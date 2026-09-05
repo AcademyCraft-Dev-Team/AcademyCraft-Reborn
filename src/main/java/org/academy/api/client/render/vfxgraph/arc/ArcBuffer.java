@@ -62,14 +62,17 @@ public final class ArcBuffer {
      */
     public void removeGroup(long replacementGroup) {
         if (replacementGroup == 0L) return;
-        int i = 0;
-        while (i < count) {
-            if (arcs[i].replacementGroup() == replacementGroup) {
-                swapRemove(i);
-            } else {
-                i++;
-            }
+        // Stable compaction: translucent cores must stay before their highlight traces.
+        // Swap-removing another emitter's old group can reverse the freshly added group.
+        int retained = 0;
+        for (int i = 0; i < count; i++) {
+            if (arcs[i].replacementGroup() == replacementGroup) continue;
+            var reusable = arcs[retained];
+            arcs[retained] = arcs[i];
+            arcs[i] = reusable;
+            retained++;
         }
+        count = retained;
     }
 
     /** 每帧递增 age，删除过期弧线（swap-remove）。先清全量 fresh 标记（M29b-02）。 */

@@ -5,6 +5,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.entity.LivingEntity;
+import org.academy.api.common.ability.VortexAttackPattern;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -64,6 +69,7 @@ public final class BlackWing extends Skill {
     @Override
     public void initClient() {
         AdvancedWingSweepPacket.initClient();
+        BlackWingAttackPacket.initClient();
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -135,6 +141,7 @@ public final class BlackWing extends Skill {
 
     public static final class Server {
         private static final Map<UUID, Long> LAST_BOOST_TICK = new HashMap<>();
+        private static final Map<ServerPlayer, VortexAttackPattern> NEXT_ATTACK = new java.util.WeakHashMap<>();
 
         private Server() {
         }
@@ -174,11 +181,42 @@ public final class BlackWing extends Skill {
         public static void onLeftClickSwing(ServerPlayer player) {
             if (!isActive(player)) return;
             if (!WingFlightSupport.trySweepCost(player, Skills.BLACK_WING.get())) return;
-            WingFlightSupport.broadcastSweep(player, AdvancedWingSweepPacket.WingKind.BLACK);
+            var pattern = NEXT_ATTACK.getOrDefault(player, VortexAttackPattern.RISE_SLAM);
+            NEXT_ATTACK.put(player, pattern.next());
+            var packet = new BlackWingAttackPacket(player.getId(), pattern,
+                    player.level().getGameTime(), attackTarget(player, pattern));
+            for (var observer : player.level().players()) {
+                if (observer.distanceToSqr(player) <= 128.0 * 128.0) MisakaNetworkServer.send(observer, packet);
+            }
             WingFlightSupport.fanAttack(player, Skills.BLACK_WING.get());
         }
 
+        private static Vec3 attackTarget(ServerPlayer player, VortexAttackPattern pattern) {
+            var origin = player.getEyePosition();
+            var hit = player.pick(WingFlightSupport.ATTACK_RANGE, 1f, false);
+            var target = hit.getLocation();
+            double distance = origin.distanceToSqr(target);
+            // Use the nearest entity along the aim ray, stopping at the first block.
+            var rayBounds = player.getBoundingBox().expandTowards(target.subtract(origin)).inflate(1.0);
+            for (var entity : player.level().getEntitiesOfClass(LivingEntity.class, rayBounds,
+                    e -> e != player && e.isAlive())) {
+                var intersection = entity.getBoundingBox().inflate(0.15).clip(origin, target);
+                if (intersection.isPresent() && origin.distanceToSqr(intersection.get()) < distance) {
+                    target = intersection.get();
+                    distance = origin.distanceToSqr(target);
+                }
+            }
+            if (pattern == VortexAttackPattern.FOURFOLD_SLAM) {
+                var top = new Vec3(target.x, Math.max(origin.y, target.y) + 16.0, target.z);
+                var ground = player.level().clip(new ClipContext(top, new Vec3(target.x, player.level().getMinY(), target.z),
+                        ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+                if (ground.getType() != HitResult.Type.MISS) target = ground.getLocation().add(0, 0.05, 0);
+            }
+            return target;
+        }
+
         private static void tick(ServerPlayer player) {
+            if (!isActive(player)) NEXT_ATTACK.remove(player);
             WingFlightSupport.tick(player, Skills.BLACK_WING.get(),
                     AttachmentTypes.ACTIVATED_BLACK_WING.get(), LAST_BOOST_TICK);
         }

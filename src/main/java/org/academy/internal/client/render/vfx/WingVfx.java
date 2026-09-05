@@ -19,6 +19,8 @@ import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.api.client.util.VertexUtil;
 import org.academy.api.common.util.ImprovedNoise;
+import org.academy.api.common.ability.VortexAttackPattern;
+import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -104,6 +106,11 @@ public final class WingVfx implements Vfx {
     private static ClientLevel animationLevel;
     private static final Identifier BLACK_GRAPH = Identifier.fromNamespaceAndPath("academy", "vfxgraph/black_wings");
     private static final Map<Integer, ActiveEffect> BLACK_GRAPHS = new HashMap<>();
+    private static final Map<Integer, BlackAttack> BLACK_ATTACKS = new HashMap<>();
+
+    private record BlackAttack(long startTick, VortexAttackPattern pattern, Vec3 target) {
+        float progress(double tick) { return (float) ((tick - startTick) / pattern.durationTicks()); }
+    }
     private static final int INSTANCE_STRIDE = 64;
 
     static {
@@ -130,6 +137,17 @@ public final class WingVfx implements Vfx {
         );
     }
 
+    public static void enqueueBlackAttack(int entityId, VortexAttackPattern pattern, long startTick, Vec3 target) {
+        var minecraft = Minecraft.getInstance();
+        if (minecraft.level == null || minecraft.level.getEntity(entityId) == null) return;
+        if (animationLevel != minecraft.level) {
+            clearSweeps();
+            animationLevel = minecraft.level;
+        }
+        if (!Double.isFinite(target.x) || !Double.isFinite(target.y) || !Double.isFinite(target.z)) return;
+        BLACK_ATTACKS.put(entityId, new BlackAttack(startTick, pattern, target));
+    }
+
     public static void enqueueBlackToWhiteTransition(int entityId) {
         var minecraft = Minecraft.getInstance();
         if (minecraft.level == null || minecraft.level.getEntity(entityId) == null) return;
@@ -137,6 +155,7 @@ public final class WingVfx implements Vfx {
             clearSweeps();
             animationLevel = minecraft.level;
         }
+        BLACK_ATTACKS.remove(entityId);
         BLACK_TO_WHITE_TRANSITIONS.put(entityId, minecraft.level.getGameTime());
     }
 
@@ -152,6 +171,9 @@ public final class WingVfx implements Vfx {
             return;
         }
         var currentTick = (double) minecraft.level.getGameTime();
+        BLACK_ATTACKS.entrySet().removeIf(entry -> entry.getValue().progress(currentTick) >= 1f
+                || !(minecraft.level.getEntity(entry.getKey()) instanceof Player player)
+                || !isActive(player, WingKind.BLACK));
         for (var timeline : SWEEP_ANIMATIONS.values()) {
             timeline.prune(currentTick, SWEEP_DURATION_TICKS,
                     entityId -> minecraft.level.getEntity(entityId) != null);
@@ -167,6 +189,7 @@ public final class WingVfx implements Vfx {
         BLACK_TO_WHITE_TRANSITIONS.clear();
         BLACK_GRAPHS.values().forEach(ActiveEffect::stop);
         BLACK_GRAPHS.clear();
+        BLACK_ATTACKS.clear();
         animationLevel = null;
     }
 
@@ -320,20 +343,23 @@ public final class WingVfx implements Vfx {
             effect.effect().setLiveParam("sweep_right", Value.of(0f));
             effect.effect().setLiveParam("pitch_left", Value.of(0f));
             effect.effect().setLiveParam("pitch_right", Value.of(0f));
-            if (!active) continue;
-            for (var sweep : SWEEP_ANIMATIONS.get(WingKind.BLACK).entries(player.getId())) {
-                float progress = SweepAnimationTimeline.progress(sweep, ctx.gameTime(), SWEEP_DURATION_TICKS);
-                if (progress < 0f || progress >= 1f) continue;
-                var animation = sweep.payload();
-                float side = animation.leftWing ? -1f : 1f;
-                // Smooth out-and-back motion avoids snapping the persistent vortex after the attack.
-                float swing = (float) Math.sin(progress * Math.PI);
-                String suffix = animation.leftWing ? "left" : "right";
-                effect.effect().setLiveParam("sweep_" + suffix,
-                        Value.of((-side * SWEEP_ARC_DEGREES + animation.yawOffsetDeg) * swing));
-                effect.effect().setLiveParam("pitch_" + suffix,
-                        Value.of(animation.pitchOffsetDeg * swing));
-            }
+            effect.effect().setLiveParam("attack_mode", Value.of(0f));
+            effect.effect().setLiveParam("attack_progress", Value.of(1f));
+            var attack = active && transition == null ? BLACK_ATTACKS.get(player.getId()) : null;
+            if (attack == null) continue;
+            float progress = attack.progress(ctx.gameTime());
+            if (progress < 0f || progress >= 1f) continue;
+            // A fixed world target remains aimed correctly as the avatar banks, turns or moves.
+            var target = new Vector3f((float) (attack.target.x - effect.position().x),
+                    (float) (attack.target.y - effect.position().y),
+                    (float) (attack.target.z - effect.position().z));
+            new Quaternionf(effect.rotation()).conjugate().transform(target);
+            target.div(Math.max(0.001f, effect.scale()));
+            effect.effect().setLiveParam("attack_mode", Value.of((float) attack.pattern.id()));
+            effect.effect().setLiveParam("attack_progress", Value.of(progress));
+            effect.effect().setLiveParam("attack_target_x", Value.of(target.x));
+            effect.effect().setLiveParam("attack_target_y", Value.of(target.y));
+            effect.effect().setLiveParam("attack_target_z", Value.of(target.z));
         }
         BLACK_GRAPHS.entrySet().removeIf(entry -> {
             if (visible.contains(entry.getKey())) return false;

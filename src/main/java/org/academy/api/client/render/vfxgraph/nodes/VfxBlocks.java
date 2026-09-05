@@ -1717,6 +1717,7 @@ public final class VfxBlocks {
         var spine = new org.joml.Vector3f();
         var surfaceNormal = new org.joml.Vector3f();
         var rotation = new org.joml.Quaternionf();
+        var shape = new org.academy.api.client.render.vfxgraph.shape.VortexAttackGeometry();
         return (buf, ctx) -> {
             ctx.arcs().removeGroup(group);
             float radial = Math.max(0f, ctx.paramFloat("radial_scale", 1f));
@@ -1727,96 +1728,103 @@ public final class VfxBlocks {
             float time = ctx.time() + phase;
             rotation.identity().rotateY(ctx.paramFloat(sweepParam, 0f) * Mth.DEG_TO_RAD)
                     .rotateZ(ctx.paramFloat(pitchParam, 0f) * Mth.DEG_TO_RAD);
-            // Keep the approved spine and envelope; open a few windows between bridging strands.
-            for (int strand = 0; strand <= filaments; strand++) {
-                boolean core = strand == 0;
-                float strandPhase = strand * 2.399963f + phase;
-                float orbit = core ? 0f : 0.70f + 0.32f * stableUnit(strand, 3.17f);
-                var arc = ctx.arcs().add(group);
-                for (int segment = 0; segment <= segments; segment++) {
-                    float u = segment / (float) segments;
-                    VortexJetGeometry.sample(u, time, strandPhase, orbit,
-                            length * axial * spread, rise * axial, back * axial,
-                            radius * radial, turns, speed, point);
-                    point.x *= side;
-                    rotation.transform(point);
-                    float localRadius = VortexJetGeometry.radius(u, radius * radial);
-                    float width = localRadius * (core ? 0.72f : 0.12f + 0.05f * stableUnit(strand, 6.1f));
-                    width *= 0.86f + 0.14f * (float) Math.sin(u * 57f - time * speed + strandPhase);
-                    // Only the terminal few percent disperse; the silhouette stays a wide-ended funnel.
-                    width *= Math.max(0.015f, Math.min(1f, (1f - u) * 28f));
-                    int run = VortexJetGeometry.hollow(u, time, strand, hollow) ? segment + 1 : 0;
-                    arc.addPoint(point.x + side * root, point.y, point.z, width, 0f, run);
+            int attackMode = Math.clamp(Math.round(ctx.paramFloat("attack_mode", 0f)), 0, 3);
+            float attackProgress = ctx.paramFloat("attack_progress", 1f);
+            // Negative progress is reserved for standalone looping attack previews in the editor.
+            if (attackProgress < 0f) attackProgress = (ctx.time() % 2f) / 2f;
+            int branchCount = attackMode == 3 && attackProgress > 0f && attackProgress < 1f ? 2 : 1;
+            for (int branch = 0; branch < branchCount; branch++) {
+                shape.configure(attackMode, attackProgress, branch,
+                        ctx.paramFloat("attack_target_x", 0f) * side,
+                        ctx.paramFloat("attack_target_y", -1.2f),
+                        ctx.paramFloat("attack_target_z", 12f),
+                        length * axial * spread, rise * axial, back * axial,
+                        radius * radial, turns, speed, time);
+                float branchAlpha = branch == 0 ? 1f : shape.activity();
+                if (branchAlpha < 0.001f) continue;
+                // Keep the approved spine and envelope; open a few windows between bridging strands.
+                for (int strand = 0; strand <= filaments; strand++) {
+                    boolean core = strand == 0;
+                    float strandPhase = strand * 2.399963f + phase;
+                    float orbit = core ? 0f : 0.70f + 0.32f * stableUnit(strand, 3.17f);
+                    var arc = ctx.arcs().add(group);
+                    for (int segment = 0; segment <= segments; segment++) {
+                        float u = segment / (float) segments;
+                        shape.sample(u, orbit, strandPhase, point);
+                        point.x *= side;
+                        rotation.transform(point);
+                        float localRadius = VortexJetGeometry.radius(u, radius * radial);
+                        float width = localRadius * (core ? 0.72f : 0.12f + 0.05f * stableUnit(strand, 6.1f));
+                        width *= 0.86f + 0.14f * (float) Math.sin(u * 57f - time * speed + strandPhase);
+                        // Only the terminal few percent disperse; the silhouette stays a wide-ended funnel.
+                        width *= Math.max(0.015f, Math.min(1f, (1f - u) * 28f)) * shape.widthScale(u);
+                        int run = VortexJetGeometry.hollow(u, time, strand, hollow) ? segment + 1 : 0;
+                        arc.addPoint(point.x + side * root, point.y, point.z, width, 0f, run);
+                    }
+                    float shade = core ? 0.48f : 0.8f + 1.6f * stableUnit(strand, 8.1f);
+                    arc.setColor(color[0] * shade, color[1] * shade, color[2] * shade, color[3] * alpha * branchAlpha);
+                    arc.setLifetime(1f);
+                    arc.setSeed(branch * 10000L + strand + 1);
+                    arc.setNoiseStrength(0f);
+                    arc.setDriftSpeed(0f);
                 }
-                float shade = core ? 0.48f : 0.8f + 1.6f * stableUnit(strand, 8.1f);
-                arc.setColor(color[0] * shade, color[1] * shade, color[2] * shade, color[3] * alpha);
-                arc.setLifetime(1f);
-                arc.setSeed(strand + 1);
-                arc.setNoiseStrength(0f);
-                arc.setDriftSpeed(0f);
-            }
-            // Short violet pulses follow existing outer filaments from nozzle to tip. Their
-            // endpoints taper and fade at wraparound, so the entire wing never flashes purple.
-            for (int highlight = 0; highlight < highlights; highlight++) {
-                int strand = 1 + (highlight * 7) % filaments;
-                float strandPhase = strand * 2.399963f + phase;
-                float orbit = 0.70f + 0.32f * stableUnit(strand, 3.17f);
-                float start = (stableUnit(highlight, 4.71f) + time * highlightSpeed) % 1f;
-                // 10 rather than 8 traces, with 4% longer coverage: 1.25 * 1.04 = 1.30.
-                float pulseLength = 1.04f * (0.045f + 0.035f * stableUnit(highlight, 7.31f));
-                float fade = Math.min(1f, start * 16f) * Math.min(1f, (1f - start) * 14f);
-                var arc = ctx.arcs().add(group);
-                for (int j = 0; j <= 12; j++) {
-                    float u = Math.min(1f, start + pulseLength * j / 12f);
-                    VortexJetGeometry.sample(u, time, strandPhase, orbit,
-                            length * axial * spread, rise * axial, back * axial,
-                            radius * radial, turns, speed, point);
-                    float width = VortexJetGeometry.radius(u, radius * radial)
-                            * (0.12f + 0.05f * stableUnit(strand, 6.1f));
-                    width *= 0.86f + 0.14f * (float) Math.sin(u * 57f - time * speed + strandPhase);
-                    width *= Math.max(0.015f, Math.min(1f, (1f - u) * 28f));
-                    // Place a fine trace on the outward surface, instead of painting the whole
-                    // thick filament purple. Simply shrinking a concentric tube would bury it.
-                    VortexJetGeometry.sample(u, time, strandPhase, 0f,
-                            length * axial * spread, rise * axial, back * axial,
-                            radius * radial, turns, speed, spine);
-                    point.sub(spine, surfaceNormal).normalize();
-                    point.fma(width * 0.98f, surfaceNormal);
-                    point.x *= side;
-                    rotation.transform(point);
-                    width = Math.min(width * 0.20f, 0.012f * radial)
-                            * (float) Math.sin(Math.PI * j / 12f);
-                    int run = VortexJetGeometry.hollow(u, time, strand, hollow) ? j + 1 : 0;
-                    arc.addPoint(point.x + side * root, point.y, point.z, width, 0f, run);
+                // Short violet pulses follow existing outer filaments from nozzle to tip. Their
+                // endpoints taper and fade at wraparound, so the entire wing never flashes purple.
+                for (int highlight = 0; highlight < highlights; highlight++) {
+                    int strand = 1 + (highlight * 7) % filaments;
+                    float strandPhase = strand * 2.399963f + phase;
+                    float orbit = 0.70f + 0.32f * stableUnit(strand, 3.17f);
+                    float start = (stableUnit(highlight, 4.71f) + time * highlightSpeed) % 1f;
+                    // 10 rather than 8 traces, with 4% longer coverage: 1.25 * 1.04 = 1.30.
+                    float pulseLength = 1.04f * (0.045f + 0.035f * stableUnit(highlight, 7.31f));
+                    float fade = Math.min(1f, start * 16f) * Math.min(1f, (1f - start) * 14f);
+                    var arc = ctx.arcs().add(group);
+                    for (int j = 0; j <= 12; j++) {
+                        float u = Math.min(1f, start + pulseLength * j / 12f);
+                        shape.sample(u, orbit, strandPhase, point);
+                        float width = VortexJetGeometry.radius(u, radius * radial)
+                                * (0.12f + 0.05f * stableUnit(strand, 6.1f));
+                        width *= 0.86f + 0.14f * (float) Math.sin(u * 57f - time * speed + strandPhase);
+                        width *= Math.max(0.015f, Math.min(1f, (1f - u) * 28f)) * shape.widthScale(u);
+                        // Place a fine trace on the outward surface, instead of painting the whole
+                        // thick filament purple. Simply shrinking a concentric tube would bury it.
+                        shape.sample(u, 0f, strandPhase, spine);
+                        point.sub(spine, surfaceNormal).normalize();
+                        point.fma(width * 0.98f, surfaceNormal);
+                        point.x *= side;
+                        rotation.transform(point);
+                        width = Math.min(width * 0.20f, 0.012f * radial)
+                                * (float) Math.sin(Math.PI * j / 12f);
+                        int run = VortexJetGeometry.hollow(u, time, strand, hollow) ? j + 1 : 0;
+                        arc.addPoint(point.x + side * root, point.y, point.z, width, 0f, run);
+                    }
+                    arc.setColor(highlightColor[0], highlightColor[1], highlightColor[2],
+                            highlightColor[3] * alpha * fade * branchAlpha);
+                    arc.setLifetime(1f);
+                    arc.setSeed(branch * 10000L + 1000 + highlight);
+                    arc.setNoiseStrength(0f);
+                    arc.setDriftSpeed(0f);
                 }
-                arc.setColor(highlightColor[0], highlightColor[1], highlightColor[2],
-                        highlightColor[3] * alpha * fade);
-                arc.setLifetime(1f);
-                arc.setSeed(1000 + highlight);
-                arc.setNoiseStrength(0f);
-                arc.setDriftSpeed(0f);
-            }
-            // Short orbiting ink shreds travel outward, wrap at the nozzle, and fade at both ends.
-            for (int fleck = 0; fleck < flecks; fleck++) {
-                float u = (stableUnit(fleck, 2.13f) + time * 0.22f) % 1f;
-                float fade = Math.min(1f, u * 12f) * Math.min(1f, (1f - u) * 12f);
-                float orbit = 1.15f + stableUnit(fleck, 9.31f) * 0.6f;
-                var arc = ctx.arcs().add(group);
-                for (int j = 0; j < 3; j++) {
-                    float v = Math.min(1f, u + j * 0.006f);
-                    VortexJetGeometry.sample(v, time, fleck * 2.4f, orbit,
-                            length * axial * spread, rise * axial, back * axial,
-                            radius * radial, turns, speed, point);
-                    point.x *= side;
-                    rotation.transform(point);
-                    arc.addPoint(point.x + side * root, point.y, point.z,
-                            (j == 1 ? 0.019f : 0.002f) * radial * fade, 0f);
+                // Short orbiting ink shreds travel outward, wrap at the nozzle, and fade at both ends.
+                for (int fleck = 0; fleck < flecks; fleck++) {
+                    float u = (stableUnit(fleck, 2.13f) + time * 0.22f) % 1f;
+                    float fade = Math.min(1f, u * 12f) * Math.min(1f, (1f - u) * 12f);
+                    float orbit = 1.15f + stableUnit(fleck, 9.31f) * 0.6f;
+                    var arc = ctx.arcs().add(group);
+                    for (int j = 0; j < 3; j++) {
+                        float v = Math.min(1f, u + j * 0.006f);
+                        shape.sample(v, orbit, fleck * 2.4f, point);
+                        point.x *= side;
+                        rotation.transform(point);
+                        arc.addPoint(point.x + side * root, point.y, point.z,
+                                (j == 1 ? 0.019f : 0.002f) * radial * fade, 0f);
+                    }
+                    arc.setColor(color[0], color[1], color[2], alpha * fade * 0.8f * branchAlpha);
+                    arc.setLifetime(1f);
+                    arc.setSeed(branch * 10000L + fleck + 100);
+                    arc.setNoiseStrength(0f);
+                    arc.setDriftSpeed(0f);
                 }
-                arc.setColor(color[0], color[1], color[2], alpha * fade * 0.8f);
-                arc.setLifetime(1f);
-                arc.setSeed(fleck + 100);
-                arc.setNoiseStrength(0f);
-                arc.setDriftSpeed(0f);
             }
         };
     }

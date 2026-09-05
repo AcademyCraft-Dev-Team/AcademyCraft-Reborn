@@ -558,6 +558,10 @@ public final class PacketTypes {
             ADVANCED_WING_SWEEP = PACKET_TYPES.register("advanced_wing_sweep",
             () -> new PacketType<>(AdvancedWingSweepPacket.class, AdvancedWingSweepPacket.CODEC));
 
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, BlackWingAttackPacket>>
+            BLACK_WING_ATTACK = PACKET_TYPES.register("black_wing_attack",
+            () -> new PacketType<>(BlackWingAttackPacket.class, BlackWingAttackPacket.CODEC));
+
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AdvancedWingTransitionPacket>>
             ADVANCED_WING_TRANSITION = PACKET_TYPES.register("advanced_wing_transition",
             () -> new PacketType<>(AdvancedWingTransitionPacket.class, AdvancedWingTransitionPacket.CODEC));
