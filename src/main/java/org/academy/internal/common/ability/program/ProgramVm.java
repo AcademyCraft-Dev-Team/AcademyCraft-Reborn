@@ -178,7 +178,9 @@ public final class ProgramVm {
                             ProgramVmDiagnostic.NONE
                     );
                 } catch (ExecutionFailure exception) {
-                    return fail(exception.diagnostic);
+                    failed = true;
+                    return new ProgramVmResult(ProgramVmResult.Status.FAILED,
+                            exception.nodeId < 0 ? currentNodeId : exception.nodeId, exception.diagnostic);
                 } catch (RuntimeException exception) {
                     return fail(ProgramVmDiagnostic.EXECUTOR_ERROR);
                 }
@@ -271,7 +273,7 @@ public final class ProgramVm {
                 evaluated.add(source.id());
             }
             var result = dataCache.get(output);
-            if (result == null) throw new ExecutionFailure(ProgramVmDiagnostic.MISSING_INPUT_VALUE);
+            if (result == null) throw new ExecutionFailure(ProgramVmDiagnostic.MISSING_INPUT_VALUE, output.nodeId());
             return result;
         }
 
@@ -333,7 +335,19 @@ public final class ProgramVm {
     ) {
         @SuppressWarnings("unchecked")
         var configuration = (C) node.configuration();
-        return executor.execute(context, configuration, inputs);
+        try {
+            return executor.execute(context, configuration, inputs);
+        } catch (ExecutionFailure failure) {
+            throw failure;
+        } catch (RuntimeException exception) {
+            var diagnostic = AbilityProgramManager.actionDiagnostic(exception);
+            if (diagnostic == ProgramVmDiagnostic.ACTION_REJECTED) {
+                org.academy.AcademyCraft.LOGGER.warn(
+                        "Program node {} ({}) failed", node.id(), node.typeId(), exception);
+            }
+            throw new ExecutionFailure(diagnostic == ProgramVmDiagnostic.ACTION_REJECTED
+                    ? ProgramVmDiagnostic.EXECUTOR_ERROR : diagnostic, node.id());
+        }
     }
 
     private static final class Fuel {
@@ -355,9 +369,15 @@ public final class ProgramVm {
 
     private static final class ExecutionFailure extends RuntimeException {
         private final ProgramVmDiagnostic diagnostic;
+        private final int nodeId;
 
         private ExecutionFailure(ProgramVmDiagnostic diagnostic) {
+            this(diagnostic, -1);
+        }
+
+        private ExecutionFailure(ProgramVmDiagnostic diagnostic, int nodeId) {
             this.diagnostic = diagnostic;
+            this.nodeId = nodeId;
         }
     }
 }

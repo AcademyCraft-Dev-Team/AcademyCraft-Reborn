@@ -18,6 +18,34 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class AbilityProgramManagerTest {
     @Test
+    void mentaloutFeedbackRetainsItsSpecificReason() {
+        assertEquals(ProgramVmDiagnostic.CONTROL_RESISTANCE, AbilityProgramManager.precisionDiagnostic(
+                org.academy.internal.common.ability.mentalout.precision.PrecisionGraph.Diagnostic.CONTROL_RESISTANCE));
+        assertEquals(ProgramVmDiagnostic.PROFICIENCY_REQUIRED, AbilityProgramManager.precisionDiagnostic(
+                org.academy.internal.common.ability.mentalout.precision.PrecisionGraph.Diagnostic.PROFICIENCY_REQUIRED));
+        assertEquals(ProgramVmDiagnostic.INSUFFICIENT_CP, AbilityProgramManager.precisionDiagnostic(
+                org.academy.internal.common.ability.mentalout.precision.PrecisionGraph.Diagnostic.INSUFFICIENT_CP));
+    }
+
+    @Test
+    void diagnosticPacketPreservesTheFailingPort() {
+        var buffer = Unpooled.buffer();
+        try {
+            var packet = new AbilityProgramManager.ResultPacket("academy:teleport", 2,
+                    AbilityProgramManager.FeedbackType.ERROR, 4,
+                    AbilityProgramManager.ResultCode.INVALID_PROGRAM,
+                    ProgramDiagnosticCode.TYPE_MISMATCH, 17, ProgramVmDiagnostic.NONE, "direction");
+            AbilityProgramManager.ResultPacket.CODEC.encode(buffer, packet);
+            var decoded = AbilityProgramManager.ResultPacket.CODEC.decode(buffer);
+            assertEquals(17, decoded.nodeId());
+            assertEquals("direction", decoded.port());
+            assertEquals(ProgramDiagnosticCode.TYPE_MISMATCH, decoded.diagnostic());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
     void storedBooksAreBoundedAndBoundToTheirCategory() {
         var accelerator = AcademyCraft.academy(AbilityCategoryNames.ACCELERATOR);
         var program = program(accelerator);

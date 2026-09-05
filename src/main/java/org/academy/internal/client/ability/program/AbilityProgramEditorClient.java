@@ -335,12 +335,20 @@ public final class AbilityProgramEditorClient {
             AbilityProgramManager.ResultCode code,
             @Nullable ProgramDiagnosticCode diagnostic,
             int nodeId,
-            ProgramVmDiagnostic vmDiagnostic
+            ProgramVmDiagnostic vmDiagnostic,
+            String diagnosticPort
     ) {
         if (!isSupportedCategoryId(category)) return;
         slot = Math.clamp(slot, 0, SLOT_COUNT - 1);
         var player = Minecraft.getInstance().player;
         var state = player == null ? null : STATES.get(storageKey(player.getUUID(), category));
+        if (state != null) {
+            if (type == AbilityProgramManager.FeedbackType.ERROR) {
+                state.failures.put(slot, new FailureFeedback(diagnostic, nodeId, vmDiagnostic, diagnosticPort));
+            } else {
+                state.failures.remove(slot);
+            }
+        }
         if (state != null && state.importPending) {
             state.importPending = false;
             if (type == AbilityProgramManager.FeedbackType.ERROR) {
@@ -371,8 +379,20 @@ public final class AbilityProgramEditorClient {
                 case EXECUTION_FAILED -> "message.academy.program.execution.failed";
                 case INVALID_PROGRAM, OK -> "message.academy.program.editor.invalid_program";
             };
-            notify(key, ChatFormatting.RED, slot + 1, Component.translatable(
-                    vmDiagnostic.translationKey()));
+            var program = state == null ? null : state.saved.slot(slot).program();
+            var catalog = AbilityProgramDefinitions.require(category).editorCatalog();
+            var detail = diagnostic == null
+                    ? ProgramDiagnosticText.locate(program, catalog, nodeId, diagnosticPort,
+                            Component.translatable(vmDiagnostic.translationKey()))
+                    : ProgramDiagnosticText.describe(program, catalog,
+                            new ProgramDiagnostic(diagnostic, nodeId, diagnosticPort));
+            var message = code == AbilityProgramManager.ResultCode.INVALID_PROGRAM
+                    ? Component.translatable("message.academy.program.editor.invalid_program_detail", slot + 1, detail)
+                    : Component.translatable(key, slot + 1, detail);
+            if (player != null) {
+                player.sendOverlayMessage(message.copy().withStyle(ChatFormatting.RED));
+                player.sendSystemMessage(message.copy().withStyle(ChatFormatting.RED));
+            }
         }
         var currentCategory = AbilitySystemClient.category;
         if (screen != null
@@ -386,7 +406,7 @@ public final class AbilityProgramEditorClient {
                     nodeId,
                     type == AbilityProgramManager.FeedbackType.ERROR
                             ? vmDiagnostic : ProgramVmDiagnostic.NONE,
-                    type != AbilityProgramManager.FeedbackType.ERROR
+                    type != AbilityProgramManager.FeedbackType.ERROR, diagnosticPort
             );
         }
     }
@@ -435,6 +455,18 @@ public final class AbilityProgramEditorClient {
         @Override
         public int slotCount() {
             return SLOT_COUNT;
+        }
+
+        @Override
+        public void clearDiagnostic(int slot) {
+            state.failures.remove(slot);
+        }
+
+        @Override
+        public void restoreDiagnostic(ModularProgramScreen screen, int slot) {
+            var failure = state.failures.get(slot);
+            if (failure != null) screen.applyProgramResult(slot, revision(), failure.diagnostic(),
+                    failure.nodeId(), failure.vmDiagnostic(), false, failure.port());
         }
 
         @Override
@@ -536,7 +568,14 @@ public final class AbilityProgramEditorClient {
 
     }
 
+    private record FailureFeedback(
+            @Nullable ProgramDiagnosticCode diagnostic, int nodeId,
+            ProgramVmDiagnostic vmDiagnostic, String port
+    ) {
+    }
+
     private static final class State {
+        private final Map<Integer, FailureFeedback> failures = new HashMap<>();
         private final String storageKey;
         private final AbilityProgram[] drafts;
         private ProgramBook saved;

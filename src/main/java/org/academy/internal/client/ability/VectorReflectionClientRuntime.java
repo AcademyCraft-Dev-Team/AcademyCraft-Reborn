@@ -1,5 +1,7 @@
 package org.academy.internal.client.ability;
 
+import net.minecraft.world.effect.MobEffects;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -99,6 +101,12 @@ public final class VectorReflectionClientRuntime {
         return !ReflectionFilter.shouldAcceptEffect(data, effect);
     }
 
+    public static boolean shouldPreventInvisibility(LocalPlayer player) {
+        if (!isProtected(player)) return false;
+        var effect = player.getEffect(MobEffects.INVISIBILITY);
+        return effect == null || shouldReflectEffect(player, effect);
+    }
+
     private static boolean isVectorDeviationActive(LocalPlayer player) {
         return player != null
                 && AbilitySystemClient.isSkillLearned(Skills.VECTOR_DEVIATION.get())
@@ -153,7 +161,8 @@ public final class VectorReflectionClientRuntime {
         if (player.getPose() == Pose.DYING) player.setPose(Pose.STANDING);
         player.invulnerableTime = 0;
         player.setTicksFrozen(0);
-        player.setInvisible(false);
+        player.setInvisible(player.hasEffect(MobEffects.INVISIBILITY)
+                && !shouldPreventInvisibility(player));
         player.clearFire();
         if (player.getAirSupply() < player.getMaxAirSupply()) {
             player.setAirSupply(player.getMaxAirSupply());

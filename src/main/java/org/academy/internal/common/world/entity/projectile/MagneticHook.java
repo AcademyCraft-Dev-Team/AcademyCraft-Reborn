@@ -214,6 +214,13 @@ public final class MagneticHook extends AbstractArrow implements ItemSupplier, M
     }
 
     @Override
+    public boolean isAttackable() {
+        // Attached hooks are pickable. Vanilla disconnects clients that attack a non-attackable arrow.
+        // Keep this stable when attachment state changes between targeting and packet handling.
+        return true;
+    }
+
+    @Override
     public float getPickRadius() {
         return isAttached() ? 0.35f : super.getPickRadius();
     }

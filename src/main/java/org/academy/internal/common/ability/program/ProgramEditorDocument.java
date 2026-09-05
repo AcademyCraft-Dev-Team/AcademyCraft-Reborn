@@ -113,6 +113,10 @@ public final class ProgramEditorDocument {
     }
 
     public EditResult addNode(Identifier typeId, double x, double y) {
+        return addNode(typeId, x, y, null);
+    }
+
+    public EditResult addNode(Identifier typeId, double x, double y, @Nullable JsonElement configuration) {
         if (!Double.isFinite(x) || !Double.isFinite(y)) {
             return failure(ProgramDiagnosticCode.INVALID_NODE, -1, null);
         }
@@ -144,6 +148,9 @@ public final class ProgramEditorDocument {
                 );
             }
         }
+        var configured = configuration == null ? entry.defaultConfiguration()
+                : catalog.normalizeConfiguration(typeId, configuration);
+        if (configured == null) return failure(ProgramDiagnosticCode.INVALID_CONFIGURATION, -1, null);
         var id = firstFreeNodeId();
         if (id < 0) return failure(ProgramDiagnosticCode.INVALID_NODE, -1, null);
         var nodes = new ArrayList<>(program.graph().nodes());
@@ -151,7 +158,7 @@ public final class ProgramEditorDocument {
                 id,
                 typeId,
                 entry.type().schemaVersion(),
-                entry.defaultConfiguration()
+                configured
         ));
         var positions = new HashMap<>(program.editorLayout().nodePositions());
         positions.put(id, new ProgramEditorLayout.NodePosition(x, y));

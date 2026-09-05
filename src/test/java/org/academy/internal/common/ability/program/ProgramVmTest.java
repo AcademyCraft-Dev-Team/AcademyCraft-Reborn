@@ -28,6 +28,45 @@ class ProgramVmTest {
     private static final Identifier STOP = AcademyCraft.academy("test/stop");
 
     @Test
+    void dataNodeFailuresIdentifyTheSourceInsteadOfTheConsumingAction() {
+        var sourceId = AcademyCraft.academy("test/broken_data");
+        var types = nodeTypes();
+        types.put(sourceId, type(ProgramNodeRole.VALUE, new ProgramNodeSchema(List.of(),
+                List.of(ProgramPortDefinition.output("value", ProgramValueTypes.BOOLEAN)))));
+        types.put(INCREMENT, type(ProgramNodeRole.ACTION, new ProgramNodeSchema(
+                List.of(ProgramPortDefinition.optionalInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput("condition", ProgramValueTypes.BOOLEAN)),
+                List.of(flowOutput("flow")))));
+        var graph = new ProgramGraph(List.of(node(1, ENTRY), node(2, INCREMENT), node(7, sourceId)),
+                List.of(edge(1, "flow", 2, "flow"), edge(7, "value", 2, "condition")));
+        var compiled = ProgramCompiler.compile(graph,
+                new ProgramCompileContext(CATEGORY, Set.of(), ProgramLimits.DEFAULT), types::get);
+        assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
+        var executors = executors();
+        executors.put(sourceId, (context, configuration, inputs) -> {
+            throw new ArithmeticException("Program float result is not finite");
+        });
+        var result = new ProgramVm.Session(compiled.program()).run(0, 10, executors::get, null);
+        assertEquals(7, result.nodeId());
+        assertEquals(ProgramVmDiagnostic.NON_FINITE_RESULT, result.diagnostic());
+    }
+
+    @Test
+    void reportsSpecificExecutorFailureAndItsNode() {
+        var session = new ProgramVm.Session(compile(new ProgramGraph(
+                List.of(node(1, ENTRY), node(2, INCREMENT)),
+                List.of(edge(1, "flow", 2, "flow")))));
+        var executors = executors();
+        executors.put(INCREMENT, (context, configuration, inputs) -> {
+            throw new ArithmeticException("/ by zero");
+        });
+        var result = session.run(0, 10, executors::get, null);
+        assertEquals(ProgramVmResult.Status.FAILED, result.status());
+        assertEquals(2, result.nodeId());
+        assertEquals(ProgramVmDiagnostic.DIVISION_BY_ZERO, result.diagnostic());
+    }
+
+    @Test
     void executesLoopAcrossFuelLimitedTimeSlices() {
         var graph = new ProgramGraph(
                 List.of(

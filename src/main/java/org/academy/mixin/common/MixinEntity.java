@@ -277,7 +277,7 @@ public abstract class MixinEntity {
     @Inject(method = "setInvisible", at = @At("HEAD"), cancellable = true)
     private void academy$protectVectorReflectionVisibility(boolean invisible, CallbackInfo ci) {
         if (invisible && (Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.usesFullInstanceProtection(player)) {
+                && VectorReflection.Server.shouldPreventInvisibility(player)) {
             ci.cancel();
         }
     }
@@ -285,7 +285,7 @@ public abstract class MixinEntity {
     @Inject(method = "isInvisible", at = @At("RETURN"), cancellable = true)
     private void academy$protectVectorReflectionVisibleState(CallbackInfoReturnable<Boolean> cir) {
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.usesFullInstanceProtection(player)) {
+                && VectorReflection.Server.shouldPreventInvisibility(player)) {
             cir.setReturnValue(false);
         }
     }

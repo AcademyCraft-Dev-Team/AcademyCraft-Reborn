@@ -310,11 +310,11 @@ public class VrLocalPlayerTemplate extends LocalPlayer implements ImagineBreaker
 
     @Override
     public boolean isInvisible() {
-        return !academy$protected() && super.isInvisible();
+        return !VectorReflectionClientRuntime.shouldPreventInvisibility(this) && super.isInvisible();
     }
 
     @Override
     public void setInvisible(boolean invisible) {
-        if (!academy$protected()) super.setInvisible(invisible);
+        if (!invisible || !VectorReflectionClientRuntime.shouldPreventInvisibility(this)) super.setInvisible(invisible);
     }
 }

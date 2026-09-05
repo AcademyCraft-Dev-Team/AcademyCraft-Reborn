@@ -39,7 +39,7 @@ public abstract class MixinClientEntity {
     @Inject(method = "isInvisible", at = @At("RETURN"), cancellable = true)
     private void academy$protectVectorReflectionVisibility(CallbackInfoReturnable<Boolean> cir) {
         if ((Object) this instanceof LocalPlayer player
-                && VectorReflectionClientRuntime.isProtected(player)) {
+                && VectorReflectionClientRuntime.shouldPreventInvisibility(player)) {
             cir.setReturnValue(false);
         }
     }
@@ -53,7 +53,7 @@ public abstract class MixinClientEntity {
     @Inject(method = "setInvisible", at = @At("HEAD"), cancellable = true)
     private void academy$protectVectorReflectionSetInvisible(boolean invisible, CallbackInfo ci) {
         if (invisible && (Object) this instanceof LocalPlayer player
-                && VectorReflectionClientRuntime.isProtected(player)) {
+                && VectorReflectionClientRuntime.shouldPreventInvisibility(player)) {
             ci.cancel();
         }
     }

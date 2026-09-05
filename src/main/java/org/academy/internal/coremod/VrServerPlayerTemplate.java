@@ -337,11 +337,11 @@ public class VrServerPlayerTemplate extends ServerPlayer implements ImagineBreak
 
     @Override
     public boolean isInvisible() {
-        return !academy$protected() && super.isInvisible();
+        return !VectorReflection.Server.shouldPreventInvisibility(this) && super.isInvisible();
     }
 
     @Override
     public void setInvisible(boolean invisible) {
-        if (!academy$protected()) super.setInvisible(invisible);
+        if (!invisible || !VectorReflection.Server.shouldPreventInvisibility(this)) super.setInvisible(invisible);
     }
 }
