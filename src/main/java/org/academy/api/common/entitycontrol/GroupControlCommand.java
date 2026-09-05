@@ -4,7 +4,14 @@ import java.util.Objects;
 
 /** High-level orders that a compatible entity-control adapter may execute autonomously. */
 public sealed interface GroupControlCommand permits GroupControlCommand.MoveTo,
-        GroupControlCommand.GatherResources, GroupControlCommand.Farm {
+        GroupControlCommand.GatherResources, GroupControlCommand.Farm, GroupControlCommand.Work {
+    record Work(BlockWorkRegion region, WorkSettings settings) implements GroupControlCommand {
+        public Work {
+            Objects.requireNonNull(region, "region");
+            Objects.requireNonNull(settings, "settings");
+        }
+    }
+
     record MoveTo(ControlDestination destination) implements GroupControlCommand {
         public MoveTo {
             Objects.requireNonNull(destination, "destination");

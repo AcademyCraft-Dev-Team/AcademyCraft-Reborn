@@ -32,7 +32,7 @@ final class StandardMobControlBindings {
 
     static ControlBinding create(ControlContext context, Mob mob, ControlDirective directive) {
         return switch (directive) {
-            case ControlDirective.TakeoverAi ignored -> ControlBinding.noop();
+            case ControlDirective.TakeoverAi ignored -> new TakeoverBinding(mob);
             case ControlDirective.ForceTarget forceTarget -> new ForceTargetBinding(mob, forceTarget.targetUuid());
             case ControlDirective.FreezeAi ignored -> new FreezeBinding(mob);
             case ControlDirective.ImpressionAlliance ignored -> new RelationBinding(mob);
@@ -48,6 +48,28 @@ final class StandardMobControlBindings {
                     guard.arrivalRadius()
             );
         };
+    }
+
+    private static final class TakeoverBinding implements ControlBinding {
+        private final Mob mob;
+        private boolean closed;
+        @SuppressWarnings("unchecked")
+        private TakeoverBinding(Mob mob) {
+            this.mob = mob;
+            if (mob instanceof MentalControlMobAccess access) access.academy$stopAutonomousGoals();
+            ((net.minecraft.world.entity.ai.Brain<LivingEntity>) mob.getBrain())
+                    .stopAll((net.minecraft.server.level.ServerLevel) mob.level(), mob);
+            mob.getNavigation().stop();
+            mob.setTarget(null);
+        }
+        @Override public void tick() {}
+        @Override public void close() {
+            if (closed) return;
+            closed = true;
+            mob.getNavigation().stop();
+            mob.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+            mob.getBrain().eraseMemory(MemoryModuleType.LOOK_TARGET);
+        }
     }
 
     private static ResolvedDestination resolve(Mob mob, ControlDestination destination) {
@@ -211,7 +233,10 @@ final class StandardMobControlBindings {
             }
             if (!attacked && mob.isWithinMeleeAttackRange(target)) {
                 mob.swing(InteractionHand.MAIN_HAND, true);
-                mob.doHurtTarget(level, target);
+                if (MentalControlApi.hasAiTakeover(mob) && mob.getMainHandItem().isEmpty()
+                        && mob.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE) == null) {
+                    ControlledEquipment.attackWithoutAttribute(mob, level, target);
+                } else mob.doHurtTarget(level, target);
                 attacked = true;
             }
             lastObservedAttackTimestamp = mob.getLastHurtMobTimestamp();

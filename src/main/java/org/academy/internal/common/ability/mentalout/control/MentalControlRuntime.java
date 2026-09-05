@@ -41,7 +41,8 @@ public final class MentalControlRuntime {
         var controller = request.controller();
         var subject = request.subject();
         var server = controller.level().getServer();
-        if (server == null || subject.level().getServer() != server || controller.level() != subject.level()) {
+        if (server == null || subject.level().getServer() != server || controller.level() != subject.level()
+                && !GroupControlRuntime.ownsWorkScope(controller.getUUID(), subject.getUUID(), request.scopeId())) {
             throw new IllegalArgumentException("Controller and subject must be in the same server level");
         }
         if (!controller.isAlive() || !subject.isAlive() || subject.isRemoved()) {
@@ -1462,7 +1463,8 @@ public final class MentalControlRuntime {
                 );
                 state.activeBindings.put(
                         key,
-                        new ActiveBinding(effective.leaseId(), capability, new SafeBinding(binding))
+                        new ActiveBinding(effective.leaseId(), capability, new SafeBinding(binding,
+                                capability == ControlCapability.AI_CONTROL && subject instanceof Mob mob ? mob : null))
                 );
             } catch (Throwable throwable) {
                 throw new BindingFailure(effective.leaseId(), capability, throwable);
@@ -1658,13 +1660,20 @@ public final class MentalControlRuntime {
         private final ControlBinding delegate;
         private boolean closed;
 
-        private SafeBinding(ControlBinding delegate) {
+        private final @Nullable Mob equippedSubject;
+
+        private SafeBinding(ControlBinding delegate, @Nullable Mob equippedSubject) {
             this.delegate = delegate;
+            this.equippedSubject = equippedSubject;
+            if (equippedSubject != null) ControlledEquipment.refresh(equippedSubject);
         }
 
         @Override
         public void tick() {
-            if (!closed) delegate.tick();
+            if (!closed) {
+                if (equippedSubject != null) ControlledEquipment.refresh(equippedSubject);
+                delegate.tick();
+            }
         }
 
         @Override
@@ -1696,7 +1705,11 @@ public final class MentalControlRuntime {
         public void close() {
             if (closed) return;
             closed = true;
-            delegate.close();
+            try {
+                delegate.close();
+            } finally {
+                if (equippedSubject != null) ControlledEquipment.clear(equippedSubject);
+            }
         }
     }
 

@@ -19,6 +19,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Camera.class)
 public abstract class MixinCamera implements CameraSmoothingBridge {
     @Shadow
+    private float depthFar;
+    @Shadow
     private float eyeHeight;
     @Shadow
     private float eyeHeightOld;
@@ -84,9 +86,13 @@ public abstract class MixinCamera implements CameraSmoothingBridge {
         academy$setRotation(camera.yRot(), camera.xRot() + adjustment.pitchOffset());
     }
 
-    @Inject(method = "update", at = @At("TAIL"))
+    @Inject(method = "update", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/Camera;alignWithEntity(F)V", shift = At.Shift.AFTER))
     private void academy$applyWideAreaInterferenceCamera(DeltaTracker deltaTracker, CallbackInfo ci) {
         if (!WideAreaInterferenceClientState.hasCameraOverride()) return;
+        if (WideAreaInterferenceClientState.isRtsView()) {
+            depthFar = Math.max(depthFar, (float) WideAreaInterferenceClientState.pickDistance());
+        }
         academy$setPosition(WideAreaInterferenceClientState.cameraPosition());
         academy$setRotation(
                 WideAreaInterferenceClientState.cameraYaw(),

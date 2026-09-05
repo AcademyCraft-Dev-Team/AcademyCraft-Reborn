@@ -17,6 +17,16 @@ public final class GroupControlApi {
         return GroupControlRuntime.dispatch(request);
     }
 
+    public static void pauseWork(net.minecraft.server.MinecraftServer server, java.util.UUID controller,
+                                 java.util.Set<java.util.UUID> subjects, boolean paused) {
+        GroupControlRuntime.setWorkPaused(server, controller, subjects, paused);
+    }
+
+    public static void cancelWork(net.minecraft.server.MinecraftServer server, java.util.UUID controller,
+                                  java.util.Set<java.util.UUID> subjects) {
+        GroupControlRuntime.cancelWork(server, controller, subjects);
+    }
+
     public static java.util.Optional<GroupControlInspection> inspect(LivingEntity subject) {
         return GroupControlRuntime.inspect(subject);
     }

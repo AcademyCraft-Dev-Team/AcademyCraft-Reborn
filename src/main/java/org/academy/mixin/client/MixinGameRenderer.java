@@ -8,6 +8,14 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.Camera;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.fog.FogData;
+import net.minecraft.client.renderer.fog.FogRenderer;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.material.FogType;
+import org.academy.internal.client.ability.mentalout.WideAreaInterferenceClientState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.GameRenderer;
@@ -84,6 +92,30 @@ public abstract class MixinGameRenderer {
                     cameraState.viewRotationMatrix
             );
         }
+    }
+
+    @WrapOperation(method = "extractCamera", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/renderer/fog/FogRenderer;setupFog(Lnet/minecraft/client/Camera;ILnet/minecraft/client/DeltaTracker;FLnet/minecraft/client/multiplayer/ClientLevel;)Lnet/minecraft/client/renderer/fog/FogData;"))
+    private FogData academy$extendRtsDistanceFog(
+            FogRenderer renderer, Camera camera,
+            int chunks, DeltaTracker delta, float darkness, ClientLevel level,
+            Operation<FogData> original) {
+        var fog = original.call(renderer, camera, chunks, delta, darkness, level);
+        if (WideAreaInterferenceClientState.isRtsView()
+                && camera.getFluidInCamera() == FogType.ATMOSPHERIC
+                && !(camera.entity() instanceof LivingEntity living
+                && (living.hasEffect(MobEffects.BLINDNESS)
+                || living.hasEffect(MobEffects.DARKNESS)))) {
+            var distance = (float) camera.position().distanceTo(
+                    WideAreaInterferenceClientState.focusPosition());
+            fog.renderDistanceStart += distance;
+            fog.renderDistanceEnd += distance;
+            fog.environmentalStart += distance;
+            fog.environmentalEnd += distance;
+            fog.skyEnd += distance;
+            fog.cloudEnd += distance;
+        }
+        return fog;
     }
 
     @Inject(method = "render", at = @At("HEAD"))

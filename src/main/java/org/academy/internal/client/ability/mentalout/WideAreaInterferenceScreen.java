@@ -7,6 +7,11 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.BlockPos;
+import org.academy.api.common.entitycontrol.WorkSelection;
+import org.academy.api.common.entitycontrol.WorkSettings;
+import org.academy.api.client.gui.widget.TextBoxWidget;
+import org.academy.api.client.gui.widget.Widget;
+import com.mojang.serialization.JsonOps;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
@@ -49,8 +54,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
             "screen.academy.wide_area_interference.misidentification",
             "screen.academy.wide_area_interference.stupor",
             "screen.academy.wide_area_interference.impression",
-            "screen.academy.wide_area_interference.gather",
-            "screen.academy.wide_area_interference.farm"
+            "screen.academy.wide_area_interference.work"
     };
 
     private final LinkedHashSet<UUID> selectedTargets = new LinkedHashSet<>();
@@ -65,7 +69,6 @@ public final class WideAreaInterferenceScreen extends UiScreen {
     private Rect selectAllButton;
     private Rect viewModeButton;
     private Rect[] actionButtons;
-    private Rect[] reservedButtons;
     private OverlaySurface overlaySurface;
     private float uiScale;
     private float bodyFontSize;
@@ -76,7 +79,6 @@ public final class WideAreaInterferenceScreen extends UiScreen {
     private int headerHeight;
     private int rowHeight;
     private int actionHeight;
-    private int reservedHeight;
     private int rosterFooterHeight;
     private int controlsFooterHeight;
     private int controlsHeaderHeight;
@@ -88,10 +90,29 @@ public final class WideAreaInterferenceScreen extends UiScreen {
     private double dragEndX;
     private double dragEndY;
     private boolean additiveSelection;
+    private double selectionPlaneY;
     private BlockPos regionFirst;
     private BlockPos regionLast;
     private int regionHeight = 1;
     private int regionVerticalOffset;
+    private boolean workOpen;
+    private int workPage;
+    private int workScroll;
+    private int workQueryTicks;
+    private Set<UUID> queriedSelection = Set.of();
+    private Rect workPanel;
+    private TextBoxWidget workFilter;
+    private WorkSettings.Mode workMode = WorkSettings.Mode.FARMING;
+    private boolean workRepeat = true;
+    private boolean workHarvest = true;
+    private boolean workReplant = true;
+    private boolean workDenyList;
+    private BlockPos workFirst;
+    private BlockPos workLast;
+    private BlockPos workInput;
+    private BlockPos workOutput;
+    private String pickingWorkPoint;
+    private String workError = "";
 
     public WideAreaInterferenceScreen() {
         super(Component.translatable("screen.academy.wide_area_interference.title"));
@@ -105,6 +126,15 @@ public final class WideAreaInterferenceScreen extends UiScreen {
         overlaySurface.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT));
         getRoot().addChild("wide_area_interference_overlay", overlaySurface);
+        workFilter = new TextBoxWidget(4096);
+        workFilter.setBaseFontSize(bodyFontSize);
+        workFilter.setBackground(null);
+        workFilter.setPlaceholder("minecraft:iron_ore, #minecraft:logs");
+        workFilter.setClearWhenEnter(false);
+        workFilter.setCoverAllPrev(true);
+        getRoot().addChild("work_filter", workFilter);
+        WorkOrderClientState.clear();
+        updateLayout();
         WideAreaInterferenceClientState.open();
     }
 
@@ -118,7 +148,6 @@ public final class WideAreaInterferenceScreen extends UiScreen {
         headerHeight = scaled(22.0f);
         rowHeight = scaled(22.0f);
         actionHeight = scaled(20.0f);
-        reservedHeight = scaled(12.0f);
         rosterFooterHeight = scaled(17.0f);
         controlsFooterHeight = scaled(16.0f);
         controlsHeaderHeight = scaled(19.0f);
@@ -142,7 +171,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
         var actionRows = (OPERATION_LABELS.length + actionColumns - 1) / actionColumns;
         var controlsHeight = controlsHeaderHeight
                 + actionRows * actionHeight + Math.max(0, actionRows - 1) * gap
-                + gap + reservedHeight + controlsFooterHeight;
+                + controlsFooterHeight;
         display = new Rect(rightX, contentY, rightWidth,
                 Math.max(1, contentHeight - controlsHeight - gap));
         controls = new Rect(rightX, display.bottom() + gap, rightWidth, controlsHeight);
@@ -193,17 +222,20 @@ public final class WideAreaInterferenceScreen extends UiScreen {
             );
         }
 
-        var reservedY = actionY + actionRows * actionHeight + Math.max(0, actionRows - 1) * gap + gap;
-        reservedButtons = new Rect[6];
-        for (var index = 0; index < reservedButtons.length; index++) {
-            var x = controls.x + inset + distributedStart(available, reservedButtons.length, index);
-            var nextX = controls.x + inset + distributedStart(available, reservedButtons.length, index + 1);
-            reservedButtons[index] = new Rect(
-                    x,
-                    reservedY,
-                    Math.max(1, nextX - x - (index == reservedButtons.length - 1 ? 0 : gap)),
-                    reservedHeight
-            );
+        var workWidth = Math.min(scaled(250), Math.max(scaled(160), display.width / 2));
+        var workTop = display.y + scaled(30);
+        var workHeight = Math.min(panel.bottom() - workTop - gap,
+                Math.max(scaled(230), display.height - scaled(34)));
+        workPanel = new Rect(display.right() - workWidth - gap, workTop, workWidth, Math.max(1, workHeight));
+        if (workFilter != null) {
+            var editable = workOpen && WideAreaInterferenceClientState.isRtsView() && workPage == 3;
+            workFilter.setVisibility(editable ? Widget.Visibility.VISIBLE : Widget.Visibility.GONE);
+            workFilter.setEnabled(editable);
+            if (!workOpen || workPage != 3) workFilter.setFocused(false);
+            workFilter.setBaseFontSize(bodyFontSize);
+            workFilter.setLayoutParams(new FrameLayoutWidget.LayoutParams()
+                    .width(workPanel.width - inset * 2).height(scaled(22))
+                    .marginLeft(workPanel.x + inset).marginTop(workPanel.y + scaled(80)));
         }
     }
 
@@ -215,7 +247,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                             Component.translatable(key).getString(), bodyFontSize)) + scaled(18.0f));
         }
         var available = Math.max(1, controlsWidth - inset * 2);
-        if (available >= minimumWidth * 6 + gap * 5) return 6;
+        if (available >= minimumWidth * OPERATION_LABELS.length + gap * (OPERATION_LABELS.length - 1)) return OPERATION_LABELS.length;
         if (available >= minimumWidth * 3 + gap * 2) return 3;
         return 2;
     }
@@ -253,6 +285,12 @@ public final class WideAreaInterferenceScreen extends UiScreen {
         }
         syncViewedTargets(entries);
         syncWorldState();
+        if (workOpen && (!queriedSelection.equals(selectedTargets) || ++workQueryTicks >= 40)) {
+            if (!queriedSelection.equals(selectedTargets)) WorkOrderClientState.clear();
+            queriedSelection = Set.copyOf(selectedTargets);
+            workQueryTicks = 0;
+            issue(WideAreaInterference.Action.QUERY_WORK, BlockPos.ZERO, BlockPos.ZERO, null);
+        }
     }
 
     private void syncViewedTargets(List<MentaloutRosterClientState.Entry> entries) {
@@ -262,13 +300,38 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                 .toList());
     }
 
+    private AABB selectionBounds() {
+        if (regionFirst == null || regionLast == null) return null;
+        if (dragMode == DragMode.SELECT) {
+            var base = WorkSelection.bounds(regionFirst, regionLast, 1, 0);
+            return new AABB(base.minX, regionFirst.getY() + regionVerticalOffset, base.minZ,
+                    base.maxX, regionFirst.getY() + regionVerticalOffset + regionHeight, base.maxZ);
+        }
+        return WorkSelection.bounds(regionFirst, regionLast, regionHeight, regionVerticalOffset);
+    }
+
     private void syncWorldState() {
-        WideAreaInterferenceClientState.setSelectedTargets(selectedTargets);
-        if (dragMode == DragMode.REGION && regionFirst != null && regionLast != null) {
-            WideAreaInterferenceClientState.setWorkRegionPreview(
-                    regionFirst, regionLast, regionHeight, regionVerticalOffset);
-        } else {
-            WideAreaInterferenceClientState.clearWorkRegionPreview();
+        var preview = new HashSet<>(selectedTargets);
+        if (dragMode == DragMode.SELECT && selectionBounds() != null) {
+            if (!additiveSelection) preview.clear();
+            for (var entity : visibleEntities()) {
+                if (entity.getBoundingBox().intersects(selectionBounds())) preview.add(entity.getUUID());
+            }
+        }
+        WideAreaInterferenceClientState.setSelectedTargets(preview);
+        WideAreaInterferenceClientState.setSelectionPreview(
+                dragMode == DragMode.NONE || dragMode == DragMode.PAN
+                        ? workOpen && workFirst != null && workLast != null
+                        ? new AABB(workFirst.getX(), workFirst.getY(), workFirst.getZ(),
+                        workLast.getX() + 1, workLast.getY() + 1, workLast.getZ() + 1) : null
+                        : selectionBounds());
+    }
+
+    private void updateSelectionEnd(double x, double y) {
+        var point = WorkSelection.intersectHorizontal(minecraft.gameRenderer.mainCamera().position(),
+                rayDirection(x, y), selectionPlaneY);
+        if (point != null && regionFirst != null) {
+            regionLast = new BlockPos(Mth.floor(point.x), regionFirst.getY(), Mth.floor(point.z));
         }
     }
 
@@ -326,6 +389,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
         renderRoster(graphics, mouseX, mouseY);
         renderDisplayOverlay(graphics, mouseX, mouseY);
         renderControls(graphics, mouseX, mouseY);
+        if (workOpen && WideAreaInterferenceClientState.isRtsView()) renderWorkPanel(graphics, mouseX, mouseY);
     }
 
     private void renderRoster(ProgramUiGraphics graphics, int mouseX, int mouseY) {
@@ -508,18 +572,9 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                 SECONDARY,
                 captionFontSize,
                 modeWidth);
-        if (WideAreaInterferenceClientState.isRtsView()) {
-            if (dragMode != DragMode.NONE && dragMode != DragMode.PAN) {
-                var selection = normalizedDrag();
-                var color = dragMode == DragMode.HIDE
-                        ? CONTROLLED : dragMode == DragMode.REGION ? PRIMARY : SELECTION;
-                border(graphics, selection, color);
-                graphics.fill(selection.x, selection.y, selection.right(), selection.bottom(), color & 0x18FFFFFF);
-            }
-        }
         if (armedAction != null) {
             var prompt = armedAction == WideAreaInterference.Action.GATHER
-                    || armedAction == WideAreaInterference.Action.FARM
+                    || armedAction == WideAreaInterference.Action.FARM || armedAction == WideAreaInterference.Action.WORK
                     ? Component.translatable("screen.academy.wide_area_interference.drag_region", regionHeight)
                     : Component.translatable("screen.academy.wide_area_interference.place_target");
             centeredText(graphics,
@@ -530,7 +585,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                     bodyFontSize,
                     display.width - inset * 2);
         }
-        if ((dragMode == DragMode.REGION || dragMode == DragMode.HIDE)
+        if ((dragMode == DragMode.REGION || dragMode == DragMode.HIDE || dragMode == DragMode.SELECT)
                 && regionFirst != null && regionLast != null) {
             var sizes = regionDimensions();
             centeredText(graphics,
@@ -541,6 +596,131 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                     bodyFontSize,
                     display.width - inset * 2);
         }
+    }
+
+    private String workText(String key) {
+        return Component.translatable("screen.academy.wide_area_interference.work." + key).getString();
+    }
+
+    private record WorkButton(Rect bounds, String label, Runnable action) {}
+
+    private List<WorkButton> workButtons() {
+        var buttons = new ArrayList<WorkButton>();
+        var names = new String[]{"mode", "range", "tasks", "filter"};
+        var tabWidth = (workPanel.width - inset * 2) / 4;
+        for (int i = 0; i < 4; i++) {
+            final int page = i;
+            buttons.add(new WorkButton(new Rect(workPanel.x + inset + i * tabWidth,
+                    workPanel.y + scaled(23), tabWidth - gap, scaled(18)), workText(names[i]), () -> workPage = page));
+        }
+        var y = workPanel.y + scaled(47);
+        var row = scaled(23);
+        if (workPage == 0) {
+            for (var mode : WorkSettings.Mode.values()) {
+                final var value = mode;
+                buttons.add(workButton(y, (workMode == mode ? "> " : "") + workText("mode." + mode.name().toLowerCase(Locale.ROOT)), () -> workMode = value));
+                y += row;
+            }
+            // Only fully visible rows participate in rendering and hit testing.
+            var top = workPanel.y + scaled(47);
+            var bottom = workPanel.bottom() - scaled(85);
+            var scroll = workScroll * row;
+            for (var i = buttons.size() - 1; i >= 4; i--) {
+                var entry = buttons.get(i);
+                var bounds = new Rect(entry.bounds.x, entry.bounds.y - scroll, entry.bounds.width, entry.bounds.height);
+                if (bounds.y < top || bounds.bottom() > bottom) buttons.remove(i);
+                else buttons.set(i, new WorkButton(bounds, entry.label, entry.action));
+            }
+        } else if (workPage == 1) {
+            buttons.add(workButton(y, workText("draw"), () -> { armedAction = WideAreaInterference.Action.WORK; pickingWorkPoint = null; }));
+            buttons.add(workButton(y + row, workText("input") + positionText(workInput), () -> { pickingWorkPoint = "input"; armedAction = null; }));
+            buttons.add(workButton(y + row * 2, workText("output") + positionText(workOutput), () -> { pickingWorkPoint = "output"; armedAction = null; }));
+            buttons.add(workButton(y + row * 3, workText("clear_points"), () -> { workInput = null; workOutput = null; }));
+        } else if (workPage == 2) {
+            buttons.add(workButton(y, check(workRepeat) + workText("repeat"), () -> workRepeat = !workRepeat));
+            buttons.add(workButton(y + row, check(workHarvest) + workText("harvest"), () -> workHarvest = !workHarvest));
+            if (workMode == WorkSettings.Mode.FARMING) buttons.add(workButton(y + row * 2,
+                    check(workReplant) + workText("replant"), () -> workReplant = !workReplant));
+        } else {
+            buttons.add(workButton(y, workText(workDenyList ? "deny" : "allow"), () -> workDenyList = !workDenyList));
+        }
+        var footer = workPanel.bottom() - scaled(81);
+        buttons.add(workButton(footer, workText("load"), this::loadWorkSettings));
+        var half = (workPanel.width - inset * 2 - gap) / 2;
+        buttons.add(new WorkButton(new Rect(workPanel.x + inset, footer + row, half, scaled(19)), workText("start"), this::startWork));
+        buttons.add(new WorkButton(new Rect(workPanel.x + inset + half + gap, footer + row, half, scaled(19)), workText("pause"),
+                () -> issue(WideAreaInterference.Action.PAUSE_WORK, BlockPos.ZERO, BlockPos.ZERO, null)));
+        buttons.add(new WorkButton(new Rect(workPanel.x + inset, footer + row * 2, half, scaled(19)), workText("resume"),
+                () -> issue(WideAreaInterference.Action.RESUME_WORK, BlockPos.ZERO, BlockPos.ZERO, null)));
+        buttons.add(new WorkButton(new Rect(workPanel.x + inset + half + gap, footer + row * 2, half, scaled(19)), workText("cancel"),
+                () -> issue(WideAreaInterference.Action.CANCEL_WORK, BlockPos.ZERO, BlockPos.ZERO, null)));
+        return buttons;
+    }
+
+    private WorkButton workButton(int y, String label, Runnable action) {
+        return new WorkButton(new Rect(workPanel.x + inset, y, workPanel.width - inset * 2, scaled(19)), label, action);
+    }
+
+    private static String check(boolean value) { return value ? "[x] " : "[ ] "; }
+    private static String positionText(BlockPos pos) { return pos == null ? " —" : " " + pos.getX() + ", " + pos.getY() + ", " + pos.getZ(); }
+
+    private void renderWorkPanel(ProgramUiGraphics graphics, int mouseX, int mouseY) {
+        graphics.fill(workPanel.x, workPanel.y, workPanel.right(), workPanel.bottom(), PANEL);
+        graphics.fill(workPanel.x, workPanel.y, workPanel.right(), workPanel.y + 1, PRIMARY);
+        text(graphics, workText("title") + " / " + selectedTargets.size(), workPanel.x + inset,
+                workPanel.y + scaled(7), PRIMARY, headingFontSize, workPanel.width - inset * 2);
+        for (var entry : workButtons()) button(graphics, entry.bounds, Component.literal(entry.label), mouseX, mouseY, true, false);
+        if (workPage == 0) {
+            text(graphics, workText("scroll_modes"), workPanel.x + inset,
+                    workPanel.bottom() - scaled(88), SECONDARY, captionFontSize, workPanel.width - inset * 2);
+        }
+        if (workPage == 2) {
+            text(graphics, workText("equipment_help"), workPanel.x + inset, workPanel.y + scaled(120),
+                    SECONDARY, captionFontSize, workPanel.width - inset * 2);
+        }
+        if (workPage == 3) {
+            graphics.fill(workPanel.x + inset, workPanel.y + scaled(80), workPanel.right() - inset,
+                    workPanel.y + scaled(102), ROW);
+            text(graphics, workText("filter_help"), workPanel.x + inset, workPanel.y + scaled(112),
+                    SECONDARY, captionFontSize, workPanel.width - inset * 2);
+        }
+        var state = selectedTargets.isEmpty() ? "none" : WorkOrderClientState.status(selectedTargets.iterator().next());
+        text(graphics, workText("status." + state), workPanel.x + inset,
+                workPanel.bottom() - scaled(13), SECONDARY, captionFontSize, workPanel.width - inset * 2);
+        if (workPage == 1 && workFirst != null && workLast != null && workPanel.height >= scaled(245)) {
+            text(graphics, positionText(workFirst) + " →" + positionText(workLast), workPanel.x + inset,
+                    workPanel.y + scaled(145), SECONDARY, captionFontSize, workPanel.width - inset * 2);
+        }
+        if (!workError.isEmpty() || pickingWorkPoint != null) {
+            text(graphics, workText(pickingWorkPoint != null ? "pick_container" : workError), display.x + inset,
+                    display.bottom() - scaled(14), PRIMARY, bodyFontSize, Math.max(1, workPanel.x - display.x - inset));
+        }
+    }
+
+    private void loadWorkSettings() {
+        WorkOrderClientState.settings().ifPresent(settings -> {
+            workMode = settings.mode(); workRepeat = settings.repeat(); workHarvest = settings.harvest();
+            workReplant = settings.replant(); workDenyList = settings.denyList();
+            workFilter.setText(String.join(", ", settings.filters()));
+            workInput = settings.input().orElse(null); workOutput = settings.output().orElse(null);
+            workFirst = WorkOrderClientState.position("first").orElse(null);
+            workLast = WorkOrderClientState.position("last").orElse(null);
+        });
+    }
+
+    private void startWork() {
+        if (workFirst == null || workLast == null || selectedTargets.isEmpty()) { workError = "need_range"; return; }
+        try {
+            var filters = Arrays.stream(workFilter.getText().split("[,;\\s]+"))
+                    .map(String::trim).filter(value -> !value.isEmpty()).distinct().toList();
+            var settings = new WorkSettings(workMode, workRepeat, workHarvest, workReplant, workDenyList,
+                    filters, Optional.ofNullable(workInput), Optional.ofNullable(workOutput));
+            var json = WorkSettings.CODEC.encodeStart(JsonOps.INSTANCE, settings).getOrThrow().toString();
+            MisakaNetworkClient.send(new WideAreaInterference.CommandPacket(MentaloutRequestGuard.nextClientSequence(),
+                    WideAreaInterference.Action.WORK, List.copyOf(selectedTargets), workFirst, workLast, null, json));
+            workError = "";
+            issue(WideAreaInterference.Action.QUERY_WORK, BlockPos.ZERO, BlockPos.ZERO, null);
+        } catch (RuntimeException exception) { workError = "invalid_filter"; }
     }
 
     private void renderControls(ProgramUiGraphics graphics, int mouseX, int mouseY) {
@@ -555,7 +735,8 @@ public final class WideAreaInterferenceScreen extends UiScreen {
         var actions = operationActions();
         for (var index = 0; index < actionButtons.length; index++) {
             button(graphics, actionButtons[index], Component.translatable(OPERATION_LABELS[index]),
-                    mouseX, mouseY, enabled, armedAction == actions[index]);
+                    mouseX, mouseY, enabled, armedAction == actions[index]
+                            || actions[index] == WideAreaInterference.Action.WORK && workOpen);
             text(graphics,
                     Integer.toString(index + 1),
                     actionButtons[index].x + scaled(3.0f),
@@ -563,9 +744,6 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                     enabled ? SECONDARY : DISABLED,
                     captionFontSize,
                     scaled(8.0f));
-        }
-        for (var reserved : reservedButtons) {
-            button(graphics, reserved, Component.literal("+"), mouseX, mouseY, false, false);
         }
         text(graphics,
                 Component.translatable("screen.academy.wide_area_interference.god_only").getString(),
@@ -582,6 +760,18 @@ public final class WideAreaInterferenceScreen extends UiScreen {
         updateLayout();
         var x = event.x();
         var y = event.y();
+        if (workOpen && WideAreaInterferenceClientState.isRtsView() && workPanel.contains(x, y)) {
+            if (event.button() == 0) {
+                if (workPage == 3 && y >= workPanel.y + scaled(80) && y < workPanel.y + scaled(102)) {
+                    Arrays.fill(movementKeys, false);
+                    return super.mouseClicked(event, doubleClick);
+                }
+                workFilter.setFocused(false);
+                for (var entry : workButtons()) if (entry.bounds.contains(x, y)) { entry.action.run(); return true; }
+            }
+            return true;
+        }
+        if (workFilter != null) workFilter.setFocused(false);
         if (event.button() == 0) {
             if (selectAllButton.contains(x, y)) {
                 MentaloutRosterClientState.snapshot().entries()
@@ -611,10 +801,21 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                 }
             }
             if (display.contains(x, y) && WideAreaInterferenceClientState.isRtsView()) {
+                if (pickingWorkPoint != null) {
+                    var point = raycastBlock(x, y);
+                    if (point != null) {
+                        if (pickingWorkPoint.equals("input")) workInput = point;
+                        else workOutput = point;
+                        pickingWorkPoint = null;
+                    }
+                    return true;
+                }
                 if (altDown()) {
-                    beginDrag(DragMode.HIDE, x, y);
                     regionFirst = raycastBlock(x, y);
                     regionLast = regionFirst;
+                    regionHeight = 1;
+                    regionVerticalOffset = 0;
+                    beginDrag(DragMode.HIDE, x, y);
                     return true;
                 }
                 if (armedAction == WideAreaInterference.Action.MOVE) {
@@ -630,19 +831,29 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                     return true;
                 }
                 if (armedAction == WideAreaInterference.Action.GATHER
-                        || armedAction == WideAreaInterference.Action.FARM) {
+                        || armedAction == WideAreaInterference.Action.FARM || armedAction == WideAreaInterference.Action.WORK) {
                     regionHeight = 1;
                     regionVerticalOffset = 0;
                     regionFirst = raycastBlock(x, y);
+                    if (armedAction == WideAreaInterference.Action.WORK && workMode == WorkSettings.Mode.FARMING
+                            && regionFirst != null && !(minecraft.level.getBlockState(regionFirst).getBlock()
+                            instanceof net.minecraft.world.level.block.CropBlock)) {
+                        regionFirst = regionFirst.above();
+                        regionHeight = 2;
+                    }
                     regionLast = regionFirst;
                     if (regionFirst != null) beginDrag(DragMode.REGION, x, y);
                     return true;
                 }
-                additiveSelection = controlDown();
+                additiveSelection = controlDown() || shiftDown();
+                regionFirst = raycastBlock(x, y);
+                regionLast = regionFirst;
+                regionHeight = 8;
+                regionVerticalOffset = 0;
                 beginDrag(DragMode.SELECT, x, y);
                 return true;
             }
-        } else if (event.button() == 1 && display.contains(x, y)
+        } else if ((event.button() == 1 || event.button() == 2) && display.contains(x, y)
                 && WideAreaInterferenceClientState.isRtsView()) {
             if (altDown()) WideAreaInterferenceClientState.clearHiddenBlocks();
             else beginDrag(DragMode.PAN, x, y);
@@ -653,17 +864,16 @@ public final class WideAreaInterferenceScreen extends UiScreen {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
-        if (dragMode == DragMode.PAN && event.button() == 1) {
-            WideAreaInterferenceClientState.panFromMouse(dragX, dragY);
+        if (dragMode == DragMode.PAN && (event.button() == 1 || event.button() == 2)) {
+            if (event.button() == 1) WideAreaInterferenceClientState.orbit(dragX, dragY);
+            else WideAreaInterferenceClientState.panFromMouse(dragX, dragY);
             return true;
         }
         if (dragMode != DragMode.NONE && event.button() == 0) {
             dragEndX = Mth.clamp(event.x(), display.x, display.right());
             dragEndY = Mth.clamp(event.y(), display.y, display.bottom());
-            if (dragMode == DragMode.REGION || dragMode == DragMode.HIDE) {
-                var point = raycastBlock(dragEndX, dragEndY);
-                if (point != null) regionLast = point;
-            }
+            updateSelectionEnd(dragEndX, dragEndY);
+            syncWorldState();
             return true;
         }
         return super.mouseDragged(event, dragX, dragY);
@@ -671,20 +881,24 @@ public final class WideAreaInterferenceScreen extends UiScreen {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
-        if (dragMode == DragMode.PAN && event.button() == 1) {
+        if (dragMode == DragMode.PAN && (event.button() == 1 || event.button() == 2)) {
             dragMode = DragMode.NONE;
             return true;
         }
         if (dragMode != DragMode.NONE && event.button() == 0) {
             dragEndX = Mth.clamp(event.x(), display.x, display.right());
             dragEndY = Mth.clamp(event.y(), display.y, display.bottom());
+            updateSelectionEnd(dragEndX, dragEndY);
             var completed = dragMode;
-            dragMode = DragMode.NONE;
             if (completed == DragMode.SELECT) completeWorldSelection();
             else if (completed == DragMode.REGION) completeRegionCommand();
             else if (completed == DragMode.HIDE && regionFirst != null && regionLast != null) {
-                WideAreaInterferenceClientState.hideRegion(regionFirst, regionLast);
+                var box = selectionBounds();
+                WideAreaInterferenceClientState.hideRegion(BlockPos.containing(box.minX, box.minY, box.minZ),
+                        BlockPos.containing(box.maxX - 1, box.maxY - 1, box.maxZ - 1));
             }
+            dragMode = DragMode.NONE;
+            syncWorldState();
             return true;
         }
         return super.mouseReleased(event);
@@ -692,12 +906,17 @@ public final class WideAreaInterferenceScreen extends UiScreen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (workOpen && workPanel.contains(mouseX, mouseY)) {
+            if (workPage == 0) workScroll = Math.clamp(workScroll - (int) Math.signum(scrollY), 0,
+                    Math.max(0, WorkSettings.Mode.values().length - Math.max(1, (workPanel.height - scaled(130)) / scaled(23))));
+            return true;
+        }
         if (roster.contains(mouseX, mouseY)) {
             rosterScroll -= (int) Math.signum(scrollY);
             return true;
         }
         if (display.contains(mouseX, mouseY) && WideAreaInterferenceClientState.isRtsView()) {
-            if (dragMode == DragMode.REGION) {
+            if (dragMode == DragMode.REGION || dragMode == DragMode.SELECT || dragMode == DragMode.HIDE) {
                 var step = (int) Math.signum(scrollY);
                 if (altDown()) {
                     regionVerticalOffset += step;
@@ -708,8 +927,11 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                     regionHeight = Math.clamp(regionHeight + step, 1, maxHeight);
                 }
                 clampRegionVerticalOffset();
+            } else if (altDown()) {
+                WideAreaInterferenceClientState.elevate(scrollY * 2);
             } else {
-                WideAreaInterferenceClientState.zoom(-scrollY * 2.5);
+                var hit = raycastBlockHit(mouseX, mouseY);
+                WideAreaInterferenceClientState.zoomAt(-scrollY * 2.5, hit == null ? null : hit.getLocation());
             }
             return true;
         }
@@ -718,20 +940,30 @@ public final class WideAreaInterferenceScreen extends UiScreen {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
+        if (workFilter != null && workFilter.isFocused()) return super.keyPressed(event);
+        if (event.key() == InputConstants.KEY_ESCAPE) {
+            if (armedAction != null || pickingWorkPoint != null || dragMode != DragMode.NONE) {
+                armedAction = null; pickingWorkPoint = null; dragMode = DragMode.NONE; return true;
+            }
+            if (workOpen) { workOpen = false; return true; }
+        }
         if (WideAreaInterferenceClientState.isRtsView()) {
             switch (event.key()) {
                 case InputConstants.KEY_W, InputConstants.KEY_UP -> movementKeys[0] = true;
                 case InputConstants.KEY_S, InputConstants.KEY_DOWN -> movementKeys[1] = true;
                 case InputConstants.KEY_A, InputConstants.KEY_LEFT -> movementKeys[2] = true;
                 case InputConstants.KEY_D, InputConstants.KEY_RIGHT -> movementKeys[3] = true;
+                case InputConstants.KEY_HOME -> WideAreaInterferenceClientState.focus(minecraft.player.position());
+                case InputConstants.KEY_F -> visibleEntities().stream()
+                        .filter(entity -> selectedTargets.contains(entity.getUUID())).findFirst()
+                        .ifPresent(entity -> WideAreaInterferenceClientState.focus(entity.position()));
                 case InputConstants.KEY_Q -> WideAreaInterferenceClientState.rotate(-5.0f);
                 case InputConstants.KEY_E -> WideAreaInterferenceClientState.rotate(5.0f);
                 case InputConstants.KEY_1 -> activateAction(WideAreaInterference.Action.MOVE);
                 case InputConstants.KEY_2 -> activateAction(WideAreaInterference.Action.MISIDENTIFICATION);
                 case InputConstants.KEY_3 -> activateAction(WideAreaInterference.Action.STUPOR);
                 case InputConstants.KEY_4 -> activateAction(WideAreaInterference.Action.IMPRESSION);
-                case InputConstants.KEY_5 -> activateAction(WideAreaInterference.Action.GATHER);
-                case InputConstants.KEY_6 -> activateAction(WideAreaInterference.Action.FARM);
+                case InputConstants.KEY_5 -> activateAction(WideAreaInterference.Action.WORK);
                 default -> {
                     return super.keyPressed(event);
                 }
@@ -757,6 +989,13 @@ public final class WideAreaInterferenceScreen extends UiScreen {
 
     private void activateAction(WideAreaInterference.Action action) {
         if (!WideAreaInterferenceClientState.isRtsView() || selectedTargets.isEmpty()) return;
+        if (action == WideAreaInterference.Action.WORK) {
+            workOpen = !workOpen;
+            workError = "";
+            armedAction = null;
+            issue(WideAreaInterference.Action.QUERY_WORK, BlockPos.ZERO, BlockPos.ZERO, null);
+            return;
+        }
         if (action == WideAreaInterference.Action.STUPOR
                 || action == WideAreaInterference.Action.IMPRESSION) {
             issue(action, BlockPos.ZERO, BlockPos.ZERO, null);
@@ -768,6 +1007,10 @@ public final class WideAreaInterferenceScreen extends UiScreen {
 
     private void toggleViewMode() {
         armedAction = null;
+        pickingWorkPoint = null;
+        workOpen = false;
+        dragMode = DragMode.NONE;
+        if (workFilter != null) workFilter.setFocused(false);
         if (WideAreaInterferenceClientState.isTargetView()) WideAreaInterferenceClientState.showRts();
         else WideAreaInterferenceClientState.showTargetViews();
     }
@@ -792,14 +1035,16 @@ public final class WideAreaInterferenceScreen extends UiScreen {
 
     private void completeRegionCommand() {
         if (armedAction == null || regionFirst == null || regionLast == null) return;
-        var minX = Math.min(regionFirst.getX(), regionLast.getX());
-        var minZ = Math.min(regionFirst.getZ(), regionLast.getZ());
-        var maxX = Math.max(regionFirst.getX(), regionLast.getX());
-        var maxZ = Math.max(regionFirst.getZ(), regionLast.getZ());
-        var topY = Math.min(regionFirst.getY(), regionLast.getY()) + regionVerticalOffset;
-        var first = new BlockPos(minX, topY - regionHeight + 1, minZ);
-        var second = new BlockPos(maxX, topY, maxZ);
-        issue(armedAction, first, second, null);
+        try {
+            var region = WorkSelection.region(minecraft.level.dimension().identifier(), selectionBounds());
+            if (armedAction == WideAreaInterference.Action.WORK) {
+                workFirst = region.minimum();
+                workLast = region.maximum();
+                workError = "";
+            } else issue(armedAction, region.minimum(), region.maximum(), null);
+        } catch (IllegalArgumentException exception) {
+            workError = "invalid_region";
+        }
         armedAction = null;
         regionFirst = regionLast = null;
         regionHeight = 1;
@@ -837,8 +1082,8 @@ public final class WideAreaInterferenceScreen extends UiScreen {
         }
         if (!additiveSelection) selectedTargets.clear();
         for (var entity : visibleEntities()) {
-            var point = project(entity);
-            if (point != null && drag.contains(point.x, point.y)) selectOrEnroll(entity, false);
+            var bounds = selectionBounds();
+            if (bounds != null && entity.getBoundingBox().intersects(bounds)) selectOrEnroll(entity, false);
         }
     }
 
@@ -888,7 +1133,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
         var direction = rayDirection(mouseX, mouseY);
         var hit = minecraft.level.clip(new ClipContext(
                 origin,
-                origin.add(direction.scale(MAX_VIEW_RANGE)),
+                origin.add(direction.scale(WideAreaInterferenceClientState.pickDistance())),
                 ClipContext.Block.OUTLINE,
                 ClipContext.Fluid.NONE,
                 minecraft.player));
@@ -915,7 +1160,8 @@ public final class WideAreaInterferenceScreen extends UiScreen {
         var camera = minecraft.gameRenderer.mainCamera().position();
         return minecraft.level.getEntitiesOfClass(
                 LivingEntity.class,
-                new AABB(camera, camera).inflate(MAX_VIEW_RANGE),
+                new AABB(WideAreaInterferenceClientState.focusPosition(), WideAreaInterferenceClientState.focusPosition())
+                        .inflate(Math.max(128, minecraft.options.renderDistance().get() * 16.0)),
                 entity -> entity != minecraft.player && entity.isAlive() && !entity.isRemoved());
     }
 
@@ -964,6 +1210,10 @@ public final class WideAreaInterferenceScreen extends UiScreen {
 
     private void beginDrag(DragMode mode, double x, double y) {
         dragMode = mode;
+        if (regionFirst != null) {
+            var hit = raycastBlockHit(x, y);
+            selectionPlaneY = hit == null ? regionFirst.getY() + 1.0 : hit.getLocation().y;
+        }
         dragStartX = dragEndX = x;
         dragStartY = dragEndY = y;
     }
@@ -1037,6 +1287,12 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                 .filter(entry -> entry.targetUuid().equals(id)).findFirst().orElse(null);
     }
 
+    private boolean shiftDown() {
+        var window = minecraft.getWindow().handle();
+        return GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS
+                || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
+    }
+
     private boolean controlDown() {
         var window = minecraft.getWindow().handle();
         return GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS
@@ -1055,8 +1311,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                 WideAreaInterference.Action.MISIDENTIFICATION,
                 WideAreaInterference.Action.STUPOR,
                 WideAreaInterference.Action.IMPRESSION,
-                WideAreaInterference.Action.GATHER,
-                WideAreaInterference.Action.FARM
+                WideAreaInterference.Action.WORK
         };
     }
 
@@ -1176,6 +1431,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
 
     @Override
     public void removed() {
+        WorkOrderClientState.clear();
         WideAreaInterferenceClientState.close();
         super.removed();
     }
