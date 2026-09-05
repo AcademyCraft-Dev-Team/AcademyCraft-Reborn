@@ -7,6 +7,14 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class WingFlightSupportTest {
     @Test
+    void fanOnlyScalesBaseDamageExceptForUnchangedPlatinumWing() {
+        assertEquals(46.0f, WingFlightSupport.calculateFanDamage(2.0f, 1000.0f, 3.0f, false));
+        assertEquals(10.0f, WingFlightSupport.calculateFanDamage(2.0f, 1000.0f, 0.0f, false));
+        assertEquals(66.0f, WingFlightSupport.calculateFanDamage(2.0f, 1000.0f, 3.0f, true));
+        assertEquals(0.0f, WingFlightSupport.calculateFanDamage(2.0f, 1000.0f, 0.0f, true));
+    }
+
+    @Test
     void keepsReferenceCombatConstants() {
         assertEquals(32.0, WingFlightSupport.ATTACK_RANGE);
         assertEquals(0.35, WingFlightSupport.FAN_COS_THRESHOLD);

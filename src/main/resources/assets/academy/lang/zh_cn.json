@@ -2270,7 +2270,7 @@
   "skill.academy.disarm.proficiency.2000": "射程由 16 增至 20 格，可同时处理主手和副手；第二件物品另收 100% 基础成本。",
   "skill.academy.disarm.proficiency.3000": "被缴械物进入 5 秒空间缓存，期间目标无法拾回；缓存结束后落在目标原位置。",
   "skill.academy.disintegrate": "解离射线",
-  "skill.academy.disintegrate.desc": "发射造成目标最大生命值 20% 伤害的特殊粒机波形高速炮；击杀后最多散射三束，二段击杀还能散射一束且不再继续连锁。",
+  "skill.academy.disintegrate.desc": "发射造成目标最大生命值 5% 加 75 点基础伤害的特殊粒机波形高速炮；击杀后最多散射三束，二段击杀还能散射一束且不再继续连锁。",
   "skill.academy.disintegrate.proficiency.1000": "施放消耗CP -10%。",
   "skill.academy.disintegrate.proficiency.2000": "射程 +20%，首次击杀的散射上限由 3 提至 4。",
   "skill.academy.disintegrate.proficiency.3000": "未击杀的目标获得 5 秒“解离”：护甲有效值降低 25%，玩家为 12.5%；不增加连锁代数。",

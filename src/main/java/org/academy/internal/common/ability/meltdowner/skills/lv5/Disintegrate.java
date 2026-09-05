@@ -23,6 +23,7 @@ import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.MaxHealthDamage;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -118,13 +119,14 @@ public class Disintegrate extends Skill {
     }
 
     public static final class Server {
+        public static final MaxHealthDamage DAMAGE = MaxHealthDamage.rebalance(0.0f, 0.20f);
         private static final Map<UUID, PendingStage> PENDING_STAGES = new HashMap<>();
 
         private Server() {
         }
 
         public static float calculateDamage(float maxHealth, float playerMultiplier) {
-            return Math.max(0.0f, maxHealth) * 0.20f * Math.max(0.0f, playerMultiplier);
+            return DAMAGE.calculate(maxHealth, playerMultiplier);
         }
 
         @SubscribePacket
@@ -215,8 +217,8 @@ public class Disintegrate extends Skill {
             beam.configure(
                     player,
                     Skills.DISINTEGRATE.get(),
-                    0.0f,
-                    0.20f,
+                    DAMAGE.baseDamage(),
+                    DAMAGE.maxHealthRatio(),
                     multiplier,
                     Skills.RADIATION_INTENSIFY.get().isEnabled(player),
                     destroysBlocks

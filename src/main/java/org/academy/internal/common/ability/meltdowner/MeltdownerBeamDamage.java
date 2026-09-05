@@ -36,7 +36,7 @@ public final class MeltdownerBeamDamage {
                 || !Float.isFinite(markedMultiplier)) return 0.0f;
         var ordinary = Math.max(0.0f, baseDamage) * (marked ? Math.max(1.0f, markedMultiplier) : 1.0f);
         var maximumHealth = Math.max(0.0f, targetMaxHealth) * Math.max(0.0f, maxHealthRatio);
-        return (ordinary + maximumHealth) * Math.max(0.0f, playerMultiplier);
+        return ordinary * Math.max(0.0f, playerMultiplier) + maximumHealth;
     }
 
     public static float amplify(float damage, boolean marked) {

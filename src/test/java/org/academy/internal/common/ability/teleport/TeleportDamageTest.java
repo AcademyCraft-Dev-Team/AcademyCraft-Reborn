@@ -6,6 +6,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TeleportDamageTest {
     @Test
+    void fleshRippingDoesNotMultiplyPercentageByAbilityOrPlayerStrength() {
+        assertEquals(77.0f, TeleportDamage.fleshRipping(12.0f, 100.0f, 2.0f, 3.0f, 1.0f));
+        assertEquals(96.25f, TeleportDamage.fleshRipping(12.0f, 100.0f, 2.0f, 3.0f, 1.25f));
+        assertEquals(5.0f, TeleportDamage.fleshRipping(12.0f, 100.0f, 2.0f, 0.0f, 1.0f));
+    }
+
+    @Test
     void threateningDamageUsesWeaponPlayerAndSpaceFoldingMultipliers() {
         assertEquals(7.0f, TeleportDamage.threatening(4.0f, 3.0f, 1.0f, false));
         assertEquals(17.5f, TeleportDamage.threatening(4.0f, 3.0f, 2.0f, true));

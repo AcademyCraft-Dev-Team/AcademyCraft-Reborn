@@ -33,6 +33,7 @@ import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.MaxHealthDamage;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.ViewTargetScanner;
@@ -268,10 +269,11 @@ public class BloodflowReverse extends Skill {
     }
 
     public static final class Server {
+        private static final MaxHealthDamage DAMAGE = MaxHealthDamage.rebalance(0.0f, 1.0f);
         private static final String EFFECT_KEY = "bloodflow_reverse_level";
 
         public static float calculateDamage(float maxHealth) {
-            return Math.max(0.0f, maxHealth);
+            return DAMAGE.calculate(maxHealth);
         }
 
         @SubscribePacket

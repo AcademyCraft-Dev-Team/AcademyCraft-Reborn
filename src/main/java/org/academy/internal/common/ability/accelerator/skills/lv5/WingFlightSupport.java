@@ -185,6 +185,14 @@ final class WingFlightSupport {
         }
     }
 
+    static float calculateFanDamage(float baseDamage, float trueMaxHealth, float playerMultiplier,
+                                    boolean platinumWing) {
+        if (platinumWing) {
+            return (baseDamage + trueMaxHealth * MAX_HEALTH_DAMAGE_RATIO + FIXED_DAMAGE) * playerMultiplier;
+        }
+        return (baseDamage + FIXED_DAMAGE) * playerMultiplier + trueMaxHealth * MAX_HEALTH_DAMAGE_RATIO;
+    }
+
     static int fanAttack(ServerPlayer player, Skill skill) {
         var level = player.level();
         var origin = player.getEyePosition();
@@ -227,8 +235,8 @@ final class WingFlightSupport {
                 if (!Float.isFinite(trueMaxHealth) || trueMaxHealth <= 0.0f) {
                     trueMaxHealth = target.getMaxHealth();
                 }
-                var damage = (baseDamage + trueMaxHealth * MAX_HEALTH_DAMAGE_RATIO + FIXED_DAMAGE)
-                        * multiplier;
+                var damage = calculateFanDamage(baseDamage, trueMaxHealth, multiplier,
+                        skill == Skills.PLATINUM_WING.get());
                 if (!Float.isFinite(damage) || damage <= 0) continue;
                 new CTAEntityActuallyHurt(target).actuallyHurt(source, damage, true);
                 if (skill == Skills.BLACK_WING.get() && skill.hasProficiencyMilestone(player, 3)) {

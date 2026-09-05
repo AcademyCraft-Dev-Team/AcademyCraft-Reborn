@@ -34,7 +34,7 @@
 | `wind_corridor` 定向风道 | 现行 | L4 / 60k / 40；重定向 20 | 生成半径 2.5、长度 24、持续 160 tick 的运输风道；高熟练度为长度 30、持续 220，可半价重定向旧风道。 | 见源码（可配置） | `academy:tailwind_field` | `WindCorridor` |
 | `pressure_lock` 压力禁锢 | 现行 | L4 / 60k / 每次锁定 40 | 锁定 18 格视线目标并压制位移，持续 200 tick；高熟练度 240 tick。 | 见源码（可配置） | `academy:vortex_pull` | `PressureLock` |
 | `flight` 飞行 | 现行 | L5 / 100k / 维持 50；加速每 20 tick 10 | 获得服务端控制飞行；普通速度上限 0.7，加速上限 1.2。 | `Alt+F↑` | `academy:wind_corridor` | `Flight` |
-| `vacuum_domain` 真空领域 | 现行 | L5 / 100k / 50+20%最大CP | 16 格内创建半径 12 的真空区，每 10 tick 造成 `max(1,5%Hmax)AD` 并清空氧气；领域持续到再次施放取消。 | `Y↑` | `academy:atmospheric_dominion` | `VacuumDomain` |
+| `vacuum_domain` 真空领域 | 现行 | L5 / 100k / 50+20%最大CP | 16 格内创建半径 12 的真空区，每 10 tick 造成 `5%Hmax`（保留该技能的独立服务端倍率） 并清空氧气；领域持续到再次施放取消。 | `Y↑` | `academy:atmospheric_dominion` | `VacuumDomain` |
 | `atmospheric_dominion` 大气支配 | 现行 | L5 / 100k / 100 | 自身中心半径 22、持续 400 tick：友军速度 II、免坠落并补氧；敌人减速，投射物受风向影响。高熟练度为半径 26、480 tick。 | 见源码（可配置） | `academy:atmosphere_blast_gun`<br>`academy:vortex_pull` | `AtmosphericDominion` |
 
 ## Accelerator 矢量操纵
@@ -49,8 +49,8 @@
 | `vector_reflection` 矢量反射 | 现行 | L4 / 30k / 维持基础 40；过滤模式为 40/60/80，名单每项 +5；另按来伤动态扣除（满熟练时低于 `1%最大CP` 的伤害无消耗） | 反射可处理的来伤并把投射物速度反向 ×1.2；每点处理伤害消耗 CP 倍率为 2/1/0.5/0.5（熟练度档位）。 | `R↓` | `academy:vector_deviation` | `VectorReflection` |
 | `reflection_filter` 过滤网 | 现行 | L4 / 60k / 自身 0；会改变矢量反射维持占用 | 配置矢量反射的全反射/正面过滤/中性过滤模式，以及效果白名单和黑名单（合计最多 256 项）。 | 见源码（可配置） | `academy:vector_reflection` | `ReflectionFilter` |
 | `storm_wing` 风暴之翼 | 现行 | L4 / 60k / 维持 40；每 20 tick 维持费 10 | 维持矢量飞行、悬停和高速推进。 | `B↓` | `academy:vector_reflection` | `StormWing` |
-| `bloodflow_reverse` 血流逆流 | 现行 | L5 / 100k / 100或最大CP的20%取高 | 近距离造成 `Hmax`，叠加缓慢/虚弱/挖掘疲劳（最高效果等级 V），持续 200 tick。 | `Alt+Shift+R↓` | `academy:vector_reflection` | `BloodflowReverse` |
-| `black_wing` 黑翼 | 现行 | L5 / 100k / 维持 60；每 20 tick 20；每次扇击 20 | 双翼矢量飞行；32 格扇击造成 `(基础攻击+1%Htmax+10)D` 真实/复合伤害。 | 见源码（可配置） | `academy:storm_wing` | `BlackWing` |
+| `bloodflow_reverse` 血流逆流 | 现行 | L5 / 100k / 100或最大CP的20%取高 | 近距离造成 `5%Hmax+200`，叠加缓慢/虚弱/挖掘疲劳（最高效果等级 V），持续 200 tick。 | `Alt+Shift+R↓` | `academy:vector_reflection` | `BloodflowReverse` |
+| `black_wing` 黑翼 | 现行 | L5 / 100k / 维持 60；每 20 tick 20；每次扇击 20 | 双翼矢量飞行；32 格扇击造成 `(基础攻击+10)D+1%Htmax` 真实/复合伤害。 | 见源码（可配置） | `academy:storm_wing` | `BlackWing` |
 | `white_wing` 白翼 | 现行 | L5 / 100k / 维持 80；每 20 tick 40；每次扇击 20 | 保留黑翼飞行与 32 格真实生命扇击。 | 见源码（可配置） | `academy:black_wing` | `WhiteWing` |
 | `platinum_wing` 白金翼 | 现行 | L5 / 100k / 维持 160；每 20 tick 80；每次扇击 20 | 保留扇击；潜行攻击可处决 128 格非玩家目标：通常 `(2Htmax+1000)D`，高熟练度对 Boss 改为 `15%Htmax×D`。 | 见源码（可配置） | `academy:white_wing` | `PlatinumWing` |
 | `crossing_the_abyss` 跨越深渊 | 现行 | L5 / 100k / 维持 100 | 压低目标真实生命并锁定治疗上限；目标连续 3 次从致死伤害中存活后强制终结，并强化矢量冲击。 | 见源码（可配置） | `academy:white_wing` | `CrossingTheAbyss` |
@@ -74,8 +74,8 @@
 | `thunder_lance` 雷击之枪 | 现行 | L2 / 10k / 20 | 向 32 格路径发射四道闪电，路径半径 2，伤害 `16AD`。 | `Ctrl+T↓ / Alt+鼠标右键↑` | `academy:arc_generate` | `ThunderLance` |
 | `lightning_storm` 闪电风暴 | 现行 | L5 / 60k / 80 | 50 格选点，在半径 8 内召唤 21 次雷击；每次技能伤害 `2%Hmax+8AD`。 | `Alt+Shift+L↓` | `academy:ball_lightning` | `LightningStorm` |
 | `railgun` 电磁炮 | 现行 | L4 / 60k / 100 + 1 个弹药 | 蓄力并消耗弹药；基础伤害 `150AD×弹药倍率`。硬币/铁锭/铁块/铁砧倍率为 0.8/1/1.5/2，射程与宽度也随弹药增加。 | `X↓` | `academy:thunder_lance` | `Railgun` |
-| `ball_lightning` 球状闪电 | 现行 | L5 / 100k / 80 | 最长存在 2000 tick、索敌半径 64；接近目标后在半径 5 造成 `(0.3Hmax+10)AD`。 | `Y↓` | `academy:lightning_nova` | `BallLightning` |
-| `thunderclap` 雷鸣 | 现行 | L5 / 100k / 100 | 64 格选点、半径 5；先造成 1 点，再造成 `20%Hmax+20AD`。 | `Alt+Shift+Y↓` | `academy:ball_lightning` | `Thunderclap` |
+| `ball_lightning` 球状闪电 | 现行 | L5 / 100k / 80 | 最长存在 2000 tick、索敌半径 64；接近目标后在半径 5 造成 `5%Hmax+135AD`。 | `Y↓` | `academy:lightning_nova` | `BallLightning` |
+| `thunderclap` 雷鸣 | 现行 | L5 / 100k / 100 | 64 格选点、半径 5；先造成 1 点，再造成 `5%Hmax+95AD`。 | `Alt+Shift+Y↓` | `academy:ball_lightning` | `Thunderclap` |
 
 ## Meltdowner 原子崩坏
 
@@ -89,8 +89,8 @@
 | `cloudroom` 粒子云室 | 现行 | L3 / 30k / 维持 30 | 显示 16 格内生物轨迹；每实体每 5 tick 最多 6 条，轨迹寿命 30 tick。 | `Alt+U↓` | `academy:light_shield` | `Cloudroom` |
 | `particle_wave_cannon` 波形粒子炮 | 现行 | L4 / 60k / 启动 10；维持每 2 tick 10 | 蓄力 25 tick 后维持 85 格宽射束；每 10 tick `40MAD+1%Hmax`，破坏半径 0.6、采掘等级 4。 | `C↓ / C↑` | `academy:scatter_bomb` | `ParticleWaveCannon` |
 | `jet_strike` 突击喷射 | 现行 | L4 / 60k / 20 | 突进 8 格，在落点半径 3.25 造成 `10AD`。 | `R↓` | `academy:light_shield` | `JetStrike` |
-| `disintegrate` 解离射线 | 现行 | L5 / 100k / 100或最大CP的20%取高 | 30 格射线造成 `20%Hmax×D` 并按服务器权限破坏路径方块；击杀后最多散射 3 束，二段击杀可再散射 1 束且不继续连锁。 | `Alt+Shift+K↓` | `academy:particle_wave_cannon` | `Disintegrate` |
-| `auto_cruise_beam_cannon` 自动巡航光束炮 | 现行 | L5 / 100k / 维持 50；每发 10 | 每 10 tick 扫描 16 格敌人，最快每 2 tick 发射一束 `(10M+1%Hmax)D` 延迟射线。 | `Y↑` | `academy:scatter_bomb` | `AutoCruiseBeamCannon` |
+| `disintegrate` 解离射线 | 现行 | L5 / 100k / 100或最大CP的20%取高 | 30 格射线造成 `5%Hmax+75D`（辐射标记仍强化基础段） 并按服务器权限破坏路径方块；击杀后最多散射 3 束，二段击杀可再散射 1 束且不继续连锁。 | `Alt+Shift+K↓` | `academy:particle_wave_cannon` | `Disintegrate` |
+| `auto_cruise_beam_cannon` 自动巡航光束炮 | 现行 | L5 / 100k / 维持 50；每发 10 | 每 10 tick 扫描 16 格敌人，最快每 2 tick 发射一束 `10MD+1%Hmax` 延迟射线。 | `Y↑` | `academy:scatter_bomb` | `AutoCruiseBeamCannon` |
 
 ## Teleport 空间移动
 
@@ -102,7 +102,7 @@
 | `spatial_synergy` 空间协同 | 现行 | L2 / 10k / 维持 20；每名被携带玩家 10 | 自我/穿透/定位传送时携带半径 4 内同队玩家。 | `X↓` | `academy:self_teleport` | `SpatialSynergy` |
 | `piercing_teleportation` 穿透传送 | 现行 | L2 / 10k / 15 | 默认显示 40 格内第一处阻挡后的安全落点；滚轮从显示位置切换为 64 格内自由调距，可选择未穿墙落点。 | `Alt+R↓` + 滚轮 / `Alt+R↑` | `academy:self_teleport` | `PiercingTeleportation` |
 | `disarm` 缴械传送 | 现行 | L2 / 10k / 单手 20；双手 40 | 16 格内缴械目标并造成 1 点技能伤害；高熟练度可同时取走双手物品。 | `Alt+D↓` | `academy:self_teleport` | `Disarm` |
-| `flesh_ripping` 肌体撕裂 | 现行 | L3 / 30k / 20 | 锁定 64 格内目标，造成 `(12A+5%Hmax)D`，再受空间折叠倍率影响。 | `Alt+鼠标右键↓ / Alt+鼠标右键↑` | `academy:piercing_teleportation` | `FleshRipping` |
+| `flesh_ripping` 肌体撕裂 | 现行 | L3 / 30k / 20 | 锁定 64 格内目标，造成 `12AD+5%Hmax`，再受空间折叠倍率影响。 | `Alt+鼠标右键↓ / Alt+鼠标右键↑` | `academy:piercing_teleportation` | `FleshRipping` |
 | `shackle` 禁锢传送 | 现行 | L3 / 30k / 30 | 禁锢 32 格内目标 160 tick 并造成 3 点技能伤害；高熟练度非玩家目标持续 200 tick。 | `Alt+Shift+S↓` | `academy:self_teleport` | `Shackle` |
 | `location_teleport` 位置传送 | 现行 | L3 / 30k / 去程 40；返程 20 | 保存最多 32 个命名位置并跨维度传送；可返回上次起点。 | `L↓` | `academy:piercing_teleportation` | `LocationTeleport` |
 | `quick_location_teleport` 快速位置传送 | 现行 | L4 / 60k / 30 | 将准星 32 格内实体或自身送往当前已保存位置。 | `C↓` | `academy:location_teleport` | `QuickLocationTeleport` |
