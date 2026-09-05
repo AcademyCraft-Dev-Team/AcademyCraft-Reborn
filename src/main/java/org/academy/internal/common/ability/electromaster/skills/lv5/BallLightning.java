@@ -30,6 +30,7 @@ import org.academy.api.common.arc.path.LinePath;
 import org.academy.api.common.arc.property.AttributeCurve;
 import org.academy.api.common.arc.property.Knot;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.common.damage.MaxHealthDamage;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -153,12 +154,12 @@ public class BallLightning extends Skill {
     }
 
     public static final class Server {
+        private static final MaxHealthDamage IMPACT_DAMAGE = MaxHealthDamage.rebalance(10.0f, 0.30f);
         private static final Map<ServerPlayer, Context> ACTIVE = new WeakHashMap<>();
 
         public static float calculateImpactDamage(float maxHealth, float abilityPower, float playerMultiplier) {
-            return (Math.max(0.0f, maxHealth) * 0.3f + 10.0f)
-                    * Math.max(0.0f, abilityPower)
-                    * Math.max(0.0f, playerMultiplier);
+            return IMPACT_DAMAGE.calculate(maxHealth,
+                    Math.max(0.0f, abilityPower) * Math.max(0.0f, playerMultiplier));
         }
 
         @SubscribePacket

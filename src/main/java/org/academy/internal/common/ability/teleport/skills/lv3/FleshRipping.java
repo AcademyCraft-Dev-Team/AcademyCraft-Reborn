@@ -233,8 +233,9 @@ public final class FleshRipping extends Skill {
                         BASE_DAMAGE,
                         target.getMaxHealth(),
                         ctx.system().getPlayerAbilityPowerMultiplier(player.getUUID()),
+                        ctx.system().getPlayerDamageMultiplier(player.getUUID()),
                         SpaceFoldingTheorem.damageMultiplier(player)
-                ) * ctx.system().getPlayerDamageMultiplier(player.getUUID());
+                );
                 player.level().playSound(null, target.blockPosition(), SoundEvents.FLESH_RIPPING.get(),
                         SoundSource.PLAYERS, 1.0f, 1.0f);
                 var wasAlive = target.isAlive();

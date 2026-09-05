@@ -2270,7 +2270,7 @@
   "skill.academy.disarm.proficiency.2000": "Range increases from 16 to 20 blocks and both hands may be processed; the second item costs another 100% base cost.",
   "skill.academy.disarm.proficiency.3000": "Disarmed items enter a 5-second spatial cache and cannot be reclaimed; afterward they drop at the target's original position and cannot be kept by the caster.",
   "skill.academy.disintegrate": "Disintegrate",
-  "skill.academy.disintegrate.desc": "Fire a special particle beam for 20% of maximum health. A kill scatters up to three beams; secondary kills scatter once more without further chaining.",
+  "skill.academy.disintegrate.desc": "Fire a special particle beam for 5% of maximum health plus 75 base damage. A kill scatters up to three beams; secondary kills scatter once more without further chaining.",
   "skill.academy.disintegrate.proficiency.1000": "Cast cost -10%.",
   "skill.academy.disintegrate.proficiency.2000": "Range +20%, and first-kill scatter limit increases from 3 to 4.",
   "skill.academy.disintegrate.proficiency.3000": "Surviving targets are Disintegrated for 5 seconds, reducing effective armor by 25%, or 12.5% for players; chain depth is unchanged.",

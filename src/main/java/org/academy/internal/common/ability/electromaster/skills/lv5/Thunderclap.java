@@ -29,6 +29,7 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.common.damage.MaxHealthDamage;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -54,7 +55,7 @@ import java.util.List;
 public class Thunderclap extends Skill {
     static final double RANGE = 64.0;
     static final double RADIUS = 5.0;
-    static final float HEALTH_DAMAGE_RATIO = 0.20f;
+    private static final MaxHealthDamage DAMAGE = MaxHealthDamage.rebalance(20.0f, 0.20f);
 
     public Thunderclap() {
         super(Builder
@@ -86,8 +87,8 @@ public class Thunderclap extends Skill {
     static float calculateDamage(float maxHealth, float abilityPower, float damageMultiplier) {
         if (!Float.isFinite(maxHealth) || !Float.isFinite(abilityPower)
                 || !Float.isFinite(damageMultiplier)) return 0;
-        return Math.max(0, maxHealth) * HEALTH_DAMAGE_RATIO
-                + 20.0f * Math.max(0, abilityPower) * Math.max(0, damageMultiplier);
+        return Math.max(0, maxHealth) * DAMAGE.maxHealthRatio()
+                + DAMAGE.baseDamage() * Math.max(0, abilityPower) * Math.max(0, damageMultiplier);
     }
 
     @Override

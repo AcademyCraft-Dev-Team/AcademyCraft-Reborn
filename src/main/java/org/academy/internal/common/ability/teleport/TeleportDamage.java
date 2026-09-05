@@ -21,11 +21,18 @@ public final class TeleportDamage {
 
     public static float fleshRipping(float baseDamage, float maxHealth, float abilityPower,
                                      float spaceFoldingMultiplier) {
+        return fleshRipping(baseDamage, maxHealth, abilityPower, 1.0f, spaceFoldingMultiplier);
+    }
+
+    public static float fleshRipping(float baseDamage, float maxHealth, float abilityPower,
+                                     float playerMultiplier, float spaceFoldingMultiplier) {
         if (!Float.isFinite(baseDamage) || !Float.isFinite(maxHealth)
-                || !Float.isFinite(abilityPower) || !Float.isFinite(spaceFoldingMultiplier)) {
+                || !Float.isFinite(abilityPower) || !Float.isFinite(playerMultiplier)
+                || !Float.isFinite(spaceFoldingMultiplier)) {
             return 0.0f;
         }
         var damage = Math.max(0.0f, baseDamage) * Math.max(0.0f, abilityPower)
+                * Math.max(0.0f, playerMultiplier)
                 + Math.max(0.0f, maxHealth) * 0.05f;
         damage *= Math.max(0.0f, spaceFoldingMultiplier);
         return Float.isFinite(damage) ? damage : 0.0f;

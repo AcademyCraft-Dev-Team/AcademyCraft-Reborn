@@ -228,9 +228,6 @@ public final class VacuumDomain extends Skill {
                     target -> canAffectTarget(owner, target)
                             && isInsideDomain(center, target.getBoundingBox().getCenter(), radius));
             var cap = ProficiencyPolicy.server(owner).maxBonusEntitiesPerTick();
-            var system = AbilitySystemServer.getSystem(owner);
-            var power = system.getPlayerAbilityPowerMultiplier(owner.getUUID())
-                    * system.getPlayerDamageMultiplier(owner.getUUID());
             var damageSource = SkillDamageSource.of(
                     owner, skill, DamageTypes.VACUUM_SUFFOCATION);
             var drain = milestone >= 2
@@ -246,8 +243,7 @@ public final class VacuumDomain extends Skill {
                 if (!protectedByBubble && shouldDealDamage(owner.tickCount, air)) {
                     target.invulnerableTime = 0;
                     var damage = baseDamage(target.getMaxHealth())
-                            * AeromanipConfig.damageMultiplier(owner, SkillNames.VACUUM_DOMAIN)
-                            * power;
+                            * AeromanipConfig.damageMultiplier(owner, SkillNames.VACUUM_DOMAIN);
                     target.hurtServer(level, damageSource, damage);
                 }
             }
