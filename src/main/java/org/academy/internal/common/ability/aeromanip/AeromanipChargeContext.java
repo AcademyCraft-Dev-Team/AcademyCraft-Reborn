@@ -20,6 +20,7 @@ public abstract class AeromanipChargeContext extends ServerContext {
     private final AeromanipResourceManager.UsageLease usageLease;
     private final ChargeTickListener chargeTickListener = new ChargeTickListener();
     private AeromanipChargeTier lastTier = AeromanipChargeTier.INSTANT;
+    private final long gesture;
     private boolean ended;
     private boolean released;
 
@@ -30,11 +31,13 @@ public abstract class AeromanipChargeContext extends ServerContext {
     protected AeromanipChargeContext(ServerPlayer player, Skill skill, long startGameTime) {
         super(player);
         this.skill = skill;
+        gesture = AeromanipChargeSync.takeGesture(player, skill);
         initialLevel = player.level();
         this.startGameTime = Math.min(startGameTime, initialLevel.getGameTime());
         usageLease = AbilitySystemServer.getSystem(player)
                 .getAeromanipResourceManager()
                 .beginUse(player);
+        AeromanipChargeSync.send(player, gesture, chargeTier(), false);
     }
 
     public final long chargeTicks() {
@@ -42,14 +45,20 @@ public abstract class AeromanipChargeContext extends ServerContext {
     }
 
     public final AeromanipChargeTier chargeTier() {
-        return AeromanipChargeTier.fromTicks(chargeTicks());
+        var current = AeromanipChargeTier.fromTicks(chargeTicks());
+        return current.ordinal() < lastTier.ordinal() ? lastTier : current;
     }
 
     public final void release() {
         if (ended) return;
+        if (player.hasDisconnected() || !player.isAlive() || player.level() != initialLevel || !skill.isEnabled(player)) {
+            cancel();
+            return;
+        }
         ended = true;
         released = true;
         try {
+            AeromanipChargeSync.send(player, gesture, chargeTier(), true);
             onReleased(chargeTier(), chargeTicks());
         } finally {
             unregister();
@@ -59,6 +68,7 @@ public abstract class AeromanipChargeContext extends ServerContext {
     public final void cancel() {
         if (ended) return;
         ended = true;
+        if (!player.hasDisconnected()) AeromanipChargeSync.cancel(player, gesture);
         unregister();
     }
 
@@ -71,6 +81,7 @@ public abstract class AeromanipChargeContext extends ServerContext {
         var tier = chargeTier();
         if (tier != lastTier) {
             lastTier = tier;
+            AeromanipChargeSync.send(player, gesture, tier, false);
             onTierReached(tier);
         }
     }

@@ -40,6 +40,7 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AeromanipChargeContext;
 import org.academy.internal.common.ability.aeromanip.AeromanipChargeTier;
+import org.academy.internal.common.ability.aeromanip.AeromanipChargeSync;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldSyncPacket;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
@@ -124,6 +125,8 @@ public final class AirflowJet extends Skill {
     @Override
     public void initClient() {
         AeromanipFieldSyncPacket.initClient();
+        MisakaNetworkClient.NETWORK_MANAGER.register(org.academy.internal.common.ability.aeromanip.AeromanipChargeSync.Client.class);
+        MisakaNetworkClient.NETWORK_MANAGER.register(org.academy.internal.common.ability.aeromanip.AirMobilitySyncPacket.Client.class);
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -164,6 +167,7 @@ public final class AirflowJet extends Skill {
     @Override
     public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
+        MisakaNetworkServer.NETWORK_MANAGER.register(org.academy.internal.common.ability.aeromanip.AeromanipChargeSync.class);
     }
 
     public static final class Client {
@@ -219,6 +223,7 @@ public final class AirflowJet extends Skill {
         private static final Map<ServerPlayer, PropulsionContext> PROPULSION = new WeakHashMap<>();
         private static final Map<ServerPlayer, BufferedChargeInput> BUFFERED_INPUTS =
                 new WeakHashMap<>();
+        private static final Map<ServerPlayer, Long> BUFFERED_GESTURES = new WeakHashMap<>();
         private static final Map<ServerPlayer, Double> MACE_MOMENTUM = new WeakHashMap<>();
 
         private Server() {
@@ -230,8 +235,14 @@ public final class AirflowJet extends Skill {
             var skill = Skills.AIRFLOW_JET.get();
             if (CHARGES.containsKey(player) || !skill.isEnabled(player)) return;
             if (PROPULSION.containsKey(player)) {
-                BUFFERED_INPUTS.computeIfAbsent(player,
-                        _ -> BufferedChargeInput.pressed(player.level().getGameTime()));
+                var gesture = AeromanipChargeSync.takeGesture(player, skill);
+                if (BUFFERED_INPUTS.containsKey(player)) {
+                    AeromanipChargeSync.cancel(player, gesture);
+                    return;
+                }
+                BUFFERED_INPUTS.put(player, BufferedChargeInput.pressed(player.level().getGameTime()));
+                BUFFERED_GESTURES.put(player, gesture);
+                AeromanipChargeSync.send(player, gesture, AeromanipChargeTier.INSTANT, false);
                 return;
             }
             beginCharge(player, player.level().getGameTime());
@@ -343,11 +354,15 @@ public final class AirflowJet extends Skill {
 
         private static void consumeBufferedInput(ServerPlayer player, AirflowJet skill) {
             var input = BUFFERED_INPUTS.remove(player);
+            var gesture = BUFFERED_GESTURES.getOrDefault(player, 0L);
+            BUFFERED_GESTURES.remove(player);
             if (input == null || player.hasDisconnected() || !player.isAlive()
                     || !skill.isEnabled(player)) return;
             if (input.isReleased()) {
+                AeromanipChargeSync.send(player, gesture, input.releaseTier(), true);
                 castReleasedTier(player, skill, input.releaseTier());
             } else {
+                AeromanipChargeSync.bind(player, skill, gesture);
                 beginCharge(player, input.startGameTime());
             }
         }
@@ -429,6 +444,7 @@ public final class AirflowJet extends Skill {
         }
 
         private static void castFull(ServerPlayer player, AirflowJet skill) {
+            org.academy.api.common.ability.AirMobility.prioritizePropulsion(player, 20);
             var level = player.level();
             var center = player.position().add(0.0, player.getBbHeight() * 0.5, 0.0);
             var range = FULL_RADIUS * AeromanipConfig.rangeMultiplier(player, SkillNames.AIRFLOW_JET);
@@ -525,6 +541,8 @@ public final class AirflowJet extends Skill {
                     consumeBufferedInput(player, skill);
                 } else {
                     BUFFERED_INPUTS.remove(player);
+                    var gesture = BUFFERED_GESTURES.remove(player);
+                    if (gesture != null && !player.hasDisconnected()) AeromanipChargeSync.cancel(player, gesture);
                 }
             }
         }
@@ -565,6 +583,11 @@ public final class AirflowJet extends Skill {
         @SubscribeEvent
         public static void onPlayerTick(PlayerTickEvent.Post event) {
             if (!(event.getEntity() instanceof ServerPlayer player)) return;
+            var input = Server.BUFFERED_INPUTS.get(player);
+            if (input != null && !input.isReleased()) {
+                AeromanipChargeSync.send(player, Server.BUFFERED_GESTURES.getOrDefault(player, 0L),
+                        AeromanipChargeTier.fromTicks(AeromanipChargeContext.elapsedTicks(input.startGameTime(), player.level().getGameTime())), false);
+            }
             if (!player.isAlive() || player.hasDisconnected() || player.onGround() || player.isInWater()) {
                 Server.clearMaceMomentum(player);
             }

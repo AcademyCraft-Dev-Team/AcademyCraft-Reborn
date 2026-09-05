@@ -29,6 +29,8 @@ import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.accelerator.skills.lv5.*;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldSyncPacket;
+import org.academy.internal.common.ability.aeromanip.AeromanipChargeSync;
+import org.academy.internal.common.ability.aeromanip.AirMobilitySyncPacket;
 import org.academy.internal.common.ability.aeromanip.FlowSensePacket;
 import org.academy.internal.common.ability.aeromanip.skills.lv1.AirflowJet;
 import org.academy.internal.common.ability.aeromanip.skills.lv1.LaminarBuffer;
@@ -229,6 +231,15 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, FlowSense.TogglePacket>>
             FLOW_SENSE_TOGGLE = PACKET_TYPES.register("flow_sense_toggle",
             () -> new PacketType<>(FlowSense.TogglePacket.class, FlowSense.TogglePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AeromanipChargeSync.Request>>
+            AEROMANIP_CHARGE_REQUEST = PACKET_TYPES.register("aeromanip_charge_request",
+            () -> new PacketType<>(AeromanipChargeSync.Request.class, AeromanipChargeSync.Request.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AeromanipChargeSync.State>>
+            AEROMANIP_CHARGE_STATE = PACKET_TYPES.register("aeromanip_charge_state",
+            () -> new PacketType<>(AeromanipChargeSync.State.class, AeromanipChargeSync.State.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AirMobilitySyncPacket>>
+            AIR_MOBILITY_SYNC = PACKET_TYPES.register("air_mobility_sync",
+            () -> new PacketType<>(AirMobilitySyncPacket.class, AirMobilitySyncPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AeromanipFieldSyncPacket>>
             AEROMANIP_FIELD_SYNC = PACKET_TYPES.register("aeromanip_field_sync",
             () -> new PacketType<>(AeromanipFieldSyncPacket.class, AeromanipFieldSyncPacket.CODEC));

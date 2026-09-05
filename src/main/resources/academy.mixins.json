@@ -25,6 +25,7 @@
     "common.MixinEntity",
     "common.MixinEntityGetter",
     "common.MixinFoodData",
+    "common.MixinFlowingFluidWaterSuppression",
     "common.MixinGhast",
     "common.MixinLivingEntity",
     "common.MixinLevelAccessorTemporalScaling",
