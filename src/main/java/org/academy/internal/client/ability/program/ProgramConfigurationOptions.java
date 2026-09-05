@@ -6,6 +6,8 @@ import net.minecraft.network.chat.Component;
 import org.academy.AcademyCraft;
 import org.academy.api.client.ability.program.ProgramNodeEditorOptions;
 import org.academy.api.common.ability.program.ProgramNodeEditorMetadata;
+import org.academy.api.common.ability.program.ProgramValueType;
+import org.academy.api.common.ability.program.ProgramValueTypes;
 import org.academy.internal.common.ability.aeromanip.program.AeromanipProgramNodeIds;
 import org.academy.internal.common.ability.electromaster.program.ElectromasterProgramNodeIds;
 import org.academy.internal.common.ability.meltdowner.program.MeltdownerProgramNodeIds;
@@ -43,6 +45,48 @@ public final class ProgramConfigurationOptions {
     );
 
     private ProgramConfigurationOptions() {
+    }
+
+    /** Chooses defaults whose actual schema best matches the dragged port. */
+    public static JsonElement defaultsForConnection(
+            ProgramEditorNodeCatalog catalog, ProgramEditorNodeCatalog.Entry entry,
+            ProgramValueType anchorType, boolean anchorInput
+    ) {
+        var best = entry.defaultConfiguration();
+        var bestScore = connectionScore(catalog, entry, best, anchorType, anchorInput);
+        if (!best.isJsonObject()) return bestScore < 2 ? best : null;
+        for (var field : best.getAsJsonObject().keySet().stream().toList()) {
+            for (var option : options(entry, field, best.getAsJsonObject().get(field))) {
+                var candidate = best.getAsJsonObject().deepCopy();
+                candidate.add(field, option.value());
+                if (entry.id().equals(CommonProgramNodeIds.SCALAR_CONSTANT)
+                        && field.equals("type") && option.value().getAsString().equals("boolean")) {
+                    candidate.addProperty("value", "false");
+                }
+                var score = connectionScore(catalog, entry, candidate, anchorType, anchorInput);
+                if (score < bestScore) {
+                    best = candidate;
+                    bestScore = score;
+                }
+            }
+        }
+        return bestScore < 2 ? best : null;
+    }
+
+    public static int connectionScore(
+            ProgramEditorNodeCatalog catalog, ProgramEditorNodeCatalog.Entry entry,
+            JsonElement configuration,
+            ProgramValueType anchorType, boolean anchorInput
+    ) {
+        if (configuration == null) return 2;
+        var schema = catalog.schema(entry.id(), configuration);
+        if (schema == null) return 2;
+        var ports = anchorInput ? schema.outputs() : schema.inputs();
+        return ports.stream().mapToInt(port -> port.type().equals(anchorType) ? 0
+                : (anchorInput
+                ? ProgramValueTypes.canConnect(port.type(), anchorType)
+                : ProgramValueTypes.canConnect(anchorType, port.type()))
+                ? 1 : 2).min().orElse(2);
     }
 
     public static List<Option> options(

@@ -27,10 +27,28 @@ public enum ProgramVmDiagnostic {
     INVALID_DIRECTION,
     POWER_LIMIT,
     SPAWN_FAILED,
-    ACTION_CONDITION_FAILED;
+    ACTION_CONDITION_FAILED,
+    DIVISION_BY_ZERO,
+    NON_FINITE_RESULT,
+    ALREADY_RUNNING,
+    EXECUTION_EXPIRED,
+    CONTROL_RESISTANCE,
+    NO_SIGHT_TARGET,
+    NO_EFFECTIVE_SUBJECTS,
+    UNREACHABLE_DESTINATION,
+    PROFICIENCY_REQUIRED,
+    TARGET_LIMIT,
+    CLIENT_TIMEOUT,
+    PLANNING_BUDGET_EXHAUSTED,
+    UNSUPPORTED_MOVEMENT_MODE;
 
     public String translationKey() {
-        return "message.academy.program.execution.diagnostic."
-                + name().toLowerCase(Locale.ROOT);
+        var prefix = switch (this) {
+            case CONTROL_RESISTANCE, NO_SIGHT_TARGET, NO_EFFECTIVE_SUBJECTS,
+                 UNREACHABLE_DESTINATION, PROFICIENCY_REQUIRED, TARGET_LIMIT, CLIENT_TIMEOUT,
+                 PLANNING_BUDGET_EXHAUSTED, UNSUPPORTED_MOVEMENT_MODE -> "message.academy.precision_operation.";
+            default -> "message.academy.program.execution.diagnostic.";
+        };
+        return prefix + name().toLowerCase(Locale.ROOT);
     }
 }

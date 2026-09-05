@@ -29,6 +29,8 @@ public final class InstantTeleportSyncPacket
             InstantTeleportSyncPacket::yRot,
             ByteBufCodecs.FLOAT,
             InstantTeleportSyncPacket::xRot,
+            ByteBufCodecs.BOOL,
+            InstantTeleportSyncPacket::preserveViewRotation,
             InstantTeleportSyncPacket::new
     );
     private static boolean clientInitialized;
@@ -38,7 +40,16 @@ public final class InstantTeleportSyncPacket
     private final float yRot;
     private final float xRot;
 
+    private final boolean preserveViewRotation;
+
     public InstantTeleportSyncPacket(int entityId, Vec3 position, float yRot, float xRot) {
+        this(entityId, position, yRot, xRot, true);
+    }
+
+    public InstantTeleportSyncPacket(
+            int entityId, Vec3 position, float yRot, float xRot, boolean preserveViewRotation
+    ) {
+        this.preserveViewRotation = preserveViewRotation;
         this.entityId = entityId;
         this.position = position;
         this.yRot = yRot;
@@ -49,6 +60,10 @@ public final class InstantTeleportSyncPacket
         if (clientInitialized) return;
         clientInitialized = true;
         MisakaNetworkClient.NETWORK_MANAGER.register(Client.class);
+    }
+
+    public boolean preserveViewRotation() {
+        return preserveViewRotation;
     }
 
     public int entityId() {
@@ -84,8 +99,8 @@ public final class InstantTeleportSyncPacket
             var entity = level.getEntity(packet.entityId);
             if (entity == null) return;
             var localPlayer = entity == minecraft.player;
-            var yRot = resolveRotation(localPlayer, entity.getYRot(), packet.yRot);
-            var xRot = resolveRotation(localPlayer, entity.getXRot(), packet.xRot);
+            var yRot = resolveRotation(localPlayer && packet.preserveViewRotation, entity.getYRot(), packet.yRot);
+            var xRot = resolveRotation(localPlayer && packet.preserveViewRotation, entity.getXRot(), packet.xRot);
             entity.getPositionCodec().setBase(packet.position);
             entity.snapTo(packet.position, yRot, xRot);
             entity.setOldPosAndRot();

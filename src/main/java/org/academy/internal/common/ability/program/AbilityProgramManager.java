@@ -33,6 +33,7 @@ import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.ability.meltdowner.program.MeltdownerProgramExecutionBridge;
 import org.academy.internal.common.ability.meltdowner.program.MeltdownerProgramNodeCatalog;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationRuntime;
+import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.common.ability.mentalout.skills.lv5.PrecisionOperation;
 import org.academy.internal.common.ability.teleport.program.TeleportProgramExecutionBridge;
 import org.academy.internal.common.ability.teleport.program.TeleportProgramNodeCatalog;
@@ -435,8 +436,38 @@ public final class AbilityProgramManager {
                 false,
                 false,
                 execution.nodeId(),
-                ProgramVmDiagnostic.ACTION_REJECTED
+                precisionDiagnostic(execution.diagnostic())
         );
+    }
+
+    static ProgramVmDiagnostic precisionDiagnostic(PrecisionGraph.Diagnostic diagnostic) {
+        return switch (diagnostic) {
+            case OK -> ProgramVmDiagnostic.NONE;
+            case INSUFFICIENT_CP -> ProgramVmDiagnostic.INSUFFICIENT_CP;
+            case SKILL_UNAVAILABLE -> ProgramVmDiagnostic.SKILL_UNAVAILABLE;
+            case PROTECTED_TARGET -> ProgramVmDiagnostic.TARGET_PROTECTED;
+            case UNSUPPORTED_TARGET -> ProgramVmDiagnostic.TARGET_TYPE_UNSUPPORTED;
+            case TARGET_UNAVAILABLE -> ProgramVmDiagnostic.TARGET_INVALID;
+            case NO_EFFECTIVE_TARGET, MISSING_INPUT -> ProgramVmDiagnostic.MISSING_INPUT_VALUE;
+            case INVALID_DIRECTION -> ProgramVmDiagnostic.INVALID_DIRECTION;
+            case ADAPTER_ERROR -> ProgramVmDiagnostic.EXECUTOR_ERROR;
+            case CONTROL_RESISTANCE, NO_SIGHT_TARGET, NO_EFFECTIVE_SUBJECTS,
+                 UNREACHABLE_DESTINATION, PROFICIENCY_REQUIRED, TARGET_LIMIT, CLIENT_TIMEOUT,
+                 PLANNING_BUDGET_EXHAUSTED, UNSUPPORTED_MOVEMENT_MODE,
+                 DIVISION_BY_ZERO, NON_FINITE_RESULT -> ProgramVmDiagnostic.valueOf(diagnostic.name());
+            default -> ProgramVmDiagnostic.ACTION_REJECTED;
+        };
+    }
+
+    static void reportDeferredFailure(
+            ServerPlayer player, Identifier category, ProgramInvocationContext invocation,
+            int nodeId, ProgramVmDiagnostic diagnostic
+    ) {
+        if (player.connection == null || invocation.trigger().isPresent()) return;
+        var playerData = AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID());
+        var current = book(playerData, category, player.getUUID());
+        Server.result(player, category.toString(), invocation.slot(), FeedbackType.ERROR,
+                current.revision(), ResultCode.EXECUTION_FAILED, null, nodeId, diagnostic);
     }
 
     private static ProgramVmDiagnostic transactionDiagnostic(
@@ -449,6 +480,8 @@ public final class AbilityProgramManager {
 
     static ProgramVmDiagnostic actionDiagnostic(@Nullable Throwable cause) {
         var message = failureMessage(cause);
+        if (message.contains("zero")) return ProgramVmDiagnostic.DIVISION_BY_ZERO;
+        if (message.contains("not finite")) return ProgramVmDiagnostic.NON_FINITE_RESULT;
         if (message.contains("insufficient cp")) return ProgramVmDiagnostic.INSUFFICIENT_CP;
         if (message.contains("skill is unavailable")) return ProgramVmDiagnostic.SKILL_UNAVAILABLE;
         if (containsAny(message,
@@ -690,7 +723,7 @@ public final class AbilityProgramManager {
                     var diagnostic = compiled.diagnostics().getFirst();
                     result(player, packet.category, slot, FeedbackType.ERROR,
                             current.revision(), ResultCode.INVALID_PROGRAM,
-                            diagnostic.code(), diagnostic.nodeId(), ProgramVmDiagnostic.NONE);
+                            diagnostic.code(), diagnostic.nodeId(), ProgramVmDiagnostic.NONE, diagnostic.port());
                     return;
                 }
             }
@@ -762,7 +795,7 @@ public final class AbilityProgramManager {
                     var diagnostic = compiled.diagnostics().getFirst();
                     result(player, packet.category, packet.slot, FeedbackType.ERROR,
                             current.revision(), ResultCode.INVALID_PROGRAM,
-                            diagnostic.code(), diagnostic.nodeId(), ProgramVmDiagnostic.NONE);
+                            diagnostic.code(), diagnostic.nodeId(), ProgramVmDiagnostic.NONE, diagnostic.port());
                     return;
                 }
             }
@@ -816,7 +849,7 @@ public final class AbilityProgramManager {
                 var diagnostic = compiled.diagnostics().getFirst();
                 result(player, packet.category, packet.slot, FeedbackType.ERROR,
                         current.revision(), ResultCode.INVALID_PROGRAM,
-                        diagnostic.code(), diagnostic.nodeId(), ProgramVmDiagnostic.NONE);
+                        diagnostic.code(), diagnostic.nodeId(), ProgramVmDiagnostic.NONE, diagnostic.port());
                 return;
             }
             var loopToggle = ProgramTriggers.toggleLoop(program).orElse(null);
@@ -854,7 +887,7 @@ public final class AbilityProgramManager {
             )) {
                 result(player, packet.category, packet.slot, FeedbackType.ERROR,
                         current.revision(), ResultCode.EXECUTION_FAILED,
-                        null, -1, ProgramVmDiagnostic.ACTION_REJECTED);
+                        null, -1, ProgramVmDiagnostic.ALREADY_RUNNING);
                 return;
             }
             var adapter = EXECUTION_ADAPTERS.get(category);
@@ -901,6 +934,14 @@ public final class AbilityProgramManager {
                 int nodeId,
                 ProgramVmDiagnostic vmDiagnostic
         ) {
+            result(player, category, slot, type, revision, code, diagnostic, nodeId, vmDiagnostic, null);
+        }
+
+        private static void result(
+                ServerPlayer player, String category, int slot, FeedbackType type,
+                long revision, ResultCode code, @Nullable ProgramDiagnosticCode diagnostic,
+                int nodeId, ProgramVmDiagnostic vmDiagnostic, @Nullable String port
+        ) {
             MisakaNetworkServer.send(player, new ResultPacket(
                     category,
                     Mth.clamp(slot, 0, SLOT_COUNT - 1),
@@ -909,7 +950,7 @@ public final class AbilityProgramManager {
                     code,
                     diagnostic,
                     nodeId,
-                    vmDiagnostic
+                    vmDiagnostic, port
             ));
         }
     }
@@ -941,7 +982,7 @@ public final class AbilityProgramManager {
                     packet.code,
                     packet.diagnostic,
                     packet.nodeId,
-                    packet.vmDiagnostic
+                    packet.vmDiagnostic, packet.port
             );
         }
     }
@@ -1188,6 +1229,7 @@ public final class AbilityProgramManager {
                             packet.diagnostic == null ? -1 : packet.diagnostic.ordinal());
                     ByteBufCodecs.VAR_INT.encode(buf, packet.nodeId);
                     ByteBufCodecs.VAR_INT.encode(buf, packet.vmDiagnostic.ordinal());
+                    ByteBufCodecs.STRING_UTF8.encode(buf, packet.port);
                 },
                 buf -> new ResultPacket(
                         ByteBufCodecs.STRING_UTF8.decode(buf),
@@ -1197,7 +1239,8 @@ public final class AbilityProgramManager {
                         resultCode(ByteBufCodecs.VAR_INT.decode(buf)),
                         programDiagnostic(ByteBufCodecs.VAR_INT.decode(buf)),
                         ByteBufCodecs.VAR_INT.decode(buf),
-                        AbilityProgramManager.vmDiagnostic(ByteBufCodecs.VAR_INT.decode(buf))
+                        AbilityProgramManager.vmDiagnostic(ByteBufCodecs.VAR_INT.decode(buf)),
+                        ByteBufCodecs.STRING_UTF8.decode(buf)
                 )
         );
         private final String category;
@@ -1208,6 +1251,7 @@ public final class AbilityProgramManager {
         private final @Nullable ProgramDiagnosticCode diagnostic;
         private final int nodeId;
         private final ProgramVmDiagnostic vmDiagnostic;
+        private final String port;
 
         public ResultPacket(
                 String category,
@@ -1219,6 +1263,15 @@ public final class AbilityProgramManager {
                 int nodeId,
                 ProgramVmDiagnostic vmDiagnostic
         ) {
+            this(category, slot, type, revision, code, diagnostic, nodeId, vmDiagnostic, null);
+        }
+
+        public ResultPacket(
+                String category, int slot, FeedbackType type, long revision, ResultCode code,
+                @Nullable ProgramDiagnosticCode diagnostic, int nodeId,
+                ProgramVmDiagnostic vmDiagnostic, @Nullable String port
+        ) {
+            this.port = port == null ? "" : port;
             this.category = category == null ? "" : category;
             this.slot = slot;
             this.type = type == null ? FeedbackType.ERROR : type;
@@ -1256,6 +1309,10 @@ public final class AbilityProgramManager {
 
         int nodeId() {
             return nodeId;
+        }
+
+        String port() {
+            return port;
         }
 
         ProgramVmDiagnostic vmDiagnostic() {

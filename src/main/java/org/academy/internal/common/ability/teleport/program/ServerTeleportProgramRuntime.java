@@ -360,11 +360,10 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                         ? distanceAdjustedCost(cost, origin.distanceTo(resolvedDestination))
                         : cost;
                 charge(skill, actualCost);
-                if (!teleport(target, destinationLevel, resolvedDestination)) {
+                if (!teleport(target, destinationLevel, resolvedDestination, direction)) {
                     throw new IllegalStateException("Target rejected program teleport");
                 }
                 setMotion(target, Vec3.ZERO);
-                applyRotation(target, direction);
                 target.resetFallDistance();
                 return () -> restore(
                         target, originLevel, origin, previousMotion, previousYaw, previousPitch);
@@ -632,10 +631,15 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
         }
     }
 
-    private boolean teleport(Entity entity, ServerLevel level, Vec3 destination) {
+    private boolean teleport(
+            Entity entity, ServerLevel level, Vec3 destination, @Nullable ProgramDirection direction
+    ) {
         return EntityMotionGuard.callWithMotionSource(
                 player,
-                () -> TeleportSync.teleportInstantly(entity, level, destination)
+                () -> direction == null
+                        ? TeleportSync.teleportInstantly(entity, level, destination)
+                        : TeleportSync.teleportInstantly(entity, level, destination,
+                                rotationYaw(direction), rotationPitch(direction))
         );
     }
 
@@ -665,12 +669,10 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
             return;
         }
         EntityMotionGuard.runInternalCorrection(entity, () -> {
-            if (!TeleportSync.teleportInstantly(entity, level, position)) {
+            if (!TeleportSync.teleportInstantly(entity, level, position, yaw, pitch)) {
                 throw new IllegalStateException("Unable to restore teleported entity");
             }
             entity.setDeltaMovement(motion);
-            entity.setYRot(yaw);
-            entity.setXRot(pitch);
         });
         entity.hurtMarked = true;
         syncMotion(entity);
@@ -892,15 +894,12 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
         }
     }
 
-    private static void applyRotation(
-            Entity entity,
-            @Nullable ProgramDirection direction
-    ) {
-        if (direction == null) return;
-        entity.setYRot((float) Math.toDegrees(Math.atan2(-direction.x(), direction.z())));
-        entity.setXRot((float) Math.toDegrees(-Math.asin(
-                Math.clamp(direction.y(), -1.0, 1.0))));
-        if (entity instanceof LivingEntity living) living.setYHeadRot(entity.getYRot());
+    static float rotationYaw(ProgramDirection direction) {
+        return (float) Math.toDegrees(Math.atan2(-direction.x(), direction.z()));
+    }
+
+    static float rotationPitch(ProgramDirection direction) {
+        return (float) Math.toDegrees(-Math.asin(Math.clamp(direction.y(), -1.0, 1.0)));
     }
 
     private static double selfRange(float power) {

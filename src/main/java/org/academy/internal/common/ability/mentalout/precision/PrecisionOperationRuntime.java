@@ -869,9 +869,18 @@ public final class PrecisionOperationRuntime {
                 return Evaluation.error(failure, failureNodeId);
             }
             if (!result.valid()) {
-                var diagnostic = result.vmDiagnostic() == ProgramVmDiagnostic.MISSING_INPUT_VALUE
-                        ? PrecisionGraph.Diagnostic.NO_EFFECTIVE_TARGET
-                        : result.diagnostic();
+                var diagnostic = switch (result.vmDiagnostic()) {
+                    case MISSING_INPUT_VALUE -> PrecisionGraph.Diagnostic.NO_EFFECTIVE_TARGET;
+                    case DIVISION_BY_ZERO -> PrecisionGraph.Diagnostic.DIVISION_BY_ZERO;
+                    case NON_FINITE_RESULT -> PrecisionGraph.Diagnostic.NON_FINITE_RESULT;
+                    case INSUFFICIENT_CP -> PrecisionGraph.Diagnostic.INSUFFICIENT_CP;
+                    case SKILL_UNAVAILABLE -> PrecisionGraph.Diagnostic.SKILL_UNAVAILABLE;
+                    case TARGET_PROTECTED -> PrecisionGraph.Diagnostic.PROTECTED_TARGET;
+                    case TARGET_TYPE_UNSUPPORTED -> PrecisionGraph.Diagnostic.UNSUPPORTED_TARGET;
+                    case TARGET_INVALID -> PrecisionGraph.Diagnostic.TARGET_UNAVAILABLE;
+                    case INVALID_DIRECTION -> PrecisionGraph.Diagnostic.INVALID_DIRECTION;
+                    default -> result.diagnostic();
+                };
                 return Evaluation.error(diagnostic, result.nodeId());
             }
             if (actions.isEmpty()) {

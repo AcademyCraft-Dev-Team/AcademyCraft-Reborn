@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.teleport;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Relative;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
@@ -39,7 +40,22 @@ public final class TeleportSync {
             ServerLevel destinationLevel,
             Vec3 destination
     ) {
+        return teleportInstantly(entity, destinationLevel, destination, 0.0f, 0.0f, true);
+    }
+
+    /** Teleports with an explicit, absolute view direction, including the owning client. */
+    public static boolean teleportInstantly(
+            Entity entity, ServerLevel destinationLevel, Vec3 destination, float yaw, float pitch
+    ) {
+        return teleportInstantly(entity, destinationLevel, destination, yaw, pitch, false);
+    }
+
+    private static boolean teleportInstantly(
+            Entity entity, ServerLevel destinationLevel, Vec3 destination,
+            float yaw, float pitch, boolean preserveViewRotation
+    ) {
         if (entity == null || destinationLevel == null || destination == null
+                || !Float.isFinite(yaw) || !Float.isFinite(pitch)
                 || !(entity.level() instanceof ServerLevel)
                 || EntityMotionGuard.shouldBlockTeleport(entity, destination)) {
             return false;
@@ -56,9 +72,9 @@ public final class TeleportSync {
                 destination.x,
                 destination.y,
                 destination.z,
-                PRESERVED_VIEW_ROTATION,
-                0.0f,
-                0.0f,
+                preserveViewRotation ? PRESERVED_VIEW_ROTATION : Set.of(),
+                yaw,
+                pitch,
                 false
         )) {
             synchronized (PENDING_ABSOLUTE_SYNCS) {
@@ -66,9 +82,13 @@ public final class TeleportSync {
             }
             return false;
         }
+        if (!preserveViewRotation && entity instanceof LivingEntity living) {
+            living.setYHeadRot(yaw);
+        }
         entity.needsSync = true;
         var packet = new InstantTeleportSyncPacket(
-                entity.getId(), entity.position(), entity.getYRot(), entity.getXRot());
+                entity.getId(), entity.position(), entity.getYRot(), entity.getXRot(),
+                preserveViewRotation);
         for (var observer : destinationLevel.players()) {
             if (observer == entity
                     || observer.position().distanceToSqr(destination) <= CLIENT_SNAP_RANGE_SQUARED) {

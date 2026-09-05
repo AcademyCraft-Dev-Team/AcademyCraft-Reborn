@@ -1,5 +1,7 @@
 package org.academy.internal.common.ability.accelerator.reflection;
 
+import net.minecraft.world.effect.MobEffects;
+
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
@@ -148,7 +150,8 @@ public final class VectorReflectionRuntime {
             anchor.observerRebuildRequested = true;
         }
         player.setTicksFrozen(0);
-        player.setInvisible(false);
+        player.setInvisible(player.hasEffect(MobEffects.INVISIBILITY)
+                && !VectorReflection.Server.shouldPreventInvisibility(player));
         player.clearFire();
         if (player.getAirSupply() < player.getMaxAirSupply()) {
             player.setAirSupply(player.getMaxAirSupply());

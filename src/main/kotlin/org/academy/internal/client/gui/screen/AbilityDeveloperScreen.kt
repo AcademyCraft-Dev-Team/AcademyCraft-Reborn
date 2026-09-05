@@ -1391,7 +1391,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                     }
 
                     details.label(skill.translatedDescription, "desc") {
-                        baseFontSize = 7f
+                        baseFontSize = 8f
                         wrapText = true
                         gravity(Gravity.CENTER)
                         width(228f)
@@ -1408,7 +1408,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                                 "$marker $threshold  ${Language.getInstance().getOrDefault(key)}",
                                 "proficiency_$threshold"
                             ) {
-                                baseFontSize = 5f
+                                baseFontSize = 8f
                                 wrapText = true
                                 gravity(Gravity.LEFT)
                                 width(228f)

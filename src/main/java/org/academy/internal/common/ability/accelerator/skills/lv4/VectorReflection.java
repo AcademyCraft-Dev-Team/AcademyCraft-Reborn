@@ -1,5 +1,7 @@
 package org.academy.internal.common.ability.accelerator.skills.lv4;
 
+import net.minecraft.world.effect.MobEffects;
+
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -420,6 +422,12 @@ public class VectorReflection extends Skill {
         static float calculateReflectedDamage(float damage, float availableCP,
                                               float calculationIntensity, boolean devMode) {
             return calculateReflection(damage, availableCP, calculationIntensity, 3, devMode).reflectedDamage();
+        }
+
+        public static boolean shouldPreventInvisibility(ServerPlayer player) {
+            if (!usesFullInstanceProtection(player)) return false;
+            var effect = player.getEffect(MobEffects.INVISIBILITY);
+            return effect == null || isActive(player) && ReflectionFilter.shouldReflectEffect(player, effect);
         }
 
         static ReflectionResult calculateReflection(float damage, float availableCP,

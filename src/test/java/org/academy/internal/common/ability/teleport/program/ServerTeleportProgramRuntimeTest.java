@@ -7,6 +7,15 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ServerTeleportProgramRuntimeTest {
     @Test
+    void targetDirectionsProduceMinecraftYawAndPitch() {
+        var east = new org.academy.api.common.ability.program.ProgramDirection(1, 0, 0);
+        var up = new org.academy.api.common.ability.program.ProgramDirection(0, 1, 0);
+        assertEquals(-90.0f, ServerTeleportProgramRuntime.rotationYaw(east));
+        assertEquals(0.0f, ServerTeleportProgramRuntime.rotationPitch(east), 0.0001f);
+        assertEquals(-90.0f, ServerTeleportProgramRuntime.rotationPitch(up));
+    }
+
+    @Test
     void targetTeleportNeverExceedsTheCategorySixtyFourBlockLimit() {
         assertEquals(8.0, ServerTeleportProgramRuntime.entityTargetRange(0.0f));
         assertEquals(64.0, ServerTeleportProgramRuntime.entityTargetRange(1.0f));

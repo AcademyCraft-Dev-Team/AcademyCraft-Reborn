@@ -48,6 +48,9 @@ public interface ModularProgramEditorSession {
         return -1;
     }
 
+    default void restoreDiagnostic(ModularProgramScreen screen, int slot) {
+    }
+
     default void clearDiagnostic(int slot) {
     }
 }

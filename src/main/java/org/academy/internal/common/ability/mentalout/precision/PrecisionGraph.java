@@ -689,7 +689,9 @@ public record PrecisionGraph(List<Node> nodes, List<Edge> edges) {
         UNSUPPORTED_MOVEMENT_MODE,
         PLANNING_BUDGET_EXHAUSTED,
         CLIENT_TIMEOUT,
-        INVALID_DIRECTION;
+        INVALID_DIRECTION,
+        DIVISION_BY_ZERO,
+        NON_FINITE_RESULT;
 
         public String translationKey() {
             return "message.academy.precision_operation." + name().toLowerCase(Locale.ROOT);

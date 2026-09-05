@@ -24,6 +24,7 @@ import org.academy.api.client.gui.widget.TextBoxWidget;
 import org.academy.api.client.gui.widget.Widget;
 import org.academy.api.common.ability.program.*;
 import org.academy.internal.client.ability.program.ProgramConfigurationOptions;
+import org.academy.internal.client.ability.program.ProgramDiagnosticText;
 import org.academy.internal.client.gui.SerializedUiLayout;
 import org.academy.internal.client.gui.debug.SerializedUiDebugHost;
 import org.academy.internal.client.ability.program.ProgramClipboardCodec;
@@ -160,6 +161,8 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     private ConnectionDrag connection;
     private QuickInsert quickInsert;
     private PrecisionGraph.Diagnostic serverDiagnostic = PrecisionGraph.Diagnostic.OK;
+    private ProgramDiagnostic serverCompileDiagnostic;
+    private Component transientDetail;
     private ProgramVmDiagnostic serverVmDiagnostic = ProgramVmDiagnostic.NONE;
     private int serverDiagnosticNode = -1;
     private PrecisionGraph.Diagnostic transientDiagnostic = PrecisionGraph.Diagnostic.OK;
@@ -328,15 +331,18 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             ProgramDiagnosticCode diagnostic,
             int nodeId,
             ProgramVmDiagnostic vmDiagnostic,
-            boolean clearDiagnostic
+            boolean clearDiagnostic,
+            String diagnosticPort
     ) {
         revision = Math.max(revision, serverRevision);
         if (slot != resultSlot) return;
+        serverCompileDiagnostic = diagnostic == null ? null
+                : new ProgramDiagnostic(diagnostic, nodeId, diagnosticPort);
         if (diagnostic != null) {
             serverDiagnostic = mapDiagnostic(diagnostic);
             serverVmDiagnostic = ProgramVmDiagnostic.NONE;
             serverDiagnosticNode = nodeId;
-            showTransient(serverDiagnostic);
+            transientUntil = 0L;
         } else if (vmDiagnostic != null && vmDiagnostic != ProgramVmDiagnostic.NONE) {
             serverDiagnostic = PrecisionGraph.Diagnostic.ACTION_FAILED;
             serverVmDiagnostic = vmDiagnostic;
@@ -609,14 +615,8 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     }
 
     private Component localDiagnostic(NodeView node, ProgramDiagnostic diagnostic) {
-        if (diagnostic.code() == ProgramDiagnosticCode.MISSING_INPUT
-                && diagnostic.port() != null) {
-            return Component.translatable(
-                    "screen.academy.program.diagnostic.missing_input",
-                    portLabel(node.entry, diagnostic.port())
-            ).withColor(ERROR);
-        }
-        return Component.literal(diagnostic.code().name()).withColor(ERROR);
+        return ProgramDiagnosticText.describe(
+                document.program(), catalog, diagnostic).copy().withColor(ERROR);
     }
 
     private static void renderPort(
@@ -792,7 +792,14 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 && shown == serverDiagnostic
                 ? Component.translatable(serverVmDiagnostic.translationKey()).getString()
                 : Component.translatable(shown.translationKey()).getString();
-        if (nodeId >= 0) text += "  [#" + nodeId + "]";
+        if (System.currentTimeMillis() < transientUntil && transientDetail != null) {
+            text = transientDetail.getString();
+        } else if (serverDiagnostic != PrecisionGraph.Diagnostic.OK) {
+            text = serverDiagnosticText();
+        } else if (local != null) {
+            text = ProgramDiagnosticText.describe(
+                    document.program(), catalog, local).getString();
+        }
         smallText(graphics, text, panelX + 4, panelY + panelH - 11,
                 shown == PrecisionGraph.Diagnostic.OK ? DIM : ERROR, panelW - 8);
     }
@@ -849,6 +856,16 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     }
 
     private List<TooltipLine> hoveredTooltip(int mouseX, int mouseY) {
+        if (inside(mouseX, mouseY, panelX, panelY + panelH - 14, panelW, 14)) {
+            var local = firstDiagnostic();
+            var detail = System.currentTimeMillis() < transientUntil && transientDetail != null
+                    ? transientDetail.getString()
+                    : serverDiagnostic != PrecisionGraph.Diagnostic.OK ? serverDiagnosticText()
+                    : local == null ? ""
+                    : ProgramDiagnosticText.describe(
+                            document.program(), catalog, local).getString();
+            if (!detail.isEmpty()) return List.of(new TooltipLine(detail, ERROR));
+        }
         var toolsX = panelX + panelW - TOOL_LABELS.length * (TOOL_SIZE + 2) - 2;
         for (var index = 0; index < TOOL_LABELS.length; index++) {
             if (inside(mouseX, mouseY, toolsX, panelY + 3, TOOL_SIZE, TOOL_SIZE)) {
@@ -1507,7 +1524,8 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             var entry = quickInsert.entries.get(row);
             var anchor = quickInsert.anchor;
             var added = addNode(entry,
-                    screenToGraphX(quickInsert.x), screenToGraphY(quickInsert.y));
+                    screenToGraphX(quickInsert.x), screenToGraphY(quickInsert.y),
+                    ProgramConfigurationOptions.defaultsForConnection(catalog, entry, anchor.type, anchor.input));
             if (added != null) {
                 var endpoint = firstCompatibleEndpoint(added, anchor);
                 if (endpoint != null) connect(anchor, endpoint);
@@ -1565,9 +1583,15 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     }
 
     private NodeView addNode(ProgramEditorNodeCatalog.Entry entry, double x, double y) {
+        return addNode(entry, x, y, entry.defaultConfiguration());
+    }
+
+    private NodeView addNode(
+            ProgramEditorNodeCatalog.Entry entry, double x, double y, JsonElement configuration
+    ) {
         var existingIds = document.program().graph().nodes().stream()
                 .map(ProgramGraph.Node::id).collect(Collectors.toSet());
-        var result = document.addNode(entry.id(), x, y);
+        var result = document.addNode(entry.id(), x, y, configuration);
         if (!result.successful()) {
             showTransient(result.diagnostic());
             return null;
@@ -1810,9 +1834,12 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         connection = null;
         quickInsert = null;
         configurationInputValidity.clear();
+        serverCompileDiagnostic = null;
+        transientUntil = 0L;
         serverDiagnostic = session.diagnostic(slot);
         serverVmDiagnostic = ProgramVmDiagnostic.NONE;
         serverDiagnosticNode = session.diagnosticNode(slot);
+        session.restoreDiagnostic(this, slot);
         session.updateLocalProgram(slot, document.program());
     }
 
@@ -1821,6 +1848,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         session.updateLocalProgram(slot, document.program());
         if (clearServerDiagnostic) {
             session.clearDiagnostic(slot);
+            serverCompileDiagnostic = null;
             serverDiagnostic = PrecisionGraph.Diagnostic.OK;
             serverVmDiagnostic = ProgramVmDiagnostic.NONE;
             serverDiagnosticNode = -1;
@@ -1831,7 +1859,12 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         var key = serverVmDiagnostic == ProgramVmDiagnostic.NONE
                 ? serverDiagnostic.translationKey()
                 : serverVmDiagnostic.translationKey();
-        return Component.translatable(key).getString();
+        return serverCompileDiagnostic != null
+                ? ProgramDiagnosticText.describe(
+                        document.program(), catalog, serverCompileDiagnostic).getString()
+                : ProgramDiagnosticText.locate(
+                        document.program(), catalog, serverDiagnosticNode, null,
+                        Component.translatable(key)).getString();
     }
 
     private ProgramEditorDocument document(AbilityProgram program) {
@@ -1864,11 +1897,11 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 .filter(ProgramEditorNodeCatalog.Entry::visible)
                 .filter(entry -> entry.type().role() != ProgramNodeRole.ENTRY)
                 .filter(this::entryUnlocked)
-                .filter(entry -> anchor.input
-                        ? entry.defaultSchema().outputs().stream().anyMatch(port ->
-                        ProgramValueTypes.canConnect(port.type(), anchor.type))
-                        : entry.defaultSchema().inputs().stream().anyMatch(port ->
-                        ProgramValueTypes.canConnect(anchor.type, port.type())))
+                .filter(entry -> ProgramConfigurationOptions.defaultsForConnection(
+                        catalog, entry, anchor.type, anchor.input) != null)
+                .sorted(Comparator.comparingInt(entry -> ProgramConfigurationOptions.connectionScore(
+                        catalog, entry, ProgramConfigurationOptions.defaultsForConnection(
+                                catalog, entry, anchor.type, anchor.input), anchor.type, anchor.input)))
                 .toList();
     }
 
@@ -1878,6 +1911,8 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
 
     private Endpoint firstCompatibleEndpoint(NodeView node, Endpoint anchor) {
         var ports = anchor.input ? node.schema.outputs() : node.schema.inputs();
+        ports = ports.stream().sorted(Comparator.comparingInt(port ->
+                port.type().equals(anchor.type) ? 0 : 1)).toList();
         for (var port : ports) {
             var compatible = anchor.input
                     ? ProgramValueTypes.canConnect(port.type(), anchor.type)
@@ -2331,10 +2366,14 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     }
 
     private void showTransient(ProgramDiagnostic diagnostic) {
-        if (diagnostic != null) showTransient(mapDiagnostic(diagnostic.code()));
+        if (diagnostic == null) return;
+        showTransient(mapDiagnostic(diagnostic.code()));
+        transientDetail = ProgramDiagnosticText.describe(
+                document.program(), catalog, diagnostic);
     }
 
     private void showTransient(PrecisionGraph.Diagnostic diagnostic) {
+        transientDetail = null;
         transientDiagnostic = diagnostic;
         transientUntil = System.currentTimeMillis() + 1800L;
     }

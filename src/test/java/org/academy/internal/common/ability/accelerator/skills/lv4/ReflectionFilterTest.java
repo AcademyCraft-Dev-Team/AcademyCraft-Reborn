@@ -22,6 +22,17 @@ class ReflectionFilterTest {
     }
 
     @Test
+    void invisibilityUsesTheSameWhitelistAndBlacklistPolicyAsOtherEffects() {
+        assertTrue(accept(data("REFLECT_ALL", "[\"minecraft:invisibility\"]", "[]"),
+                "minecraft:invisibility", MobEffectCategory.BENEFICIAL));
+        assertFalse(accept(data("REFLECT_ALL", "[]", "[]"),
+                "minecraft:invisibility", MobEffectCategory.BENEFICIAL));
+        assertFalse(accept(data("POSITIVE_FILTER", "[\"minecraft:invisibility\"]",
+                        "[\"minecraft:invisibility\"]"),
+                "minecraft:invisibility", MobEffectCategory.BENEFICIAL));
+    }
+
+    @Test
     void opensOnEqualByDefault() {
         assertEquals(Set.of(GLFW.GLFW_KEY_EQUAL),
                 ReflectionFilter.defaultOpenKey().keys());

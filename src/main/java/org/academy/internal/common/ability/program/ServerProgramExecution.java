@@ -49,7 +49,7 @@ public final class ServerProgramExecution {
                 fuelPerTick,
                 now + 1L,
                 MAX_LIFETIME_TICKS,
-                (_, termination) -> finishDeferred(category, transaction, termination)
+                (_, termination) -> finishDeferred(player, category, invocation, transaction, termination)
         );
         if (!scheduled) {
             return rejected(vmResult);
@@ -69,16 +69,27 @@ public final class ServerProgramExecution {
     }
 
     private static void finishDeferred(
+            ServerPlayer player,
             Identifier category,
+            ProgramInvocationContext invocation,
             ProgramActionTransaction transaction,
             ProgramSessionScheduler.Termination termination
     ) {
-        if (termination.kind() != ProgramSessionScheduler.TerminationKind.COMPLETED) return;
+        if (termination.kind() != ProgramSessionScheduler.TerminationKind.COMPLETED) {
+            if (termination.kind() != ProgramSessionScheduler.TerminationKind.CANCELLED) {
+                AbilityProgramManager.reportDeferredFailure(player, category, invocation,
+                        termination.nodeId(), termination.kind() == ProgramSessionScheduler.TerminationKind.EXPIRED
+                                ? ProgramVmDiagnostic.EXECUTION_EXPIRED : termination.diagnostic());
+            }
+            return;
+        }
         var committed = transaction.commit();
         if (committed.successful()) {
             transaction.release();
             return;
         }
+        AbilityProgramManager.reportDeferredFailure(player, category, invocation,
+                committed.nodeId(), AbilityProgramManager.actionDiagnostic(committed.cause()));
         AcademyCraft.LOGGER.warn(
                 "Deferred ability program action failed in category {} at node {}",
                 category,
