@@ -226,7 +226,14 @@ public final class GroupControlRuntime {
             if (entry.controller().equals(controller.toString()) && subjects.contains(UUID.fromString(entry.subject()))) {
                 data.put(entry.withPaused(paused));
                 var task = TASKS.get(new TaskKey(controller, entry.source(), UUID.fromString(entry.subject())));
-                if (task != null) { task.paused = paused; task.closeMovement(); }
+                if (task != null) {
+                    task.paused = paused;
+                    task.closeMovement();
+                    if (paused && task.sharedWork != null && task.sharedWork.mining != null) {
+                        task.sharedWork.mining.release(task.subject.getUUID());
+                        task.clearMiningTarget();
+                    }
+                }
             }
         }
     }
@@ -248,6 +255,12 @@ public final class GroupControlRuntime {
     public static String workStatus(WorkOrderData.Entry entry) {
         var task = TASKS.get(new TaskKey(UUID.fromString(entry.controller()), entry.source(), UUID.fromString(entry.subject())));
         return entry.paused() ? "paused" : task == null ? "suspended" : task.workStatus;
+    }
+
+    public static Optional<MiningWorkPlan.Progress> miningProgress(WorkOrderData.Entry entry) {
+        var task = TASKS.get(new TaskKey(UUID.fromString(entry.controller()), entry.source(), UUID.fromString(entry.subject())));
+        return task == null || task.sharedWork == null || task.sharedWork.mining == null
+                ? Optional.empty() : Optional.of(task.sharedWork.mining.progress());
     }
 
     private enum DefaultAdapter implements GroupControlAdapter {
@@ -326,6 +339,7 @@ public final class GroupControlRuntime {
         private int miningProgressTicks;
         private boolean closed;
         private boolean terminalNotified;
+        private boolean remoteMining;
 
         private DefaultTask(
                 TaskKey key,
@@ -505,6 +519,10 @@ public final class GroupControlRuntime {
         }
 
         private void tickMining(ServerPlayer controller, BlockWorkRegion region) {
+            if (sharedWork != null && sharedWork.mining != null) {
+                tickPlannedMining(controller, region);
+                return;
+            }
             if (currentBlock == null) currentBlock = nextMiningBlock();
             if (currentBlock == null) {
                 if (settings != null) {
@@ -574,6 +592,118 @@ public final class GroupControlRuntime {
             }
             saveOrder();
             advanceBlock();
+        }
+
+        private void refreshMiningPlan(ServerLevel level, boolean finalCheck) {
+            sharedWork.mining.refresh(level.getGameTime(), finalCheck, pos -> {
+                if (!level.hasChunkAt(pos)) return MiningWorkPlan.Eligibility.UNLOADED;
+                return matchesWorkBlock(pos, level.getBlockState(pos))
+                        ? MiningWorkPlan.Eligibility.ELIGIBLE : MiningWorkPlan.Eligibility.EXCLUDED;
+            });
+        }
+
+        private void clearMiningTarget() {
+            currentBlock = null;
+            miningProgressTicks = 0;
+            closeMovement();
+            clearWorkApproach();
+        }
+
+        private void blockMiningTarget(String reason, int retryTicks) {
+            sharedWork.mining.block(currentBlock, reason, subject.level().getGameTime() + retryTicks);
+            workStatus = reason;
+            clearMiningTarget();
+        }
+
+        private void tickPlannedMining(ServerPlayer controller, BlockWorkRegion region) {
+            var level = (ServerLevel) subject.level();
+            var plan = sharedWork.mining;
+            var now = level.getGameTime();
+            refreshMiningPlan(level, false);
+            if (currentBlock == null) currentBlock = plan.claim(subject.getUUID(), subject.position(), now,
+                    pos -> sharedWork.exposed(level, pos));
+            if (currentBlock == null) {
+                closeMovement();
+                if (plan.progress().remaining() == 0) refreshMiningPlan(level, true);
+                if (plan.progress().remaining() != 0) {
+                    workStatus = plan.blockedReason();
+                    if (!bufferedDrops.isEmpty() && settings.output().isPresent()) depositWorkCargo(controller, region);
+                    return;
+                }
+                if (!depositWorkCargo(controller, region)) return;
+                if (settings.repeat()) { workStatus = "waiting"; return; }
+                finish(GroupControlTaskEvent.Status.COMPLETED);
+                return;
+            }
+            if (!level.hasChunkAt(currentBlock)) { blockMiningTarget("unloaded", 20); return; }
+            var state = level.getBlockState(currentBlock);
+            if (!matchesWorkBlock(currentBlock, state)) {
+                plan.resolve(currentBlock);
+                clearMiningTarget();
+                return;
+            }
+            var tool = miningTool(state);
+            if (!isHarvestable(state, tool)) {
+                if (!supplyTool(controller, region, stack -> !stack.isEmpty() && isHarvestable(state, stack))) {
+                    if (movement == null || workStatus.equals("path")) blockMiningTarget("tool", 100);
+                    return;
+                }
+                tool = miningTool(state);
+            }
+            var target = Vec3.atCenterOf(currentBlock);
+            var inReach = subject.distanceToSqr(target) <= 12.25;
+            var area = settings.miningReach() == WorkSettings.MiningReach.AREA
+                    || settings.miningReach() == WorkSettings.MiningReach.ADAPTIVE && remoteMining;
+            if (!inReach && !area) {
+                var approach = workApproach(currentBlock);
+                var failed = approach == null || !ensureMovement(controller,
+                        new ControlDestination.Position(region.dimension(), approach), 1.0)
+                        || hasStalledPath(approach) || stalledTicks >= 60;
+                if (!failed) { workStatus = "approaching"; return; }
+                if (settings.miningReach() == WorkSettings.MiningReach.NEARBY) {
+                    blockMiningTarget("path", 40);
+                    return;
+                }
+                // Keep a stable position instead of repeatedly walking into an excavation pit.
+                remoteMining = true;
+            }
+            closeMovement();
+            workStatus = inReach ? "working" : "remote";
+            miningProgressTicks++;
+            if (miningProgressTicks % 5 == 1) subject.swing(InteractionHand.MAIN_HAND);
+            if (miningProgressTicks < miningTicks(state, tool, level, currentBlock)) return;
+            if (!canBreak(controller, level, currentBlock)) { blockMiningTarget("permission", 100); return; }
+            var drops = Block.getDrops(state, level, currentBlock, level.getBlockEntity(currentBlock), subject, tool);
+            if (!org.academy.api.server.ability.AbilityBlockDrops.run(
+                    level, controller, () -> level.destroyBlock(currentBlock, false, subject))) {
+                blockMiningTarget("permission", 100);
+                return;
+            }
+            for (var drop : drops) {
+                if (!drop.isEmpty() && !org.academy.internal.server.storage.SpatialStorageService.collect(controller, drop)) {
+                    bufferMiningDrop(drop);
+                }
+            }
+            ControlledEquipment.damageRealTool(subject, tool, 1);
+            plan.resolve(currentBlock);
+            saveOrder();
+            clearMiningTarget();
+        }
+
+        private void bufferMiningDrop(ItemStack drop) {
+            var remaining = drop.copy();
+            for (var cargo : bufferedDrops) {
+                if (!ItemStack.isSameItemSameComponents(cargo, remaining)) continue;
+                var moved = Math.min(remaining.getCount(), Math.max(0, cargo.getMaxStackSize() - cargo.getCount()));
+                cargo.grow(moved);
+                remaining.shrink(moved);
+                if (remaining.isEmpty()) return;
+            }
+            while (!remaining.isEmpty()) {
+                var count = Math.min(remaining.getCount(), remaining.getMaxStackSize());
+                bufferedDrops.add(remaining.copyWithCount(count));
+                remaining.shrink(count);
+            }
         }
 
         private void tickFarm(ServerPlayer controller, BlockWorkRegion region) {
@@ -859,7 +989,21 @@ public final class GroupControlRuntime {
         private static void addToController(ServerPlayer controller, ItemStack stack) {
             if (stack.isEmpty()) return;
             var remainder = stack.copy();
-            controller.getInventory().add(remainder);
+            var inventory = controller.getInventory();
+            // Inventory.add deliberately discards overflow for creative players. Work cargo is real.
+            for (int pass = 0; pass < 2 && !remainder.isEmpty(); pass++) {
+                for (int slot = 0; slot < inventory.getNonEquipmentItems().size() && !remainder.isEmpty(); slot++) {
+                    var existing = inventory.getItem(slot);
+                    if (pass == 0 && (existing.isEmpty() || !ItemStack.isSameItemSameComponents(existing, remainder))) continue;
+                    if (pass == 1 && !existing.isEmpty()) continue;
+                    var room = Math.min(inventory.getMaxStackSize(), remainder.getMaxStackSize()) - existing.getCount();
+                    var moved = Math.min(remainder.getCount(), Math.max(0, room));
+                    if (moved == 0) continue;
+                    if (existing.isEmpty()) inventory.setItem(slot, remainder.split(moved));
+                    else { existing.grow(moved); remainder.shrink(moved); }
+                }
+            }
+            inventory.setChanged();
             if (!remainder.isEmpty() && controller.level() instanceof ServerLevel level) {
                 Block.popResource(level, controller.blockPosition(), remainder);
             }
@@ -900,7 +1044,7 @@ public final class GroupControlRuntime {
         }
 
         private boolean matchesWorkBlock(BlockPos pos, net.minecraft.world.level.block.state.BlockState state) {
-            if (!settings.harvest() || !settings.matches(state) || state.getDestroySpeed(subject.level(), pos) < 0
+            if (state.isAir() || !settings.harvest() || !settings.matches(state) || state.getDestroySpeed(subject.level(), pos) < 0
                     || subject.level().getBlockEntity(pos) != null) return false;
             return switch (settings.mode()) {
                 case MINING -> true;
@@ -1213,7 +1357,8 @@ public final class GroupControlRuntime {
             if (closed) return;
             closed = true;
             closeMovement();
-            if (sharedWork != null && currentBlock != null) sharedWork.defer(currentBlock);
+            if (sharedWork != null && sharedWork.mining != null) sharedWork.mining.release(subject.getUUID());
+            else if (sharedWork != null && currentBlock != null) sharedWork.defer(currentBlock);
             currentBlock = null;
             releaseExclusiveWorkOrder();
             TASKS.remove(key, this);
@@ -1247,6 +1392,9 @@ public final class GroupControlRuntime {
         private static final int FARM_SCAN_INTERVAL_TICKS = 20;
         private final BlockWorkRegion region;
         private final boolean farming;
+        private MiningWorkPlan mining;
+        private long surfaceTick = Long.MIN_VALUE;
+        private final Map<BlockPos, Boolean> surfaces = new HashMap<>();
         private final ArrayDeque<BlockPos> pending = new ArrayDeque<>();
         private final Set<BlockPos> queued = new HashSet<>();
         private final Set<BlockPos> claimed = new HashSet<>();
@@ -1269,10 +1417,23 @@ public final class GroupControlRuntime {
                         new SharedWorkPlan(gather.region(), false);
                 case GroupControlCommand.Farm farm -> new SharedWorkPlan(farm.region(), true);
                 case GroupControlCommand.MoveTo ignored -> null;
-                case GroupControlCommand.Work work -> new SharedWorkPlan(work.region(),
-                        work.settings().mode() == WorkSettings.Mode.FARMING || work.settings().mode().animals()
-                        || work.settings().mode() == WorkSettings.Mode.COLLECT);
+                case GroupControlCommand.Work work -> {
+                    var plan = new SharedWorkPlan(work.region(), true);
+                    if (work.settings().minesBlocks()) plan.mining = new MiningWorkPlan(work.region());
+                    yield plan;
+                }
             };
+        }
+
+        private boolean exposed(ServerLevel level, BlockPos pos) {
+            if (surfaceTick != level.getGameTime()) { surfaceTick = level.getGameTime(); surfaces.clear(); }
+            return surfaces.computeIfAbsent(pos, candidate -> {
+                for (var direction : net.minecraft.core.Direction.values()) {
+                    var adjacent = candidate.relative(direction);
+                    if (level.hasChunkAt(adjacent) && level.getBlockState(adjacent).isAir()) return true;
+                }
+                return false;
+            });
         }
 
         private synchronized void queue(BlockPos position) {
