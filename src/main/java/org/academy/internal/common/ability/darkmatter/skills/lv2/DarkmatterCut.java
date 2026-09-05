@@ -245,7 +245,7 @@ public final class DarkmatterCut extends Skill {
                             var detonation = DarkmatterLawMark.detonate(player, target);
                             if (detonation > 0.0f) {
                                 target.invulnerableTime = 0;
-                                SkillDamageUtil.applyDirect(level, target, source, detonation);
+                                DarkmatterLawMark.damageDetonation(target, source, detonation);
                                 target.invulnerableTime = 0;
                                 target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 40, 0));
                             }
@@ -278,8 +278,7 @@ public final class DarkmatterCut extends Skill {
                                             target.invulnerableTime = 0;
                                             var detonation = DarkmatterLawMark.detonate(player, target);
                                             if (detonation > 0.0f) {
-                                                SkillDamageUtil.applyDirect(
-                                                        level, target, source, detonation);
+                                                DarkmatterLawMark.damageDetonation(target, source, detonation);
                                                 target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 40, 0));
                                                 target.invulnerableTime = 0;
                                             }

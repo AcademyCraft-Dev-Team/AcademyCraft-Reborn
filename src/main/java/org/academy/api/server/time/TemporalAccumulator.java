@@ -23,8 +23,9 @@ public final class TemporalAccumulator {
                 credit + scale,
                 maxLogicalTicks + MAX_FRACTIONAL_CARRY
         );
-        var ticks = Math.min((int) Math.floor(available), maxLogicalTicks);
-        credit = Math.min(available - ticks, MAX_FRACTIONAL_CARRY);
+        // Rational rates such as 2/3 must not lose a tick to 0.9999999999999999.
+        var ticks = Math.min((int) Math.floor(available + 1.0E-12D), maxLogicalTicks);
+        credit = Math.clamp(available - ticks, 0.0D, MAX_FRACTIONAL_CARRY);
         return ticks;
     }
 

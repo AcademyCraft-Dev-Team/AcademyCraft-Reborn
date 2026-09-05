@@ -126,7 +126,7 @@ public final class DarkmatterFeatherProjectile extends AbstractArrow implements 
         var hit = damage > 0.0f && DarkmatterTargeting.hurt(level, target, source, damage);
         if (exposureBurstDamage > 0.0f && target.isAlive()) {
             target.invulnerableTime = 0;
-            hit |= DarkmatterTargeting.hurt(level, target, source, exposureBurstDamage);
+            hit |= org.academy.api.common.damage.AbilityHitEffects.detonateLaw(target, source, exposureBurstDamage);
         }
         return hit;
     }

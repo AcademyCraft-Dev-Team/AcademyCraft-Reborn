@@ -14,10 +14,17 @@ import org.jetbrains.annotations.Nullable;
 public class SkillDamageSource extends DamageSource {
 
     private final Skill skill;
+    private final int electricalChargePoints;
 
     protected SkillDamageSource(Holder<DamageType> type, @Nullable Entity directEntity, @Nullable Entity causingEntity, Skill skill) {
+        this(type, directEntity, causingEntity, skill, -1);
+    }
+
+    private SkillDamageSource(Holder<DamageType> type, @Nullable Entity directEntity,
+                              @Nullable Entity causingEntity, Skill skill, int electricalChargePoints) {
         super(type, directEntity, causingEntity);
         this.skill = skill;
+        this.electricalChargePoints = electricalChargePoints;
     }
 
     /**
@@ -84,6 +91,17 @@ public class SkillDamageSource extends DamageSource {
             return of(player, skill, categoryType);
         }
         return new SkillDamageSource(original.typeHolder(), original.getDirectEntity(), original.getEntity(), skill);
+    }
+
+    /** Returns a copy with an explicit charge award for a primary, echo or secondary hit. */
+    public SkillDamageSource withElectricalChargePoints(int points) {
+        if (points < 0) throw new IllegalArgumentException("Charge points must be non-negative");
+        return new SkillDamageSource(typeHolder(), getDirectEntity(), getEntity(), skill, points);
+    }
+
+    /** -1 selects the category's skill default. */
+    public int electricalChargePoints() {
+        return electricalChargePoints;
     }
 
     public Skill getSkill() {

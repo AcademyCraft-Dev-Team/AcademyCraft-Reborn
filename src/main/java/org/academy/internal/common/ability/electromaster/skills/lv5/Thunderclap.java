@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.electromaster.skills.lv5;
 
+import org.academy.api.common.damage.DamageComposition;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -271,10 +272,10 @@ public class Thunderclap extends Skill {
             );
             for (var target : targets) {
                 if (PvpSetting.shouldPrevent(player, target)) continue;
-                target.hurtServer(
-                        level,
-                        source,
-                        calculateDamage(target.getMaxHealth(), abilityPower, damageMultiplier)
+                DamageComposition.hurt(
+                        target, level, source,
+                        calculateDamage(target.getMaxHealth(), abilityPower, damageMultiplier),
+                        target.getMaxHealth() * DAMAGE.maxHealthRatio()
                 );
                 if (milestone >= 3) {
                     var duration = target instanceof Player || target instanceof EnderDragon || target instanceof WitherBoss

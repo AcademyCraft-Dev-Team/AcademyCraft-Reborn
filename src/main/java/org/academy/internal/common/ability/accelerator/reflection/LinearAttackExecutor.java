@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.accelerator.reflection;
 
+import org.academy.api.common.damage.DamageComposition;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -117,7 +118,8 @@ public final class LinearAttackExecutor {
 
             var damage = payload.damage(target);
             if (!(damage > 0.0f)) continue;
-            var hurt = target.hurtServer(level, source, damage);
+            var hurt = DamageComposition.hurt(
+                    target, level, source, damage, payload.maximumHealthDamage(target));
             payload.afterHit(target, reflected, hurt);
             hits.add(target);
         }

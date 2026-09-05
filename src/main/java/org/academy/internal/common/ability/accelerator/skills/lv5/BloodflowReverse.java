@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.accelerator.skills.lv5;
 
+import org.academy.api.common.damage.DamageComposition;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
@@ -299,15 +300,10 @@ public class BloodflowReverse extends Skill {
                         var duration = skill.hasProficiencyMilestone(player, 2) ? 250 : 200;
 
                         var damage = calculateDamage(target.getMaxHealth());
-                        var damaged = SkillDamageUtil.applyVerifiedTrueHealth(
-                                target,
-                                SkillDamageSource.of(
-                                        player,
-                                        Skills.BLOODFLOW_REVERSE.get(),
-                                        DamageTypes.VEC
-                                ),
-                                damage
-                        );
+                        var source = SkillDamageSource.of(player, skill, DamageTypes.VEC);
+                        var damaged = DamageComposition.withMaximumHealthPart(
+                                target, source, target.getMaxHealth() * DAMAGE.maxHealthRatio(),
+                                () -> SkillDamageUtil.applyVerifiedTrueHealth(target, source, damage));
                         if (!damaged) return;
 
                         target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, duration, amplifier));

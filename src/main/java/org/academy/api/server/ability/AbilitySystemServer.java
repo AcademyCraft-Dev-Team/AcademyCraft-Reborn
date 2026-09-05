@@ -604,6 +604,12 @@ public final class AbilitySystemServer {
         return Objects.requireNonNull(playerDataManager.getData(uuid));
     }
 
+    /** Interrupts current skill contexts once, without changing learned skills or cooldowns. */
+    public void interruptActiveSkills(ServerPlayer player) {
+        var contexts = activeContexts.get(player.getUUID());
+        if (contexts != null) List.copyOf(contexts).forEach(ServerContext::unregister);
+    }
+
     @SubscribeEvent
     public void onPlayerOverload(AbilityOverloadEvent event) {
         var uuid = event.getEntity().getUUID();

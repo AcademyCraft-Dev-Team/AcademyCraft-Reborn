@@ -331,6 +331,8 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         var source = SkillDamageSource.of(owner, sourceSkill);
         var payload = LinearAttackPayload
                 .builder(owner, sourceSkill, source, 0.125f)
+                .maximumHealthDamage(target -> hitIndex.get() == 0 && target instanceof LivingEntity living
+                        ? living.getMaxHealth() * targetMaxHealthDamageRatio : 0.0f)
                 .targetFilter(target -> target.getType() != getType())
                 .outboundTargetFilter(target -> !target.getUUID().equals(ignoredTargetId)
                         && MeltdownerTargeting.canAffectNegatively(owner, target))

@@ -40,6 +40,17 @@ public final class DarkmatterLawMark {
                 .orElse(0.0f);
     }
 
+    /** Resolves mark and exposure detonations at CTA health-write strength, retaining their skill. */
+    public static boolean damageDetonation(LivingEntity target,
+                                           org.academy.api.common.damage.SkillDamageSource source,
+                                           float amount) {
+        if (!DarkmatterTargeting.isDarkmatterDamage(source) || DarkmatterTargeting.isNetworkMember(target)) return false;
+        if (source.getEntity() instanceof ServerPlayer owner && !DarkmatterTargeting.isAttackableBy(owner, target)) return false;
+        if (DarkmatterTargeting.areAllied(source.getEntity(), target)) return false;
+        return org.academy.internal.common.world.damagesource.SkillDamageUtil.applyVerifiedTrueHealth(
+                target, new org.academy.api.common.damage.LawDetonationDamageSource(source), amount);
+    }
+
     public static boolean isMarkedBy(ServerPlayer owner, LivingEntity target) {
         return owner != null && target != null && TimedSkillEffectRuntime.get(
                 owner.getUUID(),

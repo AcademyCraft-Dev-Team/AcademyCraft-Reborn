@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.aeromanip.skills.lv5;
 
+import org.academy.api.common.damage.DamageComposition;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -244,7 +245,8 @@ public final class VacuumDomain extends Skill {
                     target.invulnerableTime = 0;
                     var damage = baseDamage(target.getMaxHealth())
                             * AeromanipConfig.damageMultiplier(owner, SkillNames.VACUUM_DOMAIN);
-                    target.hurtServer(level, damageSource, damage);
+                    DamageComposition.hurt(
+                            target, level, damageSource, damage, damage);
                 }
             }
             spawnVisual(level, center, radius, owner.tickCount);

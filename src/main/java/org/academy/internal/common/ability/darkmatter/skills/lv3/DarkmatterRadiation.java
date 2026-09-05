@@ -317,7 +317,7 @@ public final class DarkmatterRadiation extends Skill {
                 var detonation = DarkmatterLawMark.detonate(player, target);
                 if (detonation > 0.0f) {
                     target.invulnerableTime = 0;
-                    SkillDamageUtil.applyDirect(level, target, darkmatterSource, detonation);
+                    DarkmatterLawMark.damageDetonation(target, darkmatterSource, detonation);
                     target.invulnerableTime = 0;
                     target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 40, 0));
                 }
@@ -332,7 +332,7 @@ public final class DarkmatterRadiation extends Skill {
                     if (exposure >= exposurePulseTicks(state.milestone)) {
                         state.exposure.put(target.getUUID(), 0);
                         target.invulnerableTime = 0;
-                        DarkmatterTargeting.hurt(level, target, darkmatterSource,
+                        DarkmatterLawMark.damageDetonation(target, darkmatterSource,
                                 exposureBurstDamage(phase.beta()));
                     }
                 }

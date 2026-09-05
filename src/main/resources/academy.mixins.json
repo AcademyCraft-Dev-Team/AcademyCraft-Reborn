@@ -5,6 +5,11 @@
   "compatibilityLevel": "JAVA_25",
   "plugin": "org.academy.mixin.plugin.MixinPlugin",
   "mixins": [
+    "common.MixinCommonHooksDamageComposition",
+    "common.ItemCooldownsAccess",
+    "common.CooldownInstanceAccess",
+    "common.MixinMeltdownerResistance",
+    "common.MixinPlayerDamageContext",
     "common.AbstractArrowVectorAccessor",
     "common.EntitySharedFlagInvoker",
     "common.EntityStateAccessor",

@@ -167,8 +167,7 @@ public final class TemporalRuntime implements TemporalService {
         var fieldId = UUID.randomUUID();
         var owner = leaseOwnerAfterAcquire("acquireField");
         temporalFields.put(fieldId, field);
-        resetScaleAccumulators();
-        rebaseScheduledQueues();
+        resetScaleAccumulators(field);
         clientStateDirty = true;
         return new FieldLease(fieldId, field, owner);
     }
@@ -528,6 +527,14 @@ public final class TemporalRuntime implements TemporalService {
         for (var index = 0; index < logicalTicks && !player.isRemoved(); index++) {
             vanillaPlayerTick.run();
         }
+    }
+
+    /** Whether gameplay actions may execute in this physical tick. Transport remains unscaled. */
+    public boolean isPlayerActionTick(ServerPlayer player) {
+        requireServerThread();
+        if (stopped || player.level().getServer() != server) return true;
+        var scale = effectiveScale(player, TemporalChannel.ENTITY);
+        return scale > 0.0D && (scale >= 1.0D || playerTickPlan(player).logicalTicks() > 0);
     }
 
     /** Server-authoritative hard-pause check used by packet action guards. */
@@ -1604,6 +1611,23 @@ public final class TemporalRuntime implements TemporalService {
         }
     }
 
+    private void resetScaleAccumulators(TemporalField field) {
+        if (field.scope() instanceof TemporalScope.Entities entities) {
+            var ids = entities.entityIds();
+            if (field.channels().contains(TemporalChannel.ENTITY)) {
+                ids.forEach(entityTickAccumulators::remove);
+                ids.forEach(playerTickAccumulators::remove);
+            }
+            if (field.channels().contains(TemporalChannel.ACADEMY_SCHEDULER)) {
+                academySchedulerAccumulators.keySet().removeIf(key -> ids.contains(key.ownerId()));
+            }
+            // Entity scopes cannot change scheduled block/fluid clocks or other players' phases.
+            return;
+        }
+        resetScaleAccumulators();
+        rebaseScheduledQueues();
+    }
+
     private void resetScaleAccumulators() {
         entityTickAccumulators.clear();
         playerTickAccumulators.clear();
@@ -2010,8 +2034,7 @@ public final class TemporalRuntime implements TemporalService {
             if (!active) return;
             active = false;
             if (!stopped && temporalFields.remove(fieldId) != null) {
-                resetScaleAccumulators();
-                rebaseScheduledQueues();
+                resetScaleAccumulators(field);
                 clientStateDirty = true;
             }
         }

@@ -112,7 +112,7 @@ public final class MindDestruction extends Skill {
     }
 
     public static void tick(MinecraftServer server) {
-        var now = server.overworld().getGameTime();
+        var now = (long) server.getTickCount();
         for (var effect : List.copyOf(ACTIVE.values())) {
             var controller = server.getPlayerList().getPlayer(effect.key.controllerId);
             var target = findLivingEntity(server, effect.key.targetId);
@@ -128,13 +128,18 @@ public final class MindDestruction extends Skill {
             if (now < effect.nextDamageTick || effect.pulsesRemaining <= 0) continue;
             effect.nextDamageTick += DAMAGE_INTERVAL_TICKS;
             effect.pulsesRemaining--;
-            SkillDamageUtil.apply(
+            var healthBeforePulse = target.getHealth();
+            var damaged = SkillDamageUtil.apply(
                     controller,
                     target,
                     Skills.MIND_DESTRUCTION.get(),
                     DamageTypes.MENTAL_DAMAGE,
-                    damagePerPulse(target.getMaxHealth())
+                    damagePerPulse(target.getMaxHealth()),
+                    target.getMaxHealth() * MAX_HEALTH_DAMAGE_RATIO
             );
+            if (damaged && target.getHealth() < healthBeforePulse && target.isAlive() && effect.reaction == null) {
+                effect.reaction = org.academy.api.common.damage.ReactionSlowdown.acquire(target);
+            }
             if (target.level() instanceof ServerLevel level) {
                 var center = target.getBoundingBox().getCenter();
                 level.sendParticles(ParticleTypes.SOUL,
@@ -161,7 +166,7 @@ public final class MindDestruction extends Skill {
     }
 
     private static void start(ServerPlayer controller, LivingEntity target, boolean applyStupor) {
-        var now = controller.level().getGameTime();
+        var now = (long) controller.level().getServer().getTickCount();
         var key = new EffectKey(controller.getUUID(), target.getUUID());
         var previous = ACTIVE.remove(key);
         if (previous != null) close(previous);
@@ -173,7 +178,7 @@ public final class MindDestruction extends Skill {
                         target,
                         Skills.MIND_DESTRUCTION.get().getKey(),
                         STUPOR_PRIORITY,
-                        now + DURATION_TICKS,
+                        controller.level().getGameTime() + DURATION_TICKS,
                         List.of(new ControlDirective.FreezeAi())
                 ));
             } catch (RuntimeException ignored) {
@@ -198,6 +203,7 @@ public final class MindDestruction extends Skill {
         if (effect == null) return;
         ACTIVE.remove(effect.key, effect);
         if (effect.stupor != null) effect.stupor.close();
+        if (effect.reaction != null) effect.reaction.close();
     }
 
     private static LivingEntity findLivingEntity(MinecraftServer server, UUID entityId) {
@@ -318,6 +324,7 @@ public final class MindDestruction extends Skill {
         private long nextDamageTick;
         private int pulsesRemaining;
         private final ControlHandle stupor;
+        private org.academy.api.common.damage.ReactionSlowdown reaction;
 
         private ActiveEffect(
                 EffectKey key,

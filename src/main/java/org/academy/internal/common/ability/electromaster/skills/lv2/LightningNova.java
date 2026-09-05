@@ -183,7 +183,7 @@ public class LightningNova extends Skill {
                         system.getPlayerDamageMultiplier(player.getUUID())
                 );
                 var source = SkillDamageSource.of(player, Skills.LIGHTNING_NOVA.get(),
-                        DamageTypes.ELECTRO_DAMAGE);
+                        DamageTypes.ELECTRO_DAMAGE).withElectricalChargePoints(echo ? 1 : 2);
                 for (var target : targets) {
                     var dist = target.distanceTo(player);
                     var phaseHits = echo ? echoHits : outwardHits;

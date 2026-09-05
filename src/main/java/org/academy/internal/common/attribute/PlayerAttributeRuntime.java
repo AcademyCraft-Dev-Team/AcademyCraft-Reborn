@@ -198,6 +198,7 @@ public final class PlayerAttributeRuntime {
     public static float modifyHealthWrite(Player player, float requestedHealth) {
         if (RESISTANCE_BYPASS_DEPTH.get() > 0 || !Float.isFinite(requestedHealth)) return requestedHealth;
         var source = DAMAGE_CONTEXT.get().peek();
+        if (source != null && source.is(DamageTypes.MELT_DAMAGE)) return requestedHealth;
         var reductionPerPoint = source != null && DamageTypes.usesResistanceBackdoor(source)
                 ? 0.08
                 : 0.10;

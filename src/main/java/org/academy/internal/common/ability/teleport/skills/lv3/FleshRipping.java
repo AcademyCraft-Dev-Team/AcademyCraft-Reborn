@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.teleport.skills.lv3;
 
+import org.academy.api.common.damage.DamageComposition;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
@@ -239,10 +240,9 @@ public final class FleshRipping extends Skill {
                 player.level().playSound(null, target.blockPosition(), SoundEvents.FLESH_RIPPING.get(),
                         SoundSource.PLAYERS, 1.0f, 1.0f);
                 var wasAlive = target.isAlive();
-                target.hurtServer(
-                        player.level(),
-                        SkillDamageSource.of(player, skill),
-                        damage
+                DamageComposition.hurt(
+                        target, player.level(), SkillDamageSource.of(player, skill),
+                        damage, target.getMaxHealth() * 0.05f * SpaceFoldingTheorem.damageMultiplier(player)
                 );
                 if (wasAlive && !target.isAlive()) {
                     SpaceFoldingTheorem.refundKillCost(player, actualCost);
