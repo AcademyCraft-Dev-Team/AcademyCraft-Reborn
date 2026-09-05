@@ -108,7 +108,7 @@ public final class WingVfx implements Vfx {
     private static final Map<Integer, ActiveEffect> BLACK_GRAPHS = new HashMap<>();
     private static final Map<Integer, BlackAttack> BLACK_ATTACKS = new HashMap<>();
 
-    private record BlackAttack(long startTick, VortexAttackPattern pattern, Vec3 target) {
+    private record BlackAttack(long startTick, VortexAttackPattern pattern, List<Vec3> targets) {
         float progress(double tick) { return (float) ((tick - startTick) / pattern.durationTicks()); }
     }
     private static final int INSTANCE_STRIDE = 64;
@@ -137,15 +137,18 @@ public final class WingVfx implements Vfx {
         );
     }
 
-    public static void enqueueBlackAttack(int entityId, VortexAttackPattern pattern, long startTick, Vec3 target) {
+    public static void enqueueBlackAttack(int entityId, VortexAttackPattern pattern, long startTick, List<Vec3> targets) {
         var minecraft = Minecraft.getInstance();
         if (minecraft.level == null || minecraft.level.getEntity(entityId) == null) return;
         if (animationLevel != minecraft.level) {
             clearSweeps();
             animationLevel = minecraft.level;
         }
-        if (!Double.isFinite(target.x) || !Double.isFinite(target.y) || !Double.isFinite(target.z)) return;
-        BLACK_ATTACKS.put(entityId, new BlackAttack(startTick, pattern, target));
+        if (targets.size() != (pattern == VortexAttackPattern.FOURFOLD_SLAM ? 4 : 1)) return;
+        for (var target : targets) {
+            if (!Double.isFinite(target.x) || !Double.isFinite(target.y) || !Double.isFinite(target.z)) return;
+        }
+        BLACK_ATTACKS.put(entityId, new BlackAttack(startTick, pattern, List.copyOf(targets)));
     }
 
     public static void enqueueBlackToWhiteTransition(int entityId) {
@@ -349,17 +352,25 @@ public final class WingVfx implements Vfx {
             if (attack == null) continue;
             float progress = attack.progress(ctx.gameTime());
             if (progress < 0f || progress >= 1f) continue;
-            // A fixed world target remains aimed correctly as the avatar banks, turns or moves.
-            var target = new Vector3f((float) (attack.target.x - effect.position().x),
-                    (float) (attack.target.y - effect.position().y),
-                    (float) (attack.target.z - effect.position().z));
-            new Quaternionf(effect.rotation()).conjugate().transform(target);
-            target.div(Math.max(0.001f, effect.scale()));
             effect.effect().setLiveParam("attack_mode", Value.of((float) attack.pattern.id()));
             effect.effect().setLiveParam("attack_progress", Value.of(progress));
-            effect.effect().setLiveParam("attack_target_x", Value.of(target.x));
-            effect.effect().setLiveParam("attack_target_y", Value.of(target.y));
-            effect.effect().setLiveParam("attack_target_z", Value.of(target.z));
+            // Freeze world landing points while the shoulder transform continues to follow the avatar.
+            var inverseRotation = new Quaternionf(effect.rotation()).conjugate();
+            for (int i = 0; i < attack.targets.size(); i++) {
+                var worldTarget = attack.targets.get(i);
+                var target = new Vector3f((float) (worldTarget.x - effect.position().x),
+                        (float) (worldTarget.y - effect.position().y),
+                        (float) (worldTarget.z - effect.position().z));
+                inverseRotation.transform(target);
+                target.div(Math.max(0.001f, effect.scale()));
+                if (attack.pattern == VortexAttackPattern.FOURFOLD_SLAM) {
+                    effect.effect().setLiveParam("attack_corner_" + i, Value.of(target));
+                } else {
+                    effect.effect().setLiveParam("attack_target_x", Value.of(target.x));
+                    effect.effect().setLiveParam("attack_target_y", Value.of(target.y));
+                    effect.effect().setLiveParam("attack_target_z", Value.of(target.z));
+                }
+            }
         }
         BLACK_GRAPHS.entrySet().removeIf(entry -> {
             if (visible.contains(entry.getKey())) return false;

@@ -10,6 +10,8 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.api.common.ability.VortexAttackPattern;
+import org.academy.api.common.ability.VortexAttackTargets;
+import org.academy.api.common.ability.VortexAttackSequence;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -141,7 +143,7 @@ public final class BlackWing extends Skill {
 
     public static final class Server {
         private static final Map<UUID, Long> LAST_BOOST_TICK = new HashMap<>();
-        private static final Map<ServerPlayer, VortexAttackPattern> NEXT_ATTACK = new java.util.WeakHashMap<>();
+        private static final Map<ServerPlayer, VortexAttackSequence> ATTACK_SEQUENCES = new java.util.WeakHashMap<>();
 
         private Server() {
         }
@@ -180,18 +182,37 @@ public final class BlackWing extends Skill {
 
         public static void onLeftClickSwing(ServerPlayer player) {
             if (!isActive(player)) return;
-            if (!WingFlightSupport.trySweepCost(player, Skills.BLACK_WING.get())) return;
-            var pattern = NEXT_ATTACK.getOrDefault(player, VortexAttackPattern.RISE_SLAM);
-            NEXT_ATTACK.put(player, pattern.next());
+            var sequence = ATTACK_SEQUENCES.computeIfAbsent(player, _ -> new VortexAttackSequence());
+            var pattern = sequence.tryBegin(player.level().getGameTime(),
+                    () -> WingFlightSupport.trySweepCost(player, Skills.BLACK_WING.get()));
+            if (pattern == null) return;
             var packet = new BlackWingAttackPacket(player.getId(), pattern,
-                    player.level().getGameTime(), attackTarget(player, pattern));
+                    player.level().getGameTime(), attackTargets(player, pattern));
             for (var observer : player.level().players()) {
                 if (observer.distanceToSqr(player) <= 128.0 * 128.0) MisakaNetworkServer.send(observer, packet);
             }
             WingFlightSupport.fanAttack(player, Skills.BLACK_WING.get());
         }
 
-        private static Vec3 attackTarget(ServerPlayer player, VortexAttackPattern pattern) {
+        private static List<Vec3> attackTargets(ServerPlayer player, VortexAttackPattern pattern) {
+            if (pattern == VortexAttackPattern.FOURFOLD_SLAM) {
+                // Freeze the four corners at cast time, each projected onto its own terrain column.
+                return VortexAttackTargets.quadrilateral(player.position(),
+                                Vec3.directionFromRotation(0f, player.getYRot()), 6.0, 6.0)
+                        .stream().map(corner -> groundTarget(player, corner)).toList();
+            }
+            return List.of(aimTarget(player));
+        }
+
+        private static Vec3 groundTarget(ServerPlayer player, Vec3 corner) {
+            var top = corner.add(0, 16, 0);
+            var ground = player.level().clip(new ClipContext(top,
+                    new Vec3(corner.x, player.level().getMinY(), corner.z),
+                    ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+            return ground.getType() == HitResult.Type.MISS ? corner : ground.getLocation().add(0, 0.05, 0);
+        }
+
+        private static Vec3 aimTarget(ServerPlayer player) {
             var origin = player.getEyePosition();
             var hit = player.pick(WingFlightSupport.ATTACK_RANGE, 1f, false);
             var target = hit.getLocation();
@@ -206,17 +227,11 @@ public final class BlackWing extends Skill {
                     distance = origin.distanceToSqr(target);
                 }
             }
-            if (pattern == VortexAttackPattern.FOURFOLD_SLAM) {
-                var top = new Vec3(target.x, Math.max(origin.y, target.y) + 16.0, target.z);
-                var ground = player.level().clip(new ClipContext(top, new Vec3(target.x, player.level().getMinY(), target.z),
-                        ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-                if (ground.getType() != HitResult.Type.MISS) target = ground.getLocation().add(0, 0.05, 0);
-            }
             return target;
         }
 
         private static void tick(ServerPlayer player) {
-            if (!isActive(player)) NEXT_ATTACK.remove(player);
+            if (!isActive(player)) ATTACK_SEQUENCES.remove(player);
             WingFlightSupport.tick(player, Skills.BLACK_WING.get(),
                     AttachmentTypes.ACTIVATED_BLACK_WING.get(), LAST_BOOST_TICK);
         }

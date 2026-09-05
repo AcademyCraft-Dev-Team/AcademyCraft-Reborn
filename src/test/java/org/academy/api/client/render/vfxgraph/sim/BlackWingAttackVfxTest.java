@@ -9,6 +9,8 @@ import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
 import org.academy.api.client.render.vfxgraph.serialize.JsonVfxGraphCodec;
 import org.junit.jupiter.api.Test;
+import org.joml.Vector3f;
+import org.academy.api.common.ability.VortexAttackPattern;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStreamReader;
@@ -49,31 +51,87 @@ class BlackWingAttackVfxTest {
     }
 
     @Test
-    void threeAttacksHaveDistinctWindupImpactAndReturnPaths() throws Exception {
+    void fiveAttacksHaveDistinctWindupAndReturnPaths() throws Exception {
         var sim = simulator("black_wings");
         phase(sim, 0, 1f);
         float idleX = core(sim, 0, false).x(100);
         float idleY = core(sim, 0, false).y(100);
-        for (int mode = 1; mode <= 3; mode++) {
+        for (int mode = 1; mode <= 5; mode++) {
             phase(sim, mode, 0.30f);
-            var lifted = core(sim, 0, false);
+            var lifted = core(sim, 0, mode == 4);
             if (mode == 2) {
-                assertTrue(lifted.x(100) < 2f && lifted.z(100) < 0f, "thrust first compresses next to the shoulder");
-            } else {
+                assertTrue(lifted.x(100) < 2f && lifted.z(100) < 0f,
+                        "thrust first compresses next to the shoulder");
+            } else if (mode == 1 || mode == 3) {
                 assertTrue(lifted.y(100) > 8f, "slams first climb above the avatar");
+            } else {
+                assertTrue(Math.abs(lifted.x(100)) > 8f && lifted.y(100) < 2f,
+                        "lateral whips wind up at their own side instead of overhead");
             }
             assertEquals(mode == 3 ? 220 : 110, sim.arcBuffer().count());
-            if (mode == 3) {
-                assertTrue(Math.abs(core(sim, 1, false).x(100) - lifted.x(100)) > 1.5f,
-                        "fourfold storm must contain two separated branches per shoulder");
-            }
-            phase(sim, mode, 0.70f);
-            var impact = core(sim, 0, false);
-            assertTrue(impact.z(100) > 11f && impact.y(100) < 0f, "the strike must reach the forward target");
             phase(sim, mode, 1f);
             assertEquals(110, sim.arcBuffer().count());
             assertEquals(idleX, core(sim, 0, false).x(100), 0.001f);
             assertEquals(idleY, core(sim, 0, false).y(100), 0.001f);
+        }
+    }
+
+    @Test
+    void overheadStrokeLowersTheWholeWingWithADelayedTip() throws Exception {
+        var sim = simulator("black_wings");
+        phase(sim, 1, 0.30f);
+        float raisedMid = core(sim, 0, false).y(50);
+        phase(sim, 1, 0.52f);
+        var travelling = core(sim, 0, false);
+        assertTrue(travelling.y(50) < raisedMid * 0.6f, "the middle follows the shoulder down");
+        assertTrue(travelling.y(100) > travelling.y(50) + 2f, "the tip must lag behind the middle");
+        phase(sim, 1, 0.72f);
+        var contact = core(sim, 0, false);
+        assertTrue(contact.y(50) < 0f, "no high stationary arch may remain at contact");
+        assertEquals(12f, contact.z(100), 0.03f);
+        assertEquals(-1.2f, contact.y(100), 0.03f);
+    }
+
+    @Test
+    void lateralWhipsLeaveTheOtherWingUnchanged() throws Exception {
+        var idle = simulator("black_wings");
+        var attack = simulator("black_wings");
+        for (int mode : new int[]{4, 5}) {
+            for (float progress : new float[]{0.3f, 0.52f, 0.72f, 0.9f}) {
+                idle.setTime(progress * 1.5f);
+                attack.setTime(progress * 1.5f);
+                phase(idle, 0, 1f);
+                phase(attack, mode, progress);
+                boolean untouchedLeft = mode == 5;
+                for (int i = 0; i < idle.arcBuffer().count(); i++) {
+                    var expected = idle.arcBuffer().arc(i);
+                    if ((expected.x(0) < 0f) != untouchedLeft) continue;
+                    var actual = attack.arcBuffer().arc(i);
+                    assertEquals(expected.seed(), actual.seed());
+                    for (int p = 0; p < expected.size(); p++) {
+                        assertEquals(expected.x(p), actual.x(p), 0.00001f);
+                        assertEquals(expected.y(p), actual.y(p), 0.00001f);
+                        assertEquals(expected.z(p), actual.z(p), 0.00001f);
+                        assertEquals(expected.width(p), actual.width(p), 0.00001f);
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    void fourfoldHitsAllFourCornersWithIndependentGroundHeights() throws Exception {
+        var sim = simulator("black_wings");
+        Vector3f[] corners = {new Vector3f(-6, -1, 6), new Vector3f(-6, -4, -6),
+                new Vector3f(6, 2, 6), new Vector3f(6, -2, -6)};
+        for (int i = 0; i < 4; i++) sim.setLiveParam("attack_corner_" + i, Value.of(corners[i]));
+        phase(sim, 3, 0.76f);
+        assertEquals(220, sim.arcBuffer().count());
+        for (int i = 0; i < 4; i++) {
+            var landed = core(sim, i % 2, i < 2);
+            assertEquals(corners[i].x, landed.x(100), 0.001f);
+            assertEquals(corners[i].y, landed.y(100), 0.001f);
+            assertEquals(corners[i].z, landed.z(100), 0.001f);
         }
     }
 
@@ -83,7 +141,7 @@ class BlackWingAttackVfxTest {
         sim.setLiveParam("attack_target_x", Value.of(-7f));
         sim.setLiveParam("attack_target_y", Value.of(4f));
         sim.setLiveParam("attack_target_z", Value.of(16f));
-        for (int mode = 1; mode <= 3; mode++) {
+        for (int mode = 1; mode <= 5; mode++) {
             for (int i = 0; i <= 80; i++) {
                 phase(sim, mode, i / 80f);
                 assertTrue(sim.arcBuffer().count() <= 220);
@@ -95,26 +153,51 @@ class BlackWingAttackVfxTest {
                     }
                 }
             }
-            phase(sim, mode, 0.70f);
-            assertTrue(core(sim, 0, true).x(100) < -6f);
-            assertTrue(core(sim, 0, false).x(100) < -5f, "both wings aim toward the target, not opposite yaw offsets");
+            if (mode == 3) continue;
+            phase(sim, mode, 0.72f);
+            for (boolean left : new boolean[]{true, false}) {
+                if (mode == 4 && !left || mode == 5 && left) continue;
+                var tip = core(sim, 0, left);
+                assertEquals(-7f, tip.x(100), 0.03f);
+                assertEquals(4f, tip.y(100), 0.03f);
+                assertEquals(16f, tip.z(100), 0.03f);
+            }
         }
     }
 
     @Test
-    void editorVariantsPlayTheirOwnAttackAndCanExportActualMeshForVisualReview() throws Exception {
-        String[] variants = {"black_wings_rise_slam", "black_wings_compressed_thrust", "black_wings_fourfold_slam"};
+    void editorVariantsMatchTheGameDurationAndCanExportActualMeshForVisualReview() throws Exception {
+        String[] variants = {"black_wings_rise_slam", "black_wings_compressed_thrust", "black_wings_fourfold_slam",
+                "black_wings_left_whip", "black_wings_right_whip"};
         for (int m = 0; m < variants.length; m++) {
             var sim = simulator(variants[m]);
-            sim.setTime(0.6f);
-            sim.step(0f);
-            assertEquals(m == 2 ? 220 : 110, sim.arcBuffer().count());
+            var manual = simulator("black_wings");
+            for (float time : new float[]{0.45f, 0.78f, 1.08f, 1.44f, 1.5f}) {
+                sim.setTime(time);
+                sim.step(0f);
+                manual.setTime(time);
+                phase(manual, m + 1, (time % 1.5f) / 1.5f);
+                assertEquals(manual.arcBuffer().count(), sim.arcBuffer().count());
+                for (boolean left : new boolean[]{true, false}) {
+                    assertEquals(core(manual, 0, left).y(100), core(sim, 0, left).y(100), 0.001f);
+                    assertEquals(core(manual, 0, left).z(100), core(sim, 0, left).z(100), 0.001f);
+                }
+            }
+            assertEquals(30, VortexAttackPattern.byId(m + 1).durationTicks());
             if (!"1".equals(System.getenv("ACADEMY_VFX_CAPTURE"))) continue;
             for (int f = 0; f < 7; f++) {
-                float[] phases = {0f, 0.16f, 0.30f, 0.48f, 0.70f, 0.85f, 1f};
-                sim.setTime(0.6f + phases[f] * 0.5f);
+                float[] phases = {0f, 0.16f, 0.30f, 0.52f, 0.76f, 0.90f, 1f};
+                sim.setTime(0.6f + phases[f] * 1.5f);
                 phase(sim, m + 1, phases[f]);
                 exportMesh(sim, "m" + (m + 1) + "_f" + f);
+            }
+            if ("1".equals(System.getenv("ACADEMY_VFX_CAPTURE_MOTION"))) {
+                for (int f = 0; f <= 45; f++) {
+                    float progress = f / 45f;
+                    sim.setTime(0.6f + progress * 1.5f);
+                    phase(sim, m + 1, progress);
+                    exportMesh(sim, "motion_m" + (m + 1) + "_f" + f);
+                }
             }
         }
     }

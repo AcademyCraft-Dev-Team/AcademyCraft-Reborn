@@ -2,7 +2,7 @@ package org.academy.api.common.ability;
 
 /** Shared visual sequence, independent of a player, renderer, or skill implementation. */
 public enum VortexAttackPattern {
-    RISE_SLAM(1), COMPRESSED_THRUST(2), FOURFOLD_SLAM(3);
+    RISE_SLAM(1), LEFT_WHIP(4), RIGHT_WHIP(5), COMPRESSED_THRUST(2), FOURFOLD_SLAM(3);
 
     private final int id;
 
@@ -12,8 +12,10 @@ public enum VortexAttackPattern {
 
     public int id() { return id; }
 
-    /** Match the existing ten-tick wing attack cadence. */
-    public int durationTicks() { return 10; }
+    /** One complete windup, strike and recovery at twenty game ticks per second. */
+    public int durationTicks() { return 30; }
+
+    public float durationSeconds() { return durationTicks() / 20f; }
 
     public VortexAttackPattern next() {
         return values()[(ordinal() + 1) % values().length];
