@@ -3,6 +3,7 @@ package org.academy.api.client.gui.dsl
 import net.minecraft.resources.Identifier
 import org.academy.api.client.gui.event.OnClickListener
 import org.academy.api.client.gui.layout.Orientation
+import org.academy.api.client.gui.texture.TextureSource
 import org.academy.api.client.gui.widget.*
 
 // ============ 名称生成 ============
@@ -15,9 +16,6 @@ fun WidgetContainer.nextChildName(base: String): String {
     return "${base}_$n"
 }
 
-// ============ 叶子控件工厂 ============
-
-/** 创建并加入一个 [LabelWidget]. */
 fun WidgetContainer.label(
     text: String,
     name: String = nextChildName("label"),
@@ -29,7 +27,6 @@ fun WidgetContainer.label(
     return widget
 }
 
-/** 创建并加入一个 [ImageWidget]. */
 fun WidgetContainer.image(
     texture: Identifier? = null,
     name: String = nextChildName("image"),
@@ -41,7 +38,17 @@ fun WidgetContainer.image(
     return widget
 }
 
-/** 创建并加入一个 [FillWidget]. */
+fun WidgetContainer.image(
+    texture: TextureSource,
+    name: String = nextChildName("image"),
+    init: ImageWidget.() -> Unit = {}
+): ImageWidget {
+    val widget = ImageWidget().setTextureSource(texture)
+    addChild(name, widget)
+    widget.init()
+    return widget
+}
+
 fun WidgetContainer.fill(
     color: Int,
     name: String = nextChildName("fill"),
@@ -53,7 +60,6 @@ fun WidgetContainer.fill(
     return widget
 }
 
-/** 创建并加入一个磨砂玻璃面板 [BlurPanelWidget]. */
 fun WidgetContainer.blurPanel(
     radius: Float = 8f,
     name: String = nextChildName("blur_panel"),
@@ -65,7 +71,6 @@ fun WidgetContainer.blurPanel(
     return widget
 }
 
-/** 创建并加入一个 SDF 圆角矩形控件 [RoundedRectWidget]. */
 fun WidgetContainer.roundedRect(
     fillColor: Int = 0xFFFFFFFF.toInt(),
     radius: Float = 4f,
@@ -78,7 +83,6 @@ fun WidgetContainer.roundedRect(
     return widget
 }
 
-/** 创建并加入一个九宫格控件 [NineSliceWidget]. */
 fun WidgetContainer.nineSlice(
     texture: Identifier,
     left: Float = 0f,
@@ -94,7 +98,6 @@ fun WidgetContainer.nineSlice(
     return widget
 }
 
-/** 创建并加入一个 [ButtonWidget]. */
 fun WidgetContainer.button(name: String = nextChildName("button"), init: ButtonWidget.() -> Unit = {}): ButtonWidget {
     val widget = ButtonWidget()
     addChild(name, widget)
@@ -102,7 +105,6 @@ fun WidgetContainer.button(name: String = nextChildName("button"), init: ButtonW
     return widget
 }
 
-/** 创建并加入一个 [ToggleButtonWidget]. */
 fun WidgetContainer.toggle(
     checked: Boolean = false,
     name: String = nextChildName("toggle"),
@@ -115,7 +117,6 @@ fun WidgetContainer.toggle(
     return widget
 }
 
-/** 创建并加入一个 [RadioButtonWidget]. */
 fun WidgetContainer.radio(
     name: String = nextChildName("radio"),
     init: RadioButtonWidget.() -> Unit = {}
@@ -126,7 +127,6 @@ fun WidgetContainer.radio(
     return widget
 }
 
-/** 创建并加入一个 [ProgressBarWidget]. */
 fun WidgetContainer.progress(
     name: String = nextChildName("progress"),
     init: ProgressBarWidget.() -> Unit = {}
@@ -137,7 +137,6 @@ fun WidgetContainer.progress(
     return widget
 }
 
-/** 创建并加入一个 [TextBoxWidget]. */
 fun WidgetContainer.textBox(
     maxLength: Int = 32,
     name: String = nextChildName("text_box"),
@@ -149,7 +148,6 @@ fun WidgetContainer.textBox(
     return widget
 }
 
-/** 创建并加入一个 [SeekBarWidget]. */
 fun WidgetContainer.seekBar(
     name: String = nextChildName("seek_bar"),
     init: SeekBarWidget.() -> Unit = {}
@@ -160,9 +158,6 @@ fun WidgetContainer.seekBar(
     return widget
 }
 
-// ============ 独立构造器 (不加入任何父级, 供返回/传参使用) ============
-
-/** 构造一个未挂载的纵向线性布局. */
 fun standaloneColumn(spacing: Float = 0f, init: LinearLayoutWidget.() -> Unit = {}): LinearLayoutWidget {
     val widget = LinearLayoutWidget()
     widget.orientation = Orientation.VERTICAL
@@ -172,7 +167,6 @@ fun standaloneColumn(spacing: Float = 0f, init: LinearLayoutWidget.() -> Unit = 
     return widget
 }
 
-/** 构造一个未挂载的横向线性布局. */
 fun standaloneRow(spacing: Float = 0f, init: LinearLayoutWidget.() -> Unit = {}): LinearLayoutWidget {
     val widget = LinearLayoutWidget()
     widget.orientation = Orientation.HORIZONTAL
@@ -182,7 +176,6 @@ fun standaloneRow(spacing: Float = 0f, init: LinearLayoutWidget.() -> Unit = {})
     return widget
 }
 
-/** 构造一个未挂载的帧布局. */
 fun standaloneFrame(init: FrameLayoutWidget.() -> Unit = {}): FrameLayoutWidget {
     val widget = FrameLayoutWidget()
     widget.layoutParams = FrameLayoutWidget.LayoutParams()
@@ -190,9 +183,6 @@ fun standaloneFrame(init: FrameLayoutWidget.() -> Unit = {}): FrameLayoutWidget 
     return widget
 }
 
-// ============ 容器控件工厂 ============
-
-/** 纵向线性布局. */
 fun WidgetContainer.column(
     name: String = nextChildName("column"),
     spacing: Float = 0f,
@@ -206,7 +196,6 @@ fun WidgetContainer.column(
     return widget
 }
 
-/** 横向线性布局. */
 fun WidgetContainer.row(
     name: String = nextChildName("row"),
     spacing: Float = 0f,
@@ -220,7 +209,6 @@ fun WidgetContainer.row(
     return widget
 }
 
-/** 锚点布局 (布局 v2). */
 fun WidgetContainer.anchor(
     name: String = nextChildName("anchor"),
     init: AnchorLayoutWidget.() -> Unit = {}
@@ -285,7 +273,6 @@ fun WidgetContainer.stack(
     return widget
 }
 
-/** 宽高比约束布局. */
 fun WidgetContainer.aspect(
     ratio: Float,
     name: String = nextChildName("aspect"),
@@ -297,7 +284,6 @@ fun WidgetContainer.aspect(
     return widget
 }
 
-/** 滚动面板, [content] 为其唯一子内容. */
 fun WidgetContainer.scrollPanel(
     orientation: Orientation? = Orientation.VERTICAL,
     name: String = nextChildName("scroll"),
@@ -311,7 +297,6 @@ fun WidgetContainer.scrollPanel(
     return widget
 }
 
-/** 单选组. */
 fun WidgetContainer.radioGroup(
     name: String = nextChildName("radio_group"),
     init: RadioGroupWidget.() -> Unit = {}
@@ -322,7 +307,6 @@ fun WidgetContainer.radioGroup(
     return widget
 }
 
-/** 为现有子控件赋予布局参数后加入父级 (等价 addChild + init). */
 fun <T : Widget> WidgetContainer.add(
     name: String,
     widget: T,
@@ -333,7 +317,6 @@ fun <T : Widget> WidgetContainer.add(
     return widget
 }
 
-/** 替换同名子控件并保留顺序, 赋予布局参数后执行 init (等价 replaceChild + init). */
 fun <T : Widget> WidgetContainer.replace(
     name: String,
     widget: T,
@@ -344,9 +327,6 @@ fun <T : Widget> WidgetContainer.replace(
     return widget
 }
 
-// ============ 交互辅助 ============
-
-/** 设置点击回调. */
 fun ButtonWidget.onClick(handler: () -> Unit): ButtonWidget {
     onClickListener = OnClickListener { handler() }
     return this

@@ -6,10 +6,10 @@ import net.minecraft.world.inventory.MenuType;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-import static org.academy.AcademyCraft.MODID;
+import static org.academy.AcademyCraft.MOD_ID;
 
 public class MenuTypes {
-    public static final DeferredRegister<MenuType<?>> MENU_TYPES = DeferredRegister.create(BuiltInRegistries.MENU, MODID);
+    public static final DeferredRegister<MenuType<?>> MENU_TYPES = DeferredRegister.create(BuiltInRegistries.MENU, MOD_ID);
     public static final DeferredHolder<MenuType<?>, MenuType<WindGenMenu>> WIND_GEN = MENU_TYPES.register("wind_gen",
             () -> new MenuType<>(WindGenMenu::new, FeatureFlags.VANILLA_SET));
     public static final DeferredHolder<MenuType<?>, MenuType<WirelessNodeMenu>> NODE = MENU_TYPES.register("node",

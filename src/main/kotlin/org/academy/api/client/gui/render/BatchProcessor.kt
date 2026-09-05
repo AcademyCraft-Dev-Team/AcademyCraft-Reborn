@@ -66,20 +66,21 @@ object BatchProcessor {
     private fun applyVertices(state: BatchState, submittedCommand: SubmittedCommand) {
         val command = submittedCommand.command
         val pose = submittedCommand.pose
+        val alphaMul = submittedCommand.alphaMul
 
         if (state.builders.size == 1) {
-            command.generateVertices(state.builders[0], pose)
+            command.generateVertices(state.builders[0], pose, alphaMul)
         } else {
             val instancing = command.isGeometryFixed()
             if (!instancing || state.instanceCount == 0) {
-                command.generateVertices(state.builders[0], pose)
+                command.generateVertices(state.builders[0], pose, alphaMul)
                 if (instancing) {
                     state.geometryMeshData = state.builders[0].build()
                 }
             }
             for (i in 1 until state.builders.size) {
                 val slot = state.slotIndices[i]
-                command.generateInstanceData(slot, state.builders[i], if (instancing) state.instanceCount else 0, pose)
+                command.generateInstanceData(slot, state.builders[i], if (instancing) state.instanceCount else 0, pose, alphaMul)
             }
             if (instancing) state.instanceCount++ else state.instanceCount = 1
         }

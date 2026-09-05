@@ -1,12 +1,8 @@
 package org.academy.internal.client.app.music.ui
 
-import com.mojang.blaze3d.platform.NativeImage
 import com.mojang.blaze3d.textures.FilterMode
 import com.mojang.blaze3d.textures.GpuSampler
 import com.mojang.blaze3d.textures.GpuTextureView
-import net.minecraft.client.Minecraft
-import net.minecraft.client.renderer.texture.DynamicTexture
-import net.minecraft.locale.Language
 import net.minecraft.resources.Identifier
 import org.academy.AcademyCraft
 import org.academy.api.client.app.App
@@ -15,20 +11,25 @@ import org.academy.api.client.gui.animation.ObjectAnimator
 import org.academy.api.client.gui.animation.ValueAnimator
 import org.academy.api.client.gui.command.DrawCommand
 import org.academy.api.client.gui.command.ImageCircleDrawCommand
+import org.academy.api.client.gui.drawable.ColorDrawable
+import org.academy.api.client.gui.drawable.StateListDrawable
+import org.academy.api.client.gui.dsl.*
+import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
+import org.academy.api.client.gui.state.UiState
+import org.academy.api.client.gui.state.bindState
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.gui.widget.SeekBarWidget.OnSeekBarChangeListener
 import org.academy.api.client.hud.terminal.TerminalHud
 import org.academy.api.client.resources.R
 import org.academy.api.common.util.L10n
+import org.academy.internal.client.app.music.backend.AccountAvatarCache
 import org.academy.internal.client.app.music.backend.AlbumArtworkCache
 import org.academy.internal.client.app.music.backend.MusicPlayerBackend
 import org.academy.internal.client.app.music.backend.OnlineMusicManager
 import org.academy.internal.client.app.music.common.PlaybackMode
-import java.io.ByteArrayInputStream
-import java.util.function.Supplier
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -43,7 +44,7 @@ object MusicApp : App {
     }
 
     override fun name(): String {
-        return tr("app.academy.music_player.name")
+        return L10n["app.academy.music_player.name"]
     }
 
     override fun icon(): Identifier {
@@ -52,17 +53,19 @@ object MusicApp : App {
 
     private class Context : WidgetContext {
         private var showingSearchResults = false
-        private var libraryViewRevision = 0
+        private var showingAccount = false
+        private val listRevisionState = UiState(0)
+        private lateinit var searchBox: TextBoxWidget
+        private lateinit var searchButton: ButtonWidget
+        private var settingsTitle: LabelWidget? = null
+        private var moreIcon: ImageWidget? = null
         private val vinyl = createVinyl()
-        private val playPauseIcon: ImageWidget = object : ImageWidget(getPlayPauseIcon()) {
-            override fun tick() {
-                updatePlayPauseIcon()
-            }
+        private var lastVinylArtwork: Identifier? = null
+        private val playPauseIcon: ImageWidget = ImageWidget().apply {
+            bindState(MusicPlayerBackend.getInstance().uiState) { setTexture(getPlayPauseIcon()) }
         }
-        private val playbackModeIcon: ImageWidget = object : ImageWidget(getPlaybackModeIcon()) {
-            override fun tick() {
-                updatePlaybackModeIcon()
-            }
+        private val playbackModeIcon: ImageWidget = ImageWidget().apply {
+            bindState(MusicPlayerBackend.getInstance().uiState) { setTexture(getPlaybackModeIcon()) }
         }
         private val rot: ObjectAnimator = ObjectAnimator
             .ofFloat(
@@ -79,414 +82,600 @@ object MusicApp : App {
                 repeatCount = ValueAnimator.INFINITE
             }
 
+        private lateinit var mainContainer: WidgetContainer
+
         override fun get(): Widget {
             return createContent()
         }
 
         fun createContent(): FrameLayoutWidget {
-            val content = FrameLayoutWidget()
-            content.layoutParams = WidgetContainer.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-            run {
-                val root = LinearLayoutWidget()
-                root.orientation = Orientation.VERTICAL
-                root.layoutParams = FrameLayoutWidget.LayoutParams()
-                    .sizeMode(SizeMode.MATCH_PARENT)
-                root.spacing = 1f
-                content.addChild("root", root)
-                run {
-                    val topBar = LinearLayoutWidget()
-                    topBar.orientation = Orientation.HORIZONTAL
-                    topBar.layoutParams = LinearLayoutWidget.LayoutParams()
-                        .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
-                    root.addChild("top_bar", topBar)
-                    run {
-                        val backButton = ButtonWidget()
-                        backButton.layoutParams = LinearLayoutWidget.LayoutParams()
-                            .margin(2f, 2f, 2f, 0f)
-                            .size(16f, 16f)
-                        backButton.onClickListener = { _: Widget? ->
-                            TerminalHud.INSTANCE.closeApp()
+            return standaloneFrame {
+                matchParent()
+                paddingHorizontal(2f)
+
+                column("root") {
+                    spacing = 1f
+                    sizeMode(SizeMode.MATCH_PARENT)
+
+                    row("top_bar") {
+                        sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                        spacing = 2f
+
+                        button("back_button") {
+                            margin(2f, 2f, 2f, 0f)
+                            size(16f, 16f)
+                            onClick { TerminalHud.INSTANCE.closeApp() }
+                            image(R.textures.gui.icon.arrow_back, "arrow") {
+                                sizeMode(SizeMode.MATCH_PARENT)
+                            }
                         }
-                        topBar.addChild("back_button", backButton)
-                        run {
-                            val arrow = ImageWidget(R.textures.gui.icon.arrow_back)
-                            arrow.setSampler(FilterMode.LINEAR, false)
-                            arrow.layoutParams = FrameLayoutWidget.LayoutParams()
-                                .sizeMode(SizeMode.MATCH_PARENT)
-                            backButton.addChild("arrow", arrow)
+                        searchBox = textBox(64, "query") {
+                            weight(1f)
+                            height(14f)
+                            gravity(Gravity.CENTER_VERTICAL)
+                            padding(2f, 0f)
+                            enter { search(it) }
+                            clearOnEnter(false)
+                        }
+                        searchButton = createTextButton(L10n["app.academy.music_player.search"], 24f) {
+                            search(searchBox.text)
+                        }
+                        add("search", searchButton)
+                        settingsTitle = label(L10n["app.academy.music_player.settings.title"], "settings_title") {
+                            weight(1f)
+                            height(14f)
+                            gravity(Gravity.CENTER)
+                            visibility = Widget.Visibility.GONE
+                        }
+                        button("more_button") {
+                            margin(2f, 2f, 2f, 0f)
+                            size(16f, 16f)
+                            onClick { toggleAccountView() }
+                            moreIcon = image(R.textures.gui.icon.more, "icon") {
+                                sizeMode(SizeMode.MATCH_PARENT)
+                            }
                         }
                     }
 
-                    val splitLine = FillWidget(-0x1)
-                    splitLine.layoutParams = LinearLayoutWidget.LayoutParams()
-                        .height(1f)
-                        .widthMode(SizeMode.MATCH_PARENT)
-                        .padding(2f, 0f)
-                    root.addChild("split_line", splitLine)
-                    root.addChild("main", createMain())
+                    fill(TerminalHud.PRIMARY_COLOR, "split_line") {
+                        height(1f)
+                        widthMode(SizeMode.MATCH_PARENT)
+                    }
+
+                    mainContainer = frame {
+                        weight(1f)
+                        widthMode(SizeMode.MATCH_PARENT)
+
+                        add("content", createNormalView())
+                    }
                 }
             }
-            return content
         }
 
-        fun createMain(): LinearLayoutWidget {
-            val main = LinearLayoutWidget()
-            main.layoutParams = LinearLayoutWidget.LayoutParams()
-                .weight(1f)
-                .padding(2f, 0f, 2f, 2f)
-                .widthMode(SizeMode.MATCH_PARENT)
-            main.orientation = Orientation.HORIZONTAL
-            run {
-                val musicListArea = ScrollPanelWidget()
-                musicListArea.layoutParams = LinearLayoutWidget.LayoutParams()
-                    .width(142f)
-                    .heightMode(SizeMode.MATCH_PARENT)
-                musicListArea.setContent(createLibraryPanel())
-                main.addChild("music_list_area", musicListArea)
+        fun toggleAccountView() {
+            showingAccount = !showingAccount
+            mainContainer.replace("content", if (showingAccount) createSettingsView() else createNormalView())
+            updateTopBarMode()
+        }
 
-                val playerArea = FrameLayoutWidget()
-                playerArea.layoutParams = LinearLayoutWidget.LayoutParams()
-                    .weight(1f)
-                    .heightMode(SizeMode.MATCH_PARENT)
-                main.addChild("player_area", playerArea)
+        private fun updateTopBarMode() {
+            if (showingAccount) {
+                searchBox.visibility = Widget.Visibility.GONE
+                searchButton.visibility = Widget.Visibility.GONE
+                settingsTitle?.visibility = Widget.Visibility.VISIBLE
+                moreIcon?.setTexture(R.textures.gui.icon.close)
+                moreIcon?.parent?.let {
+                    (it as? ButtonWidget)?.tooltipText = L10n["app.academy.music_player.settings.back"]
+                }
+            } else {
+                searchBox.visibility = Widget.Visibility.VISIBLE
+                searchButton.visibility = Widget.Visibility.VISIBLE
+                settingsTitle?.visibility = Widget.Visibility.GONE
+                moreIcon?.setTexture(R.textures.gui.icon.more)
+                moreIcon?.parent?.let { (it as? ButtonWidget)?.tooltipText = null }
+            }
+        }
 
-                vinyl.setSampler(FilterMode.NEAREST, false)
-                vinyl.layoutParams = FrameLayoutWidget.LayoutParams()
-                    .gravity(Gravity.CENTER)
-                    .size(96f, 96f)
-                    .margin(0f, 0f, 0f, 24f)
-                playerArea.addChild("vinyl", vinyl)
+        fun createNormalView(): LinearLayoutWidget = standaloneRow {
+            sizeMode(SizeMode.MATCH_PARENT)
+
+            column {
+                label(L10n["app.academy.music_player.track_list"], "playlist_title")
+
+                scrollPanel(Orientation.VERTICAL, "music_list_area", createPlaylistPanel()) {
+                    width(100f)
+                    weight(1f)
+                }
+            }
+
+            frame {
+                weight(1f)
+                heightMode(SizeMode.MATCH_PARENT)
+
+                add("vinyl", vinyl) {
+                    sampler(FilterMode.NEAREST, false)
+                    size(88f, 88f)
+                    margin(0f, 0f, 0f, 32f)
+                    gravity(Gravity.CENTER)
+                }
                 updateVinylIcon()
                 updateRot()
-
-                val infoArea = LinearLayoutWidget()
-                infoArea.layoutParams = FrameLayoutWidget.LayoutParams()
-                    .gravity(Gravity.CENTER_BOTTOM)
-                    .size(224f, 32f)
-                    .margin(0f, 0f, 0f, 12f)
-                infoArea.orientation = Orientation.VERTICAL
-                playerArea.addChild("info_area", infoArea)
-                run {
-                    val progressInfoArea = LinearLayoutWidget()
-                    progressInfoArea.layoutParams = LinearLayoutWidget.LayoutParams()
-                        .weight(1f)
-                        .widthMode(SizeMode.MATCH_PARENT)
-                    progressInfoArea.orientation = Orientation.HORIZONTAL
-                    progressInfoArea.spacing = 4f
-                    infoArea.addChild("progress_info_area", progressInfoArea)
-                    run {
-                        val p = LinearLayoutWidget.LayoutParams()
-                            .weight(1f)
-                            .width(0f)
-                            .gravity(Gravity.CENTER)
-                        val currentTime: LabelWidget = object : LabelWidget("00:00") {
-                            override fun tick() {
-                                text = formatTime(MusicPlayerBackend.getInstance().currentTime)
-                            }
+                column("info_area") {
+                    gravity(Gravity.CENTER_BOTTOM)
+                    size(228f, 56f)
+                    margin(0f, 0f, 0f, 4f)
+                    add("meta", LinearLayoutWidget().apply {
+                        orientation = Orientation.VERTICAL
+                        val titleLabel = label("") {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            gravity(Gravity.CENTER)
                         }
-                        currentTime.layoutParams = p
-                        progressInfoArea.addChild("current_time", currentTime)
-
-                        progressInfoArea.addChild("play_progress_bar", createPlayProgressBar())
-
-                        val musicDuration: LabelWidget = object : LabelWidget("00:00") {
-                            override fun tick() {
-                                text = formatTime(MusicPlayerBackend.getInstance().totalDuration)
-                            }
+                        val artistLabel = label("") {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            gravity(Gravity.CENTER)
                         }
-                        musicDuration.layoutParams = p
-                        progressInfoArea.addChild("music_duration", musicDuration)
+                        bindState(MusicPlayerBackend.getInstance().uiState) {
+                            val mi = MusicPlayerBackend.getInstance().currentMusicInfo
+                            titleLabel.text = mi?.name ?: ""
+                            artistLabel.text = mi?.subtitle ?: ""
+                        }
+                    }) {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        heightMode(SizeMode.WRAP_CONTENT)
                     }
-
-                    val controlArea = LinearLayoutWidget()
-                    controlArea.layoutParams = LinearLayoutWidget.LayoutParams()
-                        .widthMode(SizeMode.MATCH_PARENT)
-                        .height(16f)
-                    controlArea.orientation = Orientation.HORIZONTAL
-                    controlArea.spacing = 8f
-                    infoArea.addChild("control_area", controlArea)
-                    run {
-                        val emptyP = LinearLayoutWidget.LayoutParams()
-                            .weight(1f)
-                            .width(0f)
-                            .heightMode(SizeMode.MATCH_PARENT)
-                        val p = LinearLayoutWidget.LayoutParams()
-                            .size(16f, 16f)
-                            .gravity(Gravity.CENTER)
-
-                        val left = FrameLayoutWidget()
-                        left.layoutParams = emptyP
-                        controlArea.addChild("left", left)
-                        run {
-                            val playbackModeButton = ButtonWidget()
-                            playbackModeButton.layoutParams = LinearLayoutWidget.LayoutParams()
-                                .size(16f, 16f)
-                                .gravity(Gravity.CENTER_RIGHT)
-                            playbackModeButton.onClickListener = {
-                                MusicPlayerBackend.getInstance().cyclePlaybackMode()
+                    row("progress_info_area") {
+                        height(12f)
+                        widthMode(SizeMode.MATCH_PARENT)
+                        spacing = 4f
+                        add("current_time", LabelWidget("00:00").apply {
+                            setFrameUpdate {
+                                text = formatTime(MusicPlayerBackend.getInstance().currentTime)
+                                true
                             }
-                            left.addChild("playback_mode", playbackModeButton)
-                            run {
-                                playbackModeIcon.setSampler(FilterMode.LINEAR, false)
-                                playbackModeButton.addChild("icon", playbackModeIcon)
+                        }) {
+                            weight(1f)
+                            width(0f)
+                            gravity(Gravity.CENTER)
+                        }
+                        add("play_progress_bar", createPlayProgressBar())
+                        add("music_duration", LabelWidget("00:00").apply {
+                            setFrameUpdate {
+                                text = formatTime(MusicPlayerBackend.getInstance().totalDuration)
+                                true
+                            }
+                        }) {
+                            weight(1f)
+                            width(0f)
+                            gravity(Gravity.CENTER)
+                        }
+                    }
+                    row("control_area") {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(16f)
+                        spacing = 8f
+
+                        frame {
+                            weight(1f)
+                            width(0f)
+                            heightMode(SizeMode.MATCH_PARENT)
+
+                            button("playback_mode") {
+                                size(16f, 16f)
+                                gravity(Gravity.CENTER_RIGHT)
+                                onClick { MusicPlayerBackend.getInstance().cyclePlaybackMode() }
+                                add("icon", playbackModeIcon) {
+                                    sampler(FilterMode.LINEAR, false)
+                                }
                             }
                         }
+                        button("previous") {
+                            size(16f, 16f)
+                            gravity(Gravity.CENTER)
+                            onClick { MusicPlayerBackend.getInstance().playPrevious() }
+                            image(R.textures.gui.app.music.previous) {
+                                sampler(FilterMode.LINEAR, false)
+                            }
+                        }
+                        button("play_pause") {
+                            size(16f, 16f)
+                            gravity(Gravity.CENTER)
+                            onClick { MusicPlayerBackend.getInstance().togglePlayPause() }
+                            add("icon", playPauseIcon) {
+                                sampler(FilterMode.LINEAR, false)
+                            }
+                        }
+                        button("next") {
+                            size(16f, 16f)
+                            gravity(Gravity.CENTER)
+                            onClick { MusicPlayerBackend.getInstance().playNext() }
+                            image(R.textures.gui.app.music.next) {
+                                sampler(FilterMode.LINEAR, false)
+                            }
+                        }
+                        frame {
+                            weight(1f)
+                            width(0f)
+                            heightMode(SizeMode.MATCH_PARENT)
 
-                        val previousButton = ButtonWidget()
-                        previousButton.layoutParams = p
-                        previousButton.onClickListener = {
-                            MusicPlayerBackend.getInstance().playPrevious()
-                        }
-                        controlArea.addChild("previous", previousButton)
-                        run {
-                            val icon = ImageWidget(R.textures.gui.app.music.previous)
-                            icon.setSampler(FilterMode.LINEAR, false)
-                            previousButton.addChild("icon", icon)
-                        }
-
-                        val playPauseButton = ButtonWidget()
-                        playPauseButton.layoutParams = p
-                        playPauseButton.onClickListener = {
-                            MusicPlayerBackend.getInstance().togglePlayPause()
-                        }
-                        controlArea.addChild("play_pause", playPauseButton)
-                        run {
-                            playPauseIcon.setSampler(FilterMode.LINEAR, false)
-                            playPauseButton.addChild("icon", playPauseIcon)
-                        }
-
-                        val nextButton = ButtonWidget()
-                        nextButton.layoutParams = p
-                        nextButton.onClickListener = { MusicPlayerBackend.getInstance().playNext() }
-                        controlArea.addChild("next", nextButton)
-                        run {
-                            val icon = ImageWidget(R.textures.gui.app.music.next)
-                            icon.setSampler(FilterMode.LINEAR, false)
-                            nextButton.addChild("icon", icon)
-                        }
-
-                        val right = FrameLayoutWidget()
-                        right.layoutParams = emptyP
-                        controlArea.addChild("right", right)
-                        run {
-                            right.addChild("volume_area", createVolumeArea())
+                            add("volume_area", createVolumeArea())
                         }
                     }
                 }
             }
-            return main
         }
 
-        private fun createLibraryPanel(): LinearLayoutWidget {
-            val panel = LinearLayoutWidget()
-            panel.orientation = Orientation.VERTICAL
-            panel.spacing = 2f
-            panel.layoutParams = WidgetContainer.LayoutParams()
-                .width(138f)
-                .heightMode(SizeMode.WRAP_CONTENT)
+        fun createPlaylistPanel(): LinearLayoutWidget = LinearLayoutWidget().apply {
+            orientation = Orientation.VERTICAL
+            bindState(OnlineMusicManager.revisionState) { rebuildSearchAndPlaylist(this as LinearLayoutWidget) }
+            bindState(MusicPlayerBackend.getInstance().uiState) { rebuildSearchAndPlaylist(this as LinearLayoutWidget) }
+            bindState(listRevisionState) { rebuildSearchAndPlaylist(this as LinearLayoutWidget) }
+        }
 
-            val searchBox = TextBoxWidget(64).apply {
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .weight(1f)
-                    .height(14f)
-                    .padding(2f, 0f)
-                setWhenEnter { query -> search(query) }
-                setClearWhenEnter(false)
-            }
-            val searchRow = LinearLayoutWidget().apply {
-                orientation = Orientation.HORIZONTAL
-                spacing = 2f
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .widthMode(SizeMode.MATCH_PARENT)
-                    .height(14f)
-            }
-            searchRow.addChild("query", searchBox)
-            searchRow.addChild("search", createTextButton(tr("app.academy.music_player.search"), 24f) {
-                search(searchBox.text)
-            })
-            searchRow.addChild(
-                "return_list", createTextButton(
-                    tr("app.academy.music_player.back_to_list"), 24f, 0.65f
-                ) {
-                    showingSearchResults = false
-                    libraryViewRevision++
-                })
-            panel.addChild("search_row", searchRow)
-
-            val providers = LinearLayoutWidget().apply {
-                orientation = Orientation.HORIZONTAL
-                spacing = 2f
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .widthMode(SizeMode.MATCH_PARENT)
-                    .height(14f)
-            }
-            providers.addChild("qq", createTextButton(tr("app.academy.music_player.provider.qq"), 0f) {
-                OnlineMusicManager.selectProvider(OnlineMusicManager.Provider.QQ)
-            }.apply { layoutParams = LinearLayoutWidget.LayoutParams().weight(1f).height(14f) })
-            providers.addChild("netease", createTextButton(tr("app.academy.music_player.provider.netease"), 0f) {
-                OnlineMusicManager.selectProvider(OnlineMusicManager.Provider.NETEASE)
-            }.apply { layoutParams = LinearLayoutWidget.LayoutParams().weight(1f).height(14f) })
-            panel.addChild("providers", providers)
-
-            val accountActions = LinearLayoutWidget().apply {
-                orientation = Orientation.HORIZONTAL
-                spacing = 2f
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .widthMode(SizeMode.MATCH_PARENT)
-                    .height(14f)
-            }
-            accountActions.addChild("login", createTextButton(tr("app.academy.music_player.login"), 0f) {
-                OnlineMusicManager.startLogin()
-            }.apply { layoutParams = LinearLayoutWidget.LayoutParams().weight(1f).height(14f) })
-            accountActions.addChild("logout", createTextButton(tr("app.academy.music_player.logout"), 0f) {
-                OnlineMusicManager.logout()
-            }.apply { layoutParams = LinearLayoutWidget.LayoutParams().weight(1f).height(14f) })
-            accountActions.addChild("sync", createTextButton(tr("app.academy.music_player.sync"), 0f) {
-                OnlineMusicManager.shareCurrentTrack()
-            }.apply { layoutParams = LinearLayoutWidget.LayoutParams().weight(1f).height(14f) })
-            panel.addChild("account_actions", accountActions)
-
-            panel.addChild("status", object : LabelWidget(OnlineMusicManager.status) {
-                override fun tick() {
-                    super.tick()
-                    OnlineMusicManager.tick()
-                    text = OnlineMusicManager.status
-                }
-            }.apply {
-                scale = 0.65f
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .widthMode(SizeMode.MATCH_PARENT)
-                    .height(12f)
-                    .gravity(Gravity.CENTER_LEFT)
-            })
-
-            panel.addChild("qr", LoginQrWidget().apply {
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .size(72f, 72f)
-                    .gravity(Gravity.CENTER)
-            })
-
-            panel.addChild("dynamic", object : LinearLayoutWidget() {
-                private var lastOnlineRevision = -1
-                private var lastPlaylistRevision = -1
-                private var lastViewRevision = -1
-
-                init {
-                    orientation = Orientation.VERTICAL
+        private fun createSettingsView(): ScrollPanelWidget {
+            return ScrollPanelWidget(Orientation.VERTICAL).apply {
+                sizeMode(SizeMode.MATCH_PARENT)
+                setContent(standaloneColumn {
                     spacing = 2f
-                    layoutParams = LayoutParams()
-                        .widthMode(SizeMode.MATCH_PARENT)
-                        .heightMode(SizeMode.WRAP_CONTENT)
-                }
+                    sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                    padding(2f, 2f)
 
-                override fun tick() {
-                    super.tick()
-                    val onlineRevision = OnlineMusicManager.revision
-                    val playlistRevision = MusicPlayerBackend.getInstance().playlistRevision
-                    if (onlineRevision == lastOnlineRevision
-                        && playlistRevision == lastPlaylistRevision
-                        && libraryViewRevision == lastViewRevision
-                    ) return
-                    lastOnlineRevision = onlineRevision
-                    lastPlaylistRevision = playlistRevision
-                    lastViewRevision = libraryViewRevision
-                    rebuildSearchAndPlaylist(this)
+                    add("provider", createProviderPanel())
+                    add("account", createAccountPanel())
+                    add("status", createStatusLine())
+                })
+            }
+        }
+
+        private fun createProviderPanel(): FrameLayoutWidget {
+            return standaloneFrame {
+                sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                radioGroup("segments") {
+                    orientation = Orientation.HORIZONTAL
+                    spacing = 2f
+                    sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                    padding(2f)
+
+                    val qq = add("qq", createProviderSegment(OnlineMusicManager.Provider.QQ))
+                    val netease = add("netease", createProviderSegment(OnlineMusicManager.Provider.NETEASE))
+
+                    selectButton(
+                        if (OnlineMusicManager.selectedProvider == OnlineMusicManager.Provider.QQ)
+                            qq else netease
+                    )
                 }
-            })
-            return panel
+            }
+        }
+
+        private fun createProviderSegment(provider: OnlineMusicManager.Provider): RadioButtonWidget {
+            val radio = RadioButtonWidget()
+            radio.layoutParams = LinearLayoutWidget.LayoutParams().weight(1f).height(14f)
+            radio.onClickListener = org.academy.api.client.gui.event.OnClickListener {
+                OnlineMusicManager.selectProvider(provider)
+            }
+            val labelText = when (provider) {
+                OnlineMusicManager.Provider.QQ -> L10n["app.academy.music_player.provider.qq"]
+                OnlineMusicManager.Provider.NETEASE -> L10n["app.academy.music_player.provider.netease"]
+            }
+            val text = LabelWidget(labelText)
+            text.layoutParams = FrameLayoutWidget.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT)
+                .gravity(Gravity.CENTER)
+            radio.addChild("text", text)
+            val bg = StateListDrawable()
+            bg.addState(Widget.SELECTED, ColorDrawable(TerminalHud.CONTROL_ACTIVE_COLOR))
+            bg.addState(Widget.HOVERED, ColorDrawable(TerminalHud.CONTROL_HOVER_COLOR))
+            bg.setDefault(ColorDrawable(0))
+            radio.background = bg
+            return radio
+        }
+
+        private fun createAccountPanel(): FrameLayoutWidget {
+            return standaloneFrame {
+                sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+
+                add("content", FrameLayoutWidget().apply {
+                    fun rebuild() {
+                        clearChildren()
+                        add("card", buildAccountCard().apply {
+                            sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                            padding(4f, 4f)
+                        })
+                    }
+
+                    bindState(OnlineMusicManager.revisionState) { rebuild() }
+                    sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                })
+            }
+        }
+
+        private fun buildAccountCard(): Widget {
+            val state = OnlineMusicManager.loginState
+            if (state == OnlineMusicManager.LoginState.FETCHING
+                || state == OnlineMusicManager.LoginState.WAITING
+                || state == OnlineMusicManager.LoginState.EXPIRED
+                || state == OnlineMusicManager.LoginState.FAILED
+            ) return buildLoginFlowCard()
+            return if (OnlineMusicManager.isLoggedIn()) buildLoggedInCard() else buildLoggedOutCard()
+        }
+
+        private fun buildLoggedOutCard(): LinearLayoutWidget {
+            return standaloneRow(6f) {
+                sizeMode(SizeMode.MATCH_PARENT)
+                image(R.textures.gui.app.music.icon, "icon") {
+                    sampler(FilterMode.LINEAR, false)
+                    setColor(0.65f, 0.65f, 0.65f)
+                    size(20f, 20f)
+                    gravity(Gravity.CENTER)
+                }
+                column("text") {
+                    weight(1f)
+                    heightMode(SizeMode.MATCH_PARENT)
+                    label(L10n["app.academy.music_player.account.not_logged_in"], "title") {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(10f)
+                        gravity(Gravity.CENTER_LEFT)
+                    }
+                    label(L10n["app.academy.music_player.account.not_logged_in_hint"], "hint") {
+                        scale = 0.6f
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(9f)
+                        gravity(Gravity.CENTER_LEFT)
+                    }
+                }
+                add(
+                    "login", createStyledButton(
+                        L10n["app.academy.music_player.login"], 60f, 14f
+                    ) {
+                        OnlineMusicManager.startLogin()
+                    }) {
+                    gravity(Gravity.CENTER)
+                }
+            }
+        }
+
+        private fun buildLoginFlowCard(): LinearLayoutWidget {
+            val state = OnlineMusicManager.loginState
+            val provider = OnlineMusicManager.selectedProvider
+            val hint = when (state) {
+                OnlineMusicManager.LoginState.FETCHING -> L10n["app.academy.music_player.account.login_fetching"]
+                OnlineMusicManager.LoginState.WAITING -> L10n["app.academy.music_player.account.login_scan_hint"]
+                    .replace("%s", providerLabelText(provider))
+
+                OnlineMusicManager.LoginState.EXPIRED -> L10n["app.academy.music_player.account.qr_expired"]
+                OnlineMusicManager.LoginState.FAILED -> L10n["app.academy.music_player.account.login_failed"]
+                else -> ""
+            }
+            return standaloneColumn(3f) {
+                sizeMode(SizeMode.MATCH_PARENT)
+                label(hint, "hint") {
+                    scale = 0.62f
+                    alpha = 0.85f
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(10f)
+                    gravity(Gravity.CENTER)
+                }
+                if (state == OnlineMusicManager.LoginState.WAITING) {
+                    add("qr", LoginQrWidget()) {
+                        size(56f, 56f)
+                        gravity(Gravity.CENTER)
+                    }
+                }
+                row("actions") {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(14f)
+                    gravity(Gravity.CENTER)
+                    if (state == OnlineMusicManager.LoginState.WAITING
+                        || state == OnlineMusicManager.LoginState.EXPIRED
+                        || state == OnlineMusicManager.LoginState.FAILED
+                    ) {
+                        add(
+                            "refresh", createStyledButton(
+                                L10n["app.academy.music_player.account.refresh_qr"], 58f, 14f
+                            ) {
+                                OnlineMusicManager.refreshLogin()
+                            }) {
+                            weight(1f)
+                            width(0f)
+                        }
+                    }
+                    add(
+                        "cancel", createStyledButton(
+                            L10n["app.academy.music_player.account.cancel_login"], 44f, 14f
+                        ) {
+                            OnlineMusicManager.cancelLogin()
+                        }) {
+                        weight(1f)
+                        width(0f)
+                    }
+                }
+            }
+        }
+
+        private fun buildLoggedInCard(): LinearLayoutWidget {
+            val provider = OnlineMusicManager.selectedProvider
+            val name = OnlineMusicManager.accountDisplayName(provider)
+            val sub = "${providerLabelText(provider)} · ${L10n["app.academy.music_player.account.logged_in"]}"
+            return standaloneRow(6f) {
+                sizeMode(SizeMode.MATCH_PARENT)
+                add("avatar", AvatarWidget(provider)) {
+                    size(22f, 22f)
+                    gravity(Gravity.CENTER)
+                }
+                column("text") {
+                    weight(1f)
+                    heightMode(SizeMode.MATCH_PARENT)
+                    label(name, "name") {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(10f)
+                        gravity(Gravity.CENTER_LEFT)
+                    }
+                    label(sub, "sub") {
+                        scale = 0.6f
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(9f)
+                        gravity(Gravity.CENTER_LEFT)
+                    }
+                }
+                add(
+                    "sync", createStyledButton(
+                        L10n["app.academy.music_player.sync"], 54f, 14f,
+                        tooltip = L10n["app.academy.music_player.account.sync_tooltip"]
+                    ) {
+                        OnlineMusicManager.shareCurrentTrack()
+                    }) {
+                    gravity(Gravity.CENTER)
+                }
+                add(
+                    "logout", createStyledButton(
+                        L10n["app.academy.music_player.logout"], 54f, 14f
+                    ) {
+                        OnlineMusicManager.logout()
+                    }) {
+                    gravity(Gravity.CENTER)
+                }
+            }
+        }
+
+        private fun createStatusLine(): LabelWidget {
+            return LabelWidget("").apply {
+                bindState(OnlineMusicManager.revisionState) {
+                    val s = OnlineMusicManager.status
+                    if (text != s) text = s
+                    visibility = if (s.isBlank()) Widget.Visibility.GONE else Widget.Visibility.VISIBLE
+                }
+                scale = 0.58f
+                wrapText = true
+                layoutParams = WidgetContainer.LayoutParams()
+                    .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                    .padding(2f, 0f)
+            }
+        }
+
+        private fun providerLabelText(provider: OnlineMusicManager.Provider): String = when (provider) {
+            OnlineMusicManager.Provider.QQ -> L10n["app.academy.music_player.provider.qq"]
+            OnlineMusicManager.Provider.NETEASE -> L10n["app.academy.music_player.provider.netease"]
         }
 
         private fun rebuildSearchAndPlaylist(container: LinearLayoutWidget) {
-            container.clearChildren()
-            if (showingSearchResults) {
-                container.addChild("search_title", LabelWidget(tr("app.academy.music_player.search_results")).apply {
-                    layoutParams = LinearLayoutWidget.LayoutParams()
-                        .widthMode(SizeMode.MATCH_PARENT)
-                        .height(10f)
-                })
-                OnlineMusicManager.searchResults.forEachIndexed { index, entry ->
-                    val row = LinearLayoutWidget().apply {
-                        orientation = Orientation.HORIZONTAL
-                        spacing = 2f
-                        layoutParams = LinearLayoutWidget.LayoutParams()
-                            .widthMode(SizeMode.MATCH_PARENT)
-                            .height(24f)
-                    }
-                    row.addChild(
-                        "name", LabelWidget(
-                            (if (entry.vip) "[VIP] " else "") + entry.title + " - " + entry.artist
-                        ).apply {
-                            scale = 0.62f
-                            layoutParams = LinearLayoutWidget.LayoutParams()
-                                .weight(1f)
-                                .height(0f)
-                                .gravity(Gravity.CENTER_LEFT)
-                        })
-                    row.addChild(
-                        "add", createActionButton(
-                            R.textures.gui.icon.add,
-                            tr("app.academy.music_player.action.add")
-                        ) {
-                            OnlineMusicManager.add(entry)
-                        })
-                    row.addChild(
-                        "play", createActionButton(
-                            R.textures.gui.app.music.play,
-                            tr("app.academy.music_player.action.play")
-                        ) {
-                            OnlineMusicManager.add(entry, true)
-                        })
-                    container.addChild("result_$index", row)
-                }
-                return
-            }
+            container.apply {
+                clearChildren()
 
-            container.addChild("playlist_title", LabelWidget(tr("app.academy.music_player.track_list")).apply {
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .widthMode(SizeMode.MATCH_PARENT)
-                    .height(10f)
-            })
-            MusicPlayerBackend.getInstance().playlist.forEachIndexed { index, mediaInfo ->
-                val row = LinearLayoutWidget().apply {
-                    orientation = Orientation.HORIZONTAL
-                    spacing = 2f
-                    layoutParams = LinearLayoutWidget.LayoutParams()
-                        .widthMode(SizeMode.MATCH_PARENT)
-                        .height(24f)
-                }
-                row.addChild("name", LabelWidget(mediaInfo.name).apply {
-                    scale = 0.68f
-                    layoutParams = LinearLayoutWidget.LayoutParams()
-                        .weight(1f)
-                        .height(0f)
-                        .gravity(Gravity.CENTER_LEFT)
-                        .padding(2f, 0f)
-                })
-                row.addChild(
-                    "play", createActionButton(
-                        R.textures.gui.app.music.play,
-                        tr("app.academy.music_player.action.play")
-                    ) {
-                        MusicPlayerBackend.getInstance().play(index)
-                    })
-                if (mediaInfo.provider != "local") {
-                    row.addChild(
-                        "remove", createActionButton(
-                            R.textures.gui.icon.close,
-                            tr("app.academy.music_player.action.remove")
+                paddingLeft(1f)
+                if (showingSearchResults) {
+                    add(
+                        "return_list", createTextButton(
+                            L10n["app.academy.music_player.back_to_list"], 24f, 0.65f
                         ) {
-                            OnlineMusicManager.remove(mediaInfo)
-                        })
+                            showingSearchResults = false
+                            listRevisionState.value += 1
+                        }) {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(14f)
+                    }
+                    label(L10n["app.academy.music_player.search_results"], "search_title") {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(10f)
+                    }
+                    OnlineMusicManager.searchResults.forEachIndexed { index, entry ->
+                        row("result_$index") {
+                            spacing = 2f
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(24f)
+                            label(
+                                (if (entry.vip) "[VIP] " else "") + entry.title + " - " + entry.artist,
+                                "name"
+                            ) {
+                                scale = 0.62f
+                                weight(1f)
+                                height(0f)
+                                gravity(Gravity.CENTER_LEFT)
+                            }
+                            add(
+                                "add", createActionButton(
+                                    R.textures.gui.icon.add,
+                                    L10n["app.academy.music_player.action.add"]
+                                ) {
+                                    OnlineMusicManager.add(entry)
+                                })
+                            add(
+                                "play", createActionButton(
+                                    R.textures.gui.app.music.play,
+                                    L10n["app.academy.music_player.action.play"]
+                                ) {
+                                    OnlineMusicManager.add(entry, true)
+                                })
+                        }
+                    }
+                } else {
+                    MusicPlayerBackend.getInstance().playlist.forEachIndexed { index, mediaInfo ->
+                        val isCurrent = index == MusicPlayerBackend.getInstance().currentTrackIndex
+                        add("track_$index", ButtonWidget()) {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(16f)
+                            onClick { MusicPlayerBackend.getInstance().play(index) }
+                            background = createTrackBackground(isCurrent)
+                            isSelected = isCurrent
+                            add("content", standaloneRow(2f) {
+                                sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
+                                image(AlbumArtworkCache.textureFor(mediaInfo), "icon") {
+                                    sampler(FilterMode.LINEAR, false)
+                                    size(12f, 12f)
+                                    gravity(Gravity.CENTER)
+                                }
+                                column("info") {
+                                    weight(1f)
+                                    heightMode(SizeMode.MATCH_PARENT)
+                                    gravity(Gravity.CENTER)
+
+                                    add("top", EmptyWidget()) {
+                                        weight(1f)
+                                    }
+
+                                    label(mediaInfo.name, "name") {
+                                        widthMode(SizeMode.MATCH_PARENT)
+                                        gravity(Gravity.CENTER_LEFT)
+
+                                        baseFontSize = 6f
+                                    }
+                                    label(mediaInfo.subtitle, "author") {
+                                        widthMode(SizeMode.MATCH_PARENT)
+                                        gravity(Gravity.CENTER_LEFT)
+
+                                        baseFontSize = 4f
+                                    }
+
+                                    add("bottom", EmptyWidget()) {
+                                        weight(1f)
+                                    }
+                                }
+                                label(formatTime(mediaInfo.durationSeconds.toFloat()), "duration") {
+                                    scale = 0.6f
+                                    width(16f)
+                                    height(0f)
+                                    gravity(Gravity.CENTER)
+                                }
+                                if (mediaInfo.provider != "local") {
+                                    add(
+                                        "remove", createActionButton(
+                                            R.textures.gui.icon.close,
+                                            L10n["app.academy.music_player.action.remove"],
+                                            8f,
+                                            Gravity.CENTER
+                                        ) {
+                                            OnlineMusicManager.remove(mediaInfo)
+                                        })
+                                }
+                            })
+                        }
+                    }
                 }
-                container.addChild("track_$index", row)
             }
         }
 
         private fun search(query: String) {
             if (query.isBlank()) return
             showingSearchResults = true
-            libraryViewRevision++
+            listRevisionState.value += 1
             OnlineMusicManager.search(query)
         }
 
@@ -498,48 +687,129 @@ object MusicApp : App {
             action: () -> Unit
         ): ButtonWidget {
             return ButtonWidget().apply {
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .width(width)
-                    .height(height)
-                onClickListener = { action() }
-                addChild("text", LabelWidget(text).apply {
+                size(width, height)
+                onClick { action() }
+                gravity(Gravity.CENTER)
+                label(text) {
                     scale = textScale
-                    layoutParams = FrameLayoutWidget.LayoutParams()
-                        .sizeMode(SizeMode.MATCH_PARENT)
-                        .gravity(Gravity.CENTER)
-                })
+                    sizeMode(SizeMode.MATCH_PARENT)
+                    gravity(Gravity.CENTER)
+                }
             }
+        }
+
+        private fun createStyledButton(
+            text: String,
+            width: Float,
+            height: Float,
+            textScale: Float = 0.62f,
+            tooltip: String? = null,
+            action: () -> Unit
+        ): ButtonWidget {
+            val b = ButtonWidget()
+            b.size(width, height)
+            val bg = StateListDrawable()
+            bg.addState(Widget.PRESSED, ColorDrawable(TerminalHud.CONTROL_ACTIVE_COLOR))
+            bg.addState(Widget.HOVERED, ColorDrawable(TerminalHud.CONTROL_HOVER_COLOR))
+            bg.setDefault(ColorDrawable(TerminalHud.CONTROL_BASE_COLOR))
+            b.background = bg
+            if (tooltip != null) b.tooltipText = tooltip
+            b.onClick { action() }
+            b.add("text", LabelWidget(text)) {
+                scale = textScale
+                sizeMode(SizeMode.MATCH_PARENT)
+                gravity(Gravity.CENTER)
+            }
+            return b
         }
 
         private fun createActionButton(
             texture: Identifier,
             tooltip: String,
+            size: Float = 22f,
+            gravity: Int = Gravity.CENTER_VERTICAL,
             action: () -> Unit
         ): ButtonWidget {
-            val isPlayIcon = texture == R.textures.gui.app.music.play
-            return ButtonWidget().apply {
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .size(22f, 22f)
-                    .gravity(Gravity.CENTER_VERTICAL)
-                tooltipText = tooltip
-                onClickListener = { action() }
-                addChild("icon", ImageWidget(texture).apply {
-                    setSampler(FilterMode.LINEAR, false)
-                    // Keep the click target comfortable while reducing the visible glyph by 30%.
-                    // play.png has asymmetric transparent padding, so center its visible pixels
-                    // instead of the full 128 x 128 canvas.
-                    if (isPlayIcon) {
-                        translationX = 1.25f
-                        translationY = -0.9f
-                    }
-                    layoutParams = FrameLayoutWidget.LayoutParams()
-                        .size(9.8f, 9.8f)
-                        .gravity(Gravity.CENTER)
-                })
+            val b = ButtonWidget()
+            b.size(size, size)
+            b.gravity(gravity)
+            b.tooltipText = tooltip
+            b.onClick { action() }
+            b.add("icon", ImageWidget(texture)) {
+                sampler(FilterMode.LINEAR, false)
+                if (texture == R.textures.gui.app.music.play) {
+                    translationX = size * 1.25f / 22f
+                    translationY = -size * 0.9f / 22f
+                }
+                size(size * 0.45f, size * 0.45f)
+                gravity(Gravity.CENTER)
             }
+            return b
         }
 
-        private fun tr(key: String): String = Language.getInstance().getOrDefault(key)
+        private fun createTrackBackground(isCurrent: Boolean): StateListDrawable {
+            val bg = StateListDrawable()
+            if (isCurrent) {
+                bg.addState(Widget.SELECTED, ColorDrawable(TerminalHud.CONTROL_ACTIVE_COLOR))
+            }
+            bg.addState(Widget.HOVERED, ColorDrawable(TerminalHud.CONTROL_HOVER_COLOR))
+            bg.setDefault(ColorDrawable(TerminalHud.CONTROL_BASE_COLOR))
+            return bg
+        }
+
+        private class AvatarWidget(private val provider: OnlineMusicManager.Provider) :
+            ImageWidget(R.textures.gui.app.music.icon) {
+            private var lastUrl: String? = null
+            private var lastTexture: Identifier? = null
+
+            init {
+                setSampler(FilterMode.LINEAR, false)
+                bindState(OnlineMusicManager.revisionState) { refreshAvatar() }
+                bindState(AccountAvatarCache.textureState) { refreshAvatar() }
+            }
+
+            private fun refreshAvatar() {
+                val url = OnlineMusicManager.accountAvatarUrl(provider)
+                if (url == lastUrl) return
+                lastUrl = url
+                if (url == null) {
+                    lastTexture = null
+                    setTexture(R.textures.gui.app.music.icon)
+                    return
+                }
+                val texture = AccountAvatarCache.textureFor(provider, url)
+                if (texture != null && texture != lastTexture) {
+                    lastTexture = texture
+                    setTexture(texture)
+                }
+            }
+
+            override fun generateDrawCommand(
+                texture: GpuTextureView,
+                sampler: GpuSampler,
+                width: Float,
+                height: Float,
+                u0: Float,
+                v0: Float,
+                u1: Float,
+                v1: Float,
+                u2: Float,
+                v2: Float,
+                u3: Float,
+                v3: Float,
+                red: Float,
+                green: Float,
+                blue: Float,
+                alpha: Float
+            ): DrawCommand {
+                return ImageCircleDrawCommand(
+                    texture, sampler,
+                    width, height,
+                    u0, v0, u1, v1, u2, v2, u3, v3,
+                    red, green, blue, alpha
+                )
+            }
+        }
 
         private class LoginQrWidget : ImageWidget(R.textures.gui.app.music.icon) {
             private var uploadedBytes: ByteArray? = null
@@ -547,87 +817,25 @@ object MusicApp : App {
             init {
                 setSampler(FilterMode.NEAREST, false)
                 visibility = Widget.Visibility.INVISIBLE
+                bindState(OnlineMusicManager.revisionState) { refreshQr() }
             }
 
-            override fun tick() {
-                super.tick()
+            private fun refreshQr() {
                 val bytes = OnlineMusicManager.qrBytes
                 visibility =
                     if (bytes == null || bytes.isEmpty()) Widget.Visibility.INVISIBLE else Widget.Visibility.VISIBLE
                 if (bytes == null || bytes.isEmpty() || bytes === uploadedBytes) return
                 runCatching {
-                    val image = NativeImage.read(ByteArrayInputStream(bytes))
-                    val texture = DynamicTexture(Supplier { "academy_music_login_qr" }, image)
-                    val location = AcademyCraft.academy("music_login_qr")
-                    Minecraft.getInstance().textureManager.register(location, texture)
-                    setTexture(location)
+                    setTextureSource(
+                        UiEnvironment.get().createDynamicTextureSource(
+                            AcademyCraft.academy("music_login_qr"), bytes
+                        )
+                    )
                     uploadedBytes = bytes
                 }.onFailure {
                     AcademyCraft.LOGGER.error("Failed to upload music login QR texture", it)
                 }
             }
-        }
-
-        fun createMusicList(): LinearLayoutWidget {
-            val musicList = LinearLayoutWidget()
-            musicList.orientation = Orientation.VERTICAL
-            musicList.layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.WRAP_CONTENT)
-            run {
-                val playlist = MusicPlayerBackend.getInstance().playlist
-                for (mediaInfo in playlist) {
-                    val musicButton = ButtonWidget()
-                    musicButton.layoutParams = LinearLayoutWidget.LayoutParams()
-                        .sizeMode(SizeMode.WRAP_CONTENT)
-                    musicButton.onClickListener = { MusicPlayerBackend.getInstance().play(mediaInfo) }
-                    musicList.addChild(mediaInfo.name, musicButton)
-                    run {
-                        val back = FillWidget(TerminalHud.COLOR)
-                        back.layoutParams = FrameLayoutWidget.LayoutParams()
-                            .sizeMode(SizeMode.MATCH_PARENT)
-                        musicButton.addChild("back", back)
-
-                        val info = LinearLayoutWidget()
-                        info.layoutParams = FrameLayoutWidget.LayoutParams()
-                            .sizeMode(SizeMode.WRAP_CONTENT)
-                        info.orientation = Orientation.HORIZONTAL
-                        info.spacing = 2f
-                        musicButton.addChild("info", info)
-                        run {
-                            val icon = ImageWidget(mediaInfo.icon)
-                            icon.layoutParams = LinearLayoutWidget.LayoutParams()
-                                .size(16f, 16f)
-                                .gravity(Gravity.CENTER)
-                                .margin(2f, 2f, 0f, 2f)
-                            icon.setSampler(FilterMode.LINEAR, false)
-                            info.addChild("icon", icon)
-
-                            val text = LinearLayoutWidget()
-                            text.layoutParams = LinearLayoutWidget.LayoutParams()
-                                .height(16f)
-                                .gravity(Gravity.CENTER)
-                            text.orientation = Orientation.VERTICAL
-                            info.addChild("stringBuilder", text)
-                            run {
-                                val name = LabelWidget(mediaInfo.name)
-                                name.layoutParams = LinearLayoutWidget.LayoutParams()
-                                    .weight(1f)
-                                    .size(48f, 0f)
-                                    .gravity(Gravity.CENTER_LEFT)
-                                text.addChild("name", name)
-
-                                val subtitle = LabelWidget(mediaInfo.subtitle)
-                                subtitle.layoutParams = LinearLayoutWidget.LayoutParams()
-                                    .weight(1f)
-                                    .size(32f, 0f)
-                                    .gravity(Gravity.CENTER_LEFT)
-                                text.addChild("subtitle", subtitle)
-                            }
-                        }
-                    }
-                }
-            }
-            return musicList
         }
 
         fun createVinyl(): ImageWidget {
@@ -658,27 +866,34 @@ object MusicApp : App {
                     )
                 }
 
-                override fun tick() {
-                    updateRot()
-                    updateVinylIcon()
+                init {
+                    setFrameUpdate {
+                        updateRot()
+                        updateVinylIcon()
+                        if (MusicPlayerBackend.getInstance().isPlaying) invalidate()
+                        true
+                    }
                 }
             }
         }
 
         fun createPlayProgressBar(): SeekBarWidget {
             val progressBar: SeekBarWidget = object : SeekBarWidget() {
-                override fun tick() {
-                    if (!isDragging) {
-                        val musicPlayerBackend = MusicPlayerBackend.getInstance()
-                        val progress = musicPlayerBackend.currentTime / musicPlayerBackend.totalDuration
-                        setProgress(min + progress * (max - min))
+                init {
+                    setFrameUpdate {
+                        if (!isDragging) {
+                            val musicPlayerBackend = MusicPlayerBackend.getInstance()
+                            val progress = musicPlayerBackend.currentTime / musicPlayerBackend.totalDuration
+                            setProgress(min + progress * (max - min))
+                        }
+                        true
                     }
                 }
             }
-            progressBar.layoutParams = WidgetContainer.LayoutParams()
-                .size(128f, 6f)
-                .gravity(Gravity.CENTER)
-            progressBar.setOnSeekBarChangeListener(object : OnSeekBarChangeListener {
+            progressBar.size(128f, 6f)
+            progressBar.gravity(Gravity.CENTER)
+            progressBar.setBarColors(TerminalHud.BACKGROUND_COLOR, TerminalHud.PRIMARY_COLOR)
+            progressBar.seekListener(object : OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBarWidget, progress: Float, fromUser: Boolean) {}
 
                 override fun onStartTrackingTouch(seekBar: SeekBarWidget) {}
@@ -691,64 +906,52 @@ object MusicApp : App {
             return progressBar
         }
 
-        fun createVolumeArea(): LinearLayoutWidget {
-            val content = LinearLayoutWidget()
-            content.layoutParams = LinearLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-            content.orientation = Orientation.HORIZONTAL
-            run {
-                val p = LinearLayoutWidget.LayoutParams()
-                    .size(16f, 16f)
-                    .gravity(Gravity.CENTER)
-                val emptyP = LinearLayoutWidget.LayoutParams()
-                    .weight(1f)
-                    .width(0f)
-                    .heightMode(SizeMode.MATCH_PARENT)
-
-                val icon = ImageWidget(R.textures.gui.app.music.volume)
-                icon.setSampler(FilterMode.LINEAR, false)
-                icon.layoutParams = p
-                content.addChild("icon", icon)
-
-                val info = object : FrameLayoutWidget() {
-                    override fun tick() {
-                        super.tick()
-                        visibility = if (icon.isHovered || isHovered) Widget.Visibility.VISIBLE
+        fun createVolumeArea(): LinearLayoutWidget = standaloneRow {
+            sizeMode(SizeMode.MATCH_PARENT)
+            val iconImg = image(R.textures.gui.app.music.volume, "icon") {
+                sampler(FilterMode.LINEAR, false)
+                size(16f, 16f)
+                gravity(Gravity.CENTER)
+            }
+            add("info", object : FrameLayoutWidget() {
+                init {
+                    setFrameUpdate {
+                        visibility = if (iconImg.isHovered || isHovered) Widget.Visibility.VISIBLE
                         else Widget.Visibility.INVISIBLE
+                        true
                     }
-
-                    override var isHovered: Boolean
-                        get() = super.isHovered
-                        set(hovered) {
-                            if (visibility == Widget.Visibility.VISIBLE) super.isHovered = hovered
-                        }
                 }
-                info.layoutParams = emptyP
-                content.addChild("info", info)
-                run {
-                    val volume = { min(MusicPlayerBackend.getInstance().volume / VOLUME_SCALE, 1f) }
 
-                    val text = LabelWidget("${(volume() * 100).roundToInt()}%")
-                    text.scale = 0.75f
-                    text.layoutParams = WidgetContainer.LayoutParams()
-                        .marginTop(8f)
-                        .gravity(Gravity.CENTER)
-                    info.addChild("text", text)
-
-                    fun setText(progress: Float) {
-                        text.text = "${(progress * 100f).roundToInt()}%"
+                override var isHovered: Boolean
+                    get() = super.isHovered
+                    set(hovered) {
+                        if (visibility == Widget.Visibility.VISIBLE) super.isHovered = hovered
                     }
+            }) {
+                weight(1f)
+                width(0f)
+                heightMode(SizeMode.MATCH_PARENT)
+                val volume = { min(MusicPlayerBackend.getInstance().volume / VOLUME_SCALE, 1f) }
+                val textLabel = label("${(volume() * 100).roundToInt()}%", "text") {
+                    scale = 0.75f
+                    marginTop(8f)
+                    gravity(Gravity.CENTER)
+                }
 
-                    val volumeBar = SeekBarWidget()
-                    volumeBar.setProgress(volume() * volumeBar.max)
-                    volumeBar.layoutParams = WidgetContainer.LayoutParams()
-                        .size(48f, 4f)
-                        .marginBottom(2f)
-                        .gravity(Gravity.CENTER)
-                    volumeBar.setOnSeekBarChangeListener(object : OnSeekBarChangeListener {
+                fun setText(progress: Float) {
+                    textLabel.text = "${(progress * 100f).roundToInt()}%"
+                }
+
+                seekBar("bar") {
+                    size(48f, 4f)
+                    marginBottom(2f)
+                    gravity(Gravity.CENTER)
+                    setBarColors(TerminalHud.BACKGROUND_COLOR, TerminalHud.PRIMARY_COLOR)
+                    setProgress(volume() * max)
+                    seekListener(object : OnSeekBarChangeListener {
                         override fun onProgressChanged(seekBar: SeekBarWidget, progress: Float, fromUser: Boolean) {
                             val musicPlayerBackend = MusicPlayerBackend.getInstance()
-                            val p = progress / volumeBar.max
+                            val p = progress / seekBar.max
                             musicPlayerBackend.volume = p * VOLUME_SCALE
                             setText(p)
                         }
@@ -761,10 +964,8 @@ object MusicApp : App {
                             setText(seekBar.progress / seekBar.max)
                         }
                     })
-                    info.addChild("bar", volumeBar)
                 }
             }
-            return content
         }
 
         val isPlaying: Boolean
@@ -782,14 +983,6 @@ object MusicApp : App {
                 PlaybackMode.REPEAT_ONE -> R.textures.gui.app.music.single_cycle
                 PlaybackMode.SHUFFLE -> R.textures.gui.app.music.random_play
             }
-        }
-
-        fun updatePlayPauseIcon() {
-            playPauseIcon.setTexture(getPlayPauseIcon())
-        }
-
-        fun updatePlaybackModeIcon() {
-            playbackModeIcon.setTexture(getPlaybackModeIcon())
         }
 
         fun updateRot() {
@@ -813,8 +1006,12 @@ object MusicApp : App {
             val musicPlayerBackend = MusicPlayerBackend.getInstance()
             val mediaInfo = musicPlayerBackend.currentMusicInfo
             if (mediaInfo != null) {
-                vinyl.setTexture(AlbumArtworkCache.textureFor(mediaInfo))
-                vinyl.setSampler(FilterMode.LINEAR, false)
+                val texture = AlbumArtworkCache.textureFor(mediaInfo)
+                if (texture != lastVinylArtwork) {
+                    lastVinylArtwork = texture
+                    vinyl.setTexture(texture)
+                    vinyl.setSampler(FilterMode.LINEAR, false)
+                }
             }
         }
 
@@ -823,6 +1020,4 @@ object MusicApp : App {
             return "%02d:%02d".format((totalSeconds / 60).toInt(), (totalSeconds % 60).toInt())
         }
     }
-
-    private fun tr(key: String): String = L10n[key]
 }

@@ -13,7 +13,6 @@ import net.minecraft.client.renderer.DynamicUniformStorage
 import net.minecraft.client.renderer.DynamicUniformStorage.DynamicUniform
 import net.minecraft.client.renderer.Projection
 import net.minecraft.client.renderer.ProjectionMatrixBuffer
-import org.academy.AcademyCraft
 import org.academy.api.client.gui.command.ItemStackDrawCommand
 import org.academy.api.client.gui.command.SubmittedCommand
 import org.academy.api.client.gui.environment.UiEnvironment
@@ -33,7 +32,6 @@ import kotlin.math.ceil
 
 open class UiContext {
     private val commandList = AtomicReference<MutableList<SubmittedCommand>?>()
-    private var cachedCommands: MutableList<SubmittedCommand>? = null
 
     /** 主线程 [perform] 写入, 渲染线程 [blurRegions] 读取喵. */
     @Volatile
@@ -77,7 +75,6 @@ open class UiContext {
         if (closed.get() || closing.get()) return
 
         if (performedRoot !== rootWidget) {
-            cachedCommands = null
             commandList.set(null)
             lastBlurRegions = emptyList()
             performedRoot = rootWidget
@@ -94,21 +91,10 @@ open class UiContext {
             rootWidget.layout(0f, 0f, width, height)
         }
 
-        if (shouldUseCacheCommands(rootWidget)) {
-            commandList.set(cachedCommands)
-            return
-        }
-
         val context = RenderContext()
         generateCommands(context, rootWidget, mouseX, mouseY, partialTick)
-        rootWidget.isRenderDirty = false
-        cachedCommands = context.commands.toMutableList()
         commandList.set(context.commands)
         lastBlurRegions = context.blurRegions
-    }
-
-    open fun shouldUseCacheCommands(rootWidget: WidgetContainer): Boolean {
-        return !AcademyCraft.DEBUG_UI && !rootWidget.hasPendingRender() && cachedCommands != null
     }
 
     /** 本帧收集到的模糊区域，供宿主交给 [UiCompositor]（需要世界/下方两个 target）。 */
@@ -359,7 +345,9 @@ open class UiContext {
                 itemCommand.resolve(slot, sampler),
                 submitted.pose,
                 submitted.scissorRect,
-                submitted.drawOrder
+                submitted.drawOrder,
+                submitted.commandIndex,
+                submitted.alphaMul
             )
         }
         atlas.endFrame()
@@ -436,7 +424,6 @@ open class UiContext {
         itemAtlasSlotSize = 0
         for (ubo in dynamicUniformStorages.values) ubo.close()
         dynamicUniformStorages.clear()
-        cachedCommands = null
         lastBlurRegions = emptyList()
         performedRoot = null
         closed.set(true)

@@ -18,6 +18,7 @@
       <w>compat</w>
       <w>cpdata</w>
       <w>cubemap</w>
+      <w>darkmatter</w>
       <w>dynamictransforms</w>
       <w>inversesqrt</w>
       <w>izzelaliz</w>
@@ -30,6 +31,7 @@
       <w>modid</w>
       <w>msdf</w>
       <w>msdfgen</w>
+      <w>netease</w>
       <w>thedarkcolour</w>
       <w>thirdparty</w>
       <w>unqueue</w>

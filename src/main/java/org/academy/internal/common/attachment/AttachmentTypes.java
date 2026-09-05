@@ -17,19 +17,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
-import static org.academy.AcademyCraft.MODID;
+import static org.academy.AcademyCraft.MOD_ID;
 
 public final class AttachmentTypes {
-    public static final DeferredRegister<AttachmentType<?>> REGISTER = DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, MODID);
+    public static final DeferredRegister<AttachmentType<?>> REGISTER = DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, MOD_ID);
     public static final Supplier<Boolean> DEFAULT_FALSE = () -> false;
     public static final Supplier<Boolean> DEFAULT_TRUE = () -> true;
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> HAS_DATA_TERMINAL = REGISTER.register("has_data_terminal",
-            () -> AttachmentType
-                    .builder(DEFAULT_FALSE)
-                    .serialize(Codec.BOOL.fieldOf("has_data_terminal"))
-                    .sync(ByteBufCodecs.BOOL)
-                    .build()
-    );
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> FRIENDLY_FIRE_ENABLED = REGISTER.register(
             "friendly_fire_enabled",
             () -> AttachmentType
@@ -119,9 +112,6 @@ public final class AttachmentTypes {
                     .sync(ByteBufCodecs.BOOL)
                     .build()
     );
-    @Deprecated(forRemoval = false)
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> KINETIC_SHOCKWAVE_ENABLED =
-            KINETIC_BLOCK_BREAK_ENABLED;
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> KINETIC_BLOCK_DROPS_ENABLED = REGISTER.register(
             "kinetic_block_drops_enabled",
             () -> AttachmentType
@@ -137,13 +127,6 @@ public final class AttachmentTypes {
                     .builder(() -> 1)
                     .serialize(Codec.INT.fieldOf("level"))
                     .sync(ByteBufCodecs.VAR_INT)
-                    .build()
-    );
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> BIOELECTRIC_OPERATION_ACTIVE_TICKS = REGISTER.register(
-            "bioelectric_operation_active_ticks",
-            () -> AttachmentType
-                    .builder(() -> 0)
-                    .serialize(Codec.INT.fieldOf("ticks"))
                     .build()
     );
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> LIGHT_SHIELD_ACTIVE = REGISTER.register(
@@ -188,15 +171,6 @@ public final class AttachmentTypes {
             "sp_reduction_rate",
             () -> AttachmentType
                     .builder(() -> 1.0f)
-                    .sync(ByteBufCodecs.FLOAT)
-                    .build()
-    );
-
-    //KineticEnergyApplied的投射物增伤
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Float>> PROJECTILE_EXTRA_DAMAGE = REGISTER.register(
-            "projectile_extra_damage",
-            () -> AttachmentType
-                    .builder(() -> 0.0f)
                     .sync(ByteBufCodecs.FLOAT)
                     .build()
     );

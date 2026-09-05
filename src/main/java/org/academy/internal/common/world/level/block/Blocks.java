@@ -10,10 +10,10 @@ import net.minecraft.world.level.material.PushReaction;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-import static org.academy.AcademyCraft.MODID;
+import static org.academy.AcademyCraft.MOD_ID;
 
 public final class Blocks {
-    public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MODID);
+    public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MOD_ID);
     public static final DeferredHolder<Block, WirelessNodeBlock> WIRELESS_NODE =
             BLOCKS.registerBlock("wireless_node", WirelessNodeBlock::new, Blocks::machineProperties);
     public static final DeferredHolder<Block, WindGenBaseBlock> WIND_GEN_BASE =

@@ -6,9 +6,8 @@ import org.academy.api.client.gui.drawable.Drawable
 import org.academy.api.client.gui.event.InputEvent
 import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.render.RenderContext
-import org.academy.api.common.vanilla.Tickable
 
-interface Widget : Tickable {
+interface Widget {
     val x: Float
     val y: Float
     var coverAllPrev: Boolean
@@ -51,13 +50,7 @@ interface Widget : Tickable {
     var isRenderDirty: Boolean
     fun invalidate()
 
-    /** Transiently set by parents that re-render this widget at a changing pose
-     * (e.g. WheelPicker items), forcing its subtree to regenerate every render. */
     var bypassRenderCache: Boolean
-
-    fun hasPendingRender(): Boolean {
-        return isRenderDirty
-    }
 
     fun isVisible(): Boolean
     fun getWidgetState(): Int
@@ -73,27 +66,22 @@ interface Widget : Tickable {
     fun getAbsoluteTranslationX(): Float
     fun getAbsoluteTranslationY(): Float
     fun getAbsoluteAlpha(): Float
-    override fun tick() {}
     fun onAttached()
     fun onDetached()
     fun dispatchAttached()
     fun dispatchDetached()
     fun isAttached(): Boolean
 
-    /** 注册控件分离时的清理回调（如解绑 UiState 订阅）。 */
     fun addOnDetach(action: () -> Unit) {}
 
     fun removeOnDetach(action: () -> Unit) {}
     fun startAnimation(animator: Animator)
     fun cancelAnimations()
 
-    /** 布局完成后回调, 参数为本次布局解析出的矩形信息。 */
     var onLayoutComplete: ((WidgetLayoutInfo) -> Unit)?
 
-    /** 注册在本次布局 pass 完成后执行的回调。 */
     fun postLayout(action: () -> Unit)
 
-    /** 控件布局后的解析矩形快照。 */
     data class WidgetLayoutInfo(
         val x: Float,
         val y: Float,

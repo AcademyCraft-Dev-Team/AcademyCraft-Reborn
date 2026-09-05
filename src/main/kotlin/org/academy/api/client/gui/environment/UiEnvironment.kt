@@ -2,6 +2,7 @@ package org.academy.api.client.gui.environment
 
 import com.mojang.blaze3d.textures.GpuTextureView
 import net.minecraft.resources.Identifier
+import org.academy.api.client.gui.texture.TextureSource
 import java.io.InputStream
 import java.nio.file.Path
 
@@ -44,6 +45,15 @@ interface UiEnvironment {
 
     /** Resolves a texture by identifier to its GPU view. */
     fun loadTexture(identifier: Identifier): GpuTextureView
+
+    /**
+     * Creates (or refreshes) a dynamic texture from raw image bytes keyed by [identifier],
+     * returning a [TextureSource] for the widget to draw.
+     *
+     * Must be called on the UI thread; bytes decoding is expected to have happened on the
+     * caller/backend side already (Android-style: load off the UI thread, apply on it).
+     */
+    fun createDynamicTextureSource(identifier: Identifier, bytes: ByteArray): TextureSource
 
     /** Reads the clipboard text (empty string when unavailable). */
     fun clipboard(): String = ""

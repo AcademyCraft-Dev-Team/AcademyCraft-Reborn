@@ -10,19 +10,22 @@ import net.neoforged.neoforge.common.NeoForge
 import org.academy.AcademyCraft
 import org.academy.api.client.gui.msdf.font.MsdfFont
 import org.academy.api.client.gui.msdf.font.MsdfFontService
+import org.academy.api.client.gui.state.UiState
 import org.academy.api.client.vanilla.MainLoopEvent
 import org.academy.internal.client.app.music.common.PlaybackMode
 import org.academy.internal.client.app.music.common.PlaybackState
 import org.academy.internal.client.app.music.data.MusicData
 import org.academy.internal.client.app.music.data.MusicInfo
 import org.academy.internal.client.app.music.data.MusicSource
+import org.academy.internal.client.app.music.decoder.DecoderFactory
 import org.academy.internal.client.app.music.engine.AudioPlayer
-import java.io.IOException
 import java.nio.ByteBuffer
 import java.util.*
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
+import java.util.function.Supplier
 import java.util.stream.Collectors
 
 class MusicPlayerBackend private constructor() {
@@ -32,9 +35,16 @@ class MusicPlayerBackend private constructor() {
     private val onlineTracks = mutableListOf<MusicInfo>()
     private val playlistRevisionCounter = AtomicInteger()
 
+    val uiState = UiState(0)
+
+    private fun bumpUiState() {
+        Minecraft.getInstance().execute { uiState.value += 1 }
+    }
+
     private var currentTrackData: ByteBuffer? = null
     private val isSessionActive = AtomicBoolean(false)
     private val resumeAfterGamePause = AtomicBoolean(false)
+    private val bufferingTrackIndex = AtomicInteger(-1)
 
     private val soundExecutor: SoundEngineExecutor
         get() = Minecraft.getInstance().soundManager.soundEngine.executor
@@ -60,8 +70,6 @@ class MusicPlayerBackend private constructor() {
 
     @SubscribeEvent
     fun onLoggingOut(@Suppress("unused") event: ClientPlayerNetworkEvent.LoggingOut) {
-        // Disable auto-advance immediately so an already queued main-loop update
-        // cannot start another track while the world is being torn down.
         isSessionActive.set(false)
         resumeAfterGamePause.set(false)
         runOnSoundEngine { performStop() }
@@ -74,7 +82,7 @@ class MusicPlayerBackend private constructor() {
 
     fun update() {
         audioPlayer.update()
-
+        if (bufferingTrackIndex.get() != -1) return
         if (audioPlayer.state == PlaybackState.IDLE && isSessionActive.get()) {
             if (playbackMode == PlaybackMode.REPEAT_ONE) {
                 val index = playlistManager.getCurrentTrackIndex()
@@ -101,13 +109,13 @@ class MusicPlayerBackend private constructor() {
             .collect(Collectors.toList())
 
         // 初始化以缓解 MusicApp 第一次打开时卡顿喵
-        for (info in newPlaylist) {
-            val codePoints = info.name.codePoints().toArray()
+        for ((icon, _, name) in newPlaylist) {
+            val codePoints = name.codePoints().toArray()
             for (cp in codePoints) {
                 val font: MsdfFont = MsdfFontService.getFont(cp)
                 font.getGlyph(cp)
             }
-            Minecraft.getInstance().textureManager.getTexture(info.icon)
+            Minecraft.getInstance().textureManager.getTexture(icon)
         }
 
         runOnSoundEngine {
@@ -155,17 +163,36 @@ class MusicPlayerBackend private constructor() {
         playlistManager.updatePlaylist(rebuilt)
         if (current != null) playlistManager.setCurrentTrackIndex(rebuilt.indexOf(current))
         playlistRevisionCounter.incrementAndGet()
+        bumpUiState()
     }
 
     private fun parseMusicEntry(name: String, data: MusicData, sourceDescription: String): Optional<MusicInfo> {
         try {
             val iconLocation = Identifier.parse(data.icon)
             val source = createMusicSource(data.sourceType, data.source)
-            return Optional.of(MusicInfo(iconLocation, source, name, data.subtitle))
+            return Optional.of(
+                MusicInfo(
+                    iconLocation,
+                    source,
+                    name,
+                    data.subtitle,
+                    durationSeconds = probeDurationSeconds(source)
+                )
+            )
         } catch (e: Exception) {
             logger.error("Failed to parse music entry '{}' from {}: {}", name, sourceDescription, e.message)
             return Optional.empty()
         }
+    }
+
+    private fun probeDurationSeconds(source: MusicSource): Int {
+        if (source.path is Supplier<*>) return 0
+        return runCatching {
+            val stream = DecoderFactory.create(source.data) ?: return 0
+            stream.use {
+                if (it.sampleRate <= 0) 0 else (it.totalSamples / it.sampleRate).toInt()
+            }
+        }.getOrDefault(0)
     }
 
     private fun createMusicSource(type: String, path: String): MusicSource {
@@ -186,21 +213,52 @@ class MusicPlayerBackend private constructor() {
     }
 
     private fun performPlay(trackIndex: Int) {
+        if (bufferingTrackIndex.get() == trackIndex) return
         if (playlistManager.getCurrentTrackIndex() == trackIndex && audioPlayer.state == PlaybackState.PLAYING) return
 
         playlistManager.getTrack(trackIndex).ifPresentOrElse(Consumer { mediaInfo ->
-            try {
-                val data = mediaInfo.source.data
-                currentTrackData = data
-                playlistManager.setCurrentTrackIndex(trackIndex)
-                audioPlayer.play(data, 0)
-                isSessionActive.set(true)
-            } catch (e: IOException) {
-                logger.error("Failed to play media: {}", mediaInfo.name, e)
-                performStop()
+            val source = mediaInfo.source
+            if (source.path is Supplier<*>) {
+                performBufferedPlay(trackIndex, mediaInfo, source)
+            } else {
+                performImmediatePlay(trackIndex, mediaInfo, source.data)
             }
         }) {
             logger.warn("Attempted to play track with invalid index: {}", trackIndex)
+            performStop()
+        }
+    }
+
+    private fun performBufferedPlay(trackIndex: Int, mediaInfo: MusicInfo, source: MusicSource) {
+        bufferingTrackIndex.set(trackIndex)
+        playlistManager.setCurrentTrackIndex(trackIndex)
+        bumpUiState()
+        CompletableFuture.supplyAsync({ source.data }, AcademyCraft.executorService)
+            .whenComplete { data, throwable ->
+                runOnSoundEngine {
+                    if (bufferingTrackIndex.get() == trackIndex) bufferingTrackIndex.set(-1)
+                    if (playlistManager.getCurrentTrackIndex() != trackIndex) return@runOnSoundEngine
+                    if (throwable != null) {
+                        logger.error("Failed to play media: {}", mediaInfo.name, throwable)
+                        OnlineMusicManager.onPlayError(rootMessage(throwable))
+                        performStop()
+                        return@runOnSoundEngine
+                    }
+                    if (data != null) performImmediatePlay(trackIndex, mediaInfo, data.duplicate())
+                    else performStop()
+                }
+            }
+    }
+
+    private fun performImmediatePlay(trackIndex: Int, mediaInfo: MusicInfo, data: ByteBuffer) {
+        try {
+            currentTrackData = data
+            playlistManager.setCurrentTrackIndex(trackIndex)
+            audioPlayer.play(data, 0)
+            isSessionActive.set(true)
+            bumpUiState()
+        } catch (e: Exception) {
+            logger.error("Failed to play media: {}", mediaInfo.name, e)
             performStop()
         }
     }
@@ -210,11 +268,13 @@ class MusicPlayerBackend private constructor() {
     }
 
     private fun performStop() {
+        bufferingTrackIndex.set(-1)
         isSessionActive.set(false)
         resumeAfterGamePause.set(false)
         playlistManager.setCurrentTrackIndex(-1)
         audioPlayer.stop()
         currentTrackData = null
+        bumpUiState()
     }
 
     fun togglePlayPause() {
@@ -224,6 +284,7 @@ class MusicPlayerBackend private constructor() {
     private fun performTogglePlayPause() {
         if (audioPlayer.state == PlaybackState.PLAYING || audioPlayer.state == PlaybackState.PAUSED) {
             audioPlayer.togglePlayPause()
+            bumpUiState()
         } else if (audioPlayer.hasSession) audioPlayer.resume()
         else {
             val trackIndex = playlistManager.getCurrentTrackIndex()
@@ -264,11 +325,15 @@ class MusicPlayerBackend private constructor() {
             if (playbackMode == PlaybackMode.REPEAT_ONE) {
                 if (currentIndex != -1) performPlay(currentIndex)
             } else if (nextIndex != -1) performPlay(nextIndex)
-        } else audioPlayer.seek(data, timeRatio)
+        } else {
+            audioPlayer.seek(data, timeRatio)
+            bumpUiState()
+        }
     }
 
     fun cyclePlaybackMode() {
         playlistManager.cyclePlaybackMode()
+        bumpUiState()
     }
 
     val currentTime: Float get() = audioPlayer.currentTime
@@ -284,7 +349,16 @@ class MusicPlayerBackend private constructor() {
 
     var volume: Float
         get() = audioPlayer.volume
-        set(value) = runOnSoundEngine { audioPlayer.volume = value }
+        set(value) = runOnSoundEngine {
+            audioPlayer.volume = value
+            bumpUiState()
+        }
+
+    private fun rootMessage(throwable: Throwable?): String {
+        var current = throwable ?: return "未知错误"
+        while (current.cause != null) current = current.cause!!
+        return current.message?.takeIf(String::isNotBlank) ?: current.javaClass.simpleName
+    }
 
     companion object {
         private val logger = AcademyCraft.getLogger()

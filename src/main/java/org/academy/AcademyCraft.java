@@ -10,9 +10,8 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-@Mod(AcademyCraft.MODID)
+@Mod(AcademyCraft.MOD_ID)
 public final class AcademyCraft {
-    public static final String MODID = "academy";
     public static final String MOD_ID = "academy";
     public static final String MOD_NAME = "AcademyCraft";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);

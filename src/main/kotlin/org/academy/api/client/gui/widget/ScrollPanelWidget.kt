@@ -10,6 +10,7 @@ import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.render.ScissorRect
 import org.academy.api.client.util.ClientUtil
+import kotlin.math.abs
 import kotlin.math.max
 
 open class ScrollPanelWidget(protected val orientation: Orientation? = Orientation.VERTICAL) :
@@ -18,7 +19,6 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
     protected var scrollSpeed: Float = 24f
     private var pendingScrollToEnd = false
 
-    /** Below this distance (px) the scroll snaps onto its target and stops. */
     private companion object {
         const val SNAP_EPSILON: Float = 0.5f
     }
@@ -191,14 +191,13 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
 
         val currentScrollY = scrollY
         val newScrollY = Mth.lerp(ClientUtil.animationFactor(Mth.PI / 1.5f), currentScrollY, scrollTarget)
-        if (Math.abs(newScrollY - scrollTarget) < SNAP_EPSILON) {
+        if (abs(newScrollY - scrollTarget) < SNAP_EPSILON) {
             scrollTo(scrollX, scrollTarget)
         } else {
             scrollTo(scrollX, newScrollY)
         }
 
-        val alpha1 = alpha
-        context.alpha().push(alpha1)
+        context.alpha().push(alpha)
         val scissor = ScissorRect(
             getAbsoluteX() + getAbsoluteTranslationX(), getAbsoluteY() + getAbsoluteTranslationY(),
             width, height

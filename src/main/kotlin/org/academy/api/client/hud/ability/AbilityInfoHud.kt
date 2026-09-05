@@ -10,7 +10,6 @@ import com.mojang.blaze3d.vertex.PoseStack
 import net.minecraft.client.Minecraft
 import net.minecraft.util.Mth
 import net.neoforged.bus.api.SubscribeEvent
-import net.neoforged.neoforge.client.event.ClientTickEvent
 import net.neoforged.neoforge.common.NeoForge
 import org.academy.AcademyCraft
 import org.academy.AcademyCraftClient
@@ -169,11 +168,6 @@ class AbilityInfoHud private constructor() {
     }
 
     @SubscribeEvent
-    fun onTick(@Suppress("unused") event: ClientTickEvent.Post) {
-        context.get().tick()
-    }
-
-    @SubscribeEvent
     fun onResizeDisplay(@Suppress("unused") event: ResizeDisplayEvent) {
         context.get().requestLayout()
     }
@@ -189,18 +183,18 @@ class AbilityInfoHud private constructor() {
         /** v2 布局绑定：ability_cp_hud.json 的 cp_value 标签经 bind_text 接到此状态。 */
         private val cpTextState = UiState("")
 
-        private val root: FrameLayoutWidget = createRoot()
+        private val root: FrameLayoutWidget = createRoot().also { it.dispatchAttached() }
 
         override fun get(): WidgetContainer {
             return root
         }
 
         fun createRoot(): FrameLayoutWidget {
-            val root = object : FrameLayoutWidget() {
-                override fun tick() {
+            val root = FrameLayoutWidget().apply {
+                setFrameUpdate {
                     applyHudLayout()
                     updateCpText()
-                    super.tick()
+                    true
                 }
             }
             root.alpha = 0f
@@ -288,9 +282,9 @@ class AbilityInfoHud private constructor() {
                                 listOf(TextureBinding("Sampler0", view, sampler)),
                                 mutableListOf()
                             ) {
-                                override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose) {
+                                override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose, alphaMul: Float) {
                                     val matrix = pose.pose()
-                                    val a = (alpha * 255.0f).toInt()
+                                    val a = (alpha * alphaMul * 255.0f).toInt()
                                     val dest = Vector3f()
 
                                     writer.beginVertex()
@@ -346,9 +340,9 @@ class AbilityInfoHud private constructor() {
                                         listOf(TextureBinding("Sampler0", view, sampler)),
                                         mutableListOf()
                                     ) {
-                                        override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose) {
+                                        override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose, alphaMul: Float) {
                                             val matrix = pose.pose()
-                                            val a = (particle.alpha * 255.0f).toInt()
+                                            val a = (particle.alpha * alphaMul * 255.0f).toInt()
                                             val dest = Vector3f()
 
                                             writer.beginVertex()
@@ -391,23 +385,26 @@ class AbilityInfoHud private constructor() {
                             }
                         }
 
-                        override fun tick() {
-                            val currentCp = AbilitySystemClient.getAvailableCP()
-                            if (currentCp == lastCp) return
+                        init {
+                            setFrameUpdate {
+                                val currentCp = AbilitySystemClient.getAvailableCP()
+                                if (currentCp != lastCp) {
+                                    val maxCp = AbilitySystemClient.getMaxCP()
+                                    val increase = currentCp > lastCp
 
-                            val maxCp = AbilitySystemClient.getMaxCP()
-                            val increase = currentCp > lastCp
-
-                            if (increase) {
-                                cancelShrinkParticles()
-                                visualCp = lastCp
-                                spawnFillParticles(lastCp / maxCp, currentCp / maxCp, maxCp)
-                            } else {
-                                cancelIncreaseParticles()
-                                visualCp = currentCp
-                                spawnShrinkParticles(lastCp / maxCp, currentCp / maxCp, maxCp)
+                                    if (increase) {
+                                        cancelShrinkParticles()
+                                        visualCp = lastCp
+                                        spawnFillParticles(lastCp / maxCp, currentCp / maxCp, maxCp)
+                                    } else {
+                                        cancelIncreaseParticles()
+                                        visualCp = currentCp
+                                        spawnShrinkParticles(lastCp / maxCp, currentCp / maxCp, maxCp)
+                                    }
+                                    lastCp = currentCp
+                                }
+                                true
                             }
-                            lastCp = currentCp
                         }
 
                         private fun spawnFillParticles(lastProgress: Float, currentProgress: Float, maxCp: Float) {
@@ -567,14 +564,14 @@ class AbilityInfoHud private constructor() {
                                 listOf(TextureBinding("Sampler0", view, sampler)),
                                 mutableListOf()
                             ) {
-                                override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose) {
+                                override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose, alphaMul: Float) {
                                     val matrix = pose.pose()
                                     val dest = Vector3f()
                                     val u0 = sourceFillLeft / textureWidth
                                     val u1 = sourceRight / textureWidth
                                     val v0 = sourceTop / textureHeight
                                     val v1 = sourceBottom / textureHeight
-                                    val a = (finalAlpha * 255f).toInt()
+                                    val a = (finalAlpha * alphaMul * 255f).toInt()
 
                                     writer.beginVertex()
                                     matrix.transformPosition(0f, 0f, 0f, dest)
@@ -608,8 +605,8 @@ class AbilityInfoHud private constructor() {
                         .sizeMode(SizeMode.MATCH_PARENT)
                     cp.addChild("sp", sp)
 
-                    val matter = object : LabelWidget("") {
-                        override fun tick() {
+                    val matter = LabelWidget("").apply {
+                        setFrameUpdate {
                             val category = AbilitySystemClient.getCategory()
                             val maximum = AbilitySystemClient.getMaxMP()
                             val shouldShow = shouldShowAbilityResource(category, maximum)
@@ -625,9 +622,8 @@ class AbilityInfoHud private constructor() {
                             } else {
                                 ""
                             }
-                            super.tick()
+                            true
                         }
-                    }.apply {
                         baseFontSize = 7f
                         setRed(0.84f)
                         setGreen(0.80f)
@@ -644,8 +640,8 @@ class AbilityInfoHud private constructor() {
                 }
             }
 
-            val phase = object : LabelWidget("") {
-                override fun tick() {
+            val phase = LabelWidget("").apply {
+                setFrameUpdate {
                     val isDarkmatter = AbilitySystemClient.getCategory() == AbilityCategories.DARKMATTER.get()
                     visibility = if (isDarkmatter) {
                         Widget.Visibility.VISIBLE
@@ -659,9 +655,8 @@ class AbilityInfoHud private constructor() {
                     } else {
                         ""
                     }
-                    super.tick()
+                    true
                 }
-            }.apply {
                 baseFontSize = 7f
                 setRed(0.84f)
                 setGreen(0.80f)
@@ -723,9 +718,11 @@ class AbilityInfoHud private constructor() {
         val selectedSkillInfo: SkillInfo?
             get() = currentSkills.getOrNull(targetSelectedPosition)
 
-        override fun tick() {
-            refreshItems()
-            super.tick()
+        init {
+            setFrameUpdate {
+                refreshItems()
+                true
+            }
         }
 
         override fun computeItemScale(distanceRatio: Float): Float {
@@ -786,21 +783,21 @@ class AbilityInfoHud private constructor() {
                 .margin(16f, 0f, 1f, 0f)
             row.addChild("name", name)
 
-            val binding = object : LabelWidget("") {
-                override fun tick() {
-                    val current = InputSystem.formatBindingsForSkill(info.skill).ifBlank {
+            val binding = LabelWidget("").apply {
+                setFrameUpdate {
+                    text = InputSystem.formatBindingsForSkill(info.skill).ifBlank {
                         L10n["app.academy.settings.keybind.format.none"]
                     }
-                    text = current
+                    true
                 }
+                baseFontSize = 5f
+                setRed(0.72f)
+                setGreen(0.82f)
+                setBlue(0.9f)
+                layoutParams = FrameLayoutWidget.LayoutParams()
+                    .gravity(Gravity.BOTTOM_LEFT)
+                    .margin(16f, 0f, 0f, 0f)
             }
-            binding.baseFontSize = 5f
-            binding.setRed(0.72f)
-            binding.setGreen(0.82f)
-            binding.setBlue(0.9f)
-            binding.layoutParams = FrameLayoutWidget.LayoutParams()
-                .gravity(Gravity.BOTTOM_LEFT)
-                .margin(16f, 0f, 0f, 0f)
             row.addChild("binding", binding)
             return row
         }

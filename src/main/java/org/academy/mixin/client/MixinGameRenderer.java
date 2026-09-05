@@ -17,6 +17,8 @@ import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.world.level.GameType;
 import net.neoforged.neoforge.common.NeoForge;
+import org.academy.api.client.gui.animation.AnimationManager;
+import org.academy.api.client.gui.frame.UiFrame;
 import org.academy.api.client.hud.HudManager;
 import org.academy.api.client.render.Render;
 import org.academy.api.client.renderer.RendererManager;
@@ -74,9 +76,9 @@ public abstract class MixinGameRenderer {
             Vector4f fogColor,
             boolean shouldRenderSky,
             Operation<Void> original,
-            @Local(ordinal = 0) Matrix4f frameProjection
+            @Local(name = "projectionMatrix") Matrix4f projectionMatrix
     ) {
-        try (var ignored = SpatialCutFrameProjectionContext.push(frameProjection)) {
+        try (var ignored = SpatialCutFrameProjectionContext.push(projectionMatrix)) {
             original.call(renderer, resourceAllocator, deltaTracker, renderOutline, cameraState,
                     modelViewMatrix, terrainFog, fogColor, shouldRenderSky);
             WorldLineOverlayPass.renderWorld(
@@ -88,11 +90,14 @@ public abstract class MixinGameRenderer {
 
     @Inject(method = "render", at = @At("HEAD"))
     private void onFrameUpdate(CallbackInfo ci) {
+        AnimationManager.INSTANCE.onFrameUpdate();
+        UiFrame.INSTANCE.onFrame();
         NeoForge.EVENT_BUS.post(new RenderLoopEvent());
     }
 
     @Inject(method = "renderLevel", at = @At("HEAD"))
     private void academy$beginPlatinumCosmosFrame(DeltaTracker deltaTracker, CallbackInfo ci) {
+        assert minecraft.level != null;
         WorldLineOverlayPass.beginFrame(minecraft.level);
         WingAvatarRegistry.beginFrame();
     }
@@ -107,10 +112,6 @@ public abstract class MixinGameRenderer {
         if (shouldRenderLevel) HudManager.INSTANCE.render();
     }
 
-    /**
-     * GuiRenderer 执行完毕后发布喵: 此时主缓冲已含世界 + 原版屏幕背景 + Academy 下方内容,
-     * 正好是模糊面板背后应有的完整背景, 供 WorldCompositeEvent 就地烘焙模糊.
-     */
     @Inject(
             method = "render",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/render/GuiRenderer;render()V", shift = At.Shift.AFTER)
@@ -143,13 +144,7 @@ public abstract class MixinGameRenderer {
         if (PlayerControlClientState.isController()) {
             var entity = PlayerControlClientState.controlledViewEntity();
             var state = PlayerControlClientState.targetViewState();
-            if (state != null && entity instanceof AbstractClientPlayer player
-                    && !cameraState.isPanoramicMode
-                    && minecraft.options.getCameraType().isFirstPerson()
-                    && !cameraState.entityRenderState.isSleeping
-                    && !minecraft.gameRenderer.gameRenderState().guiRenderState.isHudHidden
-                    && minecraft.gameMode != null
-                    && minecraft.gameMode.getPlayerMode() != GameType.SPECTATOR) {
+            if (entity instanceof AbstractClientPlayer player && !cameraState.isPanoramicMode && minecraft.options.getCameraType().isFirstPerson() && !cameraState.entityRenderState.isSleeping && !minecraft.gameRenderer.gameRenderState().guiRenderState.isHudHidden && minecraft.gameMode != null && minecraft.gameMode.getPlayerMode() != GameType.SPECTATOR) {
                 var poseStack = new PoseStack();
                 poseStack.pushPose();
                 poseStack.mulPose(modelViewMatrix.invert(new Matrix4f()));

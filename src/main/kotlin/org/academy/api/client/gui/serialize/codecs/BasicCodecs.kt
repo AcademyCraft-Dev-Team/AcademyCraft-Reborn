@@ -68,7 +68,7 @@ class ImageCodec : WidgetCodec<ImageWidget> {
         addProperty("v2", widget.v2)
         addProperty("u3", widget.u3)
         addProperty("v3", widget.v3)
-        addProperty("red", widget.brightness)
+        addProperty("red", widget.red)
         addProperty("green", widget.green)
         addProperty("blue", widget.blue)
     }
@@ -84,7 +84,7 @@ class ImageCodec : WidgetCodec<ImageWidget> {
         val u3 = props.get("u3")?.asFloat ?: widget.u3
         val v3 = props.get("v3")?.asFloat ?: widget.v3
         widget.setUv(u0, v0, u1, v1, u2, v2, u3, v3)
-        val r = props.get("red")?.asFloat ?: widget.brightness
+        val r = props.get("red")?.asFloat ?: widget.red
         val g = props.get("green")?.asFloat ?: widget.green
         val b = props.get("blue")?.asFloat ?: widget.blue
         widget.setColor(r, g, b)

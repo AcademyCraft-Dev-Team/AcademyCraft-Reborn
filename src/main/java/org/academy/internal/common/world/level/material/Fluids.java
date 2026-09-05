@@ -7,12 +7,12 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
-import static org.academy.AcademyCraft.MODID;
+import static org.academy.AcademyCraft.MOD_ID;
 
 public final class Fluids {
-    public static final DeferredRegister<Fluid> FLUIDS = DeferredRegister.create(Registries.FLUID, MODID);
+    public static final DeferredRegister<Fluid> FLUIDS = DeferredRegister.create(Registries.FLUID, MOD_ID);
     public static final DeferredRegister<FluidType> FLUID_TYPES =
-            DeferredRegister.create(NeoForgeRegistries.Keys.FLUID_TYPES, MODID);
+            DeferredRegister.create(NeoForgeRegistries.Keys.FLUID_TYPES, MOD_ID);
 
     public static final DeferredHolder<FluidType, FluidType> IMAG_PHASE_TYPE =
             FLUID_TYPES.register("imag_phase", () -> new FluidType(

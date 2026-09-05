@@ -5,16 +5,12 @@ import com.mojang.blaze3d.pipeline.TextureTarget
 import com.mojang.blaze3d.platform.Window
 import com.mojang.blaze3d.platform.WindowEventHandler
 import org.academy.api.client.gui.event.*
+import org.academy.api.client.gui.frame.UiFrame
 import org.academy.api.client.gui.render.UiContext
 import org.academy.api.client.gui.widget.WidgetContainer
 import org.academy.internal.client.gui.imgui.ImGuiBackend
 import org.lwjgl.glfw.GLFW
 
-/**
- * Hosts an [EditorApp]'s widget tree on the desktop window: owns the offscreen
- * [TextureTarget], drives [UiContext], forwards GLFW input into framework events,
- * and reacts to window resizes.
- */
 class DesktopUiHost(
     private val app: EditorApp,
     private val environment: DesktopEnvironment,
@@ -25,11 +21,10 @@ class DesktopUiHost(
     var target: TextureTarget? = null
         private set
 
-    val root: WidgetContainer
+    val root: WidgetContainer = app.createRoot()
 
     private var imGuiBackend: ImGuiBackend? = null
 
-    /** 共享 ImGui 后端（供编辑器注册任意纹理显示，M11-02）。 */
     val imgui: ImGuiBackend?
         get() = imGuiBackend
 
@@ -45,11 +40,9 @@ class DesktopUiHost(
     }
 
     init {
-        root = app.createRoot()
         if (!root.isAttached()) root.dispatchAttached()
     }
 
-    /** Called after the [Window] is created; registers input callbacks. */
     fun bind(window: Window) {
         this.window = window
         environment.clipboardGetter = { GLFW.glfwGetClipboardString(window.handle()) ?: "" }
@@ -66,9 +59,6 @@ class DesktopUiHost(
             )
         }
         GLFW.glfwSetCharCallback(window.handle()) { _, codepoint -> onChar(codepoint) }
-        // 同步实际 GLFW framebuffer 尺寸：环境 + 离屏 target 必须在首帧前与真实
-        // framebuffer 对齐（framebuffer-size 回调因 old==new 不会在启动时触发），否则
-        // ImGui 的 scissor 会越出 target 导致 "Scissor ... out of bounds"。
         framebufferSizeChanged()
         if (app.usesImGui) {
             imGuiBackend = ImGuiBackend(
@@ -85,12 +75,11 @@ class DesktopUiHost(
         )
     }
 
-    /** Called once per frame; performs layout, command generation and GPU upload. */
     fun frame(partialTick: Float) {
         environment.frameDeltaTicks = partialTick
         environment.drainMainThreadTasks()
+        UiFrame.onFrame()
         app.onFrame(partialTick)
-        root.tick()
         uiContext.perform(root, mouseX, mouseY, partialTick)
         uiContext.upload(target!!, true)
         app.renderBackground(target!!)
@@ -104,8 +93,6 @@ class DesktopUiHost(
         target = null
         uiContext.close()
     }
-
-    // ---- WindowEventHandler ----
 
     override fun framebufferSizeChanged() {
         val w = window ?: return
@@ -126,8 +113,6 @@ class DesktopUiHost(
 
     override fun cursorEntered() {
     }
-
-    // ---- GLFW input ----
 
     private fun onCursorPos(x: Double, y: Double) {
         val gx = x / environment.guiScale

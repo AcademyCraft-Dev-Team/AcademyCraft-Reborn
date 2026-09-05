@@ -18,7 +18,7 @@ open class PosTexRectDrawCommand(
     textures: List<TextureBinding>,
     uniforms: List<UniformPayload<*>>
 ) : DrawCommand(pipeline, textures, uniforms) {
-    override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose) {
+    override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose, alphaMul: Float) {
         val matrix = pose.pose()
         val dest = Vector3f()
 

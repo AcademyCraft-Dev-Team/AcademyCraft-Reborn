@@ -27,6 +27,9 @@ abstract class PosTexColorRectDrawCommand : DrawCommand {
     protected val blue: Float
     protected val alpha: Float
 
+    /** 预乘 alpha 管线 (如物品图标): rgb 已乘 alpha, 淡出时须连 rgb 一起缩放. */
+    protected open val premultiplied: Boolean = false
+
     protected constructor(
         pipeline: RenderPipeline,
         width: Float,
@@ -86,12 +89,13 @@ abstract class PosTexColorRectDrawCommand : DrawCommand {
         this.alpha = alpha
     }
 
-    override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose) {
+    override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose, alphaMul: Float) {
         val matrix = pose.pose()
-        val r = (red * 255.0f).toInt()
-        val g = (green * 255.0f).toInt()
-        val b = (blue * 255.0f).toInt()
-        val a = (alpha * 255.0f).toInt()
+        val rgbMul = if (premultiplied) alphaMul else 1.0f
+        val r = (red * rgbMul * 255.0f).toInt()
+        val g = (green * rgbMul * 255.0f).toInt()
+        val b = (blue * rgbMul * 255.0f).toInt()
+        val a = (alpha * alphaMul * 255.0f).toInt()
         val dest = Vector3f()
 
         writer.beginVertex()

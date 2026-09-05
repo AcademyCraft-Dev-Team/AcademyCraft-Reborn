@@ -50,13 +50,13 @@ import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
 import org.academy.internal.common.world.level.levelgen.feature.Features;
 import org.academy.internal.common.world.level.material.Fluids;
 
-import static org.academy.AcademyCraft.MODID;
+import static org.academy.AcademyCraft.MOD_ID;
 import static org.academy.AcademyCraft.MOD_NAME;
 import static org.academy.api.common.registries.Registries.*;
 
 public final class AcademyCraftRegister {
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
-            DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
+            DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MOD_ID);
     @SuppressWarnings("unused")
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> CREATIVE_MODE_TAB =
             CREATIVE_MODE_TABS.register("all", () -> CreativeModeTab.builder()
@@ -127,32 +127,32 @@ public final class AcademyCraftRegister {
                 MagneticHookCuriosCompat.register();
             }
             MentalControlApi.registerAdapter(
-                    Identifier.fromNamespaceAndPath(MODID, "warden"),
+                    Identifier.fromNamespaceAndPath(MOD_ID, "warden"),
                     100,
                     new WardenMentalControlAdapter()
             );
             MentalControlApi.registerAdapter(
-                    Identifier.fromNamespaceAndPath(MODID, "wither"),
+                    Identifier.fromNamespaceAndPath(MOD_ID, "wither"),
                     100,
                     new WitherMentalControlAdapter()
             );
             MentalControlApi.registerAdapter(
-                    Identifier.fromNamespaceAndPath(MODID, "ender_dragon"),
+                    Identifier.fromNamespaceAndPath(MOD_ID, "ender_dragon"),
                     100,
                     new EnderDragonMentalControlAdapter()
             );
             MentalControlApi.registerAdapter(
-                    Identifier.fromNamespaceAndPath(MODID, "vanilla_mob"),
+                    Identifier.fromNamespaceAndPath(MOD_ID, "vanilla_mob"),
                     Integer.MIN_VALUE,
                     new VanillaMobMentalControlAdapter()
             );
             MentalControlApi.registerAdapter(
-                    Identifier.fromNamespaceAndPath(MODID, "server_player"),
+                    Identifier.fromNamespaceAndPath(MOD_ID, "server_player"),
                     200,
                     new ServerPlayerMentalControlAdapter()
             );
             PlayerNavigationApi.registerAdapter(
-                    Identifier.fromNamespaceAndPath(MODID, "vanilla_player"),
+                    Identifier.fromNamespaceAndPath(MOD_ID, "vanilla_player"),
                     0,
                     new DefaultPlayerNavigationAdapter()
             );

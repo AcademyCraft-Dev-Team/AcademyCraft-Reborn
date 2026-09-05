@@ -4,8 +4,10 @@ import com.mojang.math.Axis
 import org.academy.api.client.gui.animation.Animator
 import org.academy.api.client.gui.animation.AnimatorListener
 import org.academy.api.client.gui.animation.StateListAnimator
+import org.academy.api.client.gui.animation.ValueAnimator
 import org.academy.api.client.gui.drawable.Drawable
 import org.academy.api.client.gui.event.*
+import org.academy.api.client.gui.frame.UiFrame
 import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.render.RenderContext
@@ -60,30 +62,10 @@ abstract class AbstractWidget : Widget {
         }
 
     override var translationX: Float = 0f
-        set(value) {
-            field = value
-            invalidate()
-        }
     override var translationY: Float = 0f
-        set(value) {
-            field = value
-            invalidate()
-        }
     override var scaleX: Float = 1.0f
-        set(value) {
-            field = value
-            invalidate()
-        }
     override var scaleY: Float = 1.0f
-        set(value) {
-            field = value
-            invalidate()
-        }
     override var rotation: Float = 0.0f
-        set(value) {
-            field = value
-            invalidate()
-        }
     override var originX: Float = 0.5f
     override var originY: Float = 0.5f
     override var origin: Float
@@ -132,10 +114,6 @@ abstract class AbstractWidget : Widget {
         }
     override var isClickable: Boolean = false
     override var alpha: Float = 1.0f
-        set(value) {
-            field = value
-            invalidate()
-        }
     override var name: String = ""
 
     override var stateListAnimator: StateListAnimator? = null
@@ -152,7 +130,6 @@ abstract class AbstractWidget : Widget {
         set(value) {
             scaleX = value
             scaleY = value
-            invalidate()
         }
 
     override var background: Drawable? = null
@@ -185,6 +162,39 @@ abstract class AbstractWidget : Widget {
     private val detachListeners: MutableList<() -> Unit> = ArrayList()
     private val postLayoutActions: MutableList<() -> Unit> = ArrayList()
 
+    private var frameUpdateCallback: (() -> Boolean)? = null
+    private var frameCancel: (() -> Unit)? = null
+
+    fun setFrameUpdate(callback: () -> Boolean) {
+        if (frameUpdateCallback === callback) return
+        removeFrameUpdate()
+        frameUpdateCallback = callback
+        registerFrameCallback()
+    }
+
+    fun removeFrameUpdate() {
+        frameCancel?.invoke()
+        frameCancel = null
+        frameUpdateCallback = null
+    }
+
+    private fun registerFrameCallback() {
+        val callback = frameUpdateCallback ?: return
+        if (!isAttached) return
+        frameCancel = UiFrame.post {
+            if (!isAttached) {
+                frameCancel = null
+                return@post
+            }
+            if (!callback()) removeFrameUpdate()
+        }
+    }
+
+    fun runFrameUpdate() {
+        val callback = frameUpdateCallback ?: return
+        if (!callback()) removeFrameUpdate()
+    }
+
     override var onLayoutComplete: ((Widget.WidgetLayoutInfo) -> Unit)? = null
 
     override fun postLayout(action: () -> Unit) {
@@ -194,6 +204,20 @@ abstract class AbstractWidget : Widget {
     override var isRenderDirty: Boolean = true
 
     override var bypassRenderCache: Boolean = false
+
+    private var isMeasureForced = true
+    private var isLayoutRequired = true
+    private var lastWidthMeasureSpec: MeasureSpec? = null
+    private var lastHeightMeasureSpec: MeasureSpec? = null
+
+    private val measureCache: MutableMap<MeasureSpecPair, MeasuredSize> = HashMap()
+
+    private data class MeasureSpecPair(val width: MeasureSpec, val height: MeasureSpec)
+    private data class MeasuredSize(val width: Float, val height: Float)
+
+    protected var layoutFrameChanged = true
+
+    protected var needsOnLayout = true
 
     override fun invalidate() {
         isRenderDirty = true
@@ -288,9 +312,40 @@ abstract class AbstractWidget : Widget {
     override fun measure(widthMeasureSpec: MeasureSpec, heightMeasureSpec: MeasureSpec) {
         if (visibility == Widget.Visibility.GONE) {
             setMeasuredDimension(0f, 0f)
+            isMeasureForced = false
             return
         }
+        val force = isMeasureForced
+        val specChanged = widthMeasureSpec != lastWidthMeasureSpec || heightMeasureSpec != lastHeightMeasureSpec
+        isMeasureForced = false
+
+        val widthMatches = widthMeasureSpec.mode == MeasureSpec.Mode.EXACTLY && widthMeasureSpec.size == measuredWidth
+        val heightMatches = heightMeasureSpec.mode == MeasureSpec.Mode.EXACTLY && heightMeasureSpec.size == measuredHeight
+        if (!force && widthMatches && heightMatches) {
+            lastWidthMeasureSpec = widthMeasureSpec
+            lastHeightMeasureSpec = heightMeasureSpec
+            return
+        }
+        if (!force && !specChanged) return
+
+        val cached = if (!force) measureCache[MeasureSpecPair(widthMeasureSpec, heightMeasureSpec)] else null
+        if (cached != null) {
+            setMeasuredDimension(cached.width, cached.height)
+            lastWidthMeasureSpec = widthMeasureSpec
+            lastHeightMeasureSpec = heightMeasureSpec
+            return
+        }
+
+        isLayoutRequired = true
+        lastWidthMeasureSpec = widthMeasureSpec
+        lastHeightMeasureSpec = heightMeasureSpec
         onMeasure(widthMeasureSpec, heightMeasureSpec)
+        if (widthMeasureSpec.mode == MeasureSpec.Mode.UNSPECIFIED &&
+            heightMeasureSpec.mode == MeasureSpec.Mode.UNSPECIFIED
+        ) {
+            measureCache[MeasureSpecPair(widthMeasureSpec, heightMeasureSpec)] =
+                MeasuredSize(measuredWidth, measuredHeight)
+        }
     }
 
     protected open fun onMeasure(widthMeasureSpec: MeasureSpec, heightMeasureSpec: MeasureSpec) {
@@ -309,19 +364,33 @@ abstract class AbstractWidget : Widget {
     }
 
     override fun layout(left: Float, top: Float, right: Float, bottom: Float) {
+        val newWidth = right - left
+        val newHeight = bottom - top
+        val changed = left != x || top != y || newWidth != protectedWidth || newHeight != protectedHeight
+        val sizeChanged = newWidth != protectedWidth || newHeight != protectedHeight
         x = left
         y = top
-        protectedWidth = right - left
-        protectedHeight = bottom - top
-        onLayoutComplete?.invoke(Widget.WidgetLayoutInfo(x, y, protectedWidth, protectedHeight))
-        if (postLayoutActions.isNotEmpty()) {
-            val actions = ArrayList(postLayoutActions)
-            postLayoutActions.clear()
-            for (action in actions) action()
+        protectedWidth = newWidth
+        protectedHeight = newHeight
+        layoutFrameChanged = changed
+        needsOnLayout = changed || isLayoutRequired
+        isLayoutRequired = false
+        if (sizeChanged) {
+            invalidate()
+        }
+        if (layoutFrameChanged) {
+            onLayoutComplete?.invoke(Widget.WidgetLayoutInfo(x, y, protectedWidth, protectedHeight))
+            if (postLayoutActions.isNotEmpty()) {
+                val actions = ArrayList(postLayoutActions)
+                postLayoutActions.clear()
+                for (action in actions) action()
+            }
         }
     }
 
     override fun requestLayout() {
+        isMeasureForced = true
+        measureCache.clear()
         invalidate()
         parent?.requestLayout()
     }
@@ -348,7 +417,6 @@ abstract class AbstractWidget : Widget {
         if (scrollX != x || scrollY != y) {
             scrollX = x
             scrollY = y
-            invalidate()
         }
     }
 
@@ -442,6 +510,7 @@ abstract class AbstractWidget : Widget {
         if (isAttached) return
         isAttached = true
         onAttached()
+        registerFrameCallback()
         if (stateListAnimator != null) {
             stateListAnimator!!.jumpToCurrentState()
             updateStateAnimator()
@@ -450,6 +519,7 @@ abstract class AbstractWidget : Widget {
 
     override fun dispatchDetached() {
         if (!isAttached) return
+        removeFrameUpdate()
         onDetached()
         isAttached = false
         for (listener in detachListeners.toList()) listener()
@@ -482,6 +552,9 @@ abstract class AbstractWidget : Widget {
                 attachedAnimators.remove(animation)
             }
         })
+        if (animator is ValueAnimator) {
+            animator.addUpdateListener { invalidate() }
+        }
         animator.start()
     }
 

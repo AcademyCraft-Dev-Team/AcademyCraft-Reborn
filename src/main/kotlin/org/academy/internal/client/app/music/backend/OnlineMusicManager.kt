@@ -3,9 +3,13 @@ package org.academy.internal.client.app.music.backend
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import net.minecraft.client.Minecraft
+import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.loading.FMLPaths
+import net.neoforged.neoforge.common.NeoForge
 import org.academy.AcademyCraft
+import org.academy.api.client.gui.state.UiState
 import org.academy.api.client.resources.R
+import org.academy.api.client.vanilla.MainLoopEvent
 import org.academy.internal.client.app.music.data.MusicInfo
 import org.academy.internal.client.app.music.data.MusicSource
 import org.academy.internal.client.app.music.netease.NeteaseAudioCache
@@ -19,17 +23,26 @@ import org.academy.internal.client.app.music.qq.QqMusicService
 import org.academy.internal.common.network.MusicSyncPackets
 import org.misaka.MisakaNetworkClient
 import org.misaka.api.common.network.annotation.SubscribePacket
+import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.function.Supplier
 
 object OnlineMusicManager {
     enum class Provider(val storageName: String) {
         QQ("qq"),
         NETEASE("netease")
+    }
+
+    enum class LoginState {
+        IDLE,
+        FETCHING,
+        WAITING,
+        SUCCESS,
+        FAILED,
+        EXPIRED
     }
 
     data class SearchEntry(
@@ -66,6 +79,10 @@ object OnlineMusicManager {
     private var loginFuture: CompletableFuture<*>? = null
 
     @Volatile
+    var loginState = LoginState.IDLE
+        private set
+
+    @Volatile
     var selectedProvider = Provider.QQ
         private set
 
@@ -81,12 +98,20 @@ object OnlineMusicManager {
     var qrBytes: ByteArray? = null
         private set
 
+    val revisionState = UiState(0)
+
     val revision: Int
         get() = revisionCounter.get()
+
+    private fun bumpRevision() {
+        revisionCounter.incrementAndGet()
+        Minecraft.getInstance().execute { revisionState.value = revisionCounter.get() }
+    }
 
     fun init() {
         if (initialized) return
         initialized = true
+        NeoForge.EVENT_BUS.register(this)
         QqCredentialManager.init()
         NeteaseCredentialManager.init()
         MisakaNetworkClient.NETWORK_MANAGER.register(OnlineMusicManager::class.java)
@@ -95,10 +120,13 @@ object OnlineMusicManager {
 
     fun selectProvider(provider: Provider) {
         selectedProvider = provider
-        searchResults = emptyList()
+        loginProvider = null
         qrBytes = null
+        loginFuture = null
+        loginState = LoginState.IDLE
+        searchResults = emptyList()
         status = providerLabel(provider)
-        revisionCounter.incrementAndGet()
+        bumpRevision()
     }
 
     fun search(query: String) {
@@ -107,7 +135,7 @@ object OnlineMusicManager {
         val provider = selectedProvider
         status = "${providerLabel(provider)}：搜索中…"
         searchResults = emptyList()
-        revisionCounter.incrementAndGet()
+        bumpRevision()
         CompletableFuture.supplyAsync({
             when (provider) {
                 Provider.QQ -> QqMusicService.search(normalized).map {
@@ -136,7 +164,7 @@ object OnlineMusicManager {
                     searchResults = results ?: emptyList()
                     status = "${providerLabel(provider)}：${searchResults.size} 条结果"
                 }
-                revisionCounter.incrementAndGet()
+                bumpRevision()
             }
         }
     }
@@ -151,7 +179,7 @@ object OnlineMusicManager {
         val info = createMusicInfo(stored)
         MusicPlayerBackend.getInstance().addOnlineTrack(info, false)
         status = "正在缓存：${entry.title}"
-        revisionCounter.incrementAndGet()
+        bumpRevision()
         cache(entry.provider, entry.id).whenComplete { _, throwable ->
             Minecraft.getInstance().execute {
                 if (throwable != null) {
@@ -160,7 +188,7 @@ object OnlineMusicManager {
                     status = "已加入播放列表：${entry.title}"
                     if (playNow) MusicPlayerBackend.getInstance().addOnlineTrack(info, true)
                 }
-                revisionCounter.incrementAndGet()
+                bumpRevision()
             }
         }
     }
@@ -173,7 +201,12 @@ object OnlineMusicManager {
         }
         MusicPlayerBackend.getInstance().removeOnlineTrack(info.provider, info.externalId)
         status = "已从播放列表移除：${info.name}"
-        revisionCounter.incrementAndGet()
+        bumpRevision()
+    }
+
+    fun onPlayError(message: String) {
+        status = "播放失败：$message"
+        bumpRevision()
     }
 
     fun startLogin() {
@@ -181,34 +214,41 @@ object OnlineMusicManager {
         val provider = selectedProvider
         loginProvider = provider
         qrBytes = null
+        loginState = LoginState.FETCHING
         status = "${providerLabel(provider)}：正在获取登录二维码…"
-        revisionCounter.incrementAndGet()
+        bumpRevision()
         loginFuture = when (provider) {
             Provider.QQ -> QqLoginService.fetchQrCode().whenComplete { session, throwable ->
                 Minecraft.getInstance().execute {
+                    if (loginProvider != provider) return@execute
                     if (throwable != null || session == null) {
                         status = "QQ 音乐登录失败：${rootMessage(throwable)}"
+                        loginState = LoginState.FAILED
                     } else {
                         qqQrSig = session.qrsig()
                         qrBytes = session.imageBytes()
                         status = "QQ 音乐：请扫码登录"
+                        loginState = LoginState.WAITING
                         lastLoginPoll = 0L
                     }
-                    revisionCounter.incrementAndGet()
+                    bumpRevision()
                 }
             }
 
             Provider.NETEASE -> NeteaseLoginService.fetchQrCode().whenComplete { session, throwable ->
                 Minecraft.getInstance().execute {
+                    if (loginProvider != provider) return@execute
                     if (throwable != null || session == null) {
                         status = "网易云音乐登录失败：${rootMessage(throwable)}"
+                        loginState = LoginState.FAILED
                     } else {
                         neteaseUniKey = session.uniKey()
                         qrBytes = session.imageBytes()
                         status = "网易云音乐：请扫码登录"
+                        loginState = LoginState.WAITING
                         lastLoginPoll = 0L
                     }
-                    revisionCounter.incrementAndGet()
+                    bumpRevision()
                 }
             }
         }
@@ -220,8 +260,53 @@ object OnlineMusicManager {
             Provider.NETEASE -> NeteaseLoginService.logout()
         }
         qrBytes = null
+        loginProvider = null
+        loginFuture = null
+        loginState = LoginState.IDLE
         status = "${providerLabel(selectedProvider)}：已退出登录"
-        revisionCounter.incrementAndGet()
+        bumpRevision()
+    }
+
+    fun cancelLogin() {
+        loginProvider = null
+        qrBytes = null
+        loginFuture = null
+        loginState = LoginState.IDLE
+        status = ""
+        bumpRevision()
+    }
+
+    fun refreshLogin() {
+        if (loginFuture?.isDone == false) return
+        loginProvider = null
+        qrBytes = null
+        startLogin()
+    }
+
+    fun accountDisplayName(provider: Provider = selectedProvider): String = when (provider) {
+        Provider.QQ -> {
+            val id = QqCredentialManager.getCredential().musicId
+            if (id.isBlank()) providerLabel(provider) else "${providerLabel(provider)} · ${maskAccount(id)}"
+        }
+
+        Provider.NETEASE -> {
+            val credential = NeteaseCredentialManager.getCredential()
+            val nickname = credential.nickname
+            nickname.ifBlank {
+                val uid = credential.uid
+                if (uid.isBlank()) providerLabel(provider) else "${providerLabel(provider)} · ${maskAccount(uid)}"
+            }
+        }
+    }
+
+    fun accountAvatarUrl(provider: Provider = selectedProvider): String? = when (provider) {
+        Provider.QQ -> null
+        Provider.NETEASE -> NeteaseCredentialManager.getCredential().avatarUrl.takeIf { it.isNotBlank() }
+    }
+
+    private fun maskAccount(id: String): String {
+        if (id.length <= 4) return id
+        return id.take(4) + "***"
     }
 
     fun isLoggedIn(provider: Provider = selectedProvider): Boolean = when (provider) {
@@ -229,7 +314,12 @@ object OnlineMusicManager {
         Provider.NETEASE -> NeteaseCredentialManager.hasValidCredential()
     }
 
-    fun tick() {
+    @SubscribeEvent
+    fun onMainLoop(@Suppress("unused") event: MainLoopEvent) {
+        pollLogin()
+    }
+
+    private fun pollLogin() {
         val provider = loginProvider ?: return
         if (qrBytes == null || System.currentTimeMillis() - lastLoginPoll < 2_000L) return
         if (loginFuture?.isDone == false) return
@@ -237,12 +327,14 @@ object OnlineMusicManager {
         loginFuture = when (provider) {
             Provider.QQ -> QqLoginService.pollLogin(qqQrSig).whenComplete { state, throwable ->
                 Minecraft.getInstance().execute {
+                    if (loginProvider != provider) return@execute
                     handleLoginState(provider, state?.name, throwable)
                 }
             }
 
             Provider.NETEASE -> NeteaseLoginService.pollLogin(neteaseUniKey).whenComplete { state, throwable ->
                 Minecraft.getInstance().execute {
+                    if (loginProvider != provider) return@execute
                     handleLoginState(provider, state?.name, throwable)
                 }
             }
@@ -254,7 +346,7 @@ object OnlineMusicManager {
         val info = backend.currentMusicInfo
         if (info == null || info.provider == "local" || info.externalId.isBlank()) {
             status = "当前曲目无法同步"
-            revisionCounter.incrementAndGet()
+            bumpRevision()
             return
         }
         MisakaNetworkClient.send(
@@ -273,7 +365,7 @@ object OnlineMusicManager {
             )
         )
         status = "已向附近玩家同步：${info.name}"
-        revisionCounter.incrementAndGet()
+        bumpRevision()
     }
 
     @SubscribePacket
@@ -305,29 +397,41 @@ object OnlineMusicManager {
             }
         }
         status = "已接收 ${packet.senderName()} 的同步播放"
-        revisionCounter.incrementAndGet()
+        bumpRevision()
     }
 
     private fun handleLoginState(provider: Provider, state: String?, throwable: Throwable?) {
         if (throwable != null) {
+            loginState = LoginState.FAILED
             status = "${providerLabel(provider)}登录失败：${rootMessage(throwable)}"
         } else when (state) {
             "SUCCESS" -> {
                 qrBytes = null
                 loginProvider = null
+                loginFuture = null
+                loginState = LoginState.IDLE
                 status = "${providerLabel(provider)}：登录成功"
             }
 
             "EXPIRED" -> {
                 qrBytes = null
                 loginProvider = null
+                loginFuture = null
+                loginState = LoginState.EXPIRED
                 status = "${providerLabel(provider)}：二维码已过期"
             }
 
-            "FAILED" -> status = "${providerLabel(provider)}：登录失败"
-            else -> status = "${providerLabel(provider)}：等待扫码确认"
+            "FAILED" -> {
+                loginState = LoginState.FAILED
+                status = "${providerLabel(provider)}：登录失败"
+            }
+
+            else -> {
+                loginState = LoginState.WAITING
+                status = "${providerLabel(provider)}：等待扫码确认"
+            }
         }
-        revisionCounter.incrementAndGet()
+        bumpRevision()
     }
 
     private fun cache(provider: Provider, id: String): CompletableFuture<ByteBuffer> = when (provider) {
@@ -337,9 +441,13 @@ object OnlineMusicManager {
 
     private fun createMusicInfo(track: StoredTrack): MusicInfo {
         val provider = Provider.entries.firstOrNull { it.storageName == track.provider } ?: Provider.QQ
-        val source = MusicSource.fromSupplier(Supplier {
-            cache(provider, track.id).join().duplicate()
-        })
+        val source = MusicSource.fromSupplier {
+            try {
+                cache(provider, track.id).join().duplicate()
+            } catch (exception: Exception) {
+                throw IOException(rootMessage(exception))
+            }
+        }
         return MusicInfo(
             R.textures.gui.app.music.icon,
             source,

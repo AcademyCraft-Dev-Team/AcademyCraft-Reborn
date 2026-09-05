@@ -18,12 +18,12 @@ abstract class PosColorRectDrawCommand protected constructor(
     textures: List<TextureBinding>,
     uniforms: List<UniformPayload<*>>
 ) : DrawCommand(pipeline, textures, uniforms) {
-    override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose) {
+    override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose, alphaMul: Float) {
         val matrix = pose.pose()
         val r = (red * 255.0f).toInt()
         val g = (green * 255.0f).toInt()
         val b = (blue * 255.0f).toInt()
-        val a = (alpha * 255.0f).toInt()
+        val a = (alpha * alphaMul * 255.0f).toInt()
         val dest = Vector3f()
 
         writer.beginVertex()

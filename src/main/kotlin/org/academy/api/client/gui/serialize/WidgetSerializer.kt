@@ -14,21 +14,12 @@ import org.academy.api.client.gui.widget.*
 import java.nio.file.Files
 import java.nio.file.Path
 
-/**
- * 控件树 <-> JSON 的双向序列化器.
- *
- * 序列化范围: 布局属性 (LayoutParams), 控件通用属性, 类型专属属性, 子控件层级与顺序.
- * 不序列化: Drawable, 回调/行为, 瞬时状态 (measured/坐标/滚动位置/焦点).
- */
 object WidgetSerializer {
     private val logger = AcademyCraft.getLogger()
 
     const val FORMAT_VERSION = 2
 
-    /** 最早仍可解码的历史格式版本. */
     const val MIN_SUPPORTED_VERSION = 1
-
-    // ============ 编码 (控件树 -> JSON) ============
 
     fun encode(root: WidgetContainer): JsonObject {
         UiLayoutCodecs.ensureRegistered()
@@ -101,8 +92,6 @@ object WidgetSerializer {
         return o
     }
 
-    // ============ 解码 (JSON -> 控件树) ============
-
     fun decode(json: JsonObject, bindings: UiBindingContext? = null): Widget {
         return decode(json, bindings, null)
     }
@@ -135,7 +124,6 @@ object WidgetSerializer {
         bindings: UiBindingContext?,
         templates: UiTemplateRegistry?
     ): Widget {
-        // v2 `include`：按模板名展开为实际控件。
         if (node.type == "include") {
             val template = templates?.resolve(node.template ?: "")
                 ?: throw IllegalArgumentException("Unknown template '${node.template}'")
@@ -166,8 +154,6 @@ object WidgetSerializer {
             }
             for (childNode in node.children) {
                 val child = decodeNode(childNode, bindings, templates)
-                // 先 addChild 让父容器把 layoutParams 校正为父容器的子类,
-                // 再应用 layout (weight 等字段在子类里才存在, 不会被丢弃).
                 widget.addChild(childNode.name, child)
                 applyLayout(child, childNode.layout)
             }
@@ -181,10 +167,6 @@ object WidgetSerializer {
         return 0
     }
 
-    /**
-     * 以 [WidgetCodec.propertySchema] 为唯一事实来源, 将数值属性钳制到声明的 min/max 区间.
-     * 仅处理 FLOAT/INT 类型; 其余属性原样透传.
-     */
     private fun clampPropsToSchema(codec: WidgetCodec<*>, props: JsonObject): JsonObject {
         if (props.size() == 0 || codec.propertySchema.isEmpty()) return props
         val clamped = JsonObject()
@@ -207,7 +189,6 @@ object WidgetSerializer {
     }
 
     private fun applyLayout(widget: Widget, layout: JsonObject) {
-        // 防止直接修改共享的 LayoutParams.NONE 单例
         val lp = if (widget.layoutParams === WidgetContainer.LayoutParams.NONE)
             WidgetContainer.LayoutParams()
         else
@@ -267,8 +248,6 @@ object WidgetSerializer {
         }
     }
 
-    // ============ 字符串 / 文件 I/O ============
-
     fun toPrettyJson(root: WidgetContainer): String = UiJson.GSON.toJson(encode(root))
 
     fun fromJsonString(json: String): Widget {
@@ -285,7 +264,6 @@ object WidgetSerializer {
         return decode(element, bindings, templates)
     }
 
-    /** 可写布局目录: <gameDir>/academy/ui */
     fun layoutDir(): Path {
         return UiEnvironment.get().layoutDir()
     }
@@ -303,12 +281,10 @@ object WidgetSerializer {
         return fromJsonString(Files.readString(file), bindings)
     }
 
-    /** 从 assets (只读) 加载布局. */
     fun loadLayout(identifier: Identifier): Widget {
         return loadLayout(identifier, null)
     }
 
-    /** 从 assets (只读) 加载布局，并可传入绑定上下文解析 `$path`。 */
     fun loadLayout(identifier: Identifier, bindings: UiBindingContext?): Widget {
         val json = UiEnvironment.get().openResource(identifier.namespace, identifier.path)?.use { stream ->
             UiJson.GSON.fromJson(stream.reader(), JsonObject::class.java)

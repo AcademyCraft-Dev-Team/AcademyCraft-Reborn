@@ -234,10 +234,6 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
     override fun extractLabels(graphics: GuiGraphicsExtractor, xm: Int, ym: Int) {
     }
 
-    override fun containerTick() {
-        root.tick()
-    }
-
     override fun mouseMoved(mouseX: Double, mouseY: Double) {
         if (ImGuiUtilApi.wantCaptureMouse()) return
 

@@ -10,16 +10,14 @@ import org.academy.internal.common.world.entity.projectile.PaperAirplane;
 import org.academy.internal.common.world.entity.projectile.MagneticHook;
 import org.academy.internal.common.world.entity.projectile.DarkmatterFeatherProjectile;
 import org.academy.internal.common.world.entity.projectile.DarkmatterCreatureProjectile;
-import org.academy.internal.common.world.entity.projectile.DarkmatterFeatherProjectile;
 import org.academy.internal.common.world.entity.projectile.DarkmatterSpearProjectile;
-import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 import org.academy.internal.common.world.entity.skill.*;
 import org.academy.internal.common.world.entity.vehicle.CleaningRobot;
 
-import static org.academy.AcademyCraft.MODID;
+import static org.academy.AcademyCraft.MOD_ID;
 
 public class EntityTypes {
-    public static final DeferredRegister.Entities ENTITY_TYPES = DeferredRegister.createEntities(MODID);
+    public static final DeferredRegister.Entities ENTITY_TYPES = DeferredRegister.createEntities(MOD_ID);
 
     public static final DeferredHolder<EntityType<?>, EntityType<ThrownCoin>> THROWN_COIN =
             ENTITY_TYPES.registerEntityType(

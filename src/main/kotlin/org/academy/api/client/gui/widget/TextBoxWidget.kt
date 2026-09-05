@@ -77,6 +77,18 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
         sld.setDefault(ColorDrawable(0x5F1F1F1F))
         sld.addState(Widget.FOCUSED, ColorDrawable(0x5F5A5A5A))
         background = sld
+
+        setFrameUpdate {
+            if (isFocused) {
+                val now = System.currentTimeMillis()
+                if (now - lastBlinkTime >= 500) {
+                    showCaret = !showCaret
+                    invalidate()
+                    lastBlinkTime = now
+                }
+            }
+            true
+        }
     }
 
     override fun render(context: RenderContext) {
@@ -396,16 +408,6 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
         preeditText = ""
         updateTextComponent()
         invalidate()
-    }
-
-    override fun tick() {
-        if (!isFocused) return
-        val now = System.currentTimeMillis()
-        if (now - lastBlinkTime >= 500) {
-            showCaret = !showCaret
-            invalidate()
-            lastBlinkTime = now
-        }
     }
 
     override fun onMousePressed(event: MouseEvent) {

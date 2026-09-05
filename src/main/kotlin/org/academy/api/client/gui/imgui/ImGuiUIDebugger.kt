@@ -400,7 +400,7 @@ object ImGuiUIDebugger {
         }
 
         if (widget is ImageWidget) {
-            val rgb = floatArrayOf(widget.brightness, widget.green, widget.blue)
+            val rgb = floatArrayOf(widget.red, widget.green, widget.blue)
             if (ImGui.colorEdit3(label("screen.academy.ui_debug.inspector.image_tint", "image_tint"), rgb)) {
                 widget.setColor(rgb[0], rgb[1], rgb[2])
             }

@@ -44,7 +44,6 @@ class ControlledTargetsHud private constructor() {
         } else {
             MentaloutRosterClientState.tick()
         }
-        context.get().tick()
     }
 
     @SubscribeEvent
@@ -60,11 +59,11 @@ class ControlledTargetsHud private constructor() {
     private class Context : WidgetContext {
         private val panel: FrameLayoutWidget
         private val content: LinearLayoutWidget
-        private val root = object : FrameLayoutWidget() {
-            override fun tick() {
+        private val root = FrameLayoutWidget().apply {
+            setFrameUpdate {
                 applyHudLayout()
                 refresh()
-                super.tick()
+                true
             }
         }
         private var cachedSignature: String? = null
@@ -77,6 +76,7 @@ class ControlledTargetsHud private constructor() {
             panel = SerializedUiLayout.require(layout, "mental_control") as FrameLayoutWidget
             content = SerializedUiLayout.require(layout, "content") as LinearLayoutWidget
             root.addChild("serialized_layout", layout)
+            root.dispatchAttached()
         }
 
         private fun fallbackLayout(): FrameLayoutWidget {
@@ -358,7 +358,7 @@ class ControlledTargetsHud private constructor() {
             val parts = typeId.split(':', limit = 2)
             if (parts.size != 2) return typeId
             val fallback = parts[1].replace('_', ' ')
-            return L10n.getOrDefault("entity.${parts[0]}.${parts[1]}", fallback)
+            return L10n["entity.${parts[0]}.${parts[1]}", fallback]
         }
 
         private fun distance(distance: Float): String {

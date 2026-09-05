@@ -42,21 +42,21 @@ class SolarGenScreen private constructor(
 
         invPage.addChild("ui", ui)
 
-        val effect: SpriteSheetWidget = object : SpriteSheetWidget(
+        val effect: SpriteSheetWidget = SpriteSheetWidget(
             R.textures.gui.solar_gen.icon_solar_gen_sunny,
             Orientation.VERTICAL,
             48, 96,
             48, 48,
             2
-        ) {
-            private var ticks = 0
-
-            override fun tick() {
-                ticks++
-                if (ticks == 10) {
+        ).apply {
+            var lastTime = System.currentTimeMillis()
+            setFrameUpdate {
+                val time = System.currentTimeMillis()
+                if (time - lastTime > 500) {
                     nextFrame()
-                    ticks = 0
+                    lastTime = time
                 }
+                true
             }
         }
         stateConsumer = {

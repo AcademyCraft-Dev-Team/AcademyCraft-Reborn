@@ -3,7 +3,6 @@ package org.academy.api.client.hud.ability
 import com.mojang.blaze3d.pipeline.RenderTarget
 import net.minecraft.client.Minecraft
 import net.neoforged.bus.api.SubscribeEvent
-import net.neoforged.neoforge.client.event.ClientTickEvent
 import net.neoforged.neoforge.common.NeoForge
 import org.academy.AcademyCraft
 import org.academy.api.client.ability.AbilitySystemClient
@@ -39,22 +38,17 @@ class ToggleStatusHud private constructor() {
     }
 
     @SubscribeEvent
-    fun onTick(@Suppress("unused") event: ClientTickEvent.Post) {
-        context.get().tick()
-    }
-
-    @SubscribeEvent
     fun onResizeDisplay(@Suppress("unused") event: ResizeDisplayEvent) {
         context.get().requestLayout()
     }
 
     private class Context : WidgetContext {
         private var statuses: LinearLayoutWidget
-        private val root = object : FrameLayoutWidget() {
-            override fun tick() {
+        private val root = FrameLayoutWidget().apply {
+            setFrameUpdate {
                 applyHudLayout()
                 refresh()
-                super.tick()
+                true
             }
         }
         private var cachedSignature: String? = null
@@ -67,6 +61,7 @@ class ToggleStatusHud private constructor() {
             statuses = SerializedUiLayout.require(layout, "toggle_statuses") as LinearLayoutWidget
             statuses.visibility = Widget.Visibility.GONE
             root.addChild("serialized_layout", layout)
+            root.dispatchAttached()
         }
 
         override fun get(): WidgetContainer = root
