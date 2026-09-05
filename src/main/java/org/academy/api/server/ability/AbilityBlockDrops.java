@@ -28,13 +28,19 @@ public final class AbilityBlockDrops {
     }
 
     public static boolean run(ServerPlayer player, BooleanSupplier action) {
+        return run(player.level(), player, action);
+    }
+
+    /** Use the effect level when a controlled entity or delayed action is in another dimension. */
+    public static boolean run(Level level, ServerPlayer player, BooleanSupplier action) {
+        if (AbilityEffectPolicy.blockDestruction(level) == AbilityEffectPolicy.Decision.DENY) return false;
         try (var ignored = capture(player)) {
             return action.getAsBoolean();
         }
     }
 
     public static boolean destroyBlock(Level level, BlockPos pos, boolean drops, ServerPlayer player) {
-        return run(player, () -> level.destroyBlock(pos,
+        return run(level, player, () -> level.destroyBlock(pos,
                 drops || SpatialStorageService.hasEnabledUnit(player), player));
     }
 

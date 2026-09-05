@@ -725,7 +725,7 @@ public final class DarkmatterDisassemble extends Skill {
             var drops = Block.getDrops(
                     state, level, pos, level.getBlockEntity(pos), player, tool);
             if (!org.academy.api.server.ability.AbilityBlockDrops.run(
-                    player, () -> level.destroyBlock(pos, false, player))) return false;
+                    level, player, () -> level.destroyBlock(pos, false, player))) return false;
             for (var drop : drops) {
                 if (drop.isEmpty()) continue;
                 if (org.academy.internal.server.storage.SpatialStorageService.collect(player, drop)) continue;

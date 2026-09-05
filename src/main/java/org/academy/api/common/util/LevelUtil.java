@@ -448,6 +448,8 @@ public class LevelUtil {
             BlockState state,
             @Nullable ServerPlayer breaker
     ) {
+        if (org.academy.api.server.ability.AbilityEffectPolicy.blockDestruction(level)
+                == org.academy.api.server.ability.AbilityEffectPolicy.Decision.DENY) return false;
         if (breaker == null) return true;
         var restricted = breaker.blockActionRestricted(
                 level,

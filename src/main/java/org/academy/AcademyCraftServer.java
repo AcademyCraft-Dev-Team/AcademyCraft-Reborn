@@ -25,6 +25,7 @@ import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.config.GenericConfig;
+import org.academy.internal.server.config.DimensionEffectsConfig;
 import org.academy.internal.server.entity.SurvivalDefenseRuntime;
 import org.academy.internal.server.time.TemporalRuntime;
 import org.academy.internal.server.world.level.storage.Player;
@@ -49,6 +50,7 @@ public final class AcademyCraftServer {
     private final AbilitySystemServer abilitySystemServer;
     private final AbilityConfig abilityConfig;
     private final GenericConfig genericConfig;
+    private final DimensionEffectsConfig dimensionEffectsConfig;
     private final TemporalRuntime temporalRuntime;
     private final MinecraftServer server;
     private long lastSaveTick = 0;
@@ -56,6 +58,8 @@ public final class AcademyCraftServer {
     private AcademyCraftServer(MinecraftServerContext context) {
         context.setAcademyCraftServer(this);
         server = context.getMinecraftServer();
+        dimensionEffectsConfig = DimensionEffectsConfig.load(server.getServerDirectory()
+                .resolve("config").resolve(DimensionEffectsConfig.FILE_NAME));
 
         var serverConfigFile = server.getServerDirectory()
                 .resolve("config")
@@ -122,6 +126,10 @@ public final class AcademyCraftServer {
 
     public GenericConfig getGenericConfig() {
         return genericConfig;
+    }
+
+    public DimensionEffectsConfig getDimensionEffectsConfig() {
+        return dimensionEffectsConfig;
     }
 
     public TemporalService getTemporalService() {
