@@ -65,6 +65,90 @@ class QqMusicServiceTest {
         assertEquals(2, exception.getSuppressed().length);
     }
 
+    @Test
+    void diagnosesVipTrackWithoutLoginAsLoginRequired() {
+        assertEquals(
+                "付费歌曲需登录 QQ 音乐账号（VIP）后才能播放",
+                QqMusicService.diagnoseNoSource(true, null, 0)
+        );
+    }
+
+    @Test
+    void diagnosesVipTrackWithExpiredCredentialAsReLogin() {
+        var expired = new QqCredential(
+                "123", "key", 3600L, System.currentTimeMillis() / 1000 - 7200, "", ""
+        );
+        assertEquals(
+                "QQ 音乐登录已过期，请重新登录后再播放付费歌曲",
+                QqMusicService.diagnoseNoSource(true, expired, 0)
+        );
+    }
+
+    @Test
+    void diagnosesVipTrackWithValidCredentialAsMissingVipRight() {
+        var valid = new QqCredential(
+                "123", "key", 3600L, System.currentTimeMillis() / 1000, "", ""
+        );
+        assertEquals(
+                "付费歌曲暂时无法播放，请确认账号具备 VIP 权限",
+                QqMusicService.diagnoseNoSource(true, valid, 0)
+        );
+    }
+
+    @Test
+    void diagnosesFreeTrackWithApiErrorCode() {
+        assertEquals(
+                "QQ 音乐未返回可播放的音频源（code=40000）",
+                QqMusicService.diagnoseNoSource(false, null, 40000)
+        );
+    }
+
+    @Test
+    void diagnosesFreeTrackWithoutApiErrorCode() {
+        assertEquals(
+                "QQ 音乐未返回可播放的音频源",
+                QqMusicService.diagnoseNoSource(false, null, 0)
+        );
+    }
+
+    @Test
+    void diagnosesPermissionErrorOnFreeTrackAsVipOnly() {
+        assertEquals(
+                "该歌曲为付费/VIP 曲目，当前账号无播放权限",
+                QqMusicService.diagnoseNoSource(false, null, 104009)
+        );
+    }
+
+    @Test
+    void diagnosesPermissionErrorOnVipTrackWithoutLoginAsLoginRequired() {
+        assertEquals(
+                "付费歌曲需登录 QQ 音乐账号（VIP）后才能播放",
+                QqMusicService.diagnoseNoSource(true, null, 104009)
+        );
+    }
+
+    @Test
+    void diagnosesPermissionErrorOnVipTrackWithExpiredCredentialAsReLogin() {
+        var expired = new QqCredential(
+                "123", "key", 3600L, System.currentTimeMillis() / 1000 - 7200, "", ""
+        );
+        assertEquals(
+                "QQ 音乐登录已过期，请重新登录后再播放付费歌曲",
+                QqMusicService.diagnoseNoSource(true, expired, 104009)
+        );
+    }
+
+    @Test
+    void diagnosesPermissionErrorOnVipTrackWithValidCredentialAsMissingVipRight() {
+        var valid = new QqCredential(
+                "123", "key", 3600L, System.currentTimeMillis() / 1000, "", ""
+        );
+        assertEquals(
+                "付费歌曲暂时无法播放，请确认账号具备 VIP 权限",
+                QqMusicService.diagnoseNoSource(true, valid, 104009)
+        );
+    }
+
     private static byte[] throwFailure() throws IOException {
         throw new IOException("unavailable");
     }

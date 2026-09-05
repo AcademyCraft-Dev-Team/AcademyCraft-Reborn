@@ -14,7 +14,7 @@ class ItemStackDrawCommand(
     val height: Float,
     val alpha: Float
 ) : DrawCommand(Render.RenderPipelines.IMAGE_PREMULTIPLIED_ALPHA, emptyList(), emptyList()) {
-    override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose) {
+    override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose, alphaMul: Float) {
         error("ItemStackDrawCommand must be resolved by UiContext before batching")
     }
 
@@ -48,5 +48,7 @@ class ItemStackDrawCommand(
         alpha,
         listOf(TextureBinding("Sampler0", slot.textureView(), sampler)),
         emptyList()
-    )
+    ) {
+        override val premultiplied: Boolean get() = true
+    }
 }

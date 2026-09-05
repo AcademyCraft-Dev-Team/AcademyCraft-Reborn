@@ -5,11 +5,11 @@ import net.minecraft.world.level.levelgen.feature.Feature;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-import static org.academy.AcademyCraft.MODID;
+import static org.academy.AcademyCraft.MOD_ID;
 
 public final class Features {
     public static final DeferredRegister<Feature<?>> FEATURES =
-            DeferredRegister.create(Registries.FEATURE, MODID);
+            DeferredRegister.create(Registries.FEATURE, MOD_ID);
     public static final DeferredHolder<Feature<?>, Feature<ImagPhaseLakeFeature.Configuration>> IMAG_PHASE_LAKE =
             FEATURES.register(
                     "imag_phase_lake",

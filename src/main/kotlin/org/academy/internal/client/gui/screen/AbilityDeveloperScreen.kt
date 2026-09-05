@@ -352,15 +352,15 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
             size(100f, 12f)
         }
 
-        panel.add("progress_power", object : ProgressBarWidget() {
-            override fun tick() {
-                super.tick()
+        panel.add("progress_power", ProgressBarWidget().apply {
+            setFrameUpdate {
                 val capacity = maxEnergy()
                 setProgress(
                     if (capacity > 0)
                         currentEnergy().toFloat() / capacity * 100f
                     else 0f
                 )
+                true
             }
         }) {
             gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
@@ -919,12 +919,12 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                 }
             }
 
-            add("outline_bg", object : ImageWidget(skill_outline) {
-                override fun tick() {
-                    super.tick()
+            add("outline_bg", ImageWidget(skill_outline).apply {
+                setFrameUpdate {
                     val full = isLearned && AbilitySystemClient.getSkillProficiencyProgress(info.skill) >= 1f
                     setBrightness(if (full) 1.4f else 0.2f)
                     alpha = if (full) 1f else mAlpha * 0.6f
+                    true
                 }
             }) {
                 gravity(Gravity.CENTER)
@@ -1230,7 +1230,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         val btnWid = object : ButtonWidget() {
             override fun render(context: RenderContext) {
                 val target = if (isHovered || isFocused || isPressed) 1.1f else 0.85f
-                if (btnTex.brightness != target) {
+                if (btnTex.red != target) {
                     brightnessRef.set(target)
                     btnTex.setBrightness(target)
                 }
@@ -1522,12 +1522,11 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                             LearningHelper.getEstimatedSkillConsumption(skill)
                         )
                     }
-                    val messageLabel = object : LabelWidget(learnQuestion) {
-                        override fun tick() {
-                            super.tick()
+                    val messageLabel = LabelWidget(learnQuestion).apply {
+                        setFrameUpdate {
                             if (machineRequired) {
                                 text = L10n["academy.ability_developer.portable.skill_restricted"]
-                                return
+                                return@setFrameUpdate true
                             }
                             val targetId = AbilitySystemClient.getDevTargetId()
                             if (targetId == skillId) {
@@ -1550,6 +1549,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                             } else if (AbilitySystemClient.isDevelopmentActive()) {
                                 text = L10n["academy.ability_developer.already_developing"]
                             }
+                            true
                         }
                     }
                     add("message", messageLabel) {

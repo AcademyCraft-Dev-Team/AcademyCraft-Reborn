@@ -56,11 +56,6 @@ abstract class UiScreen protected constructor(title: Component) : Screen(title),
         if (root.isAttached()) root.dispatchDetached()
     }
 
-    override fun tick() {
-        root.tick()
-        super.tick()
-    }
-
     override fun mouseMoved(mouseX: Double, mouseY: Double) {
         if (ImGuiUtilApi.wantCaptureMouse()) return
 

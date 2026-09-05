@@ -17,6 +17,7 @@ import java.util.*;
 public final class QqMusicService {
     private static final String MUSICU_URL = "https://u.y.qq.com/cgi-bin/musicu.fcg";
     private static final String DEFAULT_SIP = "http://ws.stream.qqmusic.qq.com/";
+    private static final int CODE_NO_PERMISSION = 104009;
 
     private QqMusicService() {
     }
@@ -47,11 +48,14 @@ public final class QqMusicService {
         request.add("req", req);
 
         var root = postJson(request.toString(), defaultHeaders(true));
-        var list = root.getAsJsonObject("req")
-                .getAsJsonObject("data")
-                .getAsJsonObject("body")
-                .getAsJsonObject("song")
-                .getAsJsonArray("list");
+        var data = requireReqData(root, "req");
+        if (data == null
+                || !data.has("body")
+                || !data.getAsJsonObject("body").has("song")
+                || !data.getAsJsonObject("body").getAsJsonObject("song").has("list")) {
+            return Collections.emptyList();
+        }
+        var list = data.getAsJsonObject("body").getAsJsonObject("song").getAsJsonArray("list");
         List<QqSearchResult> results = new ArrayList<>();
         for (var element : list) {
             var song = element.getAsJsonObject();
@@ -83,7 +87,11 @@ public final class QqMusicService {
         var data = requestVkeyData(mid, filenames);
         var streamUrls = resolveStreamUrls(data);
         if (streamUrls.isEmpty()) {
-            throw new IOException("QQ music track has no playable supported source");
+            throw new IOException(diagnoseNoSource(
+                    trackInfo.vip(),
+                    QqCredentialManager.getCredential(),
+                    data == null ? 0 : getInt(data, "code", 0)
+            ));
         }
         return streamUrls.stream()
                 .map(url -> new QqResolvedTrack(
@@ -166,9 +174,11 @@ public final class QqMusicService {
         body.add("comm", comm);
 
         var root = postJson(body.toString(), defaultHeaders(true));
-        var trackInfo = root.getAsJsonObject("req_1")
-                .getAsJsonObject("data")
-                .getAsJsonObject("track_info");
+        var data = requireReqData(root, "req_1");
+        if (data == null || !data.has("track_info")) {
+            throw new IOException("QQ 音乐未找到歌曲信息");
+        }
+        var trackInfo = data.getAsJsonObject("track_info");
         var title = getString(trackInfo, "name");
         var interval = trackInfo.has("interval") ? trackInfo.get("interval").getAsInt() : 0;
         var vip = trackInfo.has("pay") && trackInfo.getAsJsonObject("pay").has("pay_play")
@@ -242,7 +252,15 @@ public final class QqMusicService {
         body.add("comm", comm);
 
         var root = postJson(body.toString(), defaultHeaders(true));
-        return root.getAsJsonObject("req_1").getAsJsonObject("data");
+        var data = requireReqData(root, "req_1");
+        if (data == null) {
+            return new JsonObject();
+        }
+        var dataCode = getInt(data, "code", 0);
+        if (dataCode != 0 && dataCode != CODE_NO_PERMISSION) {
+            throw new IOException("QQ 音乐接口返回错误（code=" + dataCode + "）");
+        }
+        return data;
     }
 
     private static JsonObject postJson(String body, Map<String, String> headers) throws IOException {
@@ -267,6 +285,36 @@ public final class QqMusicService {
         } finally {
             connection.disconnect();
         }
+    }
+
+    private static JsonObject requireReqData(JsonObject root, String moduleKey) throws IOException {
+        if (root == null) {
+            throw new IOException("QQ 音乐接口响应为空");
+        }
+        var rootCode = getInt(root, "code", 0);
+        if (rootCode != 0) {
+            throw new IOException("QQ 音乐接口返回错误（code=" + rootCode + "）");
+        }
+        if (!root.has(moduleKey) || !root.get(moduleKey).isJsonObject()) {
+            throw new IOException("QQ 音乐接口响应缺少 " + moduleKey + " 字段");
+        }
+        var module = root.getAsJsonObject(moduleKey);
+        var moduleCode = getInt(module, "code", 0);
+        if (moduleCode != 0) {
+            if (moduleCode == 2001) {
+                throw new IOException("QQ 音乐请求过于频繁，请稍后重试");
+            }
+            if (moduleCode == CODE_NO_PERMISSION) {
+                var permissionData = new JsonObject();
+                permissionData.addProperty("code", moduleCode);
+                return permissionData;
+            }
+            throw new IOException("QQ 音乐接口返回错误（code=" + moduleCode + "）");
+        }
+        if (!module.has("data") || !module.get("data").isJsonObject()) {
+            return null;
+        }
+        return module.getAsJsonObject("data");
     }
 
     private static Map<String, String> defaultHeaders(boolean allowCookie) {
@@ -341,12 +389,49 @@ public final class QqMusicService {
                 : "0";
     }
 
+    static String diagnoseNoSource(boolean vip, QqCredential credential, int apiCode) {
+        if (apiCode == CODE_NO_PERMISSION) {
+            if (vip) {
+                if (credential == null) {
+                    return "付费歌曲需登录 QQ 音乐账号（VIP）后才能播放";
+                }
+                if (!credential.isValid()) {
+                    return "QQ 音乐登录已过期，请重新登录后再播放付费歌曲";
+                }
+                return "付费歌曲暂时无法播放，请确认账号具备 VIP 权限";
+            }
+            return "该歌曲为付费/VIP 曲目，当前账号无播放权限";
+        }
+        if (vip) {
+            if (credential == null) {
+                return "付费歌曲需登录 QQ 音乐账号（VIP）后才能播放";
+            }
+            if (!credential.isValid()) {
+                return "QQ 音乐登录已过期，请重新登录后再播放付费歌曲";
+            }
+            return "付费歌曲暂时无法播放，请确认账号具备 VIP 权限";
+        }
+        if (apiCode != 0) {
+            return "QQ 音乐未返回可播放的音频源（code=" + apiCode + "）";
+        }
+        return "QQ 音乐未返回可播放的音频源";
+    }
+
     private static long getLong(JsonObject object, String key) {
         if (object == null || !object.has(key) || object.get(key).isJsonNull()) return 0L;
         try {
             return object.get(key).getAsLong();
         } catch (RuntimeException ignored) {
             return 0L;
+        }
+    }
+
+    private static int getInt(JsonObject object, String key, int fallback) {
+        if (object == null || !object.has(key) || object.get(key).isJsonNull()) return fallback;
+        try {
+            return object.get(key).getAsInt();
+        } catch (RuntimeException ignored) {
+            return fallback;
         }
     }
 

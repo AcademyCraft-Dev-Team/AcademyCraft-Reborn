@@ -1,20 +1,10 @@
 package org.academy.api.client.gui.dsl
 
 import org.academy.api.client.gui.layout.SizeMode
+import org.academy.api.client.gui.widget.LinearLayoutWidget
 import org.academy.api.client.gui.widget.Widget
 import org.academy.api.client.gui.widget.WidgetContainer
 
-/**
- * 声明式 UI DSL 喵.
- *
- * 核心思路: 在 [WidgetContainer] 上提供创建子控件的扩展函数, 容器工厂在
- * `addChild` 之后执行配置 lambda, 因此 lambda 内 `layoutParams` 已是容器生成的
- * 正确子类, 可直接读写字段与使用 [lp] 辅助.
- */
-
-// ============ 通用布局辅助 (Widget 扩展) ============
-
-/** 打开当前 [layoutParams] 并按 [init] 配置字段. 若尚未分配则先分配. */
 fun Widget.lp(init: WidgetContainer.LayoutParams.() -> Unit): Widget {
     if (layoutParams === WidgetContainer.LayoutParams.NONE) {
         layoutParams = WidgetContainer.LayoutParams()
@@ -95,7 +85,7 @@ fun Widget.matchParent(): Widget {
 }
 
 fun Widget.weight(weight: Float): Widget {
-    (layoutParams as? org.academy.api.client.gui.widget.LinearLayoutWidget.LayoutParams)?.weight = weight
+    (layoutParams as? LinearLayoutWidget.LayoutParams)?.weight = weight
     return this
 }
 
@@ -235,8 +225,6 @@ fun Widget.paddingVertical(vertical: Float): Widget {
     }
     return this
 }
-
-// ============ 锚点约束辅助 ============
 
 fun Widget.anchors(h: Float, v: Float): Widget {
     lp {

@@ -6,34 +6,32 @@ import com.mojang.blaze3d.textures.GpuSampler
 import com.mojang.blaze3d.textures.GpuTextureView
 import net.minecraft.resources.Identifier
 import net.minecraft.util.ARGB
-import org.academy.AcademyCraft
 import org.academy.api.client.gui.command.ImageDrawCommand
-import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.texture.GpuTextureViewSource
+import org.academy.api.client.gui.texture.IdentifierTextureSource
+import org.academy.api.client.gui.texture.TextureSource
 import org.academy.api.client.gui.widget.Widget
 
 open class TextureDrawable : Drawable {
-    protected val textureLocation: Identifier?
+    private val textureSource: TextureSource?
 
-    protected var texture: GpuTextureView?
-
-    protected var sampler: GpuSampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
+    var sampler: GpuSampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
 
     var tintColor: Int = -0x1
 
     constructor(textureLocation: Identifier?) {
-        this.textureLocation = textureLocation
-        texture = null
+        textureSource = textureLocation?.let { IdentifierTextureSource(it) }
     }
 
     constructor(texture: GpuTextureView?) {
-        textureLocation = null
-        this.texture = texture
+        textureSource = GpuTextureViewSource(texture)
     }
 
     override fun draw(context: RenderContext, widget: Widget) {
-        resolveAndPrepareTexture()
-        if (texture == null) return
+        val source = textureSource ?: return
+        val view = source.getTextureView()
+        if (view == null || view.isClosed) return
 
         val lp = widget.layoutParams
         val paddedWidth = widget.width - lp.paddingLeft - lp.paddingRight
@@ -54,29 +52,9 @@ open class TextureDrawable : Drawable {
         context.pose().translate(lp.paddingLeft, lp.paddingTop)
 
         val command =
-            ImageDrawCommand(texture!!, sampler, paddedWidth, paddedHeight, 0f, 0f, 1f, 1f, r, g, b, finalAlpha)
+            ImageDrawCommand(view, sampler, paddedWidth, paddedHeight, 0f, 0f, 1f, 1f, r, g, b, finalAlpha)
         context.submit(command)
 
         context.pose().popPose()
-    }
-
-    private fun resolveAndPrepareTexture() {
-        if (texture != null && !texture!!.isClosed) return
-        if (textureLocation == null) {
-            texture = null
-            return
-        }
-
-        try {
-            val textureView = UiEnvironment.get().loadTexture(textureLocation)
-            this.texture = textureView
-        } catch (e: Exception) {
-            logger.error("Failed to resolve texture view for {}", textureLocation, e)
-            texture = null
-        }
-    }
-
-    companion object {
-        private val logger = AcademyCraft.getLogger()
     }
 }

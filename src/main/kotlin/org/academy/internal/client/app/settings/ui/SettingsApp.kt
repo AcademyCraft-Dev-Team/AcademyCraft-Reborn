@@ -60,10 +60,10 @@ object SettingsApp : App {
         private var pendingMouseButton: Int = -1
         private var pendingModifiers: Int = 0
 
-        private val captureHint: LabelWidget = object : LabelWidget("") {
-            override fun tick() {
-                super.tick()
+        private val captureHint: LabelWidget = LabelWidget("").apply {
+            setFrameUpdate {
                 updateHint()
+                true
             }
         }
         private val captureLayer = createCaptureLayer()
@@ -332,16 +332,16 @@ object SettingsApp : App {
                     .gravity(Gravity.CENTER_LEFT)
             })
             var applyingAuthoritativeState = false
-            val toggle = object : ToggleButtonWidget() {
-                override fun tick() {
-                    super.tick()
-                    val expected = authoritativeState?.invoke() ?: return
-                    if (isChecked == expected) return
-                    applyingAuthoritativeState = true
-                    setChecked(expected)
-                    applyingAuthoritativeState = false
+            val toggle = ToggleButtonWidget().apply {
+                setFrameUpdate {
+                    val expected = authoritativeState?.invoke()
+                    if (expected != null && isChecked != expected) {
+                        applyingAuthoritativeState = true
+                        setChecked(expected)
+                        applyingAuthoritativeState = false
+                    }
+                    true
                 }
-            }.apply {
                 setChecked(checked)
                 layoutParams = LinearLayoutWidget.LayoutParams()
                     .size(20f, 10f)
