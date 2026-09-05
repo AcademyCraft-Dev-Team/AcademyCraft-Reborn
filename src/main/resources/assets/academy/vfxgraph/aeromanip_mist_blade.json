@@ -101,7 +101,7 @@
           "id": "blade_core_left",
           "type": "vfx.block.spawn_burst",
           "properties": {
-            "count": "24", "lifetime": "0.26", "size": "0.026",
+            "count": "43", "lifetime": "0.26", "size": "0.026",
             "color": "0.9,0.91,0.92,0.76", "vx": "-0.62", "vy": "0.12", "vz": "0",
             "layer": "blade", "shape": "box",
             "half_x": "0.58", "half_y": "2.48", "half_z": "0.006", "origin_y": "2.5"
@@ -111,7 +111,7 @@
           "id": "blade_core_right",
           "type": "vfx.block.spawn_burst",
           "properties": {
-            "count": "24", "lifetime": "0.26", "size": "0.026",
+            "count": "43", "lifetime": "0.26", "size": "0.026",
             "color": "0.9,0.91,0.92,0.76", "vx": "0.62", "vy": "0.12", "vz": "0",
             "layer": "blade", "shape": "box",
             "half_x": "0.58", "half_y": "2.48", "half_z": "0.006", "origin_y": "2.5"
@@ -121,7 +121,7 @@
           "id": "blade_band_left",
           "type": "vfx.block.spawn_burst",
           "properties": {
-            "count": "24", "lifetime": "0.44", "size": "0.055",
+            "count": "43", "lifetime": "0.44", "size": "0.055",
             "color": "0.78,0.79,0.8,0.28", "vx": "-0.46", "vy": "0.22", "vz": "0",
             "layer": "blade", "shape": "box",
             "half_x": "0.62", "half_y": "2.45", "half_z": "0.014", "origin_y": "2.5"
@@ -131,7 +131,7 @@
           "id": "blade_band_right",
           "type": "vfx.block.spawn_burst",
           "properties": {
-            "count": "24", "lifetime": "0.44", "size": "0.055",
+            "count": "43", "lifetime": "0.44", "size": "0.055",
             "color": "0.78,0.79,0.8,0.28", "vx": "0.46", "vy": "0.22", "vz": "0",
             "layer": "blade", "shape": "box",
             "half_x": "0.62", "half_y": "2.45", "half_z": "0.014", "origin_y": "2.5"
@@ -141,7 +141,7 @@
           "id": "fine_gas_left",
           "type": "vfx.block.spawn_burst",
           "properties": {
-            "count": "32", "lifetime": "0.68", "size": "0.075",
+            "count": "58", "lifetime": "0.68", "size": "0.075",
             "color": "0.69,0.7,0.71,0.105", "vx": "-0.26", "vy": "0.46", "vz": "0",
             "layer": "mist", "shape": "box",
             "half_x": "0.66", "half_y": "2.36", "half_z": "0.038", "origin_y": "2.58"
@@ -151,7 +151,7 @@
           "id": "fine_gas_right",
           "type": "vfx.block.spawn_burst",
           "properties": {
-            "count": "32", "lifetime": "0.68", "size": "0.075",
+            "count": "58", "lifetime": "0.68", "size": "0.075",
             "color": "0.69,0.7,0.71,0.105", "vx": "0.26", "vy": "0.46", "vz": "0",
             "layer": "mist", "shape": "box",
             "half_x": "0.66", "half_y": "2.36", "half_z": "0.038", "origin_y": "2.58"
@@ -161,7 +161,7 @@
           "id": "suspended_grain_left",
           "type": "vfx.block.spawn_burst",
           "properties": {
-            "count": "32", "lifetime": "0.54", "size": "0.018",
+            "count": "58", "lifetime": "0.54", "size": "0.018",
             "color": "0.82,0.83,0.84,0.38", "vx": "-0.34", "vy": "0.72", "vz": "0",
             "layer": "grain", "shape": "box",
             "half_x": "0.7", "half_y": "2.48", "half_z": "0.052", "origin_y": "2.5"
@@ -171,7 +171,7 @@
           "id": "suspended_grain_right",
           "type": "vfx.block.spawn_burst",
           "properties": {
-            "count": "32", "lifetime": "0.54", "size": "0.018",
+            "count": "58", "lifetime": "0.54", "size": "0.018",
             "color": "0.82,0.83,0.84,0.38", "vx": "0.34", "vy": "0.72", "vz": "0",
             "layer": "grain", "shape": "box",
             "half_x": "0.7", "half_y": "2.48", "half_z": "0.052", "origin_y": "2.5"
