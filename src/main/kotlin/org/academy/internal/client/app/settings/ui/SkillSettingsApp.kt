@@ -60,10 +60,10 @@ object SkillSettingsApp : App {
         private var pendingMouseButton: Int = -1
         private var pendingModifiers: Int = 0
 
-        private val captureHint = object : LabelWidget("") {
-            override fun tick() {
-                super.tick()
+        private val captureHint = LabelWidget("").apply {
+            setFrameUpdate {
                 updateCaptureHint()
+                true
             }
         }
         private val skillTooltipText = LabelWidget("").apply {
@@ -91,10 +91,10 @@ object SkillSettingsApp : App {
         )
 
         private fun createRoot(): FrameLayoutWidget {
-            val root = object : FrameLayoutWidget() {
-                override fun tick() {
-                    super.tick()
+            val root = FrameLayoutWidget().apply {
+                setFrameUpdate {
                     updateSkillTooltip()
+                    true
                 }
             }
             root.layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
@@ -626,9 +626,8 @@ object SkillSettingsApp : App {
                 is SkillSettingsRegistry.Choice -> {
                     var tracking = false
                     var displayedIndex = entry.clampIndex(entry.getter.asInt)
-                    val value = object : LabelWidget(translate(entry.optionKeys[displayedIndex])) {
-                        override fun tick() {
-                            super.tick()
+                    val value = LabelWidget(translate(entry.optionKeys[displayedIndex])).apply {
+                        setFrameUpdate {
                             val available = entry.available.asBoolean
                             if (!tracking) displayedIndex = entry.clampIndex(entry.getter.asInt)
                             text = if (available) {
@@ -637,17 +636,16 @@ object SkillSettingsApp : App {
                                 translate(entry.unavailableKey)
                             }
                             alpha = if (available) 0.85f else 0.35f
+                            true
                         }
-                    }.apply {
                         scale = 0.7f
                         layoutParams = LinearLayoutWidget.LayoutParams()
                             .width(64f)
                             .height(10f)
                             .gravity(Gravity.CENTER)
                     }
-                    val slider = object : SeekBarWidget() {
-                        override fun tick() {
-                            super.tick()
+                    val slider = SeekBarWidget().apply {
+                        setFrameUpdate {
                             val available = entry.available.asBoolean
                             isEnabled = available
                             alpha = if (available) 1f else 0.2f
@@ -656,6 +654,7 @@ object SkillSettingsApp : App {
                                 displayedIndex = selected
                                 if (progress.roundToInt() != selected) setProgress(selected.toFloat())
                             }
+                            true
                         }
                     }
                     slider.setMin(0f)

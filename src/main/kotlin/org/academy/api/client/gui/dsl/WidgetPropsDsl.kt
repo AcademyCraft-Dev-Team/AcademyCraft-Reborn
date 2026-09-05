@@ -7,7 +7,7 @@ import org.academy.api.client.gui.widget.*
 import java.util.function.Consumer
 
 fun ImageWidget.texture(id: Identifier?): ImageWidget {
-    textureIdentifier = id
+    setTexture(id)
     return this
 }
 
@@ -23,7 +23,7 @@ fun ImageWidget.uv(
 fun ImageWidget.rgb(red: Float, green: Float, blue: Float): ImageWidget = setColor(red, green, blue)
 
 fun ImageWidget.brightnessOf(value: Float): ImageWidget {
-    brightness = value
+    red = value
     return this
 }
 

@@ -77,14 +77,14 @@ class WirelessNodeScreen(
 
         invPage.addChild("ui", ui)
 
-        val effect: SpriteSheetWidget = object : SpriteSheetWidget(
+        val effect: SpriteSheetWidget = SpriteSheetWidget(
             R.textures.gui.node.state_node,
             Orientation.VERTICAL,
             186, 750,
             186, 75,
             10
-        ) {
-            override fun tick() {
+        ).apply {
+            setFrameUpdate {
                 var progressCapacity =
                     wirelessNodeBlockEntity.connectedUsersCount.toFloat() / wirelessNodeBlockEntity.maxConnectedUsers
 
@@ -96,6 +96,7 @@ class WirelessNodeScreen(
                 }
 
                 frameIndex = index
+                true
             }
         }
         effect.layoutParams = FrameLayoutWidget.LayoutParams()

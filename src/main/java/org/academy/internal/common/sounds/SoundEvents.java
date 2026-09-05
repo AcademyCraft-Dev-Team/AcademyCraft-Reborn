@@ -6,10 +6,10 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.academy.AcademyCraft;
 
-import static org.academy.AcademyCraft.MODID;
+import static org.academy.AcademyCraft.MOD_ID;
 
 public class SoundEvents {
-    public static final DeferredRegister<SoundEvent> SOUND_EVENTS = DeferredRegister.create(BuiltInRegistries.SOUND_EVENT, MODID);
+    public static final DeferredRegister<SoundEvent> SOUND_EVENTS = DeferredRegister.create(BuiltInRegistries.SOUND_EVENT, MOD_ID);
 
     public static final DeferredHolder<SoundEvent, SoundEvent> COIN = SOUND_EVENTS.register("coin",
             () -> SoundEvent.createVariableRangeEvent(AcademyCraft.academy("coin")));

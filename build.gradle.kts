@@ -51,6 +51,7 @@ java {
 }
 
 val jbrLauncher = javaToolchains.launcherFor {
+    @Suppress("UnstableApiUsage")
     vendor.set(JvmVendorSpec.JETBRAINS)
     languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get()))
 }
