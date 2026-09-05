@@ -760,6 +760,7 @@
   "message.academy.program.execution.loop_disabled": "Periodic trigger for custom skill slot %s disabled.",
   "message.academy.program.execution.loop_enabled": "Periodic trigger for custom skill slot %s enabled.",
   "message.academy.program.execution.unsupported": "This ability category does not have executable action nodes yet.",
+  "message.academy.pvp.dimension_disabled": "Skill PVP is disabled in this dimension by the server",
   "message.academy.pvp.disabled": "PVP is disabled",
   "message.academy.pvp.switch_cooldown": "PVP switching is on cooldown for %s more seconds",
   "message.academy.pvp.target_disabled": "The target has disabled PVP",

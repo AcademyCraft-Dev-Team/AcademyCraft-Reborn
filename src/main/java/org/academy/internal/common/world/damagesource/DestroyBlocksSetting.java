@@ -11,6 +11,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.server.ability.AbilityEffectPolicy;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkServer;
@@ -50,6 +51,8 @@ public final class DestroyBlocksSetting {
     }
 
     public static boolean canDestroyBlocks(ServerPlayer player) {
+        var decision = AbilityEffectPolicy.blockDestruction(player.level());
+        if (decision != AbilityEffectPolicy.Decision.DEFAULT) return decision == AbilityEffectPolicy.Decision.ALLOW;
         if (!isDestroyBlocksEnabled(player)) return false;
         try {
             var server = player.level().getServer();
@@ -72,6 +75,9 @@ public final class DestroyBlocksSetting {
     }
 
     public static boolean canDestroyBlocks(ServerPlayer player, Skill skill) {
+        if (!supportsSkillBlockDestruction(skill)) return false;
+        var decision = AbilityEffectPolicy.blockDestruction(player.level());
+        if (decision != AbilityEffectPolicy.Decision.DEFAULT) return decision == AbilityEffectPolicy.Decision.ALLOW;
         if (!canDestroyBlocksBySkillSetting(player, skill)) return false;
         return usesIndependentBlockDestructionSetting(skill) || canDestroyBlocks(player);
     }

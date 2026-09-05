@@ -19,6 +19,7 @@ import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
+import org.academy.api.server.ability.AbilityEffectPolicy;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.server.pvp.PvpCooldownData;
@@ -131,6 +132,11 @@ public final class PvpSetting {
         if (attacker == null || target == null) return ProtectionReason.NONE;
         var playerTarget = target instanceof Player;
         var samePlayer = target == attacker;
+        if (playerTarget && !samePlayer) {
+            var decision = AbilityEffectPolicy.pvp(target.level());
+            if (decision == AbilityEffectPolicy.Decision.DENY) return ProtectionReason.DIMENSION_DISABLED;
+            if (decision == AbilityEffectPolicy.Decision.ALLOW) return ProtectionReason.NONE;
+        }
         return protectionReason(
                 playerTarget,
                 samePlayer,
@@ -191,7 +197,8 @@ public final class PvpSetting {
     public enum ProtectionReason {
         NONE(""),
         ATTACKER_DISABLED("message.academy.pvp.disabled"),
-        TARGET_DISABLED("message.academy.pvp.target_disabled");
+        TARGET_DISABLED("message.academy.pvp.target_disabled"),
+        DIMENSION_DISABLED("message.academy.pvp.dimension_disabled");
 
         private final String feedbackKey;
 

@@ -689,6 +689,10 @@ public class KineticEnergyApplied extends Skill {
         }
 
         private static boolean canDestroyBlocks(ServerPlayer player) {
+            var decision = org.academy.api.server.ability.AbilityEffectPolicy.blockDestruction(player.level());
+            if (decision != org.academy.api.server.ability.AbilityEffectPolicy.Decision.DEFAULT) {
+                return decision == org.academy.api.server.ability.AbilityEffectPolicy.Decision.ALLOW;
+            }
             return player.getData(AttachmentTypes.KINETIC_BLOCK_BREAK_ENABLED.get())
                     && DestroyBlocksSetting.canDestroyBlocks(player, Skills.KINETIC_ENERGY_APPLIED.get());
         }
@@ -929,6 +933,8 @@ public class KineticEnergyApplied extends Skill {
         }
 
         private boolean tick(ServerLevel level, ServerPlayer player) {
+            if (org.academy.api.server.ability.AbilityEffectPolicy.blockDestruction(level)
+                    == org.academy.api.server.ability.AbilityEffectPolicy.Decision.DENY) return true;
             var changed = 0;
             var scanned = 0;
             if (!priorityProcessed) {
