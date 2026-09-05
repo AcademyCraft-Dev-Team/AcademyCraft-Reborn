@@ -38,6 +38,8 @@ public final class AbilityEffectPolicy {
     static Decision decide(DimensionEffectsConfig config, String dimension, boolean pvp) {
         if (!config.enabled) return Decision.DEFAULT;
         var rule = pvp ? config.pvp : config.blockDestruction;
-        return rule.allows(dimension) ? Decision.ALLOW : Decision.DENY;
+        if (rule.blacklist.contains(dimension)) return Decision.DENY;
+        if (rule.whitelist.contains(dimension)) return Decision.ALLOW;
+        return Decision.DEFAULT;
     }
 }

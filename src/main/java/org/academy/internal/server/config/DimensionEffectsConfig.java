@@ -1,6 +1,9 @@
 package org.academy.internal.server.config;
 
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import net.minecraft.resources.Identifier;
 
 import java.io.IOException;
@@ -17,24 +20,18 @@ public final class DimensionEffectsConfig {
     public DimensionRule pvp = new DimensionRule();
     public DimensionRule blockDestruction = new DimensionRule();
 
-    public enum Mode {
-        WHITELIST,
-        BLACKLIST
-    }
-
     public static final class DimensionRule {
-        public Mode mode = Mode.BLACKLIST;
-        public Set<String> dimensions = new HashSet<>();
-
-        public boolean allows(String dimension) {
-            return mode == Mode.WHITELIST
-                    ? dimensions.contains(dimension)
-                    : !dimensions.contains(dimension);
-        }
+        public Set<String> whitelist = new HashSet<>();
+        public Set<String> blacklist = new HashSet<>();
 
         private void validate(String name) {
-            if (mode == null || dimensions == null) {
-                throw new IllegalArgumentException(name + " requires a valid mode and dimensions array");
+            validateDimensions(name + ".whitelist", whitelist);
+            validateDimensions(name + ".blacklist", blacklist);
+        }
+
+        private static void validateDimensions(String name, Set<String> dimensions) {
+            if (dimensions == null) {
+                throw new IllegalArgumentException(name + " must be a dimensions array");
             }
             for (var dimension : dimensions) {
                 if (dimension == null || !dimension.contains(":") || Identifier.tryParse(dimension) == null) {
@@ -61,13 +58,30 @@ public final class DimensionEffectsConfig {
                 Files.writeString(file, gson.toJson(defaults) + System.lineSeparator());
                 return defaults;
             }
-            var config = gson.fromJson(Files.readString(file), DimensionEffectsConfig.class);
-            if (config == null) throw new IllegalArgumentException("Configuration must be a JSON object");
+            var root = JsonParser.parseString(Files.readString(file)).getAsJsonObject();
+            migrateLegacyRule(root, "pvp");
+            migrateLegacyRule(root, "blockDestruction");
+            var config = gson.fromJson(root, DimensionEffectsConfig.class);
             config.validate();
             return config;
         } catch (IOException | RuntimeException error) {
             // A typo must not silently turn off protection or overwrite the administrator's file.
             throw new IllegalStateException("Cannot load dimension effect rules from " + file, error);
         }
+    }
+
+    /** Read old mode/dimensions files without rewriting them or merging stale lists into new rules. */
+    private static void migrateLegacyRule(JsonObject root, String name) {
+        if (!root.has(name) || !root.get(name).isJsonObject()) return;
+        var rule = root.getAsJsonObject(name);
+        if (rule.has("whitelist") || rule.has("blacklist")) return;
+        if (!rule.has("mode") && !rule.has("dimensions")) return;
+        var mode = rule.has("mode") ? rule.get("mode").getAsString() : "BLACKLIST";
+        var destination = switch (mode) {
+            case "WHITELIST" -> "whitelist";
+            case "BLACKLIST" -> "blacklist";
+            default -> throw new IllegalArgumentException(name + " contains an invalid legacy mode: " + mode);
+        };
+        rule.add(destination, rule.has("dimensions") ? rule.get("dimensions") : new JsonArray());
     }
 }

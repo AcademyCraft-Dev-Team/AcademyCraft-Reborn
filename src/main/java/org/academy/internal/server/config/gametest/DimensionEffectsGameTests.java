@@ -77,6 +77,8 @@ public final class DimensionEffectsGameTests {
         try {
             var dimension = level.dimension().identifier().toString();
             var skill = Skills.MINING_BEAM.get();
+            config.pvp = new DimensionEffectsConfig.DimensionRule();
+            config.blockDestruction = new DimensionEffectsConfig.DimensionRule();
             attacker.setData(AttachmentTypes.PVP_ENABLED.get(), false);
             target.setData(AttachmentTypes.PVP_ENABLED.get(), false);
             attacker.setData(AttachmentTypes.DESTROY_BLOCKS_ENABLED.get(), false);
@@ -89,24 +91,45 @@ public final class DimensionEffectsGameTests {
             helper.assertTrue(!DestroyBlocksSetting.canDestroyBlocks(attacker, skill),
                     "Disabled config must preserve mining beam's personal switch");
 
-            config.pvp = new DimensionEffectsConfig.DimensionRule();
-            config.blockDestruction = new DimensionEffectsConfig.DimensionRule();
-            config.pvp.mode = DimensionEffectsConfig.Mode.WHITELIST;
-            config.pvp.dimensions = Set.of(dimension);
-            config.blockDestruction.mode = DimensionEffectsConfig.Mode.WHITELIST;
-            config.blockDestruction.dimensions = Set.of(dimension);
+            config.pvp.whitelist = Set.of(dimension);
             config.enabled = true;
             helper.assertTrue(PvpSetting.protectionReason(attacker, target) == PvpSetting.ProtectionReason.NONE,
-                    "Server allow must override both players' disabled PVP switches");
+                    "PVP whitelist must override both players' disabled switches");
+            helper.assertTrue(!DestroyBlocksSetting.canDestroyBlocks(attacker)
+                            && !DestroyBlocksSetting.canDestroyBlocks(attacker, Skills.RAILGUN.get())
+                            && !DestroyBlocksSetting.canDestroyBlocks(attacker, skill),
+                    "PVP-only config must let players disable global and per-skill block destruction");
+            attacker.setData(AttachmentTypes.SKILL_DESTROY_BLOCKS_ENABLED.get(), Map.of());
+            helper.assertTrue(DestroyBlocksSetting.canDestroyBlocks(attacker, skill),
+                    "PVP-only config must preserve mining beam's independent switch");
+            helper.assertTrue(!DestroyBlocksSetting.canDestroyBlocks(attacker, Skills.RAILGUN.get()),
+                    "PVP-only config must still honor the global block switch for other skills");
+            attacker.setData(AttachmentTypes.SKILL_DESTROY_BLOCKS_ENABLED.get(),
+                    Map.of(skill.getKeyString(), false));
+
+            config.pvp.whitelist = Set.of();
+            config.blockDestruction.whitelist = Set.of(dimension);
+            helper.assertTrue(PvpSetting.protectionReason(attacker, target)
+                            == PvpSetting.ProtectionReason.ATTACKER_DISABLED,
+                    "Block-only config must preserve personal PVP protection");
             helper.assertTrue(DestroyBlocksSetting.canDestroyBlocks(attacker)
                             && DestroyBlocksSetting.canDestroyBlocks(attacker, skill),
-                    "Server allow must override global and independent per-skill block switches");
+                    "Block whitelist must override global and independent per-skill switches");
 
-            // A second real server level must use its own dimension, not an owner/global cached result.
+            config.pvp.whitelist = Set.of(dimension);
+            config.pvp.blacklist = Set.of(Level.NETHER.identifier().toString());
+            config.blockDestruction.blacklist = Set.of(Level.NETHER.identifier().toString());
             var nether = level.getServer().getLevel(Level.NETHER);
             helper.assertTrue(nether != null, "Nether level must be present");
             helper.assertTrue(AbilityEffectPolicy.blockDestruction(nether) == AbilityEffectPolicy.Decision.DENY,
-                    "Whitelist must distinguish levels on the same server");
+                    "Simultaneous white and black lists must distinguish levels on the same server");
+            helper.assertTrue(AbilityEffectPolicy.blockDestruction(level) == AbilityEffectPolicy.Decision.ALLOW,
+                    "Adding a blacklist must not suppress other whitelisted dimensions");
+            var endLevel = level.getServer().getLevel(Level.END);
+            helper.assertTrue(endLevel != null, "End level must be present");
+            helper.assertTrue(AbilityEffectPolicy.pvp(endLevel) == AbilityEffectPolicy.Decision.DEFAULT
+                            && AbilityEffectPolicy.blockDestruction(endLevel) == AbilityEffectPolicy.Decision.DEFAULT,
+                    "Dimensions outside both lists must remain player-controlled");
             var remoteProfile = new GameProfile(UUID.randomUUID(), "policy-remote");
             var remoteTarget = new ServerPlayer(level.getServer(), nether, remoteProfile,
                     CommonListenerCookie.createInitial(remoteProfile, false).clientInformation());
@@ -117,8 +140,18 @@ public final class DimensionEffectsGameTests {
                 throw new AssertionError("Denied remote block action was executed");
             }), "Remote block actions must use their actual effect level");
 
-            config.pvp.mode = DimensionEffectsConfig.Mode.BLACKLIST;
-            config.blockDestruction.mode = DimensionEffectsConfig.Mode.BLACKLIST;
+            config.pvp.blacklist = Set.of(dimension);
+            helper.assertTrue(PvpSetting.protectionReason(attacker, target)
+                            == PvpSetting.ProtectionReason.DIMENSION_DISABLED,
+                    "PVP blacklist must take precedence over its whitelist");
+            helper.assertTrue(DestroyBlocksSetting.canDestroyBlocks(attacker, skill),
+                    "PVP denial must not override a block destruction whitelist");
+            config.pvp.blacklist = Set.of();
+            config.blockDestruction.blacklist = Set.of(dimension);
+            helper.assertTrue(PvpSetting.protectionReason(attacker, target) == PvpSetting.ProtectionReason.NONE,
+                    "Block destruction denial must not override a PVP whitelist");
+
+            config.pvp.blacklist = Set.of(dimension);
             // Simulate a client enabling every personal switch: the server denial still wins.
             attacker.setData(AttachmentTypes.PVP_ENABLED.get(), true);
             target.setData(AttachmentTypes.PVP_ENABLED.get(), true);
@@ -129,7 +162,7 @@ public final class DimensionEffectsGameTests {
                     "Server denial must override client switches");
             helper.assertTrue(!DestroyBlocksSetting.canDestroyBlocks(attacker)
                             && !DestroyBlocksSetting.canDestroyBlocks(attacker, skill),
-                    "Mining beam must not bypass a forbidden dimension");
+                    "Mining beam and overlapping whitelists must not bypass a forbidden dimension");
             var beforeHealth = target.getHealth();
             helper.assertTrue(!SkillDamageUtil.apply(attacker, target, skill, DamageTypes.MELT_DAMAGE, 5.0f),
                     "Forbidden direct skill damage was accepted");
@@ -154,10 +187,28 @@ public final class DimensionEffectsGameTests {
             helper.assertTrue(level.getBlockState(absolute).is(Blocks.STONE),
                     "A delayed/reflected beam bypassed the dimension restriction");
 
-            config.blockDestruction.dimensions = Set.of();
+            config.blockDestruction.blacklist = Set.of();
             helper.assertTrue(AbilityBlockDrops.destroyBlock(level, absolute, false, attacker),
-                    "Allowed ability block destruction must still execute");
+                    "Whitelisted ability block destruction must still execute");
             helper.assertTrue(level.getBlockState(absolute).isAir(), "Allowed block was not destroyed");
+
+            // Keep nonempty lists for another dimension; neither may take over this dimension.
+            config.pvp.whitelist = config.blockDestruction.whitelist = Set.of("example:arena");
+            config.pvp.blacklist = config.blockDestruction.blacklist = Set.of("example:protected");
+            helper.assertTrue(PvpSetting.protectionReason(attacker, target) == PvpSetting.ProtectionReason.NONE,
+                    "Unlisted players must be able to enable PVP");
+            target.setData(AttachmentTypes.PVP_ENABLED.get(), false);
+            helper.assertTrue(PvpSetting.protectionReason(attacker, target)
+                            == PvpSetting.ProtectionReason.TARGET_DISABLED,
+                    "Unlisted players must be able to disable PVP");
+            helper.assertTrue(DestroyBlocksSetting.canDestroyBlocks(attacker, skill),
+                    "Unlisted players must be able to enable per-skill destruction");
+            attacker.setData(AttachmentTypes.DESTROY_BLOCKS_ENABLED.get(), false);
+            attacker.setData(AttachmentTypes.SKILL_DESTROY_BLOCKS_ENABLED.get(),
+                    Map.of(skill.getKeyString(), false));
+            helper.assertTrue(!DestroyBlocksSetting.canDestroyBlocks(attacker)
+                            && !DestroyBlocksSetting.canDestroyBlocks(attacker, skill),
+                    "Unlisted players must be able to disable global and per-skill destruction");
         } finally {
             config.enabled = previousEnabled;
             config.pvp = previousPvp;
