@@ -23,6 +23,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.wireless.WirelessNode;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.api.server.wireless.WirelessManager;
+import org.academy.internal.server.misaka.MisakaNetworkCoverage;
 import org.academy.internal.server.world.level.storage.WirelessNetworkData;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -88,12 +89,16 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
         }
 
         var newConnectedUsersCount = cachedConfig.connectedUsers.size();
+        var radiusChanged = radius != cachedConfig.radius;
         var networkInfoChanged = connectedUsersCount != newConnectedUsersCount
                 || maxConnectedUsers != cachedConfig.maxConnections
-                || radius != cachedConfig.radius;
+                || radiusChanged;
         connectedUsersCount = newConnectedUsersCount;
         maxConnectedUsers = cachedConfig.maxConnections;
         radius = cachedConfig.radius;
+        if (radiusChanged) {
+            MisakaNetworkCoverage.invalidate();
+        }
 
         WirelessManager.balanceEnergy(this, userMap);
 

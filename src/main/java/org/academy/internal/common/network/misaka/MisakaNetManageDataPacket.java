@@ -63,6 +63,7 @@ public final class MisakaNetManageDataPacket
             buf.writeFloat(sister.msk());
             ByteBufCodecs.STRING_UTF8.encode(buf, sister.nodeName());
             buf.writeBoolean(sister.starving());
+            buf.writeBoolean(sister.inCoverage());
         }
         for (int i = 0; i < MisakaComputeSink.COUNT; i++) {
             ByteBufCodecs.VAR_INT.encode(buf, packet.percents[i]);
@@ -82,6 +83,7 @@ public final class MisakaNetManageDataPacket
                     ByteBufCodecs.VAR_INT.decode(buf),
                     buf.readFloat(),
                     ByteBufCodecs.STRING_UTF8.decode(buf),
+                    buf.readBoolean(),
                     buf.readBoolean()
             ));
         }
@@ -134,7 +136,14 @@ public final class MisakaNetManageDataPacket
         return PacketTypes.MISAKA_NET_MANAGE_DATA.get();
     }
 
-    public record SisterSummary(int serial, int perception, float msk, String nodeName, boolean starving) {
+    public record SisterSummary(
+            int serial,
+            int perception,
+            float msk,
+            String nodeName,
+            boolean starving,
+            boolean inCoverage
+    ) {
         public SisterSummary {
             nodeName = nodeName == null ? "" : nodeName;
         }

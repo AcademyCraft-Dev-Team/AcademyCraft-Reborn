@@ -37,8 +37,10 @@ import org.academy.internal.common.world.entity.misaka.ai.MisakaStarveGuardGoal;
 import org.academy.internal.common.world.entity.misaka.ai.MisakaUnawakenedStrollGoal;
 import org.academy.internal.common.world.entity.misaka.favor.FavorContext;
 import org.academy.internal.common.world.entity.misaka.favor.FavorRuleRegistry;
+import org.academy.api.common.misaka.MisakaNAT;
 import org.academy.internal.common.world.entity.misaka.perception.PerceptionService;
 import org.academy.internal.server.misaka.MisakaComputeContribution;
+import org.academy.internal.server.misaka.MisakaComputeIndex;
 import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
 import org.academy.internal.server.world.level.storage.MisakaSisterRoster;
 import org.jspecify.annotations.Nullable;
@@ -117,6 +119,9 @@ public class MisakaSisterEntity extends PathfinderMob {
         ensureRegistered();
         syncFromRoster();
         updateLastKnownChunk();
+        if (tickCount % 20 == 0) {
+            recheckNetworkCoverage();
+        }
         tickSleepWake();
         if (isAwakened()) {
             if (!isPassenger()) {
@@ -479,7 +484,35 @@ public class MisakaSisterEntity extends PathfinderMob {
             }
             record.lastKnownChunk = chunk;
             MisakaSisterRoster.get(level().getServer()).setDirty();
+            recheckNetworkCoverage(record);
         });
+    }
+
+    private void recheckNetworkCoverage() {
+        rosterRecord().ifPresent(this::recheckNetworkCoverage);
+    }
+
+    private void recheckNetworkCoverage(MisakaSisterRecord record) {
+        var server = level().getServer();
+        if (server == null) {
+            return;
+        }
+        if (!record.awakened || record.networkNodePos == null) {
+            return;
+        }
+        // Footprint / topology live on overworld SavedData (same as compute index rebuild).
+        var overworld = server.overworld();
+        var networkId = MisakaNAT.get().resolveNetworkId(overworld, record.networkNodePos);
+        boolean nowIn = MisakaNAT.get().canUseMisakaService(overworld, networkId, blockPosition());
+        Boolean was = MisakaComputeIndex.get().lastCoverageContributing(record.misakaUuid);
+        if (was == null) {
+            MisakaComputeIndex.get().seedCoverageContributing(record.misakaUuid, nowIn);
+            return;
+        }
+        if (was == nowIn) {
+            return;
+        }
+        MisakaComputeIndex.get().adjustCoverageContribution(server, record, was, nowIn);
     }
 
     private void tickAwakeWindowSpotting() {

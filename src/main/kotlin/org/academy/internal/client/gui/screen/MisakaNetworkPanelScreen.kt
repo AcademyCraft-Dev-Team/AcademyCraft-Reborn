@@ -453,6 +453,7 @@ class MisakaNetworkPanelScreen(
             Component.translatable("screen.academy.misaka_net_col_perception").string,
             Component.translatable("screen.academy.misaka_net_col_msk").string,
             Component.translatable("screen.academy.misaka_net_col_node").string,
+            Component.translatable("screen.academy.misaka_net_col_coverage").string,
             Component.translatable("screen.academy.misaka_net_col_status").string,
             header = true
         ))
@@ -510,6 +511,11 @@ class MisakaNetworkPanelScreen(
                 } else {
                     Component.translatable("screen.academy.misaka_net_status_ok").string
                 }
+                val coverage = if (item.inCoverage()) {
+                    Component.translatable("screen.academy.misaka_net_coverage_in").string
+                } else {
+                    Component.translatable("screen.academy.misaka_net_coverage_out").string
+                }
                 view.addChild(
                     "cols",
                     sisterColumnsRow(
@@ -517,8 +523,10 @@ class MisakaNetworkPanelScreen(
                         item.perception().toString(),
                         String.format(Locale.ROOT, "%.1f", item.msk()),
                         item.nodeName().ifEmpty { "-" },
+                        coverage,
                         status,
                         header = false,
+                        coverageAccent = !item.inCoverage(),
                         statusAccent = item.starving()
                     ).apply {
                         layoutParams = FrameLayoutWidget.LayoutParams()
@@ -580,8 +588,10 @@ class MisakaNetworkPanelScreen(
         perception: String,
         msk: String,
         node: String,
+        coverage: String,
         status: String,
         header: Boolean,
+        coverageAccent: Boolean = false,
         statusAccent: Boolean = false
     ): LinearLayoutWidget {
         val row = LinearLayoutWidget().apply {
@@ -615,6 +625,7 @@ class MisakaNetworkPanelScreen(
                 .height(10f)
                 .gravity(Gravity.CENTER_VERTICAL)
         })
+        row.addChild("coverage", cell(coverage, COL_COVERAGE, coverageAccent))
         row.addChild("status", cell(status, COL_STATUS, statusAccent))
         return row
     }
@@ -1301,10 +1312,11 @@ class MisakaNetworkPanelScreen(
         private const val INPUT_WIDTH = 22f
         private const val INPUT_HEIGHT = 10f
         private const val PCT_WIDTH = 8f
-        private const val COL_SERIAL = 40f
-        private const val COL_PERCEPTION = 28f
-        private const val COL_MSK = 40f
-        private const val COL_STATUS = 32f
+        private const val COL_SERIAL = 36f
+        private const val COL_PERCEPTION = 24f
+        private const val COL_MSK = 36f
+        private const val COL_COVERAGE = 40f
+        private const val COL_STATUS = 28f
         private const val SCROLLBAR_WIDTH = 5f
         private const val ROOT_PLANE = 0x70000000
         private const val ROW_PLANE = 0x28000000

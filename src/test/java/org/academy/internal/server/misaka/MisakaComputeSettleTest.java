@@ -113,4 +113,33 @@ class MisakaComputeSettleTest {
         assertEquals(0f, result.personalCpByName().getOrDefault("Alice", 0f), 0.001f);
         assertEquals(20f, result.poolMskByNetwork().get("n1"), 0.001f);
     }
+
+    @Test
+    void outOfRangePrivilegeMatchesOfflinePersonalPath() {
+        // Coverage OOR is assembled as online=false for that network.
+        var result = MisakaComputeSettle.settle(
+                List.of(new MisakaComputeSettle.ClosestBucket("n1", "Alice", 40f)),
+                Map.of("Alice", 100f),
+                List.of(new MisakaComputeSettle.NetworkPoolInput("n1", 0f, new int[]{100, 0, 0, 0}, "Alice")),
+                Map.of("Alice", false),
+                2.0f
+        );
+        assertEquals(0f, result.personalCpByName().getOrDefault("Alice", 0f), 0.001f);
+        assertEquals(40f, result.poolMskByNetwork().get("n1"), 0.001f);
+        assertEquals(0f, result.networkCpByName().getOrDefault("Alice", 0f), 0.001f);
+    }
+
+    @Test
+    void reconInRangeReceivesPoolCpWhileClosestOorSendsGroupToPool() {
+        var result = MisakaComputeSettle.settle(
+                List.of(new MisakaComputeSettle.ClosestBucket("n1", "Alice", 20f)),
+                Map.of("Alice", 100f),
+                List.of(new MisakaComputeSettle.NetworkPoolInput("n1", 0f, new int[]{100, 0, 0, 0}, "Bob")),
+                Map.of("Alice", false, "Bob", true),
+                2.0f
+        );
+        assertEquals(0f, result.personalCpByName().getOrDefault("Alice", 0f), 0.001f);
+        assertEquals(20f, result.poolMskByNetwork().get("n1"), 0.001f);
+        assertEquals(40f, result.networkCpByName().get("Bob"), 0.001f);
+    }
 }

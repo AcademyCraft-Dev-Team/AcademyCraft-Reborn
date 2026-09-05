@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import org.academy.internal.common.world.entity.misaka.favor.FavorService;
+import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
 import org.academy.internal.server.world.level.storage.MisakaSisterRoster;
 import org.jspecify.annotations.Nullable;
 
@@ -16,6 +17,7 @@ import java.util.UUID;
 
 /**
  * Dirty-rebuilt aggregate index for Misaka compute. Hot tick path must not scan the full roster.
+ * Coverage edge flips adjust MSk totals incrementally without a full rebuild.
  */
 public final class MisakaComputeIndex {
     public static final String UNASSIGNED = "";
@@ -30,6 +32,8 @@ public final class MisakaComputeIndex {
     private final Map<NetworkClosestKey, Float> groupMskPerSecond = new HashMap<>();
     private final Map<BlockPos, List<UUID>> networkSisterOrder = new HashMap<>();
     private final Map<String, UUID> playerNameToUuid = new HashMap<>();
+    /** Last known in-coverage contribution flag (not persisted). */
+    private final Map<UUID, Boolean> coverageContributing = new HashMap<>();
 
     private MisakaComputeIndex() {
     }
@@ -46,6 +50,7 @@ public final class MisakaComputeIndex {
         topologyDirty = true;
         dirty = true;
         nodeToNetworkId.clear();
+        MisakaNetworkCoverage.invalidate();
     }
 
     public void putPlayerName(String name, UUID uuid) {
@@ -127,15 +132,90 @@ public final class MisakaComputeIndex {
         return List.copyOf(list.subList(from, to));
     }
 
+    public @Nullable Boolean lastCoverageContributing(UUID misakaUuid) {
+        return misakaUuid == null ? null : coverageContributing.get(misakaUuid);
+    }
+
+    /** Seed coverage flag without adjusting totals (rebuild already applied geometry). */
+    public void seedCoverageContributing(UUID misakaUuid, boolean inCoverage) {
+        if (misakaUuid != null) {
+            coverageContributing.put(misakaUuid, inCoverage);
+        }
+    }
+
+    /**
+     * Incremental MSk adjust when a sister crosses coverage. Does not mark dirty / scan roster.
+     */
+    public void adjustCoverageContribution(
+            MinecraftServer server,
+            MisakaSisterRecord record,
+            boolean wasIn,
+            boolean nowIn
+    ) {
+        if (record == null || record.misakaUuid == null || wasIn == nowIn) {
+            return;
+        }
+        coverageContributing.put(record.misakaUuid, nowIn);
+        if (!record.awakened || record.networkNodePos == null || record.starving || dirty) {
+            return;
+        }
+        var level = server.overworld();
+        var networkId = resolveNetworkIdCached(level, record.networkNodePos);
+        float msk = MisakaComputeContribution.mskPerSecond(record.perception);
+        float delta = nowIn ? msk : -msk;
+        applyMskDelta(networkId, closestName(record), delta);
+    }
+
+    private void applyMskDelta(BlockPos networkId, String closest, float delta) {
+        if (delta == 0.0f) {
+            return;
+        }
+        networkTotalMskPerSecond.merge(networkId, delta, Float::sum);
+        float total = networkTotalMskPerSecond.getOrDefault(networkId, 0.0f);
+        if (total <= 0.0f) {
+            networkTotalMskPerSecond.remove(networkId);
+        }
+        var key = new NetworkClosestKey(networkId, closest);
+        groupMskPerSecond.merge(key, delta, Float::sum);
+        float group = groupMskPerSecond.getOrDefault(key, 0.0f);
+        if (group <= 0.0f) {
+            groupMskPerSecond.remove(key);
+        }
+    }
+
+    /** Test hook: apply MSk delta without a live server. */
+    void testingApplyMskDelta(BlockPos networkId, String closest, float delta) {
+        applyMskDelta(networkId, closest == null ? UNASSIGNED : closest, delta);
+    }
+
+    /** Test hook: clear aggregate maps without touching roster topology. */
+    void testingClearAggregates() {
+        networkTotalMskPerSecond.clear();
+        groupMskPerSecond.clear();
+        coverageContributing.clear();
+    }
+
+    private static String closestName(MisakaSisterRecord record) {
+        String closest = record.lastInteractedBenevolentPlayerName == null
+                ? UNASSIGNED
+                : record.lastInteractedBenevolentPlayerName;
+        if (closest.isEmpty() || !FavorService.isPrivilegePlayer(record, closest)) {
+            return UNASSIGNED;
+        }
+        return closest;
+    }
+
     private void rebuild(MinecraftServer server) {
         nodeToNetworkId.clear();
         networkTotalMskPerSecond.clear();
         networkReconstructionPrivilege.clear();
         groupMskPerSecond.clear();
         networkSisterOrder.clear();
+        coverageContributing.clear();
 
         var level = server.overworld();
         var roster = MisakaSisterRoster.get(server);
+        var loaded = MisakaNetworkCoverage.loadedSistersByUuid(level);
         record SisterSort(
                 UUID uuid,
                 int serial,
@@ -143,28 +223,25 @@ public final class MisakaComputeIndex {
                 float msk,
                 String closest,
                 boolean reconstruction,
-                boolean starving
+                boolean starving,
+                boolean inCoverage
         ) {
         }
         var sorted = new ArrayList<SisterSort>();
 
         for (var record : roster.all()) {
             // Bound awakened sisters stay on the manage list / recon pick even while starving.
-            // Only non-starving sisters contribute MSk.
+            // Only non-starving in-coverage sisters contribute MSk.
             if (!record.awakened || record.networkNodePos == null) {
                 continue;
             }
             var networkId = resolveDuringRebuild(level, record.networkNodePos);
             float msk = MisakaComputeContribution.mskPerSecond(record.perception);
-            String closest = record.lastInteractedBenevolentPlayerName == null
-                    ? UNASSIGNED
-                    : record.lastInteractedBenevolentPlayerName;
-            if (closest.isEmpty()
-                    || !FavorService.isPrivilegePlayer(
-                    record, closest)) {
-                closest = UNASSIGNED;
-            }
+            String closest = closestName(record);
             boolean reconstruction = record.perception >= 101;
+            BlockPos sample = MisakaNetworkCoverage.samplePos(record, loaded.get(record.misakaUuid));
+            boolean inCoverage = MisakaNetworkCoverage.canUseMisakaService(level, networkId, sample);
+            coverageContributing.put(record.misakaUuid, inCoverage);
             sorted.add(new SisterSort(
                     record.misakaUuid,
                     record.serial,
@@ -172,7 +249,8 @@ public final class MisakaComputeIndex {
                     msk,
                     closest,
                     reconstruction,
-                    record.starving
+                    record.starving,
+                    inCoverage
             ));
         }
 
@@ -186,7 +264,7 @@ public final class MisakaComputeIndex {
             if (sister.reconstruction) {
                 reconCandidates.putIfAbsent(sister.networkId, sister);
             }
-            if (sister.starving) {
+            if (sister.starving || !sister.inCoverage) {
                 continue;
             }
             networkTotalMskPerSecond.merge(sister.networkId, sister.msk, Float::sum);

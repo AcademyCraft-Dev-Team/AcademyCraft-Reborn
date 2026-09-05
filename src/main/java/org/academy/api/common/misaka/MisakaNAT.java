@@ -31,4 +31,10 @@ public interface MisakaNAT {
     int countNetworkSisters(ServerLevel level, BlockPos nodePos);
 
     List<MisakaSisterRecord> listNetworkSisters(ServerLevel level, BlockPos nodePos, int offset, int limit);
+
+    /**
+     * Whether {@code pos} can use Misaka network services for the topology rooted at {@code networkId}
+     * (energy coverage or future relay satellite).
+     */
+    boolean canUseMisakaService(ServerLevel level, BlockPos networkId, BlockPos pos);
 }

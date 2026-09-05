@@ -137,4 +137,9 @@ public final class WirelessForwardingMisakaNAT implements MisakaNAT {
         }
         return result;
     }
+
+    @Override
+    public boolean canUseMisakaService(ServerLevel level, BlockPos networkId, BlockPos pos) {
+        return MisakaNetworkCoverage.canUseMisakaService(level, networkId, pos);
+    }
 }
