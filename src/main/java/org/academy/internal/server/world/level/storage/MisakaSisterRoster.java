@@ -9,6 +9,7 @@ import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.world.entity.misaka.MisakaPersonality;
+import org.academy.internal.server.misaka.MisakaComputeIndex;
 
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -96,6 +97,7 @@ public final class MisakaSisterRoster extends SavedData {
         );
         byUuid.put(record.misakaUuid, record);
         setDirty();
+        MisakaComputeIndex.get().markDirty();
         return Optional.of(record);
     }
 
@@ -121,6 +123,7 @@ public final class MisakaSisterRoster extends SavedData {
             freeSerials.add(removed.serial);
         }
         setDirty();
+        MisakaComputeIndex.get().markDirty();
         return true;
     }
 
@@ -135,6 +138,7 @@ public final class MisakaSisterRoster extends SavedData {
         }
         mutator.accept(record);
         setDirty();
+        MisakaComputeIndex.get().markDirty();
     }
 
     public Collection<MisakaSisterRecord> all() {

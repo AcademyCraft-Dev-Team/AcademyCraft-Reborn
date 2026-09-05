@@ -9,9 +9,12 @@ public final class MisakaPackets {
         SetMisakaNetworkNodePacket.initServer();
         TogglePickUpMisakaPacket.initServer();
         RequestMisakaPanelPacket.initServer();
+        RequestMisakaNetManagePacket.initServer();
+        SetMisakaNetworkAllocationPacket.initServer();
     }
 
     public static void initClient() {
         MisakaPanelDataPacket.initClient();
+        MisakaNetManageDataPacket.initClient();
     }
 }

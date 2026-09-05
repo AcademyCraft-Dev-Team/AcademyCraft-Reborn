@@ -5,11 +5,13 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import org.academy.api.common.misaka.MisakaNAT;
 import org.academy.api.server.wireless.WirelessManager;
+import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
 import org.academy.internal.server.world.level.storage.MisakaSisterRoster;
 import org.academy.internal.server.world.level.storage.WirelessNetworkData;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -17,6 +19,7 @@ import java.util.UUID;
 
 public final class WirelessForwardingMisakaNAT implements MisakaNAT {
     public static final WirelessForwardingMisakaNAT INSTANCE = new WirelessForwardingMisakaNAT();
+    public static final int MANAGE_PAGE_SIZE = 64;
 
     private WirelessForwardingMisakaNAT() {
     }
@@ -33,6 +36,11 @@ public final class WirelessForwardingMisakaNAT implements MisakaNAT {
 
     @Override
     public BlockPos resolveNetworkId(ServerLevel level, BlockPos nodePos) {
+        return MisakaComputeIndex.get().resolveNetworkIdCached(level, nodePos);
+    }
+
+    /** Uncached BFS used by the compute index rebuild / cold cache miss. */
+    public static BlockPos resolveNetworkIdRaw(ServerLevel level, BlockPos nodePos) {
         var data = WirelessNetworkData.get(level);
         var seen = new HashSet<BlockPos>();
         var queue = new ArrayDeque<BlockPos>();
@@ -75,6 +83,7 @@ public final class WirelessForwardingMisakaNAT implements MisakaNAT {
             return false;
         }
         roster.modify(misakaUuid, sister -> sister.networkNodePos = nodePos.immutable());
+        MisakaComputeIndex.get().markDirty();
         MisakaComputeContribution.refreshCpForRecord(level.getServer(), record);
         return true;
     }
@@ -89,6 +98,7 @@ public final class WirelessForwardingMisakaNAT implements MisakaNAT {
             sister.networkNodePos = null;
             sister.wanderAnchorChunk = null;
         });
+        MisakaComputeIndex.get().markDirty();
         roster.get(misakaUuid).ifPresent(record -> MisakaComputeContribution.refreshCpForRecord(server, record));
         return true;
     }
@@ -101,5 +111,30 @@ public final class WirelessForwardingMisakaNAT implements MisakaNAT {
                 .filter(record -> record.awakened && record.perception >= 101 && record.networkNodePos != null)
                 .filter(record -> except == null || !record.misakaUuid.equals(except))
                 .anyMatch(record -> resolveNetworkId(level, record.networkNodePos).equals(targetNetwork));
+    }
+
+    @Override
+    public int countNetworkSisters(ServerLevel level, BlockPos nodePos) {
+        MisakaComputeIndex.get().rebuildIfDirty(level.getServer());
+        var networkId = resolveNetworkId(level, nodePos);
+        return MisakaComputeIndex.get().networkSisterCount(networkId);
+    }
+
+    @Override
+    public List<MisakaSisterRecord> listNetworkSisters(
+            ServerLevel level,
+            BlockPos nodePos,
+            int offset,
+            int limit
+    ) {
+        MisakaComputeIndex.get().rebuildIfDirty(level.getServer());
+        var networkId = resolveNetworkId(level, nodePos);
+        var uuids = MisakaComputeIndex.get().pageSisters(networkId, offset, limit);
+        var roster = MisakaSisterRoster.get(level.getServer());
+        var result = new ArrayList<MisakaSisterRecord>(uuids.size());
+        for (var uuid : uuids) {
+            roster.get(uuid).ifPresent(result::add);
+        }
+        return result;
     }
 }

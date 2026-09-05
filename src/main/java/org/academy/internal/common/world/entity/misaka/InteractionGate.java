@@ -2,6 +2,7 @@ package org.academy.internal.common.world.entity.misaka;
 
 import net.minecraft.server.MinecraftServer;
 import org.academy.internal.common.world.entity.misaka.favor.FavorService;
+import org.academy.internal.server.misaka.MisakaComputeIndex;
 import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
 import org.academy.internal.server.world.level.storage.MisakaSisterRoster;
 import org.jspecify.annotations.Nullable;
@@ -47,9 +48,13 @@ public final class InteractionGate {
 
     public static void touchBenevolent(MisakaSisterRecord record, String name, @Nullable MinecraftServer server) {
         if (FavorService.relation(record, name) == MobRelation.BENEVOLENT) {
+            boolean changed = !name.equals(record.lastInteractedBenevolentPlayerName);
             record.lastInteractedBenevolentPlayerName = name;
             if (server != null) {
                 MisakaSisterRoster.get(server).setDirty();
+                if (changed) {
+                    MisakaComputeIndex.get().markDirty();
+                }
             }
         }
     }

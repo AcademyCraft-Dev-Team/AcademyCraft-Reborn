@@ -2,22 +2,33 @@ package org.academy.internal.client.gui.screen
 
 import com.mojang.blaze3d.textures.FilterMode
 import net.minecraft.network.chat.Component
+import net.minecraft.util.Mth
+import org.academy.api.client.gui.command.FillRectDrawCommand
 import org.academy.api.client.gui.drawable.ColorDrawable
 import org.academy.api.client.gui.drawable.StateListDrawable
 import org.academy.api.client.gui.drawable.TextureDrawable
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
+import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.screen.UiScreen
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.resources.R
+import org.academy.internal.common.network.misaka.MisakaNetManageDataPacket
 import org.academy.internal.common.network.misaka.MisakaPanelDataPacket
+import org.academy.internal.common.network.misaka.RequestMisakaNetManagePacket
+import org.academy.internal.common.network.misaka.SetMisakaNetworkAllocationPacket
 import org.academy.internal.common.network.misaka.SetMisakaNetworkNodePacket
 import org.academy.internal.common.network.misaka.SetMisakaWanderStylePacket
 import org.academy.internal.common.world.entity.misaka.MisakaPersonality
 import org.academy.internal.common.world.entity.misaka.MobRelation
 import org.academy.internal.common.world.entity.misaka.WanderStyle
+import org.academy.internal.server.misaka.MisakaComputeSink
+import org.academy.internal.server.misaka.WirelessForwardingMisakaNAT
 import org.misaka.MisakaNetworkClient
+import java.util.Locale
+import kotlin.math.max
+import kotlin.math.roundToInt
 
 class MisakaNetworkPanelScreen(
     private val data: MisakaPanelDataPacket
@@ -25,6 +36,23 @@ class MisakaNetworkPanelScreen(
 
     private lateinit var mainPage: LinearLayoutWidget
     private lateinit var bindPage: LinearLayoutWidget
+    private lateinit var managePage: LinearLayoutWidget
+    private lateinit var sistersTabContent: FrameLayoutWidget
+    private lateinit var allocTabContent: FrameLayoutWidget
+    private lateinit var sistersList: ListWidget<MisakaNetManageDataPacket.SisterSummary>
+    private lateinit var pageLabel: LabelWidget
+    private lateinit var allocatedLabel: LabelWidget
+    private lateinit var sistersTabButton: ButtonWidget
+    private lateinit var allocTabButton: ButtonWidget
+    private lateinit var emptySistersLabel: LabelWidget
+
+    private var manageTab = ManageTab.SISTERS
+    private var managePageIndex = 0
+    private var manageTotalCount = 0
+    private var localPercents = IntArray(MisakaComputeSink.COUNT)
+    private val allocSeekBars = arrayOfNulls<SeekBarWidget>(MisakaComputeSink.COUNT)
+    private val allocInputs = arrayOfNulls<TextBoxWidget>(MisakaComputeSink.COUNT)
+    private var suppressAllocCallbacks = false
 
     override fun onInit() {
         val panel = FrameLayoutWidget().apply {
@@ -62,9 +90,46 @@ class MisakaNetworkPanelScreen(
 
         mainPage = buildMainPage()
         bindPage = buildBindPage()
+        managePage = buildManagePage()
         pageHost.addChild("main_page", mainPage)
         pageHost.addChild("bind_page", bindPage)
+        pageHost.addChild("manage_page", managePage)
         showMainPage()
+    }
+
+    fun applyManageData(packet: MisakaNetManageDataPacket) {
+        if (packet.misakaUuid() != data.misakaUuid()) {
+            return
+        }
+        managePageIndex = packet.pageIndex()
+        manageTotalCount = packet.totalCount()
+        localPercents = packet.percents()
+        if (::sistersList.isInitialized) {
+            sistersList.items = packet.sisters()
+        }
+        if (::emptySistersLabel.isInitialized) {
+            val empty = manageTotalCount <= 0
+            emptySistersLabel.visibility =
+                if (empty) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
+            sistersList.visibility =
+                if (empty) Widget.Visibility.GONE else Widget.Visibility.VISIBLE
+        }
+        if (::pageLabel.isInitialized) {
+            val pages = if (manageTotalCount <= 0) 1 else (manageTotalCount + WirelessForwardingMisakaNAT.MANAGE_PAGE_SIZE - 1) /
+                WirelessForwardingMisakaNAT.MANAGE_PAGE_SIZE
+            pageLabel.text = Component.translatable(
+                "screen.academy.misaka_net_page",
+                managePageIndex + 1,
+                pages
+            ).string
+        }
+        refreshAllocWidgets()
+        if (::allocatedLabel.isInitialized) {
+            allocatedLabel.text = Component.translatable(
+                "screen.academy.misaka_net_allocated",
+                MisakaComputeSink.sum(localPercents)
+            ).string
+        }
     }
 
     private fun buildMainPage(): LinearLayoutWidget {
@@ -171,6 +236,11 @@ class MisakaNetworkPanelScreen(
             wanderRow.addChild("follow", styleButton(WanderStyle.FOLLOW))
         }
 
+        if (data.reconstructionWork() && data.privilege() && data.currentNodeName().isNotEmpty()) {
+            page.addChild("section_rule_manage", sectionRule())
+            page.addChild("manage_entry", manageMenuEntry())
+        }
+
         val canBind = data.relation() >= MobRelation.DEFAULT.ordinal
         if (canBind && data.availableNodes().isNotEmpty()) {
             page.addChild("section_rule_nodes", sectionRule())
@@ -193,7 +263,9 @@ class MisakaNetworkPanelScreen(
             isEnabled = false
         }
 
-        page.addChild("top_bar", createSubmenuTopBar())
+        page.addChild("top_bar", createSubmenuTopBar(
+            Component.translatable("screen.academy.misaka_bind_node").string
+        ))
         page.addChild("top_rule", FillWidget(PRIMARY_FOREGROUND).apply {
             alpha = 0.8f
             layoutParams = LinearLayoutWidget.LayoutParams()
@@ -205,7 +277,458 @@ class MisakaNetworkPanelScreen(
         return page
     }
 
-    private fun createSubmenuTopBar(): LinearLayoutWidget {
+    private fun buildManagePage(): LinearLayoutWidget {
+        val page = LinearLayoutWidget().apply {
+            orientation = Orientation.VERTICAL
+            spacing = SPACING_MINOR
+            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+            visibility = Widget.Visibility.GONE
+            isEnabled = false
+        }
+
+        page.addChild("top_bar", createSubmenuTopBar(
+            Component.translatable("screen.academy.misaka_net_manage").string
+        ))
+        page.addChild("top_rule", FillWidget(PRIMARY_FOREGROUND).apply {
+            alpha = 0.8f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(1f)
+                .marginBottom(1f)
+        })
+
+        val tabs = LinearLayoutWidget().apply {
+            orientation = Orientation.HORIZONTAL
+            spacing = SPACING_MINOR
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(LIST_ITEM_HEIGHT)
+        }
+        page.addChild("tabs", tabs)
+        sistersTabButton = tabButton(
+            Component.translatable("screen.academy.misaka_net_tab_sisters").string,
+            ManageTab.SISTERS
+        )
+        allocTabButton = tabButton(
+            Component.translatable("screen.academy.misaka_net_tab_alloc").string,
+            ManageTab.ALLOC
+        )
+        tabs.addChild("sisters", sistersTabButton)
+        tabs.addChild("alloc", allocTabButton)
+
+        val tabHost = FrameLayoutWidget().apply {
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .weight(1f)
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(0f)
+        }
+        page.addChild("tab_host", tabHost)
+
+        sistersTabContent = buildSistersTab()
+        allocTabContent = buildAllocTab()
+        tabHost.addChild("sisters_tab", sistersTabContent)
+        tabHost.addChild("alloc_tab", allocTabContent)
+        showManageTab(ManageTab.SISTERS)
+        return page
+    }
+
+    private fun buildSistersTab(): FrameLayoutWidget {
+        val root = FrameLayoutWidget().apply {
+            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+        }
+        val column = LinearLayoutWidget().apply {
+            orientation = Orientation.VERTICAL
+            spacing = SPACING_MINOR
+            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+        }
+        root.addChild("column", column)
+
+        column.addChild(
+            "title",
+            sectionLabel(Component.translatable("screen.academy.misaka_net_sisters_title").string)
+        )
+        column.addChild("header", sisterColumnsRow(
+            Component.translatable("screen.academy.misaka_net_col_serial").string,
+            Component.translatable("screen.academy.misaka_net_col_perception").string,
+            Component.translatable("screen.academy.misaka_net_col_msk").string,
+            Component.translatable("screen.academy.misaka_net_col_node").string,
+            Component.translatable("screen.academy.misaka_net_col_status").string,
+            header = true
+        ))
+        column.addChild("header_rule", FillWidget(PRIMARY_FOREGROUND).apply {
+            alpha = 0.35f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(1f)
+        })
+
+        val listHost = FrameLayoutWidget().apply {
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .weight(1f)
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(0f)
+        }
+        column.addChild("list_host", listHost)
+
+        val scrollPanel = ScrollPanelWidget().apply {
+            layoutParams = FrameLayoutWidget.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT)
+                .marginRight(SCROLLBAR_WIDTH + SPACING_MINOR)
+        }
+        listHost.addChild("scroll_panel", scrollPanel)
+        listHost.addChild("scroll_bar", ScrollBarWidget(scrollPanel, Orientation.VERTICAL).apply {
+            layoutParams = FrameLayoutWidget.LayoutParams()
+                .width(SCROLLBAR_WIDTH)
+                .heightMode(SizeMode.MATCH_PARENT)
+                .gravity(Gravity.CENTER_RIGHT)
+        })
+        emptySistersLabel = LabelWidget(
+            Component.translatable("screen.academy.misaka_net_empty").string
+        ).apply {
+            scale = 0.75f
+            alpha = 0.7f
+            visibility = Widget.Visibility.GONE
+            layoutParams = FrameLayoutWidget.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT)
+                .gravity(Gravity.CENTER)
+        }
+        listHost.addChild("empty", emptySistersLabel)
+
+        sistersList = ListWidget<MisakaNetManageDataPacket.SisterSummary>().apply {
+            itemHeight = { _, _ -> LIST_ITEM_HEIGHT }
+            spacing = SPACING_MICRO
+            createItem = { _ -> FrameLayoutWidget() }
+            bindItem = { view, item, _ ->
+                view.clearChildren()
+                view.addChild("back", FillWidget(LIST_ROW_FILL).apply {
+                    alpha = 0.2f
+                    layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+                })
+                val status = if (item.starving()) {
+                    Component.translatable("screen.academy.misaka_net_starving").string
+                } else {
+                    Component.translatable("screen.academy.misaka_net_status_ok").string
+                }
+                view.addChild(
+                    "cols",
+                    sisterColumnsRow(
+                        Component.translatable("screen.academy.misaka_serial_value", item.serial()).string,
+                        item.perception().toString(),
+                        String.format(Locale.ROOT, "%.1f", item.msk()),
+                        item.nodeName().ifEmpty { "-" },
+                        status,
+                        header = false,
+                        statusAccent = item.starving()
+                    ).apply {
+                        layoutParams = FrameLayoutWidget.LayoutParams()
+                            .sizeMode(SizeMode.MATCH_PARENT)
+                            .paddingHorizontal(2f)
+                            .gravity(Gravity.CENTER_VERTICAL)
+                    }
+                )
+            }
+            layoutParams = FrameLayoutWidget.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+        }
+        scrollPanel.setContent(sistersList)
+
+        val pager = LinearLayoutWidget().apply {
+            orientation = Orientation.HORIZONTAL
+            spacing = SPACING_MINOR
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(LIST_ITEM_HEIGHT)
+        }
+        column.addChild("pager", pager)
+        pager.addChild("prev", textActionButton(
+            Component.translatable("screen.academy.misaka_net_prev").string
+        ) {
+            if (managePageIndex > 0) {
+                requestManagePage(managePageIndex - 1)
+            }
+        }.apply {
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .weight(1f)
+                .heightMode(SizeMode.MATCH_PARENT)
+        })
+        pageLabel = LabelWidget("1/1").apply {
+            scale = 0.75f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .weight(1f)
+                .height(10f)
+                .gravity(Gravity.CENTER)
+        }
+        pager.addChild("page", pageLabel)
+        pager.addChild("next", textActionButton(
+            Component.translatable("screen.academy.misaka_net_next").string
+        ) {
+            val maxPage = if (manageTotalCount <= 0) 0 else (manageTotalCount - 1) / WirelessForwardingMisakaNAT.MANAGE_PAGE_SIZE
+            if (managePageIndex < maxPage) {
+                requestManagePage(managePageIndex + 1)
+            }
+        }.apply {
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .weight(1f)
+                .heightMode(SizeMode.MATCH_PARENT)
+        })
+        return root
+    }
+
+    private fun sisterColumnsRow(
+        serial: String,
+        perception: String,
+        msk: String,
+        node: String,
+        status: String,
+        header: Boolean,
+        statusAccent: Boolean = false
+    ): LinearLayoutWidget {
+        val row = LinearLayoutWidget().apply {
+            orientation = Orientation.HORIZONTAL
+            spacing = SPACING_MINOR
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(if (header) 10f else LIST_ITEM_HEIGHT)
+        }
+        fun cell(text: String, width: Float, accent: Boolean = false): LabelWidget = LabelWidget(text).apply {
+            scale = 0.7f
+            alpha = if (header) 0.62f else if (accent) 1f else 0.9f
+            if (accent) {
+                setRed(((ACCENT_WARNING shr 16) and 0xFF) / 255f)
+                setGreen(((ACCENT_WARNING shr 8) and 0xFF) / 255f)
+                setBlue((ACCENT_WARNING and 0xFF) / 255f)
+            }
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .width(width)
+                .height(10f)
+                .gravity(Gravity.CENTER_VERTICAL)
+        }
+        row.addChild("serial", cell(serial, COL_SERIAL))
+        row.addChild("perception", cell(perception, COL_PERCEPTION))
+        row.addChild("msk", cell(msk, COL_MSK))
+        row.addChild("node", LabelWidget(node).apply {
+            scale = 0.7f
+            alpha = if (header) 0.62f else 0.9f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .weight(1f)
+                .height(10f)
+                .gravity(Gravity.CENTER_VERTICAL)
+        })
+        row.addChild("status", cell(status, COL_STATUS, statusAccent))
+        return row
+    }
+
+    private fun buildAllocTab(): FrameLayoutWidget {
+        val root = FrameLayoutWidget().apply {
+            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+            visibility = Widget.Visibility.GONE
+            isEnabled = false
+        }
+        val column = LinearLayoutWidget().apply {
+            orientation = Orientation.VERTICAL
+            spacing = SPACING_MINOR
+            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+        }
+        root.addChild("column", column)
+
+        val listHost = FrameLayoutWidget().apply {
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .weight(1f)
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(0f)
+        }
+        column.addChild("list_host", listHost)
+        val scrollPanel = ScrollPanelWidget().apply {
+            layoutParams = FrameLayoutWidget.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT)
+                .marginRight(SCROLLBAR_WIDTH + SPACING_MINOR)
+        }
+        listHost.addChild("scroll_panel", scrollPanel)
+        listHost.addChild("scroll_bar", ScrollBarWidget(scrollPanel, Orientation.VERTICAL).apply {
+            layoutParams = FrameLayoutWidget.LayoutParams()
+                .width(SCROLLBAR_WIDTH)
+                .heightMode(SizeMode.MATCH_PARENT)
+                .gravity(Gravity.CENTER_RIGHT)
+        })
+
+        val rows = LinearLayoutWidget().apply {
+            orientation = Orientation.VERTICAL
+            spacing = SPACING_MICRO
+            layoutParams = FrameLayoutWidget.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+        }
+        scrollPanel.setContent(rows)
+
+        for (sink in MisakaComputeSink.entries) {
+            rows.addChild("sink_${sink.id()}", allocRow(sink))
+        }
+
+        allocatedLabel = LabelWidget(
+            Component.translatable("screen.academy.misaka_net_allocated", 0).string
+        ).apply {
+            scale = 0.75f
+            alpha = 0.82f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(10f)
+        }
+        column.addChild("allocated", allocatedLabel)
+        return root
+    }
+
+    private fun allocRow(sink: MisakaComputeSink): FrameLayoutWidget {
+        val row = FrameLayoutWidget().apply {
+            background = ColorDrawable(ROW_PLANE)
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(ALLOC_ROW_HEIGHT)
+        }
+        val column = LinearLayoutWidget().apply {
+            orientation = Orientation.VERTICAL
+            spacing = SPACING_MICRO
+            layoutParams = FrameLayoutWidget.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT)
+                .padding(4f, 3f)
+                .gravity(Gravity.CENTER_VERTICAL)
+        }
+        row.addChild("column", column)
+
+        val heading = LinearLayoutWidget().apply {
+            orientation = Orientation.HORIZONTAL
+            spacing = SPACING_MINOR
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(INPUT_HEIGHT)
+        }
+        column.addChild("heading", heading)
+        heading.addChild("label", LabelWidget(
+            Component.translatable("screen.academy.misaka_net_sink.${sink.serializedName()}").string
+        ).apply {
+            scale = 0.7f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .weight(1f)
+                .height(INPUT_HEIGHT)
+                .gravity(Gravity.CENTER_VERTICAL)
+        })
+
+        val valueGroup = LinearLayoutWidget().apply {
+            orientation = Orientation.HORIZONTAL
+            spacing = 1f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .height(INPUT_HEIGHT)
+                .gravity(Gravity.CENTER_VERTICAL)
+        }
+        heading.addChild("value", valueGroup)
+
+        val input = TextBoxWidget(3).apply {
+            setInputValidator { text -> text.isEmpty() || text.all { it.isDigit() } }
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .size(INPUT_WIDTH, INPUT_HEIGHT)
+                .gravity(Gravity.CENTER)
+        }
+        allocInputs[sink.id()] = input
+        valueGroup.addChild("input", input)
+        valueGroup.addChild("pct", LabelWidget(
+            Component.translatable("screen.academy.misaka_net_pct").string
+        ).apply {
+            scale = 0.7f
+            alpha = 0.82f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .size(PCT_WIDTH, INPUT_HEIGHT)
+                .gravity(Gravity.CENTER)
+        })
+
+        val seek = AllocSeekBar().apply {
+            setMin(0f)
+            setMax(100f)
+            setProgress(0f)
+            setKeyProgressIncrement(1)
+            setBackgroundColor(SLIDER_TRACK)
+            setProgressColor(PRIMARY_FOREGROUND)
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(SLIDER_HEIGHT)
+        }
+        allocSeekBars[sink.id()] = seek
+        column.addChild("seek", seek)
+
+        seek.setOnSeekBarChangeListener(object : SeekBarWidget.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBarWidget, progress: Float, fromUser: Boolean) {
+                if (suppressAllocCallbacks || !fromUser) {
+                    return
+                }
+                setLocalPercent(sink.id(), progress.roundToInt())
+                if (seekBar.progress.roundToInt() != localPercents[sink.id()]) {
+                    suppressAllocCallbacks = true
+                    seekBar.setProgress(localPercents[sink.id()].toFloat())
+                    suppressAllocCallbacks = false
+                }
+                syncAllocInput(sink.id())
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBarWidget) = Unit
+
+            override fun onStopTrackingTouch(seekBar: SeekBarWidget) {
+                if (!suppressAllocCallbacks) {
+                    commitAllocations()
+                }
+            }
+        })
+        input.setOnFocusLost {
+            if (suppressAllocCallbacks) {
+                return@setOnFocusLost
+            }
+            val parsed = input.text.toIntOrNull() ?: localPercents[sink.id()]
+            setLocalPercent(sink.id(), parsed)
+            syncAllocWidgetsFromLocal(sink.id())
+            commitAllocations()
+        }
+        return row
+    }
+
+    private fun setLocalPercent(index: Int, requested: Int) {
+        val others = MisakaComputeSink.sum(localPercents) - localPercents[index]
+        localPercents[index] = max(0, minOf(100 - others, requested))
+        if (::allocatedLabel.isInitialized) {
+            allocatedLabel.text = Component.translatable(
+                "screen.academy.misaka_net_allocated",
+                MisakaComputeSink.sum(localPercents)
+            ).string
+        }
+    }
+
+    private fun syncAllocInput(index: Int) {
+        suppressAllocCallbacks = true
+        allocInputs[index]?.text = localPercents[index].toString()
+        suppressAllocCallbacks = false
+    }
+
+    private fun syncAllocWidgetsFromLocal(index: Int) {
+        suppressAllocCallbacks = true
+        allocSeekBars[index]?.setProgress(localPercents[index].toFloat())
+        allocInputs[index]?.text = localPercents[index].toString()
+        suppressAllocCallbacks = false
+    }
+
+    private fun refreshAllocWidgets() {
+        for (i in 0 until MisakaComputeSink.COUNT) {
+            syncAllocWidgetsFromLocal(i)
+        }
+    }
+
+    private fun commitAllocations() {
+        localPercents = MisakaComputeSink.clampAllocations(localPercents)
+        refreshAllocWidgets()
+        MisakaNetworkClient.send(
+            SetMisakaNetworkAllocationPacket(data.misakaUuid(), localPercents, managePageIndex)
+        )
+    }
+
+    private fun requestManagePage(page: Int) {
+        MisakaNetworkClient.send(RequestMisakaNetManagePacket(data.misakaUuid(), page))
+    }
+
+    private fun createSubmenuTopBar(titleText: String): LinearLayoutWidget {
         val bar = LinearLayoutWidget().apply {
             orientation = Orientation.HORIZONTAL
             spacing = SPACING_MINOR
@@ -224,15 +747,54 @@ class MisakaNetworkPanelScreen(
             layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
         })
         bar.addChild("back", back)
-        bar.addChild("title", LabelWidget(
-            Component.translatable("screen.academy.misaka_bind_node").string
-        ).apply {
+        bar.addChild("title", LabelWidget(titleText).apply {
             layoutParams = LinearLayoutWidget.LayoutParams()
                 .weight(1f)
                 .height(10f)
                 .gravity(Gravity.CENTER)
         })
         return bar
+    }
+
+    private fun manageMenuEntry(): ButtonWidget {
+        val entry = ButtonWidget().apply {
+            background = actionBackground(false)
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(LIST_ITEM_HEIGHT)
+            onClickListener = { showManagePage() }
+        }
+        val content = LinearLayoutWidget().apply {
+            orientation = Orientation.HORIZONTAL
+            spacing = SPACING_MINOR
+            layoutParams = FrameLayoutWidget.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT)
+                .paddingHorizontal(7f)
+                .gravity(Gravity.CENTER_VERTICAL)
+        }
+        entry.addChild("content", content)
+        content.addChild("icon", ImageWidget(R.textures.gui.icon.icon_node).apply {
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .size(14f, 14f)
+                .gravity(Gravity.CENTER)
+        })
+        content.addChild("label", LabelWidget(
+            Component.translatable("screen.academy.misaka_net_manage").string
+        ).apply {
+            scale = 0.75f
+            alpha = 0.82f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .weight(1f)
+                .height(10f)
+                .gravity(Gravity.CENTER_VERTICAL)
+        })
+        content.addChild("chevron", LabelWidget(">").apply {
+            alpha = 0.82f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .height(10f)
+                .gravity(Gravity.CENTER_VERTICAL)
+        })
+        return entry
     }
 
     private fun bindMenuEntry(): ButtonWidget {
@@ -279,7 +841,7 @@ class MisakaNetworkPanelScreen(
                 .height(10f)
                 .gravity(Gravity.CENTER_VERTICAL)
         })
-        content.addChild("chevron", LabelWidget("›").apply {
+        content.addChild("chevron", LabelWidget(">").apply {
             alpha = 0.82f
             layoutParams = LinearLayoutWidget.LayoutParams()
                 .height(10f)
@@ -288,11 +850,31 @@ class MisakaNetworkPanelScreen(
         return entry
     }
 
+    private fun tabButton(text: String, tab: ManageTab): ButtonWidget {
+        val button = ButtonWidget().apply {
+            background = actionBackground(manageTab == tab)
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .weight(1f)
+                .heightMode(SizeMode.MATCH_PARENT)
+            onClickListener = { showManageTab(tab) }
+        }
+        button.addChild("label", LabelWidget(text).apply {
+            scale = 0.75f
+            alpha = 0.82f
+            layoutParams = FrameLayoutWidget.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT)
+                .gravity(Gravity.CENTER)
+        })
+        return button
+    }
+
     private fun showMainPage() {
         mainPage.visibility = Widget.Visibility.VISIBLE
         mainPage.isEnabled = true
         bindPage.visibility = Widget.Visibility.GONE
         bindPage.isEnabled = false
+        managePage.visibility = Widget.Visibility.GONE
+        managePage.isEnabled = false
     }
 
     private fun showBindPage() {
@@ -300,6 +882,33 @@ class MisakaNetworkPanelScreen(
         mainPage.isEnabled = false
         bindPage.visibility = Widget.Visibility.VISIBLE
         bindPage.isEnabled = true
+        managePage.visibility = Widget.Visibility.GONE
+        managePage.isEnabled = false
+    }
+
+    private fun showManagePage() {
+        mainPage.visibility = Widget.Visibility.GONE
+        mainPage.isEnabled = false
+        bindPage.visibility = Widget.Visibility.GONE
+        bindPage.isEnabled = false
+        managePage.visibility = Widget.Visibility.VISIBLE
+        managePage.isEnabled = true
+        showManageTab(ManageTab.SISTERS)
+        requestManagePage(0)
+    }
+
+    private fun showManageTab(tab: ManageTab) {
+        manageTab = tab
+        sistersTabContent.visibility =
+            if (tab == ManageTab.SISTERS) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
+        sistersTabContent.isEnabled = tab == ManageTab.SISTERS
+        allocTabContent.visibility =
+            if (tab == ManageTab.ALLOC) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
+        allocTabContent.isEnabled = tab == ManageTab.ALLOC
+        if (::sistersTabButton.isInitialized) {
+            sistersTabButton.background = actionBackground(tab == ManageTab.SISTERS)
+            allocTabButton.background = actionBackground(tab == ManageTab.ALLOC)
+        }
     }
 
     private fun createNodeList(): FrameLayoutWidget {
@@ -553,6 +1162,38 @@ class MisakaNetworkPanelScreen(
     private fun wanderStyleName(style: WanderStyle): String =
         Component.translatable("misaka.wander_style.${style.name.lowercase()}").string
 
+    private enum class ManageTab {
+        SISTERS,
+        ALLOC
+    }
+
+    private class AllocSeekBar : SeekBarWidget() {
+        override fun canFocus(): Boolean = true
+
+        override fun renderInternal(context: RenderContext) {
+            super.renderInternal(context)
+            val range = max - min
+            if (width <= 0f || height <= 0f || range <= 0f) {
+                return
+            }
+            val ratio = Mth.clamp((progress - min) / range, 0f, 1f)
+            val markerX = Mth.clamp(width * ratio - MARKER_WIDTH * 0.5f, 0f, width - MARKER_WIDTH)
+            context.pose().pushPose()
+            context.pose().translate(markerX, -2f)
+            context.submit(
+                FillRectDrawCommand(
+                    MARKER_WIDTH,
+                    height + 4f,
+                    1f,
+                    1f,
+                    1f,
+                    context.accumulatedAlpha
+                )
+            )
+            context.pose().popPose()
+        }
+    }
+
     companion object {
         private const val PANEL_WIDTH = 280f
         private const val PANEL_HEIGHT = 248f
@@ -561,6 +1202,16 @@ class MisakaNetworkPanelScreen(
         private const val SPACING_MINOR = 3f
         private const val INFO_ROW_HEIGHT = 14f
         private const val LIST_ITEM_HEIGHT = 18f
+        private const val ALLOC_ROW_HEIGHT = 34f
+        private const val SLIDER_HEIGHT = 9f
+        private const val MARKER_WIDTH = 5f
+        private const val INPUT_WIDTH = 22f
+        private const val INPUT_HEIGHT = 10f
+        private const val PCT_WIDTH = 8f
+        private const val COL_SERIAL = 40f
+        private const val COL_PERCEPTION = 28f
+        private const val COL_MSK = 40f
+        private const val COL_STATUS = 32f
         private const val SCROLLBAR_WIDTH = 5f
         private const val ROOT_PLANE = 0x70000000
         private const val ROW_PLANE = 0x28000000
@@ -568,6 +1219,7 @@ class MisakaNetworkPanelScreen(
         private const val SELECTED_PLANE = 0x50FFFFFF
         private const val LIST_ROW_FILL = 0xFFFFFFFF.toInt()
         private const val PRIMARY_FOREGROUND = 0xFFFFFFFF.toInt()
+        private const val SLIDER_TRACK = 0x40FFFFFF
         private const val ACCENT_CAPACITY = 0xFFFF6C00.toInt()
         private const val ACCENT_WARNING = 0xFFFF6C00.toInt()
     }

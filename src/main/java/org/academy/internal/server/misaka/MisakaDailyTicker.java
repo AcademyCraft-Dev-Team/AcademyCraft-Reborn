@@ -16,6 +16,8 @@ public final class MisakaDailyTicker {
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
         var server = event.getServer();
+        MisakaComputeContribution.settleAndApply(server);
+
         if (server.getTickCount() % 20 != 0) {
             return;
         }
@@ -39,6 +41,7 @@ public final class MisakaDailyTicker {
         }
         if (dirty) {
             roster.setDirty();
+            MisakaComputeIndex.get().markDirty();
             for (var record : roster.all()) {
                 MisakaComputeContribution.refreshCpForRecord(server, record);
             }

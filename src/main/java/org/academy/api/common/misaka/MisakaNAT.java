@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import org.academy.internal.server.misaka.WirelessForwardingMisakaNAT;
+import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
@@ -26,4 +27,8 @@ public interface MisakaNAT {
     boolean unbindSister(MinecraftServer server, UUID misakaUuid);
 
     boolean hasReconstructionWork(MinecraftServer server, BlockPos nodePos, @Nullable UUID except);
+
+    int countNetworkSisters(ServerLevel level, BlockPos nodePos);
+
+    List<MisakaSisterRecord> listNetworkSisters(ServerLevel level, BlockPos nodePos, int offset, int limit);
 }

@@ -38,6 +38,7 @@ import org.academy.internal.common.world.entity.misaka.ai.MisakaUnawakenedStroll
 import org.academy.internal.common.world.entity.misaka.favor.FavorContext;
 import org.academy.internal.common.world.entity.misaka.favor.FavorRuleRegistry;
 import org.academy.internal.common.world.entity.misaka.perception.PerceptionService;
+import org.academy.internal.server.misaka.MisakaComputeContribution;
 import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
 import org.academy.internal.server.world.level.storage.MisakaSisterRoster;
 import org.jspecify.annotations.Nullable;
@@ -204,7 +205,7 @@ public class MisakaSisterEntity extends PathfinderMob {
                 InteractionGate.touchBenevolent(record, name, level().getServer());
                 syncFromRecord(record);
                 MisakaSisterRoster.get(level().getServer()).setDirty();
-                org.academy.internal.server.misaka.MisakaComputeContribution.refreshCpForRecord(
+                MisakaComputeContribution.refreshCpForRecord(
                         level().getServer(), record);
                 MisakaInteractionFeedback.promaxOk(this, serverPlayer);
                 return InteractionResult.CONSUME;
@@ -223,7 +224,7 @@ public class MisakaSisterEntity extends PathfinderMob {
             syncFromRecord(record);
             stack.shrink(1);
             MisakaSisterRoster.get(level().getServer()).setDirty();
-            org.academy.internal.server.misaka.MisakaComputeContribution.refreshCpForRecord(
+            MisakaComputeContribution.refreshCpForRecord(
                     level().getServer(), record);
             MisakaInteractionFeedback.awaken(this, serverPlayer);
             return InteractionResult.CONSUME;
@@ -244,7 +245,7 @@ public class MisakaSisterEntity extends PathfinderMob {
             stack.shrink(1);
             InteractionGate.touchBenevolent(record, name, level().getServer());
             MisakaSisterRoster.get(level().getServer()).setDirty();
-            org.academy.internal.server.misaka.MisakaComputeContribution.refreshCpForRecord(
+            MisakaComputeContribution.refreshCpForRecord(
                     level().getServer(), record);
             MisakaInteractionFeedback.fed(this, serverPlayer, fed, MisakaFoodTraits.isFavorite(fed));
             return InteractionResult.CONSUME;
@@ -267,7 +268,7 @@ public class MisakaSisterEntity extends PathfinderMob {
             stack.shrink(1);
             InteractionGate.touchBenevolent(record, name, level().getServer());
             MisakaSisterRoster.get(level().getServer()).setDirty();
-            org.academy.internal.server.misaka.MisakaComputeContribution.refreshCpForRecord(
+            MisakaComputeContribution.refreshCpForRecord(
                     level().getServer(), record);
             MisakaInteractionFeedback.fed(this, serverPlayer, fed, MisakaFoodTraits.isFavorite(fed));
             return InteractionResult.CONSUME;
@@ -285,7 +286,7 @@ public class MisakaSisterEntity extends PathfinderMob {
             }
             InteractionGate.touchBenevolent(record, name, level().getServer());
             syncFromRecord(record);
-            org.academy.internal.server.misaka.MisakaComputeContribution.refreshCpForRecord(
+            MisakaComputeContribution.refreshCpForRecord(
                     level().getServer(), record);
             MisakaInteractionFeedback.pet(this, serverPlayer);
             return InteractionResult.SUCCESS;
@@ -455,14 +456,15 @@ public class MisakaSisterEntity extends PathfinderMob {
         }
         boolean starvingNow = foodData.getFoodLevel() == 0;
         entityData.set(STARVING, starvingNow);
-        MisakaSisterRoster.get(level().getServer()).modify(misakaUuid, record -> {
-            boolean changed = record.starving != starvingNow;
-            record.starving = starvingNow;
-            if (changed) {
-                org.academy.internal.server.misaka.MisakaComputeContribution.refreshCpForRecord(
-                        level().getServer(), record);
-            }
-        });
+        var server = level().getServer();
+        var roster = MisakaSisterRoster.get(server);
+        var existing = roster.get(misakaUuid);
+        if (existing.isEmpty() || existing.get().starving == starvingNow) {
+            return;
+        }
+        roster.modify(misakaUuid, record -> record.starving = starvingNow);
+        existing = roster.get(misakaUuid);
+        existing.ifPresent(record -> MisakaComputeContribution.refreshCpForRecord(server, record));
     }
 
     private void updateLastKnownChunk() {

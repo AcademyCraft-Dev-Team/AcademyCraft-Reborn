@@ -10,6 +10,7 @@ import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 import org.academy.AcademyCraft;
 import org.academy.api.server.wireless.WirelessManager;
+import org.academy.internal.server.misaka.MisakaComputeIndex;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -90,6 +91,7 @@ public final class WirelessNetworkData extends SavedData {
 
         setDirty();
         LOGGER.debug("Unregistered node '{}' at {}. Now disconnecting its users.", config.name, pos);
+        MisakaComputeIndex.get().markTopologyDirty();
 
         var usersToDisconnect = new HashSet<>(config.connectedUsers.keySet());
         for (var userPos : usersToDisconnect) {
@@ -163,6 +165,7 @@ public final class WirelessNetworkData extends SavedData {
         }
         if (changed) {
             setDirty();
+            MisakaComputeIndex.get().markTopologyDirty();
         }
         return true;
     }
@@ -176,6 +179,7 @@ public final class WirelessNetworkData extends SavedData {
         if (config.connectedUsers.remove(userPos) != null) {
             LOGGER.debug("Disconnected user {} from node '{}'", userPos, config.name);
             setDirty();
+            MisakaComputeIndex.get().markTopologyDirty();
             return true;
         }
         return false;
@@ -191,6 +195,7 @@ public final class WirelessNetworkData extends SavedData {
         }
         if (removed) {
             setDirty();
+            MisakaComputeIndex.get().markTopologyDirty();
         }
         return removed;
     }

@@ -16,8 +16,9 @@ public class GenericConfig {
     @SerializedName("stringListMap")
     public final Map<String, List<String>> stringListMap = new HashMap<>();
 
+    /** CP gained per 1 MSk of Misaka compute (1 MSk : 2 CP by default). */
     @SerializedName("misakaCpPerMsk")
-    public float misakaCpPerMsk = 1.0f;
+    public float misakaCpPerMsk = 2.0f;
 
     public static final class Action implements TypeHandler<GenericConfig> {
         public static final TypeHandler<GenericConfig> INSTANCE = new Action();
