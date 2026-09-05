@@ -9,15 +9,20 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.util.Mth;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import org.academy.api.client.render.vfx.Vfx;
 import org.academy.api.client.render.vfx.VfxFrameContext;
 import org.academy.api.client.render.vfx.VfxSink;
+import org.academy.api.client.render.graph.type.Value;
+import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
+import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.api.client.util.VertexUtil;
 import org.academy.api.common.util.ImprovedNoise;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
+import org.joml.Vector3f;
 import org.lwjgl.BufferUtils;
 
 import java.nio.ByteBuffer;
@@ -97,6 +102,8 @@ public final class WingVfx implements Vfx {
             new EnumMap<>(WingKind.class);
     private static final Map<Integer, Long> BLACK_TO_WHITE_TRANSITIONS = new HashMap<>();
     private static ClientLevel animationLevel;
+    private static final Identifier BLACK_GRAPH = Identifier.fromNamespaceAndPath("academy", "vfxgraph/black_wings");
+    private static final Map<Integer, ActiveEffect> BLACK_GRAPHS = new HashMap<>();
     private static final int INSTANCE_STRIDE = 64;
 
     static {
@@ -158,6 +165,8 @@ public final class WingVfx implements Vfx {
     public static void clearSweeps() {
         for (var timeline : SWEEP_ANIMATIONS.values()) timeline.clear();
         BLACK_TO_WHITE_TRANSITIONS.clear();
+        BLACK_GRAPHS.values().forEach(ActiveEffect::stop);
+        BLACK_GRAPHS.clear();
         animationLevel = null;
     }
 
@@ -167,6 +176,7 @@ public final class WingVfx implements Vfx {
         var level = minecraft.level;
         if (level == null) return;
         var roots = WingAvatarRegistry.entries();
+        sampleBlackGraphs(ctx, roots);
         if (roots.isEmpty()) return;
 
         var partialTick = ctx.partialTick();
@@ -179,6 +189,7 @@ public final class WingVfx implements Vfx {
             if (!(entity instanceof Player player)) continue;
             var transition = transitionProjection(player.getId(), currentTick);
             for (var kind : WingKind.values()) {
+                if (kind == WingKind.BLACK) continue;
                 var active = isActive(player, kind);
                 if (!active && !isTransitionWing(kind, transition)) continue;
                 counts.merge(kind, countInstances(kind, player.getId(), currentTick, active), Integer::sum);
@@ -260,6 +271,75 @@ public final class WingVfx implements Vfx {
             case STORM, BLACK -> 1.0f;
             case WHITE, PLATINUM -> 0.11f / 0.075f;
         };
+    }
+
+    /** Uses the captured avatar pose, including banking/flight, for both scapula nozzles. */
+    private static void sampleBlackGraphs(VfxFrameContext ctx, Map<Integer, Matrix4f> capturedRoots) {
+        var minecraft = Minecraft.getInstance();
+        var level = minecraft.level;
+        var manager = VfxGraphManager.INSTANCE;
+        if (level == null || !manager.isInitialized()) return;
+        var roots = new HashMap<>(capturedRoots);
+        var local = minecraft.player;
+        if (local != null && minecraft.options.getCameraType().isFirstPerson()
+                && minecraft.getCameraEntity() == local) {
+            // The first-person avatar has no submitted model; keep the real world-space jets
+            // behind the shoulders and let a sweep naturally enter the camera frustum.
+            var position = local.getPosition(ctx.partialTick());
+            float yaw = Mth.rotLerp(ctx.partialTick(), local.yBodyRotO, local.yBodyRot);
+            roots.put(local.getId(), new Matrix4f()
+                    .translation((float) position.x - ctx.camera().pos().x,
+                            (float) position.y - ctx.camera().pos().y + 1.4071875f,
+                            (float) position.z - ctx.camera().pos().z)
+                    .rotateY(-yaw * Mth.DEG_TO_RAD).rotateX(Mth.PI).scale(0.9375f));
+        }
+        var visible = new java.util.HashSet<Integer>();
+        for (var entry : roots.entrySet()) {
+            if (!(level.getEntity(entry.getKey()) instanceof Player player)) continue;
+            var transition = transitionProjection(player.getId(), ctx.gameTime());
+            boolean active = isActive(player, WingKind.BLACK);
+            if (!active && transition == null) continue;
+            var pose = transition == null ? null : transition.blackWing();
+            if (pose != null && !pose.visible()) continue;
+            visible.add(player.getId());
+            var effect = BLACK_GRAPHS.get(player.getId());
+            if (effect == null || effect.isStopped()) {
+                effect = manager.spawn(BLACK_GRAPH, new Vector3f());
+                effect.setAlwaysVisible(true); // Already culled by submitted avatar roots; wing tips exceed entity bounds.
+                BLACK_GRAPHS.put(player.getId(), effect);
+            }
+            var transform = new Matrix4f(entry.getValue()).translate(0f, 0.30f, 0.12f).rotateX(Mth.PI);
+            effect.setPosition(transform.getTranslation(new Vector3f()).add(ctx.camera().pos()));
+            effect.setRotation(transform.getUnnormalizedRotation(new Quaternionf()));
+            effect.setScale(transform.getScale(new Vector3f()).x);
+            effect.effect().setLiveParam("radial_scale", Value.of(pose == null ? 1f : pose.radialScale()));
+            effect.effect().setLiveParam("length_scale", Value.of(pose == null ? 1f : pose.lengthScale()));
+            effect.effect().setLiveParam("spread_scale", Value.of(pose == null ? 1f : pose.spreadDegrees() / 30f));
+            effect.effect().setLiveParam("opacity", Value.of(1f));
+            effect.effect().setLiveParam("sweep_left", Value.of(0f));
+            effect.effect().setLiveParam("sweep_right", Value.of(0f));
+            effect.effect().setLiveParam("pitch_left", Value.of(0f));
+            effect.effect().setLiveParam("pitch_right", Value.of(0f));
+            if (!active) continue;
+            for (var sweep : SWEEP_ANIMATIONS.get(WingKind.BLACK).entries(player.getId())) {
+                float progress = SweepAnimationTimeline.progress(sweep, ctx.gameTime(), SWEEP_DURATION_TICKS);
+                if (progress < 0f || progress >= 1f) continue;
+                var animation = sweep.payload();
+                float side = animation.leftWing ? -1f : 1f;
+                // Smooth out-and-back motion avoids snapping the persistent vortex after the attack.
+                float swing = (float) Math.sin(progress * Math.PI);
+                String suffix = animation.leftWing ? "left" : "right";
+                effect.effect().setLiveParam("sweep_" + suffix,
+                        Value.of((-side * SWEEP_ARC_DEGREES + animation.yawOffsetDeg) * swing));
+                effect.effect().setLiveParam("pitch_" + suffix,
+                        Value.of(animation.pitchOffsetDeg * swing));
+            }
+        }
+        BLACK_GRAPHS.entrySet().removeIf(entry -> {
+            if (visible.contains(entry.getKey())) return false;
+            entry.getValue().stop();
+            return true;
+        });
     }
 
     private static int persistentTornadoCount(WingKind kind) {
@@ -655,7 +735,7 @@ public final class WingVfx implements Vfx {
     ) {
         var submitted = false;
         for (var kind : WingKind.values()) {
-            if (kind == WingKind.STORM) continue;
+            if (kind == WingKind.STORM || kind == WingKind.BLACK) continue;
             if (!isActive(player, kind)) continue;
             submitted |= submitFirstPersonGeometry(
                     poseStack, collector, player, partialTick, kind, firstPersonRenderType(kind)
