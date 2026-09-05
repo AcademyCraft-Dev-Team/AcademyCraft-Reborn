@@ -13,9 +13,14 @@ public enum VortexAttackPattern {
     public int id() { return id; }
 
     /** One complete windup, strike and recovery at twenty game ticks per second. */
-    public int durationTicks() { return 30; }
+    public int durationTicks() { return 16; }
 
     public float durationSeconds() { return durationTicks() / 20f; }
+
+    /** Subtract integer world ticks before adding the frame fraction, preserving old-world precision. */
+    public float progress(long startTick, long currentTick, float partialTick) {
+        return ((currentTick - startTick) + partialTick) / durationTicks();
+    }
 
     public VortexAttackPattern next() {
         return values()[(ordinal() + 1) % values().length];

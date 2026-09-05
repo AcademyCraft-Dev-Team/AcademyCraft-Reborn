@@ -109,7 +109,7 @@ public final class WingVfx implements Vfx {
     private static final Map<Integer, BlackAttack> BLACK_ATTACKS = new HashMap<>();
 
     private record BlackAttack(long startTick, VortexAttackPattern pattern, List<Vec3> targets) {
-        float progress(double tick) { return (float) ((tick - startTick) / pattern.durationTicks()); }
+        float progress(long tick, float partialTick) { return pattern.progress(startTick, tick, partialTick); }
     }
     private static final int INSTANCE_STRIDE = 64;
 
@@ -173,8 +173,8 @@ public final class WingVfx implements Vfx {
             animationLevel = minecraft.level;
             return;
         }
-        var currentTick = (double) minecraft.level.getGameTime();
-        BLACK_ATTACKS.entrySet().removeIf(entry -> entry.getValue().progress(currentTick) >= 1f
+        var currentTick = minecraft.level.getGameTime();
+        BLACK_ATTACKS.entrySet().removeIf(entry -> entry.getValue().progress(currentTick, 0f) >= 1f
                 || !(minecraft.level.getEntity(entry.getKey()) instanceof Player player)
                 || !isActive(player, WingKind.BLACK));
         for (var timeline : SWEEP_ANIMATIONS.values()) {
@@ -350,7 +350,7 @@ public final class WingVfx implements Vfx {
             effect.effect().setLiveParam("attack_progress", Value.of(1f));
             var attack = active && transition == null ? BLACK_ATTACKS.get(player.getId()) : null;
             if (attack == null) continue;
-            float progress = attack.progress(ctx.gameTime());
+            float progress = attack.progress(level.getGameTime(), ctx.partialTick());
             if (progress < 0f || progress >= 1f) continue;
             effect.effect().setLiveParam("attack_mode", Value.of((float) attack.pattern.id()));
             effect.effect().setLiveParam("attack_progress", Value.of(progress));

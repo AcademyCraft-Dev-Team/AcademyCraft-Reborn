@@ -19,7 +19,8 @@ class BlackWingAttackPacketTest {
         int[] order = {1, 4, 5, 2, 3};
         for (int i = 0; i < 10; i++) {
             assertEquals(order[i % order.length], pattern.id());
-            assertEquals(30, pattern.durationTicks());
+            assertEquals(16, pattern.durationTicks());
+            assertEquals(0.8f, pattern.durationSeconds(), 0.00001f);
             var targets = pattern == VortexAttackPattern.FOURFOLD_SLAM
                     ? List.of(new Vec3(-23.25, 87.5, 15.75), new Vec3(-23.25, 77.5, -15.75),
                             new Vec3(23.25, 80.5, 15.75), new Vec3(23.25, 81.5, -15.75))
@@ -66,16 +67,33 @@ class BlackWingAttackPacketTest {
             charged.incrementAndGet();
             return true;
         }));
-        for (int tick = 101; tick < 130; tick++) {
+        for (int tick = 101; tick < 116; tick++) {
             assertNull(sequence.tryBegin(tick, () -> {
                 charged.incrementAndGet();
                 return true;
             }));
         }
         assertEquals(1, charged.get());
-        assertNull(sequence.tryBegin(130, () -> false));
-        assertEquals(VortexAttackPattern.LEFT_WHIP, sequence.tryBegin(131, () -> true));
-        assertNull(sequence.tryBegin(160, () -> true));
-        assertEquals(VortexAttackPattern.RIGHT_WHIP, sequence.tryBegin(161, () -> true));
+        assertNull(sequence.tryBegin(116, () -> false));
+        assertEquals(VortexAttackPattern.LEFT_WHIP, sequence.tryBegin(117, () -> true));
+        assertNull(sequence.tryBegin(132, () -> true));
+        assertEquals(VortexAttackPattern.RIGHT_WHIP, sequence.tryBegin(133, () -> true));
+    }
+
+    @Test
+    void oldWorldsRetainSubTickAttackMotion() {
+        long start = 1L << 36;
+        for (var pattern : VortexAttackPattern.values()) {
+            float previous = -1f;
+            for (int frame = 0; frame <= 192; frame++) {
+                float elapsed = frame / 12f;
+                long wholeTicks = (long) elapsed;
+                float progress = pattern.progress(start, start + wholeTicks, elapsed - wholeTicks);
+                assertEquals(elapsed / 16f, progress, 0.000001f);
+                assertTrue(progress > previous, "each rendered frame must advance even in old worlds");
+                previous = progress;
+            }
+            assertEquals(1f, previous);
+        }
     }
 }

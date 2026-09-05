@@ -57,7 +57,7 @@ class BlackWingAttackVfxTest {
         float idleX = core(sim, 0, false).x(100);
         float idleY = core(sim, 0, false).y(100);
         for (int mode = 1; mode <= 5; mode++) {
-            phase(sim, mode, 0.30f);
+            phase(sim, mode, 0.20f);
             var lifted = core(sim, 0, mode == 4);
             if (mode == 2) {
                 assertTrue(lifted.x(100) < 2f && lifted.z(100) < 0f,
@@ -85,7 +85,7 @@ class BlackWingAttackVfxTest {
         var travelling = core(sim, 0, false);
         assertTrue(travelling.y(50) < raisedMid * 0.6f, "the middle follows the shoulder down");
         assertTrue(travelling.y(100) > travelling.y(50) + 2f, "the tip must lag behind the middle");
-        phase(sim, 1, 0.72f);
+        phase(sim, 1, 0.71f);
         var contact = core(sim, 0, false);
         assertTrue(contact.y(50) < 0f, "no high stationary arch may remain at contact");
         assertEquals(12f, contact.z(100), 0.03f);
@@ -98,8 +98,8 @@ class BlackWingAttackVfxTest {
         var attack = simulator("black_wings");
         for (int mode : new int[]{4, 5}) {
             for (float progress : new float[]{0.3f, 0.52f, 0.72f, 0.9f}) {
-                idle.setTime(progress * 1.5f);
-                attack.setTime(progress * 1.5f);
+                idle.setTime(progress * VortexAttackPattern.RISE_SLAM.durationSeconds());
+                attack.setTime(progress * VortexAttackPattern.RISE_SLAM.durationSeconds());
                 phase(idle, 0, 1f);
                 phase(attack, mode, progress);
                 boolean untouchedLeft = mode == 5;
@@ -125,7 +125,7 @@ class BlackWingAttackVfxTest {
         Vector3f[] corners = {new Vector3f(-6, -1, 6), new Vector3f(-6, -4, -6),
                 new Vector3f(6, 2, 6), new Vector3f(6, -2, -6)};
         for (int i = 0; i < 4; i++) sim.setLiveParam("attack_corner_" + i, Value.of(corners[i]));
-        phase(sim, 3, 0.76f);
+        phase(sim, 3, 0.745f);
         assertEquals(220, sim.arcBuffer().count());
         for (int i = 0; i < 4; i++) {
             var landed = core(sim, i % 2, i < 2);
@@ -154,7 +154,7 @@ class BlackWingAttackVfxTest {
                 }
             }
             if (mode == 3) continue;
-            phase(sim, mode, 0.72f);
+            phase(sim, mode, mode == 2 ? 0.70f : 0.71f);
             for (boolean left : new boolean[]{true, false}) {
                 if (mode == 4 && !left || mode == 5 && left) continue;
                 var tip = core(sim, 0, left);
@@ -172,32 +172,54 @@ class BlackWingAttackVfxTest {
         for (int m = 0; m < variants.length; m++) {
             var sim = simulator(variants[m]);
             var manual = simulator("black_wings");
-            for (float time : new float[]{0.45f, 0.78f, 1.08f, 1.44f, 1.5f}) {
+            float duration = VortexAttackPattern.byId(m + 1).durationSeconds();
+            for (float fraction : new float[]{0.30f, 0.52f, 0.72f, 0.96f, 1f}) {
+                float time = fraction * duration;
                 sim.setTime(time);
                 sim.step(0f);
                 manual.setTime(time);
-                phase(manual, m + 1, (time % 1.5f) / 1.5f);
+                phase(manual, m + 1, (time % duration) / duration);
                 assertEquals(manual.arcBuffer().count(), sim.arcBuffer().count());
                 for (boolean left : new boolean[]{true, false}) {
                     assertEquals(core(manual, 0, left).y(100), core(sim, 0, left).y(100), 0.001f);
                     assertEquals(core(manual, 0, left).z(100), core(sim, 0, left).z(100), 0.001f);
                 }
             }
-            assertEquals(30, VortexAttackPattern.byId(m + 1).durationTicks());
+            assertEquals(16, VortexAttackPattern.byId(m + 1).durationTicks());
             if (!"1".equals(System.getenv("ACADEMY_VFX_CAPTURE"))) continue;
             for (int f = 0; f < 7; f++) {
-                float[] phases = {0f, 0.16f, 0.30f, 0.52f, 0.76f, 0.90f, 1f};
-                sim.setTime(0.6f + phases[f] * 1.5f);
+                float contact = m == 2 ? 0.745f : m == 1 ? 0.70f : 0.71f;
+                float[] phases = {0f, 0.10f, 0.20f, 0.52f, contact, 0.90f, 1f};
+                sim.setTime(0.6f + phases[f] * duration);
                 phase(sim, m + 1, phases[f]);
                 exportMesh(sim, "m" + (m + 1) + "_f" + f);
             }
             if ("1".equals(System.getenv("ACADEMY_VFX_CAPTURE_MOTION"))) {
-                for (int f = 0; f <= 45; f++) {
-                    float progress = f / 45f;
-                    sim.setTime(0.6f + progress * 1.5f);
+                int frames = Math.round(duration * 30f);
+                for (int f = 0; f <= frames; f++) {
+                    float progress = f / (float) frames;
+                    sim.setTime(0.6f + progress * duration);
                     phase(sim, m + 1, progress);
                     exportMesh(sim, "motion_m" + (m + 1) + "_f" + f);
                 }
+            }
+        }
+    }
+
+    @Test
+    void attacksKeepMovingThroughWindupAndRecoveryInsteadOfHoldingAPose() throws Exception {
+        var sim = simulator("black_wings");
+        // Hold the noise clock still so idle turbulence cannot conceal a stopped attack spine.
+        sim.setTime(0.6f);
+        for (int mode = 1; mode <= 5; mode++) {
+            for (float[] window : new float[][]{{0.20f, 0.24f}, {0.26f, 0.30f}, {0.76f, 0.80f}}) {
+                phase(sim, mode, window[0]);
+                var a = core(sim, 0, mode == 4);
+                var before = new Vector3f(a.x(100), a.y(100), a.z(100));
+                phase(sim, mode, window[1]);
+                var b = core(sim, 0, mode == 4);
+                float movement = before.distance(b.x(100), b.y(100), b.z(100));
+                assertTrue(movement > 0.01f, "mode " + mode + " must move through phase " + window[0]);
             }
         }
     }
