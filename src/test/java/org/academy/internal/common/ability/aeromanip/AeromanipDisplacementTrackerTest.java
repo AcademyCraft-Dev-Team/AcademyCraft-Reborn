@@ -15,10 +15,25 @@ class AeromanipDisplacementTrackerTest {
 
     @Test
     void settlementAddsTheStrongestCollisionSpeed() {
-        assertEquals(21.25f,
+        assertEquals(20.0f,
                 AeromanipDisplacementTracker.settlementDamage(2.0, 1.25), 1.0e-6f);
         assertEquals(20.0f,
                 AeromanipDisplacementTracker.settlementDamage(2.0, Double.NaN), 1.0e-6f);
+    }
+
+    @Test
+    void shortMovementsCarryOverAcrossSettlementBoundaries() {
+        var carried = AeromanipDisplacementTracker.distanceRemainder(0.15);
+        assertEquals(0.15, carried, 1.0e-9);
+        assertEquals(2.0f, AeromanipDisplacementTracker.damageForDistance(carried + 0.1));
+        assertEquals(0.05, AeromanipDisplacementTracker.distanceRemainder(carried + 0.1), 1.0e-9);
+        assertEquals(0.0, AeromanipDisplacementTracker.distanceRemainder(0.2), 1.0e-9);
+    }
+
+    @Test
+    void longPullsAndCollisionsCannotExceedOneBatchLimit() {
+        assertEquals(20.0f, AeromanipDisplacementTracker.settlementDamage(200.0, 100.0));
+        assertEquals(3.25f, AeromanipDisplacementTracker.settlementDamage(0.2, 1.25));
     }
 
     @Test

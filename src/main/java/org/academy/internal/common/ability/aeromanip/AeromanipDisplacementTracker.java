@@ -26,6 +26,10 @@ public final class AeromanipDisplacementTracker {
     static final int SETTLEMENT_INTERVAL_TICKS = 10;
     static final double DISTANCE_PER_DAMAGE_STEP = 0.2;
     static final float DAMAGE_PER_DISTANCE_STEP = 2.0f;
+    static final float INITIAL_DAMAGE = 2.0f;
+    static final float MAX_SETTLEMENT_DAMAGE = 20.0f;
+    static final int INITIAL_HIT_INTERVAL_TICKS = 20;
+    private static final Map<LivingEntity, Long> INITIAL_HITS = new java.util.WeakHashMap<>();
     private static final double MOTION_EPSILON_SQUARED = 1.0e-8;
     private static final Map<UUID, Ticket> TICKETS = new HashMap<>();
     private static final EquipmentSlot[] ARMOR_SLOTS = {
@@ -70,6 +74,12 @@ public final class AeromanipDisplacementTracker {
                 now + MARK_DURATION_TICKS, now + SETTLEMENT_INTERVAL_TICKS);
         ticket.recordAppliedMotion(previousVelocity, appliedVelocity);
         TICKETS.put(target.getUUID(), ticket);
+        var living = (LivingEntity) target;
+        var lastHit = INITIAL_HITS.get(living);
+        if (lastHit == null || now - lastHit >= INITIAL_HIT_INTERVAL_TICKS || now < lastHit) {
+            INITIAL_HITS.put(living, now);
+            applyHit(owner, living, INITIAL_DAMAGE, false);
+        }
     }
 
     static float damageForDistance(double distance) {
@@ -83,7 +93,7 @@ public final class AeromanipDisplacementTracker {
         var collisionDamage = Double.isFinite(collisionSpeed)
                 ? Math.max(0.0, collisionSpeed)
                 : 0.0;
-        return (float) Math.min(Float.MAX_VALUE, distanceDamage + collisionDamage);
+        return (float) Math.min(MAX_SETTLEMENT_DAMAGE, distanceDamage + collisionDamage);
     }
 
     static int armorWearForDistance(double distance, int milestone) {
@@ -148,29 +158,39 @@ public final class AeromanipDisplacementTracker {
 
         var accumulatedDistance = ticket.accumulatedDistance;
         var baseDamage = settlementDamage(accumulatedDistance, ticket.collisionSpeed);
-        var damage = baseDamage
-                * AeromanipConfig.damageMultiplier(owner, skill.getKey().getPath())
-                * org.academy.api.server.ability.AbilitySystemServer.getSystem(owner)
-                .getPlayerDamageMultiplier(owner.getUUID());
-        if (damage > 0.0f) {
-            SkillDamageUtil.applyDirect(
-                    level,
-                    target,
-                    SkillDamageSource.of(owner, skill),
-                    damage);
+        if (applyHit(owner, target, baseDamage, ticket.collisionSpeed > 0.0)) {
+            damageArmor(target, armorWearForDistance(
+                    accumulatedDistance - distanceRemainder(accumulatedDistance),
+                    skill.getEffectiveProficiencyMilestone(owner)));
         }
-        damageArmor(target, armorWearForDistance(
-                accumulatedDistance,
-                skill.getEffectiveProficiencyMilestone(owner)
-        ));
-        if (baseDamage > 0.0f) {
-            AeromanipVfx.burst(level,
-                    target.position().add(0.0, target.getBbHeight() * 0.5, 0.0),
-                    Math.max(0.35, Math.min(1.4, baseDamage * 0.035)));
-        }
-        ticket.accumulatedDistance = 0.0;
+        ticket.accumulatedDistance = distanceRemainder(accumulatedDistance);
         ticket.collisionSpeed = 0.0;
         ticket.nextSettlementAt = now + SETTLEMENT_INTERVAL_TICKS;
+    }
+
+    /** Keeps travel below one damage step between settlements, discarding capped excess damage. */
+    static double distanceRemainder(double distance) {
+        if (!Double.isFinite(distance) || distance <= 0.0) return 0.0;
+        return Math.clamp(distance - Math.floor((distance + 1.0e-9) / DISTANCE_PER_DAMAGE_STEP)
+                * DISTANCE_PER_DAMAGE_STEP, 0.0, DISTANCE_PER_DAMAGE_STEP);
+    }
+
+    /** Damage and impact feedback share the same successful-hit result. */
+    public static boolean applyHit(ServerPlayer owner, LivingEntity target, float baseDamage, boolean collision) {
+        if (owner == null || target == null || owner.level() != target.level()
+                || !Float.isFinite(baseDamage) || baseDamage <= 0.0f
+                || !AeromanipTargeting.canAffectNegatively(owner, target)) return false;
+        var skill = Skills.TURBULENT_CAVITATION.get();
+        var damage = baseDamage * AeromanipConfig.damageMultiplier(owner, skill.getKey().getPath())
+                * org.academy.api.server.ability.AbilitySystemServer.getSystem(owner).getPlayerDamageMultiplier(owner.getUUID());
+        if (!Float.isFinite(damage) || damage <= 0.0f
+                || !SkillDamageUtil.applyDirect(owner.level(), target, SkillDamageSource.of(owner, skill), damage)) return false;
+        var center = target.position().add(0.0, target.getBbHeight() * 0.5, 0.0);
+        AeromanipVfx.burst(owner.level(), center, collision ? 1.2 : 0.65);
+        if (collision) AeromanipVfx.ring(owner.level(), center, 1.4);
+        owner.level().playSound(null, target.blockPosition(), net.minecraft.sounds.SoundEvents.BUBBLE_COLUMN_BUBBLE_POP,
+                net.minecraft.sounds.SoundSource.PLAYERS, collision ? 0.9f : 0.65f, collision ? 0.65f : 1.15f);
+        return true;
     }
 
     private static void damageArmor(LivingEntity target, int amount) {

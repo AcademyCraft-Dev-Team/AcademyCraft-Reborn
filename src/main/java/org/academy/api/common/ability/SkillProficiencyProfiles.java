@@ -41,7 +41,7 @@ public final class SkillProficiencyProfiles {
             Map.entry("laminar_buffer", "sharing, hover duration, and platform lifetime milestones are resolved together"),
             Map.entry("flow_sense", "range, cadence and synchronization budgets are resolved together"),
             Map.entry("pneumatic_grasp", "continuous costs depend on the selected entity class"),
-            Map.entry("breathing_bubble", "compressed-air upkeep, sharing and active radius milestones are resolved together"),
+            Map.entry("breathing_bubble", "activation cost, shared breathing protection and water-suppression radius milestones"),
             Map.entry("turbulent_cavitation", "refreshable marks batch distance, block-collision damage, and armor wear"),
             Map.entry("tailwind_field", "release mode, field radius, duration and force milestones are resolved together"),
             Map.entry("rejecting_wind", "release-tier force, control effects and low-drag duration are resolved together"),

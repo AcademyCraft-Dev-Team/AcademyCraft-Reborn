@@ -186,6 +186,10 @@ public final class AeromanipTargeting {
         if (EntityMotionGuard.currentMotionSourceEntity() instanceof ServerPlayer owner) {
             AeromanipDisplacementTracker.mark(owner, entity, previousVelocity, appliedVelocity);
         }
+        if (entity instanceof net.minecraft.world.entity.LivingEntity living
+                && appliedVelocity.subtract(previousVelocity).lengthSqr() > 1.0e-8) {
+            org.academy.api.common.ability.AirMobility.prioritizePropulsion(living, 20);
+        }
         entity.setDeltaMovement(appliedVelocity);
         entity.hurtMarked = true;
         if (entity instanceof ServerPlayer player) {

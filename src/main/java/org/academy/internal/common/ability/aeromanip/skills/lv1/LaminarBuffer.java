@@ -24,6 +24,9 @@ import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.AirMobility;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.network.chat.Component;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
@@ -229,14 +232,23 @@ public final class LaminarBuffer extends Skill {
                 var skill = Skills.LAMINAR_BUFFER.get();
                 switch (tier) {
                     case INSTANT -> toggleBuffer(player, skill);
-                    case HALF -> skill.executeActiveWithResource(
+                    case HALF -> {
+                        if (AirMobility.hasMovementPriority(player)) {
+                            player.sendSystemMessage(Component.translatable("message.academy.aeromanip.hover_blocked"));
+                            return;
+                        }
+                        skill.executeActiveWithResource(
                             player,
                             _ -> cpCost(player, HOVER_CP_COST),
                             _ -> HOVER_AIR_COST,
                             (_, _) -> beginHover(player, skill));
+                    }
                     case FULL -> {
                         var platformPos = platformPosition(player);
-                        if (!canPlacePlatform(player.level(), platformPos)) return;
+                        if (!canPlacePlatform(player.level(), platformPos)) {
+                            player.sendSystemMessage(Component.translatable("message.academy.aeromanip.platform_blocked"));
+                            return;
+                        }
                         skill.executeActiveWithResource(
                                 player,
                                 _ -> cpCost(player, PLATFORM_CP_COST),
@@ -345,14 +357,13 @@ public final class LaminarBuffer extends Skill {
             @SubscribeEvent
             public void onTick(ServerTickEvent.Pre event) {
                 if (ended || ticks >= durationTicks || player.hasDisconnected() || !player.isAlive()
-                        || player.level() != initialLevel || !skill.isEnabled(player)) {
+                        || player.level() != initialLevel || !skill.isEnabled(player)
+                        || AirMobility.hasMovementPriority(player)) {
                     stop();
                     return;
                 }
-                var velocity = player.getDeltaMovement();
-                var correction = Math.clamp((targetY - player.getY()) * 0.35, -0.25, 0.25);
-                player.setDeltaMovement(velocity.x * 0.92, correction, velocity.z * 0.92);
-                player.hurtMarked = true;
+                AirMobility.setSupport(player, AirMobility.HOVER, targetY);
+                AirMobility.applySupport(player);
                 player.resetFallDistance();
                 skill.reportActivity(player, true);
                 if (ticks % 8 == 0) {
@@ -368,6 +379,7 @@ public final class LaminarBuffer extends Skill {
                 ended = true;
                 usageLease.close();
                 HOVERS.remove(player, this);
+                AirMobility.setSupport(player, AirMobility.NONE, 0.0);
             }
         }
     }
@@ -389,26 +401,23 @@ public final class LaminarBuffer extends Skill {
                 AbilitySystemServer.getSystem(player).releaseMaintenanceOccupation(
                         player.getUUID(), skill.getKeyString());
             }
-            if (living.onGround() || living.isInWater()) return;
+            if (living instanceof ServerPlayer player && Server.HOVERS.containsKey(player)) return;
             var owner = findOwner(level, living, skill);
-            if (owner == null) return;
-            var current = living.getDeltaMovement();
-            var buffered = bufferedAirVelocity(current);
-            if (!buffered.equals(current)) {
-                living.setDeltaMovement(buffered);
-                living.hurtMarked = true;
-            }
-            living.resetFallDistance();
+            var mode = owner != null && !AirMobility.hasMovementPriority(living)
+                    ? AirMobility.SLOW_FALL : AirMobility.NONE;
+            AirMobility.setSupport(living, mode, 0.0);
+            AirMobility.applySupport(living);
         }
 
         @SubscribeEvent
         public static void onJump(LivingEvent.LivingJumpEvent event) {
             var living = event.getEntity();
-            if (!(living.level() instanceof ServerLevel level)) return;
-            var owner = findOwner(level, living, Skills.LAMINAR_BUFFER.get());
-            if (owner == null) return;
+            if (AirMobility.hasMovementPriority(living)) return;
+            if (living.level() instanceof ServerLevel level) {
+                if (findOwner(level, living, Skills.LAMINAR_BUFFER.get()) == null) return;
+            } else if (AirMobility.mode(living) != AirMobility.SLOW_FALL) return;
             living.setDeltaMovement(boostedJumpVelocity(living.getDeltaMovement()));
-            living.hurtMarked = true;
+            if (!(living instanceof Player)) living.hurtMarked = true;
         }
 
         private static ServerPlayer findOwner(

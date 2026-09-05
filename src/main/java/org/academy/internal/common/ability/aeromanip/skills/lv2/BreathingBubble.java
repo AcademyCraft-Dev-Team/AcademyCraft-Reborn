@@ -6,7 +6,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.player.Player;
@@ -22,7 +21,6 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
-import org.academy.api.common.ability.LearningHelper;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -34,7 +32,6 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
 import org.academy.internal.common.network.PacketTypes;
-import org.academy.internal.server.ability.AeromanipResourceManager;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -47,19 +44,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
-/** Maintains a compressed-air bubble when its owner or nearby allies cannot breathe. */
+/** Manually toggled, following dry-air pocket with a reversible water-suppression lease. */
 public final class BreathingBubble extends Skill {
     static final int REFRESH_INTERVAL_TICKS = 10;
-    static final int PASSIVE_VFX_COOLDOWN_TICKS = 10 * 20;
-    private static final float BASE_COMPRESSED_AIR_COST = 4.0f;
-    private static final float SHARED_COMPRESSED_AIR_COST = 2.0f;
+    private static final float BASE_COMPRESSED_AIR_COST = 8.0f;
 
     public BreathingBubble() {
         super(Builder
                 .of(AbilityCategories.AEROMANIP.get())
                 .level(AbilityLevel.LEVEL2)
                 .energyCost(10_000)
-                .passive()
                 .maintenanceCost(20)
                 .iterationTicks(20)
                 .maxStacks(NO_STACK_LIMIT)
@@ -78,18 +72,12 @@ public final class BreathingBubble extends Skill {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
-    static float compressedAirCost(int milestone, boolean sharing) {
-        return (milestone >= 1 ? 3.0f : BASE_COMPRESSED_AIR_COST)
-                + (sharing ? SHARED_COMPRESSED_AIR_COST : 0.0f);
+    public static float activationAirCost(int milestone) {
+        return milestone >= 1 ? 6.0f : BASE_COMPRESSED_AIR_COST;
     }
 
-    static double activeRadius(int milestone) {
-        return milestone >= 3 ? 24.0 : 16.0;
-    }
-
-    static boolean passiveVfxCooldownElapsed(long currentGameTime, long lastGameTime) {
-        return currentGameTime < lastGameTime
-                || currentGameTime - lastGameTime >= PASSIVE_VFX_COOLDOWN_TICKS;
+    public static double activeRadius(int milestone) {
+        return milestone >= 3 ? 3.0 : 2.0;
     }
 
     public static final class Client {
@@ -127,7 +115,7 @@ public final class BreathingBubble extends Skill {
         }
 
         private static void cast() {
-            if (AbilitySystemClient.canUseSkill(Skills.BREATHING_BUBBLE.get())) {
+            if (AbilitySystemClient.getSkillData(Skills.BREATHING_BUBBLE.get()).isPresent()) {
                 MisakaNetworkClient.send(CastPacket.INSTANCE);
             }
         }
@@ -154,92 +142,33 @@ public final class BreathingBubble extends Skill {
 
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
     public static final class Events {
-        private static final Map<ServerPlayer, Long> LAST_PASSIVE_VFX_TICKS = new WeakHashMap<>();
-
-        private Events() {
-        }
-
         @SubscribeEvent
         public static void onPlayerTick(PlayerTickEvent.Post event) {
             if (!(event.getEntity() instanceof ServerPlayer player)) return;
-            if (player.level().getGameTime() % REFRESH_INTERVAL_TICKS != 0) return;
-
+            var level = Server.ACTIVE.get(player);
             var skill = Skills.BREATHING_BUBBLE.get();
-            var system = AbilitySystemServer.getSystem(player);
-            var runtimeData = skill.getRuntimeData(player);
-            var available = runtimeData.isPresent() && LearningHelper.isSkillAvailableForCategory(
-                    system.getPlayerAbilityCategory(player.getUUID()), skill);
-            if (!available || !player.isAlive()) {
-                Server.stopSustaining(player);
-                system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
+            if (level == null) {
+                // Remove occupations left by the old automatic passive implementation or a saved session.
+                AbilitySystemServer.getSystem(player).releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
                 return;
             }
-
-            var sharedTargets = skill.hasProficiencyMilestone(player, 2)
-                    ? player.level().getEntitiesOfClass(ServerPlayer.class, player.getBoundingBox().inflate(4.0),
-                    target -> target != player && target.isAlive() && TeamRelations.areAllied(player, target)
-                            && target.distanceToSqr(player) <= 16.0 && isHazardous(target))
-                    : List.<ServerPlayer>of();
-            var hazardous = isHazardous(player);
-            if (!hazardous && sharedTargets.isEmpty()) {
-                Server.stopSustaining(player);
-                system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
+            if (!player.isAlive() || player.hasDisconnected() || player.level() != level || !skill.isEnabled(player)
+                    || AbilitySystemServer.getSystem(player).getPlayerStatus(player.getUUID())
+                    == org.academy.api.common.data.AbilityData.Status.OVERLOAD) {
+                Server.stop(player);
                 return;
             }
-
-            if (!runtimeData.orElseThrow().isEnabled()) {
-                system.toggleSkill(player.getUUID(), skill.getKeyString());
-            }
-            if (!system.ensurePermanentOccupation(
-                    player.getUUID(),
-                    skill.getMaintenanceCost(player)
-                            * AeromanipConfig.cpMultiplier(player, SkillNames.BREATHING_BUBBLE)
-                            + (sharedTargets.isEmpty() ? 0.0f : 5.0f),
-                    skill)) {
-                Server.stopSustaining(player);
-                return;
-            }
-
-            Server.startSustaining(player);
-            var milestone = skill.getEffectiveProficiencyMilestone(player);
-            if (!skill.executeContinuousWithResource(
-                    player,
-                    _ -> 0.0f,
-                    _ -> compressedAirCost(milestone, !sharedTargets.isEmpty()),
-                    (_, _) -> refillAir(player, sharedTargets),
-                    true)) {
-                Server.stopSustaining(player);
-                system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
-            }
+            Server.refresh(player, skill);
         }
 
-        private static boolean isHazardous(ServerPlayer player) {
-            return player.isEyeInFluid(FluidTags.WATER)
-                    || player.getAirSupply() < player.getMaxAirSupply();
-        }
-
-        private static void refillAir(ServerPlayer player, List<ServerPlayer> sharedTargets) {
-            player.setAirSupply(player.getMaxAirSupply());
-            for (var target : sharedTargets) target.setAirSupply(target.getMaxAirSupply());
-            if (player.level() instanceof ServerLevel level
-                    && shouldPlayPassiveVfx(player, level.getGameTime())) {
-                AeromanipVfx.burst(level, new net.minecraft.world.phys.Vec3(
-                        player.getX(), player.getEyeY(), player.getZ()), 0.72);
-            }
-        }
-
-        private static boolean shouldPlayPassiveVfx(ServerPlayer player, long gameTime) {
-            var lastGameTime = LAST_PASSIVE_VFX_TICKS.get(player);
-            if (lastGameTime != null
-                    && !passiveVfxCooldownElapsed(gameTime, lastGameTime)) return false;
-            LAST_PASSIVE_VFX_TICKS.put(player, gameTime);
-            return true;
+        @SubscribeEvent
+        public static void onLogout(net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent event) {
+            if (event.getEntity() instanceof ServerPlayer player) Server.stop(player);
         }
     }
 
     public static final class Server {
-        private static final Map<ServerPlayer, AeromanipResourceManager.UsageLease> ACTIVE =
-                new WeakHashMap<>();
+        private static final Map<ServerPlayer, ServerLevel> ACTIVE = new WeakHashMap<>();
 
         private Server() {
         }
@@ -247,45 +176,74 @@ public final class BreathingBubble extends Skill {
         @SubscribePacket
         public static void handle(CastPacket packet) {
             var player = packet.getPacketListener().getPlayer();
+            if (ACTIVE.containsKey(player)) {
+                stop(player);
+                player.sendSystemMessage(net.minecraft.network.chat.Component.translatable("message.academy.breathing_bubble.off"));
+                return;
+            }
             var skill = Skills.BREATHING_BUBBLE.get();
-            if (!skill.isEnabled(player)) return;
-            var milestone = skill.getEffectiveProficiencyMilestone(player);
-            var radius = activeRadius(milestone);
-            skill.executeActiveWithResource(
-                    player,
-                    _ -> 15.0f * AeromanipConfig.cpMultiplier(player, SkillNames.BREATHING_BUBBLE),
-                    _ -> Math.max(0.0f, AeromanipConfig.skillFloat(
-                            player, SkillNames.BREATHING_BUBBLE, "activeCompressedAirCost", 24.0f)),
-                    (_, _) -> refillSupportedTargets(player, radius));
+            if (!player.isAlive() || !skill.isEnabled(player)) return;
+            var system = AbilitySystemServer.getSystem(player);
+            var cost = activationAirCost(skill.getEffectiveProficiencyMilestone(player));
+            var air = system.getAeromanipResourceManager();
+            if (air.getCurrent(player) + 1.0e-4f < cost) {
+                player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
+                        "message.academy.aeromanip.insufficient_air", cost, air.getCurrent(player)));
+                return;
+            }
+            if (!system.ensurePermanentOccupation(player.getUUID(), skill.getMaintenanceCost(player)
+                    * AeromanipConfig.cpMultiplier(player, SkillNames.BREATHING_BUBBLE), skill)) {
+                player.sendSystemMessage(net.minecraft.network.chat.Component.translatable("message.academy.breathing_bubble.cp_required"));
+                return;
+            }
+            // No sustained-use lease: a dry pocket allows recovery at half the normal rate.
+            if (!skill.executeActiveWithResource(player, _ -> 0.0f, _ -> cost, (_, _) -> {
+                ACTIVE.put(player, player.level());
+                refresh(player, skill);
+                AeromanipVfx.burst(player.level(), player.getEyePosition(), activeRadius(skill.getEffectiveProficiencyMilestone(player)));
+            })) {
+                system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
+                return;
+            }
+            player.sendSystemMessage(net.minecraft.network.chat.Component.translatable("message.academy.breathing_bubble.on"));
         }
 
         public static boolean isSustained(ServerPlayer player) {
-            return ACTIVE.containsKey(player);
+            return ACTIVE.get(player) == player.level();
         }
 
-        private static void startSustaining(ServerPlayer player) {
-            ACTIVE.computeIfAbsent(player, current -> AbilitySystemServer.getSystem(current)
-                    .getAeromanipResourceManager().beginUse(current));
-        }
-
-        private static void stopSustaining(ServerPlayer player) {
-            var lease = ACTIVE.remove(player);
-            if (lease != null) lease.close();
-        }
-
-        private static void refillSupportedTargets(ServerPlayer player, double radius) {
-            var targets = player.level().getEntitiesOfClass(
-                    LivingEntity.class,
-                    player.getBoundingBox().inflate(radius),
-                    target -> target.isAlive()
-                            && target.distanceToSqr(player) <= radius * radius
-                            && isSupportedTarget(player, target));
-            for (var target : targets) target.setAirSupply(target.getMaxAirSupply());
-            if (player.level() instanceof ServerLevel level) {
-                AeromanipVfx.burst(level, new net.minecraft.world.phys.Vec3(
-                        player.getX(), player.getEyeY(), player.getZ()),
-                        Math.max(0.75, radius * 0.34));
+        public static boolean protects(LivingEntity target) {
+            for (var entry : ACTIVE.entrySet()) {
+                var owner = entry.getKey();
+                if (entry.getValue() != target.level()) continue;
+                var skill = Skills.BREATHING_BUBBLE.get();
+                if (target == owner) return true;
+                var radius = activeRadius(skill.getEffectiveProficiencyMilestone(owner));
+                if (skill.hasProficiencyMilestone(owner, 2) && isSupportedTarget(owner, target)
+                        && target.getEyePosition().distanceToSqr(owner.getEyePosition()) <= radius * radius) return true;
             }
+            return false;
+        }
+
+        public static void stop(ServerPlayer player) {
+            var level = ACTIVE.remove(player);
+            if (level != null) org.academy.api.server.world.WaterSuppression.release(level, player.getUUID());
+            AbilitySystemServer.getSystem(player).releaseMaintenanceOccupation(
+                    player.getUUID(), Skills.BREATHING_BUBBLE.get().getKeyString());
+        }
+
+        private static void refresh(ServerPlayer player, BreathingBubble skill) {
+            var radius = activeRadius(skill.getEffectiveProficiencyMilestone(player));
+            org.academy.api.server.world.WaterSuppression.refresh(player.level(), player.getUUID(), player.getEyePosition(), radius);
+            player.setAirSupply(player.getMaxAirSupply());
+            if (skill.hasProficiencyMilestone(player, 2)) {
+                for (var target : player.level().getEntitiesOfClass(LivingEntity.class,
+                        player.getBoundingBox().inflate(radius), target -> isSupportedTarget(player, target)
+                                && target.getEyePosition().distanceToSqr(player.getEyePosition()) <= radius * radius)) {
+                    target.setAirSupply(target.getMaxAirSupply());
+                }
+            }
+            if (player.tickCount % REFRESH_INTERVAL_TICKS == 0) skill.reportActivity(player, true);
         }
 
         private static boolean isSupportedTarget(ServerPlayer owner, LivingEntity target) {

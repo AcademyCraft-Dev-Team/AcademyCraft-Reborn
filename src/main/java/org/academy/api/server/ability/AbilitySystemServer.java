@@ -983,7 +983,19 @@ public final class AbilitySystemServer {
         var iterationPoints = resolveIterationPoints(skill.getIterationTicks(player), baseCpCost);
         if (!aeromanipResourceManager.tryCast(
                 player, skill, actualCpCost, compressedAirCost, iterationPoints,
-                stackGroup, stackLimit)) return false;
+                stackGroup, stackLimit)) {
+            if (discreteTrigger) {
+                var availableAir = aeromanipResourceManager.getCurrent(player);
+                var availableCp = playerCPManager.getAvailableCP(uuid);
+                var message = availableAir + 1.0e-4f < compressedAirCost
+                        ? net.minecraft.network.chat.Component.translatable("message.academy.aeromanip.insufficient_air", compressedAirCost, availableAir)
+                        : availableCp + 1.0e-4f < actualCpCost
+                        ? net.minecraft.network.chat.Component.translatable("message.academy.aeromanip.insufficient_cp", actualCpCost, availableCp)
+                        : net.minecraft.network.chat.Component.translatable("message.academy.aeromanip.cast_restricted");
+                player.sendSystemMessage(message);
+            }
+            return false;
+        }
 
         EntityMotionGuard.runWithMotionSource(player, () -> action.execute(ctx, actualCpCost));
         if (discreteTrigger) addPlayerSkillProficiency(uuid, skill, ProficiencyEvent.TRIGGER);

@@ -239,8 +239,7 @@ public final class VacuumDomain extends Skill {
             var handled = 0;
             for (var target : targets) {
                 if (handled++ >= cap) break;
-                var protectedByBubble = target instanceof ServerPlayer targetPlayer
-                        && BreathingBubble.Server.isSustained(targetPlayer);
+                var protectedByBubble = BreathingBubble.Server.protects(target);
                 var air = airSupplyAfterPulse(
                         target.getAirSupply(), target.getMaxAirSupply(), drain, protectedByBubble);
                 target.setAirSupply(air);
