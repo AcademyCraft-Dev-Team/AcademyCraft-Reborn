@@ -36,7 +36,7 @@ public final class WideAreaInterferenceClientState {
     public static final int WHITE_OUTLINE = 0xFFFFFFFF;
     public static final int CONTROLLED_OUTLINE = 0xFFFF7A18;
     public static final int SELECTED_OUTLINE = 0xFF35D45A;
-    private static final float GOD_PITCH = 62.0f;
+    private static float godPitch = 62.0f;
     private static final int MAX_HIDDEN_BLOCKS = 32_768;
     private static final LinkedHashMap<UUID, ViewFrame> VIEW_FRAMES = new LinkedHashMap<>();
     private static final Map<UUID, CameraSmoothingBridge.CameraSmoothingState> CAMERA_SMOOTHING_STATES = new HashMap<>();
@@ -269,7 +269,7 @@ public final class WideAreaInterferenceClientState {
     }
 
     public static Vec3 cameraPosition() {
-        var forward = Vec3.directionFromRotation(GOD_PITCH, godYaw);
+        var forward = Vec3.directionFromRotation(godPitch, godYaw);
         return godFocus.subtract(forward.scale(godDistance));
     }
 
@@ -278,7 +278,7 @@ public final class WideAreaInterferenceClientState {
     }
 
     public static float cameraPitch() {
-        return GOD_PITCH;
+        return godPitch;
     }
 
     public static void pan(double forwardAmount, double rightAmount) {
@@ -360,8 +360,44 @@ public final class WideAreaInterferenceClientState {
 
     public static void zoom(double amount) {
         if (mode == Mode.RTS) {
-            godTargetDistance = Math.clamp(godTargetDistance + amount, 8.0, 64.0);
+            godTargetDistance = Math.clamp(godTargetDistance * Math.exp(amount * 0.045), 0.5, 16384.0);
         }
+    }
+
+    public static void zoomAt(double amount, Vec3 anchor) {
+        var previous = godTargetDistance;
+        zoom(amount);
+        if (mode == Mode.RTS && anchor != null) {
+            godFocus = godFocus.add(anchor.subtract(godFocus).scale(1.0 - godTargetDistance / previous));
+        }
+    }
+
+    public static void orbit(double horizontal, double vertical) {
+        if (mode != Mode.RTS) return;
+        godYaw += (float) horizontal * 0.3f;
+        godPitch = Math.clamp(godPitch + (float) vertical * 0.3f, 5.0f, 89.0f);
+    }
+
+    public static void elevate(double amount) {
+        if (mode == Mode.RTS) godFocus = godFocus.add(0, amount, 0);
+    }
+
+    public static void focus(Vec3 position) {
+        if (mode == Mode.RTS && position != null) godFocus = position;
+    }
+
+    public static double pickDistance() {
+        return godDistance + Math.max(128, Minecraft.getInstance().options.renderDistance().get() * 32.0);
+    }
+
+    public static Vec3 focusPosition() {
+        return godFocus;
+    }
+
+    public static void setSelectionPreview(AABB box) {
+        workPreviewBounds = box == null ? null : new Bounds(
+                BlockPos.containing(box.minX, box.minY, box.minZ),
+                BlockPos.containing(box.maxX - 1, box.maxY - 1, box.maxZ - 1));
     }
 
     public static void hideRegion(BlockPos first, BlockPos second) {
@@ -594,6 +630,35 @@ public final class WideAreaInterferenceClientState {
             event.submitCustomGeometry(Render.RenderTypes.MINE_DETECT_LINES,
                     (snapshot, consumer) -> LineBoxRenderer.renderWireframeBox(
                             snapshot, consumer, box, 1.0f, 1.0f, 1.0f, 1.0f));
+            event.submitCustomGeometry(Render.RenderTypes.POS_COLOR_QUADS_NO_DEPTH_WRITE, (snapshot, consumer) -> {
+                var matrix = snapshot.lastMatrix();
+                var vertices = new float[][]{
+                        {(float) box.minX, (float) box.minY, (float) box.minZ},
+                        {(float) box.maxX, (float) box.minY, (float) box.minZ},
+                        {(float) box.maxX, (float) box.minY, (float) box.maxZ},
+                        {(float) box.minX, (float) box.minY, (float) box.maxZ},
+                        {(float) box.minX, (float) box.maxY, (float) box.minZ},
+                        {(float) box.maxX, (float) box.maxY, (float) box.minZ},
+                        {(float) box.maxX, (float) box.maxY, (float) box.maxZ},
+                        {(float) box.minX, (float) box.maxY, (float) box.maxZ}};
+                var faces = new int[][]{{0,3,2,1},{4,5,6,7},{0,1,5,4},{2,3,7,6},{0,4,7,3},{1,2,6,5}};
+                for (var face : faces) for (var index : face) {
+                    var vertex = vertices[index];
+                    consumer.addVertex(matrix, vertex[0], vertex[1], vertex[2]).setColor(1f, 1f, 1f, 0.075f);
+                }
+            });
+            event.submitCustomGeometry(Render.RenderTypes.MINE_DETECT_LINES, (snapshot, consumer) -> {
+                // Bound grid density while keeping block-aligned major guides at wide zoom.
+                var step = Math.max(1, (int) Math.ceil(Math.max(box.getXsize(), box.getZsize()) / 32));
+                for (double x = Math.ceil(box.minX); x < box.maxX; x += step) {
+                    LineBoxRenderer.renderWireframeBox(snapshot, consumer,
+                            new AABB(x, box.maxY, box.minZ, x, box.maxY, box.maxZ), 1, 1, 1, 0.18f);
+                }
+                for (double z = Math.ceil(box.minZ); z < box.maxZ; z += step) {
+                    LineBoxRenderer.renderWireframeBox(snapshot, consumer,
+                            new AABB(box.minX, box.maxY, z, box.maxX, box.maxY, z), 1, 1, 1, 0.18f);
+                }
+            });
             matrixStack.popPose();
         }
 

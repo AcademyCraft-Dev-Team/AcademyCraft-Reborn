@@ -227,6 +227,188 @@ public final class MentaloutGameTests {
     }
 
     private enum Scenario {
+        WORK_ENDURANCE("work_endurance", 72500) {
+            @Override void run(GameTestHelper helper) {
+                var controller = createController(helper);
+                var workers = new java.util.ArrayList<LivingEntity>();
+                for (int x = 0; x < 10; x++) for (int z = 0; z < 10; z++) helper.setBlock(x, 1, z, Blocks.STONE);
+                for (int i = 0; i < 64; i++) {
+                    var worker = helper.spawn(EntityTypes.VILLAGER, i % 8 + 1, 2, i / 8 + 1);
+                    workers.add(worker);
+                }
+                var region = new BlockWorkRegion(helper.getLevel().dimension().identifier(),
+                        helper.absolutePos(new BlockPos(0, 2, 0)), helper.absolutePos(new BlockPos(9, 2, 9)));
+                var result = GroupControlApi.dispatch(new GroupControlRequest(controller, SOURCE, workers,
+                        new GroupControlCommand.Work(region, WorkSettings.defaults()), 1000));
+                helper.assertValueEqual(result.applied(), 64, "All workers accepted");
+                helper.runAtTickTime(72000, () -> {
+                    for (var worker : workers) helper.assertTrue(MentalControlApi.hasAiTakeover(worker),
+                            "Worker lost control within one simulated hour: " + worker.getUUID());
+                    GroupControlApi.cancelWork(helper.getLevel().getServer(), controller.getUUID(),
+                            workers.stream().map(LivingEntity::getUUID).collect(java.util.stream.Collectors.toSet()));
+                    helper.getLevel().getServer().getPlayerList().remove(controller);
+                    helper.succeed();
+                });
+            }
+        },
+        WORK_PLANTING("work_planting", 100) {
+            @Override void run(GameTestHelper helper) {
+                prepareArena(helper);
+                var controller = createController(helper);
+                var worker = helper.spawn(EntityTypes.VILLAGER, 2, 2, 1);
+                var cropPos = helper.absolutePos(new BlockPos(3, 2, 1));
+                var supplyPos = helper.absolutePos(new BlockPos(1, 2, 2));
+                helper.setBlock(3, 1, 1, Blocks.DIRT);
+                helper.setBlock(1, 2, 2, Blocks.CHEST);
+                var chest = (net.minecraft.world.Container) helper.getLevel().getBlockEntity(supplyPos);
+                chest.setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WHEAT_SEEDS, 16));
+                var settings = new WorkSettings(WorkSettings.Mode.FARMING, true, false, true, false,
+                        List.of("minecraft:wheat"), java.util.Optional.of(supplyPos), java.util.Optional.empty());
+                var region = new BlockWorkRegion(helper.getLevel().dimension().identifier(), cropPos.below(), cropPos);
+                GroupControlApi.dispatch(new GroupControlRequest(controller, SOURCE, List.of(worker),
+                        new GroupControlCommand.Work(region, settings), 1000));
+                helper.runAtTickTime(60, () -> {
+                    helper.assertTrue(helper.getLevel().getBlockState(cropPos).is(Blocks.WHEAT), "Worker did not plant supplied seed");
+                    org.academy.internal.common.ability.mentalout.control.GroupControlRuntime.cancelWork(
+                            helper.getLevel().getServer(), controller.getUUID(), java.util.Set.of(worker.getUUID()));
+                    var remaining = chest.countItem(net.minecraft.world.item.Items.WHEAT_SEEDS)
+                            + controller.getInventory().countItem(net.minecraft.world.item.Items.WHEAT_SEEDS);
+                    helper.assertValueEqual(remaining, 15, "Planting must consume exactly one seed");
+                    helper.assertTrue(worker.getMainHandItem().isEmpty(), "Virtual tools must not occupy equipment slots");
+                    helper.getLevel().getServer().getPlayerList().remove(controller);
+                    helper.succeed();
+                });
+            }
+        },
+        WORK_MINING("work_mining", 100) {
+            @Override void run(GameTestHelper helper) {
+                prepareArena(helper);
+                var controller = createController(helper);
+                var worker = helper.spawn(EntityTypes.VILLAGER, 2, 2, 1);
+                var block = helper.absolutePos(new BlockPos(3, 2, 1));
+                helper.setBlock(3, 2, 1, Blocks.STONE);
+                var region = new BlockWorkRegion(helper.getLevel().dimension().identifier(), block, block);
+                var settings = new WorkSettings(WorkSettings.Mode.MINING, false, true, false, false,
+                        List.of("minecraft:stone"), java.util.Optional.empty(), java.util.Optional.empty());
+                GroupControlApi.dispatch(new GroupControlRequest(controller, SOURCE, List.of(worker),
+                        new GroupControlCommand.Work(region, settings), 1000));
+                helper.runAtTickTime(70, () -> {
+                    helper.assertTrue(helper.getLevel().getBlockState(block).isAir(), "Worker did not mine stone");
+                    helper.assertValueEqual(controller.getInventory().countItem(net.minecraft.world.item.Items.COBBLESTONE),
+                            1, "Mining must produce one item, without duplication");
+                    helper.assertFalse(MentalControlApi.hasAiTakeover(worker), "Completed one-shot work retained AI lease");
+                    helper.assertTrue(worker.getMainHandItem().isEmpty(), "Virtual tools must not occupy equipment slots");
+                    helper.getLevel().getServer().getPlayerList().remove(controller);
+                    helper.succeed();
+                });
+            }
+        },
+        WORK_DEFAULT_EQUIPMENT("work_default_equipment", 100) {
+            @Override void run(GameTestHelper helper) {
+                prepareArena(helper);
+                var controller = createController(helper);
+                var worker = helper.spawn(EntityTypes.ZOMBIE, 2, 2, 1);
+                for (var slot : EquipmentSlot.values()) worker.setItemSlot(slot, net.minecraft.world.item.ItemStack.EMPTY);
+                var armor = worker.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR);
+                var attack = worker.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+                var armorBefore = armor.getValue();
+                var attackBefore = attack.getValue();
+                var cell = helper.absolutePos(new BlockPos(3, 2, 1));
+                var region = new BlockWorkRegion(helper.getLevel().dimension().identifier(), cell, cell);
+                GroupControlApi.dispatch(new GroupControlRequest(controller, SOURCE, List.of(worker),
+                        new GroupControlCommand.Work(region, WorkSettings.defaults()), 1000));
+                helper.runAtTickTime(10, () -> {
+                    helper.assertValueEqual(armor.getValue(), armorBefore + 15, "Empty armor slots need iron protection");
+                    helper.assertValueEqual(attack.getValue(), attackBefore + 5, "Empty hand needs iron sword bonus");
+                    helper.assertFalse(ControlledEquipment.miningTool(worker, Blocks.OBSIDIAN.defaultBlockState())
+                            .isCorrectToolForDrops(Blocks.OBSIDIAN.defaultBlockState()), "Fallback must retain iron harvest limits");
+                    worker.setItemSlot(EquipmentSlot.CHEST, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND_CHESTPLATE));
+                    worker.setItemSlot(EquipmentSlot.MAINHAND, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND_PICKAXE));
+                });
+                helper.runAtTickTime(25, () -> {
+                    helper.assertValueEqual(armor.getModifier(Identifier.fromNamespaceAndPath("academy", "control_default_armor")).amount(),
+                            9.0, "An occupied armor slot must not receive virtual armor");
+                    helper.assertTrue(attack.getModifier(Identifier.fromNamespaceAndPath("academy", "control_default_weapon")) == null,
+                            "Real equipment must replace the virtual weapon bonus");
+                    var real = worker.getMainHandItem();
+                    helper.assertTrue(ControlledEquipment.miningTool(worker, Blocks.STONE.defaultBlockState()) == real,
+                            "Real tool and its enchantments must take precedence");
+                    ControlledEquipment.damageRealTool(worker, real, 1);
+                    helper.assertValueEqual(real.getDamageValue(), 1, "Real tools still consume durability");
+                    GroupControlApi.cancelWork(helper.getLevel().getServer(), controller.getUUID(), java.util.Set.of(worker.getUUID()));
+                    helper.assertTrue(armor.getModifier(Identifier.fromNamespaceAndPath("academy", "control_default_armor")) == null,
+                            "Cancelling control must remove default armor");
+                    helper.assertTrue(worker.getItemBySlot(EquipmentSlot.HEAD).isEmpty(), "Virtual armor must not create items");
+                    helper.assertTrue(helper.getLevel().getBlockState(cell).isAir(), "No supplied seed must mean no planting");
+                    helper.getLevel().getServer().getPlayerList().remove(controller);
+                    helper.succeed();
+                });
+            }
+        },
+        WORK_SHEARING("work_shearing", 100) {
+            @Override void run(GameTestHelper helper) {
+                prepareArena(helper);
+                var controller = createController(helper);
+                var worker = helper.spawn(EntityTypes.VILLAGER, 2, 2, 1);
+                var sheep = helper.spawn(EntityTypes.SHEEP, 3, 2, 1);
+                sheep.setNoAi(true);
+                var region = new BlockWorkRegion(helper.getLevel().dimension().identifier(),
+                        helper.absolutePos(new BlockPos(1, 2, 0)), helper.absolutePos(new BlockPos(4, 3, 2)));
+                var settings = new WorkSettings(WorkSettings.Mode.SHEARING, false, true, false, false,
+                        List.of("minecraft:sheep"), java.util.Optional.empty(), java.util.Optional.empty());
+                GroupControlApi.dispatch(new GroupControlRequest(controller, SOURCE, List.of(worker),
+                        new GroupControlCommand.Work(region, settings), 1000));
+                helper.runAtTickTime(50, () -> {
+                    helper.assertTrue(sheep.isSheared(), "Empty-handed worker must shear with virtual shears");
+                    helper.assertTrue(worker.getMainHandItem().isEmpty(), "Virtual shears must not generate equipment");
+                    helper.assertFalse(MentalControlApi.hasAiTakeover(worker), "One-shot shearing must finish");
+                    helper.getLevel().getServer().getPlayerList().remove(controller);
+                    helper.succeed();
+                });
+            }
+        },
+        PERSISTENT_WORK("persistent_work", 180) {
+            @Override void run(GameTestHelper helper) {
+                prepareArena(helper);
+                var controller = createController(helper);
+                var worker = helper.spawn(EntityTypes.VILLAGER, 3, 2, 1);
+                org.academy.internal.common.ability.mentalout.MentalControlMemory.remember(controller, worker);
+                var region = new BlockWorkRegion(helper.getLevel().dimension().identifier(),
+                        helper.absolutePos(new BlockPos(2, 2, 1)), helper.absolutePos(new BlockPos(4, 2, 1)));
+                var result = GroupControlApi.dispatch(new GroupControlRequest(controller, SOURCE, List.of(worker),
+                        new GroupControlCommand.Work(region, WorkSettings.defaults()), 1000));
+                helper.assertValueEqual(result.applied(), 1, "Work order accepted");
+                helper.runAtTickTime(30, () -> {
+                    helper.assertTrue(MentalControlApi.hasAiTakeover(worker), "Idle work lost AI ownership");
+                    org.academy.internal.common.ability.mentalout.control.GroupControlRuntime.setWorkPaused(
+                            helper.getLevel().getServer(), controller.getUUID(), java.util.Set.of(worker.getUUID()), true);
+                });
+                helper.runAtTickTime(45, () -> {
+                    helper.assertTrue(MentalControlApi.hasAiTakeover(worker), "Paused work released autonomous AI");
+                    var data = org.academy.internal.common.ability.mentalout.control.WorkOrderData.get(helper.getLevel().getServer());
+                    var ops = helper.getLevel().registryAccess().createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE);
+                    var codec = org.academy.internal.common.ability.mentalout.control.WorkOrderData.CODEC;
+                    var saved = codec.encodeStart(ops, data).getOrThrow();
+                    var loaded = codec.parse(ops, saved).getOrThrow();
+                    helper.assertValueEqual(loaded.entries().size(), data.entries().size(), "Saved order codec lost entries");
+                    loaded.entries().forEach(data::put);
+                    org.academy.internal.common.ability.mentalout.control.GroupControlRuntime.clear();
+                });
+                helper.runAtTickTime(85, () -> {
+                    helper.assertTrue(MentalControlApi.hasAiTakeover(worker), "Saved work did not reconstruct AI ownership");
+                    org.academy.internal.common.ability.mentalout.control.GroupControlRuntime.setWorkPaused(
+                            helper.getLevel().getServer(), controller.getUUID(), java.util.Set.of(worker.getUUID()), false);
+                });
+                helper.runAtTickTime(140, () -> {
+                    helper.assertTrue(MentalControlApi.hasAiTakeover(worker), "Resumed work lost AI ownership");
+                    org.academy.internal.common.ability.mentalout.control.GroupControlRuntime.cancelWork(
+                            helper.getLevel().getServer(), controller.getUUID(), java.util.Set.of(worker.getUUID()));
+                    helper.assertFalse(MentalControlApi.hasAiTakeover(worker), "Cancelled work retained AI ownership");
+                    helper.getLevel().getServer().getPlayerList().remove(controller);
+                    helper.succeed();
+                });
+            }
+        },
         MOB_FORCE_TARGET("mob_force_target", 70) {
             @Override
             void run(GameTestHelper helper) {

@@ -13,6 +13,15 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.animal.cow.Cow;
+import net.neoforged.neoforge.common.IShearable;
+import net.minecraft.world.phys.AABB;
+import org.academy.internal.common.ability.mentalout.MentalControlMemory;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.GameMasterBlock;
@@ -131,7 +140,10 @@ public final class GroupControlRuntime {
     }
 
     public static synchronized void clear() {
-        List.copyOf(TASKS.values()).forEach(DefaultTask::close);
+        for (var task : List.copyOf(TASKS.values())) {
+            task.saveOrder();
+            task.closeInternal();
+        }
         TASKS.clear();
     }
 
@@ -147,6 +159,7 @@ public final class GroupControlRuntime {
 
     private static void tick(MinecraftServer server) {
         ensureDefaultAdapter();
+        if (server.overworld().getGameTime() % 20 == 0) restoreOrders(server);
         for (var task : List.copyOf(TASKS.values())) {
             try {
                 task.tick(server);
@@ -162,6 +175,81 @@ public final class GroupControlRuntime {
         }
     }
 
+    public static boolean ownsWorkScope(UUID controller, UUID subject, UUID scope) {
+        return TASKS.values().stream().anyMatch(task -> task.settings != null && !task.closed
+                && task.controllerId.equals(controller) && task.subject.getUUID().equals(subject)
+                && task.scopeId.equals(scope));
+    }
+
+    private record RestoreGroup(UUID controller, Identifier source, BlockWorkRegion region,
+                                WorkSettings settings, int priority) {}
+
+    private static void restoreOrders(MinecraftServer server) {
+        var groups = new LinkedHashMap<RestoreGroup, List<WorkOrderData.Entry>>();
+        for (var entry : WorkOrderData.get(server).entries()) {
+            var controller = UUID.fromString(entry.controller());
+            var key = new TaskKey(controller, entry.source(), UUID.fromString(entry.subject()));
+            if (TASKS.containsKey(key)) continue;
+            var group = new RestoreGroup(controller, entry.source(), entry.region(), entry.settings(), entry.priority());
+            groups.computeIfAbsent(group, ignored -> new ArrayList<>()).add(entry);
+        }
+        for (var groupEntry : groups.entrySet()) {
+            var group = groupEntry.getKey();
+            var controller = server.getPlayerList().getPlayer(group.controller());
+            if (controller == null || !controller.isAlive()) continue;
+            var level = java.util.stream.StreamSupport.stream(server.getAllLevels().spliterator(), false)
+                    .filter(candidate -> candidate.dimension().identifier().equals(group.region().dimension())).findFirst().orElse(null);
+            if (level == null) continue;
+            var subjects = new ArrayList<LivingEntity>();
+            for (var entry : groupEntry.getValue()) {
+                var entity = level.getEntity(UUID.fromString(entry.subject()));
+                if (entity instanceof Mob mob && mob.isAlive()
+                        && MentalControlMemory.wasControlledBy(mob, group.controller())) subjects.add(mob);
+            }
+            if (subjects.isEmpty()) continue;
+            dispatch(new GroupControlRequest(controller, group.source(), subjects,
+                    new GroupControlCommand.Work(group.region(), group.settings()), group.priority()));
+            for (var entry : groupEntry.getValue()) {
+                var task = TASKS.get(new TaskKey(group.controller(), group.source(), UUID.fromString(entry.subject())));
+                if (task != null) {
+                    task.bufferedDrops.addAll(entry.cargo().stream().map(ItemStack::copy).toList());
+                    task.paused = entry.paused();
+                    task.saveOrder();
+                }
+            }
+        }
+    }
+
+    public static void setWorkPaused(MinecraftServer server, UUID controller, Set<UUID> subjects, boolean paused) {
+        var data = WorkOrderData.get(server);
+        for (var entry : data.entries()) {
+            if (entry.controller().equals(controller.toString()) && subjects.contains(UUID.fromString(entry.subject()))) {
+                data.put(entry.withPaused(paused));
+                var task = TASKS.get(new TaskKey(controller, entry.source(), UUID.fromString(entry.subject())));
+                if (task != null) { task.paused = paused; task.closeMovement(); }
+            }
+        }
+    }
+
+    public static void cancelWork(MinecraftServer server, UUID controller, Set<UUID> subjects) {
+        var data = WorkOrderData.get(server);
+        for (var entry : data.entries()) {
+            if (!entry.controller().equals(controller.toString()) || !subjects.contains(UUID.fromString(entry.subject()))) continue;
+            var task = TASKS.get(new TaskKey(controller, entry.source(), UUID.fromString(entry.subject())));
+            if (task != null) task.close();
+            else {
+                var player = server.getPlayerList().getPlayer(controller);
+                if (player != null) entry.cargo().forEach(stack -> DefaultTask.addToController(player, stack));
+            }
+            data.remove(entry.key());
+        }
+    }
+
+    public static String workStatus(WorkOrderData.Entry entry) {
+        var task = TASKS.get(new TaskKey(UUID.fromString(entry.controller()), entry.source(), UUID.fromString(entry.subject())));
+        return entry.paused() ? "paused" : task == null ? "suspended" : task.workStatus;
+    }
+
     private enum DefaultAdapter implements GroupControlAdapter {
         INSTANCE;
 
@@ -170,6 +258,7 @@ public final class GroupControlRuntime {
             return subject != null && subject.isAlive() && !subject.isRemoved()
                     && MentalControlApi.supports(subject, ControlCapability.PATH_CONTROL)
                     && (!(command instanceof GroupControlCommand.GatherResources
+                    || command instanceof GroupControlCommand.Work
                     || command instanceof GroupControlCommand.Farm)
                     || MentalControlApi.supports(subject, ControlCapability.AI_CONTROL));
         }
@@ -193,8 +282,10 @@ public final class GroupControlRuntime {
             var previous = TASKS.remove(key);
             if (previous != null) previous.close();
             var task = new DefaultTask(key, request, subject, subjectIndex, sharedWork);
-            task.retainExclusiveWorkOrder(request.controller());
             TASKS.put(key, task);
+            try { task.retainExclusiveWorkOrder(request.controller()); }
+            catch (RuntimeException exception) { task.closeInternal(); throw exception; }
+            task.saveOrder();
             task.notifyObserver(GroupControlTaskEvent.Status.ACCEPTED);
             return task;
         }
@@ -206,6 +297,12 @@ public final class GroupControlRuntime {
         private final Identifier source;
         private final LivingEntity subject;
         private final GroupControlCommand command;
+        private final WorkSettings settings;
+        private boolean paused;
+        private String workStatus = "working";
+        private long nextWorkScan;
+        private long nextAnimalAction;
+        private long retryAfter;
         private final GroupControlObserver observer;
         private final int priority;
         private final int subjectIndex;
@@ -241,7 +338,11 @@ public final class GroupControlRuntime {
             controllerId = request.controller().getUUID();
             source = request.source();
             this.subject = subject;
-            command = request.command();
+            settings = request.command() instanceof GroupControlCommand.Work work ? work.settings() : null;
+            command = request.command() instanceof GroupControlCommand.Work work
+                    ? settings.mode() == WorkSettings.Mode.FARMING
+                    ? new GroupControlCommand.Farm(work.region())
+                    : new GroupControlCommand.GatherResources(work.region()) : request.command();
             observer = request.observer();
             priority = request.priority();
             this.subjectIndex = subjectIndex;
@@ -310,11 +411,27 @@ public final class GroupControlRuntime {
         private void tick(MinecraftServer server) {
             if (closed) return;
             var controller = server.getPlayerList().getPlayer(controllerId);
-            if (controller == null || !controller.isAlive() || controller.hasDisconnected()
-                    || !subject.isAlive() || subject.isRemoved()
-                    || controller.level() != subject.level()) {
+            if (!subject.isAlive() && !subject.isRemoved()
+                    || subject.getRemovalReason() != null && subject.getRemovalReason().shouldDestroy()) {
                 finish(GroupControlTaskEvent.Status.CANCELLED);
                 return;
+            }
+            if (controller == null || !controller.isAlive() || controller.hasDisconnected()
+                    || subject.isRemoved() || settings == null && controller.level() != subject.level()) {
+                if (settings != null) {
+                    workStatus = "suspended";
+                    saveOrder();
+                    closeInternal();
+                } else finish(GroupControlTaskEvent.Status.CANCELLED);
+                return;
+            }
+            if (settings != null) {
+                if (aiControl != null && aiControl.state().isTerminal()) {
+                    aiControl = null;
+                    closeMovement();
+                }
+                retainExclusiveWorkOrder(controller);
+                if (paused) { workStatus = "paused"; closeMovement(); return; }
             }
             if (isExclusiveWorkOrder() && aiControl != null
                     && aiControl.state() != ControlState.ACTIVE) {
@@ -324,6 +441,7 @@ public final class GroupControlRuntime {
                     // Atomic work ownership: pause the complete job while AI execution is
                     // preempted instead of continuing movement/action with only half the rights.
                     closeMovement();
+                    workStatus = "preempted";
                 }
                 return;
             }
@@ -335,6 +453,20 @@ public final class GroupControlRuntime {
                     ? gather : ((GroupControlCommand.Farm) command).region();
             if (!region.dimension().equals(subject.level().dimension().identifier())) {
                 finish(GroupControlTaskEvent.Status.PATH_FAILED);
+                return;
+            }
+            if (settings != null && !bufferedDrops.isEmpty()
+                    && bufferedDrops.size() >= 18) {
+                if (!depositWorkCargo(controller, region)) return;
+            }
+            if (settings != null && subject.level().getGameTime() < retryAfter) return;
+            workStatus = "working";
+            if (settings != null && settings.mode() == WorkSettings.Mode.COLLECT) {
+                tickCollection(controller, region);
+                return;
+            }
+            if (settings != null && settings.mode().animals()) {
+                tickAnimalWork(controller, region);
                 return;
             }
             if (command instanceof GroupControlCommand.Farm) tickFarm(controller, region);
@@ -375,14 +507,33 @@ public final class GroupControlRuntime {
         private void tickMining(ServerPlayer controller, BlockWorkRegion region) {
             if (currentBlock == null) currentBlock = nextMiningBlock();
             if (currentBlock == null) {
-                deliverToController(controller);
+                if (settings != null) {
+                    if (!depositWorkCargo(controller, region)) return;
+                    if (settings.repeat()) {
+                        workStatus = "waiting";
+                        closeMovement();
+                        if (subject.level().getGameTime() >= nextWorkScan) {
+                            if (sharedWork == null) partitionAll(region);
+                            else sharedWork.refreshFiltered(subject.level(), subject.level().getGameTime(), 100, this::matchesWorkBlock);
+                            nextWorkScan = subject.level().getGameTime() + 100;
+                        }
+                        return;
+                    }
+                } else deliverToController(controller);
                 finish(GroupControlTaskEvent.Status.COMPLETED);
                 return;
+            }
+            if (settings != null) {
+                var blockState = subject.level().getBlockState(currentBlock);
+                if (blockState.isAir() || !matchesWorkBlock(currentBlock, blockState)) { advanceBlock(); return; }
+                if (!isHarvestable(blockState, miningTool(blockState))
+                        && !supplyTool(controller, region, stack -> !stack.isEmpty() && isHarvestable(blockState, stack))) return;
             }
             var target = Vec3.atCenterOf(currentBlock);
             if (subject.distanceToSqr(target) > 12.25) {
                 var approach = workApproach(currentBlock);
                 if (approach == null) {
+                    workStatus = "path";
                     deferCurrentBlock();
                     return;
                 }
@@ -395,6 +546,11 @@ public final class GroupControlRuntime {
             if (!(subject.level() instanceof ServerLevel level)) return;
             var state = level.getBlockState(currentBlock);
             var tool = miningTool(state);
+            if (settings != null && !isHarvestable(state, tool)) {
+                workStatus = "tool";
+                closeMovement();
+                return;
+            }
             if (!isHarvestable(state, tool)) {
                 advanceBlock();
                 return;
@@ -408,8 +564,13 @@ public final class GroupControlRuntime {
                 if (level.destroyBlock(currentBlock, false, subject)) {
                     drops.stream().filter(stack -> !stack.isEmpty())
                             .map(ItemStack::copy).forEach(bufferedDrops::add);
+                    if (settings != null) ControlledEquipment.damageRealTool(subject, tool, 1);
                 }
+            } else if (settings != null) {
+                workStatus = "permission";
+                retryAfter = level.getGameTime() + 100;
             }
+            saveOrder();
             advanceBlock();
         }
 
@@ -423,16 +584,27 @@ public final class GroupControlRuntime {
                 currentBlock = pollBlock();
             }
             if (currentBlock == null) {
-                depositFarmDrops(controller, region, false);
+                if (settings != null) {
+                    if (!depositWorkCargo(controller, region)) return;
+                    workStatus = "waiting";
+                    if (!settings.repeat()) { finish(GroupControlTaskEvent.Status.COMPLETED); return; }
+                } else depositFarmDrops(controller, region, false);
                 // Farming is persistent. Waiting for the next mature crop must never turn
                 // into an invalid path-to-the-solid-region-center order that ends the task.
                 closeMovement();
                 return;
             }
+            if (settings != null && subject.level().getBlockState(currentBlock).isAir()) {
+                if (!subject.level().getBlockState(currentBlock.below()).is(Blocks.FARMLAND)
+                        && !(ControlledEquipment.tool(subject, Items.IRON_HOE).getItem() instanceof net.minecraft.world.item.HoeItem)
+                        && !supplyTool(controller, region, stack -> stack.getItem() instanceof net.minecraft.world.item.HoeItem)) return;
+                if (bufferedDrops.stream().noneMatch(this::isSeed) && !collectSeeds(controller, region)) return;
+            }
             var target = Vec3.atCenterOf(currentBlock);
             if (subject.distanceToSqr(target) > 12.25) {
                 var approach = workApproach(currentBlock);
                 if (approach == null) {
+                    workStatus = "path";
                     deferCurrentBlock();
                     return;
                 }
@@ -443,22 +615,25 @@ public final class GroupControlRuntime {
             }
             closeMovement();
             if (subject.level() instanceof ServerLevel level) {
-                harvestCrop(controller, level, currentBlock);
-                depositFarmDrops(controller, region, false);
+                if (settings != null && level.getBlockState(currentBlock).isAir()) plantCrop(controller, level, currentBlock);
+                else harvestCrop(controller, level, currentBlock);
+                if (settings == null) depositFarmDrops(controller, region, false);
+                saveOrder();
             }
             advanceBlock();
         }
 
         private void populateMatureCrops(BlockWorkRegion region) {
             if (sharedWork != null) {
-                sharedWork.refreshCrops(subject.level(), subject.level().getGameTime());
+                if (settings == null) sharedWork.refreshCrops(subject.level(), subject.level().getGameTime());
+                else sharedWork.refreshFiltered(subject.level(), subject.level().getGameTime(), 20, this::isFarmCandidate);
                 return;
             }
             var index = 0;
             for (var pos : BlockPos.betweenClosed(region.minimum(), region.maximum())) {
                 if (index++ % subjectCount != subjectIndex) continue;
                 var state = subject.level().getBlockState(pos);
-                if (state.getBlock() instanceof CropBlock crop && crop.isMaxAge(state)) {
+                if (isFarmCandidate(pos, state)) {
                     enqueueBlock(pos);
                 }
             }
@@ -469,7 +644,8 @@ public final class GroupControlRuntime {
                 var candidate = pollBlock();
                 if (candidate == null) return null;
                 var state = subject.level().getBlockState(candidate);
-                if (!state.isAir() && isHarvestable(state, miningTool(state))) return candidate;
+                if (!state.isAir() && (settings == null ? isHarvestable(state, miningTool(state))
+                        : matchesWorkBlock(candidate, state))) return candidate;
                 if (sharedWork != null) sharedWork.complete(candidate);
             }
             return null;
@@ -483,6 +659,7 @@ public final class GroupControlRuntime {
         }
 
         private void deferCurrentBlock() {
+            if (settings != null) { retryAfter = subject.level().getGameTime() + 40; workStatus = "path"; }
             if (currentBlock != null) {
                 if (sharedWork != null) sharedWork.defer(currentBlock);
                 else enqueueBlock(currentBlock);
@@ -509,6 +686,7 @@ public final class GroupControlRuntime {
 
         private ItemStack miningTool(net.minecraft.world.level.block.state.BlockState state) {
             var held = subject.getMainHandItem();
+            if (settings != null) return ControlledEquipment.miningTool(subject, state);
             var ironPickaxe = new ItemStack(Items.IRON_PICKAXE);
             if (held.isEmpty()) return ironPickaxe;
             var heldCorrect = held.isCorrectToolForDrops(state);
@@ -604,12 +782,21 @@ public final class GroupControlRuntime {
         private void harvestCrop(ServerPlayer controller, ServerLevel level, BlockPos pos) {
             var state = level.getBlockState(pos);
             if (!(state.getBlock() instanceof CropBlock crop) || !crop.isMaxAge(state)
+                    || settings != null && (!settings.harvest() || !settings.matches(state))
                     || !canBreak(controller, level, pos)) return;
             subject.swing(InteractionHand.MAIN_HAND);
             var drops = Block.getDrops(
                     state, level, pos, level.getBlockEntity(pos), subject, subject.getMainHandItem());
             if (!level.destroyBlock(pos, false, subject)) return;
-            level.setBlock(pos, crop.getStateForAge(0), Block.UPDATE_ALL);
+            if (settings == null) level.setBlock(pos, crop.getStateForAge(0), Block.UPDATE_ALL);
+            else if (settings.replant()) {
+                var seed = drops.stream().filter(stack -> stack.getItem() instanceof BlockItem item
+                        && item.getBlock() == crop && !stack.isEmpty()).findFirst();
+                if (seed.isPresent() && crop.getStateForAge(0).canSurvive(level, pos)) {
+                    seed.get().shrink(1);
+                    level.setBlock(pos, crop.getStateForAge(0), Block.UPDATE_ALL);
+                }
+            }
             drops.stream().filter(stack -> !stack.isEmpty())
                     .map(ItemStack::copy).forEach(bufferedDrops::add);
         }
@@ -689,8 +876,288 @@ public final class GroupControlRuntime {
             }
         }
 
+        private BlockWorkRegion workRegion() {
+            return command instanceof GroupControlCommand.Farm farm ? farm.region()
+                    : ((GroupControlCommand.GatherResources) command).region();
+        }
+
+        private void saveOrder() {
+            if (settings == null || closed || !(subject.level() instanceof ServerLevel level)) return;
+            var region = workRegion();
+            WorkOrderData.get(level.getServer()).put(new WorkOrderData.Entry(controllerId.toString(),
+                    subject.getUUID().toString(), source, region.dimension(), region.minimum(), region.maximum(),
+                    settings, priority, paused, bufferedDrops.stream().filter(stack -> !stack.isEmpty()).map(ItemStack::copy).toList()));
+        }
+
+        private void removeOrder() {
+            if (settings != null && subject.level() instanceof ServerLevel level) {
+                WorkOrderData.get(level.getServer()).remove(controllerId + "/" + source + "/" + subject.getUUID());
+            }
+        }
+
+        private boolean matchesWorkBlock(BlockPos pos, net.minecraft.world.level.block.state.BlockState state) {
+            if (!settings.harvest() || !settings.matches(state) || state.getDestroySpeed(subject.level(), pos) < 0
+                    || subject.level().getBlockEntity(pos) != null) return false;
+            return switch (settings.mode()) {
+                case MINING -> true;
+                case LOGGING -> state.is(BlockTags.LOGS);
+                case SUGAR_CANE -> (state.is(Blocks.SUGAR_CANE) || state.is(Blocks.BAMBOO))
+                        && subject.level().getBlockState(pos.below()).is(state.getBlock());
+                case CLEARING -> state.is(Blocks.SHORT_GRASS) || state.is(Blocks.TALL_GRASS)
+                        || state.is(Blocks.SNOW) || state.is(Blocks.FIRE);
+                case FARMING, SHEARING, MILKING, FEEDING, COLLECT -> false;
+            };
+        }
+
+        private boolean isFarmCandidate(BlockPos pos, net.minecraft.world.level.block.state.BlockState state) {
+            if (state.getBlock() instanceof CropBlock crop && crop.isMaxAge(state)) {
+                return settings == null || settings.harvest() && settings.matches(state);
+            }
+            return settings != null && settings.replant() && state.isAir()
+                    && (subject.level().getBlockState(pos.below()).is(Blocks.FARMLAND)
+                    || pos.getY() > workRegion().minimum().getY()
+                    && (subject.level().getBlockState(pos.below()).is(Blocks.DIRT)
+                    || subject.level().getBlockState(pos.below()).is(Blocks.GRASS_BLOCK)));
+        }
+
+        private void tickCollection(ServerPlayer controller, BlockWorkRegion region) {
+            var level = (ServerLevel) subject.level();
+            if (level.getGameTime() < nextAnimalAction || !settings.harvest()) return;
+            var bounds = new AABB(region.minimum().getX(), region.minimum().getY(), region.minimum().getZ(),
+                    region.maximum().getX() + 1, region.maximum().getY() + 1, region.maximum().getZ() + 1);
+            var item = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, bounds,
+                    candidate -> candidate.isAlive() && !candidate.hasPickUpDelay()
+                            && settings.matches(candidate.getItem())).stream()
+                    .min(Comparator.comparingDouble(subject::distanceToSqr)).orElse(null);
+            if (item == null) {
+                workStatus = "waiting";
+                if (!depositWorkCargo(controller, region)) return;
+                closeMovement();
+                nextAnimalAction = level.getGameTime() + 20;
+                if (!settings.repeat()) finish(GroupControlTaskEvent.Status.COMPLETED);
+                return;
+            }
+            if (!level.mayInteract(controller, item.blockPosition())) { workStatus = "permission"; return; }
+            if (subject.distanceToSqr(item) > 4) {
+                var approach = workApproach(item.blockPosition());
+                if (approach == null || !ensureMovement(controller,
+                        new ControlDestination.Position(region.dimension(), approach), 1) || hasStalledPath(approach)) {
+                    closeMovement(); clearWorkApproach(); workStatus = "path";
+                    retryAfter = level.getGameTime() + 40;
+                }
+                return;
+            }
+            closeMovement();
+            bufferedDrops.add(item.getItem().copy());
+            item.discard();
+            nextAnimalAction = level.getGameTime() + 5;
+            saveOrder();
+        }
+
+        private boolean supplyTool(ServerPlayer controller, BlockWorkRegion region,
+                                   java.util.function.Predicate<ItemStack> suitable) {
+            workStatus = "tool";
+            if (settings.input().isEmpty()) { closeMovement(); return false; }
+            var pos = settings.input().get();
+            var level = (ServerLevel) subject.level();
+            if (!level.hasChunkAt(pos) || !level.mayInteract(controller, pos)) return false;
+            if (subject.distanceToSqr(Vec3.atCenterOf(pos)) > 12.25) {
+                var approach = workApproach(pos);
+                if (approach == null || !ensureMovement(controller,
+                        new ControlDestination.Position(region.dimension(), approach), 1.5)
+                        || hasStalledPath(approach)) { closeMovement(); clearWorkApproach(); workStatus = "path"; }
+                return false;
+            }
+            closeMovement();
+            clearWorkApproach();
+            var container = HopperBlockEntity.getContainerAt(level, pos);
+            if (container == null) return false;
+            for (int slot = 0; slot < container.getContainerSize(); slot++) {
+                if (!suitable.test(container.getItem(slot))) continue;
+                var replacement = container.removeItem(slot, 1);
+                if (replacement.isEmpty()) continue;
+                var previous = subject.getMainHandItem();
+                subject.setItemSlot(EquipmentSlot.MAINHAND, replacement);
+                if (!previous.isEmpty()) {
+                    var remainder = HopperBlockEntity.addItem(null, container, previous.copy(), null);
+                    if (!remainder.isEmpty()) bufferedDrops.add(remainder);
+                }
+                container.setChanged();
+                saveOrder();
+                return true;
+            }
+            return false;
+        }
+
+        private void tickAnimalWork(ServerPlayer controller, BlockWorkRegion region) {
+            var level = (ServerLevel) subject.level();
+            if (level.getGameTime() < nextAnimalAction) return;
+            if (!settings.harvest()) { workStatus = "waiting"; return; }
+            java.util.function.Predicate<ItemStack> suitable = stack -> switch (settings.mode()) {
+                case SHEARING -> stack.is(Items.SHEARS);
+                case MILKING -> stack.is(Items.BUCKET);
+                case FEEDING -> !stack.isEmpty() && level.getEntitiesOfClass(Animal.class,
+                        new AABB(subject.blockPosition()).inflate(32), animal -> animal.isFood(stack)).size() > 0;
+                default -> false;
+            };
+            if (!suitable.test(settings.mode() == WorkSettings.Mode.SHEARING
+                    ? ControlledEquipment.tool(subject, Items.SHEARS) : subject.getMainHandItem())
+                    && !supplyTool(controller, region, suitable)) return;
+            var held = settings.mode() == WorkSettings.Mode.SHEARING
+                    ? ControlledEquipment.tool(subject, Items.SHEARS) : subject.getMainHandItem();
+            var bounds = new AABB(region.minimum().getX(), region.minimum().getY(), region.minimum().getZ(),
+                    region.maximum().getX() + 1, region.maximum().getY() + 1, region.maximum().getZ() + 1);
+            var target = level.getEntitiesOfClass(Animal.class, bounds, animal -> animal != subject
+                    && animal.isAlive() && !animal.isBaby() && settings.matches(animal) && switch (settings.mode()) {
+                case SHEARING -> animal instanceof IShearable shearable
+                        && shearable.isShearable(controller, held, level, animal.blockPosition());
+                case MILKING -> animal instanceof Cow;
+                case FEEDING -> animal.canFallInLove() && animal.isFood(held);
+                default -> false;
+            }).stream().min(Comparator.comparingDouble(subject::distanceToSqr)).orElse(null);
+            if (target == null) {
+                workStatus = "waiting";
+                closeMovement();
+                depositWorkCargo(controller, region);
+                nextAnimalAction = level.getGameTime() + 20;
+                if (!settings.repeat()) finish(GroupControlTaskEvent.Status.COMPLETED);
+                return;
+            }
+            if (!level.mayInteract(controller, target.blockPosition())) { workStatus = "path"; return; }
+            if (subject.distanceToSqr(target) > 9) {
+                var approach = workApproach(target.blockPosition());
+                if (approach == null || !ensureMovement(controller,
+                        new ControlDestination.Position(region.dimension(), approach), 1.5)
+                        || hasStalledPath(approach)) { closeMovement(); clearWorkApproach(); workStatus = "path"; }
+                return;
+            }
+            closeMovement();
+            subject.swing(InteractionHand.MAIN_HAND);
+            switch (settings.mode()) {
+                case SHEARING -> {
+                    var shearable = (IShearable) target;
+                    shearable.onSheared(controller, held, level, target.blockPosition()).stream()
+                            .filter(stack -> !stack.isEmpty()).map(ItemStack::copy).forEach(bufferedDrops::add);
+                    ControlledEquipment.damageRealTool(subject, held, 1);
+                }
+                case MILKING -> { held.shrink(1); bufferedDrops.add(new ItemStack(Items.MILK_BUCKET)); }
+                case FEEDING -> { held.shrink(1); target.setInLove(controller); }
+                default -> { }
+            }
+            nextAnimalAction = level.getGameTime() + 40;
+            saveOrder();
+            if (!settings.repeat()) finish(GroupControlTaskEvent.Status.COMPLETED);
+        }
+
+        private boolean isSeed(ItemStack stack) {
+            return !stack.isEmpty() && stack.getItem() instanceof BlockItem item
+                    && item.getBlock() instanceof CropBlock crop && settings.matches(crop.defaultBlockState());
+        }
+
+        private boolean collectSeeds(ServerPlayer controller, BlockWorkRegion region) {
+            workStatus = "materials";
+            if (settings.input().isEmpty()) { closeMovement(); return false; }
+            var pos = settings.input().get();
+            var level = (ServerLevel) subject.level();
+            if (!level.hasChunkAt(pos) || !level.mayInteract(controller, pos)) return false;
+            if (subject.distanceToSqr(Vec3.atCenterOf(pos)) > 12.25) {
+                var approach = workApproach(pos);
+                if (approach == null || !ensureMovement(controller,
+                        new ControlDestination.Position(region.dimension(), approach), 1.5)
+                        || hasStalledPath(approach)) { closeMovement(); clearWorkApproach(); workStatus = "path"; }
+                return false;
+            }
+            closeMovement();
+            clearWorkApproach();
+            var container = HopperBlockEntity.getContainerAt(level, pos);
+            if (container == null) return false;
+            for (int slot = 0; slot < container.getContainerSize(); slot++) {
+                if (!isSeed(container.getItem(slot))) continue;
+                bufferedDrops.add(container.removeItem(slot, 16));
+                container.setChanged();
+                saveOrder();
+                return true;
+            }
+            return false;
+        }
+
+        private void plantCrop(ServerPlayer controller, ServerLevel level, BlockPos pos) {
+            if (!level.mayInteract(controller, pos) || !DestroyBlocksSetting.canDestroyBlocks(controller)) return;
+            if (!level.getBlockState(pos.below()).is(Blocks.FARMLAND)) {
+                var soil = level.getBlockState(pos.below());
+                if (pos.getY() <= workRegion().minimum().getY()
+                        || !(soil.is(Blocks.DIRT) || soil.is(Blocks.GRASS_BLOCK))
+                        || !(ControlledEquipment.tool(subject, Items.IRON_HOE).getItem() instanceof net.minecraft.world.item.HoeItem)) return;
+                if (!level.setBlock(pos.below(), Blocks.FARMLAND.defaultBlockState(), Block.UPDATE_ALL)) return;
+                ControlledEquipment.damageRealTool(subject, ControlledEquipment.tool(subject, Items.IRON_HOE), 1);
+            }
+            for (var stack : bufferedDrops) {
+                if (!isSeed(stack)) continue;
+                var crop = (CropBlock) ((BlockItem) stack.getItem()).getBlock();
+                var state = crop.getStateForAge(0);
+                if (!state.canSurvive(level, pos)) continue;
+                if (level.setBlock(pos, state, Block.UPDATE_ALL)) {
+                    stack.shrink(1);
+                    subject.swing(InteractionHand.MAIN_HAND);
+                }
+                bufferedDrops.removeIf(ItemStack::isEmpty);
+                return;
+            }
+            workStatus = "materials";
+        }
+
+        private boolean depositWorkCargo(ServerPlayer controller, BlockWorkRegion region) {
+            bufferedDrops.removeIf(ItemStack::isEmpty);
+            if (bufferedDrops.isEmpty()) return true;
+            if (settings.output().isEmpty()) {
+                // No remote player-inventory teleport: carry a bounded amount until output is assigned.
+                if (bufferedDrops.size() < 18) return true;
+                workStatus = "output";
+                closeMovement();
+                return false;
+            }
+            var pos = settings.output().get();
+            var level = (ServerLevel) subject.level();
+            if (!level.hasChunkAt(pos) || !level.mayInteract(controller, pos)) { workStatus = "output"; return false; }
+            var target = Vec3.atCenterOf(pos);
+            if (subject.distanceToSqr(target) > 12.25) {
+                var approach = workApproach(pos);
+                workStatus = "delivering";
+                if (approach == null || !ensureMovement(controller,
+                        new ControlDestination.Position(region.dimension(), approach), 1.5)
+                        || hasStalledPath(approach)) { closeMovement(); workStatus = "path"; }
+                return false;
+            }
+            closeMovement();
+            clearWorkApproach();
+            var container = HopperBlockEntity.getContainerAt(level, pos);
+            if (container == null) { workStatus = "output"; return false; }
+            var remaining = new ArrayList<ItemStack>();
+            var reservedSeeds = 0;
+            for (var stack : bufferedDrops) {
+                var deposit = stack.copy();
+                if (settings.mode() == WorkSettings.Mode.FARMING && settings.replant() && isSeed(stack)
+                        && reservedSeeds < 16) {
+                    var count = Math.min(16 - reservedSeeds, deposit.getCount());
+                    remaining.add(deposit.copyWithCount(count));
+                    deposit.shrink(count);
+                    reservedSeeds += count;
+                }
+                var rest = deposit.isEmpty() ? ItemStack.EMPTY : HopperBlockEntity.addItem(null, container, deposit, null);
+                if (!rest.isEmpty()) remaining.add(rest);
+            }
+            bufferedDrops.clear();
+            bufferedDrops.addAll(remaining);
+            saveOrder();
+            var onlySeeds = bufferedDrops.stream().allMatch(this::isSeed)
+                    && bufferedDrops.stream().mapToInt(ItemStack::getCount).sum() <= 16;
+            workStatus = bufferedDrops.isEmpty() || onlySeeds ? "working" : "output";
+            return bufferedDrops.isEmpty() || onlySeeds;
+        }
+
         private void finish(GroupControlTaskEvent.Status status) {
             if (closed) return;
+            removeOrder();
             var server = subject.level() instanceof ServerLevel level ? level.getServer() : null;
             ServerPlayer controller = server == null
                     ? null : server.getPlayerList().getPlayer(controllerId);
@@ -716,6 +1183,15 @@ public final class GroupControlRuntime {
         @Override
         public void close() {
             if (closed) return;
+            removeOrder();
+            if (settings != null && subject.level() instanceof ServerLevel level) {
+                var controller = level.getServer().getPlayerList().getPlayer(controllerId);
+                if (controller != null) deliverToController(controller);
+                else {
+                    for (var stack : bufferedDrops) Block.popResource(level, subject.blockPosition(), stack);
+                    bufferedDrops.clear();
+                }
+            }
             if (command instanceof GroupControlCommand.Farm(var region)) {
                 var server = subject.level() instanceof ServerLevel level ? level.getServer() : null;
                 ServerPlayer controller = server == null
@@ -789,6 +1265,9 @@ public final class GroupControlRuntime {
                         new SharedWorkPlan(gather.region(), false);
                 case GroupControlCommand.Farm farm -> new SharedWorkPlan(farm.region(), true);
                 case GroupControlCommand.MoveTo ignored -> null;
+                case GroupControlCommand.Work work -> new SharedWorkPlan(work.region(),
+                        work.settings().mode() == WorkSettings.Mode.FARMING || work.settings().mode().animals()
+                        || work.settings().mode() == WorkSettings.Mode.COLLECT);
             };
         }
 
@@ -833,6 +1312,15 @@ public final class GroupControlRuntime {
 
         private synchronized int pendingCount() {
             return pending.size();
+        }
+
+        private synchronized void refreshFiltered(net.minecraft.world.level.Level level, long now, int interval,
+                java.util.function.BiPredicate<BlockPos, net.minecraft.world.level.block.state.BlockState> filter) {
+            if (now < nextFarmScanTick) return;
+            nextFarmScanTick = now + interval;
+            for (var pos : BlockPos.betweenClosed(region.minimum(), region.maximum())) {
+                if (level.hasChunkAt(pos) && filter.test(pos, level.getBlockState(pos))) queue(pos);
+            }
         }
 
         private synchronized void refreshCrops(net.minecraft.world.level.Level level, long now) {

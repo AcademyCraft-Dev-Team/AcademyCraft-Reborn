@@ -22,6 +22,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class MixinMob implements MentalControlMobAccess {
     @Shadow
     private @Nullable LivingEntity target;
+    @Shadow
+    protected GoalSelector goalSelector;
+    @Shadow
+    protected GoalSelector targetSelector;
+
+    @Override
+    public void academy$stopAutonomousGoals() {
+        goalSelector.getAvailableGoals().forEach(goal -> { if (goal.isRunning()) goal.stop(); });
+        targetSelector.getAvailableGoals().forEach(goal -> { if (goal.isRunning()) goal.stop(); });
+    }
 
     private static void academy$maintainForcedTarget(Mob mob) {
         var target = MentalControlRuntime.getForcedTarget(mob);

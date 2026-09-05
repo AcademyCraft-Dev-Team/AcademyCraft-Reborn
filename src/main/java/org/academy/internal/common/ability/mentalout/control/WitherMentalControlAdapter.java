@@ -44,7 +44,7 @@ public final class WitherMentalControlAdapter implements MentalControlAdapter {
             throw new IllegalArgumentException("Wither adapter requires a Wither subject");
         }
         return switch (directive) {
-            case ControlDirective.TakeoverAi ignored -> ControlBinding.noop();
+            case ControlDirective.TakeoverAi takeover -> StandardMobControlBindings.create(context, wither, takeover);
             case ControlDirective.ForceTarget forceTarget -> new ForceTargetBinding(wither, forceTarget.targetUuid());
             case ControlDirective.FreezeAi ignored -> new FreezeBinding(wither);
             case ControlDirective.ImpressionAlliance ignored -> new RelationBinding(wither);

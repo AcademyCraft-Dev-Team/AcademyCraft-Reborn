@@ -36,6 +36,11 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.MentaloutControlContext;
 import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
+import org.academy.internal.common.ability.mentalout.control.GroupControlRuntime;
+import org.academy.internal.common.ability.mentalout.control.WorkOrderData;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonObject;
+import com.mojang.serialization.JsonOps;
 import org.academy.internal.common.ability.mentalout.skills.MentaloutTargeting;
 import org.academy.internal.common.ability.mentalout.skills.lv1.TargetMisidentification;
 import org.academy.internal.common.ability.mentalout.skills.lv2.MentalStupor;
@@ -198,6 +203,33 @@ public final class WideAreaInterference extends Skill {
             )) return;
             var controller = listener.getPlayer();
             if (!available(controller)) return;
+            if (packet.action == Action.QUERY_WORK) {
+                var payload = new JsonObject();
+                var states = new JsonObject();
+                for (var entry : WorkOrderData.get(controller.level().getServer()).entries().stream()
+                        .sorted(Comparator.comparingInt(entry -> packet.targets.indexOf(UUID.fromString(entry.subject())))).toList()) {
+                    if (!entry.controller().equals(controller.getUUID().toString())
+                            || !packet.targets.contains(UUID.fromString(entry.subject()))) continue;
+                    states.addProperty(entry.subject(), GroupControlRuntime.workStatus(entry));
+                    if (!payload.has("settings")) {
+                        payload.add("settings", WorkSettings.CODEC.encodeStart(JsonOps.INSTANCE, entry.settings()).getOrThrow());
+                        payload.add("first", BlockPos.CODEC.encodeStart(JsonOps.INSTANCE, entry.minimum()).getOrThrow());
+                        payload.add("last", BlockPos.CODEC.encodeStart(JsonOps.INSTANCE, entry.maximum()).getOrThrow());
+                    }
+                }
+                payload.add("states", states);
+                feedback(controller, FeedbackCode.WORK_STATUS, 0, 0, 0, payload.toString());
+                return;
+            }
+            if (packet.action == Action.PAUSE_WORK || packet.action == Action.RESUME_WORK
+                    || packet.action == Action.CANCEL_WORK) {
+                var ids = Set.copyOf(packet.targets);
+                if (packet.action == Action.CANCEL_WORK) GroupControlRuntime.cancelWork(
+                        controller.level().getServer(), controller.getUUID(), ids);
+                else GroupControlRuntime.setWorkPaused(controller.level().getServer(), controller.getUUID(), ids,
+                        packet.action == Action.PAUSE_WORK);
+                return;
+            }
             var roster = MentaloutControlContext.subjects(controller);
             var requested = new LinkedHashSet<>(packet.targets);
             var subjects = roster.stream()
@@ -211,8 +243,12 @@ public final class WideAreaInterference extends Skill {
             var subjectIds = subjects.stream().map(LivingEntity::getUUID)
                     .collect(java.util.stream.Collectors.toUnmodifiableSet());
             var source = Skills.WIDE_AREA_INTERFERENCE.get().getKey();
-            GroupControlApi.cancelSubjects(controller.getUUID(), source, subjectIds);
-            cancelPositioning(controller.getUUID(), subjectIds);
+            // Work replacement is validated completely before cancelling the previous order.
+            if (packet.action != Action.WORK) {
+                GroupControlRuntime.cancelWork(controller.level().getServer(), controller.getUUID(), subjectIds);
+                GroupControlApi.cancelSubjects(controller.getUUID(), source, subjectIds);
+                cancelPositioning(controller.getUUID(), subjectIds);
+            }
 
             if (packet.action == Action.RELEASE) {
                 var released = MentalControlRosterApi.release(controller, subjectIds);
@@ -299,15 +335,35 @@ public final class WideAreaInterference extends Skill {
             final GroupControlCommand command;
             try {
                 command = switch (packet.action) {
+                    case WORK -> new GroupControlCommand.Work(new BlockWorkRegion(
+                            controller.level().dimension().identifier(), packet.first, packet.second), packet.workSettings());
                     case GATHER -> new GroupControlCommand.GatherResources(new BlockWorkRegion(
                             controller.level().dimension().identifier(), packet.first, packet.second));
                     case FARM -> new GroupControlCommand.Farm(new BlockWorkRegion(
                             controller.level().dimension().identifier(), packet.first, packet.second));
                     default -> throw new IllegalArgumentException("Action has no group command");
                 };
-            } catch (IllegalArgumentException exception) {
+            } catch (RuntimeException exception) {
                 feedback(controller, FeedbackCode.INVALID_REGION, 0, 0, 0);
                 return;
+            }
+            if (command instanceof GroupControlCommand.Work work) {
+                if (work.settings().input().filter(pos -> outOfRange(controller, pos)).isPresent()
+                        || work.settings().output().filter(pos -> outOfRange(controller, pos)).isPresent()
+                        || work.region().minimum().getY() < controller.level().getMinY()
+                        || work.region().maximum().getY() >= controller.level().getMaxY()
+                        || !controller.level().getWorldBorder().isWithinBounds(work.region().minimum())
+                        || !controller.level().getWorldBorder().isWithinBounds(work.region().maximum())) {
+                    feedback(controller, FeedbackCode.INVALID_REGION, 0, 0, 0);
+                    return;
+                }
+                subjects = subjects.stream().filter(subject -> !(subject instanceof net.minecraft.world.entity.player.Player)
+                        && MentalControlApi.supports(subject, ControlCapability.AI_CONTROL)
+                        && MentalControlApi.supports(subject, ControlCapability.PATH_CONTROL)).toList();
+                if (subjects.isEmpty()) { feedback(controller, FeedbackCode.NO_TARGETS, 0, 0, 0); return; }
+                var workers = subjects.stream().map(LivingEntity::getUUID).collect(java.util.stream.Collectors.toSet());
+                GroupControlRuntime.cancelWork(controller.level().getServer(), controller.getUUID(), workers);
+                cancelPositioning(controller.getUUID(), workers);
             }
             GroupControlObserver observer = event -> {
                 if (event.status() == GroupControlTaskEvent.Status.COMPLETED) {
@@ -321,7 +377,7 @@ public final class WideAreaInterference extends Skill {
                     source,
                     subjects,
                     command,
-                    packet.action == Action.FARM ? FARMING_PRIORITY : CONTROL_PRIORITY,
+                    packet.action == Action.FARM || packet.action == Action.WORK ? FARMING_PRIORITY : CONTROL_PRIORITY,
                     observer
             ));
             if (result.applied() > 0) Skills.WIDE_AREA_INTERFERENCE.get().reportTrigger(controller);
@@ -395,6 +451,10 @@ public final class WideAreaInterference extends Skill {
 
         @SubscribePacket
         public static void feedback(FeedbackPacket packet) {
+            if (packet.code == FeedbackCode.WORK_STATUS) {
+                org.academy.internal.client.ability.mentalout.WorkOrderClientState.accept(packet.detail);
+                return;
+            }
             var player = net.minecraft.client.Minecraft.getInstance().player;
             if (player == null) return;
             var message = switch (packet.code) {
@@ -416,7 +476,12 @@ public final class WideAreaInterference extends Skill {
         IMPRESSION,
         GATHER,
         FARM,
-        RELEASE
+        RELEASE,
+        WORK,
+        PAUSE_WORK,
+        RESUME_WORK,
+        CANCEL_WORK,
+        QUERY_WORK
     }
 
     public enum FeedbackCode {
@@ -429,7 +494,8 @@ public final class WideAreaInterference extends Skill {
         INSUFFICIENT_CP("message.academy.mentalout.insufficient_cp"),
         TARGET_CLEARED("message.academy.mentalout.target_misidentification.cleared"),
         TASK_COMPLETED("message.academy.wide_area_interference.task_completed"),
-        TASK_PATH_FAILED("message.academy.wide_area_interference.task_path_failed");
+        TASK_PATH_FAILED("message.academy.wide_area_interference.task_path_failed"),
+        WORK_STATUS("message.academy.wide_area_interference.work_status");
 
         private final String translationKey;
 
@@ -514,6 +580,7 @@ public final class WideAreaInterference extends Skill {
                         buf.writeLong(packet.entityTarget.getMostSignificantBits());
                         buf.writeLong(packet.entityTarget.getLeastSignificantBits());
                     }
+                    ByteBufCodecs.STRING_UTF8.encode(buf, packet.workData);
                 },
                 buf -> new CommandPacket(
                         buf.readLong(),
@@ -521,7 +588,8 @@ public final class WideAreaInterference extends Skill {
                         decodeTargets(buf),
                         BlockPos.STREAM_CODEC.decode(buf),
                         BlockPos.STREAM_CODEC.decode(buf),
-                        buf.readBoolean() ? new UUID(buf.readLong(), buf.readLong()) : null
+                        buf.readBoolean() ? new UUID(buf.readLong(), buf.readLong()) : null,
+                        ByteBufCodecs.STRING_UTF8.decode(buf)
                 )
         );
         private final long sequence;
@@ -530,6 +598,12 @@ public final class WideAreaInterference extends Skill {
         private final BlockPos first;
         private final BlockPos second;
         private final UUID entityTarget;
+        private final String workData;
+
+        public WorkSettings workSettings() {
+            if (workData.length() > 8192) throw new IllegalArgumentException("Work configuration too large");
+            return WorkSettings.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(workData)).getOrThrow();
+        }
 
         public CommandPacket(
                 long sequence,
@@ -539,6 +613,13 @@ public final class WideAreaInterference extends Skill {
                 BlockPos second,
                 UUID entityTarget
         ) {
+            this(sequence, action, targets, first, second, entityTarget, "");
+        }
+
+        public CommandPacket(long sequence, Action action, List<UUID> targets, BlockPos first,
+                             BlockPos second, UUID entityTarget, String workData) {
+            this.workData = workData == null ? "" : workData;
+            if (this.workData.length() > 8192) throw new IllegalArgumentException("Work configuration too large");
             this.sequence = sequence;
             this.action = Objects.requireNonNull(action, "action");
             this.targets = targets.stream().distinct().limit(MAX_TARGETS).toList();
@@ -582,7 +663,7 @@ public final class WideAreaInterference extends Skill {
             this.applied = Math.max(0, applied);
             this.skipped = Math.max(0, skipped);
             this.failed = Math.max(0, failed);
-            this.detail = detail == null ? "" : detail.substring(0, Math.min(96, detail.length()));
+            this.detail = detail == null ? "" : detail.substring(0, Math.min(16384, detail.length()));
         }
 
         @Override
