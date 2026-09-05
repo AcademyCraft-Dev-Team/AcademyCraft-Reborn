@@ -37,4 +37,27 @@ class PlayerAttributeRuntimeTest {
         assertEquals(0.0f, PlayerAttributeRuntime.healthAfterMaxHealthChange(0.0f, 30.0f));
         assertEquals(10.0f, PlayerAttributeRuntime.healthAfterMaxHealthChange(15.0f, 10.0f));
     }
+    @Test
+    void allResistanceLevelsPreserveAuthoritativeClientHealthIncludingDeath() {
+        for (var resistance : new double[]{0.0, 2.0, 6.0, 8.0}) {
+            for (var requested : new float[]{18.0f, 3.0f, 0.0f}) {
+                assertEquals(requested, PlayerAttributeRuntime.healthAfterResistanceWrite(
+                        true, 20.0f, requested, resistance, 0.10));
+                assertEquals(requested, PlayerAttributeRuntime.healthAfterResistanceWrite(
+                        true, 20.0f, requested, resistance, 0.08));
+            }
+        }
+    }
+
+    @Test
+    void serverResistanceStillReducesDamageWithoutPreventingOverkillDeath() {
+        assertEquals(12.0f, PlayerAttributeRuntime.healthAfterResistanceWrite(
+                false, 20.0f, 10.0f, 2.0, 0.10), 0.0001f);
+        assertEquals(11.6f, PlayerAttributeRuntime.healthAfterResistanceWrite(
+                false, 20.0f, 10.0f, 2.0, 0.08), 0.0001f);
+        assertEquals(-28.0f, PlayerAttributeRuntime.healthAfterResistanceWrite(
+                false, 20.0f, -100.0f, 6.0, 0.10), 0.0001f);
+        assertEquals(20.0f, PlayerAttributeRuntime.healthAfterResistanceWrite(
+                false, 5.0f, 20.0f, 8.0, 0.10));
+    }
 }

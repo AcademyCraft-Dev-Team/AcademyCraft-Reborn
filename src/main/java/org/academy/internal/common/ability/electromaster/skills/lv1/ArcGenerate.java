@@ -37,7 +37,7 @@ import org.academy.internal.common.ability.accelerator.reflection.LinearAttackEx
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackPayload;
 import org.academy.internal.common.ability.accelerator.reflection.LinearReflectionResolver;
 import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
-import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
+import org.academy.internal.common.ability.electromaster.ElectromasterArcActions;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcTargeting;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.PvpSetting;
@@ -325,12 +325,8 @@ public final class ArcGenerate extends Skill {
             var factors = new float[]{0.5f, 0.3f};
             for (var index = 0; index < Math.min(2, candidates.size()); index++) {
                 var target = candidates.get(index);
-                target.hurtServer(level, source, damage * factors[index]);
-                ElectromasterArcEffects.spawnChainArc(
-                        level,
-                        origin.getBoundingBox().getCenter(),
-                        target.getBoundingBox().getCenter()
-                );
+                if (!ElectromasterArcActions.strikeChain(
+                        level, player, source, origin, target, damage * factors[index])) break;
                 origin = target;
             }
         }

@@ -197,15 +197,21 @@ public final class PlayerAttributeRuntime {
      */
     public static float modifyHealthWrite(Player player, float requestedHealth) {
         if (RESISTANCE_BYPASS_DEPTH.get() > 0 || !Float.isFinite(requestedHealth)) return requestedHealth;
-        var current = player.getHealth();
-        if (!(requestedHealth < current)) return requestedHealth;
-
         var source = DAMAGE_CONTEXT.get().peek();
         var reductionPerPoint = source != null && DamageTypes.usesResistanceBackdoor(source)
                 ? 0.08
                 : 0.10;
-        var reducedLoss = reduceDamage(player, current - requestedHealth, reductionPerPoint);
-        return current - reducedLoss;
+        return healthAfterResistanceWrite(player.level().isClientSide(), player.getHealth(),
+                requestedHealth, trueResistance(player), reductionPerPoint);
+    }
+
+    static float healthAfterResistanceWrite(boolean clientSide, float current, float requested,
+                                            double resistance, double reductionPerPoint) {
+        // Health packets are authoritative, including zero on death. Applying resistance again
+        // on the client leaves a dead server player displaying positive health.
+        if (clientSide || !Float.isFinite(requested) || !(requested < current)) return requested;
+        var multiplier = Math.max(0.0, 1.0 - Math.clamp(resistance, 0.0, 8.0) * reductionPerPoint);
+        return current - (float) ((current - requested) * multiplier);
     }
 
     public static void pushDamageContext(DamageSource source) {
