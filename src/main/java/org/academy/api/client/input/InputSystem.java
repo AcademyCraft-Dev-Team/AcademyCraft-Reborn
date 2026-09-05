@@ -58,6 +58,16 @@ public final class InputSystem {
         bindingRevision++;
     }
 
+    public static void addConfiguredKeyBinding(
+            String keyName,
+            KeyCombination defaultCombo,
+            Consumer<BindingContext> handler
+    ) {
+        var cfg = config();
+        addKeyBinding(keyName, cfg.getKeyBinding(keyName, defaultCombo), handler);
+        setKeyBindingEnabled(keyName, cfg.isKeyBindingEnabled(keyName));
+    }
+
     /**
      * Registers one logical press-and-hold action. The configured row uses one physical gesture;
      * press starts it and release stops it. Once started, its STOP callback is never gated by a

@@ -1,14 +1,19 @@
 package org.academy.internal.common.world.item;
 
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.academy.api.common.ability.DevelopmentSource;
 import org.academy.api.common.energy.AcademyEnergyItem;
+import org.academy.internal.common.world.entity.misaka.InteractionGate;
+import org.academy.internal.common.world.entity.misaka.MisakaSisterEntity;
+import org.academy.internal.server.misaka.MisakaPanelSupport;
 import org.academy.internal.common.world.level.block.AbilityDeveloperBlock;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
 
@@ -24,6 +29,32 @@ public final class AbilityControlTabletItem extends Item implements AcademyEnerg
         if (player instanceof ServerPlayer serverPlayer) {
             AbilityDeveloperBlock.openScreen(serverPlayer, DevelopmentSource.tablet(hand));
         }
+        return InteractionResult.SUCCESS;
+    }
+
+    @Override
+    public InteractionResult interactLivingEntity(
+            ItemStack stack,
+            Player player,
+            LivingEntity target,
+            InteractionHand hand
+    ) {
+        if (player.level().isClientSide()) {
+            return InteractionResult.SUCCESS;
+        }
+        if (!(player instanceof ServerPlayer serverPlayer) || !(target instanceof MisakaSisterEntity sister)) {
+            return InteractionResult.PASS;
+        }
+        var record = sister.rosterRecord().orElse(null);
+        if (record == null) {
+            return InteractionResult.PASS;
+        }
+        String name = serverPlayer.getGameProfile().name();
+        if (!InteractionGate.allow(record, name, InteractionGate.Intent.PANEL)) {
+            return InteractionResult.FAIL;
+        }
+        InteractionGate.touchBenevolent(record, name, ((ServerLevel) serverPlayer.level()).getServer());
+        MisakaPanelSupport.sendPanel(serverPlayer, sister);
         return InteractionResult.SUCCESS;
     }
 

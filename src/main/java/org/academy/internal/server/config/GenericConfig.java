@@ -16,6 +16,9 @@ public class GenericConfig {
     @SerializedName("stringListMap")
     public final Map<String, List<String>> stringListMap = new HashMap<>();
 
+    @SerializedName("misakaCpPerMsk")
+    public float misakaCpPerMsk = 1.0f;
+
     public static final class Action implements TypeHandler<GenericConfig> {
         public static final TypeHandler<GenericConfig> INSTANCE = new Action();
 

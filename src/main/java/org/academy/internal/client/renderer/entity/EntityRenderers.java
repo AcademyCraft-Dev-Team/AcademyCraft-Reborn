@@ -40,5 +40,6 @@ public final class EntityRenderers {
         event.registerEntityRenderer(EntityTypes.DARKMATTER_SPEAR_PROJECTILE.get(),
                 context -> new ThrownItemRenderer<>(context, 1.25f, true));
         event.registerEntityRenderer(EntityTypes.DARKMATTER_BEETLE.get(), DarkmatterBeetleRenderer::new);
+        event.registerEntityRenderer(EntityTypes.MISAKA_SISTER.get(), MisakaSisterRenderer::new);
     }
 }

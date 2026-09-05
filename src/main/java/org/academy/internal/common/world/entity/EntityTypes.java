@@ -5,6 +5,7 @@ import net.minecraft.world.entity.MobCategory;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
+import org.academy.internal.common.world.entity.misaka.MisakaSisterEntity;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 import org.academy.internal.common.world.entity.projectile.PaperAirplane;
 import org.academy.internal.common.world.entity.projectile.MagneticHook;
@@ -111,6 +112,10 @@ public class EntityTypes {
             ENTITY_TYPES.registerEntityType(
                     "cleaning_robot", CleaningRobot::new, MobCategory.MISC
             );
+    public static final DeferredHolder<EntityType<?>, EntityType<MisakaSisterEntity>> MISAKA_SISTER =
+            ENTITY_TYPES.registerEntityType(
+                    "misaka_sister", MisakaSisterEntity::new, MobCategory.CREATURE,
+                    builder -> builder.sized(0.6f, 1.8f).clientTrackingRange(10).updateInterval(3));
 
     private EntityTypes() {
     }

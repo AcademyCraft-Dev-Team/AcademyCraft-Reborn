@@ -40,6 +40,7 @@ import org.academy.internal.common.sync.SyncKeys;
 import org.academy.internal.common.world.effect.StatusEffects;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
+import org.academy.internal.common.world.entity.misaka.MisakaSisterEntity;
 import org.academy.internal.common.world.inventory.MenuTypes;
 import org.academy.internal.common.world.item.AbilityControlTabletItem;
 import org.academy.internal.common.world.item.ItemDataComponents;
@@ -79,10 +80,11 @@ public final class AcademyCraftRegister {
         Blocks.BLOCKS.register(modEventBus);
         Features.FEATURES.register(modEventBus);
         ItemDataComponents.DATA_COMPONENTS.register(modEventBus);
+        // Entity types before items so spawn eggs can resolve EntityType holders at item construction.
+        EntityTypes.ENTITY_TYPES.register(modEventBus);
         Items.ITEMS.register(modEventBus);
         RecipeSerializers.RECIPE_SERIALIZERS.register(modEventBus);
         BlockEntityTypes.BLOCK_ENTITY_TYPES.register(modEventBus);
-        EntityTypes.ENTITY_TYPES.register(modEventBus);
         EntityDataSerializers.ENTITY_DATA_SERIALIZERS.register(modEventBus);
         SoundEvents.SOUND_EVENTS.register(modEventBus);
         MenuTypes.MENU_TYPES.register(modEventBus);
@@ -164,6 +166,7 @@ public final class AcademyCraftRegister {
 
     private static void onEntityAttributes(EntityAttributeCreationEvent event) {
         event.put(EntityTypes.DARKMATTER_BEETLE.get(), DarkmatterBeetle.createAttributes().build());
+        event.put(EntityTypes.MISAKA_SISTER.get(), MisakaSisterEntity.createAttributes().build());
     }
 
     private static void onEntityAttributeModification(EntityAttributeModificationEvent event) {

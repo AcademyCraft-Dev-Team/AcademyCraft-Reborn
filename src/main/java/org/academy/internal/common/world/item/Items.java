@@ -5,6 +5,7 @@ import net.minecraft.world.item.*;
 import net.minecraft.world.item.equipment.ArmorType;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.level.block.Blocks;
 
 import static org.academy.AcademyCraft.MODID;
@@ -139,6 +140,13 @@ public final class Items {
             ITEMS.registerItem("empty_unit", EmptyUnitItem::new);
     public static final DeferredHolder<Item, ImagPhaseUnitItem> IMAG_PHASE_UNIT =
             ITEMS.registerItem("imag_phase_unit", ImagPhaseUnitItem::new);
+    public static final DeferredHolder<Item, MisakaTowerItem> MISAKA_TOWER =
+            ITEMS.registerItem("misaka_tower", MisakaTowerItem::new);
+    public static final DeferredHolder<Item, MisakaTowerPromaxItem> MISAKA_TOWER_PROMAX =
+            ITEMS.registerItem("misaka_tower_promax", MisakaTowerPromaxItem::new);
+    public static final DeferredHolder<Item, SpawnEggItem> MISAKA_SISTER_SPAWN_EGG =
+            ITEMS.registerItem("misaka_sister_spawn_egg", properties -> new SpawnEggItem(
+                    properties.spawnEgg(EntityTypes.MISAKA_SISTER.get())));
 
     private Items() {
     }

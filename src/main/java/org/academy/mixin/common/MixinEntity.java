@@ -5,8 +5,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
+import org.academy.internal.common.world.entity.misaka.MisakaSisterEntity;
 import org.academy.api.common.entitycontrol.AttackDecision;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
@@ -277,6 +279,14 @@ public abstract class MixinEntity {
             VectorReflection.Server.maintainProtection(player);
             ci.cancel();
         }
+    }
+
+    @Inject(method = "canAddPassenger", at = @At("HEAD"), cancellable = true)
+    private void academy$allowMisakaSisterPassenger(Entity passenger, CallbackInfoReturnable<Boolean> cir) {
+        if (!(passenger instanceof MisakaSisterEntity) || !((Object) this instanceof Player)) {
+            return;
+        }
+        cir.setReturnValue(((Entity) (Object) this).getPassengers().isEmpty());
     }
 
     @Inject(method = "markHurt", at = @At("HEAD"), cancellable = true)

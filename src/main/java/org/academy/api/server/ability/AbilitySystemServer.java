@@ -1263,6 +1263,10 @@ public final class AbilitySystemServer {
         return playerCPManager.getMaxCP(uuid);
     }
 
+    public void refreshPlayerCommonSkillBonuses(UUID uuid) {
+        playerCPManager.refreshCommonSkillBonuses(uuid);
+    }
+
     public void setPlayerMaxCP(UUID uuid, float maxCP) {
         playerCPManager.setMaxCP(uuid, maxCP);
     }

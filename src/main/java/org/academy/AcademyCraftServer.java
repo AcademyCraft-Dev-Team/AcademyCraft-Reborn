@@ -18,6 +18,7 @@ import org.academy.internal.common.ability.program.AbilityProgramManager;
 import org.academy.internal.common.ability.program.ServerProgramScheduler;
 import org.academy.internal.common.network.MusicSyncPackets;
 import org.academy.internal.common.network.MagneticHookActionPacket;
+import org.academy.internal.common.network.misaka.*;
 import org.academy.internal.common.network.PlayerLeftClickSwingPacket;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
@@ -84,6 +85,7 @@ public final class AcademyCraftServer {
         MusicSyncPackets.initServer();
         PlayerLeftClickSwingPacket.initServer();
         MagneticHookActionPacket.initServer();
+        MisakaPackets.initServer();
         AbilityProgramManager.initServer();
     }
 

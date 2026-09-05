@@ -1,0 +1,27 @@
+{
+  "values": [
+    "minecraft:copper_chest",
+    "minecraft:exposed_copper_chest",
+    "minecraft:weathered_copper_chest",
+    "minecraft:oxidized_copper_chest",
+    "minecraft:waxed_copper_chest",
+    "minecraft:waxed_exposed_copper_chest",
+    "minecraft:waxed_weathered_copper_chest",
+    "minecraft:waxed_oxidized_copper_chest",
+    "minecraft:furnace",
+    "minecraft:blast_furnace",
+    "minecraft:smoker",
+    "minecraft:oak_shelf",
+    "minecraft:spruce_shelf",
+    "minecraft:birch_shelf",
+    "minecraft:jungle_shelf",
+    "minecraft:acacia_shelf",
+    "minecraft:dark_oak_shelf",
+    "minecraft:mangrove_shelf",
+    "minecraft:cherry_shelf",
+    "minecraft:bamboo_shelf",
+    "minecraft:crimson_shelf",
+    "minecraft:warped_shelf",
+    "minecraft:pale_oak_shelf"
+  ]
+}
