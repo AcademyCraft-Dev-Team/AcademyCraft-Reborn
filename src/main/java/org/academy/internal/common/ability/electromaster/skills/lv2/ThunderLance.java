@@ -30,6 +30,7 @@ import org.academy.internal.common.ability.accelerator.reflection.LinearAttackPa
 import org.academy.internal.common.ability.accelerator.reflection.LinearReflectionResolver;
 import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
+import org.academy.internal.common.ability.electromaster.ElectromasterArcActions;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcTargeting;
 import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
 import org.academy.internal.common.network.PacketTypes;
@@ -217,12 +218,7 @@ public class ThunderLance extends Skill {
                                     && !PvpSetting.shouldPrevent(player, candidate))
                     .stream().min(Comparator.comparingDouble(origin::distanceToSqr)).orElse(null);
             if (target != null) {
-                target.hurtServer(level, source, damage * 0.4f);
-                ElectromasterArcEffects.spawnChainArc(
-                        level,
-                        origin.getBoundingBox().getCenter(),
-                        target.getBoundingBox().getCenter()
-                );
+                ElectromasterArcActions.strikeChain(level, player, source, origin, target, damage * 0.4f);
             }
         }
     }

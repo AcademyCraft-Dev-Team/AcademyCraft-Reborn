@@ -54,8 +54,7 @@ public final class LinearReflectionResolver {
                     && ElectromagneticShield.Server.isActive(player)) {
                 return LinearReflectionCandidate.Mode.ELECTROMAGNETIC_SHIELD_REFRACTION;
             }
-            if (payload.skill().getCategory() == AbilityCategories.ELECTROMASTER.get()
-                    && player.getData(AttachmentTypes.LIGHT_SHIELD_ACTIVE.get())) {
+            if (player.getData(AttachmentTypes.LIGHT_SHIELD_ACTIVE.get())) {
                 return LinearReflectionCandidate.Mode.LIGHT_SHIELD_REFRACTION;
             }
             return null;

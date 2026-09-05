@@ -336,7 +336,8 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
                         && MeltdownerTargeting.canAffectNegatively(owner, target))
                 .damage(target -> {
                     var living = target instanceof LivingEntity entity ? entity : null;
-                    var index = hitIndex.getAndIncrement();
+                    // Candidate probes must not consume the first hit before execution.
+                    var index = hitIndex.get();
                     if (index > (proficiencyMilestone >= 3 ? 1 : 0)) return 0.0f;
                     var marked = radiationEnabled && living != null
                             && RadiationIntensify
@@ -355,6 +356,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
                             playerDamageMultiplier, marked, markMultiplier);
                 })
                 .onHit((target, _, hurt) -> {
+                    hitIndex.incrementAndGet();
                     if (hurt && radiationEnabled && target instanceof LivingEntity living) {
                         RadiationIntensify
                                 .mark(owner, living, level.getGameTime());
