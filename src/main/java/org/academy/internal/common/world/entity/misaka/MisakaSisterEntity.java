@@ -152,7 +152,8 @@ public class MisakaSisterEntity extends PathfinderMob {
     @Override
     public Vec3 getVehicleAttachmentPoint(Entity vehicle) {
         if (vehicle instanceof Player) {
-            return new Vec3(0.0, vehicle.getBbHeight() * 0.5, 0.0);
+            // Front of chest in vehicle local space: up + slightly forward of the torso center.
+            return new Vec3(0.0, vehicle.getBbHeight() * 0.38, 0.32);
         }
         return super.getVehicleAttachmentPoint(vehicle);
     }

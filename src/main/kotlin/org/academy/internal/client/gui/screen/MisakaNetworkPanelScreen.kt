@@ -45,10 +45,12 @@ class MisakaNetworkPanelScreen(
     private lateinit var sistersTabButton: ButtonWidget
     private lateinit var allocTabButton: ButtonWidget
     private lateinit var emptySistersLabel: LabelWidget
+    private lateinit var networkTotalMskLabel: LabelWidget
 
     private var manageTab = ManageTab.SISTERS
     private var managePageIndex = 0
     private var manageTotalCount = 0
+    private var manageTotalMsk = 0f
     private var localPercents = IntArray(MisakaComputeSink.COUNT)
     private val allocSeekBars = arrayOfNulls<SeekBarWidget>(MisakaComputeSink.COUNT)
     private val allocInputs = arrayOfNulls<TextBoxWidget>(MisakaComputeSink.COUNT)
@@ -103,9 +105,16 @@ class MisakaNetworkPanelScreen(
         }
         managePageIndex = packet.pageIndex()
         manageTotalCount = packet.totalCount()
+        manageTotalMsk = packet.totalMskPerSecond()
         localPercents = packet.percents()
         if (::sistersList.isInitialized) {
             sistersList.items = packet.sisters()
+        }
+        if (::networkTotalMskLabel.isInitialized) {
+            networkTotalMskLabel.text = Component.translatable(
+                "screen.academy.misaka_net_total_msk",
+                String.format(Locale.ROOT, "%.1f", manageTotalMsk)
+            ).string
         }
         if (::emptySistersLabel.isInitialized) {
             val empty = manageTotalCount <= 0
@@ -257,7 +266,7 @@ class MisakaNetworkPanelScreen(
     private fun buildBindPage(): LinearLayoutWidget {
         val page = LinearLayoutWidget().apply {
             orientation = Orientation.VERTICAL
-            spacing = SPACING_MINOR
+            spacing = BIND_SPACING_MINOR
             layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
             visibility = Widget.Visibility.GONE
             isEnabled = false
@@ -273,7 +282,90 @@ class MisakaNetworkPanelScreen(
                 .height(1f)
                 .marginBottom(1f)
         })
-        page.addChild("nodes", createNodeList())
+
+        page.addChild("icon", ImageWidget(R.textures.gui.icon.icon_tonode).apply {
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .size(16f, 16f)
+        })
+        page.addChild(
+            "connected_label",
+            LabelWidget(Component.translatable("screen.academy.misaka_bind_connected").string)
+        )
+
+        val connectedNode = data.currentNodeName()
+        val connectedIsNone = connectedNode.isEmpty()
+        val connectedContainer = FrameLayoutWidget().apply {
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(LIST_ITEM_HEIGHT)
+                .marginTop(BIND_SPACING_MINOR - BIND_SPACING_MAJOR)
+                .marginRight(SCROLLBAR_WIDTH + BIND_SPACING_MINOR)
+        }
+        page.addChild("connected_node_container", connectedContainer)
+        connectedContainer.addChild(
+            "connected_node",
+            wirelessStyleNodeRow(
+                if (connectedIsNone) {
+                    Component.translatable("screen.academy.misaka_bind_none").string
+                } else {
+                    connectedNode
+                },
+                isConnected = true,
+                isNone = connectedIsNone
+            ).apply {
+                layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+            }
+        )
+
+        page.addChild(
+            "available_label",
+            LabelWidget(Component.translatable("screen.academy.misaka_bind_available").string)
+        )
+
+        val listContainer = LinearLayoutWidget().apply {
+            orientation = Orientation.HORIZONTAL
+            spacing = BIND_SPACING_MINOR
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .weight(1f)
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(0f)
+                .marginTop(BIND_SPACING_MINOR - BIND_SPACING_MAJOR)
+        }
+        page.addChild("list_container", listContainer)
+
+        val scrollPanel = ScrollPanelWidget().apply {
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .weight(1f)
+                .width(0f)
+                .heightMode(SizeMode.MATCH_PARENT)
+        }
+        listContainer.addChild("scroll_panel", scrollPanel)
+        listContainer.addChild("scroll_bar", ScrollBarWidget(scrollPanel, Orientation.VERTICAL).apply {
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .width(SCROLLBAR_WIDTH)
+                .heightMode(SizeMode.MATCH_PARENT)
+        })
+
+        val nodeList = LinearLayoutWidget().apply {
+            orientation = Orientation.VERTICAL
+            layoutParams = FrameLayoutWidget.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+        }
+        scrollPanel.setContent(nodeList)
+
+        for (nodeName in data.availableNodes()) {
+            if (nodeName == connectedNode) {
+                continue
+            }
+            nodeList.addChild(
+                "node_$nodeName",
+                wirelessStyleNodeRow(nodeName, isConnected = false, isNone = false).apply {
+                    layoutParams = LinearLayoutWidget.LayoutParams()
+                        .widthMode(SizeMode.MATCH_PARENT)
+                        .height(LIST_ITEM_HEIGHT)
+                }
+            )
+        }
         return page
     }
 
@@ -343,10 +435,19 @@ class MisakaNetworkPanelScreen(
         }
         root.addChild("column", column)
 
-        column.addChild(
-            "title",
-            sectionLabel(Component.translatable("screen.academy.misaka_net_sisters_title").string)
-        )
+        networkTotalMskLabel = LabelWidget(
+            Component.translatable(
+                "screen.academy.misaka_net_total_msk",
+                String.format(Locale.ROOT, "%.1f", manageTotalMsk)
+            ).string
+        ).apply {
+            scale = 0.75f
+            alpha = 0.82f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(10f)
+        }
+        column.addChild("total_msk", networkTotalMskLabel)
         column.addChild("header", sisterColumnsRow(
             Component.translatable("screen.academy.misaka_net_col_serial").string,
             Component.translatable("screen.academy.misaka_net_col_perception").string,
@@ -911,40 +1012,92 @@ class MisakaNetworkPanelScreen(
         }
     }
 
-    private fun createNodeList(): FrameLayoutWidget {
-        val container = FrameLayoutWidget().apply {
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .weight(1f)
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(0f)
-        }
-        val scrollPanel = ScrollPanelWidget().apply {
+    private fun wirelessStyleNodeRow(
+        nodeName: String,
+        isConnected: Boolean,
+        isNone: Boolean
+    ): FrameLayoutWidget {
+        val nodeViewPanel = FrameLayoutWidget()
+        nodeViewPanel.addChild("back", FillWidget(LIST_ROW_FILL).apply {
+            alpha = 0.25f
             layoutParams = FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT)
-                .marginRight(SCROLLBAR_WIDTH + SPACING_MINOR)
-        }
-        container.addChild("scroll_panel", scrollPanel)
+                .padding(2f, 2f)
+        })
 
-        val scrollBar = ScrollBarWidget(scrollPanel, Orientation.VERTICAL).apply {
+        val itemContent = LinearLayoutWidget().apply {
+            orientation = Orientation.HORIZONTAL
+            spacing = 4f
             layoutParams = FrameLayoutWidget.LayoutParams()
-                .width(SCROLLBAR_WIDTH)
-                .heightMode(SizeMode.MATCH_PARENT)
-                .gravity(Gravity.CENTER_RIGHT)
+                .sizeMode(SizeMode.MATCH_PARENT)
+                .gravity(Gravity.CENTER_VERTICAL)
+                .paddingHorizontal(4f)
         }
-        container.addChild("scroll_bar", scrollBar)
+        nodeViewPanel.addChild("content", itemContent)
+        itemContent.addChild("icon", ImageWidget(R.textures.gui.icon.icon_node).apply {
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .gravity(Gravity.CENTER)
+                .size(14f, 14f)
+        })
+        itemContent.addChild("node_name", LabelWidget(nodeName).apply {
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .weight(1f)
+                .height(10f)
+                .gravity(Gravity.CENTER_VERTICAL)
+        })
 
-        val nodeList = LinearLayoutWidget().apply {
-            orientation = Orientation.VERTICAL
-            spacing = SPACING_MICRO
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+        if (!isConnected) {
+            val connectButton = ButtonWidget().apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .gravity(Gravity.CENTER)
+                    .size(14f, 14f)
+                onClickListener = {
+                    MisakaNetworkClient.send(
+                        SetMisakaNetworkNodePacket(data.entityUuid(), nodeName)
+                    )
+                }
+            }
+            itemContent.addChild("button", connectButton)
+            connectButton.addChild("content", ImageWidget().apply {
+                val defaultDrawable = TextureDrawable(R.textures.gui.icon.icon_unconnected).apply {
+                    tintColor = 0xFFE6E6E6.toInt()
+                }
+                val hoveredDrawable = TextureDrawable(R.textures.gui.icon.icon_unconnected).apply {
+                    tintColor = PRIMARY_FOREGROUND
+                }
+                background = StateListDrawable().apply {
+                    setDefault(defaultDrawable)
+                    addState(Widget.HOVERED, hoveredDrawable)
+                }
+                layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+            })
+        } else if (!isNone) {
+            val disconnectButton = ButtonWidget().apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .gravity(Gravity.CENTER)
+                    .size(14f, 14f)
+                onClickListener = {
+                    MisakaNetworkClient.send(
+                        SetMisakaNetworkNodePacket(data.entityUuid(), "")
+                    )
+                }
+            }
+            itemContent.addChild("button", disconnectButton)
+            disconnectButton.addChild("content", ImageWidget().apply {
+                val defaultDrawable = TextureDrawable(R.textures.gui.icon.icon_connected).apply {
+                    tintColor = 0xFFE6E6E6.toInt()
+                }
+                val hoveredDrawable = TextureDrawable(R.textures.gui.icon.icon_connected).apply {
+                    tintColor = PRIMARY_FOREGROUND
+                }
+                background = StateListDrawable().apply {
+                    setDefault(defaultDrawable)
+                    addState(Widget.HOVERED, hoveredDrawable)
+                }
+                layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+            })
         }
-        scrollPanel.setContent(nodeList)
-
-        for (nodeName in data.availableNodes()) {
-            nodeList.addChild("node_$nodeName", bindRow(nodeName))
-        }
-        return container
+        return nodeViewPanel
     }
 
     private fun infoRow(label: String, value: String): FrameLayoutWidget {
@@ -1050,68 +1203,6 @@ class MisakaNetworkPanelScreen(
         return button
     }
 
-    private fun bindRow(nodeName: String): FrameLayoutWidget {
-        val row = FrameLayoutWidget().apply {
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(LIST_ITEM_HEIGHT)
-        }
-        row.addChild("back", FillWidget(LIST_ROW_FILL).apply {
-            alpha = 0.25f
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-                .padding(2f, 2f)
-        })
-        val content = LinearLayoutWidget().apply {
-            orientation = Orientation.HORIZONTAL
-            spacing = SPACING_MINOR
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-                .gravity(Gravity.CENTER_VERTICAL)
-                .paddingHorizontal(4f)
-        }
-        row.addChild("content", content)
-        content.addChild("icon", ImageWidget(R.textures.gui.icon.icon_node).apply {
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .size(14f, 14f)
-                .gravity(Gravity.CENTER)
-        })
-        content.addChild("name", LabelWidget(nodeName).apply {
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .weight(1f)
-                .height(10f)
-                .gravity(Gravity.CENTER_VERTICAL)
-        })
-        val bind = ButtonWidget().apply {
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .size(14f, 14f)
-                .gravity(Gravity.CENTER)
-            onClickListener = {
-                MisakaNetworkClient.send(
-                    SetMisakaNetworkNodePacket(data.entityUuid(), nodeName)
-                )
-            }
-        }
-        content.addChild("bind", bind)
-        val iconContent = ImageWidget().apply {
-            val resting = TextureDrawable(R.textures.gui.icon.icon_unconnected).apply {
-                tintColor = 0xFFE6E6E6.toInt()
-            }
-            val active = TextureDrawable(R.textures.gui.icon.icon_unconnected).apply {
-                tintColor = PRIMARY_FOREGROUND
-            }
-            background = StateListDrawable().apply {
-                setDefault(resting)
-                addState(Widget.HOVERED, active)
-                addState(Widget.FOCUSED, active)
-                addState(Widget.PRESSED, active)
-            }
-            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-        }
-        bind.addChild("content", iconContent)
-        return row
-    }
-
     private fun textActionButton(text: String, onClick: () -> Unit): ButtonWidget {
         val button = ButtonWidget().apply {
             background = actionBackground(false)
@@ -1200,6 +1291,8 @@ class MisakaNetworkPanelScreen(
         private const val PANEL_INSET = 10f
         private const val SPACING_MICRO = 2f
         private const val SPACING_MINOR = 3f
+        private const val BIND_SPACING_MAJOR = 8f
+        private const val BIND_SPACING_MINOR = 4f
         private const val INFO_ROW_HEIGHT = 14f
         private const val LIST_ITEM_HEIGHT = 18f
         private const val ALLOC_ROW_HEIGHT = 34f

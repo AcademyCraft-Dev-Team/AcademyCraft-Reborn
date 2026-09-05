@@ -20,7 +20,7 @@ public final class MisakaPickupClient {
                 InputSystem.InputType.KEYBOARD,
                 InputConstants.KEY_B,
                 InputConstants.PRESS,
-                0
+                InputSystem.ANY_MODIFIER
         );
         InputSystem.addConfiguredKeyBinding(KEY_NAME_PICKUP, defaultCombo, context -> tryTogglePickup());
     }

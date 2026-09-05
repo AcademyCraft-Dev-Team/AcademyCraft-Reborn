@@ -1,6 +1,7 @@
 package org.academy.mixin.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -8,10 +9,12 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.PlayerModelPart;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.academy.internal.client.ability.mentalout.ControlledItemInHandRendererBridge;
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
+import org.academy.internal.client.misaka.MisakaCarryClient;
 import org.academy.internal.client.renderer.special.AbilityControlTabletSpecialRenderer;
 import org.academy.internal.client.renderer.special.ImagPhaseDowsingRodSpecialRenderer;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
@@ -94,5 +97,60 @@ public abstract class MixinItemInHandRenderer implements ControlledItemInHandRen
                 ? ItemDisplayContext.FIRST_PERSON_RIGHT_HAND
                 : ItemDisplayContext.FIRST_PERSON_LEFT_HAND;
         if (displayContext == mainHandContext) ci.cancel();
+    }
+
+    /**
+     * While carrying a sister with empty hands, draw both FP arms in a hug pose
+     * (vanilla only draws the main-hand arm when empty).
+     */
+    @Inject(method = "submitArmWithItem", at = @At("HEAD"), cancellable = true)
+    private void academy$submitCarryArms(
+            AbstractClientPlayer player,
+            float frameInterp,
+            float xRot,
+            InteractionHand hand,
+            float attack,
+            ItemStack itemStack,
+            float inverseArmHeight,
+            PoseStack poseStack,
+            SubmitNodeCollector collector,
+            int packedLight,
+            CallbackInfo ci
+    ) {
+        if (!MisakaCarryClient.shouldApplyCarryArmPose(player)) {
+            return;
+        }
+        if (!itemStack.isEmpty() || player.isInvisible() || player.isScoping() || attack > 0.0F) {
+            return;
+        }
+        var arm = hand == InteractionHand.MAIN_HAND
+                ? player.getMainArm()
+                : player.getMainArm().getOpposite();
+        poseStack.pushPose();
+        MisakaCarryClient.applyFirstPersonCarryArm(poseStack, arm, inverseArmHeight);
+        var isRight = arm != HumanoidArm.LEFT;
+        var skin = player.getSkin().body().texturePath();
+        var renderer = Minecraft.getInstance().getEntityRenderDispatcher().getPlayerRenderer(player);
+        if (isRight) {
+            renderer.renderRightHand(
+                    poseStack,
+                    collector,
+                    packedLight,
+                    skin,
+                    player.isModelPartShown(PlayerModelPart.RIGHT_SLEEVE),
+                    player
+            );
+        } else {
+            renderer.renderLeftHand(
+                    poseStack,
+                    collector,
+                    packedLight,
+                    skin,
+                    player.isModelPartShown(PlayerModelPart.LEFT_SLEEVE),
+                    player
+            );
+        }
+        poseStack.popPose();
+        ci.cancel();
     }
 }

@@ -2,6 +2,7 @@ package org.academy.internal.common.network.misaka;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.game.ClientboundSetPassengersPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -87,9 +88,30 @@ public final class TogglePickUpMisakaPacket
         private static void togglePickup(ServerPlayer player, MisakaSisterEntity sister) {
             if (sister.isPassenger() && sister.getVehicle() == player) {
                 sister.stopRiding();
+                syncPassengers(player);
                 return;
             }
-            sister.startRiding(player, true, true);
+            if (!sister.startRiding(player, true, true)) {
+                MisakaInteractionFeedback.pickupDenied(player);
+                return;
+            }
+            syncPassengers(player);
+        }
+
+        /**
+         * Vanilla only self-sends passenger packets when the player mounts something.
+         * When a mob mounts the player, tracking updates skip the ridden player, so clients never see the pickup.
+         */
+        private static void syncPassengers(ServerPlayer player) {
+            var packet = new ClientboundSetPassengersPacket(player);
+            // Vanilla never self-sends this when a mob mounts the player.
+            player.connection.send(packet);
+            var level = (ServerLevel) player.level();
+            for (ServerPlayer viewer : level.players()) {
+                if (viewer != player && viewer.distanceToSqr(player) <= 64.0 * 64.0) {
+                    viewer.connection.send(packet);
+                }
+            }
         }
     }
 }

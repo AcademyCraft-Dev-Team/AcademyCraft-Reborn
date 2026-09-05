@@ -10,6 +10,7 @@ import org.academy.internal.client.animation.GeckoPlayerModelAdapter;
 import org.academy.internal.client.animation.WingFlightAnimationClient;
 import org.academy.internal.client.animation.WingFlightAnimationTimeline;
 import org.academy.internal.client.definitions.WingFlightAnimations;
+import org.academy.internal.client.misaka.MisakaCarryClient;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -69,6 +70,24 @@ public abstract class MixinHumanoidModel {
                 model.getArm(mainArm.getOpposite()).loadPose(vanillaOffhandArmPose);
             }
         }
+    }
+
+    @Inject(
+            method = "setupAnim(Lnet/minecraft/client/renderer/entity/state/HumanoidRenderState;)V",
+            at = @At("RETURN"),
+            order = 2000
+    )
+    private void academy$applyMisakaCarryArmPose(HumanoidRenderState state, CallbackInfo ci) {
+        if (!(state instanceof AvatarRenderState avatarState)) {
+            return;
+        }
+        if (!MisakaCarryClient.shouldApplyCarryArmPose(avatarState.id)) {
+            return;
+        }
+        if (state.isUsingItem || state.attackTime > 0.0F) {
+            return;
+        }
+        MisakaCarryClient.applyCarryArmPose((HumanoidModel<?>) (Object) this);
     }
 
     @Unique

@@ -20,6 +20,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -287,6 +288,25 @@ public abstract class MixinEntity {
             return;
         }
         cir.setReturnValue(((Entity) (Object) this).getPassengers().isEmpty());
+    }
+
+    /**
+     * Players are {@code .noSave()} so {@code EntityType#canSerialize()} is false.
+     * Vanilla {@code startRiding} rejects that on the server even when {@code force} is true,
+     * which would make Misaka pickup always fail silently.
+     */
+    @Redirect(
+            method = "startRiding(Lnet/minecraft/world/entity/Entity;ZZ)Z",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/EntityType;canSerialize()Z"
+            )
+    )
+    private boolean academy$allowMisakaMountPlayer(EntityType<?> type) {
+        if ((Object) this instanceof MisakaSisterEntity && type == EntityTypes.PLAYER) {
+            return true;
+        }
+        return type.canSerialize();
     }
 
     @Inject(method = "markHurt", at = @At("HEAD"), cancellable = true)

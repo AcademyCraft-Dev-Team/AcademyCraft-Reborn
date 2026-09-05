@@ -81,6 +81,12 @@ public final class SetMisakaNetworkNodePacket
                 return;
             }
             InteractionGate.touchBenevolent(record, name, level.getServer());
+            if (packet.nodeName().isBlank()) {
+                MisakaNAT.get().unbindSister(level.getServer(), record.misakaUuid);
+                MisakaComputeContribution.refreshCpForRecord(level.getServer(), record);
+                MisakaPanelSupport.sendPanel(player, sister);
+                return;
+            }
             var nodePos = MisakaNAT.get().findNode(level, packet.nodeName()).orElse(null);
             if (nodePos == null) {
                 return;

@@ -31,6 +31,7 @@ public final class MisakaNetManageDataPacket
     private final UUID misakaUuid;
     private final int pageIndex;
     private final int totalCount;
+    private final float totalMskPerSecond;
     private final List<SisterSummary> sisters;
     private final int[] percents;
 
@@ -38,12 +39,14 @@ public final class MisakaNetManageDataPacket
             UUID misakaUuid,
             int pageIndex,
             int totalCount,
+            float totalMskPerSecond,
             List<SisterSummary> sisters,
             int[] percents
     ) {
         this.misakaUuid = misakaUuid;
         this.pageIndex = pageIndex;
         this.totalCount = totalCount;
+        this.totalMskPerSecond = totalMskPerSecond;
         this.sisters = sisters == null ? List.of() : List.copyOf(sisters);
         this.percents = MisakaComputeSink.clampAllocations(percents);
     }
@@ -52,6 +55,7 @@ public final class MisakaNetManageDataPacket
         MisakaPacketCodecs.encodeUuid(buf, packet.misakaUuid);
         ByteBufCodecs.VAR_INT.encode(buf, packet.pageIndex);
         ByteBufCodecs.VAR_INT.encode(buf, packet.totalCount);
+        buf.writeFloat(packet.totalMskPerSecond);
         ByteBufCodecs.VAR_INT.encode(buf, packet.sisters.size());
         for (var sister : packet.sisters) {
             ByteBufCodecs.VAR_INT.encode(buf, sister.serial());
@@ -69,6 +73,7 @@ public final class MisakaNetManageDataPacket
         UUID misakaUuid = MisakaPacketCodecs.decodeUuid(buf);
         int pageIndex = ByteBufCodecs.VAR_INT.decode(buf);
         int totalCount = ByteBufCodecs.VAR_INT.decode(buf);
+        float totalMskPerSecond = buf.readFloat();
         int sisterCount = ByteBufCodecs.VAR_INT.decode(buf);
         var sisters = new ArrayList<SisterSummary>(sisterCount);
         for (int i = 0; i < sisterCount; i++) {
@@ -84,7 +89,8 @@ public final class MisakaNetManageDataPacket
         for (int i = 0; i < MisakaComputeSink.COUNT; i++) {
             percents[i] = ByteBufCodecs.VAR_INT.decode(buf);
         }
-        return new MisakaNetManageDataPacket(misakaUuid, pageIndex, totalCount, sisters, percents);
+        return new MisakaNetManageDataPacket(
+                misakaUuid, pageIndex, totalCount, totalMskPerSecond, sisters, percents);
     }
 
     public static synchronized void initClient() {
@@ -105,6 +111,10 @@ public final class MisakaNetManageDataPacket
 
     public int totalCount() {
         return totalCount;
+    }
+
+    public float totalMskPerSecond() {
+        return totalMskPerSecond;
     }
 
     public List<SisterSummary> sisters() {

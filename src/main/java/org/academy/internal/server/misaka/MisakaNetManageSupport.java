@@ -81,10 +81,12 @@ public final class MisakaNetManageSupport {
             ));
         }
         int[] percents = MisakaNetworkAllocations.get(server).get(networkId);
+        float totalMsk = MisakaComputeIndex.get().networkTotals().getOrDefault(networkId.immutable(), 0f);
         return new MisakaNetManageDataPacket(
                 misakaUuid,
                 safePage,
                 total,
+                totalMsk,
                 summaries,
                 percents
         );
