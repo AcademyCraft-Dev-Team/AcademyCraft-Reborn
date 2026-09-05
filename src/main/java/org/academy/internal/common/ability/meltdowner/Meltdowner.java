@@ -12,7 +12,7 @@ public final class Meltdowner extends AbilityCategory {
 
     @Override
     public Identifier getDeveloperIcon() {
-        return R.textures.gui.icon.icon_meltdowner;
+        return R.textures.ability.meltdowner.icon;
     }
 
     @Override
