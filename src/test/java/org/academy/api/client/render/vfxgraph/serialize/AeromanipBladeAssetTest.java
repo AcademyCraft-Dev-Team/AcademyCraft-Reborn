@@ -49,7 +49,8 @@ class AeromanipBladeAssetTest {
                     "air-blade particles should remain neutral pale gray");
         }
 
-        assertTrue(particleCount >= 200, "small particles need enough density to read as gas");
+        assertEquals(404, particleCount,
+                "the particle budget should be approximately 180% of the original 224 particles");
         assertTrue(maximumSize <= 0.08, "blade particles must not regress to large fog cards");
         assertTrue(maximumHalfThickness <= 0.06, "the cutting plane must stay visually thin");
         assertTrue(hasLeftFlow && hasRightFlow, "the horizontal blade should peel away in both directions");

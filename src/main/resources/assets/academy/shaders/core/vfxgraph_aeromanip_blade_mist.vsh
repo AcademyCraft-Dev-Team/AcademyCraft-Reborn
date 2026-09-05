@@ -19,6 +19,9 @@ out vec4 vertexColor;
 out float mistSeed;
 out float mistAge;
 
+const float CARD_LENGTH_SCALE = 1.5;
+const float CARD_WIDTH_SCALE = 1.3;
+
 float hash1(float value) {
     return fract(sin(value * 127.1) * 43758.5453);
 }
@@ -40,8 +43,8 @@ void main() {
     float widthVariation = mix(0.56, 1.12, hash1(InstanceSeed * 0.27 + 8.7));
     float stretch = (1.65 + clamp(length(InstanceVel) * 0.075, 0.0, 1.25))
             * lengthVariation;
-    viewPos.xy += longAxis * offset.y * InstanceSize * stretch;
-    viewPos.xy += shortAxis * offset.x * InstanceSize * 0.72 * widthVariation;
+    viewPos.xy += longAxis * offset.y * InstanceSize * stretch * CARD_LENGTH_SCALE;
+    viewPos.xy += shortAxis * offset.x * InstanceSize * 0.72 * widthVariation * CARD_WIDTH_SCALE;
 
     gl_Position = Projection * viewPos;
     texCoord = Position.xy;
