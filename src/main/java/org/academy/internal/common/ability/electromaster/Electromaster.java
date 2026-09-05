@@ -14,7 +14,7 @@ public final class Electromaster extends AbilityCategory {
 
     @Override
     public Identifier getDeveloperIcon() {
-        return R.textures.gui.icon.icon_electromaster;
+        return R.textures.ability.electromaster.icon;
     }
 
     @Override
