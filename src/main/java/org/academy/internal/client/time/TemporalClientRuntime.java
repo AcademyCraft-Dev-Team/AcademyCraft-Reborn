@@ -1,13 +1,16 @@
 package org.academy.internal.client.time;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import org.academy.api.server.time.TemporalAccumulator;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /** Client-side wall-clock compensation for server-authorized immunity. */
@@ -15,8 +18,14 @@ public final class TemporalClientRuntime {
     private static final long TICK_NANOS = 50_000_000L;
     private static final long FREEZE_GRACE_NANOS = 55_000_000L;
     private static final Map<UUID, TickState> TICK_STATES = new HashMap<>();
+    private static final Map<UUID, ScaledTickState> SCALED_TICK_STATES =
+            new HashMap<>();
+    private static final Set<UUID> SCALED_TICK_STACK = new HashSet<>();
     private static Map<UUID, Integer> immunityMasks = Map.of();
+    private static Map<UUID, Float> playerScales = Map.of();
+    private static UUID serverSessionId;
     private static long revision = Long.MIN_VALUE;
+    private static long serverHeartbeat = Long.MIN_VALUE;
     private static UUID sessionPlayerId;
     private static boolean hadWorld;
     private static boolean compensatingLocal;
@@ -25,10 +34,48 @@ public final class TemporalClientRuntime {
     private TemporalClientRuntime() {
     }
 
-    public static void applyState(long newRevision, Map<UUID, Integer> masks) {
-        if (newRevision < revision) return;
+    public static void applyState(
+            UUID newSessionId,
+            long newRevision,
+            long newServerHeartbeat,
+            Map<UUID, Integer> masks,
+            Map<UUID, Float> scales
+    ) {
+        if (newSessionId == null) return;
+        if (!newSessionId.equals(serverSessionId)) {
+            serverSessionId = newSessionId;
+            revision = Long.MIN_VALUE;
+            serverHeartbeat = Long.MIN_VALUE;
+            immunityMasks = Map.of();
+            playerScales = Map.of();
+            TICK_STATES.clear();
+            SCALED_TICK_STATES.clear();
+            SCALED_TICK_STACK.clear();
+        }
+        if (newRevision <= revision) return;
+
+        var checkedScales = new HashMap<UUID, Float>();
+        for (var entry : scales.entrySet()) {
+            var scale = entry.getValue();
+            if (scale == null || !Float.isFinite(scale) || scale < 0.0F || scale > 8.0F) {
+                continue;
+            }
+            if (Float.compare(scale, 1.0F) != 0) {
+                checkedScales.put(entry.getKey(), scale);
+            }
+        }
+        var nextScales = Map.copyOf(checkedScales);
+        SCALED_TICK_STATES.entrySet().removeIf(entry ->
+                !nextScales.containsKey(entry.getKey())
+                        || Float.compare(
+                                entry.getValue().scale,
+                                nextScales.get(entry.getKey())
+                        ) != 0
+        );
         revision = newRevision;
+        serverHeartbeat = newServerHeartbeat;
         immunityMasks = Map.copyOf(masks);
+        playerScales = nextScales;
         TICK_STATES.keySet().removeIf(entityId -> !immunityMasks.containsKey(entityId));
     }
 
@@ -38,6 +85,39 @@ public final class TemporalClientRuntime {
 
     public static boolean isRemoteCompensationActive() {
         return compensatingRemote;
+    }
+
+    public static double effectivePlayerScale(UUID playerId) {
+        return playerId == null ? 1.0D : playerScales.getOrDefault(playerId, 1.0F);
+    }
+
+    public static boolean isPlayerSimulationPaused(Player player) {
+        return player != null && effectivePlayerScale(player.getUUID()) == 0.0D;
+    }
+
+    /** Dispatches a client player using only a server-authorized scale snapshot. */
+    public static boolean dispatchPlayerTicks(ClientLevel level, Player player) {
+        if (level == null || player == null || player.isRemoved()
+                || compensatingRemote) {
+            return false;
+        }
+        var playerId = player.getUUID();
+        if (SCALED_TICK_STACK.contains(playerId)) return false;
+
+        var scale = effectivePlayerScale(playerId);
+        var logicalTicks = logicalTicks(playerId, scale);
+        if (logicalTicks == 1) return false;
+        if (logicalTicks == 0) return true;
+
+        SCALED_TICK_STACK.add(playerId);
+        try {
+            for (var index = 0; index < logicalTicks && !player.isRemoved(); index++) {
+                level.tickNonPassenger(player);
+            }
+        } finally {
+            SCALED_TICK_STACK.remove(playerId);
+        }
+        return true;
     }
 
     public static void beforeVanillaTick(Minecraft minecraft) {
@@ -72,12 +152,33 @@ public final class TemporalClientRuntime {
 
     public static void reset() {
         immunityMasks = Map.of();
+        playerScales = Map.of();
+        serverSessionId = null;
         revision = Long.MIN_VALUE;
+        serverHeartbeat = Long.MIN_VALUE;
         sessionPlayerId = null;
         hadWorld = false;
         TICK_STATES.clear();
+        SCALED_TICK_STATES.clear();
+        SCALED_TICK_STACK.clear();
         compensatingLocal = false;
         compensatingRemote = false;
+    }
+
+    private static int logicalTicks(UUID playerId, double scale) {
+        if (scale == 1.0D) {
+            SCALED_TICK_STATES.remove(playerId);
+            return 1;
+        }
+        var state = SCALED_TICK_STATES.computeIfAbsent(
+                playerId,
+                ignored -> new ScaledTickState((float) scale)
+        );
+        if (Float.compare(state.scale, (float) scale) != 0) {
+            state = new ScaledTickState((float) scale);
+            SCALED_TICK_STATES.put(playerId, state);
+        }
+        return state.accumulator.advance(scale, 8);
     }
 
     private static void compensateLocal(
@@ -202,6 +303,15 @@ public final class TemporalClientRuntime {
         private boolean canCompensate(long now) {
             return lastCompensationNanos == Long.MIN_VALUE
                     || now - lastCompensationNanos >= TICK_NANOS;
+        }
+    }
+
+    private static final class ScaledTickState {
+        private final TemporalAccumulator accumulator = new TemporalAccumulator();
+        private final float scale;
+
+        private ScaledTickState(float scale) {
+            this.scale = scale;
         }
     }
 }
