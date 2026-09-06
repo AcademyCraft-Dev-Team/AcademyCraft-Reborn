@@ -10,7 +10,7 @@ renderdoc = "1.44"
 rendernurse = "0.0.26"
 
 kotlinforforge = "6.3.0"
-geckolib = "5.5"
+geckolib = "5.5.5"
 sodium = "mc26.2-0.9.1-neoforge"
 iris = "1.11.2+26.2-neoforge"
 jade = "26.2.8+neoforge"
@@ -29,7 +29,7 @@ plugin-moddevgradle = "2.0.144"
 download = "5.7.0"
 [libraries]
 kotlinforforge = { group = "thedarkcolour", name = "kotlinforforge-neoforge", version.ref = "kotlinforforge" }
-geckolib = { group = "com.geckolib", name = "geckolib-neoforge-26.1", version.ref = "geckolib" }
+geckolib = { group = "com.geckolib", name = "geckolib-neoforge-26.2", version.ref = "geckolib" }
 sodium = { group = "maven.modrinth", name = "sodium", version.ref = "sodium" }
 iris = { group = "maven.modrinth", name = "iris", version.ref = "iris" }
 jade = { group = "maven.modrinth", name = "jade", version.ref = "jade" }

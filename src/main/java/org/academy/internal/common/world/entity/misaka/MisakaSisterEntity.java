@@ -9,6 +9,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
@@ -43,12 +45,36 @@ import org.academy.internal.server.misaka.MisakaComputeContribution;
 import org.academy.internal.server.misaka.MisakaComputeIndex;
 import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
 import org.academy.internal.server.world.level.storage.MisakaSisterRoster;
+import com.geckolib.animatable.GeoEntity;
+import com.geckolib.animatable.instance.AnimatableInstanceCache;
+import com.geckolib.animatable.manager.AnimatableManager;
+import com.geckolib.animation.AnimationController;
+import com.geckolib.animation.RawAnimation;
+import com.geckolib.animation.object.PlayState;
+import com.geckolib.util.GeckoLibUtil;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Optional;
 import java.util.UUID;
 
-public class MisakaSisterEntity extends PathfinderMob {
+public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
+    /** Hitbox/render height relative to Steve (0.6 × 1.8). */
+    public static final float STEVE_SCALE = 0.94f;
+    /** Unscaled geo foot→head height in blocks (16 px = 1 block). */
+    public static final float GEO_HEIGHT_BLOCKS = 2.4f;
+    /** GeckoLib {@code withScale} so rendered height matches {@code 1.8 * STEVE_SCALE}. */
+    public static final float MODEL_RENDER_SCALE = (1.8f * STEVE_SCALE) / GEO_HEIGHT_BLOCKS;
+    /** Forward offset from player while carried (blocks, local space). */
+    public static final float CARRY_FORWARD = 0.28f;
+    /**
+     * Strafe offset while carried (blocks, local space). Positive = player's right.
+     * Shifts her across the chest so FP sees a facial profile instead of the occiput.
+     */
+    public static final float CARRY_SIDEWAYS = 0.22f;
+
+    private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("idle");
+    private static final RawAnimation WALK = RawAnimation.begin().thenLoop("walk");
+    private static final RawAnimation JUMP = RawAnimation.begin().thenLoop("jump");
     private static final EntityDataAccessor<Integer> SERIAL = SynchedEntityData.defineId(
             MisakaSisterEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> AWAKENED = SynchedEntityData.defineId(
@@ -65,12 +91,35 @@ public class MisakaSisterEntity extends PathfinderMob {
             MisakaSisterEntity.class, EntityDataSerializers.INT);
 
     private final SisterFoodData foodData = new SisterFoodData();
+    private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
     private @Nullable UUID misakaUuid;
     private @Nullable MisakaFollowGoal followGoal;
     private @Nullable MisakaNetworkWanderGoal networkWanderGoal;
 
     public MisakaSisterEntity(EntityType<? extends MisakaSisterEntity> type, Level level) {
         super(type, level);
+    }
+
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+        controllers.add(new AnimationController<>("Movement", test -> {
+            // Carried by player: freeze movement clips; renderer applies hug silhouette.
+            if (isPassenger() && getVehicle() instanceof Player) {
+                return PlayState.STOP;
+            }
+            if (!onGround()) {
+                return test.setAndContinue(JUMP);
+            }
+            if (test.isMoving()) {
+                return test.setAndContinue(WALK);
+            }
+            return test.setAndContinue(IDLE);
+        }));
+    }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return geoCache;
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -156,16 +205,43 @@ public class MisakaSisterEntity extends PathfinderMob {
 
     @Override
     public Vec3 getVehicleAttachmentPoint(Entity vehicle) {
-        if (vehicle instanceof Player) {
-            // Front of chest in vehicle local space: up + slightly forward of the torso center.
-            return new Vec3(0.0, vehicle.getBbHeight() * 0.38, 0.32);
+        if (!(vehicle instanceof Player player)) {
+            return super.getVehicleAttachmentPoint(vehicle);
         }
-        return super.getVehicleAttachmentPoint(vehicle);
+        // positionRider: passengerPos = ridePos - offset.
+        // Align Misaka's mid-torso to the player's arm/chest hold point so changing STEVE_SCALE
+        // (and thus getBbHeight) keeps the hug height looking right.
+        float holdY = player.getBbHeight() * 0.55f;
+        float misakaTorso = getBbHeight() * 0.45f;
+        float feetY = Mth.clamp(holdY - misakaTorso, player.getBbHeight() * 0.12f, player.getBbHeight() * 0.42f);
+        // Local X = strafe (right+), local Z = forward — same basis as Entity#getInputVector.
+        float yawRad = player.getYRot() * Mth.DEG_TO_RAD;
+        float sin = Mth.sin(yawRad);
+        float cos = Mth.cos(yawRad);
+        double desiredX = player.getX() + CARRY_SIDEWAYS * cos - CARRY_FORWARD * sin;
+        double desiredY = player.getY() + feetY;
+        double desiredZ = player.getZ() + CARRY_FORWARD * cos + CARRY_SIDEWAYS * sin;
+        Vec3 ride = player.getPassengerRidingPosition(this);
+        return new Vec3(ride.x - desiredX, ride.y - desiredY, ride.z - desiredZ);
     }
 
     @Override
     public boolean canRide(Entity vehicle) {
         return vehicle instanceof Player;
+    }
+
+    /** Carried against the chest often clips into walls; do not treat that as in-wall. */
+    @Override
+    public boolean isInWall() {
+        return !(getVehicle() instanceof Player) && super.isInWall();
+    }
+
+    @Override
+    public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
+        if (getVehicle() instanceof Player && source.is(DamageTypes.IN_WALL)) {
+            return false;
+        }
+        return super.hurtServer(level, source, amount);
     }
 
     @Override

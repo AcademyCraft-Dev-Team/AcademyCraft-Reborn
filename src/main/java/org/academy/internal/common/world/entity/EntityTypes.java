@@ -116,7 +116,8 @@ public class EntityTypes {
     public static final DeferredHolder<EntityType<?>, EntityType<MisakaSisterEntity>> MISAKA_SISTER =
             ENTITY_TYPES.registerEntityType(
                     "misaka_sister", MisakaSisterEntity::new, MobCategory.CREATURE,
-                    builder -> builder.sized(0.6f, 1.8f).clientTrackingRange(10).updateInterval(3));
+                    builder -> builder.sized(0.6f * MisakaSisterEntity.STEVE_SCALE, 1.8f * MisakaSisterEntity.STEVE_SCALE)
+                            .clientTrackingRange(10).updateInterval(3));
     public static final DeferredHolder<EntityType<?>, EntityType<RelaySatelliteEntity>> RELAY_SATELLITE =
             ENTITY_TYPES.registerEntityType(
                     "relay_satellite", RelaySatelliteEntity::new, MobCategory.MISC,

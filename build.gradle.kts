@@ -14,6 +14,7 @@ plugins {
 
 val minecraftVersion = libs.versions.minecraft.get()
 val misakaVersion = libs.versions.misaka.get()
+val geckolibVersion = libs.versions.geckolib.get()
 val neoVersion = libs.versions.neoforge.get()
 val modVersion = libs.versions.academy.get()
 
@@ -79,6 +80,7 @@ val generateModsToml = tasks.register("generateModsToml") {
     inputs.property("neoVersion", neoVersion)
     inputs.property("minecraftVersionRange", minecraftVersion)
     inputs.property("misakaVersion", misakaVersion)
+    inputs.property("geckolibVersion", geckolibVersion)
 
     outputs.file(tomlFile)
 
@@ -93,6 +95,7 @@ val generateModsToml = tasks.register("generateModsToml") {
         val neoVersion = inputs.properties["neoVersion"] as String
         val minecraftVersionRange = inputs.properties["minecraftVersionRange"] as String
         val misakaVersion = inputs.properties["misakaVersion"] as String
+        val geckolibVersion = inputs.properties["geckolibVersion"] as String
 
         val config = TomlFormat.newConfig()
         config.set<String>("modLoader", "kotlinforforge")
@@ -128,6 +131,7 @@ val generateModsToml = tasks.register("generateModsToml") {
         addDep("neoforge", "[$neoVersion,)")
         addDep("minecraft", minecraftVersionRange)
         addDep("kotlinforforge", loaderVersionRange)
+        addDep("geckolib", "[$geckolibVersion,)")
         addDep("misaka_network", misakaVersion)
         addDep("curios", "[16.0.0,)", "optional")
 
@@ -399,6 +403,8 @@ fun DependencyHandler.dev(
 
 dependencies {
     implementation(libs.kotlinforforge)
+    implementation(libs.geckolib)
+    interfaceInjectionData(libs.geckolib)
 
     compileOnly(libs.jei.api)
     compileOnly("top.theillusivec4.curios:curios-neoforge:${libs.versions.curios.get()}:api")
