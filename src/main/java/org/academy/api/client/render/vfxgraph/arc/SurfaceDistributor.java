@@ -4,12 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-/**
- * 表面布点器（M22-Rev2）：在三角形网格表面按面积加权均匀撒点。
- *
- * <p>复用 {@code MeshShape} 的面积加权采样逻辑（二分选三角形 + 重心坐标取点），
- * 增加法线计算、概率过滤、时间频率控制（复刻 Blender 随机点云阵列子组）。</p>
- */
 public final class SurfaceDistributor {
     private static final int FLOATS_PER_TRI = 9;
 
@@ -18,9 +12,6 @@ public final class SurfaceDistributor {
     private final float totalArea;
     private final int triCount;
 
-    /**
-     * 临时存储每个三角形的法线（构造时预计算）。
-     */
     private final float[] normals;
 
     public SurfaceDistributor(float[] triangles) {
@@ -40,39 +31,20 @@ public final class SurfaceDistributor {
         this.totalArea = total;
     }
 
-    /**
-     * 在表面撒点。
-     *
-     * <p>注意：本方法只做**单帧纯布点**（面积加权 + 概率过滤），不再做时间频率门控——
-     * 帧周期断续时序（复刻 Blender {@code Compare(Frame MOD N) EQUAL 0}）由调用方
-     * （{@code VfxBlocks.arcSurface/arcContact}）在块级按帧周期控制，避免每帧全密度 spawn
-     * 导致弧数爆炸（M29b-01 修复）。{@code time}/{@code frequency} 保留为兼容签名。</p>
-     *
-     * @param density     每单位面积的期望点数
-     * @param probability 每个点的保留概率（0~1）
-     * @param time        当前时间（保留，未使用；兼容签名）
-     * @param frequency   散布频率（保留，未使用；兼容签名）
-     * @param seed        随机种子
-     * @return 采样结果列表（position + normal）
-     */
     public List<Sample> distribute(float density, float probability, float time, float frequency, long seed) {
         var random = new Random(seed);
         var result = new ArrayList<Sample>();
 
         if (totalArea < 1e-8f || density < 1e-6f) return result;
 
-        // 期望点数 = 面积 × 密度
         var expectedCount = Math.max(1, (int) (totalArea * density));
 
         for (var i = 0; i < expectedCount; i++) {
-            // 概率过滤（复刻 Blender 的 Random Value + Delete Geometry）
             if (random.nextFloat() > probability) continue;
 
-            // 面积加权采样一个三角形
             var r = random.nextFloat() * totalArea;
             var tri = pickTriangle(r);
 
-            // 重心坐标取点（均匀分布，u+v<=1 翻转保证在三角形内）
             var u = (float) Math.sqrt(random.nextFloat());
             var v = random.nextFloat();
             if (u + v > 1f) {
@@ -86,7 +58,6 @@ public final class SurfaceDistributor {
             var py = triangles[t9 + 1] * w + triangles[t9 + 4] * u + triangles[t9 + 7] * v;
             var pz = triangles[t9 + 2] * w + triangles[t9 + 5] * u + triangles[t9 + 8] * v;
 
-            // 法线
             var n3 = tri * 3;
             var nx = normals[n3];
             var ny = normals[n3 + 1];
@@ -97,44 +68,26 @@ public final class SurfaceDistributor {
         return result;
     }
 
-    /**
-     * 获取三角形数量。
-     */
     public int triCount() {
         return triCount;
     }
 
-    /**
-     * 获取原始三角形数据。
-     */
     public float[] triangles() {
         return triangles;
     }
 
-    /**
-     * 获取预计算的法线数组。
-     */
     public float[] normals() {
         return normals;
     }
 
-    /**
-     * 获取累计面积数组。
-     */
     public float[] cumulativeArea() {
         return cumulativeArea;
     }
 
-    /**
-     * 获取总面积。
-     */
     public float totalArea() {
         return totalArea;
     }
 
-    /**
-     * 计算与给定单位轴方向垂直的一个确定单位向量（构建分支平面用）。
-     */
     public static float[] perpendicular(float ax, float ay, float az) {
         var ref = Math.abs(ay) < 0.9f ? new float[]{0, 1, 0} : new float[]{1, 0, 0};
         var t = cross(ax, ay, az, ref[0], ref[1], ref[2]);
@@ -143,13 +96,6 @@ public final class SurfaceDistributor {
         return new float[]{t[0] / len, t[1] / len, t[2] / len};
     }
 
-    /**
-     * 平面扇形分叉方向：在 {@code (forward, right)} 张成的平面内、朝 forward 单侧扇形张开。
-     * 所有分支共享同一方位角（{@code right}），不会绕树干径向散开成鸡毛掸子/草丛，
-     * 而是像真实闪电树一样整体朝一个方向分叉。
-     *
-     * @param da ∈ [0, angle]：由 forward 向 right 侧倾斜的角度
-     */
     public static float[] fanDirection(float fx, float fy, float fz,
                                        float rx, float ry, float rz,
                                        float angle, Random random) {
@@ -159,16 +105,6 @@ public final class SurfaceDistributor {
         return new float[]{fx * dc + rx * ds, fy * dc + ry * ds, fz * dc + rz * ds};
     }
 
-    /**
-     * 锥形区间分叉方向：在 axis 为轴的半角 {@code angle} 锥体内均匀采样单位方向。
-     * 分支不再局限于单一平面扇形，而是围绕树干方向在 3D 锥体内散开（真实闪电树状分叉）。
-     *
-     * <p>构造切平面正交基 t1/t2，随机方位角 a∈[0,2π) + 极角 da∈[0,angle]，
-     * 方向 = axis·cos(da) + (t1·cos(a)+t2·sin(a))·sin(da)，天然单位长度。</p>
-     *
-     * @param ax,ay,az 锥体中心轴（单位向量）
-     * @param angle    锥体半角（弧度，从 axis 到锥面的最大偏角）
-     */
     public static float[] coneDirection(float ax, float ay, float az, float angle, Random random) {
         var t1 = tangentBase(ax, ay, az);
         var t2 = cross(ax, ay, az, t1[0], t1[1], t1[2]);
@@ -184,35 +120,22 @@ public final class SurfaceDistributor {
         return new float[]{ex, ey, ez};
     }
 
-    /**
-     * 按法线方向在切平面内采样一个方向向量。
-     *
-     * @param nx,ny,nz 表面法线
-     * @param angle    扰动角度（弧度）
-     * @param random   随机源
-     * @return 归一化的方向向量 [x,y,z]
-     */
     public static float[] tangentDirection(float nx, float ny, float nz, float angle, Random random) {
-        // 构建切平面基
         var t1 = tangentBase(nx, ny, nz);
         var t2 = cross(nx, ny, nz, t1[0], t1[1], t1[2]);
 
-        // 随机角度
         var a = random.nextFloat() * (float) (Math.PI * 2);
         var c = (float) Math.cos(a);
         var s = (float) Math.sin(a);
 
-        // 扰动角度
         var da = (random.nextFloat() - 0.5f) * 2f * angle;
         var dc = (float) Math.cos(da);
         var ds = (float) Math.sin(da);
 
-        // 组合：先绕法线旋转 a，再倾斜 da
         var dx = t1[0] * c + t2[0] * s;
         var dy = t1[1] * c + t2[1] * s;
         var dz = t1[2] * c + t2[2] * s;
 
-        // 倾斜
         var rx = dx * dc + nx * ds;
         var ry = dy * dc + ny * ds;
         var rz = dz * dc + nz * ds;
@@ -221,8 +144,6 @@ public final class SurfaceDistributor {
         if (len < 1e-6f) return new float[]{nx, ny, nz};
         return new float[]{rx / len, ry / len, rz / len};
     }
-
-    // --- 内部方法 ---
 
     private int pickTriangle(float target) {
         int lo = 0, hi = triCount - 1;
@@ -237,16 +158,12 @@ public final class SurfaceDistributor {
         return lo;
     }
 
-    /**
-     * 计算三角形面积并预计算法线。返回面积。
-     */
     private float computeAreaAndNormal(int tri) {
         var t9 = tri * 9;
         float ax = triangles[t9], ay = triangles[t9 + 1], az = triangles[t9 + 2];
         float bx = triangles[t9 + 3], by = triangles[t9 + 4], bz = triangles[t9 + 5];
         float cx = triangles[t9 + 6], cy = triangles[t9 + 7], cz = triangles[t9 + 8];
 
-        // AB × AC
         float abx = bx - ax, aby = by - ay, abz = bz - az;
         float acx = cx - ax, acy = cy - ay, acz = cz - az;
         var nx = aby * acz - abz * acy;
@@ -269,7 +186,6 @@ public final class SurfaceDistributor {
     }
 
     private static float[] tangentBase(float nx, float ny, float nz) {
-        // 与法线不平行的参考向量
         var ref = Math.abs(ny) < 0.9f ? new float[]{0, 1, 0} : new float[]{1, 0, 0};
         var t = cross(nx, ny, nz, ref[0], ref[1], ref[2]);
         var len = (float) Math.sqrt(t[0] * t[0] + t[1] * t[1] + t[2] * t[2]);
@@ -280,9 +196,6 @@ public final class SurfaceDistributor {
         return new float[]{ay * bz - az * by, az * bx - ax * bz, ax * by - ay * bx};
     }
 
-    /**
-     * 表面采样结果。
-     */
     public record Sample(float x, float y, float z, float nx, float ny, float nz) {
     }
 }
