@@ -11,6 +11,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VerifiedTrueDamageRouteTest {
     @Test
+    void legacyDirectDamageInjectionDescriptorRemainsAvailable() throws ReflectiveOperationException {
+        // Addons resolve this exact descriptor when SkillDamageUtil is transformed on first hit.
+        // Missing it prevents the entire utility class (including CTA/VEC) from loading.
+        var method = SkillDamageUtil.class.getDeclaredMethod("applyDirectWithFallback",
+                net.minecraft.server.level.ServerLevel.class,
+                net.minecraft.server.level.ServerPlayer.class,
+                net.minecraft.world.entity.LivingEntity.class,
+                org.academy.api.common.ability.Skill.class,
+                net.minecraft.world.damagesource.DamageSource.class, float.class);
+        assertTrue(java.lang.reflect.Modifier.isStatic(method.getModifiers()));
+        assertTrue(method.getReturnType() == boolean.class);
+    }
+
+    @Test
     void kineticShockwaveKeepsTheFullVerifiedHealthSubtraction() throws IOException {
         var source = Files.readString(Path.of(
                 "src/main/java/org/academy/internal/common/world/damagesource/CTADamageUtil.java"));

@@ -126,6 +126,18 @@ public final class SkillDamageUtil {
     private static boolean applyDirectDamage(ServerLevel level, ServerPlayer attacker,
                                                    LivingEntity target, Skill skill,
                                                    DamageSource source, float amount) {
+        return applyDirectWithFallback(level, attacker, target, skill, source, amount);
+    }
+
+    /**
+     * Retained injection ABI for extensions compiled against the former direct-damage entry.
+     * Both public apply overloads and the hurtServer route must pass through this hook so an
+     * extension's cancellation remains effective. The historical name does not enable melee
+     * retries: blocked damage still returns false and keeps its original category.
+     */
+    private static boolean applyDirectWithFallback(ServerLevel level, ServerPlayer attacker,
+                                                   LivingEntity target, Skill skill,
+                                                   DamageSource source, float amount) {
         var beforeHealth = target.getHealth();
         var beforeAbsorption = target.getAbsorptionAmount();
         var invoker = (LivingEntityDamageInvoker) target;
