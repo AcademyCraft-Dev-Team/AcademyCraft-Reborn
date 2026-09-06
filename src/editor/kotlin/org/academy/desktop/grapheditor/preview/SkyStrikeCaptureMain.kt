@@ -49,7 +49,8 @@ private class SkyStrikeCaptureApp(private val root: Path) : EditorApp {
         Shot("sky_strike_thunderclap", "impact", 0.12f),
         Shot("sky_strike_thunderclap", "decay", 0.70f),
         Shot("sky_strike_thunderclap", "afterglow", 2.95f),
-        Shot("sky_strike_thunderclap", "attachment", 1f)
+        Shot("sky_strike_thunderclap", "attachment", 1f),
+        Shot("sky_strike_thunderclap", "attachment_top", 1f)
     ) + (0..51).map { Shot("sky_strike_thunderclap", "motion_%03d".format(it), it / 12f) }
 
     init {
@@ -73,12 +74,13 @@ private class SkyStrikeCaptureApp(private val root: Path) : EditorApp {
         val system = JsonVfxGraphCodec(metadata).decode(JsonParser.parseString(Files.readString(path)).asJsonObject)
         val sim = VfxSystemSimulator(system, blocks, 42L, system.parameters())
         sim.setLiveParam("time", Value.of(shot.time))
+        if (shot.view == "attachment_top") sim.setLiveParam("cloud_opacity", Value.of(0f))
         sim.step(0f)
         val specs = system.contexts().flatMap { it.blocks() }
             .filter { it.type().startsWith("vfx.block.output_") }
             .map { RenderSpec.fromOutputNode(GraphNode(it.id(), it.type(), it.properties(), it.ports(), 0f, 0f)) }
         val side = shot.view == "side"
-        val top = shot.view == "top"
+        val top = shot.view == "top" || shot.view == "attachment_top"
         val eye = when {
             top -> Vector3f(0f, 140f, 0f)
             side -> Vector3f(120f, 36f, 0f)
@@ -90,7 +92,7 @@ private class SkyStrikeCaptureApp(private val root: Path) : EditorApp {
             else -> Vector3f(0f, 0f, -1f)
         }
         val up = if (top) Vector3f(0f, 0f, -1f) else Vector3f(0f, 1f, 0f)
-        val halfY = if (top) 32f else 45f
+        val halfY = if (shot.view == "attachment_top") 22f else if (top) 32f else 45f
         val halfX = halfY * target.width / target.height
         val camera = GraphCamera(eye, Matrix4f().lookAlong(direction, up),
             Matrix4f().setOrtho(-halfX, halfX, -halfY, halfY, 300f, 0.1f, true))

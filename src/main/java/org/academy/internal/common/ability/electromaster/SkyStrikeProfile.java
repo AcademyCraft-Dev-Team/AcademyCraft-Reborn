@@ -4,7 +4,7 @@ public enum SkyStrikeProfile {
     LIGHTNING_STORM(
             0, 68.0f, 48.0f, 1.3f,
             5, 0, 8,
-            1.0f, 4.5f, 4.0f,
+            1.0f, 6.0f, 4.0f,
             0.08f, 3.0f, 24.0f, 0.18f,
             0.06f, 6.0f, 24.0f, 0.20f,
             1.8f, 1.0f, false
@@ -12,7 +12,7 @@ public enum SkyStrikeProfile {
     THUNDERCLAP(
             1, 68.0f, 72.0f, 3.1f,
             12, 20, 24,
-            1.5f, 10.0f, 6.0f,
+            1.5f, 14.0f, 6.0f,
             0.22f, 4.0f, 32.0f, 0.22f,
             0.35f, 6.0f, 32.0f, 0.35f,
             5.0f, 2.0f, true
@@ -125,6 +125,7 @@ public enum SkyStrikeProfile {
         return ringStartRadius;
     }
 
+    /** Shared nominal outer shockwave radius, also used by the server damage query. */
     public float ringEndRadius() {
         return ringEndRadius;
     }

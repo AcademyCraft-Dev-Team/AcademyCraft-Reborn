@@ -27,6 +27,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.ability.AreaEffectTargets;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -255,8 +256,8 @@ public class LightningStorm extends Skill {
                 ElectromasterArcEffects.spawnSkyStrike(serverLevel, impact, SkyStrikeProfile.LIGHTNING_STORM);
                 VanillaLightningEffects.trigger(serverLevel, impact, player);
 
-                var box = new AABB(topPos).inflate(3);
-                var targets = serverLevel.getEntitiesOfClass(LivingEntity.class, box, e -> e != player && e.isAlive());
+                var targets = AreaEffectTargets.inSphere(serverLevel, impact,
+                        SkyStrikeProfile.LIGHTNING_STORM.ringEndRadius(), entity -> entity != player);
                 var system = AbilitySystemServer.getSystem(player);
                 var abilityPower = system.getPlayerAbilityPowerMultiplier(player.getUUID());
                 var damageMultiplier = system.getPlayerDamageMultiplier(player.getUUID());

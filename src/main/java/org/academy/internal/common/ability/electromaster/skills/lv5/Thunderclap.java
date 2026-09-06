@@ -33,6 +33,7 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.damage.MaxHealthDamage;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.ability.AreaEffectTargets;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -55,7 +56,6 @@ import java.util.List;
 
 public class Thunderclap extends Skill {
     static final double RANGE = 64.0;
-    static final double RADIUS = 5.0;
     private static final MaxHealthDamage DAMAGE = MaxHealthDamage.rebalance(20.0f, 0.20f);
 
     public Thunderclap() {
@@ -261,15 +261,8 @@ public class Thunderclap extends Skill {
             var abilityPower = system.getPlayerAbilityPowerMultiplier(player.getUUID());
             var damageMultiplier = system.getPlayerDamageMultiplier(player.getUUID());
             var source = SkillDamageSource.of(player, Skills.THUNDERCLAP.get());
-            var radius = milestone >= 2 ? 6.0 : RADIUS;
-            var radiusSquared = radius * radius;
-            var targets = level.getEntitiesOfClass(
-                    LivingEntity.class,
-                    new AABB(targetPos, targetPos).inflate(radius),
-                    entity -> entity != player
-                            && entity.isAlive()
-                            && entity.distanceToSqr(targetPos) <= radiusSquared
-            );
+            var targets = AreaEffectTargets.inSphere(level, targetPos,
+                    SkyStrikeProfile.THUNDERCLAP.ringEndRadius(), entity -> entity != player);
             for (var target : targets) {
                 if (PvpSetting.shouldPrevent(player, target)) continue;
                 DamageComposition.hurt(
