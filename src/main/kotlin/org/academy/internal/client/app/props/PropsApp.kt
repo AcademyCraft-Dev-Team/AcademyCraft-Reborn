@@ -28,18 +28,16 @@ object PropsApp : App {
     private class Context : WidgetContext {
         private var displayedStarted = PropsClientState.isStarted()
         private var consoleStatus = ""
-        private val root = object : FrameLayoutWidget() {
-            init {
-                layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-            }
+        private val root = FrameLayoutWidget().apply {
+            layoutParams = WidgetContainer.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
 
-            override fun tick() {
+            setFrameUpdate {
                 val started = PropsClientState.isStarted()
                 if (displayedStarted != started) {
                     displayedStarted = started
                     rebuild()
                 }
-                super.tick()
+                true
             }
         }
 
@@ -233,11 +231,11 @@ object PropsApp : App {
             })
         }
 
-        private fun dynamicLabel(value: () -> String): LabelWidget = object : LabelWidget(value()) {
-            override fun tick() {
-                super.tick()
+        private fun dynamicLabel(value: () -> String): LabelWidget = LabelWidget(value()).apply {
+            setFrameUpdate {
                 val updated = value()
                 if (text != updated) text = updated
+                true
             }
         }
 

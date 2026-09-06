@@ -34,8 +34,11 @@ class StateListAnimator {
     }
 
     fun jumpToCurrentState() {
-        if (runningAnimator != null) {
-            runningAnimator!!.end()
+        val anim = runningAnimator
+        if (anim is ValueAnimator) {
+            anim.snapToEnd()
+        } else {
+            anim?.end()
         }
     }
 

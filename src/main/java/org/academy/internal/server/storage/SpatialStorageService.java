@@ -21,7 +21,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 
-@EventBusSubscriber(modid = AcademyCraft.MODID)
+@EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class SpatialStorageService {
     private SpatialStorageService() {
     }

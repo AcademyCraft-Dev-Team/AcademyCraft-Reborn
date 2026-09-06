@@ -19,11 +19,9 @@ import org.academy.api.client.gui.command.SkillProgressDrawCommand
 import org.academy.api.client.gui.dsl.*
 import org.academy.api.client.gui.event.MouseEvent
 import org.academy.api.client.gui.layout.Gravity
-import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.render.RenderContext
 import org.academy.api.client.gui.screen.UiScreen
-import org.academy.api.client.gui.util.GlyphCommandGenerator
 import org.academy.api.client.gui.util.WirelessPanelUtil
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.resources.R
@@ -352,15 +350,15 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
             size(100f, 12f)
         }
 
-        panel.add("progress_power", object : ProgressBarWidget() {
-            override fun tick() {
-                super.tick()
+        panel.add("progress_power", ProgressBarWidget().apply {
+            setFrameUpdate {
                 val capacity = maxEnergy()
                 setProgress(
                     if (capacity > 0)
                         currentEnergy().toFloat() / capacity * 100f
                     else 0f
                 )
+                true
             }
         }) {
             gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
@@ -919,12 +917,12 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                 }
             }
 
-            add("outline_bg", object : ImageWidget(skill_outline) {
-                override fun tick() {
-                    super.tick()
+            add("outline_bg", ImageWidget(skill_outline).apply {
+                setFrameUpdate {
                     val full = isLearned && AbilitySystemClient.getSkillProficiencyProgress(info.skill) >= 1f
                     setBrightness(if (full) 1.4f else 0.2f)
                     alpha = if (full) 1f else mAlpha * 0.6f
+                    true
                 }
             }) {
                 gravity(Gravity.CENTER)
@@ -1230,7 +1228,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         val btnWid = object : ButtonWidget() {
             override fun render(context: RenderContext) {
                 val target = if (isHovered || isFocused || isPressed) 1.1f else 0.85f
-                if (btnTex.brightness != target) {
+                if (btnTex.red != target) {
                     brightnessRef.set(target)
                     btnTex.setBrightness(target)
                 }
@@ -1454,64 +1452,61 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
 
                     val conditions = skill.devConditions.filter { it.shouldDisplay() }
 
-                    val req = object : LinearLayoutWidget() {
-                        var hintText: String = ""
-                        var hintRed: Float = 0.93f
-                        var hintGreen: Float = 0.35f
-                        var hintBlue: Float = 0.35f
+                    val condBindings = mutableListOf<Triple<FrameLayoutWidget, DevCondition, Boolean>>()
 
-                        override fun render(context: RenderContext) {
-                            hintText = ""
-                            super.render(context)
-                            if (hintText.isEmpty()) return
-                            val finalAlpha = alpha * context.accumulatedAlpha
-                            val textHeight = LabelWidget.getTextHeight(hintText, 9f)
-                            val y = (height - textHeight) / 2f
-                            context.pose().pushPose()
-                            context.pose().translate(width, y)
-                            val commands = GlyphCommandGenerator.generate(
-                                hintText, 9f, 0f, hintRed, hintGreen, hintBlue, finalAlpha
-                            )
-                            for (cmd in commands) context.submit(cmd)
-                            context.pose().popPose()
-                        }
-                    }
-                    req.orientation = Orientation.HORIZONTAL
-                    add("req", req) {
+                    row("req") {
                         gravity(Gravity.CENTER)
-                    }
-                    req.label(L10n["academy.ability_developer.req"], "label") {
-                        gravity(Gravity.CENTER_BOTTOM)
-                        baseFontSize = 9f
-                        alpha = 0.66f
-                    }
-
-                    for ((idx, cond) in conditions.withIndex()) {
-                        val accepted = cond.accepts()
-                        val condWid = object : FrameLayoutWidget() {
-                            var condAccepted = accepted
-                            override fun render(context: RenderContext) {
-                                if (isHovered) {
-                                    req.hintText = "(${cond.getHintText()})"
-                                    if (condAccepted) {
-                                        req.hintRed = 0.93f; req.hintGreen = 1.0f; req.hintBlue = 1.0f
-                                    } else {
-                                        req.hintRed = 0.93f; req.hintGreen = 0.35f; req.hintBlue = 0.35f
-                                    }
-                                    req.invalidate()
+                        empty("left") { weight(1f) }
+                        label(L10n["academy.ability_developer.req"], "label") {
+                            gravity(Gravity.CENTER_BOTTOM)
+                            baseFontSize = 9f
+                            alpha = 0.66f
+                        }
+                        for ((idx, cond) in conditions.withIndex()) {
+                            val accepted = cond.accepts()
+                            val condWid = frame("cond_$idx") {
+                                gravity(Gravity.CENTER)
+                                size(14f, 14f)
+                                if (accepted) {
+                                    image(cond.getIcon() ?: R.textures.gui.icon.close, "icon") { matchParent() }
+                                } else {
+                                    monochromeImage(
+                                        cond.getIcon() ?: R.textures.gui.icon.close,
+                                        "icon"
+                                    ) { matchParent() }
                                 }
-                                super.render(context)
                             }
+                            condBindings += Triple(condWid, cond, accepted)
                         }
-                        val condIcon = if (!accepted) MonochromeImageWidget(
-                            cond.getIcon() ?: R.textures.gui.icon.close
-                        ) else ImageWidget(cond.getIcon() ?: R.textures.gui.icon.close)
-                        condWid.add("icon", condIcon) {
-                            matchParent()
-                        }
-                        req.add("cond_$idx", condWid) {
-                            gravity(Gravity.CENTER)
-                            size(14f, 14f)
+                        empty("right") { weight(1f) }
+                        label("", "hint") {
+                            baseFontSize = 9f
+                            gravity(Gravity.BOTTOM)
+                            size(0f, 0f)
+                            setFrameUpdate {
+                                val hovered = condBindings.firstOrNull { (widget, _, _) -> widget.isHovered }
+                                if (hovered != null) {
+                                    val (widget, condition, accepted) = hovered
+                                    val hintText = "(${condition.getHintText()})"
+                                    if (text != hintText) text = hintText
+                                    rgb(0.93f, if (accepted) 1.0f else 0.35f, if (accepted) 1.0f else 0.35f)
+                                    val hintX = widget.x - x + widget.width
+                                    val hintY = 0f
+                                    var moved = false
+                                    if (translationX != hintX) {
+                                        translationX = hintX
+                                        moved = true
+                                    }
+                                    if (translationY != hintY) {
+                                        translationY = hintY
+                                        moved = true
+                                    }
+                                    if (moved) invalidate()
+                                } else if (text.isNotEmpty()) {
+                                    text = ""
+                                }
+                                true
+                            }
                         }
                     }
 
@@ -1522,12 +1517,11 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                             LearningHelper.getEstimatedSkillConsumption(skill)
                         )
                     }
-                    val messageLabel = object : LabelWidget(learnQuestion) {
-                        override fun tick() {
-                            super.tick()
+                    val messageLabel = LabelWidget(learnQuestion).apply {
+                        setFrameUpdate {
                             if (machineRequired) {
                                 text = L10n["academy.ability_developer.portable.skill_restricted"]
-                                return
+                                return@setFrameUpdate true
                             }
                             val targetId = AbilitySystemClient.getDevTargetId()
                             if (targetId == skillId) {
@@ -1550,6 +1544,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                             } else if (AbilitySystemClient.isDevelopmentActive()) {
                                 text = L10n["academy.ability_developer.already_developing"]
                             }
+                            true
                         }
                     }
                     add("message", messageLabel) {

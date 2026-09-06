@@ -8,11 +8,11 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-import static org.academy.AcademyCraft.MODID;
+import static org.academy.AcademyCraft.MOD_ID;
 
 public final class RecipeSerializers {
     public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS =
-            DeferredRegister.create(Registries.RECIPE_SERIALIZER, MODID);
+            DeferredRegister.create(Registries.RECIPE_SERIALIZER, MOD_ID);
     static final StreamCodec<RegistryFriendlyByteBuf, DarkmatterDuplicationRecipe>
             DARKMATTER_DUPLICATION_STREAM_CODEC = StreamCodec.of(
             (_, _) -> {

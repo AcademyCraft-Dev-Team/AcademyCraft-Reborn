@@ -3,7 +3,6 @@ package org.academy.mixin.client;
 import com.mojang.blaze3d.platform.Window;
 import net.minecraft.client.Minecraft;
 import net.neoforged.neoforge.common.NeoForge;
-import org.academy.api.client.gui.animation.AnimationManager;
 import org.academy.api.client.vanilla.MainLoopEvent;
 import org.academy.api.client.vanilla.ResizeDisplayEvent;
 import org.academy.internal.client.ability.VectorReflectionClientRuntime;
@@ -45,9 +44,9 @@ public abstract class MixinMinecraft {
     }
 
     @Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)
-    private void academy$blockMentalIntrusionMining(boolean attacking, CallbackInfo ci) {
+    private void academy$blockMentalIntrusionMining(boolean down, CallbackInfo ci) {
         if (MentalIntrusionClientState.blocksWorldInteraction()
-                || PlayerControlClientState.blocksWorldInteraction(attacking)) ci.cancel();
+                || PlayerControlClientState.blocksWorldInteraction(down)) ci.cancel();
     }
 
     @Inject(
@@ -58,19 +57,18 @@ public abstract class MixinMinecraft {
                     shift = At.Shift.AFTER
             )
     )
-    private void academy$sendHeldLeftSwing(boolean attacking, CallbackInfo ci) {
+    private void continueAttack(boolean down, CallbackInfo ci) {
         MisakaNetworkClient.send(PlayerLeftClickSwingPacket.INSTANCE);
     }
 
     @Inject(method = "startUseItem", at = @At("HEAD"), cancellable = true)
-    private void academy$blockMentalIntrusionUse(CallbackInfo ci) {
+    private void startUseItem(CallbackInfo ci) {
         if (MentalIntrusionClientState.blocksWorldInteraction()
                 || PlayerControlClientState.blocksWorldInteraction(true)) ci.cancel();
     }
 
     @Inject(method = "runTick", at = @At("HEAD"))
     private void runTick(CallbackInfo info) {
-        AnimationManager.INSTANCE.onFrameUpdate();
         NeoForge.EVENT_BUS.post(new MainLoopEvent());
         VectorReflectionClientRuntime.tick((Minecraft) (Object) this);
         MentalIntrusionClientState.tick();
@@ -78,8 +76,8 @@ public abstract class MixinMinecraft {
         PlayerControlClientState.tick();
     }
 
-    @Inject(method = "destroy", at = @At("HEAD"), require = 0)
-    private void academy$restoreVectorReflectionPlayer(CallbackInfo ci) {
+    @Inject(method = "close", at = @At("HEAD"), require = 0)
+    private void close(CallbackInfo ci) {
         VectorReflectionClientRuntime.shutdown();
         MentalIntrusionClientState.clearLocal();
         MentalResistanceClientState.clearLocal();

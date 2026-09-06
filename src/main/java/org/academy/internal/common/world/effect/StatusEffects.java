@@ -6,11 +6,11 @@ import net.minecraft.world.effect.MobEffectCategory;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-import static org.academy.AcademyCraft.MODID;
+import static org.academy.AcademyCraft.MOD_ID;
 
 public final class StatusEffects {
     public static final DeferredRegister<MobEffect> MOB_EFFECTS =
-            DeferredRegister.create(BuiltInRegistries.MOB_EFFECT, MODID);
+            DeferredRegister.create(BuiltInRegistries.MOB_EFFECT, MOD_ID);
 
     public static final DeferredHolder<MobEffect, MobEffect> IMPRISONED =
             MOB_EFFECTS.register("imprisoned", ImprisonedEffect::new);

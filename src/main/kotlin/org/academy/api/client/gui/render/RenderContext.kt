@@ -3,6 +3,7 @@ package org.academy.api.client.gui.render
 import com.mojang.blaze3d.vertex.PoseStack
 import org.academy.api.client.gui.command.DrawCommand
 import org.academy.api.client.gui.command.SubmittedCommand
+import org.joml.Matrix4f
 import org.joml.Quaternionfc
 import java.util.*
 import java.util.function.Supplier
@@ -14,15 +15,10 @@ class RenderContext {
     private val scissorStack: ScissorStack
     private val drawOrderStack: DrawOrderStack
     private val alphaStack: AlphaStack
-    private val blurRegionBuffer = mutableListOf<BlurRegion>()
-
-    /** 命令列表的单调递增渲染序号, 供 BlurRegion 记录分割点喵. */
     var commandCounter = 0
         private set
 
-    /** 本帧收集到的模糊区域快照。 */
-    val blurRegions: List<BlurRegion>
-        get() = blurRegionBuffer
+    val blurRegions = mutableListOf<BlurRegion>()
 
     var recordedMax = 0L
         private set
@@ -46,27 +42,83 @@ class RenderContext {
         commandCounter++
     }
 
-    fun addCached(cached: List<SubmittedCommand>, regions: List<BlurRegion> = emptyList()) {
-        if (cached.isEmpty() && regions.isEmpty()) return
-        val anchor = if (cached.isNotEmpty()) cached.first().commandIndex else regions.first().commandIndex
+    fun addCached(cache: SubtreeCache, currentOrigin: Matrix4f): Boolean {
+        val cachedCommands = cache.commands
+        if (cachedCommands.isEmpty() && cache.regions.isEmpty()) return true
+
+        val anchor =
+            if (cachedCommands.isNotEmpty()) cachedCommands.first().commandIndex else cache.regions.first().commandIndex
         val offset = commandCounter - anchor
-        for (command in cached) {
-            if (command.drawOrder > recordedMax) recordedMax = command.drawOrder
+
+        val alphaMul = alphaMulCorrection(cache)
+        val poseChanged = !SubtreeCache.sameMatrix(cache.recordOrigin, currentOrigin)
+        val baseDrawOrder = drawOrderStack.peek()
+
+        if (poseChanged) {
+            if (cache.regions.isNotEmpty()) return false
+            addRecomposed(cachedCommands, offset, currentOrigin, cache.recordOrigin, alphaMul, baseDrawOrder)
+            return true
         }
-        if (cached.isNotEmpty()) {
-            val start = commands.size
-            commands.addAll(cached)
-            if (offset != 0) {
-                for (i in start until commands.size) {
-                    val c = commands[i]
-                    commands[i] = SubmittedCommand(c.command, c.pose, c.scissorRect, c.drawOrder, c.commandIndex + offset)
-                }
+
+        if (cachedCommands.isNotEmpty()) {
+            for (c in cachedCommands) {
+                val absoluteOrder = baseDrawOrder + c.drawOrder
+                if (absoluteOrder > recordedMax) recordedMax = absoluteOrder
+                commands.add(
+                    SubmittedCommand(
+                        c.command,
+                        c.pose,
+                        replayScissor(c),
+                        absoluteOrder,
+                        c.commandIndex + offset,
+                        alphaMul
+                    )
+                )
             }
             commandCounter = commands.size
         }
-        for (region in regions) {
-            blurRegionBuffer.add(BlurRegion(region.x, region.y, region.width, region.height, region.radius, region.commandIndex + offset))
+        for ((x, y, width, height, radius, commandIndex) in cache.regions) {
+            blurRegions.add(BlurRegion(x, y, width, height, radius, commandIndex + offset))
         }
+        return true
+    }
+
+    private fun addRecomposed(
+        cachedCommands: List<SubmittedCommand>,
+        offset: Int,
+        currentOrigin: Matrix4f,
+        recordOrigin: Matrix4f,
+        alphaMul: Float,
+        baseDrawOrder: Long
+    ) {
+        if (cachedCommands.isEmpty()) return
+        val invRecordOrigin = Matrix4f(recordOrigin).invert() ?: return
+        for (c in cachedCommands) {
+            val replayPose = SubtreeCache.recomposePose(c.pose, currentOrigin, invRecordOrigin)
+            val absoluteOrder = baseDrawOrder + c.drawOrder
+            if (absoluteOrder > recordedMax) recordedMax = absoluteOrder
+            commands.add(
+                SubmittedCommand(
+                    c.command,
+                    replayPose,
+                    replayScissor(c),
+                    absoluteOrder,
+                    c.commandIndex + offset,
+                    alphaMul
+                )
+            )
+        }
+        commandCounter = commands.size
+    }
+
+    private fun replayScissor(c: SubmittedCommand): ScissorRect? = c.scissorRect ?: scissorStack.peek()
+
+    private fun alphaMulCorrection(cache: SubtreeCache): Float {
+        val record = cache.recordAlphaMul
+        val current = alphaStack.peek()
+        if (record == current) return 1.0f
+        if (record == 0f) return 1.0f
+        return current / record
     }
 
     fun pose(): PoseStack2D {
@@ -81,17 +133,14 @@ class RenderContext {
         return alphaStack
     }
 
-    /** 登记一个屏幕空间模糊区域（[BlurPanelWidget]）。由 [UiContext] 收集并交给 [UiCompositor]。 */
     fun registerBlurRegion(region: BlurRegion) {
-        blurRegionBuffer.add(region)
+        blurRegions.add(region)
     }
 
-    /** 当前已登记的模糊区域数量 (供缓存切分时取其增量)。 */
-    fun blurRegionCount(): Int = blurRegionBuffer.size
+    fun blurRegionCount(): Int = blurRegions.size
 
-    /** 从 [fromIndex] 起新登记的模糊区域 (供缓存时独立捕获子树内的区域)。 */
     fun blurRegionsSince(fromIndex: Int): List<BlurRegion> =
-        if (fromIndex < blurRegionBuffer.size) blurRegionBuffer.subList(fromIndex, blurRegionBuffer.size).toList()
+        if (fromIndex < blurRegions.size) blurRegions.subList(fromIndex, blurRegions.size).toList()
         else emptyList()
 
     fun enableScissor(scissorRect: ScissorRect) {
@@ -102,6 +151,8 @@ class RenderContext {
         scissorStack.pop()
     }
 
+    fun currentScissor(): ScissorRect? = scissorStack.peek()
+
     val accumulatedAlpha: Float
         get() = alphaStack.peek()
 
@@ -109,7 +160,7 @@ class RenderContext {
         commands.clear()
         drawOrderStack.clear()
         alphaStack.clear()
-        blurRegionBuffer.clear()
+        blurRegions.clear()
         commandCounter = 0
     }
 

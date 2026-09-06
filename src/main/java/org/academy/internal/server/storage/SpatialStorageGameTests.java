@@ -41,7 +41,7 @@ import java.util.List;
 import java.util.UUID;
 
 /** Exercises real loot, server persistence and NeoForge container capabilities. */
-@EventBusSubscriber(modid = AcademyCraft.MODID)
+@EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class SpatialStorageGameTests {
     private static final Identifier TYPE = AcademyCraft.academy("spatial_storage_test");
 

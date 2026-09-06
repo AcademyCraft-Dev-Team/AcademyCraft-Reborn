@@ -15,11 +15,11 @@ abstract class DrawCommand protected constructor(
         validatePipelineMode(pipeline)
     }
 
-    abstract fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose)
+    abstract fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose, alphaMul: Float)
 
     open fun isGeometryFixed(): Boolean = false
 
-    open fun generateInstanceData(slot: Int, writer: VertexWriter, instanceIndex: Int, pose: PoseStack.Pose) {
+    open fun generateInstanceData(slot: Int, writer: VertexWriter, instanceIndex: Int, pose: PoseStack.Pose, alphaMul: Float) {
     }
 
     companion object {
