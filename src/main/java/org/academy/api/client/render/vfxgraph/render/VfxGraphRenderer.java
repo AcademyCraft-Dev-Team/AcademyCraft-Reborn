@@ -462,7 +462,9 @@ public final class VfxGraphRenderer {
                     BlenderArcCurves.LIGHT, ageFrac) + 0.33f;
             return new float[]{f, 1f};
         }
-        return new float[]{1f, 1f};
+        // 自由电弧（arc_bolt 等）：出生即亮 → 抖动 → 临终熄灭，形状不变仅亮度动态
+        var f = BlenderArcCurves.sample(BlenderArcCurves.FLICKER, ageFrac);
+        return new float[]{f, 1f};
     }
 
     /**

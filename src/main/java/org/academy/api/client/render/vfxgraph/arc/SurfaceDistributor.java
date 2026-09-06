@@ -133,6 +133,58 @@ public final class SurfaceDistributor {
     }
 
     /**
+     * 计算与给定单位轴方向垂直的一个确定单位向量（构建分支平面用）。
+     */
+    public static float[] perpendicular(float ax, float ay, float az) {
+        var ref = Math.abs(ay) < 0.9f ? new float[]{0, 1, 0} : new float[]{1, 0, 0};
+        var t = cross(ax, ay, az, ref[0], ref[1], ref[2]);
+        var len = (float) Math.sqrt(t[0] * t[0] + t[1] * t[1] + t[2] * t[2]);
+        if (len < 1e-6f) return new float[]{1, 0, 0};
+        return new float[]{t[0] / len, t[1] / len, t[2] / len};
+    }
+
+    /**
+     * 平面扇形分叉方向：在 {@code (forward, right)} 张成的平面内、朝 forward 单侧扇形张开。
+     * 所有分支共享同一方位角（{@code right}），不会绕树干径向散开成鸡毛掸子/草丛，
+     * 而是像真实闪电树一样整体朝一个方向分叉。
+     *
+     * @param da ∈ [0, angle]：由 forward 向 right 侧倾斜的角度
+     */
+    public static float[] fanDirection(float fx, float fy, float fz,
+                                       float rx, float ry, float rz,
+                                       float angle, Random random) {
+        var da = random.nextFloat() * angle;
+        var dc = (float) Math.cos(da);
+        var ds = (float) Math.sin(da);
+        return new float[]{fx * dc + rx * ds, fy * dc + ry * ds, fz * dc + rz * ds};
+    }
+
+    /**
+     * 锥形区间分叉方向：在 axis 为轴的半角 {@code angle} 锥体内均匀采样单位方向。
+     * 分支不再局限于单一平面扇形，而是围绕树干方向在 3D 锥体内散开（真实闪电树状分叉）。
+     *
+     * <p>构造切平面正交基 t1/t2，随机方位角 a∈[0,2π) + 极角 da∈[0,angle]，
+     * 方向 = axis·cos(da) + (t1·cos(a)+t2·sin(a))·sin(da)，天然单位长度。</p>
+     *
+     * @param ax,ay,az 锥体中心轴（单位向量）
+     * @param angle    锥体半角（弧度，从 axis 到锥面的最大偏角）
+     */
+    public static float[] coneDirection(float ax, float ay, float az, float angle, Random random) {
+        var t1 = tangentBase(ax, ay, az);
+        var t2 = cross(ax, ay, az, t1[0], t1[1], t1[2]);
+        var a = random.nextFloat() * (float) (Math.PI * 2);
+        var da = random.nextFloat() * angle;
+        var dc = (float) Math.cos(da);
+        var ds = (float) Math.sin(da);
+        var cc = (float) Math.cos(a);
+        var cs = (float) Math.sin(a);
+        var ex = ax * dc + (t1[0] * cc + t2[0] * cs) * ds;
+        var ey = ay * dc + (t1[1] * cc + t2[1] * cs) * ds;
+        var ez = az * dc + (t1[2] * cc + t2[2] * cs) * ds;
+        return new float[]{ex, ey, ez};
+    }
+
+    /**
      * 按法线方向在切平面内采样一个方向向量。
      *
      * @param nx,ny,nz 表面法线

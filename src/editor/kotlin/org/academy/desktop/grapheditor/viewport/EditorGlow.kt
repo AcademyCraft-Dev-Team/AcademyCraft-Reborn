@@ -47,6 +47,7 @@ class EditorGlow(
 
     fun render(
         viewport: GpuTextureView,
+        depth: GpuTextureView?,
         buffer: ParticleBuffer,
         arcBuffer: ArcBuffer?,
         camera: GraphCamera,
@@ -71,7 +72,7 @@ class EditorGlow(
         // 1) 发光主体（bloomPass=true：只画 GLOW 输出规格，translucent 层不参与 glow）渲进清黑的输入（additive）
         device.createCommandEncoder().clearColorTexture(inputView.texture(), CLEAR_BLACK)
         if (arcBuffer != null) renderer.setArcBuffer(arcBuffer)
-        renderer.render(inputView, null, buffer, camera, false, specs, WorldTransform.identity(), true)
+        renderer.render(inputView, depth, buffer, camera, false, specs, WorldTransform.identity(), true)
 
         // 2) 半分辨率高斯模糊 (复用唯一 BackdropBlur 引擎); 细亮芯 + 更宽模糊 = 明显光晕
         BackdropBlur.applyGaussian(inputView, blurBView, null, blurB!!.width, blurB!!.height, 6f)

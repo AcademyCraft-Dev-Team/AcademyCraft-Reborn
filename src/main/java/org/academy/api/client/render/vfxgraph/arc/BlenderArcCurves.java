@@ -109,6 +109,21 @@ public final class BlenderArcCurves {
     };
 
     /**
+     * 自由电弧（arc_bolt）亮度随 age 闪烁：出生即亮 → 抖动 → 临终熄灭。
+     * 复刻真实闪电「先亮后灭、中途再闪」的观感，形状不变，仅亮度动态。
+     */
+    public static final float[][] FLICKER = {
+            {0.000f, 1.000f},
+            {0.100f, 0.450f},
+            {0.220f, 0.900f},
+            {0.340f, 0.350f},
+            {0.500f, 0.780f},
+            {0.700f, 0.500f},
+            {0.850f, 0.680f},
+            {1.000f, 0.000f},
+    };
+
+    /**
      * 对 FloatCurve 控制点做分段线性插值采样（AUTO 控制柄近似；x 越界钳制两端）。
      */
     public static float sample(float[][] points, float x) {
