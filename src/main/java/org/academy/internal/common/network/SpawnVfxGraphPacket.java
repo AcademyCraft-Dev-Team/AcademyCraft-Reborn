@@ -155,7 +155,7 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
             float lifetimeSeconds, Map<String, Float> floatParams) {
         var packet = new SpawnVfxGraphPacket(assetId, position, direction, localXDirection,
                 followEntityId, scale, lifetimeSeconds, floatParams);
-        var broadcastRange = BROADCAST_RANGE + Math.min(128.0, Math.max(0.0, scale));
+        var broadcastRange = BROADCAST_RANGE + Math.clamp(scale, 0.0, 128.0);
         var rangeSquared = broadcastRange * broadcastRange;
         for (var observer : level.players()) {
             if (observer.distanceToSqr(position) <= rangeSquared) {
@@ -164,7 +164,6 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
         }
     }
 
-    /** 向单个观察者发送，用于仅施法者可见的感知标记。 */
     public static void send(ServerPlayer observer, Identifier assetId, Vec3 position,
             Vec3 direction, float scale, float lifetimeSeconds, Map<String, Float> floatParams) {
         MisakaNetworkServer.send(observer, new SpawnVfxGraphPacket(assetId, position, direction,

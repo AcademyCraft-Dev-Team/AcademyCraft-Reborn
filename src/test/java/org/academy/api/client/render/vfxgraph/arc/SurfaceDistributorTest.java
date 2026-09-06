@@ -122,4 +122,51 @@ class SurfaceDistributorTest {
             assertEquals(1.0f, dlen, 0.01f, "Tangent direction should be unit length");
         }
     }
+
+    /**
+     * fanDirection 应始终落在 (forward, right) 平面内、朝 forward 单侧扇形张开
+     * （分支前倾成树，而非绕树干径向散开的鸡毛掸子），且为单位向量。
+     */
+    @Test
+    void fanDirectionStaysInForwardPlaneOneSide() {
+        var random = new Random(7);
+        float fx = 0f, fy = 1f, fz = 0f;
+        var right = SurfaceDistributor.perpendicular(fx, fy, fz);
+        var angle = 0.5f;
+        for (var i = 0; i < 200; i++) {
+            var dir = SurfaceDistributor.fanDirection(fx, fy, fz, right[0], right[1], right[2], angle, random);
+            var len = (float) Math.sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]);
+            assertEquals(1.0f, len, 0.01f, "fan direction should be unit length");
+            // 前倾：与 forward 的夹角 ≤ angle（单侧扇形，dot ≥ cos(angle)）
+            var dot = dir[0] * fx + dir[1] * fy + dir[2] * fz;
+            assertTrue(dot >= (float) Math.cos(angle) - 1e-4f,
+                    "branch must lean forward within fan, dot=" + dot);
+            // 平面内：与平面法线（forward × right）的点积 ≈ 0
+            var nrmX = fy * right[2] - fz * right[1];
+            var nrmY = fz * right[0] - fx * right[2];
+            var nrmZ = fx * right[1] - fy * right[0];
+            var outPlane = dir[0] * nrmX + dir[1] * nrmY + dir[2] * nrmZ;
+            assertEquals(0.0f, outPlane, 0.01f, "branch must stay in the forward/right plane");
+        }
+    }
+
+    /**
+     * coneDirection 应在以 axis 为轴、半角 angle 的锥体内均匀散开（3D 树状分叉），
+     * 且为单位向量。
+     */
+    @Test
+    void coneDirectionStaysWithinCone() {
+        var random = new Random(11);
+        float ax = 0f, ay = 1f, az = 0f;
+        var angle = 0.5f;
+        for (var i = 0; i < 400; i++) {
+            var dir = SurfaceDistributor.coneDirection(ax, ay, az, angle, random);
+            var len = (float) Math.sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]);
+            assertEquals(1.0f, len, 0.01f, "cone direction should be unit length");
+            // 与 axis 的夹角 ≤ angle：dot ≥ cos(angle)
+            var dot = dir[0] * ax + dir[1] * ay + dir[2] * az;
+            assertTrue(dot >= (float) Math.cos(angle) - 1e-4f,
+                    "branch must stay within cone half-angle, dot=" + dot);
+        }
+    }
 }

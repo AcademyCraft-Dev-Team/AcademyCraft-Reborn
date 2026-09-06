@@ -203,7 +203,7 @@ class VfxPreview(
                 surfaces
             )
             if (specs.any { it.blend() == RenderSpec.Blend.GLOW }) {
-                glow!!.render(color, active.buffer(), active.arcBuffer(), camera, specs, target.width, target.height)
+                glow!!.render(color, depth, active.buffer(), active.arcBuffer(), camera, specs, target.width, target.height)
             }
             return
         }
@@ -222,7 +222,7 @@ class VfxPreview(
         }
         renderer!!.render(color, depth, sim.buffer(), camera, true, specs)
         if (specs.any { it.blend() == RenderSpec.Blend.GLOW }) {
-            glow!!.render(color, sim.buffer(), null, camera, specs, target.width, target.height)
+            glow!!.render(color, depth, sim.buffer(), null, camera, specs, target.width, target.height)
         }
     }
 
