@@ -4,7 +4,11 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
 import org.academy.internal.common.world.entity.misaka.MisakaPersonality;
 import org.academy.internal.common.world.entity.misaka.WanderStyle;
 import org.jspecify.annotations.Nullable;
@@ -46,6 +50,10 @@ public final class MisakaSisterRecord {
             },
             pos -> DataResult.success(pos.getX() + "," + pos.getY() + "," + pos.getZ())
     );
+    private static final Codec<ResourceKey<Level>> DIMENSION_CODEC = Identifier.CODEC.flatXmap(
+            id -> DataResult.success(ResourceKey.create(Registries.DIMENSION, id)),
+            key -> DataResult.success(key.identifier())
+    );
     private static final Codec<Set<String>> STRING_SET_CODEC = Codec.STRING.listOf().xmap(
             HashSet::new,
             set -> new ArrayList<>(set)
@@ -57,18 +65,22 @@ public final class MisakaSisterRecord {
             @Nullable BlockPos networkNodePos,
             @Nullable ChunkPos wanderAnchorChunk,
             @Nullable ChunkPos lastKnownChunk,
+            ResourceKey<Level> lastKnownDimension,
             WanderStyle wanderStyle
     ) {
         private static final Codec<NetworkState> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 BLOCK_POS_CODEC.optionalFieldOf("network_node_pos").forGetter(state -> Optional.ofNullable(state.networkNodePos)),
                 ChunkPos.CODEC.optionalFieldOf("wander_anchor_chunk").forGetter(state -> Optional.ofNullable(state.wanderAnchorChunk)),
                 ChunkPos.CODEC.optionalFieldOf("last_known_chunk").forGetter(state -> Optional.ofNullable(state.lastKnownChunk)),
+                DIMENSION_CODEC.optionalFieldOf("last_known_dimension", Level.OVERWORLD)
+                        .forGetter(NetworkState::lastKnownDimension),
                 WanderStyle.CODEC.fieldOf("wander_style").orElse(WanderStyle.FREE_MOVE).forGetter(NetworkState::wanderStyle)
-        ).apply(instance, (networkNodePos, wanderAnchorChunk, lastKnownChunk, wanderStyle) ->
+        ).apply(instance, (networkNodePos, wanderAnchorChunk, lastKnownChunk, lastKnownDimension, wanderStyle) ->
                 new NetworkState(
                         networkNodePos.orElse(null),
                         wanderAnchorChunk.orElse(null),
                         lastKnownChunk.orElse(null),
+                        lastKnownDimension,
                         wanderStyle
                 )));
     }
@@ -131,6 +143,8 @@ public final class MisakaSisterRecord {
     public @Nullable ChunkPos wanderAnchorChunk;
     /** Last loaded chunk; used for favor LAN proximity when the entity is unloaded. */
     public @Nullable ChunkPos lastKnownChunk;
+    /** Dimension of {@link #lastKnownChunk} / last loaded position. */
+    public ResourceKey<Level> lastKnownDimension = Level.OVERWORLD;
     public WanderStyle wanderStyle = WanderStyle.FREE_MOVE;
     public long awakeWindowEndGameTime;
     public final Set<String> awakeSpottedNames = new HashSet<>();
@@ -178,6 +192,7 @@ public final class MisakaSisterRecord {
         record.networkNodePos = network.networkNodePos() == null ? null : network.networkNodePos().immutable();
         record.wanderAnchorChunk = network.wanderAnchorChunk();
         record.lastKnownChunk = network.lastKnownChunk();
+        record.lastKnownDimension = network.lastKnownDimension() == null ? Level.OVERWORLD : network.lastKnownDimension();
         record.wanderStyle = network.wanderStyle();
         record.awakeWindowEndGameTime = awake.awakeWindowEndGameTime();
         record.awakeSpottedNames.addAll(awake.awakeSpottedNames());
@@ -195,7 +210,13 @@ public final class MisakaSisterRecord {
     }
 
     private NetworkState networkSnapshot() {
-        return new NetworkState(networkNodePos, wanderAnchorChunk, lastKnownChunk, wanderStyle);
+        return new NetworkState(
+                networkNodePos,
+                wanderAnchorChunk,
+                lastKnownChunk,
+                lastKnownDimension == null ? Level.OVERWORLD : lastKnownDimension,
+                wanderStyle
+        );
     }
 
     private AwakeState awakeSnapshot() {

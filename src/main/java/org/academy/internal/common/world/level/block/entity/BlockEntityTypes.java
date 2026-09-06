@@ -75,6 +75,22 @@ public final class BlockEntityTypes {
                             Blocks.SOLAR_GEN.get()
                     )
             );
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<AerospaceSignalCabinBlockEntity>> AEROSPACE_SIGNAL_CABIN =
+            BLOCK_ENTITY_TYPES.register(
+                    "aerospace_signal_cabin",
+                    () -> new BlockEntityType<>(
+                            AerospaceSignalCabinBlockEntity::new,
+                            Blocks.AEROSPACE_SIGNAL_CABIN.get()
+                    )
+            );
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<EnergyLaserTowerBlockEntity>> ENERGY_LASER_TOWER =
+            BLOCK_ENTITY_TYPES.register(
+                    "energy_laser_tower",
+                    () -> new BlockEntityType<>(
+                            EnergyLaserTowerBlockEntity::new,
+                            Blocks.ENERGY_LASER_TOWER.get()
+                    )
+            );
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<DarkmatterBlockEntity>> DARKMATTER_BLOCK =
             BLOCK_ENTITY_TYPES.register(
                     "darkmatter_block",
@@ -86,6 +102,4 @@ public final class BlockEntityTypes {
 
     private BlockEntityTypes() {
     }
-
-
 }

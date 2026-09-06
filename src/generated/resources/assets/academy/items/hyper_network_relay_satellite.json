@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "academy:item/hyper_network_relay_satellite"
+  }
+}

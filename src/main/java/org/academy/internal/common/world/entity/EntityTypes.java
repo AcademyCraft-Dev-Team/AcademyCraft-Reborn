@@ -6,6 +6,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 import org.academy.internal.common.world.entity.misaka.MisakaSisterEntity;
+import org.academy.internal.common.world.entity.misaka.RelaySatelliteEntity;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 import org.academy.internal.common.world.entity.projectile.PaperAirplane;
 import org.academy.internal.common.world.entity.projectile.MagneticHook;
@@ -116,6 +117,10 @@ public class EntityTypes {
             ENTITY_TYPES.registerEntityType(
                     "misaka_sister", MisakaSisterEntity::new, MobCategory.CREATURE,
                     builder -> builder.sized(0.6f, 1.8f).clientTrackingRange(10).updateInterval(3));
+    public static final DeferredHolder<EntityType<?>, EntityType<RelaySatelliteEntity>> RELAY_SATELLITE =
+            ENTITY_TYPES.registerEntityType(
+                    "relay_satellite", RelaySatelliteEntity::new, MobCategory.MISC,
+                    builder -> builder.sized(0.8f, 0.8f).clientTrackingRange(96).updateInterval(2));
 
     private EntityTypes() {
     }

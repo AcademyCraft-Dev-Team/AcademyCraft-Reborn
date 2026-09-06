@@ -30,5 +30,7 @@ public final class BlockEntityRenderers {
                 _ -> WindGenPillarRenderer.INSTANCE);
         event.registerBlockEntityRenderer(BlockEntityTypes.SOLAR_GEN.get(),
                 _ -> SolarGenRenderer.INSTANCE);
+        event.registerBlockEntityRenderer(BlockEntityTypes.ENERGY_LASER_TOWER.get(),
+                _ -> EnergyLaserTowerRenderer.INSTANCE);
     }
 }

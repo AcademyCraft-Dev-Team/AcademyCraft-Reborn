@@ -144,9 +144,18 @@ public final class Items {
             ITEMS.registerItem("misaka_tower", MisakaTowerItem::new);
     public static final DeferredHolder<Item, MisakaTowerPromaxItem> MISAKA_TOWER_PROMAX =
             ITEMS.registerItem("misaka_tower_promax", MisakaTowerPromaxItem::new);
+    public static final DeferredHolder<Item, NetworkRelaySatelliteItem> NETWORK_RELAY_SATELLITE =
+            ITEMS.registerItem("network_relay_satellite", NetworkRelaySatelliteItem::new);
+    public static final DeferredHolder<Item, HyperNetworkRelaySatelliteItem> HYPER_NETWORK_RELAY_SATELLITE =
+            ITEMS.registerItem("hyper_network_relay_satellite", HyperNetworkRelaySatelliteItem::new);
     public static final DeferredHolder<Item, SpawnEggItem> MISAKA_SISTER_SPAWN_EGG =
             ITEMS.registerItem("misaka_sister_spawn_egg", properties -> new SpawnEggItem(
                     properties.spawnEgg(EntityTypes.MISAKA_SISTER.get())));
+    public static final DeferredHolder<Item, BlockItem> AEROSPACE_SIGNAL_CABIN =
+            ITEMS.registerSimpleBlockItem("aerospace_signal_cabin", Blocks.AEROSPACE_SIGNAL_CABIN);
+    public static final DeferredHolder<Item, MultiBlockItem> ENERGY_LASER_TOWER =
+            ITEMS.registerItem("energy_laser_tower",
+                    properties -> new MultiBlockItem(Blocks.ENERGY_LASER_TOWER.get(), properties));
 
     private Items() {
     }

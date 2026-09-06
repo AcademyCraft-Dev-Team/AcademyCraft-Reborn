@@ -20,6 +20,18 @@ public class GenericConfig {
     @SerializedName("misakaCpPerMsk")
     public float misakaCpPerMsk = 2.0f;
 
+    /** Energy drained per tick by an energy laser tower while powering a relay satellite. */
+    @SerializedName("misakaRelayLaserDrainPerTick")
+    public int misakaRelayLaserDrainPerTick = 2000;
+
+    /** Consecutive unpowered ticks before a relay satellite crashes. */
+    @SerializedName("misakaRelayCrashTicks")
+    public int misakaRelayCrashTicks = 6000;
+
+    /** Explosion radius when a crashed relay satellite hits the ground (TNT-like destroy). */
+    @SerializedName("misakaRelayCrashExplosionPower")
+    public float misakaRelayCrashExplosionPower = 5.0f;
+
     public static final class Action implements TypeHandler<GenericConfig> {
         public static final TypeHandler<GenericConfig> INSTANCE = new Action();
 

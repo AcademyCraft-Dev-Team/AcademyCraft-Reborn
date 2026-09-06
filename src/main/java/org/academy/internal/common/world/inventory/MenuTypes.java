@@ -18,9 +18,13 @@ public class MenuTypes {
             () -> new MenuType<>(OmniCraftingMenu::new, FeatureFlags.VANILLA_SET));
     public static final DeferredHolder<MenuType<?>, MenuType<SolarGenMenu>> SOLAR_GEN = MENU_TYPES.register("solar_gen",
             () -> new MenuType<>(SolarGenMenu::new, FeatureFlags.VANILLA_SET));
+    public static final DeferredHolder<MenuType<?>, MenuType<AerospaceSignalCabinMenu>> AEROSPACE_SIGNAL_CABIN =
+            MENU_TYPES.register("aerospace_signal_cabin",
+                    () -> new MenuType<>(AerospaceSignalCabinMenu::new, FeatureFlags.VANILLA_SET));
+    public static final DeferredHolder<MenuType<?>, MenuType<EnergyLaserTowerMenu>> ENERGY_LASER_TOWER =
+            MENU_TYPES.register("energy_laser_tower",
+                    () -> new MenuType<>(EnergyLaserTowerMenu::new, FeatureFlags.VANILLA_SET));
 
     private MenuTypes() {
     }
-
-
 }

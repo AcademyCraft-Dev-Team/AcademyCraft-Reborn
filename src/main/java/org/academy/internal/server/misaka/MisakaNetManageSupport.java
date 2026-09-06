@@ -65,7 +65,6 @@ public final class MisakaNetManageSupport {
         var summaries = new ArrayList<MisakaNetManageDataPacket.SisterSummary>(sisters.size());
         var wireless = WirelessNetworkData.get(level);
         var overworld = server.overworld();
-        var loaded = MisakaNetworkCoverage.loadedSistersByUuid(overworld);
         for (var sister : sisters) {
             String nodeName = "";
             if (sister.networkNodePos != null) {
@@ -80,8 +79,10 @@ public final class MisakaNetManageSupport {
             var sisterNetworkId = sister.networkNodePos == null
                     ? networkId
                     : MisakaNAT.get().resolveNetworkId(overworld, sister.networkNodePos);
-            var sample = MisakaNetworkCoverage.samplePos(sister, loaded.get(sister.misakaUuid));
-            boolean inCoverage = MisakaNAT.get().canUseMisakaService(overworld, sisterNetworkId, sample);
+            var loadedSister = MisakaNetworkCoverage.findLoadedSister(server, sister.misakaUuid);
+            var sampleLevel = MisakaNetworkCoverage.sampleLevel(server, sister, loadedSister);
+            var sample = MisakaNetworkCoverage.samplePos(sister, loadedSister);
+            boolean inCoverage = MisakaNAT.get().canUseMisakaService(sampleLevel, sisterNetworkId, sample);
             float msk = (!sister.starving && inCoverage)
                     ? MisakaComputeContribution.mskPerSecond(sister.perception)
                     : 0.0f;

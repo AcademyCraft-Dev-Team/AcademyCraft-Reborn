@@ -195,6 +195,14 @@ public final class MisakaComputeIndex {
         coverageContributing.clear();
     }
 
+    boolean testingIsDirty() {
+        return dirty;
+    }
+
+    void testingSetDirty(boolean value) {
+        dirty = value;
+    }
+
     private static String closestName(MisakaSisterRecord record) {
         String closest = record.lastInteractedBenevolentPlayerName == null
                 ? UNASSIGNED
@@ -215,7 +223,6 @@ public final class MisakaComputeIndex {
 
         var level = server.overworld();
         var roster = MisakaSisterRoster.get(server);
-        var loaded = MisakaNetworkCoverage.loadedSistersByUuid(level);
         record SisterSort(
                 UUID uuid,
                 int serial,
@@ -239,8 +246,10 @@ public final class MisakaComputeIndex {
             float msk = MisakaComputeContribution.mskPerSecond(record.perception);
             String closest = closestName(record);
             boolean reconstruction = record.perception >= 101;
-            BlockPos sample = MisakaNetworkCoverage.samplePos(record, loaded.get(record.misakaUuid));
-            boolean inCoverage = MisakaNetworkCoverage.canUseMisakaService(level, networkId, sample);
+            var loadedSister = MisakaNetworkCoverage.findLoadedSister(server, record.misakaUuid);
+            var sampleLevel = MisakaNetworkCoverage.sampleLevel(server, record, loadedSister);
+            BlockPos sample = MisakaNetworkCoverage.samplePos(record, loadedSister);
+            boolean inCoverage = MisakaNetworkCoverage.canUseMisakaService(sampleLevel, networkId, sample);
             coverageContributing.put(record.misakaUuid, inCoverage);
             sorted.add(new SisterSort(
                     record.misakaUuid,

@@ -121,6 +121,16 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         blockModels.createTrivialBlock(Blocks.WIND_GEN_PILLAR.get(), providerW);
         blockModels.createTrivialBlock(Blocks.OMNI_CRAFTING_TABLE.get(), providerDB);
         blockModels.createTrivialBlock(Blocks.SOLAR_GEN.get(), providerDB);
+        blockModels.createTrivialBlock(Blocks.AEROSPACE_SIGNAL_CABIN.get(), providerDB);
+        blockModels.registerSimpleItemModel(
+                Blocks.AEROSPACE_SIGNAL_CABIN.get(),
+                ModelLocationUtils.getModelLocation(Blocks.AEROSPACE_SIGNAL_CABIN.get())
+        );
+        blockModels.createTrivialBlock(Blocks.ENERGY_LASER_TOWER.get(), providerW);
+        blockModels.registerSimpleItemModel(
+                Blocks.ENERGY_LASER_TOWER.get(),
+                ModelLocationUtils.getModelLocation(Blocks.ENERGY_LASER_TOWER.get())
+        );
         blockModels.createTrivialBlock(Blocks.ABILITY_DEVELOPER.get(), providerDB);
         blockModels.createTrivialBlock(Blocks.IMAG_PHASE.get(), providerBlack);
         var configurableDarkmatterBlock = Blocks.DARKMATTER_BLOCK.get();
@@ -187,6 +197,23 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         itemModels.generateFlatItem(Items.DARK_MATTER_BOOTS.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.EMPTY_UNIT.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.IMAG_PHASE_UNIT.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(Items.MISAKA_TOWER.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(Items.MISAKA_TOWER_PROMAX.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(Items.MISAKA_SISTER_SPAWN_EGG.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.itemModelOutput.accept(Items.NETWORK_RELAY_SATELLITE.get(), ItemModelUtils.plainModel(
+                ModelTemplates.FLAT_ITEM.create(
+                        ModelLocationUtils.getModelLocation(Items.NETWORK_RELAY_SATELLITE.get()),
+                        TextureMapping.layer0(Items.NEEDLE.get()),
+                        itemModels.modelOutput
+                )
+        ));
+        itemModels.itemModelOutput.accept(Items.HYPER_NETWORK_RELAY_SATELLITE.get(), ItemModelUtils.plainModel(
+                ModelTemplates.FLAT_ITEM.create(
+                        ModelLocationUtils.getModelLocation(Items.HYPER_NETWORK_RELAY_SATELLITE.get()),
+                        TextureMapping.layer0(Items.IMAG_PHASE_CIRCUIT.get()),
+                        itemModels.modelOutput
+                )
+        ));
         itemModels.itemModelOutput.accept(Items.PAPER_AIRPLANE.get(), ItemModelUtils.plainModel(
                 ModelTemplates.FLAT_ITEM.create(
                         ModelLocationUtils.getModelLocation(Items.PAPER_AIRPLANE.get()),

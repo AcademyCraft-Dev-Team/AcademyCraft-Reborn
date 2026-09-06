@@ -31,6 +31,10 @@ public final class Blocks {
             BLOCKS.registerBlock("cat_engine", CatEngineBlock::new, Blocks::machineProperties);
     public static final DeferredHolder<Block, SolarGenBlock> SOLAR_GEN =
             BLOCKS.registerBlock("solar_gen", SolarGenBlock::new, Blocks::machineProperties);
+    public static final DeferredHolder<Block, AerospaceSignalCabinBlock> AEROSPACE_SIGNAL_CABIN =
+            BLOCKS.registerBlock("aerospace_signal_cabin", AerospaceSignalCabinBlock::new, Blocks::machineProperties);
+    public static final DeferredHolder<Block, EnergyLaserTowerBlock> ENERGY_LASER_TOWER =
+            BLOCKS.registerBlock("energy_laser_tower", EnergyLaserTowerBlock::new, Blocks::machineProperties);
     public static final DeferredHolder<Block, LiquidBlock> IMAG_PHASE =
             BLOCKS.registerBlock(
                     "imag_phase",

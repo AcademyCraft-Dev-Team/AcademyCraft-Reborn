@@ -12,8 +12,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MisakaNetworkCoverageTest {
     @AfterEach
-    void clearCache() {
+    void clear() {
         MisakaNetworkCoverage.invalidate();
+        MisakaRelayAccess.testingInstall(null);
     }
 
     @Test
@@ -33,7 +34,6 @@ class MisakaNetworkCoverageTest {
 
     @Test
     void onlyOwnNetworkSpheresGrantCoverage() {
-        // Simulates two topology components: only network-A spheres should match.
         var networkA = List.of(
                 new MisakaNetworkCoverage.Sphere(new BlockPos(0, 64, 0), 25.0),
                 new MisakaNetworkCoverage.Sphere(new BlockPos(4, 64, 0), 25.0)
@@ -47,7 +47,35 @@ class MisakaNetworkCoverageTest {
     }
 
     @Test
-    void relayNoopNeverGrantsAccess() {
+    void overworldEnergyFootprintGrantsWithoutRelay() {
+        assertTrue(MisakaNetworkCoverage.resolveServiceAccess(true, true, false));
+        assertFalse(MisakaNetworkCoverage.resolveServiceAccess(true, false, false));
+    }
+
+    @Test
+    void overworldOutsideEnergyUsesRelay() {
+        assertTrue(MisakaNetworkCoverage.resolveServiceAccess(true, false, true));
+        assertFalse(MisakaNetworkCoverage.resolveServiceAccess(true, false, false));
+    }
+
+    @Test
+    void nonOverworldIgnoresEnergyFootprint() {
+        // Nether / hyper: energy spheres never apply; only powered relay grants.
+        assertFalse(MisakaNetworkCoverage.resolveServiceAccess(false, true, false));
+        assertTrue(MisakaNetworkCoverage.resolveServiceAccess(false, true, true));
+        assertFalse(MisakaNetworkCoverage.resolveServiceAccess(false, false, false));
+    }
+
+    @Test
+    void nullSampleLevelDefersToRelayAccess() {
+        MisakaRelayAccess.testingInstall((level, pos, networkId) -> true);
+        assertTrue(MisakaNetworkCoverage.canUseMisakaService(null, BlockPos.ZERO, BlockPos.ZERO));
+        MisakaRelayAccess.testingInstall((level, pos, networkId) -> false);
+        assertFalse(MisakaNetworkCoverage.canUseMisakaService(null, BlockPos.ZERO, BlockPos.ZERO));
+    }
+
+    @Test
+    void liveRelayAccessDeniesWithoutLevel() {
         assertFalse(MisakaRelayAccess.get().grantsAccess(null, BlockPos.ZERO, BlockPos.ZERO));
     }
 }

@@ -483,6 +483,7 @@ public class MisakaSisterEntity extends PathfinderMob {
                 return;
             }
             record.lastKnownChunk = chunk;
+            record.lastKnownDimension = level().dimension();
             MisakaSisterRoster.get(level().getServer()).setDirty();
             recheckNetworkCoverage(record);
         });
@@ -500,10 +501,14 @@ public class MisakaSisterEntity extends PathfinderMob {
         if (!record.awakened || record.networkNodePos == null) {
             return;
         }
-        // Footprint / topology live on overworld SavedData (same as compute index rebuild).
+        // Topology resolve uses overworld wireless data; coverage sample uses this entity's level.
         var overworld = server.overworld();
         var networkId = MisakaNAT.get().resolveNetworkId(overworld, record.networkNodePos);
-        boolean nowIn = MisakaNAT.get().canUseMisakaService(overworld, networkId, blockPosition());
+        boolean nowIn = MisakaNAT.get().canUseMisakaService(
+                (ServerLevel) level(),
+                networkId,
+                blockPosition()
+        );
         Boolean was = MisakaComputeIndex.get().lastCoverageContributing(record.misakaUuid);
         if (was == null) {
             MisakaComputeIndex.get().seedCoverageContributing(record.misakaUuid, nowIn);

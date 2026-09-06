@@ -8,6 +8,8 @@
     "academy:wind_gen_base",
     "academy:wind_gen_pillar",
     "academy:wind_gen_top",
-    "academy:wireless_node"
+    "academy:wireless_node",
+    "academy:aerospace_signal_cabin",
+    "academy:energy_laser_tower"
   ]
 }

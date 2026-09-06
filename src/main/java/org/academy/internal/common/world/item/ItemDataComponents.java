@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.academy.api.common.ability.darkmatter.DarkmatterBlockProfile;
@@ -44,6 +45,12 @@ public final class ItemDataComponents {
             "darkmatter_block_profile", builder -> builder
                     .persistent(DarkmatterBlockProfile.CODEC)
                     .networkSynchronized(DarkmatterBlockProfile.STREAM_CODEC));
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Identifier>>
+            RELAY_TARGET_DIMENSION = DATA_COMPONENTS.registerComponentType(
+            "relay_target_dimension", builder -> builder
+                    .persistent(Identifier.CODEC)
+                    .networkSynchronized(Identifier.STREAM_CODEC));
 
     private ItemDataComponents() {
     }
