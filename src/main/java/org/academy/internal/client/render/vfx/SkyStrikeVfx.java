@@ -16,6 +16,7 @@ import org.joml.Vector3f;
 /** Owns the graph-authored world effect and bounded screen feedback on the same paused game clock. */
 public final class SkyStrikeVfx implements Vfx {
     private static final int MAX_DETAILED_EFFECTS = 12;
+    private static final int FULL_SURFACE_BUDGET = 4;
     private static int activeDetailedEffects;
     private static final java.util.Set<SkyStrikeVfx> ACTIVE = new java.util.HashSet<>();
 
@@ -56,12 +57,17 @@ public final class SkyStrikeVfx implements Vfx {
             case REDUCED -> 0.45f;
             case COLUMN_ONLY -> 0f;
         }));
+        graph.bind("surface_detail", () -> Value.of(surfaceDetailScale()));
         graph.bind("cloud_opacity", () -> Value.of(profile == SkyStrikeProfile.THUNDERCLAP ? 1f : 0.32f));
         // The cloud extends far above the impact point used by the normal small-effect culler.
         var level = net.minecraft.client.Minecraft.getInstance().level;
         if (level != null) graph.bindSurface("ground", new SkyStrikeTerrain(level, impact));
         graph.setAlwaysVisible(true);
         graph.setMinimumFarPlane(256);
+    }
+
+    private static synchronized float surfaceDetailScale() {
+        return Math.min(1f, (float) FULL_SURFACE_BUDGET / Math.max(1, activeDetailedEffects));
     }
 
     private static synchronized SkyStrikeGeometry.Detail claimDetail(SkyStrikeGeometry.Detail requested) {

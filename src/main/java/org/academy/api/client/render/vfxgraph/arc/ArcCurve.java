@@ -38,6 +38,8 @@ public final class ArcCurve {
     private long seed;
     /** 替换式瞬态组；0 表示普通寿命电弧。 */
     private long replacementGroup;
+    /** Optional tube tessellation cap for thin curves; zero uses the output setting. */
+    private int maxTubeSegments;
 
     /**
      * 可选的端点吸附表面（三角形 xyz*3/三角形；null = 自由弧不做表面吸附）。
@@ -149,6 +151,7 @@ public final class ArcCurve {
         this.noiseStrength = Float.NaN;
         this.driftSpeed = Float.NaN;
         this.replacementGroup = 0L;
+        this.maxTubeSegments = 0;
         this.archRandom = 1f;
         this.archHeight = 1f;
         this.archHalf = 0.5f;
@@ -156,6 +159,15 @@ public final class ArcCurve {
         this.archCurve = 0.78f;
         this.archWidth = 0.01f;
         this.archSegments = 12;
+    }
+
+    public int maxTubeSegments() {
+        return maxTubeSegments;
+    }
+
+    /** Limits thin tubes without reducing the resolution of other arcs in the same output. */
+    public void setMaxTubeSegments(int segments) {
+        maxTubeSegments = segments <= 0 ? 0 : Math.clamp(segments, 3, 16);
     }
 
     long replacementGroup() {

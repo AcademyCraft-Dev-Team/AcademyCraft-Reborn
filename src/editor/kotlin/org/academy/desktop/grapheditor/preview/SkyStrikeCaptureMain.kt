@@ -49,7 +49,7 @@ private class SkyStrikeCaptureApp(private val root: Path) : EditorApp {
         Shot("sky_strike_thunderclap", "impact", 0.12f),
         Shot("sky_strike_thunderclap", "decay", 0.70f),
         Shot("sky_strike_thunderclap", "afterglow", 2.95f),
-        Shot("sky_strike_thunderclap", "attachment", 2f)
+        Shot("sky_strike_thunderclap", "attachment", 1f)
     ) + (0..51).map { Shot("sky_strike_thunderclap", "motion_%03d".format(it), it / 12f) }
 
     init {

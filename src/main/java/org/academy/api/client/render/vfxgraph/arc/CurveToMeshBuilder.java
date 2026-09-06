@@ -31,6 +31,7 @@ public final class CurveToMeshBuilder {
      */
     public static MeshData build(ArcCurve arc, int segmentRes, float r, float g, float b, float a,
                                  float brightnessScale) {
+        if (arc.maxTubeSegments() > 0) segmentRes = Math.min(segmentRes, arc.maxTubeSegments());
         var n = arc.size();
         if (n < 2) return MeshData.EMPTY;
 

@@ -26,6 +26,19 @@ class CurveToMeshBuilderTest {
     }
 
     @Test
+    void thinCurveResolutionCapRespectsOutputAndResetsOnPoolReuse() {
+        var buffer = new ArcBuffer();
+        var arc = buffer.add();
+        arc.addPoint(0, 0, 0, 0.05f, 0);
+        arc.addPoint(0, 1, 0, 0.05f, 0);
+        arc.setMaxTubeSegments(6);
+        assertEquals(12, CurveToMeshBuilder.build(arc, 12, 1, 1, 1, 1, 1).vertexCount());
+        assertEquals(8, CurveToMeshBuilder.build(arc, 4, 1, 1, 1, 1, 1).vertexCount());
+        buffer.clear();
+        assertEquals(0, buffer.add().maxTubeSegments(), "A later main column must not inherit attachment LOD");
+    }
+
+    @Test
     void buildEmptyArcReturnsEmpty() {
         var arc = new ArcCurve();
         var mesh = CurveToMeshBuilder.build(arc, 8, 1, 1, 1, 1, 0.6f);
