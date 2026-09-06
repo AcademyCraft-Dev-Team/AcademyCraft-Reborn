@@ -53,7 +53,7 @@ public final class InteractionGate {
             if (server != null) {
                 MisakaSisterRoster.get(server).setDirty();
                 if (changed) {
-                    MisakaComputeIndex.get().markDirty();
+                    MisakaComputeIndex.get(server).markDirty();
                 }
             }
         }

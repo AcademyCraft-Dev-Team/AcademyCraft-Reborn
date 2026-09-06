@@ -7,13 +7,10 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import org.academy.api.common.ability.DevelopmentSource;
 import org.academy.api.common.vanilla.OpenScreenPacket;
-import org.academy.internal.common.world.inventory.AerospaceSignalCabinMenu;
 import org.academy.internal.common.world.inventory.MenuTypes;
 import org.academy.internal.common.world.level.block.*;
-import org.academy.internal.common.world.level.block.entity.AerospaceSignalCabinBlockEntity;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.api.common.network.annotation.SubscribePacket;
-import net.minecraft.world.inventory.ContainerLevelAccess;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -93,27 +90,16 @@ public final class Screens {
                     var containerId = buf.readVarInt();
                     var title = buf.readUtf();
                     var pos = buf.readBlockPos();
-                    var minecraft = Minecraft.getInstance();
-                    if (minecraft.player != null && minecraft.level != null) {
-                        var inventory = minecraft.player.getInventory();
-                        var level = minecraft.level;
-                        AerospaceSignalCabinMenu menu;
-                        if (level.getBlockEntity(pos) instanceof AerospaceSignalCabinBlockEntity cabin) {
-                            // Bind to the client BE so slot contents survive reopen (not a throwaway SimpleContainer).
-                            menu = new AerospaceSignalCabinMenu(
-                                    containerId,
-                                    inventory,
-                                    ContainerLevelAccess.create(level, pos),
-                                    cabin
-                            );
-                        } else {
-                            menu = MenuTypes.AEROSPACE_SIGNAL_CABIN.get().create(containerId, inventory);
-                        }
-                        minecraft.player.containerMenu = menu;
+                    if (Minecraft.getInstance().player != null) {
+                        var inventory = Minecraft.getInstance().player.getInventory();
+                        var menu = MenuTypes.AEROSPACE_SIGNAL_CABIN.get().create(containerId, inventory);
                         var screen = AerospaceSignalCabinScreen.Companion.create(
                                 menu, inventory, Component.literal(title), pos
                         );
-                        minecraft.gui.setScreen(screen);
+                        if (screen != null) {
+                            Minecraft.getInstance().player.containerMenu = screen.getMenu();
+                        }
+                        Minecraft.getInstance().gui.setScreen(screen);
                     }
                 });
         SCREEN_HANDLERS.put(EnergyLaserTowerBlock.SCREEN,

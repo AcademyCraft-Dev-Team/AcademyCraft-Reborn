@@ -22,20 +22,33 @@ public final class MisakaMonsterAggroEvents {
         if (!(event.getEntity() instanceof Mob mob) || !(mob instanceof Enemy)) {
             return;
         }
-        mob.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(
-                mob,
-                MisakaSisterEntity.class,
-                10,
-                true,
-                false,
-                (target, level) -> target instanceof MisakaSisterEntity sister && !sister.isStarving()
-        ));
+        for (var wrapped : mob.targetSelector.getAvailableGoals()) {
+            if (wrapped.getGoal() instanceof MisakaSisterTargetGoal) {
+                return;
+            }
+        }
+        mob.targetSelector.addGoal(3, new MisakaSisterTargetGoal(mob));
     }
 
     @SubscribeEvent
     public static void onLivingChangeTarget(LivingChangeTargetEvent event) {
-        if (event.getNewAboutToBeSetTarget() instanceof MisakaSisterEntity sister && sister.isStarving()) {
+        if (event.getNewAboutToBeSetTarget() instanceof MisakaSisterEntity sister
+                && !sister.canBeSeenAsEnemy()) {
             event.setNewAboutToBeSetTarget(null);
+        }
+    }
+
+    /** Identifiable target goal so rejoin does not stack duplicates. */
+    static final class MisakaSisterTargetGoal extends NearestAttackableTargetGoal<MisakaSisterEntity> {
+        MisakaSisterTargetGoal(Mob mob) {
+            super(
+                    mob,
+                    MisakaSisterEntity.class,
+                    10,
+                    true,
+                    false,
+                    (target, level) -> target instanceof MisakaSisterEntity sister && sister.canBeSeenAsEnemy()
+            );
         }
     }
 }

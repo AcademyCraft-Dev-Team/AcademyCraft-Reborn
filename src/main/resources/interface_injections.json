@@ -4,8 +4,5 @@
   ],
   "net/minecraft/client/renderer/entity/state/EntityRenderState": [
     "com/geckolib/renderer/base/GeoRenderState"
-  ],
-  "net/minecraft/client/renderer/blockentity/state/BlockEntityRenderState": [
-    "com/geckolib/renderer/base/GeoRenderState"
   ]
 }

@@ -24,9 +24,6 @@ import java.util.UUID;
 @PacketTarget(ThreadType.SERVER)
 public final class TogglePickUpMisakaPacket
         extends Packet<ServerGamePacketListenerImpl, TogglePickUpMisakaPacket> {
-    private static final double PICKUP_RANGE = 4.0;
-    private static final double PICKUP_RANGE_SQR = PICKUP_RANGE * PICKUP_RANGE;
-
     public static final StreamCodec<ByteBuf, TogglePickUpMisakaPacket> CODEC = StreamCodec.composite(
             MisakaPacketCodecs.UUID_STREAM_CODEC,
             TogglePickUpMisakaPacket::entityUuid,
@@ -68,7 +65,7 @@ public final class TogglePickUpMisakaPacket
             if (sister == null || !player.isAlive()) {
                 return;
             }
-            if (player.distanceToSqr(sister) > PICKUP_RANGE_SQR) {
+            if (player.distanceToSqr(sister) > MisakaSisterEntity.PICKUP_RANGE_SQR) {
                 return;
             }
             var record = sister.rosterRecord().orElse(null);

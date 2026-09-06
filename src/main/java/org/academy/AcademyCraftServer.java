@@ -7,6 +7,8 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import org.academy.api.common.misaka.MisakaNAT;
+import org.academy.api.common.misaka.MisakaRelayAccess;
 import org.academy.api.common.profiler.AcademyProfiler;
 import org.academy.api.common.util.FileUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -25,6 +27,8 @@ import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.config.GenericConfig;
+import org.academy.internal.server.misaka.SatelliteMisakaRelayAccess;
+import org.academy.internal.server.misaka.WirelessForwardingMisakaNAT;
 import org.academy.internal.server.world.level.storage.Player;
 import org.academy.internal.server.world.level.storage.WorldData;
 import org.jetbrains.annotations.Nullable;
@@ -86,6 +90,8 @@ public final class AcademyCraftServer {
         PlayerLeftClickSwingPacket.initServer();
         MagneticHookActionPacket.initServer();
         MisakaPackets.initServer();
+        MisakaNAT.install(WirelessForwardingMisakaNAT.INSTANCE);
+        MisakaRelayAccess.install(SatelliteMisakaRelayAccess.INSTANCE);
         AbilityProgramManager.initServer();
     }
 
@@ -106,6 +112,8 @@ public final class AcademyCraftServer {
         LOGGER.info("Server stopping. Performing final data saves...");
         instance.saveData();
         instance.serverConfig.save();
+        MisakaNAT.install(null);
+        MisakaRelayAccess.install(null);
         AcademyProfiler.stopSampling();
         AcademyProfiler.stopZoneCapture();
         AcademyProfiler.unregisterThread(context.getRunningThread());

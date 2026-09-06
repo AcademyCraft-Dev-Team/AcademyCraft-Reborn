@@ -1,6 +1,7 @@
 package org.academy.internal.common.world.entity.misaka;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.ChunkPos;
 import org.academy.internal.common.world.entity.misaka.favor.FavorService;
 import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
@@ -146,6 +147,35 @@ class FavorServiceTest {
         assertEquals(1, component.size());
         assertEquals(-5, oldNet.favorByPlayerName.get("villain"));
         assertNull(newNet.favorByPlayerName.get("villain"));
+    }
+
+    @Test
+    void proximityDoesNotBridgeAcrossDimensions() {
+        var overworld = ResourceKey.create(
+                net.minecraft.core.registries.Registries.DIMENSION,
+                net.minecraft.resources.Identifier.withDefaultNamespace("overworld")
+        );
+        var nether = ResourceKey.create(
+                net.minecraft.core.registries.Registries.DIMENSION,
+                net.minecraft.resources.Identifier.withDefaultNamespace("the_nether")
+        );
+        var a = awakenedRecord(100_001);
+        var b = awakenedRecord(100_002);
+        a.lastKnownChunk = new ChunkPos(0, 0);
+        b.lastKnownChunk = new ChunkPos(1, 0);
+        a.lastKnownDimension = overworld;
+        b.lastKnownDimension = nether;
+
+        var component = FavorService.resolveLanComponent(
+                a,
+                List.of(a, b),
+                record -> null,
+                record -> record.lastKnownChunk,
+                record -> record.lastKnownDimension
+        );
+        assertEquals(1, component.size());
+        assertTrue(component.contains(a));
+        assertFalse(component.contains(b));
     }
 
     private static MisakaSisterRecord awakenedRecord(int serial) {

@@ -16,10 +16,6 @@ public final class FeedFavoriteFoodRule implements IFavorRule {
     @Override
     public void apply(FavorContext context, @Nullable MinecraftServer server) {
         context.record().dailyFavoriteFavor = true;
-        if (server != null) {
-            FavorService.modifyFavorLan(server, context.record(), context.playerName(), 1);
-        } else {
-            FavorService.modifyFavor(context.record(), context.playerName(), 1);
-        }
+        FavorService.applyDelta(server, context.record(), context.playerName(), 1);
     }
 }

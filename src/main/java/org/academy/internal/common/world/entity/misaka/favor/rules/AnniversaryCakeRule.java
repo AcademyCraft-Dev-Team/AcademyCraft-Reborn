@@ -20,10 +20,6 @@ public final class AnniversaryCakeRule implements IFavorRule {
     @Override
     public void apply(FavorContext context, @Nullable MinecraftServer server) {
         context.record().dailyCakeFavor = true;
-        if (server != null) {
-            FavorService.modifyFavorLan(server, context.record(), context.playerName(), 10);
-        } else {
-            FavorService.modifyFavor(context.record(), context.playerName(), 10);
-        }
+        FavorService.applyDelta(server, context.record(), context.playerName(), 10);
     }
 }

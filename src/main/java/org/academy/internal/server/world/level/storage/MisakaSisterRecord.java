@@ -1,12 +1,9 @@
 package org.academy.internal.server.world.level.storage;
 
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import org.academy.internal.common.world.entity.misaka.MisakaPersonality;
@@ -22,38 +19,6 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class MisakaSisterRecord {
-    private static final Codec<UUID> UUID_CODEC = Codec.STRING.comapFlatMap(
-            value -> {
-                try {
-                    return DataResult.success(UUID.fromString(value));
-                } catch (IllegalArgumentException exception) {
-                    return DataResult.error(() -> "Invalid UUID: " + value);
-                }
-            },
-            UUID::toString
-    );
-    private static final Codec<BlockPos> BLOCK_POS_CODEC = Codec.STRING.flatXmap(
-            value -> {
-                try {
-                    var parts = value.split(",");
-                    if (parts.length != 3) {
-                        return DataResult.error(() -> "Invalid BlockPos: " + value);
-                    }
-                    return DataResult.success(new BlockPos(
-                            Integer.parseInt(parts[0].trim()),
-                            Integer.parseInt(parts[1].trim()),
-                            Integer.parseInt(parts[2].trim())
-                    ));
-                } catch (NumberFormatException exception) {
-                    return DataResult.error(() -> "Invalid BlockPos: " + value);
-                }
-            },
-            pos -> DataResult.success(pos.getX() + "," + pos.getY() + "," + pos.getZ())
-    );
-    private static final Codec<ResourceKey<Level>> DIMENSION_CODEC = Identifier.CODEC.flatXmap(
-            id -> DataResult.success(ResourceKey.create(Registries.DIMENSION, id)),
-            key -> DataResult.success(key.identifier())
-    );
     private static final Codec<Set<String>> STRING_SET_CODEC = Codec.STRING.listOf().xmap(
             HashSet::new,
             set -> new ArrayList<>(set)
@@ -69,10 +34,10 @@ public final class MisakaSisterRecord {
             WanderStyle wanderStyle
     ) {
         private static final Codec<NetworkState> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-                BLOCK_POS_CODEC.optionalFieldOf("network_node_pos").forGetter(state -> Optional.ofNullable(state.networkNodePos)),
+                MisakaSavedDataCodecs.BLOCK_POS_STRING_CODEC.optionalFieldOf("network_node_pos").forGetter(state -> Optional.ofNullable(state.networkNodePos)),
                 ChunkPos.CODEC.optionalFieldOf("wander_anchor_chunk").forGetter(state -> Optional.ofNullable(state.wanderAnchorChunk)),
                 ChunkPos.CODEC.optionalFieldOf("last_known_chunk").forGetter(state -> Optional.ofNullable(state.lastKnownChunk)),
-                DIMENSION_CODEC.optionalFieldOf("last_known_dimension", Level.OVERWORLD)
+                MisakaSavedDataCodecs.DIMENSION_CODEC.optionalFieldOf("last_known_dimension", MisakaSavedDataCodecs.DEFAULT_OVERWORLD)
                         .forGetter(NetworkState::lastKnownDimension),
                 WanderStyle.CODEC.fieldOf("wander_style").orElse(WanderStyle.FREE_MOVE).forGetter(NetworkState::wanderStyle)
         ).apply(instance, (networkNodePos, wanderAnchorChunk, lastKnownChunk, lastKnownDimension, wanderStyle) ->
@@ -111,7 +76,7 @@ public final class MisakaSisterRecord {
     }
 
     public static final Codec<MisakaSisterRecord> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            UUID_CODEC.fieldOf("misaka_uuid").forGetter(r -> r.misakaUuid),
+            MisakaSavedDataCodecs.UUID_STRING_CODEC.fieldOf("misaka_uuid").forGetter(r -> r.misakaUuid),
             Codec.INT.fieldOf("serial").forGetter(r -> r.serial),
             MisakaPersonality.CODEC.fieldOf("personality").forGetter(r -> r.personality),
             Codec.BOOL.fieldOf("awakened").orElse(false).forGetter(r -> r.awakened),
@@ -144,7 +109,7 @@ public final class MisakaSisterRecord {
     /** Last loaded chunk; used for favor LAN proximity when the entity is unloaded. */
     public @Nullable ChunkPos lastKnownChunk;
     /** Dimension of {@link #lastKnownChunk} / last loaded position. */
-    public ResourceKey<Level> lastKnownDimension = Level.OVERWORLD;
+    public ResourceKey<Level> lastKnownDimension = MisakaSavedDataCodecs.DEFAULT_OVERWORLD;
     public WanderStyle wanderStyle = WanderStyle.FREE_MOVE;
     public long awakeWindowEndGameTime;
     public final Set<String> awakeSpottedNames = new HashSet<>();
@@ -192,7 +157,9 @@ public final class MisakaSisterRecord {
         record.networkNodePos = network.networkNodePos() == null ? null : network.networkNodePos().immutable();
         record.wanderAnchorChunk = network.wanderAnchorChunk();
         record.lastKnownChunk = network.lastKnownChunk();
-        record.lastKnownDimension = network.lastKnownDimension() == null ? Level.OVERWORLD : network.lastKnownDimension();
+        record.lastKnownDimension = network.lastKnownDimension() == null
+                ? MisakaSavedDataCodecs.DEFAULT_OVERWORLD
+                : network.lastKnownDimension();
         record.wanderStyle = network.wanderStyle();
         record.awakeWindowEndGameTime = awake.awakeWindowEndGameTime();
         record.awakeSpottedNames.addAll(awake.awakeSpottedNames());
@@ -214,7 +181,7 @@ public final class MisakaSisterRecord {
                 networkNodePos,
                 wanderAnchorChunk,
                 lastKnownChunk,
-                lastKnownDimension == null ? Level.OVERWORLD : lastKnownDimension,
+                lastKnownDimension == null ? MisakaSavedDataCodecs.DEFAULT_OVERWORLD : lastKnownDimension,
                 wanderStyle
         );
     }

@@ -16,10 +16,7 @@ import org.academy.internal.common.world.entity.misaka.MobRelation;
 import org.academy.internal.common.world.entity.misaka.favor.rules.AnniversaryCakeRule;
 import org.academy.internal.common.world.entity.misaka.favor.rules.AttackedByPlayerRule;
 import org.academy.internal.common.world.entity.misaka.favor.rules.FeedFavoriteFoodRule;
-import org.academy.internal.common.world.entity.misaka.favor.rules.KilledBenevolentPlayerRule;
 import org.academy.internal.common.world.entity.misaka.favor.rules.KilledByPlayerRule;
-import org.academy.internal.common.world.entity.misaka.favor.rules.WitnessKillPlayerRule;
-import org.academy.internal.common.world.entity.misaka.favor.rules.WitnessKillVillagerRule;
 import org.academy.internal.server.misaka.MisakaComputeContribution;
 import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
 import org.academy.internal.server.world.level.storage.MisakaSisterRoster;
@@ -30,11 +27,8 @@ import java.util.List;
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class FavorRuleRegistry {
     public static final List<IFavorRule> RULES = List.of(
-            new WitnessKillVillagerRule(),
-            new WitnessKillPlayerRule(),
             new AttackedByPlayerRule(),
             new KilledByPlayerRule(),
-            new KilledBenevolentPlayerRule(),
             new FeedFavoriteFoodRule(),
             new AnniversaryCakeRule()
     );

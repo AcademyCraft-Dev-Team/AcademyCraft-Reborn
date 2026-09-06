@@ -60,18 +60,15 @@ public final class MisakaPanelSupport {
             MisakaSisterRecord record
     ) {
         var level = (ServerLevel) player.level();
+        var server = level.getServer();
+        var overworld = server != null ? server.overworld() : level;
         String playerName = player.getGameProfile().name();
-        String nodeName = "";
-        if (record.networkNodePos != null) {
-            var config = WirelessNetworkData.get(level).getNodeConfig(record.networkNodePos);
-            if (config != null) {
-                nodeName = config.name;
-            }
-        }
-        var availableNodes = MisakaNAT.get().listAvailableNodes(level, sister.blockPosition());
+        // Node configs live in overworld SavedData; position sample uses the sister entity.
+        String nodeName = WirelessNetworkData.displayName(overworld, record.networkNodePos, false);
+        var availableNodes = MisakaNAT.get().listAvailableNodes(overworld, sister.blockPosition());
         boolean reconstructionWork = record.perception >= 101;
         boolean reconstructionBlocked = record.networkNodePos != null
-                && MisakaNAT.get().hasReconstructionWork(level.getServer(), record.networkNodePos, record.misakaUuid);
+                && MisakaNAT.get().hasReconstructionWork(server, record.networkNodePos, record.misakaUuid);
         return new MisakaPanelDataPacket(
                 sister.getUUID(),
                 record.misakaUuid,

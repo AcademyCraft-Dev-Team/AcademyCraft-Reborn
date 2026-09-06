@@ -198,7 +198,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         if (isAutomaticSkillDebugPlayer(player.getScoreboardName())) {
             skillDebugPlayers.add(player.getUUID());
         }
-        MisakaComputeIndex.get().putPlayerName(player.getGameProfile().name(), player.getUUID());
+        MisakaComputeIndex.get(player.level().getServer()).putPlayerName(player.getGameProfile().name(), player.getUUID());
         refreshCommonSkillBonuses(player.getUUID());
         syncManager.schedulePlayerSync(player.getUUID(), SyncTypes.CP_DATA);
     }
@@ -207,7 +207,7 @@ public class PlayerCPManager implements AbilitySubsystem {
     public void onPlayerLogout(ServerPlayer player) {
         skillDebugPlayers.remove(player.getUUID());
         cpIterationProgress.remove(player.getUUID());
-        MisakaComputeIndex.get().removePlayerName(player.getGameProfile().name());
+        MisakaComputeIndex.get(player.level().getServer()).removePlayerName(player.getGameProfile().name());
         MisakaComputeUsageTracker.clearPlayer(player.getUUID());
     }
 

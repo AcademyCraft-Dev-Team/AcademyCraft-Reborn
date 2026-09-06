@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -23,7 +24,7 @@ import org.academy.api.common.misaka.MisakaNAT;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.common.world.item.HyperNetworkRelaySatelliteItem;
 import org.academy.internal.common.world.item.NetworkRelaySatelliteItem;
-import org.academy.internal.server.misaka.WirelessForwardingMisakaNAT;
+import org.academy.internal.server.world.level.storage.MisakaRelayEntry;
 import org.academy.internal.server.world.level.storage.MisakaRelayRegistry;
 import org.academy.internal.server.world.level.storage.WirelessNetworkData;
 import org.jspecify.annotations.Nullable;
@@ -36,6 +37,29 @@ import java.util.UUID;
 
 public final class AerospaceSignalCabinBlockEntity extends BlockEntity implements WirelessUser, Container {
     private static final int MAX_ENERGY = 50_000;
+    private static final String OPS_MANAGED_SATS = "ops_managed_sats";
+    private static final String OPS_RETARGET_NETS = "ops_retarget_nets";
+    private static final String OPS_REBIND_LASERS = "ops_rebind_lasers";
+
+    public record ManagedSatRow(
+            int index,
+            String dimPath,
+            String phase,
+            boolean powered,
+            boolean hyper,
+            String id8,
+            boolean laserBound,
+            int unpoweredTicks,
+            int crashTimeout,
+            int forceCrashTicks
+    ) {
+    }
+
+    public record RetargetNetRow(String nodeName, boolean isCurrentSatNetwork) {
+    }
+
+    public record RebindLaserRow(BlockPos pos, boolean ready) {
+    }
 
     private NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
     private @Nullable BlockPos connectedNodePos;
@@ -48,21 +72,12 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
     private int managedSatelliteCount;
     /** Client-synced ops-page feedback key (empty = idle). */
     private String opsFeedbackKey = "";
-    /**
-     * Client-synced satellite rows for the ops list.
-     * Each line: {@code index|dimPath|phase|powered|hyper|id8|laserBound|unpoweredTicks|crashTimeout|forceCrashTicks}
-     */
-    private String managedSatelliteList = "";
-    /**
-     * Client-synced retarget targets (unique Misaka topologies).
-     * Each line: {@code nodeName|isCurrentSatNetwork}
-     */
-    private String retargetNetworkList = "";
-    /**
-     * Client-synced unbound lasers on the cabin wireless topology for ops rebind.
-     * Each line: {@code x,y,z|ready}
-     */
-    private String rebindLaserList = "";
+    /** Client-synced satellite rows for the ops list (sync-only; not persisted). */
+    private List<ManagedSatRow> managedSatelliteList = List.of();
+    /** Client-synced retarget targets (unique Misaka topologies; sync-only). */
+    private List<RetargetNetRow> retargetNetworkList = List.of();
+    /** Client-synced unbound lasers on the cabin wireless topology (sync-only). */
+    private List<RebindLaserRow> rebindLaserList = List.of();
     /** Display name of the selected satellite's current coverage network, if known. */
     private String selectedSatNetworkName = "";
 
@@ -76,14 +91,17 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
         }
         // Keep ops list power flags fresh while the cabin GUI may be open.
         if (serverLevel.getGameTime() % 20L == 0L) {
-            var before = be.managedSatelliteList + "\n" + be.retargetNetworkList + "\n"
-                    + be.selectedSatNetworkName + "\n" + be.rebindLaserList;
+            var beforeSats = be.managedSatelliteList;
+            var beforeNets = be.retargetNetworkList;
+            var beforeLasers = be.rebindLaserList;
+            var beforeNetName = be.selectedSatNetworkName;
             be.refreshManagedCount(serverLevel);
             be.refreshRetargetNetworks(serverLevel);
             be.refreshRebindLasers(serverLevel);
-            var after = be.managedSatelliteList + "\n" + be.retargetNetworkList + "\n"
-                    + be.selectedSatNetworkName + "\n" + be.rebindLaserList;
-            if (!before.equals(after)) {
+            if (!beforeSats.equals(be.managedSatelliteList)
+                    || !beforeNets.equals(be.retargetNetworkList)
+                    || !beforeLasers.equals(be.rebindLaserList)
+                    || !Objects.equals(beforeNetName, be.selectedSatNetworkName)) {
                 be.markAndSync();
             }
         }
@@ -109,15 +127,15 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
         return opsFeedbackKey;
     }
 
-    public String getManagedSatelliteList() {
+    public List<ManagedSatRow> getManagedSatelliteList() {
         return managedSatelliteList;
     }
 
-    public String getRetargetNetworkList() {
+    public List<RetargetNetRow> getRetargetNetworkList() {
         return retargetNetworkList;
     }
 
-    public String getRebindLaserList() {
+    public List<RebindLaserRow> getRebindLaserList() {
         return rebindLaserList;
     }
 
@@ -129,9 +147,9 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
         opsFeedbackKey = key == null ? "" : key;
     }
 
-    /** All satellites whose coverage/orbit dimension matches this cabin's dimension. */
-    private List<MisakaRelayRegistry.Entry> managedEntries(ServerLevel level) {
-        var list = MisakaRelayRegistry.get(level.getServer()).listByDimension(level.dimension());
+    /** Satellites launched from this cabin (matched by cabin dimension + block pos). */
+    private List<MisakaRelayEntry> managedEntries(ServerLevel level) {
+        var list = MisakaRelayRegistry.get(level.getServer()).listByCabin(level.dimension(), worldPosition);
         list.sort(Comparator.comparing(e -> e.satelliteId));
         return list;
     }
@@ -142,7 +160,7 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
         managedSatelliteCount = list.size();
         if (managedSatelliteCount == 0) {
             selectedSatelliteIndex = 0;
-            managedSatelliteList = "";
+            managedSatelliteList = List.of();
             refreshRetargetNetworks(level);
             return;
         }
@@ -150,27 +168,26 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
         int crashTimeout = Math.max(1, level.getServer().getAcademyCraftServer() != null
                 ? level.getServer().getAcademyCraftServer().getGenericConfig().misakaRelayCrashTicks
                 : 6000);
-        var sb = new StringBuilder(managedSatelliteCount * 56);
+        var rows = new ArrayList<ManagedSatRow>(list.size());
         for (int i = 0; i < list.size(); i++) {
             var entry = list.get(i);
-            if (i > 0) {
-                sb.append('\n');
-            }
             var id = entry.satelliteId.toString().replace("-", "");
             var id8 = id.length() >= 8 ? id.substring(0, 8) : id;
             boolean powered = registry.isReceivingPower(entry.satelliteId);
-            sb.append(i).append('|')
-                    .append(entry.dimension.identifier().getPath()).append('|')
-                    .append(entry.phase.name()).append('|')
-                    .append(powered ? '1' : '0').append('|')
-                    .append(entry.hyper ? '1' : '0').append('|')
-                    .append(id8).append('|')
-                    .append(entry.laserBound ? '1' : '0').append('|')
-                    .append(entry.unpoweredTicks).append('|')
-                    .append(crashTimeout).append('|')
-                    .append(entry.forceCrashCountdownTicks);
+            rows.add(new ManagedSatRow(
+                    i,
+                    entry.dimension.identifier().getPath(),
+                    entry.phase.name(),
+                    powered,
+                    entry.hyper,
+                    id8,
+                    entry.laserBound,
+                    entry.unpoweredTicks,
+                    crashTimeout,
+                    entry.forceCrashCountdownTicks
+            ));
         }
-        managedSatelliteList = sb.toString();
+        managedSatelliteList = List.copyOf(rows);
         refreshRetargetNetworks(level);
     }
 
@@ -205,33 +222,24 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
         }
         var names = new ArrayList<>(byNetwork.entrySet());
         names.sort((a, b) -> String.CASE_INSENSITIVE_ORDER.compare(a.getValue(), b.getValue()));
-        var sb = new StringBuilder();
-        for (int i = 0; i < names.size(); i++) {
-            var e = names.get(i);
-            if (i > 0) {
-                sb.append('\n');
-            }
+        var rows = new ArrayList<RetargetNetRow>(names.size());
+        for (var e : names) {
             boolean current = selectedNet != null && selectedNet.asLong() == e.getKey();
-            sb.append(e.getValue()).append('|').append(current ? '1' : '0');
+            rows.add(new RetargetNetRow(e.getValue(), current));
         }
-        retargetNetworkList = sb.toString();
+        retargetNetworkList = List.copyOf(rows);
     }
 
     private void refreshRebindLasers(ServerLevel level) {
         var selectable = listSelectableLasers(level);
         selectableLaserCount = selectable.size();
-        var sb = new StringBuilder(selectable.size() * 24);
-        for (int i = 0; i < selectable.size(); i++) {
-            var pos = selectable.get(i);
-            if (i > 0) {
-                sb.append('\n');
-            }
+        var rows = new ArrayList<RebindLaserRow>(selectable.size());
+        for (var pos : selectable) {
             boolean ready = level.getBlockEntity(pos) instanceof EnergyLaserTowerBlockEntity tower
                     && tower.canPowerSatellite();
-            sb.append(pos.getX()).append(',').append(pos.getY()).append(',').append(pos.getZ())
-                    .append('|').append(ready ? '1' : '0');
+            rows.add(new RebindLaserRow(pos.immutable(), ready));
         }
-        rebindLaserList = sb.toString();
+        rebindLaserList = List.copyOf(rows);
     }
 
     /** Refresh managed-satellite stats for the ops UI when the menu opens. */
@@ -270,7 +278,7 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
         var data = WirelessNetworkData.get(level);
         for (var entry : data.getAllNodes().entrySet()) {
             var nodePos = entry.getKey();
-            if (!WirelessForwardingMisakaNAT.resolveNetworkIdRaw(level, nodePos).equals(networkId)) {
+            if (!MisakaNAT.get().resolveNetworkId(level, nodePos).equals(networkId)) {
                 continue;
             }
             for (var userPos : entry.getValue().connectedUsers.keySet()) {
@@ -349,7 +357,8 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
                 hyper,
                 selectedLaserPos,
                 level.dimension(),
-                worldPosition
+                worldPosition,
+                level.dimension()
         );
         if (ok) {
             stack.shrink(1);
@@ -375,17 +384,12 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
     public boolean tryRetargetToNetworkIndex(ServerLevel level, int networkIndex) {
         refreshManagedCount(level);
         refreshRetargetNetworks(level);
-        var lines = retargetNetworkList.isEmpty() ? new String[0] : retargetNetworkList.split("\n", -1);
-        if (networkIndex < 0 || networkIndex >= lines.length) {
+        if (networkIndex < 0 || networkIndex >= retargetNetworkList.size()) {
             setOpsFeedback("gui.academy.aerospace_signal_cabin.ops_no_networks");
             markAndSync();
             return false;
         }
-        var name = lines[networkIndex];
-        int sep = name.indexOf('|');
-        if (sep >= 0) {
-            name = name.substring(0, sep);
-        }
+        var name = retargetNetworkList.get(networkIndex).nodeName();
         var nodePos = WirelessNetworkData.get(level).findNodePositionByName(name);
         if (nodePos == null) {
             setOpsFeedback("gui.academy.aerospace_signal_cabin.ops_network_missing");
@@ -443,8 +447,8 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
         int index = Mth.clamp(selectedSatelliteIndex, 0, list.size() - 1);
         selectedSatelliteIndex = index;
         var entry = list.get(index);
-        if (entry.phase != MisakaRelayRegistry.Phase.ORBIT
-                && entry.phase != MisakaRelayRegistry.Phase.LAUNCHING) {
+        if (entry.phase != MisakaRelayEntry.Phase.ORBIT
+                && entry.phase != MisakaRelayEntry.Phase.LAUNCHING) {
             setOpsFeedback("gui.academy.aerospace_signal_cabin.ops_rebind_fail");
             markAndSync();
             return false;
@@ -633,9 +637,7 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
         output.putInt("selectable_laser_count", selectableLaserCount);
         output.putInt("managed_satellite_count", managedSatelliteCount);
         output.putString("ops_feedback", opsFeedbackKey);
-        output.putString("managed_satellite_list", managedSatelliteList);
-        output.putString("retarget_network_list", retargetNetworkList);
-        output.putString("rebind_laser_list", rebindLaserList);
+        // Ops list rows are sync-only (appended in getUpdateTag); do not persist to disk.
         output.putString("selected_sat_network_name", selectedSatNetworkName);
         if (connectedNodePos != null) {
             output.putLong("connected_node_pos", connectedNodePos.asLong());
@@ -655,14 +657,88 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
         selectableLaserCount = input.getIntOr("selectable_laser_count", 0);
         managedSatelliteCount = input.getIntOr("managed_satellite_count", 0);
         opsFeedbackKey = input.getString("ops_feedback").orElse("");
-        managedSatelliteList = input.getString("managed_satellite_list").orElse("");
-        retargetNetworkList = input.getString("retarget_network_list").orElse("");
-        rebindLaserList = input.getString("rebind_laser_list").orElse("");
         selectedSatNetworkName = input.getString("selected_sat_network_name").orElse("");
         connectedNodePos = null;
         input.getLong("connected_node_pos").ifPresent(pos -> connectedNodePos = BlockPos.of(pos));
         selectedLaserPos = null;
         input.getLong("selected_laser_pos").ifPresent(pos -> selectedLaserPos = BlockPos.of(pos));
+        loadOpsSnapshot(input);
+    }
+
+    private void loadOpsSnapshot(ValueInput input) {
+        var satChildren = input.childrenList(OPS_MANAGED_SATS);
+        if (satChildren.isEmpty()) {
+            managedSatelliteList = List.of();
+            retargetNetworkList = List.of();
+            rebindLaserList = List.of();
+            return;
+        }
+        var sats = new ArrayList<ManagedSatRow>();
+        satChildren.get().stream().forEach(row -> sats.add(new ManagedSatRow(
+                row.getIntOr("index", 0),
+                row.getString("dim").orElse(""),
+                row.getString("phase").orElse(""),
+                row.getBooleanOr("powered", false),
+                row.getBooleanOr("hyper", false),
+                row.getString("id8").orElse(""),
+                row.getBooleanOr("laser_bound", true),
+                row.getIntOr("unpowered_ticks", 0),
+                row.getIntOr("crash_timeout", 6000),
+                row.getIntOr("force_crash_ticks", 0)
+        )));
+        managedSatelliteList = List.copyOf(sats);
+
+        var nets = new ArrayList<RetargetNetRow>();
+        input.childrenListOrEmpty(OPS_RETARGET_NETS).stream().forEach(row -> nets.add(new RetargetNetRow(
+                row.getString("name").orElse(""),
+                row.getBooleanOr("current", false)
+        )));
+        retargetNetworkList = List.copyOf(nets);
+
+        var lasers = new ArrayList<RebindLaserRow>();
+        input.childrenListOrEmpty(OPS_REBIND_LASERS).stream().forEach(row ->
+                row.getLong("pos").ifPresent(packed ->
+                        lasers.add(new RebindLaserRow(BlockPos.of(packed), row.getBooleanOr("ready", false)))
+                )
+        );
+        rebindLaserList = List.copyOf(lasers);
+    }
+
+    private void appendOpsSnapshot(CompoundTag tag) {
+        var sats = new ListTag();
+        for (var row : managedSatelliteList) {
+            var c = new CompoundTag();
+            c.putInt("index", row.index());
+            c.putString("dim", row.dimPath());
+            c.putString("phase", row.phase());
+            c.putBoolean("powered", row.powered());
+            c.putBoolean("hyper", row.hyper());
+            c.putString("id8", row.id8());
+            c.putBoolean("laser_bound", row.laserBound());
+            c.putInt("unpowered_ticks", row.unpoweredTicks());
+            c.putInt("crash_timeout", row.crashTimeout());
+            c.putInt("force_crash_ticks", row.forceCrashTicks());
+            sats.add(c);
+        }
+        tag.put(OPS_MANAGED_SATS, sats);
+
+        var nets = new ListTag();
+        for (var row : retargetNetworkList) {
+            var c = new CompoundTag();
+            c.putString("name", row.nodeName());
+            c.putBoolean("current", row.isCurrentSatNetwork());
+            nets.add(c);
+        }
+        tag.put(OPS_RETARGET_NETS, nets);
+
+        var lasers = new ListTag();
+        for (var row : rebindLaserList) {
+            var c = new CompoundTag();
+            c.putLong("pos", row.pos().asLong());
+            c.putBoolean("ready", row.ready());
+            lasers.add(c);
+        }
+        tag.put(OPS_REBIND_LASERS, lasers);
     }
 
     @Override
@@ -708,7 +784,9 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
 
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        return saveWithoutMetadata(registries);
+        var tag = saveWithoutMetadata(registries);
+        appendOpsSnapshot(tag);
+        return tag;
     }
 
     @Override

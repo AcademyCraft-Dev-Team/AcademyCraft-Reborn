@@ -8,7 +8,6 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.api.common.misaka.MisakaNAT;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.entity.misaka.InteractionGate;
-import org.academy.internal.server.misaka.MisakaComputeContribution;
 import org.academy.internal.server.misaka.MisakaPanelSupport;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -81,18 +80,20 @@ public final class SetMisakaNetworkNodePacket
                 return;
             }
             InteractionGate.touchBenevolent(record, name, level.getServer());
+            if (player.distanceToSqr(sister) > 64.0 * 64.0) {
+                return;
+            }
+            var overworld = level.getServer().overworld();
             if (packet.nodeName().isBlank()) {
                 MisakaNAT.get().unbindSister(level.getServer(), record.misakaUuid);
-                MisakaComputeContribution.refreshCpForRecord(level.getServer(), record);
                 MisakaPanelSupport.sendPanel(player, sister);
                 return;
             }
-            var nodePos = MisakaNAT.get().findNode(level, packet.nodeName()).orElse(null);
+            var nodePos = MisakaNAT.get().findNode(overworld, packet.nodeName()).orElse(null);
             if (nodePos == null) {
                 return;
             }
-            MisakaNAT.get().bindSisterToNode(level, record.misakaUuid, nodePos);
-            MisakaComputeContribution.refreshCpForRecord(level.getServer(), record);
+            MisakaNAT.get().bindSisterToNode(overworld, record.misakaUuid, nodePos);
             MisakaPanelSupport.sendPanel(player, sister);
         }
     }

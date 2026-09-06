@@ -1,10 +1,14 @@
 package org.academy.internal.common.world.entity.misaka.favor;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
 import org.academy.api.common.misaka.MisakaNAT;
 import org.academy.internal.common.world.entity.misaka.MobRelation;
 import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
@@ -86,18 +90,30 @@ public final class FavorService {
                 origin,
                 all,
                 record -> networkKey(level, record),
-                FavorService::positionChunk
+                FavorService::positionChunk,
+                FavorService::positionDimension
         );
     }
 
     /**
-     * Pure graph flood for tests: edge if same non-null network key, or chunk Chebyshev ≤ {@link #LAN_PROXIMITY_CHUNKS}.
+     * Pure graph flood for tests: edge if same non-null network key, or same-dimension
+     * chunk Chebyshev ≤ {@link #LAN_PROXIMITY_CHUNKS}.
      */
     public static List<MisakaSisterRecord> resolveLanComponent(
             MisakaSisterRecord origin,
             Collection<MisakaSisterRecord> all,
             Function<MisakaSisterRecord, @Nullable Object> networkKey,
             Function<MisakaSisterRecord, @Nullable ChunkPos> chunkPos
+    ) {
+        return resolveLanComponent(origin, all, networkKey, chunkPos, FavorService::positionDimension);
+    }
+
+    public static List<MisakaSisterRecord> resolveLanComponent(
+            MisakaSisterRecord origin,
+            Collection<MisakaSisterRecord> all,
+            Function<MisakaSisterRecord, @Nullable Object> networkKey,
+            Function<MisakaSisterRecord, @Nullable ChunkPos> chunkPos,
+            Function<MisakaSisterRecord, @Nullable ResourceKey<Level>> dimension
     ) {
         if (!origin.awakened) {
             return List.of();
@@ -118,11 +134,19 @@ public final class FavorService {
             component.add(current);
             Object currentNet = networkKey.apply(current);
             ChunkPos currentChunk = chunkPos.apply(current);
+            ResourceKey<Level> currentDim = dimension.apply(current);
             for (var other : awakened) {
                 if (visited.contains(other.misakaUuid)) {
                     continue;
                 }
-                if (!linked(currentNet, networkKey.apply(other), currentChunk, chunkPos.apply(other))) {
+                if (!linked(
+                        currentNet,
+                        networkKey.apply(other),
+                        currentChunk,
+                        chunkPos.apply(other),
+                        currentDim,
+                        dimension.apply(other)
+                )) {
                     continue;
                 }
                 visited.add(other.misakaUuid);
@@ -130,6 +154,20 @@ public final class FavorService {
             }
         }
         return component;
+    }
+
+    /** Apply {@code delta} with LAN flood when {@code server} is present; otherwise single-record. */
+    public static void applyDelta(
+            @Nullable MinecraftServer server,
+            MisakaSisterRecord record,
+            String name,
+            int delta
+    ) {
+        if (server != null) {
+            modifyFavorLan(server, record, name, delta);
+        } else {
+            modifyFavor(record, name, delta);
+        }
     }
 
     public static MobRelation relation(MisakaSisterRecord record, String name) {
@@ -159,12 +197,14 @@ public final class FavorService {
             @Nullable Object netA,
             @Nullable Object netB,
             @Nullable ChunkPos chunkA,
-            @Nullable ChunkPos chunkB
+            @Nullable ChunkPos chunkB,
+            @Nullable ResourceKey<Level> dimA,
+            @Nullable ResourceKey<Level> dimB
     ) {
         if (netA != null && netA.equals(netB)) {
             return true;
         }
-        if (chunkA == null || chunkB == null) {
+        if (chunkA == null || chunkB == null || dimA == null || dimB == null || !dimA.equals(dimB)) {
             return false;
         }
         return Math.max(Math.abs(chunkA.x() - chunkB.x()), Math.abs(chunkA.z() - chunkB.z())) <= LAN_PROXIMITY_CHUNKS;
@@ -190,4 +230,11 @@ public final class FavorService {
         }
         return null;
     }
+
+    private static @Nullable ResourceKey<Level> positionDimension(MisakaSisterRecord record) {
+        return record.lastKnownDimension != null ? record.lastKnownDimension : OVERWORLD_KEY;
+    }
+
+    private static final ResourceKey<Level> OVERWORLD_KEY =
+            ResourceKey.create(Registries.DIMENSION, Identifier.withDefaultNamespace("overworld"));
 }

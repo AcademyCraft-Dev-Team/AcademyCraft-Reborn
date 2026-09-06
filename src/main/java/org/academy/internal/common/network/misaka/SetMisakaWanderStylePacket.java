@@ -81,6 +81,9 @@ public final class SetMisakaWanderStylePacket
                 return;
             }
             InteractionGate.touchBenevolent(record, name, ((ServerLevel) player.level()).getServer());
+            if (player.distanceToSqr(sister) > 64.0 * 64.0) {
+                return;
+            }
             var wanderStyle = WanderStyle.fromOrdinal(packet.style());
             MisakaSisterRoster.get(((ServerLevel) player.level()).getServer()).modify(record.misakaUuid, sisterRecord -> {
                 sisterRecord.wanderStyle = wanderStyle;

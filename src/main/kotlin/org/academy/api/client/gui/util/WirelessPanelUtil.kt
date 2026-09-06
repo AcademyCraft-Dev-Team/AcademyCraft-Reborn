@@ -150,6 +150,94 @@ object WirelessPanelUtil {
             })
     }
 
+    /**
+     * Shared wireless-style node row (Fill back, icon, name, connect/disconnect).
+     * [trailing] is invoked on the content row before action buttons (e.g. password field).
+     */
+    fun nodeRow(
+        nodeName: String,
+        isConnected: Boolean,
+        isNone: Boolean,
+        onConnect: () -> Unit,
+        onDisconnect: () -> Unit,
+        trailing: (LinearLayoutWidget) -> Unit = {}
+    ): FrameLayoutWidget {
+        val nodeViewPanel = FrameLayoutWidget()
+        val nodeBack = FillWidget(-0x1)
+        nodeBack.layoutParams = FrameLayoutWidget.LayoutParams()
+            .sizeMode(SizeMode.MATCH_PARENT)
+            .padding(2f, 2f)
+        nodeBack.alpha = 0.25f
+        nodeViewPanel.addChild("back", nodeBack)
+
+        val itemContent = LinearLayoutWidget()
+        itemContent.orientation = Orientation.HORIZONTAL
+        itemContent.layoutParams = FrameLayoutWidget.LayoutParams()
+            .sizeMode(SizeMode.MATCH_PARENT)
+            .gravity(Gravity.CENTER_VERTICAL)
+            .paddingHorizontal(4f)
+        itemContent.spacing = 4f
+        nodeViewPanel.addChild("content", itemContent)
+
+        val nodeIcon = ImageWidget(R.textures.gui.icon.icon_node)
+        nodeIcon.layoutParams = LinearLayoutWidget.LayoutParams()
+            .gravity(Gravity.CENTER)
+            .size(14f, 14f)
+        itemContent.addChild("icon", nodeIcon)
+
+        val nodeNameLabel = LabelWidget(nodeName)
+        nodeNameLabel.layoutParams = LinearLayoutWidget.LayoutParams()
+            .weight(1f)
+            .height(10f)
+            .gravity(Gravity.CENTER_VERTICAL)
+        itemContent.addChild("node_name", nodeNameLabel)
+
+        trailing(itemContent)
+
+        if (!isConnected) {
+            val connectButton = ButtonWidget()
+            connectButton.layoutParams = LinearLayoutWidget.LayoutParams()
+                .gravity(Gravity.CENTER)
+                .size(14f, 14f)
+            connectButton.onClickListener = { onConnect() }
+            itemContent.addChild("button", connectButton) {
+                val content = ImageWidget()
+                val defaultDrawable = TextureDrawable(R.textures.gui.icon.icon_unconnected)
+                defaultDrawable.tintColor = 0xFFE6E6E6.toInt()
+                val hoveredDrawable = TextureDrawable(R.textures.gui.icon.icon_unconnected)
+                hoveredDrawable.tintColor = -0x1
+                val sld = StateListDrawable()
+                sld.setDefault(defaultDrawable)
+                sld.addState(Widget.HOVERED, hoveredDrawable)
+                content.background = sld
+                content.layoutParams = FrameLayoutWidget.LayoutParams()
+                    .sizeMode(SizeMode.MATCH_PARENT)
+                connectButton.addChild("content", content)
+            }
+        } else if (!isNone) {
+            val disconnectButton = ButtonWidget()
+            disconnectButton.onClickListener = { onDisconnect() }
+            disconnectButton.layoutParams = LinearLayoutWidget.LayoutParams()
+                .gravity(Gravity.CENTER)
+                .size(14f, 14f)
+            itemContent.addChild("button", disconnectButton) {
+                val content = ImageWidget()
+                val defaultDrawable = TextureDrawable(R.textures.gui.icon.icon_connected)
+                defaultDrawable.tintColor = 0xFFE6E6E6.toInt()
+                val hoveredDrawable = TextureDrawable(R.textures.gui.icon.icon_connected)
+                hoveredDrawable.tintColor = -0x1
+                val sld = StateListDrawable()
+                sld.setDefault(defaultDrawable)
+                sld.addState(Widget.HOVERED, hoveredDrawable)
+                content.background = sld
+                content.layoutParams = FrameLayoutWidget.LayoutParams()
+                    .sizeMode(SizeMode.MATCH_PARENT)
+                disconnectButton.addChild("content", content)
+            }
+        }
+        return nodeViewPanel
+    }
+
     private fun getNodeWidget(
         position: BlockPos,
         connectedNodeContainer: FrameLayoutWidget,
@@ -158,104 +246,34 @@ object WirelessPanelUtil {
         isConnected: Boolean,
         isNone: Boolean
     ): FrameLayoutWidget {
-        val nodeViewPanel = FrameLayoutWidget()
-        run {
-            val nodeBack = FillWidget(-0x1)
-            nodeBack.layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-                .padding(2f, 2f)
-            nodeBack.alpha = 0.25f
-            nodeViewPanel.addChild("back", nodeBack)
-
-            val itemContent = LinearLayoutWidget()
-            itemContent.orientation = Orientation.HORIZONTAL
-            itemContent.layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-                .gravity(Gravity.CENTER_VERTICAL)
-                .paddingHorizontal(4f)
-            itemContent.spacing = 4f
-            nodeViewPanel.addChild("content", itemContent) {
-                val nodeIcon = ImageWidget(R.textures.gui.icon.icon_node)
-                nodeIcon.layoutParams = LinearLayoutWidget.LayoutParams()
-                    .gravity(Gravity.CENTER)
-                    .size(14f, 14f)
-                itemContent.addChild("icon", nodeIcon)
-
-                val nodeNameLabel = LabelWidget(nodeName)
-                nodeNameLabel.layoutParams = LinearLayoutWidget.LayoutParams()
-                    .weight(1f)
-                    .height(10f)
-                    .gravity(Gravity.CENTER_VERTICAL)
-                itemContent.addChild("node_name", nodeNameLabel)
+        var passwordBox: TextBoxWidget? = null
+        return nodeRow(
+            nodeName = nodeName,
+            isConnected = isConnected,
+            isNone = isNone,
+            onConnect = {
+                val password = passwordBox?.text.orEmpty()
+                MisakaNetworkClient.send(ConnectNodePacket(position, nodeName, password))
+                updateConnectedNodeDisplay(position, connectedNodeContainer, nodeList)
+            },
+            onDisconnect = {
+                MisakaNetworkClient.send(DisconnectNodePacket(position))
+                updateConnectedNodeDisplay(position, connectedNodeContainer, nodeList)
+            },
+            trailing = { itemContent ->
                 if (!isConnected) {
-                    val connectAction = { password: String ->
-                        MisakaNetworkClient.send(
-                            ConnectNodePacket(
-                                position,
-                                nodeName,
-                                password
-                            )
-                        )
-                        WirelessPanelUtil.updateConnectedNodeDisplay(position, connectedNodeContainer, nodeList)
-                    }
                     val inputBox = TextBoxWidget(12)
                     inputBox.layoutParams = LinearLayoutWidget.LayoutParams()
                         .gravity(Gravity.CENTER)
                         .size(46f, 10f)
-                    inputBox.setWhenEnter(connectAction)
+                    inputBox.setWhenEnter { password ->
+                        MisakaNetworkClient.send(ConnectNodePacket(position, nodeName, password))
+                        updateConnectedNodeDisplay(position, connectedNodeContainer, nodeList)
+                    }
                     itemContent.addChild("input", inputBox)
-
-                    val connectButton = ButtonWidget()
-                    connectButton.layoutParams = LinearLayoutWidget.LayoutParams()
-                        .gravity(Gravity.CENTER)
-                        .size(14f, 14f)
-                    connectButton.onClickListener = { _ -> connectAction(inputBox.text) }
-                    itemContent.addChild("button", connectButton) {
-                        val content = ImageWidget()
-                        val defaultDrawable = TextureDrawable(R.textures.gui.icon.icon_unconnected)
-                        defaultDrawable.tintColor = 0xFFE6E6E6.toInt()
-
-                        val hoveredDrawable = TextureDrawable(R.textures.gui.icon.icon_unconnected)
-                        hoveredDrawable.tintColor = -0x1
-
-                        val sld = StateListDrawable()
-                        sld.setDefault(defaultDrawable)
-                        sld.addState(Widget.HOVERED, hoveredDrawable)
-
-                        content.background = sld
-                        content.layoutParams = FrameLayoutWidget.LayoutParams()
-                            .sizeMode(SizeMode.MATCH_PARENT)
-                        connectButton.addChild("content", content)
-                    }
-                } else if (!isNone) {
-                    val disconnectButton = ButtonWidget()
-                    disconnectButton.onClickListener = {
-                        MisakaNetworkClient.send(DisconnectNodePacket(position))
-                        WirelessPanelUtil.updateConnectedNodeDisplay(position, connectedNodeContainer, nodeList)
-                    }
-                    disconnectButton.layoutParams = LinearLayoutWidget.LayoutParams()
-                        .gravity(Gravity.CENTER)
-                        .size(14f, 14f)
-                    itemContent.addChild("button", disconnectButton) {
-                        val content = ImageWidget()
-                        val defaultDrawable = TextureDrawable(R.textures.gui.icon.icon_connected)
-                        defaultDrawable.tintColor = 0xFFE6E6E6.toInt()
-
-                        val hoveredDrawable = TextureDrawable(R.textures.gui.icon.icon_connected)
-                        hoveredDrawable.tintColor = -0x1
-
-                        val sld = StateListDrawable()
-                        sld.setDefault(defaultDrawable)
-                        sld.addState(Widget.HOVERED, hoveredDrawable)
-
-                        content.background = sld
-                        content.layoutParams = FrameLayoutWidget.LayoutParams()
-                            .sizeMode(SizeMode.MATCH_PARENT)
-                        disconnectButton.addChild("content", content)
-                    }
+                    passwordBox = inputBox
                 }
             }
-        }
-        return nodeViewPanel
+        )
     }
 }

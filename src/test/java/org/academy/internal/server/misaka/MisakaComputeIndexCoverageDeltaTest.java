@@ -2,20 +2,29 @@ package org.academy.internal.server.misaka;
 
 import net.minecraft.core.BlockPos;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MisakaComputeIndexCoverageDeltaTest {
+    private MisakaComputeIndex index;
+
+    @BeforeEach
+    void install() {
+        index = new MisakaComputeIndex();
+        MisakaComputeIndex.testingInstall(index);
+    }
+
     @AfterEach
     void reset() {
-        MisakaComputeIndex.get().testingClearAggregates();
+        index.testingClearAggregates();
+        MisakaComputeIndex.testingInstall(null);
     }
 
     @Test
     void inToOutSubtractsMskAndOutToInAddsBack() {
-        var index = MisakaComputeIndex.get();
         var networkId = new BlockPos(1, 2, 3);
         float msk = 100f;
         index.testingApplyMskDelta(networkId, "Alice", msk);

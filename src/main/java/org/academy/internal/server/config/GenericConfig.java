@@ -21,10 +21,14 @@ public class GenericConfig {
     public float misakaCpPerMsk = 2.0f;
 
     /** Energy drained per tick by an energy laser tower while powering a normal relay satellite.
-     * Hyper relays use twice this amount. While healing crash debt after an outage, the tower
-     * drains an additional equal amount to recover one debt tick per tick. */
+     * Hyper relays multiply by {@link #misakaRelayHyperDrainMultiplier}. While healing crash debt
+     * after an outage, the tower drains an additional equal amount to recover one debt tick per tick. */
     @SerializedName("misakaRelayLaserDrainPerTick")
     public int misakaRelayLaserDrainPerTick = 2000;
+
+    /** Multiplier applied to {@link #misakaRelayLaserDrainPerTick} for hyper relays (maintain + recovery). */
+    @SerializedName("misakaRelayHyperDrainMultiplier")
+    public int misakaRelayHyperDrainMultiplier = 2;
 
     /** Consecutive unpowered ticks before a relay satellite crashes.
      * Debt only decreases when a laser pays the recovery surcharge; restore power alone does not clear it. */

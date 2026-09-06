@@ -1,7 +1,6 @@
 package org.academy.internal.server.world.level.storage;
 
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.RandomSource;
@@ -10,6 +9,7 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.world.entity.misaka.MisakaPersonality;
 import org.academy.internal.server.misaka.MisakaComputeIndex;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -25,19 +25,8 @@ public final class MisakaSisterRoster extends SavedData {
     public static final int SERIAL_MAX = 200_001;
     public static final int SERIAL_POOL_SIZE = SERIAL_MAX - SERIAL_MIN + 1;
 
-    private static final Codec<UUID> UUID_CODEC = Codec.STRING.comapFlatMap(
-            value -> {
-                try {
-                    return DataResult.success(UUID.fromString(value));
-                } catch (IllegalArgumentException exception) {
-                    return DataResult.error(() -> "Invalid UUID: " + value);
-                }
-            },
-            UUID::toString
-    );
-
     public static final Codec<MisakaSisterRoster> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Codec.unboundedMap(UUID_CODEC, MisakaSisterRecord.CODEC)
+            Codec.unboundedMap(MisakaSavedDataCodecs.UUID_STRING_CODEC, MisakaSisterRecord.CODEC)
                     .fieldOf("sisters")
                     .forGetter(MisakaSisterRoster::snapshot)
     ).apply(instance, MisakaSisterRoster::new));
@@ -52,6 +41,7 @@ public final class MisakaSisterRoster extends SavedData {
     /** Lazy free-list of unused serials in [{@link #SERIAL_MIN}, {@link #SERIAL_MAX}]. */
     private final ArrayList<Integer> freeSerials = new ArrayList<>();
     private boolean freeSerialsReady;
+    private @Nullable transient MinecraftServer owningServer;
 
     public MisakaSisterRoster() {
     }
@@ -61,7 +51,15 @@ public final class MisakaSisterRoster extends SavedData {
     }
 
     public static MisakaSisterRoster get(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(SAVED_DATA_TYPE);
+        var roster = server.overworld().getDataStorage().computeIfAbsent(SAVED_DATA_TYPE);
+        roster.owningServer = server;
+        return roster;
+    }
+
+    private void markComputeDirty() {
+        if (owningServer != null) {
+            MisakaComputeIndex.get(owningServer).markDirty();
+        }
     }
 
     public int usedSerialCount() {
@@ -97,7 +95,7 @@ public final class MisakaSisterRoster extends SavedData {
         );
         byUuid.put(record.misakaUuid, record);
         setDirty();
-        MisakaComputeIndex.get().markDirty();
+        markComputeDirty();
         return Optional.of(record);
     }
 
@@ -123,7 +121,7 @@ public final class MisakaSisterRoster extends SavedData {
             freeSerials.add(removed.serial);
         }
         setDirty();
-        MisakaComputeIndex.get().markDirty();
+        markComputeDirty();
         return true;
     }
 
@@ -138,7 +136,7 @@ public final class MisakaSisterRoster extends SavedData {
         }
         mutator.accept(record);
         setDirty();
-        MisakaComputeIndex.get().markDirty();
+        markComputeDirty();
     }
 
     public Collection<MisakaSisterRecord> all() {

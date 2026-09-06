@@ -5,8 +5,10 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
+import org.academy.internal.server.world.level.storage.MisakaRelayEntry;
 import org.academy.internal.server.world.level.storage.MisakaRelayRegistry;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
@@ -16,18 +18,26 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MisakaRelayRegistryTest {
-    /** Avoid {@code Level.OVERWORLD} — that static touches FML AttachmentHolder in unit tests. */
+    /** Avoid {@code Level.OVERWORLD} �?that static touches FML AttachmentHolder in unit tests. */
     private static final ResourceKey<Level> OVERWORLD =
             ResourceKey.create(Registries.DIMENSION, Identifier.withDefaultNamespace("overworld"));
     private static final ResourceKey<Level> NETHER =
             ResourceKey.create(Registries.DIMENSION, Identifier.withDefaultNamespace("the_nether"));
 
     private final MisakaRelayRegistry registry = new MisakaRelayRegistry();
+    private MisakaComputeIndex index;
+
+    @BeforeEach
+    void installIndex() {
+        index = new MisakaComputeIndex();
+        MisakaComputeIndex.testingInstall(index);
+    }
 
     @AfterEach
     void clear() {
         registry.testingClear();
-        MisakaComputeIndex.get().testingClearAggregates();
+        index.testingClearAggregates();
+        MisakaComputeIndex.testingInstall(null);
     }
 
     @Test
@@ -91,7 +101,7 @@ class MisakaRelayRegistryTest {
         assertFalse(registry.hasActiveRelay(networkId, NETHER));
         assertEquals(1, registry.all().size());
 
-        // No loaded entity → beginCrash → completeCrash (discard-only path; RenderOnlyEntity never drops items).
+        // No loaded entity �?beginCrash �?completeCrash (discard-only path; RenderOnlyEntity never drops items).
         registry.testingEndTick(2);
         assertTrue(registry.all().isEmpty());
         assertFalse(registry.hasActiveRelay(networkId, NETHER));
@@ -108,17 +118,16 @@ class MisakaRelayRegistryTest {
     @Test
     void poweredCountEdgeOnlyMarksComputeDirty() {
         var networkId = new BlockPos(9, 9, 9);
-        var index = MisakaComputeIndex.get();
         index.testingSetDirty(false);
 
         var a = orbitEntry(UUID.randomUUID(), networkId, OVERWORLD, new BlockPos(0, 70, 0));
         registry.testingPutPowered(a);
-        assertTrue(index.testingIsDirty(), "0→1 powered edge must dirty compute index");
+        assertTrue(index.testingIsDirty(), "0�? powered edge must dirty compute index");
         index.testingSetDirty(false);
 
         var b = orbitEntry(UUID.randomUUID(), networkId, OVERWORLD, new BlockPos(1, 70, 0));
         registry.testingPutPowered(b);
-        assertFalse(index.testingIsDirty(), "1→2 powered must not dirty");
+        assertFalse(index.testingIsDirty(), "1�? powered must not dirty");
 
         registry.feed(a.satelliteId);
         registry.feed(b.satelliteId);
@@ -127,11 +136,11 @@ class MisakaRelayRegistryTest {
 
         registry.feed(a.satelliteId);
         registry.testingEndTick(6000);
-        assertFalse(index.testingIsDirty(), "2→1 powered must not dirty");
+        assertFalse(index.testingIsDirty(), "2�? powered must not dirty");
         assertTrue(registry.hasActiveRelay(networkId, OVERWORLD));
 
         registry.testingEndTick(6000);
-        assertTrue(index.testingIsDirty(), "1→0 powered edge must dirty");
+        assertTrue(index.testingIsDirty(), "1�? powered edge must dirty");
         assertFalse(registry.hasActiveRelay(networkId, OVERWORLD));
     }
 
@@ -146,7 +155,7 @@ class MisakaRelayRegistryTest {
 
         registry.onLaserRemoved(null, OVERWORLD, laser);
         assertFalse(entry.laserBound);
-        assertEquals(MisakaRelayRegistry.Phase.ORBIT, entry.phase);
+        assertEquals(MisakaRelayEntry.Phase.ORBIT, entry.phase);
         assertEquals(1, registry.all().size());
         assertEquals(null, registry.laserBoundSatellite(OVERWORLD, laser));
         assertFalse(registry.hasActiveRelay(networkId, OVERWORLD));
@@ -193,11 +202,11 @@ class MisakaRelayRegistryTest {
         registry.testingPutPowered(entry);
         registry.onLaserRemoved(null, OVERWORLD, laser);
         assertFalse(entry.laserBound);
-        assertEquals(MisakaRelayRegistry.Phase.ORBIT, entry.phase);
+        assertEquals(MisakaRelayEntry.Phase.ORBIT, entry.phase);
 
         registry.testingEndTick(2);
         assertEquals(1, registry.all().size());
-        assertEquals(MisakaRelayRegistry.Phase.ORBIT, entry.phase);
+        assertEquals(MisakaRelayEntry.Phase.ORBIT, entry.phase);
 
         registry.testingEndTick(2);
         assertTrue(registry.all().isEmpty());
@@ -206,13 +215,13 @@ class MisakaRelayRegistryTest {
     @Test
     void completeLaunchClearsEntityUuidAndStaysOrbit() {
         var entry = orbitEntry(UUID.randomUUID(), new BlockPos(15, 64, 15), OVERWORLD, new BlockPos(40, 80, 40));
-        entry.phase = MisakaRelayRegistry.Phase.LAUNCHING;
+        entry.phase = MisakaRelayEntry.Phase.LAUNCHING;
         entry.entityUuid = UUID.randomUUID();
         registry.testingPutOrbit(entry);
-        entry.phase = MisakaRelayRegistry.Phase.LAUNCHING;
+        entry.phase = MisakaRelayEntry.Phase.LAUNCHING;
 
         registry.testingCompleteLaunch(entry.satelliteId);
-        assertEquals(MisakaRelayRegistry.Phase.ORBIT, entry.phase);
+        assertEquals(MisakaRelayEntry.Phase.ORBIT, entry.phase);
         assertEquals(null, entry.entityUuid);
     }
 
@@ -220,13 +229,13 @@ class MisakaRelayRegistryTest {
     void launchingRefusesFeedUntilOrbit() {
         var entry = orbitEntry(UUID.randomUUID(), new BlockPos(20, 64, 20), OVERWORLD, new BlockPos(45, 80, 45));
         registry.testingPutOrbit(entry);
-        entry.phase = MisakaRelayRegistry.Phase.LAUNCHING;
+        entry.phase = MisakaRelayEntry.Phase.LAUNCHING;
 
         assertFalse(registry.acceptsPowerFeed(entry.satelliteId));
         registry.feed(entry.satelliteId);
         registry.testingEndTick(2);
         assertFalse(entry.powered);
-        assertEquals(MisakaRelayRegistry.Phase.LAUNCHING, entry.phase);
+        assertEquals(MisakaRelayEntry.Phase.LAUNCHING, entry.phase);
         assertFalse(registry.hasActiveRelay(entry.networkId, OVERWORLD));
 
         registry.testingCompleteLaunch(entry.satelliteId);
@@ -244,7 +253,7 @@ class MisakaRelayRegistryTest {
         entry.entityUuid = null;
 
         registry.testingBeginCrashPhaseOnly(entry.satelliteId);
-        assertEquals(MisakaRelayRegistry.Phase.CRASHING, entry.phase);
+        assertEquals(MisakaRelayEntry.Phase.CRASHING, entry.phase);
         assertEquals(null, entry.entityUuid);
         assertEquals(entry, registry.get(entry.satelliteId));
     }
@@ -256,7 +265,7 @@ class MisakaRelayRegistryTest {
         entry.entityUuid = null;
 
         registry.beginCrash(null, entry.satelliteId);
-        // No server → spawnCrashEntity fails → completeCrash removes entry.
+        // No server �?spawnCrashEntity fails �?completeCrash removes entry.
         assertTrue(registry.all().isEmpty());
     }
 
@@ -271,7 +280,7 @@ class MisakaRelayRegistryTest {
 
         assertTrue(registry.cancelForceCrash(null, entry.satelliteId));
         assertEquals(0, entry.forceCrashCountdownTicks);
-        assertEquals(MisakaRelayRegistry.Phase.ORBIT, entry.phase);
+        assertEquals(MisakaRelayEntry.Phase.ORBIT, entry.phase);
         assertFalse(registry.cancelForceCrash(null, entry.satelliteId));
     }
 
@@ -292,7 +301,7 @@ class MisakaRelayRegistryTest {
         registry.endTick(null);
         assertFalse(entry.powered);
         assertEquals(9, entry.forceCrashCountdownTicks);
-        assertEquals(MisakaRelayRegistry.Phase.ORBIT, entry.phase);
+        assertEquals(MisakaRelayEntry.Phase.ORBIT, entry.phase);
         assertFalse(registry.hasActiveRelay(entry.networkId, OVERWORLD));
     }
 
@@ -304,10 +313,10 @@ class MisakaRelayRegistryTest {
 
         registry.endTick(null);
         assertEquals(1, entry.forceCrashCountdownTicks);
-        assertEquals(MisakaRelayRegistry.Phase.ORBIT, entry.phase);
+        assertEquals(MisakaRelayEntry.Phase.ORBIT, entry.phase);
 
         registry.endTick(null);
-        // beginCrash(null) with no entity → completeCrash removes entry.
+        // beginCrash(null) with no entity �?completeCrash removes entry.
         assertTrue(registry.all().isEmpty());
     }
 
@@ -354,13 +363,13 @@ class MisakaRelayRegistryTest {
         assertEquals(0, entry.unpoweredTicks);
     }
 
-    private static MisakaRelayRegistry.Entry orbitEntry(
+    private static MisakaRelayEntry orbitEntry(
             UUID id,
             BlockPos networkId,
             ResourceKey<Level> dimension,
             BlockPos laserPos
     ) {
-        return new MisakaRelayRegistry.Entry(
+        return new MisakaRelayEntry(
                 id,
                 networkId,
                 dimension,
@@ -369,7 +378,7 @@ class MisakaRelayRegistryTest {
                 OVERWORLD,
                 new BlockPos(100, 64, 100),
                 null,
-                MisakaRelayRegistry.Phase.ORBIT
+                MisakaRelayEntry.Phase.ORBIT
         );
     }
 }

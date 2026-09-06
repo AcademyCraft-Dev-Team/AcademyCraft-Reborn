@@ -5,13 +5,11 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import org.academy.api.common.misaka.MisakaNAT;
 import org.academy.api.server.wireless.WirelessManager;
-import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
 import org.academy.internal.server.world.level.storage.MisakaSisterRoster;
 import org.academy.internal.server.world.level.storage.WirelessNetworkData;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -36,7 +34,7 @@ public final class WirelessForwardingMisakaNAT implements MisakaNAT {
 
     @Override
     public BlockPos resolveNetworkId(ServerLevel level, BlockPos nodePos) {
-        return MisakaComputeIndex.get().resolveNetworkIdCached(level, nodePos);
+        return MisakaComputeIndex.get(level.getServer()).resolveNetworkIdCached(level, nodePos);
     }
 
     /** Uncached BFS used by the compute index rebuild / cold cache miss. */
@@ -73,18 +71,19 @@ public final class WirelessForwardingMisakaNAT implements MisakaNAT {
         if (data.getNodeConfig(nodePos) == null) {
             return false;
         }
-        var roster = MisakaSisterRoster.get(level.getServer());
+        var server = level.getServer();
+        var roster = MisakaSisterRoster.get(server);
         var record = roster.get(misakaUuid).orElse(null);
         if (record == null) {
             return false;
         }
         if (record.perception >= 101
-                && hasReconstructionWork(level.getServer(), nodePos, misakaUuid)) {
+                && hasReconstructionWork(server, nodePos, misakaUuid)) {
             return false;
         }
         roster.modify(misakaUuid, sister -> sister.networkNodePos = nodePos.immutable());
-        MisakaComputeIndex.get().markDirty();
-        MisakaComputeContribution.refreshCpForRecord(level.getServer(), record);
+        MisakaComputeIndex.get(server).markDirty();
+        MisakaComputeContribution.refreshCpForRecord(server, record);
         return true;
     }
 
@@ -98,7 +97,7 @@ public final class WirelessForwardingMisakaNAT implements MisakaNAT {
             sister.networkNodePos = null;
             sister.wanderAnchorChunk = null;
         });
-        MisakaComputeIndex.get().markDirty();
+        MisakaComputeIndex.get(server).markDirty();
         roster.get(misakaUuid).ifPresent(record -> MisakaComputeContribution.refreshCpForRecord(server, record));
         return true;
     }
@@ -115,27 +114,23 @@ public final class WirelessForwardingMisakaNAT implements MisakaNAT {
 
     @Override
     public int countNetworkSisters(ServerLevel level, BlockPos nodePos) {
-        MisakaComputeIndex.get().rebuildIfDirty(level.getServer());
+        var index = MisakaComputeIndex.get(level.getServer());
+        index.rebuildIfDirty(level.getServer());
         var networkId = resolveNetworkId(level, nodePos);
-        return MisakaComputeIndex.get().networkSisterCount(networkId);
+        return index.networkSisterCount(networkId);
     }
 
     @Override
-    public List<MisakaSisterRecord> listNetworkSisters(
+    public List<UUID> listNetworkSisters(
             ServerLevel level,
             BlockPos nodePos,
             int offset,
             int limit
     ) {
-        MisakaComputeIndex.get().rebuildIfDirty(level.getServer());
+        var index = MisakaComputeIndex.get(level.getServer());
+        index.rebuildIfDirty(level.getServer());
         var networkId = resolveNetworkId(level, nodePos);
-        var uuids = MisakaComputeIndex.get().pageSisters(networkId, offset, limit);
-        var roster = MisakaSisterRoster.get(level.getServer());
-        var result = new ArrayList<MisakaSisterRecord>(uuids.size());
-        for (var uuid : uuids) {
-            roster.get(uuid).ifPresent(result::add);
-        }
-        return result;
+        return index.pageSisters(networkId, offset, limit);
     }
 
     @Override

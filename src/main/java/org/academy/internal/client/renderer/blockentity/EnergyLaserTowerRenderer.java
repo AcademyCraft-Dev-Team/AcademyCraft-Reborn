@@ -1,13 +1,11 @@
 package org.academy.internal.client.renderer.blockentity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
-import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.Mth;
@@ -15,17 +13,13 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.client.renderer.CylinderRenderer;
-import org.academy.api.client.util.VertexUtil;
+import org.academy.api.client.renderer.OrientedCylinderBeam;
 import org.academy.internal.client.renderer.blockentity.state.EnergyLaserTowerRenderState;
 import org.academy.internal.common.world.entity.misaka.RelaySatelliteEntity;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.EnergyLaserTowerBlock;
 import org.academy.internal.common.world.level.block.entity.EnergyLaserTowerBlockEntity;
 import org.academy.internal.server.misaka.MisakaRelayOrbits;
-import org.joml.Matrix4f;
-import org.joml.Quaternionf;
-import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 import net.minecraft.util.LightCoordsUtil;
 
@@ -36,7 +30,6 @@ import static org.academy.api.client.render.Render.RenderTypes.POS_COLOR_QUADS_N
 public final class EnergyLaserTowerRenderer
         implements BlockEntityRenderer<EnergyLaserTowerBlockEntity, EnergyLaserTowerRenderState> {
     public static final EnergyLaserTowerRenderer INSTANCE = new EnergyLaserTowerRenderer();
-    private static final float[][] CYLINDER = VertexUtil.Cylinder.getCylinderVertexBuffer(0, 1, 0.5f, 12, true);
     private static final double DEFAULT_BEAM_HEIGHT = 64.0;
 
     private EnergyLaserTowerRenderer() {
@@ -69,13 +62,6 @@ public final class EnergyLaserTowerRenderer
 
         var level = Minecraft.getInstance().level;
         var origin = Vec3.atLowerCornerOf(blockEntity.getBlockPos());
-        var targetId = blockEntity.getBeamTargetEntityUuid();
-        if (renderState.beamActive && targetId != null && level != null) {
-            var entity = level.getEntity(targetId);
-            if (entity != null && !entity.isRemoved()) {
-                renderState.beamEndRelative = entity.getPosition(partialTick).subtract(origin);
-            }
-        }
 
         if (blockEntity.isOrbiting() && level != null) {
             long time = level.getGameTime();
@@ -87,7 +73,7 @@ public final class EnergyLaserTowerRenderer
                     seed
             );
             var relative = slot.subtract(origin);
-            if (renderState.beamActive && targetId == null) {
+            if (renderState.beamActive) {
                 renderState.beamEndRelative = relative;
             }
             renderState.orbitHyper = blockEntity.isOrbitHyper();
@@ -144,15 +130,17 @@ public final class EnergyLaserTowerRenderer
         if (!(length > 0.05) || !Double.isFinite(length)) {
             return;
         }
-        var direction = delta.normalize();
-        poseStack.pushPose();
-        poseStack.translate(start.x, start.y, start.z);
-        poseStack.mulPose(new Quaternionf().rotationTo(
-                new Vector3f(0.0f, 1.0f, 0.0f),
-                new Vector3f((float) direction.x, (float) direction.y, (float) direction.z)
-        ));
-        submitLayer(nodeCollector, poseStack, (float) length, 0.12f, POS_COLOR_QUADS_NO_DEPTH_WRITE, 0.35f, 0.85f, 1.0f, 0.55f);
-        submitLayer(nodeCollector, poseStack, (float) length, 0.045f, POS_COLOR_QUADS_ADDITIVE, 0.85f, 0.95f, 1.0f, 0.9f);
+        if (!OrientedCylinderBeam.preparePose(poseStack, start, delta, (float) length)) {
+            return;
+        }
+        OrientedCylinderBeam.submitLayer(
+                nodeCollector, poseStack, (float) length, 0.12f,
+                POS_COLOR_QUADS_NO_DEPTH_WRITE, 0.35f, 0.85f, 1.0f, 0.55f
+        );
+        OrientedCylinderBeam.submitLayer(
+                nodeCollector, poseStack, (float) length, 0.045f,
+                POS_COLOR_QUADS_ADDITIVE, 0.85f, 0.95f, 1.0f, 0.9f
+        );
         poseStack.popPose();
     }
 
@@ -176,38 +164,6 @@ public final class EnergyLaserTowerRenderer
                 0
         );
         poseStack.popPose();
-    }
-
-    private static void submitLayer(
-            SubmitNodeCollector nodeCollector,
-            PoseStack poseStack,
-            float length,
-            float radius,
-            RenderType renderType,
-            float red,
-            float green,
-            float blue,
-            float alpha
-    ) {
-        poseStack.pushPose();
-        poseStack.scale(radius, length, radius);
-        nodeCollector.submitCustomGeometry(
-                poseStack,
-                renderType,
-                (pose, consumer) -> renderCylinder(pose.pose(), consumer, red, green, blue, alpha)
-        );
-        poseStack.popPose();
-    }
-
-    private static void renderCylinder(
-            Matrix4f matrix,
-            VertexConsumer consumer,
-            float red,
-            float green,
-            float blue,
-            float alpha
-    ) {
-        CylinderRenderer.renderCylinder(matrix, consumer, CYLINDER, red, green, blue, alpha);
     }
 
     @Override

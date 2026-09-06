@@ -52,30 +52,25 @@ public final class MisakaNetManageSupport {
             return null;
         }
         var level = (ServerLevel) player.level();
-        MisakaComputeIndex.get().rebuildIfDirty(server);
-        var networkId = MisakaNAT.get().resolveNetworkId(level, record.networkNodePos);
-        int total = MisakaNAT.get().countNetworkSisters(level, record.networkNodePos);
+        MisakaComputeIndex.get(server).rebuildIfDirty(server);
+        var overworld = server.overworld();
+        var networkId = MisakaNAT.get().resolveNetworkId(overworld, record.networkNodePos);
+        int total = MisakaNAT.get().countNetworkSisters(overworld, record.networkNodePos);
         int safePage = Math.max(0, pageIndex);
         int maxPage = total <= 0 ? 0 : (total - 1) / PAGE_SIZE;
         if (safePage > maxPage) {
             safePage = maxPage;
         }
         int offset = safePage * PAGE_SIZE;
-        var sisters = MisakaNAT.get().listNetworkSisters(level, record.networkNodePos, offset, PAGE_SIZE);
-        var summaries = new ArrayList<MisakaNetManageDataPacket.SisterSummary>(sisters.size());
-        var wireless = WirelessNetworkData.get(level);
-        var overworld = server.overworld();
-        for (var sister : sisters) {
-            String nodeName = "";
-            if (sister.networkNodePos != null) {
-                var config = wireless.getNodeConfig(sister.networkNodePos);
-                if (config == null) {
-                    config = WirelessNetworkData.get(overworld).getNodeConfig(sister.networkNodePos);
-                }
-                if (config != null) {
-                    nodeName = config.name;
-                }
+        var sisterUuids = MisakaNAT.get().listNetworkSisters(overworld, record.networkNodePos, offset, PAGE_SIZE);
+        var roster = MisakaSisterRoster.get(server);
+        var summaries = new ArrayList<MisakaNetManageDataPacket.SisterSummary>(sisterUuids.size());
+        for (var sisterUuid : sisterUuids) {
+            var sister = roster.get(sisterUuid).orElse(null);
+            if (sister == null) {
+                continue;
             }
+            String nodeName = WirelessNetworkData.displayName(level, sister.networkNodePos, true);
             var sisterNetworkId = sister.networkNodePos == null
                     ? networkId
                     : MisakaNAT.get().resolveNetworkId(overworld, sister.networkNodePos);
@@ -96,7 +91,7 @@ public final class MisakaNetManageSupport {
             ));
         }
         int[] percents = MisakaNetworkAllocations.get(server).get(networkId);
-        float totalMsk = MisakaComputeIndex.get().networkTotals().getOrDefault(networkId.immutable(), 0f);
+        float totalMsk = MisakaComputeIndex.get(server).networkTotals().getOrDefault(networkId.immutable(), 0f);
         return new MisakaNetManageDataPacket(
                 misakaUuid,
                 safePage,
@@ -116,8 +111,9 @@ public final class MisakaNetManageSupport {
         if (!canManage(player, record)) {
             return false;
         }
-        var level = (ServerLevel) player.level();
-        var networkId = MisakaNAT.get().resolveNetworkId(level, record.networkNodePos);
+        MisakaComputeIndex.get(server).rebuildIfDirty(server);
+        var overworld = server.overworld();
+        var networkId = MisakaNAT.get().resolveNetworkId(overworld, record.networkNodePos);
         MisakaNetworkAllocations.get(server).set(networkId, percents);
         return true;
     }

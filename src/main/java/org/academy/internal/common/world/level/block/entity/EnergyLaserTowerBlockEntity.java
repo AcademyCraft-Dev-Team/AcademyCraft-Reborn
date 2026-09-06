@@ -11,6 +11,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.common.world.level.block.EnergyLaserTowerBlock;
 import org.academy.internal.server.misaka.MisakaRelayOrbits;
+import org.academy.internal.server.world.level.storage.MisakaRelayEntry;
 import org.academy.internal.server.world.level.storage.MisakaRelayRegistry;
 import org.jspecify.annotations.Nullable;
 
@@ -25,7 +26,6 @@ public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implemen
     private @Nullable BlockPos connectedNodePos;
     private int energyStored;
     private boolean beamActive;
-    private @Nullable UUID beamTargetEntityUuid;
     private boolean orbiting;
     private boolean orbitHyper;
     private int orbitAngleSeed;
@@ -44,7 +44,6 @@ public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implemen
         var registry = MisakaRelayRegistry.get(server);
         UUID bound = registry.laserBoundSatellite(serverLevel.dimension(), pos);
         int energyBefore = be.energyStored;
-        UUID targetUuid = null;
         boolean nextOrbiting = false;
         boolean nextHyper = false;
         int nextSeed = 0;
@@ -52,14 +51,16 @@ public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implemen
         boolean supplying = false;
         if (bound != null) {
             int drain = 2000;
+            int hyperMul = 2;
             var academy = server.getAcademyCraftServer();
             if (academy != null) {
-                drain = Math.max(1, academy.getGenericConfig().misakaRelayLaserDrainPerTick);
+                var config = academy.getGenericConfig();
+                drain = Math.max(1, config.misakaRelayLaserDrainPerTick);
+                hyperMul = Math.max(1, config.misakaRelayHyperDrainMultiplier);
             }
             var entry = registry.get(bound);
-            // Provisional: hyper relays draw twice the normal laser feed.
             if (entry != null && entry.hyper) {
-                drain = (int) Math.min(Integer.MAX_VALUE, (long) drain * 2L);
+                drain = (int) Math.min(Integer.MAX_VALUE, (long) drain * (long) hyperMul);
             }
             boolean acceptsFeed = registry.acceptsPowerFeed(bound);
             boolean needsRecovery = registry.needsCrashRecovery(bound);
@@ -82,7 +83,7 @@ public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implemen
             }
             // Sky orbit marker may stay; laser beam only while actually supplying (see beamActive).
             if (entry != null
-                    && entry.phase == MisakaRelayRegistry.Phase.ORBIT
+                    && entry.phase == MisakaRelayEntry.Phase.ORBIT
                     && entry.laserBound
                     && acceptsFeed) {
                 nextOrbiting = true;
@@ -93,13 +94,11 @@ public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implemen
         }
         boolean active = supplying;
         boolean beamChanged = be.beamActive != active
-                || !Objects.equals(be.beamTargetEntityUuid, targetUuid)
                 || be.orbiting != nextOrbiting
                 || be.orbitHyper != nextHyper
                 || be.orbitAngleSeed != nextSeed
                 || Float.compare(be.orbitVisualY, nextVisualY) != 0;
         be.beamActive = active;
-        be.beamTargetEntityUuid = targetUuid;
         be.orbiting = nextOrbiting;
         be.orbitHyper = nextHyper;
         be.orbitAngleSeed = nextSeed;
@@ -142,11 +141,6 @@ public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implemen
         var main = mainEntity();
         // Hide beam when the tower has no stored energy (client sync lag / empty buffer).
         return main != null && main.beamActive && main.energyStored > 0;
-    }
-
-    public @Nullable UUID getBeamTargetEntityUuid() {
-        var main = mainEntity();
-        return main == null ? null : main.beamTargetEntityUuid;
     }
 
     public boolean isOrbiting() {
@@ -281,9 +275,6 @@ public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implemen
         if (connectedNodePos != null) {
             output.putLong("connected_node_pos", connectedNodePos.asLong());
         }
-        if (beamTargetEntityUuid != null) {
-            output.putString("beam_target_entity", beamTargetEntityUuid.toString());
-        }
     }
 
     @Override
@@ -297,13 +288,5 @@ public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implemen
         orbitVisualY = input.getFloatOr("orbit_visual_y", 0.0f);
         connectedNodePos = null;
         input.getLong("connected_node_pos").ifPresent(pos -> connectedNodePos = BlockPos.of(pos));
-        beamTargetEntityUuid = null;
-        input.getString("beam_target_entity").ifPresent(id -> {
-            try {
-                beamTargetEntityUuid = UUID.fromString(id);
-            } catch (IllegalArgumentException ignored) {
-                beamTargetEntityUuid = null;
-            }
-        });
     }
 }

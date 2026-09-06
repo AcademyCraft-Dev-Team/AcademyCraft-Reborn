@@ -165,22 +165,30 @@ public final class MisakaNetworkCoverage {
         }
         ResourceKey<Level> key = record != null && record.lastKnownDimension != null
                 ? record.lastKnownDimension
-                : Level.OVERWORLD;
+                : ResourceKey.create(
+                        net.minecraft.core.registries.Registries.DIMENSION,
+                        net.minecraft.resources.Identifier.withDefaultNamespace("overworld")
+                );
         var level = server.getLevel(key);
         return level != null ? level : server.overworld();
     }
 
     /**
-     * Find a loaded sister by UUID across all dimensions (rebuild / manage only; not hot path).
+     * Find a loaded sister by roster {@code misakaUuid} across all dimensions
+     * (rebuild / manage only; not hot path).
+     * <p>
+     * This is <strong>not</strong> the entity UUID — use
+     * {@link MisakaPanelSupport#findLoadedEntityAnyDimension} for that.
      */
-    public static @Nullable MisakaSisterEntity findLoadedSister(MinecraftServer server, UUID uuid) {
-        if (server == null || uuid == null) {
+    public static @Nullable MisakaSisterEntity findLoadedSister(MinecraftServer server, UUID misakaUuid) {
+        if (server == null || misakaUuid == null) {
             return null;
         }
         for (ServerLevel level : server.getAllLevels()) {
-            Entity entity = level.getEntity(uuid);
-            if (entity instanceof MisakaSisterEntity sister && !sister.isRemoved()) {
-                return sister;
+            for (var sister : loadedSisterEntities(level)) {
+                if (misakaUuid.equals(sister.getMisakaUuid()) && !sister.isRemoved()) {
+                    return sister;
+                }
             }
         }
         return null;
@@ -191,6 +199,17 @@ public final class MisakaNetworkCoverage {
         if (level == null) {
             return Map.of();
         }
+        var map = new HashMap<UUID, MisakaSisterEntity>();
+        for (var sister : loadedSisterEntities(level)) {
+            var uuid = sister.getMisakaUuid();
+            if (uuid != null) {
+                map.put(uuid, sister);
+            }
+        }
+        return map;
+    }
+
+    private static List<MisakaSisterEntity> loadedSisterEntities(ServerLevel level) {
         var border = level.getWorldBorder();
         var box = new AABB(
                 border.getMinX(),
@@ -200,13 +219,6 @@ public final class MisakaNetworkCoverage {
                 level.dimensionType().minY() + level.dimensionType().logicalHeight(),
                 border.getMaxZ()
         );
-        var map = new HashMap<UUID, MisakaSisterEntity>();
-        for (var sister : level.getEntitiesOfClass(MisakaSisterEntity.class, box)) {
-            var uuid = sister.getMisakaUuid();
-            if (uuid != null) {
-                map.put(uuid, sister);
-            }
-        }
-        return map;
+        return level.getEntitiesOfClass(MisakaSisterEntity.class, box);
     }
 }

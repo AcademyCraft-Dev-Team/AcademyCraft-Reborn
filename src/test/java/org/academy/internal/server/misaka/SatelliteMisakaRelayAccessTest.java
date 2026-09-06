@@ -15,15 +15,19 @@ class SatelliteMisakaRelayAccessTest {
     void clear() {
         MisakaNetworkCoverage.invalidate();
         MisakaRelayAccess.testingInstall(null);
+        MisakaRelayAccess.install(null);
     }
 
     @Test
-    void liveAccessIsInstalled() {
+    void defaultIsNoopUntilInstalled() {
+        assertSame(NoopMisakaRelayAccess.INSTANCE, MisakaRelayAccess.get());
+        MisakaRelayAccess.install(SatelliteMisakaRelayAccess.INSTANCE);
         assertSame(SatelliteMisakaRelayAccess.INSTANCE, MisakaRelayAccess.get());
     }
 
     @Test
     void nullLevelNeverGrants() {
+        MisakaRelayAccess.install(SatelliteMisakaRelayAccess.INSTANCE);
         assertFalse(MisakaRelayAccess.get().grantsAccess(null, BlockPos.ZERO, BlockPos.ZERO));
     }
 

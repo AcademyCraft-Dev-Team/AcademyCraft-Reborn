@@ -1,7 +1,6 @@
 package org.academy.internal.server.world.level.storage;
 
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -18,25 +17,6 @@ import java.util.Map;
  * Per wireless-network-component compute allocation percentages keyed by {@code resolveNetworkId}.
  */
 public final class MisakaNetworkAllocations extends SavedData {
-    private static final Codec<BlockPos> BLOCK_POS_CODEC = Codec.STRING.flatXmap(
-            value -> {
-                try {
-                    var parts = value.split(",");
-                    if (parts.length != 3) {
-                        return DataResult.error(() -> "Invalid BlockPos: " + value);
-                    }
-                    return DataResult.success(new BlockPos(
-                            Integer.parseInt(parts[0].trim()),
-                            Integer.parseInt(parts[1].trim()),
-                            Integer.parseInt(parts[2].trim())
-                    ));
-                } catch (NumberFormatException exception) {
-                    return DataResult.error(() -> "Invalid BlockPos: " + value);
-                }
-            },
-            pos -> DataResult.success(pos.getX() + "," + pos.getY() + "," + pos.getZ())
-    );
-
     private static final Codec<int[]> PERCENTS_CODEC = Codec.INT.listOf().xmap(
             list -> {
                 var raw = new int[MisakaComputeSink.COUNT];
@@ -49,7 +29,7 @@ public final class MisakaNetworkAllocations extends SavedData {
     );
 
     public static final Codec<MisakaNetworkAllocations> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Codec.unboundedMap(BLOCK_POS_CODEC, PERCENTS_CODEC)
+            Codec.unboundedMap(MisakaSavedDataCodecs.BLOCK_POS_STRING_CODEC, PERCENTS_CODEC)
                     .fieldOf("allocations")
                     .forGetter(data -> Map.copyOf(data.byNetworkId))
     ).apply(instance, MisakaNetworkAllocations::new));

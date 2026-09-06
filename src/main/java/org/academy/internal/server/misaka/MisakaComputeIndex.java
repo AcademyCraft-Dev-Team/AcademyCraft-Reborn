@@ -1,8 +1,12 @@
 package org.academy.internal.server.misaka;
 
+import com.mojang.serialization.Codec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.level.saveddata.SavedDataType;
+import org.academy.AcademyCraft;
 import org.academy.internal.common.world.entity.misaka.favor.FavorService;
 import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
 import org.academy.internal.server.world.level.storage.MisakaSisterRoster;
@@ -14,18 +18,33 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Dirty-rebuilt aggregate index for Misaka compute. Hot tick path must not scan the full roster.
  * Coverage edge flips adjust MSk totals incrementally without a full rebuild.
+ * Aggregates are not persisted; SavedData exists only for per-server lifetime scoping.
  */
-public final class MisakaComputeIndex {
+public final class MisakaComputeIndex extends SavedData {
     public static final String UNASSIGNED = "";
 
-    private static final MisakaComputeIndex INSTANCE = new MisakaComputeIndex();
+    /** Test-only override; when non-null, {@link #get(MinecraftServer)} returns it. */
+    public static final AtomicReference<@Nullable MisakaComputeIndex> TESTING_OVERRIDE = new AtomicReference<>();
 
-    private boolean dirty = true;
-    private boolean topologyDirty = true;
+    /** Always creates an empty dirty index; aggregates are never persisted. */
+    public static final Codec<MisakaComputeIndex> CODEC = Codec.INT.xmap(
+            ignored -> new MisakaComputeIndex(),
+            index -> 0
+    );
+
+    public static final SavedDataType<MisakaComputeIndex> SAVED_DATA_TYPE = new SavedDataType<>(
+            AcademyCraft.academy("misaka_compute_index"),
+            MisakaComputeIndex::new,
+            CODEC
+    );
+
+    private boolean dirty;
+    private boolean topologyDirty;
     private final Map<BlockPos, BlockPos> nodeToNetworkId = new HashMap<>();
     private final Map<BlockPos, Float> networkTotalMskPerSecond = new HashMap<>();
     private final Map<BlockPos, String> networkReconstructionPrivilege = new HashMap<>();
@@ -35,11 +54,22 @@ public final class MisakaComputeIndex {
     /** Last known in-coverage contribution flag (not persisted). */
     private final Map<UUID, Boolean> coverageContributing = new HashMap<>();
 
-    private MisakaComputeIndex() {
+    public MisakaComputeIndex() {
+        dirty = true;
+        topologyDirty = true;
     }
 
-    public static MisakaComputeIndex get() {
-        return INSTANCE;
+    /** Test-only: install a stub index. Pass null to clear. */
+    public static void testingInstall(@Nullable MisakaComputeIndex index) {
+        TESTING_OVERRIDE.set(index);
+    }
+
+    public static MisakaComputeIndex get(MinecraftServer server) {
+        var override = TESTING_OVERRIDE.get();
+        if (override != null) {
+            return override;
+        }
+        return server.overworld().getDataStorage().computeIfAbsent(SAVED_DATA_TYPE);
     }
 
     public void markDirty() {
@@ -94,7 +124,10 @@ public final class MisakaComputeIndex {
                 return cached;
             }
         }
-        var resolved = WirelessForwardingMisakaNAT.resolveNetworkIdRaw(level, immutable);
+        // Misaka wireless topology is overworld-authoritative.
+        var server = level != null ? level.getServer() : null;
+        var topologyLevel = server != null ? server.overworld() : level;
+        var resolved = WirelessForwardingMisakaNAT.resolveNetworkIdRaw(topologyLevel, immutable);
         nodeToNetworkId.put(immutable, resolved);
         return resolved;
     }
@@ -184,22 +217,22 @@ public final class MisakaComputeIndex {
     }
 
     /** Test hook: apply MSk delta without a live server. */
-    void testingApplyMskDelta(BlockPos networkId, String closest, float delta) {
+    public void testingApplyMskDelta(BlockPos networkId, String closest, float delta) {
         applyMskDelta(networkId, closest == null ? UNASSIGNED : closest, delta);
     }
 
     /** Test hook: clear aggregate maps without touching roster topology. */
-    void testingClearAggregates() {
+    public void testingClearAggregates() {
         networkTotalMskPerSecond.clear();
         groupMskPerSecond.clear();
         coverageContributing.clear();
     }
 
-    boolean testingIsDirty() {
+    public boolean testingIsDirty() {
         return dirty;
     }
 
-    void testingSetDirty(boolean value) {
+    public void testingSetDirty(boolean value) {
         dirty = value;
     }
 

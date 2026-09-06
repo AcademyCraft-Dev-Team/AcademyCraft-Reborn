@@ -37,12 +37,8 @@ import org.academy.internal.common.world.entity.misaka.ai.MisakaSleepInBedGoal;
 import org.academy.internal.common.world.entity.misaka.ai.MisakaSocialGoal;
 import org.academy.internal.common.world.entity.misaka.ai.MisakaStarveGuardGoal;
 import org.academy.internal.common.world.entity.misaka.ai.MisakaUnawakenedStrollGoal;
-import org.academy.internal.common.world.entity.misaka.favor.FavorContext;
-import org.academy.internal.common.world.entity.misaka.favor.FavorRuleRegistry;
-import org.academy.api.common.misaka.MisakaNAT;
 import org.academy.internal.common.world.entity.misaka.perception.PerceptionService;
 import org.academy.internal.server.misaka.MisakaComputeContribution;
-import org.academy.internal.server.misaka.MisakaComputeIndex;
 import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
 import org.academy.internal.server.world.level.storage.MisakaSisterRoster;
 import com.geckolib.animatable.GeoEntity;
@@ -71,28 +67,31 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
      * Shifts her across the chest so FP sees a facial profile instead of the occiput.
      */
     public static final float CARRY_SIDEWAYS = 0.22f;
+    /** Max distance (blocks) for player pickup / drop interactions. */
+    public static final double PICKUP_RANGE = 4.0;
+    public static final double PICKUP_RANGE_SQR = PICKUP_RANGE * PICKUP_RANGE;
 
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("idle");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("walk");
     private static final RawAnimation JUMP = RawAnimation.begin().thenLoop("jump");
-    private static final EntityDataAccessor<Integer> SERIAL = SynchedEntityData.defineId(
+    static final EntityDataAccessor<Integer> SERIAL = SynchedEntityData.defineId(
             MisakaSisterEntity.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Boolean> AWAKENED = SynchedEntityData.defineId(
+    static final EntityDataAccessor<Boolean> AWAKENED = SynchedEntityData.defineId(
             MisakaSisterEntity.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<Integer> PERCEPTION = SynchedEntityData.defineId(
+    static final EntityDataAccessor<Integer> PERCEPTION = SynchedEntityData.defineId(
             MisakaSisterEntity.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Integer> PERSONALITY = SynchedEntityData.defineId(
+    static final EntityDataAccessor<Integer> PERSONALITY = SynchedEntityData.defineId(
             MisakaSisterEntity.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Boolean> STARVING = SynchedEntityData.defineId(
+    static final EntityDataAccessor<Boolean> STARVING = SynchedEntityData.defineId(
             MisakaSisterEntity.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<Integer> WANDER_STYLE = SynchedEntityData.defineId(
+    static final EntityDataAccessor<Integer> WANDER_STYLE = SynchedEntityData.defineId(
             MisakaSisterEntity.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Integer> FOOD_LEVEL = SynchedEntityData.defineId(
+    static final EntityDataAccessor<Integer> FOOD_LEVEL = SynchedEntityData.defineId(
             MisakaSisterEntity.class, EntityDataSerializers.INT);
 
     private final SisterFoodData foodData = new SisterFoodData();
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
-    private @Nullable UUID misakaUuid;
+    @Nullable UUID misakaUuid;
     private @Nullable MisakaFollowGoal followGoal;
     private @Nullable MisakaNetworkWanderGoal networkWanderGoal;
 
@@ -160,26 +159,32 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
     }
 
     @Override
+    public boolean isNoAi() {
+        // Carried against the chest: freeze pathfinding / combat goals without editing each Goal.
+        return (getVehicle() instanceof Player) || super.isNoAi();
+    }
+
+    @Override
     public void tick() {
         super.tick();
         if (level().isClientSide()) {
             return;
         }
-        ensureRegistered();
-        syncFromRoster();
-        updateLastKnownChunk();
+        MisakaSisterRosterSync.ensureRegistered(this);
+        MisakaSisterRosterSync.syncFromRoster(this);
+        MisakaSisterRosterSync.updateLastKnownChunk(this);
         if (tickCount % 20 == 0) {
-            recheckNetworkCoverage();
+            MisakaSisterRosterSync.recheckNetworkCoverage(this);
         }
         tickSleepWake();
         if (isAwakened()) {
             if (!isPassenger()) {
                 foodData.tick(this);
             }
-            tickFoodAndStarvation();
-            syncStarvingToRoster();
+            foodData.tickFoodAndStarvation(this);
+            MisakaSisterRosterSync.syncStarvingToRoster(this);
         }
-        tickAwakeWindowSpotting();
+        MisakaSisterRosterSync.tickAwakeWindowSpotting(this);
         syncFoodLevel();
     }
 
@@ -199,7 +204,7 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
     public void onAddedToLevel() {
         super.onAddedToLevel();
         if (!level().isClientSide()) {
-            ensureRegistered();
+            MisakaSisterRosterSync.ensureRegistered(this);
         }
     }
 
@@ -285,7 +290,7 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
             if (PerceptionService.tryBreakLimit(level().getServer(), record)) {
                 stack.shrink(1);
                 InteractionGate.touchBenevolent(record, name, level().getServer());
-                syncFromRecord(record);
+                MisakaSisterRosterSync.syncFromRecord(this, record);
                 MisakaSisterRoster.get(level().getServer()).setDirty();
                 MisakaComputeContribution.refreshCpForRecord(
                         level().getServer(), record);
@@ -303,7 +308,7 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
             }
             PerceptionService.awakenWithTower(record, name, level().getGameTime(), level().getServer());
             InteractionGate.touchBenevolent(record, name, level().getServer());
-            syncFromRecord(record);
+            MisakaSisterRosterSync.syncFromRecord(this, record);
             stack.shrink(1);
             MisakaSisterRoster.get(level().getServer()).setDirty();
             MisakaComputeContribution.refreshCpForRecord(
@@ -323,7 +328,7 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
             }
             ItemStack fed = stack.copyWithCount(1);
             MisakaFoodTraits.applyTo(this, stack);
-            onHandFed(serverPlayer, stack);
+            foodData.onHandFed(this, serverPlayer, stack);
             stack.shrink(1);
             InteractionGate.touchBenevolent(record, name, level().getServer());
             MisakaSisterRoster.get(level().getServer()).setDirty();
@@ -346,7 +351,7 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
             }
             ItemStack fed = stack.copyWithCount(1);
             MisakaFoodTraits.applyTo(this, stack);
-            onHandFed(serverPlayer, stack);
+            foodData.onHandFed(this, serverPlayer, stack);
             stack.shrink(1);
             InteractionGate.touchBenevolent(record, name, level().getServer());
             MisakaSisterRoster.get(level().getServer()).setDirty();
@@ -367,7 +372,7 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
                 MisakaSisterRoster.get(level().getServer()).setDirty();
             }
             InteractionGate.touchBenevolent(record, name, level().getServer());
-            syncFromRecord(record);
+            MisakaSisterRosterSync.syncFromRecord(this, record);
             MisakaComputeContribution.refreshCpForRecord(
                     level().getServer(), record);
             MisakaInteractionFeedback.pet(this, serverPlayer);
@@ -432,17 +437,11 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
     }
 
     public void bindToRecord(MisakaSisterRecord record) {
-        misakaUuid = record.misakaUuid;
-        syncFromRecord(record);
+        MisakaSisterRosterSync.bindToRecord(this, record);
     }
 
     public void setWanderStyle(WanderStyle style) {
-        rosterRecord().ifPresent(record -> {
-            record.wanderStyle = style;
-            entityData.set(WANDER_STYLE, style.ordinal());
-            style.apply(this);
-            MisakaSisterRoster.get(level().getServer()).setDirty();
-        });
+        MisakaSisterRosterSync.setWanderStyle(this, style);
     }
 
     public Optional<MisakaSisterRecord> rosterRecord() {
@@ -461,225 +460,10 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
     }
 
     public void onSelfFed(ItemStack stack) {
-        rosterRecord().ifPresent(record -> {
-            if (MisakaFoodTraits.isFavorite(stack)) {
-                PerceptionService.gain(level().getServer(), record, 2);
-            }
-            MisakaSisterRoster.get(level().getServer()).setDirty();
-            syncFromRecord(record);
-        });
+        foodData.onSelfFed(this, stack);
     }
 
     public void tickFoodAndStarvation() {
-        if (foodData.getFoodLevel() == 0 && tickCount % 80 == 0) {
-            if (getHealth() > 1.0f) {
-                hurt(damageSources().starve(), 1.0f);
-            }
-            if (getHealth() < 1.0f) {
-                setHealth(1.0f);
-            }
-        }
-    }
-
-    private void onHandFed(ServerPlayer player, ItemStack stack) {
-        rosterRecord().ifPresent(record -> {
-            int sourceGain = MisakaFoodTraits.isTower(stack) ? 5 : 2;
-            PerceptionService.gain(level().getServer(), record, sourceGain);
-            if (MisakaFoodTraits.isFavorite(stack)) {
-                PerceptionService.gain(level().getServer(), record, 2);
-                FavorRuleRegistry.trigger(FavorContext.feedFavorite(record, misakaUuid, player));
-            }
-            if (stack.is(net.minecraft.world.item.Items.CAKE)) {
-                FavorRuleRegistry.trigger(FavorContext.anniversaryCake(record, misakaUuid, player));
-            }
-            MisakaSisterRoster.get(level().getServer()).setDirty();
-            syncFromRecord(record);
-            syncFoodLevel();
-        });
-    }
-
-    private void ensureRegistered() {
-        if (misakaUuid != null || level().getServer() == null) {
-            return;
-        }
-        int day = MisakaDayTime.dayIndex(level());
-        var registered = MisakaSisterRoster.get(level().getServer()).tryRegisterRescued(getRandom(), day);
-        if (registered.isEmpty()) {
-            // Serial pool exhausted — forbid creating more sisters.
-            discard();
-            return;
-        }
-        var record = registered.get();
-        misakaUuid = record.misakaUuid;
-        syncFromRecord(record);
-    }
-
-    private void syncFromRoster() {
-        rosterRecord().ifPresent(this::syncFromRecord);
-    }
-
-    private void syncFromRecord(MisakaSisterRecord record) {
-        entityData.set(SERIAL, record.serial);
-        entityData.set(AWAKENED, record.awakened);
-        entityData.set(PERCEPTION, record.perception);
-        entityData.set(PERSONALITY, record.personality.ordinal());
-        entityData.set(STARVING, record.starving);
-        entityData.set(WANDER_STYLE, record.wanderStyle.ordinal());
-        if (!record.awakened) {
-            foodData.setFoodLevel(20);
-            foodData.setSaturation(5.0f);
-        }
-        syncFoodLevel();
-    }
-
-    private void syncStarvingToRoster() {
-        if (misakaUuid == null || level().getServer() == null) {
-            return;
-        }
-        boolean starvingNow = foodData.getFoodLevel() == 0;
-        entityData.set(STARVING, starvingNow);
-        var server = level().getServer();
-        var roster = MisakaSisterRoster.get(server);
-        var existing = roster.get(misakaUuid);
-        if (existing.isEmpty() || existing.get().starving == starvingNow) {
-            return;
-        }
-        roster.modify(misakaUuid, record -> record.starving = starvingNow);
-        existing = roster.get(misakaUuid);
-        existing.ifPresent(record -> MisakaComputeContribution.refreshCpForRecord(server, record));
-    }
-
-    private void updateLastKnownChunk() {
-        if (misakaUuid == null || level().getServer() == null) {
-            return;
-        }
-        var chunk = chunkPosition();
-        rosterRecord().ifPresent(record -> {
-            if (chunk.equals(record.lastKnownChunk)) {
-                return;
-            }
-            record.lastKnownChunk = chunk;
-            record.lastKnownDimension = level().dimension();
-            MisakaSisterRoster.get(level().getServer()).setDirty();
-            recheckNetworkCoverage(record);
-        });
-    }
-
-    private void recheckNetworkCoverage() {
-        rosterRecord().ifPresent(this::recheckNetworkCoverage);
-    }
-
-    private void recheckNetworkCoverage(MisakaSisterRecord record) {
-        var server = level().getServer();
-        if (server == null) {
-            return;
-        }
-        if (!record.awakened || record.networkNodePos == null) {
-            return;
-        }
-        // Topology resolve uses overworld wireless data; coverage sample uses this entity's level.
-        var overworld = server.overworld();
-        var networkId = MisakaNAT.get().resolveNetworkId(overworld, record.networkNodePos);
-        boolean nowIn = MisakaNAT.get().canUseMisakaService(
-                (ServerLevel) level(),
-                networkId,
-                blockPosition()
-        );
-        Boolean was = MisakaComputeIndex.get().lastCoverageContributing(record.misakaUuid);
-        if (was == null) {
-            MisakaComputeIndex.get().seedCoverageContributing(record.misakaUuid, nowIn);
-            return;
-        }
-        if (was == nowIn) {
-            return;
-        }
-        MisakaComputeIndex.get().adjustCoverageContribution(server, record, was, nowIn);
-    }
-
-    private void tickAwakeWindowSpotting() {
-        rosterRecord().ifPresent(record -> {
-            if (!record.awakened || level().getGameTime() > record.awakeWindowEndGameTime) {
-                return;
-            }
-            var server = level().getServer();
-            for (ServerPlayer player : ((ServerLevel) level()).getPlayers(
-                    player -> player.hasLineOfSight(this) && distanceToSqr(player) <= 16.0 * 16.0)) {
-                String name = player.getGameProfile().name();
-                if (!record.awakeSpottedNames.add(name)) {
-                    continue;
-                }
-                var component = org.academy.internal.common.world.entity.misaka.favor.FavorService
-                        .resolveLanComponent((ServerLevel) level(), record, MisakaSisterRoster.get(server).all());
-                for (var member : component) {
-                    member.awakeSpottedNames.add(name);
-                }
-                org.academy.internal.common.world.entity.misaka.favor.FavorService
-                        .modifyFavorLan(server, record, name, 1);
-                MisakaSisterRoster.get(server).setDirty();
-            }
-        });
-    }
-
-    public static final class SisterFoodData {
-        private int foodLevel = 20;
-        private float saturationLevel = 5.0f;
-        private int foodTickTimer;
-        private int starveTickTimer;
-
-        public int getFoodLevel() {
-            return foodLevel;
-        }
-
-        public void setFoodLevel(int foodLevel) {
-            this.foodLevel = Mth.clamp(foodLevel, 0, 20);
-        }
-
-        public void setSaturation(float saturationLevel) {
-            this.saturationLevel = Mth.clamp(saturationLevel, 0.0f, foodLevel);
-        }
-
-        public boolean needsFood() {
-            return foodLevel < 20;
-        }
-
-        /** Cake / crop-style: saturation from nutrition × modifier × 2 (vanilla FoodData.eat(int, float)). */
-        public void eat(int nutrition, float saturationModifier) {
-            eatFood(nutrition, nutrition * saturationModifier * 2.0f);
-        }
-
-        /** Registry food: saturation value already absolute (vanilla FoodData.eat(FoodProperties)). */
-        public void eatFood(int nutrition, float saturation) {
-            foodLevel = Math.min(20, foodLevel + nutrition);
-            saturationLevel = Math.min(foodLevel, saturationLevel + saturation);
-        }
-
-        public void tick(MisakaSisterEntity entity) {
-            foodTickTimer++;
-            if (foodTickTimer >= 80) {
-                foodTickTimer = 0;
-                if (foodLevel >= 18 && saturationLevel > 0.0f) {
-                    if (entity.getHealth() < entity.getMaxHealth()) {
-                        entity.heal(1.0f);
-                    }
-                    saturationLevel = Math.max(0.0f, saturationLevel - 1.0f);
-                } else if (foodLevel > 0) {
-                    if (saturationLevel > 0.0f) {
-                        saturationLevel = Math.max(0.0f, saturationLevel - 1.0f);
-                    } else if (entity.getDeltaMovement().horizontalDistanceSqr() > 1.0E-4) {
-                        foodLevel--;
-                    }
-                }
-            }
-        }
-
-        public void read(ValueInput input) {
-            foodLevel = input.getIntOr("academy_food_level", 20);
-            saturationLevel = input.getFloatOr("academy_food_saturation", 5.0f);
-        }
-
-        public void write(ValueOutput output) {
-            output.putInt("academy_food_level", foodLevel);
-            output.putFloat("academy_food_saturation", saturationLevel);
-        }
+        foodData.tickFoodAndStarvation(this);
     }
 }

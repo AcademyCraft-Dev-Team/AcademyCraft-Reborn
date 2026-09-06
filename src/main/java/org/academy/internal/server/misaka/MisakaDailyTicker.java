@@ -41,7 +41,7 @@ public final class MisakaDailyTicker {
         }
         if (dirty) {
             roster.setDirty();
-            MisakaComputeIndex.get().markDirty();
+            MisakaComputeIndex.get(server).markDirty();
             for (var record : roster.all()) {
                 MisakaComputeContribution.refreshCpForRecord(server, record);
             }

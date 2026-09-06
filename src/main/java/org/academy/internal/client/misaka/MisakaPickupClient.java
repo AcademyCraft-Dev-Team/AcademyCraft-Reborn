@@ -9,8 +9,6 @@ import org.misaka.MisakaNetworkClient;
 
 public final class MisakaPickupClient {
     public static final String KEY_NAME_PICKUP = "misaka_pickup";
-    private static final double PICKUP_RANGE = 4.0;
-    private static final double PICKUP_RANGE_SQR = PICKUP_RANGE * PICKUP_RANGE;
 
     private MisakaPickupClient() {
     }
@@ -32,7 +30,7 @@ public final class MisakaPickupClient {
         if (player == null || level == null || minecraft.gui.screen() != null) {
             return;
         }
-        var box = player.getBoundingBox().inflate(PICKUP_RANGE);
+        var box = player.getBoundingBox().inflate(MisakaSisterEntity.PICKUP_RANGE);
         MisakaSisterEntity nearest = null;
         double nearestDistance = Double.MAX_VALUE;
         for (var sister : level.getEntitiesOfClass(MisakaSisterEntity.class, box)) {

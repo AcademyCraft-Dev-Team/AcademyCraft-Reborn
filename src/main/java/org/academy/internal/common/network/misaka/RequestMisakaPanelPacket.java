@@ -69,6 +69,9 @@ public final class RequestMisakaPanelPacket
                 return;
             }
             InteractionGate.touchBenevolent(record, name, ((ServerLevel) player.level()).getServer());
+            if (player.distanceToSqr(sister) > 64.0 * 64.0) {
+                return;
+            }
             MisakaPanelSupport.sendPanel(player, sister);
         }
     }

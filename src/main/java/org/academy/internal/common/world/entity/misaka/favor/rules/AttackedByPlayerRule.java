@@ -15,10 +15,6 @@ public final class AttackedByPlayerRule implements IFavorRule {
 
     @Override
     public void apply(FavorContext context, @Nullable MinecraftServer server) {
-        if (server != null) {
-            FavorService.modifyFavorLan(server, context.record(), context.playerName(), -1);
-        } else {
-            FavorService.modifyFavor(context.record(), context.playerName(), -1);
-        }
+        FavorService.applyDelta(server, context.record(), context.playerName(), -1);
     }
 }

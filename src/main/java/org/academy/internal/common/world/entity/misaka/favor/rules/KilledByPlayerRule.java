@@ -15,10 +15,6 @@ public final class KilledByPlayerRule implements IFavorRule {
 
     @Override
     public void apply(FavorContext context, @Nullable MinecraftServer server) {
-        if (server != null) {
-            FavorService.modifyFavorLan(server, context.record(), context.playerName(), -5);
-        } else {
-            FavorService.modifyFavor(context.record(), context.playerName(), -5);
-        }
+        FavorService.applyDelta(server, context.record(), context.playerName(), -5);
     }
 }

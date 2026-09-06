@@ -44,7 +44,7 @@ public final class MisakaComputeContribution {
 
     /** Settle personal + network-pool CP for this server tick. */
     public static void settleAndApply(MinecraftServer server) {
-        var index = MisakaComputeIndex.get();
+        var index = MisakaComputeIndex.get(server);
         index.rebuildIfDirty(server);
 
         float ratio = cpPerMsk(server);
@@ -244,7 +244,7 @@ public final class MisakaComputeContribution {
 
     /** Notify after Misaka contribution may have changed; also dirties the compute index. */
     public static void refreshCpForRecord(MinecraftServer server, MisakaSisterRecord record) {
-        MisakaComputeIndex.get().markDirty();
+        MisakaComputeIndex.get(server).markDirty();
         var names = new HashSet<String>();
         if (record.lastInteractedBenevolentPlayerName != null
                 && !record.lastInteractedBenevolentPlayerName.isEmpty()) {

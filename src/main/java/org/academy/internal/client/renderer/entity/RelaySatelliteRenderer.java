@@ -8,11 +8,9 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.ItemEntityRenderer;
 import net.minecraft.client.renderer.item.ItemModelResolver;
-import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
-import org.academy.api.client.util.VertexUtil;
 import org.academy.api.common.util.MathUtil;
 import org.academy.internal.client.renderer.entity.state.RelaySatelliteRenderState;
 import org.academy.internal.common.world.entity.misaka.RelaySatelliteEntity;
@@ -21,16 +19,8 @@ import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 import static org.academy.api.client.render.Render.RenderTypes.POS_COLOR_QUADS_ADDITIVE;
-import static org.academy.api.client.render.Render.RenderTypes.POS_COLOR_QUADS_NO_DEPTH_WRITE;
 
 public final class RelaySatelliteRenderer extends EntityRenderer<RelaySatelliteEntity, RelaySatelliteRenderState> {
-    private static final float ORBIT_RING_CULL_DISTANCE_SQR = 256.0f * 256.0f;
-    private static final int ORBIT_RING_SEGMENTS = 32;
-    /** Reused orbit-ring geometry: thin horizontal band at satellite orbit radius. */
-    private static final float[][][] ORBIT_RING = VertexUtil.Ring.getRingVertexBuffer(
-            RelaySatelliteEntity.ORBIT_RADIUS, ORBIT_RING_SEGMENTS, -0.08f, 0.08f
-    );
-
     private final ItemModelResolver itemModelResolver;
 
     public RelaySatelliteRenderer(EntityRendererProvider.Context context) {
@@ -49,9 +39,6 @@ public final class RelaySatelliteRenderer extends EntityRenderer<RelaySatelliteE
         state.spin = (entity.tickCount + partialTick) * 4.0f;
         state.crashing = entity.isCrashing();
         state.launching = entity.isLaunching();
-        // Resident orbit entities are no longer used; never draw the old orbit ring.
-        state.showOrbitRing = false;
-        state.orbitAnchor.set(entity.getOrbitAnchor());
         var motion = entity.getDeltaMovement();
         if (state.launching && motion.lengthSqr() < 1.0e-6) {
             state.trailVelocity.set(0.0f, 0.2f, 0.0f);
@@ -71,9 +58,6 @@ public final class RelaySatelliteRenderer extends EntityRenderer<RelaySatelliteE
             SubmitNodeCollector collector,
             CameraRenderState camera
     ) {
-        if (state.showOrbitRing) {
-            submitOrbitRing(state, poseStack, collector, camera);
-        }
         if (state.crashing) {
             submitTrail(state, poseStack, collector, 1.0f, 0.45f, 0.08f, 1.0f, 0.75f, 0.2f, 1.0f, 0.95f, 0.55f);
         } else if (state.launching) {
@@ -176,59 +160,5 @@ public final class RelaySatelliteRenderer extends EntityRenderer<RelaySatelliteE
                 .setColor(red, green, blue, 0.0f);
         consumer.addVertex(matrix, tailX - hx * 0.15f, tailY - hy * 0.15f, tailZ - hz * 0.15f)
                 .setColor(red, green, blue, 0.0f);
-    }
-
-    private static void submitOrbitRing(
-            RelaySatelliteRenderState state,
-            PoseStack poseStack,
-            SubmitNodeCollector collector,
-            CameraRenderState camera
-    ) {
-        var cam = camera.pos;
-        double dx = state.orbitAnchor.x() - cam.x;
-        double dy = state.orbitAnchor.y() - cam.y;
-        double dz = state.orbitAnchor.z() - cam.z;
-        if (dx * dx + dy * dy + dz * dz > ORBIT_RING_CULL_DISTANCE_SQR) {
-            return;
-        }
-        poseStack.pushPose();
-        poseStack.translate(
-                state.orbitAnchor.x() - state.x,
-                state.orbitAnchor.y() - state.y,
-                state.orbitAnchor.z() - state.z
-        );
-        submitRingLayer(collector, poseStack, POS_COLOR_QUADS_NO_DEPTH_WRITE, 0.25f, 0.7f, 1.0f, 0.35f);
-        submitRingLayer(collector, poseStack, POS_COLOR_QUADS_ADDITIVE, 0.55f, 0.9f, 1.0f, 0.55f);
-        poseStack.popPose();
-    }
-
-    private static void submitRingLayer(
-            SubmitNodeCollector collector,
-            PoseStack poseStack,
-            RenderType renderType,
-            float red,
-            float green,
-            float blue,
-            float alpha
-    ) {
-        collector.submitCustomGeometry(poseStack, renderType, (pose, consumer) ->
-                renderRing(pose.pose(), consumer, red, green, blue, alpha)
-        );
-    }
-
-    private static void renderRing(
-            Matrix4f matrix,
-            VertexConsumer consumer,
-            float red,
-            float green,
-            float blue,
-            float alpha
-    ) {
-        for (var quad : ORBIT_RING) {
-            for (var vertex : quad) {
-                consumer.addVertex(matrix, vertex[0], vertex[1], vertex[2])
-                        .setColor(red, green, blue, alpha);
-            }
-        }
     }
 }
