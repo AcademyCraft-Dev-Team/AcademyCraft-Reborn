@@ -8,7 +8,6 @@ import com.mojang.blaze3d.textures.GpuSampler
 import com.mojang.blaze3d.textures.GpuTextureView
 import com.mojang.blaze3d.vertex.PoseStack
 import net.minecraft.client.Minecraft
-import net.minecraft.util.Mth
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.neoforge.common.NeoForge
 import org.academy.AcademyCraft
@@ -16,8 +15,6 @@ import org.academy.AcademyCraftClient
 import org.academy.api.client.ability.AbilitySystemClient
 import org.academy.api.client.ability.AbilitySystemClient.SkillInfo
 import org.academy.api.client.config.KeyBindingConfig
-import org.academy.api.client.gui.animation.Animator
-import org.academy.api.client.gui.animation.AnimatorListener
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator
 import org.academy.api.client.gui.command.DrawCommand
@@ -41,9 +38,6 @@ import org.academy.internal.client.hud.HudLayout
 import org.academy.internal.common.ability.AbilityCategories
 import org.academy.internal.common.ability.Skills
 import org.joml.Vector3f
-import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.roundToInt
 
 private data class Color(val r: Int, val g: Int, val b: Int)
@@ -229,9 +223,7 @@ class AbilityInfoHud private constructor() {
 
                     val content: AbstractWidget = object : AbstractWidget() {
                         var textureView: GpuTextureView? = null
-                        val particles = mutableListOf<Particle>()
-                        var lastCp: Float = AbilitySystemClient.getAvailableCP()
-                        var visualCp: Float = AbilitySystemClient.getAvailableCP()
+                        val cpController = CpDisplayController()
 
                         override fun renderInternal(context: RenderContext) {
                             super.renderInternal(context)
@@ -249,267 +241,26 @@ class AbilityInfoHud private constructor() {
                                 }
                             }
 
-                            val spacing = 7f / 4f
-                            val topPadding = 21f / 4f
-                            val bottomPadding = 56f / 4f
-                            val leftPadding = 107f / 4f
-                            val rightPadding = 130f / 4f
-
-                            // because tan(45°) = 1
-                            val progress = visualCp / AbilitySystemClient.getMaxCP() * root.alpha
-                            val offset = height - topPadding - bottomPadding
-                            val i = 10 - Mth.ceil(progress / 0.1f)
-                            val barWidth = width - leftPadding - rightPadding - offset - 9 * spacing
-                            val progressOffsetX = (1 - progress) * barWidth + i * spacing
-
-                            val topPaddingU = topPadding / height
-                            val bottomPaddingU = bottomPadding / height
-
-                            val topLeft = leftPadding + progressOffsetX
-                            val bottomLeft = topLeft + offset
-                            val topRight = width - rightPadding - offset
-                            val bottomRight = topRight + offset
-
-                            val topLeftU = topLeft / width
-                            val bottomLeftU = bottomLeft / width
-                            val topRightU = topRight / width
-                            val bottomRightU = bottomRight / width
-
-                            val alpha = alpha * context.accumulatedAlpha
-
-                            context.submit(object : DrawCommand(
-                                Render.RenderPipelines.IMAGE,
-                                listOf(TextureBinding("Sampler0", view, sampler)),
-                                mutableListOf()
-                            ) {
-                                override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose, alphaMul: Float) {
-                                    val matrix = pose.pose()
-                                    val a = (alpha * alphaMul * 255.0f).toInt()
-                                    val dest = Vector3f()
-
-                                    writer.beginVertex()
-                                    matrix.transformPosition(topLeft, topPadding, 0f, dest)
-                                    writer.putVec3f(dest.x, dest.y, dest.z)
-                                    writer.putVec2f(topLeftU, topPaddingU)
-                                    writer.putColor(tint.r, tint.g, tint.b, a)
-
-                                    writer.beginVertex()
-                                    matrix.transformPosition(bottomLeft, height - bottomPadding, 0f, dest)
-                                    writer.putVec3f(dest.x, dest.y, dest.z)
-                                    writer.putVec2f(bottomLeftU, 1.0f - bottomPaddingU)
-                                    writer.putColor(tint.r, tint.g, tint.b, a)
-
-                                    writer.beginVertex()
-                                    matrix.transformPosition(bottomRight, height - bottomPadding, 0f, dest)
-                                    writer.putVec3f(dest.x, dest.y, dest.z)
-                                    writer.putVec2f(bottomRightU, 1.0f - bottomPaddingU)
-                                    writer.putColor(tint.r, tint.g, tint.b, a)
-
-                                    writer.beginVertex()
-                                    matrix.transformPosition(topRight, topPadding, 0f, dest)
-                                    writer.putVec3f(dest.x, dest.y, dest.z)
-                                    writer.putVec2f(topRightU, topPaddingU)
-                                    writer.putColor(tint.r, tint.g, tint.b, a)
-                                }
-                            })
-
-                            for (particle in particles) {
-                                val currentI = 10 - Mth.ceil(particle.current / 0.1f)
-                                val lastI = 10 - Mth.ceil(particle.last / 0.1f)
-                                val currentOffsetX = (1 - particle.current) * barWidth + currentI * spacing
-                                val lastOffsetX = (1 - particle.last) * barWidth + lastI * spacing
-
-                                val leftX = if (particle.increase) currentOffsetX else lastOffsetX
-                                val rightX = if (particle.increase) lastOffsetX else currentOffsetX
-
-                                val particleTopLeft = leftPadding + leftX
-                                val particleTopRight = leftPadding + rightX
-                                val particleBottomLeft = particleTopLeft + offset
-                                val particleBottomRight = particleTopRight + offset
-
-                                val particleTopLeftU = particleTopLeft / width
-                                val particleTopRightU = particleTopRight / width
-                                val particleBottomLeftU = particleBottomLeft / width
-                                val particleBottomRightU = particleBottomRight / width
-
-                                context.pose().pushPose()
-                                run {
-                                    context.pose().translate(particle.posOffset, particle.posOffset)
-                                    context.submit(object : DrawCommand(
-                                        Render.RenderPipelines.IMAGE,
-                                        listOf(TextureBinding("Sampler0", view, sampler)),
-                                        mutableListOf()
-                                    ) {
-                                        override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose, alphaMul: Float) {
-                                            val matrix = pose.pose()
-                                            val a = (particle.alpha * alphaMul * 255.0f).toInt()
-                                            val dest = Vector3f()
-
-                                            writer.beginVertex()
-                                            matrix.transformPosition(particleTopLeft, topPadding, 0f, dest)
-                                            writer.putVec3f(dest.x, dest.y, dest.z)
-                                            writer.putVec2f(particleTopLeftU, topPaddingU)
-                                            writer.putColor(tint.r, tint.g, tint.b, a)
-
-                                            writer.beginVertex()
-                                            matrix.transformPosition(
-                                                particleBottomLeft,
-                                                height - bottomPadding,
-                                                0f,
-                                                dest
-                                            )
-                                            writer.putVec3f(dest.x, dest.y, dest.z)
-                                            writer.putVec2f(particleBottomLeftU, 1.0f - bottomPaddingU)
-                                            writer.putColor(tint.r, tint.g, tint.b, a)
-
-                                            writer.beginVertex()
-                                            matrix.transformPosition(
-                                                particleBottomRight,
-                                                height - bottomPadding,
-                                                0f,
-                                                dest
-                                            )
-                                            writer.putVec3f(dest.x, dest.y, dest.z)
-                                            writer.putVec2f(particleBottomRightU, 1.0f - bottomPaddingU)
-                                            writer.putColor(tint.r, tint.g, tint.b, a)
-
-                                            writer.beginVertex()
-                                            matrix.transformPosition(particleTopRight, topPadding, 0f, dest)
-                                            writer.putVec3f(dest.x, dest.y, dest.z)
-                                            writer.putVec2f(particleTopRightU, topPaddingU)
-                                            writer.putColor(tint.r, tint.g, tint.b, a)
-                                        }
-                                    })
-                                }
-                                context.pose().popPose()
-                            }
+                            cpController.render(
+                                context,
+                                CpBarGeometry(width, height),
+                                sampler,
+                                view,
+                                tint.r,
+                                tint.g,
+                                tint.b,
+                                alpha * context.accumulatedAlpha,
+                                root.alpha
+                            )
                         }
 
                         init {
                             setFrameUpdate {
-                                val currentCp = AbilitySystemClient.getAvailableCP()
-                                if (currentCp != lastCp) {
-                                    val maxCp = AbilitySystemClient.getMaxCP()
-                                    val increase = currentCp > lastCp
-
-                                    if (increase) {
-                                        cancelShrinkParticles()
-                                        visualCp = lastCp
-                                        spawnFillParticles(lastCp / maxCp, currentCp / maxCp, maxCp)
-                                    } else {
-                                        cancelIncreaseParticles()
-                                        visualCp = currentCp
-                                        spawnShrinkParticles(lastCp / maxCp, currentCp / maxCp, maxCp)
-                                    }
-                                    lastCp = currentCp
-                                }
+                                cpController.update(
+                                    AbilitySystemClient.getAvailableCP(),
+                                    AbilitySystemClient.getMaxCP()
+                                )
                                 true
-                            }
-                        }
-
-                        private fun spawnFillParticles(lastProgress: Float, currentProgress: Float, maxCp: Float) {
-                            val animationTime = 750L
-                            var progressTracker = lastProgress
-                            var i = 0
-                            while (true) {
-                                val start = progressTracker
-                                val nextBoundary = (Mth.floor(start / 0.1f) + 1).toFloat() * 0.1f
-                                val end = min(nextBoundary, currentProgress)
-                                val progressChanged = abs(start - end) > 0
-                                if (!progressChanged) break
-
-                                val particle = Particle(start, end, true)
-                                val animator = ObjectAnimator.ofFloat(
-                                    { progress: Float? -> particle.setProgress(progress!!) },
-                                    0f,
-                                    1f
-                                )
-                                    .setDuration(animationTime).setInterpolator(EasingFunctions.EASE_OUT_EXPO)
-                                    .setStartDelay(i * animationTime / 10)
-
-                                animator.addListener(object : AnimatorListener {
-                                    override fun onAnimationEnd(animation: Animator) {
-                                        particles.remove(particle)
-                                        if (particle.increase) visualCp = end * maxCp
-                                    }
-                                })
-                                animator.start()
-                                particle.animator = animator
-                                particles.add(particle)
-
-                                progressTracker = end
-                                i++
-
-                                if (progressTracker == currentProgress) break
-                            }
-                        }
-
-                        private fun cancelIncreaseParticles() {
-                            val iterator = particles.iterator()
-                            while (iterator.hasNext()) {
-                                val particle = iterator.next()
-                                if (particle.increase) {
-                                    iterator.remove()
-                                    particle.animator?.cancel()
-                                }
-                            }
-                        }
-
-                        private fun spawnShrinkParticles(lastProgress: Float, currentProgress: Float, maxCp: Float) {
-                            val animationTime = 750L
-                            var progressTracker = lastProgress
-                            var i = 0
-                            while (true) {
-                                val start = progressTracker
-                                val nextBoundary = (Mth.ceil(start / 0.1f) - 1).toFloat() * 0.1f
-                                val end = max(nextBoundary, currentProgress)
-                                val progressChanged = abs(start - end) > 0
-                                if (!progressChanged) break
-
-                                val particle = Particle(start, end, false)
-                                val animator = ObjectAnimator.ofFloat(
-                                    { progress: Float? -> particle.setProgress(progress!!) },
-                                    0f,
-                                    1f
-                                )
-                                    .setDuration(animationTime).setInterpolator(EasingFunctions.EASE_OUT_EXPO)
-                                    .setStartDelay(i * animationTime / 10)
-
-                                animator.addListener(object : AnimatorListener {
-                                    override fun onAnimationEnd(animation: Animator) {
-                                        particles.remove(particle)
-                                    }
-                                })
-                                animator.start()
-                                particle.animator = animator
-                                particles.add(particle)
-
-                                progressTracker = end
-                                i++
-
-                                if (progressTracker == currentProgress) break
-                            }
-                        }
-
-                        private fun cancelShrinkParticles() {
-                            val iterator = particles.iterator()
-                            while (iterator.hasNext()) {
-                                val particle = iterator.next()
-                                if (!particle.increase) {
-                                    iterator.remove()
-                                    particle.animator?.cancel()
-                                }
-                            }
-                        }
-
-                        inner class Particle(val last: Float, val current: Float, val increase: Boolean) {
-                            var animator: Animator? = null
-                            var posOffset: Float = 0f
-                            var alpha: Float = 1f
-
-                            fun setProgress(progress: Float) {
-                                posOffset = if (increase) -10 + progress * 10 else progress * -10
-                                alpha = if (increase) progress else 1 - progress
                             }
                         }
                     }
@@ -849,8 +600,6 @@ class AbilityInfoHud private constructor() {
             ) { binding ->
                 if (AbilitySystemClient.isActiveHUD()) INSTANCE.triggerSelectedSkill(binding)
             }
-            // getKeyBindingMigratingDefaults records a one-shot migration fingerprint. Persist it
-            // even when no key changed so a historical default deliberately chosen later is kept.
             AcademyCraftClient.Config.INSTANCE.save()
         }
     }
