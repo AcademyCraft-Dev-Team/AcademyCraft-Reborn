@@ -68,6 +68,11 @@ public final class VfxSystemSimulator {
     private final Map<String, Gradient> gradients = new LinkedHashMap<>();
     private final Random random;
     private float time;
+    private final Map<String, org.academy.api.client.render.vfxgraph.shape.SurfaceProjector> surfaces = new HashMap<>();
+
+    public void setSurfaceProjector(String name, org.academy.api.client.render.vfxgraph.shape.SurfaceProjector surface) {
+        surfaces.put(name, Objects.requireNonNull(surface));
+    }
 
     /**
      * 块执行节点：保留块 id 以便按块收集批次（块级 flow，M28b）。
@@ -105,6 +110,7 @@ public final class VfxSystemSimulator {
 
     public void step(float dt) {
         var ctx = new SimContext(dt, time, random, curves, gradients, liveParams, arcBuffer);
+        ctx.setSurfaces(surfaces);
 
         // Phase 1: SPAWN（按块收集本帧批次 + 按 context 汇总）
         var spawnBatchesByBlock = new HashMap<String, List<SpawnBatch>>();

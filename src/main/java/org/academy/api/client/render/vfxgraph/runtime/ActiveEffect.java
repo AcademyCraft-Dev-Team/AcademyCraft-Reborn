@@ -37,7 +37,14 @@ public final class ActiveEffect {
     private final Vector3f position = new Vector3f();
     private final Quaternionf rotation = new Quaternionf();
     private final Map<String, Supplier<Value>> bindings = new LinkedHashMap<>();
+    private final Map<String, org.academy.api.client.render.vfxgraph.shape.SurfaceProjector> surfaces = new LinkedHashMap<>();
     private GraphEffect effect;
+
+    /** Bind a local projection surface; preserved through asset reloads, independent of player entities. */
+    public void bindSurface(String name, org.academy.api.client.render.vfxgraph.shape.SurfaceProjector surface) {
+        surfaces.put(name, java.util.Objects.requireNonNull(surface));
+        effect.setSurfaceProjector(name, surface);
+    }
     private float scale = 1f;
     private float minimumFarPlane;
     private long expiresAtNanos = Long.MAX_VALUE;
@@ -189,6 +196,7 @@ public final class ActiveEffect {
                 effect.setLiveParam(entry.getKey(), value);
             }
         }
+        surfaces.forEach(effect::setSurfaceProjector);
         effect.tick(dt);
         return false;
     }

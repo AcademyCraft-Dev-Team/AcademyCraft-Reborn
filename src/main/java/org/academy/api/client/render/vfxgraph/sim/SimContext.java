@@ -23,7 +23,16 @@ public final class SimContext {
     private final Map<String, Gradient> gradients;
     private final Map<String, Value> liveParams;
     private final ArcBuffer arcs;
+    private Map<String, org.academy.api.client.render.vfxgraph.shape.SurfaceProjector> surfaces = Map.of();
     public int spawnStart;
+
+    public void setSurfaces(Map<String, org.academy.api.client.render.vfxgraph.shape.SurfaceProjector> surfaces) {
+        this.surfaces = surfaces;
+    }
+
+    public org.academy.api.client.render.vfxgraph.shape.SurfaceProjector surface(String name) {
+        return surfaces.getOrDefault(name, org.academy.api.client.render.vfxgraph.shape.SurfaceProjector.IDENTITY);
+    }
     private final List<SpawnBatch> emittedBatches = new ArrayList<>();
     private List<SpawnBatch> incomingBatches = List.of();
 

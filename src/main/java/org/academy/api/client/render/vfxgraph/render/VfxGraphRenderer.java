@@ -217,7 +217,7 @@ public final class VfxGraphRenderer {
         // 电弧：发射 UBO
         arcLightningUbo = device.createBuffer(
                 () -> "VfxGraph Arc Lightning", GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, ARC_LIGHTNING_UBO_SIZE);
-        writeArcLightning(device, RenderSpec.ArcRender.DEFAULT.emission());
+        writeArcLightning(device, RenderSpec.ArcRender.DEFAULT.emission(), false);
         // 电弧管缓冲
         arcTubeVertexBuffer = device.createBuffer(
                 () -> "VfxGraph Arc Tube Vertices",
@@ -310,10 +310,10 @@ public final class VfxGraphRenderer {
     /**
      * 写入旧式电弧渲染参数 UBO：仅渲染标量（aces 开关、发射增强），**无任何颜色常量**——电弧颜色全由图数据顶点色驱动。
      */
-    private void writeArcLightning(GpuDevice device, float emission) {
+    private void writeArcLightning(GpuDevice device, float emission, boolean bloomPass) {
         try (var stack = MemoryStack.stackPush()) {
             var builder = Std140Builder.onStack(stack, ARC_LIGHTNING_UBO_SIZE);
-            builder.putVec4(new Vector4f(0f, 0f, emission, 0f)); // LightningParams(aces=0, unused, 发射增强 emission)
+            builder.putVec4(new Vector4f(0f, bloomPass ? 1f : 0f, emission, 0f)); // LightningParams(aces=0, bloom pass, 发射增强 emission)
             device.createCommandEncoder().writeToBuffer(arcLightningUbo.slice(), builder.get());
         }
     }
@@ -544,7 +544,7 @@ public final class VfxGraphRenderer {
         writeEncoder.writeToBuffer(arcTubeIndexBuffer.slice(0, indexBytes), indexData);
 
         // 写入 UBO
-        writeArcLightning(device, arcRender.emission());
+        writeArcLightning(device, arcRender.emission(), bloomPass);
 
         // 绘制
         var pipeline = arcTubePipeline(spec, bloomPass);

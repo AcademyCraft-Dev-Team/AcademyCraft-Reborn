@@ -218,6 +218,8 @@ public final class ParticleBuffer {
             case "wind_volume" -> 9;
             case "wind_dust" -> 10;
             case "impact_mono" -> 11;
+            case "sky_cloud" -> 12;
+            case "sky_halo" -> 13;
             default -> 0;
         };
     }

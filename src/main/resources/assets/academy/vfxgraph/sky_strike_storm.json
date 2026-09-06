@@ -1,0 +1,199 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "sky_strike_storm",
+  "parameters": [
+    {
+      "id": "time",
+      "name": "time",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": -1
+      }
+    },
+    {
+      "id": "seed",
+      "name": "seed",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 42
+      }
+    },
+    {
+      "id": "opacity",
+      "name": "opacity",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "detail",
+      "name": "detail",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "cloud_opacity",
+      "name": "cloud opacity",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "discharge",
+      "type": "SPAWN",
+      "name": "01 / cloud-to-ground current",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "channel",
+          "type": "vfx.block.sky_discharge",
+          "properties": {
+            "height": "48",
+            "radius": "0.65",
+            "spread": "3.2",
+            "sustain": "0.45",
+            "decay": "0.15",
+            "branches": "9",
+            "ground_radius": "6",
+            "segments": "64",
+            "corona": "0.18",
+            "twist_rate": "9",
+            "twist_strength": "0.9",
+            "twist_duration": "0.2"
+          }
+        }
+      ]
+    },
+    {
+      "id": "atmosphere",
+      "type": "SPAWN",
+      "name": "02 / storm cloud and impact",
+      "x": 0,
+      "y": 450,
+      "blocks": [
+        {
+          "id": "cloud",
+          "type": "vfx.block.storm_atmosphere",
+          "properties": {
+            "height": "48",
+            "cloud_radius": "11",
+            "cloud_count": "24",
+            "sustain": "0.45",
+            "decay": "0.15",
+            "afterglow": "2.8",
+            "impact_size": "2.8",
+            "dust_count": "8"
+          }
+        }
+      ]
+    },
+    {
+      "id": "output",
+      "type": "OUTPUT",
+      "name": "03 / cloud volume, white core, cyan glow",
+      "x": 650,
+      "y": 100,
+      "blocks": [
+        {
+          "id": "cloud_out",
+          "type": "vfx.block.output_quad",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_storm_cloud",
+            "shader": "academy:core/vfxgraph_storm_cloud",
+            "blend": "translucent",
+            "layer": "sky_cloud"
+          }
+        },
+        {
+          "id": "current_out",
+          "type": "vfx.block.output_arc",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_arc",
+            "shader": "academy:core/vfxgraph_sky_discharge",
+            "blend": "glow",
+            "thickness": "1",
+            "emission": "1.2",
+            "sparks": "0",
+            "segments": "12",
+            "overall_scale": "1",
+            "branch_depth": "0",
+            "branch_count": "0",
+            "noise_strength": "0",
+            "drift_speed": "0",
+            "branch_brightness_scale": "0.95"
+          }
+        },
+        {
+          "id": "impact_out",
+          "type": "vfx.block.output_quad",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_storm_cloud",
+            "shader": "academy:core/vfxgraph_sky_halo",
+            "blend": "glow",
+            "layer": "sky_halo"
+          }
+        }
+      ]
+    },
+    {
+      "id": "attachment",
+      "type": "SPAWN",
+      "name": "04 / surface attachment · 3.4 s",
+      "x": 0,
+      "y": 850,
+      "blocks": [
+        {
+          "id": "surface",
+          "type": "vfx.block.surface_discharge",
+          "properties": {
+            "duration": "3.4",
+            "fade": "0.45",
+            "height": "48",
+            "ground_radius": "6",
+            "ground_arcs": "6",
+            "cloud_radius": "11",
+            "cloud_count": "24",
+            "cloud_arcs": "8",
+            "width": "0.065",
+            "crawl_rate": "5"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "discharge",
+      "to": "output"
+    },
+    {
+      "from": "atmosphere",
+      "to": "output"
+    },
+    {
+      "from": "attachment",
+      "to": "output"
+    }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "cloud_out",
+    "current_out",
+    "impact_out"
+  ]
+}

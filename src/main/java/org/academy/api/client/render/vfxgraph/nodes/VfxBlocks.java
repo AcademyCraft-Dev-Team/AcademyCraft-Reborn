@@ -190,6 +190,15 @@ public final class VfxBlocks {
     );
 
     public static void registerAll(NodeRegistry metadata, VfxBlockRegistry blocks) {
+        metadata.register(type("vfx.block.sky_discharge", "spawn", "Cloud-to-ground Discharge",
+                SkyDischargeEmitter.channelProperties()));
+        blocks.register("vfx.block.sky_discharge", SkyDischargeEmitter::channel);
+        metadata.register(type("vfx.block.storm_atmosphere", "spawn", "Storm Cloud / Impact Atmosphere",
+                SkyDischargeEmitter.atmosphereProperties()));
+        blocks.register("vfx.block.storm_atmosphere", SkyDischargeEmitter::atmosphere);
+        metadata.register(type("vfx.block.surface_discharge", "spawn", "Surface-Attached Lightning Patches",
+                SurfaceDischargeEmitter.properties()));
+        blocks.register("vfx.block.surface_discharge", SurfaceDischargeEmitter::create);
         // ==================== spawn ====================
 
         metadata.register(typeWithPorts("vfx.block.spawn_rate", "spawn", "Spawn Rate",

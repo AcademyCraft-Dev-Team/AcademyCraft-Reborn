@@ -1,0 +1,11 @@
+allprojects {
+    afterEvaluate {
+        neoForge.runs.named('clientDev') {
+            sourceSet.set(sourceSets.editor)
+            gameDirectory.set(file('run/sky-strike-client'))
+            systemProperty 'academy.skyStrikeSmoke', 'true'
+            systemProperty 'academy.skyStrikeSmokeOutput', file('docs/vfx/sky_strike').absolutePath
+            programArguments.addAll('--width', '1280', '--height', '720')
+        }
+    }
+}

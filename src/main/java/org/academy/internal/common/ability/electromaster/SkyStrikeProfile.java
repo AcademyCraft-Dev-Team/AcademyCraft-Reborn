@@ -2,7 +2,7 @@ package org.academy.internal.common.ability.electromaster;
 
 public enum SkyStrikeProfile {
     LIGHTNING_STORM(
-            0, 6.0f, 24.0f, 2.5f,
+            0, 68.0f, 48.0f, 1.3f,
             5, 0, 8,
             1.0f, 4.5f, 4.0f,
             0.08f, 3.0f, 24.0f, 0.18f,
@@ -10,7 +10,7 @@ public enum SkyStrikeProfile {
             1.8f, 1.0f, false
     ),
     THUNDERCLAP(
-            1, 10.0f, 40.0f, 6.0f,
+            1, 68.0f, 72.0f, 3.1f,
             12, 20, 24,
             1.5f, 10.0f, 6.0f,
             0.22f, 4.0f, 32.0f, 0.22f,

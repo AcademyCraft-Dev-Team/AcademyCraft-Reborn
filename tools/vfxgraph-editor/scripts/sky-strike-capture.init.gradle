@@ -1,0 +1,7 @@
+allprojects {
+    afterEvaluate {
+        neoForge.runs.named('graphEditor') {
+            systemProperty 'academy.desktop.main', 'org.academy.desktop.grapheditor.preview.SkyStrikeCaptureMainKt'
+        }
+    }
+}
