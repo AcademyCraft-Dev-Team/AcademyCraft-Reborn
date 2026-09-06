@@ -128,6 +128,11 @@ public final class GraphEffect {
         }
     }
 
+    /** Supplies an emitter-local projection surface to container simulation blocks. */
+    public void setSurfaceProjector(String name, org.academy.api.client.render.vfxgraph.shape.SurfaceProjector surface) {
+        if (systemSimulator != null) systemSimulator.setSurfaceProjector(name, surface);
+    }
+
     public void tick(float dt) {
         if (dirty) {
             rebuild();

@@ -3,6 +3,7 @@ package org.academy.api.client.render.vfxgraph.runtime;
 import com.google.gson.JsonObject;
 import net.minecraft.resources.Identifier;
 import org.academy.api.client.render.graph.model.Graph;
+import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.graph.serialize.GraphSchemaVersion;
@@ -38,6 +39,16 @@ class VfxGraphManagerTest {
         VfxGraphManager.INSTANCE.close();
     }
 
+    @Test
+    void firstSpawnLazilyLoadsPackagedDischargeContainer() {
+        var manager = VfxGraphManager.INSTANCE;
+        var id = Identifier.fromNamespaceAndPath("academy", "vfxgraph/sky_strike_thunderclap");
+        var effect = manager.spawn(id, new Vector3f());
+        effect.bind("time", () -> Value.of(0.3f));
+        manager.tick(1f / 60);
+        assertEquals(1, manager.effectCount());
+        assertTrue(effect.effect().buffer().count() > 0);
+    }
     private Graph burstGraph() {
         return new Graph("test_burst",
                 List.of(

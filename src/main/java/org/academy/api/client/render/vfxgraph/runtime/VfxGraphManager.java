@@ -252,6 +252,14 @@ public final class VfxGraphManager {
             // 懒加载兜底：重载监听可能尚未装载（或未命中），直接从资源管理器/classpath 读取
             var loaded = loadFromResourceManager(assetId);
             graph = loaded;
+            // Container decoding populates its own cache and deliberately returns no flat graph.
+            // Recheck it on the very first spawn, before a resource reload has warmed the cache.
+            container = containerAssets.get(key);
+            if (container != null) {
+                var effect = new ActiveEffect(key, container, vfxRegistry, blockRegistry, operatorRegistry, position);
+                effects.add(effect);
+                return effect;
+            }
         }
         if (graph == null) {
             throw new IllegalArgumentException("no vfx graph asset: " + assetId);
