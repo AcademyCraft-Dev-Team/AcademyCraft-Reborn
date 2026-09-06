@@ -9,10 +9,15 @@ public final class StormCloudShape {
     private StormCloudShape() {
     }
 
+    /** Rigid cloud rotation, also used to move cached surface traces with the visible billows. */
+    public static float rotation(float time) {
+        return time * 0.055f;
+    }
+
     public static Vector4f lobe(int index, int count, float time, long seed,
                                 float height, float radius, Vector4f out) {
         float u = (index + 0.5f) / count;
-        float angle = index * 2.399963f + time * 0.055f;
+        float angle = index * 2.399963f + rotation(time);
         float r = radius * (float) Math.sqrt(u) * 0.82f;
         return out.set((float) Math.cos(angle) * r,
                 height + radius * (0.055f + unit(seed, index) * 0.10f),

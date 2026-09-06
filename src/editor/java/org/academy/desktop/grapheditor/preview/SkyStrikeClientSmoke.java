@@ -65,7 +65,7 @@ public final class SkyStrikeClientSmoke {
         ticks++;
         if (ticks == 100) emit(SkyStrikeProfile.THUNDERCLAP, impact);
         if (ticks == 107) capture("ingame_thunderclap");
-        if (ticks == 142) capture("ingame_surface_attachment");
+        if (ticks == 122) capture("ingame_surface_attachment");
         if (ticks >= 180 && ticks <= 240 && (ticks - 180) % 3 == 0) {
             int n = (ticks - 180) / 3;
             double angle = n * 2.399963;

@@ -64,8 +64,8 @@
             "height": "48",
             "radius": "0.65",
             "spread": "3.2",
-            "sustain": "0.45",
-            "decay": "0.15",
+            "sustain": "0.25",
+            "decay": "0.35",
             "branches": "9",
             "ground_radius": "6",
             "segments": "64",
@@ -91,8 +91,8 @@
             "height": "48",
             "cloud_radius": "11",
             "cloud_count": "24",
-            "sustain": "0.45",
-            "decay": "0.15",
+            "sustain": "0.25",
+            "decay": "0.35",
             "afterglow": "2.8",
             "impact_size": "2.8",
             "dust_count": "8"
@@ -151,7 +151,7 @@
     {
       "id": "attachment",
       "type": "SPAWN",
-      "name": "04 / surface attachment · 3.4 s",
+      "name": "04 / surface attachment · 1.5 s",
       "x": 0,
       "y": 850,
       "blocks": [
@@ -159,14 +159,14 @@
           "id": "surface",
           "type": "vfx.block.surface_discharge",
           "properties": {
-            "duration": "3.4",
+            "duration": "1.5",
             "fade": "0.45",
             "height": "48",
             "ground_radius": "6",
-            "ground_arcs": "6",
+            "ground_arcs": "4",
             "cloud_radius": "11",
             "cloud_count": "24",
-            "cloud_arcs": "8",
+            "cloud_arcs": "5",
             "width": "0.065",
             "crawl_rate": "5"
           }
