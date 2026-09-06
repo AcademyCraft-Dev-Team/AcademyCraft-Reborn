@@ -49,12 +49,33 @@ fun WidgetContainer.image(
     return widget
 }
 
+fun WidgetContainer.monochromeImage(
+    texture: Identifier,
+    name: String = nextChildName("mono_image"),
+    init: MonochromeImageWidget.() -> Unit = {}
+): MonochromeImageWidget {
+    val widget = MonochromeImageWidget(texture)
+    addChild(name, widget)
+    widget.init()
+    return widget
+}
+
 fun WidgetContainer.fill(
     color: Int,
     name: String = nextChildName("fill"),
     init: FillWidget.() -> Unit = {}
 ): FillWidget {
     val widget = FillWidget(color)
+    addChild(name, widget)
+    widget.init()
+    return widget
+}
+
+fun WidgetContainer.empty(
+    name: String = nextChildName("empty"),
+    init: EmptyWidget.() -> Unit = {}
+): EmptyWidget {
+    val widget = EmptyWidget()
     addChild(name, widget)
     widget.init()
     return widget
