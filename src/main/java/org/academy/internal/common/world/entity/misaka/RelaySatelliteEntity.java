@@ -10,12 +10,14 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
+import org.academy.internal.server.misaka.MisakaRelayOrbits;
 import org.academy.internal.server.world.level.storage.MisakaRelayRegistry;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
@@ -29,8 +31,7 @@ import java.util.UUID;
  */
 public final class RelaySatelliteEntity extends RenderOnlyEntity {
     public static final float ORBIT_RADIUS = 48.0f;
-    /** Provisional: takeoff → scheduled orbit insertion lasts one game minute. */
-    public static final int LAUNCH_DURATION_TICKS = 20 * 60;
+    public static final int LAUNCH_DURATION_TICKS = MisakaRelayOrbits.DEFAULT_LAUNCH_TICKS;
 
     private static final EntityDataAccessor<Boolean> CRASHING =
             SynchedEntityData.defineId(RelaySatelliteEntity.class, EntityDataSerializers.BOOLEAN);
@@ -43,7 +44,7 @@ public final class RelaySatelliteEntity extends RenderOnlyEntity {
     private static final EntityDataAccessor<Vector3fc> ORBIT_ANCHOR =
             SynchedEntityData.defineId(RelaySatelliteEntity.class, EntityDataSerializers.VECTOR3);
     private static final double ORBIT_SPEED = 0.01;
-    private static final double METEOR_MAX_SPEED = 3.5;
+    private static final double METEOR_AIR_DRAG = 0.995;
     private static final float DEFAULT_CRASH_EXPLOSION_POWER = 5.0f;
 
     private @Nullable UUID satelliteId;
@@ -52,6 +53,9 @@ public final class RelaySatelliteEntity extends RenderOnlyEntity {
     private double launchStartX;
     private double launchStartY;
     private double launchStartZ;
+    /** Snapshot of dive profile derived from launch duration at {@link #beginCrash()}. */
+    private double crashMaxSpeed;
+    private double crashAccel;
 
     public RelaySatelliteEntity(EntityType<?> type, Level level) {
         super(type, level);
@@ -108,7 +112,37 @@ public final class RelaySatelliteEntity extends RenderOnlyEntity {
         if (!isLaunching()) {
             return 1.0f;
         }
-        return Mth.clamp((entityData.get(LAUNCH_AGE) + partialTick) / LAUNCH_DURATION_TICKS, 0.0f, 1.0f);
+        int duration = launchDurationTicks();
+        return Mth.clamp((entityData.get(LAUNCH_AGE) + partialTick) / duration, 0.0f, 1.0f);
+    }
+
+    private int launchDurationTicks() {
+        if (level() instanceof ServerLevel serverLevel) {
+            return MisakaRelayOrbits.launchTicks(serverLevel.getServer());
+        }
+        return MisakaRelayOrbits.DEFAULT_LAUNCH_TICKS;
+    }
+
+    /**
+     * Derive dive speed/accel from current launch ascent duration and remaining fall height.
+     * Changing {@code misakaRelayLaunchTicks} automatically retargets crash fall time.
+     */
+    private void refreshCrashMotionProfile() {
+        int crashTicks = MisakaRelayOrbits.crashDurationTicks(launchDurationTicks());
+        double drop = Math.max(16.0, getY() - estimateCrashGroundY());
+        crashMaxSpeed = MisakaRelayOrbits.crashMaxSpeed(drop, crashTicks);
+        crashAccel = MisakaRelayOrbits.crashAccel(crashMaxSpeed);
+    }
+
+    private double estimateCrashGroundY() {
+        if (level() instanceof ServerLevel serverLevel) {
+            int x = Mth.floor(getX());
+            int z = Mth.floor(getZ());
+            if (serverLevel.hasChunk(x >> 4, z >> 4)) {
+                return serverLevel.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
+            }
+        }
+        return level().getSeaLevel();
     }
 
     public void beginLaunch() {
@@ -129,11 +163,13 @@ public final class RelaySatelliteEntity extends RenderOnlyEntity {
         entityData.set(LAUNCHING, false);
         noPhysics = false;
         setNoGravity(false);
+        refreshCrashMotionProfile();
         var yaw = random.nextFloat() * Mth.TWO_PI;
-        var horizontal = 0.45 + random.nextDouble() * 0.55;
+        var horizontal = crashMaxSpeed * (0.85 + random.nextDouble() * 1.05);
+        var dive = crashMaxSpeed * (0.50 + random.nextDouble() * 0.30);
         setDeltaMovement(new Vec3(
                 Mth.cos(yaw) * horizontal,
-                -1.35 - random.nextDouble() * 0.65,
+                -dive,
                 Mth.sin(yaw) * horizontal
         ));
     }
@@ -167,19 +203,20 @@ public final class RelaySatelliteEntity extends RenderOnlyEntity {
 
     private void tickLaunch() {
         launchAge++;
-        if (launchAge % 5 == 0 || launchAge >= LAUNCH_DURATION_TICKS) {
+        int duration = launchDurationTicks();
+        if (launchAge % 5 == 0 || launchAge >= duration) {
             entityData.set(LAUNCH_AGE, launchAge);
         }
         var anchor = getOrbitAnchor();
         var end = new Vec3(anchor.x() + ORBIT_RADIUS, anchor.y(), anchor.z());
-        if (launchAge >= LAUNCH_DURATION_TICKS) {
+        if (launchAge >= duration) {
             setPos(end.x, end.y, end.z);
             setDeltaMovement(Vec3.ZERO);
             finishLaunch();
             return;
         }
 
-        float t = launchAge / (float) LAUNCH_DURATION_TICKS;
+        float t = launchAge / (float) duration;
         // Smoothstep: quicker climb early, gentle insertion into orbit.
         float eased = t * t * (3.0f - 2.0f * t);
         // Quadratic Bezier: rise above start first, then curve into the orbit slot.
@@ -212,7 +249,7 @@ public final class RelaySatelliteEntity extends RenderOnlyEntity {
 
     private void finishLaunch() {
         entityData.set(LAUNCHING, false);
-        entityData.set(LAUNCH_AGE, LAUNCH_DURATION_TICKS);
+        entityData.set(LAUNCH_AGE, launchDurationTicks());
         noPhysics = true;
         setNoGravity(true);
         setDeltaMovement(Vec3.ZERO);
@@ -223,13 +260,17 @@ public final class RelaySatelliteEntity extends RenderOnlyEntity {
     }
 
     private void tickCrash() {
-        var motion = getDeltaMovement().add(0.0, -0.12, 0.0);
-        var speed = motion.length();
-        if (speed > 1.0e-4 && speed < METEOR_MAX_SPEED) {
-            motion = motion.scale(Math.min(1.06, (speed + 0.1) / speed));
+        if (!(crashMaxSpeed > 0.0) || !(crashAccel < 0.0)) {
+            refreshCrashMotionProfile();
         }
-        if (motion.y < -METEOR_MAX_SPEED) {
-            motion = new Vec3(motion.x, -METEOR_MAX_SPEED, motion.z);
+        var motion = getDeltaMovement();
+        motion = new Vec3(
+                motion.x * METEOR_AIR_DRAG,
+                motion.y + crashAccel,
+                motion.z * METEOR_AIR_DRAG
+        );
+        if (motion.y < -crashMaxSpeed) {
+            motion = new Vec3(motion.x, -crashMaxSpeed, motion.z);
         }
         setDeltaMovement(motion);
 
@@ -373,9 +414,14 @@ public final class RelaySatelliteEntity extends RenderOnlyEntity {
         launchStartX = input.getDoubleOr("launch_start_x", getX());
         launchStartY = input.getDoubleOr("launch_start_y", getY());
         launchStartZ = input.getDoubleOr("launch_start_z", getZ());
+        crashMaxSpeed = input.getDoubleOr("crash_max_speed", 0.0);
+        crashAccel = input.getDoubleOr("crash_accel", 0.0);
         if (isCrashing()) {
             noPhysics = false;
             setNoGravity(false);
+            if (!(crashMaxSpeed > 0.0) || !(crashAccel < 0.0)) {
+                refreshCrashMotionProfile();
+            }
         } else {
             noPhysics = true;
             setNoGravity(true);
@@ -399,5 +445,7 @@ public final class RelaySatelliteEntity extends RenderOnlyEntity {
         output.putDouble("launch_start_x", launchStartX);
         output.putDouble("launch_start_y", launchStartY);
         output.putDouble("launch_start_z", launchStartZ);
+        output.putDouble("crash_max_speed", crashMaxSpeed);
+        output.putDouble("crash_accel", crashAccel);
     }
 }

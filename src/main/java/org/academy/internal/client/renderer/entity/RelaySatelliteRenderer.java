@@ -49,7 +49,8 @@ public final class RelaySatelliteRenderer extends EntityRenderer<RelaySatelliteE
         state.spin = (entity.tickCount + partialTick) * 4.0f;
         state.crashing = entity.isCrashing();
         state.launching = entity.isLaunching();
-        state.showOrbitRing = !state.crashing && !state.launching;
+        // Resident orbit entities are no longer used; never draw the old orbit ring.
+        state.showOrbitRing = false;
         state.orbitAnchor.set(entity.getOrbitAnchor());
         var motion = entity.getDeltaMovement();
         if (state.launching && motion.lengthSqr() < 1.0e-6) {

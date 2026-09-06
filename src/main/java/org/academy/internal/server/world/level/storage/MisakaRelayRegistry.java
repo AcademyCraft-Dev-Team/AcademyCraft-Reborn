@@ -15,6 +15,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.world.entity.misaka.RelaySatelliteEntity;
 import org.academy.internal.server.misaka.MisakaComputeIndex;
+import org.academy.internal.server.misaka.MisakaRelayOrbits;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -32,6 +33,9 @@ import java.util.UUID;
  * Coverage queries use {@link #hasActiveRelay} O(1) via poweredCount index.
  */
 public final class MisakaRelayRegistry {
+    /** Cabin-ops forced crash arming delay (60 seconds). */
+    public static final int FORCE_CRASH_COUNTDOWN_TICKS = 20 * 60;
+
     public enum Phase {
         ORBIT,
         LAUNCHING,
@@ -48,7 +52,7 @@ public final class MisakaRelayRegistry {
                 Enum::name
         );
 
-        /** Orbiting or ascending — still participates in power / coverage lifecycle. */
+        /** Orbiting or ascending — still registered; power / beam only after {@link #ORBIT}. */
         public boolean isActive() {
             return this == ORBIT || this == LAUNCHING;
         }
@@ -72,8 +76,16 @@ public final class MisakaRelayRegistry {
         public boolean laserBound = true;
         /** Runtime: fed this server tick. */
         public transient boolean powered;
-        /** Runtime: consecutive ticks without feed. */
+        /**
+         * Runtime crash-debt ticks: increments while unfed, decreases only when a laser pays
+         * recovery energy ({@link #feed(UUID, boolean)} with recover). Does not reset instantly on power restore.
+         */
         public transient int unpoweredTicks;
+        /**
+         * Runtime: ticks remaining before a cabin-ops forced crash fires.
+         * {@code 0} means not armed; cancel clears it before {@link Phase#CRASHING}.
+         */
+        public transient int forceCrashCountdownTicks;
 
         public Entry(
                 UUID satelliteId,
@@ -170,6 +182,8 @@ public final class MisakaRelayRegistry {
     private final Map<Long, UUID> laserOwner = new HashMap<>();
     private final Map<Long, Integer> poweredCountByNetDim = new HashMap<>();
     private final Set<UUID> fedThisTick = new HashSet<>();
+    /** Subset of {@link #fedThisTick}: paid extra energy this tick to reduce crash debt. */
+    private final Set<UUID> recoveryFedThisTick = new HashSet<>();
     private int respawnCheckTick;
     private Runnable persistentDirty = () -> {};
 
@@ -297,9 +311,10 @@ public final class MisakaRelayRegistry {
     /**
      * True if the satellite is powered for coverage, including a feed already queued this tick
      * (before {@link #endTick} flips the persistent {@code powered} flag).
+     * Force-crash arming and crash phase reject power immediately.
      */
     public boolean isReceivingPower(UUID satelliteId) {
-        if (satelliteId == null) {
+        if (satelliteId == null || !acceptsPowerFeed(satelliteId)) {
             return false;
         }
         if (fedThisTick.contains(satelliteId)) {
@@ -309,21 +324,82 @@ public final class MisakaRelayRegistry {
         return entry != null && entry.powered;
     }
 
+    /**
+     * Lasers may drain and call {@link #feed} only while the satellite still accepts power.
+     * Launch ascent, armed force-crash, and non-orbit phases refuse feed (no coverage / no beam).
+     */
+    public boolean acceptsPowerFeed(UUID satelliteId) {
+        if (satelliteId == null) {
+            return false;
+        }
+        var entry = byId.get(satelliteId);
+        return entry != null
+                && entry.phase == Phase.ORBIT
+                && entry.forceCrashCountdownTicks <= 0;
+    }
+
     public List<Entry> all() {
         return List.copyOf(byId.values());
     }
 
+    /**
+     * True while the satellite is in orbit with unpaid crash debt ({@code unpoweredTicks > 0}).
+     * Lasers should drain maintain + recovery energy and call {@link #feed(UUID, boolean)} with recover.
+     */
+    public boolean needsCrashRecovery(UUID satelliteId) {
+        if (satelliteId == null || !acceptsPowerFeed(satelliteId)) {
+            return false;
+        }
+        var entry = byId.get(satelliteId);
+        return entry != null && entry.unpoweredTicks > 0;
+    }
+
+    /** Maintain-only feed (coverage). Does not reduce crash debt. */
     public void feed(UUID satelliteId) {
-        if (satelliteId != null) {
+        feed(satelliteId, false);
+    }
+
+    /**
+     * Queue a feed pulse for this tick.
+     * @param recoverCrashDebt when true and the satellite has debt, {@link #endTick} reduces
+     *                         {@code unpoweredTicks} by 1 (requires the laser to have paid extra drain).
+     */
+    public void feed(UUID satelliteId, boolean recoverCrashDebt) {
+        if (satelliteId != null && acceptsPowerFeed(satelliteId)) {
             fedThisTick.add(satelliteId);
+            if (recoverCrashDebt) {
+                recoveryFedThisTick.add(satelliteId);
+            }
         }
     }
 
     public void endTick(MinecraftServer server) {
         int crashTicks = crashTimeout(server);
         var toCrash = new ArrayList<UUID>();
+        var forceDue = new ArrayList<UUID>();
         for (var entry : byId.values()) {
+            boolean forceArmed = entry.forceCrashCountdownTicks > 0;
+            if (forceArmed) {
+                if (!entry.phase.isActive()) {
+                    entry.forceCrashCountdownTicks = 0;
+                    forceArmed = false;
+                } else {
+                    entry.forceCrashCountdownTicks--;
+                    if (entry.forceCrashCountdownTicks <= 0) {
+                        forceDue.add(entry.satelliteId);
+                    }
+                }
+            }
             if (!entry.phase.isActive()) {
+                continue;
+            }
+            // Launch / force-crash own the timeline: stay dark, ignore feed, no unpowered timeout race.
+            if (forceArmed || entry.phase == Phase.LAUNCHING) {
+                if (entry.powered) {
+                    entry.powered = false;
+                    bumpPoweredCount(entry, -1);
+                    markPersistentDirty();
+                }
                 continue;
             }
             boolean fed = fedThisTick.contains(entry.satelliteId);
@@ -333,7 +409,10 @@ public final class MisakaRelayRegistry {
                     bumpPoweredCount(entry, +1);
                     markPersistentDirty();
                 }
-                entry.unpoweredTicks = 0;
+                // Crash debt only heals when the laser paid recovery energy this tick (1 tick per tick).
+                if (recoveryFedThisTick.contains(entry.satelliteId) && entry.unpoweredTicks > 0) {
+                    entry.unpoweredTicks--;
+                }
             } else {
                 if (entry.powered) {
                     entry.powered = false;
@@ -347,6 +426,10 @@ public final class MisakaRelayRegistry {
             }
         }
         fedThisTick.clear();
+        recoveryFedThisTick.clear();
+        for (UUID id : forceDue) {
+            beginCrash(server, id);
+        }
         for (UUID id : toCrash) {
             beginCrash(server, id);
         }
@@ -354,6 +437,36 @@ public final class MisakaRelayRegistry {
             respawnCheckTick = 0;
             tryRespawnMissing(server);
         }
+    }
+
+    /**
+     * Arm a forced crash countdown for an active satellite. Fails if already crashing or already armed.
+     * Cuts coverage power immediately; lasers stop feeding until cancel or crash completes.
+     */
+    public boolean scheduleForceCrash(MinecraftServer server, UUID satelliteId, int ticks) {
+        var entry = get(satelliteId);
+        if (entry == null || !entry.phase.isActive() || entry.forceCrashCountdownTicks > 0) {
+            return false;
+        }
+        entry.forceCrashCountdownTicks = Math.max(1, ticks);
+        if (entry.powered) {
+            entry.powered = false;
+            bumpPoweredCount(entry, -1);
+            markPersistentDirty();
+        }
+        return true;
+    }
+
+    /**
+     * Cancel a pending forced-crash countdown. Fails once {@link Phase#CRASHING} has started.
+     */
+    public boolean cancelForceCrash(MinecraftServer server, UUID satelliteId) {
+        var entry = get(satelliteId);
+        if (entry == null || entry.phase == Phase.CRASHING || entry.forceCrashCountdownTicks <= 0) {
+            return false;
+        }
+        entry.forceCrashCountdownTicks = 0;
+        return true;
     }
 
     private static int crashTimeout(MinecraftServer server) {
@@ -481,6 +594,7 @@ public final class MisakaRelayRegistry {
 
     /**
      * Launch ascent finished: satellite has reached its scheduled orbit slot.
+     * Orbit phase is registry-only — discard any cosmetic launch entity.
      */
     public void completeLaunch(MinecraftServer server, UUID satelliteId) {
         var entry = get(satelliteId);
@@ -488,6 +602,11 @@ public final class MisakaRelayRegistry {
             return;
         }
         entry.phase = Phase.ORBIT;
+        RelaySatelliteEntity entity = findEntity(server, entry);
+        if (entity != null && !entity.isRemoved()) {
+            entity.discard();
+        }
+        entry.entityUuid = null;
         markPersistentDirty();
     }
 
@@ -516,6 +635,7 @@ public final class MisakaRelayRegistry {
         if (entry == null || entry.phase == Phase.CRASHING) {
             return;
         }
+        entry.forceCrashCountdownTicks = 0;
         if (entry.powered) {
             entry.powered = false;
             bumpPoweredCount(entry, -1);
@@ -525,6 +645,9 @@ public final class MisakaRelayRegistry {
         MisakaComputeIndex.get().markDirty();
 
         RelaySatelliteEntity entity = findEntity(server, entry);
+        if (entity == null) {
+            entity = spawnCrashEntity(server, entry);
+        }
         if (entity != null) {
             entity.beginCrash();
         } else {
@@ -566,31 +689,42 @@ public final class MisakaRelayRegistry {
         }
         RelaySatelliteEntity entity = findEntity(server, entry);
         if (entity == null) {
-            spawnEntity(server, entry, false);
+            // ORBIT has no resident entity; LAUNCHING/CRASHING keep their own spawn paths.
             return;
         }
         var level = server.getLevel(entry.dimension);
         if (level == null) {
             return;
         }
-        double orbitY = level.dimensionType().minY() + level.dimensionType().logicalHeight() - 16.0;
+        double orbitY = MisakaRelayOrbits.visualOrbitY(level, server);
         entity.setOrbitAnchor(entry.laserPos.getX() + 0.5, orbitY, entry.laserPos.getZ() + 0.5);
     }
 
     private void tryRespawnMissing(MinecraftServer server) {
         for (var entry : byId.values()) {
-            if (!entry.phase.isActive()) {
+            if (entry.phase == Phase.ORBIT) {
                 continue;
             }
-            if (findEntity(server, entry) != null) {
-                continue;
-            }
-            // Skip replaying the one-minute ascent after unload; snap into orbit.
             if (entry.phase == Phase.LAUNCHING) {
-                entry.phase = Phase.ORBIT;
-                markPersistentDirty();
+                if (findEntity(server, entry) == null) {
+                    // Unload mid-ascent: snap to abstract orbit, do not replay launch or spawn.
+                    entry.phase = Phase.ORBIT;
+                    entry.entityUuid = null;
+                    markPersistentDirty();
+                }
+                continue;
             }
-            spawnEntity(server, entry, false);
+            if (entry.phase == Phase.CRASHING) {
+                if (findEntity(server, entry) != null) {
+                    continue;
+                }
+                var spawned = spawnCrashEntity(server, entry);
+                if (spawned == null) {
+                    completeCrash(server, entry.satelliteId);
+                } else {
+                    spawned.beginCrash();
+                }
+            }
         }
     }
 
@@ -599,7 +733,7 @@ public final class MisakaRelayRegistry {
         if (level == null) {
             return;
         }
-        double orbitY = level.dimensionType().minY() + level.dimensionType().logicalHeight() - 16.0;
+        double orbitY = MisakaRelayOrbits.visualOrbitY(level, server);
         var entity = new RelaySatelliteEntity(level);
         entity.setSatelliteId(entry.satelliteId);
         entity.setOrbitAnchor(entry.laserPos.getX() + 0.5, orbitY, entry.laserPos.getZ() + 0.5);
@@ -610,22 +744,16 @@ public final class MisakaRelayRegistry {
             int chunkX = BlockPos.containing(start).getX() >> 4;
             int chunkZ = BlockPos.containing(start).getZ() >> 4;
             if (!level.hasChunk(chunkX, chunkZ)) {
+                // Cannot play ascent — abstract orbit immediately, no resident entity.
                 entry.phase = Phase.ORBIT;
-                int laserChunkX = entry.laserPos.getX() >> 4;
-                int laserChunkZ = entry.laserPos.getZ() >> 4;
-                if (!level.hasChunk(laserChunkX, laserChunkZ)) {
-                    return;
-                }
-                entity.setPos(
-                        entry.laserPos.getX() + 0.5 + RelaySatelliteEntity.ORBIT_RADIUS,
-                        orbitY,
-                        entry.laserPos.getZ() + 0.5
-                );
-            } else {
-                entity.setPos(start.x, start.y, start.z);
-                entity.beginLaunch();
+                entry.entityUuid = null;
+                markPersistentDirty();
+                return;
             }
+            entity.setPos(start.x, start.y, start.z);
+            entity.beginLaunch();
         } else {
+            // Non-launch spawns are only for crash recovery.
             int chunkX = entry.laserPos.getX() >> 4;
             int chunkZ = entry.laserPos.getZ() >> 4;
             if (!level.hasChunk(chunkX, chunkZ)) {
@@ -641,6 +769,35 @@ public final class MisakaRelayRegistry {
         level.addFreshEntity(entity);
         entry.entityUuid = entity.getUUID();
         markPersistentDirty();
+    }
+
+    private @Nullable RelaySatelliteEntity spawnCrashEntity(MinecraftServer server, Entry entry) {
+        if (server == null) {
+            return null;
+        }
+        var level = server.getLevel(entry.dimension);
+        if (level == null) {
+            return null;
+        }
+        int chunkX = entry.laserPos.getX() >> 4;
+        int chunkZ = entry.laserPos.getZ() >> 4;
+        if (!level.hasChunk(chunkX, chunkZ)) {
+            return null;
+        }
+        double orbitY = MisakaRelayOrbits.visualOrbitY(level, server);
+        var entity = new RelaySatelliteEntity(level);
+        entity.setSatelliteId(entry.satelliteId);
+        entity.setOrbitAnchor(entry.laserPos.getX() + 0.5, orbitY, entry.laserPos.getZ() + 0.5);
+        entity.setHyper(entry.hyper);
+        entity.setPos(
+                entry.laserPos.getX() + 0.5 + RelaySatelliteEntity.ORBIT_RADIUS,
+                orbitY,
+                entry.laserPos.getZ() + 0.5
+        );
+        level.addFreshEntity(entity);
+        entry.entityUuid = entity.getUUID();
+        markPersistentDirty();
+        return entity;
     }
 
     private static Vec3 resolveLaunchStart(
@@ -676,12 +833,35 @@ public final class MisakaRelayRegistry {
         return entity instanceof RelaySatelliteEntity sat ? sat : null;
     }
 
+    /** Test hook: finish launch without a live entity / server. */
+    public void testingCompleteLaunch(UUID satelliteId) {
+        completeLaunch(null, satelliteId);
+    }
+
+    /**
+     * Test hook: enter {@link Phase#CRASHING} without a live server spawn.
+     * Mirrors the pre-spawn side of {@link #beginCrash} when no resident entity exists.
+     */
+    public void testingBeginCrashPhaseOnly(UUID satelliteId) {
+        var entry = get(satelliteId);
+        if (entry == null || entry.phase == Phase.CRASHING) {
+            return;
+        }
+        if (entry.powered) {
+            entry.powered = false;
+            bumpPoweredCount(entry, -1);
+        }
+        entry.phase = Phase.CRASHING;
+        entry.entityUuid = null;
+    }
+
     /** Test hook: clear runtime indexes without SavedData. */
     public void testingClear() {
         byId.clear();
         laserOwner.clear();
         poweredCountByNetDim.clear();
         fedThisTick.clear();
+        recoveryFedThisTick.clear();
         respawnCheckTick = 0;
     }
 
@@ -713,13 +893,22 @@ public final class MisakaRelayRegistry {
             if (!entry.phase.isActive()) {
                 continue;
             }
+            if (entry.forceCrashCountdownTicks > 0 || entry.phase == Phase.LAUNCHING) {
+                if (entry.powered) {
+                    entry.powered = false;
+                    bumpPoweredCount(entry, -1);
+                }
+                continue;
+            }
             boolean fed = fedThisTick.contains(entry.satelliteId);
             if (fed) {
                 if (!entry.powered) {
                     entry.powered = true;
                     bumpPoweredCount(entry, +1);
                 }
-                entry.unpoweredTicks = 0;
+                if (recoveryFedThisTick.contains(entry.satelliteId) && entry.unpoweredTicks > 0) {
+                    entry.unpoweredTicks--;
+                }
             } else {
                 if (entry.powered) {
                     entry.powered = false;
@@ -732,6 +921,7 @@ public final class MisakaRelayRegistry {
             }
         }
         fedThisTick.clear();
+        recoveryFedThisTick.clear();
         for (UUID id : toCrash) {
             beginCrash(null, id);
         }

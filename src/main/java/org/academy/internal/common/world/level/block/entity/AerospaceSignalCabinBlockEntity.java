@@ -50,7 +50,7 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
     private String opsFeedbackKey = "";
     /**
      * Client-synced satellite rows for the ops list.
-     * Each line: {@code index|dimPath|phase|powered|hyper|id8|laserBound|unpoweredTicks|crashTimeout}
+     * Each line: {@code index|dimPath|phase|powered|hyper|id8|laserBound|unpoweredTicks|crashTimeout|forceCrashTicks}
      */
     private String managedSatelliteList = "";
     /**
@@ -167,7 +167,8 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
                     .append(id8).append('|')
                     .append(entry.laserBound ? '1' : '0').append('|')
                     .append(entry.unpoweredTicks).append('|')
-                    .append(crashTimeout);
+                    .append(crashTimeout).append('|')
+                    .append(entry.forceCrashCountdownTicks);
         }
         managedSatelliteList = sb.toString();
         refreshRetargetNetworks(level);
@@ -470,6 +471,55 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
         return ok;
     }
 
+    /** Arm a 60s forced-crash countdown for the selected satellite. */
+    public boolean tryScheduleForceCrash(ServerLevel level) {
+        refreshManagedCount(level);
+        var list = managedEntries(level);
+        if (list.isEmpty()) {
+            setOpsFeedback("gui.academy.aerospace_signal_cabin.ops_no_satellites");
+            markAndSync();
+            return false;
+        }
+        int index = Mth.clamp(selectedSatelliteIndex, 0, list.size() - 1);
+        selectedSatelliteIndex = index;
+        var entry = list.get(index);
+        boolean ok = MisakaRelayRegistry.get(level.getServer()).scheduleForceCrash(
+                level.getServer(),
+                entry.satelliteId,
+                MisakaRelayRegistry.FORCE_CRASH_COUNTDOWN_TICKS
+        );
+        setOpsFeedback(ok
+                ? "gui.academy.aerospace_signal_cabin.ops_force_crash_armed"
+                : "gui.academy.aerospace_signal_cabin.ops_force_crash_fail");
+        refreshManagedCount(level);
+        markAndSync();
+        return ok;
+    }
+
+    /** Cancel a pending forced-crash countdown before it begins. */
+    public boolean tryCancelForceCrash(ServerLevel level) {
+        refreshManagedCount(level);
+        var list = managedEntries(level);
+        if (list.isEmpty()) {
+            setOpsFeedback("gui.academy.aerospace_signal_cabin.ops_no_satellites");
+            markAndSync();
+            return false;
+        }
+        int index = Mth.clamp(selectedSatelliteIndex, 0, list.size() - 1);
+        selectedSatelliteIndex = index;
+        var entry = list.get(index);
+        boolean ok = MisakaRelayRegistry.get(level.getServer()).cancelForceCrash(
+                level.getServer(),
+                entry.satelliteId
+        );
+        setOpsFeedback(ok
+                ? "gui.academy.aerospace_signal_cabin.ops_force_crash_cancelled"
+                : "gui.academy.aerospace_signal_cabin.ops_force_crash_cancel_fail");
+        refreshManagedCount(level);
+        markAndSync();
+        return ok;
+    }
+
     public void cycleSelected() {
         if (!(level instanceof ServerLevel serverLevel)) {
             return;
@@ -494,16 +544,17 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
             markAndSync();
             return;
         }
-        var current = HyperNetworkRelaySatelliteItem.targetDimension(stack);
+        // Copy so the open menu detects a component change and syncs the slot to the client.
+        ItemStack updated = stack.copy();
+        var current = HyperNetworkRelaySatelliteItem.targetDimension(updated);
         var next = net.minecraft.world.level.Level.NETHER.equals(current)
                 ? net.minecraft.world.level.Level.END
                 : net.minecraft.world.level.Level.NETHER;
-        HyperNetworkRelaySatelliteItem.setTargetDimension(stack, next);
+        HyperNetworkRelaySatelliteItem.setTargetDimension(updated, next);
         setOpsFeedback(net.minecraft.world.level.Level.NETHER.equals(next)
                 ? "gui.academy.aerospace_signal_cabin.ops_dim_nether"
                 : "gui.academy.aerospace_signal_cabin.ops_dim_end");
-        // Force container/slot listeners to see the component change.
-        setItem(0, stack);
+        setItem(0, updated);
     }
 
     private void markAndSync() {

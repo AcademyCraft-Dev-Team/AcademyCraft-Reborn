@@ -20,17 +20,31 @@ public class GenericConfig {
     @SerializedName("misakaCpPerMsk")
     public float misakaCpPerMsk = 2.0f;
 
-    /** Energy drained per tick by an energy laser tower while powering a relay satellite. */
+    /** Energy drained per tick by an energy laser tower while powering a normal relay satellite.
+     * Hyper relays use twice this amount. While healing crash debt after an outage, the tower
+     * drains an additional equal amount to recover one debt tick per tick. */
     @SerializedName("misakaRelayLaserDrainPerTick")
     public int misakaRelayLaserDrainPerTick = 2000;
 
-    /** Consecutive unpowered ticks before a relay satellite crashes. */
+    /** Consecutive unpowered ticks before a relay satellite crashes.
+     * Debt only decreases when a laser pays the recovery surcharge; restore power alone does not clear it. */
     @SerializedName("misakaRelayCrashTicks")
     public int misakaRelayCrashTicks = 6000;
 
     /** Explosion radius when a crashed relay satellite hits the ground (TNT-like destroy). */
     @SerializedName("misakaRelayCrashExplosionPower")
     public float misakaRelayCrashExplosionPower = 5.0f;
+
+    /**
+     * Logical orbit altitude (Advanced Rocketry–style OrbitHeight).
+     * Visual Y is clamped to world top − 16.
+     */
+    @SerializedName("misakaRelayOrbitHeight")
+    public int misakaRelayOrbitHeight = 1000;
+
+    /** Ticks from launch pad to scheduled orbit insertion (default one game minute). */
+    @SerializedName("misakaRelayLaunchTicks")
+    public int misakaRelayLaunchTicks = 1200;
 
     public static final class Action implements TypeHandler<GenericConfig> {
         public static final TypeHandler<GenericConfig> INSTANCE = new Action();

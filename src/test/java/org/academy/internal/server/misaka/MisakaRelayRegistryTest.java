@@ -203,6 +203,157 @@ class MisakaRelayRegistryTest {
         assertTrue(registry.all().isEmpty());
     }
 
+    @Test
+    void completeLaunchClearsEntityUuidAndStaysOrbit() {
+        var entry = orbitEntry(UUID.randomUUID(), new BlockPos(15, 64, 15), OVERWORLD, new BlockPos(40, 80, 40));
+        entry.phase = MisakaRelayRegistry.Phase.LAUNCHING;
+        entry.entityUuid = UUID.randomUUID();
+        registry.testingPutOrbit(entry);
+        entry.phase = MisakaRelayRegistry.Phase.LAUNCHING;
+
+        registry.testingCompleteLaunch(entry.satelliteId);
+        assertEquals(MisakaRelayRegistry.Phase.ORBIT, entry.phase);
+        assertEquals(null, entry.entityUuid);
+    }
+
+    @Test
+    void launchingRefusesFeedUntilOrbit() {
+        var entry = orbitEntry(UUID.randomUUID(), new BlockPos(20, 64, 20), OVERWORLD, new BlockPos(45, 80, 45));
+        registry.testingPutOrbit(entry);
+        entry.phase = MisakaRelayRegistry.Phase.LAUNCHING;
+
+        assertFalse(registry.acceptsPowerFeed(entry.satelliteId));
+        registry.feed(entry.satelliteId);
+        registry.testingEndTick(2);
+        assertFalse(entry.powered);
+        assertEquals(MisakaRelayRegistry.Phase.LAUNCHING, entry.phase);
+        assertFalse(registry.hasActiveRelay(entry.networkId, OVERWORLD));
+
+        registry.testingCompleteLaunch(entry.satelliteId);
+        assertTrue(registry.acceptsPowerFeed(entry.satelliteId));
+        registry.feed(entry.satelliteId);
+        registry.endTick(null);
+        assertTrue(entry.powered);
+        assertTrue(registry.hasActiveRelay(entry.networkId, OVERWORLD));
+    }
+
+    @Test
+    void beginCrashWithoutEntityEntersCrashingViaHook() {
+        var entry = orbitEntry(UUID.randomUUID(), new BlockPos(16, 64, 16), OVERWORLD, new BlockPos(41, 80, 41));
+        registry.testingPutOrbit(entry);
+        entry.entityUuid = null;
+
+        registry.testingBeginCrashPhaseOnly(entry.satelliteId);
+        assertEquals(MisakaRelayRegistry.Phase.CRASHING, entry.phase);
+        assertEquals(null, entry.entityUuid);
+        assertEquals(entry, registry.get(entry.satelliteId));
+    }
+
+    @Test
+    void beginCrashWithoutEntityStillClearsRegistryWhenServerMissing() {
+        var entry = orbitEntry(UUID.randomUUID(), new BlockPos(16, 64, 16), OVERWORLD, new BlockPos(41, 80, 41));
+        registry.testingPutOrbit(entry);
+        entry.entityUuid = null;
+
+        registry.beginCrash(null, entry.satelliteId);
+        // No server → spawnCrashEntity fails → completeCrash removes entry.
+        assertTrue(registry.all().isEmpty());
+    }
+
+    @Test
+    void forceCrashCountdownCanBeArmedAndCancelled() {
+        var entry = orbitEntry(UUID.randomUUID(), new BlockPos(17, 64, 17), OVERWORLD, new BlockPos(42, 80, 42));
+        registry.testingPutOrbit(entry);
+
+        assertTrue(registry.scheduleForceCrash(null, entry.satelliteId, 5));
+        assertEquals(5, entry.forceCrashCountdownTicks);
+        assertFalse(registry.scheduleForceCrash(null, entry.satelliteId, 5));
+
+        assertTrue(registry.cancelForceCrash(null, entry.satelliteId));
+        assertEquals(0, entry.forceCrashCountdownTicks);
+        assertEquals(MisakaRelayRegistry.Phase.ORBIT, entry.phase);
+        assertFalse(registry.cancelForceCrash(null, entry.satelliteId));
+    }
+
+    @Test
+    void forceCrashCutsPowerImmediatelyAndRefusesFeed() {
+        var entry = orbitEntry(UUID.randomUUID(), new BlockPos(19, 64, 19), OVERWORLD, new BlockPos(44, 80, 44));
+        registry.testingPutPowered(entry);
+        assertTrue(entry.powered);
+        assertTrue(registry.hasActiveRelay(entry.networkId, OVERWORLD));
+
+        assertTrue(registry.scheduleForceCrash(null, entry.satelliteId, 10));
+        assertFalse(entry.powered);
+        assertFalse(registry.acceptsPowerFeed(entry.satelliteId));
+        assertFalse(registry.hasActiveRelay(entry.networkId, OVERWORLD));
+        assertFalse(registry.isReceivingPower(entry.satelliteId));
+
+        registry.feed(entry.satelliteId);
+        registry.endTick(null);
+        assertFalse(entry.powered);
+        assertEquals(9, entry.forceCrashCountdownTicks);
+        assertEquals(MisakaRelayRegistry.Phase.ORBIT, entry.phase);
+        assertFalse(registry.hasActiveRelay(entry.networkId, OVERWORLD));
+    }
+
+    @Test
+    void forceCrashCountdownExpiryBeginsCrash() {
+        var entry = orbitEntry(UUID.randomUUID(), new BlockPos(18, 64, 18), OVERWORLD, new BlockPos(43, 80, 43));
+        registry.testingPutOrbit(entry);
+        assertTrue(registry.scheduleForceCrash(null, entry.satelliteId, 2));
+
+        registry.endTick(null);
+        assertEquals(1, entry.forceCrashCountdownTicks);
+        assertEquals(MisakaRelayRegistry.Phase.ORBIT, entry.phase);
+
+        registry.endTick(null);
+        // beginCrash(null) with no entity → completeCrash removes entry.
+        assertTrue(registry.all().isEmpty());
+    }
+
+    @Test
+    void maintainFeedDoesNotClearCrashDebtInstantly() {
+        var entry = orbitEntry(UUID.randomUUID(), new BlockPos(19, 64, 19), OVERWORLD, new BlockPos(44, 80, 44));
+        registry.testingPutPowered(entry);
+
+        registry.testingEndTick(6000);
+        assertEquals(1, entry.unpoweredTicks);
+        assertFalse(entry.powered);
+        assertTrue(registry.needsCrashRecovery(entry.satelliteId));
+
+        registry.feed(entry.satelliteId, false);
+        registry.testingEndTick(6000);
+        assertTrue(entry.powered);
+        assertEquals(1, entry.unpoweredTicks);
+        assertTrue(registry.needsCrashRecovery(entry.satelliteId));
+    }
+
+    @Test
+    void recoveryFeedHealsCrashDebtOneTickPerTick() {
+        var entry = orbitEntry(UUID.randomUUID(), new BlockPos(21, 64, 21), OVERWORLD, new BlockPos(46, 80, 46));
+        registry.testingPutOrbit(entry);
+        entry.unpoweredTicks = 3;
+        assertTrue(registry.needsCrashRecovery(entry.satelliteId));
+
+        registry.feed(entry.satelliteId, true);
+        registry.testingEndTick(6000);
+        assertTrue(entry.powered);
+        assertEquals(2, entry.unpoweredTicks);
+
+        registry.feed(entry.satelliteId, true);
+        registry.testingEndTick(6000);
+        assertEquals(1, entry.unpoweredTicks);
+
+        registry.feed(entry.satelliteId, true);
+        registry.testingEndTick(6000);
+        assertEquals(0, entry.unpoweredTicks);
+        assertFalse(registry.needsCrashRecovery(entry.satelliteId));
+
+        registry.feed(entry.satelliteId, true);
+        registry.testingEndTick(6000);
+        assertEquals(0, entry.unpoweredTicks);
+    }
+
     private static MisakaRelayRegistry.Entry orbitEntry(
             UUID id,
             BlockPos networkId,

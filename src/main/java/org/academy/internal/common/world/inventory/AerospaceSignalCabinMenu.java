@@ -20,6 +20,8 @@ public final class AerospaceSignalCabinMenu extends AbstractContainerMenu {
     public static final int BUTTON_CYCLE_SAT = 2;
     public static final int BUTTON_CYCLE_DIM = 3;
     public static final int BUTTON_CYCLE_LASER = 4;
+    public static final int BUTTON_FORCE_CRASH = 5;
+    public static final int BUTTON_CANCEL_FORCE_CRASH = 6;
     /** Select managed satellite by index: BASE + index (0..MAX-1). */
     public static final int BUTTON_SELECT_SAT_BASE = 100;
     public static final int BUTTON_SELECT_SAT_MAX = 32;
@@ -89,12 +91,15 @@ public final class AerospaceSignalCabinMenu extends AbstractContainerMenu {
             }
             case BUTTON_CYCLE_DIM -> {
                 blockEntity.cycleHyperDimension();
+                broadcastChanges();
                 yield true;
             }
             case BUTTON_CYCLE_LASER -> {
                 blockEntity.cycleSelectedLaser(serverLevel);
                 yield true;
             }
+            case BUTTON_FORCE_CRASH -> blockEntity.tryScheduleForceCrash(serverLevel);
+            case BUTTON_CANCEL_FORCE_CRASH -> blockEntity.tryCancelForceCrash(serverLevel);
             default -> {
                 if (id >= BUTTON_SELECT_SAT_BASE && id < BUTTON_SELECT_SAT_BASE + BUTTON_SELECT_SAT_MAX) {
                     blockEntity.selectSatellite(serverLevel, id - BUTTON_SELECT_SAT_BASE);

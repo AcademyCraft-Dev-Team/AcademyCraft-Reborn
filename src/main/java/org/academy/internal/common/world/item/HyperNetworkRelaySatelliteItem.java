@@ -1,11 +1,16 @@
 package org.academy.internal.common.world.item;
 
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
+
+import java.util.function.Consumer;
 
 /** Hyperdimensional Misaka relay satellite; target dimension is stored on the stack. */
 public final class HyperNetworkRelaySatelliteItem extends Item {
@@ -36,5 +41,27 @@ public final class HyperNetworkRelaySatelliteItem extends Item {
             return;
         }
         stack.set(ItemDataComponents.RELAY_TARGET_DIMENSION.get(), dimension.identifier());
+    }
+
+    @Override
+    public void appendHoverText(
+            ItemStack stack,
+            TooltipContext context,
+            TooltipDisplay display,
+            Consumer<Component> tooltipAdder,
+            TooltipFlag flag
+    ) {
+        var path = targetDimension(stack).identifier().getPath();
+        var dimKey = switch (path) {
+            case "the_nether" -> "gui.academy.aerospace_signal_cabin.ops_dim_full_nether";
+            case "the_end" -> "gui.academy.aerospace_signal_cabin.ops_dim_full_end";
+            default -> null;
+        };
+        if (dimKey != null) {
+            tooltipAdder.accept(Component.translatable(
+                    "item.academy.hyper_network_relay_satellite.target",
+                    Component.translatable(dimKey)
+            ));
+        }
     }
 }
