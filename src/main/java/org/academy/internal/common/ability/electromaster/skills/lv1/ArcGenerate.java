@@ -3,13 +3,15 @@ package org.academy.internal.common.ability.electromaster.skills.lv1;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.util.Mth;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -19,14 +21,9 @@ import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.arc.ArcPath;
-import org.academy.api.common.arc.Branch;
-import org.academy.api.common.arc.modifier.JaggedModifier;
-import org.academy.api.common.arc.path.LinePath;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.LevelUtil;
-import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -37,12 +34,13 @@ import org.academy.internal.common.ability.accelerator.reflection.LinearAttackEx
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackPayload;
 import org.academy.internal.common.ability.accelerator.reflection.LinearReflectionResolver;
 import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
+import org.academy.internal.common.ability.accelerator.reflection.ResolvedLinearAttack;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcActions;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcTargeting;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.network.SpawnVfxGraphPacket;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.sounds.SoundEvents;
-import org.academy.internal.common.world.entity.skill.ArcEffect;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.misaka.MisakaNetworkClient;
@@ -53,15 +51,14 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 
 public final class ArcGenerate extends Skill {
     public static final String KEY_NAME_GENERATE = SkillNames.ARC_GENERATE + ".generate";
     static final float BASE_DAMAGE = 4.0f;
-    private static final long RETURN_SEED_MASK = 0xD1B54A32D192ED03L;
 
     public ArcGenerate() {
         super(
@@ -88,79 +85,6 @@ public final class ArcGenerate extends Skill {
         return getDamage(abilityPower, playerDamageMultiplier);
     }
 
-    static long deriveReturnSeed(long seed) {
-        return seed ^ RETURN_SEED_MASK;
-    }
-
-    static List<ArcPath> createUnreflectedArcPaths(
-            Vec3 start,
-            Vec3 end,
-            long trunkSeed,
-            List<BranchSpec> branchSpecs
-    ) {
-        var branches = branchSpecs.stream()
-                .map(spec -> createBranch(spec.progress(), spec, spec.seed(), 1.0f))
-                .toList();
-        return List.of(createRootPath(start, end, trunkSeed, branches));
-    }
-
-    static List<ArcPath> createReflectedArcPaths(
-            Vec3 start,
-            Vec3 mirrorPoint,
-            Vec3 returnEnd,
-            double reflectionProgress,
-            long trunkSeed,
-            List<BranchSpec> branchSpecs
-    ) {
-        var t = (float) Mth.clamp(reflectionProgress, 0.0, 1.0);
-        var reflectedSpecs = t <= 0.0f
-                ? List.<BranchSpec>of()
-                : branchSpecs.stream().filter(spec -> spec.progress() <= t).toList();
-        var outboundBranches = reflectedSpecs.stream()
-                .map(spec -> createBranch(spec.progress() / t, spec, spec.seed(), t))
-                .toList();
-        var returnBranches = reflectedSpecs.stream()
-                .map(spec -> createBranch(
-                        t - spec.progress(),
-                        spec,
-                        deriveReturnSeed(spec.seed()),
-                        t
-                ))
-                .toList();
-
-        return List.of(
-                createRootPath(start, mirrorPoint, trunkSeed, outboundBranches),
-                createRootPath(mirrorPoint, returnEnd, deriveReturnSeed(trunkSeed), returnBranches)
-        );
-    }
-
-    private static Branch createBranch(
-            float attachmentProgress,
-            BranchSpec spec,
-            long seed,
-            float lengthScale
-    ) {
-        var childPath = new ArcPath(
-                new LinePath(
-                        new Vector3f(0, 0, 0),
-                        new Vector3f(spec.localEnd()).mul(Math.max(0.0f, lengthScale))
-                ),
-                List.of(new JaggedModifier(1, 3, seed)),
-                2.0f,
-                List.of()
-        );
-        return new Branch(attachmentProgress, childPath);
-    }
-
-    private static ArcPath createRootPath(Vec3 start, Vec3 end, long seed, List<Branch> branches) {
-        return new ArcPath(
-                new LinePath(start.toVector3f(), end.toVector3f()),
-                List.of(new JaggedModifier(1, 4, seed)),
-                2.0f,
-                branches
-        );
-    }
-
     @Override
     public void initClient() {
         var key = getKey();
@@ -175,9 +99,6 @@ public final class ArcGenerate extends Skill {
     @Override
     public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
-    }
-
-    record BranchSpec(float progress, Vector3f localEnd, long seed) {
     }
 
     public static final class Client {
@@ -237,7 +158,6 @@ public final class ArcGenerate extends Skill {
 
                 var length = LevelUtil.getValidViewDistance(player, context.milestone() >= 2 ? 12 : 10);
                 var targetPos = eyePos.add(player.getLookAngle().scale(length));
-                var trunkLength = (float) handPos.distanceTo(targetPos);
 
                 var radius = context.milestone() >= 2 ? 0.15f : 0.125f;
                 var system = AbilitySystemServer.getSystem(player);
@@ -261,48 +181,52 @@ public final class ArcGenerate extends Skill {
                         payload
                 );
 
-                var arc = new ArcEffect(level, 20);
-                arc.setPos(handPos);
-
-                var branchSpecs = new ArrayList<BranchSpec>();
-                var branchCount = 4 + MathUtil.RANDOM.nextInt(3);
-                var maxAngleRad = (10.0) * Mth.DEG_TO_RAD;
-
-                for (var i = 0; i < branchCount; i++) {
-                    var progress = 0.2f + MathUtil.RANDOM.nextFloat() * 0.7f;
-                    var branchLength = trunkLength * (0.3f + MathUtil.RANDOM.nextFloat() * 0.2f);
-
-                    var phi = MathUtil.RANDOM.nextDouble() * maxAngleRad;
-
-                    var x = Mth.sin(phi);
-                    var y = Mth.sin(phi);
-                    var z = Mth.cos(phi);
-
-                    var localDir = new Vector3f(x, y, z).normalize().mul(branchLength);
-
-                    branchSpecs.add(new BranchSpec(progress, localDir, MathUtil.RANDOM.nextLong()));
-                }
-
-                var trunkSeed = MathUtil.RANDOM.nextLong();
-                var arcPaths = resolved.isReflected()
-                        ? createReflectedArcPaths(
-                        handPos,
-                        resolved.mirrorPoint(),
-                        resolved.returnSegment().orElseThrow().end(),
-                        resolved.reflectionProgress(),
-                        trunkSeed,
-                        branchSpecs
-                )
-                        : createUnreflectedArcPaths(handPos, targetPos, trunkSeed, branchSpecs);
-                arc.setArcPaths(arcPaths);
-                level.addFreshEntity(arc);
-                arc.playSound(SoundEvents.ARC_WEAK.get());
+                spawnArcVfx(level, handPos, targetPos, resolved);
 
                 var result = LinearAttackExecutor.execute(level, resolved, payload);
                 if (context.milestone() >= 3) {
                     chainArc(player, level, result, src, damage);
                 }
             });
+        }
+
+        private static final Identifier ARC_GENERATE_VFX = AcademyCraft.academy("vfxgraph/arc_generate");
+
+        private static void spawnArcVfx(ServerLevel level, Vec3 handPos, Vec3 targetPos,
+                                        ResolvedLinearAttack resolved) {
+            if (resolved.isReflected()) {
+                var mirrorPoint = resolved.mirrorPoint();
+                broadcastArc(level, handPos, mirrorPoint);
+                var returnEnd = resolved.returnSegment().orElseThrow().end();
+                broadcastArc(level, mirrorPoint, returnEnd);
+            } else {
+                broadcastArc(level, handPos, targetPos);
+            }
+            level.playSound(
+                    null,
+                    handPos.x,
+                    handPos.y,
+                    handPos.z,
+                    SoundEvents.ARC_WEAK.get(),
+                    SoundSource.PLAYERS,
+                    1.0f,
+                    1.0f
+            );
+        }
+
+        private static void broadcastArc(ServerLevel level, Vec3 from, Vec3 to) {
+            var length = (float) from.distanceTo(to);
+            System.out.println(length);
+            SpawnVfxGraphPacket.broadcast(
+                    level,
+                    ARC_GENERATE_VFX,
+                    from,
+                    to.subtract(from),
+                    -1,
+                    1f,
+                    1.0f,
+                    Map.of("branch_length_scale", length * 0.275f)
+            );
         }
 
         private static void chainArc(ServerPlayer player,

@@ -277,6 +277,16 @@ public final class CurveGenerator {
         generateBolt(arc, fromX, fromY, fromZ, toX, toY, toZ,
                 nx, ny, nz, width, segments, 0, random, segmentCounter);
 
+        // 自由电弧端点锚定：起点/终点噪声乘数归零（复刻 Blender NOISE_PA 端点 0），
+        // 使平滑噪声只蠕动中段、端点不漂移（否则整条电弧随噪声整体晃动 → 蛆/水草观感）。
+        if (arc.size() >= 2) {
+            arc.setPa(0, 0f);
+            arc.setPa(arc.size() - 1, 0f);
+        }
+
+        // 树状锥形分叉：每级分支围绕父段方向在半角 branchAngle 的锥体内散开
+        // （{@link SurfaceDistributor#coneDirection}），形成真实闪电的树状 3D 分叉，
+        // 而不是局限于单一平面的扇形。
         // 递归分支（附着在主弧中部控制点）
         if (branchDepth > 0 && branchCount > 0) {
             generateBranchesRecursive(arc, 0, branchDepth, branchCount,
@@ -331,11 +341,20 @@ public final class CurveGenerator {
             uz /= ulen;
         }
 
+        // 每 seed 随机旋转锯齿平面（绕切线 t 旋转垂直轴 u）：不同 seed/步进重掷产生在空间上
+        // 明显不同的闪电折线（端点不动、整体朝向/偏折平面变化），形成真实的"跳动"运动感。
+        var planeAngle = random.nextFloat() * 2f * (float) Math.PI;
+        var pc = (float) Math.cos(planeAngle);
+        var ps = (float) Math.sin(planeAngle);
+        float rux = ux * pc + (ty * uz - tz * uy) * ps;
+        float ruy = uy * pc + (tz * ux - tx * uz) * ps;
+        float ruz = uz * pc + (tx * uy - ty * ux) * ps;
+
         // 递归中点位移生成锯齿点列
         var pts = new ArrayList<float[]>();
         pts.add(new float[]{fromX, fromY, fromZ});
         midpointDisplace(pts, fromX, fromY, fromZ, toX, toY, toZ,
-                ux, uy, uz, nx, ny, nz, chordLen, 0, random);
+                rux, ruy, ruz, nx, ny, nz, chordLen, 0, random);
         pts.add(new float[]{toX, toY, toZ});
 
         // 重采样到 segments 点（等距）
@@ -424,18 +443,20 @@ public final class CurveGenerator {
     }
 
     /**
-     * 递归生成分支：沿主弧控制柄方向，在主弧中部控制点附着子弧。
+     * 递归生成分支：在主弧中部控制点附着子弧。每级分支围绕父段方向在半角
+     * {@code branchAngle} 的锥体内散开（{@link SurfaceDistributor#coneDirection}），
+     * 形成真实闪电的树状 3D 分叉；锥角受限，不会绕树干径向散开成鸡毛掸子。
      */
     private static void generateBranchesRecursive(ArcCurve arc,
                                                   int currentGen, int maxDepth,
                                                   int branchCount, float branchAngle,
                                                   float lengthScale, float widthScale,
                                                   float brightnessScale, int segments,
-                                                  float fromX, float fromY, float fromZ,
-                                                  float toX, float toY, float toZ,
-                                                  float nx, float ny, float nz,
-                                                  float r, float g, float b, float a,
-                                                  Random random, int[] segmentCounter) {
+                                                   float fromX, float fromY, float fromZ,
+                                                   float toX, float toY, float toZ,
+                                                   float nx, float ny, float nz,
+                                                   float r, float g, float b, float a,
+                                                   Random random, int[] segmentCounter) {
         if (currentGen >= maxDepth) return;
 
         float childGen = currentGen + 1;
@@ -452,6 +473,19 @@ public final class CurveGenerator {
         var attachCount = Math.min(branchCount, Math.max(0, total - 2));
         if (attachCount <= 0) return;
 
+        // 父段整体方向（起点→终点）：分支围绕该方向在锥体内散开（真实树状分叉）
+        float fx = toX - fromX, fy = toY - fromY, fz = toZ - fromZ;
+        var flen = (float) Math.sqrt(fx * fx + fy * fy + fz * fz);
+        if (flen < 1e-6f) {
+            fx = 0;
+            fy = 1;
+            fz = 0;
+        } else {
+            fx /= flen;
+            fy /= flen;
+            fz /= flen;
+        }
+
         for (var bi = 0; bi < attachCount; bi++) {
             var t = 0.2f + 0.6f * (float) bi / Math.max(1, attachCount - 1);
             var idx = Math.max(1, Math.min(total - 2, Math.round(t * (total - 1))));
@@ -461,23 +495,7 @@ public final class CurveGenerator {
             var by = arc.y(pointIdx);
             var bz = arc.z(pointIdx);
 
-            var prev = Math.max(0, pointIdx - 1);
-            var next = Math.min(arc.size() - 1, pointIdx + 1);
-            var tx = arc.x(next) - arc.x(prev);
-            var ty = arc.y(next) - arc.y(prev);
-            var tz = arc.z(next) - arc.z(prev);
-            var tlen = (float) Math.sqrt(tx * tx + ty * ty + tz * tz);
-            if (tlen < 1e-6f) {
-                tx = 0;
-                ty = 1;
-                tz = 0;
-            } else {
-                tx /= tlen;
-                ty /= tlen;
-                tz /= tlen;
-            }
-
-            var branchDir = SurfaceDistributor.tangentDirection(tx, ty, tz, branchAngle, random);
+            var branchDir = SurfaceDistributor.coneDirection(fx, fy, fz, branchAngle, random);
             float branchNx = branchDir[0], branchNy = branchDir[1], branchNz = branchDir[2];
 
             var parentWidth = arc.width(pointIdx) / (0.3f + 0.7f * (float) Math.sin(

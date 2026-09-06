@@ -458,6 +458,7 @@ public final class VfxBlocks {
                         prop("probability", ValueType.FLOAT, Value.of(0.02f)),
                         prop("frequency", ValueType.FLOAT, Value.of(30f)),
                         prop("interval", ValueType.FLOAT, Value.of(0.5f)),
+                        prop("reshuffle", ValueType.FLOAT, Value.of(0f)),
                         prop("width", ValueType.FLOAT, Value.of(0.01f)),
                         prop("segments", ValueType.INT, Value.of(12)),
                         prop("lifetime", ValueType.FLOAT, Value.of(1f)),
@@ -1439,6 +1440,9 @@ public final class VfxBlocks {
         var branchCount = propInt(block, "branch_count", 2);
         var branchAngle = propFloat(block, "branch_angle", 1.57f);
         var branchLengthScale = propFloat(block, "branch_length_scale", 0.3f);
+        // 存活参数覆写（技能经 SpawnVfxGraphPacket.floatParams 绑定）：指定参数 id 则每帧
+        // 从 ctx.paramFloat 读取分叉长度比例（弧长被整体放大时，技能可调小该比例保持分叉不过长）。
+        var branchLengthScaleParam = propString(block, "branch_length_scale_param", "");
         var branchWidthScale = propFloat(block, "branch_width_scale", 0.35f);
         var branchBrightnessScale = propFloat(block, "branch_brightness_scale", 0.6f);
         // 主弧法线：from→to 连线方向（起拱方向，贴表面）
@@ -1458,8 +1462,60 @@ public final class VfxBlocks {
         // 每 N 秒生成一条电弧（低频，避免每帧生成导致几十上百条累积）；interval=0 则每帧概率生成
         var interval = propFloat(block, "interval", 0f);
         float[] accumulator = {0f};
+        // 步进重掷（reshuffle>0）：本段寿命内按固定节奏整体重新生成锯齿折线（端点不动），
+        // 复刻真实闪电「路径保持片刻后跳到新随机构型」的运动感，而非噪声平滑蠕动。
+        var reshuffle = propFloat(block, "reshuffle", 0f);
+        long[] transientGroup = {NEXT_TRANSIENT_ARC_GROUP.getAndIncrement()};
+        float[] carryAge = {0f};
         // 断续出现（复刻 Blender 随机点云阵列 Delete Geometry）：按概率随机跳过，产生零星断档
         return (buf, ctx) -> {
+            var bls = branchLengthScaleParam.isEmpty()
+                    ? branchLengthScale
+                    : ctx.paramFloat(branchLengthScaleParam, branchLengthScale);
+            if (reshuffle > 0f) {
+                accumulator[0] += ctx.dt();
+                if (accumulator[0] < reshuffle) return;
+                accumulator[0] = 0f;
+                if (carryAge[0] >= 0f && carryAge[0] < lifetime) {
+                    // 步进重掷：替换上一次采样，同组唯一，端点不变、锯齿构型随 seed 变化
+                    carryAge[0] += reshuffle;
+                    if (carryAge[0] >= lifetime) {
+                        // 本段寿命结束：移除旧弧，进入等待重亮（概率门控，避免连续无断档地生成）
+                        ctx.arcs().removeGroup(transientGroup[0]);
+                        carryAge[0] = Float.NaN;
+                    } else {
+                        ctx.arcs().removeGroup(transientGroup[0]);
+                        seed[0]++;
+                        var arc = ctx.arcs().add(transientGroup[0]);
+                        arc.setAge(carryAge[0]);
+                        CurveGenerator.generateFromTo(
+                                arc, fromX, fromY, fromZ, toX, toY, toZ,
+                                nx, ny, nz,
+                                width, segments,
+                                color[0] * emission, color[1] * emission, color[2] * emission, color[3],
+                                lifetime, seed[0],
+                                branchDepth, branchCount, branchAngle,
+                                bls, branchWidthScale, branchBrightnessScale);
+                    }
+                } else {
+                    // 等待重亮：概率通过才重新生成（新 seed → 新构型，形成断续噼啪）
+                    if (ctx.random().nextFloat() > probability) return;
+                    ctx.arcs().removeGroup(transientGroup[0]);
+                    carryAge[0] = 0f;
+                    seed[0]++;
+                    var arc = ctx.arcs().add(transientGroup[0]);
+                    arc.setAge(0f);
+                    CurveGenerator.generateFromTo(
+                            arc, fromX, fromY, fromZ, toX, toY, toZ,
+                            nx, ny, nz,
+                            width, segments,
+                            color[0] * emission, color[1] * emission, color[2] * emission, color[3],
+                            lifetime, seed[0],
+                            branchDepth, branchCount, branchAngle,
+                            bls, branchWidthScale, branchBrightnessScale);
+                }
+                return;
+            }
             if (interval > 0f) {
                 accumulator[0] += ctx.dt();
                 if (accumulator[0] < interval) return;
@@ -1475,7 +1531,7 @@ public final class VfxBlocks {
                     color[0] * emission, color[1] * emission, color[2] * emission, color[3],
                     lifetime, seed[0],
                     branchDepth, branchCount, branchAngle,
-                    branchLengthScale, branchWidthScale, branchBrightnessScale);
+                    bls, branchWidthScale, branchBrightnessScale);
         };
     }
 

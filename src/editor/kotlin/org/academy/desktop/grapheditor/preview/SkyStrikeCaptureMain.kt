@@ -100,7 +100,8 @@ private class SkyStrikeCaptureApp(private val root: Path) : EditorApp {
         val color = target.getColorTextureView() ?: return
         renderer!!.render(color, target.getDepthTextureView(), sim.buffer(), camera, true,
             specs, WorldTransform.identity(), false)
-        glow!!.render(color, sim.buffer(), sim.arcBuffer(), camera, specs, target.width, target.height)
+        glow!!.render(color, target.getDepthTextureView(), sim.buffer(), sim.arcBuffer(), camera,
+            specs, target.width, target.height)
         val folder = if (shot.view.startsWith("motion_")) "build/sky-strike-frames/" else "docs/vfx/sky_strike/"
         val output = root.resolve(folder + shot.asset + "_" + shot.view + ".png")
         Files.createDirectories(output.parent)
