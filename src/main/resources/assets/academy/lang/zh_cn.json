@@ -123,7 +123,7 @@
   "app.academy.props.console.starting": "正在初始化 P.R.O.P.S……",
   "app.academy.props.effect.dexterity": "移速 +%s%% / 跳高 +%s%% / 步高 +%s / 缓冲 +%s格",
   "app.academy.props.effect.endurance": "最大生命 +%s",
-  "app.academy.props.effect.muscle": "近战伤害 +%s / 击退 +%s",
+  "app.academy.props.effect.muscle": "近战伤害 +%s",
   "app.academy.props.effect.neural": "CP 迭代速率 +%s%%",
   "app.academy.props.effect.perception": "抢夺/时运 +%s（小数按概率生效）",
   "app.academy.props.footer": "能力因子 %s / 2000   获取系数 %s%%",

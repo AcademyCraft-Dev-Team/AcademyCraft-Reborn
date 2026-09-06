@@ -16,8 +16,8 @@ class PlayerAttributeRuntimeTest {
                 PlayerAttributeRuntime.dexterityJumpStrengthBonus(1.0), 1.0E-12);
         assertEquals(3.0,
                 PlayerAttributeRuntime.dexteritySafeFallDistanceBonus(2_000.0));
-        assertEquals(0, PlayerAttributeRuntime.logarithmicLevel(499.99));
-        assertEquals(1, PlayerAttributeRuntime.logarithmicLevel(500.0));
+        assertEquals(0, PlayerAttributeRuntime.logarithmicLevel(999.99));
+        assertEquals(1, PlayerAttributeRuntime.logarithmicLevel(1_000.0));
     }
 
     @Test

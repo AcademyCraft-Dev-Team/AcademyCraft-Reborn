@@ -21,6 +21,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.ExperienceOrb;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -103,14 +104,31 @@ public final class PropsGameTests {
 
     private static void attributes(GameTestHelper helper, ServerPlayer player) {
         var step = player.getAttribute(Attributes.STEP_HEIGHT).getBaseValue();
-        for (var value : new double[]{799.0, 800.0, 1_199.0, 1_200.0, 0.0}) {
+        var knockback = player.getAttribute(Attributes.ATTACK_KNOCKBACK);
+        var legacyKnockback = AcademyCraft.academy("attribute_bonus.muscle_knockback");
+        var otherKnockback = AcademyCraft.academy("props_test.other_knockback");
+        knockback.addOrReplacePermanentModifier(new AttributeModifier(
+                legacyKnockback, 1.0, AttributeModifier.Operation.ADD_VALUE));
+        knockback.addTransientModifier(new AttributeModifier(
+                otherKnockback, 0.25, AttributeModifier.Operation.ADD_VALUE));
+        var cases = new double[][]{
+                {799.0, 3.995}, {800.0, 5.0}, {1_199.0, 6.995},
+                {1_200.0, 8.0}, {1_599.0, 8.0}, {1_600.0, 9.0},
+                {2_000.0, 9.0}, {0.0, 0.0}
+        };
+        for (var sample : cases) {
+            var value = sample[0];
             player.getAttribute(PlayerAttributes.MUSCLE_STRENGTH).setBaseValue(value);
             player.getAttribute(PlayerAttributes.DEXTERITY).setBaseValue(value);
             PlayerAttributeRuntime.syncPlayer(player);
             close(helper, player.getAttributeValue(Attributes.ATTACK_DAMAGE),
-                    1.0 + PropsMath.muscleDamageBonus(value), "Melee damage");
+                    1.0 + sample[1], "Melee damage cap/milestones");
             close(helper, player.getAttributeValue(Attributes.ATTACK_KNOCKBACK),
-                    PropsMath.muscleKnockbackBonus(value), "Knockback threshold/removal");
+                    0.25, "Remove muscle knockback while preserving other modifiers");
+            helper.assertTrue(knockback.getModifier(legacyKnockback) == null,
+                    "Old permanent muscle knockback must be removed");
+            helper.assertTrue(knockback.getModifier(otherKnockback) != null,
+                    "Other knockback bonuses must remain intact");
             close(helper, player.getAttributeValue(Attributes.STEP_HEIGHT),
                     step + PropsMath.dexterityStepHeightBonus(value), "Step threshold/removal");
         }
@@ -203,7 +221,7 @@ public final class PropsGameTests {
             total += AbilityBlockDrops.getDrops(player, state, level, pos, null, subject, ItemStack.EMPTY)
                     .stream().mapToInt(ItemStack::getCount).sum();
         }
-        helper.assertTrue(total > 350, "Ability block loot must receive the caster's Fortune IV");
+        helper.assertTrue(total > 350, "Ability block loot must receive the caster's Fortune II");
         helper.assertTrue(BlockLootPlayerContext.current() == null, "Ability loot attribution must not leak");
         try (var ignored = AbilityBlockDrops.capture(player)) {
             helper.assertTrue(BlockLootPlayerContext.current() == player,
@@ -222,7 +240,7 @@ public final class PropsGameTests {
                     "Perception adds to existing enchantments");
             extras += event.getEnchantmentLevel() - 3;
         }
-        helper.assertTrue(extras > 140 && extras < 260, "100 perception rolls an extra level with 20 percent chance");
+        helper.assertTrue(extras > 60 && extras < 140, "100 perception rolls an extra level with 10 percent chance");
     }
 
     private static void close(GameTestHelper helper, double actual, double expected, String message) {
