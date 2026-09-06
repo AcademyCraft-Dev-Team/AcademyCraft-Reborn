@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "academy:item/misaka_sister_spawn_egg"
+    "layer0": "minecraft:item/villager_spawn_egg"
   }
 }

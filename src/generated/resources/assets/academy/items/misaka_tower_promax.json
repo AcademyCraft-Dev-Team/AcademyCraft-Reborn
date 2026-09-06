@@ -1,6 +1,9 @@
 {
   "model": {
-    "type": "minecraft:model",
-    "model": "academy:item/misaka_tower_promax"
+    "type": "minecraft:special",
+    "base": "academy:item/misaka_tower_promax",
+    "model": {
+      "type": "geckolib:geckolib"
+    }
   }
 }

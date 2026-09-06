@@ -12,5 +12,7 @@
   "skill.academy.vector_reflection.desc": "反射膜を維持し、ダメージと飛び道具を反射する。",
   "skill.academy.vector_reflection.proficiency.1000": "反射ダメージに対するCP占有量が、ダメージ値×1まで低下する。",
   "skill.academy.vector_reflection.proficiency.3000": "更新間隔が10tickから5tickに短縮され、最大CPの1%未満の反射可能なダメージは動的CPを消費しない。",
-  "skill.academy.vortex_pull.desc": "即時発動で周囲のエンティティを照準地点へ一度引き寄せる。半チャージで持続する渦を生成し、最大チャージで範囲と牽引力がさらに増加する。"
+  "skill.academy.vortex_pull.desc": "即時発動で周囲のエンティティを照準地点へ一度引き寄せる。半チャージで持続する渦を生成し、最大チャージで範囲と牽引力がさらに増加する。",
+  "block.academy.energy_laser_tower": "エネルギーレーザー塔",
+  "item.academy.energy_laser_tower": "エネルギーレーザー塔"
 }

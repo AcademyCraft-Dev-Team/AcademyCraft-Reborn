@@ -1,0 +1,31 @@
+﻿{
+  "credit": "Made with Blockbench",
+  "parent": "minecraft:builtin/entity",
+  "texture_size": [
+    128,
+    128
+  ],
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [-112.77, -0.02, -179.95],
+      "translation": [-6, 4, -2]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [-112.77, -0.02, -179.95],
+      "translation": [-6, 4, -2]
+    },
+    "firstperson_righthand": {
+      "rotation": [-180, 9.75, -180],
+      "translation": [-6, 1, 0]
+    },
+    "firstperson_lefthand": {
+      "rotation": [-180, 9.75, -180],
+      "translation": [-6, 1, 0]
+    },
+    "gui": {
+      "rotation": [-152.92, -32.9, -179.13],
+      "translation": [0, -2.75, 0],
+      "scale": [0.828125, 0.828125, 0.828125]
+    }
+  }
+}

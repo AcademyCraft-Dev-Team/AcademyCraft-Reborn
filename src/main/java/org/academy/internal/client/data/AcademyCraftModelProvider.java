@@ -19,6 +19,7 @@ import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.neoforged.neoforge.client.model.generators.template.ExtendedModelTemplateBuilder;
+import com.geckolib.renderer.internal.GeckolibItemSpecialRenderer;
 import org.academy.AcademyCraft;
 import org.academy.api.client.resources.model.cuboid.CoinModelGenerator;
 import org.academy.internal.client.renderer.special.*;
@@ -197,9 +198,31 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         itemModels.generateFlatItem(Items.DARK_MATTER_BOOTS.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.EMPTY_UNIT.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.IMAG_PHASE_UNIT.get(), ModelTemplates.FLAT_ITEM);
-        itemModels.generateFlatItem(Items.MISAKA_TOWER.get(), ModelTemplates.FLAT_ITEM);
-        itemModels.generateFlatItem(Items.MISAKA_TOWER_PROMAX.get(), ModelTemplates.FLAT_ITEM);
-        itemModels.generateFlatItem(Items.MISAKA_SISTER_SPAWN_EGG.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.itemModelOutput.accept(
+                Items.MISAKA_TOWER.get(),
+                ItemModelUtils.specialModel(
+                        academy("misaka_tower").withPrefix("item/"),
+                        new GeckolibItemSpecialRenderer.Unbaked<>()
+                )
+        );
+        itemModels.itemModelOutput.accept(
+                Items.MISAKA_TOWER_PROMAX.get(),
+                ItemModelUtils.specialModel(
+                        academy("misaka_tower_promax").withPrefix("item/"),
+                        new GeckolibItemSpecialRenderer.Unbaked<>()
+                )
+        );
+        itemModels.itemModelOutput.accept(Items.MISAKA_SISTER_SPAWN_EGG.get(), ItemModelUtils.plainModel(
+                ModelTemplates.FLAT_ITEM.create(
+                        ModelLocationUtils.getModelLocation(Items.MISAKA_SISTER_SPAWN_EGG.get()),
+                        new TextureMapping().put(
+                                TextureSlot.LAYER0,
+                                // Placeholder until a dedicated Misaka Sister egg texture exists.
+                                new Material(AcademyCraft.vanilla("villager_spawn_egg").withPrefix("item/"))
+                        ),
+                        itemModels.modelOutput
+                )
+        ));
         itemModels.itemModelOutput.accept(Items.NETWORK_RELAY_SATELLITE.get(), ItemModelUtils.plainModel(
                 ModelTemplates.FLAT_ITEM.create(
                         ModelLocationUtils.getModelLocation(Items.NETWORK_RELAY_SATELLITE.get()),
