@@ -9,7 +9,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stats;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -193,6 +192,16 @@ public final class PropsManager implements AbilitySubsystem {
         var sprint = stat(player, Stats.SPRINT_ONE_CM);
         var swim = stat(player, Stats.SWIM_ONE_CM);
         var jumps = stat(player, Stats.JUMP);
+        var maps = player.getStats().getValue(Stats.ITEM_USED.get(Items.MAP));
+        var usedMaps = PropsAcquisition.statIncrease(maps, snapshot.mapStat);
+        snapshot.mapStat = maps;
+        if (usedMaps > 0) award(player, AbilityFactor.NEURAL_ACTIVITY, usedMaps * 5.0, false);
+
+        // Covers cake and other food restoration outside the consumable-item events.
+        var foodLevel = player.getFoodData().getFoodLevel();
+        var restoredFood = PropsAcquisition.foodRestored(snapshot.foodLevel, foodLevel);
+        snapshot.foodLevel = foodLevel;
+        if (restoredFood > 0) award(player, AbilityFactor.ENDURANCE, restoredFood * 0.5, false);
 
         var sprintProgress = PropsAcquisition.distanceProgress(
                 snapshot.sprintRemainder, sprint, snapshot.sprintStat
@@ -206,14 +215,18 @@ public final class PropsManager implements AbilitySubsystem {
         snapshot.swimStat = swim;
 
         if (sprintProgress.blocks() > 0) {
-            award(player, AbilityFactor.DEXTERITY, sprintProgress.blocks(), false);
+            award(player, AbilityFactor.DEXTERITY, sprintProgress.blocks() * 0.004, false);
         }
         if (swimProgress.blocks() > 0) {
-            award(player, AbilityFactor.DEXTERITY, swimProgress.blocks(), false);
+            award(player, AbilityFactor.DEXTERITY, swimProgress.blocks() * 0.01, false);
         }
 
         var completedJumps = PropsAcquisition.statIncrease(jumps, snapshot.jumpStat);
-        if (completedJumps > 0) award(player, AbilityFactor.DEXTERITY, completedJumps, false);
+        var gameTime = player.level().getGameTime();
+        if (PropsAcquisition.canRewardJump(completedJumps, gameTime, snapshot.lastJumpRewardTick)) {
+            award(player, AbilityFactor.DEXTERITY, 0.1, false);
+            snapshot.lastJumpRewardTick = gameTime;
+        }
         snapshot.jumpStat = jumps;
     }
 
@@ -239,7 +252,7 @@ public final class PropsManager implements AbilitySubsystem {
             var key = level.dimension().identifier() + "|" + id + "|" + chunk.x() + "," + chunk.z();
             if (!data.visitStructure(key)) continue;
             changed = true;
-            award(player, AbilityFactor.NEURAL_ACTIVITY, 50.0, true);
+            award(player, AbilityFactor.NEURAL_ACTIVITY, 20.0, true);
         }
 
         if (changed) {
@@ -264,25 +277,22 @@ public final class PropsManager implements AbilitySubsystem {
                     event.getHealthDamage()
             );
             if (healthLost > 0.0) {
-                award(victim, AbilityFactor.ENDURANCE, healthLost, false);
+                award(victim, AbilityFactor.ENDURANCE, healthLost * 0.5, false);
             }
         }
 
-        if (!(event.getEntity() instanceof Mob)) return;
-        if (!(event.getSource().getEntity() instanceof ServerPlayer attacker)) return;
-        if (event.getSource().getDirectEntity() != attacker
-                || !event.getSource().is(DamageTypes.PLAYER_ATTACK)) return;
-        var meleeDamage = PropsAcquisition.meleeDamage(event.getHealthDamage());
-        if (meleeDamage > 0.0) {
-            award(attacker, AbilityFactor.MUSCLE_STRENGTH, meleeDamage, false);
+        var attacker = resolvePlayer(event.getSource());
+        if (attacker == null || attacker == event.getEntity()) return;
+        var reward = PropsAcquisition.damageReward(event.getHealthDamage());
+        if (reward > 0.0) {
+            award(attacker, AbilityFactor.MUSCLE_STRENGTH, reward, false);
         }
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
-    public void onExperienceChange(PlayerXpEvent.XpChange event) {
+    public void onExperiencePickup(PlayerXpEvent.PickupXp event) {
         if (!(event.getEntity() instanceof ServerPlayer player) || event.isCanceled()) return;
-        var experience = PropsAcquisition.experienceGained(event.getAmount());
-        if (experience > 0) award(player, AbilityFactor.PERCEPTION, experience, false);
+        award(player, AbilityFactor.PERCEPTION, 0.1, false);
     }
 
     @SubscribeEvent
@@ -303,7 +313,9 @@ public final class PropsManager implements AbilitySubsystem {
         var restored = PropsAcquisition.foodRestored(
                 foodBefore, player.getFoodData().getFoodLevel()
         );
-        if (restored > 0) award(player, AbilityFactor.ENDURANCE, restored, false);
+        if (restored > 0) award(player, AbilityFactor.ENDURANCE, restored * 0.5, false);
+        var snapshot = activity.get(player.getUUID());
+        if (snapshot != null) snapshot.foodLevel = player.getFoodData().getFoodLevel();
     }
 
     @SubscribeEvent
@@ -326,14 +338,6 @@ public final class PropsManager implements AbilitySubsystem {
         var result = event.getCrafting();
         if (result.is(REDSTONE_COMPONENTS)) {
             award(player, AbilityFactor.NEURAL_ACTIVITY, result.getCount() * 5.0, false);
-        }
-    }
-
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public void onUseMap(PlayerInteractEvent.RightClickItem event) {
-        if (!(event.getEntity() instanceof ServerPlayer player) || event.isCanceled()) return;
-        if (event.getItemStack().is(Items.MAP)) {
-            award(player, AbilityFactor.NEURAL_ACTIVITY, 5.0, false);
         }
     }
 
@@ -455,14 +459,19 @@ public final class PropsManager implements AbilitySubsystem {
         private int sprintStat;
         private int swimStat;
         private int jumpStat;
+        private int mapStat;
+        private int foodLevel;
         private int sprintRemainder;
         private int swimRemainder;
+        private long lastJumpRewardTick = Long.MIN_VALUE;
 
         private static ActivitySnapshot capture(ServerPlayer player) {
             var snapshot = new ActivitySnapshot();
             snapshot.sprintStat = stat(player, Stats.SPRINT_ONE_CM);
             snapshot.swimStat = stat(player, Stats.SWIM_ONE_CM);
             snapshot.jumpStat = stat(player, Stats.JUMP);
+            snapshot.mapStat = player.getStats().getValue(Stats.ITEM_USED.get(Items.MAP));
+            snapshot.foodLevel = player.getFoodData().getFoodLevel();
             return snapshot;
         }
     }

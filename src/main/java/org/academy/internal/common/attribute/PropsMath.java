@@ -35,19 +35,57 @@ public final class PropsMath {
     }
 
     public static double muscleDamageBonus(double value) {
-        return finiteNonNegative(value) * 0.05;
+        return finiteNonNegative(value) * 0.005;
+    }
+
+    public static double muscleKnockbackBonus(double value) {
+        var safe = finiteNonNegative(value);
+        return safe >= 1_200.0 ? 1.0 : safe >= 800.0 ? 0.5 : 0.0;
     }
 
     public static double enduranceHealthBonus(double value) {
-        return finiteNonNegative(value) * 0.1;
+        return finiteNonNegative(value) * 0.02;
     }
 
     public static double dexteritySpeedBonus(double value) {
-        return finiteNonNegative(value) * 0.002;
+        return finiteNonNegative(value) * 0.001;
+    }
+
+    public static double dexterityJumpHeightBonus(double value) {
+        return finiteNonNegative(value) * 0.0015;
+    }
+
+    public static double dexterityStepHeightBonus(double value) {
+        var safe = finiteNonNegative(value);
+        return safe >= 1_200.0 ? 1.3 : safe >= 800.0 ? 1.0 : 0.0;
     }
 
     public static double dexterityJumpStrengthBonus(double value) {
-        return Mth.sqrt((float) (1.0 + finiteNonNegative(value) * 0.005)) - 1.0;
+        var heightBonus = dexterityJumpHeightBonus(value);
+        if (heightBonus == 0.0) return 0.0;
+        var targetHeight = jumpApexHeight(BASE_JUMP_STRENGTH) * (1.0 + heightBonus);
+        return jumpStrengthForHeight(targetHeight) / BASE_JUMP_STRENGTH - 1.0;
+    }
+
+    /**
+     * Inverts the discrete vanilla jump trajectory. A square-root velocity approximation loses
+     * height because each tick applies both gravity and drag.
+     */
+    private static double jumpStrengthForHeight(double targetHeight) {
+        var velocityCoefficient = 1.0;
+        var velocityOffset = 0.0;
+        var heightCoefficient = 0.0;
+        var heightOffset = 0.0;
+        var initialVelocity = BASE_JUMP_STRENGTH;
+        for (var tick = 0; tick < MAX_JUMP_SIMULATION_TICKS; tick++) {
+            heightCoefficient += velocityCoefficient;
+            heightOffset += velocityOffset;
+            initialVelocity = (targetHeight - heightOffset) / heightCoefficient;
+            velocityCoefficient *= VERTICAL_DRAG;
+            velocityOffset = (velocityOffset - GRAVITY_PER_TICK) * VERTICAL_DRAG;
+            if (initialVelocity * velocityCoefficient + velocityOffset <= 0.0) break;
+        }
+        return initialVelocity;
     }
 
     /**
@@ -71,12 +109,20 @@ public final class PropsMath {
         return height;
     }
 
-    public static int perceptionEnchantmentBonus(double value) {
-        return Mth.floor(finiteNonNegative(value) * 0.005);
+    public static double perceptionEnchantmentBonus(double value) {
+        return finiteNonNegative(value) * 0.002;
     }
 
+    /** Integer loot APIs receive the whole levels plus a roll for the fractional level. */
+    public static int rollPerceptionEnchantmentBonus(double value, double roll) {
+        var bonus = perceptionEnchantmentBonus(value);
+        var whole = Mth.floor(bonus);
+        return whole + (roll < bonus - whole ? 1 : 0);
+    }
+
+    /** Retained for callers of the old helper; perception no longer increases experience. */
     public static double perceptionExperienceMultiplier(double value) {
-        return 1.0 + finiteNonNegative(value) * 0.00005;
+        return 1.0;
     }
 
     public static double neuralIterationMultiplier(double value) {

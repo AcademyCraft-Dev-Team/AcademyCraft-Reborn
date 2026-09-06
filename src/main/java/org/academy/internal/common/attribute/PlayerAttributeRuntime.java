@@ -5,6 +5,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -16,7 +17,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.enchanting.EnchantedBlockLootEvent;
 import net.neoforged.neoforge.event.enchanting.EnchantedEntityLootEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerXpEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.attribute.PlayerAttributes;
@@ -31,6 +31,8 @@ import java.util.Deque;
 @EventBusSubscriber
 public final class PlayerAttributeRuntime {
     private static final Identifier MUSCLE_DAMAGE = AcademyCraft.academy("attribute_bonus.muscle_damage");
+    private static final Identifier MUSCLE_KNOCKBACK = AcademyCraft.academy("attribute_bonus.muscle_knockback");
+    private static final Identifier DEXTERITY_STEP = AcademyCraft.academy("attribute_bonus.dexterity_step");
     private static final Identifier ENDURANCE_HEALTH = AcademyCraft.academy("attribute_bonus.endurance_health");
     private static final Identifier DEXTERITY_SPEED = AcademyCraft.academy("attribute_bonus.dexterity_speed");
     private static final Identifier LEGACY_ENDURANCE_JUMP = AcademyCraft.academy("attribute_bonus.endurance_jump");
@@ -63,6 +65,20 @@ public final class PlayerAttributeRuntime {
                 player.getAttribute(Attributes.ATTACK_DAMAGE),
                 MUSCLE_DAMAGE,
                 muscleDamageBonus(muscle),
+                AttributeModifier.Operation.ADD_VALUE,
+                true
+        );
+        syncModifier(
+                player.getAttribute(Attributes.ATTACK_KNOCKBACK),
+                MUSCLE_KNOCKBACK,
+                PropsMath.muscleKnockbackBonus(muscle),
+                AttributeModifier.Operation.ADD_VALUE,
+                true
+        );
+        syncModifier(
+                player.getAttribute(Attributes.STEP_HEIGHT),
+                DEXTERITY_STEP,
+                PropsMath.dexterityStepHeightBonus(dexterity),
                 AttributeModifier.Operation.ADD_VALUE,
                 true
         );
@@ -110,15 +126,6 @@ public final class PlayerAttributeRuntime {
     }
 
     @SubscribeEvent
-    public static void onExperienceGain(PlayerXpEvent.XpChange event) {
-        if (event.getAmount() <= 0) return;
-        var multiplier = perceptionExperienceMultiplier(event.getEntity());
-        if (multiplier <= 1.0) return;
-        var scaled = Mth.lfloor(event.getAmount() * multiplier);
-        event.setAmount((int) Math.min(Integer.MAX_VALUE, scaled));
-    }
-
-    @SubscribeEvent
     public static void onEnchantedEntityLoot(EnchantedEntityLootEvent event) {
         if (!event.getEnchantment().is(Enchantments.LOOTING)) return;
         var player = resolvePlayer(event.getDamageSource());
@@ -135,7 +142,8 @@ public final class PlayerAttributeRuntime {
     }
 
     public static int perceptionBonus(Player player) {
-        return logarithmicLevel(value(player, PlayerAttributes.PERCEPTION));
+        return PropsMath.rollPerceptionEnchantmentBonus(
+                value(player, PlayerAttributes.PERCEPTION), player.getRandom().nextDouble());
     }
 
     public static double perceptionExperienceMultiplier(Player player) {
@@ -167,7 +175,7 @@ public final class PlayerAttributeRuntime {
     }
 
     public static int logarithmicLevel(double value) {
-        return PropsMath.perceptionEnchantmentBonus(value);
+        return Mth.floor(PropsMath.perceptionEnchantmentBonus(value));
     }
 
     public static double trueResistance(Player player) {
@@ -290,6 +298,8 @@ public final class PlayerAttributeRuntime {
     private static Player resolvePlayer(DamageSource source) {
         if (source == null) return null;
         if (source.getEntity() instanceof Player player) return player;
+        if (source.getEntity() instanceof TamableAnimal tamable
+                && tamable.getOwner() instanceof Player player) return player;
         if (source.getDirectEntity() instanceof Player player) return player;
         var direct = source.getDirectEntity();
         if (direct instanceof Projectile projectile
