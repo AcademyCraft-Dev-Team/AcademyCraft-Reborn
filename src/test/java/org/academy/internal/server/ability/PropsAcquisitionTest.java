@@ -2,15 +2,15 @@ package org.academy.internal.server.ability;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 class PropsAcquisitionTest {
     @Test
-    void meleeDamageUsesActualHealthDamageAndCapsEachHitAtTen() {
-        assertEquals(4.25, PropsAcquisition.meleeDamage(4.25));
-        assertEquals(10.0, PropsAcquisition.meleeDamage(18.0));
-        assertEquals(0.0, PropsAcquisition.meleeDamage(-1.0));
-        assertEquals(0.0, PropsAcquisition.meleeDamage(Double.NaN));
+    void damageRewardsAreProportionalWithoutTheOldPerHitCap() {
+        assertEquals(0.85, PropsAcquisition.damageReward(4.25), 1.0E-12);
+        assertEquals(3.6, PropsAcquisition.damageReward(18.0), 1.0E-12);
+        assertEquals(0.0, PropsAcquisition.damageReward(-1.0));
+        assertEquals(0.0, PropsAcquisition.damageReward(Double.NaN));
     }
 
     @Test
@@ -29,10 +29,14 @@ class PropsAcquisitionTest {
     }
 
     @Test
-    void perceptionOnlyUsesPositiveExperienceChanges() {
-        assertEquals(12, PropsAcquisition.experienceGained(12));
-        assertEquals(0, PropsAcquisition.experienceGained(0));
-        assertEquals(0, PropsAcquisition.experienceGained(-7));
+    void jumpsAreRateLimitedAndDoNotAccumulateSuppressedRewards() {
+        assertTrue(PropsAcquisition.canRewardJump(1, 0, Long.MIN_VALUE));
+        assertFalse(PropsAcquisition.canRewardJump(0, 100, Long.MIN_VALUE));
+        for (var tick = 0; tick < 4; tick++) {
+            assertFalse(PropsAcquisition.canRewardJump(10, tick, 0));
+        }
+        assertTrue(PropsAcquisition.canRewardJump(10, 4, 0));
+        assertFalse(PropsAcquisition.canRewardJump(0, 5, 0));
     }
 
     @Test

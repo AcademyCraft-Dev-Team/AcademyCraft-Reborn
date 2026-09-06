@@ -247,7 +247,8 @@ object PropsApp : App {
             return when (factor) {
                 AbilityFactor.MUSCLE_STRENGTH -> tr("app.academy.props.effect.muscle").format(
                     Locale.ROOT,
-                    formatDecimal(PropsMath.muscleDamageBonus(effective))
+                    formatDecimal(PropsMath.muscleDamageBonus(effective)),
+                    formatDecimal(PropsMath.muscleKnockbackBonus(effective))
                 )
 
                 AbilityFactor.ENDURANCE -> tr("app.academy.props.effect.endurance").format(
@@ -257,15 +258,15 @@ object PropsApp : App {
 
                 AbilityFactor.DEXTERITY -> tr("app.academy.props.effect.dexterity").format(
                     Locale.ROOT,
-                    formatDecimal(effective * 0.2),
-                    formatDecimal(effective * 0.5),
+                    formatDecimal(PropsMath.dexteritySpeedBonus(effective) * 100.0),
+                    formatDecimal(PropsMath.dexterityJumpHeightBonus(effective) * 100.0),
+                    formatDecimal(PropsMath.dexterityStepHeightBonus(effective)),
                     formatDecimal(PropsMath.dexteritySafeFallDistanceBonus(effective))
                 )
 
                 AbilityFactor.PERCEPTION -> tr("app.academy.props.effect.perception").format(
                     Locale.ROOT,
-                    PropsMath.perceptionEnchantmentBonus(effective),
-                    formatDecimal((PropsMath.perceptionExperienceMultiplier(effective) - 1.0) * 100.0)
+                    formatDecimal(PropsMath.perceptionEnchantmentBonus(effective))
                 )
 
                 AbilityFactor.NEURAL_ACTIVITY -> tr("app.academy.props.effect.neural").format(

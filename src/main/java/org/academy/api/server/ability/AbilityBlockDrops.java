@@ -1,11 +1,19 @@
 package org.academy.api.server.ability;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemInstance;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import org.academy.internal.server.storage.SpatialStorageService;
 import org.jspecify.annotations.Nullable;
 
+import java.util.List;
 import java.util.function.BooleanSupplier;
 
 /** Explicit attribution for ability block destruction, including secondary container/neighbor drops.
@@ -36,6 +44,18 @@ public final class AbilityBlockDrops {
         if (AbilityEffectPolicy.blockDestruction(level) == AbilityEffectPolicy.Decision.DENY) return false;
         try (var ignored = capture(player)) {
             return action.getAsBoolean();
+        }
+    }
+
+    /**
+     * Evaluates ability loot with the caster's perception, including controlled entities and
+     * drops computed before destruction. Keeps the actual breaker and tool in the loot table.
+     */
+    public static List<ItemStack> getDrops(ServerPlayer player, BlockState state, ServerLevel level,
+                                          BlockPos pos, @Nullable BlockEntity blockEntity,
+                                          @Nullable Entity breaker, ItemInstance tool) {
+        try (var ignored = capture(player)) {
+            return Block.getDrops(state, level, pos, blockEntity, breaker, tool);
         }
     }
 

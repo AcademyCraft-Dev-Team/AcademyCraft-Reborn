@@ -4,13 +4,13 @@ package org.academy.internal.server.ability;
  * Pure input normalization for P.R.O.P.S activity rewards.
  */
 final class PropsAcquisition {
-    private static final double MAX_MELEE_DAMAGE_PER_HIT = 10.0;
+    static final int JUMP_INTERVAL_TICKS = 4;
 
     private PropsAcquisition() {
     }
 
-    static double meleeDamage(double healthDamage) {
-        return Math.min(MAX_MELEE_DAMAGE_PER_HIT, finiteNonNegative(healthDamage));
+    static double damageReward(double healthDamage) {
+        return finiteNonNegative(healthDamage) * 0.2;
     }
 
     static double healthLost(double healthBefore, double healthDamage) {
@@ -21,8 +21,9 @@ final class PropsAcquisition {
         return Math.max(0, foodAfter - foodBefore);
     }
 
-    static int experienceGained(int amount) {
-        return Math.max(0, amount);
+    static boolean canRewardJump(int completedJumps, long gameTime, long lastRewardTick) {
+        return completedJumps > 0 && (lastRewardTick == Long.MIN_VALUE
+                || gameTime - lastRewardTick >= JUMP_INTERVAL_TICKS);
     }
 
     static int statIncrease(int current, int previous) {

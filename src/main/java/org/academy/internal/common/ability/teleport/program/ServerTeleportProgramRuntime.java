@@ -757,7 +757,7 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
             ItemStack tool
     ) {
         if (state.isAir()) return List.of();
-        return Block.getDrops(
+        return org.academy.api.server.ability.AbilityBlockDrops.getDrops(player,
                 state,
                 targets.level(),
                 position,

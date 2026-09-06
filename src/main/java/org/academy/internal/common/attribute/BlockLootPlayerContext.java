@@ -1,6 +1,7 @@
 package org.academy.internal.common.attribute;
 
 import net.minecraft.server.level.ServerPlayer;
+import org.academy.api.server.ability.AbilityBlockDrops;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayDeque;
@@ -28,6 +29,7 @@ public final class BlockLootPlayerContext {
 
     @Nullable
     public static ServerPlayer current() {
-        return PLAYERS.get().peek();
+        var abilityPlayer = AbilityBlockDrops.currentBreaker();
+        return abilityPlayer != null ? abilityPlayer : PLAYERS.get().peek();
     }
 }

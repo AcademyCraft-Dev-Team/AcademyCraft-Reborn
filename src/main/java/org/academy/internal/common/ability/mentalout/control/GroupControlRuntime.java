@@ -577,7 +577,7 @@ public final class GroupControlRuntime {
             if (miningProgressTicks % 5 == 1) subject.swing(InteractionHand.MAIN_HAND);
             if (miningProgressTicks < miningTicks(state, tool, level, currentBlock)) return;
             if (canBreak(controller, level, currentBlock)) {
-                var drops = Block.getDrops(
+                var drops = org.academy.api.server.ability.AbilityBlockDrops.getDrops(controller,
                         state, level, currentBlock, level.getBlockEntity(currentBlock), subject, tool);
                 if (org.academy.api.server.ability.AbilityBlockDrops.run(
                         level, controller, () -> level.destroyBlock(currentBlock, false, subject))) {
@@ -673,7 +673,8 @@ public final class GroupControlRuntime {
             if (miningProgressTicks % 5 == 1) subject.swing(InteractionHand.MAIN_HAND);
             if (miningProgressTicks < miningTicks(state, tool, level, currentBlock)) return;
             if (!canBreak(controller, level, currentBlock)) { blockMiningTarget("permission", 100); return; }
-            var drops = Block.getDrops(state, level, currentBlock, level.getBlockEntity(currentBlock), subject, tool);
+            var drops = org.academy.api.server.ability.AbilityBlockDrops.getDrops(controller,
+                    state, level, currentBlock, level.getBlockEntity(currentBlock), subject, tool);
             if (!org.academy.api.server.ability.AbilityBlockDrops.run(
                     level, controller, () -> level.destroyBlock(currentBlock, false, subject))) {
                 blockMiningTarget("permission", 100);
@@ -917,7 +918,7 @@ public final class GroupControlRuntime {
                     || settings != null && (!settings.harvest() || !settings.matches(state))
                     || !canBreak(controller, level, pos)) return;
             subject.swing(InteractionHand.MAIN_HAND);
-            var drops = Block.getDrops(
+            var drops = org.academy.api.server.ability.AbilityBlockDrops.getDrops(controller,
                     state, level, pos, level.getBlockEntity(pos), subject, subject.getMainHandItem());
             if (!org.academy.api.server.ability.AbilityBlockDrops.run(
                     level, controller, () -> level.destroyBlock(pos, false, subject))) return;
