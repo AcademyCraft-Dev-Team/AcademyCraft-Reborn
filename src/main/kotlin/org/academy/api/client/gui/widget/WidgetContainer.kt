@@ -45,10 +45,6 @@ interface WidgetContainer : Widget {
         return false
     }
 
-    override fun hasPendingRender(): Boolean {
-        return isRenderDirty || dirtyChildren.isNotEmpty()
-    }
-
     open class LayoutParams {
         var widthMode: SizeMode = SizeMode.WRAP_CONTENT
         var heightMode: SizeMode = SizeMode.WRAP_CONTENT
@@ -67,13 +63,11 @@ interface WidgetContainer : Widget {
         var paddingRight: Float = 0f
         var paddingBottom: Float = 0f
 
-        /** 锚点扩展（[AnchorLayoutWidget]/percent 布局）：以父内容区比例定位/拉伸。 */
         var stretchX: Boolean = false
         var stretchY: Boolean = false
         var anchorX: Float = 0f
         var anchorY: Float = 0f
 
-        /** 拉伸的另一端锚点；<0 视为伸到内容区右/下边缘。 */
         var anchorX2: Float = -1f
         var anchorY2: Float = -1f
         var offsetX: Float = 0f
@@ -269,42 +263,36 @@ interface WidgetContainer : Widget {
             return this
         }
 
-        /** 锚点 (点锚定): 子控件边/中心按 `x * (contentW - childW)` 摆放。 */
         fun anchors(x: Float, y: Float): LayoutParams {
             anchorX = x
             anchorY = y
             return this
         }
 
-        /** 拉伸另一端的锚点; <0 表示伸到内容区右/下边缘。 */
         fun anchors2(x: Float, y: Float): LayoutParams {
             anchorX2 = x
             anchorY2 = y
             return this
         }
 
-        /** 是否沿该轴从 [anchors] 拉伸到 [anchors2]。 */
         fun stretch(x: Boolean, y: Boolean): LayoutParams {
             stretchX = x
             stretchY = y
             return this
         }
 
-        /** 像素偏移叠加在锚点/拉伸结果上。 */
         fun offset(x: Float, y: Float): LayoutParams {
             offsetX = x
             offsetY = y
             return this
         }
 
-        /** 宽度按父内容区百分比 (0-100) 解析。 */
         fun widthPercent(percent: Float): LayoutParams {
             widthMode = SizeMode.PERCENT
             widthPercent = percent / 100f
             return this
         }
 
-        /** 高度按父内容区百分比 (0-100) 解析。 */
         fun heightPercent(percent: Float): LayoutParams {
             heightMode = SizeMode.PERCENT
             heightPercent = percent / 100f

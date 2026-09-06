@@ -131,8 +131,8 @@ public final class AcademyCraftClient {
 
         MusicPlayerBackend.Companion.init();
         Screens.register();
-        HudManager.INSTANCE.initMain();
         AbilitySystemClient.init();
+        HudManager.INSTANCE.initMain();
         AbilityProgramEditorClient.init();
         InstantTeleportSyncPacket.initClient();
         TemporalImmunitySyncPacket.initClient();

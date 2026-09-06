@@ -41,7 +41,7 @@ class GlyphDrawCommand(
 ) {
     override fun isGeometryFixed(): Boolean = true
 
-    override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose) {
+    override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose, alphaMul: Float) {
         writer.beginVertex()
         writer.putVec3f(0f, 0f, 0f)
 
@@ -55,7 +55,7 @@ class GlyphDrawCommand(
         writer.putVec3f(1f, 0f, 0f)
     }
 
-    override fun generateInstanceData(slot: Int, writer: VertexWriter, instanceIndex: Int, pose: PoseStack.Pose) {
+    override fun generateInstanceData(slot: Int, writer: VertexWriter, instanceIndex: Int, pose: PoseStack.Pose, alphaMul: Float) {
         if (slot == 1) {
             val matrix = pose.pose()
             val start = Vector3f()
@@ -73,7 +73,7 @@ class GlyphDrawCommand(
             writer.putVec2f(tw, th)
             writer.putVec2f(u0, v0)
             writer.putVec2f(u1, v1)
-            writer.putVec4f(red, green, blue, alpha)
+            writer.putVec4f(red, green, blue, alpha * alphaMul)
         }
     }
 }

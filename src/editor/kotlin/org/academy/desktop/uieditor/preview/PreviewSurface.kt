@@ -21,7 +21,6 @@ import org.joml.Vector2f
 import org.joml.Vector4f
 import java.util.*
 
-/** One laid-out widget flattened into document space, used for picking and overlays. */
 class HitEntry(
     val path: List<String>,
     val widget: Widget,
@@ -36,10 +35,6 @@ class HitEntry(
         px >= x && py >= y && px < x + width && py < y + height
 }
 
-/**
- * Hosts the decoded document at its natural size: children are measured UNSPECIFIED so the
- * viewport never stretches them, and the whole host is later drawn scaled by the view transform.
- */
 private class DocumentHost : AbstractWidgetContainer() {
     var contentWidth: Float = 0f
         private set
@@ -71,7 +66,6 @@ private class DocumentHost : AbstractWidgetContainer() {
         if (child.isVisible()) child.layout(0f, 0f, child.measuredWidth, child.measuredHeight)
     }
 
-    /** perform() lays the root out at viewport size; the host must stay at its natural size. */
     override fun layout(left: Float, top: Float, right: Float, bottom: Float) {
         super.layout(left, top, left + contentWidth, top + contentHeight)
         onLayout()
@@ -80,15 +74,12 @@ private class DocumentHost : AbstractWidgetContainer() {
     }
 }
 
-/**
- * Offscreen renderer for the preview canvas. Draws workspace backdrop, artboard card and an
- * optional dot grid as procedural draw commands around the transformed document, then flattens
- * the laid-out tree into [HitEntry] snapshots.
- */
 internal class PreviewSurface(private val environment: DesktopEnvironment) {
-
     private val ui = PreviewUiContext()
-    private val host = DocumentHost().apply { name = "document_host" }
+    private val host = DocumentHost().apply {
+        name = "document_host"
+        dispatchAttached()
+    }
     private var target: TextureTarget? = null
     private var sampler: GpuSampler? = null
     private var textureId = 0L
@@ -106,17 +97,11 @@ internal class PreviewSurface(private val environment: DesktopEnvironment) {
         if (root != null) host.addChild("document", root)
     }
 
-    private var lastSubmitted: CanvasTransform? = null
-
     fun renderFrame(win: ViewRect, transform: CanvasTransform, artboardColor: Int, grid: Boolean): List<HitEntry> {
         val scale = environment.guiScale.coerceAtLeast(0.01f)
         val lw = (win.w / scale).coerceAtLeast(1f)
         val lh = (win.h / scale).coerceAtLeast(1f)
         ensureTarget(win.w.toInt().coerceAtLeast(64), win.h.toInt().coerceAtLeast(64))
-        // Widget command caches bake the submit-time pose; the view transform lives outside
-        // the widget tree, so cached subtrees would render at a stale transform.
-        if (transform != lastSubmitted) host.invalidate()
-        lastSubmitted = transform
         ui.viewWidth = lw
         ui.viewHeight = lh
         ui.transform = transform
@@ -188,9 +173,6 @@ private class PreviewUiContext : UiContext() {
     var transform: CanvasTransform = CanvasTransform.IDENTITY
     var artboardColor: Int = 0xFF151515.toInt()
     var gridEnabled: Boolean = false
-
-    // ponytail: always regenerate commands; editor mutates widgets every frame during drags
-    override fun shouldUseCacheCommands(rootWidget: WidgetContainer): Boolean = false
 
     override fun generateCommands(
         context: RenderContext,

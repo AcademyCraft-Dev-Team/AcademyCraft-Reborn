@@ -2,30 +2,21 @@ package org.academy.desktop.platform
 
 import com.mojang.blaze3d.textures.GpuTextureView
 import net.minecraft.resources.Identifier
+import org.academy.AcademyCraft
 import org.academy.api.client.gui.environment.UiEnvironment
+import org.academy.api.client.gui.texture.IdentifierTextureSource
+import org.academy.api.client.gui.texture.TextureSource
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentLinkedQueue
 
-/**
- * File-system/classpath [UiEnvironment] for out-of-game editors.
- *
- * Resource resolution order:
- *  1. `<workingDir>/src/main/resources/assets/<ns>/<path>` (editable project source)
- *  2. classpath `assets/<ns>/<path>` (the mod's bundled resources, which are on the
- *     editor runtime classpath via the inherited `main` source set)
- *
- * [layoutDir] points at the project's source layout directory so edits persist back
- * to the repository.
- */
 class DesktopEnvironment(
     val workingDir: Path,
     initialWidth: Int,
     initialHeight: Int,
     initialGuiScale: Float = 2f,
 ) : UiEnvironment {
-
     @Volatile
     override var physicalWidth: Int = initialWidth
         internal set
@@ -56,7 +47,6 @@ class DesktopEnvironment(
     var clipboardGetter: () -> String = { "" }
     var clipboardSetter: (String) -> Unit = {}
 
-    /** 共享 ImGui 后端（由 DesktopUiHost 注入；编辑器可注册纹理供 ImGui 显示，M11-02/M14）。 */
     @Volatile
     var imguiBackend: org.academy.internal.client.gui.imgui.ImGuiBackend? = null
 
@@ -65,7 +55,6 @@ class DesktopEnvironment(
         clipboardSetter(text)
     }
 
-    /** Runs tasks queued from worker threads (e.g. MSDF glyph uploads). */
     fun drainMainThreadTasks() {
         while (true) {
             val task = mainThreadTasks.poll() ?: return
@@ -85,6 +74,11 @@ class DesktopEnvironment(
         return DesktopTextures.load(identifier, input)
     }
 
+    override fun createDynamicTextureSource(identifier: Identifier, bytes: ByteArray): TextureSource {
+        DesktopTextures.register(identifier, bytes)
+        return IdentifierTextureSource(identifier, this)
+    }
+
     override fun layoutDir(): Path = workingDir.resolve("src").resolve("main").resolve("resources")
-        .resolve("assets").resolve("academy").resolve("ui").resolve("layout")
+        .resolve("assets").resolve(AcademyCraft.MOD_ID).resolve("ui").resolve("layout")
 }

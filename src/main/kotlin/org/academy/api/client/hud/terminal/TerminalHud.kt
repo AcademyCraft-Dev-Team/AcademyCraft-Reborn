@@ -17,7 +17,6 @@ import net.minecraft.client.input.PreeditEvent
 import net.minecraft.client.renderer.DynamicUniformStorage.DynamicUniform
 import net.minecraft.util.Mth
 import net.neoforged.bus.api.SubscribeEvent
-import net.neoforged.neoforge.client.event.ClientTickEvent
 import net.neoforged.neoforge.client.event.ScreenEvent
 import net.neoforged.neoforge.common.NeoForge
 import org.academy.AcademyCraftClient
@@ -56,6 +55,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Consumer
 import kotlin.concurrent.Volatile
+import kotlin.math.abs
 import kotlin.math.sign
 import kotlin.math.tan
 
@@ -105,10 +105,6 @@ class TerminalHud private constructor() {
 
     private fun createUiContext(): UiContext {
         return object : UiContext() {
-            override fun shouldUseCacheCommands(rootWidget: WidgetContainer): Boolean {
-                return super.shouldUseCacheCommands(rootWidget) && !posChanged
-            }
-
             override fun generateCommands(
                 context: RenderContext, rootWidget: WidgetContainer, mouseX: Double, mouseY: Double, partialTick: Float
             ) {
@@ -270,7 +266,7 @@ class TerminalHud private constructor() {
         val viewMatrix = Matrix4f().identity()
 
         val z = -2.5125f
-        val scale = (2 * Math.abs(z) * tan((fovY / 2).toDouble()) / guiHeight).toFloat()
+        val scale = (2 * abs(z) * tan((fovY / 2).toDouble()) / guiHeight).toFloat()
 
         viewMatrix.translate(0.0f, 0.0f, z)
         viewMatrix.scale(scale, scale, scale)
@@ -300,11 +296,6 @@ class TerminalHud private constructor() {
 
     fun closeApp() {
         context.closeApp()
-    }
-
-    @SubscribeEvent
-    fun onTick(@Suppress("unused") event: ClientTickEvent.Post) {
-        context.get().tick()
     }
 
     @SubscribeEvent
@@ -423,8 +414,6 @@ class TerminalHud private constructor() {
                     )
                 )
             }
-            // Text input owns every keyboard event except Escape. This prevents the inventory key,
-            // terminal toggle key, and other gameplay bindings from closing or affecting the HUD.
             event.setCanceled(true)
             return
         }
@@ -519,7 +508,7 @@ class TerminalHud private constructor() {
         private var main = FrameLayoutWidget()
         private var content = LinearLayoutWidget()
         private var appContainer = FrameLayoutWidget()
-        private var root = createRoot()
+        private var root = createRoot().also { it.dispatchAttached() }
 
         override fun get(): WidgetContainer {
             return root
@@ -529,6 +518,7 @@ class TerminalHud private constructor() {
             viewStateProgress = 0f
             viewMarginRight = 32f
 
+            if (root.isAttached()) root.dispatchDetached()
             main.cancelAnimations()
             main = FrameLayoutWidget()
             content.cancelAnimations()
@@ -536,7 +526,7 @@ class TerminalHud private constructor() {
             appContainer.cancelAnimations()
             appContainer = FrameLayoutWidget()
             root.cancelAnimations()
-            root = createRoot()
+            root = createRoot().also { it.dispatchAttached() }
         }
 
         fun createRoot(): FrameLayoutWidget {
@@ -548,7 +538,7 @@ class TerminalHud private constructor() {
                     .size(MAIN_WIDTH, MAIN_HEIGHT)
                 root.addChild("main", main)
                 run {
-                    val background = FillWidget(COLOR)
+                    val background = FillWidget(BACKGROUND_COLOR)
                     main.addChild("back", background)
                     content.orientation = Orientation.VERTICAL
                     content.spacing = 2f
@@ -562,7 +552,7 @@ class TerminalHud private constructor() {
 
                         content.addChild("icon", logo)
 
-                        val splitLine = FillWidget(-0x1)
+                        val splitLine = FillWidget(PRIMARY_COLOR)
                         splitLine.layoutParams = LinearLayoutWidget.LayoutParams()
                             .height(1f)
                             .widthMode(SizeMode.MATCH_PARENT)
@@ -654,7 +644,7 @@ class TerminalHud private constructor() {
             val currentProgress = viewStateProgress
             main.cancelAnimations()
 
-            val distance = Math.abs(target - currentProgress)
+            val distance = abs(target - currentProgress)
             val baseDuration = 400L
             val newDuration = (baseDuration * distance).toLong()
 
@@ -688,7 +678,10 @@ class TerminalHud private constructor() {
 
             viewMarginRight = (1f - progress) * 32f
             val lp = main.layoutParams
-            main.layoutParams = lp.marginRight(viewMarginRight)
+            if (lp.marginRight != viewMarginRight) {
+                lp.marginRight = viewMarginRight
+                main.layoutParams = lp
+            }
 
             val parentWidth = root.width
             val rightAlignedX = parentWidth - viewMarginRight - main.width
@@ -704,7 +697,7 @@ class TerminalHud private constructor() {
             startDelay: Long = 0
         ): ObjectAnimator {
             val currentAlpha = widget.alpha
-            val distance = Math.abs(targetAlpha - currentAlpha)
+            val distance = abs(targetAlpha - currentAlpha)
             val duration = (baseDuration * distance).toLong().coerceAtLeast(1)
 
             val anim = ofFloat({ widget.alpha = it }, currentAlpha, targetAlpha)
@@ -783,7 +776,11 @@ class TerminalHud private constructor() {
     }
 
     companion object {
-        const val COLOR: Int = 0x40000000
+        const val BACKGROUND_COLOR = 0x40000000.toInt()
+        const val PRIMARY_COLOR = 0xFFFFFFFF.toInt()
+        const val CONTROL_BASE_COLOR = 0x20000000.toInt()
+        const val CONTROL_HOVER_COLOR = 0x40000000.toInt()
+        const val CONTROL_ACTIVE_COLOR = 0x50000000.toInt()
         const val MAIN_WIDTH: Float = 150f
         const val UNFOLDED_MAIN_WIDTH: Float = 384f
         const val MAIN_HEIGHT: Float = 200f
@@ -812,7 +809,6 @@ class TerminalHud private constructor() {
             if (app !in APPS && app !in LAST_APPS) APPS.add(app)
         }
 
-        /** Adds an extension app after every regular terminal app. */
         fun addLastApp(app: App) {
             if (app !in APPS && app !in LAST_APPS) LAST_APPS.add(app)
         }
