@@ -123,7 +123,7 @@
   "app.academy.props.console.starting": "Initializing P.R.O.P.S...",
   "app.academy.props.effect.dexterity": "Speed +%s%% / jump +%s%% / step +%s / safe fall +%s",
   "app.academy.props.effect.endurance": "Maximum health +%s",
-  "app.academy.props.effect.muscle": "Melee damage +%s / knockback +%s",
+  "app.academy.props.effect.muscle": "Melee damage +%s",
   "app.academy.props.effect.neural": "CP iteration +%s%%",
   "app.academy.props.effect.perception": "Looting/Fortune +%s (fraction is chance)",
   "app.academy.props.footer": "Ability factors %s / 2000   Acquisition %s%%",

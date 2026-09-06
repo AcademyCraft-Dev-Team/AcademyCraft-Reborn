@@ -35,12 +35,11 @@ public final class PropsMath {
     }
 
     public static double muscleDamageBonus(double value) {
-        return finiteNonNegative(value) * 0.005;
-    }
-
-    public static double muscleKnockbackBonus(double value) {
         var safe = finiteNonNegative(value);
-        return safe >= 1_200.0 ? 1.0 : safe >= 800.0 ? 0.5 : 0.0;
+        var milestones = (safe >= 800.0 ? 1 : 0)
+                + (safe >= 1_200.0 ? 1 : 0)
+                + (safe >= 1_600.0 ? 1 : 0);
+        return Math.min(safe * 0.005, 6.0) + milestones;
     }
 
     public static double enduranceHealthBonus(double value) {
@@ -110,7 +109,7 @@ public final class PropsMath {
     }
 
     public static double perceptionEnchantmentBonus(double value) {
-        return finiteNonNegative(value) * 0.002;
+        return finiteNonNegative(value) * 0.001;
     }
 
     /** Integer loot APIs receive the whole levels plus a roll for the fractional level. */

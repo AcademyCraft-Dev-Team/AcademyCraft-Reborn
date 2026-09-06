@@ -31,7 +31,7 @@ import java.util.Deque;
 @EventBusSubscriber
 public final class PlayerAttributeRuntime {
     private static final Identifier MUSCLE_DAMAGE = AcademyCraft.academy("attribute_bonus.muscle_damage");
-    private static final Identifier MUSCLE_KNOCKBACK = AcademyCraft.academy("attribute_bonus.muscle_knockback");
+    private static final Identifier LEGACY_MUSCLE_KNOCKBACK = AcademyCraft.academy("attribute_bonus.muscle_knockback");
     private static final Identifier DEXTERITY_STEP = AcademyCraft.academy("attribute_bonus.dexterity_step");
     private static final Identifier ENDURANCE_HEALTH = AcademyCraft.academy("attribute_bonus.endurance_health");
     private static final Identifier DEXTERITY_SPEED = AcademyCraft.academy("attribute_bonus.dexterity_speed");
@@ -68,12 +68,13 @@ public final class PlayerAttributeRuntime {
                 AttributeModifier.Operation.ADD_VALUE,
                 true
         );
+        // Remove the permanent bonus saved by earlier P.R.O.P.S versions.
         syncModifier(
                 player.getAttribute(Attributes.ATTACK_KNOCKBACK),
-                MUSCLE_KNOCKBACK,
-                PropsMath.muscleKnockbackBonus(muscle),
+                LEGACY_MUSCLE_KNOCKBACK,
+                0.0,
                 AttributeModifier.Operation.ADD_VALUE,
-                true
+                false
         );
         syncModifier(
                 player.getAttribute(Attributes.STEP_HEIGHT),

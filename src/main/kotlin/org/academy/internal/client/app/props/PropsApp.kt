@@ -245,8 +245,7 @@ object PropsApp : App {
             return when (factor) {
                 AbilityFactor.MUSCLE_STRENGTH -> tr("app.academy.props.effect.muscle").format(
                     Locale.ROOT,
-                    formatDecimal(PropsMath.muscleDamageBonus(effective)),
-                    formatDecimal(PropsMath.muscleKnockbackBonus(effective))
+                    formatDecimal(PropsMath.muscleDamageBonus(effective))
                 )
 
                 AbilityFactor.ENDURANCE -> tr("app.academy.props.effect.endurance").format(
