@@ -299,6 +299,51 @@ class SkyDischargeVfxTest {
     }
 
     @Test
+    void attachmentSilhouettesIncludeOneSidedBendsAndAlternatingTurns() throws Exception {
+        int oneSided = 0;
+        int alternating = 0;
+        var silhouettes = new java.util.HashSet<String>();
+        for (int seed = 0; seed < 12; seed++) {
+            var sim = simulator("sky_strike_thunderclap");
+            sim.setLiveParam("seed", Value.of((float) (42 + seed * 137)));
+            sim.setLiveParam("time", Value.of(1f));
+            sim.step(0);
+            for (int i = 0; i < sim.arcBuffer().count(); i++) {
+                var arc = sim.arcBuffer().arc(i);
+                if (arc.size() < 4 || arc.y(0) > 20) continue;
+                float first = lateralAt(arc, 0.25f);
+                float last = lateralAt(arc, 0.75f);
+                if (Math.abs(first) > 0.025f && Math.abs(last) > 0.025f) {
+                    if (first * last > 0) oneSided++; else alternating++;
+                }
+                var signature = new StringBuilder();
+                for (float fraction : new float[]{0.25f, 0.5f, 0.75f}) {
+                    float offset = lateralAt(arc, fraction);
+                    signature.append(offset > 0.03f ? '+' : offset < -0.03f ? '-' : '0');
+                }
+                silhouettes.add(signature.toString());
+            }
+        }
+        assertTrue(oneSided >= 16, "The old shared S wave must not dominate every attachment");
+        assertTrue(alternating >= 16, "Randomness must include direction reversals as well as single bends");
+        assertTrue(silhouettes.size() >= 8, "Rotation alone does not make different silhouettes");
+    }
+
+    /** Lateral deviation relative to the stroke's endpoint chord, independent of angle and scale. */
+    private float lateralAt(org.academy.api.client.render.vfxgraph.arc.ArcCurve arc, float fraction) {
+        int count = 1;
+        while (count < arc.size() && arc.generation(count) == 0 && arc.segment(count) == arc.segment(0)) count++;
+        float dx = arc.x(count - 1) - arc.x(0);
+        float dz = arc.z(count - 1) - arc.z(0);
+        float cursor = (count - 1) * fraction;
+        int at = (int) cursor;
+        float blend = cursor - at;
+        float x = arc.x(at) + (arc.x(Math.min(at + 1, count - 1)) - arc.x(at)) * blend - arc.x(0);
+        float z = arc.z(at) + (arc.z(Math.min(at + 1, count - 1)) - arc.z(at)) * blend - arc.z(0);
+        return (dx * z - dz * x) / Math.max(0.0001f, dx * dx + dz * dz);
+    }
+
+    @Test
     void cloudAndGlowLayersCannotRenderThroughEachOthersOutput() {
         assertNotEquals(ParticleBuffer.layerByte("sky_cloud"), ParticleBuffer.layerByte("sky_halo"));
         assertNotEquals(ParticleBuffer.layerByte("sky_cloud"), ParticleBuffer.layerByte("fire"));

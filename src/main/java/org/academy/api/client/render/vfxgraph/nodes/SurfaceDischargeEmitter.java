@@ -51,6 +51,7 @@ public final class SurfaceDischargeEmitter {
         private final VfxBlock block;
         private final long group = SkyDischargeEmitter.newGroup();
         private final List<Trace> traces = new ArrayList<>();
+        private final TraceShape shape = new TraceShape();
         private Layout layout;
         private float epoch = Float.NaN;
         private int count;
@@ -154,13 +155,22 @@ public final class SurfaceDischargeEmitter {
                     trace.brightness = 0.60f + unit(seed + settings.frame * 31L, 8) * 0.40f;
                     float length = reach * (0.22f + unit(seed, 2) * 0.18f);
                     append(trace.path, surface, cx, cz, angle, length, settings.width,
-                            seed, settings.frame, sky, settings.segments, 0);
+                            seed, settings.frame, sky, settings.segments, 0, shape);
                     // Sparse local forks share a mesh with their parent, but never connect across strokes.
                     if (settings.forks && patch % 3 == 0 && trace.path.size() >= 4) {
-                        int at = trace.path.size() / 2;
-                        append(trace.path, surface, trace.path.x(at), trace.path.z(at), angle + 1.15f,
-                                length * 0.48f, settings.width * 0.50f,
-                                seed + 99, settings.frame, sky, settings.segments, 1);
+                        int at = Math.clamp(Math.round((trace.path.size() - 1)
+                                * (0.25f + unit(seed, 61) * 0.45f)), 1, trace.path.size() - 2);
+                        int before = trace.path.segment(at - 1) == trace.path.segment(at) ? at - 1 : at;
+                        int after = trace.path.segment(at + 1) == trace.path.segment(at) ? at + 1 : at;
+                        float dx = trace.path.x(after) - trace.path.x(before);
+                        float dz = trace.path.z(after) - trace.path.z(before);
+                        float tangent = dx * dx + dz * dz > 0.0001f ? (float) Math.atan2(dz, dx) : angle;
+                        float forkAngle = tangent + (unit(seed, 62) < 0.5f ? -1 : 1)
+                                * (0.55f + unit(seed, 63) * 0.95f);
+                        append(trace.path, surface, trace.path.x(at), trace.path.z(at), forkAngle,
+                                length * (0.28f + unit(seed, 64) * 0.20f),
+                                settings.width * (0.35f + unit(seed, 65) * 0.15f),
+                                seed + 99, settings.frame, sky, settings.segments, 1, shape);
                     }
                 }
             }
@@ -169,7 +179,7 @@ public final class SurfaceDischargeEmitter {
 
     private static void append(ArcCurve arc, SurfaceProjector surface,
                                float cx, float cz, float angle, float length, float width,
-                               long seed, int frame, boolean sky, int limit, int generation) {
+                               long seed, int frame, boolean sky, int limit, int generation, TraceShape shape) {
         var point = new Vector3f();
         var previous = new Vector3f();
         int stroke = arc.size() == 0 ? 0 : arc.segment(arc.size() - 1) + 1;
@@ -177,10 +187,10 @@ public final class SurfaceDischargeEmitter {
         int segments = Math.clamp((int) Math.ceil(length * 3), 6, limit);
         float cos = (float) Math.cos(angle);
         float sin = (float) Math.sin(angle);
+        shape.configure(seed, frame);
         for (int i = 0; i <= segments; i++) {
             float u = (float) i / segments;
-            float bend = (float) Math.sin(u * 6.5f) * length * 0.24f
-                    + (unit(seed + frame * 71L, i / 2) - 0.5f) * length * 0.11f * (float) Math.sin(u * Math.PI);
+            float bend = shape.sample(u) * length;
             float x = cx + cos * length * u - sin * bend;
             float z = cz + sin * length * u + cos * bend;
             surface.project(x, 0.08f, z, point);
@@ -201,6 +211,41 @@ public final class SurfaceDischargeEmitter {
             arc.addPoint(point.x, point.y, point.z, thickness, generation, stroke);
             previous.set(point);
             hasPrevious = true;
+        }
+    }
+
+    /** Reused scratch spine: uneven corners, directional drift and fine nonperiodic crawl. */
+    private static final class TraceShape {
+        private final float[] along = new float[8];
+        private final float[] across = new float[8];
+        private int spans;
+        private long crawlSeed;
+
+        void configure(long seed, int frame) {
+            spans = 3 + (int) (unit(seed, 71) * 5);
+            float roughness = 0.10f + unit(seed, 72) * 0.22f;
+            float drift = (unit(seed, 73) - 0.5f) * 0.32f;
+            crawlSeed = seed + frame * 617L;
+            along[0] = 0;
+            across[0] = 0;
+            for (int k = 1; k <= spans; k++) {
+                along[k] = k == spans ? 1 : (k + (unit(seed, k + 80) - 0.5f) * 0.6f) / spans;
+                // A short random walk produces hooks, zigzags and one-sided bends without a shared wave.
+                across[k] = Math.clamp(across[k - 1] * 0.3f
+                        + (unit(seed, k + 90) * 2f - 1f) * roughness + drift * along[k], -0.42f, 0.42f);
+            }
+        }
+
+        float sample(float u) {
+            int k = 1;
+            while (k < spans && u > along[k]) k++;
+            float blend = (u - along[k - 1]) / (along[k] - along[k - 1]);
+            float spine = across[k - 1] + (across[k] - across[k - 1]) * blend;
+            float cursor = u * 13;
+            int cell = (int) cursor;
+            float fine = (unit(crawlSeed, cell + 120) * 2f - 1f) * (1f - (cursor - cell))
+                    + (unit(crawlSeed, cell + 121) * 2f - 1f) * (cursor - cell);
+            return spine + fine * 0.025f * Math.min(1f, u * 12);
         }
     }
 

@@ -24,6 +24,12 @@ public final class SkyStrikeClientSmoke {
     private static boolean openedWorld;
 
     @SubscribeEvent
+    public static void screenInitialized(net.neoforged.neoforge.client.event.ScreenEvent.Init.Post event) {
+        if (Boolean.getBoolean("academy.skyStrikeSmoke"))
+            System.out.println("[sky-strike-smoke] screen " + event.getScreen().getClass().getName());
+    }
+
+    @SubscribeEvent
     public static void tick(ClientTickEvent.Post event) {
         if (!Boolean.getBoolean("academy.skyStrikeSmoke")) return;
         var mc = Minecraft.getInstance();
@@ -53,6 +59,8 @@ public final class SkyStrikeClientSmoke {
                 if (player == null) return;
                 var level = player.level();
                 var p = new net.minecraft.core.BlockPos(0, 64, 175);
+                // The isolated client may start before this saved chunk enters its view distance.
+                level.getChunk(p.getX() >> 4, p.getZ() >> 4);
                 double y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, p.getX(), p.getZ());
                 impact = new Vec3(p.getX() + 0.5, y + 0.1, p.getZ() + 0.5);
                 player.setGameMode(GameType.SPECTATOR);
@@ -63,6 +71,8 @@ public final class SkyStrikeClientSmoke {
         }
         if (impact == null) return;
         ticks++;
+        // Wait for the initial chunk/entity tracking setup before probing real query results.
+        if (ticks == 80) mc.getSingleplayerServer().execute(() -> verifyImpactTargets(mc.getSingleplayerServer().overworld(), impact));
         if (ticks == 100) emit(SkyStrikeProfile.THUNDERCLAP, impact);
         if (ticks == 107) capture("ingame_thunderclap");
         if (ticks == 122) capture("ingame_surface_attachment");
@@ -76,6 +86,47 @@ public final class SkyStrikeClientSmoke {
         if (ticks == 350) {
             System.out.println("[sky-strike-smoke] completed thunderclap and 21 storm strikes");
             mc.stop();
+        }
+    }
+
+    private static void verifyImpactTargets(net.minecraft.server.level.ServerLevel level, Vec3 origin) {
+        var center = origin.add(0, 120, 0);
+        for (var profile : SkyStrikeProfile.values()) {
+            double radius = profile.ringEndRadius();
+            var subjects = new java.util.ArrayList<net.minecraft.world.entity.LivingEntity>();
+            try {
+                var offsets = new Vec3[]{new Vec3(radius - 0.25, 0, 0), new Vec3(radius + 0.25, 0, 0),
+                        new Vec3(radius * 0.8, 0, radius * 0.8), Vec3.ZERO};
+                for (var offset : offsets) {
+                    var subject = net.minecraft.world.entity.EntityTypes.COW.create(
+                            level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+                    if (subject == null) throw new IllegalStateException("Cannot create radius probe");
+                    subject.setPos(center.add(offset));
+                    subject.setNoAi(true);
+                    subject.setNoGravity(true);
+                    if (!level.addFreshEntity(subject)) throw new IllegalStateException("Cannot add radius probe");
+                    subjects.add(subject);
+                }
+                var selected = org.academy.api.server.ability.AreaEffectTargets.inSphere(level, center, radius,
+                        target -> subjects.contains(target) && target != subjects.get(3));
+                if (!selected.equals(java.util.List.of(subjects.getFirst()))) {
+                    throw new IllegalStateException("Impact radius selected incorrect targets: " + profile
+                            + " selected=" + selected.stream().map(subjects::indexOf).toList()
+                            + " contained=" + subjects.stream().map(subject ->
+                            org.academy.api.server.ability.AreaEffectTargets.contains(center, subject.position(), radius)).toList());
+                }
+                float health = subjects.getFirst().getHealth();
+                for (var target : selected) target.hurtServer(level, level.damageSources().generic(), 1f);
+                if (subjects.getFirst().getHealth() >= health
+                        || subjects.get(1).getHealth() != subjects.get(1).getMaxHealth()
+                        || subjects.get(2).getHealth() != subjects.get(2).getMaxHealth()
+                        || subjects.get(3).getHealth() != subjects.get(3).getMaxHealth()) {
+                    throw new IllegalStateException("Impact boundary damage check failed: " + profile);
+                }
+                System.out.println("[sky-strike-smoke] impact radius passed " + profile + " radius=" + radius);
+            } finally {
+                subjects.forEach(net.minecraft.world.entity.Entity::discard);
+            }
         }
     }
 

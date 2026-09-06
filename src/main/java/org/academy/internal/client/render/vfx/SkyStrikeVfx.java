@@ -51,6 +51,7 @@ public final class SkyStrikeVfx implements Vfx {
         }
         // Explicit time also keeps both render passes and the feedback pulse on one clock.
         graph.bind("time", () -> Value.of(ageTicks / 20f));
+        graph.bind("ground_radius", () -> Value.of(profile.ringEndRadius()));
         graph.bind("seed", () -> Value.of((float) ((seed ^ (seed >>> 32)) & 0xFFFFFFL)));
         graph.bind("detail", () -> Value.of(switch (detail) {
             case FULL -> 1f;
