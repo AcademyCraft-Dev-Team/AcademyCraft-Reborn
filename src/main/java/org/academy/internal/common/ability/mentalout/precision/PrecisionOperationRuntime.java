@@ -17,6 +17,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.program.*;
 import org.academy.api.common.entitycontrol.*;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.ability.HostileTargets;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
@@ -1681,7 +1682,8 @@ public final class PrecisionOperationRuntime {
         var decision = MentalControlApi.attackDecision(entity, target);
         if (decision == AttackDecision.ALLOW) return true;
         if (decision == AttackDecision.DENY) return false;
-        return entity instanceof Mob mob && mob.getTarget() == target
+        return HostileTargets.isMarked(target, entity)
+                || entity instanceof Mob mob && mob.getTarget() == target
                 || entity.getLastHurtByMob() == target;
     }
 

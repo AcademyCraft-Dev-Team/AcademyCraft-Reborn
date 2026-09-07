@@ -15,6 +15,7 @@ public class SkillDamageSource extends DamageSource {
 
     private final Skill skill;
     private final int electricalChargePoints;
+    private final boolean canMarkHostility;
 
     protected SkillDamageSource(Holder<DamageType> type, @Nullable Entity directEntity, @Nullable Entity causingEntity, Skill skill) {
         this(type, directEntity, causingEntity, skill, -1);
@@ -22,9 +23,16 @@ public class SkillDamageSource extends DamageSource {
 
     private SkillDamageSource(Holder<DamageType> type, @Nullable Entity directEntity,
                               @Nullable Entity causingEntity, Skill skill, int electricalChargePoints) {
+        this(type, directEntity, causingEntity, skill, electricalChargePoints, true);
+    }
+
+    private SkillDamageSource(Holder<DamageType> type, @Nullable Entity directEntity,
+                              @Nullable Entity causingEntity, Skill skill, int electricalChargePoints,
+                              boolean canMarkHostility) {
         super(type, directEntity, causingEntity);
         this.skill = skill;
         this.electricalChargePoints = electricalChargePoints;
+        this.canMarkHostility = canMarkHostility;
     }
 
     /**
@@ -87,16 +95,26 @@ public class SkillDamageSource extends DamageSource {
      */
     public static SkillDamageSource from(DamageSource original, Skill skill) {
         var categoryType = SkillDamageTypeResolver.resolve(skill);
-        if (categoryType != null && original.getEntity() instanceof ServerPlayer player) {
-            return of(player, skill, categoryType);
-        }
-        return new SkillDamageSource(original.typeHolder(), original.getDirectEntity(), original.getEntity(), skill);
+        var copy = categoryType != null && original.getEntity() instanceof ServerPlayer player
+                ? of(player, skill, categoryType)
+                : new SkillDamageSource(original.typeHolder(), original.getDirectEntity(), original.getEntity(), skill);
+        return original instanceof SkillDamageSource source && !source.canMarkHostility()
+                ? copy.withoutHostilityMark() : copy;
     }
 
     /** Returns a copy with an explicit charge award for a primary, echo or secondary hit. */
     public SkillDamageSource withElectricalChargePoints(int points) {
         if (points < 0) throw new IllegalArgumentException("Charge points must be non-negative");
-        return new SkillDamageSource(typeHolder(), getDirectEntity(), getEntity(), skill, points);
+        return new SkillDamageSource(typeHolder(), getDirectEntity(), getEntity(), skill, points, canMarkHostility());
+    }
+
+    /** Returns a source for an automatic pulse or retaliation that must not refresh hostility. */
+    public SkillDamageSource withoutHostilityMark() {
+        return new SkillDamageSource(typeHolder(), getDirectEntity(), getEntity(), skill, electricalChargePoints, false);
+    }
+
+    public boolean canMarkHostility() {
+        return canMarkHostility;
     }
 
     /** -1 selects the category's skill default. */

@@ -70,6 +70,7 @@ import org.academy.internal.common.ability.mentalout.skills.lv2.SensoryDistortio
 import org.academy.internal.common.ability.mentalout.skills.lv3.CommandPositioning;
 import org.academy.internal.common.ability.mentalout.skills.lv3.ImpressionManipulation;
 import org.academy.internal.common.ability.mentalout.skills.lv4.MentalTakeover;
+import org.academy.internal.common.ability.mentalout.skills.lv4.PainSuppression;
 import org.academy.internal.common.ability.mentalout.skills.lv5.WideAreaInterference;
 import org.academy.internal.common.ability.mentalout.skills.lv5.MindDestruction;
 import org.academy.internal.common.ability.teleport.skills.lv1.SpaceFoldingTheorem;
@@ -215,6 +216,8 @@ public final class Skills {
             SKILLS.register(SkillNames.IMPRESSION_MANIPULATION, ImpressionManipulation::new);
     public static final DeferredHolder<Skill, MentalIntrusion> MENTAL_INTRUSION =
             SKILLS.register(SkillNames.MENTAL_INTRUSION, MentalIntrusion::new);
+    public static final DeferredHolder<Skill, PainSuppression> PAIN_SUPPRESSION =
+            SKILLS.register(SkillNames.PAIN_SUPPRESSION, PainSuppression::new);
     public static final DeferredHolder<Skill, MentalTakeover> MENTAL_TAKEOVER =
             SKILLS.register(SkillNames.MENTAL_TAKEOVER, MentalTakeover::new);
     public static final DeferredHolder<Skill, SensoryDistortion> SENSORY_DISTORTION =

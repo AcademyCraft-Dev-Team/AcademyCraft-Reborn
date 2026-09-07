@@ -29,10 +29,12 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.ability.HostileTargets;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage;
 import org.academy.internal.common.ability.meltdowner.skills.lv1.RadiationIntensify;
@@ -360,14 +362,17 @@ public final class AutoCruiseBeamCannon extends Skill {
         }
 
         static boolean isDetectable(ServerPlayer player, LivingEntity target) {
-            if (target == player || !target.isAlive() || target.isRemoved() || target instanceof Player) {
+            if (target == player || !target.isAlive() || target.isRemoved() || target.isSpectator()) {
                 return false;
             }
+            if (target instanceof Player victim && victim.isCreative()) return false;
+            if (PvpSetting.shouldPrevent(player, target)) return false;
             if (target instanceof TamableAnimal tameable && tameable.isOwnedBy(player)) {
                 return false;
             }
             if (TeamRelations.areAllied(player, target)) return false;
-            return target instanceof Enemy || target instanceof Mob mob && mob.getTarget() == player;
+            return HostileTargets.isMarked(player, target)
+                    || target instanceof Enemy || target instanceof Mob mob && mob.getTarget() == player;
         }
 
         private static LivingEntity pollTarget(

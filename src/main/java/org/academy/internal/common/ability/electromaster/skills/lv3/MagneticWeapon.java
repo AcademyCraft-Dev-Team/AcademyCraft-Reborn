@@ -30,6 +30,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
+import org.academy.api.server.ability.HostileTargets;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.render.vfx.ElectromasterWeaponVfxClient;
@@ -226,7 +227,8 @@ public class MagneticWeapon extends Skill {
             if (PvpSetting.shouldPrevent(player, entity)) return false;
             if (entity instanceof ServerPlayer target
                     && (target.isCreative() || target.isSpectator())) return false;
-            return player.getLastHurtByMob() == entity
+            return HostileTargets.isMarked(player, entity)
+                    || player.getLastHurtByMob() == entity
                     || player.getLastHurtByPlayer() == entity
                     || entity instanceof Mob mob && mob.getTarget() == player;
         }

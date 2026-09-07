@@ -33,6 +33,7 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
+import org.academy.api.server.ability.HostileTargets;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.render.vfx.ElectromasterWeaponVfx;
@@ -250,14 +251,15 @@ public class IronSandArsenal extends Skill {
                         LivingEntity.class,
                         player.getBoundingBox().inflate(proximityRadius),
                         entity -> entity != player && entity.isAlive()
-                                && entity instanceof Enemy && !TeamRelations.areAllied(player, entity)
+                                && (entity instanceof Enemy || HostileTargets.isMarked(player, entity))
+                                && !TeamRelations.areAllied(player, entity)
                 )) {
                     if (hitCooldowns.containsKey(target.getId())) continue;
-                    if (target.hurtServer(level, SkillDamageSource.of(player, skill),
+                    if (target.hurtServer(level, SkillDamageSource.of(player, skill).withoutHostilityMark(),
                             Server.calculateDamage(PROXIMITY_DAMAGE, abilityPower, multiplier))) {
                         if (milestone >= 3 && TimedSkillEffectRuntime.consume(player.getUUID(),
                                 target.getUUID(), skill, "sweep_mark", level.getGameTime()).isPresent()) {
-                            target.hurtServer(level, SkillDamageSource.of(player, skill),
+                            target.hurtServer(level, SkillDamageSource.of(player, skill).withoutHostilityMark(),
                                     Server.calculateDamage(SWEEP_DAMAGE * 0.5f, abilityPower, multiplier));
                             var destination = player.position().add(player.getLookAngle().normalize().scale(2.0));
                             var pull = destination.subtract(target.position());

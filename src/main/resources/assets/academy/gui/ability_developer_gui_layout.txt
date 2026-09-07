@@ -129,6 +129,7 @@ academy:mental_intervention=10.0,20.0
 academy:mental_intrusion=70.0,84.5
 academy:mental_stupor=223.5,15.5
 academy:mental_takeover=234.5,115.5
+academy:pain_suppression=112.0,110.0
 academy:mind_destruction=200.0,100.0
 academy:multiple_brain_domain_segmentation=77.5,65.0
 academy:output_control=121.0,29.0
