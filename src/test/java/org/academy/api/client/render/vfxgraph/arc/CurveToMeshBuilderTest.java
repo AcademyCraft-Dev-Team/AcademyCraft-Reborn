@@ -10,6 +10,30 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CurveToMeshBuilderTest {
 
     @Test
+    void streamingAppendHonorsOffsetsAndNeverJoinsAcrossMovingHoles() {
+        var arc = new ArcCurve();
+        arc.addPoint(0, 0, 0, .1f, 0, 0);
+        arc.addPoint(0, 1, 0, .1f, 0, 0);
+        arc.addPoint(5, 1, 0, .1f, 0, 1); // isolated hole sample
+        arc.addPoint(10, 1, 0, .1f, 0, 0);
+        arc.addPoint(10, 2, 0, .1f, 0, 0);
+        var vertices = java.nio.ByteBuffer.allocate(16 * 48);
+        var indices = java.nio.ByteBuffer.allocate(48 * 4);
+        assertEquals(16, CurveToMeshBuilder.append(arc, 4, 1, 1, 1, 1, 1, vertices, indices, 100));
+        assertEquals(vertices.capacity(), vertices.position());
+        assertEquals(indices.capacity(), indices.position());
+        indices.flip();
+        for (int i = 0; i < 48; i++) {
+            int index = indices.getInt();
+            assertTrue(i < 24 ? index >= 100 && index < 108 : index >= 108 && index < 116);
+        }
+        vertices.clear(); indices.clear();
+        arc = new ArcCurve();
+        assertEquals(0, CurveToMeshBuilder.append(arc, 4, 1, 1, 1, 1, 1, vertices, indices, 0));
+        assertEquals(0, vertices.position()); assertEquals(0, indices.position());
+    }
+
+    @Test
     void buildSimpleArc() {
         var arc = new ArcCurve();
         CurveGenerator.generate(arc, 0, 0, 0, 0, 1, 0, 0.01f, 12,

@@ -14,6 +14,7 @@ public final class VortexJetGeometry {
     public static Vector3f sample(float u, float time, float phase, float radiusFraction,
                                   float length, float rise, float back, float radius,
                                   float turns, float speed, Vector3f destination) {
+        if (radiusFraction == 0f) return spine(u, time, length, rise, back, radius, destination);
         float envelope = radius(u, radius) * (1f + 0.22f * (float) Math.sin(u * 23f - time * 1.2f));
         float travel = u * 18f - time * speed;
         float angle = u * turns * (float) (Math.PI * 2) - time * speed + phase;
@@ -38,6 +39,20 @@ public final class VortexJetGeometry {
                 -back * (0.7f * u + 0.3f * u * u)
                         + 0.5f * u * (float) Math.sin(u * 10f - bendPhase * 0.8f)
                         + (float) Math.sin(angle) * orbit
+                        + envelope * 0.15f * (float) Math.sin(u * 9f - time * 1.1f));
+    }
+
+    /** Phase-independent centerline; skips the orbital frame and its trigonometry. */
+    public static Vector3f spine(float u, float time, float length, float rise, float back,
+                                 float radius, Vector3f destination) {
+        float envelope = radius(u, radius) * (1f + 0.22f * (float) Math.sin(u * 23f - time * 1.2f));
+        float bendPhase = time * 0.55f;
+        float bend = 0.48f * u * (float) Math.sin(u * 13f - bendPhase);
+        return destination.set(length * u,
+                rise * (0.55f * u + 0.45f * u * u) + bend
+                        + envelope * 0.12f * (float) Math.sin(u * 11f - time * 1.4f),
+                -back * (0.7f * u + 0.3f * u * u)
+                        + 0.5f * u * (float) Math.sin(u * 10f - bendPhase * 0.8f)
                         + envelope * 0.15f * (float) Math.sin(u * 9f - time * 1.1f));
     }
 

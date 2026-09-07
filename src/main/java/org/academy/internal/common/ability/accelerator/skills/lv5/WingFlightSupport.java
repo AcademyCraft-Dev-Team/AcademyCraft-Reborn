@@ -84,8 +84,42 @@ final class WingFlightSupport {
         if (!sent) sender.send(StormWing.State.KEEP, yRot, xRot);
     }
 
+    static org.academy.api.common.ability.WingControlIntent readControl() {
+        var minecraft = Minecraft.getInstance();
+        var player = minecraft.player;
+        if (player == null) return new org.academy.api.common.ability.WingControlIntent(0, 0, 0);
+        int buttons = 0;
+        if (minecraft.gui.screen() == null) {
+            if (InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_W)) buttons |= 1;
+            if (InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_S)) buttons |= 2;
+            if (InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_A)) buttons |= 4;
+            if (InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_D)) buttons |= 8;
+            if (InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_SPACE)) buttons |= 16;
+        }
+        return new org.academy.api.common.ability.WingControlIntent(buttons, player.getYRot(), player.getXRot());
+    }
+
+    static void applyHeldControl(ServerPlayer player, org.academy.api.common.ability.WingControlIntent input,
+                                 Map<UUID, Long> lastBoostTick) {
+        if (input.has(16)) applyControl(player, StormWing.State.BOOST, input.yaw(), input.pitch(), lastBoostTick, false);
+        else if (input.buttons() == 0) applyControl(player, StormWing.State.KEEP, input.yaw(), input.pitch(), lastBoostTick, false);
+        else {
+            // Preserve the former forward/back then strafe ordering and per-direction movement amounts.
+            if (input.has(1)) applyControl(player, StormWing.State.FRONT, input.yaw(), input.pitch(), lastBoostTick, false);
+            if (input.has(2)) applyControl(player, StormWing.State.BACK, input.yaw(), input.pitch(), lastBoostTick, false);
+            if (input.has(4)) applyControl(player, StormWing.State.LEFT, input.yaw(), input.pitch(), lastBoostTick, false);
+            if (input.has(8)) applyControl(player, StormWing.State.RIGHT, input.yaw(), input.pitch(), lastBoostTick, false);
+        }
+        player.connection.send(new ClientboundSetEntityMotionPacket(player));
+    }
+
     static void applyControl(ServerPlayer player, StormWing.State state, float yRot, float xRot,
                              Map<UUID, Long> lastBoostTick) {
+        applyControl(player, state, yRot, xRot, lastBoostTick, true);
+    }
+
+    private static void applyControl(ServerPlayer player, StormWing.State state, float yRot, float xRot,
+                                     Map<UUID, Long> lastBoostTick, boolean sendVelocity) {
         if (state == StormWing.State.BOOST) {
             lastBoostTick.put(player.getUUID(), player.level().getGameTime());
         }
@@ -128,7 +162,7 @@ final class WingFlightSupport {
                 }
             }
         });
-        player.connection.send(new ClientboundSetEntityMotionPacket(player));
+        if (sendVelocity) player.connection.send(new ClientboundSetEntityMotionPacket(player));
     }
 
     static boolean tick(ServerPlayer player, Skill skill, AttachmentType<Boolean> attachment,

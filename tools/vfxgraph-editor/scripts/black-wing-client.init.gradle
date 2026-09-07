@@ -1,0 +1,11 @@
+allprojects {
+    afterEvaluate {
+        neoForge.runs.named('clientDev') {
+            sourceSet.set(sourceSets.editor)
+            gameDirectory.set(file('run/black-wing-client'))
+            systemProperty 'academy.blackWingSmoke', 'true'
+            systemProperty 'academy.blackWingSmokeOutput', file('build/black_wing_analysis/client').absolutePath
+            programArguments.addAll('--width', '1280', '--height', '720')
+        }
+    }
+}

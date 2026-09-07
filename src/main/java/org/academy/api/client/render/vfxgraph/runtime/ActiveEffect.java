@@ -49,6 +49,7 @@ public final class ActiveEffect {
     private float minimumFarPlane;
     private long expiresAtNanos = Long.MAX_VALUE;
     private boolean alwaysVisible;
+    private boolean frameVisible = true;
     private @org.jspecify.annotations.Nullable Entity followEntity;
     private boolean stopped;
 
@@ -136,6 +137,11 @@ public final class ActiveEffect {
     public void setAlwaysVisible(boolean alwaysVisible) {
         this.alwaysVisible = alwaysVisible;
     }
+
+    /** External analytic effects may cull before simulation without freezing their presentation clock. */
+    public void setFrameVisible(boolean visible) { frameVisible = visible; }
+    public boolean frameVisible() { return frameVisible; }
+    public boolean isExpired() { return stopped || System.nanoTime() >= expiresAtNanos; }
 
     public boolean alwaysVisible() {
         return alwaysVisible;
