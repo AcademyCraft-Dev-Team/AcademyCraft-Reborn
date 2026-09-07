@@ -137,6 +137,8 @@ public final class AcademyCraftClient {
         InstantTeleportSyncPacket.initClient();
         TemporalImmunitySyncPacket.initClient();
         SpawnVfxGraphPacket.initClient();
+        org.academy.internal.common.network.SkillVfxPacket.initClient();
+        org.academy.internal.client.render.vfx.ShockwaveVfx.register();
         ProficiencyPolicy.initClient();
         PvpSetting.initClient();
         ProficiencySkillSettingsClient.init();

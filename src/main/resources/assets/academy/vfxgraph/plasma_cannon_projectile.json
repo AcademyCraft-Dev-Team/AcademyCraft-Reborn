@@ -139,12 +139,12 @@
       "x": 1500.0,
       "y": 0.0,
       "blocks": [
-        { "id": "out_core", "type": "vfx.block.output_quad_glow", "properties": { "vertex": "academy:core/vfxgraph_plasma_sphere", "shader": "academy:core/vfxgraph_plasma_liquid", "blend": "glow", "layer": "plasma_core" } },
-        { "id": "out_halo", "type": "vfx.block.output_quad_glow", "properties": { "vertex": "academy:core/vfxgraph_plasma_halo", "shader": "academy:core/vfxgraph_plasma_halo", "blend": "glow", "layer": "plasma_halo" } },
+        { "id": "out_core", "type": "vfx.block.output_quad_glow", "properties": { "bounds_scale": "2.0", "vertex": "academy:core/vfxgraph_plasma_sphere", "shader": "academy:core/vfxgraph_plasma_liquid", "blend": "glow", "layer": "plasma_core" } },
+        { "id": "out_halo", "type": "vfx.block.output_quad_glow", "properties": { "bounds_scale": "2.0", "vertex": "academy:core/vfxgraph_plasma_halo", "shader": "academy:core/vfxgraph_plasma_halo", "blend": "glow", "layer": "plasma_halo" } },
         { "id": "out_surface_lightning", "type": "vfx.block.output_arc", "properties": { "vertex": "academy:core/vfxgraph_arc", "shader": "academy:core/vfxgraph_arc", "blend": "glow", "sparks": "0", "emission": "1.55", "noise_strength": "0.06", "drift_speed": "2.4", "lifetime": "0.07", "overall_scale": "1", "branch_depth": "0" } },
         { "id": "out_white_trails", "type": "vfx.block.output_ribbon", "properties": { "vertex": "academy:core/vfxgraph_simple", "shader": "academy:core/vfxgraph_simple", "blend": "glow", "layer": "trail_white" } },
         { "id": "out_plasma_trails", "type": "vfx.block.output_ribbon", "properties": { "vertex": "academy:core/vfxgraph_simple", "shader": "academy:core/vfxgraph_simple", "blend": "glow", "layer": "trail_plasma" } },
-        { "id": "out_smoke", "type": "vfx.block.output_quad", "properties": { "vertex": "academy:core/vfxgraph_plasma_smoke", "shader": "academy:core/vfxgraph_plasma_smoke", "blend": "translucent", "layer": "smoke" } }
+        { "id": "out_smoke", "type": "vfx.block.output_quad", "properties": { "bounds_scale": "2.0", "vertex": "academy:core/vfxgraph_plasma_smoke", "shader": "academy:core/vfxgraph_plasma_smoke", "blend": "translucent", "layer": "smoke" } }
       ]
     }
   ],

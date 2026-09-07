@@ -131,118 +131,84 @@ public final class VfxGraphManager {
     /**
      * 逐 effect tick。移除已停止或跟随实体已移除的效果。
      */
+    /** Explicit simulation for tools/tests. In-game frame simulation is owned by renderFrame. */
     public void tick(float dt) {
-        if (!initialized) {
-            return;
-        }
+        if (!initialized) return;
         var iterator = effects.iterator();
         while (iterator.hasNext()) {
             var effect = iterator.next();
-            // 粒子上限（M15-06）：达到上限时冻结该帧模拟（不再产新粒），已存在粒子保留渲染（Bug 修复）
-            if (!budget.canSpawnMore(effect.effect().buffer().count())) {
-                continue;
-            }
-            if (effect.tick(dt)) {
-                iterator.remove();
-            }
+            if (effect.updateState()) { iterator.remove(); continue; }
+            if (budget.canSpawnMore(effect.effect().buffer().count())) effect.simulate(dt);
         }
     }
 
-    /**
-     * 渲染所有可见效果到目标纹理（不清屏，叠加世界变换）。每帧以真实帧时间步进模拟（平滑，不锁 20Hz tick）；游戏暂停时冻结。
-     * glow 拓扑（{@code BILLBOARD_GLOW}）效果在此渲出实心 additive 主体，另由 {@link #renderGlowFrame} 渲进 bloom 输入形成光晕。
-     */
+    public record FrameStatistics(int active, int visible, int culled, int simulated) {}
+    private FrameStatistics frameStatistics = new FrameStatistics(0, 0, 0, 0);
+    private final java.util.Map<Float, GraphCamera> frameCameras = new java.util.HashMap<>();
+    public FrameStatistics frameStatistics() { return frameStatistics; }
+
+    /** Cull before simulation, vertex building, staging and draw submission. */
     public void renderFrame(GpuTextureView target, @Nullable GpuTextureView depth, GraphCamera camera) {
-        if (!initialized || effects.isEmpty()) {
-            return;
-        }
+        if (!initialized) return;
         lastCamera = camera;
-        var paused = Minecraft.getInstance().isPaused();
-        var now = System.nanoTime();
-        var dt = paused ? 0f : lastRenderNanos <= 0 ? 1f / 60f : Math.min((now - lastRenderNanos) / 1e9f, 0.1f);
+        frameCameras.clear();
+        boolean paused = Minecraft.getInstance().isPaused();
+        long now = System.nanoTime();
+        float dt = paused ? 0f : lastRenderNanos <= 0 ? 1f / 60f
+                : Math.min((now - lastRenderNanos) / 1e9f, 0.1f);
         lastRenderNanos = now;
+        int visible = 0, culled = 0, simulated = 0;
         var iterator = effects.iterator();
         while (iterator.hasNext()) {
             var effect = iterator.next();
-            if (effect.isExpired()) { effect.stop(); iterator.remove(); continue; }
-            if (!effect.frameVisible()) continue;
-            if (!budget.canSpawnMore(effect.effect().buffer().count())) {
-                continue;
+            effect.setRenderVisible(false);
+            if (effect.updateState()) { iterator.remove(); continue; }
+            var effectCamera = frameCameras.computeIfAbsent(effect.minimumFarPlane(),
+                    far -> camera.withMinimumFarPlane(far));
+            float radius = effect.cullingRadius(budget.effectRadius());
+            boolean draw = effect.frameVisible() && (effect.alwaysVisible()
+                    || (budget.shouldRender(effectCamera.position(), effect.cullingCenter(), radius,
+                            effect.renderDistance(budget.maxRenderDistance()))
+                    && budget.sphereInFrustum(effectCamera.projection(), effectCamera.viewRotation(),
+                            effectCamera.position(), effect.cullingCenter(), radius)));
+            effect.setRenderVisible(draw);
+            // Analytic callers using frameVisible manage their own presentation clock.
+            if (!paused && effect.frameVisible() && budget.canSpawnMore(effect.effect().buffer().count())) {
+                float step = effect.simulationStep(dt, draw);
+                if (step > 0f) { effect.simulate(step); simulated++; }
             }
-            if (!paused) {
-                if (effect.tick(dt)) {
-                    iterator.remove();
-                    continue;
-                }
-            }
-            var effectCamera = effect.cameraForRendering(camera);
-            if (!effect.alwaysVisible()) {
-                if (!budget.shouldRender(effectCamera.position(), effect.position())) {
-                    continue;
-                }
-                if (!budget.sphereInFrustum(effectCamera.projection(), effectCamera.viewRotation(),
-                        effectCamera.position(), effect.position())) {
-                    continue;
-                }
-            }
+            if (!draw) { culled++; continue; }
+            visible++;
             var renderer = rendererPool.computeIfAbsent(effect.specs(), k -> new VfxGraphRenderer());
             effect.render(target, depth, effectCamera, renderer, false, false);
         }
+        frameStatistics = new FrameStatistics(effects.size(), visible, culled, simulated);
     }
 
-    /**
-     * 把 glow 拓扑效果渲进 bloom 输入（additive，不清屏，只画 GLOW 输出规格）。由 {@code GlowEffect.process()} 调用。
-     */
     public void renderGlowFrame(GpuTextureView color, @Nullable GpuTextureView depth) {
-        if (!initialized || effects.isEmpty()) {
-            return;
-        }
-        var camera = lastCamera;
-        if (camera == null) {
-            return;
-        }
+        if (!initialized || lastCamera == null) return;
         for (var effect : effects) {
-            if (!effect.frameVisible() || effect.isExpired()) continue;
-            if (effect.specs().stream().noneMatch(RenderSpec::feedsBloom)) {
-                continue;
-            }
-            if (!budget.canSpawnMore(effect.effect().buffer().count())) {
-                continue;
-            }
-            var effectCamera = effect.cameraForRendering(camera);
-            if (!effect.alwaysVisible()) {
-                if (!budget.shouldRender(effectCamera.position(), effect.position())) {
-                    continue;
-                }
-                if (!budget.sphereInFrustum(effectCamera.projection(), effectCamera.viewRotation(),
-                        effectCamera.position(), effect.position())) {
-                    continue;
-                }
-            }
+            if (!effect.renderVisible() || effect.isExpired() || !feedsBloom(effect)) continue;
+            var camera = frameCameras.get(effect.minimumFarPlane());
+            if (camera == null) continue;
             var renderer = rendererPool.computeIfAbsent(effect.specs(), k -> new VfxGraphRenderer());
-            effect.render(color, depth, effectCamera, renderer, false, true);
+            effect.render(color, depth, camera, renderer, false, true);
         }
     }
 
-    /**
-     * 是否存在活的 glow 拓扑效果（供 {@code GlowEffect.process()} 决定是否跑 bloom 帧）。
-     */
-    public boolean hasGlowData() {
-        if (!initialized) {
-            return false;
-        }
-        for (var effect : effects) {
-            if (!effect.frameVisible() || effect.isExpired()) continue;
-            if (effect.specs().stream().anyMatch(RenderSpec::feedsBloom)) {
-                return true;
-            }
-        }
+    private static boolean feedsBloom(ActiveEffect effect) {
+        for (var spec : effect.specs()) if (spec.feedsBloom()) return true;
         return false;
     }
 
-    /**
-     * 按图资产 id spawn 效果到世界坐标。键统一去掉 .json，兼容带/不带扩展名的写法。
-     */
+    /** Offscreen glow no longer triggers a bloom pass by itself. */
+    public boolean hasGlowData() {
+        if (!initialized) return false;
+        for (var effect : effects) {
+            if (effect.renderVisible() && !effect.isExpired() && feedsBloom(effect)) return true;
+        }
+        return false;
+    }
     public ActiveEffect spawn(Identifier assetId, Vector3f position) {
         var key = normalizedKey(assetId);
         var container = containerAssets.get(key);

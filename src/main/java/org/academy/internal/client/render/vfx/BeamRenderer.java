@@ -43,6 +43,7 @@ public final class BeamRenderer implements VfxRenderer<BeamData> {
     private @Nullable GpuBuffer boxInstanceBuffer;
     private @Nullable ByteBuffer instanceData;
     private int capacityInstances;
+    private final Matrix4f instanceTransform = new Matrix4f();
 
     public BeamRenderer(boolean glow) {
         this.glow = glow;
@@ -55,12 +56,6 @@ public final class BeamRenderer implements VfxRenderer<BeamData> {
             ballFactor = 0.85f;
             boxFactorXZ = 0.75f;
         }
-    }
-
-    private static Matrix4f orientation(BeamData beam) {
-        return new Matrix4f()
-                .rotateY((90 - beam.yRot()) * Mth.DEG_TO_RAD)
-                .rotateZ((90 + beam.xRot()) * Mth.DEG_TO_RAD);
     }
 
     @Override
@@ -105,7 +100,7 @@ public final class BeamRenderer implements VfxRenderer<BeamData> {
             grow(instanceCount);
         }
         if (instanceData == null || instanceData.capacity() < neededBytes) {
-            instanceData = BufferUtils.createByteBuffer(Math.toIntExact(neededBytes));
+            instanceData = BufferUtils.createByteBuffer(Math.toIntExact((long) capacityInstances * INSTANCE_STRIDE));
         }
 
         var cameraPos = ctx.cameraPos();
@@ -133,11 +128,11 @@ public final class BeamRenderer implements VfxRenderer<BeamData> {
         instanceData.clear();
         var builder = Std140Builder.intoBuffer(instanceData);
         for (var beam : data) {
-            var relPos = new Vector3f(beam.pos()).sub(cameraPos);
             var ballRadius = beam.progress() * 0.185f * beam.ballScale();
-            builder.putMat4f(new Matrix4f()
-                    .translate(relPos)
-                    .mul(orientation(beam))
+            builder.putMat4f(instanceTransform.identity()
+                    .translate(beam.pos().x - cameraPos.x, beam.pos().y - cameraPos.y, beam.pos().z - cameraPos.z)
+                    .rotateY((90 - beam.yRot()) * Mth.DEG_TO_RAD)
+                    .rotateZ((90 + beam.xRot()) * Mth.DEG_TO_RAD)
                     .scale(ballRadius * ballFactor));
         }
         instanceData.flip();
@@ -147,12 +142,12 @@ public final class BeamRenderer implements VfxRenderer<BeamData> {
         instanceData.clear();
         var builder = Std140Builder.intoBuffer(instanceData);
         for (var beam : data) {
-            var relPos = new Vector3f(beam.pos()).sub(cameraPos);
             var rayVisualProgress = beam.isCharging() ? 0.0f : beam.progress();
             var width = rayVisualProgress * 0.25f * boxFactorXZ * beam.widthScale();
-            builder.putMat4f(new Matrix4f()
-                    .translate(relPos)
-                    .mul(orientation(beam))
+            builder.putMat4f(instanceTransform.identity()
+                    .translate(beam.pos().x - cameraPos.x, beam.pos().y - cameraPos.y, beam.pos().z - cameraPos.z)
+                    .rotateY((90 - beam.yRot()) * Mth.DEG_TO_RAD)
+                    .rotateZ((90 + beam.xRot()) * Mth.DEG_TO_RAD)
                     .scale(width, beam.length(), width));
         }
         instanceData.flip();

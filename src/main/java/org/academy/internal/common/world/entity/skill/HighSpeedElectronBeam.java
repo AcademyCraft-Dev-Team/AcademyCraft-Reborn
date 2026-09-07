@@ -412,6 +412,30 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         return owner;
     }
 
+    /** This entity remains authoritative on the server; visual snapshots own client playback. */
+    @Override
+    public boolean broadcastToPlayer(ServerPlayer player) { return false; }
+
+    public void applyVisualSnapshot(org.academy.api.common.vfx.SkillVfxState.Beam state, float elapsed) {
+        if (!level().isClientSide()) throw new IllegalStateException("Visual snapshot on server");
+        setPos(state.position());
+        setXRot(state.xRot());
+        setYRot(state.yRot());
+        setBeamLength(state.length());
+        setBeamScale(state.scale());
+        setVisualSideOffset(state.sideOffset());
+        setAttackDelayTicks(state.delayTicks());
+        setContinuous(state.continuous());
+        setHeldCharge(state.held());
+        entityData.set(RAY_FIRED, state.fired());
+        fired = state.fired();
+        int advance = (int) (elapsed * state.tickRate());
+        currentChargerTicks = Math.min(state.delayTicks(), state.chargeTicks() + advance);
+        currentRayLifeTicks = Math.max(0, state.remainingTicks() - advance);
+        if (state.reflected()) setReflection(state.reflectionDistance(), state.returnLength(), state.returnDirection());
+        else clearReflection();
+    }
+
     public boolean isCharging() {
         return currentChargerTicks < getAttackDelayTicks();
     }

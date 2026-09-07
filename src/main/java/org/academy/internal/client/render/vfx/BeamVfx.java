@@ -21,6 +21,7 @@ public final class BeamVfx implements Vfx {
     }
 
     private static void pushSegment(
+            VfxFrameContext ctx,
             VfxSink sink,
             Vec3 start,
             Vec3 end,
@@ -29,6 +30,7 @@ public final class BeamVfx implements Vfx {
             float widthScale,
             float ballScale
     ) {
+        if (!VfxVisibility.segment(ctx.camera(), start, end, Math.max(2f, widthScale * 0.5f))) return;
         var direction = end.subtract(start);
         var length = direction.length();
         var yRot = 0.0f;
@@ -91,7 +93,7 @@ public final class BeamVfx implements Vfx {
         var visualEnd = origin.add(logicalDirection.scale(originalLength));
         var widthScale = Float.isFinite(beam.getBeamScale()) ? Math.max(0.0f, beam.getBeamScale()) : 0.0f;
         if (!beam.isReflectionActive()) {
-            pushSegment(sink, visualStart, visualEnd, progress, isCharging, widthScale, 1.0f);
+            pushSegment(ctx, sink, visualStart, visualEnd, progress, isCharging, widthScale, 1.0f);
             return;
         }
 
@@ -102,8 +104,8 @@ public final class BeamVfx implements Vfx {
                 beam.getReflectionReturnDirection(),
                 beam.getReflectionReturnLength()
         );
-        pushSegment(sink, visualStart, reflectionPoint, progress, isCharging, widthScale, 1.0f);
-        pushSegment(sink, reflectionPoint, returnEnd, progress, false, widthScale * 0.9f, 0.8f);
+        pushSegment(ctx, sink, visualStart, reflectionPoint, progress, isCharging, widthScale, 1.0f);
+        pushSegment(ctx, sink, reflectionPoint, returnEnd, progress, false, widthScale * 0.9f, 0.8f);
     }
 
     @Override

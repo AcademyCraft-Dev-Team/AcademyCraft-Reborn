@@ -96,6 +96,11 @@ public final class AcademyCraftCommand {
                         .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(Commands.literal("god")
                                 .executes(AcademyCraftCommand::toggleSkillDebugMode))
+                        .then(Commands.literal("vfxstats").executes(ctx -> {
+                            var stats = org.academy.internal.server.vfx.SkillVfxRuntime.statistics();
+                            ctx.getSource().sendSuccess(() -> Component.literal(stats.toString()), false);
+                            return 1;
+                        }))
                         .then(CPDebugCommands.register())
                         .then(DarkmatterDebugCommands.register())
                         .then(ControlDebugCommands.register())
