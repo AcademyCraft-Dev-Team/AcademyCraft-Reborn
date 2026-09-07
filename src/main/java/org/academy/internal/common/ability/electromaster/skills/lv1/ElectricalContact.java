@@ -226,7 +226,7 @@ public class ElectricalContact extends Skill {
             if (chained != null) {
                 var percentage = DamageComposition.maximumHealthPart(target, event.getSource());
                 DamageComposition.hurt(
-                        chained, level, SkillDamageSource.of(attacker, skillSource.getSkill(), DamageTypes.ELECTRO_DAMAGE)
+                        chained, level, SkillDamageSource.from(skillSource, skillSource.getSkill())
                                 .withElectricalChargePoints(1),
                         event.getAmount() * 0.5f, percentage * 0.5f);
             }

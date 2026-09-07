@@ -10,6 +10,7 @@ import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.server.ability.HostileTargets;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 import org.academy.internal.common.world.damagesource.PvpSetting;
@@ -60,7 +61,8 @@ public final class DarkmatterTargeting {
     public static boolean isEnemyTarget(ServerPlayer owner, LivingEntity target) {
         if (!isAttackableBy(owner, target)) return false;
         if (target instanceof Player) return true;
-        return target instanceof Enemy
+        return HostileTargets.isMarked(owner, target)
+                || target instanceof Enemy
                 || target instanceof Mob mob && mob.getTarget() == owner;
     }
 

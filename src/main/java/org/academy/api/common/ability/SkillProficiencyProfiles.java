@@ -34,9 +34,10 @@ public final class SkillProficiencyProfiles {
             "darkmatter_repair", "darkmatter_creation", "darkmatter_six_wings",
             "mental_intervention", "target_misidentification", "mental_stupor", "impression_manipulation",
             "mental_intrusion", "mental_takeover", "sensory_distortion", "command_positioning",
-            "mind_destruction", "wide_area_interference"
+            "mind_destruction", "wide_area_interference", "pain_suppression"
     );
     private static final Map<String, String> CUSTOM_PROFILE_REASONS = Map.ofEntries(
+            Map.entry("pain_suppression", "fixed resistance, maintenance and final-damage cost have no proficiency scaling"),
             Map.entry("airflow_jet", "release-tier damage, movement, and duration milestones are resolved together"),
             Map.entry("laminar_buffer", "sharing, hover duration, and platform lifetime milestones are resolved together"),
             Map.entry("flow_sense", "range, cadence and synchronization budgets are resolved together"),

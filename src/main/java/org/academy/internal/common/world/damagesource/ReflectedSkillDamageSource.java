@@ -62,6 +62,11 @@ public final class ReflectedSkillDamageSource extends SkillDamageSource
         return VectorRedirectedDamageSourceInfo.isRedirected(source);
     }
 
+    @Override
+    public boolean canMarkHostility() {
+        return false;
+    }
+
     public int reflectionDepth() {
         return reflectionDepth;
     }

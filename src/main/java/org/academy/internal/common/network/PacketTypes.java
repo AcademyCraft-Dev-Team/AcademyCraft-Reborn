@@ -65,6 +65,7 @@ import org.academy.internal.common.ability.electromaster.skills.lv2.ThunderLance
 import org.academy.internal.common.ability.electromaster.skills.lv3.*;
 import org.academy.internal.common.ability.electromaster.skills.lv4.BioelectricOperation;
 import org.academy.internal.common.ability.electromaster.skills.lv4.ElectromagneticShield;
+import org.academy.internal.common.ability.mentalout.skills.lv4.PainSuppression;
 import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
 import org.academy.internal.common.ability.electromaster.skills.lv4.Railgun;
 import org.academy.internal.common.ability.electromaster.skills.lv5.BallLightning;
@@ -338,6 +339,10 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MineDetect.TogglePacket>>
             MINE_DETECT_TOGGLE = PACKET_TYPES.register("mine_detect_toggle",
             () -> new PacketType<>(MineDetect.TogglePacket.class, MineDetect.TogglePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PainSuppression.TogglePacket>>
+            PAIN_SUPPRESSION_TOGGLE = PACKET_TYPES.register("pain_suppression_toggle",
+            () -> new PacketType<>(PainSuppression.TogglePacket.class, PainSuppression.TogglePacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ElectromagneticShield.TogglePacket>>
             ELECTROMAGNETIC_SHIELD_TOGGLE = PACKET_TYPES.register("electromagnetic_shield_toggle",

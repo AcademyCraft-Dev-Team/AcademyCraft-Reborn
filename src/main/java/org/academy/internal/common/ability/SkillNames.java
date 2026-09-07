@@ -94,6 +94,7 @@ public final class SkillNames {
     public static final String DISINTEGRATE = "disintegrate";
     public static final String SPACIAL_EXCISION = "spacial_excision";
     public static final String MENTAL_INTRUSION = "mental_intrusion";
+    public static final String PAIN_SUPPRESSION = "pain_suppression";
     public static final String MENTAL_TAKEOVER = "mental_takeover";
     public static final String MENTAL_INTERVENTION = "mental_intervention";
     public static final String SENSORY_DISTORTION = "sensory_distortion";

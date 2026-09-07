@@ -25,6 +25,7 @@ import org.academy.api.common.ability.program.ProgramValueType;
 import org.academy.api.common.ability.program.ProgramValueTypes;
 import org.academy.api.common.ability.program.ProgramVector;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
+import org.academy.api.server.ability.HostileTargets;
 import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import org.jspecify.annotations.Nullable;
 
@@ -691,7 +692,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
     ) {
         return entity != target
                 && !DarkmatterTargeting.areAllied(entity, target)
-                && (entity == damageAttacker
+                && (HostileTargets.isMarked(target, entity) || entity == damageAttacker
                 || entity instanceof Mob mob && (mob.getTarget() == target || mob.canAttack(target))
                 || entity.getLastHurtByMob() == target);
     }
