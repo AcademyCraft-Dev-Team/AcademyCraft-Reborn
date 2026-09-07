@@ -543,7 +543,7 @@ public final class PacketTypes {
             () -> new PacketType<>(BlackWing.TogglePacket.class, BlackWing.TogglePacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, BlackWing.ControlPacket>>
-            BLACK_WING_CONTROL = PACKET_TYPES.register("black_wing_control",
+            BLACK_WING_CONTROL = PACKET_TYPES.register("black_wing_control_v2",
             () -> new PacketType<>(BlackWing.ControlPacket.class, BlackWing.ControlPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, WhiteWing.TogglePacket>>
@@ -575,8 +575,13 @@ public final class PacketTypes {
             () -> new PacketType<>(AdvancedWingSweepPacket.class, AdvancedWingSweepPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, BlackWingAttackPacket>>
-            BLACK_WING_ATTACK = PACKET_TYPES.register("black_wing_attack",
+            BLACK_WING_ATTACK = PACKET_TYPES.register("black_wing_attack_v2",
             () -> new PacketType<>(BlackWingAttackPacket.class, BlackWingAttackPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, org.academy.internal.common.ability.accelerator.skills.lv5.BlackWingStatePacket>>
+            BLACK_WING_STATE = PACKET_TYPES.register("black_wing_state_v1",
+            () -> new PacketType<>(org.academy.internal.common.ability.accelerator.skills.lv5.BlackWingStatePacket.class,
+                    org.academy.internal.common.ability.accelerator.skills.lv5.BlackWingStatePacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AdvancedWingTransitionPacket>>
             ADVANCED_WING_TRANSITION = PACKET_TYPES.register("advanced_wing_transition",

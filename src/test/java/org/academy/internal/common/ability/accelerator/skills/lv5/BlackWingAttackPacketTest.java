@@ -25,12 +25,15 @@ class BlackWingAttackPacketTest {
                     ? List.of(new Vec3(-23.25, 87.5, 15.75), new Vec3(-23.25, 77.5, -15.75),
                             new Vec3(23.25, 80.5, 15.75), new Vec3(23.25, 81.5, -15.75))
                     : List.of(new Vec3(-23.25, 87.5, 15.75));
-            var packet = new BlackWingAttackPacket(345, pattern, 123456L, targets);
+            var packet = new BlackWingAttackPacket(345, pattern, 123456L, targets, 77, i + 1, .25f);
             var buffer = Unpooled.buffer();
             try {
                 BlackWingAttackPacket.CODEC.encode(buffer, packet);
                 var decoded = BlackWingAttackPacket.CODEC.decode(buffer);
                 assertEquals(packet.entityId(), decoded.entityId());
+                assertEquals(77, decoded.epoch());
+                assertEquals(i + 1, decoded.sequence());
+                assertEquals(.25f, decoded.initialProgress());
                 assertEquals(pattern, decoded.pattern());
                 assertEquals(packet.startTick(), decoded.startTick());
                 assertEquals(packet.targets(), decoded.targets());

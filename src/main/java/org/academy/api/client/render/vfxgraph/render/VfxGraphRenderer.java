@@ -172,6 +172,8 @@ public final class VfxGraphRenderer {
      */
     private GpuBuffer arcTubeVertexBuffer;
     private GpuBuffer arcTubeIndexBuffer;
+    private ByteBuffer arcVertexStaging;
+    private ByteBuffer arcIndexStaging;
     private int arcTubeVertexCapacity;
     private int arcTubeIndexCapacity;
     /**
@@ -482,56 +484,29 @@ public final class VfxGraphRenderer {
         var device = RenderSystem.getDevice();
         var arcRender = spec.arc();
 
-        // 收集所有弧线的管网格数据
-        var totalVerts = 0;
-        var totalIndices = 0;
-        var meshDataList = new ArrayList<CurveToMeshBuilder.MeshData>();
-
-        for (var a = 0; a < arcBuffer.count(); a++) {
-            var arc = arcBuffer.arc(a);
-            var segRes = Math.max(3, Math.min(16, arcRender.segments()));
-            // M30 age 亮度闪烁（Blender 材质 Emission）：表面弧 Light = FloatCurve.004(age)×亮度+0.33×亮度；
-            // 接触弧 TLight = FloatCurve.009(生命系数)。烘焙进顶点色（UBO emission 保持图数据驱动）。
-            var light = arcLight(arc);
-            var meshData = CurveToMeshBuilder.build(
-                    arc, segRes,
-                    arc.r() * light[0], arc.g() * light[0], arc.b() * light[0], arc.a() * light[1],
-                    arcRender.branchBrightnessScale());
-            if (meshData.vertexCount() > 0) {
-                meshDataList.add(meshData);
-                totalVerts += meshData.vertexCount();
-                totalIndices += meshData.indexCount();
-            }
+        int totalVerts = 0, totalIndices = 0;
+        int segRes = Math.clamp(arcRender.segments(), 3, 16);
+        for (int a = 0; a < arcBuffer.count(); a++) {
+            var size = CurveToMeshBuilder.measure(arcBuffer.arc(a), segRes);
+            totalVerts += size.vertices();
+            totalIndices += size.indices();
         }
-
         if (totalVerts == 0) return;
-
-        // 确保缓冲区足够大
-        var vertexBytes = (long) totalVerts * ARC_TUBE_FORMAT.getVertexSize();
-        var indexBytes = (long) totalIndices * 4;
-        if (vertexBytes > arcTubeVertexBuffer.size()) {
-            growArc2TubeBuffer(totalVerts);
-        }
-        if (indexBytes > arcTubeIndexBuffer.size()) {
-            growArc2TubeIndexBuffer(totalIndices);
-        }
-
-        // 合并所有网格数据到单个顶点/索引缓冲
-        var vertexData = BufferUtils.createByteBuffer(Math.toIntExact(vertexBytes));
-        var indexData = BufferUtils.createByteBuffer(Math.toIntExact(indexBytes));
-        var vertexOffset = 0;
-        var indexOffset = 0;
-        for (var meshData : meshDataList) {
-            // 顶点数据：直接拷贝（已经是 Position+Normal+UV+Color 格式）
-            var srcVert = meshData.vertexBuffer().duplicate();
-            vertexData.put(srcVert);
-            // 索引数据：偏移后拷贝
-            var srcIndices = meshData.indices();
-            for (var i = 0; i < srcIndices.length; i++) {
-                indexData.putInt(srcIndices[i] + vertexOffset);
-            }
-            vertexOffset += meshData.vertexCount();
-            indexOffset += meshData.indexCount();
+        long vertexBytes = (long) totalVerts * ARC_TUBE_FORMAT.getVertexSize();
+        long indexBytes = (long) totalIndices * 4;
+        if (vertexBytes > arcTubeVertexBuffer.size()) growArc2TubeBuffer(totalVerts);
+        if (indexBytes > arcTubeIndexBuffer.size()) growArc2TubeIndexBuffer(totalIndices);
+        arcVertexStaging = ensureArcStaging(arcVertexStaging, Math.toIntExact(vertexBytes));
+        arcIndexStaging = ensureArcStaging(arcIndexStaging, Math.toIntExact(indexBytes));
+        var vertexData = arcVertexStaging;
+        var indexData = arcIndexStaging;
+        int vertexOffset = 0;
+        for (int a = 0; a < arcBuffer.count(); a++) {
+            var arc = arcBuffer.arc(a);
+            var light = arcLight(arc);
+            vertexOffset += CurveToMeshBuilder.append(arc, segRes,
+                    arc.r() * light[0], arc.g() * light[0], arc.b() * light[0], arc.a() * light[1],
+                    arcRender.branchBrightnessScale(), vertexData, indexData, vertexOffset);
         }
         vertexData.flip();
         indexData.flip();
@@ -559,6 +534,17 @@ public final class VfxGraphRenderer {
         pass.setVertexBuffer(1, null);
         pass.setIndexBuffer(arcTubeIndexBuffer, IndexType.INT);
         pass.drawIndexed(totalIndices, 1, 0, 0, 0);
+    }
+
+    private static ByteBuffer ensureArcStaging(ByteBuffer buffer, int needed) {
+        if (buffer == null || buffer.capacity() < needed) {
+            int capacity = Math.max(needed, buffer == null ? 65536 : Math.multiplyExact(buffer.capacity(), 2));
+            var replacement = org.lwjgl.system.MemoryUtil.memAlloc(capacity);
+            if (buffer != null) org.lwjgl.system.MemoryUtil.memFree(buffer);
+            buffer = replacement;
+        }
+        buffer.clear();
+        return buffer;
     }
 
     /**
@@ -875,6 +861,8 @@ public final class VfxGraphRenderer {
         sceneDepth.close();
         instanceBuffer.close();
         lineBuffer.close();
+        if (arcVertexStaging != null) { org.lwjgl.system.MemoryUtil.memFree(arcVertexStaging); arcVertexStaging = null; }
+        if (arcIndexStaging != null) { org.lwjgl.system.MemoryUtil.memFree(arcIndexStaging); arcIndexStaging = null; }
         arcTubeVertexBuffer.close();
         arcTubeIndexBuffer.close();
         arcLightningUbo.close();

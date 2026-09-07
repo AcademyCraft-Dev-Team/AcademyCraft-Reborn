@@ -1,0 +1,160 @@
+{
+  "notes": "Same JVM and graph; legacy sources from HEAD. Includes sampling, tube building and merge; excludes world transform, GPU and networking. 40 warmup + 80 measured frames per case. Heap allocation excludes direct-memory bytes. Eight actors use one full hero plus budgeted remote actors.",
+  "max_sampler_position_error_m": 0.0,
+  "cases": [
+    {
+      "legacy": true,
+      "players": 1,
+      "mode": 0,
+      "tiers": [
+        0
+      ],
+      "sample_median_ms": 0.634,
+      "mesh_merge_median_ms": 1.3927,
+      "total_median_ms": 2.1774,
+      "total_p95_ms": 3.5484,
+      "heap_alloc_median_bytes": 937528.0,
+      "max_vertices": 32608,
+      "max_upload_bytes": 2316672
+    },
+    {
+      "legacy": false,
+      "players": 1,
+      "mode": 0,
+      "tiers": [
+        0
+      ],
+      "sample_median_ms": 0.5857,
+      "mesh_merge_median_ms": 0.3261,
+      "total_median_ms": 0.917,
+      "total_p95_ms": 2.6791,
+      "heap_alloc_median_bytes": 3368.0,
+      "max_vertices": 32608,
+      "max_upload_bytes": 2316672
+    },
+    {
+      "legacy": true,
+      "players": 1,
+      "mode": 3,
+      "tiers": [
+        0
+      ],
+      "sample_median_ms": 6.3567,
+      "mesh_merge_median_ms": 2.5617,
+      "total_median_ms": 8.9821,
+      "total_p95_ms": 10.2848,
+      "heap_alloc_median_bytes": 1869632.0,
+      "max_vertices": 65216,
+      "max_upload_bytes": 4633344
+    },
+    {
+      "legacy": false,
+      "players": 1,
+      "mode": 3,
+      "tiers": [
+        0
+      ],
+      "sample_median_ms": 1.846,
+      "mesh_merge_median_ms": 0.6451,
+      "total_median_ms": 2.5038,
+      "total_p95_ms": 2.7141,
+      "heap_alloc_median_bytes": 6392.0,
+      "max_vertices": 65216,
+      "max_upload_bytes": 4633344
+    },
+    {
+      "legacy": true,
+      "players": 8,
+      "mode": 0,
+      "tiers": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "sample_median_ms": 4.6744,
+      "mesh_merge_median_ms": 10.3101,
+      "total_median_ms": 14.9498,
+      "total_p95_ms": 20.3286,
+      "heap_alloc_median_bytes": 7483680.0,
+      "max_vertices": 260864,
+      "max_upload_bytes": 18533376
+    },
+    {
+      "legacy": false,
+      "players": 8,
+      "mode": 0,
+      "tiers": [
+        0,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "sample_median_ms": 1.5214,
+      "mesh_merge_median_ms": 0.6981,
+      "total_median_ms": 2.2196,
+      "total_p95_ms": 2.5963,
+      "heap_alloc_median_bytes": 14272.0,
+      "max_vertices": 57308,
+      "max_upload_bytes": 4048032
+    },
+    {
+      "legacy": true,
+      "players": 8,
+      "mode": 3,
+      "tiers": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "sample_median_ms": 50.1074,
+      "mesh_merge_median_ms": 16.4696,
+      "total_median_ms": 66.6406,
+      "total_p95_ms": 71.0753,
+      "heap_alloc_median_bytes": 14955328.0,
+      "max_vertices": 521728,
+      "max_upload_bytes": 37066752
+    },
+    {
+      "legacy": false,
+      "players": 8,
+      "mode": 3,
+      "tiers": [
+        0,
+        2,
+        2,
+        2,
+        2,
+        3,
+        3,
+        3
+      ],
+      "sample_median_ms": 4.0631,
+      "mesh_merge_median_ms": 1.1915,
+      "total_median_ms": 5.2688,
+      "total_p95_ms": 5.5498,
+      "heap_alloc_median_bytes": 22128.0,
+      "max_vertices": 99274,
+      "max_upload_bytes": 7017504
+    }
+  ],
+  "baseline_commit": "08e63fbf6b5234e4b83accea8f6ce91ba72bcbb2",
+  "environment": {
+    "cpu": "Intel Core i9-14900KF",
+    "java": "JetBrains Runtime 25.0.3+1-b329.124",
+    "gpu_used_in_probe": false
+  }
+}

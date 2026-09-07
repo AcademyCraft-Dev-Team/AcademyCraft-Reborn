@@ -224,6 +224,34 @@ class BlackWingAttackVfxTest {
         }
     }
 
+    @Test
+    void everyLodStaysWithinItsReservationAndPreservesFourLandingPoints() throws Exception {
+        for (var detail : org.academy.api.client.render.vfxgraph.runtime.VortexRenderBudget.DETAILS) {
+            var sim = simulator("black_wings");
+            sim.setLiveParam("vortex_filaments", Value.of((float) detail.filaments()));
+            sim.setLiveParam("vortex_segments", Value.of((float) detail.segments()));
+            sim.setLiveParam("vortex_rings", Value.of((float) detail.rings()));
+            sim.setLiveParam("vortex_flecks", Value.of((float) detail.flecks()));
+            for (int mode : new int[]{0, 1, 3}) {
+                phase(sim, mode, .745f);
+                int vertices = 0; long bytes = 0;
+                for (int i = 0; i < sim.arcBuffer().count(); i++) {
+                    var arc = sim.arcBuffer().arc(i);
+                    var size = CurveToMeshBuilder.measure(arc, 8);
+                    vertices += size.vertices(); bytes += size.vertices() * 48L + size.indices() * 4L;
+                    if (mode == 3 && (arc.seed() == 1 || arc.seed() == 10001)) {
+                        int tip = arc.size() - 1;
+                        assertEquals(6f, Math.abs(arc.x(tip)), .001f);
+                        assertEquals(6f, Math.abs(arc.z(tip)), .001f);
+                        assertEquals(-1.2f, arc.y(tip), .001f);
+                    }
+                }
+                assertTrue(vertices <= detail.maxVertices(mode == 3));
+                assertTrue(bytes <= detail.maxBytes(mode == 3));
+            }
+        }
+    }
+
     private void exportMesh(VfxSystemSimulator sim, String name) throws Exception {
         var vertices = new ByteArrayOutputStream();
         var indices = new ArrayList<Integer>();

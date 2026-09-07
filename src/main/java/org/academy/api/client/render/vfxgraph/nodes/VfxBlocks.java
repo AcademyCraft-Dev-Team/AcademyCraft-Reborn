@@ -1790,7 +1790,11 @@ public final class VfxBlocks {
             float alpha = clamp01(ctx.paramFloat("opacity", 1f));
             float spread = Math.max(0f, ctx.paramFloat("spread_scale", 1f));
             if (radial < 0.001f || axial < 0.001f || alpha < 0.001f) return;
-            float time = ctx.time() + phase;
+            float time = ctx.paramFloat("vortex_time", ctx.time()) + phase;
+            int liveSegments = Math.clamp(Math.round(ctx.paramFloat("vortex_segments", segments)), 24, segments);
+            int liveFilaments = Math.clamp(Math.round(ctx.paramFloat("vortex_filaments", filaments)), 3, filaments);
+            int liveFlecks = Math.clamp(Math.round(ctx.paramFloat("vortex_flecks", flecks)), 0, flecks);
+            int tubeSegments = Math.clamp(Math.round(ctx.paramFloat("vortex_rings", 8)), 3, 8);
             rotation.identity().rotateY(ctx.paramFloat(sweepParam, 0f) * Mth.DEG_TO_RAD)
                     .rotateZ(ctx.paramFloat(pitchParam, 0f) * Mth.DEG_TO_RAD);
             int attackMode = Math.clamp(Math.round(ctx.paramFloat("attack_mode", 0f)), 0, 5);
@@ -1817,16 +1821,18 @@ public final class VfxBlocks {
                         targetX * side - root, targetY, targetZ,
                         length * axial * spread, rise * axial, back * axial,
                         radius * radial, turns, speed, time);
+                shape.prepareGrid(liveSegments);
                 float branchAlpha = branch == 0 ? 1f : shape.activity();
                 if (branchAlpha < 0.001f) continue;
                 // Keep the approved spine and envelope; open a few windows between bridging strands.
-                for (int strand = 0; strand <= filaments; strand++) {
+                for (int strand = 0; strand <= liveFilaments; strand++) {
                     boolean core = strand == 0;
                     float strandPhase = strand * 2.399963f + phase;
                     float orbit = core ? 0f : 0.70f + 0.32f * stableUnit(strand, 3.17f);
                     var arc = ctx.arcs().add(group);
-                    for (int segment = 0; segment <= segments; segment++) {
-                        float u = segment / (float) segments;
+                    arc.setMaxTubeSegments(tubeSegments);
+                    for (int segment = 0; segment <= liveSegments; segment++) {
+                        float u = segment / (float) liveSegments;
                         shape.sample(u, orbit, strandPhase, point);
                         point.x *= side;
                         rotation.transform(point);
@@ -1849,6 +1855,7 @@ public final class VfxBlocks {
                 // endpoints taper and fade at wraparound, so the entire wing never flashes purple.
                 for (int highlight = 0; highlight < highlights; highlight++) {
                     int strand = 1 + (highlight * 7) % filaments;
+                    if (strand > liveFilaments) continue;
                     float strandPhase = strand * 2.399963f + phase;
                     float orbit = 0.70f + 0.32f * stableUnit(strand, 3.17f);
                     float start = (stableUnit(highlight, 4.71f) + time * highlightSpeed) % 1f;
@@ -1856,6 +1863,7 @@ public final class VfxBlocks {
                     float pulseLength = 1.04f * (0.045f + 0.035f * stableUnit(highlight, 7.31f));
                     float fade = Math.min(1f, start * 16f) * Math.min(1f, (1f - start) * 14f);
                     var arc = ctx.arcs().add(group);
+                    arc.setMaxTubeSegments(tubeSegments);
                     for (int j = 0; j <= 12; j++) {
                         float u = Math.min(1f, start + pulseLength * j / 12f);
                         shape.sample(u, orbit, strandPhase, point);
@@ -1883,11 +1891,12 @@ public final class VfxBlocks {
                     arc.setDriftSpeed(0f);
                 }
                 // Short orbiting ink shreds travel outward, wrap at the nozzle, and fade at both ends.
-                for (int fleck = 0; fleck < flecks; fleck++) {
+                for (int fleck = 0; fleck < liveFlecks; fleck++) {
                     float u = (stableUnit(fleck, 2.13f) + time * 0.22f) % 1f;
                     float fade = Math.min(1f, u * 12f) * Math.min(1f, (1f - u) * 12f);
                     float orbit = 1.15f + stableUnit(fleck, 9.31f) * 0.6f;
                     var arc = ctx.arcs().add(group);
+                    arc.setMaxTubeSegments(tubeSegments);
                     for (int j = 0; j < 3; j++) {
                         float v = Math.min(1f, u + j * 0.006f);
                         shape.sample(v, orbit, fleck * 2.4f, point);

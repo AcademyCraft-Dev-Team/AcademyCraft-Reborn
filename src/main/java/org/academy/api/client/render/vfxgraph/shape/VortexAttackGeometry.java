@@ -13,15 +13,23 @@ public final class VortexAttackGeometry {
     private final float[] whipX = new float[WHIP_SEGMENTS + 1];
     private final float[] whipY = new float[WHIP_SEGMENTS + 1];
     private final float[] whipZ = new float[WHIP_SEGMENTS + 1];
+    private final Vector3f idle = new Vector3f();
     private final Vector3f direction = new Vector3f();
     private final Vector3f swingNormal = new Vector3f();
-    private final Vector3f idle = new Vector3f();
-    private final Vector3f animated = new Vector3f();
     private final Vector3f before = new Vector3f();
     private final Vector3f after = new Vector3f();
     private final Vector3f tangent = new Vector3f();
     private final Vector3f newTangent = new Vector3f();
-    private final Quaternionf transport = new Quaternionf();
+    private static final class SampleFrame {
+        final Vector3f idle = new Vector3f();
+        final Vector3f animated = new Vector3f();
+        final Quaternionf transport = new Quaternionf();
+        float width;
+    }
+    private final SampleFrame[] grid = new SampleFrame[193];
+    private final SampleFrame offGrid = new SampleFrame();
+    private int gridSegments;
+    private float offGridU = Float.NaN;
     private int mode, branch;
     private float progress, activity, strike;
     private float targetX, targetY, targetZ;
@@ -31,6 +39,8 @@ public final class VortexAttackGeometry {
                           float targetX, float targetY, float targetZ,
                           float length, float rise, float back, float radius,
                           float turns, float speed, float time) {
+        gridSegments = 0;
+        offGridU = Float.NaN;
         this.mode = mode;
         this.progress = Math.clamp(progress, 0f, 1f);
         this.branch = branch;
@@ -64,28 +74,46 @@ public final class VortexAttackGeometry {
         return 1f + (attackWidth - 1f) * activity;
     }
 
-    public Vector3f sample(float u, float orbit, float phase, Vector3f destination) {
-        VortexJetGeometry.sample(u, time, phase, orbit,
-                length, rise, back, radius, turns, speed, destination);
-        if (activity <= 0f) return destination;
-        VortexJetGeometry.sample(u, time, phase, 0f,
-                length, rise, back, radius, turns, speed, idle);
-        destination.sub(idle);
+    /** Share exact centerline frames across all strands. Off-grid highlights retain exact sampling. */
+    public void prepareGrid(int segments) {
+        gridSegments = Math.clamp(segments, 1, grid.length - 1);
+        if (activity <= 0f) return;
+        for (int i = 0; i <= gridSegments; i++) {
+            if (grid[i] == null) grid[i] = new SampleFrame();
+            buildFrame(i / (float) gridSegments, grid[i]);
+        }
+    }
+
+    private void buildFrame(float u, SampleFrame frame) {
+        VortexJetGeometry.spine(u, time, length, rise, back, radius, frame.idle);
         float a = Math.max(0f, u - 0.003f);
         float b = Math.min(1f, u + 0.003f);
-        VortexJetGeometry.sample(a, time, phase, 0f,
-                length, rise, back, radius, turns, speed, before);
-        VortexJetGeometry.sample(b, time, phase, 0f,
-                length, rise, back, radius, turns, speed, after);
+        VortexJetGeometry.spine(a, time, length, rise, back, radius, before);
+        VortexJetGeometry.spine(b, time, length, rise, back, radius, after);
         after.sub(before, tangent).normalize();
         animatedSpine(a, before);
         animatedSpine(b, after);
         after.sub(before, newTangent).normalize();
-        transport.identity().rotationTo(tangent, newTangent);
-        transport.transform(destination);
-        destination.mul(widthScale(u));
-        animatedSpine(u, animated);
-        return destination.add(animated);
+        frame.transport.identity().rotationTo(tangent, newTangent);
+        animatedSpine(u, frame.animated);
+        frame.width = widthScale(u);
+    }
+
+    public Vector3f sample(float u, float orbit, float phase, Vector3f destination) {
+        VortexJetGeometry.sample(u, time, phase, orbit,
+                length, rise, back, radius, turns, speed, destination);
+        if (activity <= 0f) return destination;
+        int index = Math.round(u * gridSegments);
+        SampleFrame frame;
+        if (gridSegments > 0 && index >= 0 && index <= gridSegments && u == index / (float) gridSegments) {
+            frame = grid[index];
+        } else {
+            if (u != offGridU) { buildFrame(u, offGrid); offGridU = u; }
+            frame = offGrid;
+        }
+        destination.sub(frame.idle);
+        frame.transport.transform(destination);
+        return destination.mul(frame.width).add(frame.animated);
     }
 
     /** Includes smooth return to the exact idle spine; endpoints never detach from the nozzle. */

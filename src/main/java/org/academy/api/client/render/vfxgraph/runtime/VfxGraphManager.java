@@ -164,6 +164,8 @@ public final class VfxGraphManager {
         var iterator = effects.iterator();
         while (iterator.hasNext()) {
             var effect = iterator.next();
+            if (effect.isExpired()) { effect.stop(); iterator.remove(); continue; }
+            if (!effect.frameVisible()) continue;
             if (!budget.canSpawnMore(effect.effect().buffer().count())) {
                 continue;
             }
@@ -200,6 +202,7 @@ public final class VfxGraphManager {
             return;
         }
         for (var effect : effects) {
+            if (!effect.frameVisible() || effect.isExpired()) continue;
             if (effect.specs().stream().noneMatch(RenderSpec::feedsBloom)) {
                 continue;
             }
@@ -229,6 +232,7 @@ public final class VfxGraphManager {
             return false;
         }
         for (var effect : effects) {
+            if (!effect.frameVisible() || effect.isExpired()) continue;
             if (effect.specs().stream().anyMatch(RenderSpec::feedsBloom)) {
                 return true;
             }

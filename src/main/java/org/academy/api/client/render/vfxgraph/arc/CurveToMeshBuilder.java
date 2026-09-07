@@ -1,219 +1,115 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
 import org.lwjgl.BufferUtils;
-
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
+import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * 曲线→管网格构建器（M22-Rev2）：复刻 Blender Curve to Mesh + Curve Circle 节点。
- *
- * <p>对 ArcCurve 的每个控制点生成 circle profile 顶点，通过 parallel transport 构建正交基，
- * 连接相邻 ring 形成 tube mesh。Blender 对应：Curve to Mesh(Curve Circle, r=0.01)。</p>
- *
- * <p>输出顶点格式：Position(3) + Normal(3) + UV(2) + Color(4) = 12 floats/vertex。</p>
- */
+/** Tube extrusion with stable disconnected runs and caller-owned streaming buffers. */
 public final class CurveToMeshBuilder {
-    public static final int FLOATS_PER_VERTEX = 12; // Position(3) + Normal(3) + UV(2) + Color(4)
-    public static final int VERTEX_STRIDE = FLOATS_PER_VERTEX * 4; // bytes
+    public static final int FLOATS_PER_VERTEX = 12;
+    public static final int VERTEX_STRIDE = FLOATS_PER_VERTEX * 4;
+    private record Profile(float[] cos, float[] sin) { }
+    private static final ConcurrentHashMap<Integer, Profile> PROFILES = new ConcurrentHashMap<>();
+    private CurveToMeshBuilder() { }
 
-    private CurveToMeshBuilder() {
+    public record Size(int vertices, int indices) { }
+
+    private static int resolution(ArcCurve arc, int requested) {
+        if (arc.maxTubeSegments() > 0) requested = Math.min(requested, arc.maxTubeSegments());
+        return Math.clamp(requested, 3, 64);
     }
 
-    /**
-     * 构建 ArcCurve 的管网格。
-     *
-     * @param arc             源弧线数据
-     * @param segmentRes      圆周分段数（默认 8，Blender Curve Circle Resolution=8）
-     * @param r,g,b,a         基础颜色
-     * @param brightnessScale generation 亮度衰减因子
-     * @return 管网格数据（顶点 ByteBuffer + 索引 int[]）
-     */
-    public static MeshData build(ArcCurve arc, int segmentRes, float r, float g, float b, float a,
-                                 float brightnessScale) {
-        if (arc.maxTubeSegments() > 0) segmentRes = Math.min(segmentRes, arc.maxTubeSegments());
-        var n = arc.size();
-        if (n < 2) return MeshData.EMPTY;
+    /** Counts only runs containing at least two points; holes must never be bridged by an index. */
+    public static Size measure(ArcCurve arc, int requested) {
+        int rings = resolution(arc, requested), vertices = 0, indices = 0, from = 0;
+        for (int to = 1; to <= arc.size(); to++) {
+            if (to < arc.size() && arc.segment(to) == arc.segment(to - 1)) continue;
+            int length = to - from;
+            if (length >= 2) { vertices += length * rings; indices += (length - 1) * rings * 6; }
+            from = to;
+        }
+        return new Size(vertices, indices);
+    }
 
-        // 按连续折线段（segment）分组：分支等互不相连的段各自成 run，避免被缝成一根管。
-        // 主弧默认 segment 0；CurveGenerator 为每根分支分配独立 id。
-        var runs = new ArrayList<int[]>();
-        var runStart = 0;
-        for (var i = 1; i <= n; i++) {
-            if (i == n || arc.segment(i) != arc.segment(i - 1)) {
-                runs.add(new int[]{runStart, i});
-                runStart = i;
+    /** Append without allocating per curve/ring. Buffers remain in write mode. Returns appended vertices. */
+    public static int append(ArcCurve arc, int requested, float r, float g, float b, float a,
+                             float brightnessScale, ByteBuffer vertices, ByteBuffer indices, int baseVertex) {
+        int rings = resolution(arc, requested);
+        var profile = PROFILES.computeIfAbsent(rings, count -> {
+            var cos = new float[count]; var sin = new float[count];
+            for (int i = 0; i < count; i++) {
+                float angle = (float) (i * Math.PI * 2.0 / count);
+                cos[i] = (float) Math.cos(angle); sin[i] = (float) Math.sin(angle);
             }
-        }
-
-        // 汇总各 run 顶点/索引数
-        var vertsPerRing = segmentRes;
-        var totalVerts = 0;
-        var totalIndices = 0;
-        for (var run : runs) {
-            var len = run[1] - run[0];
-            if (len < 2) continue;
-            totalVerts += len * vertsPerRing;
-            totalIndices += (len - 1) * segmentRes * 6; // 2 triangles per segment pair
-        }
-        if (totalVerts == 0) return MeshData.EMPTY;
-
-        var vertBuf = BufferUtils.createByteBuffer(totalVerts * VERTEX_STRIDE);
-        var indices = new int[totalIndices];
-
-        // Precompute ring angles
-        var ringCos = new float[segmentRes];
-        var ringSin = new float[segmentRes];
-        for (var i = 0; i < segmentRes; i++) {
-            var angle = (float) (i * Math.PI * 2.0 / segmentRes);
-            ringCos[i] = (float) Math.cos(angle);
-            ringSin[i] = (float) Math.sin(angle);
-        }
-
-        // 逐 run 建管（parallel transport 在每个 run 重新初始化，防 run 间串扰）
-        var vertexOffset = 0;
-        var idx = 0;
-        for (var run : runs) {
-            var from = run[0];
-            var to = run[1];
-            var len = to - from;
-            if (len < 2) continue;
-
-            float[] prevRight = null;
-            for (var i = from; i < to; i++) {
-                var li = i - from; // local index within run
-                // Tangent (center difference)
-                var prev = Math.max(from, i - 1);
-                var next = Math.min(to - 1, i + 1);
-                var tx = arc.x(next) - arc.x(prev);
-                var ty = arc.y(next) - arc.y(prev);
-                var tz = arc.z(next) - arc.z(prev);
-                var tlen = (float) Math.sqrt(tx * tx + ty * ty + tz * tz);
-                if (tlen < 1e-6f) {
-                    tx = 0;
-                    ty = 1;
-                    tz = 0;
-                } else {
-                    tx /= tlen;
-                    ty /= tlen;
-                    tz /= tlen;
+            return new Profile(cos, sin);
+        });
+        int from = 0, vertexOffset = baseVertex;
+        for (int to = 1; to <= arc.size(); to++) {
+            if (to < arc.size() && arc.segment(to) == arc.segment(to - 1)) continue;
+            int length = to - from;
+            if (length < 2) { from = to; continue; }
+            float rx = 0, ry = 0, rz = 0;
+            for (int i = from; i < to; i++) {
+                int previous = Math.max(from, i - 1), next = Math.min(to - 1, i + 1);
+                float tx = arc.x(next) - arc.x(previous), ty = arc.y(next) - arc.y(previous), tz = arc.z(next) - arc.z(previous);
+                float magnitude = (float) Math.sqrt(tx * tx + ty * ty + tz * tz);
+                if (magnitude < 1e-6f) { tx = 0; ty = 1; tz = 0; }
+                else { tx /= magnitude; ty /= magnitude; tz /= magnitude; }
+                if (i > from) {
+                    float dot = rx * tx + ry * ty + rz * tz;
+                    rx -= dot * tx; ry -= dot * ty; rz -= dot * tz;
                 }
-
-                // Right vector (parallel transport); reset per run
-                float[] right;
-                if (prevRight == null) {
-                    right = initialRight(tx, ty, tz);
-                } else {
-                    right = parallelTransport(prevRight, tx, ty, tz);
+                magnitude = (float) Math.sqrt(rx * rx + ry * ry + rz * rz);
+                if (i == from || magnitude < 1e-6f) {
+                    if (Math.abs(ty) < 0.9f) { rx = -tz; ry = 0; rz = tx; }
+                    else { rx = 0; ry = tz; rz = -ty; }
+                    magnitude = (float) Math.sqrt(rx * rx + ry * ry + rz * rz);
                 }
-
-                // Up = tangent × right
-                var ux = ty * right[2] - tz * right[1];
-                var uy = tz * right[0] - tx * right[2];
-                var uz = tx * right[1] - ty * right[0];
-
-                var radius = arc.width(i);
-                var v = (float) li / (len - 1); // UV.y = progress along run
-
-                // generation-based brightness attenuation
-                var gen = arc.generation(i);
-                var brightness = (float) Math.pow(brightnessScale, gen);
-                var cr = r * brightness;
-                var cg = g * brightness;
-                var cb = b * brightness;
-
-                // Ring vertices
-                for (var j = 0; j < segmentRes; j++) {
-                    var nx = right[0] * ringCos[j] + ux * ringSin[j];
-                    var ny = right[1] * ringCos[j] + uy * ringSin[j];
-                    var nz = right[2] * ringCos[j] + uz * ringSin[j];
-
-                    var px = arc.x(i) + nx * radius;
-                    var py = arc.y(i) + ny * radius;
-                    var pz = arc.z(i) + nz * radius;
-
-                    var u = (float) j / segmentRes; // UV.x = around tube
-
-                    // Position
-                    vertBuf.putFloat(px);
-                    vertBuf.putFloat(py);
-                    vertBuf.putFloat(pz);
-                    // Normal
-                    vertBuf.putFloat(nx);
-                    vertBuf.putFloat(ny);
-                    vertBuf.putFloat(nz);
-                    // UV
-                    vertBuf.putFloat(u);
-                    vertBuf.putFloat(v);
-                    // Color
-                    vertBuf.putFloat(cr);
-                    vertBuf.putFloat(cg);
-                    vertBuf.putFloat(cb);
-                    vertBuf.putFloat(a);
-                }
-
-                prevRight = right;
-            }
-
-            // Build index buffer (triangle strip per segment pair)
-            for (var i = from; i < to - 1; i++) {
-                var ring0 = vertexOffset + (i - from) * segmentRes;
-                var ring1 = vertexOffset + (i - from + 1) * segmentRes;
-                for (var j = 0; j < segmentRes; j++) {
-                    var j1 = (j + 1) % segmentRes;
-                    // Triangle 1
-                    indices[idx++] = ring0 + j;
-                    indices[idx++] = ring1 + j;
-                    indices[idx++] = ring0 + j1;
-                    // Triangle 2
-                    indices[idx++] = ring0 + j1;
-                    indices[idx++] = ring1 + j;
-                    indices[idx++] = ring1 + j1;
+                if (magnitude < 1e-6f) { rx = 1; ry = 0; rz = 0; }
+                else { rx /= magnitude; ry /= magnitude; rz /= magnitude; }
+                float ux = ty * rz - tz * ry, uy = tz * rx - tx * rz, uz = tx * ry - ty * rx;
+                float radius = arc.width(i), v = (float) (i - from) / (length - 1);
+                float brightness = brightnessScale == 1f ? 1f : (float) Math.pow(brightnessScale, arc.generation(i));
+                for (int j = 0; j < rings; j++) {
+                    float nx = rx * profile.cos[j] + ux * profile.sin[j];
+                    float ny = ry * profile.cos[j] + uy * profile.sin[j];
+                    float nz = rz * profile.cos[j] + uz * profile.sin[j];
+                    vertices.putFloat(arc.x(i) + nx * radius).putFloat(arc.y(i) + ny * radius).putFloat(arc.z(i) + nz * radius);
+                    vertices.putFloat(nx).putFloat(ny).putFloat(nz);
+                    vertices.putFloat((float) j / rings).putFloat(v);
+                    vertices.putFloat(r * brightness).putFloat(g * brightness).putFloat(b * brightness).putFloat(a);
                 }
             }
-            vertexOffset += len * vertsPerRing;
+            for (int i = from; i < to - 1; i++) {
+                int ring0 = vertexOffset + (i - from) * rings, ring1 = ring0 + rings;
+                for (int j = 0; j < rings; j++) {
+                    int j1 = (j + 1) % rings;
+                    indices.putInt(ring0 + j).putInt(ring1 + j).putInt(ring0 + j1);
+                    indices.putInt(ring0 + j1).putInt(ring1 + j).putInt(ring1 + j1);
+                }
+            }
+            vertexOffset += length * rings;
+            from = to;
         }
-
-        vertBuf.flip();
-        return new MeshData(vertBuf, indices, totalVerts, totalIndices);
+        return vertexOffset - baseVertex;
     }
 
-    /**
-     * 与切线方向垂直的初始 right 向量。
-     */
-    private static float[] initialRight(float tx, float ty, float tz) {
-        var ref = Math.abs(ty) < 0.9f ? new float[]{0, 1, 0} : new float[]{1, 0, 0};
-        var rx = ty * ref[2] - tz * ref[1];
-        var ry = tz * ref[0] - tx * ref[2];
-        var rz = tx * ref[1] - ty * ref[0];
-        var len = (float) Math.sqrt(rx * rx + ry * ry + rz * rz);
-        if (len < 1e-6f) return new float[]{1, 0, 0};
-        return new float[]{rx / len, ry / len, rz / len};
+    /** Compatibility/export convenience. Runtime rendering uses append with reusable buffers. */
+    public static MeshData build(ArcCurve arc, int segmentRes, float r, float g, float b, float a, float brightnessScale) {
+        var size = measure(arc, segmentRes);
+        if (size.vertices == 0) return MeshData.EMPTY;
+        var vertices = BufferUtils.createByteBuffer(size.vertices * VERTEX_STRIDE);
+        var indexBytes = ByteBuffer.allocate(size.indices * 4);
+        append(arc, segmentRes, r, g, b, a, brightnessScale, vertices, indexBytes, 0);
+        var indices = new int[size.indices];
+        indexBytes.flip();
+        indexBytes.asIntBuffer().get(indices);
+        vertices.flip();
+        return new MeshData(vertices, indices, size.vertices, size.indices);
     }
 
-    /**
-     * Parallel transport：把 prevRight 投影到新切线的垂直平面。
-     */
-    private static float[] parallelTransport(float[] prevRight, float tx, float ty, float tz) {
-        // dot = prevRight · tangent
-        var dot = prevRight[0] * tx + prevRight[1] * ty + prevRight[2] * tz;
-        // projected = prevRight - dot * tangent
-        var rx = prevRight[0] - dot * tx;
-        var ry = prevRight[1] - dot * ty;
-        var rz = prevRight[2] - dot * tz;
-        var len = (float) Math.sqrt(rx * rx + ry * ry + rz * rz);
-        if (len < 1e-6f) return initialRight(tx, ty, tz);
-        return new float[]{rx / len, ry / len, rz / len};
-    }
-
-    /**
-     * 管网格数据。
-     */
     public record MeshData(ByteBuffer vertexBuffer, int[] indices, int vertexCount, int indexCount) {
         public static final MeshData EMPTY = new MeshData(BufferUtils.createByteBuffer(0), new int[0], 0, 0);
-
-        public int vertexBytes() {
-            return vertexCount * VERTEX_STRIDE;
-        }
+        public int vertexBytes() { return vertexCount * VERTEX_STRIDE; }
     }
 }
