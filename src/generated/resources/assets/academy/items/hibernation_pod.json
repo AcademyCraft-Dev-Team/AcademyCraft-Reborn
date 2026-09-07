@@ -1,7 +1,7 @@
 {
   "model": {
     "type": "minecraft:special",
-    "base": "academy:item/misaka_tower_promax",
+    "base": "academy:item/hibernation_pod",
     "model": {
       "type": "geckolib:geckolib"
     }

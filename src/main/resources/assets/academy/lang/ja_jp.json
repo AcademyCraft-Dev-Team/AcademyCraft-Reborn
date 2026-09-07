@@ -14,5 +14,6 @@
   "skill.academy.vector_reflection.proficiency.3000": "更新間隔が10tickから5tickに短縮され、最大CPの1%未満の反射可能なダメージは動的CPを消費しない。",
   "skill.academy.vortex_pull.desc": "即時発動で周囲のエンティティを照準地点へ一度引き寄せる。半チャージで持続する渦を生成し、最大チャージで範囲と牽引力がさらに増加する。",
   "block.academy.energy_laser_tower": "エネルギーレーザー塔",
+  "block.academy.hibernation_pod": "休眠ポッド",
   "item.academy.energy_laser_tower": "エネルギーレーザー塔"
 }

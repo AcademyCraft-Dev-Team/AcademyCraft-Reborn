@@ -132,6 +132,7 @@ public final class AcademyCraftModelProvider extends ModelProvider {
                 Blocks.ENERGY_LASER_TOWER.get(),
                 ModelLocationUtils.getModelLocation(Blocks.ENERGY_LASER_TOWER.get())
         );
+        blockModels.createTrivialBlock(Blocks.HIBERNATION_POD.get(), providerW);
         blockModels.createTrivialBlock(Blocks.ABILITY_DEVELOPER.get(), providerDB);
         blockModels.createTrivialBlock(Blocks.IMAG_PHASE.get(), providerBlack);
         var configurableDarkmatterBlock = Blocks.DARKMATTER_BLOCK.get();
@@ -209,6 +210,13 @@ public final class AcademyCraftModelProvider extends ModelProvider {
                 Items.MISAKA_TOWER_PROMAX.get(),
                 ItemModelUtils.specialModel(
                         academy("misaka_tower_promax").withPrefix("item/"),
+                        new GeckolibItemSpecialRenderer.Unbaked<>()
+                )
+        );
+        itemModels.itemModelOutput.accept(
+                Items.HIBERNATION_POD.get(),
+                ItemModelUtils.specialModel(
+                        academy("hibernation_pod").withPrefix("item/"),
                         new GeckolibItemSpecialRenderer.Unbaked<>()
                 )
         );

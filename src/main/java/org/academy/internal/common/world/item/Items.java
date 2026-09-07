@@ -5,6 +5,7 @@ import net.minecraft.world.item.*;
 import net.minecraft.world.item.equipment.ArmorType;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import org.academy.AcademyCraft;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.level.block.Blocks;
 
@@ -156,6 +157,14 @@ public final class Items {
     public static final DeferredHolder<Item, MultiBlockItem> ENERGY_LASER_TOWER =
             ITEMS.registerItem("energy_laser_tower",
                     properties -> new MultiBlockItem(Blocks.ENERGY_LASER_TOWER.get(), properties));
+    public static final DeferredHolder<Item, GeoMultiBlockItem> HIBERNATION_POD =
+            ITEMS.registerItem("hibernation_pod",
+                    properties -> new GeoMultiBlockItem(
+                            Blocks.HIBERNATION_POD.get(),
+                            properties,
+                            AcademyCraft.academy("hibernation_pod"),
+                            0.62F
+                    ));
 
     private Items() {
     }

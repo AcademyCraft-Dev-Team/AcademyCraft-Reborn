@@ -259,6 +259,7 @@
   "block.academy.solar_gen": "太阳能发电机",
   "block.academy.aerospace_signal_cabin": "宇航信号舱",
   "block.academy.energy_laser_tower": "能源激光塔",
+  "block.academy.hibernation_pod": "休眠舱",
   "item.academy.network_relay_satellite": "网络中继卫星",
   "item.academy.hyper_network_relay_satellite": "超次元网络中继卫星",
   "item.academy.hyper_network_relay_satellite.target": "目标维度：%s",

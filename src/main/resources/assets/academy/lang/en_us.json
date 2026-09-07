@@ -259,6 +259,7 @@
   "block.academy.solar_gen": "Solar Generator",
   "block.academy.aerospace_signal_cabin": "Aerospace Signal Cabin",
   "block.academy.energy_laser_tower": "Energy Laser Tower",
+  "block.academy.hibernation_pod": "Hibernation Pod",
   "item.academy.network_relay_satellite": "Network Relay Satellite",
   "item.academy.hyper_network_relay_satellite": "Hyper Network Relay Satellite",
   "item.academy.hyper_network_relay_satellite.target": "Target dimension: %s",

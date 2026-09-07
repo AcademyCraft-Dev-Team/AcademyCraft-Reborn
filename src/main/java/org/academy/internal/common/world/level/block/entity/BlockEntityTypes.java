@@ -91,6 +91,14 @@ public final class BlockEntityTypes {
                             Blocks.ENERGY_LASER_TOWER.get()
                     )
             );
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<HibernationPodBlockEntity>> HIBERNATION_POD =
+            BLOCK_ENTITY_TYPES.register(
+                    "hibernation_pod",
+                    () -> new BlockEntityType<>(
+                            HibernationPodBlockEntity::new,
+                            Blocks.HIBERNATION_POD.get()
+                    )
+            );
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<DarkmatterBlockEntity>> DARKMATTER_BLOCK =
             BLOCK_ENTITY_TYPES.register(
                     "darkmatter_block",
