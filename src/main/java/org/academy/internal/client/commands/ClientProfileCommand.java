@@ -35,6 +35,12 @@ public final class ClientProfileCommand {
                 .then(Commands.literal("stop").executes(ClientProfileCommand::stop))
                 .then(Commands.literal("reset").executes(ClientProfileCommand::reset))
                 .then(Commands.literal("status").executes(ClientProfileCommand::status))
+                .then(Commands.literal("vfx").executes(ctx -> {
+                    var stats = org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager.INSTANCE.frameStatistics();
+                    ctx.getSource().sendSuccess(() -> Component.literal(stats + ", receivedVfxPackets="
+                            + org.academy.internal.client.render.vfx.SkillVfxClient.receivedPackets()), false);
+                    return 1;
+                }))
                 .then(zonesCommand())
                 .then(samplerCommand())
                 .then(Commands.literal("dump").executes(ClientProfileCommand::dump));

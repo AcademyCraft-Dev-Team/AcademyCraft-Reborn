@@ -638,13 +638,8 @@ public class KineticEnergyApplied extends Skill {
         private static void spawnShockwave(ServerLevel level, ServerPlayer player, Vec3 center,
                                            Vec3 direction, float radius, int impactLevel) {
             var normalized = normalizeOrDefault(direction);
-            var shockwave = new KineticShockwave(EntityTypes.KINETIC_SHOCKWAVE.get(), level);
-            shockwave.configure(normalized, Math.min(radius, MAX_VISUAL_RADIUS), impactLevel);
-            shockwave.setPos(center.x, center.y, center.z);
-            shockwave.setYRot((float) (Mth.atan2(normalized.z, normalized.x) * Mth.RAD_TO_DEG) - 90.0f);
-            shockwave.setXRot((float) (-(Mth.atan2(normalized.y,
-                    Math.sqrt(normalized.x * normalized.x + normalized.z * normalized.z)) * Mth.RAD_TO_DEG)));
-            level.addFreshEntity(shockwave);
+            org.academy.api.server.vfx.SkillVfxService.shockwave(
+                    level, center, normalized, Math.min(radius, MAX_VISUAL_RADIUS), impactLevel);
 
             var soundPosition = audiblePosition(player, center);
             level.playSound(null, soundPosition.x, soundPosition.y, soundPosition.z,

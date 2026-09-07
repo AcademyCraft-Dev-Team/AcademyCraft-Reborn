@@ -50,6 +50,36 @@ public final class ActiveEffect {
     private long expiresAtNanos = Long.MAX_VALUE;
     private boolean alwaysVisible;
     private boolean frameVisible = true;
+    private boolean renderVisible;
+    private final Vector3f cullingCenter = new Vector3f();
+    private float cullingRadius = -1f;
+    private float renderDistance = -1f;
+    private float hiddenElapsed;
+
+    /** Explicit conservative world-space bounds, independent of the graph emitter origin. */
+    public void setCullingSphere(Vector3f center, float radius) {
+        if (!Float.isFinite(radius) || radius < 0 || !center.isFinite()) {
+            throw new IllegalArgumentException("Invalid VFX bounds");
+        }
+        cullingCenter.set(center);
+        cullingRadius = radius;
+    }
+
+    public Vector3f cullingCenter() { return cullingRadius >= 0 ? cullingCenter : position; }
+    public float cullingRadius(float fallback) { return cullingRadius >= 0 ? cullingRadius : fallback; }
+    public void setRenderDistance(float distance) { renderDistance = Math.max(0f, distance); }
+    public float renderDistance(float fallback) { return renderDistance >= 0 ? renderDistance : fallback; }
+    public boolean renderVisible() { return renderVisible; }
+    void setRenderVisible(boolean visible) { renderVisible = visible; }
+
+    /** Coarse offscreen simulation preserves ageing without per-frame particle/arc work. */
+    float simulationStep(float dt, boolean visible) {
+        hiddenElapsed += dt;
+        if (!visible && hiddenElapsed < 0.2f) return 0f;
+        float step = Math.min(hiddenElapsed, 0.25f);
+        hiddenElapsed = 0f;
+        return step;
+    }
     private @org.jspecify.annotations.Nullable Entity followEntity;
     private boolean stopped;
 
@@ -154,6 +184,8 @@ public final class ActiveEffect {
         this.minimumFarPlane = Math.max(0f, minimumFarPlane);
     }
 
+    public float minimumFarPlane() { return minimumFarPlane; }
+
     GraphCamera cameraForRendering(GraphCamera camera) {
         return minimumFarPlane > 0f ? camera.withMinimumFarPlane(minimumFarPlane) : camera;
     }
@@ -185,6 +217,17 @@ public final class ActiveEffect {
      * tick 并返回是否应移除（显式 stop 或跟随实体已移除）。
      */
     public boolean tick(float dt) {
+        if (updateState()) return true;
+        simulate(dt);
+        return false;
+    }
+
+    void simulate(float dt) {
+        if (dt > 0f) effect.tick(dt);
+    }
+
+    /** Lifecycle and bindings must run even when simulation or drawing is budgeted out. */
+    boolean updateState() {
         if (stopped || System.nanoTime() >= expiresAtNanos) {
             stopped = true;
             return true;
@@ -203,7 +246,6 @@ public final class ActiveEffect {
             }
         }
         surfaces.forEach(effect::setSurfaceProjector);
-        effect.tick(dt);
         return false;
     }
 

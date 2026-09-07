@@ -492,6 +492,10 @@ public final class PacketTypes {
             SPAWN_VFX_GRAPH = PACKET_TYPES.register("spawn_vfx_graph",
             () -> new PacketType<>(SpawnVfxGraphPacket.class, SpawnVfxGraphPacket.CODEC));
 
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SkillVfxPacket>>
+            SKILL_VFX = PACKET_TYPES.register("skill_vfx",
+            () -> new PacketType<>(SkillVfxPacket.class, SkillVfxPacket.CODEC));
+
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, VectorBlast.UsePacket>>
             VECTOR_BLAST_USE = PACKET_TYPES.register("vector_blast_use",
             () -> new PacketType<>(VectorBlast.UsePacket.class, VectorBlast.UsePacket.CODEC));

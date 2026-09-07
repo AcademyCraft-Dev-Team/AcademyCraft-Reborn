@@ -35,8 +35,14 @@ public record RenderSpec(
         Identifier fragmentShader,
         @org.jspecify.annotations.Nullable Identifier texture,
         String layer,
-        ArcRender arc
+        ArcRender arc,
+        float particleBoundsScale
 ) {
+    /** Existing/custom shaders remain uncullable until their output declares a conservative bound. */
+    public RenderSpec(Geometry geometry, Blend blend, Identifier vertexShader, Identifier fragmentShader,
+                      @org.jspecify.annotations.Nullable Identifier texture, String layer, ArcRender arc) {
+        this(geometry, blend, vertexShader, fragmentShader, texture, layer, arc, 0f);
+    }
 
     /**
      * 缺省规格：中性软圆斑 quad、全部层（仅"未指定"时的中性兜底，非按类型枚举）。
@@ -115,7 +121,8 @@ public record RenderSpec(
         var texture = optionalId(node, "texture");
         var layer = node.properties().getOrDefault("layer", "").trim();
         var arc = arcRender(node);
-        return new RenderSpec(geometry, blend, vertex, fragment, texture, layer, arc);
+        return new RenderSpec(geometry, blend, vertex, fragment, texture, layer, arc,
+                Math.max(0f, floatProp(node.properties(), "bounds_scale", 0f)));
     }
 
     /**

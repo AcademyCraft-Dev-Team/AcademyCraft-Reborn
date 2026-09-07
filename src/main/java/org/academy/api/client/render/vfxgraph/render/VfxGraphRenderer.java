@@ -115,6 +115,9 @@ public final class VfxGraphRenderer {
      * 复用的世界变换 scratch（M16-02：避免每粒子分配 float[3]）。
      */
     private final float[] worldScratch = new float[3];
+    private final org.joml.FrustumIntersection particleFrustum = new org.joml.FrustumIntersection();
+    private final org.joml.Matrix4f particleProjection = new org.joml.Matrix4f();
+    private int[] selectedParticles = new int[4096];
 
     /**
      * 视口表面网格（M29b-03）：编辑器预览中的 plane/sphere 三角面（Blender 场景复刻）。
@@ -389,6 +392,7 @@ public final class VfxGraphRenderer {
             return;
         }
 
+        particleFrustum.set(particleProjection.set(camera.projection()).mul(camera.viewRotation()));
         writeCamera(device, camera);
         var encoder = device.createCommandEncoder();
         // soft particles（仅 quad 系）：先把深度附件拷到可采样纹理（must be outside render pass）。
@@ -627,8 +631,11 @@ public final class VfxGraphRenderer {
         var count = buffer.count();
         // 只写该 spec 负责的层（layer 过滤，数据驱动）：分层外观由图上多输出节点表达，无 fire/smoke 硬编码。
         var matched = 0;
+        if (selectedParticles.length < count) selectedParticles = new int[Math.max(count, selectedParticles.length * 2)];
         for (var i = 0; i < count; i++) {
-            if (spec.matchesLayer(buffer.layer(i))) matched++;
+            if (spec.matchesLayer(buffer.layer(i)) && particleVisible(buffer, i, camera, transform, spec)) {
+                selectedParticles[matched++] = i;
+            }
         }
         if (matched == 0) return;
 
@@ -637,14 +644,13 @@ public final class VfxGraphRenderer {
             growInstances(matched);
         }
         if (instanceData == null || instanceData.capacity() < bytes) {
-            instanceData = BufferUtils.createByteBuffer(Math.toIntExact(bytes));
+            instanceData = BufferUtils.createByteBuffer(Math.toIntExact(instanceBuffer.size()));
         }
         var camPos = camera.position();
         var identity = transform.isIdentity();
         instanceData.clear();
-        for (var i = 0; i < count; i++) {
-            if (!spec.matchesLayer(buffer.layer(i))) continue;
-            writeInstance(buffer, i, camPos, identity, transform, instanceData);
+        for (var selected = 0; selected < matched; selected++) {
+            writeInstance(buffer, selectedParticles[selected], camPos, identity, transform, instanceData);
         }
         instanceData.flip();
         RenderSystem.getDevice().createCommandEncoder().writeToBuffer(instanceBuffer.slice(0, bytes), instanceData);
@@ -678,6 +684,17 @@ public final class VfxGraphRenderer {
         var sequential = RenderSystem.getSequentialBuffer(PrimitiveTopology.QUADS);
         pass.setIndexBuffer(sequential.getBuffer(6), sequential.type());
         pass.drawIndexed(6, count, 0, 0, 0);
+    }
+
+    private boolean particleVisible(ParticleBuffer buffer, int i, GraphCamera camera,
+                                    WorldTransform transform, RenderSpec spec) {
+        if (!(spec.particleBoundsScale() > 0f) || spec.geometry() != RenderSpec.Geometry.QUAD) return true;
+        transform.apply(buffer.positionX(i), buffer.positionY(i), buffer.positionZ(i), worldScratch);
+        float radius = Math.abs(buffer.size(i)) * spec.particleBoundsScale()
+                * Math.max(1f, Math.abs(transform.scale())) + 0.25f;
+        var c = camera.position();
+        return particleFrustum.testSphere(worldScratch[0] - c.x, worldScratch[1] - c.y,
+                worldScratch[2] - c.z, radius);
     }
 
     private void writeInstance(ParticleBuffer buffer, int i, Vector3f camPos, boolean identity, WorldTransform transform, ByteBuffer out) {
@@ -732,7 +749,7 @@ public final class VfxGraphRenderer {
             growLine(vertexCount);
         }
         if (lineData == null || lineData.capacity() < neededBytes) {
-            lineData = BufferUtils.createByteBuffer(Math.toIntExact(neededBytes));
+            lineData = BufferUtils.createByteBuffer(Math.toIntExact(lineBuffer.size()));
         }
         lineData.clear();
         if (line) {

@@ -47,6 +47,9 @@ public class Plasma extends RenderOnlyEntity {
     private boolean destroyBlocks;
     private int proficiencyMilestone;
     private int launchDelayTicks;
+    private Vec3 visualChargeOrigin;
+    private org.academy.api.common.vfx.SkillVfxState.Plasma visualSnapshot;
+    private long visualReceivedAt;
 
     public Plasma(EntityType<?> entityType, Level level) {
         super(entityType, level);
@@ -143,6 +146,7 @@ public class Plasma extends RenderOnlyEntity {
     private void impact() {
         if (!(level() instanceof ServerLevel level)) return;
         var impact = position();
+        org.academy.api.server.vfx.SkillVfxService.plasmaImpact(level, impact, damageRadius);
         var owner = ownerUUID == null
                 ? null
                 : level.getServer().getPlayerList().getPlayer(ownerUUID);
@@ -187,6 +191,32 @@ public class Plasma extends RenderOnlyEntity {
         if (destroyBlocks && owner != null && explosionPower > 0.0f) {
             destroyExplosionBlocks(level, owner, impact, explosionPower);
         }
+    }
+
+    @Override
+    public boolean broadcastToPlayer(ServerPlayer player) { return false; }
+
+    public Vec3 visualTarget() { return targetPosition == null ? position() : targetPosition; }
+    public float visualSpeed() { return (float) travelSpeed; }
+    public int visualLaunchDelay() { return launchDelayTicks; }
+    public Vec3 visualChargeOrigin() { return visualChargeOrigin; }
+
+    public void applyVisualSnapshot(org.academy.api.common.vfx.SkillVfxState.Plasma state, float elapsed) {
+        if (!level().isClientSide()) throw new IllegalStateException("Visual snapshot on server");
+        visualSnapshot = state;
+        visualReceivedAt = System.nanoTime() - (long) (elapsed * 50_000_000L);
+        if (!state.launched()) visualChargeOrigin = state.chargeOrigin();
+        entityData.set(LAUNCHED, state.launched());
+        setGatherProgress(state.launched() ? 1f : Math.clamp(state.progress() + elapsed * state.chargeRate(), 0f, 1f));
+        setPos(visualPosition());
+    }
+
+    public Vec3 visualPosition() {
+        var state = visualSnapshot;
+        if (state == null) return position();
+        float elapsed = Math.min(25f, (System.nanoTime() - visualReceivedAt) / 50_000_000f);
+        // Charge/focus capture this position once, before the mirror has ever ticked.
+        return state.positionAt(elapsed);
     }
 
     public float getGatherProgress() {

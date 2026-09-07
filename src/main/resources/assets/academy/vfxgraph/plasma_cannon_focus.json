@@ -107,7 +107,7 @@
           "id": "out_converging_motes",
           "type": "vfx.block.output_quad_glow",
           "properties": {
-            "vertex": "academy:core/vfxgraph_plasma_sphere",
+            "bounds_scale": "2.0", "vertex": "academy:core/vfxgraph_plasma_sphere",
             "shader": "academy:core/vfxgraph_plasma_liquid",
             "blend": "glow", "layer": "plasma_mote"
           }
@@ -116,7 +116,7 @@
           "id": "out_focus_core",
           "type": "vfx.block.output_quad_glow",
           "properties": {
-            "vertex": "academy:core/vfxgraph_plasma_sphere",
+            "bounds_scale": "2.0", "vertex": "academy:core/vfxgraph_plasma_sphere",
             "shader": "academy:core/vfxgraph_plasma_sphere",
             "blend": "glow", "layer": "plasma_core"
           }
@@ -125,7 +125,7 @@
           "id": "out_focus_halo",
           "type": "vfx.block.output_quad_glow",
           "properties": {
-            "vertex": "academy:core/vfxgraph_plasma_halo",
+            "bounds_scale": "2.0", "vertex": "academy:core/vfxgraph_plasma_halo",
             "shader": "academy:core/vfxgraph_plasma_halo",
             "blend": "glow", "layer": "plasma_halo"
           }

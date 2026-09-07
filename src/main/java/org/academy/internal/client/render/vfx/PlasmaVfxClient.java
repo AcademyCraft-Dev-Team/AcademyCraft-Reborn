@@ -75,9 +75,6 @@ public final class PlasmaVfxClient {
                 stop(manager, effects.gather);
                 stop(manager, effects.focus);
                 stop(manager, effects.projectile);
-                if (effects.launched) {
-                    spawnImpact(effects.lastPosition);
-                }
                 iterator.remove();
                 continue;
             }
@@ -101,7 +98,7 @@ public final class PlasmaVfxClient {
         }
     }
 
-    private static void spawnCharge(Plasma plasma) {
+    public static void spawnCharge(Plasma plasma) {
         var manager = VfxGraphManager.INSTANCE;
         // 实体重新加入客户端世界时可能再次触发 join；先停止同一实体的旧图实例，
         // 避免两套 focus 电弧同时存活。
@@ -116,8 +113,15 @@ public final class PlasmaVfxClient {
             var fixedOrigin = chargeOrigin(plasma);
             var fixedFocus = worldPosition(plasma);
             var fixedFocusOffset = new Vector3f(fixedFocus).sub(fixedOrigin);
+            if (plasma.isLaunched()) {
+                var effects = new PlasmaEffects(null, fixedFocus, fixedOrigin);
+                effects.launched = true;
+                effects.projectile = spawnProjectile(plasma, effects);
+                EFFECTS.put(plasma, effects);
+                return;
+            }
             gather = manager.spawn(CHARGE_ASSET, new Vector3f(fixedOrigin));
-            keepVisibleAtLowViewDistance(gather);
+            configureVisibility(gather, new Vector3f(fixedOrigin).add(0f, 64f, 0f), 152f);
             gather.bind("emission", () -> Value.of(gatherEmission(plasma)));
             gather.bind("charge_progress", () -> Value.of(plasma.getGatherProgress()));
             gather.bind("expand_rate", () -> Value.of(tornadoExpandRate(plasma)));
@@ -132,7 +136,7 @@ public final class PlasmaVfxClient {
     private static @Nullable ActiveEffect spawnFocus(Plasma plasma, PlasmaEffects effects) {
         try {
             var effect = VfxGraphManager.INSTANCE.spawn(FOCUS_ASSET, new Vector3f(effects.fixedFocus));
-            keepVisibleAtLowViewDistance(effect);
+            configureVisibility(effect, effects.fixedFocus, 32f);
             effect.bind("convergence_progress", () -> Value.of(convergenceProgress(plasma)));
             effect.bind("formation_progress", () -> Value.of(formationProgress(plasma)));
             return effect;
@@ -149,8 +153,12 @@ public final class PlasmaVfxClient {
             var direction = initialDirection(plasma);
             effects.projectileDirection.set((float) direction.x, (float) direction.y, (float) direction.z);
             var effect = VfxGraphManager.INSTANCE.spawn(PROJECTILE_ASSET, new Vector3f(effects.projectileOrigin));
-            keepVisibleAtLowViewDistance(effect);
-            effect.bind("projectile_position", () -> Value.of(new Vector3f(effects.projectilePosition)));
+            configureVisibility(effect, effects.projectileOrigin, 128f);
+            effect.bind("projectile_position", () -> {
+                effects.updateProjectilePosition(plasma);
+                effect.setCullingSphere(worldPosition(plasma), 128f);
+                return Value.of(new Vector3f(effects.projectilePosition));
+            });
             effect.bind("projectile_direction", () -> Value.of(new Vector3f(effects.projectileDirection)));
             return effect;
         } catch (RuntimeException exception) {
@@ -159,10 +167,10 @@ public final class PlasmaVfxClient {
         }
     }
 
-    private static void spawnImpact(Vector3f position) {
+    public static void spawnImpact(Vector3f position) {
         try {
             var effect = VfxGraphManager.INSTANCE.spawn(IMPACT_ASSET, new Vector3f(position));
-            keepVisibleAtLowViewDistance(effect);
+            configureVisibility(effect, position, 96f);
             IMPACTS.add(new TimedEffect(effect));
         } catch (RuntimeException exception) {
             AcademyCraft.getLogger().error("Unable to spawn graph-authored plasma impact VFX", exception);
@@ -181,7 +189,16 @@ public final class PlasmaVfxClient {
         }
     }
 
+    public static void clear() {
+        var manager = VfxGraphManager.INSTANCE;
+        for (var e : EFFECTS.values()) { stop(manager, e.gather); stop(manager, e.focus); stop(manager, e.projectile); }
+        for (var impact : IMPACTS) stop(manager, impact.effect);
+        EFFECTS.clear();
+        IMPACTS.clear();
+    }
+
     private static Vector3f chargeOrigin(Plasma plasma) {
+        if (plasma.visualChargeOrigin() != null) return plasma.visualChargeOrigin().toVector3f();
         var owner = owner(plasma);
         if (owner != null) {
             return worldPosition(owner);
@@ -201,7 +218,9 @@ public final class PlasmaVfxClient {
     }
 
     private static Vector3f worldPosition(Entity entity) {
-        return new Vector3f((float) entity.getX(), (float) entity.getY(), (float) entity.getZ());
+        return entity instanceof Plasma plasma && !net.minecraft.client.Minecraft.getInstance().isPaused()
+                ? plasma.visualPosition().toVector3f()
+                : new Vector3f((float) entity.getX(), (float) entity.getY(), (float) entity.getZ());
     }
 
     private static float gatherEmission(Plasma plasma) {
@@ -259,8 +278,10 @@ public final class PlasmaVfxClient {
         return Mth.lerp(swell, FORMATION_AT_CONVERGENCE, 1.0f);
     }
 
-    private static void keepVisibleAtLowViewDistance(ActiveEffect effect) {
-        effect.setAlwaysVisible(true);
+    private static void configureVisibility(ActiveEffect effect, Vector3f center, float radius) {
+        effect.setAlwaysVisible(false);
+        effect.setCullingSphere(center, radius);
+        effect.setRenderDistance(256f);
         effect.setMinimumFarPlane(PLASMA_MINIMUM_FAR_PLANE);
     }
 
@@ -282,7 +303,7 @@ public final class PlasmaVfxClient {
         private final Vector3f fixedFocus;
         private boolean launched;
 
-        private PlasmaEffects(ActiveEffect gather, Vector3f initialPosition, Vector3f fixedOrigin) {
+        private PlasmaEffects(@Nullable ActiveEffect gather, Vector3f initialPosition, Vector3f fixedOrigin) {
             this.gather = gather;
             this.lastPosition = new Vector3f(initialPosition);
             this.fixedOrigin = new Vector3f(fixedOrigin);

@@ -82,8 +82,8 @@
       "id": "ctx_output", "type": "OUTPUT", "name": "Flash Shock Rings Debris And Four-Beat Impact Exposure", "x": 1500.0, "y": 0.0,
       "blocks": [
         { "id": "out_flash", "type": "vfx.block.output_quad_glow", "properties": { "vertex": "academy:core/vfxgraph_plasma_flash", "shader": "academy:core/vfxgraph_plasma_flash", "blend": "glow", "layer": "impact_core" } },
-        { "id": "out_halo", "type": "vfx.block.output_quad_glow", "properties": { "vertex": "academy:core/vfxgraph_plasma_halo", "shader": "academy:core/vfxgraph_plasma_halo", "blend": "glow", "layer": "plasma_halo" } },
-        { "id": "out_smoke", "type": "vfx.block.output_quad", "properties": { "vertex": "academy:core/vfxgraph_plasma_smoke", "shader": "academy:core/vfxgraph_plasma_smoke", "blend": "translucent", "layer": "smoke" } },
+        { "id": "out_halo", "type": "vfx.block.output_quad_glow", "properties": { "bounds_scale": "2.0", "vertex": "academy:core/vfxgraph_plasma_halo", "shader": "academy:core/vfxgraph_plasma_halo", "blend": "glow", "layer": "plasma_halo" } },
+        { "id": "out_smoke", "type": "vfx.block.output_quad", "properties": { "bounds_scale": "2.0", "vertex": "academy:core/vfxgraph_plasma_smoke", "shader": "academy:core/vfxgraph_plasma_smoke", "blend": "translucent", "layer": "smoke" } },
         { "id": "out_sparks", "type": "vfx.block.output_quad_glow", "properties": { "vertex": "academy:core/vfxgraph_plasma_spark", "shader": "academy:core/vfxgraph_plasma_spark", "blend": "glow", "layer": "ion_spark" } },
         { "id": "out_arcs", "type": "vfx.block.output_arc", "properties": { "vertex": "academy:core/vfxgraph_arc", "shader": "academy:core/vfxgraph_arc", "blend": "glow", "sparks": "0", "emission": "1.15", "noise_strength": "0.08", "lifetime": "0.1", "overall_scale": "1", "branch_depth": "0" } },
         { "id": "out_mono_impact", "type": "vfx.block.output_quad", "properties": { "vertex": "academy:core/vfxgraph_impact_monochrome", "shader": "academy:core/vfxgraph_impact_monochrome", "blend": "translucent", "layer": "impact_mono" } }

@@ -36,17 +36,22 @@ public final class KineticShockwaveRenderer
     @Override
     public void submit(KineticShockwaveRenderState state, PoseStack poseStack,
                        SubmitNodeCollector collector, CameraRenderState cameraState) {
-        if (state.radius <= 0.01f || state.progress >= 1.0f) return;
-        var fade = 1.0f - state.progress;
-        var strength = Mth.clamp(0.018f + state.intensity * 0.006f, 0.02f, 0.055f) * fade;
-        var width = Mth.clamp(0.18f + state.intensity * 0.035f, 0.2f, 0.42f);
-        var blur = 0.055f + state.progress * 0.04f;
+        renderRings(poseStack, state.radius, state.progress, state.intensity, state.xRot, state.yRot);
+    }
 
-        emitRing(poseStack, state.radius, strength, width, blur, 0.0f, 0.0f, 0.0f);
-        emitRing(poseStack, state.radius, strength * 0.8f, width, blur, 90.0f, 0.0f, 0.0f);
-        emitRing(poseStack, state.radius, strength * 0.8f, width, blur, 0.0f, 0.0f, 90.0f);
-        emitRing(poseStack, state.radius, strength, width * 0.8f, blur,
-                180.0f, 90.0f - state.yRot, 90.0f + state.xRot);
+    public static void renderRings(PoseStack poseStack, float radius, float progress,
+                                   float intensity, float xRot, float yRot) {
+        if (radius <= 0.01f || progress >= 1.0f) return;
+        var fade = 1.0f - progress;
+        var strength = Mth.clamp(0.018f + intensity * 0.006f, 0.02f, 0.055f) * fade;
+        var width = Mth.clamp(0.18f + intensity * 0.035f, 0.2f, 0.42f);
+        var blur = 0.055f + progress * 0.04f;
+
+        emitRing(poseStack, radius, strength, width, blur, 0.0f, 0.0f, 0.0f);
+        emitRing(poseStack, radius, strength * 0.8f, width, blur, 90.0f, 0.0f, 0.0f);
+        emitRing(poseStack, radius, strength * 0.8f, width, blur, 0.0f, 0.0f, 90.0f);
+        emitRing(poseStack, radius, strength, width * 0.8f, blur,
+                180.0f, 90.0f - yRot, 90.0f + xRot);
     }
 
     @Override

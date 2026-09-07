@@ -68,7 +68,7 @@ public final class ParticleRenderer implements VfxRenderer<ParticleData> {
         var cameraPos = ctx.cameraPos();
         var writeEncoder = ctx.device().createCommandEncoder();
         if (instanceData == null || instanceData.capacity() < neededBytes) {
-            instanceData = BufferUtils.createByteBuffer(Math.toIntExact(neededBytes));
+            instanceData = BufferUtils.createByteBuffer(Math.toIntExact(instanceBuffer.size()));
         }
         instanceData.clear();
         for (var particle : data) {
