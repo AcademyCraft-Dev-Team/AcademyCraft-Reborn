@@ -13,15 +13,14 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
-import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
 
 /**
- * Hides {@code *_outline} bones from the main (typically double-sided) pass and
- * re-submits them with backface culling — Blockbench "单面" for inset glass shells.
+ * Hides {@code *_outline} bones from the main pass and re-submits them with
+ * backface culling and an unlit (no lightmap / no cardinal lighting) cutout pass.
  */
 public final class OutlineBoneGeoLayer<T extends GeoAnimatable, O, R extends GeoRenderState>
         extends GeoRenderLayer<T, O, R> {
@@ -70,10 +69,7 @@ public final class OutlineBoneGeoLayer<T extends GeoAnimatable, O, R extends Geo
         }
         R renderState = renderPassInfo.renderState();
         Identifier texture = getTextureResource(renderState);
-        RenderType renderType = getOutlineRenderType(renderState, texture);
-        if (renderType == null) {
-            return;
-        }
+        RenderType renderType = MisakaTowerRenderTypes.outline(texture);
 
         int packedLight = renderPassInfo.packedLight();
         int packedOverlay = renderPassInfo.packedOverlay();
@@ -91,10 +87,6 @@ public final class OutlineBoneGeoLayer<T extends GeoAnimatable, O, R extends Geo
             }
             poseStack.popPose();
         });
-    }
-
-    private @Nullable RenderType getOutlineRenderType(R renderState, Identifier texture) {
-        return MisakaTowerRenderTypes.outline(texture);
     }
 
     private static List<CuboidGeoBone> outlineBones(RenderPassInfo<?> renderPassInfo) {
