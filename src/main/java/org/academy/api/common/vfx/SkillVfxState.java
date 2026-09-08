@@ -6,6 +6,22 @@ import net.minecraft.world.phys.Vec3;
 public sealed interface SkillVfxState {
     Vec3 position();
 
+    default boolean oneShot() { return this instanceof Burst || this instanceof Smoke || this instanceof Slash; }
+
+    record Smoke(Vec3 position, float size, float lifeModifier, int frame, int lifetimeTicks) implements SkillVfxState {
+        public float alphaAt(float ageTicks) {
+            if (ageTicks < 0 || ageTicks >= lifetimeTicks) return 0;
+            float t = ageTicks / (20f * lifeModifier);
+            if (t <= 0.3f) return t / 0.3f;
+            if (t <= 1.5f) return 1;
+            return Math.max(0, 1f - (t - 1.5f) / 0.5f);
+        }
+        public int visibleTicks() { return Math.min(lifetimeTicks, (int) Math.ceil(40f * lifeModifier)); }
+    }
+
+    record Slash(Vec3 position, float xRot, float yRot, float scale, int direction, int lifetimeTicks)
+            implements SkillVfxState {}
+
     record Beam(Vec3 position, float xRot, float yRot, float length, float scale, float sideOffset,
                 int chargeTicks, int delayTicks, int remainingTicks, int flags,
                 float reflectionDistance, float returnLength, Vec3 returnDirection, float tickRate)

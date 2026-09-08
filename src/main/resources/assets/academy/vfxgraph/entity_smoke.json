@@ -80,6 +80,7 @@
           "id": "out_smoke",
           "type": "vfx.block.output_quad",
           "properties": {
+            "bounds_scale": "2.0",
             "vertex": "academy:core/vfxgraph_smoke_atlas",
             "shader": "academy:core/vfxgraph_smoke_atlas",
             "texture": "academy:textures/ability/generic/effect/smokes.png",

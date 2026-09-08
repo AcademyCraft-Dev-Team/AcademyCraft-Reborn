@@ -33,6 +33,7 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.vfx.SkillVfxService;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -45,8 +46,6 @@ import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisas
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
-import org.academy.internal.common.world.entity.EntityTypes;
-import org.academy.internal.common.world.entity.skill.DarkmatterCutSlash;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -393,17 +392,13 @@ public final class DarkmatterCut extends Skill {
                 Vec3 direction,
                 float scale
         ) {
-            var slash = new DarkmatterCutSlash(EntityTypes.DARKMATTER_CUT_SLASH.get(), level);
             var position = player.position().add(0, player.getBbHeight() * 0.3, 0)
                     .add(direction.scale(1.85));
-            slash.setPos(position);
-            slash.setYRot((float) Math.toDegrees(Math.atan2(-direction.x, direction.z)));
-            slash.setXRot((float) Math.toDegrees(-Math.asin(Math.clamp(direction.y, -1.0, 1.0)))
-                    + player.getRandom().nextFloat() * 60 - 30);
-            slash.setScale(scale);
-            slash.setDuration(4);
-            slash.setSwingDirection(player.getRandom().nextBoolean() ? 1 : -1);
-            level.addFreshEntity(slash);
+            float yRot = (float) Math.toDegrees(Math.atan2(-direction.x, direction.z));
+            float xRot = (float) Math.toDegrees(-Math.asin(Math.clamp(direction.y, -1.0, 1.0)))
+                    + player.getRandom().nextFloat() * 60 - 30;
+            SkillVfxService.slash(level, position, xRot, yRot, scale,
+                    player.getRandom().nextBoolean() ? 1 : -1, 4);
         }
     }
 

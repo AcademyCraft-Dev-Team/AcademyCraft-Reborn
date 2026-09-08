@@ -41,6 +41,8 @@ public final class SkillVfxPacket extends Packet<ClientPacketListener, SkillVfxP
             case SkillVfxState.Plasma ignored -> 1;
             case SkillVfxState.Burst ignored -> 2;
             case SkillVfxState.End ignored -> 3;
+            case SkillVfxState.Smoke ignored -> 4;
+            case SkillVfxState.Slash ignored -> 5;
         });
         Vec3.STREAM_CODEC.encode(b, state.position());
         switch (state) {
@@ -75,6 +77,14 @@ public final class SkillVfxPacket extends Packet<ClientPacketListener, SkillVfxP
                 ByteBufCodecs.VAR_INT.encode(b, s.lifetimeTicks());
             }
             case SkillVfxState.End s -> b.writeBoolean(s.hidden());
+            case SkillVfxState.Smoke s -> {
+                b.writeFloat(s.size()); b.writeFloat(s.lifeModifier()); b.writeByte(s.frame());
+                ByteBufCodecs.VAR_INT.encode(b, s.lifetimeTicks());
+            }
+            case SkillVfxState.Slash s -> {
+                b.writeFloat(s.xRot()); b.writeFloat(s.yRot()); b.writeFloat(s.scale());
+                b.writeBoolean(s.direction() < 0); ByteBufCodecs.VAR_INT.encode(b, s.lifetimeTicks());
+            }
         }
     }
 
@@ -113,6 +123,18 @@ public final class SkillVfxPacket extends Packet<ClientPacketListener, SkillVfxP
                 yield new SkillVfxState.Burst(pos, direction, range(b, 0, 256), range(b, 0, 128), ticks(b), impact);
             }
             case 3 -> new SkillVfxState.End(pos, b.readBoolean());
+            case 4 -> {
+                float size = range(b, 0.01f, 16), life = range(b, 0.5f, 0.7f);
+                int frame = b.readUnsignedByte(), duration = ticks(b);
+                if (frame > 3 || duration < 1 || duration > 80) throw new IllegalArgumentException("Invalid smoke parameters");
+                yield new SkillVfxState.Smoke(pos, size, life, frame, duration);
+            }
+            case 5 -> {
+                float xRot = finite(b), yRot = finite(b), scale = range(b, 0.1f, 32);
+                int direction = b.readBoolean() ? -1 : 1, duration = ticks(b);
+                if (duration < 1 || duration > 200) throw new IllegalArgumentException("Invalid slash lifetime");
+                yield new SkillVfxState.Slash(pos, xRot, yRot, scale, direction, duration);
+            }
             default -> throw new IllegalArgumentException("Unknown skill VFX type");
         };
         return new SkillVfxPacket(dimension, id, revision, state);

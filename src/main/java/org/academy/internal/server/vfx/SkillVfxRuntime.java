@@ -50,10 +50,16 @@ public final class SkillVfxRuntime {
         }
     }
 
-    public static void emit(ServerLevel level, SkillVfxState.Burst state) {
+    public static void emit(ServerLevel level, SkillVfxState state) {
+        double radius = switch (state) {
+            case SkillVfxState.Burst b -> b.plasmaImpact() ? Math.max(96, b.radius()) : b.radius();
+            case SkillVfxState.Smoke s -> s.size() * 2;
+            case SkillVfxState.Slash s -> s.scale() * 4;
+            default -> throw new IllegalArgumentException("Only one-shot VFX may be emitted");
+        };
         var packet = new SkillVfxPacket(level.dimension().identifier(), ++nextId, 1, state);
         for (var observer : level.players()) {
-            double range = 96 + (state.plasmaImpact() ? Math.max(96, state.radius()) : state.radius());
+            double range = 96 + radius;
             if (observer.distanceToSqr(state.position()) <= range * range) send(observer, packet);
         }
     }

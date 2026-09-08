@@ -293,6 +293,30 @@ neoForge {
             // due to shit iris
             systemProperty("neoforge.disableGlValidation", "true")
         }
+        // Opt-in real TCP/graphics validation; all worlds and output stay in dedicated directories.
+        val vfxSession = providers.gradleProperty("academyVfxSession").getOrElse("manual")
+        val vfxOutput = file("build/vfx-live-validation/$vfxSession").absolutePath
+        val vfxPort = providers.gradleProperty("academyVfxPort").getOrElse("25575")
+        register("serverVfxValidation") {
+            server()
+            environment("IS_DEV", "true")
+            gameDirectory.set(file("run/vfx-validation/server"))
+            systemProperty("academy.vfxValidation.server", "true")
+            systemProperty("academy.vfxValidation.output", vfxOutput)
+            programArguments.add("--nogui")
+        }
+        for ((role, username) in listOf("caster" to "VfxCaster", "observer" to "VfxObserver")) {
+            register("clientVfx${role.replaceFirstChar { it.uppercase() }}") {
+                client()
+                environment("IS_DEV", "true")
+                gameDirectory.set(file("run/vfx-validation/$role"))
+                systemProperty("academy.vfxValidation.role", role)
+                systemProperty("academy.vfxValidation.output", vfxOutput)
+                jvmArgument("-Xmx4G")
+                programArguments.addAll("--username", username, "--quickPlayMultiplayer", "127.0.0.1:$vfxPort",
+                    "--width", "1280", "--height", "720")
+            }
+        }
         register("clientDevWithRenderDoc") {
             client()
             environment("IS_DEV", "true")

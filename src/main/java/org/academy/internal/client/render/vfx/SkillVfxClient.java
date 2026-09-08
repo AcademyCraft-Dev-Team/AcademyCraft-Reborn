@@ -39,11 +39,19 @@ public final class SkillVfxClient {
         var level = minecraft.level;
         if (level != world) reset(level);
         if (level == null || !level.dimension().identifier().equals(packet.dimension)) return;
-        boolean terminal = packet.state instanceof SkillVfxState.Burst
+        boolean terminal = packet.state.oneShot()
                 || (packet.state instanceof SkillVfxState.End end && !end.hidden());
         if (!SEQUENCE.accept(packet.id, packet.revision, terminal)) return;
         received++;
         long now = clientTick;
+        if (packet.state instanceof SkillVfxState.Smoke smoke) {
+            SmokeVfxClient.spawn(smoke);
+            return;
+        }
+        if (packet.state instanceof SkillVfxState.Slash slash) {
+            VfxManager.INSTANCE.spawn(new DarkmatterSlashVfx(slash));
+            return;
+        }
         if (packet.state instanceof SkillVfxState.Burst burst) {
             if (burst.plasmaImpact()) PlasmaVfxClient.spawnImpact(burst.position().toVector3f());
             else VfxManager.INSTANCE.spawn(new ShockwaveVfx(burst));
@@ -109,6 +117,7 @@ public final class SkillVfxClient {
         ACTIVE.values().forEach(replica -> replica.entity.discard());
         ACTIVE.clear(); SEQUENCE.clear();
         PlasmaVfxClient.clear();
+        SmokeVfxClient.clear();
         clientTick = 0;
         world = level;
     }
