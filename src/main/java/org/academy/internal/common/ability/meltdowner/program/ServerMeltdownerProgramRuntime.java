@@ -33,7 +33,7 @@ import java.util.Optional;
 /**
  * Authoritative Minecraft-server adapter for Meltdowner programs.
  */
-public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRuntime {
+public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRuntime, org.academy.api.common.ability.program.ForwardingProgramTargetResolver {
     public static final double MAX_QUERY_RANGE = AbilityProgramSpatialRanges.forCategory(
             MeltdownerProgramNodeCatalog.MELTDOWNER).queryRange();
     public static final double MAX_ACTION_RANGE = AbilityProgramSpatialRanges.forCategory(
@@ -43,6 +43,10 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
     private final ServerPlayer player;
     private final float costMultiplier;
     private final ServerProgramTargetResolver targets;
+    @Override
+    public org.academy.api.common.ability.program.ProgramTargetResolver targetResolver() {
+        return targets;
+    }
 
     public ServerMeltdownerProgramRuntime(ServerPlayer player) {
         this(player, 1.0f);
@@ -265,7 +269,7 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
             throw new IllegalArgumentException("Mining target is outside loaded world bounds");
         }
         var state = level.getBlockState(position);
-        if (state.isAir() || !LevelUtil.canBreakBlock(state, 3)) {
+        if (state.isAir() || !LevelUtil.canBreakBlock(state, level, position, 4)) {
             throw new IllegalArgumentException("Mining target cannot be broken");
         }
         if (!DestroyBlocksSetting.canDestroyBlocks(player, Skills.MINING_BEAM.get())) {

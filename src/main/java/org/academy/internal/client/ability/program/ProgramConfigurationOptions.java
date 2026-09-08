@@ -129,10 +129,12 @@ public final class ProgramConfigurationOptions {
             if (field.equals("operator")) {
                 return stringOptions(
                         "screen.academy.program.configuration.arithmetic.",
-                        "add", "subtract", "multiply", "divide", "modulo", "absolute"
+                        "add", "subtract", "multiply", "divide", "integer_divide", "modulo", "power", "absolute"
                 );
             }
         }
+        if (id.equals(CommonProgramNodeIds.NUMERIC_CONVERT)
+                && (field.equals("source_type") || field.equals("target_type"))) return scalarTypes(false);
         if (id.equals(CommonProgramNodeIds.RANDOM_NUMBER) && field.equals("type")) {
             return scalarTypes(false);
         }

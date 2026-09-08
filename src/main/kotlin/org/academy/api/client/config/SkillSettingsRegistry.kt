@@ -105,7 +105,7 @@ object SkillSettingsRegistry {
         fun getAsFloat(): Float
     }
 
-    data class FloatRange(
+    data class FloatRange @JvmOverloads constructor(
         override val id: String,
         override val labelKey: String,
         val min: Float,
@@ -113,7 +113,8 @@ object SkillSettingsRegistry {
         val step: Float = 0.05f,
         val getter: FloatSupplier,
         val setter: Consumer<Float>,
-        val commit: Runnable
+        val commit: Runnable,
+        val formatter: java.util.function.Function<Float, String>? = null
     ) : Entry {
         init {
             require(min.isFinite() && max.isFinite() && min <= max) {
@@ -122,6 +123,13 @@ object SkillSettingsRegistry {
             require(step.isFinite() && step > 0f) {
                 "Float setting '$id' must use a positive finite step"
             }
+        }
+
+        fun formatValue(value: Float): String {
+            formatter?.let { return it.apply(value) }
+            val range = max - min
+            val normalized = if (range > 0f) ((value - min) / range).coerceIn(0f, 1f) else 0f
+            return "${(normalized * 100f).roundToInt()}%"
         }
 
         fun quantize(value: Float): Float {

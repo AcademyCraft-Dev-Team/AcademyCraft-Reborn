@@ -99,31 +99,6 @@ public final class VectorBlast extends Skill {
                 InputConstants.MOUSE_BUTTON_LEFT, InputConstants.PRESS, InputConstants.MOD_CONTROL);
         var pushStopBinding = InputSystem.combo(InputSystem.InputType.MOUSE,
                 InputConstants.MOUSE_BUTTON_LEFT, InputConstants.RELEASE, InputConstants.MOD_CONTROL);
-        var legacyAltBlast = InputSystem.combo(InputSystem.InputType.MOUSE,
-                InputConstants.MOUSE_BUTTON_LEFT, InputConstants.RELEASE, InputConstants.MOD_ALT);
-        var reversedPullStart = InputSystem.combo(InputSystem.InputType.MOUSE,
-                InputConstants.MOUSE_BUTTON_LEFT, InputConstants.PRESS, InputConstants.MOD_SHIFT);
-        var reversedPullStop = InputSystem.combo(InputSystem.InputType.MOUSE,
-                InputConstants.MOUSE_BUTTON_LEFT, InputConstants.RELEASE, InputConstants.MOD_SHIFT);
-
-        var migrated = false;
-        if (legacyAltBlast.equals(Client.CONFIG.getKeyBinding(Client.KEY_NAME_USE))) {
-            Client.CONFIG.setKeyBinding(Client.KEY_NAME_USE, blastBinding);
-            migrated = true;
-        }
-        if (reversedPullStart.equals(Client.CONFIG.getKeyBinding(Client.KEY_NAME_PULL_START))) {
-            Client.CONFIG.setKeyBinding(Client.KEY_NAME_PULL_START, pullStartBinding);
-            migrated = true;
-        }
-        if (reversedPullStop.equals(Client.CONFIG.getKeyBinding(Client.KEY_NAME_PULL_STOP))) {
-            Client.CONFIG.setKeyBinding(Client.KEY_NAME_PULL_STOP, pullStopBinding);
-            migrated = true;
-        }
-        if (migrated) {
-            AcademyCraftClient.Config.INSTANCE.setConfig(key, Client.CONFIG);
-            AcademyCraftClient.Config.INSTANCE.save();
-        }
-
         InputSystem.addKeyBinding(
                 Client.KEY_NAME_USE,
                 Client.CONFIG.getKeyBinding(Client.KEY_NAME_USE, blastBinding),
@@ -141,18 +116,6 @@ public final class VectorBlast extends Skill {
         InputSystem.addKeyBinding(Client.KEY_NAME_PUSH_STOP,
                 Client.CONFIG.getKeyBinding(Client.KEY_NAME_PUSH_STOP, pushStopBinding),
                 binding -> Client.sendBranchControl(binding, UsePacket.Action.PUSH_STOP));
-
-        // InputSystem also persists a global copy used by the terminal settings app. Migrate that
-        // copy after registration so an old Alt-attack binding cannot override the skill config.
-        if (legacyAltBlast.equals(InputSystem.getKeyBinding(Client.KEY_NAME_USE))) {
-            InputSystem.setKeyBinding(Client.KEY_NAME_USE, blastBinding);
-        }
-        if (reversedPullStart.equals(InputSystem.getKeyBinding(Client.KEY_NAME_PULL_START))) {
-            InputSystem.setKeyBinding(Client.KEY_NAME_PULL_START, pullStartBinding);
-        }
-        if (reversedPullStop.equals(InputSystem.getKeyBinding(Client.KEY_NAME_PULL_STOP))) {
-            InputSystem.setKeyBinding(Client.KEY_NAME_PULL_STOP, pullStopBinding);
-        }
     }
 
     @Override

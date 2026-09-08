@@ -36,7 +36,7 @@ class ProgramConfigurationOptionsTest {
                         arithmetic, "type", new JsonPrimitive("integer")))
         );
         assertEquals(
-                List.of("add", "subtract", "multiply", "divide", "modulo", "absolute"),
+                List.of("add", "subtract", "multiply", "divide", "integer_divide", "modulo", "power", "absolute"),
                 values(ProgramConfigurationOptions.options(
                         arithmetic, "operator", new JsonPrimitive("add")))
         );

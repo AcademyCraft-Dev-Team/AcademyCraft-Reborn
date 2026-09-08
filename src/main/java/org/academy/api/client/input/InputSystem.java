@@ -30,6 +30,7 @@ public final class InputSystem {
 
     private static final Map<String, KeyBinding> KEY_BINDINGS = new LinkedHashMap<>();
     private static final Map<String, MaintainedBinding> MAINTAINED_BINDINGS = new HashMap<>();
+    private static final Map<String, BooleanSupplier> EXCLUSIVE_BINDINGS = new LinkedHashMap<>();
     private static final Map<String, ActiveMaintainedBinding> ACTIVE_MAINTAINED_BINDINGS = new HashMap<>();
     private static final Map<String, ActivePairedBinding> ACTIVE_PAIRED_BINDINGS = new HashMap<>();
     private static final Set<SuppressedPairedRelease> SUPPRESSED_PAIRED_RELEASES = new HashSet<>();
@@ -108,7 +109,16 @@ public final class InputSystem {
         }, canRemainActive);
     }
 
+    /** An active HUD gesture owns its input, including when rebound onto a skill's own key. */
+    public static void addExclusiveKeyBinding(
+            String keyName, KeyCombination combo, Consumer<BindingContext> handler, BooleanSupplier active
+    ) {
+        addKeyBinding(keyName, withAction(combo, ANY_ACTION), handler);
+        EXCLUSIVE_BINDINGS.put(keyName, active);
+    }
+
     public static void removeKeyBinding(String keyName) {
+        EXCLUSIVE_BINDINGS.remove(keyName);
         cancelMaintainedKeyBinding(keyName);
         cancelPairedBindingsFor(keyName);
         MAINTAINED_BINDINGS.remove(keyName);
@@ -149,7 +159,7 @@ public final class InputSystem {
         if (binding == null) return;
         cancelMaintainedKeyBinding(keyName);
         cancelPairedBindingsFor(keyName);
-        if (MAINTAINED_BINDINGS.containsKey(keyName)) combo = withAction(combo, ANY_ACTION);
+        if (MAINTAINED_BINDINGS.containsKey(keyName) || EXCLUSIVE_BINDINGS.containsKey(keyName)) combo = withAction(combo, ANY_ACTION);
         KEY_BINDINGS.put(keyName, new KeyBinding(combo, binding.handler, binding.enabled));
         bindingRevision++;
     }
@@ -245,9 +255,8 @@ public final class InputSystem {
      * over optional branch bindings. This prevents the selected-skill HUD key from starting a
      * branch action merely because that branch happened to be registered first for the phase.
      *
-     * <p>The binding's physical key is deliberately ignored unless it already matches the HUD
-     * input. In that case the normal dispatcher will invoke the same handler, so this method treats
-     * it as handled without invoking it a second time.</p>
+     * <p>The binding's physical gesture is ignored. The HUD owns dispatch for this input, so even
+     * rebinding the HUD onto the skill's own gesture invokes its handler exactly once.</p>
      */
     public static boolean triggerPrimaryBindingForSkill(Skill skill, BindingContext context) {
         var skillName = skill.getKey().getPath();
@@ -262,9 +271,7 @@ public final class InputSystem {
             if (primaryBindingPriority(entry.getKey(), skillName) != primaryPriority) continue;
             var configuredAction = binding.combo.action;
             if (configuredAction != ANY_ACTION && configuredAction != context.action) continue;
-            if (matches(binding.combo, context.type, context.input, context.action, context.modifiers)) {
-                return true;
-            }
+
             binding.handler.accept(context);
             return true;
         }
@@ -509,12 +516,20 @@ public final class InputSystem {
         }
     }
 
-    private static void dispatch(InputType eventType, int input, int action, int modifiers) {
+    static void dispatch(InputType eventType, int input, int action, int modifiers) {
         var context = new BindingContext(eventType, input, action, modifiers);
+        for (var entry : EXCLUSIVE_BINDINGS.entrySet()) {
+            var binding = KEY_BINDINGS.get(entry.getKey());
+            if (binding != null && binding.enabled && entry.getValue().getAsBoolean()
+                    && matches(binding.combo, eventType, input, action, modifiers)) {
+                binding.handler.accept(context);
+                return;
+            }
+        }
         for (var entry : KEY_BINDINGS.entrySet()) {
             var keyName = entry.getKey();
             var binding = entry.getValue();
-            if (!binding.enabled) continue;
+            if (!binding.enabled || EXCLUSIVE_BINDINGS.containsKey(keyName)) continue;
             var combo = binding.combo;
             if (action == InputConstants.RELEASE
                     && consumeSuppressedPairedRelease(keyName, eventType, input)) {

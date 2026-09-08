@@ -26,6 +26,12 @@ public abstract class MixinLevelExtractor {
             cir.setReturnValue(false);
             return;
         }
+        if (entity instanceof net.minecraft.world.entity.LivingEntity living
+                && org.academy.internal.client.renderer.entity.layers.CloudroomLayer.shouldReveal(living)
+                && frustum.isVisible(entity.getBoundingBox())) {
+            cir.setReturnValue(true);
+            return;
+        }
         // Vanilla additionally requires the entity's chunk section to be compiled and
         // visible. A fast player can outrun that compilation and blink every other frame.
         if (entity instanceof Avatar avatar && WingFlightPose.hasActiveFlightPose(avatar)) {

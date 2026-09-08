@@ -26,7 +26,7 @@ import java.util.Optional;
 /**
  * Authoritative Minecraft-server adapter for Darkmatter programs.
  */
-public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRuntime {
+public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRuntime, org.academy.api.common.ability.program.ForwardingProgramTargetResolver {
     public static final double MAX_QUERY_RANGE = AbilityProgramSpatialRanges.forCategory(
             DarkmatterProgramNodeCatalog.DARKMATTER).queryRange();
     public static final double MAX_ACTION_RANGE = AbilityProgramSpatialRanges.forCategory(
@@ -36,6 +36,10 @@ public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRu
     private final ServerPlayer player;
     private final float costMultiplier;
     private final ServerProgramTargetResolver targets;
+    @Override
+    public org.academy.api.common.ability.program.ProgramTargetResolver targetResolver() {
+        return targets;
+    }
 
     public ServerDarkmatterProgramRuntime(ServerPlayer player) {
         this(player, 1.0f);

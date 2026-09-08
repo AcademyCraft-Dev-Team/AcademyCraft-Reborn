@@ -25,7 +25,6 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.api.server.vfx.SkillVfxService;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -279,10 +278,7 @@ public final class JetStrike extends Skill {
                 unregister();
                 return;
             }
-            if (ticks % 2 == 0) {
-                SkillVfxService.smoke(initialLevel,
-                        player.position().add(0, 0.5, 0), 1f, 80);
-            }
+
             if (proficiencyMilestone >= 3) {
                 var source = SkillDamageSource.of(player, Skills.JET_STRIKE.get());
                 for (var target : initialLevel.getEntitiesOfClass(LivingEntity.class,

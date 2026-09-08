@@ -106,6 +106,12 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                 (ProgramVmContext _,
                  CommonProgramNodeCatalog.NumericArithmeticConfiguration configuration,
                  ProgramInputView inputs) -> numericArithmetic(inputs, configuration));
+        put(result, CommonProgramNodeIds.NUMERIC_CONVERT,
+                (ProgramVmContext _, CommonProgramNodeCatalog.NumericConversionConfiguration configuration,
+                 ProgramInputView inputs) -> data("result", configuration.target().type(),
+                        org.academy.api.common.ability.program.ProgramNumericMath.convert(
+                                (Number) inputs.requireCompatible("value", configuration.source().type()).value(),
+                                configuration.target().type())));
         put(result, CommonProgramNodeIds.NUMERIC_COMPARE,
                 (ProgramVmContext _,
                  CommonProgramNodeCatalog.NumericComparisonConfiguration configuration,
@@ -766,9 +772,9 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
             Map<Identifier, ProgramNodeExecutor<?>> result
     ) {
         put(result, CommonProgramNodeIds.RANDOM_NUMBER,
-                (ProgramVmContext _, CommonProgramNodeCatalog.RandomNumberConfiguration configuration,
+                (ProgramVmContext context, CommonProgramNodeCatalog.RandomNumberConfiguration configuration,
                  ProgramInputView _) -> data(
-                        "value", configuration.kind().type(), randomNumber(configuration)));
+                        "value", configuration.kind().type(), nodeRandomNumber(context, configuration)));
         put(result, CommonProgramNodeIds.SORT_POINTS_BY_DISTANCE,
                 (ProgramVmContext context,
                  CommonProgramNodeCatalog.DistanceSortConfiguration configuration,
@@ -920,6 +926,18 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
             throw new IllegalArgumentException("Vec3 positions are in different dimensions");
         }
         return left.dimension();
+    }
+
+    private static Object nodeRandomNumber(
+            ProgramVmContext context, CommonProgramNodeCatalog.RandomNumberConfiguration configuration
+    ) {
+        // Fan-out reads reuse this node's draw for the invocation. Different node IDs never share it.
+        var key = "random_number:" + context.nodeId();
+        var cached = context.executorState(key).orElse(null);
+        if (cached != null) return cached;
+        var sampled = randomNumber(configuration);
+        context.setExecutorState(key, sampled);
+        return sampled;
     }
 
     private static Object randomNumber(
@@ -1280,7 +1298,10 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                                 integer(inputs, "left"), integer(inputs, "right"));
                         case MULTIPLY -> Math.multiplyExact(
                                 integer(inputs, "left"), integer(inputs, "right"));
-                        case DIVIDE -> integer(inputs, "left") / integer(inputs, "right");
+                        case DIVIDE, INTEGER_DIVIDE -> org.academy.api.common.ability.program.ProgramNumericMath.integerDivide(
+                                integer(inputs, "left"), integer(inputs, "right"));
+                        case POWER -> org.academy.api.common.ability.program.ProgramNumericMath.power(
+                                BigInteger.valueOf(integer(inputs, "left")), BigInteger.valueOf(integer(inputs, "right"))).intValueExact();
                         case MODULO -> integer(inputs, "left") % integer(inputs, "right");
                         case ABSOLUTE -> {
                             var value = integer(inputs, "value");
@@ -1298,7 +1319,9 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                         case ADD -> bigInteger(inputs, "left").add(bigInteger(inputs, "right"));
                         case SUBTRACT -> bigInteger(inputs, "left").subtract(bigInteger(inputs, "right"));
                         case MULTIPLY -> bigInteger(inputs, "left").multiply(bigInteger(inputs, "right"));
-                        case DIVIDE -> bigInteger(inputs, "left").divide(bigInteger(inputs, "right"));
+                        case DIVIDE, INTEGER_DIVIDE -> bigInteger(inputs, "left").divide(bigInteger(inputs, "right"));
+                        case POWER -> org.academy.api.common.ability.program.ProgramNumericMath.power(
+                                bigInteger(inputs, "left"), bigInteger(inputs, "right"));
                         case MODULO -> bigInteger(inputs, "left").remainder(bigInteger(inputs, "right"));
                         case ABSOLUTE -> bigInteger(inputs, "value").abs();
                     }
@@ -1311,6 +1334,9 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                         case SUBTRACT -> floatValue(inputs, "left") - floatValue(inputs, "right");
                         case MULTIPLY -> floatValue(inputs, "left") * floatValue(inputs, "right");
                         case DIVIDE -> floatValue(inputs, "left") / floatValue(inputs, "right");
+                        case INTEGER_DIVIDE -> org.academy.api.common.ability.program.ProgramNumericMath.integerDivide(
+                                floatValue(inputs, "left"), floatValue(inputs, "right"));
+                        case POWER -> Math.pow(floatValue(inputs, "left"), floatValue(inputs, "right"));
                         case MODULO -> floatValue(inputs, "left") % floatValue(inputs, "right");
                         case ABSOLUTE -> Math.abs(floatValue(inputs, "value"));
                     })

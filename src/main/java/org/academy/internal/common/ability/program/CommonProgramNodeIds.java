@@ -46,6 +46,7 @@ public final class CommonProgramNodeIds {
     public static final Identifier FLOAT_GREATER = id("logic/float/greater");
     public static final Identifier FLOAT_GREATER_EQUAL = id("logic/float/greater_equal");
     public static final Identifier NUMERIC_ARITHMETIC = id("logic/numeric/arithmetic");
+    public static final Identifier NUMERIC_CONVERT = id("logic/numeric/convert");
     public static final Identifier NUMERIC_COMPARE = id("logic/numeric/compare");
     public static final Identifier RANDOM_NUMBER = id("value/random_number");
 

@@ -63,7 +63,7 @@ public final class TeleportTargeting {
                 ClipContext.Fluid.NONE,
                 source
         ));
-        if (blockHit instanceof BlockHitResult hit) {
+        if (blockHit.getType() == HitResult.Type.BLOCK && blockHit instanceof BlockHitResult hit) {
             var dimensions = source.getDimensions(Pose.STANDING);
             var block = hit.getBlockPos();
             var standingCenter = standingCenterAbove(block, dimensions.height());

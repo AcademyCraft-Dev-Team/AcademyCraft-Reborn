@@ -249,6 +249,78 @@ class CommonProgramNodesTest {
     }
 
     @Test
+    void integerDivisionRemainderAndPowerExecuteThroughTheGraph() {
+        for (var type : List.of("integer", "big_integer", "float")) {
+            var valueType = switch (type) {
+                case "integer" -> ProgramValueTypes.INTEGER;
+                case "big_integer" -> ProgramValueTypes.BIG_INTEGER;
+                default -> ProgramValueTypes.FLOAT;
+            };
+            for (var operator : List.of("integer_divide", "modulo", "power")) {
+                var graph = new ProgramGraph(List.of(
+                        node(1, PrecisionProgramNodeIds.ON_CAST),
+                        scalarNode(2, type, "-7"),
+                        scalarNode(3, type, "3"),
+                        numericArithmeticNode(4, type, operator),
+                        variableNode(5, CommonProgramNodeIds.VARIABLE_SET, "result", valueType.id()),
+                        node(6, CommonProgramNodeIds.STOP)),
+                        List.of(edge(1, "flow", 5, "flow"), edge(2, "value", 4, "left"),
+                                edge(3, "value", 4, "right"), edge(4, "result", 5, "value"),
+                                edge(5, "flow", 6, "flow")));
+                double expected = switch (operator) {
+                    case "integer_divide" -> -2;
+                    case "modulo" -> -1;
+                    default -> -343;
+                };
+                assertEquals(expected, ((Number) run(graph, null).variables().get("result").value()).doubleValue(),
+                        type + "/" + operator);
+            }
+        }
+    }
+
+    @Test
+    void numericConversionExposesTypedPortsAndExecutes() {
+        var config = new JsonObject();
+        config.addProperty("source_type", "float");
+        config.addProperty("target_type", "integer");
+        var graph = new ProgramGraph(List.of(
+                node(1, PrecisionProgramNodeIds.ON_CAST), scalarNode(2, "float", "-3.75"),
+                new ProgramGraph.Node(3, CommonProgramNodeIds.NUMERIC_CONVERT, 1, config),
+                variableNode(4, CommonProgramNodeIds.VARIABLE_SET, "result", ProgramValueTypes.INTEGER.id()),
+                node(5, CommonProgramNodeIds.STOP)),
+                List.of(edge(1, "flow", 4, "flow"), edge(2, "value", 3, "value"),
+                        edge(3, "result", 4, "value"), edge(4, "flow", 5, "flow")));
+        assertEquals(-3, run(graph, null).variables().get("result").value());
+    }
+
+    @Test
+    void randomNodesHaveIndependentDrawsAndFanOutReusesEachNodesDraw() {
+        var randomNodes = new java.util.ArrayList<ProgramGraph.Node>();
+        var edges = new java.util.ArrayList<ProgramGraph.Edge>();
+        randomNodes.add(node(1, PrecisionProgramNodeIds.ON_CAST));
+        for (int i = 0; i < 24; i++) {
+            int randomId = 2 + i * 3, first = randomId + 1, second = randomId + 2;
+            randomNodes.add(randomNumberNode(randomId, "float", "0", "1"));
+            randomNodes.add(variableNode(first, CommonProgramNodeIds.VARIABLE_SET, "a" + i, ProgramValueTypes.FLOAT.id()));
+            randomNodes.add(variableNode(second, CommonProgramNodeIds.VARIABLE_SET, "b" + i, ProgramValueTypes.FLOAT.id()));
+            edges.add(edge(i == 0 ? 1 : randomId - 1, "flow", first, "flow"));
+            edges.add(edge(randomId, "value", first, "value"));
+            edges.add(edge(first, "flow", second, "flow"));
+            edges.add(edge(randomId, "value", second, "value"));
+        }
+        randomNodes.add(node(74, CommonProgramNodeIds.STOP));
+        edges.add(edge(73, "flow", 74, "flow"));
+        var variables = run(new ProgramGraph(randomNodes, edges), null).variables();
+        var unique = new java.util.HashSet<Object>();
+        for (int i = 0; i < 24; i++) {
+            var value = variables.get("a" + i).value();
+            assertEquals(value, variables.get("b" + i).value());
+            unique.add(value);
+        }
+        assertTrue(unique.size() > 1, "Separate random nodes must not share one invocation-wide draw");
+    }
+
+    @Test
     void conditionalValueSelectUsesTheConfiguredType() {
         var selectConfiguration = new JsonObject();
         selectConfiguration.addProperty("type", ProgramValueTypes.INTEGER.id().toString());

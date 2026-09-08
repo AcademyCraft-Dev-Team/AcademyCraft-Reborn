@@ -2,8 +2,6 @@ package org.academy.internal.common.ability.meltdowner.skills.lv2;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.List;
-import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
@@ -287,17 +285,7 @@ public final class MiningBeam extends Skill {
 
             if (breakTick && destroyBlocks) {
                 skill.reportActivity(player, true);
-                MeltdownerBeamActions.destroyBlocksAlongSegment(
-                        initialLevel,
-                        attack.outbound(),
-                        breakRadius,
-                        MINING_TIER,
-                        true,
-                        true,
-                        true,
-                        player,
-                        MiningBeam::dropConfiguredResources
-                );
+                executeMiningSegment(initialLevel, attack.outbound(), breakRadius, false, player, player);
             }
             LinearAttackExecutor.SegmentExecutionResult outboundResult = null;
             if (damageTick) {
@@ -305,19 +293,9 @@ public final class MiningBeam extends Skill {
             }
             if (attack.isReflected()) {
                 var returnSegment = attack.returnSegment().orElseThrow();
-                var returnLength = MeltdownerBeamActions.executeBlocksAlongSegment(
-                        initialLevel,
-                        returnSegment,
-                        breakRadius,
-                        MINING_TIER,
-                        true,
-                        true,
-                        true,
-                        !(breakTick && destroyBlocks),
-                        attack.reflectionCandidate().orElseThrow().reflector(),
-                        (level, pos, state, blockEntity, _) -> dropConfiguredResources(
-                                level, pos, state, blockEntity, player)
-                );
+                var returnLength = executeMiningSegment(
+                        initialLevel, returnSegment, breakRadius, !(breakTick && destroyBlocks),
+                        attack.reflectionCandidate().orElseThrow().reflector(), player);
                 attack = attack.limitReturnLength(returnLength);
             }
             updateVisual(attack);
@@ -360,6 +338,22 @@ public final class MiningBeam extends Skill {
         );
     }
 
+    /** Shared harvesting path for held, reflected and precision-program mining beams. */
+    public static double executeMiningSegment(
+            ServerLevel level,
+            LinearSegment segment,
+            float radius,
+            boolean simulate,
+            ServerPlayer breaker,
+            ServerPlayer harvester
+    ) {
+        return MeltdownerBeamActions.executeBlocksAlongSegment(
+                level, segment, radius, MINING_TIER, true, true, true, simulate, breaker,
+                (world, pos, state, blockEntity, _) ->
+                        dropConfiguredResources(world, pos, state, blockEntity, harvester)
+        );
+    }
+
     public static boolean dropRefinedResources(
             ServerLevel level,
             BlockPos pos,
@@ -383,10 +377,18 @@ public final class MiningBeam extends Skill {
             BlockEntity blockEntity,
             ServerPlayer player
     ) {
-        if (!Skills.MINING_BEAM.get().hasProficiencyMilestone(player, 3)) return false;
+        if (!Skills.MINING_BEAM.get().hasProficiencyMilestone(player, 3)) {
+            Block.dropResources(state, level, pos, blockEntity, player, new ItemStack(Items.NETHERITE_PICKAXE));
+            return true;
+        }
         return switch (getHarvestMode(player)) {
-            case AUTO_SMELT -> ProficiencyPolicy.server(player).allowMiningBeamSmelting()
-                    && dropSmeltedResources(level, pos, state, blockEntity, player);
+            case AUTO_SMELT -> {
+                if (ProficiencyPolicy.server(player).allowMiningBeamSmelting()) {
+                    yield dropSmeltedResources(level, pos, state, blockEntity, player);
+                }
+                Block.dropResources(state, level, pos, blockEntity, player, new ItemStack(Items.NETHERITE_PICKAXE));
+                yield true;
+            }
             case FORTUNE_III -> dropEnchantedResources(
                     level, pos, state, blockEntity, player, Enchantments.FORTUNE, 3);
             case SILK_TOUCH -> dropEnchantedResources(
@@ -406,7 +408,7 @@ public final class MiningBeam extends Skill {
             BlockEntity blockEntity,
             ServerPlayer player
     ) {
-        var drops = Block.getDrops(state, level, pos, blockEntity, player, ItemStack.EMPTY);
+        var drops = Block.getDrops(state, level, pos, blockEntity, player, new ItemStack(Items.NETHERITE_PICKAXE));
         if (drops.isEmpty()) return false;
         for (var drop : drops) {
             var input = new SingleRecipeInput(drop.copyWithCount(1));

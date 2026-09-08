@@ -889,6 +889,21 @@ public final class Render {
                 .withDepthStencilState(DepthStencilState.DEFAULT)
                 .build();
 
+        public static final RenderPipeline CLOUDROOM = builder()
+                .withLocation(academy("pipeline/cloudroom"))
+                .withVertexShader(academy("core/cloudroom"))
+                .withFragmentShader(academy("core/cloudroom"))
+                .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
+                .withBindGroupLayout(BindGroupLayouts.PROJECTION)
+                .withBindGroupLayout(BindGroupLayouts.GLOBALS)
+                .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
+                .withCull(true)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR)
+                .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
+                .build();
+
         public static final RenderPipeline TELEPORT_CURSOR = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
                 .withLocation(academy("pipeline/teleport_cursor"))
                 .withVertexShader(R.shaders.position_tex_color)

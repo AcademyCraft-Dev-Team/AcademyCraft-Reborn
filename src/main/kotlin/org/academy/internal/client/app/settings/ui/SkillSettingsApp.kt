@@ -687,13 +687,7 @@ object SkillSettingsApp : App {
                 }
 
                 is SkillSettingsRegistry.FloatRange -> {
-                    fun displayedValue(): String {
-                        val range = entry.max - entry.min
-                        val normalized = if (range > 0f) {
-                            ((entry.getter.getAsFloat() - entry.min) / range).coerceIn(0f, 1f)
-                        } else 0f
-                        return "${(normalized * 100f).roundToInt()}%"
-                    }
+                    fun displayedValue(): String = entry.formatValue(entry.getter.getAsFloat())
 
                     val value = LabelWidget(displayedValue()).apply {
                         scale = 0.7f

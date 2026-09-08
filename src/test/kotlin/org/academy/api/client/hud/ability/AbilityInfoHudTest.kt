@@ -68,6 +68,20 @@ class AbilityInfoHudTest {
         ))
     }
 
+    @Test
+    fun `selected casting upgrades old release bindings without changing user key`() {
+        val config = AbilitySystemClient.Config()
+        val name = "test_selected_release"
+        config.setKeyBinding(name, InputSystem.combo(
+            InputSystem.InputType.MOUSE, 4, InputConstants.RELEASE, InputConstants.MOD_ALT
+        ))
+        val actual = getHudBindingMigratingDefaults(config, name, InputConstants.KEY_C, InputSystem.ANY_ACTION)
+        assertTrue(actual.type == InputSystem.InputType.MOUSE)
+        assertTrue(actual.keys == setOf(4))
+        assertTrue(actual.modifiers == InputConstants.MOD_ALT)
+        assertTrue(actual.action == InputSystem.ANY_ACTION)
+    }
+
     private open class PlainCategory : AbilityCategory(1f) {
         override fun getDeveloperIcon(): Identifier = Identifier.parse("academy:test")
 

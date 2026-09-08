@@ -93,11 +93,15 @@ internal fun getHudBindingMigratingDefaults(
             ))
         }
     }
-    return config.getKeyBindingMigratingDefaults(
+    val configured = config.getKeyBindingMigratingDefaults(
         name,
         defaultBinding,
         *obsoleteDefaults.toTypedArray()
     )
+    // Old profiles used RELEASE only. Selected casting needs both phases for held skills.
+    val normalized = InputSystem.withAction(configured, action)
+    config.setKeyBinding(name, normalized)
+    return normalized
 }
 
 private fun autoLerpColor(progress: Float): Color {
@@ -589,17 +593,20 @@ class AbilityInfoHud private constructor() {
                     InputConstants.KEY_DOWN
                 )
             ) { if (AbilitySystemClient.isActiveHUD()) INSTANCE.scrollWheel(1) }
-            InputSystem.addKeyBinding(
+            InputSystem.addExclusiveKeyBinding(
                 KEY_NAME_RELEASE_SELECTED,
                 getHudBindingMigratingDefaults(
                     config,
                     KEY_NAME_RELEASE_SELECTED,
                     InputConstants.KEY_C,
                     InputSystem.ANY_ACTION
-                )
-            ) { binding ->
-                if (AbilitySystemClient.isActiveHUD()) INSTANCE.triggerSelectedSkill(binding)
-            }
+                ),
+                { binding -> INSTANCE.triggerSelectedSkill(binding) },
+                { AbilitySystemClient.isActiveHUD() }
+            )
+            InputSystem.setKeyBindingEnabled(
+                KEY_NAME_RELEASE_SELECTED, config.isKeyBindingEnabled(KEY_NAME_RELEASE_SELECTED)
+            )
             AcademyCraftClient.Config.INSTANCE.save()
         }
     }
