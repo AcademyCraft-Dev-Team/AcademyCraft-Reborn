@@ -16,6 +16,12 @@ import java.util.function.LongSupplier;
  */
 public final class ProgramExecutionFrame {
     private final ProgramActionTransaction transaction;
+    private @Nullable ExtensionProgramActions extensionActions;
+
+    ExtensionProgramActions extensionActions() {
+        if (extensionActions == null) extensionActions = new ExtensionProgramActions(this);
+        return extensionActions;
+    }
     private final @Nullable Object environment;
     private final @Nullable ProgramInvocationContext invocation;
     private final @Nullable LongSupplier gameTime;

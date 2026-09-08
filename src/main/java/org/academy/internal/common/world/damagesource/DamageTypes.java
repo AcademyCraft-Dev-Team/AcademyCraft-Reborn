@@ -6,6 +6,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.player.Player;
 import org.academy.AcademyCraft;
+import org.academy.api.common.damage.DamageSettlement;
 
 import java.util.Set;
 
@@ -38,35 +39,45 @@ public final class DamageTypes {
     private DamageTypes() {
     }
 
+    public static boolean isBuiltInType(ResourceKey<DamageType> type) {
+        return ACADEMY_DAMAGE_TYPES.contains(type);
+    }
+
     public static boolean isAcademyDamage(DamageSource source) {
-        return source != null && ACADEMY_DAMAGE_TYPES.stream().anyMatch(source::is);
+        return source != null && (ACADEMY_DAMAGE_TYPES.stream().anyMatch(source::is) || AbilityDamageProfiles.find(source).isPresent());
     }
 
     public static boolean usesResistanceBackdoor(DamageSource source) {
         return source instanceof org.academy.api.common.damage.LawDetonationDamageSource
-                || source != null && (source.is(VEC) || source.is(CTA));
+                || source != null && (source.is(VEC) || source.is(CTA))
+                || AbilityDamageProfiles.uses(source, DamageSettlement.TRUE_HEALTH);
     }
 
     public static boolean bypassesAbsorption(DamageSource source) {
-        return source != null && (source.is(SPACE_DAMAGE) || source.is(MENTAL_DAMAGE));
+        return source != null && (source.is(SPACE_DAMAGE) || source.is(MENTAL_DAMAGE)
+                || AbilityDamageProfiles.find(source).map(profile -> profile.bypassAbsorption()).orElse(false));
     }
 
     public static boolean usesDirectActuallyHurt(ResourceKey<DamageType> type) {
-        return DIRECT_ACTUALLY_HURT_TYPES.contains(type);
+        return DIRECT_ACTUALLY_HURT_TYPES.contains(type) || AbilityDamageProfiles.uses(type, DamageSettlement.DIRECT)
+                || AbilityDamageProfiles.uses(type, DamageSettlement.TRUE_HEALTH);
     }
 
     public static boolean usesDirectActuallyHurt(DamageSource source) {
         return source instanceof org.academy.api.common.damage.LawDetonationDamageSource
-                || source != null && DIRECT_ACTUALLY_HURT_TYPES.stream().anyMatch(source::is);
+                || source != null && DIRECT_ACTUALLY_HURT_TYPES.stream().anyMatch(source::is)
+                || AbilityDamageProfiles.uses(source, DamageSettlement.DIRECT)
+                || AbilityDamageProfiles.uses(source, DamageSettlement.TRUE_HEALTH);
     }
 
     public static boolean usesVerifiedTrueHealth(ResourceKey<DamageType> type) {
-        return VERIFIED_TRUE_HEALTH_TYPES.contains(type);
+        return VERIFIED_TRUE_HEALTH_TYPES.contains(type) || AbilityDamageProfiles.uses(type, DamageSettlement.TRUE_HEALTH);
     }
 
     public static boolean usesVerifiedTrueHealth(DamageSource source) {
         return source instanceof org.academy.api.common.damage.LawDetonationDamageSource
-                || source != null && VERIFIED_TRUE_HEALTH_TYPES.stream().anyMatch(source::is);
+                || source != null && VERIFIED_TRUE_HEALTH_TYPES.stream().anyMatch(source::is)
+                || AbilityDamageProfiles.uses(source, DamageSettlement.TRUE_HEALTH);
     }
 
     public static boolean isImmunePlayer(Player player, DamageSource source) {

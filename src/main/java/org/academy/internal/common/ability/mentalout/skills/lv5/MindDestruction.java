@@ -117,10 +117,12 @@ public final class MindDestruction extends Skill {
             var controller = server.getPlayerList().getPlayer(effect.key.controllerId);
             var target = findLivingEntity(server, effect.key.targetId);
             if (controller == null || target == null || !target.isAlive() || target.isRemoved()
-                    || controller.level() != target.level() || now > effect.expiresAt) {
+                    || controller.level() != target.level() || now > effect.expiresAt
+                    || MentalResistanceManager.isAutomaticallyResistant(target)) {
                 close(effect);
                 continue;
             }
+            MentalResistanceManager.markTaggedAffected(controller, target);
             if (target instanceof ServerPlayer subject
                     && effect.stupor != null && !effect.stupor.isClosed()) {
                 MentalResistanceManager.markAffected(controller, subject, false);
@@ -151,6 +153,13 @@ public final class MindDestruction extends Skill {
         }
     }
 
+    /** Ends received mental damage and its reaction slowdown without cancelling outgoing attacks. */
+    public static void releaseTarget(UUID targetId) {
+        for (var effect : List.copyOf(ACTIVE.values())) {
+            if (effect.key.targetId.equals(targetId)) close(effect);
+        }
+    }
+
     public static void releaseEntity(UUID entityId) {
         if (entityId == null) return;
         for (var effect : List.copyOf(ACTIVE.values())) {
@@ -166,6 +175,7 @@ public final class MindDestruction extends Skill {
     }
 
     private static void start(ServerPlayer controller, LivingEntity target, boolean applyStupor) {
+        if (MentalResistanceManager.isAutomaticallyResistant(target)) return;
         var now = (long) controller.level().getServer().getTickCount();
         var key = new EffectKey(controller.getUUID(), target.getUUID());
         var previous = ACTIVE.remove(key);
@@ -278,6 +288,10 @@ public final class MindDestruction extends Skill {
             if (target != null && PvpSetting.shouldPrevent(player, target)) return;
             if (target == null || FriendlyFireSetting.shouldPrevent(player, target)) {
                 feedback(player, "message.academy.mentalout.invalid_target");
+                return;
+            }
+            if (MentalResistanceManager.isAutomaticallyResistant(target)) {
+                MentalControlRuntime.notifyProtectionBlocked(player, target);
                 return;
             }
             var roster = MentaloutControlContext.get(player);

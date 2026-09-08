@@ -5,6 +5,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import org.academy.internal.common.ability.mentalout.MentalResistanceManager;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 
 import java.util.Optional;
@@ -73,6 +74,11 @@ public final class MentalControlApi {
 
     public static boolean isBossCost(LivingEntity subject) {
         return MentalControlRuntime.isBossCost(subject);
+    }
+
+    /** Remaining server game ticks of mental resistance, including manual player break-free. */
+    public static long resistanceRemainingTicks(LivingEntity subject) {
+        return MentalResistanceManager.remainingTicks(subject);
     }
 
     public static boolean hasActiveControl(LivingEntity subject) {

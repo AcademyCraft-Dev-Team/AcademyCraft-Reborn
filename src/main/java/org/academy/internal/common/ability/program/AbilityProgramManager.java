@@ -165,7 +165,7 @@ public final class AbilityProgramManager {
         if (playerData == null) return;
         var current = book(playerData, category, player.getUUID());
         var definition = AbilityProgramDefinitions.require(category);
-        var adapter = EXECUTION_ADAPTERS.get(category);
+        var adapter = executionAdapter(category);
         if (adapter == null) return;
         var gameTime = player.level().getGameTime();
         var capabilities = learnedCapabilities(playerData);
@@ -266,6 +266,81 @@ public final class AbilityProgramManager {
         return Identifier.tryParse(raw);
     }
 
+    private static void requireAddonThread(ServerPlayer player, int slot) {
+        java.util.Objects.requireNonNull(player);
+        if (!player.level().getServer().isSameThread()) throw new IllegalStateException("Program API requires server thread");
+        if (slot < 0 || slot >= SLOT_COUNT) throw new IllegalArgumentException("Program slot is out of range");
+    }
+
+    private static org.academy.api.server.ability.program.AbilityProgramService.Result addonRejected(String reason) {
+        return new org.academy.api.server.ability.program.AbilityProgramService.Result(
+                org.academy.api.server.ability.program.AbilityProgramService.Status.REJECTED, -1, reason, List.of());
+    }
+
+    private static boolean addonAllowed(ServerPlayer player, AbilityProgram program) {
+        return player.isAlive() && !player.isSpectator() && !player.hasDisconnected()
+                && unlocked(player) && isSupportedCategory(program.category()) && ownsCategory(player, program.category());
+    }
+
+    public static org.academy.api.server.ability.program.AbilityProgramService.Result saveForAddon(
+            ServerPlayer player, int slot, AbilityProgram program) {
+        requireAddonThread(player, slot);
+        java.util.Objects.requireNonNull(program);
+        if (!addonAllowed(player, program)) return addonRejected("Category is unavailable or precision operations are locked");
+        var data = AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID());
+        var compiled = AbilityProgramDefinitions.require(program.category()).compile(program, learnedCapabilities(data));
+        if (!compiled.valid()) return new org.academy.api.server.ability.program.AbilityProgramService.Result(
+                org.academy.api.server.ability.program.AbilityProgramService.Status.REJECTED, -1, "Invalid program", compiled.diagnostics());
+        var current = book(data, program.category(), player.getUUID());
+        var previous = current.slot(slot).program();
+        if (previous != null) ServerProgramScheduler.cancel(player.level().getServer(),
+                new ServerProgramScheduler.SessionKey(player.getUUID(), program.category(), previous.id(), slot));
+        var changed = current.replaceSlot(slot, program).select(slot);
+        store(data, program.category(), changed);
+        sync(player, program.category(), changed);
+        return new org.academy.api.server.ability.program.AbilityProgramService.Result(
+                org.academy.api.server.ability.program.AbilityProgramService.Status.COMPLETED, -1, "", List.of());
+    }
+
+    public static ProgramBook bookForAddon(ServerPlayer player) {
+        requireAddonThread(player, 0);
+        var system = AbilitySystemServer.getSystem(player);
+        var category = system.getPlayerAbilityCategory(player.getUUID()).getKey();
+        if (!isSupportedCategory(category) || !unlocked(player)) throw new IllegalStateException("Precision operations are unavailable");
+        return book(system.getPlayerData(player.getUUID()), category, player.getUUID());
+    }
+
+    public static void cancelForAddon(ServerPlayer player, int slot, UUID programId) {
+        requireAddonThread(player, slot);
+        var category = AbilitySystemServer.getSystem(player).getPlayerAbilityCategory(player.getUUID()).getKey();
+        ServerProgramScheduler.cancel(player.level().getServer(),
+                new ServerProgramScheduler.SessionKey(player.getUUID(), category, programId, slot));
+    }
+
+    public static org.academy.api.server.ability.program.AbilityProgramService.Result executeForAddon(
+            ServerPlayer player, int slot, AbilityProgram program) {
+        requireAddonThread(player, slot);
+        java.util.Objects.requireNonNull(program);
+        if (!addonAllowed(player, program)) return addonRejected("Category is unavailable or precision operations are locked");
+        var data = AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID());
+        var compiled = AbilityProgramDefinitions.require(program.category()).compile(program, learnedCapabilities(data));
+        if (!compiled.valid()) return new org.academy.api.server.ability.program.AbilityProgramService.Result(
+                org.academy.api.server.ability.program.AbilityProgramService.Status.REJECTED, -1, "Invalid program", compiled.diagnostics());
+        if (!ProgramTriggers.acceptsManualExecution(compiled.program())) return addonRejected("Entry requires an automatic trigger");
+        if (ServerProgramScheduler.contains(player.level().getServer(),
+                new ServerProgramScheduler.SessionKey(player.getUUID(), program.category(), program.id(), slot))) {
+            return addonRejected("Program is already running");
+        }
+        var adapter = executionAdapter(program.category());
+        var result = OutputControl.callWithoutOutputAdjustment(() -> adapter.execute(compiled.program(), player, 1, slot,
+                new ProgramInvocationContext(program.id(), slot, null, null, 0, null, null, null)));
+        var status = !result.successful ? org.academy.api.server.ability.program.AbilityProgramService.Status.FAILED
+                : result.deferred ? org.academy.api.server.ability.program.AbilityProgramService.Status.DEFERRED
+                : org.academy.api.server.ability.program.AbilityProgramService.Status.COMPLETED;
+        return new org.academy.api.server.ability.program.AbilityProgramService.Result(
+                status, result.nodeId, result.vmDiagnostic.name(), List.of());
+    }
+
     private static boolean ownsCategory(ServerPlayer player, Identifier category) {
         var current = AbilitySystemServer.getSystem(player)
                 .getPlayerAbilityCategory(player.getUUID());
@@ -350,6 +425,25 @@ public final class AbilityProgramManager {
                 transaction == null ? execution.vmResult().nodeId() : transaction.nodeId(),
                 transactionDiagnostic(transaction, execution.vmResult().diagnostic())
         );
+    }
+
+    private static CategoryExecutionAdapter executionAdapter(Identifier category) {
+        var builtin = EXECUTION_ADAPTERS.get(category);
+        if (builtin != null) return builtin;
+        return AbilityProgramDefinitions.find(category) == null ? null : (program, player, costMultiplier, slot, invocation) -> {
+            var definition = AbilityProgramDefinitions.require(category);
+            var transaction = new ProgramActionTransaction();
+            var targets = new ServerProgramTargetResolver(player, definition.spatialLimits().queryRange(), 256);
+            var frame = new ProgramExecutionFrame(transaction, targets, invocation, player.level()::getGameTime);
+            var execution = ServerProgramExecution.execute(program, player, category, 16384,
+                    definition.executors(), frame, transaction, invocation);
+            if (execution.accepted()) return ExecutionOutcome.success(
+                    execution.vmResult().status() != ProgramVmResult.Status.COMPLETED);
+            var result = execution.transactionResult().orElse(null);
+            return new ExecutionOutcome(false, false,
+                    result == null ? execution.vmResult().nodeId() : result.nodeId(),
+                    transactionDiagnostic(result, execution.vmResult().diagnostic()));
+        };
     }
 
     private static ExecutionOutcome executeElectromaster(
@@ -890,7 +984,7 @@ public final class AbilityProgramManager {
                         null, -1, ProgramVmDiagnostic.ALREADY_RUNNING);
                 return;
             }
-            var adapter = EXECUTION_ADAPTERS.get(category);
+            var adapter = executionAdapter(category);
             if (adapter == null) {
                 result(player, packet.category, packet.slot, FeedbackType.ERROR,
                         current.revision(), ResultCode.EXECUTION_UNSUPPORTED,

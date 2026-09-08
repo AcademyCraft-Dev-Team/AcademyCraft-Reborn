@@ -447,8 +447,7 @@ public final class AbilityProgramEditorClient {
         public Component title() {
             return Component.translatable(
                     "screen.academy.program.editor.title",
-                    Component.translatable("ability_category." + category.getKey().toString()
-                            .replace(':', '.'))
+                    Component.translatable(category.getDescriptionId())
             );
         }
 

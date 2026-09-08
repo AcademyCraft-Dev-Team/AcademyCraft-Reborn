@@ -8,11 +8,14 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.entity.LivingEntity;
+import org.academy.api.common.entitycontrol.MentalControlTags;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.client.ability.mentalout.MentalResistanceClientState;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.ability.mentalout.control.MentalPerceptionRuntime;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationRuntime;
+import org.academy.internal.common.ability.mentalout.skills.lv5.MindDestruction;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -27,9 +30,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/** Server-authoritative counterplay shared by every player-affecting Mentalout runtime. */
+/** Server-authoritative player counterplay and tagged living-entity automatic resistance. */
 public final class MentalResistanceManager {
     public static final int INPUT_MASK = 0x3F;
+    private static final MentalResistanceTracker AUTOMATIC = new MentalResistanceTracker();
     private static final Map<UUID, Challenge> CHALLENGES = new HashMap<>();
     private static final Map<UUID, Long> RESISTANCE_UNTIL = new HashMap<>();
     private static boolean clientInitialized;
@@ -50,7 +54,22 @@ public final class MentalResistanceManager {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
+    public static void markAffected(ServerPlayer controller, LivingEntity subject, boolean takeover) {
+        if (subject instanceof ServerPlayer player) markAffected(controller, player, takeover);
+        else markTaggedAffected(controller, subject);
+    }
+
+    /** Marks non-control mental effects without changing the existing player input challenge. */
+    public static void markTaggedAffected(ServerPlayer controller, LivingEntity subject) {
+        if (controller == null || subject == null || controller == subject
+                || !controller.isAlive() || !subject.isAlive() || subject.isRemoved()
+                || controller.level().getServer() != subject.level().getServer() || isResistant(subject)
+                || !subject.getType().builtInRegistryHolder().is(MentalControlTags.RESISTANCE)) return;
+        AUTOMATIC.mark(subject.getUUID(), subject.level().getGameTime());
+    }
+
     public static void markAffected(ServerPlayer controller, ServerPlayer subject, boolean takeover) {
+        markTaggedAffected(controller, subject);
         if (controller == null || subject == null || controller == subject
                 || !controller.isAlive() || !subject.isAlive()
                 || controller.level() != subject.level() || isResistant(subject)) {
@@ -70,6 +89,14 @@ public final class MentalResistanceManager {
     public static void tick(MinecraftServer server) {
         var now = server.overworld().getGameTime();
         RESISTANCE_UNTIL.entrySet().removeIf(entry -> entry.getValue() <= now);
+        for (var subjectId : AUTOMATIC.tick(now, id -> {
+            var subject = findSubject(server, id);
+            return subject != null && subject.isAlive() && !subject.isRemoved()
+                    && subject.getType().builtInRegistryHolder().is(MentalControlTags.RESISTANCE);
+        })) {
+            var subject = findSubject(server, subjectId);
+            if (subject != null) breakFreeAutomatically(subject);
+        }
         for (var challenge : List.copyOf(CHALLENGES.values())) {
             challenge.exposures.entrySet().removeIf(entry -> entry.getValue().lastSeenTick < now);
             var subject = server.getPlayerList().getPlayer(challenge.subjectId);
@@ -86,6 +113,19 @@ public final class MentalResistanceManager {
     }
 
     public static boolean isResistant(ServerPlayer subject) {
+        return isResistant((LivingEntity) subject);
+    }
+
+    public static boolean isAutomaticallyResistant(LivingEntity subject) {
+        return subject != null && AUTOMATIC.remainingTicks(subject.getUUID(), subject.level().getGameTime()) > 0;
+    }
+
+    public static boolean isResistant(LivingEntity subject) {
+        return isAutomaticallyResistant(subject)
+                || subject instanceof ServerPlayer player && isManuallyResistant(player);
+    }
+
+    public static boolean isManuallyResistant(ServerPlayer subject) {
         if (subject == null) return false;
         var until = RESISTANCE_UNTIL.getOrDefault(subject.getUUID(), Long.MIN_VALUE);
         if (until <= subject.level().getGameTime()) {
@@ -96,9 +136,16 @@ public final class MentalResistanceManager {
     }
 
     public static long resistanceUntil(ServerPlayer subject) {
-        return isResistant(subject)
-                ? RESISTANCE_UNTIL.getOrDefault(subject.getUUID(), 0L)
-                : 0L;
+        var remaining = remainingTicks(subject);
+        return remaining > 0 ? subject.level().getGameTime() + remaining : 0L;
+    }
+
+    public static long remainingTicks(LivingEntity subject) {
+        if (subject == null) return 0L;
+        var now = subject.level().getGameTime();
+        var manual = subject instanceof ServerPlayer
+                ? Math.max(0L, RESISTANCE_UNTIL.getOrDefault(subject.getUUID(), now) - now) : 0L;
+        return Math.max(manual, AUTOMATIC.remainingTicks(subject.getUUID(), now));
     }
 
     public static int breakThreshold(int controllerLevel) {
@@ -127,12 +174,14 @@ public final class MentalResistanceManager {
 
     public static void releaseEntity(UUID entityId) {
         if (entityId == null) return;
+        AUTOMATIC.remove(entityId);
         CHALLENGES.remove(entityId);
         RESISTANCE_UNTIL.remove(entityId);
         for (var challenge : CHALLENGES.values()) challenge.exposures.remove(entityId);
     }
 
     public static void clear() {
+        AUTOMATIC.clear();
         CHALLENGES.clear();
         RESISTANCE_UNTIL.clear();
     }
@@ -182,6 +231,33 @@ public final class MentalResistanceManager {
                     subject.getDisplayName()
             ));
         }
+    }
+
+    private static LivingEntity findSubject(MinecraftServer server, UUID subjectId) {
+        for (var level : server.getAllLevels()) {
+            if (level.getEntity(subjectId) instanceof LivingEntity subject) return subject;
+        }
+        return null;
+    }
+
+    private static void breakFreeAutomatically(LivingEntity subject) {
+        var id = subject.getUUID();
+        var server = subject.level().getServer();
+        if (subject instanceof ServerPlayer player) {
+            CHALLENGES.remove(id);
+            PlayerControlSessionManager.breakFree(player);
+            sendInactive(player);
+            player.sendOverlayMessage(Component.translatable(
+                    "message.academy.mentalout.break_free.success", MentalResistanceTracker.BLOCK_TICKS / 20));
+        } else {
+            PlayerControlSessionManager.releaseEntity(id);
+        }
+        MentaloutControlContext.releaseEffects(id);
+        MentalIntrusionManager.releaseTarget(id);
+        PrecisionOperationRuntime.releaseEntity(server, id);
+        MentalPerceptionRuntime.releaseObserver(id);
+        MindDestruction.releaseTarget(id);
+        MentalControlRuntime.releaseBySubject(server, id);
     }
 
     private static void sendInactive(ServerPlayer subject) {

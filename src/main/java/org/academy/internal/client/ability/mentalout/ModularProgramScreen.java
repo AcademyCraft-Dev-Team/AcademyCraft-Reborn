@@ -2419,8 +2419,10 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     }
 
     private static Component categoryName(Identifier category) {
-        return Component.translatable("ability_category."
-                + category.getNamespace() + "." + category.getPath());
+        var registered = org.academy.api.common.registries.Registries.ABILITY_CATEGORIES.getValue(category);
+        return Component.translatable(registered == null
+                ? "ability_category." + category.getNamespace() + "." + category.getPath()
+                : registered.getDescriptionId());
     }
 
     private static String categoryGlyph(ProgramEditorNodeCatalog.Entry entry) {

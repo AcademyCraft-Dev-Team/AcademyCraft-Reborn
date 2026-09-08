@@ -1,0 +1,10 @@
+{
+  "ability.academy_api_example.cryokinesis": "冰冻能力",
+  "node.academy_api_example.focus": "集中",
+  "death.attack.academy_api_example.frost": "%1$s被冻结了",
+  "death.attack.academy_api_example.frost.player": "%1$s被%2$s冻结了",
+  "skill.academy_api_example.frost_bolt": "霜弹",
+  "skill.academy_api_example.focus": "专注",
+  "skill.academy_api_example.frost_bolt.desc": "公开 API 示例技能。",
+  "skill.academy_api_example.focus.desc": "供专注精密操作节点使用的技能。"
+}

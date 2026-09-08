@@ -19,6 +19,15 @@ public final class SkillDamageTypeResolver {
 
     public static @Nullable ResourceKey<DamageType> resolve(Skill skill) {
         if (skill == null) return null;
+        if (skill.getDamageType().isPresent()) return skill.getDamageType().orElseThrow();
+        if (skill.getDamageProfile().isPresent()) {
+            return AbilityDamageProfiles.require(skill.getDamageProfile().orElseThrow()).damageType();
+        }
+        var category = skill.getCategory();
+        if (category.getDefaultDamageType().isPresent()) return category.getDefaultDamageType().orElseThrow();
+        if (category.getDefaultDamageProfile().isPresent()) {
+            return AbilityDamageProfiles.require(category.getDefaultDamageProfile().orElseThrow()).damageType();
+        }
         return switch (skill.getCategory()) {
             case Aeromanip ignored -> DamageTypes.AERO_DAMAGE;
             case Darkmatter ignored -> DamageTypes.DM_DAMAGE;

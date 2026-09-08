@@ -19,7 +19,7 @@ import java.util.Map;
  * Built-in programmable ability-category definitions.
  */
 public final class AbilityProgramDefinitions {
-    private static final Map<Identifier, AbilityProgramDefinition> DEFINITIONS = index(List.of(
+    private static volatile Map<Identifier, AbilityProgramDefinition> DEFINITIONS = index(List.of(
             ElectromasterProgramDefinition.create(),
             TeleportProgramDefinition.create(),
             AcceleratorProgramDefinition.create(),
@@ -30,6 +30,32 @@ public final class AbilityProgramDefinitions {
     ));
 
     private AbilityProgramDefinitions() {
+    }
+
+    public static synchronized void includeRegisteredCategories() {
+        var result = new LinkedHashMap<>(DEFINITIONS);
+        for (var category : org.academy.api.common.registries.Registries.ABILITY_CATEGORIES) {
+            var profile = category.getProgramProfile().orElse(null);
+            if (profile == null) continue;
+            if (result.containsKey(category.getKey())) {
+                throw new IllegalStateException("Duplicate program profile for " + category.getKey());
+            }
+            var entry = org.academy.api.common.registries.Registries.PROGRAM_NODE_TYPES.get(profile.entryNode())
+                    .orElseThrow(() -> new IllegalStateException("Missing entry node " + profile.entryNode().identifier())).value();
+            if (!(entry instanceof org.academy.api.common.ability.program.ProgramNodeExtension<?> extension)
+                    || entry.role() != org.academy.api.common.ability.program.ProgramNodeRole.ENTRY) {
+                throw new IllegalStateException("Program entry must be a registered ENTRY extension: " + profile.entryNode());
+            }
+            var metadata = extension.editorMetadata();
+            var editor = ProgramEditorNodeCatalog.builder(category.getKey()).includeCommonNodes()
+                    .add(profile.entryNode().identifier(), entry, metadata.defaultConfiguration(),
+                            ProgramEditorNodeCatalog.Group.FLOW, metadata.translationKey(),
+                            metadata.portTranslationPrefix(), null).build();
+            result.put(category.getKey(), new AbilityProgramDefinition(category.getKey(),
+                    Map.of(profile.entryNode().identifier(), entry), _ -> null, editor,
+                    profile.limits(), profile.spatialLimits()));
+        }
+        DEFINITIONS = Map.copyOf(result);
     }
 
     public static @Nullable AbilityProgramDefinition find(Identifier category) {

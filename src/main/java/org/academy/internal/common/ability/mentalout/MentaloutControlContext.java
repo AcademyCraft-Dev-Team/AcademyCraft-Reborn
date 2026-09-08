@@ -215,7 +215,7 @@ public final class MentaloutControlContext extends ServerContext {
                 ControlCapability.FREEZE_AI,
                 ControlCapability.RELATION_CONTROL
         )) {
-            var evaluation = MentalControlApi.evaluate(subject, capability);
+            var evaluation = MentalControlRuntime.evaluateIntervention(subject, capability);
             if (!evaluation.supported()) {
                 allFull = false;
                 continue;
@@ -1103,8 +1103,7 @@ public final class MentaloutControlContext extends ServerContext {
         if (isOverridden(entry)) flags |= FLAG_OVERRIDDEN;
         if (MentalControlRuntime
                 .isProtectedTarget(subject)) flags |= FLAG_PROTECTED;
-        if (subject instanceof ServerPlayer playerSubject
-                && PlayerControlSessionManager.isResistant(playerSubject)) flags |= FLAG_RESISTANT;
+        if (MentalResistanceManager.isResistant(subject)) flags |= FLAG_RESISTANT;
         var remaining = entry.misidentification == null || entry.misidentification.isClosed()
                 ? 0
                 : Integer.MAX_VALUE;

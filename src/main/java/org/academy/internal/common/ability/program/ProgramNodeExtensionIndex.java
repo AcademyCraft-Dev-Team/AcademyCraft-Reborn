@@ -40,6 +40,17 @@ public final class ProgramNodeExtensionIndex {
     public static synchronized void freeze() {
         if (frozenSnapshots != null) return;
         var candidates = registryCandidates();
+        var declarationFailures = new ArrayList<String>();
+        candidates.forEach((id, type) -> {
+            if (!(type instanceof ProgramNodeExtension<?> extension)) return;
+            for (var category : extension.scope().allowedCategories()) {
+                if (AbilityProgramDefinitions.find(category) == null) declarationFailures.add(id + " has no program category " + category);
+            }
+            for (var skill : extension.scope().requiredCapabilities()) {
+                if (Registries.SKILLS.get(skill).isEmpty()) declarationFailures.add(id + " requires missing skill " + skill);
+            }
+        });
+        if (!declarationFailures.isEmpty()) throw new IllegalStateException(String.join("; ", declarationFailures));
         var snapshots = new LinkedHashMap<Identifier, Snapshot>();
         AbilityProgramDefinitions.all().stream()
                 .map(AbilityProgramDefinition::category)
@@ -77,6 +88,7 @@ public final class ProgramNodeExtensionIndex {
         Objects.requireNonNull(category, "category");
         Objects.requireNonNull(candidates, "candidates");
         var registrations = new ArrayList<Registration>();
+        var failures = new ArrayList<String>();
         candidates.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey(Comparator.comparing(Identifier::toString)))
                 .forEach(entry -> {
@@ -87,11 +99,12 @@ public final class ProgramNodeExtensionIndex {
                     try {
                         registrations.add(validate(entry.getKey(), category, extension));
                     } catch (RuntimeException exception) {
-                        AcademyCraft.LOGGER.error(
-                                "Rejecting invalid program-node extension {} for {}",
-                                entry.getKey(), category, exception);
+                        failures.add(entry.getKey() + " for " + category + ": " + exception.getMessage());
                     }
                 });
+        if (!failures.isEmpty()) {
+            throw new IllegalStateException("Invalid program-node registrations: " + String.join("; ", failures));
+        }
         return new Snapshot(category, registrations, fingerprint(category, registrations));
     }
 
@@ -114,6 +127,7 @@ public final class ProgramNodeExtensionIndex {
         if (!extension.scope().allowsCategory(category)) {
             throw new IllegalArgumentException("Extension scope rejects category " + category);
         }
+        if (extension.schemaVersion() < 1) throw new IllegalArgumentException("Extension schema version must be positive");
         if (extension.compatibilityVersion() < 1) {
             throw new IllegalArgumentException("Extension compatibility version must be positive");
         }
@@ -132,8 +146,14 @@ public final class ProgramNodeExtensionIndex {
 
     private static <C> ProgramNodeExecutor<C> adapt(ProgramNodeExtension<C> extension) {
         var execution = extension.execution();
-        return (context, configuration, inputs) ->
-                execution.execute(context, configuration, inputs);
+        return (context, configuration, inputs) -> {
+            var view = new ExtensionExecutionView(context, extension);
+            try {
+                return execution.execute(view, configuration, inputs);
+            } finally {
+                view.close();
+            }
+        };
     }
 
     private static String fingerprint(
@@ -142,7 +162,7 @@ public final class ProgramNodeExtensionIndex {
     ) {
         try {
             var digest = MessageDigest.getInstance("SHA-256");
-            update(digest, "academy-program-extensions-v1\n");
+            update(digest, "academy-program-extensions-v2\n");
             update(digest, category + "\n");
             for (var registration : registrations) {
                 var extension = registration.extension();
@@ -158,17 +178,14 @@ public final class ProgramNodeExtensionIndex {
                 extension.scope().requiredCapabilities().stream()
                         .sorted(Comparator.comparing(Identifier::toString))
                         .forEach(value -> update(digest, "capability=" + value + "\n"));
-                update(digest, metadata.group() + ":" + metadata.visible() + "\n");
-                update(digest, metadata.translationKey() + "\n");
-                update(digest, metadata.portTranslationPrefix() + "\n");
                 update(digest, canonicalJson(metadata.defaultConfiguration()) + "\n");
+                updateSchema(digest, extension, metadata);
                 metadata.configurationOptions().entrySet().stream()
                         .sorted(Map.Entry.comparingByKey())
                         .forEach(entry -> {
                             update(digest, "field=" + entry.getKey() + "\n");
                             for (var option : entry.getValue()) {
-                                update(digest, canonicalJson(option.value()) + "="
-                                        + option.translationKey() + "\n");
+                                update(digest, canonicalJson(option.value()) + "\n");
                             }
                         });
             }
@@ -176,6 +193,28 @@ public final class ProgramNodeExtensionIndex {
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 is unavailable", exception);
         }
+    }
+
+    private static <C> void updateSchema(MessageDigest digest, ProgramNodeExtension<C> extension,
+                                          ProgramNodeEditorMetadata metadata) {
+        var configuration = extension.configurationCodec().parse(JsonOps.INSTANCE, metadata.defaultConfiguration()).getOrThrow();
+        var schema = extension.schema(configuration);
+        updatePorts(digest, "input", schema.inputs());
+        updatePorts(digest, "output", schema.outputs());
+    }
+
+    private static void updatePorts(MessageDigest digest, String direction,
+                                    List<org.academy.api.common.ability.program.ProgramPortDefinition> ports) {
+        ports.stream().sorted(Comparator.comparing(org.academy.api.common.ability.program.ProgramPortDefinition::name))
+                .forEach(port -> {
+                    var value = new JsonObject();
+                    value.addProperty("direction", direction);
+                    value.addProperty("name", port.name());
+                    value.addProperty("type", port.type().id().toString());
+                    value.addProperty("required", port.required());
+                    value.addProperty("connections", port.maxConnections());
+                    update(digest, canonicalJson(value) + "\n");
+                });
     }
 
     private static void update(MessageDigest digest, String value) {

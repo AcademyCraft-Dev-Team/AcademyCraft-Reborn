@@ -5,6 +5,9 @@ import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.common.skilldata.SkillData;
+import org.academy.internal.common.skilldata.CodecSkillData;
+import org.academy.internal.common.skilldata.UnknownSkillData;
+import org.academy.api.common.ability.data.SkillStateType;
 import org.slf4j.Logger;
 
 import java.lang.reflect.Type;
@@ -17,6 +20,7 @@ public class SkillDataSerializer<T extends SkillData> implements JsonSerializer<
     private static final String LEGACY_REFLECTION_FILTER_DATA_SUFFIX =
             ".accelerator.skills.ReflectionFilter$Data";
 
+    private static final Map<Identifier, SkillStateType<?>> STATE_TYPES = new HashMap<>();
     private static final Map<Identifier, Class<? extends SkillData>> TYPE_MAP = new HashMap<>();
 
     static {
@@ -24,12 +28,27 @@ public class SkillDataSerializer<T extends SkillData> implements JsonSerializer<
     }
 
     public static void registerType(Identifier id, Class<? extends SkillData> clazz) {
-        TYPE_MAP.put(id, clazz);
+        java.util.Objects.requireNonNull(id, "id");
+        java.util.Objects.requireNonNull(clazz, "clazz");
+        var previous = TYPE_MAP.putIfAbsent(id, clazz);
+        if (previous != null && previous != clazz) {
+            throw new IllegalStateException("Conflicting skill state type " + id + ": "
+                    + previous.getName() + " and " + clazz.getName());
+        }
+    }
+
+    public static void registerStateType(SkillStateType<?> type) {
+        var previous = STATE_TYPES.get(type.id());
+        if (previous != null && previous != type) throw new IllegalStateException("Conflicting skill state descriptor " + type.id());
+        registerType(type.id(), CodecSkillData.class);
+        STATE_TYPES.put(type.id(), type);
     }
 
     @Override
     public JsonElement serialize(T data, Type typeOfSrc, JsonSerializationContext context) {
-        var json = context.serialize(data).getAsJsonObject();
+        if (data instanceof UnknownSkillData unknown) return unknown.raw();
+        var json = data instanceof CodecSkillData<?> typed ? typed.encode() : context.serialize(data).getAsJsonObject();
+        json.addProperty("enabled", data.isEnabled());
         json.remove("exp");
         json.remove("maxExp");
         json.remove("level");
@@ -44,6 +63,7 @@ public class SkillDataSerializer<T extends SkillData> implements JsonSerializer<
         var jsonObject = json.getAsJsonObject();
         Class<? extends SkillData> targetClass = CommonSkillData.class;
 
+        SkillData modern = null;
         String typeStr = null;
         if (jsonObject.has("type")) {
             typeStr = jsonObject.get("type").getAsString();
@@ -58,17 +78,28 @@ public class SkillDataSerializer<T extends SkillData> implements JsonSerializer<
             try {
                 var typeId = Identifier.parse(typeStr);
                 var registeredClass = TYPE_MAP.get(typeId);
-                if (registeredClass != null) {
+                var stateType = STATE_TYPES.get(typeId);
+                if (stateType != null) {
+                    try {
+                        modern = CodecSkillData.decode(stateType, jsonObject);
+                    } catch (RuntimeException exception) {
+                        LOGGER.warn("Preserving unsupported SkillData {}: {}", typeId, exception.getMessage());
+                        return (T) new UnknownSkillData(jsonObject, typeId);
+                    }
+                } else if (registeredClass != null) {
                     targetClass = registeredClass;
                 } else {
-                    LOGGER.warn("Unknown SkillData type '{}', falling back to CommonSkillData.", typeId);
+                    LOGGER.warn("Preserving missing SkillData type '{}'.", typeId);
+                    return (T) new UnknownSkillData(jsonObject, typeId);
                 }
 
             } catch (Exception e) {
-                LOGGER.error("Failed to parse SkillData type identifier: {}", typeStr);
+                LOGGER.error("Preserving invalid SkillData type identifier: {}", typeStr);
+                return (T) new UnknownSkillData(jsonObject, CommonSkillData.ID);
             }
         }
-        var data = context.<T>deserialize(json, targetClass);
+        var data = modern == null ? context.<T>deserialize(json, targetClass) : (T) modern;
+        if (modern != null && jsonObject.has("enabled")) data.setEnabled(jsonObject.get("enabled").getAsBoolean());
         if (jsonObject.has("proficiency")) {
             data.setProficiency(jsonObject.get("proficiency").getAsFloat());
         } else {

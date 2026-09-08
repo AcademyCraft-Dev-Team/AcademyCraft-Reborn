@@ -24,6 +24,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.MentaloutControlContext;
+import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.ability.mentalout.MentalResistanceManager;
 import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
 import org.academy.internal.common.ability.mentalout.MentaloutRosterPackets;
@@ -167,7 +168,11 @@ public final class MentalIntervention extends Skill {
                 case ADDED -> feedback(player, "message.academy.mentalout.mental_intervention.added");
                 case REMOVED -> feedback(player, "message.academy.mentalout.mental_intervention.removed");
                 case INVALID -> feedback(player, "message.academy.mentalout.invalid_target");
-                case UNSUPPORTED -> feedback(player, "message.academy.mentalout.unsupported_target");
+                case UNSUPPORTED -> {
+                    if (!MentalControlRuntime.notifyInterventionBlocked(player, selected)) {
+                        feedback(player, "message.academy.mentalout.unsupported_target");
+                    }
+                }
                 case INSUFFICIENT_CP -> feedback(player, "message.academy.mentalout.insufficient_cp");
             }
         }

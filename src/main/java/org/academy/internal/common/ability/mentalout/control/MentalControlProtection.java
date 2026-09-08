@@ -1,14 +1,12 @@
 package org.academy.internal.common.ability.mentalout.control;
 
-import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import org.academy.AcademyCraft;
+import org.academy.api.common.entitycontrol.MentalControlTags;
 import org.academy.api.common.entitycontrol.ControlRejectionReason;
 import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
@@ -20,20 +18,18 @@ import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 import org.jspecify.annotations.Nullable;
 
 final class MentalControlProtection {
-    static final TagKey<EntityType<?>> IMMUNE_ENTITY_TYPES = TagKey.create(
-            Registries.ENTITY_TYPE,
-            Identifier.fromNamespaceAndPath(AcademyCraft.MOD_ID, "mental_control_immune")
-    );
-    static final TagKey<EntityType<?>> BOSS_COST_ENTITY_TYPES = TagKey.create(
-            Registries.ENTITY_TYPE,
-            Identifier.fromNamespaceAndPath(AcademyCraft.MOD_ID, "mental_control_boss_cost")
-    );
+    static final TagKey<EntityType<?>> IMMUNE_ENTITY_TYPES = MentalControlTags.IMMUNE;
+    static final TagKey<EntityType<?>> BOSS_COST_ENTITY_TYPES = MentalControlTags.BOSS_COST;
 
     private MentalControlProtection() {
     }
 
     static @Nullable ControlRejectionReason rejectionReason(LivingEntity subject) {
-        var kind = kind(subject);
+        return rejectionReason(subject, false);
+    }
+
+    static @Nullable ControlRejectionReason rejectionReason(LivingEntity subject, boolean intervention) {
+        var kind = kind(subject, intervention);
         if (kind == null) return null;
         return kind == Kind.IMMUNE_TAG
                 ? ControlRejectionReason.IMMUNE_TAG
@@ -41,11 +37,16 @@ final class MentalControlProtection {
     }
 
     static @Nullable Kind kind(LivingEntity subject) {
+        return kind(subject, false);
+    }
+
+    private static @Nullable Kind kind(LivingEntity subject, boolean intervention) {
         if (subject == null) return Kind.IMMUNE_TAG;
         if (subject instanceof DarkmatterBeetle) return Kind.DARKMATTER_NETWORK;
         if (subject.getType().builtInRegistryHolder().is(IMMUNE_ENTITY_TYPES)) return Kind.IMMUNE_TAG;
+        if (!intervention && MentalResistanceManager.isAutomaticallyResistant(subject)) return Kind.MENTAL_RESISTANCE;
         if (!(subject instanceof ServerPlayer player)) return null;
-        if (MentalResistanceManager.isResistant(player)) return Kind.MENTAL_RESISTANCE;
+        if (MentalResistanceManager.isManuallyResistant(player)) return Kind.MENTAL_RESISTANCE;
         if (VectorReflection.Server.isActive(player) || VectorDeviation.Server.isActive(player)) {
             return Kind.VECTOR_FILTER;
         }
@@ -55,9 +56,14 @@ final class MentalControlProtection {
     }
 
     static void notifyBlocked(ServerPlayer controller, LivingEntity subject) {
-        var kind = kind(subject);
-        if (controller == null || kind == null) return;
-        controller.sendOverlayMessage(Component.translatable(kind.feedbackKey));
+        notifyBlocked(controller, subject, false);
+    }
+
+    static void notifyBlocked(ServerPlayer controller, LivingEntity subject, boolean intervention) {
+        var kind = kind(subject, intervention);
+        if (controller == null || subject == null || kind == null) return;
+        controller.sendOverlayMessage(MentalControlFeedbackRegistry.resolve(
+                controller, subject, Component.translatable(kind.feedbackKey)));
         if (!(subject instanceof ServerPlayer player)) return;
         var direction = controller.getBoundingBox().getCenter()
                 .subtract(player.getBoundingBox().getCenter());
