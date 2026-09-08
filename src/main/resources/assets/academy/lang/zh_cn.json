@@ -2160,7 +2160,7 @@
   "skill.academy.airflow_jet.proficiency.2000": "半蓄喷射速度提升；满蓄推进持续时间由 1.5 秒延长至 2 秒。",
   "skill.academy.airflow_jet.proficiency.3000": "满蓄喷射速度提升。",
   "skill.academy.arc_generate": "电弧生成",
-  "skill.academy.arc_generate.desc": "释放短程电弧，对路线上的目标造成伤害。 命中累计 1 点电荷；每 5 点引爆 0.5 秒麻痹：打断行动，移速降低 80%，造成伤害降低 20%，物品进入冷却。",
+  "skill.academy.arc_generate.desc": "释放短程电弧，对路线上的目标造成伤害。 命中累计 1 点电荷；每 5 点引爆 0.5 秒麻痹：打断行动，移速降低 80%，造成伤害降低 20%。额外使玩家物品进入随机 0.5–1 秒冷却，或使怪物在随机 0.5–1 秒内发起的攻击和造成的伤害被取消。",
   "skill.academy.arc_generate.proficiency.1000": "施放消耗CP -10%。",
   "skill.academy.arc_generate.proficiency.2000": "射程由 10 增至 12 格，路径宽度 +20%。",
   "skill.academy.arc_generate.proficiency.3000": "命中后向 4 格内至多两个未命中敌人跳跃，分别造成主伤害 50% 和 30%。",

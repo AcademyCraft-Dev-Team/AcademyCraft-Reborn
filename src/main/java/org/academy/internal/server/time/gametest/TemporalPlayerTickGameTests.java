@@ -212,13 +212,50 @@ public final class TemporalPlayerTickGameTests {
             org.academy.api.common.damage.AbilityHitEffects.addElectricalCharge(controlled, 5);
             helper.assertTrue(controlled.getCooldowns().isOnCooldown(dirt),
                     "Paralysis must cool down carried items");
+            var randomDuration = org.academy.api.common.damage.AbilityHitEffects.electricalInterruptionTicks(controlled);
+            helper.assertTrue(randomDuration >= 10 && randomDuration <= 20,
+                    "Player cooldown must use an inclusive random 10-20 tick interval");
+            helper.assertTrue(org.academy.internal.common.world.damagesource.CategoryDamageRuntime.outgoingDamage(
+                    controlled.damageSources().playerAttack(controlled), 10) == 8,
+                    "The original player outgoing damage penalty must remain 20 percent");
             helper.runAfterDelay(10L, () -> guarded(() -> {
                 helper.assertTrue(!org.academy.api.common.damage.AbilityHitEffects.isParalyzed(controlled),
                         "Paralysis must end after ten physical ticks even at two-thirds speed");
-                helper.assertTrue(!controlled.getCooldowns().isOnCooldown(dirt),
-                        "Paralysis-owned cooldown must end on the physical clock");
+                helper.assertTrue(controlled.getCooldowns().isOnCooldown(dirt) == (randomDuration > 10),
+                        "Extra cooldown must follow its own duration after base paralysis ends");
                 helper.assertTrue(controlled.getCooldowns().isOnCooldown(stick),
                         "Ending paralysis must preserve a longer pre-existing cooldown");
+            }));
+            helper.runAfterDelay(randomDuration + 1L, () -> guarded(() -> {
+                helper.assertTrue(!controlled.getCooldowns().isOnCooldown(dirt),
+                        "Extra cooldown must expire on physical time despite player slowdown");
+                helper.assertTrue(controlled.getCooldowns().isOnCooldown(stick),
+                        "Extra cooldown expiry must preserve a longer existing cooldown");
+            }));
+            var monster = helper.spawn(net.minecraft.world.entity.EntityTypes.ZOMBIE, 3, 2, 5);
+            monster.setNoAi(true);
+            monster.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD,
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND_HELMET));
+            // Select the upper endpoint without depending on other entities' random consumption.
+            for (var seed = 0L; ; seed++) {
+                monster.getRandom().setSeed(seed);
+                if (monster.getRandom().nextInt(11) == 10) {
+                    monster.getRandom().setSeed(seed);
+                    break;
+                }
+            }
+            org.academy.api.common.damage.AbilityHitEffects.addElectricalCharge(monster, 5);
+            helper.assertTrue(org.academy.api.common.damage.AbilityHitEffects.electricalInterruptionTicks(monster) == 20,
+                    "Random interruption must include the full one-second endpoint");
+            helper.runAfterDelay(11L, () -> guarded(() -> {
+                helper.assertTrue(!org.academy.api.common.damage.AbilityHitEffects.isParalyzed(monster)
+                                && org.academy.internal.common.world.damagesource.CategoryDamageRuntime.blocksMobAttack(monster),
+                        "Mob attack lock must continue after the original half-second paralysis");
+            }));
+            helper.runAfterDelay(21L, () -> guarded(() -> {
+                helper.assertTrue(!org.academy.internal.common.world.damagesource.CategoryDamageRuntime.blocksMobAttack(monster),
+                        "Mob attack lock must clear by twenty physical ticks");
+                monster.discard();
             }));
             snapshot();
             for (var tick = 11L; tick < 41L; tick++) {

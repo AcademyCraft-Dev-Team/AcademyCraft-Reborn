@@ -14,6 +14,7 @@ import org.spongepowered.asm.mixin.Mixin;
 public abstract class MixinPlayerDamageContext {
     @WrapMethod(method = "actuallyHurt")
     private void academy$damageContext(ServerLevel level, DamageSource source, float amount, Operation<Void> original) {
+        if (org.academy.internal.common.world.damagesource.CategoryDamageRuntime.blocksOutgoingDamage(source)) return;
         PlayerAttributeRuntime.pushDamageContext(source);
         OutputControl.pushDamageContext(source);
         try {

@@ -20,6 +20,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Mob.class)
 public abstract class MixinMob implements MentalControlMobAccess {
+    @Inject(method = "doHurtTarget", at = @At("HEAD"), cancellable = true)
+    private void academy$blockElectricalAttack(ServerLevel level, net.minecraft.world.entity.Entity target,
+                                               CallbackInfoReturnable<Boolean> cir) {
+        if (org.academy.internal.common.world.damagesource.CategoryDamageRuntime.blocksMobAttack((Mob) (Object) this)) {
+            cir.setReturnValue(false);
+        }
+    }
+
     @Shadow
     private @Nullable LivingEntity target;
     @Shadow

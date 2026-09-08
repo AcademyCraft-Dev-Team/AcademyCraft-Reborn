@@ -194,8 +194,25 @@ public final class DamagePolicyGameTests {
         var receiver = helper.spawn(EntityTypes.COW, 4, 2, 5);
         receiver.setNoAi(true);
         receiver.hurtServer(level, electric.damageSources().mobAttack(electric), 10);
-        helper.assertTrue(Math.abs(receiver.getHealth() - (receiver.getMaxHealth() - 8)) < 0.01,
-                "Paralyzed ordinary attacks must lose exactly 20% damage");
+        helper.assertTrue(receiver.getHealth() == receiver.getMaxHealth(),
+                "Extra electrical interruption must cancel mob outgoing hurt");
+        helper.assertTrue(!electric.doHurtTarget(level, receiver), "Mob attack must be canceled before execution");
+        var interruption = org.academy.api.common.damage.AbilityHitEffects.electricalInterruptionTicks(electric);
+        helper.assertTrue(interruption >= 10 && interruption <= 20, "Extra lock must roll 10 through 20 ticks");
+        var arrow = new net.minecraft.world.entity.projectile.arrow.Arrow(level, electric,
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ARROW), null);
+        var arrowSource = electric.damageSources().arrow(arrow, electric);
+        helper.assertTrue(!receiver.hurtServer(level, arrowSource, 10), "Attributed projectiles must also be canceled");
+        var cta = new net.minecraft.world.damagesource.DamageSource(level.registryAccess()
+                .lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(DamageTypes.CTA), electric);
+        helper.assertTrue(!SkillDamageUtil.applyVerifiedTrueHealth(receiver, cta, 10),
+                "Direct true health damage from an interrupted mob must be canceled");
+        electric.invulnerableTime = 0;
+        var electricHealthBefore = electric.getHealth();
+        helper.assertTrue(electric.hurtServer(level, player.damageSources().playerAttack(player), 1)
+                        && electric.getHealth() < electricHealthBefore,
+                "A mob with interrupted attacks must still take incoming damage");
+        arrow.discard();
         receiver.discard();
         electric.discard();
 
