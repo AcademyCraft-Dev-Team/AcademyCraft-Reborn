@@ -27,4 +27,9 @@ public final class AbilityCategories {
 
     private AbilityCategories() {
     }
+
+    /** Uses registered ownership, including future built-in categories, rather than addon IDs. */
+    public static boolean isBuiltin(AbilityCategory category) {
+        return ABILITY_CATEGORIES.getEntries().stream().anyMatch(entry -> entry.get() == category);
+    }
 }
