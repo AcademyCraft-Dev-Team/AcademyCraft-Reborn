@@ -41,6 +41,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipChargeContext;
@@ -230,6 +231,22 @@ public final class LaminarCutter extends Skill {
                     maximumRange, damageScale, baseCost, tier, bladePlaneDirection);
         }
 
+        /** Precision nodes supply their own output cost curve without stacking global output. */
+        public static boolean tryProgramCast(
+                ServerPlayer player,
+                Vec3 origin,
+                Vec3 direction,
+                float maximumRange,
+                float damageScale,
+                float baseCost,
+                AeromanipChargeTier tier,
+                @Nullable Vec3 bladePlaneDirection,
+                float airCostMultiplier
+        ) {
+            return tryCast(player, origin, direction, maximumRange, damageScale, baseCost,
+                    tier, bladePlaneDirection, airCostMultiplier);
+        }
+
         static double bladeHalfWidth(AeromanipChargeTier tier) {
             return tier == AeromanipChargeTier.INSTANT ? BLADE_HALF_WIDTH : 4.0;
         }
@@ -291,6 +308,21 @@ public final class LaminarCutter extends Skill {
                 AeromanipChargeTier tier,
                 @Nullable Vec3 bladePlaneDirection
         ) {
+            return tryCast(player, origin, direction, maximumRange, damageScale, baseCost,
+                    tier, bladePlaneDirection, 1.0f);
+        }
+
+        private static boolean tryCast(
+                ServerPlayer player,
+                Vec3 origin,
+                Vec3 direction,
+                float maximumRange,
+                float damageScale,
+                float baseCost,
+                AeromanipChargeTier tier,
+                @Nullable Vec3 bladePlaneDirection,
+                float airCostMultiplier
+        ) {
             if (player == null || origin == null || direction == null
                     || !Double.isFinite(origin.x)
                     || !Double.isFinite(origin.y)
@@ -302,6 +334,9 @@ public final class LaminarCutter extends Skill {
                     || !Float.isFinite(maximumRange)
                     || !Float.isFinite(damageScale)
                     || !Float.isFinite(baseCost)
+                    || !Float.isFinite(airCostMultiplier)
+                    || airCostMultiplier < ProgramPowerScale.MIN_COST_MULTIPLIER
+                    || airCostMultiplier > ProgramPowerScale.MAX_COST_MULTIPLIER
                     || (maximumRange != -1.0f
                     && (maximumRange <= 0.0f || maximumRange > 64.0f))
                     || damageScale < 0.0f
@@ -317,14 +352,14 @@ public final class LaminarCutter extends Skill {
                 case FULL -> 50.0f;
             };
             var tierAir = switch (tier) {
-                case INSTANT -> 20.0f;
-                case HALF -> 36.0f;
-                case FULL -> 56.0f;
+                case INSTANT -> 10.0f;
+                case HALF -> 18.0f;
+                case FULL -> 28.0f;
             };
             return skill.executeActiveWithResource(player, context -> (baseCost < 0.0f
                             ? tierCp : baseCost)
                             * AeromanipConfig.cpMultiplier(player, SkillNames.LAMINAR_CUTTER),
-                    _ -> tierAir,
+                    _ -> tierAir * airCostMultiplier,
                     (context, _) -> executeCut(
                             player,
                             origin,

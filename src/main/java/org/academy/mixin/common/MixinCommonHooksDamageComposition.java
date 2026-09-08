@@ -30,6 +30,11 @@ public abstract class MixinCommonHooksDamageComposition {
     @WrapMethod(method = "onLivingDamagePre")
     private static float academy$pre(LivingEntity entity, DamageContainer container, Operation<Float> original) {
         PainSuppression.Server.beforeDamage(entity, container);
+        if (DamageTypes.bypassesAbsorption(container.getSource())) {
+            // Absorption is calculated after Pre in both LivingEntity and Player. Skip its
+            // reduction without consuming or temporarily clearing the target's yellow hearts.
+            container.addModifier(DamageContainer.Reduction.ABSORPTION, (hit, reduction) -> 0.0f);
+        }
         return DamageTypes.isAcademyDamage(container.getSource()) || container.getSource() instanceof SkillDamageSource
                 ? AcademyDamageRules.pre(entity, container) : original.call(entity, container);
     }

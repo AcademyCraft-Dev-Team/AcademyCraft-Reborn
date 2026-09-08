@@ -242,7 +242,6 @@ public final class VacuumDomain extends Skill {
                         target.getAirSupply(), target.getMaxAirSupply(), drain, protectedByBubble);
                 target.setAirSupply(air);
                 if (!protectedByBubble && shouldDealDamage(owner.tickCount, air)) {
-                    target.invulnerableTime = 0;
                     var damage = baseDamage(target.getMaxHealth())
                             * AeromanipConfig.damageMultiplier(owner, SkillNames.VACUUM_DOMAIN);
                     DamageComposition.hurt(

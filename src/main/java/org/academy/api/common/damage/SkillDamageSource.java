@@ -21,8 +21,8 @@ public class SkillDamageSource extends DamageSource {
         this(type, directEntity, causingEntity, skill, -1);
     }
 
-    private SkillDamageSource(Holder<DamageType> type, @Nullable Entity directEntity,
-                              @Nullable Entity causingEntity, Skill skill, int electricalChargePoints) {
+    protected SkillDamageSource(Holder<DamageType> type, @Nullable Entity directEntity,
+                                @Nullable Entity causingEntity, Skill skill, int electricalChargePoints) {
         this(type, directEntity, causingEntity, skill, electricalChargePoints, true);
     }
 

@@ -1,5 +1,6 @@
 package org.academy.api.common.damage;
 
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.internal.common.world.damagesource.CategoryDamageRuntime;
 
@@ -18,6 +19,12 @@ public final class AbilityHitEffects {
     /** Adds charge, consuming five points per paralysis discharge. Returns discharge count. */
     public static int addElectricalCharge(LivingEntity target, int points) {
         return CategoryDamageRuntime.addCharge(target, points);
+    }
+
+    /** Adds charge with attacker attribution for the direct electrical discharge damage. */
+    public static int addElectricalCharge(LivingEntity target, int points,
+                                         DamageSource source) {
+        return CategoryDamageRuntime.addCharge(target, points, source);
     }
 
     public static int electricalCharge(LivingEntity target) {

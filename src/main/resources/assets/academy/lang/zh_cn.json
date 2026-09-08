@@ -2366,7 +2366,7 @@
   "skill.academy.laminar_buffer.proficiency.2000": "半蓄悬浮时间由 3 秒延长至 5 秒。",
   "skill.academy.laminar_buffer.proficiency.3000": "满蓄立足块的持续时间由 10 秒延长至 15 秒。",
   "skill.academy.laminar_cutter": "层流切割",
-  "skill.academy.laminar_cutter.desc": "释放无视盾牌的空气刃。\n瞬发：斩击视线前方的目标。\n半蓄：扩大范围、强化击退并破坏易碎方块。\n满蓄：无视护甲并大幅损耗装备耐久。\n压缩空气消耗依次为 20 / 36 / 56。 固定伤害命中会追加装备磨损，连续攻击共享短时耐久破坏预算。",
+  "skill.academy.laminar_cutter.desc": "释放无视盾牌的空气刃。\n瞬发：斩击视线前方的目标。\n半蓄：扩大范围、强化击退并破坏易碎方块。\n满蓄：无视护甲并大幅损耗装备耐久。\n基础压缩空气消耗依次为 10 / 18 / 28，并按出力调整消耗。 固定伤害命中会追加装备磨损，连续攻击共享短时耐久破坏预算。",
   "skill.academy.laminar_cutter.proficiency.1000": "施放消耗CP -10%。",
   "skill.academy.laminar_cutter.proficiency.2000": "刃长 +20%；满蓄命中还会缴械目标，但仍受装备控制保护规则限制。",
   "skill.academy.laminar_cutter.proficiency.3000": "命中的生物获得 5 秒“层裂”：护甲有效值降低 20%；对玩家降为 10%。",
