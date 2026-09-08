@@ -247,6 +247,24 @@ public final class VfxPipelines {
                     .build())
             .build();
 
+    public static final RenderPipeline TEX_PLANE_TRANSLUCENT = builder()
+            .withLocation(academy("pipeline/vfx_tex_plane"))
+            .withVertexShader(academy("core/vfx_tex_plane"))
+            .withFragmentShader(R.shaders.core.vfx_ring)
+            .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
+            .withBindGroupLayout(BindGroupLayouts.PROJECTION)
+            .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
+            .withCull(false)
+            .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+            .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
+            .withPrimitiveTopology(PrimitiveTopology.QUADS)
+            .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX)
+            .withVertexBinding(1, VertexFormat.builder(1)
+                    .addAttribute("InstanceMat", GpuFormat.RGBA32_FLOAT, 4)
+                    .addAttribute("InstanceAlpha", GpuFormat.R32_FLOAT)
+                    .build())
+            .build();
+
     public static final RenderPipeline TEX_RING_TRANSLUCENT = builder()
             .withLocation(academy("pipeline/vfx_tex_ring_translucent"))
             .withVertexShader(R.shaders.core.vfx_ring)

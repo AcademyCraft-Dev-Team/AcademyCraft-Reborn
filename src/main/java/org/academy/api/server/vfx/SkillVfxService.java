@@ -9,6 +9,21 @@ import org.academy.internal.server.vfx.SkillVfxRuntime;
 public final class SkillVfxService {
     private SkillVfxService() {}
 
+    public static void smoke(ServerLevel level, Vec3 position, float size, int lifetimeTicks) {
+        if (!Double.isFinite(position.lengthSqr()) || !Float.isFinite(size)) return;
+        var random = level.getRandom();
+        SkillVfxRuntime.emit(level, new SkillVfxState.Smoke(position, Math.clamp(size, 0.01f, 16f),
+                0.5f + random.nextFloat() * 0.2f, random.nextInt(4), Math.clamp(lifetimeTicks, 1, 80)));
+    }
+
+    public static void slash(ServerLevel level, Vec3 position, float xRot, float yRot,
+                             float scale, int direction, int lifetimeTicks) {
+        if (!Double.isFinite(position.lengthSqr()) || !Float.isFinite(xRot)
+                || !Float.isFinite(yRot) || !Float.isFinite(scale)) return;
+        SkillVfxRuntime.emit(level, new SkillVfxState.Slash(position, xRot, yRot, Math.clamp(scale, 0.1f, 32f),
+                direction < 0 ? -1 : 1, Math.clamp(lifetimeTicks, 1, 200)));
+    }
+
     public static void shockwave(ServerLevel level, Vec3 position, Vec3 direction, float radius, float intensity) {
         if (!Double.isFinite(position.lengthSqr()) || !Double.isFinite(direction.lengthSqr())
                 || !Float.isFinite(radius) || !Float.isFinite(intensity)) return;

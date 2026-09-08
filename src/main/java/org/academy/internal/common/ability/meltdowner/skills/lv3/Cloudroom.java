@@ -20,14 +20,13 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.vfx.SkillVfxService;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
-import org.academy.internal.common.world.entity.EntityTypes;
-import org.academy.internal.common.world.entity.skill.Smoke;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -173,18 +172,11 @@ public class Cloudroom extends Skill {
                         && Mth.positiveModulo(entity.tickCount + entity.getId(), TRAIL_INTERVAL_TICKS) == 0
                         && spawnedTrails < MAX_TRAILS_PER_TICK
                         && Server.tryClaimTrailSlot(level().getGameTime())) {
-                    var smoke = new Smoke(EntityTypes.SMOKE.get(), level());
-                    smoke.setPos(currentPos);
-                    smoke.size = 0.5f;
-                    smoke.setLifetimeTicks(proficiencyMilestone >= 2
-                            ? Math.round(TRAIL_LIFETIME * 1.5f) : TRAIL_LIFETIME);
-                    level().addFreshEntity(smoke);
+                    SkillVfxService.smoke(level(), currentPos, 0.5f,
+                            proficiencyMilestone >= 2 ? Math.round(TRAIL_LIFETIME * 1.5f) : TRAIL_LIFETIME);
                     if (proficiencyMilestone >= 3 && lastPos.distanceToSqr(currentPos) > 16.0) {
-                        var breakpoint = new Smoke(EntityTypes.SMOKE.get(), level());
-                        breakpoint.setPos(lastPos);
-                        breakpoint.size = 0.75f;
-                        breakpoint.setLifetimeTicks(Math.round(TRAIL_LIFETIME * 1.5f));
-                        level().addFreshEntity(breakpoint);
+                        SkillVfxService.smoke(level(), lastPos, 0.75f,
+                                Math.round(TRAIL_LIFETIME * 1.5f));
                     }
                     spawnedTrails++;
                 }

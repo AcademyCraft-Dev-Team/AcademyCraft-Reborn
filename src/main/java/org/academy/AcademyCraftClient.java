@@ -146,6 +146,7 @@ public final class AcademyCraftClient {
         ImagPhaseDowsingRodClient.init();
         BeamVfxClient.register();
         SmokeVfxClient.register();
+        org.academy.internal.client.render.vfx.DarkmatterSlashVfx.register();
         ArcVfxClient.register();
         WingVfxClient.register();
         PlasmaVfxClient.register();

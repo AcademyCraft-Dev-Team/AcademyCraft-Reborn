@@ -23,6 +23,33 @@ class SkillVfxPacketTest {
         } finally { buffer.release(); }
     }
 
+    @Test void smokeAndSlashCarryAppearanceInOneSmallPacket() {
+        for (var state : new SkillVfxState[]{
+                new SkillVfxState.Smoke(new Vec3(2, 3, 4), .5f, .7f, 3, 80),
+                new SkillVfxState.Slash(new Vec3(2, 3, 4), -20, 270, 2, -1, 4)}) {
+            assertEquals(state, roundTrip(state));
+            assertTrue(state.oneShot());
+            var buffer = Unpooled.buffer();
+            try {
+                SkillVfxPacket.CODEC.encode(buffer, new SkillVfxPacket(DIMENSION, 1, 1, state));
+                assertTrue(buffer.readableBytes() <= 72);
+            } finally { buffer.release(); }
+        }
+    }
+
+    @Test void rejectsInvalidPureVisualParameters() {
+        for (var state : new SkillVfxState[]{
+                new SkillVfxState.Smoke(Vec3.ZERO, Float.NaN, .5f, 0, 80),
+                new SkillVfxState.Smoke(Vec3.ZERO, 1, .8f, 0, 80),
+                new SkillVfxState.Smoke(Vec3.ZERO, 1, .5f, 4, 80),
+                new SkillVfxState.Smoke(Vec3.ZERO, 1, .5f, 0, 0),
+                new SkillVfxState.Slash(Vec3.ZERO, Float.NaN, 0, 1, 1, 4),
+                new SkillVfxState.Slash(Vec3.ZERO, 0, 0, 33, 1, 4),
+                new SkillVfxState.Slash(Vec3.ZERO, 0, 0, 1, 1, 201)}) {
+            assertThrows(IllegalArgumentException.class, () -> roundTrip(state));
+        }
+    }
+
     @Test void reflectedBeamIsSelfContained() {
         var beam = new SkillVfxState.Beam(new Vec3(123456, 90, -54321), 25, 90,
                 50, 1.2f, 0.3f, 40, 40, 15, 9, 12, 38, new Vec3(-1, 0, 0), 1);

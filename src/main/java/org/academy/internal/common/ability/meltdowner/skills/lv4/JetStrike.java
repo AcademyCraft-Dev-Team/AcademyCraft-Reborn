@@ -25,6 +25,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.vfx.SkillVfxService;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -37,7 +38,6 @@ import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
-import org.academy.internal.common.world.entity.skill.Smoke;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -280,9 +280,8 @@ public final class JetStrike extends Skill {
                 return;
             }
             if (ticks % 2 == 0) {
-                var smoke = new Smoke(EntityTypes.SMOKE.get(), initialLevel);
-                smoke.setPos(player.position().add(0, 0.5, 0));
-                initialLevel.addFreshEntity(smoke);
+                SkillVfxService.smoke(initialLevel,
+                        player.position().add(0, 0.5, 0), 1f, 80);
             }
             if (proficiencyMilestone >= 3) {
                 var source = SkillDamageSource.of(player, Skills.JET_STRIKE.get());
