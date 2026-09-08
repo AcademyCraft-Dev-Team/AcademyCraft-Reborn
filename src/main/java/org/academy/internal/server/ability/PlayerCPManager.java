@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class PlayerCPManager implements AbilitySubsystem {
     private static final StackWalker STATE_STACK_WALKER = StackWalker.getInstance(
@@ -215,7 +216,18 @@ public class PlayerCPManager implements AbilitySubsystem {
         var cpData = playerData.getCpData();
         var occupations = playerData.getMutableCpOccupations();
 
+        var category = playerDataManager.getPlayerAbilityCategory(player.getUUID());
+        var builtin = AbilityCategories.isBuiltin(category);
         var dirty = false;
+        if (builtin) {
+            dirty |= restoreAcademyMaxCp(playerData, debugMaxCpOverrides.get(player.getUUID()));
+            dirty |= releaseInvalidOccupations(cpData, occupations, skillId -> {
+                var id = Identifier.tryParse(skillId);
+                return id != null && Registries.SKILLS.get(id)
+                        .map(reference -> LearningHelper.isSkillAvailableForCategory(category, reference.value()))
+                        .orElse(false);
+            }, getMaxCP(player.getUUID()));
+        }
 
         var bonuses = getBonuses(player.getUUID());
         if (bonuses.overloadImmune() && cpData.getStatus() != AbilityData.Status.NORMAL) {
@@ -227,11 +239,15 @@ public class PlayerCPManager implements AbilitySubsystem {
         dirty |= switch (cpData.getStatus()) {
             case NORMAL -> tickNormal(cpData, player, bonuses.overloadImmune());
             case PERSONAL_REALITY_OVERLOAD -> tickWarning(cpData, player, bonuses.overloadImmune());
-            case OVERLOAD -> tickOverload(cpData, occupations, player);
+            case OVERLOAD -> builtin
+                    ? recoverOverload(cpData, occupations, player)
+                    : tickOverload(cpData, occupations, player);
         };
 
         if (cpData.getStatus() != AbilityData.Status.OVERLOAD) {
-            dirty |= processOccupations(player, cpData, occupations);
+            dirty |= builtin
+                    ? recoverOccupations(player, cpData, occupations)
+                    : processOccupations(player, cpData, occupations);
         }
 
         dirty |= cpData.tickFoodSpRecovery();
@@ -292,7 +308,13 @@ public class PlayerCPManager implements AbilitySubsystem {
         return true;
     }
 
+    // Retain these extension entry points for addon categories. Built-in categories use the
+    // shared recovery implementation directly so an addon cannot carry its recovery veto over.
     private boolean tickOverload(AbilityData cpData, List<AbilityData.CpOccupationData> occupations, ServerPlayer player) {
+        return recoverOverload(cpData, occupations, player);
+    }
+
+    private boolean recoverOverload(AbilityData cpData, List<AbilityData.CpOccupationData> occupations, ServerPlayer player) {
         cpData.tickStateTimer();
         if (cpData.getStateTimer() <= 0) {
             cpData.setStatus(AbilityData.Status.NORMAL);
@@ -309,6 +331,10 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     private boolean processOccupations(ServerPlayer player, AbilityData cpData, List<AbilityData.CpOccupationData> occupations) {
+        return recoverOccupations(player, cpData, occupations);
+    }
+
+    private boolean recoverOccupations(ServerPlayer player, AbilityData cpData, List<AbilityData.CpOccupationData> occupations) {
         var dirty = releaseInactiveMaintenanceOccupations(player, cpData, occupations);
         var hasTimedOccupation = occupations.stream().anyMatch(occupation -> !occupation.isPermanent());
         if (!hasTimedOccupation) {
@@ -942,7 +968,9 @@ public class PlayerCPManager implements AbilitySubsystem {
     public float getMaxCP(UUID uuid) {
         var playerData = playerDataManager.getData(uuid);
         var naturalMaxCP = BASE_MAX_CP;
-        if (playerData != null) {
+        if (playerData != null && AbilityCategories.isBuiltin(playerDataManager.getPlayerAbilityCategory(uuid))) {
+            naturalMaxCP = academyMaxCp(playerData);
+        } else if (playerData != null) {
             naturalMaxCP = playerData.isMaxCpInitialized()
                     ? normalizeDebugMaxCP(playerData.getCpData().getMaxCP())
                     : initialPersistentMaxCp(
@@ -1076,40 +1104,82 @@ public class PlayerCPManager implements AbilitySubsystem {
         var playerData = playerDataManager.getData(uuid);
         if (playerData == null) return;
 
-        var desiredBonus = getDerivedMaxCpBonus(uuid);
-        var appliedBonus = playerData.getAppliedCommonSkillMaxCpBonus();
-        var cpData = playerData.getCpData();
-        var debugMaxCP = debugMaxCpOverrides.get(uuid);
-        var changed = false;
-
-        if (!playerData.isMaxCpInitialized()) {
-            // Older saves stored a 100-point base and rebuilt all growth on login. Promote the
-            // already-earned derived total into the persisted max without double-applying it.
-            var trackedBonus = Math.max(appliedBonus, desiredBonus);
-            cpData.setMaxCP(initialPersistentMaxCp(cpData.getMaxCP(), trackedBonus));
-            playerData.setAppliedCommonSkillMaxCpBonus(trackedBonus);
-            playerData.setMaxCpInitialized(true);
-            appliedBonus = trackedBonus;
-            changed = true;
-        }
-
-        if (desiredBonus > appliedBonus) {
-            var oldMaxCp = cpData.getMaxCP();
-            var newMaxCp = applyDerivedMaxCpGrowth(oldMaxCp, appliedBonus, desiredBonus);
-            var delta = newMaxCp - oldMaxCp;
-            cpData.setMaxCP(newMaxCp);
-            var effectiveMaxCp = resolveEffectiveMaxCP(newMaxCp, debugMaxCP);
-            cpData.setAvailableCP(cpData.getAvailableCP() + delta, effectiveMaxCp);
-            playerData.setAppliedCommonSkillMaxCpBonus(desiredBonus);
-            changed = true;
-        }
-
-        var effectiveMaxCp = resolveEffectiveMaxCP(cpData.getMaxCP(), debugMaxCP);
-        if (cpData.getAvailableCP() > effectiveMaxCp) {
-            cpData.setAvailableCP(effectiveMaxCp, effectiveMaxCp);
-            changed = true;
-        }
+        var changed = updateAcademyMaxCp(playerData, getDerivedMaxCpBonus(uuid));
+        changed |= restoreAcademyMaxCp(playerData, debugMaxCpOverrides.get(uuid));
         if (changed) syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
+    }
+
+    /** Migrates the old mutable maximum once; later category writes cannot replace this ledger. */
+    static float academyMaxCp(Player playerData) {
+        var recorded = playerData.getAcademyMaxCp();
+        var baseline = Float.isFinite(recorded) && recorded >= BASE_MAX_CP
+                ? recorded : playerData.getCpData().getMaxCP();
+        return initialPersistentMaxCp(baseline, playerData.getAppliedCommonSkillMaxCpBonus());
+    }
+
+    static boolean updateAcademyMaxCp(Player playerData, float desiredBonus) {
+        var applied = normalizeDebugMaxCP(playerData.getAppliedCommonSkillMaxCpBonus());
+        var desired = normalizeDebugMaxCP(desiredBonus);
+        var previous = academyMaxCp(playerData);
+        var next = playerData.isMaxCpInitialized()
+                ? applyDerivedMaxCpGrowth(previous, applied, desired)
+                : initialPersistentMaxCp(previous, Math.max(applied, desired));
+        var tracked = Math.max(applied, desired);
+        var changed = Float.compare(playerData.getAcademyMaxCp(), next) != 0
+                || Float.compare(playerData.getAppliedCommonSkillMaxCpBonus(), tracked) != 0
+                || !playerData.isMaxCpInitialized();
+        playerData.setAcademyMaxCp(next);
+        playerData.setAppliedCommonSkillMaxCpBonus(tracked);
+        playerData.setMaxCpInitialized(true);
+        return changed;
+    }
+
+    static boolean restoreAcademyMaxCp(Player playerData, Float debugOverride) {
+        var cpData = playerData.getCpData();
+        var restored = academyMaxCp(playerData);
+        var changed = Float.compare(playerData.getAcademyMaxCp(), restored) != 0;
+        playerData.setAcademyMaxCp(restored);
+        var oldMaximum = normalizeDebugMaxCP(cpData.getMaxCP());
+        var available = normalizeDebugMaxCP(cpData.getAvailableCP());
+        // Preserve existing expenditure, including legitimate permanent and timed occupations.
+        var effectiveMax = resolveEffectiveMaxCP(restored, debugOverride);
+        var adjusted = Math.clamp(available + (restored - oldMaximum), 0.0f, effectiveMax);
+        if (Float.compare(cpData.getMaxCP(), restored) != 0) {
+            cpData.setMaxCP(restored);
+            changed = true;
+        }
+        if (Float.compare(cpData.getAvailableCP(), adjusted) != 0) {
+            cpData.setAvailableCP(adjusted, effectiveMax);
+            changed = true;
+        }
+        return changed;
+    }
+
+    /** Refund only foreign/unregistered or malformed entries, retaining valid category/common debt. */
+    static boolean releaseInvalidOccupations(
+            AbilityData cpData, List<AbilityData.CpOccupationData> occupations,
+            Predicate<String> availableSkill, float maximum
+    ) {
+        var changed = false;
+        double released = 0.0;
+        var iterator = occupations.iterator();
+        while (iterator.hasNext()) {
+            var occupation = iterator.next();
+            if (occupation != null) {
+                var amount = occupation.getAmount();
+                var skillId = occupation.getSkillId();
+                if (Float.isFinite(amount) && amount > 0.0f
+                        && skillId != null && availableSkill.test(skillId)) continue;
+                if (Float.isFinite(amount) && amount > 0.0f) released += amount;
+            }
+            iterator.remove();
+            changed = true;
+        }
+        if (released > 0.0) {
+            cpData.setAvailableCP((float) Math.min(maximum,
+                    normalizeDebugMaxCP(cpData.getAvailableCP()) + released), maximum);
+        }
+        return changed;
     }
 
     private float getDerivedMaxCpBonus(UUID uuid) {

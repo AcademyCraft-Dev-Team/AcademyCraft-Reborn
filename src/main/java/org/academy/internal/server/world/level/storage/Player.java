@@ -84,6 +84,9 @@ public final class Player {
     private float appliedCommonSkillMaxCpBonus;
     @SerializedName("maxCpInitialized")
     private boolean maxCpInitialized;
+    // Independent of the mutable CP view exposed to category extensions.
+    @SerializedName("academyMaxCp")
+    private float academyMaxCp;
     @SerializedName("challengeCpBonus")
     private float challengeCpBonus;
 
@@ -306,6 +309,19 @@ public final class Player {
 
     public boolean isMaxCpInitialized() {
         return maxCpInitialized;
+    }
+
+    public float getAcademyMaxCp() {
+        return academyMaxCp;
+    }
+
+    public void setAcademyMaxCp(float maxCp) {
+        if (!isStateMutationCallerAllowed("setAcademyMaxCp")) return;
+        if (!Float.isFinite(maxCp) || maxCp < 100.0f) return;
+        if (Float.compare(academyMaxCp, maxCp) != 0) {
+            academyMaxCp = maxCp;
+            markDirty();
+        }
     }
 
     public void setMaxCpInitialized(boolean initialized) {
