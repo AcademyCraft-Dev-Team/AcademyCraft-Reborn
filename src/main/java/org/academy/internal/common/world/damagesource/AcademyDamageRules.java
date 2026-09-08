@@ -31,6 +31,7 @@ import java.util.function.Consumer;
  */
 public final class AcademyDamageRules {
     private static final List<Consumer<LivingIncomingDamageEvent>> INCOMING = List.of(
+            CategoryDamageRuntime::onIncomingDamage,
             SkillDamageEvents::onIncomingDamage,
             Flashing.Events::onIncomingDamage,
             MentalControlEvents::onLivingAttacked,

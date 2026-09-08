@@ -35,6 +35,11 @@ public final class AbilityHitEffects {
         return CategoryDamageRuntime.isParalyzed(target);
     }
 
+    /** Remaining physical ticks of the extra random item cooldown or mob attack lock. */
+    public static int electricalInterruptionTicks(LivingEntity target) {
+        return CategoryDamageRuntime.electricalInterruptionTicks(target);
+    }
+
     /** Applies the four persistent level-I radiation debuffs without downgrading stronger effects. */
     public static void applyRadiation(LivingEntity target) {
         CategoryDamageRuntime.applyRadiation(target);

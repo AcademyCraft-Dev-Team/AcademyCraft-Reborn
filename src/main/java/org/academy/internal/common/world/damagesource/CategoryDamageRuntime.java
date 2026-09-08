@@ -23,6 +23,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
@@ -44,6 +45,8 @@ import java.util.*;
 public final class CategoryDamageRuntime {
     public static final float DISCHARGE_DAMAGE = 2.0f;
     public static final int PARALYSIS_TICKS = 10;
+    public static final int INTERRUPTION_MIN_TICKS = 10;
+    public static final int INTERRUPTION_MAX_TICKS = 20;
     public static final int CHARGE_TIMEOUT_TICKS = 100;
     public static final int RADIATION_TICKS = 200;
     private static final Identifier PARALYSIS_SPEED = AcademyCraft.academy("electrical_paralysis");
@@ -92,7 +95,30 @@ public final class CategoryDamageRuntime {
         return state != null && state.target.get() == target && now(target) < state.paralyzedUntil;
     }
 
+    /** Remaining physical ticks of the additional item/attack lock, independently of paralysis. */
+    public static int electricalInterruptionTicks(LivingEntity target) {
+        if (!(target.level() instanceof ServerLevel)) return 0;
+        var state = CHARGES.get(target.getUUID());
+        return state != null && state.target.get() == target
+                ? (int) Math.max(0L, state.interruptedUntil - now(target)) : 0;
+    }
+
+    public static boolean blocksMobAttack(LivingEntity attacker) {
+        return attacker instanceof Mob && electricalInterruptionTicks(attacker) > 0;
+    }
+
+    /** Includes an attributed projectile fired before the discharge. Never blocks incoming hits. */
+    public static boolean blocksOutgoingDamage(DamageSource source) {
+        var owner = source.getEntity();
+        if (owner == null && source.getDirectEntity() instanceof net.minecraft.world.entity.projectile.Projectile projectile) {
+            owner = projectile.getOwner();
+        }
+        if (owner == null) owner = source.getDirectEntity();
+        return owner instanceof LivingEntity attacker && blocksMobAttack(attacker);
+    }
+
     public static float outgoingDamage(DamageSource source, float damage) {
+        if (blocksOutgoingDamage(source)) return 0.0f;
         return source.getEntity() instanceof LivingEntity attacker && isParalyzed(attacker)
                 ? damage * 0.8f : damage;
     }
@@ -114,8 +140,13 @@ public final class CategoryDamageRuntime {
         state.chargeExpires = now + CHARGE_TIMEOUT_TICKS;
         if (discharges > 0) {
             state.paralyzedUntil = now + PARALYSIS_TICKS;
+            // Roll once per discharge; a new shorter roll cannot shorten an existing lock.
+            var duration = INTERRUPTION_MIN_TICKS + target.getRandom().nextInt(
+                    INTERRUPTION_MAX_TICKS - INTERRUPTION_MIN_TICKS + 1);
+            state.interruptedUntil = Math.max(state.interruptedUntil, now + duration);
             interrupt(target);
             syncParalysis(target, state);
+            syncItemCooldowns(target, state);
             discharge(target, cause, discharges);
         }
         return discharges;
@@ -161,6 +192,9 @@ public final class CategoryDamageRuntime {
             speed.addTransientModifier(new AttributeModifier(PARALYSIS_SPEED, -0.8,
                     AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
         }
+    }
+
+    private static void syncItemCooldowns(LivingEntity target, ChargeState state) {
         if (target instanceof ServerPlayer player) {
             // Cool down every carried group, not just the selected hand. Record only our extensions
             // so expiry cannot erase a longer cooldown subsequently installed by another mechanic.
@@ -173,7 +207,7 @@ public final class CategoryDamageRuntime {
                 var current = access.academy$cooldowns().get(group);
                 var end = current == null ? access.academy$tickCount()
                         : ((CooldownInstanceAccess) current).academy$endTime();
-                var remaining = (int) Math.max(0L, state.paralyzedUntil - now(target));
+                var remaining = (int) Math.max(0L, state.interruptedUntil - now(target));
                 if (end - access.academy$tickCount() >= remaining) continue;
                 cooldowns.addCooldown(group, remaining);
                 state.cooldownEnds.put(group, access.academy$tickCount() + remaining);
@@ -184,6 +218,10 @@ public final class CategoryDamageRuntime {
     private static void clearParalysis(LivingEntity target, ChargeState state) {
         var speed = target.getAttribute(Attributes.MOVEMENT_SPEED);
         if (speed != null) speed.removeModifier(PARALYSIS_SPEED);
+        state.paralyzedUntil = 0;
+    }
+
+    private static void clearInterruption(LivingEntity target, ChargeState state) {
         if (target instanceof ServerPlayer player) {
             var access = (ItemCooldownsAccess) player.getCooldowns();
             state.cooldownEnds.forEach((group, ownEnd) -> {
@@ -194,7 +232,7 @@ public final class CategoryDamageRuntime {
             });
         }
         state.cooldownEnds.clear();
-        state.paralyzedUntil = 0;
+        state.interruptedUntil = 0;
     }
 
     public static void applyRadiation(LivingEntity target) {
@@ -252,6 +290,11 @@ public final class CategoryDamageRuntime {
         }
     }
 
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void onIncomingDamage(LivingIncomingDamageEvent event) {
+        if (blocksOutgoingDamage(event.getSource())) event.setCanceled(true);
+    }
+
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onOrdinaryDamagePre(LivingDamageEvent.Pre event) {
         // Academy pre is dispatched internally; this adapter handles everyone else's damage.
@@ -305,12 +348,17 @@ public final class CategoryDamageRuntime {
             if (target.level().getServer() != server) continue;
             if (!target.isAlive() || target.isRemoved()) {
                 clearParalysis(target, state);
+                clearInterruption(target, state);
                 CHARGES.remove(entry.getKey());
                 continue;
             }
             if (state.paralyzedUntil > 0 && now(target) >= state.paralyzedUntil) clearParalysis(target, state);
             else if (state.paralyzedUntil > 0) syncParalysis(target, state);
-            if (now(target) >= state.chargeExpires && state.paralyzedUntil == 0) CHARGES.remove(entry.getKey());
+            if (state.interruptedUntil > 0 && now(target) >= state.interruptedUntil) clearInterruption(target, state);
+            else if (state.interruptedUntil > 0) syncItemCooldowns(target, state);
+            if (now(target) >= state.chargeExpires && state.paralyzedUntil == 0 && state.interruptedUntil == 0) {
+                CHARGES.remove(entry.getKey());
+            }
         }
         WEAR.values().removeIf(state -> server.getTickCount() >= state.expires);
     }
@@ -319,7 +367,10 @@ public final class CategoryDamageRuntime {
     public static void leave(EntityLeaveLevelEvent event) {
         if (!(event.getEntity() instanceof LivingEntity target) || !(event.getLevel() instanceof ServerLevel)) return;
         var state = CHARGES.remove(target.getUUID());
-        if (state != null) clearParalysis(target, state);
+        if (state != null) {
+            clearParalysis(target, state);
+            clearInterruption(target, state);
+        }
         WEAR.remove(target.getUUID());
     }
 
@@ -327,7 +378,10 @@ public final class CategoryDamageRuntime {
     public static void stop(ServerStoppedEvent event) {
         CHARGES.values().forEach(state -> {
             var target = state.target.get();
-            if (target != null) clearParalysis(target, state);
+            if (target != null) {
+                clearParalysis(target, state);
+                clearInterruption(target, state);
+            }
         });
         CHARGES.clear();
         WEAR.clear();
@@ -341,6 +395,7 @@ public final class CategoryDamageRuntime {
         int points;
         long chargeExpires;
         long paralyzedUntil;
+        long interruptedUntil;
         ChargeState(LivingEntity target) { this.target = new WeakReference<>(target); }
     }
 

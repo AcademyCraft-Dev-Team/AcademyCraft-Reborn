@@ -60,6 +60,10 @@ public abstract class MixinLivingEntity {
             CallbackInfoReturnable<Boolean> cir
     ) {
         var victim = (LivingEntity) (Object) this;
+        if (org.academy.internal.common.world.damagesource.CategoryDamageRuntime.blocksOutgoingDamage(source)) {
+            cir.setReturnValue(false);
+            return;
+        }
         if (TrueDamageCompatibility.isHurtProbe(victim, source)) {
             cir.setReturnValue(true);
             return;
@@ -172,6 +176,14 @@ public abstract class MixinLivingEntity {
             return value;
         }
         return VectorDeviation.Server.limitHealthWrite(player, player.getHealth(), requested);
+    }
+
+    @com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod(method = "actuallyHurt")
+    private void academy$blockElectricalHurt(ServerLevel level, DamageSource source, float amount,
+                                             com.llamalad7.mixinextras.injector.wrapoperation.Operation<Void> original) {
+        if (!org.academy.internal.common.world.damagesource.CategoryDamageRuntime.blocksOutgoingDamage(source)) {
+            original.call(level, source, amount);
+        }
     }
 
     @Inject(
