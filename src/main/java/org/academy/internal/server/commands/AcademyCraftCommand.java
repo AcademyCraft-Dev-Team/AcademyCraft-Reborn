@@ -39,12 +39,14 @@ import org.academy.internal.common.ability.accelerator.reflection.compat.VectorC
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatibilityDiagnostics;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatibilityMode;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
+import org.academy.internal.common.skilldata.SkillData;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 
@@ -86,6 +88,8 @@ public final class AcademyCraftCommand {
                                 .executes(AcademyCraftCommand::setAbilityLevel)))
                 .then(Commands.literal("set_exp")
                         .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                        .then(Commands.literal("max")
+                                .executes(AcademyCraftCommand::maxSkillExp))
                         .then(Commands.argument("skill_name", IdentifierArgument.id())
                                 .suggests(AcademyCraftCommand::suggestLearnedSkills)
                                 .then(Commands.argument("amount", FloatArgumentType.floatArg(0, 3000))
@@ -355,6 +359,38 @@ public final class AcademyCraftCommand {
 
         context.getSource().sendSuccess(() -> Component.literal("Set proficiency for " + skillIdentifier + " to " + amount), true);
         return 1;
+    }
+
+    private static int maxSkillExp(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        var playerUuid = context.getSource().getPlayerOrException().getUUID();
+        var abilitySystemServer = CommandUtils.getSystem(context);
+        var learnedSkills = List.copyOf(abilitySystemServer.getPlayerData(playerUuid).getSkillDataMap().keySet());
+        if (learnedSkills.isEmpty()) {
+            context.getSource().sendSuccess(() -> Component.literal("You have not learned any skills yet."), false);
+            return 0;
+        }
+
+        var updated = 0;
+        for (var skillKey : learnedSkills) {
+            var identifier = Identifier.tryParse(skillKey);
+            if (identifier == null) continue;
+            var skill = Registries.SKILLS.get(identifier).map(reference -> reference.value()).orElse(null);
+            if (skill != null && abilitySystemServer.setPlayerSkillProficiency(
+                    playerUuid, skill, SkillData.MAX_PROFICIENCY)) {
+                updated++;
+            }
+        }
+
+        if (updated == 0) {
+            context.getSource().sendFailure(Component.literal("Unable to set proficiency for any learned skills."));
+            return 0;
+        }
+        var updatedSkills = updated;
+        var skippedSkills = learnedSkills.size() - updated;
+        context.getSource().sendSuccess(() -> Component.literal(
+                "Set proficiency for " + updatedSkills + " learned skills to " + (int) SkillData.MAX_PROFICIENCY
+                        + (skippedSkills > 0 ? "; skipped " + skippedSkills + " unavailable skills." : ".")), true);
+        return updated;
     }
 
     private static CompletableFuture<Suggestions> suggestAbilityCategories(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
