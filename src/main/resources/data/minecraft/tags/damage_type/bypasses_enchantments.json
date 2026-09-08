@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "academy:meltdamage",
+    "academy:spacedamage",
+    "academy:mentaldamage"
+  ]
+}

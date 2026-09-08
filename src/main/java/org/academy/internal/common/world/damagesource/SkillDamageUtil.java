@@ -69,6 +69,22 @@ public final class SkillDamageUtil {
         return applyDirect(level, target, source, amount, true);
     }
 
+    /** Direct category damage for non-player actors or effects without a skill owner. */
+    public static boolean applyDirect(ServerLevel level, LivingEntity target,
+                                      DamageSource source, float amount) {
+        if (source instanceof SkillDamageSource skillSource) {
+            return applyDirect(level, target, skillSource, amount);
+        }
+        if (target == null || source == null || target.level() != level || !target.isAlive()
+                || !(amount > 0.0f) || !Float.isFinite(amount)
+                || source.getEntity() == target || source.getDirectEntity() == target) return false;
+        var attacker = PvpSetting.resolveAttacker(source);
+        if (PvpSetting.shouldPrevent(attacker, target)
+                || DamageTypes.isImmunePlayer(target instanceof Player player ? player : null)) return false;
+        if (DamageTypes.usesVerifiedTrueHealth(source)) return applyVerifiedTrueHealth(target, source, amount);
+        return applyDirectDamage(level, attacker, target, null, source, amount);
+    }
+
     public static boolean applyDirectFromHurtServer(
             ServerLevel level,
             LivingEntity target,
@@ -123,8 +139,8 @@ public final class SkillDamageUtil {
         return new CTAEntityActuallyHurt(target).actuallyHurt(source, amount, true);
     }
 
-    private static boolean applyDirectDamage(ServerLevel level, ServerPlayer attacker,
-                                                   LivingEntity target, Skill skill,
+    private static boolean applyDirectDamage(ServerLevel level, @Nullable ServerPlayer attacker,
+                                                   LivingEntity target, @Nullable Skill skill,
                                                    DamageSource source, float amount) {
         return applyDirectWithFallback(level, attacker, target, skill, source, amount);
     }
@@ -135,8 +151,8 @@ public final class SkillDamageUtil {
      * extension's cancellation remains effective. The historical name does not enable melee
      * retries: blocked damage still returns false and keeps its original category.
      */
-    private static boolean applyDirectWithFallback(ServerLevel level, ServerPlayer attacker,
-                                                   LivingEntity target, Skill skill,
+    private static boolean applyDirectWithFallback(ServerLevel level, @Nullable ServerPlayer attacker,
+                                                   LivingEntity target, @Nullable Skill skill,
                                                    DamageSource source, float amount) {
         var beforeHealth = target.getHealth();
         var beforeAbsorption = target.getAbsorptionAmount();
@@ -196,6 +212,8 @@ public final class SkillDamageUtil {
         if (attacker != null) {
             target.setLastHurtByPlayer(attacker, 100);
             target.setLastHurtByMob(attacker);
+        } else if (source.getEntity() instanceof LivingEntity livingAttacker) {
+            target.setLastHurtByMob(livingAttacker);
         }
         invoker.academy$setLastHurt(originalAmount);
         invoker.academy$setLastDamageSource(source);

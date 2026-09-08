@@ -25,7 +25,8 @@ public final class ReflectedSkillDamageSource extends SkillDamageSource
             int reflectionDepth,
             @Nullable UUID originalAttackerId
     ) {
-        super(original.typeHolder(), reflector, reflector, skill);
+        super(original.typeHolder(), reflector, reflector, skill,
+                original instanceof SkillDamageSource skillSource ? skillSource.electricalChargePoints() : -1);
         this.reflectionDepth = reflectionDepth;
         this.originalAttackerId = originalAttackerId;
     }

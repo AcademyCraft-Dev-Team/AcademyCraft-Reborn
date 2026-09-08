@@ -1,6 +1,7 @@
 package org.academy.internal.common.world.damagesource;
 
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -33,6 +34,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.mentalout.control.MentalControlMobAccess;
 import org.academy.mixin.common.CooldownInstanceAccess;
 import org.academy.mixin.common.ItemCooldownsAccess;
+import org.jspecify.annotations.Nullable;
 
 import java.lang.ref.WeakReference;
 import java.util.*;
@@ -40,6 +42,7 @@ import java.util.*;
 /** Transient category hit state; expiry follows physical server ticks, never a slowed entity clock. */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class CategoryDamageRuntime {
+    public static final float DISCHARGE_DAMAGE = 2.0f;
     public static final int PARALYSIS_TICKS = 10;
     public static final int CHARGE_TIMEOUT_TICKS = 100;
     public static final int RADIATION_TICKS = 200;
@@ -95,6 +98,11 @@ public final class CategoryDamageRuntime {
     }
 
     public static int addCharge(LivingEntity target, int points) {
+        return addCharge(target, points, null);
+    }
+
+    public static int addCharge(LivingEntity target, int points,
+                                @Nullable DamageSource cause) {
         if (!(target.level() instanceof ServerLevel) || !target.isAlive() || points <= 0
                 || target instanceof Player player && DamageTypes.isImmunePlayer(player)) return 0;
         var state = CHARGES.computeIfAbsent(target.getUUID(), _ -> new ChargeState(target));
@@ -108,8 +116,28 @@ public final class CategoryDamageRuntime {
             state.paralyzedUntil = now + PARALYSIS_TICKS;
             interrupt(target);
             syncParalysis(target, state);
+            discharge(target, cause, discharges);
         }
         return discharges;
+    }
+
+    private static void discharge(LivingEntity target,
+                                  @Nullable DamageSource cause, int count) {
+        var level = (ServerLevel) target.level();
+        DamageSource source;
+        if (cause instanceof SkillDamageSource skillSource && cause.getEntity() instanceof ServerPlayer owner) {
+            source = SkillDamageSource.of(owner, skillSource.getSkill(), DamageTypes.ELECTRO_DAMAGE)
+                    .withElectricalChargePoints(0).withoutHostilityMark();
+        } else {
+            source = new DamageSource(level.registryAccess()
+                    .lookupOrThrow(Registries.DAMAGE_TYPE)
+                    .getOrThrow(DamageTypes.ELECTRO_DAMAGE),
+                    cause == null ? null : cause.getDirectEntity(),
+                    cause == null ? null : cause.getEntity());
+        }
+        // Zero charge on the secondary source prevents its completion callback from recharging.
+        // Batch simultaneous thresholds without an unbounded loop for public API callers.
+        SkillDamageUtil.applyDirect(level, target, source, DISCHARGE_DAMAGE * count);
     }
 
     @SuppressWarnings("unchecked")
@@ -214,7 +242,7 @@ public final class CategoryDamageRuntime {
         var category = source.getSkill().getCategory();
         if (category == AbilityCategories.ELECTROMASTER.get()) {
             addCharge(target, source.electricalChargePoints() >= 0 ? source.electricalChargePoints()
-                    : chargePoints(source.getSkill().getKey().getPath()));
+                    : chargePoints(source.getSkill().getKey().getPath()), source);
         } else if (category == AbilityCategories.MELTDOWNER.get()) {
             applyRadiation(target);
         } else if (category == AbilityCategories.AEROMANIP.get()) {

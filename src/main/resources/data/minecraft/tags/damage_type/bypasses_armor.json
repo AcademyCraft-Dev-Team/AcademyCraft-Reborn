@@ -2,6 +2,8 @@
   "replace": false,
   "values": [
     "academy:electrodamage",
+    "academy:meltdamage",
+    "academy:spacedamage",
     "academy:vec",
     "academy:cta",
     "academy:mentaldamage",

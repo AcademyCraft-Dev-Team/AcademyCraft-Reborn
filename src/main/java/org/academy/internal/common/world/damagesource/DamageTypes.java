@@ -28,7 +28,8 @@ public final class DamageTypes {
             DM_DAMAGE, ELECTRO_DAMAGE, MELT_DAMAGE, SPACE_DAMAGE, VEC, CTA, MENTAL_DAMAGE
     );
     private static final Set<ResourceKey<DamageType>> DIRECT_ACTUALLY_HURT_TYPES = Set.of(
-            MELT_DAMAGE, SPACE_DAMAGE, VEC, CTA, MENTAL_DAMAGE
+            MELT_DAMAGE, SPACE_DAMAGE, VEC, CTA, MENTAL_DAMAGE,
+            VACUUM_SUFFOCATION, ADIABATIC_COMPRESSION
     );
     private static final Set<ResourceKey<DamageType>> VERIFIED_TRUE_HEALTH_TYPES = Set.of(
             VEC, CTA
@@ -44,6 +45,10 @@ public final class DamageTypes {
     public static boolean usesResistanceBackdoor(DamageSource source) {
         return source instanceof org.academy.api.common.damage.LawDetonationDamageSource
                 || source != null && (source.is(VEC) || source.is(CTA));
+    }
+
+    public static boolean bypassesAbsorption(DamageSource source) {
+        return source != null && (source.is(SPACE_DAMAGE) || source.is(MENTAL_DAMAGE));
     }
 
     public static boolean usesDirectActuallyHurt(ResourceKey<DamageType> type) {

@@ -152,7 +152,8 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
                         laminarCost(power) * costMultiplier
                                 * requireChargeCostMultiplier(chargeCostMultiplier),
                         chargeTier,
-                        bladePlane
+                        bladePlane,
+                        ProgramPowerScale.costMultiplier(power)
                 )) {
                     throw new IllegalStateException("Laminar Cutter program cast was rejected");
                 }

@@ -336,7 +336,6 @@ public final class AdiabaticCompression extends Skill {
                         player, SkillNames.ADIABATIC_COMPRESSION)
                         * system.getPlayerAbilityPowerMultiplier(player.getUUID())
                         * system.getPlayerDamageMultiplier(player.getUUID());
-                target.invulnerableTime = 0;
                 target.hurtServer(
                         level,
                         SkillDamageSource.of(

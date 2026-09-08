@@ -983,6 +983,7 @@ public final class AbilitySystemServer {
         var compressedAirCost = mpCalculator.calculate(ctx);
         if (!Float.isFinite(baseCpCost) || baseCpCost < 0.0f
                 || !Float.isFinite(compressedAirCost) || compressedAirCost < 0.0f) return false;
+        compressedAirCost = OutputControl.adjustResourceCost(this, uuid, skill, compressedAirCost);
         var actualCpCost = Math.max(0.0f,
                 OutputControl.adjustCpCost(this, uuid, skill, baseCpCost)
                         * playerCPManager.getCalculationIntensity(uuid));

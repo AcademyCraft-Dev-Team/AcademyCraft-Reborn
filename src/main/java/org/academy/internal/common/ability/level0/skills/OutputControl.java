@@ -101,6 +101,16 @@ public final class OutputControl extends Skill {
             Skill chargedSkill,
             float amount
     ) {
+        return adjustResourceCost(system, playerId, chargedSkill, amount);
+    }
+
+    /** Shared output curve for active damage-skill CP and compressed-air payments. */
+    public static float adjustResourceCost(
+            AbilitySystemServer system,
+            UUID playerId,
+            Skill chargedSkill,
+            float amount
+    ) {
         if (!(amount > 0.0f) || !Float.isFinite(amount)
                 || chargedSkill == null
                 || !chargedSkill.isOutputAdjustableDamage()

@@ -2366,7 +2366,7 @@
   "skill.academy.laminar_buffer.proficiency.2000": "Half-charge hover duration increases from 3 to 5 seconds.",
   "skill.academy.laminar_buffer.proficiency.3000": "Full-charge foothold duration increases from 10 to 15 seconds.",
   "skill.academy.laminar_cutter": "Laminar Cutter",
-  "skill.academy.laminar_cutter.desc": "Release an air blade that bypasses shields.\nInstant: slash targets ahead.\nHalf charge: increase range and knockback, breaking fragile blocks.\nFull charge: bypass armor and severely damage equipment durability.\nCompressed-air costs: 20 / 36 / 56. Fixed-damage hits add equipment wear; repeated attacks share a short durability budget.",
+  "skill.academy.laminar_cutter.desc": "Release an air blade that bypasses shields.\nInstant: slash targets ahead.\nHalf charge: increase range and knockback, breaking fragile blocks.\nFull charge: bypass armor and severely damage equipment durability.\nBase compressed-air costs: 10 / 18 / 28, scaled by output power. Fixed-damage hits add equipment wear; repeated attacks share a short durability budget.",
   "skill.academy.laminar_cutter.proficiency.1000": "Cast cost -10%.",
   "skill.academy.laminar_cutter.proficiency.2000": "Blade length +20%; a full-charge hit also disarms the target, subject to equipment-control protection.",
   "skill.academy.laminar_cutter.proficiency.3000": "Hits reduce effective armor for 5 seconds by 20%, or 10% against players.",
