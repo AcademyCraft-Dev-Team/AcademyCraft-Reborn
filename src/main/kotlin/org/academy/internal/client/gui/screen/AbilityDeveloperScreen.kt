@@ -217,8 +217,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
             }
         }
 
-        val categoryKey = category.key
-        val translationKey = "ability_category.${categoryKey.namespace}.${categoryKey.path}"
+        val translationKey = category.descriptionId
         val translatedName = Language.getInstance().getOrDefault(translationKey)
             .takeUnless { it == translationKey }
             ?: category.getDisplayName()
@@ -621,7 +620,8 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
     }
 
     private fun localizedAbilityCategoryName(category: Identifier): String {
-        val key = "ability_category.${category.namespace}.${category.path}"
+        val key = org.academy.api.common.registries.Registries.ABILITY_CATEGORIES.getValue(category)?.descriptionId
+            ?: "ability_category.${category.namespace}.${category.path}"
         return Language.getInstance().getOrDefault(key).takeUnless { it == key }
             ?: category.path
     }

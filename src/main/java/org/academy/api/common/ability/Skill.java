@@ -6,6 +6,9 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.damagesource.DamageType;
+import org.academy.api.common.damage.AbilityDamageProfile;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
@@ -46,6 +49,11 @@ public abstract class Skill {
     public static final boolean STACK_LIMITS_ENABLED = false;
     public static final Codec<Skill> CODEC =
             Codec.INT.xmap(Registries.SKILLS::byIdOrThrow, Registries.SKILLS::getId);
+    public static final Codec<Skill> ID_CODEC = Identifier.CODEC.flatXmap(
+            id -> Registries.SKILLS.get(id)
+                    .map(holder -> com.mojang.serialization.DataResult.success(holder.value()))
+                    .orElseGet(() -> com.mojang.serialization.DataResult.error(() -> "Unknown skill " + id)),
+            skill -> com.mojang.serialization.DataResult.success(skill.getKey()));
     public static final StreamCodec<ByteBuf, Skill> STREAM_CODEC = ByteBufCodecs.idMapper(Registries.SKILLS);
     public static final StreamCodec<ByteBuf, Set<Skill>> STREAM_CODEC_SET = STREAM_CODEC.apply(
             codec -> ByteBufCodecs.collection(HashSet::new, codec)
@@ -53,9 +61,19 @@ public abstract class Skill {
     private static final float TOGGLE_CP_EPSILON = 1.0E-4f;
     private final AbilityLevel recommendedLevel;
     private final int energyCostToLearn;
-    private final AbilityCategory category;
+    private final @Nullable AbilityCategory category;
+    private final @Nullable ResourceKey<AbilityCategory> categoryKey;
+    private final Set<ResourceKey<Skill>> dependencyKeys;
+    private final Set<ResourceKey<Skill>> optionalDependencyKeys;
+    private final Identifier dataTypeId;
+    private final Class<? extends SkillData> dataClass;
+    private final int displayOrder;
+    private final @Nullable ResourceKey<DamageType> damageType;
+    private final @Nullable ResourceKey<AbilityDamageProfile> damageProfile;
+    private boolean resolved;
     private final SkillScope scope;
     private final DataFactory dataFactory;
+    private final org.academy.api.common.ability.data.SkillStateType<?> stateType;
     private final int maxSkillLevel;
     /**
      * 技能迭代时间间隔，单位为tick
@@ -86,10 +104,13 @@ public abstract class Skill {
         energyCostToLearn = builder.energyCostToLearn;
         maxSkillLevel = builder.maxSkillLevel;
         category = builder.category;
+        categoryKey = builder.categoryKey;
         scope = builder.scope;
-        if (scope == SkillScope.CATEGORY) {
-            category.addSkill(this);
-        }
+        dependencyKeys = Set.copyOf(builder.dependencyKeys);
+        optionalDependencyKeys = Set.copyOf(builder.optionalDependencyKeys);
+        displayOrder = builder.displayOrder;
+        damageType = builder.damageType;
+        damageProfile = builder.damageProfile;
         iterationTicks = builder.cpCost > 0.0f || builder.maintenanceCost > 0.0f
                 ? Math.min(builder.iterationTicks, MAX_CP_ITERATION_TICKS)
                 : builder.iterationTicks;
@@ -103,17 +124,13 @@ public abstract class Skill {
         explicitProficiencyProfile = builder.explicitProficiencyProfile;
 
         dataFactory = builder.dataFactory;
-        var dataClass = builder.dataClass;
-        SkillDataSerializer.registerType(builder.dataTypeId, dataClass);
+        stateType = builder.stateType;
+        dataClass = builder.dataClass;
+        dataTypeId = builder.dataTypeId;
         icon = builder.icon;
         devConditions = List.copyOf(builder.devConditions);
 
-        if (builder.dependencyHolders.isEmpty()) {
-            dependencies = ImmutableSet.of();
-        } else {
-            var dependencyResolver = new DependencyResolver(this, builder.dependencyHolders);
-            NeoForge.EVENT_BUS.register(dependencyResolver);
-        }
+        dependencies = Set.of();
     }
 
     public static <T extends Context> Map<Player, T> createContextMap() {
@@ -475,7 +492,60 @@ public abstract class Skill {
     }
 
     public AbilityCategory getCategory() {
-        return category;
+        if (category != null) return category;
+        return Registries.ABILITY_CATEGORIES.get(Objects.requireNonNull(categoryKey))
+                .orElseThrow(() -> new IllegalStateException("Missing category " + categoryKey.identifier()))
+                .value();
+    }
+
+    /** Returns this skill's addon state, separate from enabled/proficiency. Use immutable values. */
+    @SuppressWarnings("unchecked")
+    public final <T> Optional<T> state(ServerPlayer player, org.academy.api.common.ability.data.SkillStateType<T> type) {
+        if (stateType != type) throw new IllegalArgumentException("State type does not belong to this skill");
+        return getRuntimeData(player).filter(data -> data instanceof org.academy.internal.common.skilldata.CodecSkillData<?>)
+                .map(data -> ((org.academy.internal.common.skilldata.CodecSkillData<T>) data).value());
+    }
+
+    /** Validates and persists an addon value on the server thread; false if no supported state exists. */
+    @SuppressWarnings("unchecked")
+    public final <T> boolean updateState(ServerPlayer player,
+                                        org.academy.api.common.ability.data.SkillStateType<T> type, T value) {
+        if (stateType != type) throw new IllegalArgumentException("State type does not belong to this skill");
+        if (!player.level().getServer().isSameThread()) {
+            throw new IllegalStateException("Skill state must be updated on the server thread");
+        }
+        var data = getRuntimeData(player).orElse(null);
+        if (!(data instanceof org.academy.internal.common.skilldata.CodecSkillData<?>)) return false;
+        ((org.academy.internal.common.skilldata.CodecSkillData<T>) data).value(value);
+        AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID()).markDirty();
+        return true;
+    }
+
+    public int getDisplayOrder() { return displayOrder; }
+    public Optional<ResourceKey<DamageType>> getDamageType() { return Optional.ofNullable(damageType); }
+    public Optional<ResourceKey<AbilityDamageProfile>> getDamageProfile() { return Optional.ofNullable(damageProfile); }
+
+    /** Common skills retain the Level 0 backing category for compatibility, without joining its skill list. */
+    public static Builder common() {
+        return Builder.of(org.academy.api.common.registries.AcademyKeys.category("level0")).common();
+    }
+
+    /** Called by Academy after static registry construction; not an addon mutation hook. */
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public final void resolveRegistration() {
+        if (resolved) return;
+        var owner = getCategory();
+        var linked = new LinkedHashSet<Skill>();
+        for (var key : dependencyKeys) {
+            linked.add(Registries.SKILLS.get(key)
+                    .orElseThrow(() -> new IllegalStateException(getKey() + " missing dependency " + key.identifier())).value());
+        }
+        for (var key : optionalDependencyKeys) Registries.SKILLS.get(key).ifPresent(value -> linked.add(value.value()));
+        if (stateType == null) SkillDataSerializer.registerType(dataTypeId, dataClass);
+        else SkillDataSerializer.registerStateType(stateType);
+        dependencies = Collections.unmodifiableSet(linked);
+        if (scope == SkillScope.CATEGORY) owner.addSkill(this);
+        resolved = true;
     }
 
     public SkillScope getScope() {
@@ -596,9 +666,7 @@ public abstract class Skill {
     }
 
     private SkillProficiencyProfile resolvedProficiencyProfile() {
-        return proficiencyProfile == SkillProficiencyProfile.NONE
-                ? SkillProficiencyProfiles.forSkill(getKeyString())
-                : proficiencyProfile;
+        return explicitProficiencyProfile ? proficiencyProfile : SkillProficiencyProfiles.forSkill(getKeyString());
     }
 
     public int getMaxStacks(int skillLevel) {
@@ -670,24 +738,14 @@ public abstract class Skill {
     ) {
     }
 
-    private record DependencyResolver(Skill target, Set<DeferredHolder<Skill, ? extends Skill>> holders) {
-        private DependencyResolver(Skill target, Set<DeferredHolder<Skill, ? extends Skill>> holders) {
-            this.target = target;
-            this.holders = Set.copyOf(holders);
-        }
-
-        @SubscribeEvent
-        public void onFinalize(AbilitySystemFinalizedEvent event) {
-            target.dependencies = holders.stream()
-                    .map(DeferredHolder::get)
-                    .collect(ImmutableSet.toImmutableSet());
-            NeoForge.EVENT_BUS.unregister(this);
-        }
-    }
-
     public static final class Builder {
-        private final AbilityCategory category;
-        private final Set<DeferredHolder<Skill, ? extends Skill>> dependencyHolders = new HashSet<>();
+        private final @Nullable AbilityCategory category;
+        private final @Nullable ResourceKey<AbilityCategory> categoryKey;
+        private final Set<ResourceKey<Skill>> dependencyKeys = new LinkedHashSet<>();
+        private final Set<ResourceKey<Skill>> optionalDependencyKeys = new LinkedHashSet<>();
+        private int displayOrder;
+        private ResourceKey<DamageType> damageType;
+        private ResourceKey<AbilityDamageProfile> damageProfile;
         private final List<DevCondition> devConditions = new ArrayList<>();
         private AbilityLevel recommendedLevel = AbilityLevel.LEVEL0;
         private int energyCostToLearn = 5000;
@@ -704,13 +762,28 @@ public abstract class Skill {
         private boolean explicitProficiencyProfile = false;
         private SkillScope scope = SkillScope.CATEGORY;
 
+        private org.academy.api.common.ability.data.SkillStateType<?> stateType;
         private DataFactory dataFactory = CommonSkillData::new;
         private Class<? extends SkillData> dataClass = CommonSkillData.class;
         private Identifier dataTypeId = CommonSkillData.ID;
         private Identifier icon = R.textures.gui.icon.close;
 
         private Builder(AbilityCategory category) {
-            this.category = category;
+            this.category = Objects.requireNonNull(category);
+            this.categoryKey = null;
+        }
+
+        private Builder(ResourceKey<AbilityCategory> categoryKey) {
+            this.category = null;
+            this.categoryKey = Objects.requireNonNull(categoryKey);
+        }
+
+        public static Builder of(ResourceKey<AbilityCategory> categoryKey) {
+            return new Builder(categoryKey);
+        }
+
+        public static Builder of(DeferredHolder<AbilityCategory, ? extends AbilityCategory> category) {
+            return of(category.getKey());
         }
 
         public static Builder of(AbilityCategory category) {
@@ -788,11 +861,20 @@ public abstract class Skill {
             return this;
         }
 
+        public <T> Builder stateType(org.academy.api.common.ability.data.SkillStateType<T> type) {
+            stateType = Objects.requireNonNull(type);
+            dataTypeId = type.id();
+            dataClass = org.academy.internal.common.skilldata.CodecSkillData.class;
+            dataFactory = () -> new org.academy.internal.common.skilldata.CodecSkillData<>(type);
+            return this;
+        }
+
         public <T extends SkillData> Builder withCustomData(
                 Identifier typeId,
                 Class<T> clazz,
                 DataFactory factory
         ) {
+            stateType = null;
             dataTypeId = typeId;
             dataClass = clazz;
             dataFactory = factory;
@@ -800,12 +882,46 @@ public abstract class Skill {
         }
 
         public void setIcon(Identifier icon) {
-            this.icon = icon;
+            this.icon = Objects.requireNonNull(icon);
+        }
+
+        public Builder icon(Identifier icon) {
+            setIcon(icon);
+            return this;
+        }
+
+        public Builder displayOrder(int value) {
+            displayOrder = value;
+            return this;
+        }
+
+        public Builder damageType(ResourceKey<DamageType> value) {
+            if (damageProfile != null) throw new IllegalStateException("Damage type and profile are mutually exclusive");
+            damageType = Objects.requireNonNull(value);
+            return this;
+        }
+
+        public Builder damageProfile(ResourceKey<AbilityDamageProfile> value) {
+            if (damageType != null) throw new IllegalStateException("Damage type and profile are mutually exclusive");
+            damageProfile = Objects.requireNonNull(value);
+            return this;
+        }
+
+        @SafeVarargs
+        public final Builder dependsOn(ResourceKey<Skill>... dependencies) {
+            Collections.addAll(dependencyKeys, dependencies);
+            return this;
+        }
+
+        @SafeVarargs
+        public final Builder optionallyDependsOn(ResourceKey<Skill>... dependencies) {
+            Collections.addAll(optionalDependencyKeys, dependencies);
+            return this;
         }
 
         @SafeVarargs
         public final Builder dependsOn(DeferredHolder<Skill, ? extends Skill>... dependencies) {
-            Collections.addAll(dependencyHolders, dependencies);
+            for (var dependency : dependencies) dependencyKeys.add(dependency.getKey());
             return this;
         }
 

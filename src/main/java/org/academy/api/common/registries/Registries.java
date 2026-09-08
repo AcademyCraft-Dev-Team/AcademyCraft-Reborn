@@ -6,6 +6,7 @@ import net.neoforged.neoforge.registries.RegistryBuilder;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.AbilityDamageProfile;
 import org.academy.api.common.ability.program.ProgramNodeType;
 import org.academy.api.common.arc.PathModifierType;
 import org.academy.api.common.arc.PathType;
@@ -19,6 +20,8 @@ public final class Registries {
             new RegistryBuilder<>(Keys.SKILLS).sync(true).create();
     public static final Registry<ProgramNodeType<?>> PROGRAM_NODE_TYPES =
             new RegistryBuilder<>(Keys.PROGRAM_NODE_TYPES).sync(true).create();
+    public static final Registry<AbilityDamageProfile> DAMAGE_PROFILES =
+            new RegistryBuilder<>(Keys.DAMAGE_PROFILES).sync(true).create();
     public static final Registry<SyncKey> SYNC_KEYS =
             new RegistryBuilder<>(Keys.SYNC_KEYS).sync(true).create();
     public static final Registry<DataType<?>> DATA_TYPES =
@@ -36,6 +39,7 @@ public final class Registries {
         public static final ResourceKey<Registry<Skill>> SKILLS = key("skill");
         public static final ResourceKey<Registry<ProgramNodeType<?>>> PROGRAM_NODE_TYPES =
                 key("program_node_type");
+        public static final ResourceKey<Registry<AbilityDamageProfile>> DAMAGE_PROFILES = key("damage_profile");
         public static final ResourceKey<Registry<SyncKey>> SYNC_KEYS = key("sync_key");
         public static final ResourceKey<Registry<DataType<?>>> DATA_TYPES = key("data_type");
         public static final ResourceKey<Registry<PathType<?>>> PATH_TYPES = key("path_type");

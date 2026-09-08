@@ -156,6 +156,35 @@ sourceSets.named("test") {
     runtimeClasspath += sourceSets.named("main").get().compileClasspath
 }
 
+val apiExampleSourceSet = sourceSets.create("apiExample") {
+    java.srcDir("examples/addon/src/main/java")
+    resources.srcDir("examples/addon/src/main/resources")
+    compileClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
+    runtimeClasspath += sourceSets.main.get().output + sourceSets.main.get().runtimeClasspath
+}
+
+tasks.register<Jar>("apiExampleJar") {
+    archiveBaseName.set("academy-api-example")
+    archiveVersion.set("1.0.0")
+    from(apiExampleSourceSet.output)
+}
+
+val verifyApiExample = tasks.register("verifyApiExample") {
+    dependsOn(tasks.named(apiExampleSourceSet.compileJavaTaskName))
+    inputs.files(apiExampleSourceSet.allJava)
+    doLast {
+        apiExampleSourceSet.allJava.forEach { source ->
+            require(!source.readText().contains("org.academy.internal")) {
+                "API example imports or references internal Academy implementation: $source"
+            }
+            require(!source.readText().contains("org.spongepowered.asm.mixin")) {
+                "API example must not depend on Mixin: $source"
+            }
+        }
+    }
+}
+tasks.named("check") { dependsOn(verifyApiExample) }
+
 val editorSourceSet = sourceSets.create("editor") {
     compileClasspath += sourceSets.named("main").get().output + sourceSets.named("main").get().compileClasspath
     runtimeClasspath += sourceSets.named("main").get().output + sourceSets.named("main").get().runtimeClasspath
@@ -339,6 +368,9 @@ neoForge {
     }
 
     mods {
+        if (providers.gradleProperty("academyApiExample").orNull == "true") {
+            create("academy_api_example") { sourceSet(apiExampleSourceSet) }
+        }
         create(modId) {
             sourceSet(sourceSets.main.get())
             sourceSet(editorSourceSet)

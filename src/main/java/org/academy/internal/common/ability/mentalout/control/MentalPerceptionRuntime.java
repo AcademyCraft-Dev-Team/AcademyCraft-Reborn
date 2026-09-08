@@ -104,11 +104,9 @@ public final class MentalPerceptionRuntime {
                     || MentalControlRuntime.isProtectedTarget(relation.observer)) {
                 expired.add(lease.id);
             } else {
-                if (relation.observer instanceof ServerPlayer subject) {
-                    var controller = server.getPlayerList().getPlayer(lease.controllerId);
-                    if (controller != null) {
-                        MentalResistanceManager.markAffected(controller, subject, false);
-                    }
+                var controller = server.getPlayerList().getPlayer(lease.controllerId);
+                if (controller != null) {
+                    MentalResistanceManager.markAffected(controller, relation.observer, false);
                 }
                 clearNaturalTarget(relation.observer, relation.hidden);
             }
@@ -125,6 +123,12 @@ public final class MentalPerceptionRuntime {
 
     public static void releaseController(UUID controllerId) {
         closeIndexed(BY_CONTROLLER, controllerId);
+    }
+
+    public static void releaseObserver(UUID observerId) {
+        for (var lease : List.copyOf(LEASES.values())) {
+            if (lease.key.observerId.equals(observerId)) close(lease.id);
+        }
     }
 
     public static void releaseEntity(UUID entityId) {

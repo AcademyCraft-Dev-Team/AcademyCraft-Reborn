@@ -91,10 +91,6 @@ public final class MentaloutConfig {
         return nonNegative(settings(player).mentalTakeoverOccupation, 100.0f);
     }
 
-    public static int playerControlResistanceTicks(ServerPlayer player) {
-        return Mth.clamp(settings(player).playerControlResistanceTicks, 0, 20 * 60 * 10);
-    }
-
     public static float mentalIntrusionCost(ServerPlayer player, int level) {
         return scaled(settings(player).mentalIntrusionMaintenanceCost, 20.0f, level, 0.85f);
     }

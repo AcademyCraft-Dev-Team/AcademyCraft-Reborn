@@ -198,6 +198,21 @@ public final class MentalControlRuntime {
         return resolve(subject, capability).evaluation();
     }
 
+    /** Roster membership alone is exempt from automatic resistance, but not other protection. */
+    public static ControlEvaluation evaluateIntervention(LivingEntity subject, ControlCapability capability) {
+        Objects.requireNonNull(subject, "subject");
+        Objects.requireNonNull(capability, "capability");
+        var protection = MentalControlProtection.rejectionReason(subject, true);
+        return protection != null ? Resolution.rejected(capability, protection).evaluation()
+                : resolve(subject, capability, true).evaluation();
+    }
+
+    public static boolean notifyInterventionBlocked(ServerPlayer controller, LivingEntity subject) {
+        if (subject == null || MentalControlProtection.rejectionReason(subject, true) == null) return false;
+        MentalControlProtection.notifyBlocked(controller, subject, true);
+        return true;
+    }
+
     public static Optional<ControlInspection> inspect(
             LivingEntity subject,
             ControlCapability capability
@@ -851,10 +866,10 @@ public final class MentalControlRuntime {
                         break;
                     }
                 }
-                if (!invalidLeaseIds.contains(lease.id()) && subject instanceof ServerPlayer playerSubject) {
+                if (!invalidLeaseIds.contains(lease.id())) {
                     MentalResistanceManager.markAffected(
                             controller,
-                            playerSubject,
+                            subject,
                             lease.source().equals(Skills.MENTAL_TAKEOVER.get().getKey())
                     );
                 }

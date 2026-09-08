@@ -1,0 +1,10 @@
+{
+  "ability.academy_api_example.cryokinesis": "Cryokinesis",
+  "node.academy_api_example.focus": "Focus",
+  "death.attack.academy_api_example.frost": "%1$s froze",
+  "death.attack.academy_api_example.frost.player": "%1$s was frozen by %2$s",
+  "skill.academy_api_example.frost_bolt": "Frost Bolt",
+  "skill.academy_api_example.focus": "Focus",
+  "skill.academy_api_example.frost_bolt.desc": "An example skill for the public API.",
+  "skill.academy_api_example.focus.desc": "A skill used by the focus program node."
+}

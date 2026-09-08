@@ -15,6 +15,11 @@ public interface ProgramExecutionContext {
 
     int nodeId();
 
+    /** Stage a world action from an ACTION node; unavailable in offline evaluation. */
+    default void submit(ProgramAction action) {
+        throw new IllegalStateException("This context does not accept world actions");
+    }
+
     Identifier nodeType();
 
     /**

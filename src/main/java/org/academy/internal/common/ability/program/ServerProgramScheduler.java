@@ -45,6 +45,7 @@ public final class ServerProgramScheduler {
 
     public static boolean cancel(MinecraftServer server, SessionKey key) {
         requireServerThread(server);
+        ExtensionProgramEffects.cancel(server, key);
         var state = SCHEDULERS.get(server);
         return state != null && state.cancel(key);
     }
@@ -81,6 +82,7 @@ public final class ServerProgramScheduler {
 
     public static void cancelOwner(MinecraftServer server, UUID ownerId) {
         requireServerThread(server);
+        ExtensionProgramEffects.cancelOwner(server, ownerId);
         var state = SCHEDULERS.get(server);
         if (state == null) return;
         for (var key : state.keys()) {

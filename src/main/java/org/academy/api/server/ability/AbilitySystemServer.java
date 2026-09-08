@@ -1058,6 +1058,13 @@ public final class AbilitySystemServer {
         return tryTimedOccupation(uuid, amount, skill, skill.getIterationTicks(level));
     }
 
+    /** Read-only cost quote matching the dynamic program charge, including proficiency and calculation efficiency. */
+    public float quoteTimedOccupation(ServerPlayer player, float amount, Skill skill) {
+        if (!Float.isFinite(amount) || amount < 0) throw new IllegalArgumentException("Invalid occupation cost");
+        var adjusted = skill.adjustProficiencyCost(player, SkillProficiencyProfile.CostKind.DYNAMIC, amount);
+        return Math.max(0, adjusted * playerCPManager.getCalculationIntensity(player.getUUID()));
+    }
+
     public boolean tryTimedOccupation(ServerPlayer player, float amount, Skill skill) {
         var adjusted = skill.adjustProficiencyCost(
                 player,

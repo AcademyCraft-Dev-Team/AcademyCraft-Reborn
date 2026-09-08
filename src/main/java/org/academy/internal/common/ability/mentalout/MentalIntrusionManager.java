@@ -307,8 +307,8 @@ public final class MentalIntrusionManager {
                 if (protectedTarget) MentalControlRuntime.notifyProtectionBlocked(player, target);
                 stop(player.getUUID(), true);
             } else {
-                if (session.confirmed && target instanceof ServerPlayer subject) {
-                    MentalResistanceManager.markAffected(player, subject, false);
+                if (session.confirmed) {
+                    MentalResistanceManager.markAffected(player, target, false);
                 }
                 Skills.MENTAL_INTRUSION.get().reportActivity(player, session.confirmed);
             }

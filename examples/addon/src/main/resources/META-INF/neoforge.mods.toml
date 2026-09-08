@@ -1,0 +1,14 @@
+modLoader="javafml"
+loaderVersion="[1,)"
+license="MIT"
+[[mods]]
+modId="academy_api_example"
+version="1.0.0"
+displayName="Academy API Example"
+description="A minimal addon using only Academy public registration and execution APIs."
+[[dependencies.academy_api_example]]
+modId="academy"
+type="required"
+versionRange="[0.0.4-alpha,)"
+ordering="AFTER"
+side="BOTH"

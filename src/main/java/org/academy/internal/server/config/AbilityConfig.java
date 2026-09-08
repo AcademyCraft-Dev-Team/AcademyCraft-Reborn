@@ -109,8 +109,6 @@ public class AbilityConfig {
         public float playerControlCostMultiplier = 3.0f;
         @SerializedName("mentalTakeoverOccupation")
         public float mentalTakeoverOccupation = 100.0f;
-        @SerializedName("playerControlResistanceTicks")
-        public int playerControlResistanceTicks = 400;
         @SerializedName("mentalIntrusionMaintenanceCost")
         public float mentalIntrusionMaintenanceCost = 20.0f;
         @SerializedName("sensoryDistortionMaintenanceCost")

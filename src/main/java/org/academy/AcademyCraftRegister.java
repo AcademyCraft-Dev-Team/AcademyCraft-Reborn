@@ -116,6 +116,7 @@ public final class AcademyCraftRegister {
         event.register(ABILITY_CATEGORIES);
         event.register(SKILLS);
         event.register(PROGRAM_NODE_TYPES);
+        event.register(DAMAGE_PROFILES);
         event.register(SYNC_KEYS);
         event.register(DATA_TYPES);
         event.register(PATH_TYPES);
@@ -124,7 +125,7 @@ public final class AcademyCraftRegister {
 
     private static void onCommonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
-            ProgramNodeExtensionIndex.freeze();
+            org.academy.internal.common.ability.AbilityRegistrationFinalizer.resolve();
             if (ModList.get().isLoaded("curios")) {
                 MagneticHookCuriosCompat.register();
                 org.academy.internal.common.compatibility.SpatialStorageCuriosCompat.register();
@@ -162,6 +163,7 @@ public final class AcademyCraftRegister {
             NeoForge.EVENT_BUS.post(new AbilitySystemFinalizedEvent());
             AbilityRegistrationValidator.validate();
             ABILITY_CATEGORIES.forEach(AbilityCategory::seal);
+            NeoForge.EVENT_BUS.post(new org.academy.api.common.registries.AcademyRegistrationsReadyEvent());
         });
     }
 

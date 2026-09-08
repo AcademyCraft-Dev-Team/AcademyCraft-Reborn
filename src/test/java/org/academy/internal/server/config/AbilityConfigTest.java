@@ -22,7 +22,6 @@ class AbilityConfigTest {
         assertTrue(settings.allowMentalTakeover);
         assertEquals(100.0f, settings.mentalTakeoverOccupation);
         assertEquals(3.0f, settings.playerControlCostMultiplier);
-        assertEquals(400, settings.playerControlResistanceTicks);
     }
 
     @Test
