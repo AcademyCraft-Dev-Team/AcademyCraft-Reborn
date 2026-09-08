@@ -31,7 +31,9 @@
 ├─ learn <skill_name>
 ├─ set_category <category_name>
 ├─ level <level>
-├─ set_exp <skill_name> <amount>
+├─ set_exp
+│  ├─ <skill_name> <amount>
+│  └─ max
 ├─ debug
 │  ├─ god
 │  ├─ cp
@@ -80,6 +82,7 @@
 | `/academy set_category <category_name>` | 玩家 | 已注册的能力类别 | 替换当前能力类别；清除原类别的专属技能，同时保留通用技能。 |
 | `/academy level <level>` | 玩家 | 整数 `0`～`5` | 将当前玩家的能力等级直接设为指定值。 |
 | `/academy set_exp <skill_name> <amount>` | 玩家 | 已学习技能；浮点数 `0`～`3000` | 将指定技能的熟练度直接设为给定值。这里的数值是技能熟练度，不是能力等级经验。 |
+| `/academy set_exp max` | 玩家 | 无 | 将执行者当前已掌握的全部技能（含通用技能）的熟练度设为最大值 `3000`；不会学习新技能。没有已掌握技能时只返回提示，失效的技能记录会跳过并报告数量。 |
 
 示例：
 
@@ -88,11 +91,12 @@
 /academy learn academy:arc_generate
 /academy level 3
 /academy set_exp academy:arc_generate 1200
+/academy set_exp max
 ```
 
 ## 能力等级经验
 
-这组命令操作用于能力等级成长的经验值，与 `/academy set_exp` 操作的单个技能熟练度不同。
+这组命令操作用于能力等级成长的经验值，与 `/academy set_exp` 操作的技能熟练度不同。
 
 | 命令 | 参数限制 | 作用 |
 | --- | --- | --- |
