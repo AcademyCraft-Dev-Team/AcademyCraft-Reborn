@@ -489,7 +489,7 @@ final class PrecisionProgramExecutionBridge {
         }
 
     private record NativeEnvironment(PrecisionProgramRuntimeView runtimeView, ProgramTargetResolver targetResolver,
-                                     NativeNodeHandler nodeHandler) implements ProgramTargetResolver {
+                                     NativeNodeHandler nodeHandler) implements ForwardingProgramTargetResolver {
 
         @Override
             public Object caster() {
@@ -540,7 +540,11 @@ final class PrecisionProgramExecutionBridge {
             }
         }
 
-    private static final class Trace implements ProgramTargetResolver {
+    private static final class Trace implements ForwardingProgramTargetResolver {
+        @Override
+        public ProgramTargetResolver targetResolver() {
+            return targetResolver;
+        }
         private final Map<Integer, Object> values;
         private final List<Integer> flowTrace;
         private final PrecisionProgramRuntimeView runtimeView;

@@ -5,10 +5,7 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.util.Mth;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
@@ -20,7 +17,6 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.api.server.vfx.SkillVfxService;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -35,16 +31,14 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public class Cloudroom extends Skill {
     private static final float RADIUS = 16.0f;
-    private static final int TRAIL_LIFETIME = 30;
-    private static final int TRAIL_INTERVAL_TICKS = 5;
-    private static final int MAX_TRAILS_PER_TICK = 6;
-    private static final int MAX_GLOBAL_TRAILS_PER_TICK = 16;
-    private static final double MIN_TRAIL_DISTANCE_SQR = 0.05 * 0.05;
+
+    public static double detectionRadius(int milestone) {
+        return milestone >= 2 ? 24.0 : RADIUS;
+    }
 
     public Cloudroom() {
         super(Builder
@@ -105,8 +99,6 @@ public class Cloudroom extends Skill {
 
     public static final class Server {
         private static final Map<Player, Context> CONTEXT_MAP = createContextMap();
-        private static long trailBudgetTick = Long.MIN_VALUE;
-        private static int trailsSpawnedThisTick;
 
         @SubscribePacket
         public static void handleToggle(TogglePacket packet) {
@@ -123,26 +115,13 @@ public class Cloudroom extends Skill {
             CONTEXT_MAP.put(player, context);
             AbilitySystemServer.registerContext(context);
         }
-
-        private static boolean tryClaimTrailSlot(long gameTime) {
-            if (trailBudgetTick != gameTime) {
-                trailBudgetTick = gameTime;
-                trailsSpawnedThisTick = 0;
-            }
-            if (trailsSpawnedThisTick >= MAX_GLOBAL_TRAILS_PER_TICK) return false;
-            trailsSpawnedThisTick++;
-            return true;
-        }
     }
 
     public static final class Context extends ServerContext {
-        private final Map<LivingEntity, Vec3> lastPositions = new HashMap<>();
-        private final int proficiencyMilestone;
         private boolean ended;
 
         private Context(ServerPlayer player) {
             super(player);
-            proficiencyMilestone = Skills.CLOUDROOM.get().getEffectiveProficiencyMilestone(player);
         }
 
         @SubscribeEvent
@@ -158,31 +137,6 @@ public class Cloudroom extends Skill {
                 end();
                 return;
             }
-
-            var entities = level().getEntitiesOfClass(LivingEntity.class,
-                    player.getBoundingBox().inflate(proficiencyMilestone >= 2 ? 24.0 : RADIUS),
-                    e -> e != player && e.isAlive() && !e.isSpectator());
-
-            var spawnedTrails = 0;
-            for (var entity : entities) {
-                var currentPos = entity.position();
-                var lastPos = lastPositions.get(entity);
-                if (lastPos != null
-                        && lastPos.distanceToSqr(currentPos) >= MIN_TRAIL_DISTANCE_SQR
-                        && Mth.positiveModulo(entity.tickCount + entity.getId(), TRAIL_INTERVAL_TICKS) == 0
-                        && spawnedTrails < MAX_TRAILS_PER_TICK
-                        && Server.tryClaimTrailSlot(level().getGameTime())) {
-                    SkillVfxService.smoke(level(), currentPos, 0.5f,
-                            proficiencyMilestone >= 2 ? Math.round(TRAIL_LIFETIME * 1.5f) : TRAIL_LIFETIME);
-                    if (proficiencyMilestone >= 3 && lastPos.distanceToSqr(currentPos) > 16.0) {
-                        SkillVfxService.smoke(level(), lastPos, 0.75f,
-                                Math.round(TRAIL_LIFETIME * 1.5f));
-                    }
-                    spawnedTrails++;
-                }
-                lastPositions.put(entity, currentPos);
-            }
-            lastPositions.keySet().retainAll(entities);
         }
 
         private void end() {

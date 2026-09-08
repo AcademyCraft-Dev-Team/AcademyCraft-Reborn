@@ -37,7 +37,7 @@ import java.util.*;
 /**
  * Authoritative Minecraft-server adapter for vector-manipulation programs.
  */
-public final class ServerAcceleratorProgramRuntime implements AcceleratorProgramRuntime {
+public final class ServerAcceleratorProgramRuntime implements AcceleratorProgramRuntime, org.academy.api.common.ability.program.ForwardingProgramTargetResolver {
     public static final double MAX_QUERY_RANGE = AbilityProgramSpatialRanges.forCategory(
             AcceleratorProgramNodeCatalog.ACCELERATOR).queryRange();
     public static final double MAX_ACTION_RANGE = AbilityProgramSpatialRanges.forCategory(
@@ -48,6 +48,12 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
     private final ServerPlayer player;
     private final float costMultiplier;
     private final ImpactBatch impactBatch = new ImpactBatch();
+    private final ServerProgramTargetResolver targets;
+
+    @Override
+    public org.academy.api.common.ability.program.ProgramTargetResolver targetResolver() {
+        return targets;
+    }
 
     public ServerAcceleratorProgramRuntime(ServerPlayer player) {
         this(player, 1.0f);
@@ -56,6 +62,7 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
     public ServerAcceleratorProgramRuntime(ServerPlayer player, float costMultiplier) {
         this.player = Objects.requireNonNull(player, "player");
         this.costMultiplier = requireCostMultiplier(costMultiplier);
+        targets = new ServerProgramTargetResolver(player, MAX_QUERY_RANGE, MAX_QUERY_RESULTS);
     }
 
     @Override

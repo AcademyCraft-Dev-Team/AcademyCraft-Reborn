@@ -39,7 +39,7 @@ import java.util.*;
  * Authoritative Minecraft-server adapter for Electromaster programs.
  */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
-public final class ServerElectromasterProgramRuntime implements ElectromasterProgramRuntime {
+public final class ServerElectromasterProgramRuntime implements ElectromasterProgramRuntime, org.academy.api.common.ability.program.ForwardingProgramTargetResolver {
     public static final double MAX_QUERY_RANGE = AbilityProgramSpatialRanges.forCategory(
             ElectromasterProgramNodeCatalog.ELECTROMASTER).queryRange();
     public static final double MAX_ACTION_RANGE = AbilityProgramSpatialRanges.forCategory(
@@ -52,6 +52,10 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     private final ServerPlayer player;
     private final float costMultiplier;
     private final ServerProgramTargetResolver targets;
+    @Override
+    public org.academy.api.common.ability.program.ProgramTargetResolver targetResolver() {
+        return targets;
+    }
 
     public ServerElectromasterProgramRuntime(ServerPlayer player) {
         this(player, 1.0f);

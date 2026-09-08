@@ -35,7 +35,7 @@ import java.util.Optional;
 /**
  * Authoritative Minecraft-server adapter for Aeromanip programs.
  */
-public final class ServerAeromanipProgramRuntime implements AeromanipProgramRuntime {
+public final class ServerAeromanipProgramRuntime implements AeromanipProgramRuntime, org.academy.api.common.ability.program.ForwardingProgramTargetResolver {
     public static final double MAX_QUERY_RANGE = AbilityProgramSpatialRanges.forCategory(
             AeromanipProgramNodeCatalog.AEROMANIP).queryRange();
     public static final double MAX_ACTION_RANGE = AbilityProgramSpatialRanges.forCategory(
@@ -45,6 +45,10 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     private final ServerPlayer player;
     private final float costMultiplier;
     private final ServerProgramTargetResolver targets;
+    @Override
+    public org.academy.api.common.ability.program.ProgramTargetResolver targetResolver() {
+        return targets;
+    }
 
     public ServerAeromanipProgramRuntime(ServerPlayer player) {
         this(player, 1.0f);

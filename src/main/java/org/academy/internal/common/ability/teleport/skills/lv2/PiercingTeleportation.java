@@ -16,7 +16,7 @@ import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.ability.ClientContext;
-import org.academy.api.client.config.KeyBindingConfig;
+import org.academy.internal.client.ability.teleport.TeleportDistanceConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.input.MouseScrollEvent;
 import org.academy.api.client.render.LevelRenderEvent;
@@ -72,6 +72,7 @@ public final class PiercingTeleportation extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+        Client.CONFIG.registerSettings(this);
         InputSystem.addKeyBinding(Client.KEY_NAME_START, Client.CONFIG.getKeyBinding(
                 Client.KEY_NAME_START,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R,
@@ -128,7 +129,7 @@ public final class PiercingTeleportation extends Skill {
 
         public static final class PreviewContext extends ClientContext {
             private final LocalPlayer player;
-            private double distance = DEFAULT_DISTANCE;
+            private double distance = CONFIG == null ? DEFAULT_DISTANCE : CONFIG.getDefaultDistance();
             private boolean useDefaultTarget = true;
             private boolean validDestination;
 
@@ -142,7 +143,7 @@ public final class PiercingTeleportation extends Skill {
                 if (useDefaultTarget) {
                     var eyePosition = player.getEyePosition();
                     var defaultCenter = TeleportTargeting.findDefaultPiercingTeleportCenter(
-                            player, eyePosition, player.getLookAngle(), DEFAULT_DISTANCE);
+                            player, eyePosition, player.getLookAngle(), distance);
                     if (defaultCenter != null) {
                         defaultDestinationDistance = eyePosition.distanceTo(defaultCenter);
                     }
@@ -183,7 +184,7 @@ public final class PiercingTeleportation extends Skill {
             }
         }
 
-        public static class Config extends KeyBindingConfig {
+        public static class Config extends TeleportDistanceConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
 

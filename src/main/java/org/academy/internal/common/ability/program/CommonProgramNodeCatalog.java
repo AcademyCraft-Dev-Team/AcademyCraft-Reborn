@@ -111,6 +111,12 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 ProgramNodeRole.VALUE,
                 ProgramNodePurity.PURE
         ));
+        put(result, CommonProgramNodeIds.NUMERIC_CONVERT, type(
+                NumericConversionConfiguration.CODEC,
+                configuration -> unarySchema("value", configuration.source().type(),
+                        "result", configuration.target().type()),
+                ProgramNodeRole.VALUE, ProgramNodePurity.PURE
+        ));
         put(result, CommonProgramNodeIds.NUMERIC_COMPARE, type(
                 NumericComparisonConfiguration.CODEC,
                 configuration -> binarySchema(
@@ -1019,6 +1025,13 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         }
     }
 
+    public record NumericConversionConfiguration(NumericKind source, NumericKind target) {
+        public static final Codec<NumericConversionConfiguration> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                NumericKind.CODEC.fieldOf("source_type").forGetter(NumericConversionConfiguration::source),
+                NumericKind.CODEC.fieldOf("target_type").forGetter(NumericConversionConfiguration::target)
+        ).apply(instance, NumericConversionConfiguration::new));
+    }
+
     public record NumericArithmeticConfiguration(NumericKind kind, ArithmeticOperator operator) {
         public static final Codec<NumericArithmeticConfiguration> CODEC =
                 RecordCodecBuilder.create(instance -> instance.group(
@@ -1473,6 +1486,8 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         SUBTRACT("subtract"),
         MULTIPLY("multiply"),
         DIVIDE("divide"),
+        INTEGER_DIVIDE("integer_divide"),
+        POWER("power"),
         MODULO("modulo"),
         ABSOLUTE("absolute");
 

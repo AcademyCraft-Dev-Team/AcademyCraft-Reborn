@@ -1783,6 +1783,7 @@ public final class VfxBlocks {
         var surfaceNormal = new org.joml.Vector3f();
         var rotation = new org.joml.Quaternionf();
         var shape = new org.academy.api.client.render.vfxgraph.shape.VortexAttackGeometry();
+        var bodyOcclusion = new org.academy.api.client.render.vfxgraph.shape.FirstPersonBodyOcclusion();
         return (buf, ctx) -> {
             ctx.arcs().removeGroup(group);
             float radial = Math.max(0f, ctx.paramFloat("radial_scale", 1f));
@@ -1799,6 +1800,12 @@ public final class VfxBlocks {
                     .rotateZ(ctx.paramFloat(pitchParam, 0f) * Mth.DEG_TO_RAD);
             int attackMode = Math.clamp(Math.round(ctx.paramFloat("attack_mode", 0f)), 0, 5);
             float attackProgress = ctx.paramFloat("attack_progress", 1f);
+            boolean clipBody = ctx.paramFloat("first_person_body_clip", 0f) > 0.5f && attackMode == 0;
+            if (clipBody) {
+                bodyOcclusion.eye.set(ctx.paramVec3("body_clip_eye", 0, 0), ctx.paramVec3("body_clip_eye", 1, 0), ctx.paramVec3("body_clip_eye", 2, 0));
+                bodyOcclusion.min.set(ctx.paramVec3("body_clip_min", 0, 0), ctx.paramVec3("body_clip_min", 1, 0), ctx.paramVec3("body_clip_min", 2, 0));
+                bodyOcclusion.max.set(ctx.paramVec3("body_clip_max", 0, 0), ctx.paramVec3("body_clip_max", 1, 0), ctx.paramVec3("body_clip_max", 2, 0));
+            }
             // Negative progress is reserved for standalone looping attack previews in the editor.
             if (attackProgress < 0f) {
                 float duration = org.academy.api.common.ability.VortexAttackPattern.byId(attackMode).durationSeconds();
@@ -1841,7 +1848,9 @@ public final class VfxBlocks {
                         width *= 0.86f + 0.14f * (float) Math.sin(u * 57f - time * speed + strandPhase);
                         // Only the terminal few percent disperse; the silhouette stays a wide-ended funnel.
                         width *= Math.max(0.015f, Math.min(1f, (1f - u) * 28f)) * shape.widthScale(u);
-                        int run = VortexJetGeometry.hollow(u, time, strand, hollow) ? segment + 1 : 0;
+                        boolean hidden = clipBody && bodyOcclusion.occludes(point, side * root);
+                        if (hidden) width = 0f;
+                        int run = hidden || VortexJetGeometry.hollow(u, time, strand, hollow) ? segment + 1 : 0;
                         arc.addPoint(point.x + side * root, point.y, point.z, width, 0f, run);
                     }
                     float shade = core ? 0.48f : 0.8f + 1.6f * stableUnit(strand, 8.1f);
@@ -1880,7 +1889,9 @@ public final class VfxBlocks {
                         rotation.transform(point);
                         width = Math.min(width * 0.20f, 0.012f * radial)
                                 * (float) Math.sin(Math.PI * j / 12f);
-                        int run = VortexJetGeometry.hollow(u, time, strand, hollow) ? j + 1 : 0;
+                        boolean hidden = clipBody && bodyOcclusion.occludes(point, side * root);
+                        if (hidden) width = 0f;
+                        int run = hidden || VortexJetGeometry.hollow(u, time, strand, hollow) ? j + 1 : 0;
                         arc.addPoint(point.x + side * root, point.y, point.z, width, 0f, run);
                     }
                     arc.setColor(highlightColor[0], highlightColor[1], highlightColor[2],
@@ -1902,8 +1913,9 @@ public final class VfxBlocks {
                         shape.sample(v, orbit, fleck * 2.4f, point);
                         point.x *= side;
                         rotation.transform(point);
+                        boolean hidden = clipBody && bodyOcclusion.occludes(point, side * root);
                         arc.addPoint(point.x + side * root, point.y, point.z,
-                                (j == 1 ? 0.019f : 0.002f) * radial * fade, 0f);
+                                hidden ? 0f : (j == 1 ? 0.019f : 0.002f) * radial * fade, 0f, hidden ? j + 1 : 0);
                     }
                     arc.setColor(color[0], color[1], color[2], alpha * fade * 0.8f * branchAlpha);
                     arc.setLifetime(1f);

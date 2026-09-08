@@ -140,6 +140,9 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
         } else if (id.equals(CommonProgramNodeIds.NUMERIC_ARITHMETIC)) {
             configuration.addProperty("type", "integer");
             configuration.addProperty("operator", "add");
+        } else if (id.equals(CommonProgramNodeIds.NUMERIC_CONVERT)) {
+            configuration.addProperty("source_type", "float");
+            configuration.addProperty("target_type", "integer");
         } else if (id.equals(CommonProgramNodeIds.NUMERIC_COMPARE)) {
             configuration.addProperty("type", "integer");
             configuration.addProperty("operator", "equal");

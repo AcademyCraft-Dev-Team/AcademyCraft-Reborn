@@ -452,23 +452,24 @@ public final class AcademyCraftClient {
             var renderer = event.getPlayerRenderer(skinType);
             if (renderer != null) {
                 renderer.addLayer(new SkillEffectsLayer(renderer));
-                addQuantumLayerIfPossible(renderer);
+                addAbilityLayers(renderer);
             }
         }
 
         for (var type : event.getEntityTypes()) {
             var renderer = event.getRenderer(type);
             if (renderer instanceof LivingEntityRenderer<?, ?, ?>) {
-                addQuantumLayerIfPossible(UncheckedUtil.uncheckedCast(renderer));
+                addAbilityLayers(UncheckedUtil.uncheckedCast(renderer));
             }
         }
     }
 
     private static <T extends LivingEntity, S extends LivingEntityRenderState, M extends EntityModel<? super S>>
-    void addQuantumLayerIfPossible(
+    void addAbilityLayers(
             LivingEntityRenderer<T, S, M> renderer
     ) {
         renderer.addLayer(new QuantumInterferenceLayer<>(renderer));
+        renderer.addLayer(new org.academy.internal.client.renderer.entity.layers.CloudroomLayer<>(renderer));
     }
 
     @SubscribeEvent
@@ -477,6 +478,8 @@ public final class AcademyCraftClient {
             @Override
             public <T extends Avatar & ClientAvatarEntity> void accept(T avatar, AvatarRenderState renderState) {
                 AbilityDeveloperSleepClient.extract(avatar, renderState);
+                renderState.setRenderData(org.academy.internal.client.renderer.entity.layers.CloudroomLayer.VISIBLE,
+                        org.academy.internal.client.renderer.entity.layers.CloudroomLayer.shouldReveal(avatar));
                 renderState.setRenderData(ElectromasterWeaponVfx.ENTITY_ID_CONTEXT, avatar.getId());
                 renderState.setRenderData(
                         ElectromasterWeaponVfx.MAGNETIC_CONTEXT,
@@ -500,11 +503,14 @@ public final class AcademyCraftClient {
     }
 
     private static BiConsumer<LivingEntity, LivingEntityRenderState> living() {
-        return (livingEntity, livingEntityRenderState) ->
-                livingEntityRenderState.setRenderData(
-                        QuantumInterferenceLayer.CONTEXT_KEY,
-                        livingEntity.getExistingDataOrNull(AttachmentTypes.QUANTUM_DATA.get())
-                );
+        return (livingEntity, livingEntityRenderState) -> {
+            livingEntityRenderState.setRenderData(
+                    QuantumInterferenceLayer.CONTEXT_KEY,
+                    livingEntity.getExistingDataOrNull(AttachmentTypes.QUANTUM_DATA.get())
+            );
+            livingEntityRenderState.setRenderData(org.academy.internal.client.renderer.entity.layers.CloudroomLayer.VISIBLE,
+                    org.academy.internal.client.renderer.entity.layers.CloudroomLayer.shouldReveal(livingEntity));
+        };
     }
 
     @SubscribeEvent

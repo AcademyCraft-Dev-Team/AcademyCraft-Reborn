@@ -48,7 +48,7 @@ import java.util.Optional;
 /**
  * Authoritative Minecraft-server adapter for Teleport programs.
  */
-public final class ServerTeleportProgramRuntime implements TeleportProgramRuntime {
+public final class ServerTeleportProgramRuntime implements TeleportProgramRuntime, org.academy.api.common.ability.program.ForwardingProgramTargetResolver {
     public static final double MAX_QUERY_RANGE = AbilityProgramSpatialRanges.forCategory(
             TeleportProgramNodeCatalog.TELEPORT).queryRange();
     public static final double MAX_ACTION_RANGE = AbilityProgramSpatialRanges.forCategory(
@@ -59,6 +59,10 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
     private final ServerPlayer player;
     private final float costMultiplier;
     private final ServerProgramTargetResolver targets;
+    @Override
+    public org.academy.api.common.ability.program.ProgramTargetResolver targetResolver() {
+        return targets;
+    }
 
     public ServerTeleportProgramRuntime(ServerPlayer player) {
         this(player, 1.0f);
@@ -478,12 +482,7 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                 var damageTargets = entitiesTouchingBlockCell(target);
                 try {
                     charge(Skills.SELF_TELEPORT.get(), 10.0f);
-                    var drops = blockDrops(target, replacedState, transmitted);
-                    if (!replacedState.isAir() && !level.setBlock(
-                            target, Blocks.AIR.defaultBlockState(),
-                            Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS)) {
-                        throw new IllegalStateException("Unable to break target block");
-                    }
+                    var drops = removeBlockCollectingDrops(target, replacedState, transmitted);
                     for (var drop : drops) spawned.add(spawnItem(target, drop));
                     var source = player.getInventory().getItem(inventorySlot);
                     if (!player.isCreative()) source.shrink(1);
@@ -549,14 +548,9 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                         .toList();
                 try {
                     charge(Skills.SELF_TELEPORT.get(), 10.0f);
-                    var collected = new ArrayList<ItemStack>(blockDrops(
+                    var collected = new ArrayList<ItemStack>(removeBlockCollectingDrops(
                             target, state, player.getMainHandItem()));
                     removed.forEach(item -> collected.add(item.stack.copy()));
-                    if (!state.isAir() && !level.setBlock(
-                            target, Blocks.AIR.defaultBlockState(),
-                            Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS)) {
-                        throw new IllegalStateException("Unable to break collected block");
-                    }
                     for (var stack : collected) addToInventory(stack);
                     nearby.forEach(Entity::discard);
                     player.getInventory().setChanged();
@@ -749,6 +743,21 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                 && !player.canUseGameMasterBlocks()) {
             throw new IllegalArgumentException("Teleport target block cannot be broken");
         }
+    }
+
+    private List<ItemStack> removeBlockCollectingDrops(BlockPos position, BlockState state, ItemStack tool) {
+        var result = new ArrayList<>(blockDrops(position, state, tool));
+        var level = targets.level();
+        // Chests emit their inventory from onRemove, independently of the block loot table.
+        // Keep those emissions in the same transaction as the primary drops and inventory edits.
+        try (var capture = org.academy.api.server.ability.BlockItemDropCapture.capture(level)) {
+            if (!state.isAir() && !level.setBlock(position, Blocks.AIR.defaultBlockState(),
+                    Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS)) {
+                throw new IllegalStateException("Unable to break collected block");
+            }
+            result.addAll(capture.drops());
+        }
+        return result;
     }
 
     private List<ItemStack> blockDrops(

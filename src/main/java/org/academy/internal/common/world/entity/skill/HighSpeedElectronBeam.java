@@ -118,11 +118,19 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         setNoGravity(false);
     }
 
-    private static void destroyBlocks(
+    private void destroyBlocks(
             ServerLevel level,
             ServerPlayer breaker,
             LinearSegment segment
     ) {
+        if (sourceSkill == Skills.MINING_BEAM.get()) {
+            var harvester = resolveOwner(level);
+            if (harvester != null) {
+                org.academy.internal.common.ability.meltdowner.skills.lv2.MiningBeam.executeMiningSegment(
+                        level, segment, 0.25f, false, breaker, harvester);
+            }
+            return;
+        }
         LevelUtil.destroyBlocksAlongPath(
                 level,
                 segment.start(),
@@ -326,6 +334,12 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
     private void fire(ServerLevel level, ServerPlayer owner) {
         var start = position();
         var end = start.add(getLookAngle().scale(length));
+        if (sourceSkill == Skills.MINING_BEAM.get()) {
+            var miningLength = org.academy.internal.common.ability.meltdowner.skills.lv2.MiningBeam
+                    .executeMiningSegment(level, new LinearSegment(start, end), 0.25f, true, owner, owner);
+            end = start.add(getLookAngle().scale(miningLength));
+            setBeamLength((float) miningLength);
+        }
 
         var hitIndex = new AtomicInteger();
         var source = SkillDamageSource.of(owner, sourceSkill);

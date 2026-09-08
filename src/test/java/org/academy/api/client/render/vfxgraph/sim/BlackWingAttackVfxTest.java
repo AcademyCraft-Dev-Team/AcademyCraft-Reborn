@@ -51,6 +51,39 @@ class BlackWingAttackVfxTest {
     }
 
     @Test
+    void firstPersonBodyClipsIdleRootsWithoutChangingAnyAttackGeometry() throws Exception {
+        var normal = simulator("black_wings");
+        var clipped = simulator("black_wings");
+        clipped.setLiveParam("first_person_body_clip", Value.of(1f));
+        clipped.setLiveParam("body_clip_eye", Value.of(new Vector3f(0, 0.5f, 0.2f)));
+        clipped.setLiveParam("body_clip_min", Value.of(new Vector3f(-0.3f, -1.2f, -0.15f)));
+        clipped.setLiveParam("body_clip_max", Value.of(new Vector3f(0.3f, 0.3f, 0.45f)));
+        for (int mode = 0; mode <= 5; mode++) {
+            phase(normal, mode, 0.52f);
+            phase(clipped, mode, 0.52f);
+            assertEquals(normal.arcBuffer().count(), clipped.arcBuffer().count());
+            int removed = 0, preserved = 0;
+            for (int a = 0; a < normal.arcBuffer().count(); a++) {
+                var expected = normal.arcBuffer().arc(a);
+                var actual = clipped.arcBuffer().arc(a);
+                assertEquals(expected.size(), actual.size());
+                for (int p = 0; p < expected.size(); p++) {
+                    assertEquals(expected.x(p), actual.x(p));
+                    assertEquals(expected.y(p), actual.y(p));
+                    assertEquals(expected.z(p), actual.z(p));
+                    if (mode != 0) assertEquals(expected.width(p), actual.width(p), "attack mode " + mode);
+                    else if (expected.width(p) > 0 && actual.width(p) == 0) removed++;
+                    else if (actual.width(p) > 0) preserved++;
+                }
+            }
+            if (mode == 0) {
+                assertTrue(removed > 0, "Body-hidden idle geometry must be clipped");
+                assertTrue(preserved > removed, "The visible outer wings must remain");
+            }
+        }
+    }
+
+    @Test
     void fiveAttacksHaveDistinctWindupAndReturnPaths() throws Exception {
         var sim = simulator("black_wings");
         phase(sim, 0, 1f);

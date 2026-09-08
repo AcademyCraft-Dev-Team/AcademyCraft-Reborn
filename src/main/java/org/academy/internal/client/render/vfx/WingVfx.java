@@ -457,6 +457,29 @@ public final class WingVfx implements Vfx {
             effect.setRotation(transform.getUnnormalizedRotation(new Quaternionf()));
             effect.setScale(transform.getScale(new Vector3f()).x);
             var graph = effect.effect();
+            boolean clipBody = player == minecraft.player && minecraft.options.getCameraType().isFirstPerson()
+                    && minecraft.getCameraEntity() == player;
+            graph.setLiveParam("first_person_body_clip", Value.of(clipBody ? 1f : 0f));
+            if (clipBody) {
+                var inverse = new Matrix4f(transform).invert();
+                var eye = inverse.transformPosition(new Vector3f());
+                var minimum = new Vector3f(Float.POSITIVE_INFINITY);
+                var maximum = new Vector3f(Float.NEGATIVE_INFINITY);
+                float halfWidth = player.getBbWidth() * 0.4f;
+                // Stop below the eyes so the eye is never inside its own occluder.
+                float top = (float) (camera.y - position.y) - 0.18f;
+                for (int corner = 0; corner < 8; corner++) {
+                    var point = new Vector3f((float) (position.x - camera.x) + ((corner & 1) == 0 ? -halfWidth : halfWidth),
+                            (float) (position.y - camera.y) + ((corner & 2) == 0 ? 0f : top),
+                            (float) (position.z - camera.z) + ((corner & 4) == 0 ? -halfWidth : halfWidth));
+                    inverse.transformPosition(point);
+                    minimum.min(point);
+                    maximum.max(point);
+                }
+                graph.setLiveParam("body_clip_eye", Value.of(eye));
+                graph.setLiveParam("body_clip_min", Value.of(minimum));
+                graph.setLiveParam("body_clip_max", Value.of(maximum));
+            }
             graph.setLiveParam("vortex_time", Value.of((float) now));
             graph.setLiveParam("vortex_filaments", Value.of((float) detail.filaments()));
             graph.setLiveParam("vortex_segments", Value.of((float) detail.segments()));

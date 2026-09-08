@@ -17,7 +17,7 @@ import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.ability.ClientContext;
-import org.academy.api.client.config.KeyBindingConfig;
+import org.academy.internal.client.ability.teleport.TeleportDistanceConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.input.MouseScrollEvent;
 import org.academy.api.client.render.LevelRenderEvent;
@@ -81,6 +81,7 @@ public final class SelfTeleport extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+        CONFIG.registerSettings(this);
 
         KEY_START = CONFIG.getKeyBinding(Client.KEY_NAME_START,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.PRESS, 0));
@@ -183,7 +184,7 @@ public final class SelfTeleport extends Skill {
             private final LocalPlayer player;
             private final EntityDimensions playerDimensions;
             public Vec3 currentRenderPos;
-            private double distance = DEFAULT_DISTANCE;
+            private double distance = CONFIG == null ? DEFAULT_DISTANCE : CONFIG.getDefaultDistance();
             private Vec3 visualRenderPos;
 
             public TeleportRenderContext(LocalPlayer player) {
@@ -236,7 +237,7 @@ public final class SelfTeleport extends Skill {
             }
         }
 
-        public static class Config extends KeyBindingConfig {
+        public static class Config extends TeleportDistanceConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
 

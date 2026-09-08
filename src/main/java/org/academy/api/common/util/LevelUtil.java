@@ -47,9 +47,15 @@ public class LevelUtil {
         return (hitResult.getType() != HitResult.Type.MISS) ? hitResult.getLocation().distanceTo(startPos) : targetDistance;
     }
 
-    @SuppressWarnings("DataFlowIssue")
     public static boolean canBreakBlock(BlockState blockState, int miningLevel) {
-        if (miningLevel == -1 || blockState.getDestroySpeed(null, null) == -1) {
+        return canBreakBlock(blockState, null, null, miningLevel);
+    }
+
+    /** Uses the actual world and position for blocks with context-dependent hardness. */
+    public static boolean canBreakBlock(
+            BlockState blockState, BlockGetter level, BlockPos pos, int miningLevel
+    ) {
+        if (miningLevel < 0 || blockState.getDestroySpeed(level, pos) < 0.0f) {
             return false;
         }
         if (isUnrestrictedMiningLevel(miningLevel)) return true;
@@ -293,7 +299,7 @@ public class LevelUtil {
                 : shape.bounds().move(x, y, z);
         // Sphere-AABB intersection check meow
         if (getIntersectionT(ctx.start, ctx.end, blockAABB.inflate(ctx.radius)) <= 1.0) {
-            if (fluidVolume || canBreakBlock(state, ctx.miningLevel)) {
+            if (fluidVolume || canBreakBlock(state, ctx.level, ctx.mutablePos, ctx.miningLevel)) {
                 ctx.breakable.add(ctx.mutablePos.immutable());
             } else if (ctx.canBlock) {
                 ctx.unbreakable.add(ctx.mutablePos.immutable());
