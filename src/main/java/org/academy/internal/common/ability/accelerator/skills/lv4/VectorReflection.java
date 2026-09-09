@@ -304,8 +304,7 @@ public class VectorReflection extends Skill {
                 DamageSource source,
                 float damage
         ) {
-            if (!(damage > VectorIncomingDamageCoordinator.ANOMALOUS_DAMAGE_THRESHOLD)
-                    || !Float.isFinite(damage)
+            if (!VectorIncomingDamageCoordinator.isAnomalousDamage(damage)
                     || !canMaintainLinearReflectionLease(player)
                     || !canReflectSource(player, source)) {
                 return false;
@@ -346,6 +345,7 @@ public class VectorReflection extends Skill {
             var result = calculateReflection(
                     incomingDamage,
                     system.getPlayerAvailableCP(player.getUUID()),
+                    system.getPlayerMaxCP(player.getUUID()),
                     system.getPlayerCalculationIntensity(player.getUUID()),
                     VectorDefenseProficiency.effectiveMilestone(player, skill),
                     system.getPlayerMaxCP(player.getUUID()) * 0.01f,
@@ -392,6 +392,7 @@ public class VectorReflection extends Skill {
             var result = calculateReflection(
                     originalDamage,
                     system.getPlayerAvailableCP(serverPlayer.getUUID()),
+                    system.getPlayerMaxCP(serverPlayer.getUUID()),
                     system.getPlayerCalculationIntensity(serverPlayer.getUUID()),
                     VectorDefenseProficiency.effectiveMilestone(serverPlayer, skill),
                     system.getPlayerMaxCP(serverPlayer.getUUID()) * 0.01f,
@@ -431,14 +432,18 @@ public class VectorReflection extends Skill {
         }
 
         static ReflectionResult calculateReflection(float damage, float availableCP,
-                                                    float calculationIntensity, boolean devMode) {
-            return calculateReflection(damage, availableCP, calculationIntensity, 3, devMode);
+                                                     float calculationIntensity, boolean devMode) {
+            return calculateReflection(
+                    damage, availableCP, Float.MAX_VALUE,
+                    calculationIntensity, 3, 0.0f, devMode);
         }
 
         static ReflectionResult calculateReflection(float damage, float availableCP,
-                                                    float calculationIntensity, int milestone,
-                                                    boolean devMode) {
-            return calculateReflection(damage, availableCP, calculationIntensity, milestone, 0.0f, devMode);
+                                                     float calculationIntensity, int milestone,
+                                                     boolean devMode) {
+            return calculateReflection(
+                    damage, availableCP, Float.MAX_VALUE,
+                    calculationIntensity, milestone, 0.0f, devMode);
         }
 
         public static boolean isVectorDefenseActive(ServerPlayer player) {
@@ -449,12 +454,13 @@ public class VectorReflection extends Skill {
             return isActive(player) || VectorDeviation.Server.usesClassPointerProtection(player);
         }
 
-        static ReflectionResult calculateReflection(float damage, float availableCP,
-                                                    float calculationIntensity, int milestone,
-                                                    float freeDamageThreshold, boolean devMode) {
+        static ReflectionResult calculateReflection(float damage, float availableCP, float maximumCP,
+                                                     float calculationIntensity, int milestone,
+                                                     float freeDamageThreshold, boolean devMode) {
             var result = VectorDefenseProficiency.calculate(
                     damage,
                     availableCP,
+                    maximumCP,
                     calculationIntensity,
                     milestone,
                     freeDamageThreshold,
@@ -526,10 +532,14 @@ public class VectorReflection extends Skill {
                 return true;
             }
             var projectileCost = projectileReflectionCost(speed);
+            var budgetedCost = VectorProjectileCpBudget.limitBaseCost(player, projectileCost);
             var executed = Skills.VECTOR_REFLECTION.get().executeContinuous(
                     player,
-                    _ -> projectileCost,
-                    (_, _) -> redirect.run(),
+                    _ -> budgetedCost,
+                    (_, actualCost) -> {
+                        VectorProjectileCpBudget.record(player, actualCost);
+                        redirect.run();
+                    },
                     true
             );
             if (executed) deactivateAfterVectorChargeIfNeeded(player);

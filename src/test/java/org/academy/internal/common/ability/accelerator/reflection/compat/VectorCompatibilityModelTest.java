@@ -126,12 +126,15 @@ class VectorCompatibilityModelTest {
     }
 
     @Test
-    void anomalousDamageThresholdIsStrictAndFinite() {
+    void onlyInvalidDamageValuesAreAnomalous() {
         assertFalse(VectorIncomingDamageCoordinator.isAnomalousDamage(100_000.0f));
-        assertTrue(VectorIncomingDamageCoordinator.isAnomalousDamage(100_000.01f));
-        assertTrue(VectorIncomingDamageCoordinator.isAnomalousDamage(Float.MAX_VALUE));
-        assertFalse(VectorIncomingDamageCoordinator.isAnomalousDamage(Float.POSITIVE_INFINITY));
-        assertFalse(VectorIncomingDamageCoordinator.isAnomalousDamage(Float.NaN));
+        assertFalse(VectorIncomingDamageCoordinator.isAnomalousDamage(100_000.01f));
+        assertFalse(VectorIncomingDamageCoordinator.isAnomalousDamage(Float.MAX_VALUE));
+        assertFalse(VectorIncomingDamageCoordinator.isAnomalousDamage(0.0f));
+        assertTrue(VectorIncomingDamageCoordinator.isAnomalousDamage(-1.0f));
+        assertTrue(VectorIncomingDamageCoordinator.isAnomalousDamage(Float.POSITIVE_INFINITY));
+        assertTrue(VectorIncomingDamageCoordinator.isAnomalousDamage(Float.NEGATIVE_INFINITY));
+        assertTrue(VectorIncomingDamageCoordinator.isAnomalousDamage(Float.NaN));
     }
 
     @Test

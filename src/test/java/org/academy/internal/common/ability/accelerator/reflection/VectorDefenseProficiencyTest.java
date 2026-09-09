@@ -16,7 +16,8 @@ class VectorDefenseProficiencyTest {
 
     @Test
     void insufficientCpOnlyProcessesAffordableDamage() {
-        var result = VectorDefenseProficiency.calculate(10.0f, 9.0f, 1.5f, 0, 10.0f, false);
+        var result = VectorDefenseProficiency.calculate(
+                10.0f, 9.0f, 1_000.0f, 1.5f, 0, 10.0f, false);
 
         assertEquals(3.0f, result.processedDamage(), 1.0E-6f);
         assertEquals(7.0f, result.remainingDamage(), 1.0E-6f);
@@ -25,7 +26,8 @@ class VectorDefenseProficiencyTest {
 
     @Test
     void debugModeProcessesFiniteDamageWithoutCost() {
-        var result = VectorDefenseProficiency.calculate(10.0f, 0.0f, 3.0f, 0, 10.0f, true);
+        var result = VectorDefenseProficiency.calculate(
+                10.0f, 0.0f, 1_000.0f, 3.0f, 0, 10.0f, true);
 
         assertTrue(result.isFull());
         assertEquals(10.0f, result.processedDamage(), 1.0E-6f);
@@ -34,7 +36,8 @@ class VectorDefenseProficiencyTest {
 
     @Test
     void fullMasteryProcessesDamageBelowOnePercentMaximumCpWithoutCost() {
-        var result = VectorDefenseProficiency.calculate(9.99f, 0.0f, 1.0f, 3, 10.0f, false);
+        var result = VectorDefenseProficiency.calculate(
+                9.99f, 0.0f, 1_000.0f, 1.0f, 3, 10.0f, false);
 
         assertTrue(result.isFull());
         assertEquals(9.99f, result.processedDamage(), 1.0E-6f);
@@ -43,7 +46,8 @@ class VectorDefenseProficiencyTest {
 
     @Test
     void damageAtTheThresholdStillCostsCp() {
-        var result = VectorDefenseProficiency.calculate(10.0f, 100.0f, 1.0f, 3, 10.0f, false);
+        var result = VectorDefenseProficiency.calculate(
+                10.0f, 100.0f, 1_000.0f, 1.0f, 3, 10.0f, false);
 
         assertTrue(result.isFull());
         assertEquals(5.0f, result.baseCpCost(), 1.0E-6f);
@@ -52,18 +56,49 @@ class VectorDefenseProficiencyTest {
     @Test
     void invalidNumbersNeverProduceFreeProtection() {
         assertEquals(0.0f, VectorDefenseProficiency
-                .calculate(Float.POSITIVE_INFINITY, 100.0f, 1.0f, 3, 10.0f, false)
+                .calculate(Float.POSITIVE_INFINITY, 100.0f, 1_000.0f, 1.0f, 3, 10.0f, false)
                 .processedDamage());
         assertEquals(0.0f, VectorDefenseProficiency
-                .calculate(10.0f, Float.NaN, 1.0f, 3, 10.0f, false)
+                .calculate(10.0f, Float.NaN, 1_000.0f, 1.0f, 3, 10.0f, false)
                 .processedDamage());
         assertEquals(0.0f, VectorDefenseProficiency
-                .calculate(10.0f, 100.0f, 0.0f, 3, 10.0f, false)
+                .calculate(10.0f, 100.0f, 1_000.0f, 0.0f, 3, 10.0f, false)
                 .processedDamage());
     }
 
+    @Test
+    void singleAttackActualCostIsCappedAtQuarterMaximumCp() {
+        var result = VectorDefenseProficiency.calculate(
+                100_000.0f, 1_000.0f, 1_000.0f, 1.0f, 1, 0.0f, false);
+
+        assertTrue(result.isFull());
+        assertEquals(100_000.0f, result.processedDamage(), 1.0E-3f);
+        assertEquals(250.0f, result.baseCpCost(), 1.0E-6f);
+    }
+
+    @Test
+    void cappedAttackLetsDamageThroughInProportionToMissingCp() {
+        var result = VectorDefenseProficiency.calculate(
+                100_000.0f, 249.0f, 1_000.0f, 1.0f, 1, 0.0f, false);
+
+        assertEquals(99_600.0f, result.processedDamage(), 1.0E-3f);
+        assertEquals(400.0f, result.remainingDamage(), 1.0E-3f);
+        assertEquals(249.0f, result.baseCpCost(), 1.0E-6f);
+    }
+
+    @Test
+    void maximumFiniteDamageStillUsesTheCappedNormalCalculation() {
+        var result = VectorDefenseProficiency.calculate(
+                Float.MAX_VALUE, 1_000.0f, 1_000.0f, 1.0f, 1, 0.0f, false);
+
+        assertTrue(result.isFull());
+        assertEquals(Float.MAX_VALUE, result.processedDamage());
+        assertEquals(250.0f, result.baseCpCost(), 1.0E-6f);
+    }
+
     private static void assertCost(int milestone, float expectedCost) {
-        var result = VectorDefenseProficiency.calculate(10.0f, 100.0f, 1.0f, milestone, 0.0f, false);
+        var result = VectorDefenseProficiency.calculate(
+                10.0f, 100.0f, 1_000.0f, 1.0f, milestone, 0.0f, false);
         assertTrue(result.isFull());
         assertEquals(expectedCost, result.baseCpCost(), 1.0E-6f);
     }
