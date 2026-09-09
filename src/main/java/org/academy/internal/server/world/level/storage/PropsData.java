@@ -27,6 +27,8 @@ public final class PropsData {
     private int milestoneMask;
     @SerializedName("started")
     private boolean started;
+    @SerializedName("perceptionExperienceRemainder")
+    private int perceptionExperienceRemainder;
 
     public int getVersion() {
         return version;
@@ -65,6 +67,7 @@ public final class PropsData {
             }
         }
         enforceTotalLimit();
+        perceptionExperienceRemainder = 0;
         version = CURRENT_VERSION;
     }
 
@@ -75,6 +78,7 @@ public final class PropsData {
         visitedStructures = new HashSet<>();
         milestoneMask = 0;
         started = false;
+        perceptionExperienceRemainder = 0;
     }
 
     public double total() {
@@ -97,6 +101,14 @@ public final class PropsData {
         return lockedMask & VALID_LOCK_MASK;
     }
 
+    public int getPerceptionExperienceRemainder() {
+        return Math.clamp(perceptionExperienceRemainder, 0, 9);
+    }
+
+    public void setPerceptionExperienceRemainder(int remainder) {
+        perceptionExperienceRemainder = Math.clamp(remainder, 0, 9);
+    }
+
     public boolean visitStructure(String key) {
         ensureContainers();
         return visitedStructures.add(key);
@@ -112,6 +124,7 @@ public final class PropsData {
         var beforeVersion = version;
         var beforeMask = lockedMask;
         var beforeMilestones = milestoneMask;
+        var beforePerceptionExperienceRemainder = perceptionExperienceRemainder;
         var beforeValues = values == null ? null : values.clone();
         var missingStructures = visitedStructures == null;
 
@@ -122,11 +135,13 @@ public final class PropsData {
         enforceTotalLimit();
         lockedMask &= VALID_LOCK_MASK;
         milestoneMask = Math.max(0, milestoneMask);
+        setPerceptionExperienceRemainder(perceptionExperienceRemainder);
         if (version > CURRENT_VERSION) version = CURRENT_VERSION;
 
         return beforeVersion != version
                 || beforeMask != lockedMask
                 || beforeMilestones != milestoneMask
+                || beforePerceptionExperienceRemainder != perceptionExperienceRemainder
                 || missingStructures
                 || beforeValues == null
                 || !Arrays.equals(beforeValues, values);

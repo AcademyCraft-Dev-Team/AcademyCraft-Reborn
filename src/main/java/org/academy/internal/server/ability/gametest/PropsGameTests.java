@@ -151,11 +151,17 @@ public final class PropsGameTests {
         close(helper, data.total(), 0.0, "Direct XP is not an orb pickup");
         for (var value : new int[]{1, 17, 2477}) {
             var before = data.total();
+            var accumulatedExperience = data.getPerceptionExperienceRemainder() + value;
+            var expectedReward = accumulatedExperience / 10 * 0.1;
+            var expectedRemainder = accumulatedExperience % 10;
             player.takeXpDelay = 0;
             var orb = new ExperienceOrb(helper.getLevel(), 0.0, 5.0, 0.0, value);
             orb.playerTouch(player);
-            close(helper, data.total() - before, PropsMath.awardedAmount(before, 0.1, false),
-                    "Every orb has the same base reward");
+            close(helper, data.total() - before,
+                    PropsMath.awardedAmount(before, expectedReward, false),
+                    "Experience value determines the perception reward");
+            helper.assertTrue(data.getPerceptionExperienceRemainder() == expectedRemainder,
+                    "Sub-ten experience remainder is preserved");
             helper.assertTrue(orb.isRemoved(), "Successful pickup consumes the orb");
         }
     }
