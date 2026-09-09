@@ -51,7 +51,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 
 public class ThunderLance extends Skill {
-    static final float QUICK_BASE_DAMAGE = 16.0f;
+    static final float QUICK_BASE_DAMAGE = 20.0f;
     static final float QUICK_RANGE = 32.0f;
     static final float QUICK_RADIUS = 2.0f;
     static final float QUICK_CP_COST = 20.0f;

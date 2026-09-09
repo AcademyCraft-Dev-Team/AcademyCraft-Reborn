@@ -60,7 +60,7 @@
 
 | 技能 | 状态 | 等级 / IF / 消耗 | 实现与当前效果 | 默认按键 | 直接前置 | 实现类 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `arc_generate` 电弧生成 | 现行 | L1 / 5k / 10 | 10 格短射线造成 `4AD`，路径半径 0.125。 | `Alt+G↓` | 无 | `ArcGenerate` |
+| `arc_generate` 电弧生成 | 现行 | L1 / 5k / 10 | 10 格短射线造成 `8AD`，路径半径 0.125。 | `Alt+G↓` | 无 | `ArcGenerate` |
 | `electrical_contact` 接触电击 | 现行 | L1 / 0 / 维持 10 | 每 20 tick 电击半径 2 内敌人，并反击近战攻击者；每次 `2AD`。 | `H↓` | `academy:arc_generate` | `ElectricalContact` |
 | `current_recharge` 电流充能 | 现行 | L3 / 30k / 每 20 tick 30 | 按住为 5 格内方块、生物与装备充能；仅有效充能时收费。 | `H↓ / H↑` | `academy:magnet_manipulation` | `CurrentRecharge` |
 | `lightning_nova` 闪电新星 | 现行 | L2 / 10k / 15 | 扩张电环持续 200 tick、最大半径 16，波前每次造成 `4AD`。 | `Ctrl+N↓` | `academy:thunder_lance` | `LightningNova` |
@@ -71,7 +71,7 @@
 | `bioelectric_operation` 生物电操作 | 现行 | L4 / 60k / 维持 40；满熟练度低血量时每 20 tick 5 | 提供移速 +0.1、台阶 +0.4、移动效率 +1、跳跃 +0.58、攻速 +2.4、挖掘速度 +0.5、安全坠落 +10；攻击伤害属性 `+4A`。 | `Alt+N↑` | `academy:electrical_contact` | `BioelectricOperation` |
 | `electromagnetic_shield` 电磁护盾 | 现行 | L4 / 60k / 维持 40；每次冷却 20 | 容量 `100A`，先吸收来伤；每 20 tick 可清除 `10A` 负荷。 | `Alt+K↑` | `academy:magnet_manipulation` | `ElectromagneticShield` |
 | `iron_sand_arsenal` 铁砂操作 | 现行 | L4 / 60k / 维持 40 | 半径 2 近身脉冲 `4AD`；主手挥动向前 120°、半径 12 横扫并造成 `10AD`。 | `Alt+Shift+I↓ / Alt+Shift+G↓` | `academy:magnetic_weapon` | `IronSandArsenal` |
-| `thunder_lance` 雷击之枪 | 现行 | L2 / 10k / 20 | 向 32 格路径发射四道闪电，路径半径 2，伤害 `16AD`。 | `Ctrl+T↓ / Alt+鼠标右键↑` | `academy:arc_generate` | `ThunderLance` |
+| `thunder_lance` 雷击之枪 | 现行 | L2 / 10k / 20 | 向 32 格路径发射四道闪电，路径半径 2，伤害 `20AD`。 | `Ctrl+T↓ / Alt+鼠标右键↑` | `academy:arc_generate` | `ThunderLance` |
 | `lightning_storm` 闪电风暴 | 现行 | L5 / 60k / 80 | 50 格选点，在半径 8 内召唤 21 次雷击；每次技能伤害 `2%Hmax+8AD`。 | `Alt+Shift+L↓` | `academy:ball_lightning` | `LightningStorm` |
 | `railgun` 电磁炮 | 现行 | L4 / 60k / 100 + 1 个弹药 | 蓄力并消耗弹药；基础伤害 `150AD×弹药倍率`。硬币/铁锭/铁块/铁砧倍率为 0.8/1/1.5/2，射程与宽度也随弹药增加。 | `X↓` | `academy:thunder_lance` | `Railgun` |
 | `ball_lightning` 球状闪电 | 现行 | L5 / 100k / 80 | 最长存在 2000 tick、索敌半径 64；接近目标后在半径 5 造成 `5%Hmax+135AD`。 | `Y↓` | `academy:lightning_nova` | `BallLightning` |
