@@ -75,9 +75,8 @@ public final class DarkmatterShaping extends Skill {
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_U,
                         InputConstants.PRESS, 0, true)
         );
-        // Older saves kept this one-shot skill disabled while a container screen was open,
-        // which made the inventory-slot material action unreachable. Preserve the selected
-        // physical key while migrating the action and screen policy required by this skill.
+        // Keep the key available while a container screen is open so the inventory-slot
+        // material action remains reachable. The handler below rejects every other screen use.
         configured = new InputSystem.KeyCombination(
                 configured.type(), configured.keys(), InputConstants.PRESS,
                 configured.modifiers(), true, configured.unbound());
@@ -111,18 +110,18 @@ public final class DarkmatterShaping extends Skill {
             var minecraft = Minecraft.getInstance();
             var current = minecraft.gui.screen();
             if (current instanceof DarkmatterShapingScreen) return;
-            if (current instanceof AbstractContainerScreen<?> screen
-                    && (screen instanceof InventoryScreen
-                    || screen instanceof CreativeModeInventoryScreen)
-                    && minecraft.player != null) {
-                var slot = ((AbstractContainerScreenAccessor) screen).academy$getHoveredSlot();
-                if (slot != null && slot.getItem().isEmpty() && slot.mayPlace(
-                        new ItemStack(Items.DARKMATTER.get()))) {
-                    MisakaNetworkClient.send(CastPacket.material(slot.getContainerSlot()));
-                    return;
-                }
+            if (current == null) {
+                minecraft.gui.setScreen(new DarkmatterShapingScreen());
+                return;
             }
-            minecraft.gui.setScreen(new DarkmatterShapingScreen());
+            if (!(current instanceof AbstractContainerScreen<?> screen)
+                    || !(screen instanceof InventoryScreen
+                    || screen instanceof CreativeModeInventoryScreen)
+                    || minecraft.player == null) return;
+            var slot = ((AbstractContainerScreenAccessor) screen).academy$getHoveredSlot();
+            if (slot == null || !slot.getItem().isEmpty() || !slot.mayPlace(
+                    new ItemStack(Items.DARKMATTER.get()))) return;
+            MisakaNetworkClient.send(CastPacket.material(slot.getContainerSlot()));
         }
 
         public static void shape(DarkmatterShape shape, int alphaPercent,
@@ -308,6 +307,7 @@ public final class DarkmatterShaping extends Skill {
         private static Result createMaterialResult(ServerPlayer player, int slotIndex) {
             var skill = Skills.DARKMATTER_SHAPING.get();
             if (!skill.isEnabled(player)) return Result.UNAVAILABLE;
+            if (player.containerMenu != player.inventoryMenu) return Result.INVALID_SLOT;
             var inventory = player.getInventory();
             if (!isMaterialInventorySlot(slotIndex)
                     || !inventory.getItem(slotIndex).isEmpty()) return Result.INVALID_SLOT;

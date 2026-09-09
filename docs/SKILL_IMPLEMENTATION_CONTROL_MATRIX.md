@@ -115,7 +115,7 @@
 
 | 技能 | 状态 | 等级 / IF / 消耗 | 实现与当前效果 | 默认按键 | 直接前置 | 实现类 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `darkmatter_shaping` 未元物质塑型 | 现行 | L1 / 5k / 空手 50；持物且熟练度≥2000 为 25；自动修复按修复比例计费 | 空手生成未元物质；持物时修复并切换强化。满熟练度每秒可自动修复最多 15% 耐久。 | `U↑` | 无 | `DarkmatterShaping` |
+| `darkmatter_shaping` 未元物质塑型 | 现行 | L1 / 5k / 材料 1 MP；装备塑形按形制与词条计费 | 正常游戏中打开塑形编辑器；物品栏内指向可放置的空槽位时生成材料，其他界面操作无效。 | `U↑` | 无 | `DarkmatterShaping` |
 | `darkmatter_disassemble` 未元物质分解 | 现行 | L1 / 5k / 10 | 32 格射线对实体造成 `8AD` 或分解方块；六翼启用时对目标周围半径 3 同样生效。 | `Alt+鼠标左键↑` | `academy:darkmatter_shaping` | `DarkmatterDisassemble` |
 | `darkmatter_cut` 未元物质切割 | 现行 | L2 / 10k / 20 | 前方约 120° 锥形斩击：普通半径 8、`12AD`；六翼半径 24、`16AD`。满熟练度命中后延迟 6 tick 追加 50% 伤害。 | `R↑` | `academy:darkmatter_disassemble` | `DarkmatterCut` |
 | `darkmatter_radiation` 未元物质照射 | 现行 | L3 / 30k / 每 2 tick 10 | 持续照射前方半球 32 格；每 tick 造成 `2AD + max(2,0.1%Hmax)A`。 | `C↓ / C↑` | `academy:darkmatter_cut` | `DarkmatterRadiation` |
