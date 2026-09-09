@@ -326,6 +326,7 @@ public final class VectorExternalInterceptionService {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         VectorInterceptionTickets.clear(player);
         VectorContinuousInterceptionLeases.clear(player);
+        VectorProjectileCpBudget.clear(player);
         VectorAttackAttributionResolver.clear(player);
         VectorCompatibilityEffectLimiter.clear(player);
         VectorDefenseFeedbackTickets.clear(player);

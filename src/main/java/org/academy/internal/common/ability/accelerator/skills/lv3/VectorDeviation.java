@@ -428,15 +428,13 @@ public class VectorDeviation extends Skill {
             var result = VectorDefenseProficiency.calculate(
                     incomingDamage,
                     system.getPlayerAvailableCP(player.getUUID()),
+                    system.getPlayerMaxCP(player.getUUID()),
                     system.getPlayerCalculationIntensity(player.getUUID()),
                     VectorDefenseProficiency.effectiveMilestone(player, skill),
                     system.getPlayerMaxCP(player.getUUID()) * 0.01f,
                     system.isPlayerSkillDebugMode(player.getUUID())
             );
             if (!(result.processedDamage() > 0.0f)) {
-                return VectorIncomingDamageResult.passThrough(incomingDamage);
-            }
-            if (!fullProtection && !result.isFull()) {
                 return VectorIncomingDamageResult.passThrough(incomingDamage);
             }
             var attribution = VectorAttackAttributionResolver.resolve(player, source);
@@ -534,6 +532,7 @@ public class VectorDeviation extends Skill {
             var result = VectorDefenseProficiency.calculate(
                     incomingDamage,
                     system.getPlayerAvailableCP(player.getUUID()),
+                    system.getPlayerMaxCP(player.getUUID()),
                     system.getPlayerCalculationIntensity(player.getUUID()),
                     VectorDefenseProficiency.effectiveMilestone(player, skill),
                     system.getPlayerMaxCP(player.getUUID()) * 0.01f,
@@ -603,7 +602,10 @@ public class VectorDeviation extends Skill {
             var previousOwner = projectile.getOwner();
 
             var skill = Skills.VECTOR_DEVIATION.get();
-            var executed = skill.executeContinuous(player, _ -> Math.max(1.0f, (float) speed), (_, _) -> {
+            var budgetedCost = VectorProjectileCpBudget.limitBaseCost(
+                    player, Math.max(1.0f, (float) speed));
+            var executed = skill.executeContinuous(player, _ -> budgetedCost, (_, actualCost) -> {
+                VectorProjectileCpBudget.record(player, actualCost);
                 VectorProjectileRedirects.mark(projectile, player, VectorRedirectKind.REFRACTION);
                 projectile.setOwner(player);
                 var pushDistance = Math.max(player.getBbWidth(), 0.75) + 0.5;

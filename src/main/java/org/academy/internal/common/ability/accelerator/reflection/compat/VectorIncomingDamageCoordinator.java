@@ -7,8 +7,6 @@ import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflecti
 import org.academy.internal.common.world.damagesource.VectorRedirectedDamageSourceInfo;
 
 public final class VectorIncomingDamageCoordinator {
-    public static final float ANOMALOUS_DAMAGE_THRESHOLD = 100_000.0f;
-
     private VectorIncomingDamageCoordinator() {
     }
 
@@ -26,19 +24,21 @@ public final class VectorIncomingDamageCoordinator {
             DamageSource source,
             float damage
     ) {
-        if (defender == null || source == null || !(damage > 0.0f) || !Float.isFinite(damage)) {
+        if (defender == null || source == null) {
             return VectorIncomingDamageResult.passThrough(damage);
         }
         if (VectorRedirectedDamageSourceInfo.isRedirected(source)) {
             return VectorIncomingDamageResult.passThrough(damage);
         }
+        if (isAnomalousDamage(damage)) {
+            return VectorReflection.Server.reflectAnomalousDamage(defender, source, damage)
+                    ? VectorIncomingDamageResult.fullRedirect()
+                    : VectorIncomingDamageResult.passThrough(damage);
+        }
+        if (!(damage > 0.0f)) return VectorIncomingDamageResult.passThrough(damage);
         if (!VectorReflection.Server.isActive(defender)) {
             VectorReflection.Server.deactivateUnavailableProtection(defender);
             return VectorIncomingDamageResult.passThrough(damage);
-        }
-        if (isAnomalousDamage(damage)
-                && VectorReflection.Server.reflectAnomalousDamage(defender, source, damage)) {
-            return VectorIncomingDamageResult.fullRedirect();
         }
         if (!VectorReflection.Server.shouldReflection(defender, source)) {
             return VectorIncomingDamageResult.passThrough(damage);
@@ -60,16 +60,17 @@ public final class VectorIncomingDamageCoordinator {
             DamageSource source,
             float damage
     ) {
-        if (defender == null || source == null || !(damage > 0.0f) || !Float.isFinite(damage)) {
+        if (defender == null || source == null) {
             return VectorIncomingDamageResult.passThrough(damage);
         }
+        if (isAnomalousDamage(damage)) {
+            return VectorDeviation.Server.absorbAnomalousDamage(defender, source, damage)
+                    ? VectorIncomingDamageResult.fullRedirect()
+                    : VectorIncomingDamageResult.passThrough(damage);
+        }
+        if (!(damage > 0.0f)) return VectorIncomingDamageResult.passThrough(damage);
         if (!VectorDeviation.Server.canRefractSource(defender, source)) {
             return VectorIncomingDamageResult.passThrough(damage);
-        }
-        if (isAnomalousDamage(damage)
-                && VectorDeviation.Server.isActive(defender)
-                && VectorDeviation.Server.absorbAnomalousDamage(defender, source, damage)) {
-            return VectorIncomingDamageResult.fullRedirect();
         }
         if (!VectorDeviation.Server.isActive(defender)) {
             return VectorIncomingDamageResult.passThrough(damage);
@@ -82,6 +83,6 @@ public final class VectorIncomingDamageCoordinator {
     }
 
     public static boolean isAnomalousDamage(float damage) {
-        return Float.isFinite(damage) && damage > ANOMALOUS_DAMAGE_THRESHOLD;
+        return damage < 0.0f || !Float.isFinite(damage);
     }
 }
