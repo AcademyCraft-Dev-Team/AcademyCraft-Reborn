@@ -20,8 +20,8 @@ class ThunderLanceTest {
 
     @Test
     void quickModeUsesReferenceDamageAndCurrentMultipliers() {
-        assertEquals(16.0f, ThunderLance.calculateQuickDamage(1.0f, 1.0f));
-        assertEquals(36.0f, ThunderLance.calculateQuickDamage(1.5f, 1.5f));
+        assertEquals(20.0f, ThunderLance.calculateQuickDamage(1.0f, 1.0f));
+        assertEquals(45.0f, ThunderLance.calculateQuickDamage(1.5f, 1.5f));
         assertEquals(0.0f, ThunderLance.calculateQuickDamage(-1.0f, 1.0f));
     }
 
