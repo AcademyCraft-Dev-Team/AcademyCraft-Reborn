@@ -139,3 +139,7 @@ node_modules/
 /output/
 /asset_backups/
 /.codegraph
+
+# Local ability skill effect manual
+/docs/AcademyCraft_Reborn_能力技能效果手册.docx
+/docs/~$ademyCraft_Reborn_能力技能效果手册.docx
