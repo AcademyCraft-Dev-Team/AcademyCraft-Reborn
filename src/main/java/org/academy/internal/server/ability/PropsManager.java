@@ -292,7 +292,21 @@ public final class PropsManager implements AbilitySubsystem {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public void onExperiencePickup(PlayerXpEvent.PickupXp event) {
         if (!(event.getEntity() instanceof ServerPlayer player) || event.isCanceled()) return;
-        award(player, AbilityFactor.PERCEPTION, 0.1, false);
+        var storedPlayer = playerDataManager.getData(player.getUUID());
+        if (storedPlayer == null) return;
+        var data = storedPlayer.getPropsData();
+        if (!data.isStarted() || data.isLocked(AbilityFactor.PERCEPTION)) return;
+
+        var previousRemainder = data.getPerceptionExperienceRemainder();
+        var progress = PropsAcquisition.experienceProgress(
+                previousRemainder, event.getOrb().getValue());
+        if (progress.remainingExperience() != previousRemainder) {
+            data.setPerceptionExperienceRemainder(progress.remainingExperience());
+            storedPlayer.markDirty();
+        }
+        if (progress.rewardBatches() > 0) {
+            award(player, AbilityFactor.PERCEPTION, progress.perceptionReward(), false);
+        }
     }
 
     @SubscribeEvent

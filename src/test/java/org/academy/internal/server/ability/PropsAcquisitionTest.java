@@ -14,6 +14,24 @@ class PropsAcquisitionTest {
     }
 
     @Test
+    void experienceRewardsUsePickedUpValueAndCarrySubTenRemainders() {
+        var first = PropsAcquisition.experienceProgress(0, 1);
+        assertEquals(0, first.rewardBatches());
+        assertEquals(1, first.remainingExperience());
+        assertEquals(0.0, first.perceptionReward());
+
+        var completed = PropsAcquisition.experienceProgress(first.remainingExperience(), 9);
+        assertEquals(1, completed.rewardBatches());
+        assertEquals(0, completed.remainingExperience());
+        assertEquals(0.1, completed.perceptionReward(), 1.0E-12);
+
+        var large = PropsAcquisition.experienceProgress(8, 2_477);
+        assertEquals(248, large.rewardBatches());
+        assertEquals(5, large.remainingExperience());
+        assertEquals(24.8, large.perceptionReward(), 1.0E-12);
+    }
+
+    @Test
     void healthLossCannotExceedHealthBeforeTheHit() {
         assertEquals(3.5, PropsAcquisition.healthLost(12.0, 3.5));
         assertEquals(2.0, PropsAcquisition.healthLost(2.0, 30.0));
