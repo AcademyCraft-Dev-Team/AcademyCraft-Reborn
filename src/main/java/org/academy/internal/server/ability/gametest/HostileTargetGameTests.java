@@ -33,6 +33,7 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeaponAttackContext;
 import org.academy.internal.common.attachment.AttachmentTypes;
+import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
 
 import java.util.List;
@@ -50,7 +51,9 @@ public final class HostileTargetGameTests {
 
     @SubscribeEvent
     private static void registerTests(RegisterGameTestsEvent event) {
-        for (var scenario : List.of("routes", "selectors", "automatic", "expiry", "protection", "cleanup")) {
+        for (var scenario : List.of(
+                "routes", "selectors", "automatic", "expiry", "protection", "cta_friendly_fire", "cleanup"
+        )) {
             var environment = event.registerEnvironment(AcademyCraft.academy("hostile_target/" + scenario),
                     new TestEnvironmentDefinition.AllOf(List.of()));
             event.registerTest(AcademyCraft.academy("hostile_target_" + scenario), new Instance(new TestData<>(
@@ -241,6 +244,29 @@ public final class HostileTargetGameTests {
         }
     }
 
+    private static void ctaFriendlyFire(GameTestHelper helper, ServerPlayer attacker, ServerPlayer other) {
+        var pet = helper.spawn(EntityTypes.WOLF, 5, 3, 5);
+        pet.tame(attacker);
+        pet.setNoAi(true);
+        pet.setNoGravity(true);
+        check(helper, CtaFriendlyFireWhitelist.shouldProtect(attacker, pet),
+                "A calm tamed entity must retain CTA friendly-fire protection");
+
+        pet.setTarget(other);
+        check(helper, !CtaFriendlyFireWhitelist.shouldProtect(attacker, pet),
+                "Hostility toward any player must disable CTA friendly-fire protection");
+
+        pet.setTarget(null);
+        pet.setLastHurtMob(other);
+        check(helper, !CtaFriendlyFireWhitelist.shouldProtect(attacker, pet),
+                "A tamed entity that recently attacked a player must remain damageable");
+
+        pet.setLastHurtMob(null);
+        check(helper, CtaFriendlyFireWhitelist.shouldProtect(attacker, pet),
+                "CTA friendly-fire protection must return after player hostility clears");
+        pet.discard();
+    }
+
     private static void cleanup(GameTestHelper helper, ServerPlayer attacker, ServerPlayer other) {
         var target = pig(helper);
         HostileTargets.mark(attacker, target);
@@ -287,6 +313,7 @@ public final class HostileTargetGameTests {
                     case "selectors" -> selectors(helper, attacker, other);
                     case "automatic" -> automatic(helper, attacker, other);
                     case "protection" -> protection(helper, attacker, other);
+                    case "cta_friendly_fire" -> ctaFriendlyFire(helper, attacker, other);
                     case "cleanup" -> cleanup(helper, attacker, other);
                     default -> throw new IllegalArgumentException(scenario);
                 }

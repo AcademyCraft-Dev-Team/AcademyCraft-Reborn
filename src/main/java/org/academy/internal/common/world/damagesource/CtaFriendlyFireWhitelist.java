@@ -5,6 +5,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.List;
@@ -13,6 +14,7 @@ import java.util.Objects;
 public final class CtaFriendlyFireWhitelist {
     private static final String CONFIG_KEY = "ctaFriendlyFireWhitelist";
     private static final String TAG_PREFIX = "tag:";
+    private static final int RECENT_PLAYER_HOSTILITY_TICKS = 100;
     private static final List<String> DEFAULT = List.of("tamed", "touhou_little_maid:maid");
 
     private CtaFriendlyFireWhitelist() {
@@ -20,6 +22,7 @@ public final class CtaFriendlyFireWhitelist {
 
     public static boolean shouldProtect(Player attacker, LivingEntity target) {
         if (attacker == null || target == null) return false;
+        if (isHostileTowardPlayer(target)) return false;
         if (FriendlyFireSetting.shouldPrevent(attacker, target)) return true;
         for (var entry : getList(attacker)) {
             if (!matchesEntry(target, entry)) continue;
@@ -27,6 +30,13 @@ public final class CtaFriendlyFireWhitelist {
             if (ownerId != null && ownerId.equals(attacker.getUUID())) return true;
         }
         return false;
+    }
+
+    private static boolean isHostileTowardPlayer(LivingEntity target) {
+        if (target instanceof Player) return false;
+        if (target instanceof Mob mob && mob.getTarget() instanceof Player) return true;
+        return target.getLastHurtMob() instanceof Player
+                && target.tickCount - target.getLastHurtMobTimestamp() <= RECENT_PLAYER_HOSTILITY_TICKS;
     }
 
     public static boolean isWhitelisted(Entity entity) {
