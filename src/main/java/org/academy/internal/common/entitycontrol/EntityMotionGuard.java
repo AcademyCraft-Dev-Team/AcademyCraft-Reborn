@@ -94,8 +94,9 @@ public final class EntityMotionGuard {
                 source == target,
                 false
         );
-        return !shouldProtect
-                || !tryProtectForcedMovement((ServerPlayer) target);
+        if (!shouldProtect) return true;
+        settleForcedMovementProtection((ServerPlayer) target);
+        return false;
     }
 
     public static boolean canManipulateEquipmentFrom(Entity source, LivingEntity target) {
@@ -108,7 +109,9 @@ public final class EntityMotionGuard {
                 protectedPlayer,
                 source == target
         );
-        return !shouldProtect || !tryProtectForcedMovement((ServerPlayer) target);
+        if (!shouldProtect) return true;
+        settleForcedMovementProtection((ServerPlayer) target);
+        return false;
     }
 
     public static boolean canBeImprisoned(LivingEntity entity) {
@@ -316,8 +319,9 @@ public final class EntityMotionGuard {
                 source == entity,
                 fallbackSelfSource
         );
-        return shouldProtect
-                && tryProtectForcedMovement((ServerPlayer) entity);
+        if (!shouldProtect) return false;
+        settleForcedMovementProtection((ServerPlayer) entity);
+        return true;
     }
 
     private static boolean hasForcedMovementProtection(Entity entity) {
@@ -335,6 +339,19 @@ public final class EntityMotionGuard {
             return VectorDeviation.Server.tryProtectForcedMovement(player);
         }
         return false;
+    }
+
+    private static void settleForcedMovementProtection(ServerPlayer player) {
+        // The external action was classified while protection was active, so this attempt must
+        // remain blocked even if its CP settlement is rejected. Disable failed protection to
+        // prevent later attempts from being stopped for free.
+        if (tryProtectForcedMovement(player)) return;
+        if (VectorReflection.Server.isActive(player)) {
+            VectorReflection.Server.forceDeactivate(player);
+        }
+        if (VectorDeviation.Server.isActive(player)) {
+            VectorDeviation.Server.forceDeactivate(player);
+        }
     }
 
     private static boolean ignoresImprisonment(LivingEntity entity) {
@@ -359,11 +376,18 @@ public final class EntityMotionGuard {
     }
 
     private static boolean isGuardInfrastructure(StackFrame frame) {
-        var owner = frame.getDeclaringClass();
+        return isGuardInfrastructure(frame.getDeclaringClass(), frame.getMethodName());
+    }
+
+    static boolean isGuardInfrastructure(Class<?> owner, String method) {
+        if (owner == null || method == null) return false;
         if (owner == EntityMotionGuard.class) return true;
         var name = owner.getName();
         if (name.startsWith("org.academy.mixin.")) return true;
-        return owner == Entity.class && GUARDED_ENTRY_METHODS.contains(frame.getMethodName());
+        // Mixin copies injected handlers into the target class, so StackWalker reports
+        // Entity/ServerPlayer rather than the original org.academy.mixin owner.
+        if (Entity.class.isAssignableFrom(owner) && method.startsWith("academy$guard")) return true;
+        return owner == Entity.class && GUARDED_ENTRY_METHODS.contains(method);
     }
 
     private static FrameDecision classifyPlayerFrame(
