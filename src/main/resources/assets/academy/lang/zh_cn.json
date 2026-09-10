@@ -587,6 +587,7 @@
   "message.academy.misaka_awakened": "御坂妹妹已觉醒",
   "message.academy.misaka_promax_ok": "知觉水平已突破",
   "message.academy.misaka_promax_used": "该御坂妹妹已使用过司令塔·Promax",
+  "message.academy.misaka_hot_spring": "和妹妹一起泡温泉，好感度+1",
   "message.academy.misaka_serial_pool_exhausted": "御坂编号池已耗尽，无法再生成御坂妹妹",
   "item.academy.magnetic_hook.tooltip.1": "右键发射且不会消耗；最多同时维持 3 个钩爪，第 4 次发射会收回最早的钩爪。",
   "item.academy.magnetic_hook.tooltip.2": "命中方块或实体后附着，可作为电击使「磁力操作」将自己拉近的目标。",

@@ -25,8 +25,22 @@ public final class MisakaRelayOrbits {
     /** Fraction of each orbit period where the sky model is drawn. */
     public static final float SKY_VISIBLE_FRACTION = 0.25f;
     public static final double SKY_VIEW_RANGE = 128.0;
+    /**
+     * Soft visual track budget for laser→orbit beams (blocks). Horizon lock is the real
+     * ground-stab safety; this is only an upper bound for length/AABB, not a sky cutoff.
+     */
+    public static final double MAX_BEAM_TRACK_RANGE = 512.0;
 
     private MisakaRelayOrbits() {
+    }
+
+    /**
+     * Horizon safety lock: if the satellite slot is at or below the laser base Y, the beam
+     * would aim into the ground — cut it immediately. Prefer this over distance clamps so
+     * low-elevation sky targets can still be tracked out to {@link #MAX_BEAM_TRACK_RANGE}.
+     */
+    public static boolean isAboveLaserHorizon(BlockPos laserBase, Vec3 targetWorld) {
+        return targetWorld != null && Double.isFinite(targetWorld.y) && targetWorld.y >= laserBase.getY();
     }
 
     public static int orbitHeightConfig(@Nullable MinecraftServer server) {

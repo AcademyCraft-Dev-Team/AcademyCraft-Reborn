@@ -63,7 +63,8 @@ public final class MisakaSisterRecord {
             boolean dailySleep,
             boolean dailySocial,
             boolean dailyFavoriteFavor,
-            boolean dailyCakeFavor
+            boolean dailyCakeFavor,
+            int lastHotSpringFavorDay
     ) {
         private static final Codec<DailyState> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 Codec.INT.fieldOf("last_daily_reset_day").orElse(-1).forGetter(DailyState::lastDailyResetDay),
@@ -71,7 +72,8 @@ public final class MisakaSisterRecord {
                 Codec.BOOL.fieldOf("daily_sleep").orElse(false).forGetter(DailyState::dailySleep),
                 Codec.BOOL.fieldOf("daily_social").orElse(false).forGetter(DailyState::dailySocial),
                 Codec.BOOL.fieldOf("daily_favorite_favor").orElse(false).forGetter(DailyState::dailyFavoriteFavor),
-                Codec.BOOL.fieldOf("daily_cake_favor").orElse(false).forGetter(DailyState::dailyCakeFavor)
+                Codec.BOOL.fieldOf("daily_cake_favor").orElse(false).forGetter(DailyState::dailyCakeFavor),
+                Codec.INT.fieldOf("last_hot_spring_favor_day").orElse(-1).forGetter(DailyState::lastHotSpringFavorDay)
         ).apply(instance, DailyState::new));
     }
 
@@ -119,6 +121,7 @@ public final class MisakaSisterRecord {
     public boolean dailySocial;
     public boolean dailyFavoriteFavor;
     public boolean dailyCakeFavor;
+    public int lastHotSpringFavorDay = -1;
     public final int rescuedDayIndex;
 
     public MisakaSisterRecord(UUID misakaUuid, int serial, MisakaPersonality personality, int rescuedDayIndex) {
@@ -169,6 +172,7 @@ public final class MisakaSisterRecord {
         record.dailySocial = daily.dailySocial();
         record.dailyFavoriteFavor = daily.dailyFavoriteFavor();
         record.dailyCakeFavor = daily.dailyCakeFavor();
+        record.lastHotSpringFavorDay = daily.lastHotSpringFavorDay();
         return record;
     }
 
@@ -197,7 +201,8 @@ public final class MisakaSisterRecord {
                 dailySleep,
                 dailySocial,
                 dailyFavoriteFavor,
-                dailyCakeFavor
+                dailyCakeFavor,
+                lastHotSpringFavorDay
         );
     }
 }

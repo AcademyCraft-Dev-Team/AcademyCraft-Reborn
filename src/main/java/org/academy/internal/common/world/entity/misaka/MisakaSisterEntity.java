@@ -90,6 +90,7 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
             MisakaSisterEntity.class, EntityDataSerializers.INT);
 
     private final SisterFoodData foodData = new SisterFoodData();
+    private final MisakaHotSpringSoak hotSpringSoak = new MisakaHotSpringSoak();
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
     @Nullable UUID misakaUuid;
     private @Nullable MisakaFollowGoal followGoal;
@@ -183,6 +184,7 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
             }
             foodData.tickFoodAndStarvation(this);
             MisakaSisterRosterSync.syncStarvingToRoster(this);
+            hotSpringSoak.tick(this);
         }
         MisakaSisterRosterSync.tickAwakeWindowSpotting(this);
         syncFoodLevel();

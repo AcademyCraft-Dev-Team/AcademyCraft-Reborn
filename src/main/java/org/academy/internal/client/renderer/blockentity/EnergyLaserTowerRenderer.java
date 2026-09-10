@@ -73,8 +73,12 @@ public final class EnergyLaserTowerRenderer
                     seed
             );
             var relative = slot.subtract(origin);
+            // Horizon lock: never aim the beam at a slot below the tower base (ground stab).
+            if (renderState.beamActive && !MisakaRelayOrbits.isAboveLaserHorizon(blockEntity.getBlockPos(), slot)) {
+                renderState.beamActive = false;
+            }
             if (renderState.beamActive) {
-                renderState.beamEndRelative = relative;
+                renderState.beamEndRelative = clampBeamEnd(relative);
             }
             renderState.orbitHyper = blockEntity.isOrbitHyper();
             renderState.skySatelliteRelative = relative;
@@ -118,6 +122,21 @@ public final class EnergyLaserTowerRenderer
         }
     }
 
+    /**
+     * Caps extreme lengths for mesh/AABB sanity; does not cut sky-low elevation targets
+     * (that is {@link MisakaRelayOrbits#isAboveLaserHorizon}).
+     */
+    private static Vec3 clampBeamEnd(Vec3 relativeEnd) {
+        var start = new Vec3(0.5, EnergyLaserTowerBlock.HEIGHT, 0.5);
+        var delta = relativeEnd.subtract(start);
+        double length = delta.length();
+        double max = MisakaRelayOrbits.MAX_BEAM_TRACK_RANGE;
+        if (!(length > max) || !Double.isFinite(length) || length <= 1.0e-6) {
+            return relativeEnd;
+        }
+        return start.add(delta.scale(max / length));
+    }
+
     private static void submitBeam(
             EnergyLaserTowerRenderState renderState,
             PoseStack poseStack,
@@ -125,6 +144,10 @@ public final class EnergyLaserTowerRenderer
     ) {
         var start = new Vec3(0.5, EnergyLaserTowerBlock.HEIGHT, 0.5);
         var end = renderState.beamEndRelative;
+        // Belt-and-suspenders: relative end Y below emitter ⇒ do not draw.
+        if (end.y < start.y) {
+            return;
+        }
         var delta = end.subtract(start);
         double length = delta.length();
         if (!(length > 0.05) || !Double.isFinite(length)) {
