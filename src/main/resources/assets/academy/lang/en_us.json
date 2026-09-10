@@ -587,6 +587,7 @@
   "message.academy.misaka_awakened": "Misaka sister awakened",
   "message.academy.misaka_promax_ok": "Perception limit broken",
   "message.academy.misaka_promax_used": "This sister has already used Commander Tower Promax",
+  "message.academy.misaka_hot_spring": "Soaked in a hot spring together: favor +1",
   "message.academy.misaka_serial_pool_exhausted": "Misaka serial pool exhausted; no more sisters can be created",
   "item.academy.magnetic_hook.tooltip.1": "Right-click to fire without consuming it. Up to 3 hooks can remain active; firing a fourth recalls the oldest.",
   "item.academy.magnetic_hook.tooltip.2": "Attaches to blocks or entities and can be targeted by Electromaster Magnetic Manipulation to pull you toward it.",

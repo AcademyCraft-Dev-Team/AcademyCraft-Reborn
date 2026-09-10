@@ -16,6 +16,7 @@ import org.academy.internal.common.world.entity.misaka.MobRelation;
 import org.academy.internal.common.world.entity.misaka.favor.rules.AnniversaryCakeRule;
 import org.academy.internal.common.world.entity.misaka.favor.rules.AttackedByPlayerRule;
 import org.academy.internal.common.world.entity.misaka.favor.rules.FeedFavoriteFoodRule;
+import org.academy.internal.common.world.entity.misaka.favor.rules.HotSpringSoakRule;
 import org.academy.internal.common.world.entity.misaka.favor.rules.KilledByPlayerRule;
 import org.academy.internal.server.misaka.MisakaComputeContribution;
 import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
@@ -30,7 +31,8 @@ public final class FavorRuleRegistry {
             new AttackedByPlayerRule(),
             new KilledByPlayerRule(),
             new FeedFavoriteFoodRule(),
-            new AnniversaryCakeRule()
+            new AnniversaryCakeRule(),
+            new HotSpringSoakRule()
     );
 
     private FavorRuleRegistry() {

@@ -92,6 +92,29 @@ public final class MisakaInteractionFeedback {
         play(sister, SoundEvents.ITEM_PICKUP, 0.6f, 1.2f);
     }
 
+    public static void hotSpringSteam(MisakaSisterEntity sister, ServerPlayer player) {
+        if (!(sister.level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        var point = MisakaHotSpring.steamPoint(sister);
+        serverLevel.sendParticles(ParticleTypes.CLOUD, point.x, point.y, point.z, 4, 0.25, 0.15, 0.25, 0.01);
+        serverLevel.sendParticles(ParticleTypes.WHITE_SMOKE, point.x, point.y, point.z, 2, 0.2, 0.12, 0.2, 0.005);
+        var playerPoint = MisakaHotSpring.steamPoint(player);
+        serverLevel.sendParticles(
+                ParticleTypes.CLOUD,
+                playerPoint.x, playerPoint.y, playerPoint.z,
+                2, 0.2, 0.1, 0.2, 0.01
+        );
+    }
+
+    public static void hotSpringComplete(MisakaSisterEntity sister, ServerPlayer player) {
+        lookAt(sister, player);
+        hearts(sister, 6);
+        hotSpringSteam(sister, player);
+        play(sister, SoundEvents.VILLAGER_YES, 0.85f, 1.1f);
+        actionBar(player, "message.academy.misaka_hot_spring");
+    }
+
     public static void pickupDenied(ServerPlayer player) {
         actionBar(player, "message.academy.misaka_pickup_denied");
     }

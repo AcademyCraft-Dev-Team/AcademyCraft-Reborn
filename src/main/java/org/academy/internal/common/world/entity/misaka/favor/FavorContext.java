@@ -26,7 +26,8 @@ public record FavorContext(
         ATTACKED_BY_PLAYER,
         KILLED_BY_PLAYER,
         FEED_FAVORITE_FOOD,
-        ANNIVERSARY_CAKE
+        ANNIVERSARY_CAKE,
+        HOT_SPRING
     }
 
     public static FavorContext attacked(MisakaSisterEntity sister, MisakaSisterRecord record, Player attacker, DamageSource source) {
@@ -82,6 +83,20 @@ public record FavorContext(
                 null,
                 null,
                 currentDay(feeder),
+                null
+        );
+    }
+
+    public static FavorContext hotSpring(MisakaSisterRecord record, UUID misakaUuid, ServerPlayer player) {
+        return new FavorContext(
+                Kind.HOT_SPRING,
+                record,
+                misakaUuid,
+                player.getGameProfile().name(),
+                player,
+                null,
+                null,
+                currentDay(player),
                 null
         );
     }
