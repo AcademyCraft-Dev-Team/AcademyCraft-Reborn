@@ -47,4 +47,43 @@ class ServerTeleportProgramRuntimeTest {
         assertFalse(ServerTeleportProgramRuntime.touchesBlockCell(
                 new AABB(4.2, 9.0001, 12.2, 4.8, 10.8, 12.8), cell));
     }
+
+    @Test
+    void blockItemTeleportBaseDamageUsesCpAndTargetHealthCaps() {
+        assertEquals(80.0f, ServerTeleportProgramRuntime.blockItemBaseDamage(
+                100.0f, 80.0f, 800.0f));
+        assertEquals(40.0f, ServerTeleportProgramRuntime.blockItemBaseDamage(
+                100.0f, 30.0f, 800.0f));
+        assertEquals(40.0f, ServerTeleportProgramRuntime.blockItemBaseDamage(
+                20.0f, 80.0f, 800.0f));
+        assertEquals(15.0f, ServerTeleportProgramRuntime.blockItemBaseDamage(
+                15.0f, 100.0f, 20.0f));
+        assertEquals(50.0f, ServerTeleportProgramRuntime.blockItemBaseDamage(
+                15.0f, 10.0f, 1_000.0f));
+    }
+
+    @Test
+    void blockItemTeleportRawBlockDamageIsHardnessTimesTen() {
+        assertEquals(15.0f, ServerTeleportProgramRuntime.blockItemHardnessDamage(1.5f));
+        assertEquals(500.0f, ServerTeleportProgramRuntime.blockItemHardnessDamage(50.0f));
+    }
+
+    @Test
+    void blockItemTeleportDamageCapIsAppliedBeforeCpCost() {
+        var baseDamage = ServerTeleportProgramRuntime.blockItemBaseDamage(
+                100.0f, 80.0f, 800.0f);
+
+        assertEquals(18.0f, ServerTeleportProgramRuntime.blockItemTeleportCost(baseDamage));
+        assertEquals(10.0f, ServerTeleportProgramRuntime.blockItemTeleportCost(0.0f));
+    }
+
+    @Test
+    void blockItemTeleportRejectsInvalidDamageInputs() {
+        assertEquals(0.0f, ServerTeleportProgramRuntime.blockItemBaseDamage(
+                Float.POSITIVE_INFINITY, 100.0f, 100.0f));
+        assertEquals(0.0f, ServerTeleportProgramRuntime.blockItemBaseDamage(
+                10.0f, Float.NaN, 100.0f));
+        assertEquals(0.0f, ServerTeleportProgramRuntime.blockItemBaseDamage(
+                10.0f, 100.0f, Float.NaN));
+    }
 }
