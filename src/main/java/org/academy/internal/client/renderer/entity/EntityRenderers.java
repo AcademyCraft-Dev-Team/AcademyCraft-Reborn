@@ -42,5 +42,6 @@ public final class EntityRenderers {
         event.registerEntityRenderer(EntityTypes.DARKMATTER_BEETLE.get(), DarkmatterBeetleRenderer::new);
         event.registerEntityRenderer(EntityTypes.MISAKA_SISTER.get(), MisakaSisterRenderer::new);
         event.registerEntityRenderer(EntityTypes.RELAY_SATELLITE.get(), RelaySatelliteRenderer::new);
+        event.registerEntityRenderer(EntityTypes.ORBITAL_STRIKE_PROXY.get(), OrbitalStrikeProxyRenderer::new);
     }
 }

@@ -380,8 +380,11 @@ public final class RelaySatelliteEntity extends RenderOnlyEntity {
         if (power <= 0.0f) {
             return;
         }
+        // Prefer the Ops force-crash initiator as explosion source so claim mods see a player
+        // explosion; power-timeout crashes keep the satellite as source (typical non-player TNT rules).
+        var explosionSource = resolveCrashExplosionSource(serverLevel);
         serverLevel.explode(
-                this,
+                explosionSource,
                 getX(),
                 getY(),
                 getZ(),
@@ -389,6 +392,18 @@ public final class RelaySatelliteEntity extends RenderOnlyEntity {
                 false,
                 destroyBlocks ? Level.ExplosionInteraction.TNT : Level.ExplosionInteraction.NONE
         );
+    }
+
+    private net.minecraft.world.entity.Entity resolveCrashExplosionSource(ServerLevel serverLevel) {
+        if (satelliteId == null) {
+            return this;
+        }
+        var entry = MisakaRelayRegistry.get(serverLevel.getServer()).get(satelliteId);
+        if (entry == null || entry.forceCrashInitiator == null) {
+            return this;
+        }
+        var player = serverLevel.getServer().getPlayerList().getPlayer(entry.forceCrashInitiator);
+        return player != null ? player : this;
     }
 
     @Override

@@ -49,6 +49,7 @@ internal class AerospaceCabinOpsUi(
     private var forceCountdownLabel: LabelWidget? = null
     private var forceArmButton: ButtonWidget? = null
     private var forceCancelButton: ButtonWidget? = null
+    private var strikeStatusSetter: (String) -> Unit = {}
     private var viewingDetail: Boolean = false
     private var pendingDetailRow: ManagedSatRow? = null
     private var forceConfirmOpen: Boolean = false
@@ -64,6 +65,7 @@ internal class AerospaceCabinOpsUi(
             detailNetworkSetter(detailNetworkText())
             detailFeedbackSetter(opsFeedbackText())
             refreshForceCrashUi()
+            refreshStrikeStatusUi()
             refreshLaserListUi()
             refreshNetworkListUi()
         }
@@ -359,6 +361,47 @@ internal class AerospaceCabinOpsUi(
         forceActions.addChild("force_crash_cancel", forceCancel)
         column.addChild("force_actions", forceActions)
 
+        val strikeStatus = LabelWidget("").apply {
+            scale = SCALE_BODY
+            alpha = 0.88f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(10f)
+        }
+        strikeStatusSetter = { strikeStatus.text = it }
+        column.addChild("strike_status", strikeStatus)
+
+        val designatorActions = LinearLayoutWidget().apply {
+            orientation = Orientation.HORIZONTAL
+            spacing = 4f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(14f)
+        }
+        designatorActions.addChild(
+            "bind_designator",
+            host.createActionButton(
+                "gui.academy.aerospace_signal_cabin.ops_bind_designator",
+                AerospaceSignalCabinMenu.BUTTON_BIND_DESIGNATOR
+            ).apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .width(72f)
+                    .height(14f)
+            }
+        )
+        designatorActions.addChild(
+            "unbind_designator",
+            host.createActionButton(
+                "gui.academy.aerospace_signal_cabin.ops_unbind_designator",
+                AerospaceSignalCabinMenu.BUTTON_UNBIND_DESIGNATOR
+            ).apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .width(72f)
+                    .height(14f)
+            }
+        )
+        column.addChild("designator_actions", designatorActions)
+
         val feedback = LabelWidget(opsFeedbackText()).apply {
             scale = SCALE_BODY
             alpha = 0.78f
@@ -460,6 +503,7 @@ internal class AerospaceCabinOpsUi(
         detailNetworkSetter(detailNetworkText())
         detailFeedbackSetter(opsFeedbackText())
         refreshForceCrashUi()
+        refreshStrikeStatusUi()
         refreshLaserListUi(force = true)
         refreshNetworkListUi(force = true)
     }
@@ -538,6 +582,38 @@ internal class AerospaceCabinOpsUi(
         if (armed && forceConfirmOpen) {
             closeForceCrashConfirm(immediate = true)
         }
+    }
+
+    fun refreshStrikeStatusUi() {
+        val row = selectedSatRow()
+        strikeStatusSetter(strikeStatusText(row))
+    }
+
+    fun strikeStatusText(row: ManagedSatRow?): String {
+        if (row == null) {
+            return ""
+        }
+        val mode = row.strikeMode
+        if (mode != "IDLE") {
+            val modeLabel = when (mode) {
+                "APPROACHING" -> Component.translatable("gui.academy.aerospace_signal_cabin.ops_strike_approaching").string
+                "FIRING" -> Component.translatable("gui.academy.aerospace_signal_cabin.ops_strike_firing").string
+                "RETURNING" -> Component.translatable("gui.academy.aerospace_signal_cabin.ops_strike_returning").string
+                else -> mode
+            }
+            return Component.translatable(
+                "gui.academy.aerospace_signal_cabin.ops_strike_active",
+                modeLabel
+            ).string
+        }
+        if (row.strikeCooldownTicks > 0) {
+            val sec = (row.strikeCooldownTicks + 19) / 20
+            return Component.translatable(
+                "gui.academy.aerospace_signal_cabin.ops_strike_cooldown",
+                sec
+            ).string
+        }
+        return Component.translatable("gui.academy.aerospace_signal_cabin.ops_strike_idle").string
     }
 
     fun refreshSatelliteListUi(force: Boolean = false) {

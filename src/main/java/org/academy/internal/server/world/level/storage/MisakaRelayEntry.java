@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Optional;
@@ -14,6 +15,13 @@ import java.util.UUID;
  * Persisted + runtime state for one Misaka relay satellite.
  */
 public final class MisakaRelayEntry {
+    public enum StrikeMode {
+        IDLE,
+        APPROACHING,
+        FIRING,
+        RETURNING
+    }
+
     public enum Phase {
         ORBIT,
         LAUNCHING,
@@ -81,6 +89,20 @@ public final class MisakaRelayEntry {
      * {@code 0} means not armed; cancel clears it before {@link Phase#CRASHING}.
      */
     public transient int forceCrashCountdownTicks;
+    /** Runtime orbital-strike state machine (not persisted). */
+    public transient StrikeMode strikeMode = StrikeMode.IDLE;
+    public transient @Nullable BlockPos strikeTarget;
+    public transient int strikeTicks;
+    public transient int strikeCooldownTicks;
+    public transient @Nullable UUID strikeProxyUuid;
+    public transient @Nullable UUID strikeDesignatorPlayer;
+    public transient int strikeLavaReplacements;
+    public transient Vec3 strikeApproachFrom;
+    /**
+     * Runtime: player who armed cabin Ops force-crash (block-break attribution on impact).
+     * Cleared on cancel; natural / power-timeout crashes leave this null.
+     */
+    public transient @Nullable UUID forceCrashInitiator;
 
     public MisakaRelayEntry(
             UUID satelliteId,

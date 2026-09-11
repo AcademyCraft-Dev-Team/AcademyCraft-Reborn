@@ -23,6 +23,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 import org.academy.api.common.misaka.MisakaNAT;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.common.world.item.HyperNetworkRelaySatelliteItem;
+import org.academy.internal.common.world.item.LaserDesignatorItem;
 import org.academy.internal.common.world.item.NetworkRelaySatelliteItem;
 import org.academy.internal.server.world.level.storage.MisakaRelayEntry;
 import org.academy.internal.server.world.level.storage.MisakaRelayRegistry;
@@ -51,7 +52,9 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
             boolean laserBound,
             int unpoweredTicks,
             int crashTimeout,
-            int forceCrashTicks
+            int forceCrashTicks,
+            String strikeMode,
+            int strikeCooldownTicks
     ) {
     }
 
@@ -184,7 +187,9 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
                     entry.laserBound,
                     entry.unpoweredTicks,
                     crashTimeout,
-                    entry.forceCrashCountdownTicks
+                    entry.forceCrashCountdownTicks,
+                    entry.strikeMode.name(),
+                    entry.strikeCooldownTicks
             ));
         }
         managedSatelliteList = List.copyOf(rows);
@@ -476,7 +481,7 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
     }
 
     /** Arm a 60s forced-crash countdown for the selected satellite. */
-    public boolean tryScheduleForceCrash(ServerLevel level) {
+    public boolean tryScheduleForceCrash(ServerLevel level, Player player) {
         refreshManagedCount(level);
         var list = managedEntries(level);
         if (list.isEmpty()) {
@@ -490,7 +495,8 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
         boolean ok = MisakaRelayRegistry.get(level.getServer()).scheduleForceCrash(
                 level.getServer(),
                 entry.satelliteId,
-                MisakaRelayRegistry.FORCE_CRASH_COUNTDOWN_TICKS
+                MisakaRelayRegistry.FORCE_CRASH_COUNTDOWN_TICKS,
+                player.getUUID()
         );
         setOpsFeedback(ok
                 ? "gui.academy.aerospace_signal_cabin.ops_force_crash_armed"
@@ -522,6 +528,50 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
         refreshManagedCount(level);
         markAndSync();
         return ok;
+    }
+
+    /** Bind the player's main-hand laser designator to the selected managed satellite. */
+    public boolean tryBindDesignator(ServerLevel level, Player player) {
+        refreshManagedCount(level);
+        var list = managedEntries(level);
+        if (list.isEmpty()) {
+            setOpsFeedback("gui.academy.aerospace_signal_cabin.ops_no_satellites");
+            markAndSync();
+            return false;
+        }
+        ItemStack stack = player.getMainHandItem();
+        if (!LaserDesignatorItem.isDesignator(stack)) {
+            setOpsFeedback("gui.academy.aerospace_signal_cabin.ops_designator_need_item");
+            markAndSync();
+            return false;
+        }
+        int index = Mth.clamp(selectedSatelliteIndex, 0, list.size() - 1);
+        selectedSatelliteIndex = index;
+        var entry = list.get(index);
+        if (entry.phase == MisakaRelayEntry.Phase.CRASHING) {
+            setOpsFeedback("gui.academy.aerospace_signal_cabin.ops_designator_sat_unready");
+            markAndSync();
+            return false;
+        }
+        LaserDesignatorItem.bind(stack, entry.satelliteId);
+        setOpsFeedback("gui.academy.aerospace_signal_cabin.ops_designator_bound");
+        refreshManagedCount(level);
+        markAndSync();
+        return true;
+    }
+
+    /** Clear the satellite binding on the player's main-hand laser designator. */
+    public boolean tryUnbindDesignator(ServerLevel level, Player player) {
+        ItemStack stack = player.getMainHandItem();
+        if (!LaserDesignatorItem.isDesignator(stack)) {
+            setOpsFeedback("gui.academy.aerospace_signal_cabin.ops_designator_need_item");
+            markAndSync();
+            return false;
+        }
+        LaserDesignatorItem.unbind(stack);
+        setOpsFeedback("gui.academy.aerospace_signal_cabin.ops_designator_unbound");
+        markAndSync();
+        return true;
     }
 
     public void cycleSelected() {
@@ -684,7 +734,9 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
                 row.getBooleanOr("laser_bound", true),
                 row.getIntOr("unpowered_ticks", 0),
                 row.getIntOr("crash_timeout", 6000),
-                row.getIntOr("force_crash_ticks", 0)
+                row.getIntOr("force_crash_ticks", 0),
+                row.getString("strike_mode").orElse("IDLE"),
+                row.getIntOr("strike_cooldown_ticks", 0)
         )));
         managedSatelliteList = List.copyOf(sats);
 
@@ -718,6 +770,8 @@ public final class AerospaceSignalCabinBlockEntity extends BlockEntity implement
             c.putInt("unpowered_ticks", row.unpoweredTicks());
             c.putInt("crash_timeout", row.crashTimeout());
             c.putInt("force_crash_ticks", row.forceCrashTicks());
+            c.putString("strike_mode", row.strikeMode());
+            c.putInt("strike_cooldown_ticks", row.strikeCooldownTicks());
             sats.add(c);
         }
         tag.put(OPS_MANAGED_SATS, sats);

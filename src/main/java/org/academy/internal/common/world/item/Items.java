@@ -149,6 +149,8 @@ public final class Items {
             ITEMS.registerItem("network_relay_satellite", NetworkRelaySatelliteItem::new);
     public static final DeferredHolder<Item, HyperNetworkRelaySatelliteItem> HYPER_NETWORK_RELAY_SATELLITE =
             ITEMS.registerItem("hyper_network_relay_satellite", HyperNetworkRelaySatelliteItem::new);
+    public static final DeferredHolder<Item, LaserDesignatorItem> LASER_DESIGNATOR =
+            ITEMS.registerItem("laser_designator", LaserDesignatorItem::new);
     public static final DeferredHolder<Item, SpawnEggItem> MISAKA_SISTER_SPAWN_EGG =
             ITEMS.registerItem("misaka_sister_spawn_egg", properties -> new SpawnEggItem(
                     properties.spawnEgg(EntityTypes.MISAKA_SISTER.get())));

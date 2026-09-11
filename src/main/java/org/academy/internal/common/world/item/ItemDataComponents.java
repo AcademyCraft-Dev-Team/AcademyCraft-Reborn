@@ -10,6 +10,10 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import org.academy.api.common.ability.darkmatter.DarkmatterBlockProfile;
 import org.academy.api.common.ability.darkmatter.DarkmatterIntegrity;
 import org.academy.api.common.ability.darkmatter.DarkmatterShapingProfile;
+import org.academy.internal.common.network.misaka.MisakaPacketCodecs;
+import org.academy.internal.server.world.level.storage.MisakaSavedDataCodecs;
+
+import java.util.UUID;
 
 import static org.academy.AcademyCraft.MODID;
 
@@ -51,6 +55,12 @@ public final class ItemDataComponents {
             "relay_target_dimension", builder -> builder
                     .persistent(Identifier.CODEC)
                     .networkSynchronized(Identifier.STREAM_CODEC));
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<UUID>>
+            DESIGNATOR_SATELLITE_ID = DATA_COMPONENTS.registerComponentType(
+            "designator_satellite_id", builder -> builder
+                    .persistent(MisakaSavedDataCodecs.UUID_STRING_CODEC)
+                    .networkSynchronized(MisakaPacketCodecs.UUID_STREAM_CODEC));
 
     private ItemDataComponents() {
     }
