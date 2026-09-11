@@ -1,6 +1,7 @@
 package org.academy.internal.server.world.level.storage;
 
 import net.minecraft.server.MinecraftServer;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.UUID;
@@ -146,12 +147,13 @@ final class MisakaRelayPowerTicker {
      * Arm a forced crash countdown for an active satellite. Fails if already crashing or already armed.
      * Cuts coverage power immediately; lasers stop feeding until cancel or crash completes.
      */
-    boolean scheduleForceCrash(MinecraftServer server, UUID satelliteId, int ticks) {
+    boolean scheduleForceCrash(MinecraftServer server, UUID satelliteId, int ticks, @Nullable UUID initiator) {
         var entry = registry.get(satelliteId);
         if (entry == null || !entry.phase.isActive() || entry.forceCrashCountdownTicks > 0) {
             return false;
         }
         entry.forceCrashCountdownTicks = Math.max(1, ticks);
+        entry.forceCrashInitiator = initiator;
         if (entry.powered) {
             entry.powered = false;
             bumpPoweredCount(entry, -1);
@@ -169,6 +171,7 @@ final class MisakaRelayPowerTicker {
             return false;
         }
         entry.forceCrashCountdownTicks = 0;
+        entry.forceCrashInitiator = null;
         return true;
     }
 

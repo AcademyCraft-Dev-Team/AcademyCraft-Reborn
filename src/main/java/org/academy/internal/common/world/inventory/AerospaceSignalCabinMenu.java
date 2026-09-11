@@ -22,6 +22,8 @@ public final class AerospaceSignalCabinMenu extends AbstractContainerMenu {
     public static final int BUTTON_CYCLE_LASER = 4;
     public static final int BUTTON_FORCE_CRASH = 5;
     public static final int BUTTON_CANCEL_FORCE_CRASH = 6;
+    public static final int BUTTON_BIND_DESIGNATOR = 7;
+    public static final int BUTTON_UNBIND_DESIGNATOR = 8;
     /** Select managed satellite by index: BASE + index (0..MAX-1). */
     public static final int BUTTON_SELECT_SAT_BASE = 100;
     public static final int BUTTON_SELECT_SAT_MAX = 32;
@@ -98,8 +100,10 @@ public final class AerospaceSignalCabinMenu extends AbstractContainerMenu {
                 blockEntity.cycleSelectedLaser(serverLevel);
                 yield true;
             }
-            case BUTTON_FORCE_CRASH -> blockEntity.tryScheduleForceCrash(serverLevel);
+            case BUTTON_FORCE_CRASH -> blockEntity.tryScheduleForceCrash(serverLevel, player);
             case BUTTON_CANCEL_FORCE_CRASH -> blockEntity.tryCancelForceCrash(serverLevel);
+            case BUTTON_BIND_DESIGNATOR -> blockEntity.tryBindDesignator(serverLevel, player);
+            case BUTTON_UNBIND_DESIGNATOR -> blockEntity.tryUnbindDesignator(serverLevel, player);
             default -> {
                 if (id >= BUTTON_SELECT_SAT_BASE && id < BUTTON_SELECT_SAT_BASE + BUTTON_SELECT_SAT_MAX) {
                     blockEntity.selectSatellite(serverLevel, id - BUTTON_SELECT_SAT_BASE);

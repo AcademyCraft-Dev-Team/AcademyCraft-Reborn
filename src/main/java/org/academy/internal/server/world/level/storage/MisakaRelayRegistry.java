@@ -5,11 +5,13 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 import org.academy.AcademyCraft;
 import org.academy.internal.server.misaka.MisakaComputeIndex;
+import org.academy.internal.server.misaka.MisakaOrbitalStrikeSupport;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -231,6 +233,7 @@ public final class MisakaRelayRegistry {
 
     public void endTick(MinecraftServer server) {
         power.endTick(server);
+        MisakaOrbitalStrikeSupport.tickAll(server);
     }
 
     /**
@@ -238,7 +241,16 @@ public final class MisakaRelayRegistry {
      * Cuts coverage power immediately; lasers stop feeding until cancel or crash completes.
      */
     public boolean scheduleForceCrash(MinecraftServer server, UUID satelliteId, int ticks) {
-        return power.scheduleForceCrash(server, satelliteId, ticks);
+        return scheduleForceCrash(server, satelliteId, ticks, null);
+    }
+
+    public boolean scheduleForceCrash(
+            MinecraftServer server,
+            UUID satelliteId,
+            int ticks,
+            @Nullable UUID initiator
+    ) {
+        return power.scheduleForceCrash(server, satelliteId, ticks, initiator);
     }
 
     /**
@@ -299,7 +311,17 @@ public final class MisakaRelayRegistry {
     }
 
     public void completeCrash(MinecraftServer server, UUID satelliteId) {
+        MisakaOrbitalStrikeSupport.cancel(server, satelliteId);
         lifecycle.completeCrash(server, satelliteId);
+    }
+
+    public MisakaOrbitalStrikeSupport.BeginResult beginOrbitalStrike(
+            MinecraftServer server,
+            UUID satelliteId,
+            BlockPos target,
+            @Nullable ServerPlayer designator
+    ) {
+        return MisakaOrbitalStrikeSupport.begin(server, satelliteId, target, designator);
     }
 
     public void onLaserRemoved(MinecraftServer server, ResourceKey<Level> laserDim, BlockPos laserPos) {

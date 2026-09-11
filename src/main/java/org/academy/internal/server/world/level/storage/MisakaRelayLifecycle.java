@@ -6,6 +6,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.entity.misaka.RelaySatelliteEntity;
+import org.academy.internal.server.misaka.MisakaOrbitalStrikeSupport;
 import org.academy.internal.server.misaka.MisakaRelayOrbits;
 import org.jspecify.annotations.Nullable;
 
@@ -151,6 +152,7 @@ final class MisakaRelayLifecycle {
             entry.powered = false;
             registry.power.bumpPoweredCount(entry, -1);
         }
+        MisakaOrbitalStrikeSupport.cancel(server, satelliteId);
         // Enter / continue the same unpowered countdown used when a laser stops feeding.
         registry.markPersistentDirty();
         registry.markComputeDirty(server);
@@ -161,6 +163,7 @@ final class MisakaRelayLifecycle {
         if (entry == null || entry.phase == MisakaRelayEntry.Phase.CRASHING) {
             return;
         }
+        MisakaOrbitalStrikeSupport.cancel(server, satelliteId);
         entry.forceCrashCountdownTicks = 0;
         if (entry.powered) {
             entry.powered = false;

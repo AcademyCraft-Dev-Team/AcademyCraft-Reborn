@@ -193,6 +193,7 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         itemModels.generateFlatItem(Items.IMAG_PHASE_PLATE.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.IMAG_PHASE_CIRCUIT.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.NEEDLE.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(Items.LASER_DESIGNATOR.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.DARK_MATTER_HELMET.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.DARK_MATTER_CHESTPLATE.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.DARK_MATTER_LEGGINGS.get(), ModelTemplates.FLAT_ITEM);
