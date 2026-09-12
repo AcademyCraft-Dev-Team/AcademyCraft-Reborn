@@ -48,7 +48,7 @@ public final class ElectromasterProgramExecutionBridge {
             ProgramInvocationContext invocation
     ) {
         Objects.requireNonNull(player, "player");
-        var transaction = new ProgramActionTransaction();
+        var transaction = ProgramActionTransaction.sequential();
         var execution = ServerProgramExecution.execute(
                 program,
                 player,

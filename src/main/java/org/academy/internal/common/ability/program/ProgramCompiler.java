@@ -123,7 +123,7 @@ public final class ProgramCompiler {
                     .result()
                     .orElse(null);
             if (configuration == null) return null;
-            var schema = type.schema(configuration);
+            var schema = type.resolvedSchema(configuration);
             return new CompiledProgram.CompiledNode(
                     node.id(),
                     node.type(),

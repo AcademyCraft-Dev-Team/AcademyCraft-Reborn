@@ -99,6 +99,12 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
         put(result, CommonProgramNodeIds.FLOAT_CONSTANT,
                 (ProgramVmContext _, CommonProgramNodeCatalog.FloatConfiguration configuration,
                  ProgramInputView _) -> data("value", ProgramValueTypes.FLOAT, configuration.value()));
+        put(result, CommonProgramNodeIds.TEXT_CONSTANT,
+                (ProgramVmContext _, CommonProgramNodeCatalog.TextConfiguration configuration,
+                 ProgramInputView _) -> data("value", ProgramValueTypes.TEXT, configuration.value()));
+        put(result, CommonProgramNodeIds.TAG_CONSTANT,
+                (ProgramVmContext _, CommonProgramNodeCatalog.TagConfiguration configuration,
+                 ProgramInputView _) -> data("value", ProgramValueTypes.TAG, configuration.value()));
     }
 
     private static void registerScalarLogic(Map<Identifier, ProgramNodeExecutor<?>> result) {
@@ -1421,6 +1427,9 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
         var raw = source.value();
         if (source.type().equals(ProgramValueTypes.INTEGER) && target.equals(ProgramValueTypes.FLOAT)) {
             raw = ((Integer) raw).doubleValue();
+        }
+        if (source.type().equals(ProgramValueTypes.TAG) && target.equals(ProgramValueTypes.TEXT)) {
+            raw = raw.toString();
         }
         if (raw instanceof List<?> list) raw = List.copyOf(list);
         return value(target, raw);

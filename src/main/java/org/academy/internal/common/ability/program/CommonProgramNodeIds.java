@@ -11,6 +11,8 @@ public final class CommonProgramNodeIds {
     public static final Identifier BOOLEAN_CONSTANT = id("value/boolean");
     public static final Identifier INTEGER_CONSTANT = id("value/integer");
     public static final Identifier FLOAT_CONSTANT = id("value/float");
+    public static final Identifier TEXT_CONSTANT = id("value/text");
+    public static final Identifier TAG_CONSTANT = id("value/tag");
 
     public static final Identifier INTEGER_ADD = id("logic/integer/add");
     public static final Identifier INTEGER_SUBTRACT = id("logic/integer/subtract");

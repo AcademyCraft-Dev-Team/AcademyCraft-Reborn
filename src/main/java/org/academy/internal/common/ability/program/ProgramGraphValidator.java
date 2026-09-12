@@ -103,7 +103,7 @@ public final class ProgramGraphValidator {
                     .parse(JsonOps.INSTANCE, node.configuration())
                     .result()
                     .orElse(null);
-            return configuration == null ? null : type.schema(configuration);
+            return configuration == null ? null : type.resolvedSchema(configuration);
         } catch (RuntimeException exception) {
             return null;
         }

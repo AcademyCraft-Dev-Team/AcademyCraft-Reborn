@@ -11,6 +11,8 @@ public final class ProgramValueTypes {
     public static final ProgramValueType INTEGER = type("integer");
     public static final ProgramValueType BIG_INTEGER = type("big_integer");
     public static final ProgramValueType FLOAT = type("float");
+    public static final ProgramValueType TEXT = type("text");
+    public static final ProgramValueType TAG = type("tag");
     public static final ProgramValueType IDENTIFIER = type("identifier");
     public static final ProgramValueType DURATION = type("duration");
     public static final ProgramValueType VECTOR = type("vector");
@@ -37,6 +39,7 @@ public final class ProgramValueTypes {
     public static boolean canConnect(ProgramValueType source, ProgramValueType target) {
         if (source.equals(target)) return true;
         if (source.equals(INTEGER) && target.equals(FLOAT)) return true;
+        if (source.equals(TAG) && target.equals(TEXT)) return true;
         if (source.equals(LIVING_ENTITY_REFERENCE) && target.equals(ENTITY_REFERENCE)) return true;
         if (target.equals(CONTROL_DESTINATION)) {
             return source.equals(WORLD_POSITION)

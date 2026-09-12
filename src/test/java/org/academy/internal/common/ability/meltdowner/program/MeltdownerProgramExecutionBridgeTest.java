@@ -55,15 +55,16 @@ class MeltdownerProgramExecutionBridgeTest {
         targetAim.addProperty("destroy_blocks", false);
         var targetSchema = catalog.schema(MeltdownerProgramNodeIds.ELECTRON_BEAM, targetAim);
         assertNotNull(targetSchema);
-        assertEquals(List.of("flow", "origin", "target_position"),
+        assertEquals(List.of("flow", "origin", "target_position", "power"),
                 targetSchema.inputs().stream().map(port -> port.name()).toList());
+        assertFalse(targetSchema.input("power").orElseThrow().required());
 
         var jet = new JsonObject();
         jet.addProperty("power", 1.0f);
         jet.addProperty("destroy_blocks", true);
         var jetSchema = catalog.schema(MeltdownerProgramNodeIds.ATOMIC_JET, jet);
         assertNotNull(jetSchema);
-        assertEquals(List.of("flow", "entity", "direction"),
+        assertEquals(List.of("flow", "entity", "direction", "power"),
                 jetSchema.inputs().stream().map(port -> port.name()).toList());
 
         var invalid = new JsonObject();

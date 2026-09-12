@@ -29,6 +29,8 @@ public final class ProgramConfigurationOptions {
             "integer",
             "big_integer",
             "float",
+            "text",
+            "tag",
             "identifier",
             "duration",
             "vector",
@@ -164,7 +166,7 @@ public final class ProgramConfigurationOptions {
             if (field.equals("value_type")) {
                 return stringOptions(
                         "screen.academy.program.configuration.debug_value_type.",
-                        "boolean", "integer", "big_integer", "float", "identifier",
+                        "boolean", "integer", "big_integer", "float", "text", "tag", "identifier",
                         "duration", "vector", "direction", "world_position", "block_position",
                         "entity", "direction_list", "world_position_list",
                         "block_position_list", "entity_list");
