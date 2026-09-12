@@ -60,7 +60,7 @@ public final class PropsGameTests {
 
     @SubscribeEvent
     private static void registerTests(RegisterGameTestsEvent event) {
-        for (var scenario : List.of("attributes", "experience_orbs", "activity", "damage", "ability_loot")) {
+        for (var scenario : List.of("attributes", "experience_orbs", "activity", "damage", "ability_loot", "structures", "loaded_devices")) {
             var environment = event.registerEnvironment(AcademyCraft.academy("props/" + scenario),
                     new TestEnvironmentDefinition.AllOf(List.of()));
             event.registerTest(AcademyCraft.academy("props_" + scenario), new Instance(new TestData<>(
@@ -94,6 +94,8 @@ public final class PropsGameTests {
                 case "activity" -> activity(helper, player);
                 case "damage" -> damage(helper, player);
                 case "ability_loot" -> abilityLoot(helper, player);
+                case "structures" -> structures(helper, player);
+                case "loaded_devices" -> loadedDevices(helper);
                 default -> throw new IllegalArgumentException(scenario);
             }
             helper.succeed();
@@ -102,6 +104,126 @@ public final class PropsGameTests {
         }
     }
 
+    private static void loadedDevices(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var pos = helper.absolutePos(new BlockPos(4, 2, 4));
+        var missing = pos.offset(16_384, 0, 16_384);
+        var main = org.academy.internal.common.world.level.block.MultiBlock.MultiBlockType.MAIN;
+        var subject = org.academy.internal.common.world.level.block.MultiBlock.MultiBlockType.SUBJECT;
+        var type = org.academy.internal.common.world.level.block.MultiBlock.TYPE;
+        var developerState = org.academy.internal.common.world.level.block.Blocks.ABILITY_DEVELOPER.get()
+                .defaultBlockState().setValue(type, main);
+        var developer = new org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity(pos, developerState);
+        developer.setLevel(level);
+        developer.setConnectedNodePosition(missing);
+        var tableState = org.academy.internal.common.world.level.block.Blocks.OMNI_CRAFTING_TABLE.get()
+                .defaultBlockState().setValue(type, main);
+        var table = new org.academy.internal.common.world.level.block.entity.OmniCraftingTableBlockEntity(pos, tableState);
+        table.setLevel(level);
+        table.setConnectedNodePosition(missing);
+        var part = new org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity(
+                pos, developerState.setValue(type, subject));
+        part.setLevel(level);
+        part.mainPos = missing;
+        helper.assertTrue(level.getChunkSource().getChunkNow(missing.getX() >> 4, missing.getZ() >> 4) == null,
+                "Device endpoints must initially be unloaded");
+        developer.setEnergyStored(100);
+        table.setEnergyStored(100);
+        for (var tick = 0; tick < 100; tick++) {
+            developer.receiveEnergy(1, false);
+            table.receiveEnergy(1, false);
+            developer.serverTick(level);
+            table.tick();
+            helper.assertTrue(part.getMain() == null, "An unloaded master must resolve without waiting");
+        }
+        helper.assertTrue(developer.getEnergyStored() == 200 && table.getEnergyStored() == 200,
+                "Packet coalescing must not delay or lose energy mutations");
+        helper.assertTrue(missing.equals(developer.getConnectedNodePosition()),
+                "A temporarily unloaded developer node must remain connected");
+        helper.assertTrue(missing.equals(table.getConnectedNodePosition()),
+                "A temporarily unloaded crafting-table node must remain connected");
+        helper.assertTrue(level.getChunkSource().getChunkNow(missing.getX() >> 4, missing.getZ() >> 4) == null,
+                "Repeated device ticks must not load the endpoint chunk");
+        var tablePart = new org.academy.internal.common.world.level.block.entity.OmniCraftingTableBlockEntity(
+                pos, tableState.setValue(type, subject));
+        tablePart.setLevel(level);
+        tablePart.mainPos = missing;
+        helper.assertTrue(tablePart.receiveEnergy(100, false) == 0 && tablePart.extractEnergy(100, false) == 0,
+                "A part with an unloaded master must not create an independent energy store");
+        tablePart.setItem(0, new ItemStack(Items.DIAMOND));
+        helper.assertTrue(tablePart.isEmpty() && tablePart.getItem(0).isEmpty(),
+                "An unloaded master must not redirect inventory writes to the part");
+        part.mainPos = null;
+        helper.assertTrue(part.getMain() == null, "Missing master metadata must not throw");
+        developer.setConnectedNodePosition(pos);
+        table.setConnectedNodePosition(pos);
+        developer.serverTick(level);
+        table.tick();
+        helper.assertTrue(developer.getConnectedNodePosition() == null && table.getConnectedNodePosition() == null,
+                "Loaded invalid endpoints must still be disconnected");
+    }
+    private static void structures(GameTestHelper helper, ServerPlayer player) {
+        var level = helper.getLevel();
+        var pos = helper.absolutePos(new BlockPos(3, 2, 3));
+        player.setPos(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+        var chunk = level.getChunkAt(pos);
+        var originalStarts = new java.util.HashMap<>(chunk.getAllStarts());
+        var originalReferences = new java.util.HashMap<>(chunk.getAllReferences());
+        var structure = level.registryAccess().lookupOrThrow(Registries.STRUCTURE).getOrThrow(
+                net.minecraft.resources.ResourceKey.create(Registries.STRUCTURE,
+                        Identifier.withDefaultNamespace("buried_treasure"))).value();
+        var ownPos = chunk.getPos();
+        var missingPos = new net.minecraft.world.level.ChunkPos(ownPos.x() + 1_024, ownPos.z() + 1_024);
+        var ownReference = net.minecraft.world.level.ChunkPos.pack(ownPos.x(), ownPos.z());
+        var missingReference = net.minecraft.world.level.ChunkPos.pack(missingPos.x(), missingPos.z());
+        var keyPrefix = level.dimension().identifier() + "|minecraft:buried_treasure|";
+        var system = AbilitySystemServer.getSystem(player);
+        var manager = system.getPropsManager();
+        var data = system.getPlayerData(player.getUUID()).getPropsData();
+        try {
+            helper.assertTrue(level.getChunkSource().getChunkNow(missingPos.x(), missingPos.z()) == null,
+                    "The referenced start chunk must initially be unloaded");
+            chunk.setAllReferences(java.util.Map.of(structure,
+                    new it.unimi.dsi.fastutil.longs.LongOpenHashSet(new long[]{missingReference, ownReference})));
+            chunk.setAllStarts(java.util.Map.of(structure, new net.minecraft.world.level.levelgen.structure.StructureStart(
+                    structure, ownPos, 0, new net.minecraft.world.level.levelgen.structure.pieces.PiecesContainer(
+                    List.of(new net.minecraft.world.level.levelgen.structure.structures.BuriedTreasurePieces.BuriedTreasurePiece(pos))))));
+
+            manager.reset(player);
+            scanStructures(player);
+            close(helper, data.total(), 0, "Inactive P.R.O.P.S must not discover structures");
+            helper.assertTrue(!data.hasVisitedStructure(keyPrefix + ownPos.x() + "," + ownPos.z()),
+                    "Inactive scanning must not consume the one-time reward");
+            manager.start(player);
+            player.setPos(pos.getX() + 2.5, pos.getY(), pos.getZ() + 0.5);
+            scanStructures(player);
+            close(helper, data.total(), 0, "A chunk reference alone does not mean the player is inside its structure");
+            player.setPos(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+            scanStructures(player);
+            close(helper, data.total(), 20, "A loaded start containing the player awards discovery");
+            scanStructures(player);
+            close(helper, data.total(), 20, "Repeated discovery must not award twice");
+            helper.assertTrue(level.getChunkSource().getChunkNow(missingPos.x(), missingPos.z()) == null,
+                    "Structure discovery must never load a referenced chunk");
+            helper.assertTrue(!data.hasVisitedStructure(keyPrefix + missingPos.x() + "," + missingPos.z()),
+                    "Skipped unloaded references must remain eligible for a later retry");
+        } finally {
+            chunk.setAllStarts(originalStarts);
+            chunk.setAllReferences(originalReferences);
+        }
+    }
+
+    private static void scanStructures(ServerPlayer player) {
+        try {
+            // Keep the private injection ABI used by addons; exercise the actual production scan.
+            var scan = org.academy.internal.server.ability.PropsManager.class
+                    .getDeclaredMethod("checkStructures", ServerPlayer.class);
+            scan.setAccessible(true);
+            scan.invoke(AbilitySystemServer.getSystem(player).getPropsManager(), player);
+        } catch (ReflectiveOperationException error) {
+            throw new AssertionError("Structure scan failed", error);
+        }
+    }
     private static void attributes(GameTestHelper helper, ServerPlayer player) {
         var step = player.getAttribute(Attributes.STEP_HEIGHT).getBaseValue();
         var knockback = player.getAttribute(Attributes.ATTACK_KNOCKBACK);

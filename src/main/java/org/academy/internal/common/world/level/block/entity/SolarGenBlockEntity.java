@@ -25,6 +25,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.Objects;
 
 public final class SolarGenBlockEntity extends BlockEntity implements WirelessUser, Container {
+    private final EnergyUpdateThrottle energyUpdates = new EnergyUpdateThrottle();
     private static final int MAX_ENERGY_STORAGE = 100_000;
     private static final int OUTPUT_TRANSFER_RATE = 1_000;
     public final AnimationState foldingState = new AnimationState();
@@ -41,6 +42,7 @@ public final class SolarGenBlockEntity extends BlockEntity implements WirelessUs
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, SolarGenBlockEntity blockEntity) {
+        if (!level.isClientSide()) blockEntity.energyUpdates.flush(blockEntity, blockEntity.energyStored);
         blockEntity.ticks++;
 
         var target = level.getBrightness(LightLayer.SKY, pos) - level.getSkyDarken();
@@ -117,7 +119,7 @@ public final class SolarGenBlockEntity extends BlockEntity implements WirelessUs
             energyStored = clamped;
             setChanged();
             if (level != null && !level.isClientSide()) {
-                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
+                energyUpdates.markChanged();
             }
         }
     }
