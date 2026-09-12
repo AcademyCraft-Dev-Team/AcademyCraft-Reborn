@@ -2,6 +2,7 @@ package org.academy.internal.common.world.level.block.entity;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -14,7 +15,6 @@ import net.minecraft.world.level.storage.ValueOutput;
 import org.academy.internal.common.world.level.block.MultiBlock;
 import org.jspecify.annotations.Nullable;
 
-import java.util.Objects;
 
 import static net.minecraft.world.level.block.Block.UPDATE_CLIENTS;
 import static net.minecraft.world.level.block.Block.UPDATE_NEIGHBORS;
@@ -46,19 +46,17 @@ public abstract class MultiBlockEntity extends BlockEntity {
 
     @Nullable
     public MultiBlockEntity getMain() {
-        if (isMain()) {
-            return this;
+        if (isMain()) return this;
+        if (level == null || mainPos == null) return null;
+        BlockEntity main;
+        if (level instanceof ServerLevel serverLevel) {
+            var chunk = serverLevel.getChunkSource().getChunkNow(mainPos.getX() >> 4, mainPos.getZ() >> 4);
+            main = chunk == null ? null : chunk.getBlockEntity(mainPos);
         } else {
-            if (level != null) {
-                var blockEntity = level.getBlockEntity(Objects.requireNonNull(mainPos));
-                if (blockEntity instanceof MultiBlockEntity multiBlockEntity) {
-                    return multiBlockEntity;
-                }
-            }
-            return null;
+            main = level.getBlockEntity(mainPos);
         }
+        return main instanceof MultiBlockEntity multiBlockEntity ? multiBlockEntity : null;
     }
-
     @Override
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);

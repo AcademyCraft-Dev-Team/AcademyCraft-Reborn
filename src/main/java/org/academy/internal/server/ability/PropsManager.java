@@ -16,6 +16,7 @@ import net.minecraft.world.entity.monster.zombie.ZombieVillager;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ChunkPos;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.brewing.PlayerBrewedPotionEvent;
@@ -54,7 +55,7 @@ public final class PropsManager implements AbilitySubsystem {
     private static final int WITHER_MILESTONE = 1 << 1;
     private static final int ENDER_DRAGON_MILESTONE = 1 << 2;
     private static final int SYNC_INTERVAL_TICKS = 10;
-    private static final int STRUCTURE_INTERVAL_TICKS = 20;
+    private long lastCureCleanupTick = Long.MIN_VALUE;
 
     private final PlayerDataManager playerDataManager;
     private final SyncManager syncManager;
@@ -111,8 +112,15 @@ public final class PropsManager implements AbilitySubsystem {
         tickActivity(player, snapshot);
 
         var gameTime = player.level().getGameTime();
-        if (gameTime % STRUCTURE_INTERVAL_TICKS == 0) checkStructures(player);
-        if (gameTime % 1_200 == 0) curingPlayers.entrySet().removeIf(entry -> entry.getValue().expiresAt < gameTime);
+        if (storedPlayer != null && storedPlayer.getPropsData().isStarted()
+                && snapshot.structures.shouldCheck(gameTime, player.level().dimension().identifier(),
+                player.blockPosition().asLong(), player.getUUID().hashCode())) {
+            checkStructures(player);
+        }
+        if (gameTime % 1_200 == 0 && lastCureCleanupTick != gameTime) {
+            lastCureCleanupTick = gameTime;
+            curingPlayers.entrySet().removeIf(entry -> entry.getValue().expiresAt < gameTime);
+        }
 
         var lastSync = lastSyncTick.getOrDefault(player.getUUID(), Long.MIN_VALUE);
         if (dirtySync.contains(player.getUUID()) && gameTime - lastSync >= SYNC_INTERVAL_TICKS) {
@@ -231,28 +239,37 @@ public final class PropsManager implements AbilitySubsystem {
     }
 
     private void checkStructures(ServerPlayer player) {
-        if (!(player.level() instanceof ServerLevel level)) return;
+        var storedPlayer = playerDataManager.getData(player.getUUID());
+        if (storedPlayer == null || !storedPlayer.getPropsData().isStarted()) return;
+        var level = player.level();
         var pos = player.blockPosition();
-        var structureManager = level.structureManager();
-        var structures = structureManager.getAllStructuresAt(pos);
+        var chunks = level.getChunkSource();
+        var currentChunk = chunks.getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+        if (currentChunk == null) return;
+        var structures = currentChunk.getAllReferences();
         if (structures.isEmpty()) return;
         var registry = level.registryAccess().lookupOrThrow(Registries.STRUCTURE);
-        var storedPlayer = playerDataManager.getData(player.getUUID());
-        if (storedPlayer == null) return;
         var data = storedPlayer.getPropsData();
-        if (!data.isStarted()) return;
         var changed = false;
 
-        for (var structure : structures.keySet()) {
-            var start = structureManager.getStructureAt(pos, structure);
-            if (!start.isValid()) continue;
+        for (var entry : structures.entrySet()) {
+            var structure = entry.getKey();
             var id = registry.getKey(structure);
             if (id == null) continue;
-            var chunk = start.getChunkPos();
-            var key = level.dimension().identifier() + "|" + id + "|" + chunk.x() + "," + chunk.z();
-            if (!data.visitStructure(key)) continue;
-            changed = true;
-            award(player, AbilityFactor.NEURAL_ACTIVITY, 20.0, true);
+            for (var reference : entry.getValue()) {
+                var chunkPos = ChunkPos.unpack(reference);
+                var key = level.dimension().identifier() + "|" + id + "|" + chunkPos.x() + "," + chunkPos.z();
+                if (data.hasVisitedStructure(key)) continue;
+                // StructureManager.getStructureAt synchronously loads referenced start chunks.
+                // Discovery is optional: skip missing chunks and retry on a later scheduled check.
+                var startChunk = chunks.getChunkNow(chunkPos.x(), chunkPos.z());
+                if (startChunk == null) continue;
+                var start = startChunk.getStartForStructure(structure);
+                if (start == null || !start.isValid() || !start.getBoundingBox().isInside(pos)) continue;
+                if (!data.visitStructure(key)) continue;
+                changed = true;
+                award(player, AbilityFactor.NEURAL_ACTIVITY, 20.0, true);
+            }
         }
 
         if (changed) {
@@ -260,7 +277,6 @@ public final class PropsManager implements AbilitySubsystem {
             syncNow(player);
         }
     }
-
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public void onDamagePre(LivingDamageEvent.Pre event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
@@ -470,6 +486,7 @@ public final class PropsManager implements AbilitySubsystem {
     }
 
     private static final class ActivitySnapshot {
+        private final PropsStructureCheckState structures = new PropsStructureCheckState();
         private int sprintStat;
         private int swimStat;
         private int jumpStat;

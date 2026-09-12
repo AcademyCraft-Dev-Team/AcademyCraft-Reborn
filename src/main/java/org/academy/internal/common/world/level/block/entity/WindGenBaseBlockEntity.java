@@ -27,6 +27,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.Objects;
 
 public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Container, WirelessUser {
+    private final EnergyUpdateThrottle energyUpdates = new EnergyUpdateThrottle();
     private static final String NBT_COMPLETENESS = "Completeness";
     private static final int OUTPUT_TRANSFER_RATE = 1_000;
     public final AnimationState setupState = new AnimationState();
@@ -74,6 +75,7 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
     }
 
     private void serverTick() {
+        energyUpdates.flush(this, energyStored);
         if (!isMain()) return;
         updateState();
         if (level != null && completeness == Completeness.COMPLETE && topBlockEntity != null && topBlockEntity.hasFan) {
@@ -332,7 +334,7 @@ public final class WindGenBaseBlockEntity extends MultiBlockEntity implements Co
             energyStored = clamped;
             setChanged();
             if (level != null && !level.isClientSide()) {
-                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+                energyUpdates.markChanged();
             }
         }
     }

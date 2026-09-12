@@ -21,9 +21,10 @@ public final class AbilityDeveloperSources {
     public static @Nullable WirelessUser resolve(ServerPlayer player, DevelopmentSource source) {
         if (player == null || source == null) return null;
         if (source instanceof DevelopmentSource.BlockDevelopmentSource(var pos)) {
-            if (!player.level().hasChunkAt(pos)
-                    || player.position().distanceToSqr(Vec3.atCenterOf(pos)) > 64.0) return null;
-            var blockEntity = player.level().getBlockEntity(pos);
+            if (player.position().distanceToSqr(Vec3.atCenterOf(pos)) > 64.0) return null;
+            var chunk = player.level().getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+            if (chunk == null) return null;
+            var blockEntity = chunk.getBlockEntity(pos);
             return blockEntity instanceof AbilityDeveloperBlockEntity developer && developer.isMain()
                     ? developer
                     : null;

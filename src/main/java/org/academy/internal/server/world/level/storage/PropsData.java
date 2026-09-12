@@ -109,6 +109,11 @@ public final class PropsData {
         perceptionExperienceRemainder = Math.clamp(remainder, 0, 9);
     }
 
+    public boolean hasVisitedStructure(String key) {
+        ensureContainers();
+        return visitedStructures.contains(key);
+    }
+
     public boolean visitStructure(String key) {
         ensureContainers();
         return visitedStructures.add(key);
