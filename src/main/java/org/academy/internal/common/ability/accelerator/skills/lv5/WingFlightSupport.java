@@ -35,6 +35,8 @@ final class WingFlightSupport {
     static final double FAN_COS_THRESHOLD = 0.35;
     static final float MAX_HEALTH_DAMAGE_RATIO = 0.01f;
     static final float FIXED_DAMAGE = 10.0f;
+    static final float BLACK_SWEEP_MAX_HEALTH_DAMAGE_RATIO = 0.05f;
+    static final float BLACK_SWEEP_FIXED_DAMAGE = 40.0f;
 
     private WingFlightSupport() {
     }
@@ -98,6 +100,11 @@ final class WingFlightSupport {
         return (baseDamage + FIXED_DAMAGE) * playerMultiplier + trueMaxHealth * MAX_HEALTH_DAMAGE_RATIO;
     }
 
+    static float calculateBlackSweepDamage(float meleeAttack, float trueMaxHealth, float playerMultiplier) {
+        return (meleeAttack + BLACK_SWEEP_FIXED_DAMAGE) * playerMultiplier
+                + trueMaxHealth * BLACK_SWEEP_MAX_HEALTH_DAMAGE_RATIO;
+    }
+
     static int fanAttack(ServerPlayer player, Skill skill) {
         var level = player.level();
         var origin = player.getEyePosition();
@@ -111,7 +118,10 @@ final class WingFlightSupport {
                 ? Math.cos(Math.acos(FAN_COS_THRESHOLD) + Math.toRadians(10.0))
                 : FAN_COS_THRESHOLD;
         var attackShape = ViewTargetScanner.cone(range, cosThreshold);
-        var baseDamage = (float) player.getAttributeBaseValue(Attributes.ATTACK_DAMAGE);
+        var blackWing = skill == Skills.BLACK_WING.get();
+        var attackDamage = blackWing
+                ? (float) player.getAttributeValue(Attributes.ATTACK_DAMAGE)
+                : (float) player.getAttributeBaseValue(Attributes.ATTACK_DAMAGE);
         var multiplier = AbilitySystemServer.getSystem(player).getPlayerDamageMultiplier(player.getUUID());
         var source = SkillDamageSource.of(
                 player,
@@ -141,11 +151,15 @@ final class WingFlightSupport {
                     trueMaxHealth = target.getMaxHealth();
                 }
                 var platinumWing = skill == Skills.PLATINUM_WING.get();
-                var damage = calculateFanDamage(baseDamage, trueMaxHealth, multiplier, platinumWing);
+                var damage = blackWing
+                        ? calculateBlackSweepDamage(attackDamage, trueMaxHealth, multiplier)
+                        : calculateFanDamage(attackDamage, trueMaxHealth, multiplier, platinumWing);
                 if (!Float.isFinite(damage) || damage <= 0) continue;
                 // Percentage max-health damage must not be scaled by the ordinary damage multiplier,
                 // so tell the damage pipeline how much of this hit came from true max health.
-                var maxHealthPart = trueMaxHealth * MAX_HEALTH_DAMAGE_RATIO * (platinumWing ? multiplier : 1.0f);
+                var maxHealthPart = trueMaxHealth
+                        * (blackWing ? BLACK_SWEEP_MAX_HEALTH_DAMAGE_RATIO : MAX_HEALTH_DAMAGE_RATIO)
+                        * (platinumWing ? multiplier : 1.0f);
                 DamageComposition.withMaximumHealthPart(
                         target, source, maxHealthPart,
                         () -> new CTAEntityActuallyHurt(target).actuallyHurt(source, damage, true));
