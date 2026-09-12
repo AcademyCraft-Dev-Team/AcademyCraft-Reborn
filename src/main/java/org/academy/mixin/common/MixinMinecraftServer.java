@@ -3,6 +3,7 @@ package org.academy.mixin.common;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.clock.ServerClockManager;
 import org.academy.AcademyCraftServer;
+import org.academy.AcademyCraftConfig;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
 import org.academy.internal.server.time.TemporalRuntime;
@@ -22,6 +23,25 @@ public abstract class MixinMinecraftServer implements MinecraftServerContext {
     @Unique
     @Nullable
     private AcademyCraftServer academyCraftServer;
+
+    @Unique
+    @Nullable
+    private volatile AcademyCraftConfig academyCraftServerConfig;
+
+    @Override
+    public AcademyCraftConfig getAcademyCraftServerConfig() {
+        var config = academyCraftServerConfig;
+        if (config == null) {
+            synchronized (this) {
+                config = academyCraftServerConfig;
+                if (config == null) {
+                    config = AcademyCraftServer.loadServerConfig(getMinecraftServer().getServerDirectory());
+                    academyCraftServerConfig = config;
+                }
+            }
+        }
+        return config;
+    }
 
     @Inject(method = "halt", at = @At("HEAD"))
     private void halt(boolean wait, CallbackInfo ci) {

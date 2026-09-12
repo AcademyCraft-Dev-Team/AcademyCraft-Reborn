@@ -5,6 +5,7 @@ import net.minecraft.world.level.storage.LevelResource;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.api.common.profiler.AcademyProfiler;
@@ -42,6 +43,7 @@ import org.slf4j.Logger;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Path;
 
 /**
  * MinecraftServer, 不区分 IntegratedServer 或 DedicatedServer 喵
@@ -68,21 +70,13 @@ public final class AcademyCraftServer {
         dimensionEffectsConfig = DimensionEffectsConfig.load(server.getServerDirectory()
                 .resolve("config").resolve(DimensionEffectsConfig.FILE_NAME));
 
-        var serverConfigFile = server.getServerDirectory()
-                .resolve("config")
-                .resolve(AcademyCraft.MOD_ID + "-server.json")
-                .toFile();
         worldDataFile = server.getWorldPath(
                 LevelResource.ROOT).resolve(AcademyCraft.MOD_ID + ".json"
         ).toFile();
-        FileUtil.checkFile(serverConfigFile);
         FileUtil.checkFile(worldDataFile);
 
-        serverConfig = new AcademyCraftConfig(serverConfigFile);
+        serverConfig = context.getAcademyCraftServerConfig();
 
-        AcademyCraftConfig.registerTypeHandler(AbilityConfig.KEY, AbilityConfig.Action.INSTANCE);
-        AcademyCraftConfig.registerTypeHandler(GenericConfig.KEY, GenericConfig.Action.INSTANCE);
-        AcademyCraftConfig.registerTypeHandler(MusicConfig.KEY, MusicConfig.Action.INSTANCE);
         abilityConfig = serverConfig.getConfig(AbilityConfig.KEY);
         abilityConfig.seed("single_high_speed_electron_beam")
                 .floatMap.putIfAbsent("attackDelayTicks", 10.0f);
@@ -108,6 +102,24 @@ public final class AcademyCraftServer {
         PlayerLeftClickSwingPacket.initServer();
         MagneticHookActionPacket.initServer();
         AbilityProgramManager.initServer();
+    }
+
+    /** Loads typed settings before publishing them to world-generation workers. */
+    public static AcademyCraftConfig loadServerConfig(Path serverDirectory) {
+        var file = serverDirectory.resolve("config").resolve(AcademyCraft.MOD_ID + "-server.json").toFile();
+        FileUtil.checkFile(file);
+        AcademyCraftConfig.registerTypeHandler(AbilityConfig.KEY, AbilityConfig.Action.INSTANCE);
+        AcademyCraftConfig.registerTypeHandler(GenericConfig.KEY, GenericConfig.Action.INSTANCE);
+        AcademyCraftConfig.registerTypeHandler(MusicConfig.KEY, MusicConfig.Action.INSTANCE);
+        var config = new AcademyCraftConfig(file);
+        config.getConfig(GenericConfig.KEY);
+        return config;
+    }
+
+    @SubscribeEvent
+    public static void loadConfig(ServerAboutToStartEvent event) {
+        // Spawn chunks (including C2ME feature tasks) are generated before ServerStartedEvent.
+        event.getServer().getAcademyCraftServerConfig();
     }
 
     @SubscribeEvent
@@ -154,12 +166,16 @@ public final class AcademyCraftServer {
 
     /**
      * World-generation gate for the imag-phase lake feature. Worldgen runs on worker threads, so this
-     * reads the already-loaded server config instead of minting a new server instance.
+     * reads the shared config independently of the gameplay runtime's later initialization.
      */
     public static boolean isImagPhaseGenerationEnabled(net.minecraft.server.level.ServerLevel level) {
         if (level == null) return true;
-        var server = level.getServer().getAcademyCraftServer();
-        return server == null || server.getGenericConfig().worldgen.generateImagPhaseLakes;
+        return isImagPhaseGenerationEnabledForServer(level.getServer());
+    }
+
+    static boolean isImagPhaseGenerationEnabledForServer(MinecraftServerContext context) {
+        return context.getAcademyCraftServerConfig().<GenericConfig>getConfig(GenericConfig.KEY)
+                .worldgen.generateImagPhaseLakes;
     }
 
     public TemporalService getTemporalService() {
