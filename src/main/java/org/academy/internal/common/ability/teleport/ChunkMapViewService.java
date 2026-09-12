@@ -321,7 +321,7 @@ public final class ChunkMapViewService {
             var category = categoryOf(entity);
             if (category < 0) continue;
             var pos = entity.blockPosition();
-            // Players carry their UUID so the client can look up a portrait; nobody else has one to look up.
+            // Players carry their UUID for the real skin; other living entities are previewed from their type.
             var playerId = entity instanceof Player markerPlayer ? markerPlayer.getUUID() : null;
             markers.add(new ChunkLeapPackets.Marker(entity.getId(), category,
                     BuiltInRegistries.ENTITY_TYPE.getId(entity.getType()), pos.getX(), pos.getZ(), playerId));

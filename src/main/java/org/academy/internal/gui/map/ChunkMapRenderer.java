@@ -35,8 +35,10 @@ public final class ChunkMapRenderer {
     private static final int MAJOR_EVERY = 8;
     private static final int MIN_CHUNK_SIZE = 2;
     private static final int MAX_MARKER_HIT = 6;
+    private static final int MAX_ENTITY_THUMBNAILS = 64;
 
     private final ChunkMapTexture texture;
+    private final EntityRadarThumbnailRenderer entityThumbnails = new EntityRadarThumbnailRenderer();
 
     public ChunkMapRenderer(ChunkMapTexture texture) {
         this.texture = texture;
@@ -200,12 +202,11 @@ public final class ChunkMapRenderer {
         graphics.fill(right - 1, top, right, bottom, borderColor);
     }
     /**
-     * Draws one marker per entity: a portrait when one can be obtained, otherwise a disposition dot.
+     * Draws one marker per entity: player skin faces, type-cached living-entity previews, then category dots.
      *
-     * <p>A dot is the honest fallback, not the default. Only players have a texture that can be looked up
-     * from an id — mob head textures are model-specific and not addressable by entity type — so players get
-     * their skin face and everything else gets a dot coloured by disposition. That keeps the common case
-     * (locating other players) immediately readable while never inventing an icon that does not exist.
+     * <p>Entity previews use the vanilla GUI model renderer rather than copied texture assumptions. Unsupported
+     * entities keep their disposition dot, and the per-frame preview budget prevents dense radar scenes from
+     * turning hundreds of model renders into a frame-time spike.
      *
      * <p>The local player is ringed in blue so the map answers "where am I" without a legend.
      */
@@ -217,8 +218,9 @@ public final class ChunkMapRenderer {
         graphics.enableScissor(g.left(), g.top(), g.right(), g.bottom());
         var size = g.chunkSize();
         // Portraits read best a little larger than a bare dot, but must not swallow the terrain at low zoom.
-        var radius = Math.max(2, Math.min(5, (int) Math.round(size / 7.0)));
+        var radius = Math.max(3, Math.min(6, (int) Math.round(size / 7.0)));
         var diameter = radius * 2;
+        var thumbnailsRendered = 0;
         for (var marker : markers) {
             var centreX = g.screenX((marker.blockX() + 0.5) / 16.0);
             var centreZ = g.screenZ((marker.blockZ() + 0.5) / 16.0);
@@ -230,14 +232,21 @@ public final class ChunkMapRenderer {
 
             var portrait = portraitFor(marker);
             if (portrait != null) {
-                // Skin-tinted face: the head region of the skin sheet is a 8x8 patch at (8, 8).
-                blitFace(graphics, portrait, x, z, diameter + 2, 0xFF000000, true);
+                // Keep a dark silhouette behind the two skin layers so pale faces remain visible on bright terrain.
+                blitDot(graphics, x, z, diameter + 2, 0xB0000000);
                 blitFace(graphics, portrait, x, z, diameter, 0xFFFFFFFF, false);
+                blitFace(graphics, portrait, x, z, diameter, 0xFFFFFFFF, true);
             } else {
                 var color = markerColor(marker.category());
-                // A dark halo keeps a bright dot readable on bright terrain.
                 blitDot(graphics, x, z, diameter + 2, 0xB0000000);
                 blitDot(graphics, x, z, diameter, color);
+                var priority = self || marker.entityId() == hoveredEntityId
+                        || marker.entityId() == selectedEntityId;
+                if ((priority || thumbnailsRendered < MAX_ENTITY_THUMBNAILS)
+                        && entityThumbnails.render(graphics, marker, x, z, diameter)) {
+                    thumbnailsRendered++;
+                    bracket(graphics, x, z, diameter + 2, color & 0xAFFFFFFF);
+                }
             }
 
             if (self) {
@@ -257,10 +266,10 @@ public final class ChunkMapRenderer {
     }
 
     /**
-     * The skin texture for a marker, or null when there is none to be had.
+     * The skin texture for a player marker, or null when the entity needs a model thumbnail/fallback dot.
      *
-     * <p>Players resolve through the tab list, which already holds every visible player skin. Anything else
-     * returns null so the caller falls back to a dot; there is no generic mob head texture to fetch.
+     * <p>Players resolve through the tab list, which already holds every visible player skin. Non-player
+     * thumbnails are rendered from their registered entity type instead of pretending every model has a head UV.
      */
     private static net.minecraft.resources.Identifier portraitFor(ChunkLeapPackets.Marker marker) {
         if (marker.playerId() == null) return null;
