@@ -45,17 +45,19 @@ public final class ChunkSwapService {
      * Keeping the gameplay cap lower is what makes it enforceable: a selection is truncated to the container
      * limit on construction, so a cap equal to it could never reject anything.
      */
-    public static final int MAX_SWAP_CHUNKS = 512;
+    public static final int MAX_SWAP_CHUNKS = 9;
     /** Wall-clock budget per server tick for applying swap pairs. */
     private static final long SWAP_TIME_BUDGET_MS = 4L;
     /** Chunks refreshed per server tick during the deferred heightmap pass. */
     private static final int REFRESH_BUDGET_PER_TICK = 6;
     /** Wall-clock budget per tick for the heightmap queue, in milliseconds. */
     private static final long REFRESH_TIME_BUDGET_MS = 3L;
-    /** Ticks to wait before each carrier resync pass; light needs time to propagate. */
-    private static final int CARRIER_RESYNC_STEP_TICKS = 20;
+    /** Ticks between bounded carrier repair passes after the light-completion barrier. */
+    private static final int CARRIER_RESYNC_STEP_TICKS = 5;
     /** How many staggered resync passes a carried player receives. */
     private static final int CARRIER_RESYNC_PASSES = 2;
+    /** Only the collision-relevant 3x3 neighbourhood is repaired; never the player's whole view distance. */
+    private static final int CARRIER_RESYNC_RADIUS = 1;
 
     private ChunkSwapService() {
     }
@@ -197,6 +199,20 @@ public final class ChunkSwapService {
             }
             iterator.remove();
             var player = swap.player;
+            var crossDimension = swap.levelA != swap.levelB;
+            // Repair a carrier's destination first. The old full-view pass emitted up to 625 whole chunks
+            // before reaching the centre, which saturated an integrated or dedicated server connection and
+            // left the client colliding with stale terrain until its centre packet finally arrived.
+            for (var carried : swap.carriedPlayers) {
+                if (crossDimension) {
+                    // A respawn creates a new client chunk cache; an earlier god-view cache lease belongs
+                    // to the old level and must never restore over the new one.
+                    STREAMED.remove(carried.getUUID());
+                    invalidateGodView(carried);
+                }
+                resyncSurroundings(carried, crossDimension);
+                scheduleCarrierResync(carried, tick, crossDimension);
+            }
             resendSwappedChunks(swap);
             // Heightmap priming is far too expensive to do inline (it scans every column of the chunk), so it
             // is queued and drained a few chunks per tick. Lighting, which cannot be deferred, is already done.
@@ -208,13 +224,6 @@ public final class ChunkSwapService {
             if (!player.isRemoved() && !player.hasDisconnected()) {
                 MisakaNetworkServer.send(player, new ChunkLeapPackets.SwapResultPacket(
                         swap.opId, true, "", List.of(swap.source.bounds(), swap.target.bounds())));
-            }
-            // A carried player arrives in terrain whose light was just discarded and rebuilt. That update is
-            // broadcast once, only to players already tracking the chunk, and the pending-change filters are
-            // then cleared — so a carrier can miss it and keep an unlit chunk until a relog. A delayed
-            // whole-chunk resend delivers the settled light.
-            for (var carried : swap.carriedPlayers) {
-                scheduleCarrierResync(carried, tick);
             }
             releasePreloadLeases(player);
         }
@@ -298,21 +307,22 @@ public final class ChunkSwapService {
     /**
      * A player carried by a swap, waiting for the terrain around their new position to be re-sent.
      *
-     * <p>Necessary because discarding and rebuilding the light of a chunk is not something a player who
-     * arrives afterwards can observe: the change is broadcast once, to whoever tracks the chunk at that
-     * moment, and the pending-change filters are then cleared. A carrier therefore has to be handed a fresh
-     * chunk packet after the light has settled. Two passes are queued because the light engine amortises its
-     * rebuild across several ticks, so a single early send could still catch it mid-rebuild.
+     * <p>The light-completion barrier has already settled the server chunk. These short delayed passes cover
+     * only the client respawn/tracking handshake; recording the expected dimension prevents a later unrelated
+     * teleport from receiving stale repair packets.
      */
-    private record CarrierResync(ServerPlayer player, long dueTick) {
+    private record CarrierResync(ServerPlayer player, ResourceKey<net.minecraft.world.level.Level> dimension,
+                                 boolean resetCacheCenter, long dueTick) {
     }
 
     private static final ArrayDeque<CarrierResync> CARRIER_RESYNCS = new ArrayDeque<>();
 
-    private static void scheduleCarrierResync(ServerPlayer player, long tick) {
+    private static void scheduleCarrierResync(ServerPlayer player, long tick, boolean resetCacheCenter) {
         if (player == null) return;
+        var dimension = player.level().dimension();
         for (var pass = 1; pass <= CARRIER_RESYNC_PASSES; pass++) {
-            CARRIER_RESYNCS.add(new CarrierResync(player, tick + (long) CARRIER_RESYNC_STEP_TICKS * pass));
+            CARRIER_RESYNCS.add(new CarrierResync(player, dimension, resetCacheCenter,
+                    tick + (long) CARRIER_RESYNC_STEP_TICKS * pass));
         }
     }
 
@@ -323,28 +333,51 @@ public final class ChunkSwapService {
             var entry = iterator.next();
             if (entry.dueTick() > tick) continue;
             iterator.remove();
-            resyncSurroundings(entry.player());
+            if (!entry.player().level().dimension().equals(entry.dimension())) continue;
+            resyncSurroundings(entry.player(), entry.resetCacheCenter());
         }
     }
 
     /**
-     * Re-sends the whole chunks around a player.
+     * Re-sends the collision-relevant chunks around a player, centre first.
      *
      * <p>Whole-chunk packets carry the current light and make the client re-mark every section for redraw, so
-     * this repairs both a missed light update and any stale render state in one pass. Nothing is forgotten:
-     * the client already holds these chunks and re-sending them is idempotent.
+     * this repairs stale blocks and collision in one pass. Limiting the pass to 3x3 avoids the previous
+     * view-distance-dependent burst of up to 625 packets; the normal chunk tracker remains responsible for
+     * the rest of the view.
      */
-    private static void resyncSurroundings(ServerPlayer player) {
+    private static void resyncSurroundings(ServerPlayer player, boolean resetCacheCenter) {
         if (player.isRemoved() || player.hasDisconnected()) return;
         var level = player.level();
         var center = player.chunkPosition();
-        var radius = Math.clamp(player.requestedViewDistance(), 2, 12);
-        for (var dx = -radius; dx <= radius; dx++) {
-            for (var dz = -radius; dz <= radius; dz++) {
-                var chunk = level.getChunkSource().getChunkNow(center.x() + dx, center.z() + dz);
-                if (chunk != null) sendWholeChunk(player, level, chunk);
+        if (resetCacheCenter) {
+            // Required after a dimension respawn (and after any old god-view stream): otherwise the client
+            // can reject the centre chunk as outside its current cache window.
+            player.connection.send(new ClientboundSetChunkCacheCenterPacket(center.x(), center.z()));
+        }
+        for (var pos : carrierResyncOrder(center, CARRIER_RESYNC_RADIUS)) {
+            var chunk = level.getChunkSource().getChunkNow(pos.x(), pos.z());
+            if (chunk != null) {
+                sendWholeChunk(player, level, chunk);
             }
         }
+    }
+
+    /** Pure, bounded centre-first packet order for carrier recovery. */
+    static List<ChunkPos> carrierResyncOrder(ChunkPos center, int requestedRadius) {
+        var radius = Math.clamp(requestedRadius, 0, CARRIER_RESYNC_RADIUS);
+        var side = radius * 2 + 1;
+        var result = new ArrayList<ChunkPos>(side * side);
+        result.add(center);
+        for (var ring = 1; ring <= radius; ring++) {
+            for (var dx = -ring; dx <= ring; dx++) {
+                for (var dz = -ring; dz <= ring; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != ring) continue;
+                    result.add(new ChunkPos(center.x() + dx, center.z() + dz));
+                }
+            }
+        }
+        return List.copyOf(result);
     }
 
     // ---------------------------------------------------------------- entity teleport
@@ -557,6 +590,7 @@ public final class ChunkSwapService {
     }
 
     private static final Map<UUID, StreamedView> STREAMED = new ConcurrentHashMap<>();
+    private static final Map<UUID, UUID> GOD_VIEW_GENERATIONS = new ConcurrentHashMap<>();
 
     /** Slot a chunk occupies in a client cache of {@code v} chunks per axis. */
     private static int slotIndex(int chunkX, int chunkZ, int v) {
@@ -619,6 +653,8 @@ public final class ChunkSwapService {
             return;
         }
 
+        var generation = UUID.randomUUID();
+        GOD_VIEW_GENERATIONS.put(player.getUUID(), generation);
         var existing = STREAMED.get(player.getUUID());
         var radius = godViewChunkRadius(player);
         // Moving the camera within the area already streamed needs no new packets: re-sending hundreds of
@@ -630,11 +666,20 @@ public final class ChunkSwapService {
         }
 
         // Load what is not resident, then stream it. Bounded, and paid for by an explicit player action.
-        var owner = ChunkTicketLeaseManager.preloadOwner(player.getUUID()) + ":god";
+        var owner = godViewOwner(player);
         var region = ChunkLeapRegion.ofChunks(level.dimension(),
                 chunkX - radius, chunkZ - radius, radius * 2 + 1, radius * 2 + 1);
         ChunkTicketLeaseManager.acquireAndLoad(level, owner, region).thenRun(() -> server.execute(() -> {
-            if (player.isRemoved() || player.hasDisconnected()) return;
+            var playerId = player.getUUID();
+            var stillCurrent = generation.equals(GOD_VIEW_GENERATIONS.get(playerId));
+            if (!stillCurrent || player.isRemoved() || player.hasDisconnected() || player.level() != level) {
+                // A newer request owns the shared lease and must not be released by this stale callback.
+                // If this request is still current, invalidate it and release its old-dimension tickets.
+                if (GOD_VIEW_GENERATIONS.remove(playerId, generation)) {
+                    ChunkTicketLeaseManager.release(owner);
+                }
+                return;
+            }
             streamGodView(player, level, chunkX, chunkZ, radius);
             MisakaNetworkServer.send(player, new ChunkLeapPackets.GodViewStatusPacket(
                     packet.dimensionId(), true, true, packet.blockX(), surfaceY, packet.blockZ()));
@@ -659,6 +704,7 @@ public final class ChunkSwapService {
     /** Ends a god view: put the cache window back and repair any chunk the stream displaced. */
     private static void endGodView(ServerPlayer player, String dimensionId) {
         var streamed = STREAMED.remove(player.getUUID());
+        invalidateGodView(player);
         var centerX = player.chunkPosition().x();
         var centerZ = player.chunkPosition().z();
         // Hand the cache window back first, so the chunks restored below are in range again.
@@ -702,7 +748,20 @@ public final class ChunkSwapService {
 
     /** Drops the streamed-view record for a player, e.g. on logout. */
     static void forgetStreamedView(ServerPlayer player) {
-        if (player != null) STREAMED.remove(player.getUUID());
+        if (player == null) return;
+        STREAMED.remove(player.getUUID());
+        invalidateGodView(player);
+    }
+
+    private static String godViewOwner(ServerPlayer player) {
+        return ChunkTicketLeaseManager.preloadOwner(player.getUUID()) + ":god";
+    }
+
+    /** Cancels callbacks and releases the non-persistent chunks held for an active god view. */
+    private static void invalidateGodView(ServerPlayer player) {
+        if (player == null) return;
+        GOD_VIEW_GENERATIONS.remove(player.getUUID());
+        ChunkTicketLeaseManager.release(godViewOwner(player));
     }
 
     // ---------------------------------------------------------------- shared

@@ -67,7 +67,7 @@ public final class ChunkTicketLeaseManager {
         }
     }
 
-    private record ChunkKey(Level level, long chunk) {
+    private record ChunkKey(Level level, long chunk, int radius) {
     }
 
     private ChunkTicketLeaseManager() {
@@ -105,15 +105,18 @@ public final class ChunkTicketLeaseManager {
 
     /**
      * Acquires {@code owner} and returns a future that completes once every chunk of {@code region} is
-     * at {@code ChunkStatus.FULL}. Never blocks the server thread.
+     * at {@code ChunkStatus.FULL}, including the neighbour radius held for lighting and collision context.
+     * Never blocks the server thread.
      */
     public static CompletableFuture<Void> acquireAndLoad(ServerLevel level, String owner, ChunkLeapRegion region) {
         var lease = acquire(level, owner, region, 1);
         if (lease == null) return CompletableFuture.completedFuture(null);
         var futures = new CompletableFuture<?>[lease.chunks.size()];
         for (var i = 0; i < lease.chunks.size(); i++) {
+            // Await the same radius ticket acquired above. Using radius zero here creates a second,
+            // untracked NO_TIMEOUT ticket which release(owner) can never remove.
             futures[i] = level.getChunkSource()
-                    .addTicketAndLoadWithRadius(ChunkLeapTickets.MAP_VIEW.get(), lease.chunks.get(i), 0);
+                    .addTicketAndLoadWithRadius(ChunkLeapTickets.MAP_VIEW.get(), lease.chunks.get(i), lease.radius);
         }
         return CompletableFuture.allOf(futures).exceptionally(throwable -> null);
     }
@@ -214,7 +217,7 @@ public final class ChunkTicketLeaseManager {
     // ---------------------------------------------------------------- shared bookkeeping
 
     private static void acquireTicket(ServerLevel level, ChunkPos pos, int radius) {
-        var key = new ChunkKey(level, pos.pack());
+        var key = new ChunkKey(level, pos.pack(), radius);
         var count = REFS.get(key);
         if (count == null) {
             level.getChunkSource().addTicketWithRadius(ChunkLeapTickets.MAP_VIEW.get(), pos, radius);
@@ -225,7 +228,7 @@ public final class ChunkTicketLeaseManager {
     }
 
     private static void releaseTicket(ServerLevel level, ChunkPos pos, int radius) {
-        var key = new ChunkKey(level, pos.pack());
+        var key = new ChunkKey(level, pos.pack(), radius);
         var count = REFS.get(key);
         if (count == null) return;
         if (count > 1) {
