@@ -213,6 +213,8 @@ public final class TemporalPlayerTickGameTests {
             helper.assertTrue(controlled.getCooldowns().isOnCooldown(dirt),
                     "Paralysis must cool down carried items");
             var randomDuration = org.academy.api.common.damage.AbilityHitEffects.electricalInterruptionTicks(controlled);
+            helper.assertTrue(org.academy.internal.common.ability.mentalout.control.MentalControlRuntime.isFrozen(controlled),
+                    "Electrical interruption must freeze player actions like mental stupor");
             helper.assertTrue(randomDuration >= 10 && randomDuration <= 20,
                     "Player cooldown must use an inclusive random 10-20 tick interval");
             helper.assertTrue(org.academy.internal.common.world.damagesource.CategoryDamageRuntime.outgoingDamage(
@@ -227,6 +229,8 @@ public final class TemporalPlayerTickGameTests {
                         "Ending paralysis must preserve a longer pre-existing cooldown");
             }));
             helper.runAfterDelay(randomDuration + 1L, () -> guarded(() -> {
+                helper.assertTrue(!org.academy.internal.common.ability.mentalout.control.MentalControlRuntime.isFrozen(controlled),
+                        "Player action freeze must expire on physical time");
                 helper.assertTrue(!controlled.getCooldowns().isOnCooldown(dirt),
                         "Extra cooldown must expire on physical time despite player slowdown");
                 helper.assertTrue(controlled.getCooldowns().isOnCooldown(stick),
@@ -253,6 +257,8 @@ public final class TemporalPlayerTickGameTests {
                         "Mob attack lock must continue after the original half-second paralysis");
             }));
             helper.runAfterDelay(21L, () -> guarded(() -> {
+                helper.assertTrue(!org.academy.internal.common.ability.mentalout.control.MentalControlRuntime.isFrozen(monster),
+                        "Mob action freeze must expire after its interruption interval");
                 helper.assertTrue(!org.academy.internal.common.world.damagesource.CategoryDamageRuntime.blocksMobAttack(monster),
                         "Mob attack lock must clear by twenty physical ticks");
                 monster.discard();

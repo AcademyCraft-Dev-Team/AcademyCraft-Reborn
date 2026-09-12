@@ -45,6 +45,8 @@ public class AbilityConfig {
     public final Map<String, Map<String, SkillSettings>> skills = new TreeMap<>();
     @SerializedName("aeromanip")
     public final AeromanipSettings aeromanip = new AeromanipSettings();
+    @SerializedName("electromaster")
+    public final ElectromasterSettings electromaster = new ElectromasterSettings();
     @SerializedName("mentalout")
     public final MentaloutSettings mentalout = new MentaloutSettings();
     @SerializedName("proficiency")
@@ -255,6 +257,27 @@ public class AbilityConfig {
         public boolean allowSoftBlockInteraction = true;
     }
 
+    /** 电击使分类的麻痹引爆设置；关闭伤害仍保留电荷与行动中断。 */
+    public static class ElectromasterSettings {
+        @SerializedName("paralysisDamageEnabled")
+        public boolean paralysisDamageEnabled = true;
+        @SerializedName("paralysisMinimumDamage")
+        public float paralysisMinimumDamage = 2.0f;
+        /** 最大生命值的比例：0.01 表示 1%。 */
+        @SerializedName("paralysisMaxHealthFraction")
+        public float paralysisMaxHealthFraction = 0.01f;
+
+        public float paralysisDamage(float maximumHealth) {
+            if (!paralysisDamageEnabled) return 0.0f;
+            var minimum = Float.isFinite(paralysisMinimumDamage)
+                    ? Math.max(0.0f, paralysisMinimumDamage) : 2.0f;
+            var fraction = Float.isFinite(paralysisMaxHealthFraction)
+                    ? Math.clamp(paralysisMaxHealthFraction, 0.0f, 1.0f) : 0.01f;
+            return Math.max(minimum, Float.isFinite(maximumHealth)
+                    ? Math.max(0.0f, maximumHealth) * fraction : 0.0f);
+        }
+    }
+
     public static class MentaloutSettings {
         @SerializedName("allowPlayerRoster")
         public boolean allowPlayerRoster = true;
@@ -454,6 +477,7 @@ public class AbilityConfig {
             // hiding them when default would make them undiscoverable.
             root.addProperty("damageMultiplier", config.damageMultiplier);
             root.add("aeromanip", gson.toJsonTree(config.aeromanip));
+            root.add("electromaster", gson.toJsonTree(config.electromaster));
             root.add("mentalout", gson.toJsonTree(config.mentalout));
             root.add("proficiency", gson.toJsonTree(config.proficiency));
 

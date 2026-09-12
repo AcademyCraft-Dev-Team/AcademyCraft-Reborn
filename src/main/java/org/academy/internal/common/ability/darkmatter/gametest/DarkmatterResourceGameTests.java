@@ -42,6 +42,7 @@ import net.neoforged.neoforge.common.ItemAbilities;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import org.academy.AcademyCraft;
+import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.api.common.ability.darkmatter.DarkmatterShape;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -836,6 +837,108 @@ public final class DarkmatterResourceGameTests {
                 });
             }
         },
+        REPAIR_TICK_HEALING_ACCEPTS_TRUE_DAMAGE(
+                "repair_tick_healing_accepts_true_damage", 40) {
+            @Override
+            void run(GameTestHelper helper) {
+                var player = createPlayer(helper, 4);
+                var system = AbilitySystemServer.getSystem(player);
+                for (var skill : List.of(Skills.DARKMATTER_SHAPING.get(),
+                        Skills.DARKMATTER_PHASE_TUNING.get(), Skills.DARKMATTER_RADIATION.get(),
+                        Skills.DARKMATTER_REPAIR.get())) {
+                    system.addPlayerSkill(player, skill.getKeyString());
+                }
+                var manager = system.getDarkmatterResourceManager();
+                manager.debugSetPools(player, 50, 0, 0, 0);
+                manager.setAlphaPoints(player, 200);
+                helper.assertTrue(DarkmatterRepair.Server.toggle(player), "Repair toggle failed");
+                player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH).setBaseValue(20);
+                player.setHealth(20);
+                var types = player.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE);
+                var cta = new net.minecraft.world.damagesource.DamageSource(types.getOrThrow(DamageTypes.CTA));
+                var dm = new org.academy.api.common.damage.LawDetonationDamageSource(
+                        org.academy.api.common.damage.SkillDamageSource.from(
+                                new net.minecraft.world.damagesource.DamageSource(types.getOrThrow(DamageTypes.DM_DAMAGE)),
+                                Skills.DARKMATTER_CUT.get()));
+                try {
+                    helper.assertTrue(org.academy.internal.common.world.damagesource.SkillDamageUtil
+                            .applyVerifiedTrueHealth(player, cta, 10), "CTA damage failed");
+                    helper.assertTrue(org.academy.internal.common.world.damagesource.SkillDamageUtil
+                            .applyVerifiedTrueHealth(player, dm, 8), "DM detonation failed");
+                    assertClose(helper, 2, player.getHealth(), "CTA and DM must accumulate");
+                    var cow = helper.spawn(EntityTypes.COW, 5, 2, 5);
+                    cow.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH).setBaseValue(100);
+                    cow.setHealth(100);
+                    helper.assertTrue(SkillDamageUtil.applyVerifiedTrueHealth(cow, cta, 30), "Cow CTA failed");
+                    helper.assertTrue(SkillDamageUtil.applyVerifiedTrueHealth(cow, dm, 20), "Cow DM failed");
+                    var projection = ((org.academy.internal.common.entitycontrol.HealthOffsetAccess) cow)
+                            .academy$getHealthOffset();
+                    helper.assertTrue(projection != null, "Base-health entity must install projection");
+                    var projectionHit = projection.lastHit;
+                    assertClose(helper, 9, org.academy.api.server.entity.HealthRecovery.restore(cow, 9),
+                            "Accepted non-player recovery must release projection");
+                    cow.setHealth(100);
+                    assertClose(helper, 59, cow.getHealth(), "Recovery must not whitelist later direct writes");
+                    helper.assertTrue(projection.lastHit == projectionHit, "Recovery refreshed projection timing");
+                    org.academy.internal.common.entitycontrol.TrueHealthOffsetRuntime.clear(cow);
+                    cow.setHealth(100);
+                    org.academy.internal.common.entitycontrol.EntityControlApi.capTrueHealthTemporarily(cow, 50, 2);
+                    assertClose(helper, 9, org.academy.api.server.entity.HealthRecovery.restore(cow, 9),
+                            "Accepted recovery must also release a legacy temporary ceiling");
+                    cow.setHealth(100);
+                    assertClose(helper, 59, cow.getHealth(), "Legacy ceiling must retain the remaining damage");
+                    cow.discard();
+
+                    var state = ((org.academy.internal.common.entitycontrol.HealthOffsetAccess) player)
+                            .academy$getHealthOffset();
+                    helper.assertTrue(state != null, "Player must install a true-health projection");
+                    var hitTime = state.lastHit;
+                    player.setHealth(20);
+                    assertClose(helper, 2, player.getHealth(), "Unaccepted direct writes must remain clamped");
+
+                    // Deliberately use consecutive non-20th ticks to catch the old one-second gate.
+                    for (var tick = 1; tick <= 2; tick++) {
+                        player.tickCount = tick;
+                        DarkmatterRepair.Events.onPlayerTick(
+                                new net.neoforged.neoforge.event.tick.PlayerTickEvent.Post(player));
+                        assertClose(helper, 2 + 8.2f * tick, player.getHealth(),
+                                "Every tick must heal 8 alpha health plus 1% maximum health");
+                        assertClose(helper, 50 - 4 * tick, manager.getView(player).totalMatter(),
+                                "Alpha recovery must spend 4 MP per tick");
+                        org.academy.internal.common.entitycontrol.TrueHealthOffsetRuntime.afterEntityTick(
+                                new net.neoforged.neoforge.event.tick.EntityTickEvent.Post(player));
+                        assertClose(helper, 2 + 8.2f * tick, player.getHealth(),
+                                "Reconciliation must preserve accepted recovery");
+                    }
+                    helper.assertTrue(state.lastHit == hitTime, "Recovery must not refresh damage timing");
+
+                    manager.setAlphaPoints(player, 0);
+                    helper.assertTrue(DarkmatterRepair.Server.tryPulse(player), "Pure beta recovery failed");
+                    assertClose(helper, 19.6f, player.getHealth(), "Beta must heal 1 plus 1% maximum health");
+                    assertClose(helper, 41, manager.getView(player).totalMatter(), "Pure beta must spend 1 MP");
+
+                    var beforeOffset = state.encodedOffset;
+                    org.academy.internal.common.entitycontrol.EntityControlApi.banHeal(player, 19.6f);
+                    assertClose(helper, 0, org.academy.api.server.entity.HealthRecovery.restore(player, 10),
+                            "An explicit healing ban must still block recovery");
+                    helper.assertTrue(state.encodedOffset == beforeOffset, "Rejected recovery released projection");
+                    org.academy.internal.common.entitycontrol.EntityControlApi.allowHeal(player);
+
+                    manager.debugSetPools(player, 0, 0, 0, 0);
+                    helper.assertTrue(!DarkmatterRepair.Server.tryPulse(player), "Empty MP must reject recovery");
+                    assertClose(helper, 19.6f, player.getHealth(), "Empty MP changed health");
+                    assertClose(helper, 0.4f, org.academy.api.server.entity.HealthRecovery.restore(player, 1000),
+                            "Recovery must cap at maximum health");
+                    manager.debugSetPools(player, 10, 0, 0, 0);
+                    helper.assertTrue(!DarkmatterRepair.Server.tryPulse(player), "Full health consumed a pulse");
+                    assertClose(helper, 10, manager.getView(player).totalMatter(), "Idle recovery consumed MP");
+                } finally {
+                    org.academy.internal.common.entitycontrol.EntityControlApi.allowHeal(player);
+                    removePlayer(helper, player);
+                }
+                helper.succeed();
+            }
+        },
         REPAIR_PRODUCTIVE_PULSES_ARE_OPERATIONAL(
                 "repair_productive_pulses_are_operational", 40) {
             @Override
@@ -864,14 +967,14 @@ public final class DarkmatterResourceGameTests {
                         "Alpha repair restored the wrong integrity fraction");
                 helper.assertTrue(player.getAbsorptionAmount() > 0.0f,
                         "Successful alpha repair did not grant structural absorption");
-                assertClose(helper, 49.0f, manager.getView(player).totalMatter(),
+                assertClose(helper, 46.0f, manager.getView(player).totalMatter(),
                         "Alpha repair consumed the wrong MP amount");
 
                 DarkmatterItemUtil.setIntegrity(tool, 1.0f);
                 player.setAbsorptionAmount(0.0f);
                 helper.assertTrue(!DarkmatterRepair.Server.tryPulse(player),
                         "Repair consumed a pulse for absorption without damaged equipment");
-                assertClose(helper, 49.0f, manager.getView(player).totalMatter(),
+                assertClose(helper, 46.0f, manager.getView(player).totalMatter(),
                         "Idle repair consumed MP");
 
                 helper.assertTrue(manager.setAlphaPoints(player, 0),
@@ -881,7 +984,7 @@ public final class DarkmatterResourceGameTests {
                         MobEffects.POISON, 120));
                 helper.assertTrue(DarkmatterRepair.Server.tryPulse(player),
                         "Beta repair rejected real health/status work");
-                assertClose(helper, 12.5f, player.getHealth(),
+                assertClose(helper, 11.0f + player.getMaxHealth() * 0.01f, player.getHealth(),
                         "Beta repair healed the wrong amount");
                 var poison = player.getEffect(MobEffects.POISON);
                 helper.assertTrue(poison != null && poison.getDuration() == 60,
@@ -918,8 +1021,8 @@ public final class DarkmatterResourceGameTests {
                 helper.assertTrue(DarkmatterRepair.Server.productivePulses(
                                 player.getUUID()) == 5,
                         "Repair productive-pulse ledger diverged from actual work");
-                assertClose(helper, 45.6f, manager.getView(player).totalMatter(),
-                        "Repair proficiency costs did not use 1/0.8 MP");
+                assertClose(helper, 40.2f, manager.getView(player).totalMatter(),
+                        "Repair costs did not follow beta allocation and the proficiency discount");
                 removePlayer(helper, player);
                 helper.succeed();
             }

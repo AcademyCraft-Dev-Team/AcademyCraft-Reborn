@@ -48,7 +48,8 @@ public final class DamageTypes {
     }
 
     public static boolean usesResistanceBackdoor(DamageSource source) {
-        return source instanceof org.academy.api.common.damage.LawDetonationDamageSource
+        return org.academy.api.common.damage.TrueHealthDamageSource.matches(source)
+                || source instanceof org.academy.api.common.damage.LawDetonationDamageSource
                 || source != null && (source.is(VEC) || source.is(CTA))
                 || AbilityDamageProfiles.uses(source, DamageSettlement.TRUE_HEALTH);
     }
@@ -64,7 +65,8 @@ public final class DamageTypes {
     }
 
     public static boolean usesDirectActuallyHurt(DamageSource source) {
-        return source instanceof org.academy.api.common.damage.LawDetonationDamageSource
+        return org.academy.api.common.damage.TrueHealthDamageSource.matches(source)
+                || source instanceof org.academy.api.common.damage.LawDetonationDamageSource
                 || source != null && DIRECT_ACTUALLY_HURT_TYPES.stream().anyMatch(source::is)
                 || AbilityDamageProfiles.uses(source, DamageSettlement.DIRECT)
                 || AbilityDamageProfiles.uses(source, DamageSettlement.TRUE_HEALTH);
@@ -75,7 +77,8 @@ public final class DamageTypes {
     }
 
     public static boolean usesVerifiedTrueHealth(DamageSource source) {
-        return source instanceof org.academy.api.common.damage.LawDetonationDamageSource
+        return org.academy.api.common.damage.TrueHealthDamageSource.matches(source)
+                || source instanceof org.academy.api.common.damage.LawDetonationDamageSource
                 || source != null && VERIFIED_TRUE_HEALTH_TYPES.stream().anyMatch(source::is)
                 || AbilityDamageProfiles.uses(source, DamageSettlement.TRUE_HEALTH);
     }
