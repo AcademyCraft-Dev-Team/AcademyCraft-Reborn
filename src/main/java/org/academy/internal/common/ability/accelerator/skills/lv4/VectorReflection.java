@@ -356,7 +356,11 @@ public class VectorReflection extends Skill {
                 return false;
             }
 
-            var executed = skill.executeContinuous(player, _ -> result.baseCpCost(), (_, _) -> {
+            var budgetedCost = VectorDefenseCpBudget.limitBaseCost(
+                    player, VectorDefenseCpBudget.Channel.DAMAGE, result.baseCpCost());
+            var executed = skill.executeContinuous(player, _ -> budgetedCost, (_, actualCost) -> {
+                VectorDefenseCpBudget.record(
+                        player, VectorDefenseCpBudget.Channel.DAMAGE, actualCost);
                 if (emitFeedback) {
                     playReflectionSound(player);
                     spawnGlowCircle(player, incomingDirection.scale(-1.0), mirrorPoint);
@@ -401,8 +405,18 @@ public class VectorReflection extends Skill {
             var reflectedDamage = result.reflectedDamage();
             var executed = reflectedDamage <= 0.0f;
             if (reflectedDamage > 0.0f) {
-                executed = skill.executeContinuous(serverPlayer, _ -> result.baseCpCost(),
-                        (_, _) -> {
+                var budgetedCost = VectorDefenseCpBudget.limitBaseCost(
+                        serverPlayer,
+                        VectorDefenseCpBudget.Channel.DAMAGE,
+                        result.baseCpCost()
+                );
+                executed = skill.executeContinuous(serverPlayer, _ -> budgetedCost,
+                        (_, actualCost) -> {
+                            VectorDefenseCpBudget.record(
+                                    serverPlayer,
+                                    VectorDefenseCpBudget.Channel.DAMAGE,
+                                    actualCost
+                            );
                             applyReflection(serverPlayer, level, source, reflectedDamage);
                         }, true);
             }
@@ -532,12 +546,14 @@ public class VectorReflection extends Skill {
                 return true;
             }
             var projectileCost = projectileReflectionCost(speed);
-            var budgetedCost = VectorProjectileCpBudget.limitBaseCost(player, projectileCost);
+            var budgetedCost = VectorDefenseCpBudget.limitBaseCost(
+                    player, VectorDefenseCpBudget.Channel.PROJECTILE, projectileCost);
             var executed = Skills.VECTOR_REFLECTION.get().executeContinuous(
                     player,
                     _ -> budgetedCost,
                     (_, actualCost) -> {
-                        VectorProjectileCpBudget.record(player, actualCost);
+                        VectorDefenseCpBudget.record(
+                                player, VectorDefenseCpBudget.Channel.PROJECTILE, actualCost);
                         redirect.run();
                     },
                     true
