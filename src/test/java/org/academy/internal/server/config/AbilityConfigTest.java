@@ -12,6 +12,49 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AbilityConfigTest {
     @Test
+    void paralysisDamageIsConfigurableAndUsesTheLargerTerm() {
+        var settings = new AbilityConfig.ElectromasterSettings();
+        assertEquals(2.0f, settings.paralysisDamage(20));
+        assertEquals(2.0f, settings.paralysisDamage(200));
+        assertEquals(10.0f, settings.paralysisDamage(1000));
+        settings.paralysisMinimumDamage = 3;
+        settings.paralysisMaxHealthFraction = 0.02f;
+        assertEquals(3.0f, settings.paralysisDamage(100));
+        assertEquals(20.0f, settings.paralysisDamage(1000));
+        settings.paralysisDamageEnabled = false;
+        assertEquals(0.0f, settings.paralysisDamage(1000));
+    }
+
+    @Test
+    void paralysisSettingsRoundTripAndOldFilesReceiveDefaults() {
+        var gson = new GsonBuilder().create();
+        var adapter = AbilityConfig.Action.INSTANCE.getAdapter(gson);
+        var defaults = adapter.fromJsonTree(JsonParser.parseString("{}"));
+        assertTrue(defaults.electromaster.paralysisDamageEnabled);
+        assertEquals(10.0f, defaults.electromaster.paralysisDamage(1000));
+        defaults.electromaster.paralysisMinimumDamage = 5;
+        defaults.electromaster.paralysisMaxHealthFraction = 0.03f;
+        defaults.electromaster.paralysisDamageEnabled = false;
+        var tree = adapter.toJsonTree(defaults);
+        assertTrue(tree.getAsJsonObject().has("electromaster"));
+        var restored = adapter.fromJsonTree(tree).electromaster;
+        assertFalse(restored.paralysisDamageEnabled);
+        assertEquals(5, restored.paralysisMinimumDamage);
+        assertEquals(0.03f, restored.paralysisMaxHealthFraction);
+    }
+
+    @Test
+    void invalidParalysisNumbersCannotProduceInvalidDamage() {
+        var settings = new AbilityConfig.ElectromasterSettings();
+        settings.paralysisMinimumDamage = Float.NaN;
+        settings.paralysisMaxHealthFraction = Float.POSITIVE_INFINITY;
+        assertEquals(10.0f, settings.paralysisDamage(1000));
+        settings.paralysisMinimumDamage = -2;
+        settings.paralysisMaxHealthFraction = -1;
+        assertEquals(0.0f, settings.paralysisDamage(1000));
+    }
+
+    @Test
     void defaultsSingleBeamAttackDelayToReferenceTiming() {
         var config = AbilityConfig.Action.INSTANCE.getDefault();
         var settings = config.skillSettings("single_high_speed_electron_beam");

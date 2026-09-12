@@ -43,7 +43,6 @@ import java.util.*;
 /** Transient category hit state; expiry follows physical server ticks, never a slowed entity clock. */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class CategoryDamageRuntime {
-    public static final float DISCHARGE_DAMAGE = 2.0f;
     public static final int PARALYSIS_TICKS = 10;
     public static final int INTERRUPTION_MIN_TICKS = 10;
     public static final int INTERRUPTION_MAX_TICKS = 20;
@@ -139,20 +138,22 @@ public final class CategoryDamageRuntime {
         state.points = (int) (sum % 5L);
         state.chargeExpires = now + CHARGE_TIMEOUT_TICKS;
         if (discharges > 0) {
-            state.paralyzedUntil = now + PARALYSIS_TICKS;
             // Roll once per discharge; a new shorter roll cannot shorten an existing lock.
             var duration = INTERRUPTION_MIN_TICKS + target.getRandom().nextInt(
                     INTERRUPTION_MAX_TICKS - INTERRUPTION_MIN_TICKS + 1);
+            // Resolve damage first: a rejected/fully immune hit must never grant the action lock.
+            if (!discharge(target, cause, discharges)) return 0;
+            if (!target.isAlive()) return discharges;
+            state.paralyzedUntil = now + PARALYSIS_TICKS;
             state.interruptedUntil = Math.max(state.interruptedUntil, now + duration);
             interrupt(target);
             syncParalysis(target, state);
             syncItemCooldowns(target, state);
-            discharge(target, cause, discharges);
         }
         return discharges;
     }
 
-    private static void discharge(LivingEntity target,
+    private static boolean discharge(LivingEntity target,
                                   @Nullable DamageSource cause, int count) {
         var level = (ServerLevel) target.level();
         DamageSource source;
@@ -166,9 +167,26 @@ public final class CategoryDamageRuntime {
                     cause == null ? null : cause.getDirectEntity(),
                     cause == null ? null : cause.getEntity());
         }
+        var before = CTAEntityActuallyHurt.readTrueHealth(target);
+        if (target.isInvulnerableTo(level, source)
+                || org.academy.api.server.entity.SurvivalDefense.applyHealthReadGuard(target, 0.0f) >= before
+                || org.academy.internal.common.entitycontrol.EntityControlApi.clampHealthWrite(target, 0.0f) >= before) {
+            return false;
+        }
         // Zero charge on the secondary source prevents its completion callback from recharging.
         // Batch simultaneous thresholds without an unbounded loop for public API callers.
-        SkillDamageUtil.applyDirect(level, target, source, DISCHARGE_DAMAGE * count);
+        var settings = ((org.academy.api.server.vanilla.MinecraftServerContext) level.getServer())
+                .getAcademyCraftServer().getAbilityConfig().electromaster;
+        var damage = settings.paralysisDamage(target.getMaxHealth());
+        // Disabling the extra damage does not disable interruption on a vulnerable target.
+        if (damage <= 0.0f) return true;
+        var total = (float) Math.min(Float.MAX_VALUE, (double) damage * count);
+        var dischargeSource = org.academy.api.common.damage.TrueHealthDamageSource.of(source);
+        // Keep a winning percentage term out of ordinary skill/global damage multipliers.
+        var maximumHealthPart = damage > settings.paralysisDamage(0.0f) ? total : 0.0f;
+        var accepted = DamageComposition.withMaximumHealthPart(target, dischargeSource, maximumHealthPart,
+                () -> SkillDamageUtil.applyVerifiedTrueHealth(target, dischargeSource, total));
+        return accepted && CTAEntityActuallyHurt.readTrueHealth(target) < before;
     }
 
     @SuppressWarnings("unchecked")
@@ -306,7 +324,7 @@ public final class CategoryDamageRuntime {
         var player = event.player();
         var time = (org.academy.internal.server.time.TemporalRuntime)
                 org.academy.api.server.time.TemporalApi.get(player);
-        if (isParalyzed(player) || !event.continuous() && !time.isPlayerActionTick(player)) event.setCanceled(true);
+        if (electricalInterruptionTicks(player) > 0 || !event.continuous() && !time.isPlayerActionTick(player)) event.setCanceled(true);
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
@@ -355,7 +373,12 @@ public final class CategoryDamageRuntime {
             if (state.paralyzedUntil > 0 && now(target) >= state.paralyzedUntil) clearParalysis(target, state);
             else if (state.paralyzedUntil > 0) syncParalysis(target, state);
             if (state.interruptedUntil > 0 && now(target) >= state.interruptedUntil) clearInterruption(target, state);
-            else if (state.interruptedUntil > 0) syncItemCooldowns(target, state);
+            else if (state.interruptedUntil > 0) {
+                interrupt(target);
+                target.setJumping(false);
+                target.setDeltaMovement(0.0, Math.min(0.0, target.getDeltaMovement().y), 0.0);
+                syncItemCooldowns(target, state);
+            }
             if (now(target) >= state.chargeExpires && state.paralyzedUntil == 0 && state.interruptedUntil == 0) {
                 CHARGES.remove(entry.getKey());
             }

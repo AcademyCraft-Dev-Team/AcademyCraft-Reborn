@@ -277,6 +277,29 @@ public final class EntityControlApi {
         return state != null && state.trueMaxHealthLocked ? (float) state.trueMaxHealthLock : original;
     }
 
+    /**
+     * Releases the legacy CTA/DM temporary ceiling only by accepted recovery. Explicit health
+     * locks and healing bans remain authoritative; arbitrary setHealth calls never enter here.
+     */
+    public static void runWithAcceptedRecovery(LivingEntity entity, float amount, Runnable recovery) {
+        var state = STATES.get(entity.getUUID());
+        if (state != null) expire(state, gameTime(entity));
+        if (state == null || !state.healthCapActive || !Float.isFinite(amount) || amount <= 0.0f) {
+            recovery.run();
+            return;
+        }
+        var before = entity.getHealth();
+        var previousCap = state.healthCap;
+        state.healthCap = Math.min(getTrueMaxHealth(entity), previousCap + amount);
+        try {
+            recovery.run();
+        } finally {
+            var observed = entity.getHealth();
+            var gained = Float.isFinite(observed) ? Math.clamp(observed - before, 0.0f, amount) : 0.0f;
+            state.healthCap = Math.min(getTrueMaxHealth(entity), previousCap + gained);
+        }
+    }
+
     public static boolean handleHeal(LivingEntity entity, float amount) {
         if (entity == null || amount <= 0.0f || BYPASS_GUARDS.get()) return false;
         var state = STATES.get(entity.getUUID());
