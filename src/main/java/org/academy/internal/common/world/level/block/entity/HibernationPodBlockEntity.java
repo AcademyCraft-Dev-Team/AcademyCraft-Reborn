@@ -9,12 +9,10 @@ import com.geckolib.animation.object.PlayState;
 import com.geckolib.util.GeckoLibUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -37,7 +35,7 @@ import java.util.UUID;
 
 /**
  * One-time openable hibernation pod. Right-click spawns a Misaka Sister inside (hidden),
- * plays {@code openning} with cold air (she becomes visible), then she walks out when {@code opened}.
+ * plays {@code openning} with VFX cold mist (she becomes visible), then she walks out when {@code opened}.
  */
 public final class HibernationPodBlockEntity extends MultiBlockEntity implements GeoBlockEntity {
     /** Matches {@code openning} length 0.5417s at 20 tps. */
@@ -97,6 +95,7 @@ public final class HibernationPodBlockEntity extends MultiBlockEntity implements
         main.openingProgress = 0;
         main.setChanged();
         level.sendBlockUpdated(main.getBlockPos(), main.getBlockState(), main.getBlockState(), Block.UPDATE_ALL);
+        HibernationPodVfx.opening(serverLevel, main.getBlockPos(), main.doorFacing());
         return true;
     }
 
@@ -142,15 +141,16 @@ public final class HibernationPodBlockEntity extends MultiBlockEntity implements
         }
         if (be.openPhase == OpenPhase.OPENING) {
             be.openingProgress++;
-            if (level.isClientSide()) {
-                be.spawnColdAirParticles(level);
-            } else if (level instanceof ServerLevel serverLevel) {
+            if (!level.isClientSide() && level instanceof ServerLevel serverLevel) {
                 be.tickContainedSister(serverLevel);
+                HibernationPodVfx.openingTick(
+                        serverLevel, pos, be.doorFacing(), be.openingProgress);
             }
             if (be.openingProgress >= OPENING_TICKS) {
                 be.openPhase = OpenPhase.OPENED;
                 be.openingProgress = OPENING_TICKS;
                 if (!level.isClientSide() && level instanceof ServerLevel serverLevel) {
+                    HibernationPodVfx.opened(serverLevel, pos, be.doorFacing());
                     be.releaseSister(serverLevel);
                     be.setChanged();
                     level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
@@ -260,31 +260,6 @@ public final class HibernationPodBlockEntity extends MultiBlockEntity implements
             return Optional.of(sister);
         }
         return Optional.empty();
-    }
-
-    private void spawnColdAirParticles(Level level) {
-        RandomSource random = level.getRandom();
-        BlockPos pos = getBlockPos();
-        double x = pos.getX() + 0.5;
-        double z = pos.getZ() + 0.5;
-        for (int i = 0; i < 10; i++) {
-            double ox = (random.nextDouble() - 0.5) * 1.8;
-            double oy = 0.2 + random.nextDouble() * 3.2;
-            double oz = (random.nextDouble() - 0.5) * 1.8;
-            double vx = (random.nextDouble() - 0.5) * 0.08;
-            double vy = 0.03 + random.nextDouble() * 0.1;
-            double vz = (random.nextDouble() - 0.5) * 0.08;
-            level.addParticle(ParticleTypes.CLOUD, x + ox, pos.getY() + oy, z + oz, vx, vy, vz);
-            level.addParticle(
-                    ParticleTypes.WHITE_SMOKE,
-                    x + ox * 0.85,
-                    pos.getY() + oy,
-                    z + oz * 0.85,
-                    vx * 0.7,
-                    vy * 0.9,
-                    vz * 0.7
-            );
-        }
     }
 
     public @Nullable HibernationPodBlockEntity mainEntity() {

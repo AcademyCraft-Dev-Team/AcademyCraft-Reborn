@@ -1,0 +1,24 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"spinning": {
+			"loop": true,
+			"animation_length": 2,
+			"bones": {
+				"radar": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"1.0": {
+							"vector": [0, 180, 0]
+						},
+						"2.0": {
+							"vector": [0, 360, 0]
+						}
+					}
+				}
+			}
+		}
+	}
+}

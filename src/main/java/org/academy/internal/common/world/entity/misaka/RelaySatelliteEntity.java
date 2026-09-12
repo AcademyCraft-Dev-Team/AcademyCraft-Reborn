@@ -1,6 +1,6 @@
 package org.academy.internal.common.world.entity.misaka;
 
-import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -23,13 +23,18 @@ import org.joml.Vector3f;
 import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
+import com.geckolib.animatable.GeoEntity;
+import com.geckolib.animatable.instance.AnimatableInstanceCache;
+import com.geckolib.animatable.manager.AnimatableManager;
+import com.geckolib.util.GeckoLibUtil;
+
 import java.util.UUID;
 
 /**
  * Cosmetic orbiting / launching / crashing Misaka relay satellite.
  * Coverage authority is {@link MisakaRelayRegistry}.
  */
-public final class RelaySatelliteEntity extends RenderOnlyEntity {
+public final class RelaySatelliteEntity extends RenderOnlyEntity implements GeoEntity {
     public static final float ORBIT_RADIUS = 48.0f;
     public static final int LAUNCH_DURATION_TICKS = MisakaRelayOrbits.DEFAULT_LAUNCH_TICKS;
 
@@ -47,6 +52,7 @@ public final class RelaySatelliteEntity extends RenderOnlyEntity {
     private static final double METEOR_AIR_DRAG = 0.995;
     private static final float DEFAULT_CRASH_EXPLOSION_POWER = 5.0f;
 
+    private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
     private @Nullable UUID satelliteId;
     private double orbitAngle;
     private int launchAge;
@@ -178,11 +184,7 @@ public final class RelaySatelliteEntity extends RenderOnlyEntity {
     public void tick() {
         super.tick();
         if (level().isClientSide()) {
-            if (isCrashing()) {
-                spawnMeteorTrailParticles();
-            } else if (isLaunching()) {
-                spawnLaunchTrailParticles();
-            }
+            // Launch / crash trails: RelaySatelliteTrailVfxClient (demo_fire + mist_stream).
             return;
         }
         if (isCrashing()) {
@@ -207,8 +209,8 @@ public final class RelaySatelliteEntity extends RenderOnlyEntity {
         if (launchAge % 5 == 0 || launchAge >= duration) {
             entityData.set(LAUNCH_AGE, launchAge);
         }
-        var anchor = getOrbitAnchor();
-        var end = new Vec3(anchor.x() + ORBIT_RADIUS, anchor.y(), anchor.z());
+        // Match laser-tower / abstract-orbit slot so beam and vanish point coincide.
+        var end = currentOrbitSlot();
         if (launchAge >= duration) {
             setPos(end.x, end.y, end.z);
             setDeltaMovement(Vec3.ZERO);
@@ -232,19 +234,20 @@ public final class RelaySatelliteEntity extends RenderOnlyEntity {
         setPos(x, y, z);
         setDeltaMovement(x - prevX, y - prevY, z - prevZ);
         setYRot((float) (Mth.atan2(x - prevX, z - prevZ) * Mth.RAD_TO_DEG));
+    }
 
-        if (level() instanceof ServerLevel serverLevel && tickCount % 3 == 0) {
-            serverLevel.sendParticles(
-                    ParticleTypes.CLOUD,
-                    getX(), getY() - 0.4, getZ(),
-                    2, 0.1, 0.06, 0.1, 0.008
-            );
-            serverLevel.sendParticles(
-                    ParticleTypes.FLAME,
-                    getX(), getY() - 0.15, getZ(),
-                    3, 0.08, 0.08, 0.08, 0.015
-            );
-        }
+    /**
+     * Same world slot the energy laser aims at ({@link MisakaRelayOrbits#orbitSlotWorld}).
+     */
+    private Vec3 currentOrbitSlot() {
+        var anchor = getOrbitAnchor();
+        int seed = satelliteId != null ? satelliteId.hashCode() : 0;
+        return MisakaRelayOrbits.orbitSlotWorld(
+                BlockPos.containing(anchor.x(), anchor.y(), anchor.z()),
+                anchor.y(),
+                level().getGameTime(),
+                seed
+        );
     }
 
     private void finishLaunch() {
@@ -287,70 +290,8 @@ public final class RelaySatelliteEntity extends RenderOnlyEntity {
         }
 
         move(MoverType.SELF, motion);
-        if (level() instanceof ServerLevel serverLevel && tickCount % 2 == 0) {
-            serverLevel.sendParticles(
-                    ParticleTypes.FLAME,
-                    getX(), getY(), getZ(),
-                    4, 0.18, 0.18, 0.18, 0.03
-            );
-            serverLevel.sendParticles(
-                    ParticleTypes.LARGE_SMOKE,
-                    getX(), getY(), getZ(),
-                    2, 0.12, 0.12, 0.12, 0.01
-            );
-        }
         if (onGround() || verticalCollision || getY() < level().dimensionType().minY() + 1) {
             finishCrash();
-        }
-    }
-
-    private void spawnLaunchTrailParticles() {
-        var motion = getDeltaMovement();
-        var back = motion.lengthSqr() > 1.0e-8
-                ? motion.normalize().scale(-0.35)
-                : new Vec3(0.0, -0.35, 0.0);
-        for (var i = 0; i < 4; i++) {
-            var ox = (random.nextDouble() - 0.5) * 0.3;
-            var oy = (random.nextDouble() - 0.5) * 0.2;
-            var oz = (random.nextDouble() - 0.5) * 0.3;
-            level().addParticle(
-                    ParticleTypes.FLAME,
-                    getX() + ox, getY() + oy - 0.2, getZ() + oz,
-                    back.x + ox * 0.02, back.y, back.z + oz * 0.02
-            );
-            level().addParticle(
-                    ParticleTypes.CLOUD,
-                    getX() + ox, getY() + oy - 0.3, getZ() + oz,
-                    back.x * 0.4, back.y * 0.4, back.z * 0.4
-            );
-        }
-        if ((tickCount & 1) == 0) {
-            level().addParticle(ParticleTypes.END_ROD, getX(), getY(), getZ(), 0.0, 0.04, 0.0);
-        }
-    }
-
-    private void spawnMeteorTrailParticles() {
-        var motion = getDeltaMovement();
-        var back = motion.lengthSqr() > 1.0e-6
-                ? motion.normalize().scale(-0.35)
-                : new Vec3(0.0, 0.35, 0.0);
-        for (var i = 0; i < 5; i++) {
-            var ox = (random.nextDouble() - 0.5) * 0.45;
-            var oy = (random.nextDouble() - 0.5) * 0.45;
-            var oz = (random.nextDouble() - 0.5) * 0.45;
-            level().addParticle(
-                    ParticleTypes.FLAME,
-                    getX() + ox, getY() + oy, getZ() + oz,
-                    back.x + ox * 0.04, back.y, back.z + oz * 0.04
-            );
-            level().addParticle(
-                    ParticleTypes.SMOKE,
-                    getX() + ox, getY() + oy, getZ() + oz,
-                    back.x * 0.6, back.y * 0.6, back.z * 0.6
-            );
-        }
-        if ((tickCount & 1) == 0) {
-            level().addParticle(ParticleTypes.LAVA, getX(), getY(), getZ(), 0.0, 0.0, 0.0);
         }
     }
 
@@ -462,5 +403,14 @@ public final class RelaySatelliteEntity extends RenderOnlyEntity {
         output.putDouble("launch_start_z", launchStartZ);
         output.putDouble("crash_max_speed", crashMaxSpeed);
         output.putDouble("crash_accel", crashAccel);
+    }
+
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+    }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return geoCache;
     }
 }

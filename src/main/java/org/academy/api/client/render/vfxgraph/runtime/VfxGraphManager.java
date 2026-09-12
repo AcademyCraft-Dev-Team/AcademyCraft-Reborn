@@ -242,16 +242,18 @@ public final class VfxGraphManager {
     public ActiveEffect spawn(Identifier assetId, Vector3f position) {
         var key = normalizedKey(assetId);
         var container = containerAssets.get(key);
+        var graph = assets.get(key);
+        if (container == null && graph == null) {
+            // 懒加载兜底：重载监听可能尚未装载（或未命中），直接从资源管理器/classpath 读取。
+            // 容器 schema（kind:"vfx"）会写入 containerAssets 并返回 null Graph —— 必须再查一次容器缓存。
+            loadFromResourceManager(assetId);
+            container = containerAssets.get(key);
+            graph = assets.get(key);
+        }
         if (container != null) {
             var effect = new ActiveEffect(key, container, vfxRegistry, blockRegistry, operatorRegistry, position);
             effects.add(effect);
             return effect;
-        }
-        var graph = assets.get(key);
-        if (graph == null) {
-            // 懒加载兜底：重载监听可能尚未装载（或未命中），直接从资源管理器/classpath 读取
-            var loaded = loadFromResourceManager(assetId);
-            graph = loaded;
         }
         if (graph == null) {
             throw new IllegalArgumentException("no vfx graph asset: " + assetId);

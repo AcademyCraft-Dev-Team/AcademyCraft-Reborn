@@ -256,6 +256,23 @@ class MisakaRelayRegistryTest {
         assertEquals(MisakaRelayEntry.Phase.CRASHING, entry.phase);
         assertEquals(null, entry.entityUuid);
         assertEquals(entry, registry.get(entry.satelliteId));
+        assertFalse(entry.laserBound);
+        assertEquals(null, registry.laserBoundSatellite(OVERWORLD, entry.laserPos));
+    }
+
+    @Test
+    void beginCrashFreesLaserTowerBeforeImpact() {
+        var laser = new BlockPos(50, 80, 50);
+        var entry = orbitEntry(UUID.randomUUID(), new BlockPos(21, 64, 21), OVERWORLD, laser);
+        registry.testingPutPowered(entry);
+        assertEquals(entry.satelliteId, registry.laserBoundSatellite(OVERWORLD, laser));
+
+        registry.testingBeginCrashPhaseOnly(entry.satelliteId);
+        assertEquals(MisakaRelayEntry.Phase.CRASHING, entry.phase);
+        assertFalse(entry.laserBound);
+        assertFalse(entry.powered);
+        assertEquals(null, registry.laserBoundSatellite(OVERWORLD, laser));
+        assertEquals(entry, registry.get(entry.satelliteId));
     }
 
     @Test
@@ -285,24 +302,25 @@ class MisakaRelayRegistryTest {
     }
 
     @Test
-    void forceCrashCutsPowerImmediatelyAndRefusesFeed() {
+    void forceCrashCountdownKeepsLaserPowerUntilCrashStarts() {
         var entry = orbitEntry(UUID.randomUUID(), new BlockPos(19, 64, 19), OVERWORLD, new BlockPos(44, 80, 44));
         registry.testingPutPowered(entry);
         assertTrue(entry.powered);
         assertTrue(registry.hasActiveRelay(entry.networkId, OVERWORLD));
 
         assertTrue(registry.scheduleForceCrash(null, entry.satelliteId, 10));
-        assertFalse(entry.powered);
-        assertFalse(registry.acceptsPowerFeed(entry.satelliteId));
-        assertFalse(registry.hasActiveRelay(entry.networkId, OVERWORLD));
-        assertFalse(registry.isReceivingPower(entry.satelliteId));
+        assertTrue(entry.powered);
+        assertTrue(registry.acceptsPowerFeed(entry.satelliteId));
+        assertTrue(registry.hasActiveRelay(entry.networkId, OVERWORLD));
+        assertTrue(registry.isReceivingPower(entry.satelliteId));
 
         registry.feed(entry.satelliteId);
         registry.endTick(null);
-        assertFalse(entry.powered);
+        assertTrue(entry.powered);
         assertEquals(9, entry.forceCrashCountdownTicks);
         assertEquals(MisakaRelayEntry.Phase.ORBIT, entry.phase);
-        assertFalse(registry.hasActiveRelay(entry.networkId, OVERWORLD));
+        assertTrue(registry.hasActiveRelay(entry.networkId, OVERWORLD));
+        assertTrue(entry.laserBound);
     }
 
     @Test

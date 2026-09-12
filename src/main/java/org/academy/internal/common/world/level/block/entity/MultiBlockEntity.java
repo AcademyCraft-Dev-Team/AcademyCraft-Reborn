@@ -70,7 +70,8 @@ public abstract class MultiBlockEntity extends BlockEntity {
     @Override
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
-        mainPos = BlockPos.of(input.getLong("main_pos").orElseThrow());
+        // Legacy / incomplete saves: default to this part (MAIN self, or broken SUBJECT until repaired).
+        mainPos = input.getLong("main_pos").map(BlockPos::of).orElseGet(this::getBlockPos);
     }
 
     @Override

@@ -154,8 +154,23 @@ public final class Items {
     public static final DeferredHolder<Item, SpawnEggItem> MISAKA_SISTER_SPAWN_EGG =
             ITEMS.registerItem("misaka_sister_spawn_egg", properties -> new SpawnEggItem(
                     properties.spawnEgg(EntityTypes.MISAKA_SISTER.get())));
-    public static final DeferredHolder<Item, BlockItem> AEROSPACE_SIGNAL_CABIN =
-            ITEMS.registerSimpleBlockItem("aerospace_signal_cabin", Blocks.AEROSPACE_SIGNAL_CABIN);
+    public static final DeferredHolder<Item, GeoBlockItem> SATELLITE_LAUNCH_PAD =
+            ITEMS.registerItem("satellite_launch_pad",
+                    properties -> new GeoBlockItem(
+                            Blocks.SATELLITE_LAUNCH_PAD.get(),
+                            properties,
+                            AcademyCraft.academy("satellite_launch_pad"),
+                            0.85F,
+                            true
+                    ));
+    public static final DeferredHolder<Item, GeoMultiBlockItem> AEROSPACE_SIGNAL_CABIN =
+            ITEMS.registerItem("aerospace_signal_cabin",
+                    properties -> new GeoMultiBlockItem(
+                            Blocks.AEROSPACE_SIGNAL_CABIN.get(),
+                            properties,
+                            AcademyCraft.academy("aerospace_signal_cabin"),
+                            0.72F
+                    ));
     public static final DeferredHolder<Item, MultiBlockItem> ENERGY_LASER_TOWER =
             ITEMS.registerItem("energy_laser_tower",
                     properties -> new MultiBlockItem(Blocks.ENERGY_LASER_TOWER.get(), properties));

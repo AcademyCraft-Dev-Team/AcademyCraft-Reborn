@@ -1,20 +1,28 @@
 package org.academy.internal.common.world.item;
 
+import com.geckolib.animatable.GeoItem;
+import com.geckolib.animatable.client.GeoRenderProvider;
+import com.geckolib.animatable.instance.AnimatableInstanceCache;
+import com.geckolib.animatable.manager.AnimatableManager;
+import com.geckolib.renderer.GeoItemRenderer;
+import com.geckolib.util.GeckoLibUtil;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
+import org.academy.internal.client.renderer.item.RelaySatelliteItemRenderer;
 
 import java.util.function.Consumer;
 
 /** Hyperdimensional Misaka relay satellite; target dimension is stored on the stack. */
-public final class HyperNetworkRelaySatelliteItem extends Item {
+public final class HyperNetworkRelaySatelliteItem extends Item implements GeoItem {
     public static final Identifier DEFAULT_TARGET = Identifier.withDefaultNamespace("the_nether");
+    private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 
     public HyperNetworkRelaySatelliteItem(Properties properties) {
         super(properties.stacksTo(16)
@@ -63,5 +71,29 @@ public final class HyperNetworkRelaySatelliteItem extends Item {
                     Component.translatable(dimKey)
             ));
         }
+    }
+
+    @Override
+    public void createGeoRenderer(Consumer<GeoRenderProvider> consumer) {
+        consumer.accept(new GeoRenderProvider() {
+            private GeoItemRenderer<?> renderer;
+
+            @Override
+            public GeoItemRenderer<?> getGeoItemRenderer() {
+                if (this.renderer == null) {
+                    this.renderer = new RelaySatelliteItemRenderer<>();
+                }
+                return this.renderer;
+            }
+        });
+    }
+
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+    }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return geoCache;
     }
 }

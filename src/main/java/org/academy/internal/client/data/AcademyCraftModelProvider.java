@@ -122,11 +122,8 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         blockModels.createTrivialBlock(Blocks.WIND_GEN_PILLAR.get(), providerW);
         blockModels.createTrivialBlock(Blocks.OMNI_CRAFTING_TABLE.get(), providerDB);
         blockModels.createTrivialBlock(Blocks.SOLAR_GEN.get(), providerDB);
-        blockModels.createTrivialBlock(Blocks.AEROSPACE_SIGNAL_CABIN.get(), providerDB);
-        blockModels.registerSimpleItemModel(
-                Blocks.AEROSPACE_SIGNAL_CABIN.get(),
-                ModelLocationUtils.getModelLocation(Blocks.AEROSPACE_SIGNAL_CABIN.get())
-        );
+        blockModels.createTrivialBlock(Blocks.AEROSPACE_SIGNAL_CABIN.get(), providerW);
+        blockModels.createTrivialBlock(Blocks.SATELLITE_LAUNCH_PAD.get(), providerW);
         blockModels.createTrivialBlock(Blocks.ENERGY_LASER_TOWER.get(), providerW);
         blockModels.registerSimpleItemModel(
                 Blocks.ENERGY_LASER_TOWER.get(),
@@ -215,6 +212,20 @@ public final class AcademyCraftModelProvider extends ModelProvider {
                 )
         );
         itemModels.itemModelOutput.accept(
+                Items.SATELLITE_LAUNCH_PAD.get(),
+                ItemModelUtils.specialModel(
+                        academy("satellite_launch_pad").withPrefix("item/"),
+                        new GeckolibItemSpecialRenderer.Unbaked<>()
+                )
+        );
+        itemModels.itemModelOutput.accept(
+                Items.AEROSPACE_SIGNAL_CABIN.get(),
+                ItemModelUtils.specialModel(
+                        academy("aerospace_signal_cabin").withPrefix("item/"),
+                        new GeckolibItemSpecialRenderer.Unbaked<>()
+                )
+        );
+        itemModels.itemModelOutput.accept(
                 Items.HIBERNATION_POD.get(),
                 ItemModelUtils.specialModel(
                         academy("hibernation_pod").withPrefix("item/"),
@@ -232,20 +243,20 @@ public final class AcademyCraftModelProvider extends ModelProvider {
                         itemModels.modelOutput
                 )
         ));
-        itemModels.itemModelOutput.accept(Items.NETWORK_RELAY_SATELLITE.get(), ItemModelUtils.plainModel(
-                ModelTemplates.FLAT_ITEM.create(
-                        ModelLocationUtils.getModelLocation(Items.NETWORK_RELAY_SATELLITE.get()),
-                        TextureMapping.layer0(Items.NEEDLE.get()),
-                        itemModels.modelOutput
+        itemModels.itemModelOutput.accept(
+                Items.NETWORK_RELAY_SATELLITE.get(),
+                ItemModelUtils.specialModel(
+                        academy("relay_satellite").withPrefix("item/"),
+                        new GeckolibItemSpecialRenderer.Unbaked<>()
                 )
-        ));
-        itemModels.itemModelOutput.accept(Items.HYPER_NETWORK_RELAY_SATELLITE.get(), ItemModelUtils.plainModel(
-                ModelTemplates.FLAT_ITEM.create(
-                        ModelLocationUtils.getModelLocation(Items.HYPER_NETWORK_RELAY_SATELLITE.get()),
-                        TextureMapping.layer0(Items.IMAG_PHASE_CIRCUIT.get()),
-                        itemModels.modelOutput
+        );
+        itemModels.itemModelOutput.accept(
+                Items.HYPER_NETWORK_RELAY_SATELLITE.get(),
+                ItemModelUtils.specialModel(
+                        academy("relay_satellite").withPrefix("item/"),
+                        new GeckolibItemSpecialRenderer.Unbaked<>()
                 )
-        ));
+        );
         itemModels.itemModelOutput.accept(Items.PAPER_AIRPLANE.get(), ItemModelUtils.plainModel(
                 ModelTemplates.FLAT_ITEM.create(
                         ModelLocationUtils.getModelLocation(Items.PAPER_AIRPLANE.get()),

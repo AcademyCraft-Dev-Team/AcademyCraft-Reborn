@@ -42,6 +42,14 @@ public class LevelRenderEvent extends Event {
         return partialTick;
     }
 
+    public PoseStack getPoseStack() {
+        return poseStack;
+    }
+
+    public SubmitNodeCollector getSubmitNodeCollector() {
+        return submitNodeCollector;
+    }
+
     /** Exact world-space camera position captured for this render state. */
     public Vec3 getCameraPosition() {
         return cameraPosition;

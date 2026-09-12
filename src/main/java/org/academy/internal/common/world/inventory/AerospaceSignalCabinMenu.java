@@ -1,25 +1,19 @@
 package org.academy.internal.common.world.inventory;
 
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.Container;
-import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import org.academy.internal.common.world.item.NetworkRelaySatelliteItem;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.entity.AerospaceSignalCabinBlockEntity;
 import org.jspecify.annotations.Nullable;
 
 public final class AerospaceSignalCabinMenu extends AbstractContainerMenu {
-    public static final int BUTTON_LAUNCH = 0;
     public static final int BUTTON_RETARGET = 1;
     public static final int BUTTON_CYCLE_SAT = 2;
-    public static final int BUTTON_CYCLE_DIM = 3;
-    public static final int BUTTON_CYCLE_LASER = 4;
     public static final int BUTTON_FORCE_CRASH = 5;
     public static final int BUTTON_CANCEL_FORCE_CRASH = 6;
     public static final int BUTTON_BIND_DESIGNATOR = 7;
@@ -41,31 +35,19 @@ public final class AerospaceSignalCabinMenu extends AbstractContainerMenu {
             int containerId,
             Inventory playerInventory,
             ContainerLevelAccess access,
-            Container cabinContainer
+            @Nullable AerospaceSignalCabinBlockEntity blockEntity
     ) {
         super(MenuTypes.AEROSPACE_SIGNAL_CABIN.get(), containerId);
         this.access = access;
-        this.blockEntity = cabinContainer instanceof AerospaceSignalCabinBlockEntity cabin ? cabin : null;
+        this.blockEntity = blockEntity;
         if (this.blockEntity != null && this.blockEntity.getLevel() instanceof ServerLevel serverLevel) {
             this.blockEntity.syncOpsSnapshot(serverLevel);
         }
-        // Place satellite slot in the upper inventory panel (same band as SolarGen machine slot).
-        addSlot(new Slot(cabinContainer, 0, 80, 35) {
-            @Override
-            public boolean mayPlace(ItemStack stack) {
-                return NetworkRelaySatelliteItem.isSatellite(stack);
-            }
-
-            @Override
-            public int getMaxStackSize() {
-                return 16;
-            }
-        });
         addPlayerInv(playerInventory);
     }
 
     public AerospaceSignalCabinMenu(int id, Inventory playerInventory) {
-        this(id, playerInventory, ContainerLevelAccess.NULL, new SimpleContainer(1));
+        this(id, playerInventory, ContainerLevelAccess.NULL, null);
     }
 
     private void addPlayerInv(Inventory playerInventory) {
@@ -85,19 +67,9 @@ public final class AerospaceSignalCabinMenu extends AbstractContainerMenu {
             return false;
         }
         return switch (id) {
-            case BUTTON_LAUNCH -> blockEntity.tryLaunch(serverLevel);
             case BUTTON_RETARGET -> blockEntity.tryRetarget(serverLevel);
             case BUTTON_CYCLE_SAT -> {
                 blockEntity.cycleSelected();
-                yield true;
-            }
-            case BUTTON_CYCLE_DIM -> {
-                blockEntity.cycleHyperDimension();
-                broadcastChanges();
-                yield true;
-            }
-            case BUTTON_CYCLE_LASER -> {
-                blockEntity.cycleSelectedLaser(serverLevel);
                 yield true;
             }
             case BUTTON_FORCE_CRASH -> blockEntity.tryScheduleForceCrash(serverLevel, player);
@@ -127,11 +99,12 @@ public final class AerospaceSignalCabinMenu extends AbstractContainerMenu {
         if (slot.hasItem()) {
             var stack = slot.getItem();
             moved = stack.copy();
-            if (index < 1) {
-                if (!moveItemStackTo(stack, 1, slots.size(), true)) {
+            // Player-only: main inventory (0..26) <-> hotbar (27..35).
+            if (index < 27) {
+                if (!moveItemStackTo(stack, 27, 36, false)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (!moveItemStackTo(stack, 0, 1, false)) {
+            } else if (!moveItemStackTo(stack, 0, 27, false)) {
                 return ItemStack.EMPTY;
             }
             if (stack.isEmpty()) {

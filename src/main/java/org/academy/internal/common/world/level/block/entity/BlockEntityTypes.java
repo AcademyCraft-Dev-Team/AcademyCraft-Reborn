@@ -83,6 +83,14 @@ public final class BlockEntityTypes {
                             Blocks.AEROSPACE_SIGNAL_CABIN.get()
                     )
             );
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SatelliteLaunchPadBlockEntity>> SATELLITE_LAUNCH_PAD =
+            BLOCK_ENTITY_TYPES.register(
+                    "satellite_launch_pad",
+                    () -> new BlockEntityType<>(
+                            SatelliteLaunchPadBlockEntity::new,
+                            Blocks.SATELLITE_LAUNCH_PAD.get()
+                    )
+            );
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<EnergyLaserTowerBlockEntity>> ENERGY_LASER_TOWER =
             BLOCK_ENTITY_TYPES.register(
                     "energy_laser_tower",

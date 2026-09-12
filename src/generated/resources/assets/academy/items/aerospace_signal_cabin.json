@@ -1,6 +1,9 @@
 {
   "model": {
-    "type": "minecraft:model",
-    "model": "academy:block/aerospace_signal_cabin"
+    "type": "minecraft:special",
+    "base": "academy:item/aerospace_signal_cabin",
+    "model": {
+      "type": "geckolib:geckolib"
+    }
   }
 }

@@ -19,7 +19,7 @@ final class MisakaRelayPowerTicker {
     /**
      * True if the satellite is powered for coverage, including a feed already queued this tick
      * (before {@link #endTick} flips the persistent {@code powered} flag).
-     * Force-crash arming and crash phase reject power immediately.
+     * Crash phase rejects power; force-crash countdown still accepts feed.
      */
     boolean isReceivingPower(UUID satelliteId) {
         if (satelliteId == null || !acceptsPowerFeed(satelliteId)) {
@@ -34,16 +34,15 @@ final class MisakaRelayPowerTicker {
 
     /**
      * Lasers may drain and call {@link MisakaRelayRegistry#feed} only while the satellite still accepts power.
-     * Launch ascent, armed force-crash, and non-orbit phases refuse feed (no coverage / no beam).
+     * Launch ascent and non-orbit phases refuse feed. Armed force-crash countdown still accepts power
+     * until {@link MisakaRelayLifecycle#beginCrash} actually starts the dive.
      */
     boolean acceptsPowerFeed(UUID satelliteId) {
         if (satelliteId == null) {
             return false;
         }
         var entry = registry.byId.get(satelliteId);
-        return entry != null
-                && entry.phase == MisakaRelayEntry.Phase.ORBIT
-                && entry.forceCrashCountdownTicks <= 0;
+        return entry != null && entry.phase == MisakaRelayEntry.Phase.ORBIT;
     }
 
     /**
@@ -83,6 +82,7 @@ final class MisakaRelayPowerTicker {
         var forceDue = new ArrayList<UUID>();
         for (var entry : registry.byId.values()) {
             boolean forceArmed = entry.forceCrashCountdownTicks > 0;
+            boolean forceExpiring = false;
             if (forceArmed) {
                 if (!entry.phase.isActive()) {
                     entry.forceCrashCountdownTicks = 0;
@@ -90,6 +90,7 @@ final class MisakaRelayPowerTicker {
                 } else {
                     entry.forceCrashCountdownTicks--;
                     if (entry.forceCrashCountdownTicks <= 0) {
+                        forceExpiring = true;
                         forceDue.add(entry.satelliteId);
                     }
                 }
@@ -97,8 +98,9 @@ final class MisakaRelayPowerTicker {
             if (!entry.phase.isActive()) {
                 continue;
             }
-            // Launch / force-crash own the timeline: stay dark, ignore feed, no unpowered timeout race.
-            if (forceArmed || entry.phase == MisakaRelayEntry.Phase.LAUNCHING) {
+            // Launch ascent stays dark. Force-crash countdown still runs normal feed so the laser
+            // keeps supplying until beginCrash frees the tower.
+            if (entry.phase == MisakaRelayEntry.Phase.LAUNCHING) {
                 if (entry.powered) {
                     entry.powered = false;
                     bumpPoweredCount(entry, -1);
@@ -123,6 +125,10 @@ final class MisakaRelayPowerTicker {
                     bumpPoweredCount(entry, -1);
                     registry.markPersistentDirty();
                 }
+                // Force countdown owns the crash trigger — do not race an unpowered timeout crash.
+                if (forceArmed || forceExpiring) {
+                    continue;
+                }
                 entry.unpoweredTicks++;
                 if (entry.unpoweredTicks >= crashTicks) {
                     toCrash.add(entry.satelliteId);
@@ -145,7 +151,7 @@ final class MisakaRelayPowerTicker {
 
     /**
      * Arm a forced crash countdown for an active satellite. Fails if already crashing or already armed.
-     * Cuts coverage power immediately; lasers stop feeding until cancel or crash completes.
+     * Coverage power and laser feed continue until the countdown expires and crash begins.
      */
     boolean scheduleForceCrash(MinecraftServer server, UUID satelliteId, int ticks, @Nullable UUID initiator) {
         var entry = registry.get(satelliteId);
@@ -154,11 +160,6 @@ final class MisakaRelayPowerTicker {
         }
         entry.forceCrashCountdownTicks = Math.max(1, ticks);
         entry.forceCrashInitiator = initiator;
-        if (entry.powered) {
-            entry.powered = false;
-            bumpPoweredCount(entry, -1);
-            registry.markPersistentDirty();
-        }
         return true;
     }
 
@@ -212,13 +213,14 @@ final class MisakaRelayPowerTicker {
             if (!entry.phase.isActive()) {
                 continue;
             }
-            if (entry.forceCrashCountdownTicks > 0 || entry.phase == MisakaRelayEntry.Phase.LAUNCHING) {
+            if (entry.phase == MisakaRelayEntry.Phase.LAUNCHING) {
                 if (entry.powered) {
                     entry.powered = false;
                     bumpPoweredCount(entry, -1);
                 }
                 continue;
             }
+            boolean forceArmed = entry.forceCrashCountdownTicks > 0;
             boolean fed = registry.fedThisTick.contains(entry.satelliteId);
             if (fed) {
                 if (!entry.powered) {
@@ -232,6 +234,9 @@ final class MisakaRelayPowerTicker {
                 if (entry.powered) {
                     entry.powered = false;
                     bumpPoweredCount(entry, -1);
+                }
+                if (forceArmed) {
+                    continue;
                 }
                 entry.unpoweredTicks++;
                 if (entry.unpoweredTicks >= crashTicks) {

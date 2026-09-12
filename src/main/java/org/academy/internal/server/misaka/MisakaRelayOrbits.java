@@ -22,14 +22,15 @@ public final class MisakaRelayOrbits {
     public static final double CRASH_DURATION_PER_LAUNCH = 5.0 / 6.0;
     /** Radians per tick — matches {@link RelaySatelliteEntity} orbit step. */
     public static final double ORBIT_ANGULAR_SPEED = 0.01;
-    /** Fraction of each orbit period where the sky model is drawn. */
-    public static final float SKY_VISIBLE_FRACTION = 0.25f;
-    public static final double SKY_VIEW_RANGE = 128.0;
+    /** Fraction of each orbit period where the sky model is drawn (1 = always while orbiting). */
+    public static final float SKY_VISIBLE_FRACTION = 1.0f;
+    /** Horizontal range from the orbit slot at which the sky model may draw. */
+    public static final double SKY_VIEW_RANGE = 160.0;
     /**
-     * Soft visual track budget for laser→orbit beams (blocks). Horizon lock is the real
-     * ground-stab safety; this is only an upper bound for length/AABB, not a sky cutoff.
+     * Soft visual track budget for laser→orbit beams (blocks). Must clear configured orbit height
+     * (~1000) plus radius; horizon lock remains the ground-stab safety.
      */
-    public static final double MAX_BEAM_TRACK_RANGE = 512.0;
+    public static final double MAX_BEAM_TRACK_RANGE = 2048.0;
 
     private MisakaRelayOrbits() {
     }

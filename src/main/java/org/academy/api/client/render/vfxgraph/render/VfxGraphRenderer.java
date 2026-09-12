@@ -717,7 +717,9 @@ public final class VfxGraphRenderer {
         out.putFloat(vx);
         out.putFloat(vy);
         out.putFloat(vz);
-        out.putFloat(buffer.size(i));
+        // WorldTransform.scale must also resize billboards; position/velocity alone leave
+        // radius-0 emitters (demo_fire) visually unchanged when callers setScale(...).
+        out.putFloat(buffer.size(i) * transform.scale());
         out.putFloat(buffer.colorR(i));
         out.putFloat(buffer.colorG(i));
         out.putFloat(buffer.colorB(i));
@@ -829,7 +831,7 @@ public final class VfxGraphRenderer {
         for (int i = 0; i < buffer.count(); i++) {
             if (!spec.matchesLayer(buffer.layer(i))) continue;
             int size = buffer.trailSize(i);
-            float half = buffer.size(i) * 0.5f;
+            float half = buffer.size(i) * 0.5f * transform.scale();
             for (int k = 0; k < size - 1; k++) {
                 float ax = buffer.trailX(i, k);
                 float ay = buffer.trailY(i, k);

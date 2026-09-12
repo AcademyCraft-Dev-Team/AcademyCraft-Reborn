@@ -16,7 +16,6 @@ import org.academy.api.client.gui.widget.*
 import org.academy.api.client.resources.R
 import org.academy.api.client.util.AnimationUtil
 import org.academy.internal.common.world.inventory.AerospaceSignalCabinMenu
-import org.academy.internal.common.world.item.NetworkRelaySatelliteItem
 import org.academy.internal.common.world.level.block.entity.AerospaceSignalCabinBlockEntity
 
 class AerospaceSignalCabinScreen private constructor(
@@ -26,9 +25,6 @@ class AerospaceSignalCabinScreen private constructor(
     override val blockEntity: AerospaceSignalCabinBlockEntity
 ) : ContainerUiScreen<AerospaceSignalCabinMenu>(menu, playerInventory, title), AerospaceCabinOpsUi.Host {
     private val mainPos: BlockPos = blockEntity.blockPos
-    private var laserLabelSetter: (String) -> Unit = {}
-    private var dimLabelSetter: (String) -> Unit = {}
-    private var launchFeedbackSetter: (String) -> Unit = {}
     private lateinit var energyValueLabel: LabelWidget
     private val opsUi = AerospaceCabinOpsUi(this)
 
@@ -57,82 +53,6 @@ class AerospaceSignalCabinScreen private constructor(
         }
         invPage.addChild("hint", hint)
         playOpenReveal(hint, 1f, duration, childDuration)
-
-        val laserLabel = LabelWidget(laserSelectionText()).apply {
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(12f)
-                .gravity(Gravity.TOP)
-                .margin(8f, 16f, 8f, 0f)
-            scale = 0.75f
-        }
-        laserLabelSetter = { laserLabel.text = it }
-        invPage.addChild("laser_label", laserLabel)
-        playOpenReveal(laserLabel, 1f, duration, childDuration)
-
-        val dimLabel = LabelWidget(launchDimText()).apply {
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(12f)
-                .gravity(Gravity.TOP)
-                .margin(8f, 30f, 8f, 0f)
-            scale = 0.75f
-        }
-        dimLabelSetter = { dimLabel.text = it }
-        invPage.addChild("dim_label", dimLabel)
-        playOpenReveal(dimLabel, 1f, duration, childDuration)
-
-        val launchFeedback = LabelWidget(launchFeedbackText()).apply {
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(10f)
-                .gravity(Gravity.TOP)
-                .margin(8f, 42f, 8f, 0f)
-            scale = 0.7f
-        }
-        launchFeedbackSetter = { launchFeedback.text = it }
-        invPage.addChild("launch_feedback", launchFeedback)
-        playOpenReveal(launchFeedback, 0.9f, duration, childDuration)
-
-        val cycleLaserBtn = createActionButton(
-            "gui.academy.aerospace_signal_cabin.cycle_laser",
-            AerospaceSignalCabinMenu.BUTTON_CYCLE_LASER
-        ).apply {
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .width(72f)
-                .height(16f)
-                .gravity(Gravity.TOP_LEFT)
-                .margin(8f, 54f, 0f, 0f)
-        }
-        invPage.addChild("cycle_laser", cycleLaserBtn)
-        playOpenReveal(cycleLaserBtn, 1f, duration, childDuration)
-
-        val launchBtn = createActionButton(
-            "gui.academy.aerospace_signal_cabin.launch",
-            AerospaceSignalCabinMenu.BUTTON_LAUNCH
-        ).apply {
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .width(72f)
-                .height(16f)
-                .gravity(Gravity.TOP_RIGHT)
-                .margin(0f, 54f, 8f, 0f)
-        }
-        invPage.addChild("launch", launchBtn)
-        playOpenReveal(launchBtn, 1f, duration, childDuration)
-
-        // Keep above player inventory row (slots start at y=84).
-        val cycleDimBtn = createActionButton(
-            "gui.academy.aerospace_signal_cabin.cycle_dim",
-            AerospaceSignalCabinMenu.BUTTON_CYCLE_DIM
-        ).apply {
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .width(96f)
-                .height(14f)
-                .gravity(Gravity.CENTER_TOP)
-                .margin(0f, 72f, 0f, 0f)
-        }
-        invPage.addChild("cycle_dim", cycleDimBtn)
-        playOpenReveal(cycleDimBtn, 1f, duration, childDuration)
 
         val opsPage = opsUi.createOpsPage()
         opsPage.visibility = Widget.Visibility.GONE
@@ -217,56 +137,8 @@ class AerospaceSignalCabinScreen private constructor(
 
     override fun containerTick() {
         super.containerTick()
-        laserLabelSetter(laserSelectionText())
-        dimLabelSetter(launchDimText())
-        launchFeedbackSetter(launchFeedbackText())
         energyValueLabel.text = "${blockEntity.energyStored} / ${blockEntity.maxEnergyStorage} AF"
         opsUi.onContainerTick()
-    }
-
-    private fun launchDimText(): String {
-        val stack = menu.getSlot(0).item
-        if (!NetworkRelaySatelliteItem.isSatellite(stack)) {
-            return Component.translatable("gui.academy.aerospace_signal_cabin.dim_idle").string
-        }
-        if (!NetworkRelaySatelliteItem.isHyper(stack)) {
-            return Component.translatable("gui.academy.aerospace_signal_cabin.dim_overworld_only").string
-        }
-        val path = NetworkRelaySatelliteItem.targetDimension(stack).identifier().path
-        return Component.translatable(
-            "gui.academy.aerospace_signal_cabin.dim_target",
-            AerospaceCabinOpsUi.formatDimPathFull(path)
-        ).string
-    }
-
-    private fun launchFeedbackText(): String {
-        val key = blockEntity.opsFeedbackKey
-        return if (key.isNullOrEmpty()) {
-            ""
-        } else {
-            Component.translatable(key).string
-        }
-    }
-
-    private fun laserSelectionText(): String {
-        if (blockEntity.connectedNodePosition == null) {
-            return Component.translatable("gui.academy.aerospace_signal_cabin.laser_need_wireless").string
-        }
-        val pos = blockEntity.selectedLaserPos
-        if (pos == null) {
-            return Component.translatable(
-                "gui.academy.aerospace_signal_cabin.laser_none",
-                blockEntity.selectableLaserCount
-            ).string
-        }
-        val tower = minecraft.level?.getBlockEntity(pos) as? org.academy.internal.common.world.level.block.entity.EnergyLaserTowerBlockEntity
-        val key = when {
-            tower == null -> "gui.academy.aerospace_signal_cabin.laser_selected_unready"
-            !tower.hasClearSky() -> "gui.academy.aerospace_signal_cabin.laser_selected_blocked"
-            tower.energyStored <= 0 -> "gui.academy.aerospace_signal_cabin.laser_selected_nopower"
-            else -> "gui.academy.aerospace_signal_cabin.laser_selected_ready"
-        }
-        return Component.translatable(key, pos.x, pos.y, pos.z).string
     }
 
     override fun createActionButton(labelKey: String, buttonId: Int): ButtonWidget {
@@ -317,7 +189,6 @@ class AerospaceSignalCabinScreen private constructor(
             val player = minecraft.player ?: return null
             val entity = level.getBlockEntity(mainPos)
             return if (entity is AerospaceSignalCabinBlockEntity) {
-                // Bind to the client BE so slot contents survive reopen (not a throwaway SimpleContainer).
                 val boundMenu = AerospaceSignalCabinMenu(
                     menu.containerId,
                     playerInventory,
