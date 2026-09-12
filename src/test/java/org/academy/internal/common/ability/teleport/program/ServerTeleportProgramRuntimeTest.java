@@ -49,7 +49,7 @@ class ServerTeleportProgramRuntimeTest {
     }
 
     @Test
-    void blockItemTeleportBaseDamageUsesCpAndTargetHealthCaps() {
+    void blockItemTeleportBaseDamageUsesMaximumCpAndTargetHealthFloor() {
         assertEquals(80.0f, ServerTeleportProgramRuntime.blockItemBaseDamage(
                 100.0f, 80.0f, 800.0f));
         assertEquals(40.0f, ServerTeleportProgramRuntime.blockItemBaseDamage(
@@ -69,12 +69,12 @@ class ServerTeleportProgramRuntimeTest {
     }
 
     @Test
-    void blockItemTeleportDamageCapIsAppliedBeforeCpCost() {
-        var baseDamage = ServerTeleportProgramRuntime.blockItemBaseDamage(
-                100.0f, 80.0f, 800.0f);
-
-        assertEquals(18.0f, ServerTeleportProgramRuntime.blockItemTeleportCost(baseDamage));
-        assertEquals(10.0f, ServerTeleportProgramRuntime.blockItemTeleportCost(0.0f));
+    void blockItemTeleportCostUsesRawDamageAndMaximumCp() {
+        assertEquals(11.5f, ServerTeleportProgramRuntime.blockItemTeleportCost(
+                ServerTeleportProgramRuntime.blockItemHardnessDamage(1.5f), 1_000.0f));
+        assertEquals(20.0f, ServerTeleportProgramRuntime.blockItemTeleportCost(
+                ServerTeleportProgramRuntime.blockItemHardnessDamage(50.0f), 100.0f));
+        assertEquals(10.0f, ServerTeleportProgramRuntime.blockItemTeleportCost(0.0f, 100.0f));
     }
 
     @Test

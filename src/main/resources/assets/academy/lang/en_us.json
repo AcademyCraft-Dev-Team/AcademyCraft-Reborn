@@ -2042,7 +2042,7 @@
   "screen.academy.program.port.y": "Y",
   "screen.academy.program.port.z": "Z",
   "screen.academy.program.teleport.node.block_item_teleport": "Block & Item Teleport",
-  "screen.academy.program.teleport.node.block_item_teleport.description": "Place mode teleports the chosen hotbar or held item to a block position, breaks the existing block, and uses block hardness ×10 or weapon damage as raw damage against overlapping entities. Base damage to living targets is the greater of raw damage limited by current CP and 5% of target maximum health; damage bonuses apply afterward. Place costs base damage÷10+10 CP. Collect costs 10 CP, breaks the block, and moves drops in that cell into the inventory.",
+  "screen.academy.program.teleport.node.block_item_teleport.description": "Place mode teleports the chosen hotbar or held item to a block position, breaks the existing block, and uses block hardness ×10 or weapon damage as raw damage against overlapping entities. Base damage to living targets is the greater of raw damage limited by maximum CP and 5% of target maximum health; damage bonuses apply afterward. Teleporting a block costs min(block hardness, maximum CP÷10)+10 CP; non-block items scale equivalently from weapon damage. Collect costs 10 CP, breaks the block, and moves drops in that cell into the inventory.",
   "screen.academy.program.teleport.node.caster": "Caster",
   "screen.academy.program.teleport.node.caster.description": "Returns the player executing this Teleport program.",
   "screen.academy.program.teleport.node.entity_teleport": "Target Teleport",

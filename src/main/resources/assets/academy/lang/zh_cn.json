@@ -2042,7 +2042,7 @@
   "screen.academy.program.port.y": "Y",
   "screen.academy.program.port.z": "Z",
   "screen.academy.program.teleport.node.block_item_teleport": "方块与物品传送",
-  "screen.academy.program.teleport.node.block_item_teleport.description": "放置模式将指定快捷栏或手持物传送至方块坐标，破坏原方块并以方块硬度×10或武器伤害作为原始伤害打击重叠实体。对生物的基础伤害取“原始伤害与当前 CP 的较小值”和“目标最大生命值的 5%”中的较高值；增伤在此后结算。放置消耗为基础伤害÷10+10 CP；收取模式固定消耗 10 CP，破坏方块并将该格掉落物立即收入背包。",
+  "screen.academy.program.teleport.node.block_item_teleport.description": "放置模式将指定快捷栏或手持物传送至方块坐标，破坏原方块并以方块硬度×10或武器伤害作为原始伤害打击重叠实体。对生物的基础伤害取“原始伤害与最大 CP 上限的较小值”和“目标最大生命值的 5%”中的较高值；增伤在此后结算。传送方块的消耗为 min(方块硬度, 最大 CP 上限÷10)+10 CP，非方块物品按其武器伤害等比例计算；收取模式固定消耗 10 CP，破坏方块并将该格掉落物立即收入背包。",
   "screen.academy.program.teleport.node.caster": "能力者",
   "screen.academy.program.teleport.node.caster.description": "返回正在执行此传送使精密操作的玩家。",
   "screen.academy.program.teleport.node.entity_teleport": "目标传送",
