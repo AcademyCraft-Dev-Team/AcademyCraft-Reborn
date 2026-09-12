@@ -19,6 +19,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.Objects;
 
 public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implements WirelessUser/*, GeoBlockEntity*/ {
+    private final EnergyUpdateThrottle energyUpdates = new EnergyUpdateThrottle();
     public static final int CLOSE_DELAY_TICKS = 20;
     public static final int MAX_ENERGY_STORAGE = 1_440_000;
 
@@ -195,7 +196,7 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
             energyStored = clamped;
             setChanged();
             if (level != null && !level.isClientSide()) {
-                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+                energyUpdates.markChanged();
             }
         }
     }
@@ -255,19 +256,15 @@ public final class AbilityDeveloperBlockEntity extends MultiBlockEntity implemen
     }
 
     public void serverTick(ServerLevel level) {
+        energyUpdates.flush(this, energyStored);
         ticks++;
-        if (isMain()) {
-            if (connectedNodePos == null) {
-                setConnectedNodePosition(null);
-            } else {
-                var nodeBE = level.getBlockEntity(connectedNodePos);
-                if (!(nodeBE instanceof WirelessNode)) {
-                    setConnectedNodePosition(null);
-                }
-            }
+        if (!isMain() || connectedNodePos == null) return;
+        // An unloaded or still-loading node remains a valid connection. Never wait for its chunk.
+        var chunk = level.getChunkSource().getChunkNow(connectedNodePos.getX() >> 4, connectedNodePos.getZ() >> 4);
+        if (chunk != null && !(chunk.getBlockEntity(connectedNodePos) instanceof WirelessNode)) {
+            setConnectedNodePosition(null);
         }
     }
-
     public float getPodRotationDegrees(float partialTick) {
         var ageInTicks = ticks + partialTick;
         if (standingState.isStarted()) {

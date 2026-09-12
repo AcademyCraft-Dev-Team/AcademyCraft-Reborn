@@ -24,6 +24,7 @@ import java.util.Objects;
 
 public final class OmniCraftingTableBlockEntity extends MultiBlockEntity
         implements Container, WirelessUser {
+    private final EnergyUpdateThrottle energyUpdates = new EnergyUpdateThrottle();
     public static final int MAX_ENERGY_STORAGE = AbilityDeveloperBlockEntity.MAX_ENERGY_STORAGE;
     public static final int MAX_FLUID_STORAGE = 4_000;
     public static final int FLUID_PER_UNIT = 1_000;
@@ -44,17 +45,18 @@ public final class OmniCraftingTableBlockEntity extends MultiBlockEntity
     public void tick() {
         ticks++;
         if (!(level instanceof ServerLevel serverLevel) || !isMain()) return;
+        energyUpdates.flush(this, energyStored);
         validateWirelessConnection(serverLevel);
         acceptFluidUnit();
     }
 
     private void validateWirelessConnection(ServerLevel level) {
-        if (connectedNodePos != null
-                && !(level.getBlockEntity(connectedNodePos) instanceof WirelessNode)) {
+        if (connectedNodePos == null) return;
+        var chunk = level.getChunkSource().getChunkNow(connectedNodePos.getX() >> 4, connectedNodePos.getZ() >> 4);
+        if (chunk != null && !(chunk.getBlockEntity(connectedNodePos) instanceof WirelessNode)) {
             setConnectedNodePosition(null);
         }
     }
-
     private void acceptFluidUnit() {
         if (imagPhaseFluidStored > MAX_FLUID_STORAGE - FLUID_PER_UNIT) return;
         var stack = items.getFirst();
@@ -70,7 +72,7 @@ public final class OmniCraftingTableBlockEntity extends MultiBlockEntity
     }
 
     public boolean consumeCraftingResources(int energy, int fluid) {
-        if (energy < 0 || fluid < 0 || !hasCraftingResources(energy, fluid)) return false;
+        if (mainEntity() == null || energy < 0 || fluid < 0 || !hasCraftingResources(energy, fluid)) return false;
         setEnergyStored(getEnergyStored() - energy);
         setImagPhaseFluidStored(getImagPhaseFluidStored() - fluid);
         return true;
@@ -78,12 +80,13 @@ public final class OmniCraftingTableBlockEntity extends MultiBlockEntity
 
     public int getImagPhaseFluidStored() {
         var main = mainEntity();
-        return main == null || main == this ? imagPhaseFluidStored : main.getImagPhaseFluidStored();
+        return main == null ? 0 : main == this ? imagPhaseFluidStored : main.getImagPhaseFluidStored();
     }
 
     public void setImagPhaseFluidStored(int amount) {
         var main = mainEntity();
-        if (main != null && main != this) {
+        if (main == null) return;
+        if (main != this) {
             main.setImagPhaseFluidStored(amount);
             return;
         }
@@ -107,13 +110,14 @@ public final class OmniCraftingTableBlockEntity extends MultiBlockEntity
     @Override
     public BlockPos getConnectedNodePosition() {
         var main = mainEntity();
-        return main == null || main == this ? connectedNodePos : main.getConnectedNodePosition();
+        return main == null ? null : main == this ? connectedNodePos : main.getConnectedNodePosition();
     }
 
     @Override
     public void setConnectedNodePosition(@Nullable BlockPos nodePos) {
         var main = mainEntity();
-        if (main != null && main != this) {
+        if (main == null) return;
+        if (main != this) {
             main.setConnectedNodePosition(nodePos);
             return;
         }
@@ -126,7 +130,8 @@ public final class OmniCraftingTableBlockEntity extends MultiBlockEntity
     public int extractEnergy(int maxExtract, boolean simulate) {
         if (maxExtract <= 0) return 0;
         var main = mainEntity();
-        if (main != null && main != this) return main.extractEnergy(maxExtract, simulate);
+        if (main == null) return 0;
+        if (main != this) return main.extractEnergy(maxExtract, simulate);
         var extracted = Math.min(maxExtract, energyStored);
         if (!simulate && extracted > 0) setEnergyStored(energyStored - extracted);
         return extracted;
@@ -136,7 +141,8 @@ public final class OmniCraftingTableBlockEntity extends MultiBlockEntity
     public int receiveEnergy(int maxReceive, boolean simulate) {
         if (maxReceive <= 0) return 0;
         var main = mainEntity();
-        if (main != null && main != this) return main.receiveEnergy(maxReceive, simulate);
+        if (main == null) return 0;
+        if (main != this) return main.receiveEnergy(maxReceive, simulate);
         var received = Math.min(maxReceive, getMaxEnergyStorage() - energyStored);
         if (!simulate && received > 0) setEnergyStored(energyStored + received);
         return received;
@@ -145,19 +151,21 @@ public final class OmniCraftingTableBlockEntity extends MultiBlockEntity
     @Override
     public int getEnergyStored() {
         var main = mainEntity();
-        return main == null || main == this ? energyStored : main.getEnergyStored();
+        return main == null ? 0 : main == this ? energyStored : main.getEnergyStored();
     }
 
     public void setEnergyStored(int amount) {
         var main = mainEntity();
-        if (main != null && main != this) {
+        if (main == null) return;
+        if (main != this) {
             main.setEnergyStored(amount);
             return;
         }
         var clamped = Mth.clamp(amount, 0, getMaxEnergyStorage());
         if (clamped == energyStored) return;
         energyStored = clamped;
-        markAndSync();
+        setChanged();
+        if (level != null && !level.isClientSide()) energyUpdates.markChanged();
     }
 
     @Override
@@ -200,21 +208,23 @@ public final class OmniCraftingTableBlockEntity extends MultiBlockEntity
     @Override
     public boolean isEmpty() {
         var main = mainEntity();
-        return main == null || main == this
+        return main == null || (main == this
                 ? items.stream().allMatch(ItemStack::isEmpty)
-                : main.isEmpty();
+                : main.isEmpty());
     }
 
     @Override
     public ItemStack getItem(int slot) {
         var main = mainEntity();
-        return main == null || main == this ? items.get(slot) : main.getItem(slot);
+        if (main == null) return ItemStack.EMPTY;
+        return main == this ? items.get(slot) : main.getItem(slot);
     }
 
     @Override
     public ItemStack removeItem(int slot, int amount) {
         var main = mainEntity();
-        if (main != null && main != this) return main.removeItem(slot, amount);
+        if (main == null) return ItemStack.EMPTY;
+        if (main != this) return main.removeItem(slot, amount);
         var stack = ContainerHelper.removeItem(items, slot, amount);
         if (!stack.isEmpty()) markAndSync();
         return stack;
@@ -223,7 +233,8 @@ public final class OmniCraftingTableBlockEntity extends MultiBlockEntity
     @Override
     public ItemStack removeItemNoUpdate(int slot) {
         var main = mainEntity();
-        return main == null || main == this
+        if (main == null) return ItemStack.EMPTY;
+        return main == this
                 ? ContainerHelper.takeItem(items, slot)
                 : main.removeItemNoUpdate(slot);
     }
@@ -231,7 +242,8 @@ public final class OmniCraftingTableBlockEntity extends MultiBlockEntity
     @Override
     public void setItem(int slot, ItemStack stack) {
         var main = mainEntity();
-        if (main != null && main != this) {
+        if (main == null) return;
+        if (main != this) {
             main.setItem(slot, stack);
             return;
         }
@@ -243,7 +255,8 @@ public final class OmniCraftingTableBlockEntity extends MultiBlockEntity
     @Override
     public boolean stillValid(Player player) {
         var main = mainEntity();
-        return main == null || main == this
+        if (main == null) return false;
+        return main == this
                 ? Container.stillValidBlockEntity(this, player)
                 : main.stillValid(player);
     }
@@ -251,7 +264,8 @@ public final class OmniCraftingTableBlockEntity extends MultiBlockEntity
     @Override
     public void clearContent() {
         var main = mainEntity();
-        if (main != null && main != this) {
+        if (main == null) return;
+        if (main != this) {
             main.clearContent();
             return;
         }
@@ -268,7 +282,8 @@ public final class OmniCraftingTableBlockEntity extends MultiBlockEntity
 
     @Nullable
     private OmniCraftingTableBlockEntity mainEntity() {
-        if (isMain() || level == null || mainPos == null) return this;
+        if (isMain() || level == null) return this;
+        if (mainPos == null) return null;
         return getMain() instanceof OmniCraftingTableBlockEntity main ? main : null;
     }
 

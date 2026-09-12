@@ -33,6 +33,7 @@ import static net.minecraft.world.level.block.Block.UPDATE_CLIENTS;
 import static net.minecraft.world.level.block.Block.UPDATE_NEIGHBORS;
 
 public final class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode, WirelessUser, Container {
+    private final EnergyUpdateThrottle energyUpdates = new EnergyUpdateThrottle();
     private static final Logger LOGGER = AcademyCraft.getLogger();
 
     private static final int MAX_ENERGY = 2_400_000;
@@ -54,6 +55,7 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
     }
 
     public void serverTick(ServerLevel serverLevel, BlockPos pos) {
+        energyUpdates.flush(this, energyStored);
         var networkData = WirelessNetworkData.get(serverLevel);
         if (cachedConfig == null) {
             cachedConfig = networkData.getNodeConfig(pos);
@@ -70,10 +72,11 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
         connectedUsers.sort(Comparator.comparingLong(entry -> entry.getKey().asLong()));
         for (var entry : connectedUsers) {
             var userPos = entry.getKey();
-            if (!serverLevel.isLoaded(userPos)) {
+            var chunk = serverLevel.getChunkSource().getChunkNow(userPos.getX() >> 4, userPos.getZ() >> 4);
+            if (chunk == null) {
                 continue;
             }
-            var userBE = serverLevel.getBlockEntity(userPos);
+            var userBE = chunk.getBlockEntity(userPos);
             if (userPos.equals(pos) || !(userBE instanceof WirelessUser user)
                     || !Objects.equals(user.getConnectedNodePosition(), pos)
                     || userPos.distSqr(pos) > (double) cachedConfig.radius * cachedConfig.radius) {
@@ -113,7 +116,8 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
         } else {
             LOGGER.warn("Failed request to disconnect user {} from node {} in SavedData.", userPos, worldPosition);
         }
-        var userBE = level.getBlockEntity(userPos);
+        var chunk = level.getChunkSource().getChunkNow(userPos.getX() >> 4, userPos.getZ() >> 4);
+        var userBE = chunk == null ? null : chunk.getBlockEntity(userPos);
         if (userBE instanceof WirelessUser user
                 && Objects.equals(user.getConnectedNodePosition(), worldPosition)) {
             try {
@@ -136,7 +140,7 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
         if (oldEnergy != energyStored) {
             setChanged();
             if (level != null && !level.isClientSide()) {
-                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
+                energyUpdates.markChanged();
             }
         }
     }
