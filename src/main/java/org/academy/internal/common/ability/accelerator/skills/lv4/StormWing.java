@@ -1,10 +1,9 @@
 package org.academy.internal.common.ability.accelerator.skills.lv4;
 
 import io.netty.buffer.ByteBuf;
+import org.academy.api.common.ability.WingControlIntent;
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
@@ -20,7 +19,9 @@ import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.config.KeyBindingConfig;
+import org.academy.api.client.config.WingFlightConfig;
+import org.academy.internal.client.ability.WingFlightClient;
+import org.academy.internal.common.ability.accelerator.skills.WingFlightRuntime;
 import org.academy.api.client.hud.ability.ToggleStatusHud;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
@@ -36,13 +37,11 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
-import org.academy.internal.common.ability.accelerator.skills.WingFlightDirection;
 import org.academy.internal.common.ability.accelerator.skills.WingFlightPose;
 import org.academy.internal.common.ability.accelerator.skills.lv5.BlackWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.PlatinumWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.WhiteWing;
 import org.academy.internal.common.attachment.AttachmentTypes;
-import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -82,6 +81,7 @@ public final class StormWing extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+        Client.CONFIG.register(this);
 
         InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(Client.KEY_NAME_TOGGLE,
                 InputSystem.combo(
@@ -120,40 +120,19 @@ public final class StormWing extends Skill {
 
         public static final String KEY_NAME_TOGGLE = SkillNames.STORM_WING + "_toggle";
         public static Config CONFIG = new Config();
+        private static final WingControlIntent.Sender CONTROL_SENDER = new WingControlIntent.Sender();
 
         @SubscribeEvent
         public static void tick(ClientTickEvent.Post event) {
             var mc = Minecraft.getInstance();
-            if (mc.level != null && mc.player != null && mc.player.getData(AttachmentTypes.ACTIVATED_STORM_WING.get())) {
-                if (mc.gui.screen() == null
-                        && InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_SPACE)) {
-                    MisakaNetworkClient.send(new ControlPacket(
-                            State.BOOST, mc.player.getYRot(), mc.player.getXRot()));
-                    return;
-                }
-                var front = InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_W);
-                var back = InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_S);
-                var left = InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_A);
-                var right = InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_D);
-
-                var states = new HashSet<State>();
-
-                var canMove = mc.gui.screen() == null;
-
-                if (canMove) {
-                    if (front && !back) states.add(State.FRONT);
-                    else if (back && !front) states.add(State.BACK);
-                    if (left && !right) states.add(State.LEFT);
-                    else if (right && !left) states.add(State.RIGHT);
-                }
-
-                if (states.isEmpty()) states.add(State.KEEP);
-
-                for (var state : states) {
-                    MisakaNetworkClient.send(new ControlPacket(
-                            state, mc.player.getYRot(), mc.player.getXRot()));
-                }
+            var player = mc.player;
+            if (player == null || !player.getData(AttachmentTypes.ACTIVATED_STORM_WING.get()) || mc.isPaused()) {
+                CONTROL_SENDER.reset();
+                return;
             }
+            var input = WingFlightClient.readControl();
+            input = new WingControlIntent(input.buttons(), input.yaw(), input.pitch(), CONFIG.getRemainingMomentum());
+            if (CONTROL_SENDER.shouldSend(input, System.nanoTime())) MisakaNetworkClient.send(new ControlPacket(input));
         }
 
         public static void toggle() {
@@ -161,7 +140,7 @@ public final class StormWing extends Skill {
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 
-        public static class Config extends KeyBindingConfig {
+        public static class Config extends WingFlightConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
 
@@ -182,7 +161,6 @@ public final class StormWing extends Skill {
     }
 
     public static final class Server {
-        private static final Map<UUID, Long> LAST_BOOST_TICK = new HashMap<>();
         private static final Map<UUID, ArrayDeque<TrailPoint>> TRAILS = new HashMap<>();
 
         private Server() {
@@ -215,57 +193,8 @@ public final class StormWing extends Skill {
 
         @SubscribePacket
         public static void handleControl(ControlPacket packet) {
-            var state = packet.getState();
             var player = packet.getPacketListener().getPlayer();
-            if (isActive(player)) {
-                var look = WingFlightDirection.resolve(
-                        player.getLookAngle(), packet.getYRot(), packet.getXRot());
-                if (state == State.BOOST) {
-                    LAST_BOOST_TICK.put(player.getUUID(), player.level().getGameTime());
-                }
-                WingFlightPose.sync(player, switch (state) {
-                    case BOOST -> WingFlightPose.Pose.FAST;
-                    case KEEP -> WingFlightPose.coastingPose(player);
-                    default -> WingFlightPose.Pose.SLOW;
-                });
-                EntityMotionGuard.runWithMotionSource(player, () -> {
-                    var movementScale = Skills.STORM_WING.get().hasProficiencyMilestone(player, 2)
-                            ? 1.15
-                            : 1.0;
-                    switch (state) {
-                        case FRONT -> {
-                            var vec3 = look.add(0, 0.35, 0).scale(0.2 * movementScale);
-                            player.push(vec3.x, vec3.y * 1.5, vec3.z);
-                        }
-                        case BACK -> {
-                            var vec3 = look.add(0, -0.35, 0).scale(-0.2 * movementScale);
-                            player.push(vec3.x, vec3.y, vec3.z);
-                        }
-                        case LEFT -> {
-                            var left = new Vec3(look.z, (-look.y + 0.15), -look.x).scale(0.2 * movementScale);
-                            player.push(left.x, left.y, left.z);
-                        }
-                        case RIGHT -> {
-                            var right = new Vec3(-look.z, (-look.y + 0.15), look.x).scale(0.2 * movementScale);
-                            player.push(right.x, right.y, right.z);
-                        }
-                        case KEEP -> {
-                            if (Math.abs(player.getDeltaMovement().y) > 0.25) {
-                                player.setDeltaMovement(player.getDeltaMovement().multiply(0.995, 0.685, 0.995));
-                            } else {
-                                player.setDeltaMovement(player.getDeltaMovement().multiply(0.995, 0, 0.995));
-                            }
-                            player.resetFallDistance();
-                        }
-                        case BOOST -> {
-                            var vec3 = look.scale(2.0 * movementScale);
-                            player.push(vec3.x, vec3.y, vec3.z);
-                            player.resetFallDistance();
-                        }
-                    }
-                });
-                player.connection.send(new ClientboundSetEntityMotionPacket(player));
-            }
+            if (isActive(player)) WingFlightRuntime.accept(player, Skills.STORM_WING.get(), packet.input);
         }
 
         public static boolean isActive(ServerPlayer player) {
@@ -284,8 +213,8 @@ public final class StormWing extends Skill {
             }
             if (!active) {
                 // This path runs for every player tick. Never clear fall distance here.
-                LAST_BOOST_TICK.remove(player.getUUID());
-                if (wasActive) WingFlightPose.sync(player, WingFlightPose.Pose.IDLE);
+                WingFlightRuntime.clear(player, Skills.STORM_WING.get());
+                    if (wasActive) WingFlightPose.sync(player, WingFlightPose.Pose.IDLE);
             }
         }
 
@@ -306,13 +235,9 @@ public final class StormWing extends Skill {
             }
             sync(player);
             if (!isActive(player)) return;
-            var boostTick = LAST_BOOST_TICK.get(player.getUUID());
+            WingFlightRuntime.tick(player, skill);
             var now = player.level().getGameTime();
-            var boosting = WingFlightPose.isBoosting(now, boostTick);
-            if (player.getData(AttachmentTypes.WING_FLIGHT_POSE.get()) == WingFlightPose.Pose.FAST
-                    && !boosting) {
-                WingFlightPose.sync(player, WingFlightPose.coastingPose(player));
-            }
+            var boosting = player.getData(AttachmentTypes.WING_FLIGHT_POSE.get()) == WingFlightPose.Pose.FAST;
             tickTurbulence(player, now, boosting);
         }
 
@@ -380,37 +305,14 @@ public final class StormWing extends Skill {
 
     @PacketTarget(ThreadType.SERVER)
     public static final class ControlPacket extends Packet<ServerGamePacketListenerImpl, ControlPacket> {
-        public static final StreamCodec<ByteBuf, State> STATE_CODEC = ByteBufCodecs.idMapper(i -> State.values()[i], Enum::ordinal);
         public static final StreamCodec<ByteBuf, ControlPacket> CODEC = StreamCodec.of(
-                (buf, packet) -> {
-                    STATE_CODEC.encode(buf, packet.state);
-                    buf.writeFloat(packet.yRot);
-                    buf.writeFloat(packet.xRot);
-                },
-                buf -> new ControlPacket(STATE_CODEC.decode(buf), buf.readFloat(), buf.readFloat()));
+                (buf, packet) -> WingControlIntent.CODEC.encode(buf, packet.input),
+                buf -> new ControlPacket(WingControlIntent.CODEC.decode(buf)));
+        private final WingControlIntent input;
 
-        private final State state;
-        private final float yRot;
-        private final float xRot;
-
-        public ControlPacket(State state, float yRot, float xRot) {
-            this.state = state;
-            this.yRot = yRot;
-            this.xRot = xRot;
+        public ControlPacket(WingControlIntent input) {
+            this.input = input;
         }
-
-        public State getState() {
-            return state;
-        }
-
-        public float getYRot() {
-            return yRot;
-        }
-
-        public float getXRot() {
-            return xRot;
-        }
-
         @Override
         public PacketType<ServerGamePacketListenerImpl, ControlPacket> getPacketType() {
             return PacketTypes.STORM_WING_CONTROL.get();

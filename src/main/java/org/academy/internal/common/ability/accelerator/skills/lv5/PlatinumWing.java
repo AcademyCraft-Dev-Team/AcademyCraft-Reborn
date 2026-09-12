@@ -1,6 +1,7 @@
 package org.academy.internal.common.ability.accelerator.skills.lv5;
 
 import io.netty.buffer.ByteBuf;
+import org.academy.api.common.ability.WingControlIntent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -29,7 +30,9 @@ import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.config.KeyBindingConfig;
+import org.academy.api.client.config.WingFlightConfig;
+import org.academy.internal.client.ability.WingFlightClient;
+import org.academy.internal.common.ability.accelerator.skills.WingFlightRuntime;
 import org.academy.api.client.hud.ability.ToggleStatusHud;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
@@ -96,6 +99,7 @@ public final class PlatinumWing extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+        Client.CONFIG.register(this);
         InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(
                 Client.KEY_NAME_TOGGLE,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, GLFW_KEY_U, GLFW_RELEASE, GLFW_MOD_ALT)
@@ -125,17 +129,22 @@ public final class PlatinumWing extends Skill {
         );
         public static final String KEY_NAME_TOGGLE = SkillNames.PLATINUM_WING + "_toggle";
         public static Config CONFIG = new Config();
+        private static final WingControlIntent.Sender CONTROL_SENDER = new WingControlIntent.Sender();
 
         private Client() {
         }
 
         @SubscribeEvent
         public static void tick(ClientTickEvent.Post event) {
-            var player = Minecraft.getInstance().player;
-            WingFlightSupport.clientTick(
-                    player != null && player.getData(AttachmentTypes.ACTIVATED_PLATINUM_WING.get()),
-                    (state, yRot, xRot) -> MisakaNetworkClient.send(new ControlPacket(state, yRot, xRot))
-            );
+            var mc = Minecraft.getInstance();
+            var player = mc.player;
+            if (player == null || !player.getData(AttachmentTypes.ACTIVATED_PLATINUM_WING.get()) || mc.isPaused()) {
+                CONTROL_SENDER.reset();
+                return;
+            }
+            var input = WingFlightClient.readControl();
+            input = new WingControlIntent(input.buttons(), input.yaw(), input.pitch(), CONFIG.getRemainingMomentum());
+            if (CONTROL_SENDER.shouldSend(input, System.nanoTime())) MisakaNetworkClient.send(new ControlPacket(input));
         }
 
         @SubscribePacket
@@ -158,7 +167,7 @@ public final class PlatinumWing extends Skill {
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 
-        public static class Config extends KeyBindingConfig {
+        public static class Config extends WingFlightConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
 
@@ -179,7 +188,6 @@ public final class PlatinumWing extends Skill {
     }
 
     public static final class Server {
-        private static final Map<UUID, Long> LAST_BOOST_TICK = new HashMap<>();
         private static final Map<UUID, ExecutionTombstone> EXECUTIONS = new ConcurrentHashMap<>();
         private static final long SIGNATURE_SUPPRESSION_TICKS = 200L;
         private static volatile MinecraftServer currentServer;
@@ -198,14 +206,13 @@ public final class PlatinumWing extends Skill {
             }
             skill.toggle(player);
             WingFlightSupport.sync(player, AttachmentTypes.ACTIVATED_PLATINUM_WING.get(),
-                    skill.isEnabled(player), LAST_BOOST_TICK);
+                    skill.isEnabled(player));
         }
 
         @SubscribePacket
         public static void handleControl(ControlPacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            if (!isActive(player)) return;
-            WingFlightSupport.applyControl(player, packet.state, packet.yRot, packet.xRot, LAST_BOOST_TICK);
+            if (isActive(player)) WingFlightRuntime.accept(player, Skills.PLATINUM_WING.get(), packet.input);
         }
 
         public static boolean isActive(ServerPlayer player) {
@@ -216,7 +223,8 @@ public final class PlatinumWing extends Skill {
         public static void forceDeactivate(ServerPlayer player) {
             if (player == null) return;
             WingFlightSupport.forceDeactivateSkill(player, Skills.PLATINUM_WING.get());
-            WingFlightSupport.sync(player, AttachmentTypes.ACTIVATED_PLATINUM_WING.get(), false, LAST_BOOST_TICK);
+            WingFlightRuntime.clear(player, Skills.PLATINUM_WING.get());
+            WingFlightSupport.sync(player, AttachmentTypes.ACTIVATED_PLATINUM_WING.get(), false);
         }
 
         public static void onLeftClickSwing(ServerPlayer player) {
@@ -336,7 +344,7 @@ public final class PlatinumWing extends Skill {
 
         private static void tick(ServerPlayer player) {
             WingFlightSupport.tick(player, Skills.PLATINUM_WING.get(),
-                    AttachmentTypes.ACTIVATED_PLATINUM_WING.get(), LAST_BOOST_TICK);
+                    AttachmentTypes.ACTIVATED_PLATINUM_WING.get());
         }
 
         private static void maintainExecutions() {
@@ -360,7 +368,6 @@ public final class PlatinumWing extends Skill {
         private static void clearExecutionState() {
             PlatinumExecutionCleanup.clear();
             EXECUTIONS.clear();
-            LAST_BOOST_TICK.clear();
             currentServer = null;
         }
 
@@ -443,25 +450,14 @@ public final class PlatinumWing extends Skill {
 
     @PacketTarget(ThreadType.SERVER)
     public static final class ControlPacket extends Packet<ServerGamePacketListenerImpl, ControlPacket> {
-        private static final StreamCodec<ByteBuf, StormWing.State> STATE_CODEC =
-                ByteBufCodecs.idMapper(index -> StormWing.State.values()[index], Enum::ordinal);
         public static final StreamCodec<ByteBuf, ControlPacket> CODEC = StreamCodec.of(
-                (buf, packet) -> {
-                    STATE_CODEC.encode(buf, packet.state);
-                    buf.writeFloat(packet.yRot);
-                    buf.writeFloat(packet.xRot);
-                },
-                buf -> new ControlPacket(STATE_CODEC.decode(buf), buf.readFloat(), buf.readFloat()));
-        private final StormWing.State state;
-        private final float yRot;
-        private final float xRot;
+                (buf, packet) -> WingControlIntent.CODEC.encode(buf, packet.input),
+                buf -> new ControlPacket(WingControlIntent.CODEC.decode(buf)));
+        private final WingControlIntent input;
 
-        public ControlPacket(StormWing.State state, float yRot, float xRot) {
-            this.state = state;
-            this.yRot = yRot;
-            this.xRot = xRot;
+        public ControlPacket(WingControlIntent input) {
+            this.input = input;
         }
-
         @Override
         public PacketType<ServerGamePacketListenerImpl, ControlPacket> getPacketType() {
             return PacketTypes.PLATINUM_WING_CONTROL.get();

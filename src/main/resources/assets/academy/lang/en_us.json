@@ -217,6 +217,8 @@
   "app.academy.skill_settings.advanced.title": "Advanced Skill Settings",
   "app.academy.skill_settings.advanced.vector_deviation_first_person_distortion_ring": "Show distortion ring in first person",
   "app.academy.skill_settings.advanced.vector_reflection_first_person_distortion_ring": "Show distortion ring in first person",
+  "app.academy.skill_settings.advanced.wing_flight": "Flight control",
+  "app.academy.skill_settings.advanced.wing_momentum": "Momentum after releasing movement",
   "app.academy.skill_settings.capture.hint": "Binding \"%1$s\": %2$s. Press ESC to clear.",
   "app.academy.skill_settings.capture.key": "key",
   "app.academy.skill_settings.current_category": "Current ability: ",

@@ -23,7 +23,9 @@ import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.config.KeyBindingConfig;
+import org.academy.api.client.config.WingFlightConfig;
+import org.academy.internal.client.ability.WingFlightClient;
+import org.academy.internal.common.ability.accelerator.skills.WingFlightRuntime;
 import org.academy.api.client.hud.ability.ToggleStatusHud;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
@@ -77,6 +79,7 @@ public final class BlackWing extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+        Client.CONFIG.register(this);
         InputSystem.addKeyBinding(Client.KEY_NAME_TOGGLE, Client.CONFIG.getKeyBinding(
                 Client.KEY_NAME_TOGGLE,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, GLFW_KEY_B, GLFW_RELEASE, GLFW_MOD_ALT)
@@ -116,6 +119,11 @@ public final class BlackWing extends Skill {
         public static void tick(ClientTickEvent.Post event) {
             var player = Minecraft.getInstance().player;
             long epoch = player == null ? -1 : org.academy.internal.client.render.vfx.WingVfx.blackActivationEpoch(player.getId());
+            if (Minecraft.getInstance().isPaused()) {
+                // Pausing keeps the server activation and sequence alive; do not restart at sequence zero.
+                CONTROL_SENDER.reset();
+                return;
+            }
             if (player == null || !player.getData(AttachmentTypes.ACTIVATED_BLACK_WING.get()) || epoch < 0) {
                 CONTROL_SENDER.reset(); controlEpoch = -1; controlLevel = null; return;
             }
@@ -123,8 +131,9 @@ public final class BlackWing extends Skill {
                 CONTROL_SENDER.reset(); controlEpoch = epoch; controlSequence = 0;
                 controlLevel = Minecraft.getInstance().level;
             }
-            var input = WingFlightSupport.readControl();
-            if (CONTROL_SENDER.shouldSend(input, player.tickCount))
+            var input = WingFlightClient.readControl();
+            input = new WingControlIntent(input.buttons(), input.yaw(), input.pitch(), CONFIG.getRemainingMomentum());
+            if (CONTROL_SENDER.shouldSend(input, System.nanoTime()))
                 MisakaNetworkClient.send(new ControlPacket(epoch, ++controlSequence, input));
         }
 
@@ -133,7 +142,7 @@ public final class BlackWing extends Skill {
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 
-        public static class Config extends KeyBindingConfig {
+        public static class Config extends WingFlightConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
 
@@ -154,7 +163,6 @@ public final class BlackWing extends Skill {
     }
 
     public static final class Server {
-        private static final Map<UUID, Long> LAST_BOOST_TICK = new HashMap<>();
         private static final Map<ServerPlayer, AttackSession> ATTACK_SESSIONS = new java.util.WeakHashMap<>();
         private static final Map<ServerPlayer, java.util.Set<ServerPlayer>> OBSERVERS = new java.util.WeakHashMap<>();
         private static long nextEpoch;
@@ -164,7 +172,6 @@ public final class BlackWing extends Skill {
             final VortexAttackSequence attacks = new VortexAttackSequence();
             final net.minecraft.server.level.ServerLevel level;
             long sequence;
-            long lastControlTick = Long.MIN_VALUE;
             final WingControlIntent.Mailbox controls = new WingControlIntent.Mailbox();
             BlackWingAttackPacket lastAttack;
             AttackSession(ServerPlayer player) { level = player.level(); }
@@ -221,7 +228,6 @@ public final class BlackWing extends Skill {
             ATTACK_SESSIONS.remove(player);
             OBSERVERS.remove(player);
             OBSERVERS.values().forEach(observers -> observers.remove(player));
-            LAST_BOOST_TICK.remove(player.getUUID());
         }
 
         private Server() {
@@ -238,7 +244,7 @@ public final class BlackWing extends Skill {
             }
             skill.toggle(player);
             WingFlightSupport.sync(player, AttachmentTypes.ACTIVATED_BLACK_WING.get(),
-                    skill.isEnabled(player), LAST_BOOST_TICK);
+                    skill.isEnabled(player));
             refreshSession(player);
         }
 
@@ -248,7 +254,9 @@ public final class BlackWing extends Skill {
             if (!isActive(player)) return;
             var session = refreshSession(player);
             if (session == null || session.epoch != packet.epoch) return;
-            session.controls.accept(packet.sequence, packet.input, player.level().getGameTime());
+            if (session.controls.accept(packet.sequence, packet.input, System.nanoTime())) {
+                WingFlightRuntime.accept(player, Skills.BLACK_WING.get(), packet.input);
+            }
         }
 
         public static boolean isActive(ServerPlayer player) {
@@ -259,7 +267,8 @@ public final class BlackWing extends Skill {
         public static void forceDeactivate(ServerPlayer player) {
             if (player == null) return;
             WingFlightSupport.forceDeactivateSkill(player, Skills.BLACK_WING.get());
-            WingFlightSupport.sync(player, AttachmentTypes.ACTIVATED_BLACK_WING.get(), false, LAST_BOOST_TICK);
+            WingFlightRuntime.clear(player, Skills.BLACK_WING.get());
+            WingFlightSupport.sync(player, AttachmentTypes.ACTIVATED_BLACK_WING.get(), false);
             refreshSession(player);
         }
 
@@ -316,13 +325,8 @@ public final class BlackWing extends Skill {
 
         private static void tick(ServerPlayer player) {
             WingFlightSupport.tick(player, Skills.BLACK_WING.get(),
-                    AttachmentTypes.ACTIVATED_BLACK_WING.get(), LAST_BOOST_TICK);
-            var session = refreshSession(player);
-            long tick = player.level().getGameTime();
-            if (session != null && session.lastControlTick != tick) {
-                session.lastControlTick = tick;
-                WingFlightSupport.applyHeldControl(player, session.controls.sample(tick, player.getYRot(), player.getXRot()), LAST_BOOST_TICK);
-            }
+                    AttachmentTypes.ACTIVATED_BLACK_WING.get());
+            refreshSession(player);
         }
     }
 
@@ -347,7 +351,6 @@ public final class BlackWing extends Skill {
         public static void onServerStopped(net.neoforged.neoforge.event.server.ServerStoppedEvent event) {
             Server.ATTACK_SESSIONS.clear();
             Server.OBSERVERS.clear();
-            Server.LAST_BOOST_TICK.clear();
         }
 
         @SubscribeEvent
@@ -380,11 +383,9 @@ public final class BlackWing extends Skill {
         public static final StreamCodec<ByteBuf, ControlPacket> CODEC = StreamCodec.of((buf, packet) -> {
             ByteBufCodecs.VAR_LONG.encode(buf, packet.epoch);
             ByteBufCodecs.VAR_LONG.encode(buf, packet.sequence);
-            buf.writeByte(packet.input.buttons());
-            buf.writeFloat(packet.input.yaw());
-            buf.writeFloat(packet.input.pitch());
+            WingControlIntent.CODEC.encode(buf, packet.input);
         }, buf -> new ControlPacket(ByteBufCodecs.VAR_LONG.decode(buf), ByteBufCodecs.VAR_LONG.decode(buf),
-                new WingControlIntent(buf.readUnsignedByte(), buf.readFloat(), buf.readFloat())));
+                WingControlIntent.CODEC.decode(buf)));
         final long epoch, sequence;
         final WingControlIntent input;
         public ControlPacket(long epoch, long sequence, WingControlIntent input) {

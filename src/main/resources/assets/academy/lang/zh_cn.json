@@ -217,6 +217,8 @@
   "app.academy.skill_settings.advanced.title": "技能高级配置",
   "app.academy.skill_settings.advanced.vector_deviation_first_person_distortion_ring": "第一人称显示扭曲环",
   "app.academy.skill_settings.advanced.vector_reflection_first_person_distortion_ring": "第一人称显示扭曲环",
+  "app.academy.skill_settings.advanced.wing_flight": "飞行控制",
+  "app.academy.skill_settings.advanced.wing_momentum": "松键剩余动量",
   "app.academy.skill_settings.capture.hint": "正在为“%1$s”设置按键：%2$s，按 ESC 清空。",
   "app.academy.skill_settings.capture.key": "按键",
   "app.academy.skill_settings.current_category": "当前能力：",
