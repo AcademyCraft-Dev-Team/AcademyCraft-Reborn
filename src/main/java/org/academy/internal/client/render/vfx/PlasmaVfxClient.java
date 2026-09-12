@@ -133,6 +133,15 @@ public final class PlasmaVfxClient {
         }
     }
 
+    static void release(Plasma plasma) {
+        var effects = EFFECTS.remove(plasma);
+        if (effects == null) return;
+        var manager = VfxGraphManager.INSTANCE;
+        stop(manager, effects.gather);
+        stop(manager, effects.focus);
+        stop(manager, effects.projectile);
+    }
+
     private static @Nullable ActiveEffect spawnFocus(Plasma plasma, PlasmaEffects effects) {
         try {
             var effect = VfxGraphManager.INSTANCE.spawn(FOCUS_ASSET, new Vector3f(effects.fixedFocus));

@@ -20,6 +20,10 @@ public final class BeamVfx implements Vfx {
         this.beam = beam;
     }
 
+    void expire() {
+        expired = true;
+    }
+
     private static void pushSegment(
             VfxFrameContext ctx,
             VfxSink sink,
