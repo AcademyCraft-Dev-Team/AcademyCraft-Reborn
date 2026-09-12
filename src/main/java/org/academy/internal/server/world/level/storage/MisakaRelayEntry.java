@@ -1,6 +1,7 @@
 package org.academy.internal.server.world.level.storage;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
@@ -15,6 +16,14 @@ import java.util.UUID;
  * Persisted + runtime state for one Misaka relay satellite.
  */
 public final class MisakaRelayEntry {
+    public static String shortId(@Nullable UUID id) {
+        if (id == null) {
+            return "";
+        }
+        String raw = id.toString().replace("-", "");
+        return raw.length() >= 8 ? raw.substring(0, 8) : raw;
+    }
+
     public enum StrikeMode {
         IDLE,
         APPROACHING,
@@ -44,9 +53,42 @@ public final class MisakaRelayEntry {
         }
     }
 
+    /**
+     * Parses {@code network_id} as UUID, or legacy BlockPos string into a provisional UUID
+     * ({@code new UUID(0, pos.asLong())}) plus {@link #legacyNetworkIdPos} for later migration.
+     */
+    private record LoadedNetworkId(UUID networkId, @Nullable BlockPos legacyPos) {
+        static final Codec<LoadedNetworkId> CODEC = Codec.STRING.flatXmap(
+                value -> {
+                    try {
+                        return DataResult.success(new LoadedNetworkId(UUID.fromString(value), null));
+                    } catch (IllegalArgumentException ignored) {
+                    }
+                    try {
+                        var parts = value.split(",");
+                        if (parts.length != 3) {
+                            return DataResult.error(() -> "Invalid network_id: " + value);
+                        }
+                        var pos = new BlockPos(
+                                Integer.parseInt(parts[0].trim()),
+                                Integer.parseInt(parts[1].trim()),
+                                Integer.parseInt(parts[2].trim())
+                        );
+                        return DataResult.success(new LoadedNetworkId(new UUID(0L, pos.asLong()), pos));
+                    } catch (NumberFormatException ex) {
+                        return DataResult.error(() -> "Invalid network_id: " + value);
+                    }
+                },
+                loaded -> DataResult.success(loaded.networkId.toString())
+        );
+    }
+
     public static final Codec<MisakaRelayEntry> ENTRY_CODEC = RecordCodecBuilder.create(instance -> instance.group(
             MisakaSavedDataCodecs.UUID_STRING_CODEC.fieldOf("satellite_id").forGetter(e -> e.satelliteId),
-            MisakaSavedDataCodecs.BLOCK_POS_STRING_CODEC.fieldOf("network_id").forGetter(e -> e.networkId),
+            LoadedNetworkId.CODEC.fieldOf("network_id").forGetter(e ->
+                    new LoadedNetworkId(e.networkId, e.legacyNetworkIdPos)),
+            MisakaSavedDataCodecs.BLOCK_POS_STRING_CODEC.optionalFieldOf("network_id_pos")
+                    .forGetter(e -> Optional.ofNullable(e.legacyNetworkIdPos)),
             MisakaSavedDataCodecs.DIMENSION_CODEC.fieldOf("dimension").forGetter(e -> e.dimension),
             Codec.BOOL.fieldOf("hyper").forGetter(e -> e.hyper),
             MisakaSavedDataCodecs.BLOCK_POS_STRING_CODEC.fieldOf("laser_pos").forGetter(e -> e.laserPos),
@@ -56,12 +98,31 @@ public final class MisakaRelayEntry {
             MisakaSavedDataCodecs.UUID_STRING_CODEC.optionalFieldOf("entity_uuid").forGetter(e -> Optional.ofNullable(e.entityUuid)),
             Phase.CODEC.fieldOf("phase").orElse(Phase.ORBIT).forGetter(e -> e.phase),
             Codec.BOOL.fieldOf("laser_bound").orElse(true).forGetter(e -> e.laserBound)
-    ).apply(instance, (id, networkId, dimension, hyper, laserPos, laserDimension, cabinPos, cabinDimension, entityUuid, phase, laserBound) ->
-            new MisakaRelayEntry(id, networkId, dimension, hyper, laserPos, laserDimension, cabinPos, cabinDimension, entityUuid.orElse(null), phase, laserBound)
-    ));
+    ).apply(instance, (id, networkIdLoad, networkIdPos, dimension, hyper, laserPos, laserDimension, cabinPos, cabinDimension, entityUuid, phase, laserBound) -> {
+        BlockPos legacy = networkIdLoad.legacyPos();
+        if (legacy == null) {
+            legacy = networkIdPos.orElse(null);
+        }
+        UUID networkId = networkIdLoad.networkId();
+        if (legacy != null && networkIdLoad.legacyPos() == null && networkIdPos.isPresent()) {
+            // Explicit network_id_pos with a real UUID in network_id — keep UUID, drop legacy.
+            legacy = null;
+        }
+        var entry = new MisakaRelayEntry(
+                id, networkId, dimension, hyper, laserPos, laserDimension, cabinPos, cabinDimension,
+                entityUuid.orElse(null), phase, laserBound
+        );
+        entry.legacyNetworkIdPos = legacy;
+        return entry;
+    }));
 
     public final UUID satelliteId;
-    public BlockPos networkId;
+    public UUID networkId;
+    /**
+     * When non-null, {@link #networkId} was loaded from a legacy BlockPos key and should be
+     * remapped via {@link MisakaNetworkRegistry#resolveOrCreate} on first server touch.
+     */
+    public @Nullable BlockPos legacyNetworkIdPos;
     public ResourceKey<Level> dimension;
     public boolean hyper;
     /**
@@ -106,7 +167,7 @@ public final class MisakaRelayEntry {
 
     public MisakaRelayEntry(
             UUID satelliteId,
-            BlockPos networkId,
+            UUID networkId,
             ResourceKey<Level> dimension,
             boolean hyper,
             BlockPos laserPos,
@@ -120,7 +181,7 @@ public final class MisakaRelayEntry {
 
     public MisakaRelayEntry(
             UUID satelliteId,
-            BlockPos networkId,
+            UUID networkId,
             ResourceKey<Level> dimension,
             boolean hyper,
             BlockPos laserPos,
@@ -132,7 +193,7 @@ public final class MisakaRelayEntry {
             boolean laserBound
     ) {
         this.satelliteId = satelliteId;
-        this.networkId = networkId.immutable();
+        this.networkId = networkId == null ? new UUID(0L, 0L) : networkId;
         this.dimension = dimension;
         this.hyper = hyper;
         this.laserPos = laserPos.immutable();
@@ -147,7 +208,7 @@ public final class MisakaRelayEntry {
     /** Backward-compatible ctor: cabin dimension defaults to overworld. */
     public MisakaRelayEntry(
             UUID satelliteId,
-            BlockPos networkId,
+            UUID networkId,
             ResourceKey<Level> dimension,
             boolean hyper,
             BlockPos laserPos,

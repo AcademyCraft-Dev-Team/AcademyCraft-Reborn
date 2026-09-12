@@ -10,6 +10,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import org.academy.api.common.misaka.MisakaRelayAccess;
 import org.academy.internal.common.world.entity.misaka.MisakaSisterEntity;
+import org.academy.internal.server.world.level.storage.MisakaNetworkRegistry;
 import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
 import org.academy.internal.server.world.level.storage.WirelessNetworkData;
 import org.jspecify.annotations.Nullable;
@@ -37,7 +38,7 @@ public final class MisakaNetworkCoverage {
         }
     }
 
-    private record FootprintKey(ResourceKey<Level> dimension, long networkId) {
+    private record FootprintKey(ResourceKey<Level> dimension, UUID networkId) {
     }
 
     private static final Map<FootprintKey, List<Sphere>> FOOTPRINT_CACHE = new HashMap<>();
@@ -50,26 +51,25 @@ public final class MisakaNetworkCoverage {
     }
 
     /**
-     * Every wireless node whose {@link WirelessForwardingMisakaNAT#resolveNetworkIdRaw}
-     * equals {@code networkId}, each with its configured radius sphere.
+     * Every wireless node bound to {@code networkId}, each with its configured radius sphere.
      * {@code level} should be the energy-home level (overworld for Misaka).
      */
-    public static List<Sphere> footprint(ServerLevel level, BlockPos networkId) {
+    public static List<Sphere> footprint(ServerLevel level, UUID networkId) {
         if (level == null || networkId == null) {
             return List.of();
         }
-        var key = new FootprintKey(level.dimension(), networkId.asLong());
+        var key = new FootprintKey(level.dimension(), networkId);
         var cached = FOOTPRINT_CACHE.get(key);
         if (cached != null) {
             return cached;
         }
         var data = WirelessNetworkData.get(level);
-        var immutableNetwork = networkId.immutable();
+        var registry = MisakaNetworkRegistry.get(level.getServer());
         var spheres = new ArrayList<Sphere>();
         for (var entry : data.getAllNodes().entrySet()) {
             var nodePos = entry.getKey();
-            var resolved = WirelessForwardingMisakaNAT.resolveNetworkIdRaw(level, nodePos);
-            if (!resolved.equals(immutableNetwork)) {
+            var resolved = registry.get(nodePos).orElseGet(() -> registry.resolveOrCreate(level, nodePos));
+            if (!resolved.equals(networkId)) {
                 continue;
             }
             double r = Math.max(0, entry.getValue().radius);
@@ -80,7 +80,7 @@ public final class MisakaNetworkCoverage {
         return built;
     }
 
-    public static boolean isInEnergyCoverage(ServerLevel energyHome, BlockPos networkId, BlockPos pos) {
+    public static boolean isInEnergyCoverage(ServerLevel energyHome, UUID networkId, BlockPos pos) {
         if (pos == null || energyHome == null) {
             return false;
         }
@@ -96,7 +96,7 @@ public final class MisakaNetworkCoverage {
      * Energy spheres apply only when the sample is in the energy-home dimension (overworld).
      * Otherwise access is granted only via relay satellites for the sample dimension.
      */
-    public static boolean canUseMisakaService(ServerLevel sampleLevel, BlockPos networkId, BlockPos pos) {
+    public static boolean canUseMisakaService(ServerLevel sampleLevel, UUID networkId, BlockPos pos) {
         if (sampleLevel == null) {
             return resolveServiceAccess(false, false, MisakaRelayAccess.get().grantsAccess(null, pos, networkId));
         }

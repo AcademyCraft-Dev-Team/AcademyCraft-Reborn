@@ -5,8 +5,10 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Per-tick MSk usage ledger. CP occupations convert to MSk via {@code cpAmount / cpPerMsk}.
- * Cleared after Misaka compute settle each server tick.
+ * MSk usage ledger for the current settle window (accumulates across ticks until
+ * {@link MisakaComputeContribution#settleAndApply} clears it every
+ * {@link MisakaComputeContribution#SETTLE_INTERVAL_TICKS} ticks).
+ * CP occupations convert to MSk via {@code cpAmount / cpPerMsk}.
  */
 public final class MisakaComputeUsageTracker {
     private static final Map<UUID, Float> USAGE_MSK = new HashMap<>();
@@ -26,6 +28,11 @@ public final class MisakaComputeUsageTracker {
             return 0.0f;
         }
         return USAGE_MSK.getOrDefault(playerUuid, 0.0f);
+    }
+
+    /** Alias for budget checks (same as usedThisTick within the settle window). */
+    public static float peekBudget(UUID playerUuid) {
+        return usedThisTick(playerUuid);
     }
 
     public static Map<UUID, Float> snapshot() {

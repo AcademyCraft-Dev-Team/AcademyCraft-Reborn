@@ -28,6 +28,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.academy.AcademyCraft;
 import org.academy.api.server.util.ServerPlayerUtil;
 import org.academy.internal.common.world.inventory.WirelessNodeMenu;
+import org.academy.internal.common.world.level.block.entity.OwnedDevice;
 import org.academy.internal.common.world.level.block.entity.WirelessNodeBlockEntity;
 import org.academy.internal.server.world.level.storage.WirelessNetworkData;
 import org.jspecify.annotations.Nullable;
@@ -63,6 +64,9 @@ public final class WirelessNodeBlock extends BaseEntityBlock {
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
+        if (placer instanceof Player player) {
+            OwnedDevice.assignPlacer(level.getBlockEntity(pos), player);
+        }
         if (!level.isClientSide() && level instanceof ServerLevel serverLevel) {
             var nodeName = "Node_" + pos.getX() + "_" + pos.getY() + "_" + pos.getZ();
             var password = "";

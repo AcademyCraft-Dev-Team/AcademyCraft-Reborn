@@ -31,10 +31,14 @@ public final class MisakaRelayRegistry {
     /** Cabin-ops forced crash arming delay (60 seconds). */
     public static final int FORCE_CRASH_COUNTDOWN_TICKS = 20 * 60;
 
-    public static final Codec<MisakaRelayRegistry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Codec.list(MisakaRelayEntry.ENTRY_CODEC).fieldOf("satellites").forGetter(MisakaRelayRegistry::snapshotList)
-    ).apply(instance, MisakaRelayRegistry::fromList));
+    public static final int CURRENT_DATA_VERSION = 1;
 
+    public static final Codec<MisakaRelayRegistry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+            Codec.INT.optionalFieldOf("data_version", 0).forGetter(r -> r.dataVersion),
+            Codec.list(MisakaRelayEntry.ENTRY_CODEC).fieldOf("satellites").forGetter(MisakaRelayRegistry::snapshotList)
+    ).apply(instance, MisakaRelayRegistry::fromCodec));
+
+    int dataVersion = CURRENT_DATA_VERSION;
     final Map<UUID, MisakaRelayEntry> byId = new HashMap<>();
     final Map<Long, UUID> laserOwner = new HashMap<>();
     final Map<Long, Integer> poweredCountByNetDim = new HashMap<>();
@@ -46,6 +50,7 @@ public final class MisakaRelayRegistry {
     final MisakaRelayPowerTicker power = new MisakaRelayPowerTicker(this);
     private Runnable persistentDirty = () -> {};
     private @Nullable transient MinecraftServer owningServer;
+    private boolean legacyNetworkMigrated = true;
 
     public MisakaRelayRegistry() {
     }
@@ -70,13 +75,21 @@ public final class MisakaRelayRegistry {
         }
     }
 
-    private static MisakaRelayRegistry fromList(List<MisakaRelayEntry> entries) {
+    private static MisakaRelayRegistry fromCodec(int dataVersion, List<MisakaRelayEntry> entries) {
         var registry = new MisakaRelayRegistry();
+        registry.dataVersion = dataVersion;
         for (var entry : entries) {
             registry.byId.put(entry.satelliteId, entry);
             if (entry.laserBound) {
                 registry.laserOwner.put(laserKey(entry.laserDimension, entry.laserPos), entry.satelliteId);
             }
+            if (entry.legacyNetworkIdPos != null) {
+                registry.legacyNetworkMigrated = false;
+            }
+        }
+        if (registry.byId.values().stream().noneMatch(e -> e.legacyNetworkIdPos != null)) {
+            registry.legacyNetworkMigrated = true;
+            registry.dataVersion = CURRENT_DATA_VERSION;
         }
         return registry;
     }
@@ -88,7 +101,37 @@ public final class MisakaRelayRegistry {
     public static MisakaRelayRegistry get(MinecraftServer server) {
         var registry = server.overworld().getDataStorage().computeIfAbsent(Persistence.TYPE).registry;
         registry.owningServer = server;
+        registry.migrateLegacyNetworkIds(server);
         return registry;
+    }
+
+    private void migrateLegacyNetworkIds(MinecraftServer server) {
+        if (legacyNetworkMigrated) {
+            return;
+        }
+        boolean changed = false;
+        var level = server.overworld();
+        var networks = MisakaNetworkRegistry.get(server);
+        for (var entry : byId.values()) {
+            if (entry.legacyNetworkIdPos == null) {
+                continue;
+            }
+            boolean wasPowered = entry.powered;
+            if (wasPowered) {
+                power.bumpPoweredCount(entry, -1);
+            }
+            entry.networkId = networks.resolveOrCreate(level, entry.legacyNetworkIdPos);
+            entry.legacyNetworkIdPos = null;
+            if (wasPowered) {
+                power.bumpPoweredCount(entry, +1);
+            }
+            changed = true;
+        }
+        legacyNetworkMigrated = true;
+        dataVersion = CURRENT_DATA_VERSION;
+        if (changed) {
+            markPersistentDirty();
+        }
     }
 
     /** Overworld SavedData shell so unit tests can construct {@link MisakaRelayRegistry} without FML. */
@@ -120,12 +163,15 @@ public final class MisakaRelayRegistry {
         return (dimHash << 32) ^ (pos == null ? 0L : pos.asLong());
     }
 
-    static long netDimKey(BlockPos networkId, ResourceKey<Level> dimension) {
+    static long netDimKey(UUID networkId, ResourceKey<Level> dimension) {
         long dimHash = dimension == null ? 0L : (long) dimension.identifier().hashCode();
-        return (networkId == null ? 0L : networkId.asLong()) ^ (dimHash * 31L);
+        long netHash = networkId == null
+                ? 0L
+                : networkId.getMostSignificantBits() ^ networkId.getLeastSignificantBits();
+        return netHash ^ (dimHash * 31L);
     }
 
-    public boolean hasActiveRelay(BlockPos networkId, ResourceKey<Level> dimension) {
+    public boolean hasActiveRelay(UUID networkId, ResourceKey<Level> dimension) {
         if (networkId == null || dimension == null) {
             return false;
         }
@@ -160,14 +206,13 @@ public final class MisakaRelayRegistry {
     }
 
     /** Satellites whose coverage topology is {@code networkId}. */
-    public List<MisakaRelayEntry> listByNetwork(BlockPos networkId) {
+    public List<MisakaRelayEntry> listByNetwork(UUID networkId) {
         var list = new ArrayList<MisakaRelayEntry>();
         if (networkId == null) {
             return list;
         }
-        var key = networkId.immutable();
         for (var entry : byId.values()) {
-            if (key.equals(entry.networkId)) {
+            if (networkId.equals(entry.networkId)) {
                 list.add(entry);
             }
         }
@@ -264,7 +309,7 @@ public final class MisakaRelayRegistry {
 
     public boolean launch(
             MinecraftServer server,
-            BlockPos networkId,
+            UUID networkId,
             ResourceKey<Level> dimension,
             boolean hyper,
             BlockPos laserPos,
@@ -275,7 +320,7 @@ public final class MisakaRelayRegistry {
         return lifecycle.launch(server, networkId, dimension, hyper, laserPos, laserDimension, cabinPos, cabinDimension);
     }
 
-    public boolean retargetNetwork(MinecraftServer server, UUID satelliteId, BlockPos newNetworkId) {
+    public boolean retargetNetwork(MinecraftServer server, UUID satelliteId, UUID newNetworkId) {
         return lifecycle.retargetNetwork(server, satelliteId, newNetworkId);
     }
 

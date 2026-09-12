@@ -8,8 +8,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -33,6 +35,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.academy.api.server.util.ServerPlayerUtil;
 import org.academy.internal.common.world.inventory.SatelliteLaunchPadMenu;
 import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
+import org.academy.internal.common.world.level.block.entity.OwnedDevice;
 import org.academy.internal.common.world.level.block.entity.SatelliteLaunchPadBlockEntity;
 import org.jspecify.annotations.Nullable;
 
@@ -49,6 +52,14 @@ public final class SatelliteLaunchPadBlock extends BaseEntityBlock {
         super(properties.mapColor(MapColor.METAL).sound(SoundType.METAL).noOcclusion());
         registerDefaultState(stateDefinition.any()
                 .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH));
+    }
+
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (placer instanceof Player player) {
+            OwnedDevice.assignPlacer(level.getBlockEntity(pos), player);
+        }
     }
 
     @Override

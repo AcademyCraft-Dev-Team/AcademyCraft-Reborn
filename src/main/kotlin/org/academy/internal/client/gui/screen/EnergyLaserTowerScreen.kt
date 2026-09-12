@@ -4,7 +4,6 @@ import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.player.Inventory
-import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.screen.ContainerUiScreen
@@ -25,6 +24,8 @@ class EnergyLaserTowerScreen private constructor(
     private val mainPos: BlockPos = blockEntity.blockPos
     private lateinit var energyValueLabel: LabelWidget
     private lateinit var statusValueLabel: LabelWidget
+    private lateinit var feedValueLabel: LabelWidget
+    private var assetPage: DeviceAssetPage? = null
 
     override fun onInit(
         pageButtons: RadioGroupWidget,
@@ -36,9 +37,11 @@ class EnergyLaserTowerScreen private constructor(
         val childDuration = duration - 100
 
         invPage.addChild("hint", LabelWidget(Component.translatable("gui.academy.energy_laser_tower.hint").string).apply {
+            scale = 0.75f
+            alpha = 0.78f
             layoutParams = FrameLayoutWidget.LayoutParams()
                 .widthMode(SizeMode.MATCH_PARENT)
-                .height(16f)
+                .heightMode(SizeMode.WRAP_CONTENT)
                 .gravity(Gravity.TOP)
                 .margin(8f, 8f, 8f, 0f)
         })
@@ -49,35 +52,46 @@ class EnergyLaserTowerScreen private constructor(
         content.addChild("page_wireless", wirelessPage)
 
         val wirelessButton = createButton(R.textures.gui.icon.icon_wireless)
-        wirelessButton.layoutParams = WidgetContainer.LayoutParams()
-            .widthMode(SizeMode.MATCH_PARENT)
-            .height(16f)
+        MisakaMachineUi.sizeRailButton(wirelessButton)
         pageButtons.addChild("wireless", wirelessButton)
+
+        val asset = DeviceAssetPage.attach(
+            pageButtons = pageButtons,
+            invButton = invButton,
+            content = content,
+            devicePos = mainPos,
+            isOwner = { menu.viewerIsOwner() },
+            createRailButton = { createButton(R.textures.gui.icon.icon_settings) }
+        )
+        assetPage = asset
+
         pageButtons.onSelectionChanged = {
             when (it.name) {
                 "inv" -> {
                     AnimationUtil.hide(wirelessPage)
+                    asset.hide()
                     AnimationUtil.show(invPage)
                     isHandleContainer = true
                     isRenderInventory = true
                 }
                 "wireless" -> {
                     AnimationUtil.hide(invPage)
+                    asset.hide()
                     AnimationUtil.show(wirelessPage)
+                    isHandleContainer = false
+                    isRenderInventory = false
+                }
+                "asset" -> {
+                    AnimationUtil.hide(invPage)
+                    AnimationUtil.hide(wirelessPage)
+                    asset.show()
                     isHandleContainer = false
                     isRenderInventory = false
                 }
             }
         }
         pageButtons.selectButton(invButton)
-        AnimationUtil.reveal(
-            widget = pageButtons,
-            targetAlpha = 1f,
-            alphaDuration = childDuration,
-            translationDuration = duration,
-            yInterpolator = EasingFunctions.EASE_OUT_CUBIC,
-            applyShowFlags = false
-        )
+        MisakaMachineUi.playOpenReveal(pageButtons, 1f, duration, childDuration)
 
         val info = InfoAreaUtil.create(this, (leftPos + imageWidth).toFloat(), (topPos - 22).toFloat())
         run {
@@ -100,11 +114,19 @@ class EnergyLaserTowerScreen private constructor(
                 .sizeMode(SizeMode.WRAP_CONTENT)
             val statusLayout = InfoAreaUtil.createAttributeRow("Status", statusValueLabel)
             info.addChild("status_layout", statusLayout)
+
+            feedValueLabel = LabelWidget("")
+            feedValueLabel.layoutParams = WidgetContainer.LayoutParams()
+                .gravity(Gravity.CENTER_RIGHT)
+                .sizeMode(SizeMode.WRAP_CONTENT)
+            val feedLayout = InfoAreaUtil.createAttributeRow("Feed", feedValueLabel)
+            info.addChild("feed_layout", feedLayout)
         }
     }
 
     override fun containerTick() {
         super.containerTick()
+        assetPage?.tick(menu.viewerIsOwner())
         energyValueLabel.text = "${blockEntity.energyStored} / ${blockEntity.maxEnergyStorage} AF"
         statusValueLabel.text = when {
             !blockEntity.hasClearSky() -> Component.translatable("gui.academy.energy_laser_tower.status_blocked").string
@@ -112,6 +134,15 @@ class EnergyLaserTowerScreen private constructor(
             blockEntity.energyStored <= 0 -> Component.translatable("gui.academy.energy_laser_tower.status_nopower").string
             else -> Component.translatable("gui.academy.energy_laser_tower.status_ok").string
         }
+        feedValueLabel.text = Component.translatable(
+            when {
+                blockEntity.isStrikeAiming -> "gui.academy.energy_laser_tower.feed_strike"
+                blockEntity.isOrbiting && blockEntity.isOrbitHyper -> "gui.academy.energy_laser_tower.feed_hyper"
+                blockEntity.isOrbiting -> "gui.academy.energy_laser_tower.feed_orbit"
+                blockEntity.isBeamActive -> "gui.academy.energy_laser_tower.feed_beam"
+                else -> "gui.academy.energy_laser_tower.feed_idle"
+            }
+        ).string
     }
 
     companion object {

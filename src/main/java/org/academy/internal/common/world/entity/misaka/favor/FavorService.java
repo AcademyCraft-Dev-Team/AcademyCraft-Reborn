@@ -15,17 +15,24 @@ import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
 import org.academy.internal.server.world.level.storage.MisakaSisterRoster;
 import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 
+/**
+ * Favor mutation and one-hop LAN propagation.
+ * <p>
+ * Propagation scope (design §4.5): origin + origin's network + sisters within
+ * {@link #LAN_PROXIMITY_CHUNKS} of origin + those neighbors' directly connected networks.
+ * Does <strong>not</strong> recursively scan proximity from neighbors.
+ */
 public final class FavorService {
-    /** Chebyshev chunk radius that bridges distinct Misaka networks into one favor LAN. */
+    /** Chebyshev chunk radius that bridges distinct Misaka networks into one favor hop. */
     public static final int LAN_PROXIMITY_CHUNKS = 4;
 
     private FavorService() {
@@ -45,17 +52,14 @@ public final class FavorService {
     }
 
     /**
-     * Apply favor delta to the LAN component of {@code origin}:
-     * same wireless network, plus sisters within {@link #LAN_PROXIMITY_CHUNKS} chunks
-     * and those sisters' networks (connected-component flood).
+     * Apply favor delta to the one-hop LAN component of {@code origin}.
      */
     public static void modifyFavorLan(MinecraftServer server, MisakaSisterRecord origin, String name, int delta) {
         modifyFavorLan(server, List.of(origin), name, delta);
     }
 
     /**
-     * Union of LAN components of all seeds, applying {@code delta} once per sister.
-     * Used when several sisters independently qualify for the same event (witness / killed benevolent).
+     * Union of one-hop components of all seeds, applying {@code delta} once per sister.
      */
     public static void modifyFavorLan(
             MinecraftServer server,
@@ -96,8 +100,8 @@ public final class FavorService {
     }
 
     /**
-     * Pure graph flood for tests: edge if same non-null network key, or same-dimension
-     * chunk Chebyshev ≤ {@link #LAN_PROXIMITY_CHUNKS}.
+     * Pure one-hop resolve for tests.
+     * Members = origin ∪ same-network-as-origin ∪ proximity-to-origin ∪ networks-of-proximity-neighbors.
      */
     public static List<MisakaSisterRecord> resolveLanComponent(
             MisakaSisterRecord origin,
@@ -124,36 +128,72 @@ public final class FavorService {
                 awakened.add(record);
             }
         }
-        Set<UUID> visited = new HashSet<>();
-        ArrayDeque<MisakaSisterRecord> queue = new ArrayDeque<>();
-        visited.add(origin.misakaUuid);
-        queue.add(origin);
-        List<MisakaSisterRecord> component = new ArrayList<>();
-        while (!queue.isEmpty()) {
-            var current = queue.poll();
-            component.add(current);
-            Object currentNet = networkKey.apply(current);
-            ChunkPos currentChunk = chunkPos.apply(current);
-            ResourceKey<Level> currentDim = dimension.apply(current);
-            for (var other : awakened) {
-                if (visited.contains(other.misakaUuid)) {
-                    continue;
+
+        Object originNet = networkKey.apply(origin);
+        ChunkPos originChunk = chunkPos.apply(origin);
+        ResourceKey<Level> originDim = dimension.apply(origin);
+
+        Set<UUID> included = new HashSet<>();
+        List<MisakaSisterRecord> result = new ArrayList<>();
+        Set<Object> neighborNetworks = new HashSet<>();
+
+        include(origin, included, result);
+
+        // Pass 1: same network as origin + proximity neighbors of origin only.
+        for (var other : awakened) {
+            if (included.contains(other.misakaUuid)) {
+                continue;
+            }
+            Object otherNet = networkKey.apply(other);
+            if (originNet != null && originNet.equals(otherNet)) {
+                include(other, included, result);
+                continue;
+            }
+            if (withinProximity(originChunk, chunkPos.apply(other), originDim, dimension.apply(other))) {
+                include(other, included, result);
+                if (otherNet != null) {
+                    neighborNetworks.add(otherNet);
                 }
-                if (!linked(
-                        currentNet,
-                        networkKey.apply(other),
-                        currentChunk,
-                        chunkPos.apply(other),
-                        currentDim,
-                        dimension.apply(other)
-                )) {
-                    continue;
-                }
-                visited.add(other.misakaUuid);
-                queue.add(other);
             }
         }
-        return component;
+
+        // Pass 2: entire networks of proximity neighbors (one hop). No further proximity scan.
+        if (!neighborNetworks.isEmpty()) {
+            for (var other : awakened) {
+                if (included.contains(other.misakaUuid)) {
+                    continue;
+                }
+                Object otherNet = networkKey.apply(other);
+                if (otherNet != null && neighborNetworks.contains(otherNet)) {
+                    include(other, included, result);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private static void include(
+            MisakaSisterRecord record,
+            Set<UUID> included,
+            List<MisakaSisterRecord> result
+    ) {
+        if (included.add(record.misakaUuid)) {
+            result.add(record);
+        }
+    }
+
+    private static boolean withinProximity(
+            @Nullable ChunkPos chunkA,
+            @Nullable ChunkPos chunkB,
+            @Nullable ResourceKey<Level> dimA,
+            @Nullable ResourceKey<Level> dimB
+    ) {
+        if (chunkA == null || chunkB == null || dimA == null || dimB == null || !dimA.equals(dimB)) {
+            return false;
+        }
+        return Math.max(Math.abs(chunkA.x() - chunkB.x()), Math.abs(chunkA.z() - chunkB.z()))
+                <= LAN_PROXIMITY_CHUNKS;
     }
 
     /** Apply {@code delta} with LAN flood when {@code server} is present; otherwise single-record. */
@@ -190,24 +230,26 @@ public final class FavorService {
 
     public static boolean isPrivilegePlayer(MisakaSisterRecord record, String name) {
         return relation(record, name) == MobRelation.BENEVOLENT
-                && name.equals(record.lastInteractedBenevolentPlayerName);
+                && Objects.equals(name, record.lastInteractedBenevolentPlayerName);
     }
 
-    private static boolean linked(
-            @Nullable Object netA,
-            @Nullable Object netB,
-            @Nullable ChunkPos chunkA,
-            @Nullable ChunkPos chunkB,
-            @Nullable ResourceKey<Level> dimA,
-            @Nullable ResourceKey<Level> dimB
-    ) {
-        if (netA != null && netA.equals(netB)) {
-            return true;
+    /** All player names currently at max favor &gt; 0 (benevolent set). */
+    public static List<String> benevolentNames(MisakaSisterRecord record) {
+        if (!record.awakened || record.favorByPlayerName.isEmpty()) {
+            return List.of();
         }
-        if (chunkA == null || chunkB == null || dimA == null || dimB == null || !dimA.equals(dimB)) {
-            return false;
+        int max = record.favorByPlayerName.values().stream().mapToInt(Integer::intValue).max().orElse(0);
+        if (max <= 0) {
+            return List.of();
         }
-        return Math.max(Math.abs(chunkA.x() - chunkB.x()), Math.abs(chunkA.z() - chunkB.z())) <= LAN_PROXIMITY_CHUNKS;
+        List<String> names = new ArrayList<>();
+        for (var entry : record.favorByPlayerName.entrySet()) {
+            if (entry.getValue() == max) {
+                names.add(entry.getKey());
+            }
+        }
+        names.sort(String::compareTo);
+        return names;
     }
 
     private static @Nullable Object networkKey(ServerLevel level, MisakaSisterRecord record) {

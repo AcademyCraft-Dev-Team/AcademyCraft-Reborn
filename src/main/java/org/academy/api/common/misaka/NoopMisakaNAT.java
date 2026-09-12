@@ -27,8 +27,9 @@ public final class NoopMisakaNAT implements MisakaNAT {
     }
 
     @Override
-    public BlockPos resolveNetworkId(ServerLevel level, BlockPos nodePos) {
-        return nodePos == null ? BlockPos.ZERO : nodePos.immutable();
+    public UUID resolveNetworkId(ServerLevel level, BlockPos nodePos) {
+        // Deterministic stand-in so equality checks work without a live registry.
+        return new UUID(0L, nodePos == null ? 0L : nodePos.asLong());
     }
 
     @Override
@@ -57,7 +58,7 @@ public final class NoopMisakaNAT implements MisakaNAT {
     }
 
     @Override
-    public boolean canUseMisakaService(ServerLevel level, BlockPos networkId, BlockPos pos) {
+    public boolean canUseMisakaService(ServerLevel level, UUID networkId, BlockPos pos) {
         return false;
     }
 }

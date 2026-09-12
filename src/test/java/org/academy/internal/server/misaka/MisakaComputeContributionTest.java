@@ -18,6 +18,11 @@ class MisakaComputeContributionTest {
     }
 
     @Test
+    void settleIntervalIsOneSecond() {
+        assertEquals(20, MisakaComputeContribution.SETTLE_INTERVAL_TICKS);
+    }
+
+    @Test
     void personalShareCapIsSeventyFivePercentOfMskAsCpAtDefaultRatio() {
         float msk = MisakaComputeContribution.mskPerSecond(100);
         assertEquals(150f, 0.75f * msk * MisakaComputeContribution.CP_PER_MSK, 0.001f);

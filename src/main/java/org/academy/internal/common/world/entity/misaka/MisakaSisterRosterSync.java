@@ -44,6 +44,7 @@ public final class MisakaSisterRosterSync {
         data.set(MisakaSisterEntity.PERCEPTION, record.perception);
         data.set(MisakaSisterEntity.PERSONALITY, record.personality.ordinal());
         data.set(MisakaSisterEntity.STARVING, record.starving);
+        data.set(MisakaSisterEntity.INCAPACITATED, record.incapacitated);
         data.set(MisakaSisterEntity.WANDER_STYLE, record.wanderStyle.ordinal());
         if (!record.awakened) {
             sister.getFoodData().setFoodLevel(20);

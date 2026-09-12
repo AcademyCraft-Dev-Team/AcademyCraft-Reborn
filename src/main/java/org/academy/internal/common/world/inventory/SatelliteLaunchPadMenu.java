@@ -6,6 +6,7 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -18,9 +19,12 @@ public final class SatelliteLaunchPadMenu extends AbstractContainerMenu {
     public static final int BUTTON_LAUNCH = 0;
     public static final int BUTTON_CYCLE_DIM = 1;
     public static final int BUTTON_CYCLE_LASER = 2;
-
+    /** Select a networked laser by list index: BASE + index (0..MAX-1). */
+    public static final int BUTTON_SELECT_LASER_BASE = 100;
+    public static final int BUTTON_SELECT_LASER_MAX = 64;
     public final ContainerLevelAccess access;
     private final @Nullable SatelliteLaunchPadBlockEntity blockEntity;
+    private final ContainerData viewerData = OwnedDeviceViewerData.create();
 
     public SatelliteLaunchPadMenu(
             int containerId,
@@ -45,11 +49,17 @@ public final class SatelliteLaunchPadMenu extends AbstractContainerMenu {
                 return 16;
             }
         });
+        OwnedDeviceViewerData.sync(viewerData, this.blockEntity, playerInventory.player);
         addPlayerInv(playerInventory);
+        addDataSlots(viewerData);
     }
 
     public SatelliteLaunchPadMenu(int id, Inventory playerInventory) {
         this(id, playerInventory, ContainerLevelAccess.NULL, new SimpleContainer(1));
+    }
+
+    public boolean viewerIsOwner() {
+        return OwnedDeviceViewerData.isOwner(viewerData);
     }
 
     private void addPlayerInv(Inventory playerInventory) {
@@ -71,7 +81,7 @@ public final class SatelliteLaunchPadMenu extends AbstractContainerMenu {
         return switch (id) {
             case BUTTON_LAUNCH -> blockEntity.tryLaunch(serverLevel);
             case BUTTON_CYCLE_DIM -> {
-                blockEntity.cycleHyperDimension();
+                blockEntity.cycleHyperDimension(serverLevel);
                 broadcastChanges();
                 yield true;
             }
@@ -79,7 +89,12 @@ public final class SatelliteLaunchPadMenu extends AbstractContainerMenu {
                 blockEntity.cycleSelectedLaser(serverLevel);
                 yield true;
             }
-            default -> false;
+            default -> {
+                if (id >= BUTTON_SELECT_LASER_BASE && id < BUTTON_SELECT_LASER_BASE + BUTTON_SELECT_LASER_MAX) {
+                    yield blockEntity.trySelectLaser(serverLevel, id - BUTTON_SELECT_LASER_BASE);
+                }
+                yield false;
+            }
         };
     }
 
@@ -116,6 +131,7 @@ public final class SatelliteLaunchPadMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
+        OwnedDeviceViewerData.sync(viewerData, blockEntity, player);
         return stillValid(access, player, Blocks.SATELLITE_LAUNCH_PAD.get());
     }
 }

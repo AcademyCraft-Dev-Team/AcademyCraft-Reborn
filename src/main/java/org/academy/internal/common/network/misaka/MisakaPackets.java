@@ -6,11 +6,15 @@ public final class MisakaPackets {
 
     public static void initServer() {
         SetMisakaWanderStylePacket.initServer();
+        SetMisakaWanderAnchorPacket.initServer();
         SetMisakaNetworkNodePacket.initServer();
         TogglePickUpMisakaPacket.initServer();
         RequestMisakaPanelPacket.initServer();
         RequestMisakaNetManagePacket.initServer();
         SetMisakaNetworkAllocationPacket.initServer();
+        SetMisakaNetworkPermissionPacket.initServer();
+        DisconnectMisakaFromNetworkPacket.initServer();
+        TransferDeviceOwnerPacket.initServer();
     }
 
     public static void initClient() {

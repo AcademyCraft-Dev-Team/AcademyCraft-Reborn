@@ -14,12 +14,13 @@ import org.academy.api.client.resources.R
 import org.academy.internal.common.network.misaka.MisakaNetManageDataPacket
 import org.academy.internal.common.network.misaka.MisakaPanelDataPacket
 import org.academy.internal.common.network.misaka.SetMisakaNetworkNodePacket
+import org.academy.internal.common.network.misaka.SetMisakaWanderAnchorPacket
 import org.academy.internal.common.network.misaka.SetMisakaWanderStylePacket
 import org.academy.internal.common.world.entity.misaka.WanderStyle
 import org.academy.internal.server.misaka.MisakaComputeSink
 import org.academy.internal.server.misaka.WirelessForwardingMisakaNAT
 import org.misaka.MisakaNetworkClient
-import java.util.Locale
+import java.util.UUID
 
 class MisakaNetworkPanelScreen(
     override val data: MisakaPanelDataPacket
@@ -30,28 +31,65 @@ class MisakaNetworkPanelScreen(
     private lateinit var managePage: LinearLayoutWidget
     override lateinit var sistersTabContent: FrameLayoutWidget
     override lateinit var allocTabContent: FrameLayoutWidget
+    override lateinit var membersTabContent: FrameLayoutWidget
     override lateinit var sistersList: ListWidget<MisakaNetManageDataPacket.SisterSummary>
+    override var selectedSisterUuid: UUID? = null
+    override var sisterSelectionLabel: LabelWidget? = null
+    override var sisterDisconnectButton: ButtonWidget? = null
     override lateinit var pageLabel: LabelWidget
     override lateinit var allocatedLabel: LabelWidget
     override lateinit var sistersTabButton: ButtonWidget
     override lateinit var allocTabButton: ButtonWidget
+    override lateinit var membersTabButton: ButtonWidget
     override lateinit var emptySistersLabel: LabelWidget
     override lateinit var networkTotalMskLabel: LabelWidget
+    override lateinit var networkDemandLabel: LabelWidget
+    override lateinit var networkSatisfactionLabel: LabelWidget
+    override lateinit var membersListLabel: LabelWidget
+    override lateinit var membersPermHintLabel: LabelWidget
 
     override var manageTab = MisakaPanelManageTab.SISTERS
     override var managePageIndex = 0
     override var manageTotalCount = 0
     override var manageTotalMsk = 0f
+    override var manageDemandMsk = 0f
+    override var manageYourAllocatedMsk = 0f
+    override var manageYourSatisfaction = 1f
+    override var managePriorityAllocatedMsk = 0f
+    override var manageSharedAllocatedMsk = 0f
+    override var manageAdminNames: List<String> = emptyList()
+    override var manageMembers: List<MisakaNetManageDataPacket.MemberSummary> = emptyList()
+    override var manageCanEditMembers = false
+    override var memberPermIndex = 0
     override var localPercents = IntArray(MisakaComputeSink.COUNT)
     override val allocSeekBars = arrayOfNulls<SeekBarWidget>(MisakaComputeSink.COUNT)
     override val allocInputs = arrayOfNulls<TextBoxWidget>(MisakaComputeSink.COUNT)
     override var suppressAllocCallbacks = false
+    override lateinit var memberNameInput: TextBoxWidget
 
     override val screenTitle: String
         get() = title.string
 
+    override val sistersListInitialized: Boolean
+        get() = ::sistersList.isInitialized
+
     override val allocatedLabelInitialized: Boolean
         get() = ::allocatedLabel.isInitialized
+
+    override val networkTotalMskLabelInitialized: Boolean
+        get() = ::networkTotalMskLabel.isInitialized
+
+    override val networkDemandLabelInitialized: Boolean
+        get() = ::networkDemandLabel.isInitialized
+
+    override val networkSatisfactionLabelInitialized: Boolean
+        get() = ::networkSatisfactionLabel.isInitialized
+
+    override val membersListLabelInitialized: Boolean
+        get() = ::membersListLabel.isInitialized
+
+    override val membersPermHintLabelInitialized: Boolean
+        get() = ::membersPermHintLabel.isInitialized
 
     override fun onInit() {
         val panel = FrameLayoutWidget().apply {
@@ -104,16 +142,21 @@ class MisakaNetworkPanelScreen(
         managePageIndex = packet.pageIndex()
         manageTotalCount = packet.totalCount()
         manageTotalMsk = packet.totalMskPerSecond()
+        manageDemandMsk = packet.totalDemandMsk()
+        manageYourAllocatedMsk = packet.yourAllocatedMsk()
+        manageYourSatisfaction = packet.yourSatisfaction()
+        managePriorityAllocatedMsk = packet.priorityAllocatedMsk()
+        manageSharedAllocatedMsk = packet.sharedAllocatedMsk()
+        manageAdminNames = packet.adminNames()
+        manageMembers = packet.members()
+        manageCanEditMembers = packet.viewerCanEditMembers()
         localPercents = packet.percents()
         if (::sistersList.isInitialized) {
             sistersList.items = packet.sisters()
         }
-        if (::networkTotalMskLabel.isInitialized) {
-            networkTotalMskLabel.text = Component.translatable(
-                "screen.academy.misaka_net_total_msk",
-                String.format(Locale.ROOT, "%.1f", manageTotalMsk)
-            ).string
-        }
+        MisakaPanelManageUi.refreshSisterSelection(this)
+        MisakaPanelManageUi.refreshNetworkMetrics(this)
+        MisakaPanelManageUi.refreshMembersTab(this)
         if (::emptySistersLabel.isInitialized) {
             val empty = manageTotalCount <= 0
             emptySistersLabel.visibility =
@@ -298,9 +341,13 @@ class MisakaNetworkPanelScreen(
         allocTabContent.visibility =
             if (tab == MisakaPanelManageTab.ALLOC) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
         allocTabContent.isEnabled = tab == MisakaPanelManageTab.ALLOC
+        membersTabContent.visibility =
+            if (tab == MisakaPanelManageTab.MEMBERS) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
+        membersTabContent.isEnabled = tab == MisakaPanelManageTab.MEMBERS
         if (::sistersTabButton.isInitialized) {
             sistersTabButton.background = actionBackground(tab == MisakaPanelManageTab.SISTERS)
             allocTabButton.background = actionBackground(tab == MisakaPanelManageTab.ALLOC)
+            membersTabButton.background = actionBackground(tab == MisakaPanelManageTab.MEMBERS)
         }
     }
 
@@ -417,12 +464,16 @@ class MisakaNetworkPanelScreen(
         }
         button.addChild("label", LabelWidget(wanderStyleName(style)).apply {
             scale = 0.75f
-            alpha = 0.82f
+            alpha = 1f
             layoutParams = FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT)
                 .gravity(Gravity.CENTER)
         })
         return button
+    }
+
+    override fun setWanderAnchor() {
+        MisakaNetworkClient.send(SetMisakaWanderAnchorPacket(data.entityUuid()))
     }
 
     override fun textActionButton(text: String, onClick: () -> Unit): ButtonWidget {
@@ -435,7 +486,7 @@ class MisakaNetworkPanelScreen(
         }
         button.addChild("label", LabelWidget(text).apply {
             scale = 0.75f
-            alpha = 0.82f
+            alpha = 1f
             layoutParams = FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT)
                 .gravity(Gravity.CENTER)
@@ -443,16 +494,7 @@ class MisakaNetworkPanelScreen(
         return button
     }
 
-    override fun actionBackground(selected: Boolean): StateListDrawable {
-        val resting = ColorDrawable(if (selected) SELECTED_PLANE else ROW_PLANE)
-        val hovered = ColorDrawable(HOVER_PLANE)
-        return StateListDrawable().apply {
-            setDefault(resting)
-            addState(Widget.HOVERED, hovered)
-            addState(Widget.FOCUSED, hovered)
-            addState(Widget.PRESSED, ColorDrawable(SELECTED_PLANE))
-        }
-    }
+    override fun actionBackground(selected: Boolean): StateListDrawable = Companion.actionBackground(selected)
 
     private fun wanderStyleName(style: WanderStyle): String =
         Component.translatable("misaka.wander_style.${style.name.lowercase()}").string
@@ -480,8 +522,22 @@ class MisakaNetworkPanelScreen(
         internal const val COL_STATUS = 28f
         internal const val SCROLLBAR_WIDTH = 5f
         internal const val ROW_PLANE = 0x28000000
+        /** Resting fill for clickable text actions / tabs — same ladder as manage list rows. */
+        internal const val ACTION_RESTING_PLANE = 0x33FFFFFF
         internal const val HOVER_PLANE = 0x40FFFFFF
         internal const val SELECTED_PLANE = 0x50FFFFFF
+
+        fun actionBackground(selected: Boolean): StateListDrawable {
+            val resting = ColorDrawable(if (selected) SELECTED_PLANE else ACTION_RESTING_PLANE)
+            val hovered = ColorDrawable(HOVER_PLANE)
+            return StateListDrawable().apply {
+                setDefault(resting)
+                addState(Widget.HOVERED, hovered)
+                addState(Widget.FOCUSED, hovered)
+                addState(Widget.PRESSED, ColorDrawable(SELECTED_PLANE))
+                addState(Widget.SELECTED, ColorDrawable(SELECTED_PLANE))
+            }
+        }
         internal const val LIST_ROW_FILL = 0xFFFFFFFF.toInt()
         internal const val PRIMARY_FOREGROUND = 0xFFFFFFFF.toInt()
         internal const val SLIDER_TRACK = 0x40FFFFFF

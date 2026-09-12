@@ -6,6 +6,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -68,14 +69,15 @@ class MisakaNetworkCoverageTest {
 
     @Test
     void nullSampleLevelDefersToRelayAccess() {
-        MisakaRelayAccess.testingInstall((level, pos, networkId) -> true);
-        assertTrue(MisakaNetworkCoverage.canUseMisakaService(null, BlockPos.ZERO, BlockPos.ZERO));
-        MisakaRelayAccess.testingInstall((level, pos, networkId) -> false);
-        assertFalse(MisakaNetworkCoverage.canUseMisakaService(null, BlockPos.ZERO, BlockPos.ZERO));
+        var networkId = UUID.randomUUID();
+        MisakaRelayAccess.testingInstall((level, pos, id) -> true);
+        assertTrue(MisakaNetworkCoverage.canUseMisakaService(null, networkId, BlockPos.ZERO));
+        MisakaRelayAccess.testingInstall((level, pos, id) -> false);
+        assertFalse(MisakaNetworkCoverage.canUseMisakaService(null, networkId, BlockPos.ZERO));
     }
 
     @Test
     void liveRelayAccessDeniesWithoutLevel() {
-        assertFalse(MisakaRelayAccess.get().grantsAccess(null, BlockPos.ZERO, BlockPos.ZERO));
+        assertFalse(MisakaRelayAccess.get().grantsAccess(null, BlockPos.ZERO, UUID.randomUUID()));
     }
 }

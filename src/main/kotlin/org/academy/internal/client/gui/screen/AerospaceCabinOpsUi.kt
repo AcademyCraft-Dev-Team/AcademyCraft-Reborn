@@ -7,16 +7,15 @@ import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.widget.*
-import org.academy.api.client.util.AnimationUtil
 import org.academy.internal.common.world.inventory.AerospaceSignalCabinMenu
 import org.academy.internal.common.world.level.block.entity.AerospaceSignalCabinBlockEntity
 import org.academy.internal.common.world.level.block.entity.AerospaceSignalCabinBlockEntity.ManagedSatRow
-import org.academy.internal.common.world.level.block.entity.AerospaceSignalCabinBlockEntity.RebindLaserRow
 import org.academy.internal.common.world.level.block.entity.AerospaceSignalCabinBlockEntity.RetargetNetRow
+import org.academy.internal.server.misaka.MisakaNetworkLasers.LaserRow
 
 /**
- * Ops tab UI for [AerospaceSignalCabinScreen]: satellite list/detail, force-crash confirm,
- * and related refresh/format helpers. Behavior-frozen extract from the cabin screen shell.
+ * Ops tab UI for [AerospaceSignalCabinScreen]: satellite list/detail, laser/network pick
+ * menus, force-crash confirm, and related refresh/format helpers.
  */
 internal class AerospaceCabinOpsUi(
     private val host: Host
@@ -39,18 +38,32 @@ internal class AerospaceCabinOpsUi(
     private var satListHeader: LinearLayoutWidget? = null
     private var networkListColumn: LinearLayoutWidget? = null
     private var laserListColumn: LinearLayoutWidget? = null
+    private var assetPane: FrameLayoutWidget? = null
+    private var assetEntryButton: ButtonWidget? = null
+    private var assetUi: DeviceAssetUi? = null
+    private var viewingAsset = false
     private var lastSatList: List<ManagedSatRow>? = null
     private var lastNetworkList: List<RetargetNetRow>? = null
-    private var lastLaserList: List<RebindLaserRow>? = null
+    private var lastLaserList: List<LaserRow>? = null
+    private var lastSatCanView: Boolean? = null
     private var opsListPane: FrameLayoutWidget? = null
     private var opsDetailPane: FrameLayoutWidget? = null
+    private var laserPickPane: FrameLayoutWidget? = null
+    private var networkPickPane: FrameLayoutWidget? = null
     private var forceConfirmOverlay: FrameLayoutWidget? = null
     private var forceCountdownSetter: (String) -> Unit = {}
     private var forceCountdownLabel: LabelWidget? = null
+    private var lastManageOps: Boolean? = null
     private var forceArmButton: ButtonWidget? = null
     private var forceCancelButton: ButtonWidget? = null
+    private var bindDesignatorButton: ButtonWidget? = null
+    private var unbindDesignatorButton: ButtonWidget? = null
+    private var permMatrixHost: LinearLayoutWidget? = null
+    private var lastPermTier: Int? = null
     private var strikeStatusSetter: (String) -> Unit = {}
     private var viewingDetail: Boolean = false
+    private var viewingLaserPick: Boolean = false
+    private var viewingNetworkPick: Boolean = false
     private var pendingDetailRow: ManagedSatRow? = null
     private var forceConfirmOpen: Boolean = false
     private var cachedSatColWidths: SatColWidths? = null
@@ -58,7 +71,10 @@ internal class AerospaceCabinOpsUi(
     fun onContainerTick() {
         opsCountSetter(opsCountText())
         refreshSatelliteListUi()
-        if (viewingDetail) {
+        refreshPermTierUi()
+        // Asset entry lives on the list pane; keep owner gating live even before a row is opened.
+        refreshManageOpsUi()
+        if (viewingDetail && !viewingLaserPick && !viewingNetworkPick) {
             detailTitleSetter(detailTitleText())
             detailBodySetter(detailBodyText())
             detailLaserSetter(detailLaserText())
@@ -66,7 +82,13 @@ internal class AerospaceCabinOpsUi(
             detailFeedbackSetter(opsFeedbackText())
             refreshForceCrashUi()
             refreshStrikeStatusUi()
+        }
+        if (viewingLaserPick) {
+            detailLaserSetter(detailLaserText())
             refreshLaserListUi()
+        }
+        if (viewingNetworkPick) {
+            detailNetworkSetter(detailNetworkText())
             refreshNetworkListUi()
         }
     }
@@ -78,20 +100,33 @@ internal class AerospaceCabinOpsUi(
 
         val listPane = createOpsListPane()
         val detailPane = createOpsDetailPane()
-        detailPane.visibility = Widget.Visibility.GONE
-        detailPane.isEnabled = false
-
+        val laserPane = createLaserPickPane()
+        val networkPane = createNetworkPickPane()
         val confirmOverlay = createForceCrashConfirmOverlay()
-        confirmOverlay.visibility = Widget.Visibility.GONE
-        confirmOverlay.isEnabled = false
+        val asset = DeviceAssetUi(
+            devicePos = host.blockEntity.blockPos,
+            isOwner = { viewerIsOwner() },
+            onClose = { closeAssetPane() }
+        )
+        val assetPaneWidget = asset.build()
 
         page.addChild("list", listPane)
         page.addChild("detail", detailPane)
+        page.addChild("laser_pick", laserPane)
+        page.addChild("network_pick", networkPane)
+        page.addChild("asset", assetPaneWidget)
         page.addChild("force_confirm", confirmOverlay)
         opsListPane = listPane
         opsDetailPane = detailPane
+        laserPickPane = laserPane
+        networkPickPane = networkPane
+        assetUi = asset
+        assetPane = assetPaneWidget
         forceConfirmOverlay = confirmOverlay
+        // List active; other layers GONE until opened.
+        showOpsLayer(listPane)
         refreshSatelliteListUi(force = true)
+        refreshManageOpsUi()
         return page
     }
 
@@ -193,17 +228,51 @@ internal class AerospaceCabinOpsUi(
             .gravity(Gravity.TOP)
             .margin(6f, 6f, 6f, 6f)
 
-        column.addChild("title", LabelWidget(Component.translatable("gui.academy.aerospace_signal_cabin.ops_list_title").string).apply {
+        // Title row doubles as the asset entry so the owner action costs no extra height.
+        val titleRow = LinearLayoutWidget().apply {
+            orientation = Orientation.HORIZONTAL
+            spacing = 4f
             layoutParams = LinearLayoutWidget.LayoutParams()
                 .widthMode(SizeMode.MATCH_PARENT)
                 .height(12f)
+        }
+        titleRow.addChild("title", LabelWidget(Component.translatable("gui.academy.aerospace_signal_cabin.ops_list_title").string).apply {
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .weight(1f)
+                .height(12f)
+                .gravity(Gravity.CENTER_VERTICAL)
             scale = SCALE_TITLE
         })
+        val assetEntry = host.createLocalActionButton("gui.academy.device_asset.entry") {
+            openAssetPane()
+        }.apply {
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .width(44f)
+                .height(12f)
+            val owner = viewerIsOwner()
+            visibility = if (owner) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
+            isEnabled = owner
+        }
+        assetEntryButton = assetEntry
+        titleRow.addChild("asset_entry", assetEntry)
+        column.addChild("title", titleRow)
+
+        val permMatrix = LinearLayoutWidget().apply {
+            orientation = Orientation.VERTICAL
+            spacing = 1f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(54f)
+        }
+        permMatrixHost = permMatrix
+        lastPermTier = null
+        refreshPermTierUi()
+        column.addChild("perm_tiers", permMatrix)
 
         column.addChild("list_hint", LabelWidget(Component.translatable("gui.academy.aerospace_signal_cabin.ops_list_hint").string).apply {
             layoutParams = LinearLayoutWidget.LayoutParams()
                 .widthMode(SizeMode.MATCH_PARENT)
-                .height(18f)
+                .height(12f)
             scale = SCALE_SECTION
             alpha = 0.72f
         })
@@ -234,11 +303,20 @@ internal class AerospaceCabinOpsUi(
         satListHeader = header
         column.addChild("header", header)
 
-        val listScroll = ScrollPanelWidget(Orientation.VERTICAL)
-        listScroll.layoutParams = LinearLayoutWidget.LayoutParams()
-            .widthMode(SizeMode.MATCH_PARENT)
-            .height(110f)
-            .margin(0f, 2f, 0f, 0f)
+        // LaunchPad pattern: weight host FrameLayout, ScrollPanel MATCH_PARENT inside.
+        // A direct weight ScrollPanel can stay height=0 (no hits) while labels still paint
+        // because zero scissor fail-opens in CommandExecutor.
+        val listHost = FrameLayoutWidget().apply {
+            // Fixed viewport: weight+0 can stay height 0 on first Ops layout while labels still paint.
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(SAT_LIST_VIEWPORT_HEIGHT)
+                .margin(0f, 2f, 0f, 0f)
+        }
+        val listScroll = ScrollPanelWidget(Orientation.VERTICAL).apply {
+            layoutParams = FrameLayoutWidget.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT)
+        }
         val listColumn = LinearLayoutWidget().apply {
             orientation = Orientation.VERTICAL
             spacing = 2f
@@ -247,8 +325,9 @@ internal class AerospaceCabinOpsUi(
                 .heightMode(SizeMode.WRAP_CONTENT)
         }
         satListColumn = listColumn
-        listScroll.addChild("content", listColumn)
-        column.addChild("sat_list", listScroll)
+        listScroll.setContent(listColumn)
+        listHost.addChild("scroll", listScroll)
+        column.addChild("sat_list", listHost)
 
         pane.addChild("column", column)
         return pane
@@ -264,13 +343,18 @@ internal class AerospaceCabinOpsUi(
             alpha = 0.5f
         })
 
-        // Dense instrument column: fixed header + two weighted pick lists fill remaining space.
+        // Body scroll clips the face; laser/network pick lists live on separate layers.
+        val bodyScroll = ScrollPanelWidget(Orientation.VERTICAL).apply {
+            layoutParams = FrameLayoutWidget.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT)
+                .margin(6f, 6f, 6f, 6f)
+        }
         val column = LinearLayoutWidget()
         column.orientation = Orientation.VERTICAL
         column.spacing = DETAIL_SPACING
         column.layoutParams = FrameLayoutWidget.LayoutParams()
-            .sizeMode(SizeMode.MATCH_PARENT)
-            .margin(6f, 6f, 6f, 6f)
+            .widthMode(SizeMode.MATCH_PARENT)
+            .heightMode(SizeMode.WRAP_CONTENT)
 
         val topBar = LinearLayoutWidget().apply {
             orientation = Orientation.HORIZONTAL
@@ -317,6 +401,16 @@ internal class AerospaceCabinOpsUi(
         }
         detailLaserSetter = { laserStatus.text = it }
         column.addChild("laser_status", laserStatus)
+
+        val networkStatus = LabelWidget(detailNetworkText()).apply {
+            scale = SCALE_BODY
+            alpha = 0.82f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(10f)
+        }
+        detailNetworkSetter = { networkStatus.text = it }
+        column.addChild("network_status", networkStatus)
 
         val forceCountdown = LabelWidget("").apply {
             scale = SCALE_BODY
@@ -387,6 +481,7 @@ internal class AerospaceCabinOpsUi(
                 layoutParams = LinearLayoutWidget.LayoutParams()
                     .width(72f)
                     .height(14f)
+                bindDesignatorButton = this
             }
         )
         designatorActions.addChild(
@@ -398,6 +493,7 @@ internal class AerospaceCabinOpsUi(
                 layoutParams = LinearLayoutWidget.LayoutParams()
                     .width(72f)
                     .height(14f)
+                unbindDesignatorButton = this
             }
         )
         column.addChild("designator_actions", designatorActions)
@@ -412,59 +508,149 @@ internal class AerospaceCabinOpsUi(
         detailFeedbackSetter = { feedback.text = it }
         column.addChild("feedback", feedback)
 
-        column.addChild(
-            "laser_section",
-            detailSectionLabel("gui.academy.aerospace_signal_cabin.ops_laser_pick")
+        val pickMenus = LinearLayoutWidget().apply {
+            orientation = Orientation.HORIZONTAL
+            spacing = 4f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(14f)
+                .margin(0f, 2f, 0f, 0f)
+        }
+        pickMenus.addChild(
+            "open_laser",
+            host.createLocalActionButton("gui.academy.aerospace_signal_cabin.ops_menu_rebind_laser") {
+                openLaserPick()
+            }.apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .weight(1f)
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .height(14f)
+            }
         )
-        column.addChild(
-            "laser_list",
-            detailPickListHost { laserListColumn = it }
+        pickMenus.addChild(
+            "open_network",
+            host.createLocalActionButton("gui.academy.aerospace_signal_cabin.ops_menu_retarget_net") {
+                openNetworkPick()
+            }.apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .weight(1f)
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .height(14f)
+            }
         )
+        column.addChild("pick_menus", pickMenus)
 
-        val networkLabel = LabelWidget(detailNetworkText()).apply {
+        bodyScroll.setContent(column)
+        pane.addChild("body_scroll", bodyScroll)
+        return pane
+    }
+
+    fun createLaserPickPane(): FrameLayoutWidget {
+        return createOpsPickPane(
+            titleKey = "gui.academy.aerospace_signal_cabin.ops_laser_pick",
+            statusText = { detailLaserText() },
+            bindStatus = { setter ->
+                val prev = detailLaserSetter
+                detailLaserSetter = { text ->
+                    prev(text)
+                    setter(text)
+                }
+            },
+            bindColumn = { laserListColumn = it },
+            onBack = { closeLaserPick() }
+        )
+    }
+
+    fun createNetworkPickPane(): FrameLayoutWidget {
+        return createOpsPickPane(
+            titleKey = "gui.academy.aerospace_signal_cabin.ops_network_pick",
+            statusText = { detailNetworkText() },
+            bindStatus = { setter ->
+                val prev = detailNetworkSetter
+                detailNetworkSetter = { text ->
+                    prev(text)
+                    setter(text)
+                }
+            },
+            bindColumn = { networkListColumn = it },
+            onBack = { closeNetworkPick() }
+        )
+    }
+
+    /**
+     * Dedicated pick menu: short chrome + weight(1) scroll host (LaunchPad pattern).
+     * Kept off the detail face so nested lists never compete with detail chrome.
+     */
+    private fun createOpsPickPane(
+        titleKey: String,
+        statusText: () -> String,
+        bindStatus: ((String) -> Unit) -> Unit,
+        bindColumn: (LinearLayoutWidget) -> Unit,
+        onBack: () -> Unit
+    ): FrameLayoutWidget {
+        val pane = FrameLayoutWidget()
+        pane.layoutParams = FrameLayoutWidget.LayoutParams()
+            .sizeMode(SizeMode.MATCH_PARENT)
+
+        pane.addChild("back", BlendQuadWidget().apply {
+            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+            alpha = 0.5f
+        })
+
+        val column = LinearLayoutWidget().apply {
+            orientation = Orientation.VERTICAL
+            spacing = DETAIL_SPACING
+            layoutParams = FrameLayoutWidget.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT)
+                .margin(6f, 6f, 6f, 6f)
+        }
+
+        val topBar = LinearLayoutWidget().apply {
+            orientation = Orientation.HORIZONTAL
+            spacing = 4f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(14f)
+        }
+        topBar.addChild(
+            "back_btn",
+            host.createLocalActionButton("gui.academy.aerospace_signal_cabin.ops_back", onBack).apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .width(44f)
+                    .height(14f)
+            }
+        )
+        topBar.addChild(
+            "title",
+            LabelWidget(Component.translatable(titleKey).string).apply {
+                scale = SCALE_TITLE
+                alpha = 0.95f
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .weight(1f)
+                    .height(12f)
+                    .gravity(Gravity.CENTER_VERTICAL)
+            }
+        )
+        column.addChild("top_bar", topBar)
+
+        val status = LabelWidget(statusText()).apply {
             scale = SCALE_BODY
             alpha = 0.82f
             layoutParams = LinearLayoutWidget.LayoutParams()
                 .widthMode(SizeMode.MATCH_PARENT)
                 .height(10f)
-                .margin(0f, 2f, 0f, 0f)
         }
-        detailNetworkSetter = { networkLabel.text = it }
-        column.addChild("network_current", networkLabel)
+        bindStatus { status.text = it }
+        column.addChild("status", status)
 
-        column.addChild(
-            "network_section",
-            detailSectionLabel("gui.academy.aerospace_signal_cabin.ops_network_pick")
-        )
-        column.addChild(
-            "network_list",
-            detailPickListHost { networkListColumn = it }
-        )
-
-        pane.addChild("column", column)
-        return pane
-    }
-
-    fun detailSectionLabel(labelKey: String): LabelWidget {
-        return LabelWidget(Component.translatable(labelKey).string).apply {
-            scale = SCALE_SECTION
-            alpha = 0.7f
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(10f)
-                .margin(0f, 2f, 0f, 0f)
-        }
-    }
-
-    fun detailPickListHost(bindColumn: (LinearLayoutWidget) -> Unit): FrameLayoutWidget {
-        val host = FrameLayoutWidget().apply {
+        val listHost = FrameLayoutWidget().apply {
             layoutParams = LinearLayoutWidget.LayoutParams()
                 .weight(1f)
                 .widthMode(SizeMode.MATCH_PARENT)
                 .height(0f)
-                .margin(0f, 1f, 0f, 0f)
+                .margin(0f, 2f, 0f, 0f)
         }
-        host.addChild("frame", BlendQuadWidget().apply {
+        listHost.addChild("frame", BlendQuadWidget().apply {
             layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
             alpha = 0.22f
         })
@@ -482,21 +668,28 @@ internal class AerospaceCabinOpsUi(
         }
         bindColumn(listColumn)
         scroll.setContent(listColumn)
-        host.addChild("scroll", scroll)
-        return host
+        listHost.addChild("scroll", scroll)
+        column.addChild("list", listHost)
+
+        pane.addChild("column", column)
+        return pane
     }
 
     fun openOpsDetail(row: ManagedSatRow) {
+        if (!viewerCanViewDetail()) {
+            return
+        }
         pendingDetailRow = row
         host.client.gameMode?.handleInventoryButtonClick(
             host.cabinMenu.containerId,
             AerospaceSignalCabinMenu.BUTTON_SELECT_SAT_BASE + row.index
         )
-        val list = opsListPane ?: return
-        val detail = opsDetailPane ?: return
         viewingDetail = true
-        AnimationUtil.hide(list)
-        AnimationUtil.show(detail)
+        viewingLaserPick = false
+        viewingNetworkPick = false
+        viewingAsset = false
+        forceConfirmOpen = false
+        showOpsLayer(opsDetailPane)
         detailTitleSetter(detailTitleText())
         detailBodySetter(detailBodyText())
         detailLaserSetter(detailLaserText())
@@ -504,55 +697,315 @@ internal class AerospaceCabinOpsUi(
         detailFeedbackSetter(opsFeedbackText())
         refreshForceCrashUi()
         refreshStrikeStatusUi()
-        refreshLaserListUi(force = true)
-        refreshNetworkListUi(force = true)
     }
 
     fun closeOpsDetail(immediate: Boolean = false) {
         pendingDetailRow = null
+        viewingLaserPick = false
+        viewingNetworkPick = false
         closeForceCrashConfirm(immediate = true)
-        val list = opsListPane ?: return
-        val detail = opsDetailPane ?: return
-        viewingDetail = false
-        if (immediate) {
-            detail.cancelAnimations()
-            list.cancelAnimations()
-            detail.visibility = Widget.Visibility.GONE
-            detail.isEnabled = false
-            detail.alpha = 0f
-            list.visibility = Widget.Visibility.VISIBLE
-            list.isEnabled = true
-            list.alpha = 1f
-            list.translationY = 0f
-        } else {
-            AnimationUtil.hide(detail)
-            AnimationUtil.show(list)
+        if (viewingAsset) {
+            closeAssetPane(immediate = true)
+            return
         }
+        viewingDetail = false
+        showOpsLayer(opsListPane)
+    }
+
+    fun openLaserPick() {
+        if (!viewerCanViewDetail()) {
+            return
+        }
+        viewingLaserPick = true
+        viewingNetworkPick = false
+        forceConfirmOpen = false
+        showOpsLayer(laserPickPane)
+        detailLaserSetter(detailLaserText())
+        refreshLaserListUi(force = true)
+    }
+
+    fun closeLaserPick() {
+        viewingLaserPick = false
+        showOpsLayer(opsDetailPane)
+    }
+
+    fun openNetworkPick() {
+        if (!viewerCanViewDetail()) {
+            return
+        }
+        viewingNetworkPick = true
+        viewingLaserPick = false
+        forceConfirmOpen = false
+        showOpsLayer(networkPickPane)
+        detailNetworkSetter(detailNetworkText())
+        refreshNetworkListUi(force = true)
+    }
+
+    fun closeNetworkPick() {
+        viewingNetworkPick = false
+        showOpsLayer(opsDetailPane)
     }
 
     fun openForceCrashConfirm() {
+        if (!host.cabinMenu.viewerCanManageOps()) {
+            return
+        }
         val overlay = forceConfirmOverlay ?: return
         forceConfirmOpen = true
-        AnimationUtil.show(overlay)
+        overlay.cancelAnimations()
+        overlay.visibility = Widget.Visibility.VISIBLE
+        overlay.isEnabled = true
+        overlay.alpha = 1f
+        overlay.translationY = 0f
     }
 
     fun closeForceCrashConfirm(immediate: Boolean = false) {
         val overlay = forceConfirmOverlay ?: return
         forceConfirmOpen = false
-        if (immediate) {
-            overlay.cancelAnimations()
-            overlay.visibility = Widget.Visibility.GONE
-            overlay.isEnabled = false
-            overlay.alpha = 0f
-        } else {
-            AnimationUtil.hide(overlay)
+        overlay.cancelAnimations()
+        overlay.visibility = Widget.Visibility.GONE
+        overlay.isEnabled = false
+        overlay.alpha = 0f
+        overlay.translationY = 0f
+    }
+
+    fun openAssetPane() {
+        if (!viewerIsOwner()) {
+            return
         }
+        viewingAsset = true
+        viewingDetail = false
+        viewingLaserPick = false
+        viewingNetworkPick = false
+        forceConfirmOpen = false
+        assetUi?.refresh(force = true)
+        showOpsLayer(assetPane)
+    }
+
+    fun closeAssetPane(immediate: Boolean = false) {
+        viewingAsset = false
+        showOpsLayer(opsListPane)
+    }
+
+    /** Exactly one interactive layer; inactive layers are GONE (out of hit path). */
+    private fun showOpsLayer(active: FrameLayoutWidget?) {
+        val layers = listOf(
+            opsListPane,
+            opsDetailPane,
+            laserPickPane,
+            networkPickPane,
+            assetPane,
+            forceConfirmOverlay
+        )
+        for (layer in layers) {
+            if (layer == null) continue
+            layer.cancelAnimations()
+            val interactive = when {
+                layer === forceConfirmOverlay -> forceConfirmOpen
+                else -> layer === active
+            }
+            if (interactive) {
+                layer.visibility = Widget.Visibility.VISIBLE
+                layer.isEnabled = true
+                layer.alpha = 1f
+            } else {
+                layer.visibility = Widget.Visibility.GONE
+                layer.isEnabled = false
+                layer.alpha = 0f
+            }
+            layer.translationY = 0f
+        }
+        active?.requestLayout()
+    }
+
+    fun onOpsPageShown() {
+        viewingDetail = false
+        viewingLaserPick = false
+        viewingNetworkPick = false
+        viewingAsset = false
+        forceConfirmOpen = false
+        showOpsLayer(opsListPane)
+        refreshSatelliteListUi(force = true)
+        refreshManageOpsUi()
+        opsListPane?.requestLayout()
+    }
+
+    fun refreshManageOpsUi() {
+        val manage = host.cabinMenu.viewerCanManageOps()
+        bindDesignatorButton?.let {
+            it.isEnabled = manage
+            it.alpha = if (manage) 1f else 0.45f
+        }
+        unbindDesignatorButton?.let {
+            it.isEnabled = manage
+            it.alpha = if (manage) 1f else 0.45f
+        }
+        if (lastManageOps != manage) {
+            lastManageOps = manage
+            // Permission can flip without list identity changing — rebuild so buttons re-gate.
+            if (viewingLaserPick) {
+                refreshLaserListUi(force = true)
+            }
+            if (viewingNetworkPick) {
+                refreshNetworkListUi(force = true)
+            }
+        }
+        val owner = viewerIsOwner()
+        // Apply every tick: ContainerData can arrive while Ops is still GONE, and a
+        // GONE→VISIBLE flip must be re-applied after the page is shown so the title row measures.
+        assetEntryButton?.let {
+            val target = if (owner) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
+            if (it.visibility != target || it.isEnabled != owner) {
+                it.visibility = target
+                it.isEnabled = owner
+            }
+        }
+        // Sat-list buttons bake canView at build time; rebuild when access catches up
+        // (ContainerData / owner UUID often arrive after the first list build).
+        val canView = viewerCanViewDetail()
+        if (lastSatCanView != canView) {
+            lastSatCanView = canView
+            if (!viewingDetail && !viewingAsset) {
+                refreshSatelliteListUi(force = true)
+            }
+        }
+        if (!owner && viewingAsset) {
+            closeAssetPane(immediate = true)
+        }
+        if (viewingAsset) {
+            assetUi?.refresh()
+        }
+    }
+
+    /** Menu ContainerData may lag one open; the cabin BE already carries the placer UUID. */
+    private fun viewerIsOwner(): Boolean {
+        if (host.cabinMenu.viewerPermissionTier() >= AerospaceSignalCabinMenu.PERM_TIER_OWNER) {
+            return true
+        }
+        val player = host.client.player ?: return false
+        return host.blockEntity.isOwner(player)
+    }
+
+    /** Access+ from synced tier, or owner via BE before ContainerData arrives. */
+    private fun viewerCanViewDetail(): Boolean {
+        return host.cabinMenu.viewerPermissionTier() >= 1 || viewerIsOwner()
+    }
+
+    fun refreshPermTierUi() {
+        val hostWidget = permMatrixHost ?: return
+        val tier = host.cabinMenu.viewerPermissionTier().coerceIn(0, 3)
+        if (lastPermTier == tier && hostWidget.children.isNotEmpty()) {
+            return
+        }
+        lastPermTier = tier
+        hostWidget.clearChildren()
+        fillPermMatrix(hostWidget, tier)
+    }
+
+    fun fillPermMatrix(column: LinearLayoutWidget, currentTier: Int) {
+        fun t(key: String): String = Component.translatable(key).string
+        val tierW = permTierColWidth()
+        column.addChild(
+            "hdr",
+            permMatrixColumnsRow(
+                action = t("gui.academy.aerospace_signal_cabin.ops_perm_matrix_op"),
+                cells = arrayOf(
+                    t("gui.academy.aerospace_signal_cabin.ops_perm_tier_none"),
+                    t("gui.academy.aerospace_signal_cabin.ops_perm_tier_access"),
+                    t("gui.academy.aerospace_signal_cabin.ops_perm_tier_manage"),
+                    t("gui.academy.aerospace_signal_cabin.ops_perm_tier_owner")
+                ),
+                header = true,
+                currentTier = currentTier,
+                tierWidth = tierW
+            )
+        )
+        val rows = listOf(
+            "list" to booleanArrayOf(true, true, true, true),
+            "view" to booleanArrayOf(false, true, true, true),
+            "ops" to booleanArrayOf(false, false, true, true),
+            "owner" to booleanArrayOf(false, false, false, true)
+        )
+        for ((name, allowed) in rows) {
+            column.addChild(
+                name,
+                permMatrixColumnsRow(
+                    action = t("gui.academy.aerospace_signal_cabin.ops_perm_matrix_$name"),
+                    cells = Array(4) { i -> if (allowed[i]) "Y" else "N" },
+                    header = false,
+                    currentTier = currentTier,
+                    tierWidth = tierW
+                )
+            )
+        }
+    }
+
+    fun permMatrixColumnsRow(
+        action: String,
+        cells: Array<String>,
+        header: Boolean,
+        currentTier: Int,
+        tierWidth: Float
+    ): LinearLayoutWidget {
+        val row = LinearLayoutWidget().apply {
+            orientation = Orientation.HORIZONTAL
+            spacing = COL_SPACING
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(10f)
+        }
+        row.addChild("action", LabelWidget(action).apply {
+            scale = 1f
+            baseFontSize = LIST_FONT_SIZE
+            alpha = if (header) 0.62f else 0.88f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .weight(1f)
+                .height(10f)
+                .gravity(Gravity.CENTER_VERTICAL)
+        })
+        for (i in 0 until 4) {
+            val active = i == currentTier
+            row.addChild("t$i", LabelWidget(cells[i]).apply {
+                scale = 1f
+                baseFontSize = LIST_FONT_SIZE
+                alpha = when {
+                    header && active -> 1f
+                    header -> 0.62f
+                    active -> 1f
+                    else -> 0.78f
+                }
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .width(tierWidth)
+                    .height(10f)
+                    .gravity(Gravity.CENTER_VERTICAL)
+            })
+        }
+        return row
+    }
+
+    fun permTierColWidth(): Float {
+        fun need(sample: String): Float =
+            kotlin.math.ceil(
+                LabelWidget.getTextWidth(sample, LIST_FONT_SIZE).toDouble()
+            ).toFloat() + COL_PAD
+        var max = need("Y")
+        max = maxOf(max, need("N"))
+        for (key in arrayOf(
+            "gui.academy.aerospace_signal_cabin.ops_perm_tier_none",
+            "gui.academy.aerospace_signal_cabin.ops_perm_tier_access",
+            "gui.academy.aerospace_signal_cabin.ops_perm_tier_manage",
+            "gui.academy.aerospace_signal_cabin.ops_perm_tier_owner"
+        )) {
+            max = maxOf(max, need(Component.translatable(key).string))
+        }
+        return max
     }
 
     fun refreshForceCrashUi() {
         val row = selectedSatRow()
+        val manage = host.cabinMenu.viewerCanManageOps()
         val armed = row != null && row.forceCrashTicks > 0 && row.phase != "CRASHING"
-        val canArm = row != null && row.phase != "CRASHING" && row.forceCrashTicks <= 0
+        val canArm = manage && row != null && row.phase != "CRASHING" && row.forceCrashTicks <= 0
         val remainingSec = if (row != null && row.forceCrashTicks > 0) {
             (row.forceCrashTicks + 19) / 20
         } else {
@@ -574,13 +1027,23 @@ internal class AerospaceCabinOpsUi(
         forceArmButton?.let {
             it.visibility = if (canArm) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
             it.isEnabled = canArm
+            it.alpha = if (canArm) 1f else 0.35f
         }
         forceCancelButton?.let {
-            it.visibility = if (armed) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
-            it.isEnabled = armed
+            val show = manage && armed
+            it.visibility = if (show) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
+            it.isEnabled = show
         }
         if (armed && forceConfirmOpen) {
             closeForceCrashConfirm(immediate = true)
+        }
+        if (!manage) {
+            val key = host.blockEntity.opsFeedbackKey
+            if (key.isEmpty() && host.cabinMenu.viewerPermissionTier() < 2) {
+                detailFeedbackSetter(
+                    Component.translatable("gui.academy.aerospace_signal_cabin.ops_no_permission").string
+                )
+            }
         }
     }
 
@@ -660,11 +1123,14 @@ internal class AerospaceCabinOpsUi(
                 header = false
             )
             val button = ButtonWidget()
-            button.onClickListener = OnClickListener { openOpsDetail(parsed) }
-            button.addChild("back", BlendQuadWidget().apply {
-                layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-                alpha = 0.35f
-            })
+            val canView = viewerCanViewDetail()
+            // Keep enabled so hit-testing works even before ContainerData catches up; gate in onClick.
+            button.isEnabled = true
+            button.alpha = if (canView) 1f else 0.55f
+            button.background = MisakaNetworkPanelScreen.actionBackground(false)
+            button.onClickListener = OnClickListener {
+                openOpsDetail(parsed)
+            }
             button.addChild("cols", columns.apply {
                 layoutParams = FrameLayoutWidget.LayoutParams()
                     .sizeMode(SizeMode.MATCH_PARENT)
@@ -807,8 +1273,9 @@ internal class AerospaceCabinOpsUi(
                 "net_$row",
                 createOpsListSelectButton(
                     label = label,
-                    backAlpha = if (current) 0.5f else 0.35f,
-                    buttonId = AerospaceSignalCabinMenu.BUTTON_RETARGET_NET_BASE + row
+                    buttonId = AerospaceSignalCabinMenu.BUTTON_RETARGET_NET_BASE + row,
+                    enabled = host.cabinMenu.viewerCanManageOps() && !current,
+                    selected = current
                 )
             )
         }
@@ -848,8 +1315,8 @@ internal class AerospaceCabinOpsUi(
                 "laser_$row",
                 createOpsListSelectButton(
                     label = label,
-                    backAlpha = if (ready) 0.45f else 0.3f,
-                    buttonId = AerospaceSignalCabinMenu.BUTTON_REBIND_LASER_BASE + row
+                    buttonId = AerospaceSignalCabinMenu.BUTTON_REBIND_LASER_BASE + row,
+                    enabled = host.cabinMenu.viewerCanManageOps() && ready
                 )
             )
         }
@@ -999,27 +1466,19 @@ internal class AerospaceCabinOpsUi(
     }
 
     /** Shared row for ops network / laser select lists (left-aligned label, inventory button id). */
-    fun createOpsListSelectButton(label: String, backAlpha: Float, buttonId: Int): ButtonWidget {
-        val button = ButtonWidget()
-        button.onClickListener = OnClickListener {
-            host.client.gameMode?.handleInventoryButtonClick(host.cabinMenu.containerId, buttonId)
-        }
-        button.addChild("back", BlendQuadWidget().apply {
-            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-            alpha = backAlpha
-        })
-        button.addChild("label", LabelWidget(label).apply {
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-                .gravity(Gravity.CENTER_LEFT)
-                .margin(4f, 0f, 4f, 0f)
-            scale = SCALE_SECTION
-        })
-        button.layoutParams = LinearLayoutWidget.LayoutParams()
-            .widthMode(SizeMode.MATCH_PARENT)
-            .height(14f)
-        return button
-    }
+    fun createOpsListSelectButton(
+        label: String,
+        buttonId: Int,
+        enabled: Boolean = true,
+        selected: Boolean = false
+    ): ButtonWidget = MisakaMachineUi.menuListSelectButton(
+        menu = host.cabinMenu,
+        label = label,
+        buttonId = buttonId,
+        enabled = enabled,
+        selected = selected,
+        scale = SCALE_SECTION
+    )
 
 
     companion object {
@@ -1031,6 +1490,8 @@ internal class AerospaceCabinOpsUi(
         const val COL_SPACING = 3f
         const val COL_PAD = 2f
         const val ID_DISPLAY_LEN = 4
+        /** Guaranteed sat-list hit viewport (avoids weight/0 ScrollPanel dead clicks). */
+        const val SAT_LIST_VIEWPORT_HEIGHT = 72f
         /** 176 face − 6×2 pane margin − 2×2 row inset. */
         const val LIST_ROW_BUDGET = 156f
 
@@ -1057,7 +1518,6 @@ internal class AerospaceCabinOpsUi(
             if (rem == 0f) {
                 return widths
             }
-            // Distribute leftover / reclaim overflow by need rank (prefer wider content columns).
             val order = needs.indices.sortedByDescending { needs[it] }
             var step = 0
             while (rem != 0f && step < needs.size * 8) {

@@ -3,6 +3,7 @@ package org.academy.internal.common.world.inventory;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -13,6 +14,7 @@ import org.jspecify.annotations.Nullable;
 public final class EnergyLaserTowerMenu extends AbstractContainerMenu {
     public final ContainerLevelAccess access;
     public final @Nullable EnergyLaserTowerBlockEntity blockEntity;
+    private final ContainerData viewerData = OwnedDeviceViewerData.create();
 
     public EnergyLaserTowerMenu(
             int containerId,
@@ -23,7 +25,9 @@ public final class EnergyLaserTowerMenu extends AbstractContainerMenu {
         super(MenuTypes.ENERGY_LASER_TOWER.get(), containerId);
         this.access = access;
         this.blockEntity = blockEntity;
+        OwnedDeviceViewerData.sync(viewerData, blockEntity, playerInventory.player);
         addPlayerInv(playerInventory);
+        addDataSlots(viewerData);
     }
 
     public EnergyLaserTowerMenu(int id, Inventory playerInventory) {
@@ -31,6 +35,11 @@ public final class EnergyLaserTowerMenu extends AbstractContainerMenu {
         this.access = ContainerLevelAccess.NULL;
         this.blockEntity = null;
         addPlayerInv(playerInventory);
+        addDataSlots(viewerData);
+    }
+
+    public boolean viewerIsOwner() {
+        return OwnedDeviceViewerData.isOwner(viewerData);
     }
 
     private void addPlayerInv(Inventory playerInventory) {
@@ -51,6 +60,7 @@ public final class EnergyLaserTowerMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
+        OwnedDeviceViewerData.sync(viewerData, blockEntity, player);
         return stillValid(access, player, Blocks.ENERGY_LASER_TOWER.get());
     }
 }

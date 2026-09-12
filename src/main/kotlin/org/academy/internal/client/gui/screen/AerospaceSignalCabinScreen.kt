@@ -4,9 +4,6 @@ import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.player.Inventory
-import net.minecraft.world.inventory.ContainerLevelAccess
-import org.academy.api.client.gui.animation.EasingFunctions
-import org.academy.api.client.gui.event.OnClickListener
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.screen.ContainerUiScreen
@@ -14,7 +11,6 @@ import org.academy.api.client.gui.util.InfoAreaUtil
 import org.academy.api.client.gui.util.WirelessPanelUtil
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.resources.R
-import org.academy.api.client.util.AnimationUtil
 import org.academy.internal.common.world.inventory.AerospaceSignalCabinMenu
 import org.academy.internal.common.world.level.block.entity.AerospaceSignalCabinBlockEntity
 
@@ -52,7 +48,7 @@ class AerospaceSignalCabinScreen private constructor(
             scale = 0.75f
         }
         invPage.addChild("hint", hint)
-        playOpenReveal(hint, 1f, duration, childDuration)
+        MisakaMachineUi.playOpenReveal(hint, 1f, duration, childDuration)
 
         val opsPage = opsUi.createOpsPage()
         opsPage.visibility = Widget.Visibility.GONE
@@ -65,47 +61,57 @@ class AerospaceSignalCabinScreen private constructor(
         content.addChild("page_wireless", wirelessPage)
 
         val opsButton = createButton(R.textures.gui.icon.icon_settings)
-        opsButton.layoutParams = WidgetContainer.LayoutParams()
-            .widthMode(SizeMode.MATCH_PARENT)
-            .height(16f)
+        MisakaMachineUi.sizeRailButton(opsButton)
         pageButtons.addChild("ops", opsButton)
 
         val wirelessButton = createButton(R.textures.gui.icon.icon_wireless)
-        wirelessButton.layoutParams = WidgetContainer.LayoutParams()
-            .widthMode(SizeMode.MATCH_PARENT)
-            .height(16f)
+        MisakaMachineUi.sizeRailButton(wirelessButton)
         pageButtons.addChild("wireless", wirelessButton)
+
+        fun showCabinPage(active: FrameLayoutWidget) {
+            listOf(invPage, opsPage, wirelessPage).forEach { page ->
+                page.cancelAnimations()
+                if (page === active) {
+                    page.visibility = Widget.Visibility.VISIBLE
+                    page.isEnabled = true
+                    page.alpha = 1f
+                    page.translationY = 0f
+                } else {
+                    page.visibility = Widget.Visibility.GONE
+                    page.isEnabled = false
+                    page.alpha = 0f
+                    page.translationY = 0f
+                }
+            }
+            active.requestLayout()
+        }
 
         pageButtons.onSelectionChanged = {
             when (it.name) {
                 "inv" -> {
                     opsUi.closeOpsDetail(immediate = true)
-                    AnimationUtil.hide(opsPage)
-                    AnimationUtil.hide(wirelessPage)
-                    AnimationUtil.show(invPage)
+                    opsUi.closeAssetPane(immediate = true)
+                    showCabinPage(invPage)
                     isHandleContainer = true
                     isRenderInventory = true
                 }
                 "ops" -> {
-                    opsUi.closeOpsDetail(immediate = true)
-                    AnimationUtil.hide(invPage)
-                    AnimationUtil.hide(wirelessPage)
-                    AnimationUtil.show(opsPage)
+                    showCabinPage(opsPage)
+                    opsUi.onOpsPageShown()
                     isHandleContainer = false
                     isRenderInventory = false
                 }
                 "wireless" -> {
                     opsUi.closeOpsDetail(immediate = true)
-                    AnimationUtil.hide(invPage)
-                    AnimationUtil.hide(opsPage)
-                    AnimationUtil.show(wirelessPage)
+                    opsUi.closeAssetPane(immediate = true)
+                    showCabinPage(wirelessPage)
                     isHandleContainer = false
                     isRenderInventory = false
                 }
             }
         }
         pageButtons.selectButton(invButton)
-        playOpenReveal(pageButtons, 1f, duration, childDuration)
+        MisakaMachineUi.playOpenReveal(pageButtons, 1f, duration, childDuration)
 
         val info = InfoAreaUtil.create(this, (leftPos + imageWidth).toFloat(), (topPos - 22).toFloat())
         run {
@@ -118,23 +124,6 @@ class AerospaceSignalCabinScreen private constructor(
         }
     }
 
-    /** Same open timing as the left page rail: alpha fade + slide up with the face expand. */
-    private fun playOpenReveal(
-        widget: Widget,
-        targetAlpha: Float,
-        duration: Long,
-        childDuration: Long
-    ) {
-        AnimationUtil.reveal(
-            widget = widget,
-            targetAlpha = targetAlpha,
-            alphaDuration = childDuration,
-            translationDuration = duration,
-            yInterpolator = EasingFunctions.EASE_OUT_CUBIC,
-            applyShowFlags = false
-        )
-    }
-
     override fun containerTick() {
         super.containerTick()
         energyValueLabel.text = "${blockEntity.energyStored} / ${blockEntity.maxEnergyStorage} AF"
@@ -142,61 +131,25 @@ class AerospaceSignalCabinScreen private constructor(
     }
 
     override fun createActionButton(labelKey: String, buttonId: Int): ButtonWidget {
-        val button = ButtonWidget()
-        button.onClickListener = OnClickListener {
-            minecraft.gameMode?.handleInventoryButtonClick(menu.containerId, buttonId)
-        }
-        button.addChild("back", BlendQuadWidget().apply {
-            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-            alpha = 0.35f
-        })
-        button.addChild("label", LabelWidget(Component.translatable(labelKey).string).apply {
-            scale = SCALE_BODY
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-                .gravity(Gravity.CENTER)
-        })
-        return button
+        return MisakaMachineUi.menuActionButton(menu, labelKey, buttonId)
     }
 
     override fun createLocalActionButton(labelKey: String, onClick: () -> Unit): ButtonWidget {
-        val button = ButtonWidget()
-        button.onClickListener = OnClickListener { onClick() }
-        button.addChild("back", BlendQuadWidget().apply {
-            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-            alpha = 0.35f
-        })
-        button.addChild("label", LabelWidget(Component.translatable(labelKey).string).apply {
-            scale = SCALE_BODY
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-                .gravity(Gravity.CENTER)
-        })
-        return button
+        return MisakaMachineUi.localActionButton(labelKey, onClick = onClick)
     }
 
     companion object {
-        private const val SCALE_BODY = 0.75f
-
         fun create(
             menu: AerospaceSignalCabinMenu,
             playerInventory: Inventory,
             title: Component,
             mainPos: BlockPos
         ): AerospaceSignalCabinScreen? {
-            val minecraft = Minecraft.getInstance()
-            val level = minecraft.level ?: return null
-            val player = minecraft.player ?: return null
-            val entity = level.getBlockEntity(mainPos)
+            val entity = Minecraft.getInstance().level?.getBlockEntity(mainPos)
+            // Keep the factory menu so server-synced ContainerData (owner / manage tier)
+            // is not discarded by replacing player.containerMenu after open.
             return if (entity is AerospaceSignalCabinBlockEntity) {
-                val boundMenu = AerospaceSignalCabinMenu(
-                    menu.containerId,
-                    playerInventory,
-                    ContainerLevelAccess.create(level, mainPos),
-                    entity
-                )
-                player.containerMenu = boundMenu
-                AerospaceSignalCabinScreen(boundMenu, playerInventory, title, entity)
+                AerospaceSignalCabinScreen(menu, playerInventory, title, entity)
             } else {
                 null
             }

@@ -8,11 +8,13 @@ import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.world.entity.misaka.favor.FavorService;
+import org.academy.internal.server.world.level.storage.MisakaNetworkRegistry;
 import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
 import org.academy.internal.server.world.level.storage.MisakaSisterRoster;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -27,6 +29,8 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public final class MisakaComputeIndex extends SavedData {
     public static final String UNASSIGNED = "";
+    /** Separator for multi-name benevolent group keys (must not appear in player names). */
+    public static final String GROUP_KEY_SEP = "\u0001";
 
     /** Test-only override; when non-null, {@link #get(MinecraftServer)} returns it. */
     public static final AtomicReference<@Nullable MisakaComputeIndex> TESTING_OVERRIDE = new AtomicReference<>();
@@ -45,11 +49,13 @@ public final class MisakaComputeIndex extends SavedData {
 
     private boolean dirty;
     private boolean topologyDirty;
-    private final Map<BlockPos, BlockPos> nodeToNetworkId = new HashMap<>();
-    private final Map<BlockPos, Float> networkTotalMskPerSecond = new HashMap<>();
-    private final Map<BlockPos, String> networkReconstructionPrivilege = new HashMap<>();
-    private final Map<NetworkClosestKey, Float> groupMskPerSecond = new HashMap<>();
-    private final Map<BlockPos, List<UUID>> networkSisterOrder = new HashMap<>();
+    private final Map<BlockPos, UUID> nodeToNetworkId = new HashMap<>();
+    private final Map<UUID, Float> networkTotalMskPerSecond = new HashMap<>();
+    private final Map<UUID, String> networkReconstructionPrivilege = new HashMap<>();
+    /** Lowest-serial reconstruction sister UUID per network (for O(1) hasReconstructionWork). */
+    private final Map<UUID, UUID> networkReconstructionSister = new HashMap<>();
+    private final Map<NetworkGroupKey, Float> groupMskPerSecond = new HashMap<>();
+    private final Map<UUID, List<UUID>> networkSisterOrder = new HashMap<>();
     private final Map<String, UUID> playerNameToUuid = new HashMap<>();
     /** Last known in-coverage contribution flag (not persisted). */
     private final Map<UUID, Boolean> coverageContributing = new HashMap<>();
@@ -113,9 +119,9 @@ public final class MisakaComputeIndex extends SavedData {
         topologyDirty = false;
     }
 
-    public BlockPos resolveNetworkIdCached(ServerLevel level, BlockPos nodePos) {
+    public UUID resolveNetworkIdCached(ServerLevel level, BlockPos nodePos) {
         if (nodePos == null) {
-            return BlockPos.ZERO;
+            return new UUID(0L, 0L);
         }
         var immutable = nodePos.immutable();
         if (!topologyDirty) {
@@ -124,39 +130,62 @@ public final class MisakaComputeIndex extends SavedData {
                 return cached;
             }
         }
-        // Misaka wireless topology is overworld-authoritative.
         var server = level != null ? level.getServer() : null;
         var topologyLevel = server != null ? server.overworld() : level;
-        var resolved = WirelessForwardingMisakaNAT.resolveNetworkIdRaw(topologyLevel, immutable);
+        UUID resolved;
+        if (server != null) {
+            var registry = MisakaNetworkRegistry.get(server);
+            if (topologyDirty) {
+                registry.reconcileTopology(topologyLevel);
+            }
+            resolved = registry.resolveOrCreate(topologyLevel, immutable);
+        } else {
+            resolved = WirelessForwardingMisakaNAT.resolveNetworkIdRaw(topologyLevel, immutable);
+        }
         nodeToNetworkId.put(immutable, resolved);
         return resolved;
     }
 
-    public Map<BlockPos, Float> networkTotals() {
+    public Map<UUID, Float> networkTotals() {
         return Map.copyOf(networkTotalMskPerSecond);
     }
 
-    public Map<NetworkClosestKey, Float> closestGroups() {
+    public Map<NetworkGroupKey, Float> benevolentGroups() {
         return Map.copyOf(groupMskPerSecond);
     }
 
-    public @Nullable String reconstructionPrivilege(BlockPos networkId) {
-        return networkId == null ? null : networkReconstructionPrivilege.get(networkId.immutable());
+    public @Nullable String reconstructionPrivilege(UUID networkId) {
+        return networkId == null ? null : networkReconstructionPrivilege.get(networkId);
     }
 
-    public int networkSisterCount(BlockPos networkId) {
+    public @Nullable UUID reconstructionSisterUuid(UUID networkId) {
+        return networkId == null ? null : networkReconstructionSister.get(networkId);
+    }
+
+    /**
+     * True when another reconstruction sister (not {@code except}) already holds this network.
+     */
+    public boolean hasOtherReconstruction(UUID networkId, @Nullable UUID except) {
+        UUID holder = reconstructionSisterUuid(networkId);
+        if (holder == null) {
+            return false;
+        }
+        return except == null || !holder.equals(except);
+    }
+
+    public int networkSisterCount(UUID networkId) {
         if (networkId == null) {
             return 0;
         }
-        var list = networkSisterOrder.get(networkId.immutable());
+        var list = networkSisterOrder.get(networkId);
         return list == null ? 0 : list.size();
     }
 
-    public List<UUID> pageSisters(BlockPos networkId, int offset, int limit) {
+    public List<UUID> pageSisters(UUID networkId, int offset, int limit) {
         if (networkId == null || limit <= 0) {
             return List.of();
         }
-        var list = networkSisterOrder.get(networkId.immutable());
+        var list = networkSisterOrder.get(networkId);
         if (list == null || list.isEmpty() || offset >= list.size()) {
             return List.of();
         }
@@ -189,18 +218,18 @@ public final class MisakaComputeIndex extends SavedData {
             return;
         }
         coverageContributing.put(record.misakaUuid, nowIn);
-        if (!record.awakened || record.networkNodePos == null || record.starving || dirty) {
+        if (!record.awakened || record.networkNodePos == null || record.starving || record.incapacitated || dirty) {
             return;
         }
         var level = server.overworld();
         var networkId = resolveNetworkIdCached(level, record.networkNodePos);
         float msk = MisakaComputeContribution.mskPerSecond(record.perception);
         float delta = nowIn ? msk : -msk;
-        applyMskDelta(networkId, closestName(record), delta);
+        applyMskDelta(networkId, groupKey(record), delta);
     }
 
-    private void applyMskDelta(BlockPos networkId, String closest, float delta) {
-        if (delta == 0.0f) {
+    private void applyMskDelta(UUID networkId, String groupKey, float delta) {
+        if (delta == 0.0f || networkId == null) {
             return;
         }
         networkTotalMskPerSecond.merge(networkId, delta, Float::sum);
@@ -208,7 +237,7 @@ public final class MisakaComputeIndex extends SavedData {
         if (total <= 0.0f) {
             networkTotalMskPerSecond.remove(networkId);
         }
-        var key = new NetworkClosestKey(networkId, closest);
+        var key = new NetworkGroupKey(networkId, groupKey);
         groupMskPerSecond.merge(key, delta, Float::sum);
         float group = groupMskPerSecond.getOrDefault(key, 0.0f);
         if (group <= 0.0f) {
@@ -217,8 +246,8 @@ public final class MisakaComputeIndex extends SavedData {
     }
 
     /** Test hook: apply MSk delta without a live server. */
-    public void testingApplyMskDelta(BlockPos networkId, String closest, float delta) {
-        applyMskDelta(networkId, closest == null ? UNASSIGNED : closest, delta);
+    public void testingApplyMskDelta(UUID networkId, String groupKey, float delta) {
+        applyMskDelta(networkId, groupKey == null ? UNASSIGNED : groupKey, delta);
     }
 
     /** Test hook: clear aggregate maps without touching roster topology. */
@@ -236,7 +265,26 @@ public final class MisakaComputeIndex extends SavedData {
         dirty = value;
     }
 
-    private static String closestName(MisakaSisterRecord record) {
+    public static List<String> parseGroupKey(@Nullable String key) {
+        if (key == null || key.isEmpty()) {
+            return List.of();
+        }
+        return Arrays.asList(key.split(GROUP_KEY_SEP, -1));
+    }
+
+    public static String encodeGroupKey(List<String> names) {
+        if (names == null || names.isEmpty()) {
+            return UNASSIGNED;
+        }
+        return String.join(GROUP_KEY_SEP, names);
+    }
+
+    private static String groupKey(MisakaSisterRecord record) {
+        var names = FavorService.benevolentNames(record);
+        return encodeGroupKey(names);
+    }
+
+    private static String privilegeName(MisakaSisterRecord record) {
         String closest = record.lastInteractedBenevolentPlayerName == null
                 ? UNASSIGNED
                 : record.lastInteractedBenevolentPlayerName;
@@ -250,35 +298,41 @@ public final class MisakaComputeIndex extends SavedData {
         nodeToNetworkId.clear();
         networkTotalMskPerSecond.clear();
         networkReconstructionPrivilege.clear();
+        networkReconstructionSister.clear();
         groupMskPerSecond.clear();
         networkSisterOrder.clear();
         coverageContributing.clear();
 
         var level = server.overworld();
+        if (topologyDirty) {
+            MisakaNetworkRegistry.get(server).reconcileTopology(level);
+        }
+
         var roster = MisakaSisterRoster.get(server);
         record SisterSort(
                 UUID uuid,
                 int serial,
-                BlockPos networkId,
+                UUID networkId,
                 float msk,
-                String closest,
+                String groupKey,
+                String privilege,
                 boolean reconstruction,
                 boolean starving,
+                boolean incapacitated,
                 boolean inCoverage
         ) {
         }
         var sorted = new ArrayList<SisterSort>();
 
         for (var record : roster.all()) {
-            // Bound awakened sisters stay on the manage list / recon pick even while starving.
-            // Only non-starving in-coverage sisters contribute MSk.
             if (!record.awakened || record.networkNodePos == null) {
                 continue;
             }
             var networkId = resolveDuringRebuild(level, record.networkNodePos);
             float msk = MisakaComputeContribution.mskPerSecond(record.perception);
-            String closest = closestName(record);
-            boolean reconstruction = record.perception >= 101;
+            String group = groupKey(record);
+            String privilege = privilegeName(record);
+            boolean reconstruction = record.isReconstruction || record.perception >= 101;
             var loadedSister = MisakaNetworkCoverage.findLoadedSister(server, record.misakaUuid);
             var sampleLevel = MisakaNetworkCoverage.sampleLevel(server, record, loadedSister);
             BlockPos sample = MisakaNetworkCoverage.samplePos(record, loadedSister);
@@ -289,15 +343,17 @@ public final class MisakaComputeIndex extends SavedData {
                     record.serial,
                     networkId,
                     msk,
-                    closest,
+                    group,
+                    privilege,
                     reconstruction,
                     record.starving,
+                    record.incapacitated,
                     inCoverage
             ));
         }
 
         sorted.sort(Comparator.comparingInt(SisterSort::serial));
-        var reconCandidates = new HashMap<BlockPos, SisterSort>();
+        var reconCandidates = new HashMap<UUID, SisterSort>();
 
         for (var sister : sorted) {
             networkSisterOrder
@@ -306,42 +362,42 @@ public final class MisakaComputeIndex extends SavedData {
             if (sister.reconstruction) {
                 reconCandidates.putIfAbsent(sister.networkId, sister);
             }
-            if (sister.starving || !sister.inCoverage) {
+            if (sister.starving || sister.incapacitated || !sister.inCoverage) {
                 continue;
             }
             networkTotalMskPerSecond.merge(sister.networkId, sister.msk, Float::sum);
             groupMskPerSecond.merge(
-                    new NetworkClosestKey(sister.networkId, sister.closest),
+                    new NetworkGroupKey(sister.networkId, sister.groupKey),
                     sister.msk,
                     Float::sum
             );
         }
 
         for (var entry : reconCandidates.entrySet()) {
-            networkReconstructionPrivilege.put(entry.getKey(), entry.getValue().closest());
+            networkReconstructionPrivilege.put(entry.getKey(), entry.getValue().privilege());
+            networkReconstructionSister.put(entry.getKey(), entry.getValue().uuid());
         }
     }
 
-    private BlockPos resolveDuringRebuild(ServerLevel level, BlockPos nodePos) {
+    private UUID resolveDuringRebuild(ServerLevel level, BlockPos nodePos) {
         var immutable = nodePos.immutable();
         var cached = nodeToNetworkId.get(immutable);
-        if (cached != null && !topologyDirty) {
-            return cached;
-        }
-        // During full rebuild after topology dirty, always resolve once per unique node.
-        cached = nodeToNetworkId.get(immutable);
         if (cached != null) {
             return cached;
         }
-        var resolved = WirelessForwardingMisakaNAT.resolveNetworkIdRaw(level, immutable);
+        var resolved = MisakaNetworkRegistry.get(level.getServer()).resolveOrCreate(level, immutable);
         nodeToNetworkId.put(immutable, resolved);
         return resolved;
     }
 
-    public record NetworkClosestKey(BlockPos networkId, String closestName) {
-        public NetworkClosestKey {
-            networkId = networkId == null ? BlockPos.ZERO : networkId.immutable();
-            closestName = closestName == null ? UNASSIGNED : closestName;
+    public record NetworkGroupKey(UUID networkId, String groupKey) {
+        public NetworkGroupKey {
+            networkId = networkId == null ? new UUID(0L, 0L) : networkId;
+            groupKey = groupKey == null ? UNASSIGNED : groupKey;
+        }
+
+        public List<String> groupNames() {
+            return parseGroupKey(groupKey);
         }
     }
 }

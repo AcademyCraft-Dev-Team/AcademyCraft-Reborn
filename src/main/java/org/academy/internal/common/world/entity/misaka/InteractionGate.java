@@ -11,12 +11,17 @@ public final class InteractionGate {
     public enum Intent {
         LEASH,
         FEED_TOWER_AWAKEN,
+        FEED_RECOVER,
         PET,
         PANEL,
         FEED_FOOD,
         FEED_PROMAX,
         STATE,
-        PICKUP
+        PICKUP,
+        /** First bind while unbound — DEFAULT+. */
+        BIND_FIRST,
+        /** Change or clear network node while already bound — privilege only. */
+        MIGRATE
     }
 
     private InteractionGate() {
@@ -27,7 +32,16 @@ public final class InteractionGate {
             return true;
         }
         if (intent == Intent.FEED_TOWER_AWAKEN) {
-            return !record.awakened;
+            return !record.awakened && !record.incapacitated;
+        }
+        if (intent == Intent.FEED_RECOVER) {
+            if (!record.incapacitated) {
+                return false;
+            }
+            if (!record.awakened) {
+                return true;
+            }
+            return FavorService.relation(record, name).ordinal() >= MobRelation.DEFAULT.ordinal();
         }
         if (!record.awakened) {
             return false;
@@ -35,9 +49,11 @@ public final class InteractionGate {
         var relation = FavorService.relation(record, name);
         boolean atLeastDefault = relation.ordinal() >= MobRelation.DEFAULT.ordinal();
         return switch (intent) {
-            case PET, PANEL, FEED_FOOD -> atLeastDefault;
+            // Read-only panel for any awakened relation (incl. INDIFFERENT/HOSTILE/DEADLY).
+            case PANEL -> true;
+            case PET, FEED_FOOD, BIND_FIRST -> atLeastDefault;
             case FEED_PROMAX -> atLeastDefault && !record.promaxUsed;
-            case STATE, PICKUP -> FavorService.isPrivilegePlayer(record, name);
+            case STATE, PICKUP, MIGRATE -> FavorService.isPrivilegePlayer(record, name);
             default -> false;
         };
     }

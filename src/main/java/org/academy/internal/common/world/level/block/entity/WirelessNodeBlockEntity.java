@@ -33,7 +33,8 @@ import java.util.*;
 import static net.minecraft.world.level.block.Block.UPDATE_CLIENTS;
 import static net.minecraft.world.level.block.Block.UPDATE_NEIGHBORS;
 
-public final class WirelessNodeBlockEntity extends BlockEntity implements WirelessNode, WirelessUser, Container {
+public final class WirelessNodeBlockEntity extends BlockEntity
+        implements WirelessNode, WirelessUser, Container, OwnedDevice {
     private static final Logger LOGGER = AcademyCraft.getLogger();
 
     private static final int MAX_ENERGY = 2_400_000;
@@ -48,6 +49,8 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
     private int energyStored = 5000;
     @Nullable
     private BlockPos connectedNodePos = null;
+    @Nullable
+    private UUID ownerUuid;
 
     public WirelessNodeBlockEntity(BlockPos pos, BlockState blockState) {
         super(BlockEntityTypes.WIRELESS_NODE.get(), pos, blockState);
@@ -219,6 +222,7 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
         if (connectedNodePos != null) {
             output.putLong("connected_node_pos", connectedNodePos.asLong());
         }
+        saveOwner(output);
     }
 
     @Override
@@ -233,6 +237,18 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
         connectedNodePos = null;
         input.getLong("connected_node_pos").ifPresent(nodePos -> connectedNodePos = BlockPos.of(nodePos));
         cachedConfig = null;
+        loadOwner(input);
+    }
+
+    @Override
+    public @Nullable UUID getOwnerUuid() {
+        return ownerUuid;
+    }
+
+    @Override
+    public void setOwnerUuid(@Nullable UUID ownerUuid) {
+        this.ownerUuid = ownerUuid;
+        setChanged();
     }
 
     @Override

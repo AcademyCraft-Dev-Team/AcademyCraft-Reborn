@@ -50,6 +50,14 @@ public class GenericConfig {
     @SerializedName("misakaRelayLaunchTicks")
     public int misakaRelayLaunchTicks = 1200;
 
+    /** Cooldown between ActiveNetwork switches (0 = use code default). */
+    @SerializedName("misakaActiveNetworkCooldownTicks")
+    public int misakaActiveNetworkCooldownTicks = 0;
+
+    /** MSk demanded (and consumed from usage ledger) to start an orbital strike. */
+    @SerializedName("misakaOrbitalStrikeMskCost")
+    public float misakaOrbitalStrikeMskCost = 200.0f;
+
     public static final class Action implements TypeHandler<GenericConfig> {
         public static final TypeHandler<GenericConfig> INSTANCE = new Action();
 

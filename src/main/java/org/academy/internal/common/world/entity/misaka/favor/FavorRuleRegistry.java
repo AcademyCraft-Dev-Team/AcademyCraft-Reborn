@@ -6,12 +6,14 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.player.Player;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.world.entity.misaka.MisakaSisterEntity;
+import org.academy.internal.common.world.entity.misaka.MisakaSisterRosterSync;
 import org.academy.internal.common.world.entity.misaka.MobRelation;
 import org.academy.internal.common.world.entity.misaka.favor.rules.AnniversaryCakeRule;
 import org.academy.internal.common.world.entity.misaka.favor.rules.AttackedByPlayerRule;
@@ -21,6 +23,7 @@ import org.academy.internal.common.world.entity.misaka.favor.rules.KilledByPlaye
 import org.academy.internal.server.misaka.MisakaComputeContribution;
 import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
 import org.academy.internal.server.world.level.storage.MisakaSisterRoster;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -69,7 +72,7 @@ public final class FavorRuleRegistry {
         MisakaSisterRoster.get(sister.level().getServer()).setDirty();
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onLivingDeath(LivingDeathEvent event) {
         if (event.getEntity().level().isClientSide()) {
             return;
@@ -82,13 +85,7 @@ public final class FavorRuleRegistry {
         MinecraftServer server = level.getServer();
 
         if (event.getEntity() instanceof MisakaSisterEntity sister) {
-            var record = sister.rosterRecord().orElse(null);
-            if (record != null) {
-                var uuid = record.misakaUuid;
-                trigger(FavorContext.killedSister(sister, record, killer));
-                MisakaSisterRoster.get(server).release(uuid);
-                MisakaComputeContribution.refreshCpForRecord(server, record);
-            }
+            enterIncapacitated(sister, killer, event);
             return;
         }
 
@@ -99,6 +96,42 @@ public final class FavorRuleRegistry {
 
         // Witness kills (villagers / players) — 16 blocks + line of sight, LAN-deduped
         propagateWitnessDeaths(level, killer, event.getEntity());
+    }
+
+    /**
+     * Lethal damage becomes incapacitated instead of permanent death / roster release.
+     */
+    private static void enterIncapacitated(
+            MisakaSisterEntity sister,
+            @Nullable LivingEntity killer,
+            LivingDeathEvent event
+    ) {
+        event.setCanceled(true);
+        sister.setHealth(1.0f);
+        if (sister.isPassenger()) {
+            sister.stopRiding();
+        }
+        sister.setTarget(null);
+        sister.getNavigation().stop();
+        if (sister.isSleeping()) {
+            sister.stopSleeping();
+        }
+
+        var record = sister.rosterRecord().orElse(null);
+        if (record == null) {
+            return;
+        }
+        boolean entering = !record.incapacitated;
+        if (entering) {
+            record.incapacitated = true;
+            MisakaSisterRosterSync.syncFromRecord(sister, record);
+            MisakaSisterRoster.get(sister.level().getServer()).setDirty();
+            MisakaComputeContribution.refreshCpForRecord(sister.level().getServer(), record);
+            // Critical harm: same -5 as former kill rule, once per incap entry.
+            trigger(FavorContext.killedSister(sister, record, killer));
+        } else {
+            MisakaSisterRosterSync.syncFromRecord(sister, record);
+        }
     }
 
     private static void applyKilledBenevolentLan(

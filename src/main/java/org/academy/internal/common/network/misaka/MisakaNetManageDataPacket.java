@@ -32,23 +32,47 @@ public final class MisakaNetManageDataPacket
     private final int pageIndex;
     private final int totalCount;
     private final float totalMskPerSecond;
+    private final float totalDemandMsk;
+    private final float yourAllocatedMsk;
+    private final float yourSatisfaction;
+    private final float priorityAllocatedMsk;
+    private final float sharedAllocatedMsk;
     private final List<SisterSummary> sisters;
     private final int[] percents;
+    private final List<String> adminNames;
+    private final List<MemberSummary> members;
+    private final boolean viewerCanEditMembers;
 
     public MisakaNetManageDataPacket(
             UUID misakaUuid,
             int pageIndex,
             int totalCount,
             float totalMskPerSecond,
+            float totalDemandMsk,
+            float yourAllocatedMsk,
+            float yourSatisfaction,
+            float priorityAllocatedMsk,
+            float sharedAllocatedMsk,
             List<SisterSummary> sisters,
-            int[] percents
+            int[] percents,
+            List<String> adminNames,
+            List<MemberSummary> members,
+            boolean viewerCanEditMembers
     ) {
         this.misakaUuid = misakaUuid;
         this.pageIndex = pageIndex;
         this.totalCount = totalCount;
         this.totalMskPerSecond = totalMskPerSecond;
+        this.totalDemandMsk = totalDemandMsk;
+        this.yourAllocatedMsk = yourAllocatedMsk;
+        this.yourSatisfaction = yourSatisfaction;
+        this.priorityAllocatedMsk = priorityAllocatedMsk;
+        this.sharedAllocatedMsk = sharedAllocatedMsk;
         this.sisters = sisters == null ? List.of() : List.copyOf(sisters);
         this.percents = MisakaComputeSink.clampAllocations(percents);
+        this.adminNames = adminNames == null ? List.of() : List.copyOf(adminNames);
+        this.members = members == null ? List.of() : List.copyOf(members);
+        this.viewerCanEditMembers = viewerCanEditMembers;
     }
 
     private static void encode(ByteBuf buf, MisakaNetManageDataPacket packet) {
@@ -56,8 +80,14 @@ public final class MisakaNetManageDataPacket
         ByteBufCodecs.VAR_INT.encode(buf, packet.pageIndex);
         ByteBufCodecs.VAR_INT.encode(buf, packet.totalCount);
         buf.writeFloat(packet.totalMskPerSecond);
+        buf.writeFloat(packet.totalDemandMsk);
+        buf.writeFloat(packet.yourAllocatedMsk);
+        buf.writeFloat(packet.yourSatisfaction);
+        buf.writeFloat(packet.priorityAllocatedMsk);
+        buf.writeFloat(packet.sharedAllocatedMsk);
         ByteBufCodecs.VAR_INT.encode(buf, packet.sisters.size());
         for (var sister : packet.sisters) {
+            MisakaPacketCodecs.encodeUuid(buf, sister.misakaUuid());
             ByteBufCodecs.VAR_INT.encode(buf, sister.serial());
             ByteBufCodecs.VAR_INT.encode(buf, sister.perception());
             buf.writeFloat(sister.msk());
@@ -68,6 +98,16 @@ public final class MisakaNetManageDataPacket
         for (int i = 0; i < MisakaComputeSink.COUNT; i++) {
             ByteBufCodecs.VAR_INT.encode(buf, packet.percents[i]);
         }
+        ByteBufCodecs.collection(ArrayList::new, ByteBufCodecs.STRING_UTF8)
+                .encode(buf, new ArrayList<>(packet.adminNames));
+        ByteBufCodecs.VAR_INT.encode(buf, packet.members.size());
+        for (var member : packet.members) {
+            ByteBufCodecs.STRING_UTF8.encode(buf, member.name());
+            buf.writeBoolean(member.admin());
+            ByteBufCodecs.collection(ArrayList::new, ByteBufCodecs.STRING_UTF8)
+                    .encode(buf, new ArrayList<>(member.permissions()));
+        }
+        buf.writeBoolean(packet.viewerCanEditMembers);
     }
 
     private static MisakaNetManageDataPacket decode(ByteBuf buf) {
@@ -75,10 +115,16 @@ public final class MisakaNetManageDataPacket
         int pageIndex = ByteBufCodecs.VAR_INT.decode(buf);
         int totalCount = ByteBufCodecs.VAR_INT.decode(buf);
         float totalMskPerSecond = buf.readFloat();
+        float totalDemandMsk = buf.readFloat();
+        float yourAllocatedMsk = buf.readFloat();
+        float yourSatisfaction = buf.readFloat();
+        float priorityAllocatedMsk = buf.readFloat();
+        float sharedAllocatedMsk = buf.readFloat();
         int sisterCount = ByteBufCodecs.VAR_INT.decode(buf);
         var sisters = new ArrayList<SisterSummary>(sisterCount);
         for (int i = 0; i < sisterCount; i++) {
             sisters.add(new SisterSummary(
+                    MisakaPacketCodecs.decodeUuid(buf),
                     ByteBufCodecs.VAR_INT.decode(buf),
                     ByteBufCodecs.VAR_INT.decode(buf),
                     buf.readFloat(),
@@ -91,8 +137,33 @@ public final class MisakaNetManageDataPacket
         for (int i = 0; i < MisakaComputeSink.COUNT; i++) {
             percents[i] = ByteBufCodecs.VAR_INT.decode(buf);
         }
+        List<String> adminNames = ByteBufCodecs.collection(ArrayList::new, ByteBufCodecs.STRING_UTF8).decode(buf);
+        int memberCount = ByteBufCodecs.VAR_INT.decode(buf);
+        var members = new ArrayList<MemberSummary>(memberCount);
+        for (int i = 0; i < memberCount; i++) {
+            members.add(new MemberSummary(
+                    ByteBufCodecs.STRING_UTF8.decode(buf),
+                    buf.readBoolean(),
+                    ByteBufCodecs.collection(ArrayList::new, ByteBufCodecs.STRING_UTF8).decode(buf)
+            ));
+        }
+        boolean viewerCanEditMembers = buf.readBoolean();
         return new MisakaNetManageDataPacket(
-                misakaUuid, pageIndex, totalCount, totalMskPerSecond, sisters, percents);
+                misakaUuid,
+                pageIndex,
+                totalCount,
+                totalMskPerSecond,
+                totalDemandMsk,
+                yourAllocatedMsk,
+                yourSatisfaction,
+                priorityAllocatedMsk,
+                sharedAllocatedMsk,
+                sisters,
+                percents,
+                adminNames,
+                members,
+                viewerCanEditMembers
+        );
     }
 
     public static synchronized void initClient() {
@@ -119,12 +190,44 @@ public final class MisakaNetManageDataPacket
         return totalMskPerSecond;
     }
 
+    public float totalDemandMsk() {
+        return totalDemandMsk;
+    }
+
+    public float yourAllocatedMsk() {
+        return yourAllocatedMsk;
+    }
+
+    public float yourSatisfaction() {
+        return yourSatisfaction;
+    }
+
+    public float priorityAllocatedMsk() {
+        return priorityAllocatedMsk;
+    }
+
+    public float sharedAllocatedMsk() {
+        return sharedAllocatedMsk;
+    }
+
     public List<SisterSummary> sisters() {
         return sisters;
     }
 
     public int[] percents() {
         return percents.clone();
+    }
+
+    public List<String> adminNames() {
+        return adminNames;
+    }
+
+    public List<MemberSummary> members() {
+        return members;
+    }
+
+    public boolean viewerCanEditMembers() {
+        return viewerCanEditMembers;
     }
 
     public int allocatedSum() {
@@ -137,6 +240,7 @@ public final class MisakaNetManageDataPacket
     }
 
     public record SisterSummary(
+            UUID misakaUuid,
             int serial,
             int perception,
             float msk,
@@ -146,6 +250,13 @@ public final class MisakaNetManageDataPacket
     ) {
         public SisterSummary {
             nodeName = nodeName == null ? "" : nodeName;
+        }
+    }
+
+    public record MemberSummary(String name, boolean admin, List<String> permissions) {
+        public MemberSummary {
+            name = name == null ? "" : name;
+            permissions = permissions == null ? List.of() : List.copyOf(permissions);
         }
     }
 

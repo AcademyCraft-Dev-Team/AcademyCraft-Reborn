@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import org.jspecify.annotations.Nullable;
 
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -33,5 +34,5 @@ public interface MisakaRelayAccess {
         TESTING_OVERRIDE.set(access);
     }
 
-    boolean grantsAccess(ServerLevel level, BlockPos samplePos, BlockPos networkId);
+    boolean grantsAccess(ServerLevel level, BlockPos samplePos, UUID networkId);
 }

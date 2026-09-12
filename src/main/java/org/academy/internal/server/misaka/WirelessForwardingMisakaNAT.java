@@ -5,12 +5,11 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import org.academy.api.common.misaka.MisakaNAT;
 import org.academy.api.server.wireless.WirelessManager;
+import org.academy.internal.server.world.level.storage.MisakaNetworkRegistry;
 import org.academy.internal.server.world.level.storage.MisakaSisterRoster;
 import org.academy.internal.server.world.level.storage.WirelessNetworkData;
 import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayDeque;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,36 +32,19 @@ public final class WirelessForwardingMisakaNAT implements MisakaNAT {
     }
 
     @Override
-    public BlockPos resolveNetworkId(ServerLevel level, BlockPos nodePos) {
+    public UUID resolveNetworkId(ServerLevel level, BlockPos nodePos) {
         return MisakaComputeIndex.get(level.getServer()).resolveNetworkIdCached(level, nodePos);
     }
 
-    /** Uncached BFS used by the compute index rebuild / cold cache miss. */
-    public static BlockPos resolveNetworkIdRaw(ServerLevel level, BlockPos nodePos) {
-        var data = WirelessNetworkData.get(level);
-        var seen = new HashSet<BlockPos>();
-        var queue = new ArrayDeque<BlockPos>();
-        queue.add(nodePos.immutable());
-        BlockPos min = nodePos.immutable();
-        while (!queue.isEmpty()) {
-            var current = queue.poll();
-            if (!seen.add(current)) {
-                continue;
-            }
-            if (current.asLong() < min.asLong()) {
-                min = current;
-            }
-            var config = data.getNodeConfig(current);
-            if (config == null) {
-                continue;
-            }
-            for (var userPos : config.connectedUsers.keySet()) {
-                if (data.getNodeConfig(userPos) != null) {
-                    queue.add(userPos.immutable());
-                }
-            }
+    /**
+     * Uncached resolve via {@link MisakaNetworkRegistry} (BFS component + stable UUID inheritance).
+     * Prefer {@link #resolveNetworkId} / the compute-index cache on hot paths.
+     */
+    public static UUID resolveNetworkIdRaw(ServerLevel level, BlockPos nodePos) {
+        if (level == null || nodePos == null) {
+            return new UUID(0L, 0L);
         }
-        return min;
+        return MisakaNetworkRegistry.get(level.getServer()).resolveOrCreate(level, nodePos);
     }
 
     @Override
@@ -77,7 +59,7 @@ public final class WirelessForwardingMisakaNAT implements MisakaNAT {
         if (record == null) {
             return false;
         }
-        if (record.perception >= 101
+        if ((record.isReconstruction || record.perception >= 101)
                 && hasReconstructionWork(server, nodePos, misakaUuid)) {
             return false;
         }
@@ -106,10 +88,9 @@ public final class WirelessForwardingMisakaNAT implements MisakaNAT {
     public boolean hasReconstructionWork(MinecraftServer server, BlockPos nodePos, @Nullable UUID except) {
         var level = server.overworld();
         var targetNetwork = resolveNetworkId(level, nodePos);
-        return MisakaSisterRoster.get(server).all().stream()
-                .filter(record -> record.awakened && record.perception >= 101 && record.networkNodePos != null)
-                .filter(record -> except == null || !record.misakaUuid.equals(except))
-                .anyMatch(record -> resolveNetworkId(level, record.networkNodePos).equals(targetNetwork));
+        var index = MisakaComputeIndex.get(server);
+        index.rebuildIfDirty(server);
+        return index.hasOtherReconstruction(targetNetwork, except);
     }
 
     @Override
@@ -134,7 +115,7 @@ public final class WirelessForwardingMisakaNAT implements MisakaNAT {
     }
 
     @Override
-    public boolean canUseMisakaService(ServerLevel level, BlockPos networkId, BlockPos pos) {
+    public boolean canUseMisakaService(ServerLevel level, UUID networkId, BlockPos pos) {
         return MisakaNetworkCoverage.canUseMisakaService(level, networkId, pos);
     }
 }
