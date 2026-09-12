@@ -12,6 +12,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.server.ability.AbilityEffectPolicy;
+import org.academy.api.server.ability.SkillTuning;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkServer;
@@ -43,6 +44,11 @@ public final class DestroyBlocksSetting {
     );
     private static boolean serverInitialized;
 
+    /** Skill ids that carry a per-skill block-destruction advanced setting. */
+    public static Set<String> destructiveSkillIds() {
+        return BLOCK_DESTRUCTIVE_SKILLS;
+    }
+
     private DestroyBlocksSetting() {
     }
 
@@ -54,11 +60,15 @@ public final class DestroyBlocksSetting {
         var decision = AbilityEffectPolicy.blockDestruction(player.level());
         if (decision != AbilityEffectPolicy.Decision.DEFAULT) return decision == AbilityEffectPolicy.Decision.ALLOW;
         if (!isDestroyBlocksEnabled(player)) return false;
+        return isServerBlockDestructionAllowed(player.level());
+    }
+
+    /** Server-wide master gate; the client may never enable destruction past it. */
+    public static boolean isServerBlockDestructionAllowed(net.minecraft.world.level.Level level) {
         try {
-            var server = player.level().getServer();
+            var server = level.getServer();
             if (server == null || server.getAcademyCraftServer() == null) return true;
-            return server.getAcademyCraftServer().getGenericConfig().booleanMap
-                    .getOrDefault("destroyBlocks", true);
+            return server.getAcademyCraftServer().getGenericConfig().general.blockDestruction;
         } catch (Throwable ignored) {
             return true;
         }
@@ -87,7 +97,28 @@ public final class DestroyBlocksSetting {
      */
     public static boolean canDestroyBlocksBySkillSetting(Player player, Skill skill) {
         return supportsSkillBlockDestruction(skill)
+                && isSkillBlockDestructionAvailable(player, skill)
                 && isSkillDestroyBlocksEnabled(player, skill);
+    }
+
+    /**
+     * Server-owned availability for a skill's block destruction. Disabled here, the client can never
+     * enable it; enabled here, the client may still turn its own switch off.
+     */
+    public static boolean isSkillBlockDestructionAvailable(Player player, Skill skill) {
+        if (!supportsSkillBlockDestruction(skill)) return false;
+        if (player == null) return true;
+        if (player.level().isClientSide()) {
+            return SkillTuning.clientBlockDestructionAllowed(skill);
+        }
+        try {
+            var server = player.level().getServer();
+            if (server == null || server.getAcademyCraftServer() == null) return true;
+            return SkillTuning.allowBlockDestruction(
+                    server.getAcademyCraftServer().getAbilityConfig(), skill);
+        } catch (Throwable ignored) {
+            return true;
+        }
     }
 
     public static boolean usesIndependentBlockDestructionSetting(Skill skill) {
@@ -108,6 +139,8 @@ public final class DestroyBlocksSetting {
 
     public static void setSkillDestroyBlocksEnabled(Player player, Skill skill, boolean enabled) {
         if (player == null || !supportsSkillBlockDestruction(skill)) return;
+        // The server gate wins: a client may turn its own switch off, never on past the gate.
+        if (enabled && !isSkillBlockDestructionAvailable(player, skill)) return;
         var settings = new HashMap<>(player.getData(AttachmentTypes.SKILL_DESTROY_BLOCKS_ENABLED.get()));
         if (enabled) settings.remove(skill.getKeyString());
         else settings.put(skill.getKeyString(), false);

@@ -181,8 +181,10 @@ public final class ParticleWaveCannon extends Skill {
             super(player);
             initialLevel = player.level();
             proficiencyMilestone = Skills.PARTICLE_WAVE_CANNON.get().getEffectiveProficiencyMilestone(player);
-            maximumLength = proficiencyMilestone >= 2 ? 96.0f : MAX_LENGTH;
-            damageRadius = proficiencyMilestone >= 2 ? DAMAGE_RADIUS * 1.15f : DAMAGE_RADIUS;
+            var cannon = Skills.PARTICLE_WAVE_CANNON.get();
+            maximumLength = cannon.scaledRange(player, proficiencyMilestone >= 2 ? 96.0f : MAX_LENGTH);
+            damageRadius = cannon.scaledRange(player,
+                    proficiencyMilestone >= 2 ? DAMAGE_RADIUS * 1.15f : DAMAGE_RADIUS);
             breakRadius = proficiencyMilestone >= 2 ? BREAK_RADIUS * 1.15f : BREAK_RADIUS;
         }
 

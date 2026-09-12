@@ -275,7 +275,7 @@ public final class LaminarBuffer extends Skill {
         }
 
         private static float cpCost(ServerPlayer player, float baseCost) {
-            return baseCost * AeromanipConfig.cpMultiplier(player, SkillNames.LAMINAR_BUFFER);
+            return baseCost;
         }
 
         private static void toggleBuffer(ServerPlayer player, LaminarBuffer skill) {

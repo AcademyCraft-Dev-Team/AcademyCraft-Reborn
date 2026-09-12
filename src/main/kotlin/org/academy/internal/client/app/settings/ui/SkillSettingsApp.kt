@@ -554,7 +554,12 @@ object SkillSettingsApp : App {
                 })
             row.addChild("control", ToggleButtonWidget().apply {
                 val player = Minecraft.getInstance().player
-                setChecked(player == null || DestroyBlocksSetting.isSkillDestroyBlocksEnabled(player, skill))
+                val serverAllows = player == null
+                        || DestroyBlocksSetting.isSkillBlockDestructionAvailable(player, skill)
+                // A server-disabled option is force-off and inert, never re-enableable by the client.
+                setChecked(serverAllows
+                        && (player == null || DestroyBlocksSetting.isSkillDestroyBlocksEnabled(player, skill)))
+                isEnabled = serverAllows
                 layoutParams = LinearLayoutWidget.LayoutParams()
                     .size(16f, 9f)
                     .gravity(Gravity.CENTER)

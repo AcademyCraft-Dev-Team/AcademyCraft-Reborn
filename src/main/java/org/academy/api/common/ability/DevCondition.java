@@ -132,6 +132,7 @@ public interface DevCondition {
             var system = AbilitySystemServer.getSystem(player);
             var data = system.getPlayerData(player.getUUID());
             return Registries.SKILLS.stream()
+                    .filter(LearningHelper::isSkillVisible)
                     .anyMatch(skill -> skill.getRecommendedLevel().levelCode >= requiredLevel
                             && data.isSkillLearned(Objects.requireNonNull(
                             Registries.SKILLS.getKey(skill)).toString()));

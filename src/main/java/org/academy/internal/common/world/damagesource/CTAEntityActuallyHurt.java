@@ -70,6 +70,8 @@ public final class CTAEntityActuallyHurt {
             adjustedAmount = reducedAmount + (adjustedAmount - reducedAmount) * (1.0f - percentage / amount);
         }
         adjustedAmount = CategoryDamageRuntime.outgoingDamage(source, adjustedAmount);
+        adjustedAmount = org.academy.api.server.ability.SkillTuning.scaleSkillDamage(
+                source, adjustedAmount, DamageComposition.maximumHealthPart(entity, source));
         if (!(adjustedAmount > 0.0f) || !Float.isFinite(adjustedAmount)) return false;
         if (notifyCustomHurt) {
             TrueDamageCompatibility.notifyCustomHurt(entity, level, source, adjustedAmount);

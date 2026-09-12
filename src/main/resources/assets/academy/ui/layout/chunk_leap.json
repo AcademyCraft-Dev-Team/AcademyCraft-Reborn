@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "root": {
+    "type": "frame_layout",
+    "name": "layout_root",
+    "layout": {
+      "width_mode": "MATCH_PARENT",
+      "height_mode": "MATCH_PARENT"
+    },
+    "children": [
+      {
+        "type": "blend_quad",
+        "name": "panel_background",
+        "layout": {
+          "width_mode": "MATCH_PARENT",
+          "height_mode": "MATCH_PARENT",
+          "margin_left": 4,
+          "margin_top": 4,
+          "margin_right": 4,
+          "margin_bottom": 4
+        },
+        "common": {
+          "alpha": 0.12
+        },
+        "props": {
+          "draw_line": false,
+          "red": 0,
+          "green": 0,
+          "blue": 0
+        }
+      },
+      {
+        "type": "fill",
+        "name": "header_divider",
+        "layout": {
+          "width_mode": "MATCH_PARENT",
+          "height_mode": "FIXED",
+          "height": 1,
+          "margin_left": 4,
+          "margin_top": 26,
+          "margin_right": 4
+        },
+        "props": {
+          "color": -9010978
+        }
+      },
+      {
+        "type": "empty",
+        "name": "map_canvas",
+        "layout": {
+          "width_mode": "MATCH_PARENT",
+          "height_mode": "MATCH_PARENT",
+          "margin_left": 8,
+          "margin_top": 30,
+          "margin_right": 216,
+          "margin_bottom": 34
+        }
+      },
+      {
+        "type": "empty",
+        "name": "info_panel",
+        "layout": {
+          "width_mode": "FIXED",
+          "height_mode": "MATCH_PARENT",
+          "width": 200,
+          "gravity": 21,
+          "margin_top": 30,
+          "margin_right": 8,
+          "margin_bottom": 34
+        }
+      }
+    ]
+  }
+}

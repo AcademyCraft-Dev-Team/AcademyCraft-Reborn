@@ -15,7 +15,6 @@ import org.academy.api.common.structure.BlockStructureKineticHandle;
 import org.academy.api.common.structure.BlockStructureKineticOptions;
 import org.academy.api.common.structure.BlockStructureKinetics;
 import org.academy.api.common.structure.BlockStructurePlacementPolicy;
-import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.skills.lv4.HighSpeedJet;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
@@ -84,8 +83,7 @@ public final class HighSpeedJetStructureService {
         var blockCount = structure.snapshot().blockCount();
         var powerCost = ProgramPowerScale.costMultiplier(request.power);
         var cpCost = (HighSpeedJet.activationCpCost(1)
-                + blockCount * 0.25f) * powerCost * costMultiplier
-                * AeromanipConfig.cpMultiplier(player, SkillNames.HIGH_SPEED_JET);
+                + blockCount * 0.25f) * powerCost * costMultiplier;
         var airCost = (HighSpeedJet.activationAirCost(1)
                 + blockCount * 0.5f) * powerCost;
         var started = new BlockStructureKineticHandle[1];
@@ -204,8 +202,8 @@ public final class HighSpeedJetStructureService {
                 || target instanceof BlockStructure
                 || !AeromanipTargeting.canAffectNegatively(player, target)) return;
         var blockCount = impact.structure().snapshot().blockCount();
-        var damage = impactDamage(blockCount, impact.closingSpeed(), power)
-                * AeromanipConfig.damageMultiplier(player, SkillNames.HIGH_SPEED_JET);
+        // The damage pipeline applies the skill's configured damage multiplier centrally.
+        var damage = impactDamage(blockCount, impact.closingSpeed(), power);
         var system = org.academy.api.server.ability.AbilitySystemServer.getSystem(player);
         damage *= system.getPlayerAbilityPowerMultiplier(player.getUUID())
                 * system.getPlayerDamageMultiplier(player.getUUID());

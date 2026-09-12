@@ -27,6 +27,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
+import org.academy.api.common.damage.DamageComposition;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
@@ -861,10 +862,21 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
             if (!entity.isAlive()) continue;
             if (entity instanceof LivingEntity living
                     && CtaFriendlyFireWhitelist.shouldProtect(player, living)) continue;
-            var baseDamage = entity instanceof LivingEntity living
-                    ? blockItemBaseDamage(rawDamage, availableCp, living.getMaxHealth())
-                    : blockItemBaseDamage(rawDamage, availableCp);
-            if (baseDamage > 0.0f) result.add(new BlockItemDamage(entity, baseDamage));
+            if (entity instanceof LivingEntity living) {
+                var maxHealthDamage = Math.max(0.0f, living.getMaxHealth())
+                        * BLOCK_ITEM_MAX_HEALTH_DAMAGE_RATIO;
+                var cpLimited = blockItemBaseDamage(rawDamage, availableCp);
+                var baseDamage = blockItemBaseDamage(rawDamage, availableCp, living.getMaxHealth());
+                // The hit is whichever term is greater; only the winning term may be declared as the
+                // percentage portion so the pipeline's plain damage multiplier skips it correctly.
+                var maxHealthPart = maxHealthDamage >= cpLimited ? maxHealthDamage : 0.0f;
+                if (baseDamage > 0.0f) {
+                    result.add(new BlockItemDamage(entity, baseDamage, maxHealthPart));
+                }
+                continue;
+            }
+            var baseDamage = blockItemBaseDamage(rawDamage, availableCp);
+            if (baseDamage > 0.0f) result.add(new BlockItemDamage(entity, baseDamage, 0.0f));
         }
         return List.copyOf(result);
     }
@@ -874,7 +886,8 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
         var source = SkillDamageSource.of(player, Skills.SELF_TELEPORT.get());
         for (var damage : damagePlan) {
             if (damage.target().isAlive()) {
-                damage.target().hurtServer(targets.level(), source, damage.baseDamage());
+                DamageComposition.hurt(damage.target(), targets.level(), source,
+                        damage.baseDamage(), damage.maxHealthPart());
             }
         }
     }
@@ -1008,6 +1021,6 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
     private record RemovedItem(ItemStack stack, Vec3 position) {
     }
 
-    private record BlockItemDamage(Entity target, float baseDamage) {
+    private record BlockItemDamage(Entity target, float baseDamage, float maxHealthPart) {
     }
 }

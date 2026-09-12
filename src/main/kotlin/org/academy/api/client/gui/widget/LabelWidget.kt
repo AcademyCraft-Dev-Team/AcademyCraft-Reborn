@@ -73,6 +73,21 @@ open class LabelWidget(text: String) : AbstractWidget() {
         return Mth.clamp(finalScale, 0.0f, 1.0f)
     }
 
+    /**
+     * 文本水平滚动偏移（跑马灯），向右为正方向；默认不滚动喵。
+     */
+    protected open val textScrollOffsetX: Float
+        get() = 0f
+
+    /**
+     * 文本绘制前的内容裁剪钩子（跑马灯裁剪超出控件范围的部分），默认不裁剪喵。
+     */
+    protected open fun beginTextClip(context: RenderContext) {
+    }
+
+    protected open fun endTextClip(context: RenderContext) {
+    }
+
     private fun ensureMeasured(text: String) {
         if (text != measuredText || baseFontSize != measuredFontSize) {
             measuredText = text
@@ -151,9 +166,14 @@ open class LabelWidget(text: String) : AbstractWidget() {
 
         var alignmentOffsetX = 0f
         val horizontalGravity = (lp.gravity shr Gravity.AXIS_X_SHIFT) and 0x7
-        if (horizontalGravity == Gravity.AXIS_SPECIFIED) alignmentOffsetX = (availableWidth - visualTextWidth) / 2.0f
-        else if ((horizontalGravity and Gravity.AXIS_PULL_AFTER) != 0) alignmentOffsetX =
-            availableWidth - visualTextWidth
+        if (visualTextWidth > availableWidth) {
+            // 溢出时锚定文本起点，超出的部分交给滚动偏移展示喵
+            alignmentOffsetX = 0f
+        } else if (horizontalGravity == Gravity.AXIS_SPECIFIED) {
+            alignmentOffsetX = (availableWidth - visualTextWidth) / 2.0f
+        } else if ((horizontalGravity and Gravity.AXIS_PULL_AFTER) != 0) {
+            alignmentOffsetX = availableWidth - visualTextWidth
+        }
 
         var alignmentOffsetY = 0f
         val verticalGravity = (lp.gravity shr Gravity.AXIS_Y_SHIFT) and 0x7
@@ -163,10 +183,11 @@ open class LabelWidget(text: String) : AbstractWidget() {
 
         context.pose().pushPose()
         context.drawOrder().push()
+        beginTextClip(context)
         run {
             context.drawOrder().advance()
             val textTopY = lp.paddingTop + alignmentOffsetY
-            context.pose().translate(lp.paddingLeft + alignmentOffsetX, textTopY)
+            context.pose().translate(lp.paddingLeft + alignmentOffsetX - textScrollOffsetX, textTopY)
             context.pose().scale(finalScale, finalScale)
 
             val finalAlpha = alpha * context.accumulatedAlpha
@@ -180,6 +201,7 @@ open class LabelWidget(text: String) : AbstractWidget() {
             lastFinalAlpha = finalAlpha
             for (command in drawCommands) context.submit(command)
         }
+        endTextClip(context)
         context.drawOrder().pop()
         context.pose().popPose()
     }

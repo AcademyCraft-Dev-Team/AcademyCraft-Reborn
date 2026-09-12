@@ -288,7 +288,7 @@ public class MagneticWeapon extends Skill {
             if (pendingAttack == null && attackCooldown <= 0
                     && player.level() instanceof ServerLevel level) {
                 var milestone = skill.getEffectiveProficiencyMilestone(player);
-                var radius = milestone >= 2 ? 20.0f : RADIUS;
+                var radius = skill.scaledRange(player, milestone >= 2 ? 20.0f : RADIUS);
                 if (milestone >= 3 && player.tickCount % 20 == 0 && interceptProjectile(level, stack)) {
                     syncData();
                     return;
@@ -318,7 +318,8 @@ public class MagneticWeapon extends Skill {
 
         private boolean interceptProjectile(ServerLevel level, ItemStack stack) {
             var look = player.getLookAngle();
-            var projectile = level.getEntitiesOfClass(Projectile.class, player.getBoundingBox().inflate(20.0),
+            var interceptRadius = Skills.MAGNETIC_WEAPON.get().scaledRange(player, 20.0f);
+            var projectile = level.getEntitiesOfClass(Projectile.class, player.getBoundingBox().inflate(interceptRadius),
                             shot -> shot.isAlive() && shot.getOwner() != player
                                     && shot.position().subtract(player.position()).dot(look) > 0.0
                                     && player.position().subtract(shot.position()).dot(shot.getDeltaMovement()) > 0.0)

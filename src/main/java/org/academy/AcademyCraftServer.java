@@ -18,13 +18,19 @@ import org.academy.internal.common.ability.mentalout.precision.PrecisionOperatio
 import org.academy.internal.common.ability.program.AbilityProgramManager;
 import org.academy.internal.common.ability.program.ServerProgramScheduler;
 import org.academy.internal.common.network.MusicSyncPackets;
+import org.academy.internal.common.network.MusicAccountPackets;
 import org.academy.internal.common.network.MagneticHookActionPacket;
+import org.academy.internal.server.music.MusicRoomManager;
+import org.academy.internal.server.music.ResolveService;
+import org.academy.internal.server.music.ServerJukeboxManager;
+import org.academy.internal.server.music.SharedAccountService;
 import org.academy.internal.common.network.PlayerLeftClickSwingPacket;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.config.GenericConfig;
+import org.academy.internal.server.config.MusicConfig;
 import org.academy.internal.server.config.DimensionEffectsConfig;
 import org.academy.internal.server.entity.SurvivalDefenseRuntime;
 import org.academy.internal.server.time.TemporalRuntime;
@@ -50,6 +56,7 @@ public final class AcademyCraftServer {
     private final AbilitySystemServer abilitySystemServer;
     private final AbilityConfig abilityConfig;
     private final GenericConfig genericConfig;
+    private final MusicConfig musicConfig;
     private final DimensionEffectsConfig dimensionEffectsConfig;
     private final TemporalRuntime temporalRuntime;
     private final MinecraftServer server;
@@ -75,11 +82,12 @@ public final class AcademyCraftServer {
 
         AcademyCraftConfig.registerTypeHandler(AbilityConfig.KEY, AbilityConfig.Action.INSTANCE);
         AcademyCraftConfig.registerTypeHandler(GenericConfig.KEY, GenericConfig.Action.INSTANCE);
+        AcademyCraftConfig.registerTypeHandler(MusicConfig.KEY, MusicConfig.Action.INSTANCE);
         abilityConfig = serverConfig.getConfig(AbilityConfig.KEY);
-        abilityConfig.skills
-                .computeIfAbsent("single_high_speed_electron_beam", _ -> new AbilityConfig.SkillSettings())
+        abilityConfig.seed("single_high_speed_electron_beam")
                 .floatMap.putIfAbsent("attackDelayTicks", 10.0f);
         genericConfig = serverConfig.getConfig(GenericConfig.KEY);
+        AbilitySystemServer.setDevMode(genericConfig.general.devMode);
         serverConfig.save();
 
         worldData = WorldData.getWorldData(worldDataFile);
@@ -91,6 +99,12 @@ public final class AcademyCraftServer {
         DestroyBlocksSetting.initServer();
         ProficiencySkillSettings.initServer();
         MusicSyncPackets.initServer();
+        musicConfig = serverConfig.getConfig(MusicConfig.KEY);
+        MusicRoomManager.initServer(server, musicConfig);
+        ServerJukeboxManager.initServer(server, musicConfig);
+        SharedAccountService.init(musicConfig);
+        ResolveService.init(musicConfig);
+        MusicAccountPackets.initServer();
         PlayerLeftClickSwingPacket.initServer();
         MagneticHookActionPacket.initServer();
         AbilityProgramManager.initServer();
@@ -115,6 +129,8 @@ public final class AcademyCraftServer {
         LOGGER.info("Server stopping. Performing final data saves...");
         instance.saveData();
         instance.serverConfig.save();
+        // 关服前落盘音乐室，避免重启后房间消失喵.
+        MusicRoomManager.saveState();
         AcademyProfiler.stopSampling();
         AcademyProfiler.stopZoneCapture();
         AcademyProfiler.unregisterThread(context.getRunningThread());
@@ -128,8 +144,22 @@ public final class AcademyCraftServer {
         return genericConfig;
     }
 
+    public MusicConfig getMusicConfig() {
+        return musicConfig;
+    }
+
     public DimensionEffectsConfig getDimensionEffectsConfig() {
         return dimensionEffectsConfig;
+    }
+
+    /**
+     * World-generation gate for the imag-phase lake feature. Worldgen runs on worker threads, so this
+     * reads the already-loaded server config instead of minting a new server instance.
+     */
+    public static boolean isImagPhaseGenerationEnabled(net.minecraft.server.level.ServerLevel level) {
+        if (level == null) return true;
+        var server = level.getServer().getAcademyCraftServer();
+        return server == null || server.getGenericConfig().worldgen.generateImagPhaseLakes;
     }
 
     public TemporalService getTemporalService() {
@@ -146,6 +176,8 @@ public final class AcademyCraftServer {
         var instance = server.getAcademyCraftServer();
         SurvivalDefenseRuntime.tickAll(server);
         ServerProgramScheduler.tick(server);
+        MusicRoomManager.tick(server);
+        ServerJukeboxManager.tick(server);
         long currentTick = server.getTickCount();
         if (currentTick - instance.lastSaveTick >= SAVE_INTERVAL_TICKS) {
             instance.lastSaveTick = currentTick;

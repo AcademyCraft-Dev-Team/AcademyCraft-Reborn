@@ -512,7 +512,8 @@ public final class Railgun extends Skill {
                 var profile = ammo.kind();
                 var beamRadius = 0.125f * profile.beamWidthMultiplier();
                 var railgunRay = new RailgunRay(EntityTypes.RAILGUN_RAY.get(), player.level());
-                var beamLength = profile.beamLength() * (proficiencyMilestone >= 2 ? 1.2f : 1.0f);
+                var beamLength = skill.scaledRange(player,
+                        profile.beamLength() * (proficiencyMilestone >= 2 ? 1.2f : 1.0f));
                 var endPos = startPos.add(lookDir.scale(beamLength));
                 railgunRay.setPos(startPos);
                 railgunRay.setYRot(player.getYRot());

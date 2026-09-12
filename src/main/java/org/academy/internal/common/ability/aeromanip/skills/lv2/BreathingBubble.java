@@ -29,7 +29,6 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
@@ -192,7 +191,7 @@ public final class BreathingBubble extends Skill {
                 return;
             }
             if (!system.ensurePermanentOccupation(player.getUUID(), skill.getMaintenanceCost(player)
-                    * AeromanipConfig.cpMultiplier(player, SkillNames.BREATHING_BUBBLE), skill)) {
+, skill)) {
                 player.sendSystemMessage(net.minecraft.network.chat.Component.translatable("message.academy.breathing_bubble.cp_required"));
                 return;
             }

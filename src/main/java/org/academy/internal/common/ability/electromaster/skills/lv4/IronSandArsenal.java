@@ -246,7 +246,8 @@ public class IronSandArsenal extends Skill {
                 var abilityPower = system.getPlayerAbilityPowerMultiplier(player.getUUID());
                 var multiplier = system.getPlayerDamageMultiplier(player.getUUID());
                 var milestone = skill.getEffectiveProficiencyMilestone(player);
-                var proximityRadius = milestone >= 2 ? PROXIMITY_RADIUS * 1.2 : PROXIMITY_RADIUS;
+                var proximityRadius = skill.scaledRange(player,
+                        milestone >= 2 ? PROXIMITY_RADIUS * 1.2 : PROXIMITY_RADIUS);
                 for (var target : level.getEntitiesOfClass(
                         LivingEntity.class,
                         player.getBoundingBox().inflate(proximityRadius),
@@ -290,7 +291,8 @@ public class IronSandArsenal extends Skill {
             var multiplier = system.getPlayerDamageMultiplier(player.getUUID());
             var source = SkillDamageSource.of(player, Skills.IRON_SAND_ARSENAL.get());
             var skill = Skills.IRON_SAND_ARSENAL.get();
-            var sweepRadius = skill.hasProficiencyMilestone(player, 2) ? SWEEP_RADIUS * 1.2 : SWEEP_RADIUS;
+            var sweepRadius = skill.scaledRange(player,
+                    skill.hasProficiencyMilestone(player, 2) ? SWEEP_RADIUS * 1.2 : SWEEP_RADIUS);
             var origin = player.position();
             var sweepArea = new HorizontalSweepArea(player.getBoundingBox(), sweepRadius);
             for (var target : ViewTargetScanner.scan(

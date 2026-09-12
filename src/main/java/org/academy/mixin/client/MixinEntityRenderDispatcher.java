@@ -4,6 +4,7 @@ import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.world.entity.Entity;
 import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
+import org.academy.internal.client.ability.teleport.ChunkLeapGodView;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -21,5 +22,9 @@ public abstract class MixinEntityRenderDispatcher {
             CallbackInfoReturnable<Boolean> cir
     ) {
         if (MentalIntrusionClientState.isHidden(entity)) cir.setReturnValue(false);
+        // God view looks down from outside the world; drawing the player from there is an obstruction.
+        if (ChunkLeapGodView.isActive() && entity == net.minecraft.client.Minecraft.getInstance().player) {
+            cir.setReturnValue(false);
+        }
     }
 }

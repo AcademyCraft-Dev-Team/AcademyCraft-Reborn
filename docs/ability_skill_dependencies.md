@@ -59,6 +59,7 @@
 | 5 | 防御传送 (`academy:defensive_teleport`) | `academy:quick_location_teleport` |
 | 5 | 高速闪现 (`academy:flashing`) | `academy:location_teleport` |
 | 5 | 空间切割 (`academy:spacial_excision`) | `academy:area_teleport_select` |
+| 5 | 区块跃迁 (`academy:chunk_leap`) | `academy:area_teleport_select` |
 
 ## 矢量操控 (`academy:accelerator`)
 

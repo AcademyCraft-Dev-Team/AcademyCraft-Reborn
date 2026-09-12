@@ -164,8 +164,8 @@ public final class SingleHighSpeedElectronBeam extends Skill {
         if (server == null || server.getAcademyCraftServer() == null) {
             return DEFAULT_ATTACK_DELAY_TICKS;
         }
-        var settings = server.getAcademyCraftServer().getAbilityConfig().skills
-                .get(SkillNames.SINGLE_HIGH_SPEED_ELECTRON_BEAM);
+        var settings = server.getAcademyCraftServer().getAbilityConfig()
+                .skillSettings(SkillNames.SINGLE_HIGH_SPEED_ELECTRON_BEAM);
         var configuredDelay = settings == null
                 ? DEFAULT_ATTACK_DELAY_TICKS
                 : settings.floatMap.getOrDefault(
@@ -259,7 +259,8 @@ public final class SingleHighSpeedElectronBeam extends Skill {
                         -Mth.sin(pitchRad) * beamDistance,
                         Mth.cos(yawRad) * Mth.cos(pitchRad) * beamDistance
                 ).add(randomOffsetX, randomOffsetY, randomOffsetZ);
-                var beamLength = context.milestone() >= 2 ? 60.0f : 50.0f;
+                var beamLength = Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get()
+                        .scaledRange(player, context.milestone() >= 2 ? 60.0f : 50.0f);
                 var aimPoint = findAimPoint(player, beamLength);
                 var lookDirection = player.getLookAngle();
                 var spawnPos = constrainRandomSpawnPosition(

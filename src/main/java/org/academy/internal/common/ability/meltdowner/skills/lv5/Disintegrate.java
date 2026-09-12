@@ -142,7 +142,8 @@ public class Disintegrate extends Skill {
                         var level = player.level();
                         cleanup(level.getGameTime());
                         var start = ContinuousBeam.mainHandOrigin(player, 0.2f);
-                        var range = context.milestone() >= 2 ? PRIMARY_RANGE * 1.2 : PRIMARY_RANGE;
+                        var range = Skills.DISINTEGRATE.get().scaledRange(player,
+                                context.milestone() >= 2 ? PRIMARY_RANGE * 1.2 : PRIMARY_RANGE);
                         var end = start.add(player.getLookAngle().scale(range));
                         var target = findFirstTarget(level, player, start, end);
                         if (target != null) {
@@ -163,9 +164,10 @@ public class Disintegrate extends Skill {
 
             var count = pending.stage() == 0 ? (pending.milestone() >= 2 ? 4 : 3) : 1;
             var center = killed.getBoundingBox().getCenter();
+            var scatterRadius = Skills.DISINTEGRATE.get().scaledRange(player, SCATTER_RADIUS);
             var targets = level.getEntitiesOfClass(
                             LivingEntity.class,
-                            new AABB(center, center).inflate(SCATTER_RADIUS),
+                            new AABB(center, center).inflate(scatterRadius),
                             target -> target != player && target != killed && target.isAlive()
                                     && MeltdownerTargeting.canAffectNegatively(player, target)
                                     && (!(target instanceof ServerPlayer serverPlayer)

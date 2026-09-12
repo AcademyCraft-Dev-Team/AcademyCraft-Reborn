@@ -181,7 +181,8 @@ public final class AeromanipDisplacementTracker {
                 || !Float.isFinite(baseDamage) || baseDamage <= 0.0f
                 || !AeromanipTargeting.canAffectNegatively(owner, target)) return false;
         var skill = Skills.TURBULENT_CAVITATION.get();
-        var damage = baseDamage * AeromanipConfig.damageMultiplier(owner, skill.getKey().getPath())
+        // The damage pipeline applies the skill's configured damage multiplier centrally.
+        var damage = baseDamage
                 * org.academy.api.server.ability.AbilitySystemServer.getSystem(owner).getPlayerDamageMultiplier(owner.getUUID());
         if (!Float.isFinite(damage) || damage <= 0.0f
                 || !SkillDamageUtil.applyDirect(owner.level(), target, SkillDamageSource.of(owner, skill), damage)) return false;

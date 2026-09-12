@@ -196,8 +196,7 @@ public final class AtmosphereShield extends Skill {
                 var system = AbilitySystemServer.getSystem(player);
                 enabled = player.isAlive() && !player.hasDisconnected() && system.ensurePermanentOccupation(
                         player.getUUID(),
-                        skill.getMaintenanceCost(player)
-                                * AeromanipConfig.cpMultiplier(player, SkillNames.ATMOSPHERE_SHIELD),
+                        skill.getMaintenanceCost(player),
                         skill
                 );
                 if (enabled) Server.start(player);
@@ -247,8 +246,7 @@ public final class AtmosphereShield extends Skill {
             if (skill.hasProficiencyMilestone(player, 3)) reduction = Math.min(0.5f, reduction + 0.1f);
             var prevented = event.getAmount() * reduction;
             var defenseCost = skill.adjustProficiencyCost(player, SkillProficiencyProfile.CostKind.DYNAMIC,
-                    Math.min(30.0f, 4.0f + prevented * 2.0f)
-                            * AeromanipConfig.cpMultiplier(player, SkillNames.ATMOSPHERE_SHIELD));
+                    Math.min(30.0f, 4.0f + prevented * 2.0f));
             if (!system.tryTimedOccupation(player.getUUID(),
                     defenseCost,
                     skill, 5)) return;

@@ -280,15 +280,16 @@ public final class VectorBlast extends Skill {
         }
 
         private static LivingEntity findControlTarget(ServerPlayer player, ServerLevel level) {
+            var controlRange = Skills.VECTOR_BLAST.get().scaledRange(player, CONTROL_RANGE);
             var origin = player.getEyePosition();
             var direction = player.getLookAngle().normalize();
-            var end = origin.add(direction.scale(CONTROL_RANGE));
+            var end = origin.add(direction.scale(controlRange));
             var hit = ProjectileUtil.getEntityHitResult(
                     level,
                     player,
                     origin,
                     end,
-                    player.getBoundingBox().expandTowards(direction.scale(CONTROL_RANGE)).inflate(1.25),
+                    player.getBoundingBox().expandTowards(direction.scale(controlRange)).inflate(1.25),
                     entity -> entity instanceof LivingEntity living
                             && living != player
                             && living.isAlive()
@@ -305,7 +306,8 @@ public final class VectorBlast extends Skill {
             var direction = player.getLookAngle();
             if (direction.lengthSqr() <= 1.0e-6) return;
             direction = direction.normalize();
-            var range = skill.hasProficiencyMilestone(player, 2) ? 72.0 : RANGE;
+            var range = skill.scaledRange(player,
+                    skill.hasProficiencyMilestone(player, 2) ? 72.0 : RANGE);
             var beamRadius = skill.hasProficiencyMilestone(player, 2) ? BEAM_RADIUS * 1.2 : BEAM_RADIUS;
             var end = origin.add(direction.scale(range));
 
@@ -339,7 +341,7 @@ public final class VectorBlast extends Skill {
             }
 
             if (skill.hasProficiencyMilestone(player, 3)) {
-                var blastArea = new AABB(end, end).inflate(3.0);
+                var blastArea = new AABB(end, end).inflate(skill.scaledRange(player, 3.0));
                 for (var target : level.getEntitiesOfClass(
                         LivingEntity.class,
                         blastArea,
@@ -356,10 +358,13 @@ public final class VectorBlast extends Skill {
 
         private static void fireAbyssBlast(ServerPlayer player, ServerLevel level, Vec3 origin,
                                            Vec3 direction, float damage, SkillDamageSource source) {
-            var end = origin.add(direction.scale(ABYSS_TARGET_RANGE));
+            var skill = Skills.VECTOR_BLAST.get();
+            var abyssTargetRange = skill.scaledRange(player, ABYSS_TARGET_RANGE);
+            var abyssRadius = skill.scaledRange(player, ABYSS_RADIUS);
+            var end = origin.add(direction.scale(abyssTargetRange));
             var entityHit = ProjectileUtil.getEntityHitResult(
                     level, player, origin, end,
-                    player.getBoundingBox().expandTowards(direction.scale(RANGE)).inflate(1.0),
+                    player.getBoundingBox().expandTowards(direction.scale(abyssTargetRange)).inflate(1.0),
                     entity -> entity instanceof LivingEntity living
                             && living != player
                             && living.isAlive(),
@@ -375,7 +380,7 @@ public final class VectorBlast extends Skill {
                 center = blockHit.getType() == HitResult.Type.MISS ? end : blockHit.getLocation();
             }
 
-            var area = new AABB(center, center).inflate(ABYSS_RADIUS);
+            var area = new AABB(center, center).inflate(abyssRadius);
             for (var target : level.getEntitiesOfClass(
                     LivingEntity.class, area, entity -> entity != player && entity.isAlive())) {
                 CTADamageUtil.applyCompositeDamage(

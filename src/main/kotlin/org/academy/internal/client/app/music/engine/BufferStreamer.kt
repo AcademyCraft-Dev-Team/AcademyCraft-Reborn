@@ -21,7 +21,8 @@ internal class BufferStreamer(
     private var seeking = false
     private var nextBufferIndex = 0
 
-    val isFinished: Boolean get() = streamReadFinished && alPlayer.queuedBufferCount == 0
+    val isFinished: Boolean
+        get() = StreamDrainPolicy.isFinished(streamReadFinished, alPlayer.queuedBufferCount)
 
     fun seek(frame: Long) {
         alPlayer.stop()
@@ -35,7 +36,7 @@ internal class BufferStreamer(
 
     fun update() {
         if (isFinished) return
-        if (!isPrimed) primeInitialBuffers() else if (alPlayer.isPlaying) streamNextBuffers()
+        if (!isPrimed) primeInitialBuffers() else streamNextBuffers()
     }
 
     private fun primeInitialBuffers() {
@@ -50,13 +51,19 @@ internal class BufferStreamer(
         }
     }
 
+    /**
+     * 回填已播完的缓冲。必须与播放状态解耦：缓冲播放完毕时音源会转为 STOPPED，
+     * 若只在 isPlaying 时回填，最后一个缓冲将永远留在队列里导致 queuedBufferCount 不归零、
+     * [isFinished] 永不成立，歌曲播完后也就无法自动切歌喵。
+     */
     private fun streamNextBuffers() {
-        repeat(alPlayer.processedBufferCount) {
+        while (alPlayer.processedBufferCount > 0) {
+            // 队列为空且流未读完说明解码暂时落后: 保留已入队缓冲继续播放，等有数据再回填，避免断音喵.
+            if (!StreamDrainPolicy.shouldDrain(decodedDataQueue.isEmpty(), streamReadFinished)) break
             val bufferId = alPlayer.unqueueSingleProcessedBuffer()
-            if (bufferId != 0) {
-                updateSampleOffset(bufferId)
-                feedBuffer(bufferId)
-            }
+            if (bufferId == 0) break
+            updateSampleOffset(bufferId)
+            feedBuffer(bufferId)
         }
     }
 

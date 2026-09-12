@@ -3,6 +3,7 @@ package org.academy.internal.client.app.music.backend
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import net.minecraft.client.Minecraft
+import net.minecraft.resources.Identifier
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.loading.FMLPaths
 import net.neoforged.neoforge.common.NeoForge
@@ -15,11 +16,13 @@ import org.academy.internal.client.app.music.data.MusicSource
 import org.academy.internal.client.app.music.netease.NeteaseAudioCache
 import org.academy.internal.client.app.music.netease.NeteaseCredentialManager
 import org.academy.internal.client.app.music.netease.NeteaseLoginService
-import org.academy.internal.client.app.music.netease.NeteaseMusicService
 import org.academy.internal.client.app.music.qq.QqAudioCache
 import org.academy.internal.client.app.music.qq.QqCredentialManager
 import org.academy.internal.client.app.music.qq.QqLoginService
-import org.academy.internal.client.app.music.qq.QqMusicService
+import org.academy.internal.common.music.provider.AudioFormat
+import org.academy.internal.common.music.provider.HttpUtil
+import org.academy.internal.common.music.provider.MusicProviders
+import org.academy.internal.common.music.provider.ProviderCredential
 import org.academy.internal.common.network.MusicSyncPackets
 import org.misaka.MisakaNetworkClient
 import org.misaka.api.common.network.annotation.SubscribePacket
@@ -114,7 +117,11 @@ object OnlineMusicManager {
         NeoForge.EVENT_BUS.register(this)
         QqCredentialManager.init()
         NeteaseCredentialManager.init()
-        MisakaNetworkClient.NETWORK_MANAGER.register(OnlineMusicManager::class.java)
+        // register(Class) 只会注册静态方法，object 的 @SubscribePacket 是实例方法，必须传实例喵
+        MisakaNetworkClient.NETWORK_MANAGER.register(OnlineMusicManager)
+        org.academy.internal.client.app.music.session.RoomSessionController.init()
+        org.academy.internal.client.app.music.session.JukeboxSessionController.init()
+        org.academy.internal.client.app.music.session.SharedAccountClient.init()
         loadPlaylist()
     }
 
@@ -137,22 +144,17 @@ object OnlineMusicManager {
         searchResults = emptyList()
         bumpRevision()
         CompletableFuture.supplyAsync({
-            when (provider) {
-                Provider.QQ -> QqMusicService.search(normalized).map {
-                    SearchEntry(provider, it.id(), it.title(), it.singer(), 0, it.vip())
-                }
-
-                Provider.NETEASE -> NeteaseMusicService.search(normalized).map {
-                    SearchEntry(
-                        provider,
-                        it.id(),
-                        it.title(),
-                        it.artist(),
-                        it.durationSeconds(),
-                        it.isVip,
-                        it.picUrl()
-                    )
-                }
+            val service = MusicProviders.byName(provider.storageName).orElseThrow()
+            service.search(normalized, playerCredential(provider)).map {
+                SearchEntry(
+                    provider,
+                    it.trackId,
+                    it.title,
+                    it.artist,
+                    it.durationSeconds,
+                    it.vip,
+                    it.artworkUrl
+                )
             }
         }, AcademyCraft.executorService).whenComplete { results, throwable ->
             Minecraft.getInstance().execute {
@@ -167,6 +169,25 @@ object OnlineMusicManager {
                 bumpRevision()
             }
         }
+    }
+
+    /**
+     * 收藏服务器歌单/共享播放中的曲目到个人播放列表喵。
+     */
+    fun addSharedEntry(entry: org.academy.internal.common.music.SharedTrackEntry) {
+        val provider = providerByName(entry.provider()) ?: return
+        add(
+            SearchEntry(
+                provider,
+                entry.trackId(),
+                entry.title(),
+                entry.artist(),
+                entry.durationSeconds(),
+                entry.vip(),
+                entry.artworkUrl()
+            ),
+            false
+        )
     }
 
     fun add(entry: SearchEntry, playNow: Boolean = false) {
@@ -206,6 +227,14 @@ object OnlineMusicManager {
 
     fun onPlayError(message: String) {
         status = "播放失败：$message"
+        bumpRevision()
+    }
+
+    /**
+     * 在音乐播放器状态行展示一条提示（复用现有状态文本通道）喵。
+     */
+    fun notifyStatus(message: String) {
+        status = message
         bumpRevision()
     }
 
@@ -437,6 +466,98 @@ object OnlineMusicManager {
     private fun cache(provider: Provider, id: String): CompletableFuture<ByteBuffer> = when (provider) {
         Provider.QQ -> QqAudioCache.ensureCachedAsync(id)
         Provider.NETEASE -> NeteaseAudioCache.ensureCachedAsync(id)
+    }
+
+    fun providerByName(name: String): Provider? =
+        Provider.entries.firstOrNull { it.storageName == name }
+
+    fun ensureCached(provider: Provider, id: String): CompletableFuture<ByteBuffer> = cache(provider, id)
+
+    /**
+     * 播放回退链：先走玩家本地凭证缓存；失败（VIP/无权限）且服务器开启共享账号时，
+     * 经服务器解析代理拿直链下载并收录缓存；共享账号不可用时优先报本地失败原因喵。
+     */
+    fun ensurePlayable(provider: Provider, id: String): CompletableFuture<ByteBuffer> {
+        return cache(provider, id).exceptionallyCompose { localFailure ->
+            resolveViaServer(provider, id).exceptionally { _ -> throw localFailure }
+        }
+    }
+
+    private fun resolveViaServer(provider: Provider, id: String): CompletableFuture<ByteBuffer> {
+        return org.academy.internal.client.app.music.session.SharedAccountClient
+            .resolveTrack(provider.storageName, id)
+            .thenApplyAsync({ urls ->
+                if (urls.isEmpty()) throw IOException("resolve:no_url")
+                val api = MusicProviders.byName(provider.storageName).orElseThrow()
+                var failure: Exception? = null
+                for (url in urls) {
+                    try {
+                        val bytes = HttpUtil.downloadBytes(url, api.userAgent(), api.referer(), 15000, 30000)
+                        if (!AudioFormat.detect(bytes).isSupported) {
+                            throw IOException("服务器解析返回不支持的音频格式")
+                        }
+                        return@thenApplyAsync when (provider) {
+                            Provider.QQ -> QqAudioCache.acceptServerResolved(id, bytes)
+                            Provider.NETEASE -> NeteaseAudioCache.acceptServerResolved(id, bytes)
+                        }.join()
+                    } catch (exception: Exception) {
+                        failure = exception
+                    }
+                }
+                throw failure ?: IOException("resolve:download_failed")
+            }, AcademyCraft.executorService)
+    }
+
+    /**
+     * 将共享曲目描述转换为可播放的 MusicInfo（懒加载缓存源，带共享账号回退），供共享播放会话使用喵。
+     * 资源包曲目（provider=local）直接按资源定位符解析，无需下载。
+     */
+    fun toMusicInfo(entry: org.academy.internal.common.music.SharedTrackEntry): MusicInfo? {
+        if (entry.provider() == "local") {
+            val location = runCatching { Identifier.parse(entry.trackId()) }.getOrNull() ?: return null
+            return MusicInfo(
+                R.textures.gui.app.music.icon,
+                MusicSource.fromIdentifier(location),
+                entry.title(),
+                entry.artist(),
+                "local",
+                entry.trackId(),
+                entry.durationSeconds()
+            )
+        }
+        val provider = providerByName(entry.provider()) ?: return null
+        val source = MusicSource.fromSupplier {
+            try {
+                ensurePlayable(provider, entry.trackId()).join().duplicate()
+            } catch (exception: Exception) {
+                throw IOException(rootMessage(exception))
+            }
+        }
+        return MusicInfo(
+            R.textures.gui.app.music.icon,
+            source,
+            entry.title(),
+            entry.artist(),
+            entry.provider(),
+            entry.trackId(),
+            entry.durationSeconds(),
+            entry.vip(),
+            entry.artworkUrl()
+        )
+    }
+
+    private fun playerCredential(provider: Provider): ProviderCredential = when (provider) {
+        Provider.QQ -> {
+            val credential = QqCredentialManager.getCredential()
+            if (credential != null && credential.musicId.isNotBlank() && credential.musicKey.isNotBlank()) {
+                val expiresAt = if (credential.keyExpiresIn > 0) {
+                    credential.musicKeyCreateTime + credential.keyExpiresIn
+                } else 0L
+                ProviderCredential.ofQq(credential.musicId, credential.musicKey, expiresAt)
+            } else ProviderCredential.ANONYMOUS
+        }
+
+        Provider.NETEASE -> ProviderCredential.fromCookieSupplier(NeteaseCredentialManager::getEffectiveCookie)
     }
 
     private fun createMusicInfo(track: StoredTrack): MusicInfo {

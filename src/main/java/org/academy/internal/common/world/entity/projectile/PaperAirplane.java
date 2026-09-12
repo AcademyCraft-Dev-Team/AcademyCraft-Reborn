@@ -18,9 +18,7 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
 import org.academy.internal.common.world.entity.EntityTypes;
@@ -122,8 +120,8 @@ public final class PaperAirplane extends AbstractArrow implements ItemSupplier {
             var booster = boosterUuid == null ? null : serverLevel.getServer()
                     .getPlayerList().getPlayer(boosterUuid);
             if (booster != null && AeromanipTargeting.canAffectNegatively(booster, target)) {
+                // The damage pipeline applies the skill's configured damage multiplier centrally.
                 var damage = BOOSTED_DAMAGE
-                        * AeromanipConfig.damageMultiplier(booster, SkillNames.AIRFLOW_JET)
                         * AbilitySystemServer.getSystem(booster)
                         .getPlayerDamageMultiplier(booster.getUUID());
                 target.hurtServer(serverLevel,

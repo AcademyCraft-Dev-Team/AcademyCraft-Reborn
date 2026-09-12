@@ -311,7 +311,7 @@ public final class ScatterBomb extends Skill {
                     beam.setAttackDelayTicks(
                             SingleHighSpeedElectronBeam.getConfiguredAttackDelayTicks(player));
                     beam.setHeldCharge(true);
-                    beam.setBeamLength(BEAM_LENGTH);
+                    beam.setBeamLength(Skills.SCATTER_BOMB.get().scaledRange(player, BEAM_LENGTH));
                     beams.add(beam);
                     position(player, beam, beams.size() - 1);
                     level.addFreshEntity(beam);
@@ -343,8 +343,9 @@ public final class ScatterBomb extends Skill {
 
             private void retargetMarked(ServerPlayer player, HighSpeedElectronBeam beam) {
                 var endpoint = beam.position().add(beam.getLookAngle().scale(BEAM_LENGTH));
+                var retargetRadius = Skills.SCATTER_BOMB.get().scaledRange(player, 8.0f);
                 var target = level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
-                                new net.minecraft.world.phys.AABB(endpoint, endpoint).inflate(8.0),
+                                new net.minecraft.world.phys.AABB(endpoint, endpoint).inflate(retargetRadius),
                                 living -> living.isAlive()
                                         && MeltdownerTargeting.canAffectNegatively(player, living)
                                         && org.academy.internal.common.ability.meltdowner.skills.lv1.RadiationIntensify

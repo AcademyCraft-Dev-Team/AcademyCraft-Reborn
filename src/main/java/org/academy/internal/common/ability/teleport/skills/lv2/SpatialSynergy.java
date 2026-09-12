@@ -118,7 +118,7 @@ public class SpatialSynergy extends Skill {
             if (!Skills.SPATIAL_SYNERGY.get().isEnabled(owner)) return;
             var skill = Skills.SPATIAL_SYNERGY.get();
             var milestone = skill.getEffectiveProficiencyMilestone(owner);
-            var radius = milestone >= 2 ? 6.0f : RADIUS;
+            var radius = skill.scaledRange(owner, milestone >= 2 ? 6.0f : RADIUS);
             var origin = owner.position();
             var nearby = owner.level().getEntitiesOfClass(
                     ServerPlayer.class,

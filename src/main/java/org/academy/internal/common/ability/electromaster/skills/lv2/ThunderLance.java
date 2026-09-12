@@ -164,7 +164,8 @@ public class ThunderLance extends Skill {
             var level = player.level();
             var look = player.getLookAngle();
             var handPos = calculateHandPosition(player.position(), look);
-            var targetPos = player.getEyePosition().add(look.scale(milestone >= 2 ? 40.0 : QUICK_RANGE));
+            var targetPos = player.getEyePosition().add(look.scale(Skills.THUNDER_LANCE.get()
+                    .scaledRange(player, milestone >= 2 ? 40.0 : QUICK_RANGE)));
 
             var system = AbilitySystemServer.getSystem(player);
             var source = SkillDamageSource.of(player, Skills.THUNDER_LANCE.get());
@@ -211,8 +212,9 @@ public class ThunderLance extends Skill {
             var origin = hits.stream().filter(LivingEntity.class::isInstance)
                     .map(LivingEntity.class::cast).findFirst().orElse(null);
             if (origin == null) return;
+            var chainRadius = Skills.THUNDER_LANCE.get().scaledRange(player, 6.0f);
             var target = level.getEntitiesOfClass(LivingEntity.class,
-                            origin.getBoundingBox().inflate(6.0), candidate -> candidate != player
+                            origin.getBoundingBox().inflate(chainRadius), candidate -> candidate != player
                                     && !hits.contains(candidate) && candidate.isAlive()
                                     && !TeamRelations.areAllied(player, candidate)
                                     && !PvpSetting.shouldPrevent(player, candidate))

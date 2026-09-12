@@ -196,8 +196,7 @@ public final class Flight extends Skill {
             if (enabled) {
                 enabled = AbilitySystemServer.getSystem(player).ensurePermanentOccupation(
                         player.getUUID(),
-                        skill.getMaintenanceCost(player)
-                                * AeromanipConfig.cpMultiplier(player, SkillNames.FLIGHT),
+                        skill.getMaintenanceCost(player),
                         skill);
             }
             if (enabled) {

@@ -36,6 +36,7 @@ import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.DamageComposition;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -79,6 +80,7 @@ public final class PlatinumWing extends Skill {
                 .energyCost(100_000)
                 .passive()
                 .initiallyDisabled()
+                .hidden()
                 .maintenanceCost(160)
                 .iterationTicks(10)
                 .maxStacks(NO_STACK_LIMIT)
@@ -251,11 +253,11 @@ public final class PlatinumWing extends Skill {
                 var damage = trueMaxHealth * 0.15f
                         * AbilitySystemServer.getSystem(player)
                         .getPlayerDamageMultiplier(player.getUUID());
-                SkillDamageUtil.applyVerifiedTrueHealth(
-                        living,
-                        SkillDamageSource.of(player, skill, DamageTypes.VEC),
-                        damage
-                );
+                var bossSource = SkillDamageSource.of(player, skill, DamageTypes.VEC);
+                // Declare the max-health portion so the pipeline's plain damage multiplier skips it.
+                DamageComposition.withMaximumHealthPart(
+                        living, bossSource, damage,
+                        () -> SkillDamageUtil.applyVerifiedTrueHealth(living, bossSource, damage));
                 level.playSound(null, target, SoundEvents.PLAYER_ATTACK_CRIT,
                         SoundSource.PLAYERS, 1.0f, 0.7f);
                 return;
@@ -290,7 +292,12 @@ public final class PlatinumWing extends Skill {
                     Skills.PLATINUM_WING.get(),
                     DamageTypes.CTA
             );
-            new CTAEntityActuallyHurt(living).actuallyHurt(source, damage, true);
+            // Only the true-max-health term must escape the pipeline's plain damage multiplier.
+            var maxHealthPart = trueMaxHealth * 2.0f
+                    * AbilitySystemServer.getSystem(player).getPlayerDamageMultiplier(player.getUUID());
+            DamageComposition.withMaximumHealthPart(
+                    living, source, maxHealthPart,
+                    () -> new CTAEntityActuallyHurt(living).actuallyHurt(source, damage, true));
             level.playSound(null, target, SoundEvents.PLAYER_ATTACK_CRIT,
                     SoundSource.PLAYERS, 1.0f, 0.7f);
         }
@@ -315,9 +322,10 @@ public final class PlatinumWing extends Skill {
         }
 
         private static Entity pickTarget(ServerPlayer player) {
+            var reach = Skills.PLATINUM_WING.get().scaledRange(player, EXECUTION_REACH);
             var start = player.getEyePosition();
-            var end = start.add(player.getLookAngle().scale(EXECUTION_REACH));
-            var search = player.getBoundingBox().expandTowards(player.getLookAngle().scale(EXECUTION_REACH)).inflate(1.0);
+            var end = start.add(player.getLookAngle().scale(reach));
+            var search = player.getBoundingBox().expandTowards(player.getLookAngle().scale(reach)).inflate(1.0);
             var hit = ProjectileUtil.getEntityHitResult(
                     player.level(), player, start, end, search,
                     entity -> entity != player && entity.isAlive() && entity.isPickable(),

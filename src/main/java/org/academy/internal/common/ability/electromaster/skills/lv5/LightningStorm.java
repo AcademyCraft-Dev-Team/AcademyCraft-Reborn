@@ -228,7 +228,7 @@ public class LightningStorm extends Skill {
             cooldown = 3;
 
             strikesLeft--;
-            var radius = milestone >= 2 ? 10.0f : RADIUS;
+            var radius = skill.scaledRange(player, milestone >= 2 ? 10.0f : RADIUS);
             var r = (float) Math.sqrt(Math.random()) * radius;
             var theta = Math.random() * 2 * Math.PI;
             var strikeX = center.x + r * Math.cos(theta);
@@ -257,7 +257,8 @@ public class LightningStorm extends Skill {
                 VanillaLightningEffects.trigger(serverLevel, impact, player);
 
                 var targets = AreaEffectTargets.inSphere(serverLevel, impact,
-                        SkyStrikeProfile.LIGHTNING_STORM.ringEndRadius(), entity -> entity != player);
+                        skill.scaledRange(player, SkyStrikeProfile.LIGHTNING_STORM.ringEndRadius()),
+                        entity -> entity != player);
                 var system = AbilitySystemServer.getSystem(player);
                 var abilityPower = system.getPlayerAbilityPowerMultiplier(player.getUUID());
                 var damageMultiplier = system.getPlayerDamageMultiplier(player.getUUID());

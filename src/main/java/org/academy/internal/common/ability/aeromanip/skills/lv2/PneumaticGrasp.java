@@ -223,7 +223,7 @@ public final class PneumaticGrasp extends Skill {
                 activeTicks++;
                 if (activeTicks % 10 == 0 && !skill.executeContinuousWithResource(
                         player,
-                        _ -> 10.0f * AeromanipConfig.cpMultiplier(player, SkillNames.PNEUMATIC_GRASP),
+                        _ -> 10.0f,
                         _ -> Math.max(0.0f, AeromanipConfig.skillFloat(
                                 player, SkillNames.PNEUMATIC_GRASP,
                                 "compressedAirPerInterval", 2.0f)),
@@ -236,7 +236,7 @@ public final class PneumaticGrasp extends Skill {
                         && living.onGround() && activeTicks % 5 == 0
                         && !skill.executeContinuousWithResource(
                         player,
-                        _ -> 5.0f * AeromanipConfig.cpMultiplier(player, SkillNames.PNEUMATIC_GRASP),
+                        _ -> 5.0f,
                         _ -> 2.0f,
                         (_, _) -> { },
                         true)) {

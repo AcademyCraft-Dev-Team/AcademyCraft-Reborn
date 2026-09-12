@@ -15,6 +15,7 @@ import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 import net.minecraft.world.level.levelgen.feature.configurations.FeatureConfiguration;
 import net.minecraft.world.level.levelgen.synth.ImprovedNoise;
+import org.academy.AcademyCraftServer;
 import org.academy.internal.common.world.level.block.Blocks;
 
 import java.util.ArrayList;
@@ -30,6 +31,7 @@ public final class ImagPhaseLakeFeature extends Feature<ImagPhaseLakeFeature.Con
 
     @Override
     public boolean place(FeaturePlaceContext<Configuration> context) {
+        if (!AcademyCraftServer.isImagPhaseGenerationEnabled(context.level().getLevel())) return false;
         var level = context.level();
         var origin = context.origin();
         var random = context.random();

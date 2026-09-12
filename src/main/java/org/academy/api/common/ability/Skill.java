@@ -24,6 +24,7 @@ import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.common.util.L10nUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.ability.SkillTuning;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
@@ -90,6 +91,11 @@ public abstract class Skill {
     private final boolean isPassive;
     private final boolean outputAdjustableDamage;
     private final boolean initiallyEnabled;
+    /**
+     * Unfinished skills are excluded from every learning path and skill UI. Their registry entries
+     * stay intact so existing player data still loads and the skill can ship later unchanged.
+     */
+    private final boolean hidden;
     private final float cpCost;
     private final SkillProficiencyProfile proficiencyProfile;
     private final boolean explicitProficiencyProfile;
@@ -119,6 +125,7 @@ public abstract class Skill {
         isPassive = builder.isPassive;
         outputAdjustableDamage = builder.outputAdjustableDamage;
         initiallyEnabled = builder.initiallyEnabled;
+        hidden = builder.hidden;
         cpCost = builder.cpCost;
         proficiencyProfile = builder.proficiencyProfile;
         explicitProficiencyProfile = builder.explicitProficiencyProfile;
@@ -401,9 +408,11 @@ public abstract class Skill {
             system.toggleSkill(uuid, getKeyString());
             return;
         }
-        if (!hasSufficientCpToEnable(
+        // Affordability uses the same scaled value the charge path will apply.
+        var scaledCost = cost * SkillTuning.costMultiplier(player, this);
+        if (!Float.isFinite(scaledCost) || !hasSufficientCpToEnable(
                 system.getPlayerAvailableCP(uuid),
-                cost,
+                scaledCost,
                 system.getPlayerCalculationIntensity(uuid)
         )) return;
 
@@ -421,7 +430,8 @@ public abstract class Skill {
 
     public final boolean isEnabled(ServerPlayer player) {
         var system = AbilitySystemServer.getSystem(player);
-        return LearningHelper.isSkillAvailableForCategory(
+        return SkillTuning.isSkillEnabled(player, this)
+                && LearningHelper.isSkillAvailableForCategory(
                 system.getPlayerAbilityCategory(player.getUUID()), this
         ) && getRuntimeData(player).map(SkillData::isEnabled).orElse(false);
     }
@@ -552,6 +562,11 @@ public abstract class Skill {
         return scope;
     }
 
+    /** Hidden skills are unfinished content: never learnable, never shown in skill UIs. */
+    public boolean isHidden() {
+        return hidden;
+    }
+
     public int getEnergyCostToLearn() {
         return energyCostToLearn;
     }
@@ -604,6 +619,7 @@ public abstract class Skill {
         return cpCost;
     }
 
+    /** Base cast cost before the server's per-skill cost multiplier is applied at the cast choke point. */
     public final float getCpCost(ServerPlayer player) {
         return adjustProficiencyCost(
                 player,
@@ -646,10 +662,35 @@ public abstract class Skill {
     }
 
     public final int getIterationTicks(ServerPlayer player) {
-        return resolvedProficiencyProfile().resolveIterationTicks(
+        var resolved = resolvedProficiencyProfile().resolveIterationTicks(
                 getEffectiveProficiencyMilestone(player),
                 getIterationTicks(getLevel(player))
         );
+        return SkillTuning.iterationTicks(player, this, resolved);
+    }
+
+    /**
+     * Server-configured range scale for this skill (1.0 = the skill's own geometry). Skills apply it
+     * to their targeting range and area radius so range changes stay consistent with each other.
+     */
+    public final float getRangeMultiplier(ServerPlayer player) {
+        return SkillTuning.rangeMultiplier(player, this);
+    }
+
+    /** Scales one of this skill's own geometry values, e.g. {@code scaledRange(player, RANGE)}. */
+    public final double scaledRange(ServerPlayer player, double baseRange) {
+        var multiplier = getRangeMultiplier(player);
+        return Double.isFinite(baseRange) && Float.isFinite(multiplier)
+                ? baseRange * multiplier
+                : baseRange;
+    }
+
+    /** Float variant of {@link #scaledRange(ServerPlayer, double)}. */
+    public final float scaledRange(ServerPlayer player, float baseRange) {
+        var multiplier = getRangeMultiplier(player);
+        return Float.isFinite(baseRange) && Float.isFinite(multiplier)
+                ? baseRange * multiplier
+                : baseRange;
     }
 
     public final SkillProficiencyProfile getProficiencyProfile() {
@@ -757,6 +798,7 @@ public abstract class Skill {
         private boolean isPassive = false;
         private boolean outputAdjustableDamage = false;
         private boolean initiallyEnabled = true;
+        private boolean hidden = false;
         private float cpCost = 0;
         private SkillProficiencyProfile proficiencyProfile = SkillProficiencyProfile.NONE;
         private boolean explicitProficiencyProfile = false;
@@ -808,6 +850,15 @@ public abstract class Skill {
 
         public Builder initiallyDisabled() {
             initiallyEnabled = false;
+            return this;
+        }
+
+        /**
+         * Marks unfinished content: removes the skill from all skill UIs and rejects development
+         * requests, while leaving the registry entry available for later completion.
+         */
+        public Builder hidden() {
+            hidden = true;
             return this;
         }
 

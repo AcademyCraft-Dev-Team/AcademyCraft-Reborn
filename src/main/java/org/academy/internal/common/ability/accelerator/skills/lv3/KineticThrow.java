@@ -287,7 +287,8 @@ public final class KineticThrow extends Skill {
             }
             var inside = BlockStructureApi.isViewerInside(player, held.structure);
             if (!inside && BlockStructureApi.findLookedAt(
-                    player, TARGET_RANGE, structure -> structure == held.structure).isEmpty()) {
+                    player, Skills.KINETIC_THROW.get().scaledRange(player, TARGET_RANGE),
+                    structure -> structure == held.structure).isEmpty()) {
                 return;
             }
             launch(player, held);
@@ -454,14 +455,15 @@ public final class KineticThrow extends Skill {
             if (!(structure.asEntity().level() instanceof ServerLevel level)) return;
             var center = structure.asEntity().getBoundingBox().getCenter();
             var radius = explosionRadius(tier);
+            var targetRadius = Skills.KINETIC_THROW.get().scaledRange(player, (double) radius);
             var damage = structureDamage(structure.snapshot().blockCount());
-            var area = AABB.ofSize(center, radius * 2.0, radius * 2.0, radius * 2.0);
+            var area = AABB.ofSize(center, targetRadius * 2.0, targetRadius * 2.0, targetRadius * 2.0);
             for (var target : level.getEntitiesOfClass(
                     LivingEntity.class,
                     area,
                     target -> canAffect(player, target)
                             && target.getBoundingBox().getCenter().distanceToSqr(center)
-                            <= radius * radius)) {
+                            <= targetRadius * targetRadius)) {
                 if (target.hurtServer(
                         level,
                         SkillDamageSource.ofDirect(
@@ -515,8 +517,9 @@ public final class KineticThrow extends Skill {
         }
 
         private static BlockHitResult lookedAtBlock(ServerPlayer player) {
+            var range = Skills.KINETIC_THROW.get().scaledRange(player, TARGET_RANGE);
             var start = player.getEyePosition();
-            var end = start.add(player.getLookAngle().scale(TARGET_RANGE));
+            var end = start.add(player.getLookAngle().scale(range));
             var hit = player.level().clip(new ClipContext(
                     start,
                     end,
@@ -525,7 +528,7 @@ public final class KineticThrow extends Skill {
                     player
             ));
             return hit.getType() == HitResult.Type.BLOCK
-                    && start.distanceToSqr(hit.getLocation()) <= TARGET_RANGE * TARGET_RANGE
+                    && start.distanceToSqr(hit.getLocation()) <= range * range
                     ? hit
                     : null;
         }

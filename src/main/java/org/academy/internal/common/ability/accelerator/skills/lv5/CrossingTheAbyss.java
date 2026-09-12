@@ -67,6 +67,7 @@ public final class CrossingTheAbyss extends Skill {
                 .energyCost(100_000)
                 .passive()
                 .initiallyDisabled()
+                .hidden()
                 .maintenanceCost(RESERVED_CP)
                 .iterationTicks(20)
                 .maxStacks(NO_STACK_LIMIT)
@@ -367,9 +368,10 @@ public final class CrossingTheAbyss extends Skill {
             if (!isActive(attacker) || !skill.hasProficiencyMilestone(attacker, 3)) return;
             var target = event.getEntity();
             var level = target.level();
+            var spreadRadius = skill.scaledRange(attacker, 6.0f);
             for (var nearby : level.getEntitiesOfClass(
                     LivingEntity.class,
-                    target.getBoundingBox().inflate(6.0),
+                    target.getBoundingBox().inflate(spreadRadius),
                     entity -> entity != attacker && entity != target && entity.isAlive()
                             && !CtaFriendlyFireWhitelist.shouldProtect(attacker, entity))) {
                 TimedSkillEffectRuntime.put(

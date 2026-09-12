@@ -156,7 +156,8 @@ public final class ArcGenerate extends Skill {
                         .add(new Vec3(up).scale(-0.8))
                         .add(new Vec3(look).scale(0.35));
 
-                var length = LevelUtil.getValidViewDistance(player, context.milestone() >= 2 ? 12 : 10);
+                var length = LevelUtil.getValidViewDistance(player,
+                        Skills.ARC_GENERATE.get().scaledRange(player, context.milestone() >= 2 ? 12.0 : 10.0));
                 var targetPos = eyePos.add(player.getLookAngle().scale(length));
 
                 var radius = context.milestone() >= 2 ? 0.15f : 0.125f;
@@ -240,8 +241,9 @@ public final class ArcGenerate extends Skill {
             var origin = hit.stream().filter(LivingEntity.class::isInstance)
                     .map(LivingEntity.class::cast).findFirst().orElse(null);
             if (origin == null) return;
+            var chainRadius = Skills.ARC_GENERATE.get().scaledRange(player, 4.0f);
             var candidates = level.getEntitiesOfClass(LivingEntity.class,
-                    origin.getBoundingBox().inflate(4.0),
+                    origin.getBoundingBox().inflate(chainRadius),
                     target -> target != player && target.isAlive() && !hit.contains(target)
                             && !TeamRelations.areAllied(player, target)
                             && !PvpSetting.shouldPrevent(player, target));

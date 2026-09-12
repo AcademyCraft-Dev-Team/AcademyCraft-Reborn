@@ -30,6 +30,16 @@ class LearningHelperTest {
     }
 
     @Test
+    void hiddenSkillIsUnavailableEvenInItsOwnCategory() {
+        var category = new TestCategory("hidden");
+        var skill = new HiddenTestSkill(category);
+
+        assertTrue(skill.isHidden());
+        assertFalse(LearningHelper.isSkillVisible(skill));
+        assertFalse(LearningHelper.isSkillAvailableForCategory(category, skill));
+    }
+
+    @Test
     void abilityExperienceRequirementKeepsTheOneThousandBaseAndLevelFourFactor() {
         var category = new TestCategory("requirements");
         new LeveledTestSkill(category, AbilityLevel.LEVEL4);
@@ -53,6 +63,12 @@ class LearningHelperTest {
     private static final class LeveledTestSkill extends Skill {
         private LeveledTestSkill(AbilityCategory category, AbilityLevel level) {
             super(Builder.of(category).level(level));
+        }
+    }
+
+    private static final class HiddenTestSkill extends Skill {
+        private HiddenTestSkill(AbilityCategory category) {
+            super(Builder.of(category).hidden());
         }
     }
 

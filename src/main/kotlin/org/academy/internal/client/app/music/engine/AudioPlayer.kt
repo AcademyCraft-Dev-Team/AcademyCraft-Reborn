@@ -25,6 +25,15 @@ class AudioPlayer {
         createSession(audioData, startFrame)
     }
 
+    /**
+     * 从曲内指定秒起播，共享播放同步用喵。
+     */
+    fun playAtSeconds(audioData: ByteBuffer, startSeconds: Float) {
+        stop()
+        desiredState.set(PlaybackState.PLAYING)
+        session = StreamingPlaybackSession.createAtSeconds(audioData, startSeconds, desiredState, volume)
+    }
+
     fun pause() {
         if (desiredState.get() == PlaybackState.PLAYING) desiredState.set(PlaybackState.PAUSED)
     }

@@ -140,6 +140,7 @@ public final class R {
         public static final Identifier area_teleport_select_icon = academy("textures/ability/teleport/skill/area_teleport_select/icon.png");
         public static final Identifier flashing_icon = academy("textures/ability/teleport/skill/flashing/icon.png");
         public static final Identifier defensive_teleport_icon = academy("textures/ability/teleport/skill/defensive_teleport/icon.png");
+        public static final Identifier chunk_leap_icon = academy("textures/ability/teleport/skill/chunk_leap/icon.png");
         public static final Identifier teleport_cursor = academy("textures/ability/teleport/effect/teleport_cursor.png");
         public static final Identifier darkmatter_shaping_icon = academy("textures/ability/darkmatter/skill/darkmatter_shaping/icon.png");
         public static final Identifier darkmatter_disassemble_icon = academy("textures/ability/darkmatter/skill/darkmatter_disassemble/icon.png");
@@ -639,6 +640,8 @@ public final class R {
                 public static final Identifier logo_tech = academy("textures/gui/element/logo_tech.png");
                 public static final Identifier ui_gen = academy("textures/gui/element/ui_gen.png");
                 public static final Identifier ui_inventory = academy("textures/gui/element/ui_inventory.png");
+                /** White disc, tinted per entity category to draw map markers as small dots. */
+                public static final Identifier map_marker_dot = academy("textures/gui/map/marker_dot.png");
 
                 private element() {
                 }

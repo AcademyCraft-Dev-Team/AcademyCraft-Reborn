@@ -153,7 +153,7 @@ public class ElectricalContact extends Skill {
             if (player.level().getGameTime() % interval != 0) return;
 
             var level = player.level();
-            var radius = milestone >= 2 ? 3.0f : RADIUS;
+            var radius = skill.scaledRange(player, milestone >= 2 ? 3.0f : RADIUS);
             var box = player.getBoundingBox().inflate(radius);
             var targets = level.getEntitiesOfClass(LivingEntity.class, box,
                     e -> e != player && e.isAlive() && !e.isSpectator()
@@ -218,7 +218,8 @@ public class ElectricalContact extends Skill {
             if (TimedSkillEffectRuntime.consume(attacker.getUUID(), target.getUUID(), markSkill,
                     "conductive", attacker.level().getGameTime()).isEmpty()) return;
             if (!(attacker.level() instanceof ServerLevel level)) return;
-            var chained = level.getEntitiesOfClass(LivingEntity.class, target.getBoundingBox().inflate(4.0),
+            var chained = level.getEntitiesOfClass(LivingEntity.class,
+                            target.getBoundingBox().inflate(markSkill.scaledRange(attacker, 4.0f)),
                             candidate -> candidate != target && candidate != attacker && candidate.isAlive()
                                     && !TeamRelations.areAllied(attacker, candidate)
                                     && !PvpSetting.shouldPrevent(attacker, candidate))

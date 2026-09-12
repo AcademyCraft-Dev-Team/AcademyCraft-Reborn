@@ -194,7 +194,7 @@ public final class RejectingWind extends Skill {
             var skill = Skills.REJECTING_WIND.get();
             return skill.executeActiveWithResource(
                     player,
-                    _ -> 25.0f * AeromanipConfig.cpMultiplier(player, SkillNames.REJECTING_WIND),
+                    _ -> 25.0f,
                     _ -> 24.0f,
                     (_, _) -> cast(player, skill, AeromanipChargeTier.INSTANT));
         }
@@ -219,7 +219,7 @@ public final class RejectingWind extends Skill {
                 };
                 skill.executeActiveWithResource(
                         player,
-                        _ -> cp * AeromanipConfig.cpMultiplier(player, SkillNames.REJECTING_WIND),
+                        _ -> cp,
                         _ -> air,
                         (_, _) -> cast(player, skill, tier));
             }
@@ -251,9 +251,8 @@ public final class RejectingWind extends Skill {
             var system = AbilitySystemServer.getSystem(player);
             var power = system.getPlayerAbilityPowerMultiplier(player.getUUID())
                     * system.getPlayerDamageMultiplier(player.getUUID());
-            var damage = baseDamage(tier)
-                    * AeromanipConfig.damageMultiplier(player, SkillNames.REJECTING_WIND)
-                    * power;
+            // The damage pipeline applies the skill's configured damage multiplier centrally.
+            var damage = baseDamage(tier) * power;
             var center = player.getBoundingBox().getCenter();
             var targets = level.getEntities(
                     player,

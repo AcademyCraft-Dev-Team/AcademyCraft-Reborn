@@ -136,6 +136,7 @@ public final class AcademyCraftCommand {
                 )
                 .then(ProfileCommands.register())
                 .then(VectorCompatibilityCommands.register())
+                .then(MusicCommand.register())
         );
         AcademyTeamsCommand.register(dispatcher);
     }

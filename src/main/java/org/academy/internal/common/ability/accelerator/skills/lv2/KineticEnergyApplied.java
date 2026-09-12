@@ -436,12 +436,13 @@ public class KineticEnergyApplied extends Skill {
             var radius = Skills.KINETIC_ENERGY_APPLIED.get().hasProficiencyMilestone(player, 2)
                     ? blockRadius * 1.15f
                     : blockRadius;
+            var targetRadius = Skills.KINETIC_ENERGY_APPLIED.get().scaledRange(player, radius);
             var damage = getImpactDamage(
                     impactLevel,
                     system.getPlayerAbilityPowerMultiplier(player.getUUID()),
                     system.getPlayerDamageMultiplier(player.getUUID())
             );
-            applyAreaDamage(level, player, center, direction, radius, damage, impactLevel);
+            applyAreaDamage(level, player, center, direction, targetRadius, damage, impactLevel);
             spawnShockwave(level, player, center, direction, radius, impactLevel);
             if (canDestroyBlocks(player)) {
                 enqueueBreakTask(level, player, center, blockRadius, direction, impactLevel, priorityBlock);
