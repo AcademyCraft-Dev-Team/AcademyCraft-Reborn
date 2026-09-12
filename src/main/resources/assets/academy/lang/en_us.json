@@ -372,6 +372,7 @@
   "chunk_leap.reason.invalid_region": "Invalid region",
   "chunk_leap.reason.no_vertical_overlap": "The two dimensions share no exchangeable height range",
   "chunk_leap.reason.overlap": "Regions overlap",
+  "chunk_leap.reason.relight_failed": "Chunk lighting could not be rebuilt",
   "chunk_leap.reason.too_large": "Region too large",
   "chunk_leap.region.count": "%s chunks (%s×%s)",
   "chunk_leap.region.none": "Not selected",

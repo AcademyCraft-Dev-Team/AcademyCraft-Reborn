@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.teleport;
 
 import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.SectionPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
@@ -9,6 +10,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.LevelChunkSection;
@@ -21,6 +23,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Atomic swap of one chunk pair for 区块跃迁, same-dimension or across dimensions.
@@ -47,7 +50,7 @@ final class ChunkRegionSwap {
      * <p>Carries the moved players themselves, not just a count: a player who rode a chunk into new terrain
      * needs its client resynced afterwards, and only the swap knows who that was.
      */
-    record Result(int entitiesMoved, List<ServerPlayer> playersMoved) {
+    record Result(int entitiesMoved, List<ServerPlayer> playersMoved, CompletableFuture<Void> lightingTask) {
         boolean movedPlayers() {
             return !playersMoved.isEmpty();
         }
@@ -62,7 +65,7 @@ final class ChunkRegionSwap {
      */
     static Result apply(ServerLevel level, LevelChunk chunkA, LevelChunk chunkB,
                         ChunkLeapRegion regionA, ChunkLeapRegion regionB, boolean movePlayers) {
-        if (chunkA == chunkB) return new Result(0, List.of());
+        if (chunkA == chunkB) return new Result(0, List.of(), CompletableFuture.completedFuture(null));
         var deltaAtoB = new BlockPos(
                 (regionB.minChunkX() - regionA.minChunkX()) << 4, 0,
                 (regionB.minChunkZ() - regionA.minChunkZ()) << 4);
@@ -81,7 +84,7 @@ final class ChunkRegionSwap {
                                     ServerLevel levelB, LevelChunk chunkB,
                                     ChunkLeapRegion regionA, ChunkLeapRegion regionB, boolean movePlayers) {
         var band = ChunkVerticalBand.overlap(levelA, levelB);
-        if (band.isEmpty()) return new Result(0, List.of());
+        if (band.isEmpty()) return new Result(0, List.of(), CompletableFuture.completedFuture(null));
         var deltaAtoB = new BlockPos(
                 (regionB.minChunkX() - regionA.minChunkX()) << 4, 0,
                 (regionB.minChunkZ() - regionA.minChunkZ()) << 4);
@@ -128,18 +131,14 @@ final class ChunkRegionSwap {
         restoreBlockEntities(chunkB, levelB, blockEntitiesA, deltaAtoB, band);
         restoreBlockEntities(chunkA, levelA, blockEntitiesB, deltaBtoA, band);
 
-        // 6. Refresh lighting immediately, and refresh the client view. Lighting is the one piece that
-        //    cannot be deferred: discarding a chunk's light data is what triggers a rebuild, and a chunk
-        //    left discarded while waiting for a budgeted queue renders pitch black. Heightmap priming — the
-        //    genuinely expensive part — is deferred by the caller instead, since it feeds spawn and map
-        //    logic rather than anything the player sees.
-        refreshLighting(levelA, chunkA);
+        // 6. Reset and rebuild lighting through the vanilla asynchronous pipeline. Direct section exchange
+        //    bypasses the per-block notifications that normally keep the light engine's empty-section state
+        //    in sync, so the old storage must be cleared before the new section layout is registered.
+        var lightingA = refreshLighting(levelA, chunkA);
+        CompletableFuture<Void> lightingTask = lightingA;
         if (!sameLevel || chunkA != chunkB) {
-            refreshLighting(sameLevel ? levelA : levelB, chunkB);
-        }
-        resend(levelA, chunkA);
-        if (!sameLevel || chunkA != chunkB) {
-            resend(sameLevel ? levelA : levelB, chunkB);
+            var lightingB = refreshLighting(sameLevel ? levelA : levelB, chunkB);
+            lightingTask = CompletableFuture.allOf(lightingA, lightingB);
         }
 
         // 7. Move entities, then players, so riders land on terrain that already exists.
@@ -161,7 +160,7 @@ final class ChunkRegionSwap {
         // 8. Mark dirty immediately so a crash cannot lose the swap; the deferred refresh re-saves too.
         chunkA.markUnsaved();
         if (!sameLevel || chunkA != chunkB) chunkB.markUnsaved();
-        return new Result(moved, List.copyOf(movedPlayers));
+        return new Result(moved, List.copyOf(movedPlayers), lightingTask);
     }
 
     /** How section payloads move between the two chunks. */
@@ -274,24 +273,35 @@ final class ChunkRegionSwap {
     /**
      * Recomputes lighting for one chunk whose contents just moved.
      *
-     * <p>Lighting cannot be deferred. {@code setLightEnabled(pos, false)} discards the light data of the
-     * chunk immediately, so a chunk discarded now but rebuilt later renders pitch black in the meantime —
-     * which is exactly why a large swap left both regions dark while the budgeted queue worked through
-     * them. This half is cheap: bookkeeping plus a rebuild request the light engine amortises on its own.
+     * <p>Direct section replacement bypasses the updates that tell the light engine whether a section is
+     * empty. Toggling {@code setLightEnabled} does not clear that state or its stored light layers, so later
+     * propagation can address a missing layer and crash a worker. This mirrors vanilla's chunk-status reset,
+     * then runs its normal initialize-and-light chain so section state and stored light are rebuilt together.
      *
-     * <p>Also refreshes the sky-light column heights, which the moved blocks invalidate.
+     * <p>The returned future completes only after the chunk is safe to send to clients.
      */
-    static void refreshLighting(ServerLevel level, LevelChunk chunk) {
+    static CompletableFuture<Void> refreshLighting(ServerLevel level, LevelChunk chunk) {
         chunk.initializeLightSources();
         chunk.setLightCorrect(false);
         var lightEngine = level.getChunkSource().getLightEngine();
         var pos = chunk.getPos();
-        lightEngine.retainData(pos, true);
-        // Dropping and re-enabling light discards the stale propagation and requests a rebuild, which
-        // vanilla then amortises over subsequent ticks instead of stalling this one.
+
+        lightEngine.retainData(pos, false);
         lightEngine.setLightEnabled(pos, false);
-        lightEngine.setLightEnabled(pos, true);
-        lightEngine.propagateLightSources(pos);
+        for (var sectionY = lightEngine.getMinLightSection();
+             sectionY < lightEngine.getMaxLightSection(); sectionY++) {
+            var sectionPos = SectionPos.of(pos, sectionY);
+            lightEngine.queueSectionData(LightLayer.BLOCK, sectionPos, null);
+            lightEngine.queueSectionData(LightLayer.SKY, sectionPos, null);
+        }
+        for (var sectionY = level.getMinSectionY(); sectionY <= level.getMaxSectionY(); sectionY++) {
+            lightEngine.updateSectionStatus(SectionPos.of(pos, sectionY), true);
+        }
+
+        return lightEngine.initializeLight(chunk, false)
+                .thenCompose(initialized -> lightEngine.lightChunk(initialized, false))
+                .thenAccept(ignored -> {
+                });
     }
 
     /**

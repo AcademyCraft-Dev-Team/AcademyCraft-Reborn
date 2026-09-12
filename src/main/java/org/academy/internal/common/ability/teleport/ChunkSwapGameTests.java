@@ -14,6 +14,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
@@ -62,12 +63,14 @@ public final class ChunkSwapGameTests {
                 new SwapTest(data(environment), SwapScenario.ROUND_TRIP));
         event.registerTest(AcademyCraft.academy("chunk_swap_section_byte_round_trip"),
                 new SwapTest(data(environment), SwapScenario.SECTION_BYTES));
+        event.registerTest(AcademyCraft.academy("chunk_swap_cross_dimension_relights_empty_section"),
+                new SwapTest(data(environment), SwapScenario.CROSS_DIMENSION_LIGHT));
     }
 
     private static TestData<Holder<TestEnvironmentDefinition<?>>> data(
             Holder<TestEnvironmentDefinition<?>> environment) {
         return new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
-                200, 0, true, Rotation.NONE, false, 1, 1, false, 16);
+                400, 0, true, Rotation.NONE, false, 1, 1, false, 16);
     }
 
     private enum SwapScenario {
@@ -80,7 +83,13 @@ public final class ChunkSwapGameTests {
          * section and read it back in place. That primitive needs a real level (its palette factory and
          * registry access), which is why it is verified here rather than in a unit test.
          */
-        SECTION_BYTES
+        SECTION_BYTES,
+        /**
+         * Swap an empty Overworld section with a lit, non-empty Nether section and wait for both chunks to
+         * finish the vanilla relight pipeline. This is the empty/non-empty transition that previously left
+         * light storage without a DataLayer and killed a light worker.
+         */
+        CROSS_DIMENSION_LIGHT
     }
 
     private static final class SwapTest extends GameTestInstance {
@@ -99,6 +108,10 @@ public final class ChunkSwapGameTests {
         @Override
         public void run(GameTestHelper helper) {
             var level = helper.getLevel();
+            if (scenario == SwapScenario.CROSS_DIMENSION_LIGHT) {
+                crossDimensionLight(helper, level);
+                return;
+            }
             var posA = new BlockPos(CHUNK_A_X << 4, 80, CHUNK_A_Z << 4);
             var posB = new BlockPos((CHUNK_A_X + 1) << 4, 80, CHUNK_A_Z << 4);
 
@@ -124,6 +137,88 @@ public final class ChunkSwapGameTests {
                     release(level);
                 }
             });
+        }
+
+        private void crossDimensionLight(GameTestHelper helper, ServerLevel overworld) {
+            var nether = overworld.getServer().getLevel(Level.NETHER);
+            if (nether == null) {
+                fail(helper, "the Nether must exist for a cross-dimension swap");
+                return;
+            }
+            var targetChunkX = CHUNK_A_X + 2;
+            overworld.setChunkForced(CHUNK_A_X, CHUNK_A_Z, true);
+            nether.setChunkForced(targetChunkX, CHUNK_A_Z, true);
+            helper.runAtTickTime(390, () -> releaseAcrossLevels(overworld, nether, targetChunkX));
+
+            helper.runAfterDelay(2, () -> {
+                var chunkA = overworld.getChunkSource().getChunkNow(CHUNK_A_X, CHUNK_A_Z);
+                var chunkB = nether.getChunkSource().getChunkNow(targetChunkX, CHUNK_A_Z);
+                if (chunkA == null || chunkB == null) {
+                    releaseAcrossLevels(overworld, nether, targetChunkX);
+                    fail(helper, "both cross-dimension chunks must be loaded before the swap");
+                    return;
+                }
+
+                var band = ChunkVerticalBand.overlap(overworld, nether);
+                var sectionY = Integer.MIN_VALUE;
+                for (var candidate = band.maxSectionY(); candidate >= band.minSectionY(); candidate--) {
+                    var indexA = ChunkVerticalBand.sectionIndex(overworld, candidate);
+                    var indexB = ChunkVerticalBand.sectionIndex(nether, candidate);
+                    if (indexA >= 0 && indexA < chunkA.getSections().length
+                            && indexB >= 0 && indexB < chunkB.getSections().length
+                            && chunkA.getSection(indexA).hasOnlyAir() && chunkB.getSection(indexB).hasOnlyAir()) {
+                        sectionY = candidate;
+                        break;
+                    }
+                }
+                if (sectionY == Integer.MIN_VALUE) {
+                    releaseAcrossLevels(overworld, nether, targetChunkX);
+                    fail(helper, "the test chunks must share an empty section");
+                    return;
+                }
+
+                var markerY = (sectionY << 4) + 8;
+                var sourceMarker = new BlockPos((CHUNK_A_X << 4) + 8, markerY, (CHUNK_A_Z << 4) + 8);
+                var targetMarker = new BlockPos((targetChunkX << 4) + 8, markerY, (CHUNK_A_Z << 4) + 8);
+                nether.setBlock(targetMarker, Blocks.GLOWSTONE.defaultBlockState(), 3);
+
+                var selectedSectionY = sectionY;
+                helper.runAfterDelay(10, () -> {
+                    helper.assertTrue(chunkA.getSection(ChunkVerticalBand.sectionIndex(overworld, selectedSectionY))
+                                    .hasOnlyAir(),
+                            "the source section must still be empty before the direct exchange");
+                    helper.assertFalse(chunkB.getSection(ChunkVerticalBand.sectionIndex(nether, selectedSectionY))
+                                    .hasOnlyAir(),
+                            "the glowstone must make the target section non-empty before the direct exchange");
+
+                    var regionA = ChunkLeapRegion.ofChunks(
+                            overworld.dimension(), CHUNK_A_X, CHUNK_A_Z, 1, 1);
+                    var regionB = ChunkLeapRegion.ofChunks(
+                            nether.dimension(), targetChunkX, CHUNK_A_Z, 1, 1);
+                    var result = ChunkRegionSwap.applyAcrossLevels(
+                            overworld, chunkA, nether, chunkB, regionA, regionB, false);
+
+                    helper.assertTrue(overworld.getBlockState(sourceMarker).is(Blocks.GLOWSTONE),
+                            "the non-empty Nether section must move into the empty Overworld section");
+                    helper.assertTrue(nether.getBlockState(targetMarker).isAir(),
+                            "the Nether target must receive the empty Overworld section");
+                    helper.succeedWhen(() -> {
+                        helper.assertTrue(result.lightingTask().isDone(),
+                                "both exchanged chunks must finish relighting");
+                        result.lightingTask().join();
+                        helper.assertTrue(chunkA.isLightCorrect(),
+                                "the relit Overworld chunk must be marked light-correct");
+                        helper.assertTrue(chunkB.isLightCorrect(),
+                                "the relit Nether chunk must be marked light-correct");
+                        releaseAcrossLevels(overworld, nether, targetChunkX);
+                    });
+                });
+            });
+        }
+
+        private static void releaseAcrossLevels(ServerLevel overworld, ServerLevel nether, int targetChunkX) {
+            overworld.setChunkForced(CHUNK_A_X, CHUNK_A_Z, false);
+            nether.setChunkForced(targetChunkX, CHUNK_A_Z, false);
         }
 
         private static void release(ServerLevel level) {
