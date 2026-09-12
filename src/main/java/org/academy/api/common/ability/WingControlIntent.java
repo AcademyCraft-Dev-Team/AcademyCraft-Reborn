@@ -1,7 +1,23 @@
 package org.academy.api.common.ability;
 
+import io.netty.buffer.ByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+
 /** Held flight input. Sequence/activation validation belongs to the owning server session. */
-public record WingControlIntent(int buttons, float yaw, float pitch) {
+public record WingControlIntent(int buttons, float yaw, float pitch, float remainingMomentum) {
+    public static final StreamCodec<ByteBuf, WingControlIntent> CODEC =
+            StreamCodec.of((buf, input) -> {
+                buf.writeByte(input.buttons());
+                buf.writeFloat(input.yaw());
+                buf.writeFloat(input.pitch());
+                buf.writeFloat(input.remainingMomentum());
+            }, buf -> new WingControlIntent(buf.readUnsignedByte(), buf.readFloat(), buf.readFloat(), buf.readFloat()));
+    public static final long HEARTBEAT_NANOS = 200_000_000L;
+    public static final long TIMEOUT_NANOS = 500_000_000L;
+
+    public WingControlIntent(int buttons, float yaw, float pitch) {
+        this(buttons, yaw, pitch, 1);
+    }
     public static final int FRONT = 1, BACK = 2, LEFT = 4, RIGHT = 8, BOOST = 16;
     public static final int ALL = FRONT | BACK | LEFT | RIGHT | BOOST;
     public WingControlIntent {
@@ -9,6 +25,7 @@ public record WingControlIntent(int buttons, float yaw, float pitch) {
             throw new IllegalArgumentException("Invalid wing control input");
         yaw = (float) Math.IEEEremainder(yaw, 360);
         pitch = Math.clamp(pitch, -90, 90);
+        remainingMomentum = WingFlightMotion.clampMomentum(remainingMomentum);
         if ((buttons & BOOST) != 0) buttons = BOOST;
         else {
             if ((buttons & (FRONT | BACK)) == (FRONT | BACK)) buttons &= ~(FRONT | BACK);
@@ -17,18 +34,19 @@ public record WingControlIntent(int buttons, float yaw, float pitch) {
     }
     public boolean has(int button) { return (buttons & button) != 0; }
 
-    /** Change-driven client sender with a four-tick heartbeat and wrap-safe heading comparison. */
+    /** Change-driven client sender with a real-time heartbeat (nanosecond timestamps) and wrap-safe heading comparison. */
     public static final class Sender {
         private WingControlIntent previous;
-        private long lastTick;
-        public boolean shouldSend(WingControlIntent input, long tick) {
-            if (previous != null && tick == lastTick) return false;
-            if (previous != null && tick >= lastTick && tick - lastTick < 4
+        private long lastNanos;
+        public boolean shouldSend(WingControlIntent input, long nowNanos) {
+            if (previous != null && nowNanos == lastNanos) return false;
+            if (previous != null && nowNanos >= lastNanos && nowNanos - lastNanos < HEARTBEAT_NANOS
                     && previous.buttons == input.buttons
+                    && previous.remainingMomentum == input.remainingMomentum
                     && Math.abs(Math.IEEEremainder(input.yaw - previous.yaw, 360)) < 1
                     && Math.abs(input.pitch - previous.pitch) < 1) return false;
             previous = input;
-            lastTick = tick;
+            lastNanos = nowNanos;
             return true;
         }
         public void reset() { previous = null; }
@@ -36,18 +54,18 @@ public record WingControlIntent(int buttons, float yaw, float pitch) {
 
     /** The server consumes the newest intention once per game tick, never once per packet. */
     public static final class Mailbox {
-        private long sequence = -1, receivedTick;
+        private long sequence = -1, receivedNanos;
         private WingControlIntent held;
-        public boolean accept(long incomingSequence, WingControlIntent input, long tick) {
+        public boolean accept(long incomingSequence, WingControlIntent input, long nowNanos) {
             if (incomingSequence <= sequence) return false;
             sequence = incomingSequence;
             held = input;
-            receivedTick = tick;
+            receivedNanos = nowNanos;
             return true;
         }
-        public WingControlIntent sample(long tick, float yaw, float pitch) {
-            if (held == null || tick < receivedTick || tick - receivedTick >= 10)
-                return new WingControlIntent(0, yaw, pitch);
+        public WingControlIntent sample(long nowNanos, float yaw, float pitch) {
+            if (held == null || nowNanos < receivedNanos || nowNanos - receivedNanos >= TIMEOUT_NANOS)
+                return new WingControlIntent(0, yaw, pitch, held == null ? 1 : held.remainingMomentum);
             return held;
         }
     }

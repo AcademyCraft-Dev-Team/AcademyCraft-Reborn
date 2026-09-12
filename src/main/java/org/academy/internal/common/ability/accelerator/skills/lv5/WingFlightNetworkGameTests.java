@@ -51,28 +51,40 @@ public final class WingFlightNetworkGameTests {
         var players = helper.getLevel().getServer().getPlayerList();
         players.placeNewPlayer(connection, player, cookie);
         player.connection.markClientLoaded();
-        var boostTicks = new HashMap<UUID, Long>();
         try {
+            var system = org.academy.api.server.ability.AbilitySystemServer.getSystem(player);
+            system.setPlayerAbilityCategory(player.getUUID(), org.academy.internal.common.ability.AbilityCategories.ACCELERATOR.get());
+            system.setPlayerLevel(player.getUUID(), 5);
+            var skill = org.academy.internal.common.ability.Skills.BLACK_WING.get();
+            system.addPlayerSkill(player, skill.getKeyString());
+            var data = system.getPlayerData(player.getUUID());
+            data.setAcademyMaxCp(1_000_000);
+            data.getCpData().setMaxCP(1_000_000);
+            data.getCpData().setAvailableCP(1_000_000);
+            if (!skill.isEnabled(player)) skill.toggle(player);
             for (int buttons : new int[]{0, 1, 2, 4, 8, 5, 9, 6, 10, 16}) {
-                for (float pitch : new float[]{-70, 0, 65}) {
-                    var input = new WingControlIntent(buttons, 123, pitch);
-                    for (Vec3 velocity : new Vec3[]{new Vec3(.3, .1, -.7), new Vec3(-.4, .6, .2)}) {
-                        player.setDeltaMovement(velocity);
-                        if (buttons == 0) WingFlightSupport.applyControl(player, StormWing.State.KEEP, 123, pitch, boostTicks);
-                        else if (buttons == 16) WingFlightSupport.applyControl(player, StormWing.State.BOOST, 123, pitch, boostTicks);
-                        else {
-                            if ((buttons & 1) != 0) WingFlightSupport.applyControl(player, StormWing.State.FRONT, 123, pitch, boostTicks);
-                            if ((buttons & 2) != 0) WingFlightSupport.applyControl(player, StormWing.State.BACK, 123, pitch, boostTicks);
-                            if ((buttons & 4) != 0) WingFlightSupport.applyControl(player, StormWing.State.LEFT, 123, pitch, boostTicks);
-                            if ((buttons & 8) != 0) WingFlightSupport.applyControl(player, StormWing.State.RIGHT, 123, pitch, boostTicks);
-                        }
-                        var expected = player.getDeltaMovement();
-                        player.setDeltaMovement(velocity);
-                        WingFlightSupport.applyHeldControl(player, input, boostTicks);
-                        helper.assertTrue(expected.distanceToSqr(player.getDeltaMovement()) < 1e-16,
-                                "Aggregated flight must preserve direction, diagonal pushes and KEEP damping");
-                    }
+                var input = new WingControlIntent(buttons, 123, 0);
+                var initial = new Vec3(.3, .1, -.7);
+                player.setDeltaMovement(initial);
+                org.academy.internal.common.ability.accelerator.skills.WingFlightRuntime.clear(player, skill);
+                for (int packet = 0; packet < 100; packet++) {
+                    org.academy.internal.common.ability.accelerator.skills.WingFlightRuntime.accept(player, skill, input);
                 }
+                helper.assertTrue(player.getDeltaMovement().equals(initial), "Packets must not apply movement");
+                player.tickCount++;
+                org.academy.internal.common.ability.accelerator.skills.WingFlightRuntime.tick(player, skill);
+                var once = player.getDeltaMovement();
+                org.academy.internal.common.ability.accelerator.skills.WingFlightRuntime.tick(player, skill);
+                helper.assertTrue(once.equals(player.getDeltaMovement()), "Duplicate tick must not apply another thrust");
+                var expected = org.academy.api.common.ability.WingFlightMotion.step(
+                        initial.multiply(.91, .98, .91), input, 0, 1, 1);
+                helper.assertTrue(expected.distanceToSqr(player.getDeltaMovement()) < 1e-16,
+                        "A stalled server must consume the newest input only once");
+                org.academy.internal.common.ability.accelerator.skills.WingFlightRuntime.accept(
+                        player, skill, new WingControlIntent(0, 0, 0, 0));
+                player.tickCount++;
+                org.academy.internal.common.ability.accelerator.skills.WingFlightRuntime.tick(player, skill);
+                helper.assertTrue(player.getDeltaMovement().equals(Vec3.ZERO), "Zero momentum must stop immediately");
             }
             helper.succeed();
         } finally { players.remove(player); }
