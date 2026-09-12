@@ -16,6 +16,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Camera.class)
 public abstract class MixinCamera implements CameraSmoothingBridge {
@@ -115,6 +116,31 @@ public abstract class MixinCamera implements CameraSmoothingBridge {
         depthFar = Math.max(depthFar, (float) ChunkLeapGodView.farExtra());
         academy$setPosition(ChunkLeapGodView.cameraPosition());
         academy$setRotation(ChunkLeapGodView.cameraYaw(), ChunkLeapGodView.cameraPitch());
+    }
+
+    @Inject(method = "getMaxZoom", at = @At("HEAD"), cancellable = true)
+    private void academy$ignoreDetachedViewCollision(
+            float requestedDistance,
+            CallbackInfoReturnable<Float> cir
+    ) {
+        if (WideAreaInterferenceClientState.hasCameraOverride()
+                || ChunkLeapGodView.shouldOverrideCamera()) {
+            cir.setReturnValue(requestedDistance);
+        }
+    }
+
+    @Inject(method = "extractRenderState", at = @At("TAIL"))
+    private void academy$disableDetachedViewOcclusion(
+            CameraRenderState renderState,
+            float partialTick,
+            CallbackInfo ci
+    ) {
+        if (WideAreaInterferenceClientState.hasCameraOverride()
+                || ChunkLeapGodView.shouldOverrideCamera()) {
+            // Vanilla grants this to spectators inside blocks. These views are equally detached from the
+            // player's body, so section traversal must not stop when their free camera crosses solid terrain.
+            renderState.smartCull = false;
+        }
     }
 
     @Inject(method = "extractRenderState", at = @At("TAIL"))

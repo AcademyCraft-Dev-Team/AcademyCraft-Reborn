@@ -101,4 +101,28 @@ class MapTileBuilderRoofTest {
         var probe = solid(120, 122);
         assertEquals(122, MapTileBuilder.resolveColumnY(122, 119, 0, probe));
     }
+
+    // ---------------------------------------------------------------- ceiling-dimension slice
+
+    @Test
+    void netherSliceFindsThePlayableFloorInsteadOfTheBedrockRoof() {
+        // The lid at 120..127 is intentionally irrelevant: Y 80 is open above the playable terrain.
+        var probe = solid(-64, 64, 120, 127);
+        assertEquals(64, MapTileBuilder.resolveCeilingDimensionColumnY(80, -64, 256,
+                y -> !probe.test(y)));
+    }
+
+    @Test
+    void solidNetherSliceFindsTheSurfaceImmediatelyAboveIt() {
+        var probe = solid(-64, 84, 120, 127);
+        assertEquals(84, MapTileBuilder.resolveCeilingDimensionColumnY(80, -64, 256,
+                y -> !probe.test(y)));
+    }
+
+    @Test
+    void enclosedNetherSliceDoesNotFallBackToTheRoof() {
+        var probe = solid(-64, 110, 120, 127);
+        assertEquals(-65, MapTileBuilder.resolveCeilingDimensionColumnY(80, -64, 256,
+                y -> !probe.test(y)));
+    }
 }

@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.teleport;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -9,16 +10,14 @@ import net.minecraft.world.level.levelgen.Heightmap;
 /**
  * Rasterises the 区块跃迁 map from real blocks: one texel per block, shaded for relief.
  *
- * <p>Sampling cannot simply take the highest non-air block. The Nether seals its build range with a
- * bedrock lid, so the highest block in every column is that lid and a naive top-down view shows a flat
- * sheet of bedrock instead of the terrain below — and because the lid often has rock attached directly
- * beneath it, a per-column "is this a thin layer?" test misclassifies those columns and still renders the
- * lid. Instead the roof is found <em>per chunk</em> as a near-complete solid plane with open space a few
- * blocks below it ({@link #ceilingY}); columns under such a plane are then resolved by descending through
- * whatever is attached, past the open space, to the first solid block: the ground a player would stand on.
+ * <p>Sampling cannot simply take the highest non-air block. In dimensions with a ceiling, such as the
+ * Nether, that would always be the bedrock lid. Those dimensions are sampled from the main playable layer:
+ * each column finds the floor of the open space around {@link #CEILING_REFERENCE_Y}, following VoxelMap's
+ * persistent-map approach. Open-sky dimensions retain the chunk roof probe as a conservative fallback for
+ * custom worlds with an artificial lid.
  *
- * <p>Being chunk-level rather than column-level is what makes this dimension-agnostic and robust: it does
- * not assume a particular roof height, a particular block, or a particular number of attached layers.
+ * <p>The ceiling-dimension path does not assume a roof height or material, and therefore cannot be fooled
+ * by multiple solid layers welded to the Nether roof.
  */
 public final class MapTileBuilder {
     /** Packed texel meaning "this chunk is not loaded yet"; the client draws a placeholder. */
@@ -28,6 +27,10 @@ public final class MapTileBuilder {
     /** Texels per chunk axis. 16 gives one texel per block, which is what makes the map readable. */
     public static final int DETAIL = 16;
     private static final int SAMPLED_ALPHA = 0xFF;
+    /** Persistent-map slice used by VoxelMap to represent the Nether's main playable space. */
+    private static final int CEILING_REFERENCE_Y = 80;
+    /** When the reference slice is solid, look this far upward for its next open surface. */
+    private static final int CEILING_OPEN_SEARCH = 10;
     /** Columns per axis used to probe for a roof plane. */
     private static final int CEILING_SAMPLES = 4;
     /**
@@ -81,14 +84,18 @@ public final class MapTileBuilder {
         var baseZ = chunkZ << 4;
         var minY = level.getMinY();
         var maxY = level.getMaxY();
-        var ceiling = ceilingY(level, chunk, baseX, baseZ, minY, maxY);
+        var ceilingDimension = level.dimensionType().hasCeiling();
+        var ceiling = ceilingDimension
+                ? NO_CEILING
+                : ceilingY(level, chunk, baseX, baseZ, minY, maxY);
 
         // Two passes: heights first, so the colour pass can shade by slope as well as by altitude.
         var heights = new int[DETAIL * DETAIL];
         for (var subZ = 0; subZ < DETAIL; subZ++) {
             for (var subX = 0; subX < DETAIL; subX++) {
-                heights[subZ * DETAIL + subX] =
-                        resolveSurfaceY(level, baseX + subX, baseZ + subZ, ceiling, minY, maxY);
+                heights[subZ * DETAIL + subX] = ceilingDimension
+                        ? resolveCeilingDimensionSurfaceY(level, baseX + subX, baseZ + subZ, minY, maxY)
+                        : resolveSurfaceY(level, baseX + subX, baseZ + subZ, ceiling, minY, maxY);
             }
         }
         for (var subZ = 0; subZ < DETAIL; subZ++) {
@@ -247,6 +254,52 @@ public final class MapTileBuilder {
         while (y >= floor && !solidAtY.test(y)) y--;
         return y >= floor ? y : top;
     }
+
+    /**
+     * Finds the terrain surface belonging to a ceiling dimension's main open layer.
+     *
+     * <p>This deliberately never starts at the heightmap. If the reference slice is open, it walks down to
+     * that space's floor. If the slice is solid, it searches a short distance upward for the next opening and
+     * returns the block immediately beneath it. Lava is a surface rather than open space; transparent blocks
+     * are treated as open, matching VoxelMap's light-dampening test.
+     */
+    private static int resolveCeilingDimensionSurfaceY(
+            ServerLevel level,
+            int blockX,
+            int blockZ,
+            int minY,
+            int maxY
+    ) {
+        var pos = new BlockPos.MutableBlockPos();
+        return resolveCeilingDimensionColumnY(CEILING_REFERENCE_Y, minY, maxY, y -> {
+            var state = level.getBlockState(pos.set(blockX, y, blockZ));
+            return state.getLightDampening() == 0 && !state.is(Blocks.LAVA);
+        });
+    }
+
+    /** Pure form of the ceiling-dimension column walk, with {@code maxY} exclusive. */
+    static int resolveCeilingDimensionColumnY(
+            int referenceY,
+            int minY,
+            int maxY,
+            java.util.function.IntPredicate openAtY
+    ) {
+        if (maxY <= minY) return minY - 1;
+        var anchor = Math.clamp(referenceY, minY, maxY - 1);
+        if (openAtY.test(anchor)) {
+            for (var y = anchor - 1; y >= minY; y--) {
+                if (!openAtY.test(y)) return y;
+            }
+            return minY - 1;
+        }
+
+        var top = Math.min(maxY - 1, anchor + CEILING_OPEN_SEARCH);
+        for (var y = anchor + 1; y <= top; y++) {
+            if (openAtY.test(y)) return y - 1;
+        }
+        return minY - 1;
+    }
+
     /**
      * The Y a player looking straight down would see in this column, or {@code level.getMinY()} when the
      * column is empty.
@@ -258,8 +311,11 @@ public final class MapTileBuilder {
         var minY = level.getMinY();
         var chunk = level.getChunkSource().getChunkNow(blockX >> 4, blockZ >> 4);
         if (chunk == null) return minY;
-        var ceiling = ceilingY(level, chunk, blockX & ~15, blockZ & ~15, minY, level.getMaxY());
-        var surface = resolveSurfaceY(level, blockX, blockZ, ceiling, minY, level.getMaxY());
+        var maxY = level.getMaxY();
+        var surface = level.dimensionType().hasCeiling()
+                ? resolveCeilingDimensionSurfaceY(level, blockX, blockZ, minY, maxY)
+                : resolveSurfaceY(level, blockX, blockZ,
+                        ceilingY(level, chunk, blockX & ~15, blockZ & ~15, minY, maxY), minY, maxY);
         return surface < minY ? minY : surface;
     }
 
