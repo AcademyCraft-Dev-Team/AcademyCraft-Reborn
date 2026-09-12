@@ -18,6 +18,7 @@ import org.academy.internal.common.network.SkillVfxPacket;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
 import org.academy.internal.common.world.entity.skill.Plasma;
+import org.jspecify.annotations.Nullable;
 
 /** Client-only visual adapters. None of the mirror entities is added to ClientLevel. */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
@@ -64,7 +65,7 @@ public final class SkillVfxClient {
                     // A fire and end received in one client frame must still produce a visible flash.
                     replica.endingAt = now + Math.max(3, b.currentRayLifeTicks);
                 } else {
-                    replica.entity.discard();
+                    replica.release();
                     ACTIVE.remove(packet.id);
                 }
             }
@@ -78,7 +79,7 @@ public final class SkillVfxClient {
             replica = new Replica(mirror, packet.state, now);
             ACTIVE.put(packet.id, replica);
             replica.apply(now);
-            if (mirror instanceof HighSpeedElectronBeam beam) VfxManager.INSTANCE.spawn(new BeamVfx(beam));
+            if (mirror instanceof HighSpeedElectronBeam) VfxManager.INSTANCE.spawn(replica.beamVfx);
             else PlasmaVfxClient.spawnCharge((Plasma) mirror);
         } else {
             boolean firstFire = packet.state instanceof SkillVfxState.Beam b && b.fired()
@@ -104,7 +105,7 @@ public final class SkillVfxClient {
         while (iterator.hasNext()) {
             var replica = iterator.next();
             if (now >= replica.endingAt || now - replica.receivedAt > 100) {
-                replica.entity.discard();
+                replica.release();
                 iterator.remove();
             } else replica.apply(now);
         }
@@ -114,7 +115,7 @@ public final class SkillVfxClient {
     public static void logout(ClientPlayerNetworkEvent.LoggingOut event) { reset(null); }
 
     private static void reset(ClientLevel level) {
-        ACTIVE.values().forEach(replica -> replica.entity.discard());
+        ACTIVE.values().forEach(Replica::release);
         ACTIVE.clear(); SEQUENCE.clear();
         PlasmaVfxClient.clear();
         SmokeVfxClient.clear();
@@ -126,12 +127,15 @@ public final class SkillVfxClient {
 
     private static final class Replica {
         final Entity entity;
+        final @Nullable BeamVfx beamVfx;
         SkillVfxState state;
         long receivedAt;
         long endingAt = Long.MAX_VALUE;
         long fireVisibleUntil;
         Replica(Entity entity, SkillVfxState state, long now) {
-            this.entity = entity; this.state = state; receivedAt = now;
+            this.entity = entity;
+            beamVfx = entity instanceof HighSpeedElectronBeam beam ? new BeamVfx(beam) : null;
+            this.state = state; receivedAt = now;
             if (state instanceof SkillVfxState.Beam b && b.fired()) fireVisibleUntil = now + 3;
         }
         void apply(long now) {
@@ -142,6 +146,10 @@ public final class SkillVfxClient {
             } else if (entity instanceof Plasma plasma && state instanceof SkillVfxState.Plasma p) {
                 plasma.applyVisualSnapshot(p, elapsed);
             }
+        }
+        void release() {
+            if (beamVfx != null) beamVfx.expire();
+            else PlasmaVfxClient.release((Plasma) entity);
         }
     }
 }
