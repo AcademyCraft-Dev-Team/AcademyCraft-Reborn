@@ -37,6 +37,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import org.academy.AcademyCraft;
+import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.attribute.PlayerAttributes;
 import org.academy.api.common.damage.DamageComposition;
@@ -86,6 +87,8 @@ public final class DamagePenetrationGameTests {
     }
 
     private static void reset(LivingEntity target, boolean protection, float absorption) {
+        org.academy.internal.common.entitycontrol.TrueHealthOffsetRuntime.clear(target);
+        org.academy.internal.common.entitycontrol.EntityControlApi.clearTemporaryTrueHealthCap(target);
         target.removeAllEffects();
         target.stopUsingItem();
         target.invulnerableTime = 0;
@@ -212,7 +215,7 @@ public final class DamagePenetrationGameTests {
                 target.invulnerableTime = 0;
                 target.hurtServer(helper.getLevel(), arc, 1);
             }
-            closeTo(helper, target.getHealth(), 993, "Five one-damage hits add exactly two discharge damage");
+            closeTo(helper, target.getHealth(), 985, "Five one-damage hits add one percent discharge damage");
             helper.assertTrue(CategoryDamageRuntime.electricalCharge(target) == 0,
                     "Discharge must not award itself another charge");
             helper.assertTrue(CategoryDamageRuntime.isParalyzed(target), "Discharge retains paralysis");
@@ -220,16 +223,24 @@ public final class DamagePenetrationGameTests {
                             && target.getLastDamageSource().getEntity() == attacker,
                     "Discharge retains electrical type and attacker");
 
+            helper.assertTrue(target.getLastDamageSource() instanceof SkillDamageSource skillSource
+                            && skillSource.getSkill() == Skills.ARC_GENERATE.get()
+                            && skillSource.electricalChargePoints() == 0
+                            && DamageTypes.usesVerifiedTrueHealth(skillSource),
+                    "Discharge must retain skill attribution, zero charge and VEC settlement");
+            helper.assertTrue(org.academy.internal.common.ability.mentalout.control.MentalControlRuntime.isFrozen(target),
+                    "Discharge must enter the same action gate as mental stupor");
+
             var heavy = arc.withElectricalChargePoints(3);
             for (var index = 0; index < 2; index++) {
                 target.invulnerableTime = 0;
                 target.hurtServer(helper.getLevel(), heavy, 1);
             }
-            closeTo(helper, target.getHealth(), 989, "Six more points trigger one two-damage discharge");
+            closeTo(helper, target.getHealth(), 973, "Six more points trigger one percent discharge damage");
             helper.assertTrue(CategoryDamageRuntime.electricalCharge(target) == 1,
                     "Discharge preserves excess charge");
             org.academy.api.common.damage.AbilityHitEffects.addElectricalCharge(target, 9, arc);
-            closeTo(helper, target.getHealth(), 985, "Each threshold in a batched charge adds two damage");
+            closeTo(helper, target.getHealth(), 953, "Each threshold in a batched charge adds one percent damage");
             helper.assertTrue(CategoryDamageRuntime.electricalCharge(target) == 0,
                     "Batched discharge cannot recurse");
 
@@ -243,15 +254,49 @@ public final class DamagePenetrationGameTests {
 
             reset(target, true, 50);
             org.academy.api.common.damage.AbilityHitEffects.addElectricalCharge(target, 5, arc);
-            closeTo(helper, target.getHealth(), 1000, "Discharge still respects absorption");
-            closeTo(helper, target.getAbsorptionAmount(), 49.28f,
-                    "Discharge still respects Protection enchantment");
+            closeTo(helper, target.getHealth(), 990, "VEC-grade discharge bypasses absorption and Protection");
+            closeTo(helper, target.getAbsorptionAmount(), 50.0f,
+                    "VEC-grade discharge leaves absorption untouched");
 
+            var config = ((MinecraftServerContext) helper.getLevel().getServer())
+                    .getAcademyCraftServer().getAbilityConfig();
+            var settings = config.electromaster;
+            var previousMultiplier = config.damageMultiplier;
+            var previousEnabled = settings.paralysisDamageEnabled;
+            var previousMinimum = settings.paralysisMinimumDamage;
+            var previousFraction = settings.paralysisMaxHealthFraction;
+            try {
+                settings.paralysisDamageEnabled = false;
+                reset(target, false, 0);
+                org.academy.api.common.damage.AbilityHitEffects.addElectricalCharge(target, 5, arc);
+                closeTo(helper, target.getHealth(), 1000, "Disabled paralysis damage must not hurt");
+                helper.assertTrue(CategoryDamageRuntime.electricalInterruptionTicks(target) > 0,
+                        "Disabling damage must preserve action interruption");
+
+                settings.paralysisDamageEnabled = true;
+                settings.paralysisMinimumDamage = 3;
+                settings.paralysisMaxHealthFraction = 0.02f;
+                config.damageMultiplier = 3;
+                org.academy.api.common.damage.AbilityHitEffects.addElectricalCharge(target, 5, arc);
+                closeTo(helper, target.getHealth(), 980, "Server fraction must control damage independently of ordinary multipliers");
+
+                reset(target, false, 0);
+                config.damageMultiplier = previousMultiplier;
+                target.getAttribute(Attributes.MAX_HEALTH).setBaseValue(100);
+                target.setHealth(100);
+                org.academy.api.common.damage.AbilityHitEffects.addElectricalCharge(target, 5, arc);
+                closeTo(helper, target.getHealth(), 97, "Configured minimum must win on small targets");
+            } finally {
+                config.damageMultiplier = previousMultiplier;
+                settings.paralysisDamageEnabled = previousEnabled;
+                settings.paralysisMinimumDamage = previousMinimum;
+                settings.paralysisMaxHealthFraction = previousFraction;
+            }
             reset(target, false, 0);
             target.invulnerableTime = 20;
             org.academy.api.common.damage.AbilityHitEffects.addElectricalCharge(target, 5);
-            closeTo(helper, target.getHealth(), 998,
-                    "Unattributed public charge API also discharges through direct actuallyHurt");
+            closeTo(helper, target.getHealth(), 990,
+                    "Unattributed public charge API also uses VEC-grade settlement");
             helper.assertTrue(target.getLastDamageSource().is(DamageTypes.ELECTRO_DAMAGE),
                     "Unattributed discharge still uses electrodamage");
 
@@ -261,6 +306,74 @@ public final class DamagePenetrationGameTests {
             helper.assertTrue(target.isDeadOrDying() && target.getLastDamageSource().getEntity() == attacker,
                     "A lethal discharge retains normal death completion and kill attribution");
         } finally {
+            target.discard();
+        }
+    }
+
+    private static void verifyParalysisImmunity(GameTestHelper helper, ServerPlayer attacker) {
+        var target = helper.spawn(EntityTypes.COW, 6, 2, 5);
+        target.setNoAi(true);
+        var source = SkillDamageSource.of(attacker, Skills.ARC_GENERATE.get());
+        var settings = ((MinecraftServerContext) helper.getLevel().getServer())
+                .getAcademyCraftServer().getAbilityConfig().electromaster;
+        var previousEnabled = settings.paralysisDamageEnabled;
+        var registry = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE;
+        var originalTags = new java.util.HashMap<net.minecraft.tags.TagKey<net.minecraft.world.entity.EntityType<?>>,
+                List<Holder<net.minecraft.world.entity.EntityType<?>>>>();
+        registry.listTags().forEach(tag -> originalTags.put(tag.key(), tag.stream().toList()));
+        try {
+            target.setInvulnerable(true);
+            for (var enabled : new boolean[]{true, false}) {
+                settings.paralysisDamageEnabled = enabled;
+                helper.assertTrue(CategoryDamageRuntime.addCharge(target, 5, source) == 0,
+                        "Invulnerable targets must reject paralysis even when extra damage is disabled");
+                helper.assertTrue(!CategoryDamageRuntime.isParalyzed(target)
+                                && CategoryDamageRuntime.electricalInterruptionTicks(target) == 0,
+                        "Rejected damage must not install either paralysis timer");
+                closeTo(helper, target.getHealth(), 10, "Invulnerability must preserve health");
+            }
+            target.setInvulnerable(false);
+            try (var defense = org.academy.api.server.entity.SurvivalDefense.acquire(target,
+                    org.academy.api.server.entity.SurvivalDefenseProfile.absolute(target.getHealth()))) {
+                for (var enabled : new boolean[]{true, false}) {
+                    settings.paralysisDamageEnabled = enabled;
+                    helper.assertTrue(CategoryDamageRuntime.addCharge(target, 5, source) == 0,
+                            "Absolute damage protection must also block the interruption");
+                    helper.assertTrue(!CategoryDamageRuntime.isParalyzed(target),
+                            "Absolute protection must not receive paralysis");
+                }
+            }
+            settings.paralysisDamageEnabled = true;
+            var config = ((MinecraftServerContext) helper.getLevel().getServer())
+                    .getAcademyCraftServer().getAbilityConfig();
+            var previousMultiplier = config.damageMultiplier;
+            try {
+                config.damageMultiplier = 0.0f;
+                helper.assertTrue(CategoryDamageRuntime.addCharge(target, 5, source) == 0,
+                        "A zero-damage settlement must not trigger paralysis");
+                helper.assertTrue(CategoryDamageRuntime.electricalInterruptionTicks(target) == 0,
+                        "Rejected settlement must not install an action lock");
+            } finally {
+                config.damageMultiplier = previousMultiplier;
+            }
+            var testTags = new java.util.HashMap<>(originalTags);
+            var immuneTypes = new java.util.ArrayList<>(originalTags.getOrDefault(
+                    org.academy.api.common.entitycontrol.MentalControlTags.IMMUNE, List.of()));
+            immuneTypes.add(EntityTypes.COW.builtInRegistryHolder());
+            testTags.put(org.academy.api.common.entitycontrol.MentalControlTags.IMMUNE, immuneTypes);
+            registry.prepareTagReload(new net.minecraft.tags.TagLoader.LoadResult<>(registry.key(), testTags)).apply();
+            helper.assertTrue(org.academy.internal.common.ability.mentalout.control.MentalControlRuntime
+                            .isProtectedTarget(target),
+                    "Fixture must be immune to mental control");
+            helper.assertTrue(CategoryDamageRuntime.addCharge(target, 5, source) == 1,
+                    "Mental protection must not prevent electrical paralysis");
+            closeTo(helper, target.getHealth(), 8, "Mental protection must not prevent electrical damage");
+            helper.assertTrue(org.academy.internal.common.ability.mentalout.control.MentalControlRuntime
+                            .isFrozen(target),
+                    "Mentally protected targets still use the stupor action gate after electrical damage");
+        } finally {
+            settings.paralysisDamageEnabled = previousEnabled;
+            registry.prepareTagReload(new net.minecraft.tags.TagLoader.LoadResult<>(registry.key(), originalTags)).apply();
             target.discard();
         }
     }
@@ -339,6 +452,7 @@ public final class DamagePenetrationGameTests {
                 verifyAirRoute(helper, attacker, target);
             }
             verifyDischarge(helper, attacker);
+            verifyParalysisImmunity(helper, attacker);
             verifyDirectEntryValidation(helper, attacker);
         } finally {
             cow.discard();

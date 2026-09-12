@@ -273,6 +273,8 @@ public final class MentalControlRuntime {
     }
 
     public static boolean isFrozen(LivingEntity subject) {
+        // Electrical interruption shares stupor's action/AI gates, without a mental-control lease.
+        if (org.academy.api.common.damage.AbilityHitEffects.electricalInterruptionTicks(subject) > 0) return true;
         var state = stateIfPresent(subject.level().getServer());
         return state != null && state.leases.isFrozen(subject.getUUID(), subject.level().getGameTime());
     }

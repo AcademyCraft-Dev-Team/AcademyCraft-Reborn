@@ -44,6 +44,12 @@ public abstract class MixinServerGamePacketListenerImpl {
     ) {
         var listener = (ServerGamePacketListenerImpl) (Object) this;
         var player = listener.player;
+        if (org.academy.api.common.damage.AbilityHitEffects.electricalInterruptionTicks(player) > 0) {
+            player.connection.teleport(player.getX(), player.getY(), player.getZ(),
+                    packet.getYRot(player.getYRot()), packet.getXRot(player.getXRot()));
+            ci.cancel();
+            return;
+        }
         if (PlayerControlSessionManager.validateMovePlayer(player, packet)) {
             ci.cancel();
             return;

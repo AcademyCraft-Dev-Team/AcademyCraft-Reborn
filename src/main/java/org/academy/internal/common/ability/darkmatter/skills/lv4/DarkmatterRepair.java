@@ -28,6 +28,7 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.entity.HealthRecovery;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -50,8 +51,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class DarkmatterRepair extends Skill {
-    static final float MATTER_COST = 1.0f;
-
     public DarkmatterRepair() {
         super(Builder
                 .of(AbilityCategories.DARKMATTER.get())
@@ -157,9 +156,13 @@ public final class DarkmatterRepair extends Skill {
             return Math.clamp(milestone, 0, 3) >= 2 ? amount * 1.25f : amount;
         }
 
-        static float bodyHeal(float beta, int milestone) {
-            var amount = 0.5f + 0.5f * Math.max(0.0f, beta);
+        static float bodyHeal(float alphaRatio, int milestone) {
+            var amount = 1.0f + 7.0f * Math.clamp(alphaRatio, 0.0f, 1.0f);
             return Math.clamp(milestone, 0, 3) >= 2 ? amount * 1.25f : amount;
+        }
+
+        static float healingAmount(float alphaRatio, int milestone, float multiplier, float maxHealth) {
+            return bodyHeal(alphaRatio, milestone) * multiplier + maxHealth * 0.01f;
         }
 
         static int effectReductionTicks(float beta, int milestone) {
@@ -167,8 +170,9 @@ public final class DarkmatterRepair extends Skill {
             return Math.round(Math.clamp(milestone, 0, 3) >= 2 ? amount * 1.25f : amount);
         }
 
-        static float matterCost(int milestone) {
-            return Math.clamp(milestone, 0, 3) >= 1 ? 0.8f : MATTER_COST;
+        static float matterCost(float betaRatio, int milestone) {
+            var amount = 4.0f - 3.0f * Math.clamp(betaRatio, 0.0f, 1.0f);
+            return Math.clamp(milestone, 0, 3) >= 1 ? amount * 0.8f : amount;
         }
 
         static int repairTargetCount(boolean gammaActive, int milestone) {
@@ -181,7 +185,7 @@ public final class DarkmatterRepair extends Skill {
         }
 
         private static void tick(ServerPlayer player) {
-            if (player.tickCount % 20 == 0) tryPulse(player);
+            tryPulse(player);
         }
 
         public static boolean tryPulse(ServerPlayer player) {
@@ -189,6 +193,7 @@ public final class DarkmatterRepair extends Skill {
             var skill = Skills.DARKMATTER_REPAIR.get();
             if (!skill.isEnabled(player) || !player.isAlive()) return false;
             var phase = DarkmatterPhase.weights(player);
+            var snapshot = DarkmatterPhase.snapshot(player);
             var milestone = skill.getEffectiveProficiencyMilestone(player);
             var missingHealth = Math.max(0.0f, player.getMaxHealth() - player.getHealth());
             var damagedEquipment = findDamagedEquipment(player);
@@ -198,11 +203,11 @@ public final class DarkmatterRepair extends Skill {
             // Structural absorption is a result of a successful equipment repair, not an
             // independent source of work that may consume MP forever.
             var hasAlphaWork = phase.alpha() > 0.0f && !damagedEquipment.isEmpty();
-            var hasBetaWork = phase.beta() > 0.0f && (missingHealth > 0.0f || harmful != null);
-            if (!hasAlphaWork && !hasBetaWork) return false;
+            var hasBetaWork = phase.beta() > 0.0f && harmful != null;
+            if (!hasAlphaWork && !hasBetaWork && missingHealth <= 0.0f) return false;
 
             var system = AbilitySystemServer.getSystem(player);
-            var cost = matterCost(milestone);
+            var cost = matterCost(snapshot.betaRatio(), milestone);
             if (system.getDarkmatterResourceManager().getView(player).totalMatter() + 1.0e-5f < cost) {
                 return false;
             }
@@ -215,12 +220,9 @@ public final class DarkmatterRepair extends Skill {
                     outputMultiplier *= DarkmatterSixWings.Server.gammaMagnitudeMultiplier(player);
                 }
                 var changed = false;
-                if (hasBetaWork && missingHealth > 0.0f) {
-                    var before = player.getHealth();
-                    player.heal(Math.min(
-                            bodyHeal(phase.beta(), milestone) * outputMultiplier,
-                            missingHealth));
-                    changed |= player.getHealth() > before;
+                if (missingHealth > 0.0f) {
+                    changed |= HealthRecovery.restore(player, healingAmount(
+                            snapshot.alphaRatio(), milestone, outputMultiplier, player.getMaxHealth())) > 0.0f;
                 }
                 var repaired = false;
                 if (hasAlphaWork) {
