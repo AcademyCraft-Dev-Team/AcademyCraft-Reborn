@@ -1,0 +1,10 @@
+allprojects {
+    afterEvaluate {
+        neoForge.runs.named('clientDev') {
+            sourceSet.set(sourceSets.editor)
+            gameDirectory.set(file('run/wing-flight-client'))
+            systemProperty 'academy.wingFlightSmoke', 'true'
+            programArguments.addAll('--width', '1280', '--height', '720')
+        }
+    }
+}

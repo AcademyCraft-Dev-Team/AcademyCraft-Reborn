@@ -98,6 +98,7 @@
     "client.MixinLevelRenderer",
     "client.MixinLivingEntityRenderer",
     "client.MixinLocalPlayer",
+    "client.MixinPlayerWingFlight",
     "client.MixinMinecraft",
     "client.MixinMinecraftTimeImmunity",
     "client.MixinModelDiscovery",

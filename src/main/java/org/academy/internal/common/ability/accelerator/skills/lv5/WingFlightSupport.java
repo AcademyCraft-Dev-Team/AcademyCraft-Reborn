@@ -1,7 +1,5 @@
 package org.academy.internal.common.ability.accelerator.skills.lv5;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -11,7 +9,6 @@ import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.attachment.AttachmentType;
-import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.DamageComposition;
 import org.academy.api.common.damage.SkillDamageSource;
@@ -22,23 +19,16 @@ import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileRedirects;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileStateAdapter;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectKind;
-import org.academy.internal.common.ability.accelerator.skills.WingFlightDirection;
 import org.academy.internal.common.ability.accelerator.skills.WingFlightPose;
-import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
+import org.academy.internal.common.ability.accelerator.skills.WingFlightRuntime;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
-import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.world.damagesource.CTADamageUtil;
 import org.academy.internal.common.world.damagesource.CTAEntityActuallyHurt;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.misaka.MisakaNetworkServer;
-
-import java.util.Map;
-import java.util.UUID;
-
-import static org.lwjgl.glfw.GLFW.*;
 
 final class WingFlightSupport {
     static final double ATTACK_RANGE = 32.0;
@@ -49,125 +39,7 @@ final class WingFlightSupport {
     private WingFlightSupport() {
     }
 
-    @FunctionalInterface
-    interface ControlSender {
-        void send(StormWing.State state, float yRot, float xRot);
-    }
-
-    static void clientTick(boolean active, ControlSender sender) {
-        if (!active) return;
-        var minecraft = Minecraft.getInstance();
-        if (minecraft.player == null) return;
-        var yRot = minecraft.player.getYRot();
-        var xRot = minecraft.player.getXRot();
-        if (minecraft.gui.screen() != null) {
-            sender.send(StormWing.State.KEEP, yRot, xRot);
-            return;
-        }
-        if (InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_SPACE)) {
-            sender.send(StormWing.State.BOOST, yRot, xRot);
-            return;
-        }
-
-        var front = InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_W);
-        var back = InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_S);
-        var left = InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_A);
-        var right = InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_D);
-        var sent = false;
-        if (front != back) {
-            sender.send(front ? StormWing.State.FRONT : StormWing.State.BACK, yRot, xRot);
-            sent = true;
-        }
-        if (left != right) {
-            sender.send(left ? StormWing.State.LEFT : StormWing.State.RIGHT, yRot, xRot);
-            sent = true;
-        }
-        if (!sent) sender.send(StormWing.State.KEEP, yRot, xRot);
-    }
-
-    static org.academy.api.common.ability.WingControlIntent readControl() {
-        var minecraft = Minecraft.getInstance();
-        var player = minecraft.player;
-        if (player == null) return new org.academy.api.common.ability.WingControlIntent(0, 0, 0);
-        int buttons = 0;
-        if (minecraft.gui.screen() == null) {
-            if (InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_W)) buttons |= 1;
-            if (InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_S)) buttons |= 2;
-            if (InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_A)) buttons |= 4;
-            if (InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_D)) buttons |= 8;
-            if (InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_SPACE)) buttons |= 16;
-        }
-        return new org.academy.api.common.ability.WingControlIntent(buttons, player.getYRot(), player.getXRot());
-    }
-
-    static void applyHeldControl(ServerPlayer player, org.academy.api.common.ability.WingControlIntent input,
-                                 Map<UUID, Long> lastBoostTick) {
-        if (input.has(16)) applyControl(player, StormWing.State.BOOST, input.yaw(), input.pitch(), lastBoostTick, false);
-        else if (input.buttons() == 0) applyControl(player, StormWing.State.KEEP, input.yaw(), input.pitch(), lastBoostTick, false);
-        else {
-            // Preserve the former forward/back then strafe ordering and per-direction movement amounts.
-            if (input.has(1)) applyControl(player, StormWing.State.FRONT, input.yaw(), input.pitch(), lastBoostTick, false);
-            if (input.has(2)) applyControl(player, StormWing.State.BACK, input.yaw(), input.pitch(), lastBoostTick, false);
-            if (input.has(4)) applyControl(player, StormWing.State.LEFT, input.yaw(), input.pitch(), lastBoostTick, false);
-            if (input.has(8)) applyControl(player, StormWing.State.RIGHT, input.yaw(), input.pitch(), lastBoostTick, false);
-        }
-        player.connection.send(new ClientboundSetEntityMotionPacket(player));
-    }
-
-    static void applyControl(ServerPlayer player, StormWing.State state, float yRot, float xRot,
-                             Map<UUID, Long> lastBoostTick) {
-        applyControl(player, state, yRot, xRot, lastBoostTick, true);
-    }
-
-    private static void applyControl(ServerPlayer player, StormWing.State state, float yRot, float xRot,
-                                     Map<UUID, Long> lastBoostTick, boolean sendVelocity) {
-        if (state == StormWing.State.BOOST) {
-            lastBoostTick.put(player.getUUID(), player.level().getGameTime());
-        }
-        WingFlightPose.sync(player, switch (state) {
-            case BOOST -> WingFlightPose.Pose.FAST;
-            case KEEP -> WingFlightPose.coastingPose(player);
-            default -> WingFlightPose.Pose.SLOW;
-        });
-        var look = WingFlightDirection.resolve(player.getLookAngle(), yRot, xRot);
-        EntityMotionGuard.runWithMotionSource(player, () -> {
-            switch (state) {
-                case FRONT -> {
-                    var movement = look.add(0, 0.35, 0).scale(0.2);
-                    player.push(movement.x, movement.y * 1.5, movement.z);
-                }
-                case BACK -> {
-                    var movement = look.add(0, -0.35, 0).scale(-0.2);
-                    player.push(movement.x, movement.y, movement.z);
-                }
-                case LEFT -> {
-                    var movement = new Vec3(look.z, -look.y + 0.15, -look.x).scale(0.2);
-                    player.push(movement.x, movement.y, movement.z);
-                }
-                case RIGHT -> {
-                    var movement = new Vec3(-look.z, -look.y + 0.15, look.x).scale(0.2);
-                    player.push(movement.x, movement.y, movement.z);
-                }
-                case KEEP -> {
-                    if (Math.abs(player.getDeltaMovement().y) > 0.25) {
-                        player.setDeltaMovement(player.getDeltaMovement().multiply(0.995, 0.685, 0.995));
-                    } else {
-                        player.setDeltaMovement(player.getDeltaMovement().multiply(0.995, 0, 0.995));
-                    }
-                    player.resetFallDistance();
-                }
-                case BOOST -> {
-                    var movement = look.scale(2.0);
-                    player.push(movement.x, movement.y, movement.z);
-                    player.resetFallDistance();
-                }
-            }
-        });
-        if (sendVelocity) player.connection.send(new ClientboundSetEntityMotionPacket(player));
-    }
-
-    static boolean tick(ServerPlayer player, Skill skill, AttachmentType<Boolean> attachment,
-                        Map<UUID, Long> lastBoostTick) {
+    static boolean tick(ServerPlayer player, Skill skill, AttachmentType<Boolean> attachment) {
         var active = skill.isEnabled(player) && player.isAlive() && !player.hasDisconnected();
         if (active) {
             var system = AbilitySystemServer.getSystem(player);
@@ -186,7 +58,9 @@ final class WingFlightSupport {
         if (!active && skill.getRuntimeData(player).map(data -> data.isEnabled()).orElse(false)) {
             forceDeactivateSkill(player, skill);
         }
-        sync(player, attachment, active, lastBoostTick);
+        sync(player, attachment, active);
+        if (active) WingFlightRuntime.tick(player, skill);
+        else WingFlightRuntime.clear(player, skill);
         return active;
     }
 
@@ -199,8 +73,7 @@ final class WingFlightSupport {
         system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
     }
 
-    static void sync(ServerPlayer player, AttachmentType<Boolean> attachment, boolean active,
-                     Map<UUID, Long> lastBoostTick) {
+    static void sync(ServerPlayer player, AttachmentType<Boolean> attachment, boolean active) {
         var wasActive = player.getData(attachment);
         if (wasActive != active) {
             player.setData(attachment, active);
@@ -209,14 +82,11 @@ final class WingFlightSupport {
         if (!active) {
             // All wing skills call this every player tick. Shared pose cleanup must remain
             // transition-only so an inactive sibling wing cannot clear the active wing's pose.
-            lastBoostTick.remove(player.getUUID());
+            var skill = attachment == AttachmentTypes.ACTIVATED_BLACK_WING.get() ? Skills.BLACK_WING.get()
+                    : attachment == AttachmentTypes.ACTIVATED_WHITE_WING.get() ? Skills.WHITE_WING.get()
+                    : Skills.PLATINUM_WING.get();
+            WingFlightRuntime.clear(player, skill);
             if (wasActive) WingFlightPose.sync(player, WingFlightPose.Pose.IDLE);
-            return;
-        }
-        var boostTick = lastBoostTick.get(player.getUUID());
-        if (player.getData(AttachmentTypes.WING_FLIGHT_POSE.get()) == WingFlightPose.Pose.FAST
-                && !WingFlightPose.isBoosting(player.level().getGameTime(), boostTick)) {
-            WingFlightPose.sync(player, WingFlightPose.coastingPose(player));
         }
     }
 

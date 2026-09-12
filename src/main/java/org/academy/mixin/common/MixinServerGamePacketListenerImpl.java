@@ -22,7 +22,8 @@ public abstract class MixinServerGamePacketListenerImpl {
     @Inject(method = "tick", at = @At("HEAD"))
     private void academy$allowActiveMagneticHover(CallbackInfo ci) {
         var player = ((ServerGamePacketListenerImpl) (Object) this).player;
-        if (MagnetManipulation.Server.isControllingSelfMovement(player)) clientIsFloating = false;
+        if (MagnetManipulation.Server.isControllingSelfMovement(player)
+                || org.academy.internal.common.ability.accelerator.skills.WingFlightPose.hasActiveWing(player)) clientIsFloating = false;
     }
 
     private static final String ENSURE_MAIN_THREAD =
