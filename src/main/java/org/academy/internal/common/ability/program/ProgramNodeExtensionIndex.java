@@ -140,7 +140,7 @@ public final class ProgramNodeExtensionIndex {
                 .result()
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Extension editor default cannot be decoded"));
-        Objects.requireNonNull(extension.schema(configuration), "extension schema");
+        Objects.requireNonNull(extension.resolvedSchema(configuration), "extension schema");
         return new Registration(id, extension, metadata, adapt(extension));
     }
 
@@ -198,7 +198,7 @@ public final class ProgramNodeExtensionIndex {
     private static <C> void updateSchema(MessageDigest digest, ProgramNodeExtension<C> extension,
                                           ProgramNodeEditorMetadata metadata) {
         var configuration = extension.configurationCodec().parse(JsonOps.INSTANCE, metadata.defaultConfiguration()).getOrThrow();
-        var schema = extension.schema(configuration);
+        var schema = extension.resolvedSchema(configuration);
         updatePorts(digest, "input", schema.inputs());
         updatePorts(digest, "output", schema.outputs());
     }

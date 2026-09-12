@@ -432,7 +432,7 @@ public final class AbilityProgramManager {
         if (builtin != null) return builtin;
         return AbilityProgramDefinitions.find(category) == null ? null : (program, player, costMultiplier, slot, invocation) -> {
             var definition = AbilityProgramDefinitions.require(category);
-            var transaction = new ProgramActionTransaction();
+            var transaction = ProgramActionTransaction.sequential();
             var targets = new ServerProgramTargetResolver(player, definition.spatialLimits().queryRange(), 256);
             var frame = new ProgramExecutionFrame(transaction, targets, invocation, player.level()::getGameTime);
             var execution = ServerProgramExecution.execute(program, player, category, 16384,

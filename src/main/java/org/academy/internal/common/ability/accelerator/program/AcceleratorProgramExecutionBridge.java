@@ -42,7 +42,7 @@ public final class AcceleratorProgramExecutionBridge {
     }
 
     /**
-     * Executes, validates and atomically commits a compiled program on the server.
+     * Executes a compiled program and settles action nodes in flow order on the server.
      */
     public static ServerExecutionResult executeServer(
             CompiledProgram program,
@@ -66,7 +66,7 @@ public final class AcceleratorProgramExecutionBridge {
             ProgramInvocationContext invocation
     ) {
         Objects.requireNonNull(player, "player");
-        var transaction = new ProgramActionTransaction();
+        var transaction = ProgramActionTransaction.sequential();
         var execution = ServerProgramExecution.execute(
                 program,
                 player,
