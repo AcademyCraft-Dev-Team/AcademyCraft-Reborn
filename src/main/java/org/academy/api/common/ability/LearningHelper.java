@@ -21,14 +21,21 @@ public final class LearningHelper {
     }
 
     public static boolean isSkillAvailableForCategory(AbilityCategory category, Skill skill) {
+        if (skill.isHidden()) return false;
         return switch (skill.getScope()) {
             case CATEGORY -> skill.getCategory() == category;
             case COMMON -> category.supportsCommonSkills();
         };
     }
 
+    /** Hidden skills are unfinished content and must not count towards progression budgets. */
+    public static boolean isSkillVisible(Skill skill) {
+        return !skill.isHidden();
+    }
+
     public static float getAbilityExpRequirement(AbilityCategory category, int currentLevel) {
         var count = category.getSkills().stream()
+                .filter(LearningHelper::isSkillVisible)
                 .filter(skill -> skill.getRecommendedLevel().getLevelCode() == currentLevel)
                 .count();
         var base = Math.max(1L, count) * 1000.0f;

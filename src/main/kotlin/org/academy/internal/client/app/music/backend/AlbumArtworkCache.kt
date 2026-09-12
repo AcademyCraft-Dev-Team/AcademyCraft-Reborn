@@ -6,7 +6,9 @@ import net.minecraft.client.renderer.texture.DynamicTexture
 import net.minecraft.resources.Identifier
 import net.neoforged.fml.loading.FMLPaths
 import org.academy.AcademyCraft
+import org.academy.api.client.resources.R
 import org.academy.internal.client.app.music.data.MusicInfo
+import org.academy.internal.client.app.music.data.MusicSource
 import org.academy.internal.client.app.music.netease.NeteaseMusicService
 import org.academy.internal.client.app.music.qq.QqMusicService
 import java.io.ByteArrayInputStream
@@ -37,10 +39,30 @@ object AlbumArtworkCache {
 
     fun textureFor(info: MusicInfo): Identifier {
         if (info.provider == "local" || info.externalId.isBlank()) return info.icon
+        return lookupTexture(info.provider, info.externalId, info.artworkUrl, info.icon)
+    }
+
+    /**
+     * 共享播放（音乐室/点播）曲目封面的懒加载查找喵。
+     */
+    fun textureFor(entry: org.academy.internal.common.music.SharedTrackEntry): Identifier {
+        if (entry.provider() == "local" || entry.trackId().isBlank()) {
+            return R.textures.gui.app.music.icon
+        }
+        return lookupTexture(entry.provider(), entry.trackId(), entry.artworkUrl(), R.textures.gui.app.music.icon)
+    }
+
+    private fun lookupTexture(
+        provider: String,
+        externalId: String,
+        artworkUrl: String,
+        fallback: Identifier
+    ): Identifier {
+        val info = MusicInfo(fallback, MusicSource.fromSupplier { throw IllegalStateException() }, "", "", provider, externalId, 0, false, artworkUrl)
         val key = cacheKey(info)
         textures[key]?.let { return it }
         request(info, key)
-        return info.icon
+        return fallback
     }
 
     private fun request(info: MusicInfo, key: String) {

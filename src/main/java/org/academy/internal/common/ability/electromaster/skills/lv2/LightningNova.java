@@ -135,7 +135,8 @@ public class LightningNova extends Skill {
         private Context(ServerPlayer player, int milestone) {
             super(player);
             this.milestone = milestone;
-            maximumRadius = milestone >= 2 ? Math.round(MAX_RADIUS * 1.25f) : MAX_RADIUS;
+            maximumRadius = Math.round(Skills.LIGHTNING_NOVA.get().scaledRange(player,
+                    milestone >= 2 ? Math.round(MAX_RADIUS * 1.25f) : MAX_RADIUS));
             outwardDuration = milestone >= 2
                     ? Math.max(1, Math.round(PULSE_DURATION * 1.25f / 1.15f))
                     : PULSE_DURATION;

@@ -22,6 +22,7 @@ import org.academy.api.common.ability.pakcet.SyncSkillDataPacket;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.registries.Registries;
+import org.academy.api.server.ability.SkillTuning;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.darkmatter.SyncDarkmatterStatePacket;
@@ -105,22 +106,28 @@ public final class AbilitySystemClient {
     public static List<SkillInfo> getSkillInfosForCategory(@Nullable AbilityCategory category) {
         if (category == null) return List.of();
 
-        var categoryInfos = SKILL_INFOS.getOrDefault(category, List.of());
+        var categoryInfos = visibleSkillInfos(SKILL_INFOS.getOrDefault(category, List.of()));
         if (!category.supportsCommonSkills()) return List.copyOf(categoryInfos);
 
-        var result = new ArrayList<SkillInfo>(categoryInfos.size() + COMMON_SKILL_INFOS.size());
+        var commonInfos = visibleSkillInfos(COMMON_SKILL_INFOS);
+        var result = new ArrayList<SkillInfo>(categoryInfos.size() + commonInfos.size());
         result.addAll(categoryInfos);
-        result.addAll(COMMON_SKILL_INFOS);
+        result.addAll(commonInfos);
         return List.copyOf(result);
     }
 
     public static List<SkillInfo> getCommonSkillInfos() {
-        return List.copyOf(COMMON_SKILL_INFOS);
+        return List.copyOf(visibleSkillInfos(COMMON_SKILL_INFOS));
     }
 
     public static List<SkillInfo> getCategorySkillInfos(@Nullable AbilityCategory category) {
         if (category == null) return List.of();
-        return List.copyOf(SKILL_INFOS.getOrDefault(category, List.of()));
+        return List.copyOf(visibleSkillInfos(SKILL_INFOS.getOrDefault(category, List.of())));
+    }
+
+    /** Strips unfinished (hidden) skills before they reach any skill UI or learning-path consumer. */
+    private static List<SkillInfo> visibleSkillInfos(List<SkillInfo> infos) {
+        return infos.stream().filter(info -> !info.skill().isHidden()).toList();
     }
 
     public static void init() {
@@ -150,6 +157,7 @@ public final class AbilitySystemClient {
             var fallbackSkills = Registries.SKILLS.stream()
                     .filter(skill -> skill.getScope() == SkillScope.CATEGORY)
                     .filter(skill -> skill.getCategory() == category)
+                    .filter(skill -> !skill.isHidden())
                     .filter(skill -> !bySkill.containsKey(skill))
                     .sorted(Comparator
                             .comparingInt((Skill skill) -> skill.getRecommendedLevel().getLevelCode())
@@ -308,6 +316,8 @@ public final class AbilitySystemClient {
 
         LEARNED_SKILLS.clear();
         newData.keySet().forEach(skillId -> Registries.SKILLS.get(Identifier.parse(skillId))
+                // Hidden skills keep their persisted data but stay out of every learned-skill UI gate.
+                .filter(holder -> !holder.value().isHidden())
                 .ifPresent(holder -> LEARNED_SKILLS.add(holder.value())));
         PENDING_TOGGLE_REQUESTS.clear();
     }
@@ -347,7 +357,8 @@ public final class AbilitySystemClient {
         }
 
         var level = skill.getLevelForProficiency(skillData.getProficiency());
-        var requiredCp = Math.max(0.0f, skill.getCpCost(level) * calculationIntensity);
+        var requiredCp = Math.max(0.0f, skill.getCpCost(level)
+                * SkillTuning.clientCostMultiplier(skill) * calculationIntensity);
         if (cpData.getAvailableCP() + 1.0e-4f < requiredCp) {
             return new SkillUseStatus(
                     false,
@@ -575,7 +586,7 @@ public final class AbilitySystemClient {
     }
 
     public static int getEffectiveMaxStacks(Skill skill, int skillLevel) {
-        var base = skill.getMaxStacks(skillLevel);
+        var base = SkillTuning.clientMaxStacks(skill, skill.getMaxStacks(skillLevel));
         if (base == Skill.NO_STACK_LIMIT) return Skill.NO_STACK_LIMIT;
         if (!getCategory().supportsCommonSkills()) return base;
         var stackData = SKILL_DATA.get(

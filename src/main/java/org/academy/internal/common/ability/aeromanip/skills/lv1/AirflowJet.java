@@ -368,7 +368,7 @@ public final class AirflowJet extends Skill {
         }
 
         private static float cpCost(ServerPlayer player, float baseCost) {
-            return baseCost * AeromanipConfig.cpMultiplier(player, SkillNames.AIRFLOW_JET);
+            return baseCost;
         }
 
         private static void castInstant(ServerPlayer player, AirflowJet skill) {
@@ -381,8 +381,8 @@ public final class AirflowJet extends Skill {
                 return;
             }
             if (target instanceof LivingEntity living) {
+                // The damage pipeline applies the skill's configured damage multiplier centrally.
                 var damage = instantDamage(skill.hasProficiencyMilestone(player, 1))
-                        * AeromanipConfig.damageMultiplier(player, SkillNames.AIRFLOW_JET)
                         * AbilitySystemServer.getSystem(player).getPlayerDamageMultiplier(player.getUUID());
                 var source = SkillDamageSource.of(player, skill);
                 living.hurtServer(player.level(), source, damage);

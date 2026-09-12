@@ -13,6 +13,7 @@ import org.academy.api.common.sync.packet.SyncDataPacket;
 import org.academy.api.common.util.UncheckedUtil;
 import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.api.common.wireless.*;
+import org.academy.api.server.ability.SkillTuning;
 import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.ProficiencySkillSettings;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorDefenseFeedbackPacket;
@@ -95,6 +96,7 @@ import org.academy.internal.common.ability.mentalout.skills.lv5.MindDestruction;
 import org.academy.internal.common.ability.mentalout.skills.lv5.WideAreaInterference;
 import org.academy.internal.common.ability.program.AbilityProgramManager;
 import org.academy.internal.common.ability.teleport.skills.lv1.ThreateningTeleport;
+import org.academy.internal.common.ability.teleport.ChunkLeapPackets;
 import org.academy.internal.common.ability.teleport.InstantTeleportSyncPacket;
 import org.academy.internal.common.ability.teleport.skills.lv1.ThreateningTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv2.Disarm;
@@ -133,6 +135,9 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, TemporalImmunitySyncPacket>>
             TEMPORAL_IMMUNITY_SYNC = PACKET_TYPES.register("temporal_immunity_sync",
             () -> new PacketType<>(TemporalImmunitySyncPacket.class, TemporalImmunitySyncPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SkillTuning.SyncPacket>>
+            SKILL_TUNING_SYNC = PACKET_TYPES.register("skill_tuning_sync",
+            () -> new PacketType<>(SkillTuning.SyncPacket.class, SkillTuning.SyncPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ProficiencySkillSettings.SetPacket>>
             PROFICIENCY_SKILL_OPTION_SET = PACKET_TYPES.register("proficiency_skill_option_set",
@@ -201,6 +206,45 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MusicSyncPackets.SyncPacket>>
             MUSIC_SYNC = PACKET_TYPES.register("music_sync",
             () -> new PacketType<>(MusicSyncPackets.SyncPacket.class, MusicSyncPackets.SyncPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MusicRoomPackets.ActionPacket>>
+            MUSIC_ROOM_ACTION = PACKET_TYPES.register("music_room_action",
+            () -> new PacketType<>(MusicRoomPackets.ActionPacket.class, MusicRoomPackets.ActionPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MusicRoomPackets.SyncPacket>>
+            MUSIC_ROOM_SYNC = PACKET_TYPES.register("music_room_sync",
+            () -> new PacketType<>(MusicRoomPackets.SyncPacket.class, MusicRoomPackets.SyncPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MusicRoomPackets.ListPacket>>
+            MUSIC_ROOM_LIST = PACKET_TYPES.register("music_room_list",
+            () -> new PacketType<>(MusicRoomPackets.ListPacket.class, MusicRoomPackets.ListPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MusicRoomPackets.PendingNoticePacket>>
+            MUSIC_ROOM_PENDING = PACKET_TYPES.register("music_room_pending",
+            () -> new PacketType<>(MusicRoomPackets.PendingNoticePacket.class, MusicRoomPackets.PendingNoticePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MusicJukeboxPackets.ActionPacket>>
+            MUSIC_JUKEBOX_ACTION = PACKET_TYPES.register("music_jukebox_action",
+            () -> new PacketType<>(MusicJukeboxPackets.ActionPacket.class, MusicJukeboxPackets.ActionPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MusicJukeboxPackets.SyncPacket>>
+            MUSIC_JUKEBOX_SYNC = PACKET_TYPES.register("music_jukebox_sync",
+            () -> new PacketType<>(MusicJukeboxPackets.SyncPacket.class, MusicJukeboxPackets.SyncPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MusicAccountPackets.ResolveRequestPacket>>
+            MUSIC_RESOLVE_REQUEST = PACKET_TYPES.register("music_resolve_request",
+            () -> new PacketType<>(MusicAccountPackets.ResolveRequestPacket.class, MusicAccountPackets.ResolveRequestPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MusicAccountPackets.ResolveResponsePacket>>
+            MUSIC_RESOLVE_RESPONSE = PACKET_TYPES.register("music_resolve_response",
+            () -> new PacketType<>(MusicAccountPackets.ResolveResponsePacket.class, MusicAccountPackets.ResolveResponsePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MusicAccountPackets.AccountActionPacket>>
+            MUSIC_ACCOUNT_ACTION = PACKET_TYPES.register("music_account_action",
+            () -> new PacketType<>(MusicAccountPackets.AccountActionPacket.class, MusicAccountPackets.AccountActionPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MusicAccountPackets.AccountStatusPacket>>
+            MUSIC_ACCOUNT_STATUS = PACKET_TYPES.register("music_account_status",
+            () -> new PacketType<>(MusicAccountPackets.AccountStatusPacket.class, MusicAccountPackets.AccountStatusPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MusicAccountPackets.ServerPlaylistPacket>>
+            MUSIC_SERVER_PLAYLIST = PACKET_TYPES.register("music_server_playlist",
+            () -> new PacketType<>(MusicAccountPackets.ServerPlaylistPacket.class, MusicAccountPackets.ServerPlaylistPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MusicAccountPackets.PlaylistRequestPacket>>
+            MUSIC_PLAYLIST_REQUEST = PACKET_TYPES.register("music_playlist_request",
+            () -> new PacketType<>(MusicAccountPackets.PlaylistRequestPacket.class, MusicAccountPackets.PlaylistRequestPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, CoinItem.ThrowCoinPacket>>
             THROW_COIN_WITH_VELOCITY = PACKET_TYPES.register("throw_coin_with_velocity",
@@ -427,6 +471,51 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DefensiveTeleport.TogglePacket>>
             DEFENSIVE_TELEPORT_TOGGLE = PACKET_TYPES.register("defensive_teleport_toggle",
             () -> new PacketType<>(DefensiveTeleport.TogglePacket.class, DefensiveTeleport.TogglePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ChunkLeapPackets.ViewRequestPacket>>
+            CHUNK_LEAP_VIEW_REQUEST = PACKET_TYPES.register("chunk_leap_view_request",
+            () -> new PacketType<>(ChunkLeapPackets.ViewRequestPacket.class, ChunkLeapPackets.ViewRequestPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ChunkLeapPackets.ViewReleasePacket>>
+            CHUNK_LEAP_VIEW_RELEASE = PACKET_TYPES.register("chunk_leap_view_release",
+            () -> new PacketType<>(ChunkLeapPackets.ViewReleasePacket.class, ChunkLeapPackets.ViewReleasePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ChunkLeapPackets.SwapRequestPacket>>
+            CHUNK_LEAP_SWAP = PACKET_TYPES.register("chunk_leap_swap",
+            () -> new PacketType<>(ChunkLeapPackets.SwapRequestPacket.class, ChunkLeapPackets.SwapRequestPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ChunkLeapPackets.EntityTeleportPacket>>
+            CHUNK_LEAP_ENTITY_TELEPORT = PACKET_TYPES.register("chunk_leap_entity_teleport",
+            () -> new PacketType<>(ChunkLeapPackets.EntityTeleportPacket.class, ChunkLeapPackets.EntityTeleportPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ChunkLeapPackets.TilesPacket>>
+            CHUNK_LEAP_TILES = PACKET_TYPES.register("chunk_leap_tiles",
+            () -> new PacketType<>(ChunkLeapPackets.TilesPacket.class, ChunkLeapPackets.TilesPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ChunkLeapPackets.EntitiesPacket>>
+            CHUNK_LEAP_ENTITIES = PACKET_TYPES.register("chunk_leap_entities",
+            () -> new PacketType<>(ChunkLeapPackets.EntitiesPacket.class, ChunkLeapPackets.EntitiesPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ChunkLeapPackets.SwapResultPacket>>
+            CHUNK_LEAP_SWAP_RESULT = PACKET_TYPES.register("chunk_leap_swap_result",
+            () -> new PacketType<>(ChunkLeapPackets.SwapResultPacket.class, ChunkLeapPackets.SwapResultPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ChunkLeapPackets.TeleportResultPacket>>
+            CHUNK_LEAP_TELEPORT_RESULT = PACKET_TYPES.register("chunk_leap_teleport_result",
+            () -> new PacketType<>(ChunkLeapPackets.TeleportResultPacket.class, ChunkLeapPackets.TeleportResultPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ChunkLeapPackets.ViewStatusPacket>>
+            CHUNK_LEAP_VIEW_STATUS = PACKET_TYPES.register("chunk_leap_view_status",
+            () -> new PacketType<>(ChunkLeapPackets.ViewStatusPacket.class, ChunkLeapPackets.ViewStatusPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ChunkLeapPackets.PreloadStatusPacket>>
+            CHUNK_LEAP_PRELOAD_STATUS = PACKET_TYPES.register("chunk_leap_preload_status",
+            () -> new PacketType<>(ChunkLeapPackets.PreloadStatusPacket.class, ChunkLeapPackets.PreloadStatusPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ChunkLeapPackets.InspectRequestPacket>>
+            CHUNK_LEAP_INSPECT_REQUEST = PACKET_TYPES.register("chunk_leap_inspect_request",
+            () -> new PacketType<>(ChunkLeapPackets.InspectRequestPacket.class, ChunkLeapPackets.InspectRequestPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ChunkLeapPackets.InspectResultPacket>>
+            CHUNK_LEAP_INSPECT_RESULT = PACKET_TYPES.register("chunk_leap_inspect_result",
+            () -> new PacketType<>(ChunkLeapPackets.InspectResultPacket.class, ChunkLeapPackets.InspectResultPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ChunkLeapPackets.PlayerTeleportPacket>>
+            CHUNK_LEAP_PLAYER_TELEPORT = PACKET_TYPES.register("chunk_leap_player_teleport",
+            () -> new PacketType<>(ChunkLeapPackets.PlayerTeleportPacket.class, ChunkLeapPackets.PlayerTeleportPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ChunkLeapPackets.GodViewRequestPacket>>
+            CHUNK_LEAP_GOD_VIEW_REQUEST = PACKET_TYPES.register("chunk_leap_god_view_request",
+            () -> new PacketType<>(ChunkLeapPackets.GodViewRequestPacket.class, ChunkLeapPackets.GodViewRequestPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ChunkLeapPackets.GodViewStatusPacket>>
+            CHUNK_LEAP_GOD_VIEW_STATUS = PACKET_TYPES.register("chunk_leap_god_view_status",
+            () -> new PacketType<>(ChunkLeapPackets.GodViewStatusPacket.class, ChunkLeapPackets.GodViewStatusPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterShaping.CastPacket>>
             DARKMATTER_SHAPING_CAST = PACKET_TYPES.register("darkmatter_shaping_cast",
             () -> new PacketType<>(DarkmatterShaping.CastPacket.class, DarkmatterShaping.CastPacket.CODEC));

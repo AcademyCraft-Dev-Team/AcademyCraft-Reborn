@@ -238,17 +238,22 @@ class CommandExecutor : AutoCloseable {
             val screenWidth = (scissor.width * guiScale).toInt()
             val screenHeight = (scissor.height * guiScale).toInt()
             val screenY = (physicalHeight - (pos.y + scissor.height) * guiScale).toInt()
-            if (screenWidth > 0 && screenHeight > 0) {
-                val clampedX = screenX.coerceIn(0, physicalWidth)
-                val clampedY = screenY.coerceIn(0, physicalHeight)
-                val clampedRight = (screenX + screenWidth).coerceIn(0, physicalWidth)
-                val clampedBottom = (screenY + screenHeight).coerceIn(0, physicalHeight)
-                val clampedWidth = clampedRight - clampedX
-                val clampedHeight = clampedBottom - clampedY
-                if (clampedWidth > 0 && clampedHeight > 0) {
-                    renderPass.enableScissor(clampedX, clampedY, clampedWidth, clampedHeight)
-                    scissorEnabled = true
-                }
+            if (screenWidth <= 0 || screenHeight <= 0) {
+                // 裁剪区域为空交集 (如滚动容器外): 命令不可见, 跳过绘制而不是关闭裁剪喵.
+                return false
+            }
+            val clampedX = screenX.coerceIn(0, physicalWidth)
+            val clampedY = screenY.coerceIn(0, physicalHeight)
+            val clampedRight = (screenX + screenWidth).coerceIn(0, physicalWidth)
+            val clampedBottom = (screenY + screenHeight).coerceIn(0, physicalHeight)
+            val clampedWidth = clampedRight - clampedX
+            val clampedHeight = clampedBottom - clampedY
+            if (clampedWidth > 0 && clampedHeight > 0) {
+                renderPass.enableScissor(clampedX, clampedY, clampedWidth, clampedHeight)
+                scissorEnabled = true
+            } else {
+                // 裁剪区域完全在屏幕外: 命令不可见, 跳过绘制喵.
+                return false
             }
         }
         if (!scissorEnabled) renderPass.disableScissor()

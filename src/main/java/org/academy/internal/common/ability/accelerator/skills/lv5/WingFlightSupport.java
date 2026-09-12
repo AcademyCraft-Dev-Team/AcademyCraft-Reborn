@@ -13,6 +13,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.DamageComposition;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -233,9 +234,9 @@ final class WingFlightSupport {
         var forward = player.getLookAngle().normalize();
         var advancedBlackSweep = skill == Skills.BLACK_WING.get()
                 && skill.hasProficiencyMilestone(player, 2);
-        var range = advancedBlackSweep
+        var range = skill.scaledRange(player, advancedBlackSweep
                 ? 36.0
-                : ATTACK_RANGE;
+                : ATTACK_RANGE);
         var cosThreshold = advancedBlackSweep
                 ? Math.cos(Math.acos(FAN_COS_THRESHOLD) + Math.toRadians(10.0))
                 : FAN_COS_THRESHOLD;
@@ -269,20 +270,26 @@ final class WingFlightSupport {
                 if (!Float.isFinite(trueMaxHealth) || trueMaxHealth <= 0.0f) {
                     trueMaxHealth = target.getMaxHealth();
                 }
-                var damage = calculateFanDamage(baseDamage, trueMaxHealth, multiplier,
-                        skill == Skills.PLATINUM_WING.get());
+                var platinumWing = skill == Skills.PLATINUM_WING.get();
+                var damage = calculateFanDamage(baseDamage, trueMaxHealth, multiplier, platinumWing);
                 if (!Float.isFinite(damage) || damage <= 0) continue;
-                new CTAEntityActuallyHurt(target).actuallyHurt(source, damage, true);
+                // Percentage max-health damage must not be scaled by the ordinary damage multiplier,
+                // so tell the damage pipeline how much of this hit came from true max health.
+                var maxHealthPart = trueMaxHealth * MAX_HEALTH_DAMAGE_RATIO * (platinumWing ? multiplier : 1.0f);
+                DamageComposition.withMaximumHealthPart(
+                        target, source, maxHealthPart,
+                        () -> new CTAEntityActuallyHurt(target).actuallyHurt(source, damage, true));
                 if (skill == Skills.BLACK_WING.get() && skill.hasProficiencyMilestone(player, 3)) {
                     var now = level.getGameTime();
                     var marked = TimedSkillEffectRuntime.consume(
                             player.getUUID(), target.getUUID(), skill, "vector_mark", now);
                     if (marked.isPresent()) {
-                        SkillDamageUtil.applyVerifiedTrueHealth(
-                                target,
-                                SkillDamageSource.of(player, skill, DamageTypes.VEC),
-                                damage * 0.3f
-                        );
+                        var secondarySource = SkillDamageSource.of(player, skill, DamageTypes.VEC);
+                        // Carry over the same percentage portion into the follow-up hit.
+                        DamageComposition.withMaximumHealthPart(
+                                target, secondarySource, maxHealthPart * 0.3f,
+                                () -> SkillDamageUtil.applyVerifiedTrueHealth(
+                                        target, secondarySource, damage * 0.3f));
                         var pull = origin.subtract(targetCenter);
                         if (pull.lengthSqr() > 1.0E-6) {
                             target.setDeltaMovement(target.getDeltaMovement().add(pull.normalize().scale(0.75)));

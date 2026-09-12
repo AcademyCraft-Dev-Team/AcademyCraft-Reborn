@@ -34,6 +34,7 @@ import org.academy.api.client.vanilla.RenderLoopEvent;
 import org.academy.api.client.vanilla.WorldCompositeEvent;
 import org.academy.internal.client.ability.mentalout.ControlledItemInHandRendererBridge;
 import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
+import org.academy.internal.client.ability.teleport.ChunkLeapGodView;
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
 import org.academy.internal.client.render.vfx.SpatialCutFrameProjectionContext;
 import org.academy.internal.client.render.vfx.WingAvatarRegistry;
@@ -199,6 +200,9 @@ public abstract class MixinGameRenderer {
             }
             ci.cancel();
         } else if (MentalIntrusionClientState.isActive()) {
+            ci.cancel();
+        } else if (ChunkLeapGodView.isActive()) {
+            // Detached overhead camera: the held items belong to a viewpoint that is no longer in use.
             ci.cancel();
         }
     }

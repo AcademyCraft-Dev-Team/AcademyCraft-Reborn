@@ -203,7 +203,9 @@ public final class CurrentRecharge extends Skill {
             var eye = player.getEyePosition();
             var look = player.getLookAngle();
             if (look.lengthSqr() <= 1.0E-6) return null;
-            var end = eye.add(look.normalize().scale(milestone >= 2 ? 8.0 : CHARGE_REACH));
+            var reach = Skills.CURRENT_RECHARGE.get()
+                    .scaledRange(player, milestone >= 2 ? 8.0 : CHARGE_REACH);
+            var end = eye.add(look.normalize().scale(reach));
             var blockHit = level.clip(new ClipContext(
                     eye, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player));
             var blockPoint = blockHit.getType() == HitResult.Type.MISS ? end : blockHit.getLocation();

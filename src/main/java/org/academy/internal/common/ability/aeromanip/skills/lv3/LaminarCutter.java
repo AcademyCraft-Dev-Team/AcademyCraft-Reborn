@@ -357,8 +357,7 @@ public final class LaminarCutter extends Skill {
                 case FULL -> 28.0f;
             };
             return skill.executeActiveWithResource(player, context -> (baseCost < 0.0f
-                            ? tierCp : baseCost)
-                            * AeromanipConfig.cpMultiplier(player, SkillNames.LAMINAR_CUTTER),
+                            ? tierCp : baseCost),
                     _ -> tierAir * airCostMultiplier,
                     (context, _) -> executeCut(
                             player,
@@ -399,7 +398,8 @@ public final class LaminarCutter extends Skill {
             level.playSound(null, player.blockPosition(),
                     SoundEvents.AIRFLOW_IMPACT.get(),
                     SoundSource.PLAYERS, 0.65f, 1.15f);
-            var damage = baseDamage(tier) * AeromanipConfig.damageMultiplier(player, SkillNames.LAMINAR_CUTTER)
+            // The damage pipeline applies the skill's configured damage multiplier centrally.
+            var damage = baseDamage(tier)
                     * context.system().getPlayerAbilityPowerMultiplier(player.getUUID())
                     * context.system().getPlayerDamageMultiplier(player.getUUID())
                     * damageScale;

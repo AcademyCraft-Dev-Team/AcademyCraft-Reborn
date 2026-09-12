@@ -117,7 +117,23 @@ public class BloodflowReverse extends Skill {
             double additionalRange,
             Predicate<LivingEntity> candidateFilter
     ) {
-        var range = targetRange(observer, additionalRange);
+        return findTargetWithinRange(
+                observer, eyePosition, viewDirection,
+                targetRange(observer, additionalRange), candidateFilter);
+    }
+
+    /**
+     * Scans with an already resolved absolute range. Server call sites pass a
+     * {@link Skill#scaledRange} result so the configured range multiplier applies to the
+     * whole reach instead of only {@link #targetRange}'s additional-range term.
+     */
+    public static LivingEntity findTargetWithinRange(
+            LivingEntity observer,
+            Vec3 eyePosition,
+            Vec3 viewDirection,
+            double range,
+            Predicate<LivingEntity> candidateFilter
+    ) {
         return ViewTargetScanner.findFirst(
                 observer.level(),
                 LivingEntity.class,
@@ -367,13 +383,17 @@ public class BloodflowReverse extends Skill {
         }
 
         private static LivingEntity findTarget(ServerPlayer player) {
-            var additionalRange = Skills.BLOODFLOW_REVERSE.get().hasProficiencyMilestone(player, 2)
+            var skill = Skills.BLOODFLOW_REVERSE.get();
+            var additionalRange = skill.hasProficiencyMilestone(player, 2)
                     ? 4.0 : 0.0;
-            return BloodflowReverse.findTarget(
+            var range = skill.scaledRange(player,
+                    BloodflowReverse.targetRange(player, additionalRange));
+            return BloodflowReverse.findTargetWithinRange(
                     player,
                     player.getEyePosition(),
                     player.getLookAngle(),
-                    additionalRange
+                    range,
+                    _ -> true
             );
         }
 

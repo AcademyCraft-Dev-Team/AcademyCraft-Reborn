@@ -247,9 +247,7 @@ public final class AdiabaticCompression extends Skill {
                         "compressedAirIntervalTicks", 10.0f)));
                 if ((activeTicks - 1) % costInterval == 0 && !skill.executeContinuousWithResource(
                         player,
-                        _ -> skill.getCpCost(player)
-                                * AeromanipConfig.cpMultiplier(
-                                player, SkillNames.ADIABATIC_COMPRESSION),
+                        _ -> skill.getCpCost(player),
                         _ -> Math.max(0.0f, AeromanipConfig.skillFloat(
                                 player, SkillNames.ADIABATIC_COMPRESSION,
                                 "compressedAirPerInterval", 8.0f)),
@@ -331,9 +329,8 @@ public final class AdiabaticCompression extends Skill {
                         player, SkillNames.ADIABATIC_COMPRESSION,
                         "damagePerStack", BASE_DAMAGE_PER_STACK);
                 var system = AbilitySystemServer.getSystem(player);
+                // The damage pipeline applies the skill's configured damage multiplier centrally.
                 var damage = damageForStacks(stacks, baseDamage, milestone)
-                        * AeromanipConfig.damageMultiplier(
-                        player, SkillNames.ADIABATIC_COMPRESSION)
                         * system.getPlayerAbilityPowerMultiplier(player.getUUID())
                         * system.getPlayerDamageMultiplier(player.getUUID());
                 target.hurtServer(

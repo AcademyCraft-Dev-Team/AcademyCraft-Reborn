@@ -223,8 +223,8 @@ public class PlasmaGeneration extends Skill {
                     * AbilitySystemServer.getSystem(player).getPlayerAbilityPowerMultiplier(player.getUUID())
                     * AbilitySystemServer.getSystem(player).getPlayerDamageMultiplier(player.getUUID());
             var destroyBlocks = DestroyBlocksSetting.canDestroyBlocks(player, skill);
-            var damageRadius = stage * RADIUS_PER_STAGE
-                    * (skill.hasProficiencyMilestone(player, 2) ? 1.1f : 1.0f);
+            var damageRadius = skill.scaledRange(player, stage * RADIUS_PER_STAGE
+                    * (skill.hasProficiencyMilestone(player, 2) ? 1.1f : 1.0f));
             plasma.launch(
                     player.getUUID(),
                     targetPos,
@@ -238,10 +238,11 @@ public class PlasmaGeneration extends Skill {
         }
 
         private static Vec3 findTarget(ServerPlayer player) {
+            var targetRange = Skills.PLASMA_GENERATION.get().scaledRange(player, MAX_TARGET_RANGE);
             var start = player.getEyePosition();
             var look = player.getLookAngle();
-            var end = start.add(look.scale(MAX_TARGET_RANGE));
-            var searchBox = player.getBoundingBox().expandTowards(look.scale(MAX_TARGET_RANGE)).inflate(1.0);
+            var end = start.add(look.scale(targetRange));
+            var searchBox = player.getBoundingBox().expandTowards(look.scale(targetRange)).inflate(1.0);
             var entityHit = ProjectileUtil.getEntityHitResult(
                     player.level(), player, start, end, searchBox,
                     entity -> entity != player && !entity.isSpectator()

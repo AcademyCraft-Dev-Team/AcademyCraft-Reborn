@@ -183,9 +183,12 @@ public final class DarkmatterDisassemble extends Skill {
                 Direction hitFace
         ) {
             if (player == null || position == null
-                    || !(player.level() instanceof ServerLevel level)
-                    || Vec3.atCenterOf(position).distanceToSqr(player.getEyePosition())
-                    > maximumRange(player) * maximumRange(player)
+                    || !(player.level() instanceof ServerLevel level)) {
+                return false;
+            }
+            var reach = Skills.DARKMATTER_DISASSEMBLE.get().scaledRange(player, maximumRange(player));
+            if (Vec3.atCenterOf(position).distanceToSqr(player.getEyePosition())
+                    > reach * reach
                     || !DestroyBlocksSetting.canDestroyBlocks(
                     player, Skills.DARKMATTER_DISASSEMBLE.get())
                     || !isStructurallyBreakable(level, player, position,
@@ -273,7 +276,7 @@ public final class DarkmatterDisassemble extends Skill {
         }
 
         private static Hit pick(ServerLevel level, ServerPlayer player) {
-            var range = RANGE;
+            var range = Skills.DARKMATTER_DISASSEMBLE.get().scaledRange(player, RANGE);
             var start = player.getEyePosition();
             var direction = player.getLookAngle().normalize();
             var end = start.add(direction.scale(range));
@@ -309,9 +312,10 @@ public final class DarkmatterDisassemble extends Skill {
         }
 
         public static boolean tryAutomatedAttack(ServerPlayer player, LivingEntity target) {
+            var reach = Skills.DARKMATTER_DISASSEMBLE.get().scaledRange(player, RANGE);
             if (!(player.level() instanceof ServerLevel level)
                     || target == null || target.level() != level || !target.isAlive()
-                    || player.distanceToSqr(target) > RANGE * RANGE
+                    || player.distanceToSqr(target) > reach * reach
                     || !player.hasLineOfSight(target)) return false;
             return disassembleAt(player, target.getBoundingBox().getCenter(), null, Direction.UP);
         }
@@ -474,15 +478,18 @@ public final class DarkmatterDisassemble extends Skill {
                 Direction hitFace
         ) {
             if (player == null || impact == null
-                    || !(player.level() instanceof ServerLevel level)
-                    || impact.distanceToSqr(player.getEyePosition()) > RANGE * RANGE) {
+                    || !(player.level() instanceof ServerLevel level)) {
+                return false;
+            }
+            var reach = Skills.DARKMATTER_DISASSEMBLE.get().scaledRange(player, RANGE);
+            if (impact.distanceToSqr(player.getEyePosition()) > reach * reach) {
                 return false;
             }
             var skill = Skills.DARKMATTER_DISASSEMBLE.get();
             var applied = new boolean[1];
             var executed = skill.executeActive(player, (context, actualCost) -> {
                 var phase = DarkmatterPhase.weights(player);
-                var damageRadius = damageRadius(phase.alpha());
+                var damageRadius = skill.scaledRange(player, damageRadius(phase.alpha()));
                 var targets = level.getEntitiesOfClass(
                         LivingEntity.class,
                         new AABB(impact, impact).inflate(damageRadius),
@@ -612,7 +619,8 @@ public final class DarkmatterDisassemble extends Skill {
                             level, player, candidate, alpha, milestone)
             ));
             if (gamma > 0.0f) {
-                var radius = gammaRadius(gamma, milestone, sixWingsMilestone);
+                var radius = Skills.DARKMATTER_DISASSEMBLE.get()
+                        .scaledRange(player, gammaRadius(gamma, milestone, sixWingsMilestone));
                 var intRadius = (int) Math.ceil(radius);
                 for (var candidate : BlockPos.betweenClosed(
                         origin.offset(-intRadius, -intRadius, -intRadius),

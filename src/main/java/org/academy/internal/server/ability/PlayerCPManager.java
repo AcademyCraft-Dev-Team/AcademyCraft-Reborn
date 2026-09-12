@@ -19,6 +19,7 @@ import org.academy.api.common.ability.event.AbilityRecoveryEvent;
 import org.academy.api.common.ability.pakcet.SyncAbilityDataPacket;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
+import org.academy.api.server.ability.SkillTuning;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.world.level.block.AbilityDeveloperSleep;
@@ -48,6 +49,7 @@ public class PlayerCPManager implements AbilitySubsystem {
 
     private final PlayerDataManager playerDataManager;
     private final SyncManager syncManager;
+    private final AbilityConfig abilityConfig;
     private final Set<UUID> skillDebugPlayers = ConcurrentHashMap.newKeySet();
     private final ConcurrentHashMap<UUID, Float> cpIterationProgress = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Float> debugMaxCpOverrides = new ConcurrentHashMap<>();
@@ -55,7 +57,7 @@ public class PlayerCPManager implements AbilitySubsystem {
     public PlayerCPManager(PlayerDataManager manager, AbilityConfig config, SyncManager syncManager) {
         playerDataManager = manager;
         this.syncManager = syncManager;
-
+        this.abilityConfig = config;
     }
 
     private static void enterOverload(AbilityData cpData, ServerPlayer player) {
@@ -839,7 +841,7 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     int getMaxStacks(UUID uuid, Skill skill, int skillLevel) {
-        var base = skill.getMaxStacks(skillLevel);
+        var base = SkillTuning.maxStacks(abilityConfig, skill, skill.getMaxStacks(skillLevel));
         return base == Skill.NO_STACK_LIMIT
                 ? Skill.NO_STACK_LIMIT
                 : Math.max(0, base + getBonuses(uuid).stackBonus());

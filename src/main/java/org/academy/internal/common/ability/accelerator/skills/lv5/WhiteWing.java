@@ -53,6 +53,7 @@ public final class WhiteWing extends Skill {
                 .energyCost(100_000)
                 .passive()
                 .initiallyDisabled()
+                .hidden()
                 .maintenanceCost(80)
                 .iterationTicks(10)
                 .maxStacks(NO_STACK_LIMIT)

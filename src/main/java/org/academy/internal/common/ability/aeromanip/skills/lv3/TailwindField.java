@@ -218,7 +218,7 @@ public final class TailwindField extends Skill {
                 };
                 skill.executeActiveWithResource(
                         player,
-                        _ -> cp * AeromanipConfig.cpMultiplier(player, SkillNames.TAILWIND_FIELD),
+                        _ -> cp,
                         _ -> air,
                         (_, _) -> createField(player, skill, mode));
             }

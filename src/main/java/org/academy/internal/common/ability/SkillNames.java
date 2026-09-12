@@ -59,6 +59,7 @@ public final class SkillNames {
     public static final String AREA_TELEPORT_SELECT = "area_teleport_select";
     public static final String FLASHING = "flashing";
     public static final String DEFENSIVE_TELEPORT = "defensive_teleport";
+    public static final String CHUNK_LEAP = "chunk_leap";
     public static final String DARKMATTER_GENERATION = "darkmatter_generation";
     public static final String DARKMATTER_SHAPING = "darkmatter_shaping";
     public static final String DARKMATTER_PHASE_TUNING = "darkmatter_phase_tuning";

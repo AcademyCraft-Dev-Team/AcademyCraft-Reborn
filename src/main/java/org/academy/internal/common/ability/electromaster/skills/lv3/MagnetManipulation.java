@@ -81,8 +81,8 @@ import java.util.Map;
 
 public class MagnetManipulation extends Skill {
     static final double MOVE_RANGE = 48.0;
-    static final double MOVE_SPEED_PER_TICK = 18.0 / 20.0;
-    static final double TARGET_PULL_SPEED_PER_TICK = 1.15;
+    static final double MOVE_SPEED_PER_TICK = 36.0 / 20.0;
+    static final double TARGET_PULL_SPEED_PER_TICK = 2.3;
     static final double PLAYER_STOP_DISTANCE = 1.35;
     static final double TARGET_STOP_DISTANCE = 0.65;
     static final double TARGET_FRONT_DISTANCE = 2.5;
@@ -482,8 +482,10 @@ public class MagnetManipulation extends Skill {
                 if (anchor == null) return false;
                 Vec3 destination;
                 if (anchor.entity() != null) {
+                    var maxAnchorRange = Skills.MAGNET_MANIPULATION.get()
+                            .scaledRange(player, MOVE_RANGE * 1.25);
                     if (!anchor.entity().isAlive() || anchor.entity().level() != level()
-                            || player.distanceToSqr(anchor.entity()) > MOVE_RANGE * MOVE_RANGE * 1.5625) {
+                            || player.distanceToSqr(anchor.entity()) > maxAnchorRange * maxAnchorRange) {
                         return false;
                     }
                     destination = anchor.entity().getBoundingBox().getCenter();
@@ -572,7 +574,8 @@ public class MagnetManipulation extends Skill {
             var look = player.getLookAngle();
             if (look.lengthSqr() <= 1.0e-6) return null;
             look = look.normalize();
-            var range = skillMilestone() >= 2 ? MOVE_RANGE * 1.25 : MOVE_RANGE;
+            var range = Skills.MAGNET_MANIPULATION.get().scaledRange(player,
+                    skillMilestone() >= 2 ? MOVE_RANGE * 1.25 : MOVE_RANGE);
             var end = eye.add(look.scale(range));
             var blockHit = level().clip(new ClipContext(
                     eye,

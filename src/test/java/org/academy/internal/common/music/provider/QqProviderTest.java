@@ -1,4 +1,4 @@
-package org.academy.internal.client.app.music.qq;
+package org.academy.internal.common.music.provider;
 
 import org.junit.jupiter.api.Test;
 
@@ -6,14 +6,16 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-class QqMusicServiceTest {
+class QqProviderTest {
     @Test
     void usesAdvertisedSupportedFormatsInQualityOrder() {
         assertEquals(
                 List.of("M800media.mp3", "M500media.mp3", "F000media.flac"),
-                QqMusicService.buildSupportedFilenames("media", 5L, 10L, 20L)
+                QqProvider.buildSupportedFilenames("media", 5L, 10L, 20L)
         );
     }
 
@@ -21,7 +23,7 @@ class QqMusicServiceTest {
     void legacyTracksUseAvailableMp3InsteadOfNonexistentOgg() {
         assertEquals(
                 List.of("M500media.mp3"),
-                QqMusicService.buildSupportedFilenames("media", 5L, 0L, 0L)
+                QqProvider.buildSupportedFilenames("media", 5L, 0L, 0L)
         );
     }
 
@@ -29,7 +31,7 @@ class QqMusicServiceTest {
     void missingAvailabilityMetadataStillAttemptsCompatibleMp3() {
         assertEquals(
                 List.of("M500media.mp3"),
-                QqMusicService.buildSupportedFilenames("media", 0L, 0L, 0L)
+                QqProvider.buildSupportedFilenames("media", 0L, 0L, 0L)
         );
     }
 
@@ -38,13 +40,13 @@ class QqMusicServiceTest {
         var attempts = new ArrayList<String>();
         var mp3 = new byte[]{'I', 'D', '3', 4, 0, 0};
 
-        var result = QqMusicService.downloadFirstSupported(
+        var result = MusicProviders.downloadFirstSupported(
                 List.of("missing", "m4a", "mp3"),
                 url -> {
                     attempts.add(url);
                     return switch (url) {
                         case "missing" -> throw new IOException("HTTP 404");
-                        case "m4a" -> new byte[]{0, 0, 0, 24, 'f', 't', 'y', 'p'};
+                        case "m4a" -> throw new IOException("unsupported audio format MP4_AAC");
                         default -> mp3;
                     };
                 }
@@ -57,7 +59,7 @@ class QqMusicServiceTest {
     @Test
     void reportsFailureAfterAllSourcesAreExhausted() {
         var exception = assertThrows(IOException.class, () ->
-                QqMusicService.downloadFirstSupported(
+                MusicProviders.downloadFirstSupported(
                         List.of("first", "second"),
                         _ -> throwFailure()
                 ));
@@ -69,29 +71,25 @@ class QqMusicServiceTest {
     void diagnosesVipTrackWithoutLoginAsLoginRequired() {
         assertEquals(
                 "付费歌曲需登录 QQ 音乐账号（VIP）后才能播放",
-                QqMusicService.diagnoseNoSource(true, null, 0)
+                QqProvider.diagnoseNoSource(true, ProviderCredential.ANONYMOUS, 0)
         );
     }
 
     @Test
     void diagnosesVipTrackWithExpiredCredentialAsReLogin() {
-        var expired = new QqCredential(
-                "123", "key", 3600L, System.currentTimeMillis() / 1000 - 7200, "", ""
-        );
+        var expired = ProviderCredential.ofQq("123", "key", System.currentTimeMillis() / 1000 - 3600);
         assertEquals(
                 "QQ 音乐登录已过期，请重新登录后再播放付费歌曲",
-                QqMusicService.diagnoseNoSource(true, expired, 0)
+                QqProvider.diagnoseNoSource(true, expired, 0)
         );
     }
 
     @Test
     void diagnosesVipTrackWithValidCredentialAsMissingVipRight() {
-        var valid = new QqCredential(
-                "123", "key", 3600L, System.currentTimeMillis() / 1000, "", ""
-        );
+        var valid = ProviderCredential.ofQq("123", "key", System.currentTimeMillis() / 1000 + 3600);
         assertEquals(
                 "付费歌曲暂时无法播放，请确认账号具备 VIP 权限",
-                QqMusicService.diagnoseNoSource(true, valid, 0)
+                QqProvider.diagnoseNoSource(true, valid, 0)
         );
     }
 
@@ -99,7 +97,7 @@ class QqMusicServiceTest {
     void diagnosesFreeTrackWithApiErrorCode() {
         assertEquals(
                 "QQ 音乐未返回可播放的音频源（code=40000）",
-                QqMusicService.diagnoseNoSource(false, null, 40000)
+                QqProvider.diagnoseNoSource(false, ProviderCredential.ANONYMOUS, 40000)
         );
     }
 
@@ -107,7 +105,7 @@ class QqMusicServiceTest {
     void diagnosesFreeTrackWithoutApiErrorCode() {
         assertEquals(
                 "QQ 音乐未返回可播放的音频源",
-                QqMusicService.diagnoseNoSource(false, null, 0)
+                QqProvider.diagnoseNoSource(false, ProviderCredential.ANONYMOUS, 0)
         );
     }
 
@@ -115,7 +113,7 @@ class QqMusicServiceTest {
     void diagnosesPermissionErrorOnFreeTrackAsVipOnly() {
         assertEquals(
                 "该歌曲为付费/VIP 曲目，当前账号无播放权限",
-                QqMusicService.diagnoseNoSource(false, null, 104009)
+                QqProvider.diagnoseNoSource(false, ProviderCredential.ANONYMOUS, 104009)
         );
     }
 
@@ -123,29 +121,25 @@ class QqMusicServiceTest {
     void diagnosesPermissionErrorOnVipTrackWithoutLoginAsLoginRequired() {
         assertEquals(
                 "付费歌曲需登录 QQ 音乐账号（VIP）后才能播放",
-                QqMusicService.diagnoseNoSource(true, null, 104009)
+                QqProvider.diagnoseNoSource(true, ProviderCredential.ANONYMOUS, 104009)
         );
     }
 
     @Test
     void diagnosesPermissionErrorOnVipTrackWithExpiredCredentialAsReLogin() {
-        var expired = new QqCredential(
-                "123", "key", 3600L, System.currentTimeMillis() / 1000 - 7200, "", ""
-        );
+        var expired = ProviderCredential.ofQq("123", "key", System.currentTimeMillis() / 1000 - 3600);
         assertEquals(
                 "QQ 音乐登录已过期，请重新登录后再播放付费歌曲",
-                QqMusicService.diagnoseNoSource(true, expired, 104009)
+                QqProvider.diagnoseNoSource(true, expired, 104009)
         );
     }
 
     @Test
     void diagnosesPermissionErrorOnVipTrackWithValidCredentialAsMissingVipRight() {
-        var valid = new QqCredential(
-                "123", "key", 3600L, System.currentTimeMillis() / 1000, "", ""
-        );
+        var valid = ProviderCredential.ofQq("123", "key", System.currentTimeMillis() / 1000 + 3600);
         assertEquals(
                 "付费歌曲暂时无法播放，请确认账号具备 VIP 权限",
-                QqMusicService.diagnoseNoSource(true, valid, 104009)
+                QqProvider.diagnoseNoSource(true, valid, 104009)
         );
     }
 

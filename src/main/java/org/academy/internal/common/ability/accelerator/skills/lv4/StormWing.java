@@ -328,8 +328,9 @@ public final class StormWing extends Skill {
                 trails.clear();
                 return;
             }
+            var turbulenceRadius = skill.scaledRange(player, 1.5f);
             for (var point : trails) {
-                var area = new AABB(point.position(), point.position()).inflate(1.5);
+                var area = new AABB(point.position(), point.position()).inflate(turbulenceRadius);
                 for (var ally : player.level().getEntitiesOfClass(
                         LivingEntity.class,
                         area,

@@ -84,6 +84,7 @@ import org.academy.internal.common.ability.teleport.skills.lv3.LocationTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv3.Shackle;
 import org.academy.internal.common.ability.teleport.skills.lv4.AreaTeleportSelect;
 import org.academy.internal.common.ability.teleport.skills.lv4.QuickLocationTeleport;
+import org.academy.internal.common.ability.teleport.skills.lv5.ChunkLeap;
 import org.academy.internal.common.ability.teleport.skills.lv5.DefensiveTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv5.Flashing;
 import org.academy.internal.common.ability.teleport.skills.lv5.SpacialExcision;
@@ -187,6 +188,7 @@ public final class Skills {
     public static final DeferredHolder<Skill, AreaTeleportSelect> AREA_TELEPORT_SELECT = SKILLS.register(SkillNames.AREA_TELEPORT_SELECT, AreaTeleportSelect::new);
     public static final DeferredHolder<Skill, Flashing> FLASHING = SKILLS.register(SkillNames.FLASHING, Flashing::new);
     public static final DeferredHolder<Skill, DefensiveTeleport> DEFENSIVE_TELEPORT = SKILLS.register(SkillNames.DEFENSIVE_TELEPORT, DefensiveTeleport::new);
+    public static final DeferredHolder<Skill, ChunkLeap> CHUNK_LEAP = SKILLS.register(SkillNames.CHUNK_LEAP, ChunkLeap::new);
     /**
      * Darkmatter
      */

@@ -118,8 +118,9 @@ public final class RadiationIntensify extends Skill {
             if (entry == null || entry.value() < 3.0f) return;
             var remaining = Math.max(1, (int) Math.min(Integer.MAX_VALUE, entry.expiresAt() - now));
             var spread = 0;
+            var spreadRadius = skill.scaledRange(owner, 5.0f);
             for (var target : level.getEntitiesOfClass(LivingEntity.class,
-                    event.getEntity().getBoundingBox().inflate(5.0),
+                    event.getEntity().getBoundingBox().inflate(spreadRadius),
                     target -> target.isAlive()
                             && MeltdownerTargeting.canAffectNegatively(owner, target))) {
                 if (spread++ >= 3) break;

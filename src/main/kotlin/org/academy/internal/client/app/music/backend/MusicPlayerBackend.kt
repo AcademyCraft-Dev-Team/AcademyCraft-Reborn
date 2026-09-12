@@ -12,6 +12,7 @@ import org.academy.api.client.gui.msdf.font.MsdfFont
 import org.academy.api.client.gui.msdf.font.MsdfFontService
 import org.academy.api.client.gui.state.UiState
 import org.academy.api.client.vanilla.MainLoopEvent
+import org.academy.internal.client.app.music.common.PlaybackController
 import org.academy.internal.client.app.music.common.PlaybackMode
 import org.academy.internal.client.app.music.common.PlaybackState
 import org.academy.internal.client.app.music.data.MusicData
@@ -34,6 +35,10 @@ class MusicPlayerBackend private constructor() {
     private val resourceTracks = mutableListOf<MusicInfo>()
     private val onlineTracks = mutableListOf<MusicInfo>()
     private val playlistRevisionCounter = AtomicInteger()
+
+    @Volatile
+    var playbackController: PlaybackController = PlaybackController.LOCAL
+        private set
 
     val uiState = UiState(0)
 
@@ -83,12 +88,18 @@ class MusicPlayerBackend private constructor() {
     fun update() {
         audioPlayer.update()
         if (bufferingTrackIndex.get() != -1) return
+        if (playbackController != PlaybackController.LOCAL) return
         if (audioPlayer.state == PlaybackState.IDLE && isSessionActive.get()) {
             if (playbackMode == PlaybackMode.REPEAT_ONE) {
                 val index = playlistManager.getCurrentTrackIndex()
                 if (index != -1) performPlay(index)
             } else performPlayNext()
         }
+    }
+
+    fun setPlaybackController(controller: PlaybackController) {
+        playbackController = controller
+        bumpUiState()
     }
 
     fun handleContextReset() {
@@ -170,13 +181,16 @@ class MusicPlayerBackend private constructor() {
         try {
             val iconLocation = Identifier.parse(data.icon)
             val source = createMusicSource(data.sourceType, data.source)
+            // 资源包曲目用资源定位符作稳定曲目ID，供共享播放与本地列表去重对齐喵.
+            val externalId = (source.path as? Identifier)?.toString() ?: ""
             return Optional.of(
                 MusicInfo(
                     iconLocation,
                     source,
                     name,
                     data.subtitle,
-                    durationSeconds = probeDurationSeconds(source)
+                    durationSeconds = probeDurationSeconds(source),
+                    externalId = externalId
                 )
             )
         } catch (e: Exception) {
@@ -208,20 +222,46 @@ class MusicPlayerBackend private constructor() {
         if (index != -1) play(index)
     }
 
-    fun play(trackIndex: Int) {
-        runOnSoundEngine { performPlay(trackIndex) }
+    /**
+     * 从曲内指定秒起播（共享播放同步接入用），曲目不在列表时忽略喵。
+     */
+    fun playAt(info: MusicInfo, startSeconds: Float) {
+        val index = playlistManager.getPlaylist().indexOf(info)
+        if (index != -1) playAt(index, startSeconds)
     }
 
-    private fun performPlay(trackIndex: Int) {
-        if (bufferingTrackIndex.get() == trackIndex) return
-        if (playlistManager.getCurrentTrackIndex() == trackIndex && audioPlayer.state == PlaybackState.PLAYING) return
+    /**
+     * 按提供者与曲目ID定位播放（在线曲目 Supplier 源的 MusicInfo 不具备稳定 equals）喵。
+     */
+    fun playAt(provider: String, externalId: String, startSeconds: Float, startPaused: Boolean = false) {
+        runOnSoundEngine {
+            val index = playlistManager.getPlaylist()
+                .indexOfFirst { it.provider == provider && it.externalId == externalId }
+            if (index >= 0) performPlay(index, startSeconds, startPaused)
+        }
+    }
+
+    fun play(trackIndex: Int) {
+        playAt(trackIndex, 0f)
+    }
+
+    fun playAt(trackIndex: Int, startSeconds: Float) {
+        runOnSoundEngine { performPlay(trackIndex, startSeconds, false) }
+    }
+
+    private fun performPlay(trackIndex: Int, startSeconds: Float = 0f, startPaused: Boolean = false) {
+        if (bufferingTrackIndex.get() == trackIndex && startSeconds <= 0f) return
+        if (playlistManager.getCurrentTrackIndex() == trackIndex
+            && startSeconds <= 0f
+            && audioPlayer.state == PlaybackState.PLAYING
+        ) return
 
         playlistManager.getTrack(trackIndex).ifPresentOrElse(Consumer { mediaInfo ->
             val source = mediaInfo.source
             if (source.path is Supplier<*>) {
-                performBufferedPlay(trackIndex, mediaInfo, source)
+                performBufferedPlay(trackIndex, mediaInfo, source, startSeconds, startPaused)
             } else {
-                performImmediatePlay(trackIndex, mediaInfo, source.data)
+                performImmediatePlay(trackIndex, mediaInfo, source.data, startSeconds, startPaused)
             }
         }) {
             logger.warn("Attempted to play track with invalid index: {}", trackIndex)
@@ -229,7 +269,13 @@ class MusicPlayerBackend private constructor() {
         }
     }
 
-    private fun performBufferedPlay(trackIndex: Int, mediaInfo: MusicInfo, source: MusicSource) {
+    private fun performBufferedPlay(
+        trackIndex: Int,
+        mediaInfo: MusicInfo,
+        source: MusicSource,
+        startSeconds: Float,
+        startPaused: Boolean
+    ) {
         bufferingTrackIndex.set(trackIndex)
         playlistManager.setCurrentTrackIndex(trackIndex)
         bumpUiState()
@@ -244,17 +290,25 @@ class MusicPlayerBackend private constructor() {
                         performStop()
                         return@runOnSoundEngine
                     }
-                    if (data != null) performImmediatePlay(trackIndex, mediaInfo, data.duplicate())
+                    if (data != null) performImmediatePlay(trackIndex, mediaInfo, data.duplicate(), startSeconds, startPaused)
                     else performStop()
                 }
             }
     }
 
-    private fun performImmediatePlay(trackIndex: Int, mediaInfo: MusicInfo, data: ByteBuffer) {
+    private fun performImmediatePlay(
+        trackIndex: Int,
+        mediaInfo: MusicInfo,
+        data: ByteBuffer,
+        startSeconds: Float,
+        startPaused: Boolean = false
+    ) {
         try {
             currentTrackData = data
             playlistManager.setCurrentTrackIndex(trackIndex)
-            audioPlayer.play(data, 0)
+            if (startSeconds > 0f) audioPlayer.playAtSeconds(data, startSeconds)
+            else audioPlayer.play(data, 0)
+            if (startPaused) audioPlayer.pause()
             isSessionActive.set(true)
             bumpUiState()
         } catch (e: Exception) {
@@ -279,6 +333,27 @@ class MusicPlayerBackend private constructor() {
 
     fun togglePlayPause() {
         runOnSoundEngine { this.performTogglePlayPause() }
+    }
+
+    /**
+     * 共享播放同步专用：直接暂停/恢复，不触发本地"从头播放"回退逻辑喵。
+     */
+    fun pause() {
+        runOnSoundEngine {
+            if (audioPlayer.state == PlaybackState.PLAYING) {
+                audioPlayer.pause()
+                bumpUiState()
+            }
+        }
+    }
+
+    fun resume() {
+        runOnSoundEngine {
+            if (audioPlayer.state == PlaybackState.PAUSED) {
+                audioPlayer.resume()
+                bumpUiState()
+            }
+        }
     }
 
     private fun performTogglePlayPause() {
@@ -313,6 +388,19 @@ class MusicPlayerBackend private constructor() {
 
     fun seek(timeRatio: Float) {
         runOnSoundEngine { performSeek(timeRatio) }
+    }
+
+    /**
+     * 跳到曲内指定秒，不触发本地“跳到下一首”逻辑，供共享播放对齐进度用喵。
+     */
+    fun seekToSeconds(seconds: Float) {
+        runOnSoundEngine {
+            val data = currentTrackData ?: return@runOnSoundEngine
+            val duration = audioPlayer.totalDuration
+            val ratio = if (duration > 0f) (seconds / duration).coerceIn(0f, 0.998f) else 0f
+            audioPlayer.seek(data, ratio)
+            bumpUiState()
+        }
     }
 
     private fun performSeek(timeRatio: Float) {

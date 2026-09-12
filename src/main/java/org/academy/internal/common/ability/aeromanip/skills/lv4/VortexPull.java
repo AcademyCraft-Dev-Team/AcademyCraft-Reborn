@@ -207,7 +207,7 @@ public final class VortexPull extends Skill {
                 };
                 skill.executeActiveWithResource(
                         player,
-                        _ -> cp * AeromanipConfig.cpMultiplier(player, SkillNames.VORTEX_PULL),
+                        _ -> cp,
                         _ -> air,
                         (_, _) -> cast(player, skill, tier));
             }

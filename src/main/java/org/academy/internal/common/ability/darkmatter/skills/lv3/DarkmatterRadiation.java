@@ -250,11 +250,14 @@ public final class DarkmatterRadiation extends Skill {
             var betaRange = betaRange(phase.beta(), state.milestone);
             var sixMilestone = Skills.DARKMATTER_SIX_WINGS.get()
                     .getEffectiveProficiencyMilestone(player);
+            var skill = Skills.DARKMATTER_RADIATION.get();
             if (phase.gamma() > 0.0f) {
                 var area = DarkmatterSixWings.Server.areaMultiplier(sixMilestone);
                 alphaRange *= area;
                 betaRange *= area;
             }
+            alphaRange = skill.scaledRange(player, alphaRange);
+            betaRange = skill.scaledRange(player, betaRange);
             var queryRange = Math.max(alphaRange, betaRange);
             var alphaMinimumDot = Math.cos(Math.toRadians(alphaHalfAngle(phase.alpha())));
             var betaMinimumDot = Math.cos(Math.toRadians(betaHalfAngle(phase.beta())));
@@ -276,7 +279,6 @@ public final class DarkmatterRadiation extends Skill {
                 return;
             }
 
-            var skill = Skills.DARKMATTER_RADIATION.get();
             var system = AbilitySystemServer.getSystem(player);
             var power = system.getPlayerAbilityPowerMultiplier(player.getUUID());
             var damageMultiplier = system.getPlayerDamageMultiplier(player.getUUID());
@@ -426,7 +428,7 @@ public final class DarkmatterRadiation extends Skill {
                 float power, float damageMultiplier
         ) {
             var count = gammaFeatherCount(gamma, milestone);
-            var radius = 4.0 + 2.0 * gamma;
+            var radius = Skills.DARKMATTER_RADIATION.get().scaledRange(player, 4.0 + 2.0 * gamma);
             var nearby = candidates.stream()
                     .filter(target -> target.distanceToSqr(player) <= radius * radius)
                     .sorted(Comparator.comparingDouble(target -> target.distanceToSqr(player)))

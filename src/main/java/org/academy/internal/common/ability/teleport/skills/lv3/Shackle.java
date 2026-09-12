@@ -153,16 +153,17 @@ public class Shackle extends Skill {
         @SubscribePacket
         public static void handle(UsePacket packet) {
             var player = packet.getPacketListener().getPlayer();
+            var range = Skills.SHACKLE.get().scaledRange(player, MAX_RANGE);
             if (!(player.level().getEntity(packet.getTargetEntityId()) instanceof LivingEntity target)
                     || target == player || !target.isAlive()
                     || !target.isPickable()
                     || !canShackle(player, target)
-                    || player.distanceToSqr(target) > MAX_RANGE * MAX_RANGE) return;
+                    || player.distanceToSqr(target) > range * range) return;
 
             Skills.SHACKLE.get().executeActive(player, (ctx, actualCost) -> {
                 if (!target.isAlive() || target.level() != player.level()
                         || !canShackle(player, target)
-                        || player.distanceToSqr(target) > MAX_RANGE * MAX_RANGE) return;
+                        || player.distanceToSqr(target) > range * range) return;
                 target.stopRiding();
                 var duration = ctx.milestone() >= 2 && !(target instanceof Player) ? 200 : SHACKLE_DURATION;
                 var sourceId = "shackle:" + player.getStringUUID();

@@ -297,7 +297,8 @@ public final class BlackWing extends Skill {
 
         private static Vec3 aimTarget(ServerPlayer player) {
             var origin = player.getEyePosition();
-            var hit = player.pick(WingFlightSupport.ATTACK_RANGE, 1f, false);
+            var hit = player.pick(
+                    Skills.BLACK_WING.get().scaledRange(player, WingFlightSupport.ATTACK_RANGE), 1f, false);
             var target = hit.getLocation();
             double distance = origin.distanceToSqr(target);
             // Use the nearest entity along the aim ray, stopping at the first block.

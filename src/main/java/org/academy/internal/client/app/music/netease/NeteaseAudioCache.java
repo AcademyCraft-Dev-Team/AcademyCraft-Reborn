@@ -64,6 +64,22 @@ public final class NeteaseAudioCache {
         return songId != null && !songId.isBlank() && Files.exists(resolveFile(songId));
     }
 
+    /**
+     * 收录服务器共享账号解析得到的音频（校验后落盘并入内存缓存）。
+     * 同步执行，避免在双线程池上嵌套 join 造成死锁喵。
+     */
+    public static CompletableFuture<ByteBuffer> acceptServerResolved(String songId, byte[] bytes) {
+        try {
+            validate(bytes);
+            saveToDisk(songId, bytes);
+            var buffer = toDirectBuffer(bytes);
+            putInMemory(songId, buffer);
+            return CompletableFuture.completedFuture(buffer.duplicate());
+        } catch (Exception exception) {
+            return CompletableFuture.failedFuture(exception);
+        }
+    }
+
     private static byte[] loadFromDisk(String songId) {
         try {
             var file = resolveFile(songId);

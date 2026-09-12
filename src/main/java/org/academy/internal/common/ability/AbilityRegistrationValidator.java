@@ -83,8 +83,7 @@ public final class AbilityRegistrationValidator {
                     throw new IllegalStateException("Common skill cannot depend on a category skill: "
                             + skillKey + " -> " + dependency.getKeyString());
                 }
-                if (skill.getScope() == SkillScope.CATEGORY
-                        && !LearningHelper.isSkillAvailableForCategory(skill.getCategory(), dependency)) {
+                if (!acceptsCategoryDependency(skill, dependency)) {
                     throw new IllegalStateException("Skill dependency is unavailable to its category: "
                             + skillKey + " -> " + dependency.getKeyString());
                 }
@@ -112,6 +111,17 @@ public final class AbilityRegistrationValidator {
 
         AcademyCraft.getLogger().info("Validated {} ability categories and {} skills.",
                 registeredCategories.size(), registeredSkills.size());
+    }
+
+    /**
+     * Category skills may only depend on skills their own category can learn. Unfinished (hidden)
+     * skills sit outside the learning path, so they may reference one another freely. A visible
+     * skill must never depend on a hidden one, or it would become an unlearnable dead end.
+     */
+    static boolean acceptsCategoryDependency(Skill skill, Skill dependency) {
+        if (skill.getScope() != SkillScope.CATEGORY) return true;
+        if (skill.isHidden()) return true;
+        return LearningHelper.isSkillAvailableForCategory(skill.getCategory(), dependency);
     }
 
     static <T> void validateAcyclic(
