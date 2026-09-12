@@ -7,7 +7,7 @@ import net.minecraft.network.chat.Component
 import org.academy.api.client.gui.command.FillRectDrawCommand
 import org.academy.api.client.gui.drawable.ColorDrawable
 import org.academy.api.client.gui.layout.SizeMode
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.screen.UiScreen
 import org.academy.api.client.gui.serialize.WidgetNode
 import org.academy.api.client.gui.serialize.WidgetSerializer
@@ -178,7 +178,7 @@ class UiLayoutEditorScreen(
     }
 
     private class SelectionBorderWidget(private val target: () -> Widget?) : AbstractWidget() {
-        override fun renderInternal(context: RenderContext) {
+        override fun renderInternal(context: Canvas) {
             val t = target() ?: return
             val host = parent ?: return
             val dx = t.getAbsoluteX() - host.getAbsoluteX()

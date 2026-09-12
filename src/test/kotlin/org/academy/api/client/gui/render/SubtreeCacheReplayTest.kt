@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test
 
 class SubtreeCacheReplayTest {
     private class Fill : AbstractWidget() {
-        override fun render(context: RenderContext) {
+        override fun render(context: Canvas) {
             context.submit(FillRectDrawCommand(10f, 10f, 1f, 1f, 1f, 1f))
         }
     }
@@ -28,7 +28,7 @@ class SubtreeCacheReplayTest {
 
         override fun checkLayoutParams(p: WidgetContainer.LayoutParams): Boolean = p is FrameLayoutWidget.LayoutParams
 
-        override fun renderInternal(context: RenderContext) {
+        override fun renderInternal(context: Canvas) {
             renderInternalCount++
             context.submit(FillRectDrawCommand(width, height, 1f, 1f, 1f, context.accumulatedAlpha))
         }
@@ -51,9 +51,9 @@ class SubtreeCacheReplayTest {
         root.addChild("box", box)
         root.measureAndLayout(100f, 100f)
 
-        val ctx1 = RenderContext()
+        val ctx1 = Canvas()
         root.render(ctx1)
-        val ctx2 = RenderContext()
+        val ctx2 = Canvas()
         root.render(ctx2)
 
         assertEquals(ctx1.commands.size, ctx2.commands.size)
@@ -72,12 +72,12 @@ class SubtreeCacheReplayTest {
         root.measureAndLayout(100f, 100f)
         box.layout(30f, 40f, 80f, 90f)
 
-        val ctx1 = RenderContext()
+        val ctx1 = Canvas()
         root.render(ctx1)
         assertEquals(30f, pose(ctx1.commands.first()).m30(), 1e-4f)
         assertEquals(40f, pose(ctx1.commands.first()).m31(), 1e-4f)
 
-        val ctx2 = RenderContext()
+        val ctx2 = Canvas()
         root.render(ctx2)
         assertEquals(30f, pose(ctx2.commands.first()).m30(), 1e-4f, "fast path 不应把世界位姿丢成左上角")
         assertEquals(40f, pose(ctx2.commands.first()).m31(), 1e-4f)
@@ -91,7 +91,7 @@ class SubtreeCacheReplayTest {
         root.addChild("box", box)
         root.measureAndLayout(100f, 100f)
 
-        val ctx1 = RenderContext()
+        val ctx1 = Canvas()
         root.render(ctx1)
         assertEquals(0f, pose(ctx1.commands.first()).m30(), 1e-4f)
         assertEquals(0f, pose(ctx1.commands.first()).m31(), 1e-4f)
@@ -99,7 +99,7 @@ class SubtreeCacheReplayTest {
         box.translationX = 10f
         box.translationY = 20f
 
-        val ctx2 = RenderContext()
+        val ctx2 = Canvas()
         root.render(ctx2)
         val moved = pose(ctx2.commands.first())
         assertEquals(10f, moved.m30(), 1e-4f, "translation 应通过位姿重组反映")
@@ -117,14 +117,14 @@ class SubtreeCacheReplayTest {
         root.addChild("outer", outer)
         root.measureAndLayout(100f, 100f)
 
-        val ctx1 = RenderContext()
+        val ctx1 = Canvas()
         root.render(ctx1)
         assertEquals(0f, pose(ctx1.commands.first()).m30(), 1e-4f)
 
         outer.translationX = 30f
         inner.translationY = 40f
 
-        val ctx2 = RenderContext()
+        val ctx2 = Canvas()
         root.render(ctx2)
         val p = pose(ctx2.commands.first())
         assertEquals(30f, p.m30(), 1e-4f)
@@ -138,13 +138,13 @@ class SubtreeCacheReplayTest {
         root.addChild("box", box)
         root.measureAndLayout(100f, 100f)
 
-        val ctx1 = RenderContext()
+        val ctx1 = Canvas()
         root.render(ctx1)
         assertEquals(1, box.renderInternalCount)
         assertEquals(1f, ctx1.commands.first().alphaMul, 1e-4f)
 
         box.alpha = 0.5f
-        val ctx2 = RenderContext()
+        val ctx2 = Canvas()
         root.render(ctx2)
         assertEquals(1, box.renderInternalCount, "alpha 变化应通过 alphaMul 校正, 不重录")
         assertEquals(0.5f, ctx2.commands.first().alphaMul, 1e-4f, "校正乘子 = 当前累积 alpha / 录制累积 alpha")
@@ -160,13 +160,13 @@ class SubtreeCacheReplayTest {
         root.addChild("outer", outer)
         root.measureAndLayout(100f, 100f)
 
-        val ctx1 = RenderContext()
+        val ctx1 = Canvas()
         root.render(ctx1)
         assertEquals(1, outer.renderInternalCount)
         assertEquals(1, inner.renderInternalCount)
 
         outer.alpha = 0.5f
-        val ctx2 = RenderContext()
+        val ctx2 = Canvas()
         root.render(ctx2)
         assertEquals(1, outer.renderInternalCount, "外层 alpha 变化不应重录外层自身")
         assertEquals(1, inner.renderInternalCount, "外层 alpha 变化不应重录内层")
@@ -180,14 +180,14 @@ class SubtreeCacheReplayTest {
         root.addChild("box", box)
         root.measureAndLayout(100f, 100f)
 
-        val ctx1 = RenderContext()
+        val ctx1 = Canvas()
         root.render(ctx1)
         assertEquals(1f, pose(ctx1.commands.first()).m00(), 1e-4f)
 
         box.scaleX = 2f
         box.scaleY = 2f
 
-        val ctx2 = RenderContext()
+        val ctx2 = Canvas()
         root.render(ctx2)
         val scaled = pose(ctx2.commands.first())
         assertEquals(2f, scaled.m00(), 1e-4f, "scale 应通过位姿重组反映")
@@ -202,13 +202,13 @@ class SubtreeCacheReplayTest {
         root.addChild("box", box)
         root.measureAndLayout(100f, 100f)
 
-        val ctx1 = RenderContext()
+        val ctx1 = Canvas()
         root.render(ctx1)
         assertEquals(0f, pose(ctx1.commands.first()).m01(), 1e-4f)
 
         box.rotation = 90f
 
-        val ctx2 = RenderContext()
+        val ctx2 = Canvas()
         root.render(ctx2)
         val rotated = pose(ctx2.commands.first())
         assertTrue(Math.abs(rotated.m01()) > 0.5f, "rotation 应通过位姿重组反映 (m01 = ${rotated.m01()})")

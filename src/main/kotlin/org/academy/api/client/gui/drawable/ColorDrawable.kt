@@ -2,11 +2,11 @@ package org.academy.api.client.gui.drawable
 
 import net.minecraft.util.ARGB
 import org.academy.api.client.gui.command.FillRectDrawCommand
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.widget.Widget
 
 class ColorDrawable(var color: Int) : Drawable {
-    override fun draw(context: RenderContext, widget: Widget) {
+    override fun draw(context: Canvas, widget: Widget) {
         val lp = widget.layoutParams
         val paddedWidth = widget.width - lp.paddingLeft - lp.paddingRight
         val paddedHeight = widget.height - lp.paddingTop - lp.paddingBottom

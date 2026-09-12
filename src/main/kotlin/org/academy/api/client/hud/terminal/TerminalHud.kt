@@ -25,6 +25,7 @@ import org.academy.api.client.app.App
 import org.academy.api.client.gui.animation.*
 import org.academy.api.client.gui.animation.ObjectAnimator.Companion.ofFloat
 import org.academy.api.client.gui.animation.ValueAnimator.Companion.ofFloat
+import org.academy.api.client.gui.command.LocalBounds
 import org.academy.api.client.gui.command.PosTexRectDrawCommand
 import org.academy.api.client.gui.event.*
 import org.academy.api.client.gui.event.MouseEvent.Companion.createDragEvent
@@ -34,8 +35,9 @@ import org.academy.api.client.gui.event.MouseEvent.Companion.createReleaseEvent
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.render.UiContext
+import org.academy.api.client.gui.text.Ellipsize
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.input.*
 import org.academy.api.client.render.Render
@@ -64,6 +66,9 @@ class TerminalHud private constructor() {
     private val uiContext: UiContext
     private val config: TerminalConfig
     private var pendingToggle: PendingToggle? = null
+
+    val root: WidgetContainer
+        get() = context.get()
 
     /**
      * 0.0f : 面向鼠标喵
@@ -106,15 +111,12 @@ class TerminalHud private constructor() {
     private fun createUiContext(): UiContext {
         return object : UiContext() {
             override fun generateCommands(
-                context: RenderContext, rootWidget: WidgetContainer, mouseX: Double, mouseY: Double, partialTick: Float
+                context: Canvas, rootWidget: WidgetContainer, mouseX: Double, mouseY: Double, partialTick: Float
             ) {
                 super.generateCommands(context, rootWidget, mouseX, mouseY, partialTick)
 
                 context.pose().pushPose()
-                context.drawOrder().push()
                 run {
-                    val max = context.commands.maxByOrNull { it.drawOrder }?.drawOrder ?: 0L
-                    context.drawOrder().advance(max + 1)
                     context.pose().translate(xPos.toFloat(), yPos.toFloat())
 
                     var sdfData = SDFData(Vector4f(0f, 0f, 0f, 0.75f), 0.5f, 0.5f)
@@ -128,18 +130,16 @@ class TerminalHud private constructor() {
 
                     context.pose().pushPose()
                     run {
-                        context.drawOrder().advance()
                         context.pose().translate(-1.5f, -1.5f)
                         sdfData = SDFData(Vector4f(1f, 1f, 1f, 1f), 0.5f, 0.25f)
                         submitGlowCommand(context, 3f, sdfData)
                     }
                     context.pose().popPose()
                 }
-                context.drawOrder().pop()
                 context.pose().popPose()
             }
 
-            fun submitGlowCommand(context: RenderContext, size: Float, sdfData: SDFData) {
+            fun submitGlowCommand(context: Canvas, size: Float, sdfData: SDFData) {
                 val glowCommand: PosTexRectDrawCommand = object : PosTexRectDrawCommand(
                     Render.RenderPipelines.SDF_CIRCLE_GLOW,
                     size,
@@ -154,7 +154,10 @@ class TerminalHud private constructor() {
                             "GlowUniforms", SDFData::class.java, sdfData, SDFData.UBO_SIZE
                         )
                     )
-                ) {}
+                ) {
+                    // SDF 辉光会画到标称尺寸之外, 保守起见视为无界 (不参与合并).
+                    override fun localBounds(): LocalBounds? = null
+                }
                 context.submit(glowCommand)
             }
         }
@@ -402,7 +405,7 @@ class TerminalHud private constructor() {
             }
         }
         if (!isActive || !ClientUtil.hasNoScreen()) return
-        if (TextBoxWidget.hasActiveTextInput() && event.key != InputConstants.KEY_ESCAPE) {
+        if (TextInputFocus.isActive() && event.key != InputConstants.KEY_ESCAPE) {
             if (!ClientUtil.isControlKey(event.key, event.scanCode, event.modifiers)) {
                 context.get().dispatchEvent(
                     KeyEvent(
@@ -475,7 +478,7 @@ class TerminalHud private constructor() {
     }
 
     private fun onPreeditInput(event: PreeditEvent?): Boolean {
-        return !(!isActive || !ClientUtil.hasNoScreen()) && TextBoxWidget.handlePreeditInput(event)
+        return !(!isActive || !ClientUtil.hasNoScreen()) && TextInputFocus.handlePreedit(event)
     }
 
     @SubscribeEvent
@@ -744,7 +747,8 @@ class TerminalHud private constructor() {
                     val progressState = AtomicReference(0f)
                     val updateState = Consumer { progress: Float ->
                         progressState.set(progress)
-                        iconArea.scale = 1.0f + 0.2f * progress
+                        iconArea.scaleX = 1.0f + 0.2f * progress
+                        iconArea.scaleY = 1.0f + 0.2f * progress
                         back.setBrightness(0.8f + 0.2f * progress)
                         iconWidget.setBrightness(0.9f + 0.1f * progress)
                     }
@@ -764,11 +768,14 @@ class TerminalHud private constructor() {
                     )
                     iconArea.stateListAnimator = animator
                 }
-                val nameWidget = LabelWidget(name)
+                val nameWidget = TextWidget(name)
                 nameWidget.layoutParams = LinearLayoutWidget.LayoutParams()
                     .weight(1f)
                     .height(0f)
                     .gravity(Gravity.CENTER)
+                nameWidget.gravity = Gravity.CENTER
+                nameWidget.ellipsize = Ellipsize.MARQUEE
+                nameWidget.marqueeFadeSize = 6f
                 layout.addChild("name", nameWidget)
             }
             return layout

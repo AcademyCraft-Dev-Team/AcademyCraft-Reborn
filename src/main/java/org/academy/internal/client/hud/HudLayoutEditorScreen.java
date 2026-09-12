@@ -1,59 +1,44 @@
 package org.academy.internal.client.hud;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import org.academy.api.client.hud.HudLayoutRegion;
-import org.academy.api.client.hud.HudLayoutRegistry;
+import org.academy.api.client.hud.HudManager;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public final class HudLayoutEditorScreen extends Screen {
-    private static final long LONG_PRESS_MS = 200L;
-    private static final float HANDLE_SIZE = 9.0f;
-    private static final float RESIZE_PIXELS_PER_UNIT = 110.0f;
+    private static final float SCALE_STEP = 0.05f;
     private static final int BUTTON_WIDTH = 100;
     private static final int BUTTON_HEIGHT = 20;
     private static final int BUTTON_GAP = 6;
 
     private static final int DIM = 0x66000000;
     private static final int BOX = 0xFFFFFFFF;
-    private static final int BOX_ACTIVE = 0xFF66FFCC;
-    private static final int HANDLE = 0xC0FFE34D;
+    private static final int BOX_ACTIVE = 0xFFFFFFFF;
     private static final int TEXT = 0xFFFFFFFF;
+    private static final int TEXT_DIM = 0x99FFFFFF;
+    private static final int HIDDEN_BOX = 0x66FFFFFF;
+    private static final int HIDDEN_FILL = 0x0CFFFFFF;
+    private static final int FILL = 0x18FFFFFF;
+    private static final int FILL_ACTIVE = 0x30FFFFFF;
+
     private final @Nullable Screen previousScreen;
-    private @Nullable EditableRegion grabbed;
-    private Mode mode = Mode.NONE;
-    private long pressTime;
-    private double pressX;
-    private double pressY;
-    private double grabOffsetX;
-    private double grabOffsetY;
-    private float initialScale;
-    private boolean activated;
+    private @Nullable HudLayout.Region grabbed;
+    private double grabStartX;
+    private double grabStartY;
+    private float initialTranslateX;
+    private float initialTranslateY;
 
     public HudLayoutEditorScreen(@Nullable Screen previousScreen) {
         super(Component.translatable("hud.academy.layout.title"));
         this.previousScreen = previousScreen;
-    }
-
-    private static boolean overHandle(
-            EditableRegion region, HudLayout.Rect rect, double mouseX, double mouseY
-    ) {
-        var left = rect.x();
-        var right = rect.x() + rect.width();
-        var bottom = rect.y() + rect.height();
-        var handleLeft = usesLeftHandle(region) ? left : right - HANDLE_SIZE;
-        return mouseX >= handleLeft && mouseX <= handleLeft + HANDLE_SIZE
-                && mouseY >= bottom - HANDLE_SIZE && mouseY <= bottom;
-    }
-
-    private static boolean usesLeftHandle(EditableRegion region) {
-        return region.usesLeftHandle();
     }
 
     private static boolean inside(double mouseX, double mouseY, int x, int y, int width, int height) {
@@ -81,32 +66,26 @@ public final class HudLayoutEditorScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        if (grabbed != null && !activated && System.currentTimeMillis() - pressTime >= LONG_PRESS_MS) {
-            activated = true;
-        }
-
         graphics.centeredText(font, title, width / 2, 8, TEXT);
-        graphics.centeredText(font, Component.translatable("hud.academy.layout.hint"), width / 2, 20, 0xFFB0B0B0);
+        graphics.centeredText(font, Component.translatable("hud.academy.layout.hint"), width / 2, 20, TEXT_DIM);
 
         var minecraft = Minecraft.getInstance();
+        var hiddenLabel = Component.translatable("hud.academy.layout.hidden").getString();
         for (var region : editableRegions()) {
             var rect = region.rect(minecraft);
-            var active = region.equals(grabbed) && activated;
-            var x0 = Math.round(rect.x());
-            var y0 = Math.round(rect.y());
-            var x1 = Math.round(rect.x() + rect.width());
-            var y1 = Math.round(rect.y() + rect.height());
-            graphics.fill(x0, y0, x1, y1, active ? 0x3066FFCC : 0x20FFFFFF);
-            border(graphics, x0, y0, x1 - x0, y1 - y0, active ? BOX_ACTIVE : BOX);
+            var active = region == grabbed;
+            var hidden = region.getHidden();
+            var x0 = Math.round(rect.getX());
+            var y0 = Math.round(rect.getY());
+            var x1 = Math.round(rect.getX() + rect.getWidth());
+            var y1 = Math.round(rect.getY() + rect.getHeight());
+            graphics.fill(x0, y0, x1, y1, hidden ? HIDDEN_FILL : (active ? FILL_ACTIVE : FILL));
+            border(graphics, x0, y0, x1 - x0, y1 - y0, hidden ? HIDDEN_BOX : (active ? BOX_ACTIVE : BOX));
 
-            var handleX = usesLeftHandle(region) ? x0 : x1 - Math.round(HANDLE_SIZE);
-            var handleY = y1 - Math.round(HANDLE_SIZE);
-            graphics.fill(handleX, handleY, handleX + Math.round(HANDLE_SIZE), y1, HANDLE);
-            border(graphics, handleX, handleY, Math.round(HANDLE_SIZE), Math.round(HANDLE_SIZE), 0xFF000000);
-
-            var label = region.name().getString()
-                    + "  " + Math.round(region.scale() * 100.0f) + "%";
-            graphics.text(font, label, x0 + 2, Math.max(0, y0 + 2), active ? BOX_ACTIVE : TEXT, true);
+            var label = Component.translatable(region.getNameKey()).getString()
+                    + "  " + Math.round(region.getScaleXY() * 100.0f)
+                    + "%" + (hidden ? "  " + hiddenLabel : "");
+            graphics.text(font, label, x0 + 2, Math.max(0, y0 + 2), hidden ? TEXT_DIM : (active ? BOX_ACTIVE : TEXT), true);
         }
 
         var buttonY = height - BUTTON_HEIGHT - 8;
@@ -118,56 +97,48 @@ public final class HudLayoutEditorScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if (event.button() != 0) return super.mouseClicked(event, doubleClick);
         var mouseX = event.x();
         var mouseY = event.y();
-        var buttonY = height - BUTTON_HEIGHT - 8;
-        var resetX = width / 2 - BUTTON_WIDTH - BUTTON_GAP / 2;
-        var doneX = width / 2 + BUTTON_GAP / 2;
-        if (inside(mouseX, mouseY, resetX, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT)) {
-            HudLayout.resetAll();
-            HudLayoutRegistry.resetAll();
-            HudLayoutConfig.save();
-            HudLayoutRegistry.save();
-            return true;
-        }
-        if (inside(mouseX, mouseY, doneX, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT)) {
-            onClose();
-            return true;
+        if (event.button() == InputConstants.MOUSE_BUTTON_LEFT) {
+            var buttonY = height - BUTTON_HEIGHT - 8;
+            var resetX = width / 2 - BUTTON_WIDTH - BUTTON_GAP / 2;
+            var doneX = width / 2 + BUTTON_GAP / 2;
+            if (inside(mouseX, mouseY, resetX, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT)) {
+                HudLayout.resetAll();
+                saveAndRebuild();
+                return true;
+            }
+            if (inside(mouseX, mouseY, doneX, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT)) {
+                onClose();
+                return true;
+            }
         }
 
-        var minecraft = Minecraft.getInstance();
-        for (var region : editableRegions()) {
-            var rect = region.rect(minecraft);
-            if (overHandle(region, rect, mouseX, mouseY)) {
-                beginGrab(region, Mode.RESIZE, rect, mouseX, mouseY);
-                return true;
-            }
+        var region = regionAt(mouseX, mouseY);
+        if (region == null) return true;
+
+        if (event.button() == InputConstants.MOUSE_BUTTON_RIGHT) {
+            region.toggleHidden();
+            saveAndRebuild();
+            return true;
         }
-        for (var region : editableRegions()) {
-            var rect = region.rect(minecraft);
-            if (rect.contains(mouseX, mouseY)) {
-                beginGrab(region, Mode.MOVE, rect, mouseX, mouseY);
-                return true;
-            }
+        if (event.button() == InputConstants.MOUSE_BUTTON_LEFT) {
+            grabbed = region;
+            grabStartX = mouseX;
+            grabStartY = mouseY;
+            initialTranslateX = region.getTranslateX();
+            initialTranslateY = region.getTranslateY();
+            return true;
         }
         return true;
     }
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
-        if (event.button() == 0 && grabbed != null) {
-            if (!activated && System.currentTimeMillis() - pressTime >= LONG_PRESS_MS) activated = true;
-            if (!activated) return true;
-            if (mode == Mode.MOVE) {
-                grabbed.setTopLeft(event.x() - grabOffsetX, event.y() - grabOffsetY, Minecraft.getInstance());
-            } else if (mode == Mode.RESIZE) {
-                var horizontalDelta = usesLeftHandle(grabbed)
-                        ? pressX - event.x()
-                        : event.x() - pressX;
-                var delta = (horizontalDelta + event.y() - pressY) / 2.0;
-                grabbed.setScale(initialScale + (float) (delta / RESIZE_PIXELS_PER_UNIT));
-            }
+        if (event.button() == InputConstants.MOUSE_BUTTON_LEFT && grabbed != null) {
+            var deltaX = (float) (event.x() - grabStartX);
+            var deltaY = (float) (event.y() - grabStartY);
+            grabbed.setTranslate(initialTranslateX + deltaX, initialTranslateY + deltaY, Minecraft.getInstance());
             return true;
         }
         return super.mouseDragged(event, dragX, dragY);
@@ -176,130 +147,55 @@ public final class HudLayoutEditorScreen extends Screen {
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
         if (event.button() == 0 && grabbed != null) {
-            if (activated) {
-                HudLayoutConfig.save();
-                HudLayoutRegistry.save();
-            }
+            saveAndRebuild();
             grabbed = null;
-            mode = Mode.NONE;
-            activated = false;
             return true;
         }
         return super.mouseReleased(event);
     }
 
     @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (scrollY == 0.0) return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        var region = regionAt(mouseX, mouseY);
+        if (region == null) return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        var next = region.getScaleXY() + (scrollY > 0.0 ? SCALE_STEP : -SCALE_STEP);
+        region.setScaleXY(next);
+        saveAndRebuild();
+        return true;
+    }
+
+    @Override
     public void onClose() {
-        HudLayoutConfig.save();
-        HudLayoutRegistry.save();
+        saveAndRebuild();
         Minecraft.getInstance().gui.setScreen(previousScreen);
     }
 
-    private void beginGrab(
-            EditableRegion region, Mode mode, HudLayout.Rect rect, double mouseX, double mouseY
-    ) {
-        grabbed = region;
-        this.mode = mode;
-        pressTime = System.currentTimeMillis();
-        pressX = mouseX;
-        pressY = mouseY;
-        grabOffsetX = mouseX - rect.x();
-        grabOffsetY = mouseY - rect.y();
-        initialScale = region.scale();
-        activated = false;
+    private void saveAndRebuild() {
+        HudLayoutConfig.save();
+        HudManager.INSTANCE.rebuildHudLayouts();
+    }
+
+    private @Nullable HudLayout.Region regionAt(double mouseX, double mouseY) {
+        var minecraft = Minecraft.getInstance();
+        var regions = editableRegions();
+        for (var i = regions.size() - 1; i >= 0; i--) {
+            var region = regions.get(i);
+            if (region.rect(minecraft).contains(mouseX, mouseY)) return region;
+        }
+        return null;
     }
 
     private void drawButton(
             GuiGraphicsExtractor graphics, int x, int y, Component label, int mouseX, int mouseY
     ) {
         var hovered = inside(mouseX, mouseY, x, y, BUTTON_WIDTH, BUTTON_HEIGHT);
-        graphics.fill(x, y, x + BUTTON_WIDTH, y + BUTTON_HEIGHT, hovered ? 0x503E9FB0 : 0x40111111);
+        graphics.fill(x, y, x + BUTTON_WIDTH, y + BUTTON_HEIGHT, hovered ? 0x40FFFFFF : 0x20FFFFFF);
         border(graphics, x, y, BUTTON_WIDTH, BUTTON_HEIGHT, hovered ? BOX_ACTIVE : BOX);
         graphics.centeredText(font, label, x + BUTTON_WIDTH / 2, y + 6, TEXT);
     }
 
-    private enum Mode {NONE, MOVE, RESIZE}
-
-    private static List<EditableRegion> editableRegions() {
-        var result = new ArrayList<EditableRegion>();
-        for (var region : HudLayout.Region.values()) result.add(new BuiltinRegion(region));
-        for (var region : HudLayoutRegistry.regions()) result.add(new ExternalRegion(region));
-        return result;
-    }
-
-    private interface EditableRegion {
-        Component name();
-
-        float scale();
-
-        void setScale(float scale);
-
-        HudLayout.Rect rect(Minecraft minecraft);
-
-        void setTopLeft(double left, double top, Minecraft minecraft);
-
-        default boolean usesLeftHandle() {
-            return false;
-        }
-    }
-
-    private record BuiltinRegion(HudLayout.Region delegate) implements EditableRegion {
-        @Override
-        public Component name() {
-            return Component.translatable(delegate.nameKey());
-        }
-
-        @Override
-        public float scale() {
-            return delegate.scale();
-        }
-
-        @Override
-        public void setScale(float scale) {
-            delegate.setScale(scale);
-        }
-
-        @Override
-        public HudLayout.Rect rect(Minecraft minecraft) {
-            return delegate.rect(minecraft);
-        }
-
-        @Override
-        public void setTopLeft(double left, double top, Minecraft minecraft) {
-            delegate.setTopLeft(left, top, minecraft);
-        }
-
-        @Override
-        public boolean usesLeftHandle() {
-            return delegate == HudLayout.Region.SKILL_WHEEL;
-        }
-    }
-
-    private record ExternalRegion(HudLayoutRegion delegate) implements EditableRegion {
-        @Override
-        public Component name() {
-            return delegate.name();
-        }
-
-        @Override
-        public float scale() {
-            return delegate.scale();
-        }
-
-        @Override
-        public void setScale(float scale) {
-            delegate.setScale(scale);
-        }
-
-        @Override
-        public HudLayout.Rect rect(Minecraft minecraft) {
-            var rect = delegate.rect(minecraft);
-            return new HudLayout.Rect(rect.x(), rect.y(), rect.width(), rect.height());
-        }
-
-        @Override
-        public void setTopLeft(double left, double top, Minecraft minecraft) {
-            delegate.setTopLeft(left, top, minecraft);
-        }
+    private static List<HudLayout.Region> editableRegions() {
+        return new ArrayList<>(Arrays.asList(HudLayout.Region.values()));
     }
 }

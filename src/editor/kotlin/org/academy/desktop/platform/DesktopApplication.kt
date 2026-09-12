@@ -11,7 +11,7 @@ import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.systems.SurfaceException
 import net.minecraft.util.Util
 import org.academy.api.client.gui.environment.UiEnvironment
-import org.academy.api.client.gui.msdf.font.MsdfFontService
+import org.academy.api.client.gui.text.font.MsdfFontService
 import org.academy.api.client.gui.widget.Widget
 import org.academy.api.client.gui.widget.WidgetContainer
 import org.academy.api.client.render.Render

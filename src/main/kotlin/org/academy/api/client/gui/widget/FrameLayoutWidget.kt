@@ -9,11 +9,6 @@ open class FrameLayoutWidget : AbstractWidgetContainer() {
     var measureAllChildren: Boolean = false
     private val matchParentChildren: MutableList<Widget> = ArrayList(1)
 
-    override fun addChild(name: String, child: Widget) {
-        child.coverAllPrev = true
-        super.addChild(name, child)
-    }
-
     override fun generateDefaultLayoutParams(): LayoutParams {
         return LayoutParams()
     }

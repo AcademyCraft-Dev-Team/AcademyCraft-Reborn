@@ -69,7 +69,7 @@ public final class DarkmatterCreationScreen extends UiScreen {
     private boolean dirty;
     private int rosterPage;
     private int widgetCounter;
-    private TextBoxWidget nameBox;
+    private TextInputWidget nameBox;
     private FrameLayoutWidget panel;
     private DarkmatterBeetle previewEntity;
     private int panelWidth = PANEL_W;
@@ -176,9 +176,7 @@ public final class DarkmatterCreationScreen extends UiScreen {
 
         var title = label(Component.translatable("screen.academy.darkmatter_creation.title").getString(),
                 13, 9);
-        title.setRed(((ACCENT >> 16) & 0xFF) / 255.0f);
-        title.setGreen(((ACCENT >> 8) & 0xFF) / 255.0f);
-        title.setBlue((ACCENT & 0xFF) / 255.0f);
+        title.setTextColor(ACCENT);
         getRoot().addChild("darkmatter_creation", panel);
 
         for (var slot = 0; slot < 4; slot++) {
@@ -257,9 +255,9 @@ public final class DarkmatterCreationScreen extends UiScreen {
 
     private void buildBlueprintTab() {
         var inputY = compact ? 70 : 82;
-        nameBox = new TextBoxWidget(32);
+        nameBox = new TextInputWidget(32);
         nameBox.setText(editing.name());
-        nameBox.setPlaceholder(tr("screen.academy.darkmatter_creation.name"));
+        nameBox.setHint(tr("screen.academy.darkmatter_creation.name"));
         nameBox.setClearWhenEnter(false);
         nameBox.setWhenEnter(_ -> commitName());
         nameBox.setOnFocusLost(this::commitName);
@@ -470,8 +468,8 @@ public final class DarkmatterCreationScreen extends UiScreen {
                 .size(selected ? 2 : 1, Math.max(1, height - 6))
                 .gravity(Gravity.CENTER_LEFT).marginLeft(2));
         button.addChild("rail", rail);
-        var label = new LabelWidget(text);
-        label.setBaseFontSize(7.5f);
+        var label = new TextWidget(text);
+        label.setTextSize(7.5f);
         label.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT).gravity(Gravity.CENTER));
         button.addChild("label", label);
@@ -486,9 +484,9 @@ public final class DarkmatterCreationScreen extends UiScreen {
         panel.addChild("rule_" + widgetCounter++, rule);
     }
 
-    private LabelWidget label(String value, int x, int y) {
-        var label = new LabelWidget(value);
-        label.setBaseFontSize(8.0f);
+    private TextWidget label(String value, int x, int y) {
+        var label = new TextWidget(value);
+        label.setTextSize(8.0f);
         label.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .gravity(Gravity.TOP_LEFT).margin(x, y, 0, 0));
         panel.addChild("label_" + widgetCounter++, label);
@@ -499,7 +497,7 @@ public final class DarkmatterCreationScreen extends UiScreen {
         addLabelLiteral(tr(key) + suffix, x, y);
     }
 
-    private LabelWidget addLabelLiteral(String value, int x, int y) {
+    private TextWidget addLabelLiteral(String value, int x, int y) {
         return label(value, x, y);
     }
 

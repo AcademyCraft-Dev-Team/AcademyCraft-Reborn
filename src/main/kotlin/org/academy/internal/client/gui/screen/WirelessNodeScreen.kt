@@ -1,14 +1,12 @@
 package org.academy.internal.client.gui.screen
 
-/*import org.academy.api.client.gui.msdf.atlas.MsdfAtlasDebugger
-import org.academy.api.client.gui.msdf.font.MsdfFontService*/
+/*import org.academy.api.client.gui.glyph.MsdfAtlasDebugger
+import org.academy.api.client.gui.text.font.MsdfFontService*/
 import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
 import net.minecraft.util.Mth
 import net.minecraft.world.entity.player.Inventory
-import net.neoforged.bus.api.SubscribeEvent
-import net.neoforged.neoforge.common.NeoForge
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator
 import org.academy.api.client.gui.layout.Gravity
@@ -21,8 +19,6 @@ import org.academy.api.client.gui.util.InfoAreaUtil.createInfoRow
 import org.academy.api.client.gui.util.InfoAreaUtil.createInputRow
 import org.academy.api.client.gui.util.WirelessPanelUtil.create
 import org.academy.api.client.gui.widget.*
-import org.academy.api.client.gui.widget.TextBoxWidget.FocusGainedEvent
-import org.academy.api.client.gui.widget.TextBoxWidget.FocusLostEvent
 import org.academy.api.client.resources.R
 import org.academy.api.client.util.AnimationUtil
 import org.academy.api.common.wireless.SetNodeNamePacket
@@ -47,20 +43,6 @@ class WirelessNodeScreen(
     private var energyValueSetter = { _: String -> }
     private var capacityValueSetter = { _: String -> }
     private var rangeValueSetter = { _: String -> }
-
-    init {
-        NeoForge.EVENT_BUS.register(this)
-        /*        for (msdfFont in MsdfFontService.INSTANCE.loadedFonts.values) {
-                    MsdfAtlasDebugger.dumpAtlas(msdfFont.atlas,
-                        msdfFont.descriptor.identifier.path.length.toString()
-                    )
-                }*/
-    }
-
-    override fun onClose() {
-        super.onClose()
-        NeoForge.EVENT_BUS.unregister(this)
-    }
 
     override fun onInit(
         pageButtons: RadioGroupWidget,
@@ -141,36 +123,38 @@ class WirelessNodeScreen(
         run {
             val p = WidgetContainer.LayoutParams()
                 .gravity(Gravity.CENTER_RIGHT)
-            val energyValueLabel = LabelWidget("0 AF")
+            val energyValueLabel = TextWidget("0 AF")
             energyValueLabel.layoutParams = p
             energyValueSetter = { energyValueLabel.text = it }
             val energyLayout = createInfoRow("ENERGY", "icon_energy", -0xda3b01, energyValueLabel)
             info.addChild("energy_layout", energyLayout)
 
-            val capacityValueLabel = LabelWidget("0 / 0")
+            val capacityValueLabel = TextWidget("0 / 0")
             capacityValueLabel.layoutParams = p
             capacityValueSetter = { capacityValueLabel.text = it }
             val capacityLayout = createInfoRow("CAPACITY", "icon_capacity", -0x9400, capacityValueLabel)
             info.addChild("capacity_layout", capacityLayout)
 
-            val infoLabel = LabelWidget("Information")
+            val infoLabel = TextWidget("Information")
             infoLabel.layoutParams = LinearLayoutWidget.LayoutParams()
                 .padding(6.5f, 0f, 0f, 0f)
 
-            infoLabel.scale = 0.75f
+            infoLabel.scaleX = 0.75f
+            infoLabel.scaleY = 0.75f
             info.addChild("label_info", infoLabel)
 
-            val rangeValueLabel = LabelWidget("0")
+            val rangeValueLabel = TextWidget("0")
             rangeValueSetter = { rangeValueLabel.text = it }
             rangeValueLabel.layoutParams = WidgetContainer.LayoutParams()
-                .height(LabelWidget.DEFAULT_BASE_FONT_SIZE)
+                .height(TextWidget.DEFAULT_TEXT_SIZE)
                 .gravity(Gravity.CENTER)
+            rangeValueLabel.gravity = Gravity.CENTER
 
             val range = "Trans. Range"
             val rangeLayout = createAttributeRow(range, rangeValueLabel)
             info.addChild("range_layout", rangeLayout)
 
-            val nameTextBox = TextBoxWidget(12)
+            val nameTextBox = TextInputWidget(12)
             nameTextBox.background = null
             nameTextBox.setWhenEnter { s ->
                 MisakaNetworkClient.send(
@@ -181,7 +165,7 @@ class WirelessNodeScreen(
             val nameLayout = createAttributeRow(name, createInputRow(nameTextBox))
             info.addChild("name_layout", nameLayout)
 
-            val passTextBox = TextBoxWidget(12)
+            val passTextBox = TextInputWidget(12)
             passTextBox.background = null
             passTextBox.setWhenEnter { s ->
                 MisakaNetworkClient.send(
@@ -218,16 +202,6 @@ class WirelessNodeScreen(
     override fun containerTick() {
         super.containerTick()
         updateInfo()
-    }
-
-    @SubscribeEvent
-    fun onFocusGainedEvent(event: FocusGainedEvent) {
-        isHandleContainer = false
-    }
-
-    @SubscribeEvent
-    fun onFocusLostEvent(event: FocusLostEvent) {
-        isHandleContainer = true
     }
 
     companion object {

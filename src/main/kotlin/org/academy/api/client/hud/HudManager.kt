@@ -14,13 +14,14 @@ import org.academy.api.client.hud.ability.AbilityInfoHud
 import org.academy.api.client.hud.ability.ControlledTargetsHud
 import org.academy.api.client.hud.ability.ToggleStatusHud
 import org.academy.api.client.hud.terminal.TerminalHud
+import org.academy.api.client.gui.imgui.ImGuiUIDebugger
+import org.academy.api.client.gui.widget.WidgetContainer
 import org.academy.api.client.render.Render
 import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.render.post.BlurEffect
 import org.academy.api.client.thread.RenderThread
 import org.academy.api.client.vanilla.MainLoopEvent
 import org.academy.api.common.profiler.AcademyProfiler
-import org.academy.internal.client.gui.debug.UiDebugSession
 import org.academy.internal.client.profiler.ProfilerClientHooks
 import org.joml.Vector4f
 import org.slf4j.Logger
@@ -36,15 +37,24 @@ object HudManager {
     fun initRender() {
     }
 
-    private fun isHudEditorOpen(): Boolean {
-        return AcademyCraftClient.isUiDebugEnvironment() && UiDebugSession.hudEditorOpen
-    }
+    private fun inspectableRoots(): List<Pair<String, WidgetContainer>> = listOf(
+        "ability" to AbilityInfoHud.instance.root,
+        "toggle_status" to ToggleStatusHud.instance.root,
+        "mental_control" to ControlledTargetsHud.instance.root,
+        "terminal" to TerminalHud.INSTANCE.root,
+    )
 
     fun initMain() {
         TerminalHud.initMain()
         AbilityInfoHud.initMain()
         ToggleStatusHud.initMain()
         ControlledTargetsHud.initMain()
+    }
+
+    fun rebuildHudLayouts() {
+        AbilityInfoHud.instance.rebuildLayout()
+        ToggleStatusHud.instance.rebuildLayout()
+        ControlledTargetsHud.instance.rebuildLayout()
     }
 
     @RenderThread
@@ -65,7 +75,6 @@ object HudManager {
         val mouseY = m.getScaledYPos(w)
         val deltaPartialTick = mc.deltaTracker.getGameTimeDeltaPartialTick(false)
         TerminalHud.INSTANCE.perform(mouseX, mouseY, deltaPartialTick)
-        if (isHudEditorOpen()) return
         AbilityInfoHud.instance.perform(mouseX, mouseY, deltaPartialTick)
         ToggleStatusHud.instance.perform(mouseX, mouseY, deltaPartialTick)
         ControlledTargetsHud.instance.perform(mouseX, mouseY, deltaPartialTick)
@@ -96,13 +105,11 @@ object HudManager {
             val drewStencil = AtomicBoolean()
 
             AcademyProfiler.push("academy.hud.terminal")
-            if (!isHudEditorOpen()) {
-                AcademyProfiler.popPush("academy.hud.ability")
-                AbilityInfoHud.instance.render(main)
-                AcademyProfiler.popPush("academy.hud.toggle")
-                ToggleStatusHud.instance.render(main)
-                ControlledTargetsHud.instance.render(main)
-            }
+            AcademyProfiler.popPush("academy.hud.ability")
+            AbilityInfoHud.instance.render(main)
+            AcademyProfiler.popPush("academy.hud.toggle")
+            ToggleStatusHud.instance.render(main)
+            ControlledTargetsHud.instance.render(main)
             TerminalHud.INSTANCE.render(width, height, uiColor, uiDepth, drewStencil)
             AcademyProfiler.pop()
 
@@ -140,6 +147,9 @@ object HudManager {
             )
 
             ProfilerClientHooks.renderOverlay()
+            if (ImGuiUIDebugger.enabled) {
+                ImGuiUIDebugger.renderHud(main, inspectableRoots())
+            }
         } finally {
             pool.release(descTemp, ui)
             pool.release(descBlur, blur)

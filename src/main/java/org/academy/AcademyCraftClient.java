@@ -39,9 +39,14 @@ import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEve
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.editor.UiLayoutEditor;
 import org.academy.api.client.gui.editor.UiLayoutEditorScreen;
+import org.academy.api.client.gui.environment.UiEnvironment;
+import org.academy.api.client.gui.imgui.ImGuiUIDebugger;
 import org.academy.api.client.gui.imgui.ImGuiUtilApi;
-import org.academy.api.client.gui.msdf.atlas.MsdfAtlasManager;
-import org.academy.api.client.gui.msdf.font.MsdfFontService;
+import org.academy.api.client.gui.glyph.AtlasManager;
+import org.academy.api.client.gui.glyph.MsdfAtlasDebugger;
+import org.academy.api.client.gui.glyph.bitmap.BitmapAtlasDebugger;
+import org.academy.api.client.gui.glyph.bitmap.BitmapGlyphDebug;
+import org.academy.api.client.gui.text.font.MsdfFontService;
 import org.academy.api.client.gui.screen.ScreenDispatcher;
 import org.academy.api.client.hud.HudManager;
 import org.academy.api.client.hud.terminal.TerminalHud;
@@ -75,11 +80,9 @@ import org.academy.internal.client.gui.debug.UiDebugLayoutRegistry;
 import org.academy.internal.client.gui.debug.UiDebugSession;
 import org.academy.internal.client.gui.screen.AbilityDeveloperLayoutEditor;
 import org.academy.internal.client.gui.screen.Screens;
-import org.academy.internal.client.hud.HudDebugScreen;
 import org.academy.internal.client.hud.HudLayoutConfig;
 import org.academy.internal.client.particle.*;
 import org.academy.internal.client.profiler.ProfilerClientHooks;
-import org.academy.internal.client.time.TemporalClientRuntime;
 import org.academy.internal.client.render.fluid.ImagPhaseFluidRenderer;
 import org.academy.internal.client.render.vfx.*;
 import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
@@ -87,6 +90,7 @@ import org.academy.internal.client.renderer.effect.LightShieldEffectRenderer;
 import org.academy.internal.client.renderer.entity.layers.SkillEffectsLayer;
 import org.academy.internal.client.renderer.entity.layers.quantum.QuantumInterferenceLayer;
 import org.academy.internal.client.renderer.special.*;
+import org.academy.internal.client.time.TemporalClientRuntime;
 import org.academy.internal.client.world.item.ImagPhaseDowsingRodClient;
 import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.teleport.InstantTeleportSyncPacket;
@@ -104,6 +108,8 @@ import org.joml.Vector3f;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.function.BiConsumer;
 
 import static org.academy.AcademyCraft.academy;
@@ -170,7 +176,7 @@ public final class AcademyCraftClient {
         ScreenDispatcher.Companion.init();
         HudManager.INSTANCE.initRender();
 
-        MsdfFontService.genDefaultGlyph();
+        MsdfFontService.INSTANCE.genDefaultGlyph();
         renderInitialized = true;
     }
 
@@ -232,7 +238,7 @@ public final class AcademyCraftClient {
                                                 .executes(_ -> setSkillGuiDebug(false)))
                                         .then(Commands.literal("toggle")
                                                 .executes(_ -> setSkillGuiDebug(AbilityDeveloperLayoutEditor.toggleDebugMode())))
-                                        .then(Commands.literal("reset")
+.then(Commands.literal("reset")
                                                 .executes(_ -> {
                                                     AbilityDeveloperLayoutEditor.resetSession();
                                                     notifyClient("Skill GUI layout reset to built-in defaults.");
@@ -249,8 +255,30 @@ public final class AcademyCraftClient {
                                                         notifyClient("Unable to export Skill GUI layout: " + exception.getMessage());
                                                         return 0;
                                                     }
-                                                }))
-                                ))
+                                                })))
+                                        .then(Commands.literal("textdump")
+                                                .then(Commands.argument("px", FloatArgumentType.floatArg(1f))
+                                                        .then(Commands.argument("text", StringArgumentType.greedyString())
+                                                                .executes(ctx -> textDump(
+                                                                        ctx.getArgument("px", Float.class),
+                                                                        ctx.getArgument("text", String.class)
+                                                                )))))
+                                        .then(Commands.literal("atlasdump")
+                                                .executes(_ -> atlasDump("all"))
+                                                .then(Commands.literal("all")
+                                                        .executes(_ -> atlasDump("all")))
+                                                .then(Commands.literal("bitmap")
+                                                        .executes(_ -> atlasDump("bitmap")))
+                                                .then(Commands.literal("msdf")
+                                                        .executes(_ -> atlasDump("msdf"))))
+                                        .then(Commands.literal("imgui")
+                                                .executes(_ -> setImGuiDebug(ImGuiUIDebugger.INSTANCE.toggle()))
+                                                .then(Commands.literal("on")
+                                                        .executes(_ -> setImGuiDebug(true)))
+                                                .then(Commands.literal("off")
+                                                        .executes(_ -> setImGuiDebug(false)))
+                                                .then(Commands.literal("toggle")
+                                                        .executes(_ -> setImGuiDebug(ImGuiUIDebugger.INSTANCE.toggle())))))
         );
         ClientProfileCommand.register(event.getDispatcher());
         if (!isUiDebugEnvironment()) return;
@@ -287,16 +315,9 @@ public final class AcademyCraftClient {
                                                                             return 1;
                                                                         })
                                                         )
-                                        )
-                                        .then(
-                                                Commands.literal("hud")
-                                                        .executes(_ -> {
-                                                            HudDebugScreen.Companion.open();
-                                                            return 1;
-                                                        })
-                                        )
-                                        .then(
-                                                Commands.literal("save")
+                                         )
+                                         .then(
+                                                 Commands.literal("save")
                                                         .executes(_ -> {
                                                             UiDebugBrowserScreen.Companion.notifyPublish(UiDebugSession.INSTANCE.publish());
                                                             return 1;
@@ -333,6 +354,16 @@ public final class AcademyCraftClient {
         return 1;
     }
 
+    private static int setImGuiDebug(boolean enabled) {
+        if (!Dev.HAS_IM_GUI) {
+            notifyClient("ImGui UI inspector is not available on this build.");
+            return 0;
+        }
+        ImGuiUIDebugger.INSTANCE.setEnabled(enabled);
+        notifyClient("Academy UI inspector " + (enabled ? "enabled" : "disabled") + '.');
+        return 1;
+    }
+
     private static int spawnVfx(String graph, Vector3f position) {
         var mc = Minecraft.getInstance();
         if (mc.level == null) {
@@ -364,6 +395,75 @@ public final class AcademyCraftClient {
         if (player != null) player.sendSystemMessage(Component.literal(message));
     }
 
+    private static int textDump(float px, String text) {
+        if (!isRenderInitialized()) {
+            notifyClient("Text rendering is not initialized yet.");
+            return 0;
+        }
+        var outputDir = UiEnvironment.get().getGameDirectory().resolve("academy").resolve("debug");
+        var summaries = new StringBuilder();
+        var dumped = 0;
+        for (var i = 0; i < text.length(); ) {
+            var codepoint = text.codePointAt(i);
+            i += Character.charCount(codepoint);
+            dumped++;
+            var font = MsdfFontService.INSTANCE.getFont(codepoint);
+            var summary = BitmapGlyphDebug.INSTANCE.dump(font, codepoint, px, outputDir);
+            summaries.append('\n').append(summary == null
+                    ? String.format("U+%06X no outline", codepoint)
+                    : summary);
+        }
+        notifyClient("Dumped " + dumped + " glyph(s) at " + px + "px to " + outputDir + summaries);
+        // Commands run before a world/netcode exists must still be observable:
+        // notifyClient silently drops the message when no player is present.
+        AcademyCraft.getLogger().info(
+                "Bitmap glyph dump ({}, {}px):\n{}{}", text, px, outputDir, summaries
+        );
+        return 1;
+    }
+
+    private static int atlasDump(String filter) {
+        if (!isRenderInitialized()) {
+            notifyClient("Text rendering is not initialized yet.");
+            return 0;
+        }
+        var outputDir = UiEnvironment.get().getGameDirectory().resolve("academy").resolve("debug");
+        var dumped = new ArrayList<Path>();
+        var summary = new StringBuilder();
+
+        if (!"msdf".equals(filter)) {
+            var bitmap = AtlasManager.INSTANCE.bitmapIfPresent();
+            if (bitmap != null) {
+                var files = BitmapAtlasDebugger.INSTANCE.dumpAtlas(bitmap, outputDir, "bitmap_atlas_page");
+                dumped.addAll(files);
+                summary.append("\nbitmap: ").append(files.size()).append(" page(s)");
+            } else {
+                summary.append("\nbitmap: no atlas built yet");
+            }
+        }
+
+        if (!"bitmap".equals(filter)) {
+            var atlases = AtlasManager.INSTANCE.msdfAtlases();
+            if (atlases.isEmpty()) {
+                summary.append("\nmsdf: no atlas built yet");
+            }
+            for (var entry : atlases.entrySet()) {
+                var id = entry.getKey();
+                var prefix = "msdf_" + id.getNamespace() + "_"
+                        + id.getPath().replace('/', '_').replace('.', '_') + "_page";
+                var files = MsdfAtlasDebugger.INSTANCE.dumpAtlas(entry.getValue(), outputDir, prefix);
+                dumped.addAll(files);
+                summary.append("\nmsdf ").append(id).append(": ").append(files.size()).append(" page(s)");
+            }
+        }
+
+        notifyClient("Dumped " + dumped.size() + " atlas page(s) to " + outputDir + summary);
+        // Commands runs before a world/netcode exists must still be observable:
+        // notifyClient silently drops the message when no player is present.
+        AcademyCraft.getLogger().info("Atlas dump ({}): {}{}", filter, outputDir, summary);
+        return 1;
+    }
+
     @SubscribeEvent
     public static void onResizeDisplay(ResizeDisplayEvent event) {
         resize(event.getWidth(), event.getHeight());
@@ -387,7 +487,8 @@ public final class AcademyCraftClient {
         if (isUiDebugEnvironment()) UiDebugSession.INSTANCE.close();
         ImGuiUtilApi.INSTANCE.close();
         MsdfFontService.INSTANCE.close();
-        MsdfAtlasManager.closeAll();
+        
+        AtlasManager.INSTANCE.closeAll();
         SpacialExcisionVfxClient.close();
         PostEffect.close();
         GlowEffect.getInstance().close();

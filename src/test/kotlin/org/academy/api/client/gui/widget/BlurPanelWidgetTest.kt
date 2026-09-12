@@ -3,7 +3,7 @@ package org.academy.api.client.gui.widget
 import org.academy.api.client.gui.event.MouseEvent
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.MeasureSpec
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -29,7 +29,7 @@ class BlurPanelWidgetTest {
         root.addChild("panel", panel)
         root.measureAndLayout(200f, 200f)
 
-        val context = RenderContext()
+        val context = Canvas()
         panel.render(context)
 
         assertEquals(1, context.blurRegions.size)
@@ -50,7 +50,7 @@ class BlurPanelWidgetTest {
         root.addChild("panel", panel)
         root.measureAndLayout(200f, 200f)
 
-        val context = RenderContext()
+        val context = Canvas()
         panel.render(context)
         assertTrue(context.blurRegions.isEmpty())
     }
@@ -64,7 +64,7 @@ class BlurPanelWidgetTest {
         root.addChild("b", b)
         root.measureAndLayout(100f, 100f)
 
-        val context = RenderContext()
+        val context = Canvas()
         a.render(context)
         b.render(context)
         assertEquals(2, context.blurRegions.size)

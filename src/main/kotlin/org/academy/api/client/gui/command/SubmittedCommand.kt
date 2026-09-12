@@ -8,7 +8,6 @@ class SubmittedCommand(
     val command: DrawCommand,
     val pose: PoseStack.Pose,
     val scissorRect: ScissorRect?,
-    val drawOrder: Long,
     val commandIndex: Int = 0,
     /**
      * 顶点生成期的 alpha 校正乘子 (对齐安卓 RenderNode 合成) 喵.

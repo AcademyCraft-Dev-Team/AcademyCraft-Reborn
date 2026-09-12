@@ -43,6 +43,8 @@
 │  │  ├─ set_max <target> <value> [<broadcast>]
 │  │  └─ set_status <target> <status> [<timer> [<broadcast>]]
 │  ├─ skillgui [on|off|toggle|reset|export]                 （客户端）
+│  ├─ textdump <px> <text>                                 （客户端）
+│  ├─ atlasdump [all|bitmap|msdf]                          （客户端）
 │  ├─ ui [<layout>]                                        （仅开发客户端）
 │  ├─ hud                                                  （仅开发客户端）
 │  └─ save                                                 （仅开发客户端）
@@ -187,6 +189,20 @@
 | `/academy debug skillgui toggle` | 切换技能 GUI 布局编辑模式。 |
 | `/academy debug skillgui reset` | 清除本次客户端会话中的技能坐标修改，恢复内置布局；不会删除已经导出的文件。 |
 | `/academy debug skillgui export` | 导出所有能力类别当前使用的技能坐标到 `config/academy/ability_developer_gui_layout.txt`。 |
+
+## 客户端字体调试
+
+这些命令只影响当前客户端，不要求服务器管理员权限，用于检查字形光栅化与图集。
+
+| 命令 | 作用 |
+| --- | --- |
+| `/academy debug textdump <px> <text>` | 对 `<text>` 中每个码点按 `<px>` 字号走生产位图光栅化路径，逐字形导出 PNG（不量化尺寸、相位 0）。 |
+| `/academy debug atlasdump` | 等价于 `atlasdump all`。 |
+| `/academy debug atlasdump all` | 导出当前已构建的位图图集页与全部字体的 MSDF 图集页。 |
+| `/academy debug atlasdump bitmap` | 只导出共享位图图集页（R8）。 |
+| `/academy debug atlasdump msdf` | 只导出各字体 MSDF 图集页（RGBA）。 |
+
+导出目录为 `<gameDir>/academy/debug`：位图页命名 `bitmap_atlas_page<页码>.png`，MSDF 页命名 `msdf_<字体命名空间>_<字体路径>_page<页码>_0.png`。图集不存在时（尚未绘制过对应文本）会在命令反馈中说明，不会强制创建。整页导出保留字形槽位、gutter 与空白区域，便于直接观察排布。
 
 ## 开发客户端 UI 调试
 

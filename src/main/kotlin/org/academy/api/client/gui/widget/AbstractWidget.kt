@@ -10,7 +10,7 @@ import org.academy.api.client.gui.event.*
 import org.academy.api.client.gui.frame.UiFrame
 import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.layout.SizeMode
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 import kotlin.math.min
 
 abstract class AbstractWidget : Widget {
@@ -31,17 +31,12 @@ abstract class AbstractWidget : Widget {
     final override var y: Float = 0f
         private set
 
-    override var coverAllPrev: Boolean = false
-        set(value) {
-            field = value
-            invalidate()
-        }
-
     protected var protectedWidth: Float = 0f
 
     override var width: Float
         get() = protectedWidth
         set(width) {
+            ensureOwnLayoutParams()
             if (layoutParams.width != width || layoutParams.widthMode != SizeMode.FIXED) {
                 layoutParams.width = width
                 layoutParams.widthMode = SizeMode.FIXED
@@ -49,11 +44,23 @@ abstract class AbstractWidget : Widget {
             }
         }
 
+    /**
+     * Materializes a private [WidgetContainer.LayoutParams] before mutating it, so the
+     * shared [WidgetContainer.LayoutParams.NONE] sentinel is never poisoned for other
+     * widgets. Ownership of padding/layout params is being migrated to the widget.
+     */
+    protected fun ensureOwnLayoutParams() {
+        if (layoutParams === WidgetContainer.LayoutParams.NONE) {
+            layoutParams = WidgetContainer.LayoutParams()
+        }
+    }
+
     protected var protectedHeight: Float = 0f
 
     override var height: Float
         get() = protectedHeight
         set(value) {
+            ensureOwnLayoutParams()
             if (layoutParams.height != value || layoutParams.heightMode != SizeMode.FIXED) {
                 layoutParams.height = value
                 layoutParams.heightMode = SizeMode.FIXED
@@ -123,13 +130,6 @@ abstract class AbstractWidget : Widget {
                 animator.jumpToCurrentState()
                 updateStateAnimator()
             }
-        }
-
-    override var scale: Float
-        get() = scaleX
-        set(value) {
-            scaleX = value
-            scaleY = value
         }
 
     override var background: Drawable? = null
@@ -224,7 +224,7 @@ abstract class AbstractWidget : Widget {
         parent?.onChildInvalidated(this)
     }
 
-    override fun render(context: RenderContext) {
+    override fun render(context: Canvas) {
         if (!isVisible()) return
 
         val pivotX = width * originX
@@ -249,7 +249,7 @@ abstract class AbstractWidget : Widget {
         context.pose().popPose()
     }
 
-    protected open fun renderInternal(context: RenderContext) {
+    protected open fun renderInternal(context: Canvas) {
         background?.draw(context, this)
         foreground?.draw(context, this)
     }

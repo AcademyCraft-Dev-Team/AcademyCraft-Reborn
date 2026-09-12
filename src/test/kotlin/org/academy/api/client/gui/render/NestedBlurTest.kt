@@ -14,7 +14,6 @@ class NestedBlurTest {
             FillRectDrawCommand(1f, 1f, 1f, 1f, 1f, 1f),
             pose,
             null,
-            drawOrder = 0L,
             commandIndex = commandIndex
         )
     }

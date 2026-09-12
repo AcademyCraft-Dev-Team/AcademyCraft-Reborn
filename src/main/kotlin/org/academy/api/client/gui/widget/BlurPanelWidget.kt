@@ -2,13 +2,13 @@ package org.academy.api.client.gui.widget
 
 import org.academy.api.client.gui.event.MouseEvent
 import org.academy.api.client.gui.render.BlurRegion
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 
 /**
  * 磨砂玻璃面板喵.
  *
  * 渲染时登记一个屏幕空间 [BlurRegion], 由 [org.academy.api.client.gui.render.UiCompositor]
- * 在其 drawOrder 处把下方 UI 内容 (如 main) 高斯模糊后烘入. 面板本身默认透明,
+ * 在其记录位置处把下方 UI 内容 (如 main) 高斯模糊后烘入. 面板本身默认透明,
  * 可通过 [background] 设置半透明着色形成毛玻璃质感. 设置 [onClick] 后面板变为可点击
  * (可兼作全屏点击关闭层).
  *
@@ -39,7 +39,7 @@ open class BlurPanelWidget(initialRadius: Float = 8f) : AbstractWidget() {
         super.onMousePressed(event)
     }
 
-    override fun render(context: RenderContext) {
+    override fun render(context: Canvas) {
         if (!isVisible()) return
         val x = getAbsoluteX() + getAbsoluteTranslationX()
         val y = getAbsoluteY() + getAbsoluteTranslationY()

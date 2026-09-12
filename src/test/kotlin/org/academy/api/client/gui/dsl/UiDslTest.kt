@@ -16,8 +16,8 @@ class UiDslTest {
 
         root.column("content", spacing = 1f) {
             lp { matchParent() }
-            label("Title") {
-                baseFontSize = 12f
+            text("Title") {
+                textSize = 12f
                 weight(1f)
                 height = 0f
                 gravity(Gravity.CENTER_LEFT)
@@ -25,7 +25,7 @@ class UiDslTest {
             row("controls", spacing = 4f) {
                 button("go") {
                     onClick { clicks++ }
-                    add("text", LabelWidget("Go"))
+                    add("text", TextWidget("Go"))
                 }
                 toggle(true) { onCheckedChange { } }
             }
@@ -33,9 +33,9 @@ class UiDslTest {
 
         val content = root.children["content"] as LinearLayoutWidget
         assertEquals(2, content.children.size)
-        val title = content.children["label"] as LabelWidget
+        val title = content.children["text"] as TextWidget
         assertEquals("Title", title.text)
-        assertEquals(12f, title.baseFontSize)
+        assertEquals(12f, title.textSize)
 
         val controls = content.children["controls"] as LinearLayoutWidget
         val button = controls.children["go"] as ButtonWidget
@@ -48,9 +48,9 @@ class UiDslTest {
     @Test
     fun `dsl default names are unique`() {
         val root = FrameLayoutWidget()
-        root.label("a")
-        root.label("b")
-        assertEquals(listOf("label", "label_1"), root.children.keys.toList())
+        root.text("a")
+        root.text("b")
+        assertEquals(listOf("text", "text_1"), root.children.keys.toList())
     }
 
     @Test

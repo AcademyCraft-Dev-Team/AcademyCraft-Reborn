@@ -7,8 +7,7 @@ import org.academy.api.client.gui.animation.TimeInterpolator
 import org.academy.api.client.gui.event.InputEvent
 import org.academy.api.client.gui.event.MouseEvent
 import org.academy.api.client.gui.event.ScrollEvent
-import org.academy.api.client.gui.render.RenderContext
-import org.academy.api.client.gui.render.ScissorRect
+import org.academy.api.client.gui.render.Canvas
 
 /**
  * 横向翻页容器 (pager).
@@ -93,18 +92,11 @@ open class PagerLayoutWidget : FrameLayoutWidget() {
         applyPageOffset()
     }
 
-    override fun render(context: RenderContext) {
+    override fun render(context: Canvas) {
         if (!isVisible()) return
         pageOffset = pageOffset.coerceIn(0f, (children.size - 1).coerceAtLeast(0).toFloat())
         applyPageOffset()
-        val scissor = ScissorRect(
-            getAbsoluteX() + getAbsoluteTranslationX(),
-            getAbsoluteY() + getAbsoluteTranslationY(),
-            width, height
-        )
-        context.enableScissor(scissor)
         super.render(context)
-        context.disableScissor()
     }
 
     override fun dispatchEvent(event: InputEvent) {
