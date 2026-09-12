@@ -22,6 +22,7 @@ public abstract class MixinCommonHooksDamageComposition {
 
     @WrapMethod(method = "onLivingDamagePost")
     private static void academy$completed(LivingEntity entity, DamageContainer container, Operation<Void> original) {
+        org.academy.internal.common.entitycontrol.TrueHealthOffsetRuntime.afterOrdinaryDamage(entity);
         PainSuppression.Server.afterDamage(entity, container);
         org.academy.internal.common.world.damagesource.CategoryDamageRuntime.completed(entity, container);
         original.call(entity, container);

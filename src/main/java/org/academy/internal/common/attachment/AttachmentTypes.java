@@ -21,6 +21,9 @@ import static org.academy.AcademyCraft.MOD_ID;
 
 public final class AttachmentTypes {
     public static final DeferredRegister<AttachmentType<?>> REGISTER = DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, MOD_ID);
+    /** Display-only projection, synchronized to tracking clients and never copied on death. */
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Float>> TRUE_HEALTH_CEILING = REGISTER.register(
+            "true_health_ceiling", () -> AttachmentType.builder(() -> -1.0f).sync(ByteBufCodecs.FLOAT).build());
     public static final Supplier<Boolean> DEFAULT_FALSE = () -> false;
     public static final Supplier<Boolean> DEFAULT_TRUE = () -> true;
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> FRIENDLY_FIRE_ENABLED = REGISTER.register(

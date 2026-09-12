@@ -8,6 +8,7 @@ import net.minecraft.world.level.gameevent.GameEvent;
 import net.neoforged.neoforge.common.CommonHooks;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
+import org.academy.internal.common.entitycontrol.TrueHealthOffsetRuntime;
 import org.academy.mixin.common.LivingEntityDamageInvoker;
 
 import java.lang.invoke.MethodHandle;
@@ -92,6 +93,11 @@ public final class TrueDamageCompatibility {
      * health mutation reached from a custom notification pass; the custom override itself has
      * already run.
      */
+    public static boolean isHurtNotification(LivingEntity target) {
+        var probe = HURT_PROBE.get();
+        return probe != null && probe.target == target;
+    }
+
     public static boolean isHurtProbe(LivingEntity target, DamageSource source) {
         var probe = HURT_PROBE.get();
         return probe != null && probe.target == target && probe.source == source;
@@ -224,11 +230,12 @@ public final class TrueDamageCompatibility {
     }
 
     private static void enforceDepletedHealth(LivingEntity target) {
+        TrueHealthOffsetRuntime.commitDeath(target);
         EntityControlApi.forceSetTrueHealth(target, 0.0f);
-        target.deathTime = 0;
     }
 
     private static void restoreCanceledDeathHealth(LivingEntity target) {
+        TrueHealthOffsetRuntime.clear(target);
         if (EntityControlApi.getAuthoritativeHealth(target) <= 0.0f) {
             EntityControlApi.forceSetTrueHealth(target, 1.0f);
         }
