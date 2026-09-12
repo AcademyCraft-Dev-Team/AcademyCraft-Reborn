@@ -249,13 +249,6 @@ repositories {
         }
     }
     maven {
-        name = "IzzelAliz Maven"
-        setUrl("https://maven.izzel.io/releases/")
-        content {
-            includeGroup("icyllis.modernui")
-        }
-    }
-    maven {
         setUrl("https://jitpack.io")
         content {
             includeGroup("com.github.umjammer")

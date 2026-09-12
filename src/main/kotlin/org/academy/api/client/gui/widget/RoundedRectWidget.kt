@@ -3,7 +3,7 @@ package org.academy.api.client.gui.widget
 import net.minecraft.util.ARGB
 import org.academy.api.client.gui.command.RoundedRectDrawCommand
 import org.academy.api.client.gui.command.RoundedRectGradient
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 import org.joml.Vector2f
 import org.joml.Vector4f
 
@@ -83,7 +83,7 @@ open class RoundedRectWidget(
             }
         }
 
-    override fun render(context: RenderContext) {
+    override fun render(context: Canvas) {
         if (!isVisible() || width <= 0f || height <= 0f) return
         val finalAlpha = alpha * context.accumulatedAlpha
         if (finalAlpha == 0f) return

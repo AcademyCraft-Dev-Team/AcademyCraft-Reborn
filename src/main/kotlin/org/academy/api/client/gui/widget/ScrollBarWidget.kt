@@ -4,7 +4,7 @@ import net.minecraft.util.ARGB
 import net.minecraft.util.Mth
 import org.academy.api.client.gui.command.FillRectDrawCommand
 import org.academy.api.client.gui.layout.Orientation
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 
 open class ScrollBarWidget(orientation: Orientation) :
     DragBarWidget(orientation) {
@@ -22,10 +22,12 @@ open class ScrollBarWidget(orientation: Orientation) :
         this.panel = panel
     }
 
-    override fun render(context: RenderContext) {
+    override fun render(context: Canvas) {
         if (!isVisible()) return
 
-        val finalAlpha = getAbsoluteAlpha() * context.accumulatedAlpha
+        // Accumulated alpha already includes every ancestor; multiply only the
+        // widget's own alpha (getAbsoluteAlpha() would double-count ancestors).
+        val finalAlpha = alpha * context.accumulatedAlpha
 
         context.pose().pushPose()
         run {
@@ -35,7 +37,7 @@ open class ScrollBarWidget(orientation: Orientation) :
         context.pose().popPose()
     }
 
-    private fun renderTrack(context: RenderContext, finalAlpha: Float) {
+    private fun renderTrack(context: Canvas, finalAlpha: Float) {
         val trackAlpha = ARGB.alpha(trackColor) / 255.0f * finalAlpha
         val r = ARGB.red(trackColor) / 255.0f
         val g = ARGB.green(trackColor) / 255.0f
@@ -44,7 +46,7 @@ open class ScrollBarWidget(orientation: Orientation) :
         context.submit(trackCommand)
     }
 
-    private fun renderThumb(context: RenderContext, finalAlpha: Float) {
+    private fun renderThumb(context: Canvas, finalAlpha: Float) {
         val thumbStart = thumbPosition
         val thumbSize = thumbSize
 

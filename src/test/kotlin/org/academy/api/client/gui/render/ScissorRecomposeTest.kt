@@ -20,7 +20,7 @@ class ScissorRecomposeTest {
 
         override fun checkLayoutParams(p: WidgetContainer.LayoutParams): Boolean = p is FrameLayoutWidget.LayoutParams
 
-        override fun renderInternal(context: RenderContext) {
+        override fun renderInternal(context: Canvas) {
             renderInternalCount++
             context.submit(FillRectDrawCommand(width, height, 1f, 1f, 1f, 1f))
         }
@@ -37,7 +37,7 @@ class ScissorRecomposeTest {
 
         override fun checkLayoutParams(p: WidgetContainer.LayoutParams): Boolean = p is FrameLayoutWidget.LayoutParams
 
-        override fun render(context: RenderContext) {
+        override fun render(context: Canvas) {
             if (visibility != Widget.Visibility.VISIBLE) return
             context.pose().pushPose()
             context.alpha().push(alpha)
@@ -75,13 +75,13 @@ class ScissorRecomposeTest {
         val clip2 = ScissorRect(5f, 10f, 30f, 20f)
 
         host.clip = clip1
-        val ctx1 = RenderContext()
+        val ctx1 = Canvas()
         host.render(ctx1)
         assertEquals(1, box.renderInternalCount)
         assertEquals(clip1, ctx1.commands.first().scissorRect, "录制帧命令使用录制期祖先 scissor")
 
         host.clip = clip2
-        val ctx2 = RenderContext()
+        val ctx2 = Canvas()
         host.render(ctx2)
         assertEquals(1, box.renderInternalCount, "祖先裁剪变化不应重录子缓存")
         assertEquals(clip2, ctx2.commands.first().scissorRect, "回放应使用当前 scissor 栈重取")
@@ -99,14 +99,14 @@ class ScissorRecomposeTest {
 
         host.clip = clip1
         host.childOffsetY = 0f
-        val ctx1 = RenderContext()
+        val ctx1 = Canvas()
         host.render(ctx1)
         assertEquals(1, box.renderInternalCount)
         assertEquals(0f, ctx1.commands.first().pose.pose().m31(), 1e-4f)
 
         host.clip = clip2
         host.childOffsetY = 20f
-        val ctx2 = RenderContext()
+        val ctx2 = Canvas()
         host.render(ctx2)
         assertEquals(1, box.renderInternalCount, "滚动 (位姿) 不应重录子缓存")
         assertEquals(20f, ctx2.commands.first().pose.pose().m31(), 1e-4f, "滚动通过位姿重组反映")
@@ -116,6 +116,7 @@ class ScissorRecomposeTest {
     @Test
     fun `no scissor stack leaves cached commands unscissored`() {
         val root = FrameLayoutWidget()
+        root.clipChildren = false
         val box = OwnContentContainer()
         root.addChild("box", box)
         root.measure(
@@ -124,8 +125,8 @@ class ScissorRecomposeTest {
         )
         root.layout(0f, 0f, 50f, 50f)
 
-        root.render(RenderContext())
-        val ctx2 = RenderContext()
+        root.render(Canvas())
+        val ctx2 = Canvas()
         root.render(ctx2)
         assertEquals(null, ctx2.commands.first().scissorRect)
         assertEquals(1, box.renderInternalCount)

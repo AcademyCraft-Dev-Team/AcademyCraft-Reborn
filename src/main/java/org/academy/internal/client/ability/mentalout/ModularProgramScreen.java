@@ -14,13 +14,14 @@ import org.academy.AcademyCraft;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.environment.UiEnvironment;
-import org.academy.api.client.gui.render.RenderContext;
+import org.academy.api.client.gui.render.Canvas;
 import org.academy.api.client.gui.screen.UiScreen;
 import org.academy.api.client.gui.widget.AbstractWidget;
 import org.academy.api.client.gui.widget.EmptyWidget;
 import org.academy.api.client.gui.widget.FrameLayoutWidget;
-import org.academy.api.client.gui.widget.LabelWidget;
-import org.academy.api.client.gui.widget.TextBoxWidget;
+import org.academy.api.client.gui.widget.TextHolder;
+import org.academy.api.client.gui.widget.TextWidget;
+import org.academy.api.client.gui.widget.TextInputWidget;
 import org.academy.api.client.gui.widget.Widget;
 import org.academy.api.common.ability.program.*;
 import org.academy.internal.client.ability.program.ProgramConfigurationOptions;
@@ -139,8 +140,8 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     private boolean compactRight;
     private boolean leftDrawerOpen;
     private boolean rightDrawerOpen;
-    private TextBoxWidget search;
-    private final Map<String, TextBoxWidget> configurationInputs = new HashMap<>();
+    private TextInputWidget search;
+    private final Map<String, TextInputWidget> configurationInputs = new HashMap<>();
     private final Map<String, Boolean> configurationInputValidity = new HashMap<>();
     private int configurationNode = -1;
     private boolean updatingConfigurationInput;
@@ -225,23 +226,20 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         inspectorLayout = SerializedUiLayout.INSTANCE.require(serializedLayout, "inspector");
 
         editorSurface = new EditorSurface();
-        editorSurface.setCoverAllPrev(true);
         editorSurface.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT));
         getRoot().addChild("editor_surface", editorSurface);
 
         inputLayer = new FrameLayoutWidget();
-        inputLayer.setCoverAllPrev(true);
         inputLayer.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT));
         getRoot().addChild("input_layer", inputLayer);
 
-        search = new TextBoxWidget(64);
-        search.setBaseFontSize(ProgramUiGraphics.BODY_FONT_SIZE);
-        search.setPlaceholder(Component.translatable(
+        search = new TextInputWidget(64);
+        search.setTextSize(ProgramUiGraphics.BODY_FONT_SIZE);
+        search.setHint(Component.translatable(
                 "screen.academy.precision_operation.search").getString());
         search.setBackground(null);
-        search.setCoverAllPrev(true);
         setTextColor(search, TEXT);
         setTextBoxBounds(search, paletteX() + 4, canvasY + PALETTE_SEARCH_OFFSET_Y,
                 paletteWidth() - 8, 15);
@@ -249,7 +247,6 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         inputLayer.addChild("search_input", search);
 
         tooltipSurface = new TooltipSurface();
-        tooltipSurface.setCoverAllPrev(true);
         tooltipSurface.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT));
         getRoot().addChild("tooltip_surface", tooltipSurface);
@@ -395,7 +392,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
 
     private final class EditorSurface extends AbstractWidget {
         @Override
-        protected void renderInternal(RenderContext context) {
+        protected void renderInternal(Canvas context) {
             super.renderInternal(context);
             syncSerializedLayout();
             var minecraft = Minecraft.getInstance();
@@ -417,7 +414,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
 
     private final class TooltipSurface extends AbstractWidget {
         @Override
-        protected void renderInternal(RenderContext context) {
+        protected void renderInternal(Canvas context) {
             super.renderInternal(context);
             var minecraft = Minecraft.getInstance();
             var window = minecraft.getWindow();
@@ -757,7 +754,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 smallText(graphics, selectedLabel, x + TOOL_SIZE + 5, valueY + 4,
                         TEXT, width - TOOL_SIZE * 2 - 10);
                 if (configurationOptionNeedsTooltip(
-                        LabelWidget.Companion.getTextWidth(
+                        TextWidget.Companion.getTextWidth(
                                 selectedLabel, ProgramUiGraphics.BODY_FONT_SIZE),
                         width - TOOL_SIZE * 2 - 10)) {
                     var detailY = valueY + TOOL_SIZE + CONFIGURATION_DETAIL_GAP;
@@ -833,7 +830,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                     line.text(), 176, ProgramUiGraphics.BODY_FONT_SIZE)) {
                 expanded.add(new TooltipLine(wrapped, line.color()));
                 contentWidth = Math.max(contentWidth,
-                        LabelWidget.Companion.getTextWidth(
+                        TextWidget.Companion.getTextWidth(
                                 wrapped, ProgramUiGraphics.BODY_FONT_SIZE));
             }
         }
@@ -965,7 +962,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
             }
             var option = ProgramConfigurationOptions.selected(options, currentValue);
             var label = option.label().getString();
-            var labelWidth = LabelWidget.Companion.getTextWidth(
+            var labelWidth = TextWidget.Companion.getTextWidth(
                     label, ProgramUiGraphics.BODY_FONT_SIZE);
             if (!configurationOptionNeedsTooltip(labelWidth, controlWidth - 6)) return List.of();
             return List.of(
@@ -2053,7 +2050,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         }
         var label = ProgramConfigurationOptions.selected(options, currentValue).label().getString();
         var availableWidth = width - TOOL_SIZE * 2 - 10;
-        var labelWidth = LabelWidget.Companion.getTextWidth(
+        var labelWidth = TextWidget.Companion.getTextWidth(
                 label, ProgramUiGraphics.BODY_FONT_SIZE);
         if (!configurationOptionNeedsTooltip(labelWidth, availableWidth)) {
             return CONFIGURATION_ROW_H;
@@ -2117,7 +2114,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
     }
 
     private static void setTextBoxBounds(
-            TextBoxWidget input,
+            TextInputWidget input,
             int x,
             int y,
             int width,
@@ -2134,11 +2131,8 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
                 .padding(4, 3, 2, 2));
     }
 
-    private static void setTextColor(LabelWidget label, int color) {
-        label.setRed((color >>> 16 & 0xFF) / 255.0f);
-        label.setGreen((color >>> 8 & 0xFF) / 255.0f);
-        label.setBlue((color & 0xFF) / 255.0f);
-        label.setAlpha((color >>> 24 & 0xFF) / 255.0f);
+    private static void setTextColor(TextHolder label, int color) {
+        label.setTextColor(color);
     }
 
     private static String configurationInputName(String field) {
@@ -2199,16 +2193,15 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         }
     }
 
-    private TextBoxWidget createConfigurationInput(String field) {
+    private TextInputWidget createConfigurationInput(String field) {
         var maximumLength = switch (field) {
             case "selectors" -> 512;
             case "text" -> CommonProgramNodeCatalog.DebugOutputConfiguration.MAX_TEXT_LENGTH;
             default -> 128;
         };
-        var input = new TextBoxWidget(maximumLength);
-        input.setBaseFontSize(ProgramUiGraphics.BODY_FONT_SIZE);
+        var input = new TextInputWidget(maximumLength);
+        input.setTextSize(ProgramUiGraphics.BODY_FONT_SIZE);
         input.setBackground(null);
-        input.setCoverAllPrev(true);
         setTextColor(input, TEXT);
         input.setOnTextChanged(value -> configurationInputChanged(field, value));
         inputLayer.addChild(configurationInputName(field), input);
@@ -2252,7 +2245,7 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         install(result.document(), true);
     }
 
-    private TextBoxWidget configurationInputAt(double x, double y) {
+    private TextInputWidget configurationInputAt(double x, double y) {
         for (var input : configurationInputs.values()) {
             if (input.isVisible() && inside(x, y,
                     input.getX(), input.getY(), input.getWidth(), input.getHeight())) {
@@ -2262,9 +2255,9 @@ public final class ModularProgramScreen extends UiScreen implements SerializedUi
         return null;
     }
 
-    private TextBoxWidget focusedConfigurationInput() {
+    private TextInputWidget focusedConfigurationInput() {
         return configurationInputs.values().stream()
-                .filter(TextBoxWidget::isFocused)
+                .filter(TextInputWidget::isFocused)
                 .findFirst()
                 .orElse(null);
     }

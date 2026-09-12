@@ -50,7 +50,7 @@ object InfoAreaUtil {
         labelText: String,
         iconName: String,
         iconColor: Int,
-        valueLabel: LabelWidget
+        valueLabel: TextWidget
     ): LinearLayoutWidget {
         val layout = LinearLayoutWidget()
         layout.orientation = Orientation.HORIZONTAL
@@ -66,8 +66,9 @@ object InfoAreaUtil {
                 .size(6.5f, 6.5f)
             layout.addChild(iconName, icon)
 
-            val label = LabelWidget(labelText)
-            label.scale = 0.75f
+            val label = TextWidget(labelText)
+            label.scaleX = 0.75f
+            label.scaleY = 0.75f
             label.layoutParams = LinearLayoutWidget.LayoutParams()
                 .gravity(Gravity.CENTER_VERTICAL)
             layout.addChild(labelText.lowercase(Locale.getDefault()) + "_label", label)
@@ -78,7 +79,8 @@ object InfoAreaUtil {
                 .heightMode(SizeMode.MATCH_PARENT)
             layout.addChild("empty", empty)
 
-            valueLabel.scale = 0.75f
+            valueLabel.scaleX = 0.75f
+            valueLabel.scaleY = 0.75f
             layout.addChild(labelText.lowercase(Locale.getDefault()) + "_value_label", valueLabel)
         }
         return layout
@@ -92,9 +94,9 @@ object InfoAreaUtil {
             .heightMode(SizeMode.WRAP_CONTENT)
             .padding(10f, 0f)
         run {
-            val label = LabelWidget(labelText)
+            val label = TextWidget(labelText)
             label.layoutParams = LinearLayoutWidget.LayoutParams()
-                .height(LabelWidget.DEFAULT_BASE_FONT_SIZE)
+                .height(TextWidget.DEFAULT_TEXT_SIZE)
                 .gravity(Gravity.CENTER_VERTICAL)
             layout.addChild(labelText + "_label", label)
 
@@ -108,11 +110,11 @@ object InfoAreaUtil {
         return layout
     }
 
-    fun createInputRow(textBox: TextBoxWidget): LinearLayoutWidget {
+    fun createInputRow(textBox: TextInputWidget): LinearLayoutWidget {
         val layout = LinearLayoutWidget()
         layout.orientation = Orientation.HORIZONTAL
         run {
-            val leftBracket = LabelWidget("[")
+            val leftBracket = TextWidget("[")
             leftBracket.layoutParams = LinearLayoutWidget.LayoutParams()
                 .gravity(Gravity.CENTER_VERTICAL)
             layout.addChild("bracket_left", leftBracket)
@@ -123,7 +125,7 @@ object InfoAreaUtil {
                 .gravity(Gravity.CENTER)
             layout.addChild("textbox", textBox)
 
-            val rightBracket = LabelWidget("]")
+            val rightBracket = TextWidget("]")
             rightBracket.layoutParams = LinearLayoutWidget.LayoutParams()
                 .gravity(Gravity.CENTER_VERTICAL)
             layout.addChild("bracket_right", rightBracket)

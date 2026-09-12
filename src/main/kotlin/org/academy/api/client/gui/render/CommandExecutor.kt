@@ -14,6 +14,8 @@ import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.render.UniformBinding
 import java.lang.AutoCloseable
 import java.util.*
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.max
 
 class CommandExecutor : AutoCloseable {
@@ -229,29 +231,35 @@ class CommandExecutor : AutoCloseable {
         }
 
         val scissor = drawCall.scissorArea
-        var scissorEnabled = false
         if (scissor != null) {
             val physicalWidth = UiEnvironment.get().physicalWidth
             val physicalHeight = UiEnvironment.get().physicalHeight
             val pos = scissor.position
-            val screenX = (pos.x * guiScale).toInt()
-            val screenWidth = (scissor.width * guiScale).toInt()
-            val screenHeight = (scissor.height * guiScale).toInt()
-            val screenY = (physicalHeight - (pos.y + scissor.height) * guiScale).toInt()
-            if (screenWidth > 0 && screenHeight > 0) {
-                val clampedX = screenX.coerceIn(0, physicalWidth)
-                val clampedY = screenY.coerceIn(0, physicalHeight)
-                val clampedRight = (screenX + screenWidth).coerceIn(0, physicalWidth)
-                val clampedBottom = (screenY + screenHeight).coerceIn(0, physicalHeight)
-                val clampedWidth = clampedRight - clampedX
-                val clampedHeight = clampedBottom - clampedY
-                if (clampedWidth > 0 && clampedHeight > 0) {
-                    renderPass.enableScissor(clampedX, clampedY, clampedWidth, clampedHeight)
-                    scissorEnabled = true
-                }
+            // Outer pixel bounds (floor the near edges, ceil the far edges) so a
+            // fractional scissor never truncates a pixel of content. The old
+            // floor(pos)*+floor(width) form could clip one pixel off the right, and
+            // the Y-flip path truncated with a different rule.
+            val eps = 1e-4f
+            val left = floor(pos.x * guiScale + eps).toInt()
+            val right = ceil((pos.x + scissor.width) * guiScale - eps).toInt()
+            val glBottom = floor(physicalHeight - (pos.y + scissor.height) * guiScale + eps).toInt()
+            val glTop = ceil(physicalHeight - pos.y * guiScale - eps).toInt()
+            val clampedX = left.coerceIn(0, physicalWidth)
+            val clampedY = glBottom.coerceIn(0, physicalHeight)
+            val clampedRight = right.coerceIn(0, physicalWidth)
+            val clampedBottom = glTop.coerceIn(0, physicalHeight)
+            val clampedWidth = (clampedRight - clampedX).coerceAtLeast(0)
+            val clampedHeight = (clampedBottom - clampedY).coerceAtLeast(0)
+            if (clampedWidth <= 0 || clampedHeight <= 0) {
+                // 裁剪区域完全出屏/退化: 整条 draw 不可见, 直接跳过 (对标 Skia quickReject).
+                // 不能 enableScissor(0x0) (RenderPass 要求 size>0), 也绝不能 disableScissor,
+                // 否则会把本应被裁掉的内容画出来.
+                return false
             }
+            renderPass.enableScissor(clampedX, clampedY, clampedWidth, clampedHeight)
+        } else {
+            renderPass.disableScissor()
         }
-        if (!scissorEnabled) renderPass.disableScissor()
 
         renderPass.setUniform("Projection", projectionUbo)
         renderPass.setUniform("DynamicTransforms", dynamicTransformsUbo)

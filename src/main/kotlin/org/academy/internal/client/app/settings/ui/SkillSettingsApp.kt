@@ -60,17 +60,15 @@ object SkillSettingsApp : App {
         private var pendingMouseButton: Int = -1
         private var pendingModifiers: Int = 0
 
-        private val captureHint = LabelWidget("").apply {
+        private val captureHint = TextWidget("").apply {
             setFrameUpdate {
                 updateCaptureHint()
                 true
             }
         }
-        private val skillTooltipText = LabelWidget("").apply {
-            baseFontSize = TOOLTIP_FONT_SIZE
-            setRed(0.9f)
-            setGreen(0.95f)
-            setBlue(1f)
+        private val skillTooltipText = TextWidget("").apply {
+            textSize = TOOLTIP_FONT_SIZE
+            rgb(0.9f, 0.95f, 1f)
         }
         private val skillTooltip = createSkillTooltip()
         private val captureLayer = createCaptureLayer()
@@ -87,7 +85,7 @@ object SkillSettingsApp : App {
         private data class CaptureTarget(
             val section: BindingSection,
             val bindingName: String,
-            val keyLabel: LabelWidget
+            val keyLabel: TextWidget
         )
 
         private fun createRoot(): FrameLayoutWidget {
@@ -122,11 +120,12 @@ object SkillSettingsApp : App {
             })
             topBar.addChild("back_button", backButton)
 
-            topBar.addChild("title", LabelWidget(name()).apply {
+            topBar.addChild("title", TextWidget(name()).apply {
                 layoutParams = LinearLayoutWidget.LayoutParams()
                     .weight(1f)
                     .height(0f)
                     .gravity(Gravity.CENTER)
+                    gravity = Gravity.CENTER
             })
 
             content.addChild("split_line", FillWidget(-0x1).apply {
@@ -136,11 +135,12 @@ object SkillSettingsApp : App {
                     .padding(2f, 0f)
             })
 
-            content.addChild("page_title", LabelWidget(translate("app.academy.skill_settings.tab.skills")).apply {
+            content.addChild("page_title", TextWidget(translate("app.academy.skill_settings.tab.skills")).apply {
                 layoutParams = LinearLayoutWidget.LayoutParams()
                     .widthMode(SizeMode.MATCH_PARENT)
                     .height(14f)
                     .gravity(Gravity.CENTER)
+                    gravity = Gravity.CENTER
             })
 
             captureHint.layoutParams = LinearLayoutWidget.LayoutParams()
@@ -180,10 +180,11 @@ object SkillSettingsApp : App {
 
             val category = AbilitySystemClient.getCategory()
             page.addChild(
-                "category", LabelWidget(
+                "category", TextWidget(
                     translate("app.academy.skill_settings.current_category") + category.displayName
                 ).apply {
-                    scale = 0.8f
+                    scaleX = 0.8f
+                    scaleY = 0.8f
                     layoutParams = LinearLayoutWidget.LayoutParams()
                         .widthMode(SizeMode.MATCH_PARENT)
                         .height(10f)
@@ -203,10 +204,11 @@ object SkillSettingsApp : App {
                 layoutParams = LinearLayoutWidget.LayoutParams().size(44f, 0f)
             })
             columnHeader.addChild(
-                "toggle_title", LabelWidget(
+                "toggle_title", TextWidget(
                     translate("app.academy.settings.keybind.toggle")
                 ).apply {
-                    scale = 0.8f
+                    scaleX = 0.8f
+                    scaleY = 0.8f
                     layoutParams = LinearLayoutWidget.LayoutParams()
                         .width(16f)
                         .height(10f)
@@ -264,11 +266,12 @@ object SkillSettingsApp : App {
             }
             skillIcons[skill] = icon
             header.addChild("icon", icon)
-            header.addChild("name", LabelWidget(skill.translatedName).apply {
+            header.addChild("name", TextWidget(skill.translatedName).apply {
                 layoutParams = LinearLayoutWidget.LayoutParams()
                     .weight(1f)
                     .height(0f)
                     .gravity(Gravity.CENTER_LEFT)
+                    gravity = Gravity.CENTER_LEFT
             })
             section.addChild("header", header)
 
@@ -290,10 +293,11 @@ object SkillSettingsApp : App {
                     .marginTop(1f)
             })
             section.addChild(
-                "advanced_title", LabelWidget(
+                "advanced_title", TextWidget(
                     translate("app.academy.skill_settings.advanced.title")
                 ).apply {
-                    scale = 0.8f
+                    scaleX = 0.8f
+                    scaleY = 0.8f
                     layoutParams = LinearLayoutWidget.LayoutParams()
                         .widthMode(SizeMode.MATCH_PARENT)
                         .height(10f)
@@ -310,13 +314,15 @@ object SkillSettingsApp : App {
             } else {
                 modules.forEachIndexed { moduleIndex, module ->
                     if (module.titleKey.isNotBlank()) {
-                        section.addChild("module_${moduleIndex}_title", LabelWidget(translate(module.titleKey)).apply {
-                            scale = 0.72f
+                        section.addChild("module_${moduleIndex}_title", TextWidget(translate(module.titleKey)).apply {
+                            scaleX = 0.72f
+                            scaleY = 0.72f
                             layoutParams = LinearLayoutWidget.LayoutParams()
                                 .widthMode(SizeMode.MATCH_PARENT)
                                 .height(9f)
                                 .gravity(Gravity.CENTER_LEFT)
                                 .paddingLeft(3f)
+                            gravity = Gravity.CENTER_LEFT
                         })
                     }
                     module.entries.forEachIndexed { entryIndex, entry ->
@@ -374,7 +380,7 @@ object SkillSettingsApp : App {
                 tooltipBindingRevision = bindingRevision
                 val text = wrapTooltipText(buildSkillTooltipText(hovered.key))
                 skillTooltipText.text = text
-                val textHeight = LabelWidget.getTextHeight(text, TOOLTIP_FONT_SIZE)
+                val textHeight = TextWidget.getTextHeight(text, TOOLTIP_FONT_SIZE)
                 skillTooltipHeight = textHeight + TOOLTIP_PADDING * 2
                 skillTooltip.layoutParams = FrameLayoutWidget.LayoutParams()
                     .size(TOOLTIP_WIDTH, skillTooltipHeight)
@@ -442,14 +448,14 @@ object SkillSettingsApp : App {
         }
 
         private fun wrapTooltipLine(line: String, maxWidth: Float): List<String> {
-            if (line.isEmpty() || LabelWidget.getTextWidth(line, TOOLTIP_FONT_SIZE) <= maxWidth) return listOf(line)
+            if (line.isEmpty() || TextWidget.getTextWidth(line, TOOLTIP_FONT_SIZE) <= maxWidth) return listOf(line)
             val output = mutableListOf<String>()
             var remaining = line
             while (remaining.isNotEmpty()) {
                 var end = 1
                 var lastSpace = -1
                 while (end <= remaining.length
-                    && LabelWidget.getTextWidth(remaining.substring(0, end), TOOLTIP_FONT_SIZE) <= maxWidth
+                    && TextWidget.getTextWidth(remaining.substring(0, end), TOOLTIP_FONT_SIZE) <= maxWidth
                 ) {
                     if (remaining[end - 1].isWhitespace()) lastSpace = end - 1
                     end++
@@ -473,18 +479,21 @@ object SkillSettingsApp : App {
             row.layoutParams = WidgetContainer.LayoutParams().widthMode(SizeMode.MATCH_PARENT)
 
             row.addChild(
-                "name", LabelWidget(bindingDisplayName(bindingName)).apply {
+                "name", TextWidget(bindingDisplayName(bindingName)).apply {
                     layoutParams = LinearLayoutWidget.LayoutParams()
                         .weight(1f)
                         .height(10f)
                         .gravity(Gravity.CENTER_LEFT)
+                        gravity = Gravity.CENTER_LEFT
                 })
-            val keyLabel = LabelWidget(displayBinding(combo)).apply {
-                scale = 0.7f
+            val keyLabel = TextWidget(displayBinding(combo)).apply {
+                scaleX = 0.7f
+                scaleY = 0.7f
                 layoutParams = LinearLayoutWidget.LayoutParams()
                     .width(44f)
                     .height(10f)
                     .gravity(Gravity.CENTER)
+                    gravity = Gravity.CENTER
             }
             row.addChild("key", keyLabel)
             row.addChild("toggle", ToggleButtonWidget().apply {
@@ -507,11 +516,13 @@ object SkillSettingsApp : App {
                 .size(26f, 12f)
                 .gravity(Gravity.CENTER)
             rebind.onClickListener = { startCapture(section, bindingName, keyLabel) }
-            rebind.addChild("text", LabelWidget(translate("app.academy.settings.keybind.rebind")).apply {
-                scale = 0.7f
+            rebind.addChild("text", TextWidget(translate("app.academy.settings.keybind.rebind")).apply {
+                scaleX = 0.7f
+                scaleY = 0.7f
                 layoutParams = FrameLayoutWidget.LayoutParams()
                     .sizeMode(SizeMode.MATCH_PARENT)
                     .gravity(Gravity.CENTER)
+                    gravity = Gravity.CENTER
             })
             row.addChild("rebind", rebind)
 
@@ -520,11 +531,13 @@ object SkillSettingsApp : App {
                 .size(26f, 12f)
                 .gravity(Gravity.CENTER)
             reset.onClickListener = { resetBinding(section, bindingName, keyLabel) }
-            reset.addChild("text", LabelWidget(translate("app.academy.settings.keybind.reset")).apply {
-                scale = 0.7f
+            reset.addChild("text", TextWidget(translate("app.academy.settings.keybind.reset")).apply {
+                scaleX = 0.7f
+                scaleY = 0.7f
                 layoutParams = FrameLayoutWidget.LayoutParams()
                     .sizeMode(SizeMode.MATCH_PARENT)
                     .gravity(Gravity.CENTER)
+                    gravity = Gravity.CENTER
             })
             row.addChild("reset", reset)
             return row
@@ -538,7 +551,7 @@ object SkillSettingsApp : App {
                 .widthMode(SizeMode.MATCH_PARENT)
                 .paddingLeft(3f)
             row.addChild(
-                "label", LabelWidget(
+                "label", TextWidget(
                     translate(
                         if (DestroyBlocksSetting.usesIndependentBlockDestructionSetting(skill)) {
                             "app.academy.skill_settings.advanced.block_destruction_independent"
@@ -576,11 +589,12 @@ object SkillSettingsApp : App {
             row.layoutParams = WidgetContainer.LayoutParams()
                 .widthMode(SizeMode.MATCH_PARENT)
                 .paddingLeft(3f)
-            row.addChild("label", LabelWidget(translate(entry.labelKey)).apply {
+            row.addChild("label", TextWidget(translate(entry.labelKey)).apply {
                 layoutParams = LinearLayoutWidget.LayoutParams()
                     .weight(1f)
                     .height(11f)
                     .gravity(Gravity.CENTER_LEFT)
+                    gravity = Gravity.CENTER_LEFT
             })
 
             when (entry) {
@@ -599,12 +613,14 @@ object SkillSettingsApp : App {
                 }
 
                 is SkillSettingsRegistry.IntegerRange -> {
-                    val value = LabelWidget(entry.getter.asInt.toString()).apply {
-                        scale = 0.75f
+                    val value = TextWidget(entry.getter.asInt.toString()).apply {
+                        scaleX = 0.75f
+                        scaleY = 0.75f
                         layoutParams = LinearLayoutWidget.LayoutParams()
                             .width(20f)
                             .height(10f)
                             .gravity(Gravity.CENTER)
+                            gravity = Gravity.CENTER
                     }
 
                     fun change(delta: Int) {
@@ -620,7 +636,7 @@ object SkillSettingsApp : App {
                 is SkillSettingsRegistry.Choice -> {
                     var tracking = false
                     var displayedIndex = entry.clampIndex(entry.getter.asInt)
-                    val value = LabelWidget(translate(entry.optionKeys[displayedIndex])).apply {
+                    val value = TextWidget(translate(entry.optionKeys[displayedIndex])).apply {
                         setFrameUpdate {
                             val available = entry.available.asBoolean
                             if (!tracking) displayedIndex = entry.clampIndex(entry.getter.asInt)
@@ -632,11 +648,13 @@ object SkillSettingsApp : App {
                             alpha = if (available) 0.85f else 0.35f
                             true
                         }
-                        scale = 0.7f
+                        scaleX = 0.7f
+                        scaleY = 0.7f
                         layoutParams = LinearLayoutWidget.LayoutParams()
                             .width(64f)
                             .height(10f)
                             .gravity(Gravity.CENTER)
+                            gravity = Gravity.CENTER
                     }
                     val slider = SeekBarWidget().apply {
                         setFrameUpdate {
@@ -689,12 +707,14 @@ object SkillSettingsApp : App {
                 is SkillSettingsRegistry.FloatRange -> {
                     fun displayedValue(): String = entry.formatValue(entry.getter.getAsFloat())
 
-                    val value = LabelWidget(displayedValue()).apply {
-                        scale = 0.7f
+                    val value = TextWidget(displayedValue()).apply {
+                        scaleX = 0.7f
+                        scaleY = 0.7f
                         layoutParams = LinearLayoutWidget.LayoutParams()
                             .width(26f)
                             .height(10f)
                             .gravity(Gravity.CENTER)
+                            gravity = Gravity.CENTER
                     }
                     val stepCount = (((entry.max - entry.min) / entry.step).roundToInt()).coerceAtLeast(1)
                     val currentStep = (((entry.getter.getAsFloat() - entry.min) / entry.step).roundToInt())
@@ -741,11 +761,13 @@ object SkillSettingsApp : App {
                             .size(34f, 12f)
                             .gravity(Gravity.CENTER)
                         onClickListener = { entry.action.run() }
-                        addChild("text", LabelWidget(translate(entry.buttonKey)).apply {
-                            scale = 0.7f
+                        addChild("text", TextWidget(translate(entry.buttonKey)).apply {
+                            scaleX = 0.7f
+                            scaleY = 0.7f
                             layoutParams = FrameLayoutWidget.LayoutParams()
                                 .sizeMode(SizeMode.MATCH_PARENT)
                                 .gravity(Gravity.CENTER)
+                                gravity = Gravity.CENTER
                         })
                     })
                 }
@@ -759,22 +781,25 @@ object SkillSettingsApp : App {
                     .size(12f, 12f)
                     .gravity(Gravity.CENTER)
                 onClickListener = { onClick() }
-                addChild("text", LabelWidget(text).apply {
+                addChild("text", TextWidget(text).apply {
                     layoutParams = FrameLayoutWidget.LayoutParams()
                         .sizeMode(SizeMode.MATCH_PARENT)
                         .gravity(Gravity.CENTER)
+                        gravity = Gravity.CENTER
                 })
             }
         }
 
-        private fun emptyLabel(key: String): LabelWidget {
-            return LabelWidget(translate(key)).apply {
-                scale = 0.7f
+        private fun emptyLabel(key: String): TextWidget {
+            return TextWidget(translate(key)).apply {
+                scaleX = 0.7f
+                scaleY = 0.7f
                 layoutParams = LinearLayoutWidget.LayoutParams()
                     .widthMode(SizeMode.MATCH_PARENT)
                     .height(9f)
                     .gravity(Gravity.CENTER_LEFT)
                     .paddingLeft(3f)
+                gravity = Gravity.CENTER_LEFT
             }
         }
 
@@ -887,7 +912,7 @@ object SkillSettingsApp : App {
         private fun startCapture(
             section: BindingSection,
             bindingName: String,
-            keyLabel: LabelWidget
+            keyLabel: TextWidget
         ) {
             resetCaptureState()
             capturing = CaptureTarget(section, bindingName, keyLabel)
@@ -916,7 +941,7 @@ object SkillSettingsApp : App {
         private fun resetBinding(
             section: BindingSection,
             bindingName: String,
-            keyLabel: LabelWidget
+            keyLabel: TextWidget
         ) {
             val defaultCombo = InputSystem.getDefaultKeyBinding(bindingName) ?: return
             section.config.setKeyBinding(bindingName, defaultCombo)

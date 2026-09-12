@@ -71,6 +71,7 @@ public final class R {
             public static final Identifier imgui = academy("core/imgui");
             public static final Identifier msdf_text = academy("core/msdf_text");
             public static final Identifier msdf_text_instanced = academy("core/msdf_text_instanced");
+            public static final Identifier bitmap_text = academy("core/bitmap_text");
             public static final Identifier particle_additive = academy("core/particle_additive");
             public static final Identifier pos_color = academy("core/pos_color");
             public static final Identifier rounded_rect = academy("core/rounded_rect");

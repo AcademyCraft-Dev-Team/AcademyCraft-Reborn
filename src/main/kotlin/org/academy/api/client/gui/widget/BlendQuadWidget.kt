@@ -8,7 +8,7 @@ import net.minecraft.client.renderer.DynamicUniformStorage.DynamicUniform
 import org.academy.api.client.gui.command.ImageDrawCommand
 import org.academy.api.client.gui.command.PosTexRectDrawCommand
 import org.academy.api.client.gui.environment.UiEnvironment
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.render.Render
 import org.academy.api.client.render.UniformPayload
 import org.academy.api.client.resources.R
@@ -76,7 +76,7 @@ class BlendQuadWidget : AbstractWidget() {
             }
         }
 
-    override fun render(context: RenderContext) {
+    override fun render(context: Canvas) {
         if (!isVisible()) return
 
         val lp = layoutParams
@@ -90,7 +90,6 @@ class BlendQuadWidget : AbstractWidget() {
 
         context.pose().pushPose()
         context.pose().translate(lp.paddingLeft, lp.paddingTop)
-        context.drawOrder().push()
         run {
             // 极小值也需要渲染喵
             if (finalAlpha != 0f) {
@@ -120,15 +119,13 @@ class BlendQuadWidget : AbstractWidget() {
                 context.submit(sdfCommand)
             }
             if (drawLine) {
-                context.drawOrder().advance()
                 renderLines(context, context.accumulatedAlpha, paddedWidth, paddedHeight)
             }
         }
-        context.drawOrder().pop()
         context.pose().popPose()
     }
 
-    private fun renderLines(context: RenderContext, finalAlpha: Float, paddedWidth: Float, paddedHeight: Float) {
+    private fun renderLines(context: Canvas, finalAlpha: Float, paddedWidth: Float, paddedHeight: Float) {
         val sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
         val lineTextureView = UiEnvironment.get().loadTexture(R.textures.gui.element.line)
         val lineH = 4.0f

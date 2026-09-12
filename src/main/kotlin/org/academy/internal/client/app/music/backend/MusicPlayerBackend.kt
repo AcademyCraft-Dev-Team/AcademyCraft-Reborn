@@ -8,8 +8,8 @@ import net.neoforged.neoforge.client.event.ClientPauseChangeEvent
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent
 import net.neoforged.neoforge.common.NeoForge
 import org.academy.AcademyCraft
-import org.academy.api.client.gui.msdf.font.MsdfFont
-import org.academy.api.client.gui.msdf.font.MsdfFontService
+import org.academy.api.client.gui.text.font.MsdfFont
+import org.academy.api.client.gui.text.font.MsdfFontService
 import org.academy.api.client.gui.state.UiState
 import org.academy.api.client.vanilla.MainLoopEvent
 import org.academy.internal.client.app.music.common.PlaybackMode

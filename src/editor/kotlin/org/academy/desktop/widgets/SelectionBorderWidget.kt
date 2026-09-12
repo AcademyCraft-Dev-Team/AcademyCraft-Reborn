@@ -1,7 +1,7 @@
 package org.academy.desktop.widgets
 
 import org.academy.api.client.gui.command.FillRectDrawCommand
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.widget.AbstractWidget
 import org.academy.api.client.gui.widget.Widget
 
@@ -11,7 +11,7 @@ import org.academy.api.client.gui.widget.Widget
  * content to highlight the current selection.
  */
 class SelectionBorderWidget(private val target: () -> Widget?) : AbstractWidget() {
-    override fun renderInternal(context: RenderContext) {
+    override fun renderInternal(context: Canvas) {
         val t = target() ?: return
         val host = parent ?: return
         val dx = t.getAbsoluteX() - host.getAbsoluteX()

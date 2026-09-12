@@ -5,7 +5,7 @@ import org.academy.api.client.gui.drawable.StateListDrawable
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.widget.ButtonWidget
-import org.academy.api.client.gui.widget.LabelWidget
+import org.academy.api.client.gui.widget.TextWidget
 import org.academy.api.client.gui.widget.Widget
 import org.academy.api.client.gui.widget.WidgetContainer
 
@@ -13,8 +13,9 @@ import org.academy.api.client.gui.widget.WidgetContainer
  * A label that fills its container and centers its text on both axes — for
  * button contents and centered cells.
  */
-fun centeredLabel(text: String, size: Float = 13f): LabelWidget = LabelWidget(text).apply {
-    baseFontSize = size
+fun centeredLabel(text: String, size: Float = 13f): TextWidget = TextWidget(text).apply {
+    textSize = size
+    gravity = Gravity.CENTER
     layoutParams = WidgetContainer.LayoutParams()
         .sizeMode(SizeMode.MATCH_PARENT)
         .gravity(Gravity.CENTER)
@@ -24,8 +25,9 @@ fun centeredLabel(text: String, size: Float = 13f): LabelWidget = LabelWidget(te
  * A label whose text is vertically centered (and left-aligned) — for form rows
  * and list entries. Callers may still override layoutParams; keep gravity.
  */
-fun vCenteredLabel(text: String, size: Float = 12f): LabelWidget = LabelWidget(text).apply {
-    baseFontSize = size
+fun vCenteredLabel(text: String, size: Float = 12f): TextWidget = TextWidget(text).apply {
+    textSize = size
+    gravity = Gravity.CENTER_VERTICAL
     layoutParams = WidgetContainer.LayoutParams()
         .gravity(Gravity.CENTER_VERTICAL)
 }

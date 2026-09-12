@@ -3,7 +3,7 @@ package org.academy.api.client.gui.state
 import net.minecraft.resources.Identifier
 import org.academy.api.client.gui.texture.TextureSource
 import org.academy.api.client.gui.widget.ImageWidget
-import org.academy.api.client.gui.widget.LabelWidget
+import org.academy.api.client.gui.widget.TextHolder
 import org.academy.api.client.gui.widget.ProgressBarWidget
 import org.academy.api.client.gui.widget.Widget
 
@@ -13,9 +13,10 @@ fun <T> Widget.bindState(state: UiState<T>, writer: Widget.(T) -> Unit) {
     widget.addOnDetach { unsubscribe() }
 }
 
-fun LabelWidget.bindText(state: UiState<String>): LabelWidget {
-    bindState(state) { text = it }
-    return this
+fun TextHolder.bindText(state: UiState<String>): TextHolder {
+    val holder = this
+    bindState(state) { holder.text = it }
+    return holder
 }
 
 fun Widget.bindVisible(state: UiState<Boolean>): Widget {

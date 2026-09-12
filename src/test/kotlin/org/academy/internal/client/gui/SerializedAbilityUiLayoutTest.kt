@@ -12,10 +12,6 @@ import org.junit.jupiter.api.Test
 class SerializedAbilityUiLayoutTest {
     @Test
     fun `ability layouts decode and expose required binding slots`() {
-        assertLayout("mental_control_hud", "mental_control", "content")
-        assertLayout("ability_cp_hud", "cp")
-        assertLayout("ability_skill_wheel_hud", "skill_wheel")
-        assertLayout("toggle_status_hud", "toggle_statuses")
         assertLayout(
             "location_teleport",
             "panel", "name_input", "coordinates", "mark_current", "add_mark", "marks", "refresh", "done"
@@ -25,20 +21,6 @@ class SerializedAbilityUiLayoutTest {
         assertLayout("precision_operation_compact", "panel", "palette", "canvas", "inspector")
         assertLayout("reflection_filter_wide", "panel", "left_column", "middle_column", "right_column")
         assertLayout("reflection_filter_compact", "panel", "left_column", "middle_column", "right_column")
-    }
-
-    @Test
-    fun `mental control hud is compact and has a transparent panel background`() {
-        val root = load("mental_control_hud")
-        val panel = SerializedUiLayout.require(root, "mental_control")
-        val background = SerializedUiLayout.require(root, "background")
-        panel.visibility = Widget.Visibility.VISIBLE
-        layout(root, 854f, 480f)
-
-        assertEquals(142f, panel.width)
-        assertEquals(146f, panel.height)
-        assertTrue(background is FillWidget)
-        assertEquals(0, (background as FillWidget).color)
     }
 
     @Test

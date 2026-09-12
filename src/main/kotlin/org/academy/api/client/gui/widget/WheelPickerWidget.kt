@@ -8,9 +8,8 @@ import org.academy.api.client.gui.command.FillRectDrawCommand
 import org.academy.api.client.gui.event.*
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.MeasureSpec
-import org.academy.api.client.gui.render.RenderContext
-import org.academy.api.client.gui.render.ScissorRect
-import org.academy.api.client.util.ClientUtil
+import org.academy.api.client.gui.render.Canvas
+import org.academy.api.client.util.Chase
 import kotlin.math.max
 import kotlin.math.round
 
@@ -254,7 +253,7 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
         applyPosition(0)
     }
 
-    override fun render(context: RenderContext) {
+    override fun render(context: Canvas) {
         if (visibility != Widget.Visibility.VISIBLE) return
 
         chaseScrollTarget()
@@ -265,9 +264,7 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
         val hasTransform = scaleX != 1.0f || scaleY != 1.0f || rotation != 0.0f
 
         context.pose().pushPose()
-        context.drawOrder().push()
         run {
-            context.drawOrder().advance()
             if (hasTransform) {
                 context.pose().translate(pivotX, pivotY)
                 if (rotation != 0.0f) {
@@ -285,7 +282,6 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
             }
             context.alpha().pop()
         }
-        context.drawOrder().pop()
         context.pose().popPose()
         isRenderDirty = false
         dirtyChildrenSet.clear()
@@ -294,15 +290,14 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
     /**
      * Glides [scrollOffset] toward [scrollTarget] once per rendered frame. The
      * chase factor is frame-time normalized so the motion feels identical at any
-     * frame rate, and settles as soon as it lands on the item boundary.
+     * frame rate. No snap is applied: the wheel settles only once the chase has
+     * numerically converged, so the final frames do not pop onto the boundary.
      */
     private fun chaseScrollTarget() {
         if (isDragging || itemCount == 0 || itemHeight <= 0f) return
         if (targetPosition == 0 && scrollOffset == 0f) return
-        val chaseDuration = if (isFlinging) FLING_CHASE_DURATION else SNAP_CHASE_DURATION
-        val factor = ClientUtil.animationFactor(chaseDuration)
-        val newOffset = Mth.lerp(factor, scrollOffset, scrollTarget)
-        if (Math.abs(scrollTarget - newOffset) < SNAP_THRESHOLD_PX) {
+        val newOffset = Chase.approach(scrollOffset, scrollTarget)
+        if (Math.abs(scrollTarget - newOffset) < SETTLE_EPSILON_PX) {
             scrollOffset = scrollTarget
             settleToTarget()
         } else {
@@ -313,21 +308,14 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
         }
     }
 
-    private fun renderWheel(context: RenderContext) {
+    private fun renderWheel(context: Canvas) {
         val lp = layoutParams
         val contentTop = lp.paddingTop
         val contentBottom = height - lp.paddingBottom
         if (contentBottom <= contentTop) return
         val centerY = (contentTop + contentBottom) / 2f
 
-        context.enableScissor(
-            ScissorRect(
-                getAbsoluteX() + getAbsoluteTranslationX(),
-                getAbsoluteY() + getAbsoluteTranslationY(),
-                width,
-                height
-            )
-        )
+        context.clipRect(0f, 0f, width, height)
         run {
             renderItems(context, centerY, contentTop, contentBottom)
             if (isCurtain) renderCurtain(context, centerY)
@@ -336,7 +324,7 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
         context.disableScissor()
     }
 
-    private fun renderItems(context: RenderContext, centerY: Float, contentTop: Float, contentBottom: Float) {
+    private fun renderItems(context: Canvas, centerY: Float, contentTop: Float, contentBottom: Float) {
         if (itemCount == 0 || itemHeight <= 0f) return
 
         val start = Mth.floor(_selectedPosition + (contentTop - centerY - scrollOffset) / itemHeight) - 1
@@ -356,7 +344,7 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
      * Renders a single item at the given vertical center. Override to fully
      * control how an item is drawn.
      */
-    protected open fun renderItem(context: RenderContext, child: Widget, centerY: Float, distanceRatio: Float) {
+    protected open fun renderItem(context: Canvas, child: Widget, centerY: Float, distanceRatio: Float) {
         val scale = computeItemScale(distanceRatio)
         val alpha = computeItemAlpha(distanceRatio)
         val childWidth = child.width
@@ -365,9 +353,7 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
         val alignX = computeItemAlignX(child, childWidth)
 
         context.pose().pushPose()
-        context.drawOrder().push()
         run {
-            context.drawOrder().advance()
             context.pose().translate(alignX, centerY - childHeight / 2f)
             if (scale != 1f) {
                 context.pose().translate(childWidth / 2f, childHeight / 2f)
@@ -385,7 +371,6 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
             }
             context.alpha().pop()
         }
-        context.drawOrder().pop()
         context.pose().popPose()
     }
 
@@ -425,7 +410,7 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
     }
 
     /** Draws the curtain highlight over the selected row. */
-    protected open fun renderCurtain(context: RenderContext, centerY: Float) {
+    protected open fun renderCurtain(context: Canvas, centerY: Float) {
         val alpha = ARGB.alpha(curtainColor) / 255.0f * context.accumulatedAlpha
         if (alpha <= 0f) return
         val halfItem = itemHeight / 2f
@@ -447,7 +432,7 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
     }
 
     /** Draws the indicator lines above and below the selected row. */
-    protected open fun renderIndicator(context: RenderContext, centerY: Float) {
+    protected open fun renderIndicator(context: Canvas, centerY: Float) {
         val alpha = ARGB.alpha(indicatorColor) / 255.0f * context.accumulatedAlpha
         if (alpha <= 0f) return
         val halfItem = itemHeight / 2f
@@ -832,14 +817,8 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
         const val DEFAULT_VISIBLE_ITEM_COUNT = 3
         const val DEFAULT_ITEM_SPACE = 2.0f
 
-        /** Chase speed for a regular snap; higher = snappier (see ScrollPanelWidget). */
-        private const val SNAP_CHASE_DURATION = Mth.PI / 1.5f
-
-        /** Chase speed for a fling; larger value = longer glide. */
-        private const val FLING_CHASE_DURATION = Mth.PI / 0.7f
-
-        /** Below this distance (px) the wheel snaps onto the item boundary. */
-        private const val SNAP_THRESHOLD_PX = 0.5f
+        /** Numerical convergence distance (px) before the wheel commits its item. */
+        private const val SETTLE_EPSILON_PX = 1e-3f
 
         /** Minimum drag delta-time (s) used for velocity sampling, guards against spikey frames. */
         private const val MIN_VELOCITY_DT_SEC = 0.001

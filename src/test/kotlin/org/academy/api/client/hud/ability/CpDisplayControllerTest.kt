@@ -7,7 +7,7 @@ import kotlin.math.abs
 
 class CpDisplayControllerTest {
     private val geometry = CpBarGeometry(240f, 27f)
-    private val dt = 1f / 60f
+    private val dt = 1000f / 60f
 
     @Test
     fun `fill edge chases target without jumps`() {

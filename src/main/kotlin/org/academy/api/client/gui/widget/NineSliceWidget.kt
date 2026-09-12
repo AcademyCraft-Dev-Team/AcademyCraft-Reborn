@@ -5,7 +5,7 @@ import com.mojang.blaze3d.textures.FilterMode
 import net.minecraft.resources.Identifier
 import org.academy.api.client.gui.command.ImageDrawCommand
 import org.academy.api.client.gui.environment.UiEnvironment
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 
 /**
  * 九宫格控件喵. 把纹理按四边分割为 9 块: 四角原尺寸, 四边与中心拉伸,
@@ -76,7 +76,7 @@ open class NineSliceWidget(
         return this
     }
 
-    override fun render(context: RenderContext) {
+    override fun render(context: Canvas) {
         if (!isVisible() || width <= 0f || height <= 0f) return
         val texture = texture ?: return
         val textureView = UiEnvironment.get().loadTexture(texture)
@@ -100,9 +100,7 @@ open class NineSliceWidget(
         val sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
 
         context.pose().pushPose()
-        context.drawOrder().push()
         run {
-            context.drawOrder().advance()
             submitPatch(
                 context, textureView, sampler, finalAlpha,
                 0f, 0f, leftW, topH, 0f, 0f, leftU, topV
@@ -142,12 +140,11 @@ open class NineSliceWidget(
                 leftW + midW, topH + midH, rightW, bottomH, rightU, bottomV, 1f, 1f
             )
         }
-        context.drawOrder().pop()
         context.pose().popPose()
     }
 
     private fun submitPatch(
-        context: RenderContext,
+        context: Canvas,
         textureView: com.mojang.blaze3d.textures.GpuTextureView,
         sampler: com.mojang.blaze3d.textures.GpuSampler,
         alpha: Float,

@@ -20,6 +20,7 @@ import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.state.UiState
 import org.academy.api.client.gui.state.bindState
+import org.academy.api.client.gui.text.Ellipsize
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.gui.widget.SeekBarWidget.OnSeekBarChangeListener
 import org.academy.api.client.hud.terminal.TerminalHud
@@ -55,9 +56,9 @@ object MusicApp : App {
         private var showingSearchResults = false
         private var showingAccount = false
         private val listRevisionState = UiState(0)
-        private lateinit var searchBox: TextBoxWidget
+        private lateinit var searchBox: TextInputWidget
         private lateinit var searchButton: ButtonWidget
-        private var settingsTitle: LabelWidget? = null
+        private var settingsTitle: TextWidget? = null
         private var moreIcon: ImageWidget? = null
         private val vinyl = createVinyl()
         private var lastVinylArtwork: Identifier? = null
@@ -121,10 +122,11 @@ object MusicApp : App {
                             search(searchBox.text)
                         }
                         add("search", searchButton)
-                        settingsTitle = label(L10n["app.academy.music_player.settings.title"], "settings_title") {
+                        settingsTitle = text(L10n["app.academy.music_player.settings.title"], "settings_title") {
                             weight(1f)
                             height(14f)
                             gravity(Gravity.CENTER)
+                            this.gravity = Gravity.CENTER
                             visibility = Widget.Visibility.GONE
                         }
                         button("more_button") {
@@ -180,7 +182,7 @@ object MusicApp : App {
             sizeMode(SizeMode.MATCH_PARENT)
 
             column {
-                label(L10n["app.academy.music_player.track_list"], "playlist_title")
+                text(L10n["app.academy.music_player.track_list"], "playlist_title")
 
                 scrollPanel(Orientation.VERTICAL, "music_list_area", createPlaylistPanel()) {
                     width(100f)
@@ -206,13 +208,15 @@ object MusicApp : App {
                     margin(0f, 0f, 0f, 4f)
                     add("meta", LinearLayoutWidget().apply {
                         orientation = Orientation.VERTICAL
-                        val titleLabel = label("") {
+                        val titleLabel = text("") {
                             widthMode(SizeMode.MATCH_PARENT)
                             gravity(Gravity.CENTER)
+                            this.gravity = Gravity.CENTER
                         }
-                        val artistLabel = label("") {
+                        val artistLabel = text("") {
                             widthMode(SizeMode.MATCH_PARENT)
                             gravity(Gravity.CENTER)
+                            this.gravity = Gravity.CENTER
                         }
                         bindState(MusicPlayerBackend.getInstance().uiState) {
                             val mi = MusicPlayerBackend.getInstance().currentMusicInfo
@@ -227,7 +231,7 @@ object MusicApp : App {
                         height(12f)
                         widthMode(SizeMode.MATCH_PARENT)
                         spacing = 4f
-                        add("current_time", LabelWidget("00:00").apply {
+                        add("current_time", TextWidget("00:00").apply {
                             setFrameUpdate {
                                 text = formatTime(MusicPlayerBackend.getInstance().currentTime)
                                 true
@@ -238,7 +242,7 @@ object MusicApp : App {
                             gravity(Gravity.CENTER)
                         }
                         add("play_progress_bar", createPlayProgressBar())
-                        add("music_duration", LabelWidget("00:00").apply {
+                        add("music_duration", TextWidget("00:00").apply {
                             setFrameUpdate {
                                 text = formatTime(MusicPlayerBackend.getInstance().totalDuration)
                                 true
@@ -356,7 +360,7 @@ object MusicApp : App {
                 OnlineMusicManager.Provider.QQ -> L10n["app.academy.music_player.provider.qq"]
                 OnlineMusicManager.Provider.NETEASE -> L10n["app.academy.music_player.provider.netease"]
             }
-            val text = LabelWidget(labelText)
+            val text = TextWidget(labelText)
             text.layoutParams = FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT)
                 .gravity(Gravity.CENTER)
@@ -410,16 +414,19 @@ object MusicApp : App {
                 column("text") {
                     weight(1f)
                     heightMode(SizeMode.MATCH_PARENT)
-                    label(L10n["app.academy.music_player.account.not_logged_in"], "title") {
+                    text(L10n["app.academy.music_player.account.not_logged_in"], "title") {
                         widthMode(SizeMode.MATCH_PARENT)
                         height(10f)
                         gravity(Gravity.CENTER_LEFT)
+                        this.gravity = Gravity.CENTER_LEFT
                     }
-                    label(L10n["app.academy.music_player.account.not_logged_in_hint"], "hint") {
-                        scale = 0.6f
+                    text(L10n["app.academy.music_player.account.not_logged_in_hint"], "hint") {
+                        scaleX = 0.6f
+                        scaleY = 0.6f
                         widthMode(SizeMode.MATCH_PARENT)
                         height(9f)
                         gravity(Gravity.CENTER_LEFT)
+                        this.gravity = Gravity.CENTER_LEFT
                     }
                 }
                 add(
@@ -447,12 +454,14 @@ object MusicApp : App {
             }
             return standaloneColumn(3f) {
                 sizeMode(SizeMode.MATCH_PARENT)
-                label(hint, "hint") {
-                    scale = 0.62f
+                text(hint, "hint") {
+                    scaleX = 0.62f
+                    scaleY = 0.62f
                     alpha = 0.85f
                     widthMode(SizeMode.MATCH_PARENT)
                     height(10f)
                     gravity(Gravity.CENTER)
+                    this.gravity = Gravity.CENTER
                 }
                 if (state == OnlineMusicManager.LoginState.WAITING) {
                     add("qr", LoginQrWidget()) {
@@ -504,16 +513,19 @@ object MusicApp : App {
                 column("text") {
                     weight(1f)
                     heightMode(SizeMode.MATCH_PARENT)
-                    label(name, "name") {
+                    text(name, "name") {
                         widthMode(SizeMode.MATCH_PARENT)
                         height(10f)
                         gravity(Gravity.CENTER_LEFT)
+                        this.gravity = Gravity.CENTER_LEFT
                     }
-                    label(sub, "sub") {
-                        scale = 0.6f
+                    text(sub, "sub") {
+                        scaleX = 0.6f
+                        scaleY = 0.6f
                         widthMode(SizeMode.MATCH_PARENT)
                         height(9f)
                         gravity(Gravity.CENTER_LEFT)
+                        this.gravity = Gravity.CENTER_LEFT
                     }
                 }
                 add(
@@ -536,15 +548,16 @@ object MusicApp : App {
             }
         }
 
-        private fun createStatusLine(): LabelWidget {
-            return LabelWidget("").apply {
+        private fun createStatusLine(): TextWidget {
+            return TextWidget("").apply {
                 bindState(OnlineMusicManager.revisionState) {
                     val s = OnlineMusicManager.status
                     if (text != s) text = s
                     visibility = if (s.isBlank()) Widget.Visibility.GONE else Widget.Visibility.VISIBLE
                 }
-                scale = 0.58f
-                wrapText = true
+                scaleX = 0.58f
+                scaleY = 0.58f
+                singleLine = false
                 layoutParams = WidgetContainer.LayoutParams()
                     .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
                     .padding(2f, 0f)
@@ -572,7 +585,7 @@ object MusicApp : App {
                         widthMode(SizeMode.MATCH_PARENT)
                         height(14f)
                     }
-                    label(L10n["app.academy.music_player.search_results"], "search_title") {
+                    text(L10n["app.academy.music_player.search_results"], "search_title") {
                         widthMode(SizeMode.MATCH_PARENT)
                         height(10f)
                     }
@@ -581,11 +594,10 @@ object MusicApp : App {
                             spacing = 2f
                             widthMode(SizeMode.MATCH_PARENT)
                             height(24f)
-                            label(
+                            text(
                                 (if (entry.vip) "[VIP] " else "") + entry.title + " - " + entry.artist,
                                 "name"
                             ) {
-                                scale = 0.62f
                                 weight(1f)
                                 height(0f)
                                 gravity(Gravity.CENTER_LEFT)
@@ -631,28 +643,36 @@ object MusicApp : App {
                                         weight(1f)
                                     }
 
-                                    label(mediaInfo.name, "name") {
+                                    text(mediaInfo.name, "name") {
                                         widthMode(SizeMode.MATCH_PARENT)
                                         gravity(Gravity.CENTER_LEFT)
+                                        this.gravity = Gravity.CENTER_LEFT
 
-                                        baseFontSize = 6f
+                                        textSize = 6f
+                                        ellipsize = Ellipsize.MARQUEE
+                                        marqueeFadeSize = 6f
                                     }
-                                    label(mediaInfo.subtitle, "author") {
+                                    text(mediaInfo.subtitle, "author") {
                                         widthMode(SizeMode.MATCH_PARENT)
                                         gravity(Gravity.CENTER_LEFT)
+                                        this.gravity = Gravity.CENTER_LEFT
 
-                                        baseFontSize = 4f
+                                        textSize = 4f
+                                        ellipsize = Ellipsize.MARQUEE
+                                        marqueeFadeSize = 6f
                                     }
 
                                     add("bottom", EmptyWidget()) {
                                         weight(1f)
                                     }
                                 }
-                                label(formatTime(mediaInfo.durationSeconds.toFloat()), "duration") {
-                                    scale = 0.6f
+                                text(formatTime(mediaInfo.durationSeconds.toFloat()), "duration") {
+                                    scaleX = 0.6f
+                                    scaleY = 0.6f
                                     width(16f)
                                     height(0f)
                                     gravity(Gravity.CENTER)
+                                    this.gravity = Gravity.CENTER
                                 }
                                 if (mediaInfo.provider != "local") {
                                     add(
@@ -690,10 +710,12 @@ object MusicApp : App {
                 size(width, height)
                 onClick { action() }
                 gravity(Gravity.CENTER)
-                label(text) {
-                    scale = textScale
+                text(text) {
+                    scaleX = textScale
+                    scaleY = textScale
                     sizeMode(SizeMode.MATCH_PARENT)
                     gravity(Gravity.CENTER)
+                    this.gravity = Gravity.CENTER
                 }
             }
         }
@@ -715,10 +737,12 @@ object MusicApp : App {
             b.background = bg
             if (tooltip != null) b.tooltipText = tooltip
             b.onClick { action() }
-            b.add("text", LabelWidget(text)) {
-                scale = textScale
+            b.add("text", TextWidget(text)) {
+                scaleX = textScale
+                scaleY = textScale
                 sizeMode(SizeMode.MATCH_PARENT)
                 gravity(Gravity.CENTER)
+                this.gravity = Gravity.CENTER
             }
             return b
         }
@@ -932,10 +956,12 @@ object MusicApp : App {
                 width(0f)
                 heightMode(SizeMode.MATCH_PARENT)
                 val volume = { min(MusicPlayerBackend.getInstance().volume / VOLUME_SCALE, 1f) }
-                val textLabel = label("${(volume() * 100).roundToInt()}%", "text") {
-                    scale = 0.75f
+                val textLabel = text("${(volume() * 100).roundToInt()}%", "text") {
+                    scaleX = 0.75f
+                    scaleY = 0.75f
                     marginTop(8f)
                     gravity(Gravity.CENTER)
+                    this.gravity = Gravity.CENTER
                 }
 
                 fun setText(progress: Float) {

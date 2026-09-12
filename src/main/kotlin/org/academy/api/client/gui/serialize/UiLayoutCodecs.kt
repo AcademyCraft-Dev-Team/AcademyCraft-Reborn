@@ -12,8 +12,8 @@ object UiLayoutCodecs {
         if (registered) return
         synchronized(this) {
             if (registered) return
-            WidgetCodecRegistry.register(LabelCodec())
-            WidgetCodecRegistry.register(TextBoxCodec())
+            WidgetCodecRegistry.register(TextCodec())
+            WidgetCodecRegistry.register(TextInputCodec())
             WidgetCodecRegistry.register(ImageCodec())
             WidgetCodecRegistry.register(MonochromeImageCodec())
             WidgetCodecRegistry.register(ParallaxImageCodec())

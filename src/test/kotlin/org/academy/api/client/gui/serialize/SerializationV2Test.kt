@@ -1,8 +1,8 @@
 package org.academy.api.client.gui.serialize
 
 import org.academy.api.client.gui.state.UiState
-import org.academy.api.client.gui.widget.LabelWidget
 import org.academy.api.client.gui.widget.ProgressBarWidget
+import org.academy.api.client.gui.widget.TextWidget
 import org.academy.api.client.gui.widget.Widget
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -17,14 +17,14 @@ class SerializationV2Test {
               "version": 2,
               "root": {
                 "type": "label", "name": "title",
-                "props": { "text": "Hello", "base_font_size": 999 }
+                "props": { "text": "Hello", "text_size": 999 }
               }
             }
         """.trimIndent()
 
-        val decoded = WidgetSerializer.fromJsonString(json) as LabelWidget
+        val decoded = WidgetSerializer.fromJsonString(json) as TextWidget
         assertEquals("Hello", decoded.text)
-        assertEquals(64f, decoded.baseFontSize, "base_font_size must be clamped to its schema max")
+        assertEquals(64f, decoded.textSize, "text_size must be clamped to its schema max")
     }
 
     @Test
@@ -41,7 +41,7 @@ class SerializationV2Test {
             }
         """.trimIndent()
 
-        val decoded = WidgetSerializer.fromJsonString(json, bindings) as LabelWidget
+        val decoded = WidgetSerializer.fromJsonString(json, bindings) as TextWidget
         assertEquals("Alice", decoded.text)
 
         playerName.value = "Bob"
@@ -62,7 +62,7 @@ class SerializationV2Test {
             }
         """.trimIndent()
 
-        val decoded = WidgetSerializer.fromJsonString(json, bindings) as LabelWidget
+        val decoded = WidgetSerializer.fromJsonString(json, bindings) as TextWidget
         assertEquals(Widget.Visibility.INVISIBLE, decoded.visibility)
 
         unlocked.value = true
@@ -81,7 +81,7 @@ class SerializationV2Test {
             }
         """.trimIndent()
 
-        val decoded = WidgetSerializer.fromJsonString(json) as LabelWidget
+        val decoded = WidgetSerializer.fromJsonString(json) as TextWidget
         assertEquals("", decoded.text)
     }
 
@@ -98,7 +98,7 @@ class SerializationV2Test {
         """.trimIndent()
 
         val decoded = WidgetSerializer.fromJsonString(json)
-        assertEquals("legacy", (decoded as LabelWidget).text)
+        assertEquals("legacy", (decoded as TextWidget).text)
     }
 
     @Test
