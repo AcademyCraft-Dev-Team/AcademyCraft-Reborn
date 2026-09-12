@@ -8,21 +8,25 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/** Shared rolling CP charge limit for reflected and refracted projectiles. */
-public final class VectorProjectileCpBudget {
+/** Shared rolling CP charge limits for vector-defense damage and projectile handling. */
+public final class VectorDefenseCpBudget {
     public static final double MAX_CP_PER_SECOND_RATIO = 0.40D;
     public static final long WINDOW_TICKS = 20L;
-    private static final Map<UUID, Window> WINDOWS = new HashMap<>();
+    private static final Map<BudgetKey, Window> WINDOWS = new HashMap<>();
 
-    private VectorProjectileCpBudget() {
+    private VectorDefenseCpBudget() {
     }
 
-    public static float limitBaseCost(ServerPlayer player, float requestedBaseCost) {
-        if (player == null) return Float.NaN;
+    public static float limitBaseCost(
+            ServerPlayer player,
+            Channel channel,
+            float requestedBaseCost
+    ) {
+        if (player == null || channel == null) return Float.NaN;
         var system = AbilitySystemServer.getSystem(player);
         var playerId = player.getUUID();
         var gameTime = player.level().getGameTime();
-        var window = WINDOWS.computeIfAbsent(playerId, _ -> new Window());
+        var window = WINDOWS.computeIfAbsent(new BudgetKey(playerId, channel), _ -> new Window());
         var spentActualCp = window.spentSince(gameTime, gameTime - WINDOW_TICKS + 1L);
         return limitBaseCost(
                 requestedBaseCost,
@@ -52,14 +56,17 @@ public final class VectorProjectileCpBudget {
         return Float.isFinite(allowedBaseCost) ? allowedBaseCost : Float.NaN;
     }
 
-    public static void record(ServerPlayer player, float actualCpCost) {
-        if (player == null || !(actualCpCost > 0.0f) || !Float.isFinite(actualCpCost)) return;
-        WINDOWS.computeIfAbsent(player.getUUID(), _ -> new Window())
+    public static void record(ServerPlayer player, Channel channel, float actualCpCost) {
+        if (player == null || channel == null
+                || !(actualCpCost > 0.0f) || !Float.isFinite(actualCpCost)) return;
+        WINDOWS.computeIfAbsent(new BudgetKey(player.getUUID(), channel), _ -> new Window())
                 .record(player.level().getGameTime(), actualCpCost);
     }
 
     public static void clear(ServerPlayer player) {
-        if (player != null) WINDOWS.remove(player.getUUID());
+        if (player != null) {
+            WINDOWS.keySet().removeIf(key -> key.playerId().equals(player.getUUID()));
+        }
     }
 
     static final class Window {
@@ -88,5 +95,13 @@ public final class VectorProjectileCpBudget {
     }
 
     private record Charge(long gameTime, float actualCpCost) {
+    }
+
+    private record BudgetKey(UUID playerId, Channel channel) {
+    }
+
+    public enum Channel {
+        DAMAGE,
+        PROJECTILE
     }
 }

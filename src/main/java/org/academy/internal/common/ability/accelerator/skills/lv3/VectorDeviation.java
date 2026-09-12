@@ -446,16 +446,22 @@ public class VectorDeviation extends Skill {
             var finalDirection = direction;
             var effectKey = VectorAttackFingerprint.computeLeaseKey(
                     player.getId(), source, incoming);
+            var budgetedCost = VectorDefenseCpBudget.limitBaseCost(
+                    player, VectorDefenseCpBudget.Channel.DAMAGE, result.baseCpCost());
             var executed = skill.executeContinuous(
                     player,
-                    _ -> result.baseCpCost(),
-                    (_, _) -> VectorEnvironmentalFeedbackController.emitRefraction(
-                            player,
-                            source,
-                            effectKey,
-                            finalDirection,
-                            mirrorPoint
-                    ),
+                    _ -> budgetedCost,
+                    (_, actualCost) -> {
+                        VectorDefenseCpBudget.record(
+                                player, VectorDefenseCpBudget.Channel.DAMAGE, actualCost);
+                        VectorEnvironmentalFeedbackController.emitRefraction(
+                                player,
+                                source,
+                                effectKey,
+                                finalDirection,
+                                mirrorPoint
+                        );
+                    },
                     true
             );
             if (!executed) return VectorIncomingDamageResult.passThrough(incomingDamage);
@@ -539,10 +545,14 @@ public class VectorDeviation extends Skill {
                     system.isPlayerSkillDebugMode(player.getUUID())
             );
             if (!result.isFull()) return false;
+            var budgetedCost = VectorDefenseCpBudget.limitBaseCost(
+                    player, VectorDefenseCpBudget.Channel.DAMAGE, result.baseCpCost());
             var executed = skill.executeContinuous(
                     player,
-                    _ -> result.baseCpCost(),
-                    (_, _) -> {
+                    _ -> budgetedCost,
+                    (_, actualCost) -> {
+                        VectorDefenseCpBudget.record(
+                                player, VectorDefenseCpBudget.Channel.DAMAGE, actualCost);
                         if (emitFeedback) {
                             var direction = refractedDirection(player.getLookAngle(), incomingDirection);
                             VectorReflection.Server.spawnGlowCircle(
@@ -602,10 +612,14 @@ public class VectorDeviation extends Skill {
             var previousOwner = projectile.getOwner();
 
             var skill = Skills.VECTOR_DEVIATION.get();
-            var budgetedCost = VectorProjectileCpBudget.limitBaseCost(
-                    player, Math.max(1.0f, (float) speed));
+            var budgetedCost = VectorDefenseCpBudget.limitBaseCost(
+                    player,
+                    VectorDefenseCpBudget.Channel.PROJECTILE,
+                    Math.max(1.0f, (float) speed)
+            );
             var executed = skill.executeContinuous(player, _ -> budgetedCost, (_, actualCost) -> {
-                VectorProjectileCpBudget.record(player, actualCost);
+                VectorDefenseCpBudget.record(
+                        player, VectorDefenseCpBudget.Channel.PROJECTILE, actualCost);
                 VectorProjectileRedirects.mark(projectile, player, VectorRedirectKind.REFRACTION);
                 projectile.setOwner(player);
                 var pushDistance = Math.max(player.getBbWidth(), 0.75) + 0.5;
