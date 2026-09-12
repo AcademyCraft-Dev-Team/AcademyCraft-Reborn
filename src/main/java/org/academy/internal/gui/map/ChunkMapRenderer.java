@@ -5,7 +5,6 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
-import org.academy.api.client.resources.R;
 import org.academy.internal.client.ability.teleport.ChunkMapTexture;
 import org.academy.internal.common.ability.teleport.ChunkLeapPackets;
 import org.academy.internal.common.ability.teleport.ChunkLeapRegion;
@@ -35,8 +34,6 @@ public final class ChunkMapRenderer {
     private static final int MAJOR_EVERY = 8;
     private static final int MIN_CHUNK_SIZE = 2;
     private static final int MAX_MARKER_HIT = 6;
-    private static final int MAX_ENTITY_THUMBNAILS = 64;
-
     private final ChunkMapTexture texture;
     private final EntityRadarThumbnailRenderer entityThumbnails = new EntityRadarThumbnailRenderer();
 
@@ -202,11 +199,11 @@ public final class ChunkMapRenderer {
         graphics.fill(right - 1, top, right, bottom, borderColor);
     }
     /**
-     * Draws one marker per entity: player skin faces, type-cached living-entity previews, then category dots.
+     * Draws one marker per entity: player skin faces, type-cached living-entity previews, then category squares.
      *
      * <p>Entity previews use the vanilla GUI model renderer rather than copied texture assumptions. Unsupported
-     * entities keep their disposition dot, and the per-frame preview budget prevents dense radar scenes from
-     * turning hundreds of model renders into a frame-time spike.
+     * entities keep their disposition square, while new preview textures are admitted progressively so dense radar
+     * scenes fill in without a frame-time spike or requiring the cursor to hover a marker.
      *
      * <p>The local player is ringed in blue so the map answers "where am I" without a legend.
      */
@@ -220,7 +217,7 @@ public final class ChunkMapRenderer {
         // Portraits read best a little larger than a bare dot, but must not swallow the terrain at low zoom.
         var radius = Math.max(3, Math.min(6, (int) Math.round(size / 7.0)));
         var diameter = radius * 2;
-        var thumbnailsRendered = 0;
+        entityThumbnails.beginFrame();
         for (var marker : markers) {
             var centreX = g.screenX((marker.blockX() + 0.5) / 16.0);
             var centreZ = g.screenZ((marker.blockZ() + 0.5) / 16.0);
@@ -232,20 +229,20 @@ public final class ChunkMapRenderer {
 
             var portrait = portraitFor(marker);
             if (portrait != null) {
-                // Keep a dark silhouette behind the two skin layers so pale faces remain visible on bright terrain.
-                blitDot(graphics, x, z, diameter + 2, 0xB0000000);
+                // A square instrument frame matches the map grid and keeps pale faces visible on bright terrain.
+                fillSquare(graphics, x, z, diameter + 2, 0xD0000000);
                 blitFace(graphics, portrait, x, z, diameter, 0xFFFFFFFF, false);
                 blitFace(graphics, portrait, x, z, diameter, 0xFFFFFFFF, true);
             } else {
                 var color = markerColor(marker.category());
-                blitDot(graphics, x, z, diameter + 2, 0xB0000000);
-                blitDot(graphics, x, z, diameter, color);
+                fillSquare(graphics, x, z, diameter + 2, 0xD0000000);
+                fillSquare(graphics, x, z, diameter, 0xD018181C);
                 var priority = self || marker.entityId() == hoveredEntityId
                         || marker.entityId() == selectedEntityId;
-                if ((priority || thumbnailsRendered < MAX_ENTITY_THUMBNAILS)
-                        && entityThumbnails.render(graphics, marker, x, z, diameter)) {
-                    thumbnailsRendered++;
+                if (entityThumbnails.render(graphics, marker, x, z, diameter, priority)) {
                     bracket(graphics, x, z, diameter + 2, color & 0xAFFFFFFF);
+                } else {
+                    fillSquare(graphics, x, z, diameter, color);
                 }
             }
 
@@ -262,11 +259,12 @@ public final class ChunkMapRenderer {
                 bracket(graphics, x, z, diameter + 14, 0x66C77DFF);
             }
         }
+        entityThumbnails.endFrame();
         graphics.disableScissor();
     }
 
     /**
-     * The skin texture for a player marker, or null when the entity needs a model thumbnail/fallback dot.
+     * The skin texture for a player marker, or null when the entity needs a model thumbnail/fallback square.
      *
      * <p>Players resolve through the tab list, which already holds every visible player skin. Non-player
      * thumbnails are rendered from their registered entity type instead of pretending every model has a head UV.
@@ -299,13 +297,14 @@ public final class ChunkMapRenderer {
                 centreX - half, centreZ - half,
                 u, v, diameter, diameter, size, size, (int) textureSize, (int) textureSize, tint);
     }
-    /** Draws one tinted disc centred on a screen point. */
-    private static void blitDot(GuiGraphicsExtractor graphics, int centreX, int centreZ, int diameter,
-                                int color) {
+
+    /** Draws one crisp square centred on a screen point. */
+    private static void fillSquare(GuiGraphicsExtractor graphics, int centreX, int centreZ, int diameter,
+                                   int color) {
         var half = diameter / 2;
-        graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
-                R.textures.gui.element.map_marker_dot, centreX - half, centreZ - half,
-                0f, 0f, diameter, diameter, 16, 16, color);
+        var left = centreX - half;
+        var top = centreZ - half;
+        graphics.fill(left, top, left + diameter, top + diameter, color);
     }
 
     /** Draws four corner brackets forming a square outline outside a marker. */

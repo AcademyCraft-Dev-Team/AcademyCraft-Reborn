@@ -60,19 +60,20 @@ class ChunkSwapServiceValidationTest {
     @Test
     void theGameplayCapBindsBeforeTheContainerCap() {
         // If these were equal the size check could never fire, since construction truncates.
+        assertEquals(9, ChunkSwapService.MAX_SWAP_CHUNKS);
         assertTrue(ChunkSwapService.MAX_SWAP_CHUNKS < ChunkLeapSelection.MAX_CHUNKS);
     }
 
     @Test
     void rejectsATargetOnTopOfItsSource() {
-        var source = rectangle(OVERWORLD, 10, 10, 4, 4);
+        var source = rectangle(OVERWORLD, 10, 10, 3, 3);
         var samePlace = source.anchoredAt(OVERWORLD, new ChunkPos(10, 10));
         assertEquals("chunk_leap.reason.overlap", ChunkSwapService.validateSelections(source, samePlace));
     }
 
     @Test
     void acceptsADisjointSameDimensionTarget() {
-        var source = rectangle(OVERWORLD, 0, 0, 4, 4);
+        var source = rectangle(OVERWORLD, 0, 0, 3, 3);
         assertNull(ChunkSwapService.validateSelections(source,
                 source.anchoredAt(OVERWORLD, new ChunkPos(100, 100))));
     }

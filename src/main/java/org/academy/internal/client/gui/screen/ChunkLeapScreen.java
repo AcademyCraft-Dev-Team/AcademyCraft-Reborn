@@ -110,10 +110,10 @@ public final class ChunkLeapScreen extends UiScreen {
 
 
     private FrameLayoutWidget serializedLayout;
-    /** Block-coordinate entry: type "x z" and press Enter to move the map centre there. */
-    private EditBox coordinateBox;
+    /** Independent block-coordinate entries; pressing Enter in either moves the map centre. */
+    private EditBox coordinateXBox;
+    private EditBox coordinateZBox;
     /** Remembered per dimension so the loading banner can show that page's own progress. */
-    private String coordinateError = "";
     /** Last chunk we asked the server about, so hover does not spam inspect requests. */
     private long inspectedChunk = Long.MIN_VALUE;
     private long lastInspectRequestMs;
@@ -139,13 +139,8 @@ public final class ChunkLeapScreen extends UiScreen {
         serializedLayout = layout;
         getRoot().addChild("serialized_layout", layout);
 
-        coordinateBox = new EditBox(font, 0, 0, 1, 16, Component.empty());
-        coordinateBox.setHint(Component.translatable("chunk_leap.coord.hint"));
-        coordinateBox.setMaxLength(48);
-        coordinateBox.setBordered(false);
-        coordinateBox.setTextColor(TEXT);
-        coordinateBox.setResponder(this::onCoordinateSubmitted);
-        addRenderableWidget(coordinateBox);
+        coordinateXBox = createCoordinateBox("chunk_leap.coord.x_hint");
+        coordinateZBox = createCoordinateBox("chunk_leap.coord.z_hint");
 
         dimensions = discoverDimensions();
         dimensionIndex = Math.max(0, dimensions.indexOf(dimension));
@@ -243,30 +238,44 @@ public final class ChunkLeapScreen extends UiScreen {
     }
 
     /**
-     * Parses "x z" (or "x y z", or comma-separated) and recentres the map on that block position.
+     * Reads the independent X/Z fields and recentres the map on that block position.
      *
      * <p>Typing coordinates is the only practical way to reach a far-off location: the map only loads
      * a bounded region around whatever it is centred on, so dragging there would take a very long time.
-     * The Y value, if given, is ignored — the map is top-down.
+     * Empty fields deliberately mean zero, so either axis can be entered on its own.
      */
-    private void onCoordinateSubmitted(String value) {
-        if (value == null || value.isBlank()) return;
-        var parts = value.trim().replace(',', ' ').split("\\s+");
+    private void submitCoordinates() {
         try {
-            var x = Integer.parseInt(parts[0]);
-            var z = Integer.parseInt(parts.length >= 3 ? parts[2] : parts[1]);
+            var x = coordinateValue(coordinateXBox == null ? null : coordinateXBox.getValue());
+            var z = coordinateValue(coordinateZBox == null ? null : coordinateZBox.getValue());
             panChunkX = x >> 4;
             panChunkZ = z >> 4;
-            coordinateError = "";
             // A new centre is a new region; re-anchor and refetch around it.
             zoom = minZoom();
             syncAnchor();
             flash("chunk_leap.status.moved", MUTED);
+            clearCoordinateFocus();
         } catch (RuntimeException bad) {
-            coordinateError = "chunk_leap.coord.invalid";
             flash("chunk_leap.coord.invalid", DANGER);
         }
     }
+
+    /** Parses one axis; a missing value is the explicitly documented zero default. */
+    static int coordinateValue(String value) {
+        if (value == null || value.isBlank()) return 0;
+        return Integer.parseInt(value.strip());
+    }
+
+    private EditBox createCoordinateBox(String hintKey) {
+        var box = new EditBox(font, 0, 0, 1, 16, Component.empty());
+        box.setHint(Component.translatable(hintKey));
+        box.setMaxLength(12);
+        box.setBordered(false);
+        box.setTextColor(TEXT);
+        addRenderableWidget(box);
+        return box;
+    }
+
     private void jumpToPlayer(boolean ownDimensionOnly) {
         if (ownDimensionOnly && minecraft.player != null
                 && !minecraft.player.level().dimension().equals(dimension)) {
@@ -457,6 +466,10 @@ public final class ChunkLeapScreen extends UiScreen {
         graphics.fill(g.right() - 1, g.top(), g.right(), g.bottom(), BORDER_DIM);
 
         renderSidePanel(graphics, mouseX, mouseY);
+        if (coordinateXBox != null && coordinateZBox != null) {
+            coordinateXBox.extractRenderState(graphics, mouseX, mouseY, partialTick);
+            coordinateZBox.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        }
         renderFooter(graphics);
 
         if (confirmTicks > 0) {
@@ -726,14 +739,16 @@ public final class ChunkLeapScreen extends UiScreen {
         // a bounded region around its centre.
         graphics.text(font, Component.translatable("chunk_leap.coord.label"), x + 6, cursorY, DIM);
         cursorY += 11;
-        if (coordinateBox != null) {
-            coordinateBox.setX(x + 8);
-            coordinateBox.setY(cursorY);
-            coordinateBox.setWidth(inner - 4);
-            graphics.fill(x + 6, cursorY - 2, x + 6 + inner, cursorY + 12,
-                    coordinateBox.isFocused() ? 0x40000000 : 0x24000000);
-            border(graphics, x + 6, cursorY - 2, inner, 14,
-                    coordinateBox.isFocused() ? PANEL_BORDER : BORDER_DIM);
+        if (coordinateXBox != null && coordinateZBox != null) {
+            var gap = 4;
+            var fieldWidth = (inner - gap) / 2;
+            var zWidth = inner - gap - fieldWidth;
+            var xLeft = x + 6;
+            var zLeft = xLeft + fieldWidth + gap;
+            placeCoordinateBox(coordinateXBox, xLeft, cursorY, fieldWidth);
+            placeCoordinateBox(coordinateZBox, zLeft, cursorY, zWidth);
+            renderCoordinateFrame(graphics, xLeft, cursorY - 2, fieldWidth, coordinateXBox);
+            renderCoordinateFrame(graphics, zLeft, cursorY - 2, zWidth, coordinateZBox);
             cursorY += 18;
         }
 
@@ -753,6 +768,20 @@ public final class ChunkLeapScreen extends UiScreen {
 
         // Secondary hints
         graphics.text(font, Component.translatable("chunk_leap.action.clear_hint"), x + 6, cursorY, MUTED);
+    }
+
+    private static void placeCoordinateBox(EditBox box, int frameX, int textY, int frameWidth) {
+        box.setX(frameX + 2);
+        box.setY(textY);
+        box.setWidth(Math.max(1, frameWidth - 4));
+    }
+
+    private static void renderCoordinateFrame(GuiGraphicsExtractor graphics, int x, int y, int width,
+                                              EditBox box) {
+        graphics.fill(x, y, x + width, y + 14,
+                box.isFocused() ? 0x40000000 : 0x24000000);
+        border(graphics, x, y, width, 14,
+                box.isFocused() ? PANEL_BORDER : BORDER_DIM);
     }
 
     private int renderRegionCard(GuiGraphicsExtractor graphics, int x, int y, int w, RegionCard card) {
@@ -900,6 +929,14 @@ public final class ChunkLeapScreen extends UiScreen {
             return true;
         }
 
+        // Native EditBox input only works when the click itself reaches the box; setting the focus flag
+        // without forwarding the click leaves the caret/input handler uninitialised.
+        if (event.button() == 0 && (focusCoordinateBox(event, doubleClick, coordinateXBox)
+                || focusCoordinateBox(event, doubleClick, coordinateZBox))) {
+            return true;
+        }
+        clearCoordinateFocus();
+
         // Header controls first.
         for (var entry : buttonRects.entrySet()) {
             var r = entry.getValue();
@@ -954,16 +991,6 @@ public final class ChunkLeapScreen extends UiScreen {
             return true;
         }
 
-        // The coordinate field owns clicks inside its own rect.
-        if (coordinateBox != null && coordinateBox.isMouseOver(mouseX, mouseY)) {
-            coordinateBox.setFocused(true);
-            setFocused(coordinateBox);
-            return true;
-        }
-        if (coordinateBox != null && coordinateBox.isFocused()) {
-            coordinateBox.setFocused(false);
-        }
-
         var g = geometry();
         if (inside(mouseX, mouseY, g.left(), g.top(), g.width(), g.height())) {
             if (event.button() == 1 || event.button() == 2 || event.hasShiftDown()) {
@@ -975,7 +1002,15 @@ public final class ChunkLeapScreen extends UiScreen {
                     // Ctrl-click edits the selection chunk by chunk, so a selection need not be a
                     // rectangle: isolated chunks can be added or removed individually.
                     var chunk = chunkAt(mouseX, mouseY);
+                    var atLimit = selection.sourceIsIn(dimension)
+                            && selection.sourceCount() >= ChunkLeapClientConfig.maxRegionChunks();
+                    if (!selection.isSelected(chunk) && atLimit) {
+                        selectionClamped = true;
+                        flash("chunk_leap.status.selection_limit", DANGER);
+                        return true;
+                    }
                     var added = selection.toggle(dimension, chunk);
+                    selectionClamped = selection.sourceCount() >= ChunkLeapClientConfig.maxRegionChunks();
                     flash(added ? "chunk_leap.status.chunk_added" : "chunk_leap.status.chunk_removed", MUTED);
                 } else if (placingTarget) {
                     // One click places the target and the mode STAYS armed, so the player can keep
@@ -996,6 +1031,32 @@ public final class ChunkLeapScreen extends UiScreen {
             return true;
         }
         return super.mouseClicked(event, doubleClick);
+    }
+
+    private boolean focusCoordinateBox(MouseButtonEvent event, boolean doubleClick, EditBox box) {
+        if (box == null || !box.isMouseOver(event.x(), event.y())) return false;
+        setCoordinateFocus(box);
+        box.mouseClicked(event, doubleClick);
+        return true;
+    }
+
+    private void setCoordinateFocus(EditBox box) {
+        setFocused(box);
+        if (coordinateXBox != null) coordinateXBox.setFocused(box == coordinateXBox);
+        if (coordinateZBox != null) coordinateZBox.setFocused(box == coordinateZBox);
+    }
+
+    private void clearCoordinateFocus() {
+        if (coordinateXBox != null) coordinateXBox.setFocused(false);
+        if (coordinateZBox != null) coordinateZBox.setFocused(false);
+        if (getFocused() == coordinateXBox || getFocused() == coordinateZBox) {
+            setFocused(null);
+        }
+    }
+
+    private boolean coordinateInputFocused() {
+        return coordinateXBox != null && coordinateXBox.isFocused()
+                || coordinateZBox != null && coordinateZBox.isFocused();
     }
 
     /**
@@ -1078,17 +1139,27 @@ public final class ChunkLeapScreen extends UiScreen {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
-        // WASD pans whichever view is showing. Handled before everything else because these keys are not
-        // bound to any global action and must win over the plain-key shortcuts below.
-        if (handlePanKey(event.key())) return true;
-        // While typing coordinates every key belongs to the field, except Escape which leaves it.
-        if (coordinateBox != null && coordinateBox.isFocused()) {
+        // While typing, input belongs to the focused axis. Enter submits both values, Tab switches axes,
+        // and Escape leaves coordinate entry without closing the screen.
+        if (coordinateInputFocused()) {
             if (event.key() == InputConstants.KEY_ESCAPE) {
-                coordinateBox.setFocused(false);
+                clearCoordinateFocus();
+                return true;
+            }
+            if (event.key() == InputConstants.KEY_TAB) {
+                setCoordinateFocus(coordinateXBox.isFocused() ? coordinateZBox : coordinateXBox);
+                return true;
+            }
+            if (event.key() == InputConstants.KEY_RETURN
+                    || event.key() == InputConstants.KEY_NUMPADENTER) {
+                submitCoordinates();
                 return true;
             }
             return super.keyPressed(event);
         }
+        // WASD pans whichever view is showing. Handled after the text fields so screen shortcuts can never
+        // steal keys from an active editor.
+        if (handlePanKey(event.key())) return true;
         switch (event.key()) {
             case InputConstants.KEY_TAB -> {
                 page = page == Page.BLOCKS ? Page.ENTITIES : Page.BLOCKS;

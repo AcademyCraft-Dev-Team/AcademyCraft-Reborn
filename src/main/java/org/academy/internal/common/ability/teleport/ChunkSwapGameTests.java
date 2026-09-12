@@ -44,7 +44,10 @@ import java.util.Locale;
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class ChunkSwapGameTests {
     private static final Identifier TYPE = AcademyCraft.academy("chunk_swap_function");
-    private static final int CHUNK_A_X = 400;
+    private static final int ROUND_TRIP_CHUNK_X = 400;
+    private static final int SECTION_BYTES_CHUNK_X = 404;
+    private static final int CROSS_DIMENSION_SOURCE_CHUNK_X = 408;
+    private static final int CROSS_DIMENSION_TARGET_CHUNK_X = 410;
     private static final int CHUNK_A_Z = 400;
 
     private ChunkSwapGameTests() {
@@ -112,29 +115,34 @@ public final class ChunkSwapGameTests {
                 crossDimensionLight(helper, level);
                 return;
             }
-            var posA = new BlockPos(CHUNK_A_X << 4, 80, CHUNK_A_Z << 4);
-            var posB = new BlockPos((CHUNK_A_X + 1) << 4, 80, CHUNK_A_Z << 4);
+            var chunkAX = scenario == SwapScenario.SECTION_BYTES
+                    ? SECTION_BYTES_CHUNK_X
+                    : ROUND_TRIP_CHUNK_X;
+            var chunkBX = chunkAX + 1;
+            var posA = new BlockPos(chunkAX << 4, 80, CHUNK_A_Z << 4);
+            var posB = new BlockPos(chunkBX << 4, 80, CHUNK_A_Z << 4);
 
             // setChunkForced loads synchronously, so the chunks are resident on the next tick. A ticket
             // lease would also work but needs several ticks to generate, which is not what this tests.
-            level.setChunkForced(CHUNK_A_X, CHUNK_A_Z, true);
-            level.setChunkForced(CHUNK_A_X + 1, CHUNK_A_Z, true);
+            level.setChunkForced(chunkAX, CHUNK_A_Z, true);
+            level.setChunkForced(chunkBX, CHUNK_A_Z, true);
 
             helper.runAfterDelay(2, () -> {
-                var liveA = level.getChunkSource().getChunkNow(CHUNK_A_X, CHUNK_A_Z);
-                var liveB = level.getChunkSource().getChunkNow(CHUNK_A_X + 1, CHUNK_A_Z);
+                var liveA = level.getChunkSource().getChunkNow(chunkAX, CHUNK_A_Z);
+                var liveB = level.getChunkSource().getChunkNow(chunkBX, CHUNK_A_Z);
                 if (liveA == null || liveB == null) {
-                    release(level);
+                    release(level, chunkAX, chunkBX);
                     fail(helper, "both chunks must be loaded before the swap can run");
                     return;
                 }
                 try {
                     switch (scenario) {
-                        case ROUND_TRIP -> roundTrip(helper, level, liveA, liveB, posA, posB);
+                        case ROUND_TRIP -> roundTrip(helper, level, liveA, liveB, posA, posB,
+                                chunkAX, chunkBX);
                         case SECTION_BYTES -> sectionByteRoundTrip(helper, level, liveA, posA);
                     }
                 } finally {
-                    release(level);
+                    release(level, chunkAX, chunkBX);
                 }
             });
         }
@@ -145,13 +153,14 @@ public final class ChunkSwapGameTests {
                 fail(helper, "the Nether must exist for a cross-dimension swap");
                 return;
             }
-            var targetChunkX = CHUNK_A_X + 2;
-            overworld.setChunkForced(CHUNK_A_X, CHUNK_A_Z, true);
+            var sourceChunkX = CROSS_DIMENSION_SOURCE_CHUNK_X;
+            var targetChunkX = CROSS_DIMENSION_TARGET_CHUNK_X;
+            overworld.setChunkForced(sourceChunkX, CHUNK_A_Z, true);
             nether.setChunkForced(targetChunkX, CHUNK_A_Z, true);
             helper.runAtTickTime(390, () -> releaseAcrossLevels(overworld, nether, targetChunkX));
 
             helper.runAfterDelay(2, () -> {
-                var chunkA = overworld.getChunkSource().getChunkNow(CHUNK_A_X, CHUNK_A_Z);
+                var chunkA = overworld.getChunkSource().getChunkNow(sourceChunkX, CHUNK_A_Z);
                 var chunkB = nether.getChunkSource().getChunkNow(targetChunkX, CHUNK_A_Z);
                 if (chunkA == null || chunkB == null) {
                     releaseAcrossLevels(overworld, nether, targetChunkX);
@@ -178,7 +187,7 @@ public final class ChunkSwapGameTests {
                 }
 
                 var markerY = (sectionY << 4) + 8;
-                var sourceMarker = new BlockPos((CHUNK_A_X << 4) + 8, markerY, (CHUNK_A_Z << 4) + 8);
+                var sourceMarker = new BlockPos((sourceChunkX << 4) + 8, markerY, (CHUNK_A_Z << 4) + 8);
                 var targetMarker = new BlockPos((targetChunkX << 4) + 8, markerY, (CHUNK_A_Z << 4) + 8);
                 nether.setBlock(targetMarker, Blocks.GLOWSTONE.defaultBlockState(), 3);
 
@@ -192,7 +201,7 @@ public final class ChunkSwapGameTests {
                             "the glowstone must make the target section non-empty before the direct exchange");
 
                     var regionA = ChunkLeapRegion.ofChunks(
-                            overworld.dimension(), CHUNK_A_X, CHUNK_A_Z, 1, 1);
+                            overworld.dimension(), sourceChunkX, CHUNK_A_Z, 1, 1);
                     var regionB = ChunkLeapRegion.ofChunks(
                             nether.dimension(), targetChunkX, CHUNK_A_Z, 1, 1);
                     var result = ChunkRegionSwap.applyAcrossLevels(
@@ -217,18 +226,18 @@ public final class ChunkSwapGameTests {
         }
 
         private static void releaseAcrossLevels(ServerLevel overworld, ServerLevel nether, int targetChunkX) {
-            overworld.setChunkForced(CHUNK_A_X, CHUNK_A_Z, false);
+            overworld.setChunkForced(CROSS_DIMENSION_SOURCE_CHUNK_X, CHUNK_A_Z, false);
             nether.setChunkForced(targetChunkX, CHUNK_A_Z, false);
         }
 
-        private static void release(ServerLevel level) {
-            level.setChunkForced(CHUNK_A_X, CHUNK_A_Z, false);
-            level.setChunkForced(CHUNK_A_X + 1, CHUNK_A_Z, false);
+        private static void release(ServerLevel level, int chunkAX, int chunkBX) {
+            level.setChunkForced(chunkAX, CHUNK_A_Z, false);
+            level.setChunkForced(chunkBX, CHUNK_A_Z, false);
         }
 
         /** Plants a distinct block plus a filled chest in each chunk and verifies a true round trip. */
         private void roundTrip(GameTestHelper helper, ServerLevel level, LevelChunk chunkA, LevelChunk chunkB,
-                               BlockPos posA, BlockPos posB) {
+                               BlockPos posA, BlockPos posB, int chunkAX, int chunkBX) {
             level.setBlock(posA, Blocks.DIAMOND_BLOCK.defaultBlockState(), 3);
             level.setBlock(posB, Blocks.GOLD_BLOCK.defaultBlockState(), 3);
             var chestPos = posA.offset(1, 0, 0);
@@ -239,8 +248,8 @@ public final class ChunkSwapGameTests {
             }
             chest.setItem(0, new ItemStack(Items.APPLE, 7));
 
-            var regionA = ChunkLeapRegion.ofChunks(level.dimension(), CHUNK_A_X, CHUNK_A_Z, 1, 1);
-            var regionB = ChunkLeapRegion.ofChunks(level.dimension(), CHUNK_A_X + 1, CHUNK_A_Z, 1, 1);
+            var regionA = ChunkLeapRegion.ofChunks(level.dimension(), chunkAX, CHUNK_A_Z, 1, 1);
+            var regionB = ChunkLeapRegion.ofChunks(level.dimension(), chunkBX, CHUNK_A_Z, 1, 1);
 
             ChunkRegionSwap.apply(level, chunkA, chunkB, regionA, regionB, false);
 
