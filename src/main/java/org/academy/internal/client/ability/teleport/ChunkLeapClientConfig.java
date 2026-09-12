@@ -16,13 +16,13 @@ import java.util.List;
  * them: every one of them limits what the client asks for, not what the server allows.
  */
 public class ChunkLeapClientConfig extends KeyBindingConfig {
-    /** Ceiling on chunks per swap requested by this client. */
-    public static final int MIN_REGION_CHUNKS = 16;
-    public static final int MAX_REGION_CHUNKS = 1024;
+    /** Client selection preference, bounded by the server-authoritative nine-chunk limit. */
+    public static final int MIN_REGION_CHUNKS = 1;
+    public static final int MAX_REGION_CHUNKS = 9;
     public static final int MAX_VIEW_RADIUS = 20;
 
     private boolean movePlayersWithChunks = true;
-    private int maxRegionChunks = 256;
+    private int maxRegionChunks = MAX_REGION_CHUNKS;
     private boolean autoLoadMap = true;
     private int viewRadiusChunks = 12;
     private boolean showEntities = true;
@@ -115,7 +115,7 @@ public class ChunkLeapClientConfig extends KeyBindingConfig {
                         new SkillSettingsRegistry.IntegerRange(
                                 "max_region_chunks",
                                 "app.academy.skill_settings.advanced.chunk_leap.max_region",
-                                MIN_REGION_CHUNKS, MAX_REGION_CHUNKS, 16,
+                                MIN_REGION_CHUNKS, MAX_REGION_CHUNKS, 1,
                                 this::getMaxRegionChunks,
                                 value -> {
                                     maxRegionChunks = Math.clamp(value, MIN_REGION_CHUNKS, MAX_REGION_CHUNKS);

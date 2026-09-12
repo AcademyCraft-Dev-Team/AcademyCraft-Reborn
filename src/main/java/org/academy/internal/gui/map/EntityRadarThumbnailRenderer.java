@@ -36,19 +36,34 @@ import java.util.Set;
 public final class EntityRadarThumbnailRenderer {
     static final int MIN_DIAMETER = 6;
     private static final int MAX_SCALE = 32;
+    private static final int CONTENT_INSET = 2;
+    private static final int MAX_NEW_THUMBNAILS_PER_FRAME = 64;
+    private static final float VERTICAL_NUDGE_PIXELS = 1.0f;
 
     private final Map<Integer, LivingEntity> prototypes = new HashMap<>();
     private final Set<Integer> unavailableTypes = new HashSet<>();
+    private final Set<MarkerKey> admittedMarkers = new HashSet<>();
+    private final Set<MarkerKey> visibleMarkers = new HashSet<>();
     private ClientLevel prototypeLevel;
+    private int newThumbnailsThisFrame;
 
     @SubscribeEvent
     public static void onRegisterPictureInPictureRenderers(RegisterPictureInPictureRenderersEvent event) {
         event.register(ThumbnailState.class, ThumbnailPictureInPictureRenderer::new);
     }
 
-    /** Renders a front-facing entity thumbnail, or returns false so the caller can draw its category dot. */
+    void beginFrame() {
+        visibleMarkers.clear();
+        newThumbnailsThisFrame = 0;
+    }
+
+    void endFrame() {
+        admittedMarkers.retainAll(visibleMarkers);
+    }
+
+    /** Renders a front-facing entity thumbnail, or returns false so the caller can draw its category square. */
     boolean render(GuiGraphicsExtractor graphics, ChunkLeapPackets.Marker marker,
-                   int centerX, int centerY, int diameter) {
+                   int centerX, int centerY, int diameter, boolean priority) {
         if (graphics == null || marker == null || marker.playerId() != null || diameter < MIN_DIAMETER
                 || marker.category() == ChunkLeapPackets.CAT_ITEM
                 || marker.category() == ChunkLeapPackets.CAT_PROJECTILE) {
@@ -57,19 +72,29 @@ public final class EntityRadarThumbnailRenderer {
         var entity = entityFor(marker);
         if (entity == null) return false;
 
+        var markerKey = new MarkerKey(marker.entityId(), marker.typeId());
+        visibleMarkers.add(markerKey);
+        var alreadyAdmitted = admittedMarkers.contains(markerKey);
+        if (!canRenderThumbnail(alreadyAdmitted, priority, newThumbnailsThisFrame)) return false;
+        if (!alreadyAdmitted) {
+            admittedMarkers.add(markerKey);
+            newThumbnailsThisFrame++;
+        }
+
         var half = diameter / 2;
         var left = centerX - half;
         var top = centerY - half;
+        var scale = fitScale(entity.getBbWidth(), entity.getBbHeight(), diameter);
         graphics.submitPictureInPictureRenderState(new ThumbnailState(
                 marker.entityId(),
                 marker.typeId(),
                 entity,
-                focusHeight(entity.getBbHeight(), entity.getEyeHeight()),
+                adjustedFocusHeight(entity.getBbHeight(), entity.getEyeHeight(), scale),
                 left,
                 top,
                 left + diameter,
                 top + diameter,
-                fitScale(entity.getBbWidth(), entity.getBbHeight(), diameter),
+                scale,
                 graphics.peekScissorStack()
         ));
         return true;
@@ -82,6 +107,8 @@ public final class EntityRadarThumbnailRenderer {
         if (prototypeLevel != level) {
             prototypes.clear();
             unavailableTypes.clear();
+            admittedMarkers.clear();
+            visibleMarkers.clear();
             prototypeLevel = level;
         }
         if (unavailableTypes.contains(marker.typeId())) return null;
@@ -105,13 +132,27 @@ public final class EntityRadarThumbnailRenderer {
     /** Fits the head region inside the square icon; very broad entities remain centered and intentionally cropped. */
     static int fitScale(double width, double height, int diameter) {
         var extent = Math.max(0.5, Math.min(Math.max(0.0, width), Math.max(0.0, height) * 0.45));
-        return Math.clamp((int) Math.floor(Math.max(1, diameter) / extent), 1, MAX_SCALE);
+        var contentDiameter = Math.max(1, diameter - CONTENT_INSET);
+        return Math.clamp((int) Math.floor(contentDiameter / extent), 1, MAX_SCALE);
+    }
+
+    static boolean canRenderThumbnail(boolean alreadyAdmitted, boolean priority, int admittedThisFrame) {
+        return alreadyAdmitted || priority || admittedThisFrame < MAX_NEW_THUMBNAILS_PER_FRAME;
     }
 
     static float focusHeight(double height, double eyeHeight) {
         if (!Double.isFinite(height) || height <= 0.0) return 0.0f;
         if (!Double.isFinite(eyeHeight) || eyeHeight <= 0.0) return (float) (height * 0.5);
         return (float) Math.clamp(eyeHeight, 0.0, height);
+    }
+
+    /** Moves the model one logical pixel upward after centering it on the eyes. */
+    static float adjustedFocusHeight(double height, double eyeHeight, int scale) {
+        return Math.max(0.0f, focusHeight(height, eyeHeight)
+                - VERTICAL_NUDGE_PIXELS / Math.max(1, scale));
+    }
+
+    private record MarkerKey(int entityId, int typeId) {
     }
 
     /**
