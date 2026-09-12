@@ -26,7 +26,8 @@ public final class AeromanipTargeting {
 
     public static boolean canAffectNegatively(ServerPlayer owner, Entity target) {
         if (target == null || target == owner || target.isRemoved() || target.isSpectator()) return false;
-        if (target instanceof LivingEntity living && FriendlyFireSetting.shouldPrevent(owner, living)) return false;
+        if (target instanceof LivingEntity living && (!living.isAlive()
+                || FriendlyFireSetting.shouldPrevent(owner, living))) return false;
         return !TeamRelations.areAllied(owner, target);
     }
 

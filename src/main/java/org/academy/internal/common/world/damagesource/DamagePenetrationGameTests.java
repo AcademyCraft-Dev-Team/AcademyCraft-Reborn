@@ -16,6 +16,9 @@ import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.animal.cow.Cow;
 import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -40,6 +43,8 @@ import org.academy.api.common.damage.DamageComposition;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
+import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
+import org.academy.mixin.common.LivingEntityDamageInvoker;
 
 import java.util.List;
 import java.util.UUID;
@@ -260,6 +265,69 @@ public final class DamagePenetrationGameTests {
         }
     }
 
+    private static void verifyDirectEntryValidation(GameTestHelper helper, ServerPlayer attacker) {
+        var level = helper.getLevel();
+        var target = new CountingCow(level);
+        target.getAttribute(Attributes.MAX_HEALTH).setBaseValue(20);
+        target.setNoAi(true);
+        target.setPos(helper.absoluteVec(new net.minecraft.world.phys.Vec3(4, 2, 5)));
+        level.addFreshEntity(target);
+        var skill = Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get();
+        var source = SkillDamageSource.of(attacker, skill, DamageTypes.MELT_DAMAGE);
+        var invoker = (LivingEntityDamageInvoker) (Object) target;
+        try {
+            target.setHealth(1);
+            helper.assertTrue(SkillDamageUtil.applyDirect(level, target, source, 20),
+                    "The first lethal direct hit must complete normally");
+            helper.assertTrue(invoker.academy$isDead() && target.damageCalls == 1,
+                    "The first hit must enter actuallyHurt once and finish vanilla death");
+            // Multipart forwarding and lingering displacement marks can both reach the same
+            // corpse again before the death animation removes it from the level.
+            for (var index = 0; index < 3; index++) {
+                helper.assertTrue(!target.hurtServer(level, source, 20),
+                        "Forwarded damage to a dead parent must be rejected");
+                helper.assertTrue(!SkillDamageUtil.applyDirect(level, target, source, 20),
+                        "A lingering direct-damage mark must not hit a corpse");
+            }
+            helper.assertTrue(target.damageCalls == 1,
+                    "Rejected corpse hits must never enter actuallyHurt, even if its exception is caught");
+            helper.assertTrue(!AeromanipTargeting.canAffectNegatively(attacker, target),
+                    "Airflow must stop selecting a dead target before it is removed");
+            helper.assertTrue(invoker.academy$getDamageContainers().isEmpty(),
+                    "Rejected hits must leave the damage-container stack empty");
+
+            invoker.academy$setDead(false);
+            target.setHealth(20);
+            for (var amount : new float[]{0, -1, Float.NaN, Float.POSITIVE_INFINITY}) {
+                helper.assertTrue(!SkillDamageUtil.applyDirect(level, target, source, amount),
+                        "Invalid direct damage must be rejected: " + amount);
+                helper.assertTrue(!target.hurtServer(level, source, amount),
+                        "Invalid forwarded damage must be rejected: " + amount);
+            }
+            helper.assertTrue(target.damageCalls == 1 && target.getHealth() == 20,
+                    "Invalid amounts must not enter the mutable damage pipeline");
+            helper.assertTrue(SkillDamageUtil.applyDirect(level, target, source, 2),
+                    "A living target must still accept a valid hit after rejected calls");
+            closeTo(helper, target.getHealth(), 18, "Valid damage after rejected calls");
+        } finally {
+            target.discard();
+        }
+    }
+
+    private static final class CountingCow extends Cow {
+        private int damageCalls;
+
+        private CountingCow(ServerLevel level) {
+            super(EntityTypes.COW, level);
+        }
+
+        @Override
+        protected void actuallyHurt(ServerLevel level, DamageSource source, float amount) {
+            damageCalls++;
+            super.actuallyHurt(level, source, amount);
+        }
+    }
+
     private static void verify(GameTestHelper helper) {
         var attacker = player(helper, "penetration-owner");
         var defender = player(helper, "penetration-target");
@@ -271,6 +339,7 @@ public final class DamagePenetrationGameTests {
                 verifyAirRoute(helper, attacker, target);
             }
             verifyDischarge(helper, attacker);
+            verifyDirectEntryValidation(helper, attacker);
         } finally {
             cow.discard();
             helper.getLevel().getServer().getPlayerList().remove(defender);

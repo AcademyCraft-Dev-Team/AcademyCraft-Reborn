@@ -85,6 +85,16 @@ public final class SkillDamageUtil {
         return applyDirectDamage(level, attacker, target, null, source, amount);
     }
 
+    private static boolean canApplyDirectDamage(ServerLevel level, LivingEntity target,
+                                                DamageSource source, float amount) {
+        // hurtServer normally rejects corpses before actuallyHurt. Our HEAD route bypasses
+        // that check, including when a multipart entity forwards another hit to its dead parent.
+        return level != null && target != null && source != null && target.level() == level
+                && amount > 0.0f && Float.isFinite(amount) && !target.isRemoved() && target.isAlive()
+                && !((LivingEntityDamageInvoker) target).academy$isDead()
+                && source.getEntity() != target && source.getDirectEntity() != target;
+    }
+
     public static boolean applyDirectFromHurtServer(
             ServerLevel level,
             LivingEntity target,
@@ -101,6 +111,7 @@ public final class SkillDamageUtil {
             float amount,
             boolean notifyCustomHurt
     ) {
+        if (!canApplyDirectDamage(level, target, source, amount)) return false;
         if (DarkmatterTargeting.isNetworkMember(target)
                 && DarkmatterTargeting.isDarkmatterDamage(source)) return false;
         if (!(source.getEntity() instanceof ServerPlayer attacker)) return false;
@@ -154,6 +165,7 @@ public final class SkillDamageUtil {
     private static boolean applyDirectWithFallback(ServerLevel level, @Nullable ServerPlayer attacker,
                                                    LivingEntity target, @Nullable Skill skill,
                                                    DamageSource source, float amount) {
+        if (!canApplyDirectDamage(level, target, source, amount)) return false;
         var beforeHealth = target.getHealth();
         var beforeAbsorption = target.getAbsorptionAmount();
         var invoker = (LivingEntityDamageInvoker) target;
