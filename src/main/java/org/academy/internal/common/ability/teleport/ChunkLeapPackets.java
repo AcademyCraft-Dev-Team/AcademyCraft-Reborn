@@ -406,9 +406,9 @@ public final class ChunkLeapPackets {
     /**
      * One entity on the map.
      *
-     * <p>Carries the disposition category for colouring, the type for the hover name, and — for players only
-     * — the UUID, because a player portrait is looked up from that player in the tab list. Non-player entities
-     * have no general head texture to fetch, which is why the category colour is the documented fallback.
+     * <p>Carries the disposition category for colouring, the type for the hover name and client-side model
+     * thumbnail, and — for players only — the UUID used to resolve their real skin from the tab list. Unsupported
+     * entity types retain the category-colour fallback.
      */
     public record Marker(int entityId, byte category, int typeId, int blockX, int blockZ,
                          @Nullable UUID playerId) {
