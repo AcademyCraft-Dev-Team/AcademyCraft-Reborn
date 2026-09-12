@@ -169,6 +169,10 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
             configuration.addProperty("value", 0);
         } else if (id.equals(CommonProgramNodeIds.BIG_INTEGER_CONSTANT)) {
             configuration.addProperty("value", "0");
+        } else if (id.equals(CommonProgramNodeIds.TEXT_CONSTANT)) {
+            configuration.addProperty("value", "");
+        } else if (id.equals(CommonProgramNodeIds.TAG_CONSTANT)) {
+            configuration.addProperty("value", "minecraft:mineable/pickaxe");
         } else if (id.equals(CommonProgramNodeIds.VARIABLE_GET)
                 || id.equals(CommonProgramNodeIds.VARIABLE_SET)) {
             configuration.addProperty("name", "value");
@@ -346,7 +350,7 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
                     .parse(JsonOps.INSTANCE, configuration)
                     .result()
                     .orElse(null);
-            return decoded == null ? null : type.schema(decoded);
+            return decoded == null ? null : type.resolvedSchema(decoded);
         } catch (RuntimeException exception) {
             return null;
         }

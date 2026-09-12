@@ -11,6 +11,7 @@ import org.academy.api.common.ability.program.ProgramNodeSchema;
 import org.academy.api.common.ability.program.ProgramNodeScope;
 import org.academy.api.common.ability.program.ProgramNodeType;
 import org.academy.api.common.ability.program.ProgramPortDefinition;
+import org.academy.api.common.ability.program.ProgramTag;
 import org.academy.api.common.ability.program.ProgramValueType;
 import org.academy.api.common.ability.program.ProgramValueTypes;
 
@@ -96,6 +97,18 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         put(result, CommonProgramNodeIds.FLOAT_CONSTANT, type(
                 FloatConfiguration.CODEC,
                 _ -> outputSchema("value", ProgramValueTypes.FLOAT),
+                ProgramNodeRole.VALUE,
+                ProgramNodePurity.PURE
+        ));
+        put(result, CommonProgramNodeIds.TEXT_CONSTANT, type(
+                TextConfiguration.CODEC,
+                _ -> outputSchema("value", ProgramValueTypes.TEXT),
+                ProgramNodeRole.VALUE,
+                ProgramNodePurity.PURE
+        ));
+        put(result, CommonProgramNodeIds.TAG_CONSTANT, type(
+                TagConfiguration.CODEC,
+                _ -> outputSchema("value", ProgramValueTypes.TAG),
                 ProgramNodeRole.VALUE,
                 ProgramNodePurity.PURE
         ));
@@ -926,6 +939,8 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 ProgramValueTypes.INTEGER,
                 ProgramValueTypes.BIG_INTEGER,
                 ProgramValueTypes.FLOAT,
+                ProgramValueTypes.TEXT,
+                ProgramValueTypes.TAG,
                 ProgramValueTypes.IDENTIFIER,
                 ProgramValueTypes.DURATION,
                 ProgramValueTypes.VECTOR,
@@ -1587,6 +1602,8 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         INTEGER("integer", ProgramValueTypes.INTEGER),
         BIG_INTEGER("big_integer", ProgramValueTypes.BIG_INTEGER),
         FLOAT("float", ProgramValueTypes.FLOAT),
+        TEXT("text", ProgramValueTypes.TEXT),
+        TAG("tag", ProgramValueTypes.TAG),
         IDENTIFIER("identifier", ProgramValueTypes.IDENTIFIER),
         DURATION("duration", ProgramValueTypes.DURATION),
         VECTOR("vector", ProgramValueTypes.VECTOR),
@@ -1750,6 +1767,32 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
 
         public FloatConfiguration {
             if (!Double.isFinite(value)) throw new IllegalArgumentException("Float must be finite");
+        }
+    }
+
+    public record TextConfiguration(String value) {
+        public static final int MAX_LENGTH = 256;
+        public static final Codec<TextConfiguration> CODEC = Codec.STRING
+                .fieldOf("value")
+                .xmap(TextConfiguration::new, TextConfiguration::value)
+                .codec();
+
+        public TextConfiguration {
+            if (value == null || value.length() > MAX_LENGTH) {
+                throw new IllegalArgumentException(
+                        "Program text cannot exceed " + MAX_LENGTH + " characters");
+            }
+        }
+    }
+
+    public record TagConfiguration(ProgramTag value) {
+        public static final Codec<TagConfiguration> CODEC = ProgramTag.CODEC
+                .fieldOf("value")
+                .xmap(TagConfiguration::new, TagConfiguration::value)
+                .codec();
+
+        public TagConfiguration {
+            if (value == null) throw new IllegalArgumentException("Program tag is required");
         }
     }
 

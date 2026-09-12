@@ -10,9 +10,10 @@ import java.util.function.LongSupplier;
 /**
  * Per-invocation server execution frame shared by node executors.
  *
- * <p>Action nodes stage compensatable world mutations into the transaction instead of applying
- * them immediately. The environment remains runtime-specific, allowing each ability category to
- * expose only the services its nodes are permitted to use.</p>
+ * <p>Action nodes pass compensatable world mutations to the transaction. A sequential transaction
+ * applies them immediately in flow order; a deferred transaction retains them until commit. The
+ * environment remains runtime-specific, allowing each ability category to expose only the
+ * services its nodes are permitted to use.</p>
  */
 public final class ProgramExecutionFrame {
     private final ProgramActionTransaction transaction;

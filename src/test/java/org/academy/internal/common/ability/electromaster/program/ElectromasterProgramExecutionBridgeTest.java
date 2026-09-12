@@ -53,8 +53,9 @@ class ElectromasterProgramExecutionBridgeTest {
         var magneticSchema = catalog.schema(
                 ElectromasterProgramNodeIds.MAGNETIC_MOVE, magneticBlock);
         assertNotNull(magneticSchema);
-        assertEquals(List.of("flow", "block", "destination"),
+        assertEquals(List.of("flow", "block", "destination", "power"),
                 magneticSchema.inputs().stream().map(port -> port.name()).toList());
+        assertFalse(magneticSchema.input("power").orElseThrow().required());
 
         var energyBlock = new JsonObject();
         energyBlock.addProperty("target_type", "block");
@@ -63,8 +64,9 @@ class ElectromasterProgramExecutionBridgeTest {
         var energySchema = catalog.schema(
                 ElectromasterProgramNodeIds.ENERGY_DETECTION, energyBlock);
         assertNotNull(energySchema);
-        assertEquals(List.of("block"),
+        assertEquals(List.of("block", "percent"),
                 energySchema.inputs().stream().map(port -> port.name()).toList());
+        assertFalse(energySchema.input("percent").orElseThrow().required());
 
         var invalid = new JsonObject();
         invalid.addProperty("power", 3);

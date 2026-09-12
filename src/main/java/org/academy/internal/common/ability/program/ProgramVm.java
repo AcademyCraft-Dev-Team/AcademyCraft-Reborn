@@ -333,10 +333,15 @@ public final class ProgramVm {
             ProgramVmContext context,
             ProgramInputView inputs
     ) {
-        @SuppressWarnings("unchecked")
-        var configuration = (C) node.configuration();
+        @SuppressWarnings("unchecked") var configuration = (C) node.configuration();
+        @SuppressWarnings("unchecked") var type =
+                (org.academy.api.common.ability.program.ProgramNodeType<C>) node.type();
         try {
-            return executor.execute(context, configuration, inputs);
+            return executor.execute(
+                    context,
+                    type.resolveConfiguration(configuration, inputs),
+                    inputs
+            );
         } catch (ExecutionFailure failure) {
             throw failure;
         } catch (RuntimeException exception) {

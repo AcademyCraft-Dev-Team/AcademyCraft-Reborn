@@ -32,9 +32,12 @@ public final class ServerProgramExecution {
             return new Result(vmResult, Optional.of(committed));
         }
         if (vmResult.status() == ProgramVmResult.Status.FAILED) {
-            return new Result(vmResult, Optional.empty());
+            var aborted = transaction.abort();
+            return new Result(vmResult, aborted.successful()
+                    ? Optional.empty() : Optional.of(aborted));
         }
         if (invocation == null) {
+            transaction.abort();
             return rejected(vmResult);
         }
 
@@ -52,6 +55,7 @@ public final class ServerProgramExecution {
                 (_, termination) -> finishDeferred(player, category, invocation, transaction, termination)
         );
         if (!scheduled) {
+            transaction.abort();
             return rejected(vmResult);
         }
         return new Result(vmResult, Optional.empty());
@@ -76,10 +80,13 @@ public final class ServerProgramExecution {
             ProgramSessionScheduler.Termination termination
     ) {
         if (termination.kind() != ProgramSessionScheduler.TerminationKind.COMPLETED) {
+            var aborted = transaction.abort();
             if (termination.kind() != ProgramSessionScheduler.TerminationKind.CANCELLED) {
                 AbilityProgramManager.reportDeferredFailure(player, category, invocation,
                         termination.nodeId(), termination.kind() == ProgramSessionScheduler.TerminationKind.EXPIRED
-                                ? ProgramVmDiagnostic.EXECUTION_EXPIRED : termination.diagnostic());
+                                ? ProgramVmDiagnostic.EXECUTION_EXPIRED
+                                : aborted.successful() ? termination.diagnostic()
+                                : AbilityProgramManager.actionDiagnostic(aborted.cause()));
             }
             return;
         }

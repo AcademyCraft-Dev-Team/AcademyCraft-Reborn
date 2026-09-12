@@ -55,8 +55,9 @@ class TeleportProgramExecutionBridgeTest {
         var blockSchema = catalog.schema(
                 TeleportProgramNodeIds.ENTITY_TELEPORT, blockTeleport);
         assertNotNull(blockSchema);
-        assertEquals(List.of("flow", "block", "destination", "direction"),
+        assertEquals(List.of("flow", "block", "destination", "direction", "power"),
                 blockSchema.inputs().stream().map(port -> port.name()).toList());
+        assertFalse(blockSchema.input("power").orElseThrow().required());
         var safetySchema = catalog.schema(
                 TeleportProgramNodeIds.SPACE_SAFETY, new JsonObject());
         assertNotNull(safetySchema);

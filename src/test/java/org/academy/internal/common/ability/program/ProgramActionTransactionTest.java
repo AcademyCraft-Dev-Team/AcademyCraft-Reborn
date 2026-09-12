@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ProgramActionTransactionTest {
     @Test
-    void validatesEveryActionBeforeApplyingAnyAction() {
+    void validatesAndAppliesDeferredActionsInOrder() {
         var events = new ArrayList<String>();
         var transaction = new ProgramActionTransaction();
         transaction.stage(1, action(events, "one", false, false));
@@ -20,7 +20,9 @@ class ProgramActionTransactionTest {
         assertFalse(result.successful());
         assertEquals(ProgramActionTransaction.Phase.VALIDATE, result.phase());
         assertEquals(2, result.nodeId());
-        assertEquals(List.of("validate-one", "validate-two"), events);
+        assertEquals(List.of(
+                "validate-one", "apply-one", "validate-two", "undo-one"
+        ), events);
     }
 
     @Test
@@ -36,9 +38,43 @@ class ProgramActionTransactionTest {
         assertFalse(result.successful());
         assertEquals(3, result.nodeId());
         assertEquals(List.of(
-                "validate-one", "validate-two", "validate-three",
-                "apply-one", "apply-two", "apply-three",
+                "validate-one", "apply-one", "validate-two", "apply-two",
+                "validate-three", "apply-three",
                 "undo-two", "undo-one"
+        ), events);
+    }
+
+    @Test
+    void sequentialActionsSettleWhenStagedAndAbortInReverseOrder() {
+        var events = new ArrayList<String>();
+        var transaction = ProgramActionTransaction.sequential();
+
+        transaction.stage(1, action(events, "one", false, false));
+        assertEquals(List.of("validate-one", "apply-one"), events);
+        transaction.stage(2, action(events, "two", false, false));
+        assertEquals(List.of(
+                "validate-one", "apply-one", "validate-two", "apply-two"
+        ), events);
+
+        assertTrue(transaction.abort().successful());
+        assertEquals(List.of(
+                "validate-one", "apply-one", "validate-two", "apply-two",
+                "undo-two", "undo-one"
+        ), events);
+    }
+
+    @Test
+    void sequentialFailureRollsBackEarlierActionsImmediately() {
+        var events = new ArrayList<String>();
+        var transaction = ProgramActionTransaction.sequential();
+        transaction.stage(1, action(events, "one", false, false));
+
+        var failure = assertThrows(ProgramActionTransaction.SettlementException.class,
+                () -> transaction.stage(2, action(events, "two", true, false)));
+
+        assertEquals(2, failure.result().nodeId());
+        assertEquals(List.of(
+                "validate-one", "apply-one", "validate-two", "undo-one"
         ), events);
     }
 

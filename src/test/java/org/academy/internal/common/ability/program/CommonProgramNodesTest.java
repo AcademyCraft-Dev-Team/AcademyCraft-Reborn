@@ -294,6 +294,45 @@ class CommonProgramNodesTest {
     }
 
     @Test
+    void connectedConfigurationPortsOverrideNumericAndTextFallbacks() {
+        var textConfiguration = new JsonObject();
+        textConfiguration.addProperty("value", "fallback");
+        var tagConfiguration = new JsonObject();
+        tagConfiguration.addProperty("value", "minecraft:mineable/pickaxe");
+        var graph = new ProgramGraph(
+                List.of(
+                        node(1, PrecisionProgramNodeIds.ON_CAST),
+                        integerNode(2, 7),
+                        scalarNode(3, "integer", "1"),
+                        new ProgramGraph.Node(
+                                4, CommonProgramNodeIds.TAG_CONSTANT, 1, tagConfiguration),
+                        new ProgramGraph.Node(
+                                5, CommonProgramNodeIds.TEXT_CONSTANT, 1, textConfiguration),
+                        variableNode(6, CommonProgramNodeIds.VARIABLE_SET,
+                                "number", ProgramValueTypes.INTEGER.id()),
+                        variableNode(7, CommonProgramNodeIds.VARIABLE_SET,
+                                "text", ProgramValueTypes.TEXT.id()),
+                        node(8, CommonProgramNodeIds.STOP)
+                ),
+                List.of(
+                        edge(1, "flow", 6, "flow"),
+                        edge(2, "value", 3, "value"),
+                        edge(3, "value", 6, "value"),
+                        edge(6, "flow", 7, "flow"),
+                        edge(4, "value", 5, "value"),
+                        edge(5, "value", 7, "value"),
+                        edge(7, "flow", 8, "flow")
+                )
+        );
+
+        var session = run(graph, null);
+
+        assertEquals(7, session.variables().get("number").value());
+        assertEquals("#minecraft:mineable/pickaxe",
+                session.variables().get("text").value());
+    }
+
+    @Test
     void randomNodesHaveIndependentDrawsAndFanOutReusesEachNodesDraw() {
         var randomNodes = new java.util.ArrayList<ProgramGraph.Node>();
         var edges = new java.util.ArrayList<ProgramGraph.Edge>();
