@@ -13,14 +13,13 @@ import net.minecraft.util.Mth
 import net.neoforged.neoforge.common.NeoForge
 import org.academy.api.client.ability.AbilitySystemClient
 import org.academy.api.client.gui.animation.*
-import org.academy.api.client.gui.command.GlyphDrawCommand
 import org.academy.api.client.gui.command.ImageDrawCommand
 import org.academy.api.client.gui.command.SkillProgressDrawCommand
 import org.academy.api.client.gui.dsl.*
 import org.academy.api.client.gui.event.MouseEvent
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.SizeMode
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.screen.UiScreen
 import org.academy.api.client.gui.util.WirelessPanelUtil
 import org.academy.api.client.gui.widget.*
@@ -221,9 +220,10 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         val translatedName = Language.getInstance().getOrDefault(translationKey)
             .takeUnless { it == translationKey }
             ?: category.getDisplayName()
-        panel.label(translatedName, "text_abilityname") {
-            baseFontSize = 13f
+        panel.text(translatedName, "text_abilityname") {
+            textSize = 13f
             gravity(Gravity.TOP_LEFT)
+            this.gravity = Gravity.TOP_LEFT
             margin(31f, 2f, 0f, 0f)
             size(70f, 12f)
         }
@@ -243,8 +243,9 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
             value(levelProgress * 100f)
         }
 
-        panel.label("EXP ${(levelProgress * 100f).toInt()}%", "text_exp") {
+        panel.text("EXP ${(levelProgress * 100f).toInt()}%", "text_exp") {
             gravity(Gravity.TOP_LEFT)
+            this.gravity = Gravity.TOP_LEFT
             margin(30f, 15.5f, 0f, 0f)
             size(42f, 10f)
         }
@@ -268,10 +269,11 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                 }
             }
         } else {
-            panel.label("Level ${displayedLevel.levelCode}", "text_level") {
-                baseFontSize = 9f
+            panel.text("Level ${displayedLevel.levelCode}", "text_level") {
+                textSize = 9f
                 rgb(0.09f, 0.46f, 0.84f)
                 gravity(Gravity.TOP_RIGHT)
+                this.gravity = Gravity.TOP_RIGHT
                 margin(0f, 16f, 3f, 0f)
                 size(42f, 12f)
             }
@@ -288,8 +290,10 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
 
         val developer = blockEntity
         if (developer != null) {
-            panel.label("Current Node:", "text_wireless") {
+            panel.text("Current Node:", "text_wireless") {
                 gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+                this.gravity = Gravity.LEFT or Gravity.CENTER_VERTICAL
+                this.gravity = Gravity.LEFT or Gravity.CENTER_VERTICAL
                 margin(4.25f, 34f, 0f, 0f)
                 size(100f, 12f)
             }
@@ -314,8 +318,9 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                 ) {
                     matchParent()
                 }
-                val nodeName = label("N/A", "text_nodename") {
+                val nodeName = text("N/A", "text_nodename") {
                     gravity(Gravity.CENTER_LEFT)
+                    this.gravity = Gravity.CENTER_LEFT
                     margin(26f, 0f, 0f, 0f)
                     size(70f, 12f)
                 }
@@ -330,21 +335,27 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                 }
             }
         } else {
-            panel.label(L10n["academy.ability_developer.energy_source"], "text_energy_source") {
+            panel.text(L10n["academy.ability_developer.energy_source"], "text_energy_source") {
                 gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+                this.gravity = Gravity.LEFT or Gravity.CENTER_VERTICAL
+                this.gravity = Gravity.LEFT or Gravity.CENTER_VERTICAL
                 margin(4.25f, 34f, 0f, 0f)
                 size(100f, 12f)
             }
 
-            panel.label(L10n["academy.ability_developer.energy_source.tablet"], "text_tablet") {
+            panel.text(L10n["academy.ability_developer.energy_source.tablet"], "text_tablet") {
                 gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+                this.gravity = Gravity.LEFT or Gravity.CENTER_VERTICAL
+                this.gravity = Gravity.LEFT or Gravity.CENTER_VERTICAL
                 margin(4.25f, 58f, 0f, 0f)
                 size(100f, 16f)
             }
         }
 
-        panel.label("Power:", "text_power") {
+        panel.text("Power:", "text_power") {
             gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+            this.gravity = Gravity.LEFT or Gravity.CENTER_VERTICAL
+            this.gravity = Gravity.LEFT or Gravity.CENTER_VERTICAL
             margin(4.25f, 86f, 0f, 0f)
             size(100f, 12f)
         }
@@ -366,8 +377,10 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
             colors(0x40000000, 0xFFFFD45A.toInt())
         }
 
-        panel.label("Sync Rate:", "text_syncrate") {
+        panel.text("Sync Rate:", "text_syncrate") {
             gravity(Gravity.LEFT or Gravity.CENTER_VERTICAL)
+            this.gravity = Gravity.LEFT or Gravity.CENTER_VERTICAL
+            this.gravity = Gravity.LEFT or Gravity.CENTER_VERTICAL
             margin(4.25f, 132f, 0f, 0f)
             size(100f, 12f)
         }
@@ -403,8 +416,9 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                 ) {
                     val progressSequence = (1..6).map { it * 10 + (-3..2).random() } + (64..67).random()
 
-                    val label = outputs.label("", "label_progress") {
+                    val label = outputs.text("", "label_progress") {
                         gravity(Gravity.BOTTOM_LEFT)
+                        this.gravity = Gravity.BOTTOM_LEFT
                     }
 
                     val bootAnim = ObjectAnimator.ofFloat(
@@ -441,21 +455,10 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
     private fun addOutput(outputs: LinearLayoutWidget, text: String, onEnd: () -> Unit = {}) {
         val label = outputs.add(
             "label_${text.hashCode()}_${RandomStringUtils.insecure().nextAlphabetic(4)}",
-            object : LabelWidget(text) {
-                var progress = 0f
-
+            object : TextWidget(text) {
                 fun setRevealProgress(value: Float) {
-                    progress = value.coerceIn(0f, 1f)
-                    lastText = null
-                    invalidate()
-                }
-
-                override fun generateDrawCommands(
-                    text: String, fontSize: Float, thickness: Float,
-                    red: Float, green: Float, blue: Float, alpha: Float
-                ): MutableList<GlyphDrawCommand> {
-                    val list = super.generateDrawCommands(text, fontSize, thickness, red, green, blue, alpha)
-                    return list.subList(0, (list.size * progress).toInt().coerceIn(0, list.size))
+                    val progress = value.coerceIn(0f, 1f)
+                    revealCodeUnits = (text.length * progress).toInt()
                 }
             }
         ) {
@@ -478,13 +481,15 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
     private fun createCommandInputArea(outputs: LinearLayoutWidget): LinearLayoutWidget {
         return standaloneRow {
             gravity(Gravity.BOTTOM_LEFT)
-            height(8f)
+            height(12f)
             widthMode(SizeMode.MATCH_PARENT)
-            label(L10n["academy.ability_developer.console.prompt"], "label") {
+            text(L10n["academy.ability_developer.console.prompt"], "label") {
                 gravity(Gravity.BOTTOM_LEFT)
+                this.gravity = Gravity.BOTTOM_LEFT
             }
 
             textBox(8, "text_box") {
+                gravity = Gravity.BOTTOM_LEFT
                 gravity(Gravity.BOTTOM_LEFT)
                 width(0f)
                 heightMode(SizeMode.MATCH_PARENT)
@@ -589,8 +594,9 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
 
     private fun startInitialDevelopmentProgress(outputs: LinearLayoutWidget) {
         pendingPropsRecommendation = null
-        val progressLabel = outputs.label(L10n["academy.ability_developer.progress"] + " 0%", "dev_progress") {
+        val progressLabel = outputs.text(L10n["academy.ability_developer.progress"] + " 0%", "dev_progress") {
             gravity(Gravity.BOTTOM_LEFT)
+            this.gravity = Gravity.BOTTOM_LEFT
         }
         consoleScrollPanel.scrollToEnd()
 
@@ -634,8 +640,9 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
     }
 
     private fun addOutputLine(outputs: LinearLayoutWidget, text: String) {
-        outputs.label(text) {
+        outputs.text(text) {
             gravity(Gravity.BOTTOM_LEFT)
+            this.gravity = Gravity.BOTTOM_LEFT
         }
         scrollConsoleToEndAfterLayout()
     }
@@ -663,7 +670,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         val category = AbilitySystemClient.getCategory()
 
         area.add("area_bg", object : ParallaxImageWidget(skill_panel_back) {
-            override fun render(context: RenderContext) {
+            override fun render(context: Canvas) {
                 setParallaxEnabled(!AbilityDeveloperLayoutEditor.isDebugMode())
                 super.render(context)
             }
@@ -733,21 +740,24 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
             nodeMap[key] = node
         }
 
-        container.add("layout_debug_status", object : LabelWidget("") {
-            override fun render(context: RenderContext) {
-                text = if (AbilityDeveloperLayoutEditor.isDebugMode()) {
-                    "LAYOUT: ${category.key} / ${page.name.lowercase()}  (drag icons; snap 0.5px)"
-                } else {
-                    ""
-                }
-                super.render(context)
-            }
-        }) {
-            baseFontSize = 6f
+        val layoutDebugStatus = TextWidget("")
+        container.add("layout_debug_status", layoutDebugStatus) {
+            textSize = 6f
             isEnabled = false
             gravity(Gravity.TOP_LEFT)
+            this.gravity = Gravity.TOP_LEFT
             margin(2f, 1f, 0f, 0f)
             size(250f, 8f)
+        }
+        // Update from the frame callback, never by mutating state inside render().
+        layoutDebugStatus.setFrameUpdate {
+            val status = if (AbilityDeveloperLayoutEditor.isDebugMode()) {
+                "LAYOUT: ${category.key} / ${page.name.lowercase()}  (drag icons; snap 0.5px)"
+            } else {
+                ""
+            }
+            if (layoutDebugStatus.text != status) layoutDebugStatus.text = status
+            true
         }
 
         val nodeStagger = 50L
@@ -800,7 +810,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         val alpha = mAlpha * (if (isChildLearned) 1.0f else 0.4f)
 
         val line = object : ImageWidget(R.textures.gui.element.line) {
-            override fun render(context: RenderContext) {
+            override fun render(context: Canvas) {
                 updateSkillLineGeometry(this, category, child, dep)
                 if (AbilityDeveloperLayoutEditor.isDebugMode()) {
                     translationX = 0f
@@ -895,6 +905,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         private lateinit var maskTexView: GpuTextureView
 
         fun buildNode() {
+            clipChildren = false
             val initialPosition = AbilityDeveloperLayoutEditor.getPosition(category, info)
             lp {
                 gravity(Gravity.TOP_LEFT)
@@ -937,7 +948,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
             }
 
             add("outline", object : AbstractWidget() {
-                override fun renderInternal(context: RenderContext) {
+                override fun renderInternal(context: Canvas) {
                     if (!isLearned) return
                     val skillProgress = AbilitySystemClient.getSkillProficiencyProgress(info.skill)
                     if (skillProgress <= 0f) return
@@ -999,7 +1010,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
             }
         }
 
-        override fun render(context: RenderContext) {
+        override fun render(context: Canvas) {
             val position = AbilityDeveloperLayoutEditor.getPosition(category, info)
             if (layoutParams.marginLeft != position.x() || layoutParams.marginTop != position.y()) {
                 applyPosition(position.x(), position.y())
@@ -1200,33 +1211,34 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
     }
 
     private fun createSkillPagerButton(direction: Int, onClick: () -> Unit): ButtonWidget {
-        val label = LabelWidget(if (direction < 0) "‹" else "›")
-        val button = ButtonWidget()
-
-        button.lp {
+        return ButtonWidget().apply {
             gravity(if (direction < 0) Gravity.LEFT or Gravity.CENTER_VERTICAL else Gravity.RIGHT or Gravity.CENTER_VERTICAL)
             margin(2f, 0f, 2f, 0f)
-            size(12f, 20f)
+            size(10f, 16f)
+
+            tooltipText = if (direction < 0) {
+                L10n["academy.ability_developer.course.common"]
+            } else {
+                L10n["academy.ability_developer.course.ability"]
+            }
+
+            onClick { onClick() }
+
+            image(R.textures.gui.icon.arrow_back) {
+                matchParent()
+                if (direction > 0) {
+                    rotateUv()
+                    rotateUv()
+                }
+                isEnabled = false
+            }
         }
-        button.tooltipText = if (direction < 0) {
-            L10n["academy.ability_developer.course.common"]
-        } else {
-            L10n["academy.ability_developer.course.ability"]
-        }
-        button.onClick { onClick() }
-        label.baseFontSize = 12f
-        label.isEnabled = false
-        button.add("label", label) {
-            gravity(Gravity.CENTER)
-            size(10f, 14f)
-        }
-        return button
     }
 
     private fun createDevButton(brightnessRef: AtomicReference<Float> = AtomicReference(0.85f)): ButtonWidget {
         val btnTex = ImageWidget(button)
         val btnWid = object : ButtonWidget() {
-            override fun render(context: RenderContext) {
+            override fun render(context: Canvas) {
                 val target = if (isHovered || isFocused || isPressed) 1.1f else 0.85f
                 if (btnTex.red != target) {
                     brightnessRef.set(target)
@@ -1244,7 +1256,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
     }
 
     private fun createSkillBackButton(): ButtonWidget {
-        val label = LabelWidget("<")
+        val label = TextWidget("<")
         val button = ButtonWidget()
         button.lp {
             gravity(Gravity.TOP_RIGHT)
@@ -1254,7 +1266,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         button.tooltipText = L10n["academy.ability_developer.back"]
         button.onClick { rebuildSkillTree() }
 
-        label.baseFontSize = 9f
+        label.textSize = 9f
         label.isEnabled = false
         button.add("label", label) {
             gravity(Gravity.CENTER)
@@ -1291,7 +1303,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         cover.column("cover_center") {
             gravity(Gravity.CENTER)
             add("skill_wid", object : FrameLayoutWidget() {
-                override fun render(context: RenderContext) {
+                override fun render(context: Canvas) {
                     val finalAlpha = alpha * context.accumulatedAlpha
                     val tracksDevelopment = AbilitySystemClient.getDevTargetId() == skillId
                     val progress = if (tracksDevelopment) {
@@ -1367,19 +1379,20 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
             column("text_area") {
                 gravity(Gravity.CENTER)
                 if (isLearned) {
-                    label(skill.translatedName, "name") {
-                        baseFontSize = 10f
-                        wrapText = true
+                    text(skill.translatedName, "name") {
+                        textSize = 10f
+                        singleLine = false
                         gravity(Gravity.CENTER)
+                        this.gravity = Gravity.CENTER
                         width(240f)
                     }
 
-                    label(
+                    text(
                         L10n["academy.ability_developer.skill_exp"] +
                                 String.format("%.2f/3000 (%.2f%%)", proficiency, proficiency / 30f),
                         "exp"
                     ) {
-                        baseFontSize = 8f
+                        textSize = 8f
                         rgb(0.63f, 0.88f, 1.0f)
                         gravity(Gravity.CENTER)
                     }
@@ -1388,10 +1401,11 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                         sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
                     }
 
-                    details.label(skill.translatedDescription, "desc") {
-                        baseFontSize = 8f
-                        wrapText = true
+                    details.text(skill.translatedDescription, "desc") {
+                        textSize = 8f
+                        singleLine = false
                         gravity(Gravity.CENTER)
+                        this.gravity = Gravity.CENTER
                         width(228f)
                     }
 
@@ -1402,12 +1416,12 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                             val next = milestone == index
                             val marker = if (reached) "✓" else if (next) "→" else "•"
                             val key = "${skill.descriptionId}.proficiency.$threshold"
-                            details.label(
+                            details.text(
                                 "$marker $threshold  ${Language.getInstance().getOrDefault(key)}",
                                 "proficiency_$threshold"
                             ) {
-                                baseFontSize = 8f
-                                wrapText = true
+                                textSize = 8f
+                                singleLine = false
                                 gravity(Gravity.LEFT)
                                 width(228f)
                                 when {
@@ -1418,12 +1432,12 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                             }
                         }
                         if (ProficiencyPolicy.clientHasRestriction(skill)) {
-                            details.label(
+                            details.text(
                                 L10n["academy.ability_developer.proficiency_restricted"],
                                 "proficiency_restricted"
                             ) {
-                                baseFontSize = 8f
-                                wrapText = true
+                                textSize = 8f
+                                singleLine = false
                                 rgb(1.0f, 0.38f, 0.3f)
                                 gravity(Gravity.LEFT)
                                 width(228f)
@@ -1435,18 +1449,20 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                         size(240f, 104f)
                     }
                 } else {
-                    label("${skill.translatedName} (LV ${skill.recommendedLevel.levelCode})", "lvl_name") {
-                        baseFontSize = 10f
-                        wrapText = true
+                    text("${skill.translatedName} (LV ${skill.recommendedLevel.levelCode})", "lvl_name") {
+                        textSize = 10f
+                        singleLine = false
                         gravity(Gravity.CENTER)
+                        this.gravity = Gravity.CENTER
                         width(240f)
                     }
 
-                    label(L10n["academy.ability_developer.skill_not_learned"], "not_learned") {
-                        baseFontSize = 10f
-                        wrapText = true
+                    text(L10n["academy.ability_developer.skill_not_learned"], "not_learned") {
+                        textSize = 10f
+                        singleLine = false
                         rgb(1.0f, 0.33f, 0.33f)
                         gravity(Gravity.CENTER)
+                        this.gravity = Gravity.CENTER
                         width(240f)
                     }
 
@@ -1457,9 +1473,10 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                     row("req") {
                         gravity(Gravity.CENTER)
                         empty("left") { weight(1f) }
-                        label(L10n["academy.ability_developer.req"], "label") {
+                        text(L10n["academy.ability_developer.req"], "label") {
                             gravity(Gravity.CENTER_BOTTOM)
-                            baseFontSize = 9f
+                            this.gravity = Gravity.CENTER_BOTTOM
+                            textSize = 9f
                             alpha = 0.66f
                         }
                         for ((idx, cond) in conditions.withIndex()) {
@@ -1473,15 +1490,18 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                                     monochromeImage(
                                         cond.getIcon() ?: R.textures.gui.icon.close,
                                         "icon"
-                                    ) { matchParent() }
+                                    ) {
+                                        matchParent()
+                                    }
                                 }
                             }
                             condBindings += Triple(condWid, cond, accepted)
                         }
                         empty("right") { weight(1f) }
-                        label("", "hint") {
-                            baseFontSize = 9f
+                        text("", "hint") {
+                            textSize = 9f
                             gravity(Gravity.BOTTOM)
+                            this.gravity = Gravity.BOTTOM
                             size(0f, 0f)
                             setFrameUpdate {
                                 val hovered = condBindings.firstOrNull { (widget, _, _) -> widget.isHovered }
@@ -1517,7 +1537,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                             LearningHelper.getEstimatedSkillConsumption(skill)
                         )
                     }
-                    val messageLabel = LabelWidget(learnQuestion).apply {
+                    val messageLabel = TextWidget(learnQuestion).apply {
                         setFrameUpdate {
                             if (machineRequired) {
                                 text = L10n["academy.ability_developer.portable.skill_restricted"]
@@ -1548,8 +1568,8 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                         }
                     }
                     add("message", messageLabel) {
-                        baseFontSize = if (machineRequired) 8f else 10f
-                        wrapText = true
+                        textSize = if (machineRequired) 8f else 10f
+                        singleLine = false
                         alpha = 0.66f
                         gravity(Gravity.CENTER_HORIZONTAL)
                         width(240f)
@@ -1656,7 +1676,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                 sizeMode(SizeMode.WRAP_CONTENT)
 
                 add("skill_wid", object : FrameLayoutWidget() {
-                    override fun renderInternal(context: RenderContext) {
+                    override fun renderInternal(context: Canvas) {
                         super.renderInternal(context)
                         val finalAlpha = alpha * context.accumulatedAlpha
                         val progress = iconProgressRef.get()
@@ -1724,19 +1744,21 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
 
                 column("text_area") {
                     gravity(Gravity.CENTER)
-                    label(L10n["academy.ability_developer.uplevel"].format(targetLevel), "title") {
-                        baseFontSize = 10f
-                        wrapText = true
+                    text(L10n["academy.ability_developer.uplevel"].format(targetLevel), "title") {
+                        textSize = 10f
+                        singleLine = false
                         gravity(Gravity.CENTER_HORIZONTAL)
+                        this.gravity = Gravity.CENTER_HORIZONTAL
                         width(240f)
                     }
 
-                    label(L10n["academy.ability_developer.req"] + " " + cost, "req") {
-                        baseFontSize = 9f
+                    text(L10n["academy.ability_developer.req"] + " " + cost, "req") {
+                        textSize = 9f
                         gravity(Gravity.CENTER_HORIZONTAL)
+                        this.gravity = Gravity.CENTER_HORIZONTAL
                     }
 
-                    val hintLabel = label(
+                    val hintLabel = text(
                         if (machineRequired) {
                             L10n["academy.ability_developer.portable.level_restricted"]
                         } else {
@@ -1744,8 +1766,9 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                         },
                         "hint"
                     ) {
-                        baseFontSize = if (machineRequired) 8f else 9f
-                        wrapText = true
+                        textSize = if (machineRequired) 8f else 9f
+                        singleLine = false
+                        gravity = Gravity.CENTER
                         gravity(Gravity.CENTER_HORIZONTAL)
                         width(240f)
                     }

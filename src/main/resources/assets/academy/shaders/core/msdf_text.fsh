@@ -11,6 +11,7 @@ layout (std140) uniform MsdfUniforms {
 
 in vec2 texCoord0;
 in vec4 vertexColor;
+in float fadeAlpha;
 
 out vec4 OutColor;
 
@@ -28,6 +29,7 @@ void main() {
 
     float opacity = clamp(sd * screenParam + 0.5, 0.0, 1.0);
     opacity *= smoothstep(-0.5, -0.05, sd * Range);
+    opacity *= fadeAlpha;
 
     vec4 baseColor = vec4(vertexColor.rgb, vertexColor.a * opacity);
 

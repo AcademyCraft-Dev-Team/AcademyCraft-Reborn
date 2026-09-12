@@ -91,7 +91,7 @@ open class UiContext {
             rootWidget.layout(0f, 0f, width, height)
         }
 
-        val context = RenderContext()
+        val context = Canvas()
         generateCommands(context, rootWidget, mouseX, mouseY, partialTick)
         commandList.set(context.commands)
         lastBlurRegions = context.blurRegions
@@ -345,7 +345,6 @@ open class UiContext {
                 itemCommand.resolve(slot, sampler),
                 submitted.pose,
                 submitted.scissorRect,
-                submitted.drawOrder,
                 submitted.commandIndex,
                 submitted.alphaMul
             )
@@ -355,7 +354,7 @@ open class UiContext {
     }
 
     open fun generateCommands(
-        context: RenderContext, rootWidget: WidgetContainer, mouseX: Double, mouseY: Double, partialTick: Float
+        context: Canvas, rootWidget: WidgetContainer, mouseX: Double, mouseY: Double, partialTick: Float
     ) {
         context.pose().pushPose()
         run {

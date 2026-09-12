@@ -16,12 +16,12 @@ fun WidgetContainer.nextChildName(base: String): String {
     return "${base}_$n"
 }
 
-fun WidgetContainer.label(
+fun WidgetContainer.text(
     text: String,
-    name: String = nextChildName("label"),
-    init: LabelWidget.() -> Unit = {}
-): LabelWidget {
-    val widget = LabelWidget(text)
+    name: String = nextChildName("text"),
+    init: TextWidget.() -> Unit = {}
+): TextWidget {
+    val widget = TextWidget(text)
     addChild(name, widget)
     widget.init()
     return widget
@@ -161,9 +161,9 @@ fun WidgetContainer.progress(
 fun WidgetContainer.textBox(
     maxLength: Int = 32,
     name: String = nextChildName("text_box"),
-    init: TextBoxWidget.() -> Unit = {}
-): TextBoxWidget {
-    val widget = TextBoxWidget(maxLength)
+    init: TextInputWidget.() -> Unit = {}
+): TextInputWidget {
+    val widget = TextInputWidget(maxLength)
     addChild(name, widget)
     widget.init()
     return widget

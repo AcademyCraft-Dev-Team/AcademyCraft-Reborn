@@ -7,7 +7,7 @@ import com.mojang.blaze3d.textures.GpuTextureView
 import net.minecraft.resources.Identifier
 import net.minecraft.util.ARGB
 import org.academy.api.client.gui.command.ImageDrawCommand
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.texture.GpuTextureViewSource
 import org.academy.api.client.gui.texture.IdentifierTextureSource
 import org.academy.api.client.gui.texture.TextureSource
@@ -28,7 +28,7 @@ open class TextureDrawable : Drawable {
         textureSource = GpuTextureViewSource(texture)
     }
 
-    override fun draw(context: RenderContext, widget: Widget) {
+    override fun draw(context: Canvas, widget: Widget) {
         val source = textureSource ?: return
         val view = source.getTextureView()
         if (view == null || view.isClosed) return

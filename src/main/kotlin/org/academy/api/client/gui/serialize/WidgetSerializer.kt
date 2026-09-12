@@ -80,7 +80,6 @@ object WidgetSerializer {
         o.addProperty("enabled", widget.isEnabled)
         o.addProperty("clickable", widget.isClickable)
         o.addProperty("selected", widget.isSelected)
-        o.addProperty("cover_all_prev", widget.coverAllPrev)
         o.addProperty("translation_x", widget.translationX)
         o.addProperty("translation_y", widget.translationY)
         o.addProperty("scale_x", widget.scaleX)
@@ -218,7 +217,6 @@ object WidgetSerializer {
         common.optBoolean("enabled")?.let { widget.isEnabled = it }
         common.optBoolean("clickable")?.let { widget.isClickable = it }
         common.optBoolean("selected")?.let { widget.isSelected = it }
-        common.optBoolean("cover_all_prev")?.let { widget.coverAllPrev = it }
         common.optFloat("translation_x")?.let { widget.translationX = it }
         common.optFloat("translation_y")?.let { widget.translationY = it }
         common.optFloat("scale_x")?.let { widget.scaleX = it }
@@ -231,7 +229,7 @@ object WidgetSerializer {
         common.optString("bind_text")?.let { ref ->
             bindings.resolveBinding(ref)?.let { state ->
                 @Suppress("UNCHECKED_CAST")
-                (widget as? LabelWidget)?.bindText(state as UiState<String>)
+                (widget as? TextHolder)?.bindText(state as UiState<String>)
             }
         }
         common.optString("visible_when")?.let { ref ->

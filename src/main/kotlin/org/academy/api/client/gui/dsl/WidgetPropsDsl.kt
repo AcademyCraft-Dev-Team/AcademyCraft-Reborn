@@ -1,6 +1,7 @@
 package org.academy.api.client.gui.dsl
 
 import com.mojang.blaze3d.textures.FilterMode
+import com.mojang.blaze3d.textures.GpuSampler
 import net.minecraft.resources.Identifier
 import org.academy.api.client.gui.animation.TimeInterpolator
 import org.academy.api.client.gui.widget.*
@@ -10,6 +11,8 @@ fun ImageWidget.texture(id: Identifier?): ImageWidget {
     setTexture(id)
     return this
 }
+
+fun ImageWidget.sampler(sampler: GpuSampler?): ImageWidget = setSampler(sampler)
 
 fun ImageWidget.sampler(mode: FilterMode, useMipmap: Boolean): ImageWidget = setSampler(mode, useMipmap)
 
@@ -22,22 +25,7 @@ fun ImageWidget.uv(
 
 fun ImageWidget.rgb(red: Float, green: Float, blue: Float): ImageWidget = setColor(red, green, blue)
 
-fun ImageWidget.brightnessOf(value: Float): ImageWidget {
-    red = value
-    return this
-}
-
-fun LabelWidget.rgb(red: Float, green: Float, blue: Float): LabelWidget {
-    setRed(red)
-    setGreen(green)
-    setBlue(blue)
-    return this
-}
-
-fun LabelWidget.withDropShadow(enabled: Boolean = true): LabelWidget {
-    dropShadow = enabled
-    return this
-}
+fun ImageWidget.brightnessOf(value: Float): ImageWidget = setBrightness(value)
 
 fun ProgressBarWidget.range(min: Float, max: Float): ProgressBarWidget {
     setMin(min)
@@ -76,22 +64,22 @@ fun ScrollPanelWidget.scrollSpeed(value: Float): ScrollPanelWidget {
     return this
 }
 
-fun TextBoxWidget.enter(callback: Consumer<String>?): TextBoxWidget {
+fun TextInputWidget.enter(callback: Consumer<String>?): TextInputWidget {
     setWhenEnter(callback)
     return this
 }
 
-fun TextBoxWidget.onLostFocus(callback: Runnable?): TextBoxWidget {
+fun TextInputWidget.onLostFocus(callback: Runnable?): TextInputWidget {
     setOnFocusLost(callback)
     return this
 }
 
-fun TextBoxWidget.clearOnEnter(clear: Boolean): TextBoxWidget {
+fun TextInputWidget.clearOnEnter(clear: Boolean): TextInputWidget {
     setClearWhenEnter(clear)
     return this
 }
 
-fun TextBoxWidget.lineBreak(enabled: Boolean): TextBoxWidget {
+fun TextInputWidget.lineBreak(enabled: Boolean): TextInputWidget {
     setAllowLineBreak(enabled)
     return this
 }

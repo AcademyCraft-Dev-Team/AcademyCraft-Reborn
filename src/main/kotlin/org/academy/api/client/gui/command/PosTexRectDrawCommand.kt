@@ -18,6 +18,11 @@ open class PosTexRectDrawCommand(
     textures: List<TextureBinding>,
     uniforms: List<UniformPayload<*>>
 ) : DrawCommand(pipeline, textures, uniforms) {
+    override fun localBounds(): LocalBounds? = LocalBounds(
+        -PosColorRectDrawCommand.AA, -PosColorRectDrawCommand.AA,
+        width + PosColorRectDrawCommand.AA, height + PosColorRectDrawCommand.AA
+    )
+
     override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose, alphaMul: Float) {
         val matrix = pose.pose()
         val dest = Vector3f()

@@ -89,6 +89,11 @@ abstract class PosTexColorRectDrawCommand : DrawCommand {
         this.alpha = alpha
     }
 
+    override fun localBounds(): LocalBounds = LocalBounds(
+        -PosColorRectDrawCommand.AA, -PosColorRectDrawCommand.AA,
+        width + PosColorRectDrawCommand.AA, height + PosColorRectDrawCommand.AA
+    )
+
     override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose, alphaMul: Float) {
         val matrix = pose.pose()
         val rgbMul = if (premultiplied) alphaMul else 1.0f

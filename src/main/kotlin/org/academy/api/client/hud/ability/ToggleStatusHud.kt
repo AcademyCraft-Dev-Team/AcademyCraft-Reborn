@@ -4,7 +4,6 @@ import com.mojang.blaze3d.pipeline.RenderTarget
 import net.minecraft.client.Minecraft
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.neoforge.common.NeoForge
-import org.academy.AcademyCraft
 import org.academy.api.client.ability.AbilitySystemClient
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
@@ -17,7 +16,6 @@ import org.academy.api.common.ability.LearningHelper
 import org.academy.api.common.ability.Skill
 import org.academy.api.common.registries.Registries
 import org.academy.api.common.util.L10n
-import org.academy.internal.client.gui.SerializedUiLayout
 import org.academy.internal.client.hud.HudLayout
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.BooleanSupplier
@@ -28,6 +26,9 @@ class ToggleStatusHud private constructor() {
     private val context = Context()
     private val uiContext = UiContext()
 
+    val root: WidgetContainer
+        get() = context.get()
+
     fun perform(mouseX: Double, mouseY: Double, deltaPartialTick: Float) {
         uiContext.perform(context.get(), mouseX, mouseY, deltaPartialTick)
     }
@@ -37,51 +38,62 @@ class ToggleStatusHud private constructor() {
         context.get().invalidate()
     }
 
+    fun rebuildLayout() {
+        context.rebuildLayout()
+    }
+
     @SubscribeEvent
     fun onResizeDisplay(@Suppress("unused") event: ResizeDisplayEvent) {
-        context.get().requestLayout()
+        context.rebuildLayout()
     }
 
     private class Context : WidgetContext {
-        private var statuses: LinearLayoutWidget
+        private lateinit var statuses: LinearLayoutWidget
+        private var cachedSignature: String? = null
         private val root = FrameLayoutWidget().apply {
             setFrameUpdate {
-                applyHudLayout()
                 refresh()
                 true
             }
         }
-        private var cachedSignature: String? = null
 
         init {
-            val layout = SerializedUiLayout.load(
-                AcademyCraft.academy("ui/layout/toggle_status_hud.json"),
-                listOf("toggle_statuses")
-            ) { fallbackLayout() }
-            statuses = SerializedUiLayout.require(layout, "toggle_statuses") as LinearLayoutWidget
-            statuses.visibility = Widget.Visibility.GONE
-            root.addChild("serialized_layout", layout)
+            build()
             root.dispatchAttached()
         }
 
         override fun get(): WidgetContainer = root
 
-        private fun applyHudLayout() {
-            val rect = HudLayout.Region.TOGGLE_STATUS.rect(Minecraft.getInstance())
-            statuses.translationX = rect.x()
-            statuses.translationY = rect.y()
-            statuses.scale = HudLayout.Region.TOGGLE_STATUS.scale()
+        fun rebuildLayout() {
+            root.clearChildren()
+            build()
+            root.requestLayout()
         }
 
-        private fun fallbackLayout(): FrameLayoutWidget {
+        private fun build() {
+            cachedSignature = null
+            val region = HudLayout.Region.TOGGLE_STATUS
+            val base = region.baseRect(Minecraft.getInstance())
             val layout = FrameLayoutWidget()
             layout.layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
             val mount = LinearLayoutWidget()
             mount.orientation = Orientation.VERTICAL
             mount.spacing = 2f
-            mount.layoutParams = FrameLayoutWidget.LayoutParams().size(140f, 75f)
+            mount.layoutParams = FrameLayoutWidget.LayoutParams().apply {
+                size(region.nominalWidth, region.nominalHeight)
+                gravity(Gravity.TOP_LEFT)
+                marginLeft = base.x
+                marginTop = base.y
+            }
+            mount.origin = 0f
+            mount.translationX = region.translateX
+            mount.translationY = region.translateY
+            mount.scaleX = region.scaleXY
+            mount.scaleY = region.scaleXY
+            mount.visibility = Widget.Visibility.GONE
+            statuses = mount
             layout.addChild("toggle_statuses", mount)
-            return layout
+            root.addChild("layout", layout)
         }
 
         private fun activeSkills(): List<Skill> {
@@ -100,11 +112,17 @@ class ToggleStatusHud private constructor() {
 
         private fun refresh() {
             val active = activeSkills()
-            val signature = active.joinToString("|") { "${it.keyString}=${statusText(it)}" }
+            val hidden = HudLayout.Region.TOGGLE_STATUS.hidden
+            val signature = (if (hidden) "1" else "0") + "|" +
+                    active.joinToString("|") { "${it.keyString}=${statusText(it)}" }
             if (signature == cachedSignature) return
             cachedSignature = signature
             statuses.clearChildren()
-            statuses.visibility = if (active.isEmpty()) Widget.Visibility.GONE else Widget.Visibility.VISIBLE
+            statuses.visibility = if (hidden || active.isEmpty()) {
+                Widget.Visibility.GONE
+            } else {
+                Widget.Visibility.VISIBLE
+            }
             active.forEachIndexed { index, skill ->
                 statuses.addChild("toggle_$index", createStatusRow(skill))
             }
@@ -137,16 +155,14 @@ class ToggleStatusHud private constructor() {
                 content.addChild("icon", icon)
             }
 
-            val name = LabelWidget(skill.translatedName)
-            name.baseFontSize = 8f
+            val name = TextWidget(skill.translatedName)
+            name.textSize = 8f
             name.layoutParams = LinearLayoutWidget.LayoutParams().gravity(Gravity.CENTER_VERTICAL)
             content.addChild("name", name)
 
-            val state = LabelWidget(statusText(skill))
-            state.baseFontSize = 7f
-            state.setRed(37f / 255f)
-            state.setGreen(196f / 255f)
-            state.setBlue(1f)
+            val state = TextWidget(statusText(skill))
+            state.textSize = 7f
+            state.rgb(37f / 255f, 196f / 255f, 1f)
             state.layoutParams = LinearLayoutWidget.LayoutParams()
                 .gravity(Gravity.CENTER_VERTICAL)
                 .margin(2f, 0f)

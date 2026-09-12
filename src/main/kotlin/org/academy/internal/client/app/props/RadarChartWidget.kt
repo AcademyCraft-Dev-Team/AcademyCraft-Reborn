@@ -3,7 +3,7 @@ package org.academy.internal.client.app.props
 import com.mojang.math.Axis
 import net.minecraft.util.Mth
 import org.academy.api.client.gui.command.FillRectDrawCommand
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.widget.AbstractWidget
 import org.academy.api.common.attribute.AbilityFactor
 import org.academy.internal.common.attribute.PropsMath
@@ -16,7 +16,7 @@ class RadarChartWidget : AbstractWidget() {
         bypassRenderCache = true
     }
 
-    override fun renderInternal(context: RenderContext) {
+    override fun renderInternal(context: Canvas) {
         super.renderInternal(context)
         if (width <= 2f || height <= 2f) return
 
@@ -51,7 +51,7 @@ class RadarChartWidget : AbstractWidget() {
         }
 
     private fun drawPolygon(
-        context: RenderContext,
+        context: Canvas,
         points: List<Point>,
         red: Float,
         green: Float,
@@ -66,7 +66,7 @@ class RadarChartWidget : AbstractWidget() {
     }
 
     private fun drawLine(
-        context: RenderContext,
+        context: Canvas,
         from: Point,
         to: Point,
         red: Float,

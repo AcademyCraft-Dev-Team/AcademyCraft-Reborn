@@ -6,14 +6,14 @@ import com.mojang.blaze3d.vertex.PoseStack
 import net.minecraft.util.Mth
 import org.academy.api.client.gui.command.DrawCommand
 import org.academy.api.client.gui.command.FillRectDrawCommand
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.render.VertexWriter
 import org.academy.api.client.render.Render
 import org.academy.api.client.render.TextureBinding
+import org.academy.api.client.util.Chase
 import org.joml.Vector3f
 import kotlin.math.abs
 import kotlin.math.cos
-import kotlin.math.exp
 import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.sin
@@ -41,17 +41,12 @@ class CpDisplayController {
 
     private var targetProgress: Float = 0f
     private var activity: Float = 0f
-    private var lastNanos: Long = 0L
     private var hasInitialized: Boolean = false
 
     /** 前沿前方可视窗口宽度（进度单位）。 */
     var window: Float = 0.3f
 
-    /** 前沿追逐时间常数（秒）。越小跟得越紧。 */
-    var timeConstant: Float = 0.15f
-
-    /** 活动度（粒子亮度）平滑时间常数（秒）。 */
-    var activityTimeConstant: Float = 0.22f
+    var activityTimeConstantMs: Float = 200f
 
     /** 前沿速度达到该值（进度/秒）时粒子场全亮。 */
     var activityReferenceSpeed: Float = 0.6f
@@ -69,13 +64,10 @@ class CpDisplayController {
     var pullFactor: Float = 0.6f
 
     fun update(actualCp: Float, maxCp: Float) {
-        val now = System.nanoTime()
-        val dt = if (lastNanos == 0L) 0f else (now - lastNanos) / 1_000_000_000f
-        lastNanos = now
-        updateProgress((actualCp / maxCp).coerceIn(0f, 1f), dt)
+        updateProgress((actualCp / maxCp).coerceIn(0f, 1f), Chase.deltaMillis())
     }
 
-    fun updateProgress(target: Float, dt: Float) {
+    fun updateProgress(target: Float, dtMs: Float) {
         targetProgress = target.coerceIn(0f, 1f)
         if (!hasInitialized) {
             // 首帧直接对齐实际值，避免 HUD 初次出现时从 0 播放补动画
@@ -83,17 +75,15 @@ class CpDisplayController {
             displayProgress = targetProgress
             return
         }
-        if (dt <= 0f) return
+        if (dtMs <= 0f) return
+        val dt = dtMs / 1000f
         timeSeconds += dt
         val prev = displayProgress
-        val k = 1f - exp(-dt / timeConstant)
-        displayProgress += (targetProgress - displayProgress) * k
-        if (abs(displayProgress - targetProgress) < 1e-4f) displayProgress = targetProgress
+        displayProgress = Chase.approach(displayProgress, targetProgress, dtMs)
         val delta = abs(displayProgress - prev)
         val speed = delta / dt
         val targetActivity = (speed / activityReferenceSpeed).coerceIn(0f, 1f)
-        val ak = 1f - exp(-dt / activityTimeConstant)
-        activity += (targetActivity - activity) * ak
+        activity = Chase.approach(activity, targetActivity, dtMs, activityTimeConstantMs)
     }
 
     /**
@@ -136,7 +126,7 @@ class CpDisplayController {
      * @param tintR/G/B 条颜色（0..255），粒子与填充条共用同色。
      */
     fun render(
-        context: RenderContext,
+        context: Canvas,
         geometry: CpBarGeometry,
         sampler: GpuSampler,
         view: GpuTextureView,

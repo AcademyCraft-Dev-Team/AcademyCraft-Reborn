@@ -36,6 +36,6 @@ class SkillProgressDrawCommand : PosTexColorRectDrawCommand {
     )
 
     companion object{
-        val SAMPLER = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
+        val SAMPLER = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
     }
 }

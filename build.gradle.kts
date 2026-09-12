@@ -249,13 +249,6 @@ repositories {
         }
     }
     maven {
-        name = "IzzelAliz Maven"
-        setUrl("https://maven.izzel.io/releases/")
-        content {
-            includeGroup("icyllis.modernui")
-        }
-    }
-    maven {
         setUrl("https://jitpack.io")
         content {
             includeGroup("com.github.umjammer")
@@ -488,6 +481,18 @@ dependencies {
     testImplementation(platform("org.junit:junit-bom:5.10.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    // BatchProcessor tests allocate native vertex buffers without launching Minecraft.
+    val lwjglNativeOs = when {
+        System.getProperty("os.name").lowercase().contains("win") -> "windows"
+        System.getProperty("os.name").lowercase().contains("mac") -> "macos"
+        else -> "linux"
+    }
+    val lwjglNativeArch = when (System.getProperty("os.arch").lowercase()) {
+        "aarch64", "arm64" -> "-arm64"
+        "arm", "arm32" -> "-arm32"
+        else -> ""
+    }
+    testRuntimeOnly("org.lwjgl:lwjgl::natives-$lwjglNativeOs$lwjglNativeArch")
 
     "editorTestImplementation"(platform("org.junit:junit-bom:5.10.2"))
     "editorTestImplementation"("org.junit.jupiter:junit-jupiter")

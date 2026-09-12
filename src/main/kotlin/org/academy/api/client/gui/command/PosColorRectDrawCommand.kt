@@ -18,6 +18,8 @@ abstract class PosColorRectDrawCommand protected constructor(
     textures: List<TextureBinding>,
     uniforms: List<UniformPayload<*>>
 ) : DrawCommand(pipeline, textures, uniforms) {
+    override fun localBounds(): LocalBounds = LocalBounds(-AA, -AA, width + AA, height + AA)
+
     override fun generateVertices(writer: VertexWriter, pose: PoseStack.Pose, alphaMul: Float) {
         val matrix = pose.pose()
         val r = (red * 255.0f).toInt()
@@ -45,5 +47,10 @@ abstract class PosColorRectDrawCommand protected constructor(
         matrix.transformPosition(width, 0.0f, 0.0f, dest)
         writer.putVec3f(dest.x, dest.y, dest.z)
         writer.putColor(r, g, b, a)
+    }
+
+    companion object {
+        /** 抗锯齿/边缘外扩的保守余量 (本地像素). */
+        const val AA: Float = 1f
     }
 }

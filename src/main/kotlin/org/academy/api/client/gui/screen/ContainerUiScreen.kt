@@ -39,6 +39,10 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
     override val root: FrameLayoutWidget = FrameLayoutWidget()
 
     var isHandleContainer: Boolean = true
+
+    /** 文本输入获得焦点时，容器不再消费按键/鼠标事件（IME 优先）。 */
+    private val handleContainer: Boolean
+        get() = isHandleContainer && !TextInputFocus.isActiveWithin(root)
     var isRenderInventory: Boolean = true
         set(renderInventory) {
             field = renderInventory
@@ -310,7 +314,7 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
             onClose()
             return true
         }
-        return this.isHandleContainer && super.keyPressed(e)
+        return this.handleContainer && super.keyPressed(e)
     }
 
     override fun charTyped(e: CharacterEvent): Boolean {
@@ -318,7 +322,7 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
 
         val event = CharTypedEvent(e.codepoint())
         root.dispatchEvent(event)
-        return event.isConsumed || this.isHandleContainer && super.charTyped(e)
+        return event.isConsumed || this.handleContainer && super.charTyped(e)
     }
 
     override fun hasClickedOutside(mouseX: Double, mouseY: Double, guiLeft: Int, guiTop: Int): Boolean {

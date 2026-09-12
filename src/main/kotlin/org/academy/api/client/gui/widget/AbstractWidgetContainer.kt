@@ -8,13 +8,14 @@ import org.academy.api.client.gui.command.SubmittedCommand
 import org.academy.api.client.gui.event.EventType
 import org.academy.api.client.gui.event.InputEvent
 import org.academy.api.client.gui.event.MouseEvent
+import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.render.BlurRegion
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.render.SubtreeCache
-import org.academy.api.client.gui.util.GlyphCommandGenerator
+import org.academy.api.client.gui.text.subrun.SubRunContainer
 import org.joml.Matrix4f
 import java.util.*
 import kotlin.math.max
@@ -31,6 +32,8 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
 
     override var isLayoutDirty: Boolean = true
         protected set
+
+    override var clipChildren: Boolean = true
 
     override var isFocused: Boolean
         get() = super.isFocused
@@ -76,7 +79,7 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
         protected set
     protected var gestureTarget: Widget? = null
 
-    private fun renderDebugLayoutBounds(widget: Widget, context: RenderContext) {
+    private fun renderDebugLayoutBounds(widget: Widget, context: Canvas) {
         var outlineColor = -0x10000
         if (widget.isFocused) outlineColor = -0xff0100
         else if (widget.isHovered) outlineColor = -0xffff01
@@ -104,7 +107,7 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
         if (widget.isHovered) renderDebugInfo(widget, context)
     }
 
-    private fun renderDebugInfo(widget: Widget, context: RenderContext) {
+    private fun renderDebugInfo(widget: Widget, context: Canvas) {
         val namePart = if (widget.name.isEmpty()) "" else "'${widget.name}'"
         val infoText = "[${widget.javaClass.simpleName}] $namePart\n" +
                 "Pos: (${"%.1f".format(widget.getAbsoluteX())}, ${"%.1f".format(widget.getAbsoluteY())}) " +
@@ -114,8 +117,8 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
         val fontSize = 6f
         val padding = 2f
 
-        val textWidth = LabelWidget.getTextWidth(infoText, fontSize)
-        val textHeight = LabelWidget.getTextHeight(infoText, fontSize)
+        val textWidth = TextWidget.getTextWidth(infoText, fontSize)
+        val textHeight = TextWidget.getTextHeight(infoText, fontSize)
 
         val textRed = 1f
         val textGreen = 1f
@@ -139,8 +142,13 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
 
         context.pose().pushPose()
         context.pose().translate(padding, padding)
-        val commands = GlyphCommandGenerator.generate(
-            infoText, fontSize, 0f, textRed, textGreen, textBlue, textAlpha
+        val matrix = context.pose().last().pose()
+        val commands = SubRunContainer.make(
+            infoText, fontSize, 0f, textRed, textGreen, textBlue, textAlpha,
+            deviceScale = Canvas.maxScale(matrix),
+            guiScale = UiEnvironment.get().guiScale,
+            originXGui = matrix.m30(),
+            originYGui = matrix.m31()
         )
         for (command in commands) {
             context.submit(command)
@@ -182,7 +190,7 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
 
     override fun invalidate() {
         // 定向失效 (对齐安卓): 仅重录自身内容并向上传播, 不递归后代.
-        // 后代内容变化由各自 invalidate 自录; 位姿/alpha/scissor/drawOrder 变化均走缓存重组;
+        // 后代内容变化由各自 invalidate 自录; 位姿/alpha/scissor 变化均走缓存重组;
         // 布局尺寸变化由 layout() 按"尺寸变化"逐控件自录.
         isRenderDirty = true
         parent?.onChildInvalidated(this)
@@ -193,7 +201,7 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
         parent?.onChildInvalidated(this)
     }
 
-    override fun render(context: RenderContext) {
+    override fun render(context: Canvas) {
         if (visibility != Widget.Visibility.VISIBLE) {
             return
         }
@@ -204,9 +212,7 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
         val hasTransform = scaleX != 1.0f || scaleY != 1.0f || rotation != 0.0f
 
         context.pose().pushPose()
-        context.drawOrder().push()
         run {
-            context.drawOrder().advance()
             if (hasTransform) {
                 context.pose().translate(pivotX, pivotY)
                 if (rotation != 0.0f) {
@@ -223,15 +229,20 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
                     renderDebugLayoutBounds(this, context)
                 }
                 renderOwnCached(context)
-                renderChildren(context)
+                if (clipChildren) {
+                    context.clipRect(0f, 0f, width, height)
+                    run { renderChildren(context) }
+                    context.disableScissor()
+                } else {
+                    renderChildren(context)
+                }
             }
             context.alpha().pop()
         }
-        context.drawOrder().pop()
         context.pose().popPose()
     }
 
-    private fun renderOwnCached(context: RenderContext) {
+    private fun renderOwnCached(context: Canvas) {
         if (AcademyCraft.DEBUG_UI || bypassRenderCache) {
             renderInternal(context)
             isRenderDirty = false
@@ -245,7 +256,7 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
         val blurStart = context.blurRegionCount()
         val origin = Matrix4f(context.pose().last().pose())
         renderInternal(context)
-        val built = buildCache(context, start, blurStart, origin, 0L)
+        val built = buildCache(context, start, blurStart, origin)
         // 祖先 alpha 过低 (如淡入首帧) 时烘焙颜色接近全透明, 缓存既无意义又会放大校正噪声, 不建立缓存.
         if (built != null && context.accumulatedAlpha > ALPHA_CACHE_EPSILON) {
             ownRenderCache = built
@@ -255,13 +266,9 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
         isRenderDirty = false
     }
 
-    protected open fun renderChildren(context: RenderContext) {
-        context.resetRecordedMax()
+    protected open fun renderChildren(context: Canvas) {
         for (child in children.values) {
             if (child.isVisible()) {
-                context.drawOrder().push()
-                if (child.coverAllPrev) context.drawOrder()
-                    .advance(context.recordedMax + 1)
                 context.pose().pushPose()
                 run {
                     context.pose().translate(child.x, child.y)
@@ -269,7 +276,6 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
                     child.render(context)
                 }
                 context.pose().popPose()
-                context.drawOrder().pop()
             }
         }
 
@@ -293,24 +299,22 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
      * 变化时以 `current * invRecordOrigin * worldPose` 重组. 位姿矩阵不可逆时返回 null (调用方不缓存) 喵.
      */
     private fun buildCache(
-        context: RenderContext,
+        context: Canvas,
         start: Int,
         blurStart: Int,
-        origin: Matrix4f,
-        coverBaseRecordedMax: Long
+        origin: Matrix4f
     ): SubtreeCache? {
         // 录制期的祖先 scissor: 命中它的命令纯属祖先裁剪, 回放时用当前 scissor 栈重取 (对齐 P2-7),
         // 否则缓存会烘焙滚动面板的旧裁剪矩形导致深失效重录.
         val recordScissor = context.currentScissor()
-        val baseDrawOrder = context.drawOrder().peek()
         val localized = ArrayList<SubmittedCommand>(context.commands.size - start)
         for (i in start until context.commands.size) {
             val c = context.commands[i]
             val localScissor = if (c.scissorRect == recordScissor) null else c.scissorRect
-            // 保留世界位姿 (fast path 直接复用); drawOrder 存相对序 (减去本控件基准).
-            localized.add(SubmittedCommand(c.command, c.pose, localScissor, c.drawOrder - baseDrawOrder, c.commandIndex))
+            // 保留世界位姿 (fast path 直接复用); 命令保持记录顺序.
+            localized.add(SubmittedCommand(c.command, c.pose, localScissor, c.commandIndex))
         }
-        return SubtreeCache(localized, context.blurRegionsSince(blurStart), origin, coverBaseRecordedMax, context.accumulatedAlpha, baseDrawOrder)
+        return SubtreeCache(localized, context.blurRegionsSince(blurStart), origin, context.accumulatedAlpha)
     }
 
     override fun onMeasure(widthMeasureSpec: MeasureSpec, heightMeasureSpec: MeasureSpec) {
@@ -340,7 +344,7 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
         if (needsOnLayout) {
             onLayout()
             // 自身尺寸变化已在 super.layout 中定向失效; 后代各自按自身尺寸变化失效,
-            // 不再深失效 (位置变化走位姿重组, alpha/scissor/drawOrder 走缓存外置).
+            // 不再深失效 (位置变化走位姿重组, alpha/scissor 走缓存外置).
         }
         isLayoutDirty = false
     }

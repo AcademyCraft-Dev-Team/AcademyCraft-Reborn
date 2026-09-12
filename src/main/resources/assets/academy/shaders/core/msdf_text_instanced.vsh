@@ -9,9 +9,11 @@ layout(location = 2) in vec2 InstSize;
 layout(location = 3) in vec2 InstUVStart;
 layout(location = 4) in vec2 InstUVEnd;
 layout(location = 5) in vec4 InstColor;
+layout(location = 6) in vec2 InstFade;
 
 out vec2 texCoord0;
 out vec4 vertexColor;
+out float fadeAlpha;
 
 void main() {
     vec2 realLocalPos = InstPos.xy + (Position.xy * InstSize);
@@ -21,4 +23,5 @@ void main() {
     texCoord0 = mix(InstUVStart, InstUVEnd, Position.xy);
 
     vertexColor = InstColor;
+    fadeAlpha = mix(InstFade.x, InstFade.y, Position.x);
 }

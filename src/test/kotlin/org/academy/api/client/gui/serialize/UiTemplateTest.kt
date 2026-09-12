@@ -1,7 +1,7 @@
 package org.academy.api.client.gui.serialize
 
 import com.google.gson.JsonObject
-import org.academy.api.client.gui.widget.LabelWidget
+import org.academy.api.client.gui.widget.TextWidget
 import org.academy.api.client.gui.widget.LinearLayoutWidget
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -32,7 +32,7 @@ class UiTemplateTest {
         """.trimIndent()
 
         val decoded = WidgetSerializer.fromJsonString(json, null, templates) as LinearLayoutWidget
-        val row = decoded.children["row_a"] as LabelWidget
+        val row = decoded.children["row_a"] as TextWidget
         assertEquals("Hello", row.text)
     }
 
@@ -57,7 +57,7 @@ class UiTemplateTest {
         """.trimIndent()
 
         val decoded = WidgetSerializer.fromJsonString(json, null, templates) as LinearLayoutWidget
-        assertEquals("World", (decoded.children["e"] as LabelWidget).text)
+        assertEquals("World", (decoded.children["e"] as TextWidget).text)
     }
 
     @Test
@@ -77,8 +77,8 @@ class UiTemplateTest {
 
         val decoded = WidgetSerializer.fromJsonString(json) as LinearLayoutWidget
         assertEquals(3, decoded.children.size)
-        assertEquals("x", (decoded.children["entry_0"] as LabelWidget).text)
-        assertEquals("x", (decoded.children["entry_2"] as LabelWidget).text)
+        assertEquals("x", (decoded.children["entry_0"] as TextWidget).text)
+        assertEquals("x", (decoded.children["entry_2"] as TextWidget).text)
     }
 
     @Test

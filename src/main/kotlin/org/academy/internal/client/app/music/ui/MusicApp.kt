@@ -20,6 +20,7 @@ import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.state.UiState
 import org.academy.api.client.gui.state.bindState
+import org.academy.api.client.gui.text.Ellipsize
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.gui.widget.SeekBarWidget.OnSeekBarChangeListener
 import org.academy.api.client.hud.terminal.TerminalHud
@@ -68,13 +69,13 @@ object MusicApp : App {
         private var showingSearchResults = false
         private var viewMode = ViewMode.NORMAL
         private val listRevisionState = UiState(0)
-        private lateinit var searchBox: TextBoxWidget
+        private lateinit var searchBox: TextInputWidget
         private lateinit var searchButton: ButtonWidget
-        private var settingsTitle: LabelWidget? = null
+        private var settingsTitle: TextWidget? = null
         private var moreIcon: ImageWidget? = null
-        private var roomNameBox: TextBoxWidget? = null
-        private var inviteNameBox: TextBoxWidget? = null
-        private var roomSearchBox: TextBoxWidget? = null
+        private var roomNameBox: TextInputWidget? = null
+        private var inviteNameBox: TextInputWidget? = null
+        private var roomSearchBox: TextInputWidget? = null
         private var roomShowingSearch = false
         private val roomRevisionState = UiState(0)
 
@@ -138,6 +139,7 @@ object MusicApp : App {
                             weight(1f)
                             height(14f)
                             gravity(Gravity.CENTER_VERTICAL)
+                            this.gravity = Gravity.CENTER_VERTICAL
                             padding(2f, 0f)
                             enter { search(it) }
                             clearOnEnter(false)
@@ -146,9 +148,17 @@ object MusicApp : App {
                             search(searchBox.text)
                         }
                         add("search", searchButton)
+                        settingsTitle = text(L10n["app.academy.music_player.settings.title"], "settings_title") {
+                            weight(1f)
+                            height(14f)
+                            gravity(Gravity.CENTER)
+                            this.gravity = Gravity.CENTER
+                            visibility = Widget.Visibility.GONE
+                        }
                         button("room_button") {
                             margin(2f, 2f, 2f, 0f)
                             size(16f, 16f)
+                            tooltipText = L10n["app.academy.music_player.room.title"]
                             onClick {
                                 RoomSessionController.requestRoomList()
                                 setViewMode(ViewMode.ROOM)
@@ -160,6 +170,7 @@ object MusicApp : App {
                         button("jukebox_button") {
                             margin(2f, 2f, 2f, 0f)
                             size(16f, 16f)
+                            tooltipText = L10n["app.academy.music_player.jukebox.title"]
                             onClick {
                                 JukeboxSessionController.requestState()
                                 setViewMode(ViewMode.JUKEBOX)
@@ -167,12 +178,6 @@ object MusicApp : App {
                             image(R.textures.gui.icon.menu, "icon") {
                                 sizeMode(SizeMode.MATCH_PARENT)
                             }
-                        }
-                        settingsTitle = label(L10n["app.academy.music_player.settings.title"], "settings_title") {
-                            weight(1f)
-                            height(14f)
-                            gravity(Gravity.CENTER)
-                            visibility = Widget.Visibility.GONE
                         }
                         button("more_button") {
                             margin(2f, 2f, 2f, 0f)
@@ -222,6 +227,8 @@ object MusicApp : App {
 
         private fun updateTopBarMode() {
             val isNormal = viewMode == ViewMode.NORMAL
+            searchBox.isEnabled = isNormal
+            searchButton.isEnabled = isNormal
             searchBox.visibility = if (isNormal) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
             searchButton.visibility = if (isNormal) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
             settingsTitle?.text = when (viewMode) {
@@ -242,7 +249,7 @@ object MusicApp : App {
             sizeMode(SizeMode.MATCH_PARENT)
 
             column {
-                label(L10n["app.academy.music_player.track_list"], "playlist_title")
+                text(L10n["app.academy.music_player.track_list"], "playlist_title")
 
                 scrollPanel(Orientation.VERTICAL, "music_list_area", createPlaylistPanel()) {
                     width(100f)
@@ -268,21 +275,25 @@ object MusicApp : App {
                     margin(0f, 0f, 0f, 4f)
                     add("meta", LinearLayoutWidget().apply {
                         orientation = Orientation.VERTICAL
-                        val titleLabel = MarqueeLabelWidget("").apply {
+                        val titleText = text("", "title") {
+                            ellipsize = Ellipsize.MARQUEE
+                            marqueeFadeSize = 6f
                             widthMode(SizeMode.MATCH_PARENT)
                             gravity(Gravity.CENTER)
+                            this.gravity = Gravity.CENTER
                         }
-                        val artistLabel = MarqueeLabelWidget("").apply {
+                        val artistText = text("", "artist") {
+                            textSize = 6f
+                            ellipsize = Ellipsize.MARQUEE
+                            marqueeFadeSize = 6f
                             widthMode(SizeMode.MATCH_PARENT)
                             gravity(Gravity.CENTER)
-                            scale = 0.75f
+                            this.gravity = Gravity.CENTER
                         }
-                        add("title", titleLabel)
-                        add("artist", artistLabel)
                         bindState(MusicPlayerBackend.getInstance().uiState) {
                             val mi = MusicPlayerBackend.getInstance().currentMusicInfo
-                            titleLabel.text = mi?.name ?: ""
-                            artistLabel.text = mi?.subtitle ?: ""
+                            titleText.text = mi?.name ?: ""
+                            artistText.text = mi?.subtitle ?: ""
                         }
                     }) {
                         widthMode(SizeMode.MATCH_PARENT)
@@ -292,7 +303,7 @@ object MusicApp : App {
                         height(12f)
                         widthMode(SizeMode.MATCH_PARENT)
                         spacing = 4f
-                        add("current_time", LabelWidget("00:00").apply {
+                        add("current_time", TextWidget("00:00").apply {
                             setFrameUpdate {
                                 text = formatTime(MusicPlayerBackend.getInstance().currentTime)
                                 true
@@ -301,9 +312,10 @@ object MusicApp : App {
                             weight(1f)
                             width(0f)
                             gravity(Gravity.CENTER)
+                            this.gravity = Gravity.CENTER
                         }
                         add("play_progress_bar", createPlayProgressBar())
-                        add("music_duration", LabelWidget("00:00").apply {
+                        add("music_duration", TextWidget("00:00").apply {
                             setFrameUpdate {
                                 text = formatTime(MusicPlayerBackend.getInstance().totalDuration)
                                 true
@@ -312,6 +324,7 @@ object MusicApp : App {
                             weight(1f)
                             width(0f)
                             gravity(Gravity.CENTER)
+                            this.gravity = Gravity.CENTER
                         }
                     }
                     row("control_area") {
@@ -377,1151 +390,6 @@ object MusicApp : App {
             bindState(JukeboxSessionController.jukeboxStateUi) { rebuildSearchAndPlaylist(this as LinearLayoutWidget) }
         }
 
-        private fun createRoomView(): FrameLayoutWidget {
-            return standaloneFrame {
-                matchParent()
-                add("room_content", FrameLayoutWidget().apply {
-                    sizeMode(SizeMode.MATCH_PARENT)
-                    // 只在结构变化（进出房间/房主变更）时重建整体布局；
-                    // 成员、正在播放与队列由各自的 bindState 增量刷新，
-                    // 避免每次同步（含心跳与播放操作）把列表滚动位置刷回顶部喵。
-                    bindState(RoomSessionController.roomStateUi) {
-                        val key = currentRoomStructureKey()
-                        if (key != roomStructureKey) {
-                            roomStructureKey = key
-                            replace("room", buildRoomContent())
-                        }
-                    }
-                    bindState(roomRevisionState) { replace("room", buildRoomContent()) }
-                    add("room", buildRoomContent())
-                })
-            }
-        }
-
-        private fun currentRoomStructureKey(): String {
-            val state = RoomSessionController.roomState ?: return "lobby"
-            // 房间名与房主名一并纳入: 改名或房主转移时结构键变化，顶部信息才会刷新喵.
-            return "inside:${state.roomCode}:${state.roomName}:${state.isHost}:${state.hostName}"
-        }
-
-        private fun buildRoomContent(): Widget {
-            return if (RoomSessionController.roomState == null) buildRoomLobby() else buildRoomInside()
-        }
-
-        private fun buildRoomLobby(): LinearLayoutWidget {
-            return standaloneColumn {
-                spacing = 2f
-                sizeMode(SizeMode.MATCH_PARENT)
-                padding(2f, 2f)
-
-                row("create_area") {
-                    spacing = 2f
-                    widthMode(SizeMode.MATCH_PARENT)
-                    height(14f)
-
-                    roomNameBox = textBox(64, "room_name") {
-                        weight(1f)
-                        width(0f)
-                        height(14f)
-                        gravity(Gravity.CENTER_VERTICAL)
-                        padding(2f, 0f)
-                        enter { createRoomFromInput(it) }
-                        clearOnEnter(false)
-                    }
-                    add("create", createStyledButton(L10n["app.academy.music_player.room.create"], 38f, 14f) {
-                        createRoomFromInput(roomNameBox?.text)
-                    }) {
-                        gravity(Gravity.CENTER)
-                    }
-                    add("refresh", createStyledButton(L10n["app.academy.music_player.room.refresh"], 28f, 14f) {
-                        RoomSessionController.requestRoomList()
-                    }) {
-                        gravity(Gravity.CENTER)
-                    }
-                }
-
-                add("pending_invites", createPendingPanel(onlyApply = false))
-
-                label(L10n["app.academy.music_player.room.list.title"], "list_title") {
-                    widthMode(SizeMode.MATCH_PARENT)
-                    height(10f)
-                }
-
-                scrollPanel(Orientation.VERTICAL, "room_list", createRoomListPanel()) {
-                    widthMode(SizeMode.MATCH_PARENT)
-                    weight(1f)
-                }
-            }
-        }
-
-        private fun createRoomListPanel(): LinearLayoutWidget {
-            return LinearLayoutWidget().apply {
-                orientation = Orientation.VERTICAL
-                bindState(RoomSessionController.roomStateUi) { rebuildRoomList(this as LinearLayoutWidget) }
-            }
-        }
-
-        /**
-         * 待处理申请/邀请卡片面板：被邀者在音乐室大厅确认邀请，房主在房内确认申请喵。
-         */
-        private fun createPendingPanel(onlyApply: Boolean): LinearLayoutWidget {
-            return LinearLayoutWidget().apply {
-                orientation = Orientation.VERTICAL
-                spacing = 2f
-                widthMode(SizeMode.MATCH_PARENT)
-                heightMode(SizeMode.WRAP_CONTENT)
-                bindState(RoomSessionController.roomStateUi) { rebuildPendingPanel(this as LinearLayoutWidget, onlyApply) }
-            }
-        }
-
-        private fun rebuildPendingPanel(container: LinearLayoutWidget, onlyApply: Boolean) {
-            container.apply {
-                clearChildren()
-                val notices = RoomSessionController.pendingNotices.filter { it.apply() == onlyApply }
-                notices.forEachIndexed { index, notice ->
-                    add("pending_$index", standaloneRow(2f) {
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(12f)
-                        label(
-                            String.format(
-                                L10n[
-                                    if (notice.apply()) "app.academy.music_player.room.apply_card"
-                                    else "app.academy.music_player.room.invite_card"
-                                ],
-                                notice.otherPlayer(),
-                                notice.roomName()
-                            ),
-                            "text"
-                        ) {
-                            weight(1f)
-                            width(0f)
-                            scale = 0.58f
-                            height(0f)
-                            gravity(Gravity.CENTER_LEFT)
-                        }
-                        add("accept", createStyledButton(
-                            L10n["ui.academy.music_room.accept"], 30f, 11f, 0.58f
-                        ) {
-                            RoomSessionController.respondToken(notice.token(), true)
-                        }) {
-                            gravity(Gravity.CENTER)
-                        }
-                        add("reject", createStyledButton(
-                            L10n["ui.academy.music_room.reject"], 30f, 11f, 0.58f
-                        ) {
-                            RoomSessionController.respondToken(notice.token(), false)
-                        }) {
-                            gravity(Gravity.CENTER)
-                        }
-                    })
-                }
-            }
-        }
-
-        private fun rebuildRoomList(container: LinearLayoutWidget) {
-            container.apply {
-                clearChildren()
-                val rooms = RoomSessionController.roomList
-                if (rooms.isEmpty()) {
-                    label(L10n["app.academy.music_player.room.list.empty"], "empty") {
-                        scale = 0.62f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(12f)
-                        gravity(Gravity.CENTER)
-                    }
-                    return
-                }
-                rooms.forEachIndexed { index, room ->
-                    add("room_$index", ButtonWidget()) {
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(16f)
-                        background = createTrackBackground(false)
-                        add("content", standaloneRow(2f) {
-                            sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
-                            label("[${room.code()}]", "code") {
-                                scale = 0.62f
-                                width(22f)
-                                height(0f)
-                                gravity(Gravity.CENTER)
-                            }
-                            column("info") {
-                                weight(1f)
-                                heightMode(SizeMode.MATCH_PARENT)
-                                gravity(Gravity.CENTER)
-                                add("name", MarqueeLabelWidget(room.name()).apply {
-                                    baseFontSize = 6f
-                                }) {
-                                    widthMode(SizeMode.MATCH_PARENT)
-                                    gravity(Gravity.CENTER_LEFT)
-                                }
-                                label(
-                                    "${room.hostName()} · ${room.memberCount()}",
-                                    "sub"
-                                ) {
-                                    widthMode(SizeMode.MATCH_PARENT)
-                                    baseFontSize = 4f
-                                    gravity(Gravity.CENTER_LEFT)
-                                }
-                            }
-                            add("apply", createStyledButton(
-                                L10n["app.academy.music_player.room.apply"], 34f, 12f, 0.58f
-                            ) {
-                                RoomSessionController.applyRoom(room.code())
-                            }) {
-                                size(34f, 12f)
-                                gravity(Gravity.CENTER)
-                            }
-                        })
-                    }
-                }
-            }
-        }
-
-        private fun buildRoomInside(): LinearLayoutWidget {
-            val state = RoomSessionController.roomState ?: return buildRoomLobby()
-            return standaloneColumn {
-                spacing = 2f
-                sizeMode(SizeMode.MATCH_PARENT)
-                padding(2f, 2f)
-
-                row("header") {
-                    spacing = 2f
-                    widthMode(SizeMode.MATCH_PARENT)
-                    height(14f)
-
-                    add("name", MarqueeLabelWidget("${state.roomName} [${state.roomCode}]")) {
-                        weight(1f)
-                        width(0f)
-                        height(0f)
-                        gravity(Gravity.CENTER_LEFT)
-                    }
-                    label(
-                        "${L10n["app.academy.music_player.room.host_label"]}: ${state.hostName}",
-                        "host"
-                    ) {
-                        scale = 0.62f
-                        height(0f)
-                        gravity(Gravity.CENTER)
-                    }
-                    add("leave", createStyledButton(L10n["app.academy.music_player.room.leave"], 42f, 14f) {
-                        RoomSessionController.leaveRoom()
-                    }) {
-                        gravity(Gravity.CENTER)
-                    }
-                }
-
-                if (state.isHost) {
-                    add("pending_applies", createPendingPanel(onlyApply = true))
-                }
-
-                row("body") {
-                    spacing = 2f
-                    widthMode(SizeMode.MATCH_PARENT)
-                    weight(1f)
-                    height(0f)
-
-                    column("members") {
-                        width(76f)
-                        heightMode(SizeMode.MATCH_PARENT)
-
-                        add("members_title", createRoomMembersTitle())
-                        scrollPanel(Orientation.VERTICAL, "member_list", createMemberPanel()) {
-                            widthMode(SizeMode.MATCH_PARENT)
-                            weight(1f)
-                        }
-                    }
-
-                    column("right") {
-                        weight(1f)
-                        width(0f)
-                        heightMode(SizeMode.MATCH_PARENT)
-
-                        add("now_playing", createRoomNowPlaying())
-
-                        row("room_search_area") {
-                            spacing = 2f
-                            widthMode(SizeMode.MATCH_PARENT)
-                            height(14f)
-
-                            roomSearchBox = textBox(64, "room_query") {
-                                weight(1f)
-                                width(0f)
-                                height(14f)
-                                gravity(Gravity.CENTER_VERTICAL)
-                                padding(2f, 0f)
-                                enter { roomSearch(it) }
-                                clearOnEnter(false)
-                            }
-                            add("search", createStyledButton(
-                                L10n["app.academy.music_player.search"], 26f, 14f
-                            ) {
-                                roomSearch(roomSearchBox?.text)
-                            }) {
-                                gravity(Gravity.CENTER)
-                            }
-                            if (roomShowingSearch) {
-                                add("back", createActionButton(
-                                    R.textures.gui.icon.close,
-                                    L10n["app.academy.music_player.back_to_list"],
-                                    12f
-                                ) {
-                                    roomShowingSearch = false
-                                    roomRevisionState.value += 1
-                                }) {
-                                    gravity(Gravity.CENTER)
-                                }
-                            }
-                        }
-
-                        add("queue_title", createRoomQueueTitle())
-
-                        scrollPanel(Orientation.VERTICAL, "queue_area", createRoomQueuePanel()) {
-                            widthMode(SizeMode.MATCH_PARENT)
-                            weight(1f)
-                        }
-                    }
-                }
-
-                if (state.isHost) {
-                    row("host_actions") {
-                        spacing = 2f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(14f)
-
-                        inviteNameBox = textBox(64, "invite_name") {
-                            weight(1f)
-                            width(0f)
-                            height(14f)
-                            gravity(Gravity.CENTER_VERTICAL)
-                            padding(2f, 0f)
-                            enter { inviteFromInput(it) }
-                            clearOnEnter(false)
-                        }
-                        add("invite", createStyledButton(L10n["app.academy.music_player.room.invite"], 38f, 14f) {
-                            inviteFromInput(inviteNameBox?.text)
-                        }) {
-                            gravity(Gravity.CENTER)
-                        }
-                    }
-                }
-            }
-        }
-
-        /** 成员数标题：跟随房间同步增量刷新喵。 */
-        private fun createRoomMembersTitle(): LabelWidget {
-            return LabelWidget("").apply {
-                bindState(RoomSessionController.roomStateUi) {
-                    val count = RoomSessionController.roomState?.members?.size ?: 0
-                    text = "${L10n["app.academy.music_player.room.members"]} ($count)"
-                }
-                widthMode(SizeMode.MATCH_PARENT)
-                height(10f)
-            }
-        }
-
-        /** 队列/搜索结果标题：跟随房间同步与管理器修订增量刷新喵。 */
-        private fun createRoomQueueTitle(): LabelWidget {
-            return LabelWidget("").apply {
-                bindState(RoomSessionController.roomStateUi) { text = roomQueueTitle() }
-                bindState(OnlineMusicManager.revisionState) { text = roomQueueTitle() }
-                widthMode(SizeMode.MATCH_PARENT)
-                height(10f)
-            }
-        }
-
-        private fun roomQueueTitle(): String {
-            return if (roomShowingSearch) {
-                L10n["app.academy.music_player.search_results"]
-            } else {
-                val count = RoomSessionController.roomState?.queue?.entries()?.size ?: 0
-                "${L10n["app.academy.music_player.room.queue"]} ($count)"
-            }
-        }
-
-        private fun createMemberPanel(): LinearLayoutWidget {
-            return LinearLayoutWidget().apply {
-                orientation = Orientation.VERTICAL
-                bindState(RoomSessionController.roomStateUi) { rebuildMemberPanel(this as LinearLayoutWidget) }
-            }
-        }
-
-        private fun rebuildMemberPanel(container: LinearLayoutWidget) {
-            container.clearChildren()
-            val state = RoomSessionController.roomState ?: return
-            state.members.forEachIndexed { index, member ->
-                container.add("member_$index", standaloneRow(2f) {
-                    widthMode(SizeMode.MATCH_PARENT)
-                    height(12f)
-                    label(
-                        if (member == state.hostName) "◆ $member" else member,
-                        "name"
-                    ) {
-                        scale = 0.62f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(0f)
-                        gravity(Gravity.CENTER_LEFT)
-                    }
-                })
-            }
-        }
-
-        /**
-         * 正在播放区：整体占位固定，内容跟随房间同步增量重建，
-         * 避免聊天空闲时同步把控制区结构刷掉喵。
-         */
-        private fun createRoomNowPlaying(): FrameLayoutWidget {
-            return FrameLayoutWidget().apply {
-                widthMode(SizeMode.MATCH_PARENT)
-                heightMode(SizeMode.WRAP_CONTENT)
-                bindState(RoomSessionController.roomStateUi) {
-                    replace("now_playing", buildRoomNowPlaying())
-                }
-                add("now_playing", buildRoomNowPlaying())
-            }
-        }
-
-        private fun buildRoomNowPlaying(): LinearLayoutWidget {
-            val timeline = RoomSessionController.roomState?.timeline
-            return standaloneColumn {
-                spacing = 1f
-                widthMode(SizeMode.MATCH_PARENT)
-                heightMode(SizeMode.WRAP_CONTENT)
-
-                if (timeline == null) {
-                    label(L10n["app.academy.music_player.room.idle"], "placeholder") {
-                        scale = 0.62f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(12f)
-                        gravity(Gravity.CENTER)
-                    }
-                } else {
-                    val entry = timeline.entry()
-                    row("meta") {
-                        spacing = 4f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(14f)
-                        image(AlbumArtworkCache.textureFor(entry), "icon") {
-                            sampler(FilterMode.LINEAR, false)
-                            size(12f, 12f)
-                            gravity(Gravity.CENTER)
-                        }
-                        column("info") {
-                            weight(1f)
-                            heightMode(SizeMode.MATCH_PARENT)
-                            gravity(Gravity.CENTER)
-                            add("title", MarqueeLabelWidget(entry.title()).apply {
-                                baseFontSize = 6f
-                            }) {
-                                widthMode(SizeMode.MATCH_PARENT)
-                                gravity(Gravity.CENTER_LEFT)
-                            }
-                            add("artist", MarqueeLabelWidget(entry.artist()).apply {
-                                baseFontSize = 4f
-                            }) {
-                                widthMode(SizeMode.MATCH_PARENT)
-                                gravity(Gravity.CENTER_LEFT)
-                            }
-                        }
-                    }
-
-                    row("progress_area") {
-                        spacing = 4f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(12f)
-
-                        add("current_time", LabelWidget("00:00").apply {
-                            setFrameUpdate {
-                                text = formatTime(RoomSessionController.expectedPositionSeconds())
-                                true
-                            }
-                        }) {
-                            weight(1f)
-                            width(0f)
-                            gravity(Gravity.CENTER)
-                        }
-                        add("progress", createRoomProgressBar(entry.durationSeconds().toFloat())) {
-                            gravity(Gravity.CENTER)
-                        }
-                        add("duration", LabelWidget(formatTime(entry.durationSeconds().toFloat()))) {
-                            weight(1f)
-                            width(0f)
-                            gravity(Gravity.CENTER)
-                        }
-                    }
-                }
-
-                // 控制区始终可见并居中于进度条下方: 用两侧 weight 占位实现水平居中，
-                // 房间空闲时播放键用于开播队列中的下一首喵.
-                row("controls") {
-                    widthMode(SizeMode.MATCH_PARENT)
-                    height(14f)
-
-                    add("controls_lead", EmptyWidget()) { weight(1f) }
-                    button("previous") {
-                        size(14f, 14f)
-                        onClick { RoomSessionController.previousTrack() }
-                        image(R.textures.gui.app.music.previous) {
-                            sampler(FilterMode.LINEAR, false)
-                        }
-                    }
-                    button("play_pause") {
-                        size(14f, 14f)
-                        onClick {
-                            when {
-                                RoomSessionController.roomState?.timeline == null ->
-                                    RoomSessionController.nextTrack()
-                                RoomSessionController.expectedPlaying() -> RoomSessionController.pausePlayback()
-                                else -> RoomSessionController.resumePlayback()
-                            }
-                        }
-                        image(if (RoomSessionController.roomState?.timeline != null
-                                && RoomSessionController.expectedPlaying()
-                            ) {
-                            R.textures.gui.app.music.pause
-                        } else {
-                            R.textures.gui.app.music.play
-                        }) {
-                            sampler(FilterMode.LINEAR, false)
-                        }
-                    }
-                    button("next") {
-                        size(14f, 14f)
-                        onClick { RoomSessionController.nextTrack() }
-                        image(R.textures.gui.app.music.next) {
-                            sampler(FilterMode.LINEAR, false)
-                        }
-                    }
-                    add("controls_tail", EmptyWidget()) { weight(1f) }
-                }
-            }
-        }
-
-        private fun createRoomProgressBar(durationSeconds: Float): SeekBarWidget {
-            val progressBar = object : SeekBarWidget() {
-                init {
-                    setFrameUpdate {
-                        if (!isDragging && durationSeconds > 0f) {
-                            val progress = RoomSessionController.expectedPositionSeconds() / durationSeconds
-                            setProgress(min + progress * (max - min))
-                        }
-                        true
-                    }
-                }
-            }
-            progressBar.size(96f, 6f)
-            progressBar.gravity(Gravity.CENTER)
-            progressBar.setBarColors(TerminalHud.BACKGROUND_COLOR, TerminalHud.PRIMARY_COLOR)
-            progressBar.seekListener(object : OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: SeekBarWidget, progress: Float, fromUser: Boolean) {}
-
-                override fun onStartTrackingTouch(seekBar: SeekBarWidget) {}
-
-                override fun onStopTrackingTouch(seekBar: SeekBarWidget) {
-                    if (durationSeconds > 0f) {
-                        RoomSessionController.seekTo(progressBar.progress / progressBar.max * durationSeconds)
-                    }
-                }
-            })
-            return progressBar
-        }
-
-        private fun createRoomQueuePanel(): LinearLayoutWidget {
-            return LinearLayoutWidget().apply {
-                orientation = Orientation.VERTICAL
-                bindState(RoomSessionController.roomStateUi) {
-                    rebuildRoomQueue(this as LinearLayoutWidget)
-                }
-                bindState(OnlineMusicManager.revisionState) {
-                    rebuildRoomQueue(this as LinearLayoutWidget)
-                }
-                rebuildRoomQueue(this)
-            }
-        }
-
-        private fun rebuildRoomQueue(container: LinearLayoutWidget) {
-            container.apply {
-                clearChildren()
-                if (roomShowingSearch) {
-                    OnlineMusicManager.searchResults.forEachIndexed { index, result ->
-                        row("result_$index") {
-                            spacing = 2f
-                            widthMode(SizeMode.MATCH_PARENT)
-                            height(16f)
-                            label(
-                                (if (result.vip) "[VIP] " else "") + result.title + " - " + result.artist,
-                                "name"
-                            ) {
-                                scale = 0.6f
-                                weight(1f)
-                                height(0f)
-                                gravity(Gravity.CENTER_LEFT)
-                            }
-                            add("play", createActionButton(
-                                R.textures.gui.app.music.play,
-                                L10n["app.academy.music_player.action.play"]
-                            ) {
-                                RoomSessionController.playTrack(result.toSharedTrackEntry())
-                            })
-                            add("queue", createActionButton(
-                                R.textures.gui.icon.add,
-                                L10n["app.academy.music_player.room.action.queue_add"]
-                            ) {
-                                RoomSessionController.queueAdd(result.toSharedTrackEntry())
-                            })
-                        }
-                    }
-                    return
-                }
-                val queue = RoomSessionController.roomState?.queue
-                if (queue == null || queue.entries().isEmpty()) {
-                    label(L10n["app.academy.music_player.room.queue.empty"], "empty") {
-                        scale = 0.6f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(12f)
-                        gravity(Gravity.CENTER)
-                    }
-                    return
-                }
-                queue.entries().forEachIndexed { index, queueEntry ->
-                    val entry = queueEntry.entry()
-                    add("queue_$index", ButtonWidget()) {
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(16f)
-                        background = createTrackBackground(false)
-                        add("content", standaloneRow(2f) {
-                            sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
-                            image(AlbumArtworkCache.textureFor(entry), "icon") {
-                                sampler(FilterMode.LINEAR, false)
-                                size(12f, 12f)
-                                gravity(Gravity.CENTER)
-                            }
-                            column("info") {
-                                weight(1f)
-                                heightMode(SizeMode.MATCH_PARENT)
-                                gravity(Gravity.CENTER)
-                                add("name", MarqueeLabelWidget(entry.title()).apply {
-                                    baseFontSize = 6f
-                                }) {
-                                    widthMode(SizeMode.MATCH_PARENT)
-                                    gravity(Gravity.CENTER_LEFT)
-                                }
-                                add("artist", MarqueeLabelWidget(entry.artist()).apply {
-                                    baseFontSize = 4f
-                                }) {
-                                    widthMode(SizeMode.MATCH_PARENT)
-                                    gravity(Gravity.CENTER_LEFT)
-                                }
-                            }
-                            label(
-                                queueEntry.requesterName(),
-                                "requester"
-                            ) {
-                                scale = 0.55f
-                                width(26f)
-                                height(0f)
-                                gravity(Gravity.CENTER)
-                            }
-                            add("play_now", createActionButton(
-                                R.textures.gui.app.music.play,
-                                L10n["app.academy.music_player.action.play"],
-                                10f,
-                                Gravity.CENTER
-                            ) {
-                                RoomSessionController.playTrack(entry)
-                            })
-                            add("remove", createActionButton(
-                                R.textures.gui.icon.close,
-                                L10n["app.academy.music_player.action.remove"],
-                                10f,
-                                Gravity.CENTER
-                            ) {
-                                RoomSessionController.queueRemove(index)
-                            })
-                        })
-                    }
-                }
-            }
-        }
-
-        private fun createRoomFromInput(name: String?) {
-            val trimmed = name?.trim().orEmpty()
-            if (trimmed.isEmpty()) return
-            RoomSessionController.createRoom(trimmed)
-        }
-
-        private fun inviteFromInput(name: String?) {
-            val trimmed = name?.trim().orEmpty()
-            if (trimmed.isEmpty()) return
-            RoomSessionController.invitePlayer(trimmed)
-        }
-
-        private fun roomSearch(query: String?) {
-            val trimmed = query?.trim().orEmpty()
-            if (trimmed.isEmpty()) return
-            roomShowingSearch = true
-            roomRevisionState.value += 1
-            OnlineMusicManager.search(trimmed)
-        }
-
-        private fun OnlineMusicManager.SearchEntry.toSharedTrackEntry(): SharedTrackEntry {
-            return SharedTrackEntry(
-                provider.storageName,
-                id,
-                title,
-                artist,
-                durationSeconds,
-                vip,
-                artworkUrl
-            )
-        }
-
-        private fun MusicInfo.toSharedTrackEntry(): SharedTrackEntry? {
-            if (externalId.isNotBlank() && provider != "local") {
-                return SharedTrackEntry(
-                    provider,
-                    externalId,
-                    name,
-                    subtitle,
-                    durationSeconds,
-                    vip,
-                    artworkUrl
-                )
-            }
-            // 资源包曲目：资源定位符即曲目ID，装有同一资源包的客户端都能解析；本机绝对路径不可共享喵.
-            val location = source.path as? Identifier ?: return null
-            return SharedTrackEntry(
-                "local",
-                location.toString(),
-                name,
-                subtitle,
-                durationSeconds,
-                false,
-                ""
-            )
-        }
-
-        /**
-         * 把曲目送进音乐室队列；未入房时暂存曲目并切换到音乐室页签，
-         * 入住（成为房主）后自动入队喵。
-         */
-        private fun sendToRoomOrOpenView(entry: SharedTrackEntry) {
-            val roomState = RoomSessionController.roomState
-            if (roomState == null) {
-                pendingRoomEntry = entry
-                RoomSessionController.requestRoomList()
-                setViewMode(ViewMode.ROOM)
-                return
-            }
-            RoomSessionController.queueAdd(entry)
-        }
-
-        private fun consumePendingRoomEntry() {
-            val entry = pendingRoomEntry ?: return
-            RoomSessionController.roomState ?: return
-            pendingRoomEntry = null
-            RoomSessionController.queueAdd(entry)
-        }
-
-        private fun createJukeboxView(): FrameLayoutWidget {
-            return standaloneFrame {
-                matchParent()
-                add("jukebox_content", FrameLayoutWidget().apply {
-                    sizeMode(SizeMode.MATCH_PARENT)
-                    bindState(JukeboxSessionController.jukeboxStateUi) { replace("jukebox", buildJukeboxContent()) }
-                    bindState(SharedAccountClient.accountUi) { replace("jukebox", buildJukeboxContent()) }
-                    bindState(viewRevisionState) { replace("jukebox", buildJukeboxContent()) }
-                    add("jukebox", buildJukeboxContent())
-                })
-            }
-        }
-
-        private fun buildJukeboxContent(): Widget {
-            val state = JukeboxSessionController.state
-            return if (state == null || !state.enabled) buildJukeboxDisabled() else buildJukeboxMain(state)
-        }
-
-        private fun buildJukeboxDisabled(): LinearLayoutWidget {
-            return standaloneColumn {
-                spacing = 2f
-                sizeMode(SizeMode.MATCH_PARENT)
-                padding(2f, 2f)
-                label(L10n["app.academy.music_player.jukebox.disabled"], "disabled_hint") {
-                    scale = 0.62f
-                    widthMode(SizeMode.MATCH_PARENT)
-                    heightMode(SizeMode.WRAP_CONTENT)
-                    gravity(Gravity.CENTER)
-                }
-            }
-        }
-
-        private fun buildJukeboxMain(state: JukeboxSessionController.JukeboxState): LinearLayoutWidget {
-            return standaloneColumn {
-                spacing = 2f
-                sizeMode(SizeMode.MATCH_PARENT)
-                padding(2f, 2f)
-
-                row("header") {
-                    spacing = 2f
-                    widthMode(SizeMode.MATCH_PARENT)
-                    height(14f)
-
-                    val modeText = when (state.mode) {
-                        MusicJukeboxPackets.MODE_PRESET -> L10n["app.academy.music_player.jukebox.mode_preset"]
-                        MusicJukeboxPackets.MODE_JUKEBOX -> L10n["app.academy.music_player.jukebox.mode_jukebox"]
-                        else -> L10n["app.academy.music_player.jukebox.mode_idle"]
-                    }
-                    label(modeText, "mode") {
-                        scale = 0.62f
-                        weight(1f)
-                        width(0f)
-                        height(0f)
-                        gravity(Gravity.CENTER_LEFT)
-                    }
-                    add("subscribe", createStyledButton(
-                        if (JukeboxSessionController.subscribed) {
-                            L10n["app.academy.music_player.jukebox.mute"]
-                        } else {
-                            L10n["app.academy.music_player.jukebox.listen"]
-                        },
-                        44f, 14f
-                    ) {
-                        JukeboxSessionController.setSubscribed(!JukeboxSessionController.subscribed)
-                    }) {
-                        gravity(Gravity.CENTER)
-                    }
-                    add("playlist_toggle", createStyledButton(
-                        if (jukeboxShowingPlaylist) L10n["app.academy.music_player.jukebox.playlist_back"]
-                        else L10n["app.academy.music_player.jukebox.playlist"],
-                        36f, 14f
-                    ) {
-                        jukeboxShowingPlaylist = !jukeboxShowingPlaylist
-                        if (jukeboxShowingPlaylist) SharedAccountClient.requestPlaylist()
-                        viewRevisionState.value += 1
-                    }) {
-                        gravity(Gravity.CENTER)
-                    }
-                }
-
-                add("now_playing", buildJukeboxNowPlaying(state))
-
-                if (jukeboxShowingPlaylist) {
-                    label(
-                        "${L10n["app.academy.music_player.jukebox.playlist"]} (${SharedAccountClient.serverPlaylist?.tracks?.size ?: 0})",
-                        "playlist_title"
-                    ) {
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(10f)
-                    }
-                    scrollPanel(Orientation.VERTICAL, "server_playlist", createServerPlaylistPanel()) {
-                        widthMode(SizeMode.MATCH_PARENT)
-                        weight(1f)
-                    }
-                } else {
-                    label(
-                        "${L10n["app.academy.music_player.jukebox.queue"]} (${state.queue.entries().size})",
-                        "queue_title"
-                    ) {
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(10f)
-                    }
-                    scrollPanel(Orientation.VERTICAL, "jukebox_queue", createJukeboxQueuePanel()) {
-                        widthMode(SizeMode.MATCH_PARENT)
-                        weight(1f)
-                    }
-                }
-            }
-        }
-
-        private fun createServerPlaylistPanel(): LinearLayoutWidget {
-            return LinearLayoutWidget().apply {
-                orientation = Orientation.VERTICAL
-                bindState(SharedAccountClient.accountUi) { rebuildServerPlaylist(this as LinearLayoutWidget) }
-                rebuildServerPlaylist(this)
-            }
-        }
-
-        private fun rebuildServerPlaylist(container: LinearLayoutWidget) {
-            container.apply {
-                clearChildren()
-                val tracks = SharedAccountClient.serverPlaylist?.tracks
-                if (tracks == null || tracks.isEmpty()) {
-                    label(L10n["app.academy.music_player.jukebox.playlist.empty"], "empty") {
-                        scale = 0.6f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(12f)
-                        gravity(Gravity.CENTER)
-                    }
-                    return
-                }
-                tracks.forEachIndexed { index, entry ->
-                    add("preset_$index", ButtonWidget()) {
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(16f)
-                        background = createTrackBackground(false)
-                        add("content", standaloneRow(2f) {
-                            sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
-                            image(AlbumArtworkCache.textureFor(entry), "icon") {
-                                sampler(FilterMode.LINEAR, false)
-                                size(12f, 12f)
-                                gravity(Gravity.CENTER)
-                            }
-                            column("info") {
-                                weight(1f)
-                                heightMode(SizeMode.MATCH_PARENT)
-                                gravity(Gravity.CENTER)
-                                add("name", MarqueeLabelWidget(entry.title()).apply {
-                                    baseFontSize = 6f
-                                }) {
-                                    widthMode(SizeMode.MATCH_PARENT)
-                                    gravity(Gravity.CENTER_LEFT)
-                                }
-                                add("artist", MarqueeLabelWidget(entry.artist()).apply {
-                                    baseFontSize = 4f
-                                }) {
-                                    widthMode(SizeMode.MATCH_PARENT)
-                                    gravity(Gravity.CENTER_LEFT)
-                                }
-                            }
-                            add("play", createActionButton(
-                                R.textures.gui.app.music.play,
-                                L10n["app.academy.music_player.action.play"]
-                            ) {
-                                previewTrack(entry)
-                            })
-                            add("favorite", createActionButton(
-                                R.textures.gui.icon.add,
-                                L10n["app.academy.music_player.jukebox.playlist.favorite"]
-                            ) {
-                                OnlineMusicManager.addSharedEntry(entry)
-                            })
-                        })
-                    }
-                }
-            }
-        }
-
-        /**
-         * 共享播放（音乐室正在放曲/全服点播未静音在播）进行时，本地传输控制不得抢占播放通道，
-         * 否则会造成进度不同步与重播；此处提示用户到对应页面操作喵。
-         * 房间空闲或无点播在播时，本地播放正常可用喵。
-         */
-        private fun runLocalTransport(action: () -> Unit) {
-            if (RoomSessionController.roomState?.timeline != null || JukeboxSessionController.isActivelyPlaying()) {
-                OnlineMusicManager.notifyStatus(L10n["app.academy.music_player.transport.shared_hint"])
-                return
-            }
-            action()
-        }
-
-        /**
-         * 试听：未静音且点播正在播放时，点播优先级更高，给出提示而不抢占；
-         * 其余情况临时切回本地播放（下一次点播同步会自动重新接管共享时间线）喵。
-         */
-        private fun previewTrack(entry: SharedTrackEntry) {
-            if (JukeboxSessionController.isActivelyPlaying()) {
-                OnlineMusicManager.notifyStatus(
-                    L10n["app.academy.music_player.jukebox.preview_blocked"]
-                )
-                return
-            }
-            val info = OnlineMusicManager.toMusicInfo(entry) ?: return
-            MusicPlayerBackend.getInstance().setPlaybackController(
-                org.academy.internal.client.app.music.common.PlaybackController.LOCAL
-            )
-            MusicPlayerBackend.getInstance().addOnlineTrack(info, true)
-        }
-
-        private fun buildJukeboxNowPlaying(state: JukeboxSessionController.JukeboxState): LinearLayoutWidget {
-            val timeline = state.timeline
-            return standaloneColumn {
-                spacing = 1f
-                widthMode(SizeMode.MATCH_PARENT)
-                heightMode(SizeMode.WRAP_CONTENT)
-
-                if (timeline == null) {
-                    label(L10n["app.academy.music_player.jukebox.idle"], "placeholder") {
-                        scale = 0.62f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(12f)
-                        gravity(Gravity.CENTER)
-                    }
-                    return@standaloneColumn
-                }
-
-                val entry = timeline.entry()
-                row("meta") {
-                    spacing = 4f
-                    widthMode(SizeMode.MATCH_PARENT)
-                    height(14f)
-                    image(AlbumArtworkCache.textureFor(entry), "icon") {
-                        sampler(FilterMode.LINEAR, false)
-                        size(12f, 12f)
-                        gravity(Gravity.CENTER)
-                    }
-                    column("info") {
-                        weight(1f)
-                        heightMode(SizeMode.MATCH_PARENT)
-                        gravity(Gravity.CENTER)
-                        add("title", MarqueeLabelWidget(entry.title()).apply {
-                            baseFontSize = 6f
-                        }) {
-                            widthMode(SizeMode.MATCH_PARENT)
-                            gravity(Gravity.CENTER_LEFT)
-                        }
-                        add("artist", MarqueeLabelWidget(entry.artist()).apply {
-                            baseFontSize = 4f
-                        }) {
-                            widthMode(SizeMode.MATCH_PARENT)
-                            gravity(Gravity.CENTER_LEFT)
-                        }
-                    }
-                }
-
-                row("progress_area") {
-                    spacing = 4f
-                    widthMode(SizeMode.MATCH_PARENT)
-                    height(12f)
-
-                    add("current_time", LabelWidget("00:00").apply {
-                        setFrameUpdate {
-                            text = formatTime(JukeboxSessionController.expectedPositionSeconds())
-                            true
-                        }
-                    }) {
-                        weight(1f)
-                        width(0f)
-                        gravity(Gravity.CENTER)
-                    }
-                    add("progress", createJukeboxProgressBar(entry.durationSeconds().toFloat())) {
-                        gravity(Gravity.CENTER)
-                    }
-                    add("duration", LabelWidget(formatTime(entry.durationSeconds().toFloat()))) {
-                        weight(1f)
-                        width(0f)
-                        gravity(Gravity.CENTER)
-                    }
-                }
-
-                row("vote_area") {
-                    spacing = 4f
-                    widthMode(SizeMode.MATCH_PARENT)
-                    height(14f)
-                    gravity(Gravity.CENTER)
-
-                    if (state.voteActive) {
-                        label(
-                            "${L10n["app.academy.music_player.jukebox.vote_progress"]}: ${state.voteCount}/${state.voteThreshold}",
-                            "vote_status"
-                        ) {
-                            scale = 0.6f
-                            height(0f)
-                            gravity(Gravity.CENTER)
-                        }
-                    }
-                    add("vote", createStyledButton(
-                        L10n["app.academy.music_player.jukebox.vote_skip"], 60f, 14f
-                    ) {
-                        JukeboxSessionController.voteSkip()
-                    }) {
-                        gravity(Gravity.CENTER)
-                    }
-                }
-            }
-        }
-
-        private fun createJukeboxProgressBar(durationSeconds: Float): SeekBarWidget {
-            val progressBar = object : SeekBarWidget() {
-                // 全服点播进度仅展示，不接受本地拖动（进度由服务器权威控制）喵
-                override fun onMousePressed(event: org.academy.api.client.gui.event.MouseEvent) {}
-                override fun onMouseDragged(event: org.academy.api.client.gui.event.MouseEvent) {}
-                override fun onMouseReleased(event: org.academy.api.client.gui.event.MouseEvent) {}
-
-                init {
-                    setFrameUpdate {
-                        if (durationSeconds > 0f) {
-                            val progress = JukeboxSessionController.expectedPositionSeconds() / durationSeconds
-                            setProgress(min + progress * (max - min))
-                        }
-                        true
-                    }
-                }
-            }
-            progressBar.size(128f, 6f)
-            progressBar.gravity(Gravity.CENTER)
-            progressBar.setBarColors(TerminalHud.BACKGROUND_COLOR, TerminalHud.PRIMARY_COLOR)
-            return progressBar
-        }
-
-        private fun createJukeboxQueuePanel(): LinearLayoutWidget {
-            return LinearLayoutWidget().apply {
-                orientation = Orientation.VERTICAL
-                bindState(JukeboxSessionController.jukeboxStateUi) {
-                    rebuildJukeboxQueue(this as LinearLayoutWidget)
-                }
-                rebuildJukeboxQueue(this)
-            }
-        }
-
-        private fun rebuildJukeboxQueue(container: LinearLayoutWidget) {
-            container.apply {
-                clearChildren()
-                val queue = JukeboxSessionController.state?.queue
-                if (queue == null || queue.entries().isEmpty()) {
-                    label(L10n["app.academy.music_player.jukebox.queue.empty"], "empty") {
-                        scale = 0.6f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(12f)
-                        gravity(Gravity.CENTER)
-                    }
-                    return
-                }
-                queue.entries().forEachIndexed { index, queueEntry ->
-                    val entry = queueEntry.entry()
-                    add("queue_$index", ButtonWidget()) {
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(16f)
-                        background = createTrackBackground(false)
-                        add("content", standaloneRow(2f) {
-                            sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
-                            image(AlbumArtworkCache.textureFor(entry), "icon") {
-                                sampler(FilterMode.LINEAR, false)
-                                size(12f, 12f)
-                                gravity(Gravity.CENTER)
-                            }
-                            column("info") {
-                                weight(1f)
-                                heightMode(SizeMode.MATCH_PARENT)
-                                gravity(Gravity.CENTER)
-                                add("name", MarqueeLabelWidget(entry.title()).apply {
-                                    baseFontSize = 6f
-                                }) {
-                                    widthMode(SizeMode.MATCH_PARENT)
-                                    gravity(Gravity.CENTER_LEFT)
-                                }
-                                add("artist", MarqueeLabelWidget(entry.artist()).apply {
-                                    baseFontSize = 4f
-                                }) {
-                                    widthMode(SizeMode.MATCH_PARENT)
-                                    gravity(Gravity.CENTER_LEFT)
-                                }
-                            }
-                            label(
-                                queueEntry.requesterName().ifBlank {
-                                    L10n["app.academy.music_player.jukebox.preset_badge"]
-                                },
-                                "requester"
-                            ) {
-                                scale = 0.55f
-                                width(30f)
-                                height(0f)
-                                gravity(Gravity.CENTER)
-                            }
-                        })
-                    }
-                }
-            }
-        }
-
         private fun createSettingsView(): ScrollPanelWidget {
             return ScrollPanelWidget(Orientation.VERTICAL).apply {
                 sizeMode(SizeMode.MATCH_PARENT)
@@ -1536,101 +404,6 @@ object MusicApp : App {
                     add("status", createStatusLine())
                 })
             }
-        }
-
-        private fun createSharedAccountPanel(): FrameLayoutWidget {
-            return standaloneFrame {
-                sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
-                add("content", FrameLayoutWidget().apply {
-                    sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
-                    bindState(SharedAccountClient.accountUi) { rebuildSharedAccountPanel(this as FrameLayoutWidget) }
-                    rebuildSharedAccountPanel(this)
-                })
-            }
-        }
-
-        private fun rebuildSharedAccountPanel(container: FrameLayoutWidget) {
-            container.clearChildren()
-            container.add("card", standaloneColumn(2f) {
-                sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
-                padding(4f, 4f)
-
-                label(L10n["app.academy.music_player.shared_account.title"], "title") {
-                    widthMode(SizeMode.MATCH_PARENT)
-                    height(10f)
-                }
-
-                for (provider in listOf("qq", "netease")) {
-                    row("${provider}_row") {
-                        spacing = 2f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(14f)
-                        label(
-                            if (provider == "qq") L10n["app.academy.music_player.provider.qq"]
-                            else L10n["app.academy.music_player.provider.netease"],
-                            "name"
-                        ) {
-                            scale = 0.62f
-                            weight(1f)
-                            width(0f)
-                            height(0f)
-                            gravity(Gravity.CENTER_LEFT)
-                        }
-                        add("upload", createStyledButton(
-                            L10n["app.academy.music_player.shared_account.upload"], 34f, 12f, 0.58f
-                        ) {
-                            if (SharedAccountClient.uploadLocalCredential(provider)) {
-                                sharedAccountHint = ""
-                            } else {
-                                sharedAccountHint = L10n["app.academy.music_player.shared_account.not_logged_in"]
-                            }
-                            viewRevisionState.value += 1
-                        }) {
-                            size(34f, 12f)
-                            gravity(Gravity.CENTER)
-                        }
-                        add("query", createStyledButton(
-                            L10n["app.academy.music_player.shared_account.query"], 34f, 12f, 0.58f
-                        ) {
-                            SharedAccountClient.queryStatus(provider)
-                        }) {
-                            size(34f, 12f)
-                            gravity(Gravity.CENTER)
-                        }
-                    }
-                }
-
-                val status = SharedAccountClient.lastStatus
-                val text = buildString {
-                    if (status != null) {
-                        append(
-                            if (status.sharedEnabled) L10n["app.academy.music_player.shared_account.enabled"]
-                            else L10n["app.academy.music_player.shared_account.disabled"]
-                        )
-                        append(" · ")
-                        append(
-                            if (status.hasCredential) L10n["app.academy.music_player.shared_account.configured"]
-                            else L10n["app.academy.music_player.shared_account.missing"]
-                        )
-                        if (status.messageKey.isNotBlank() && status.messageKey.startsWith("message.")) {
-                            append('\n')
-                            append(L10n[status.messageKey])
-                        }
-                    }
-                    if (sharedAccountHint.isNotBlank()) {
-                        if (isNotEmpty()) append('\n')
-                        append(sharedAccountHint)
-                    }
-                }
-                if (text.isNotBlank()) {
-                    label(text, "status") {
-                        scale = 0.58f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        heightMode(SizeMode.WRAP_CONTENT)
-                        gravity(Gravity.CENTER_LEFT)
-                    }
-                }
-            })
         }
 
         private fun createProviderPanel(): FrameLayoutWidget {
@@ -1663,7 +436,7 @@ object MusicApp : App {
                 OnlineMusicManager.Provider.QQ -> L10n["app.academy.music_player.provider.qq"]
                 OnlineMusicManager.Provider.NETEASE -> L10n["app.academy.music_player.provider.netease"]
             }
-            val text = LabelWidget(labelText)
+            val text = TextWidget(labelText)
             text.layoutParams = FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT)
                 .gravity(Gravity.CENTER)
@@ -1717,16 +490,19 @@ object MusicApp : App {
                 column("text") {
                     weight(1f)
                     heightMode(SizeMode.MATCH_PARENT)
-                    label(L10n["app.academy.music_player.account.not_logged_in"], "title") {
+                    text(L10n["app.academy.music_player.account.not_logged_in"], "title") {
                         widthMode(SizeMode.MATCH_PARENT)
                         height(10f)
                         gravity(Gravity.CENTER_LEFT)
+                        this.gravity = Gravity.CENTER_LEFT
                     }
-                    label(L10n["app.academy.music_player.account.not_logged_in_hint"], "hint") {
-                        scale = 0.6f
+                    text(L10n["app.academy.music_player.account.not_logged_in_hint"], "hint") {
+                        scaleX = 0.6f
+                        scaleY = 0.6f
                         widthMode(SizeMode.MATCH_PARENT)
                         height(9f)
                         gravity(Gravity.CENTER_LEFT)
+                        this.gravity = Gravity.CENTER_LEFT
                     }
                 }
                 add(
@@ -1754,12 +530,14 @@ object MusicApp : App {
             }
             return standaloneColumn(3f) {
                 sizeMode(SizeMode.MATCH_PARENT)
-                label(hint, "hint") {
-                    scale = 0.62f
+                text(hint, "hint") {
+                    scaleX = 0.62f
+                    scaleY = 0.62f
                     alpha = 0.85f
                     widthMode(SizeMode.MATCH_PARENT)
                     height(10f)
                     gravity(Gravity.CENTER)
+                    this.gravity = Gravity.CENTER
                 }
                 if (state == OnlineMusicManager.LoginState.WAITING) {
                     add("qr", LoginQrWidget()) {
@@ -1811,16 +589,19 @@ object MusicApp : App {
                 column("text") {
                     weight(1f)
                     heightMode(SizeMode.MATCH_PARENT)
-                    label(name, "name") {
+                    text(name, "name") {
                         widthMode(SizeMode.MATCH_PARENT)
                         height(10f)
                         gravity(Gravity.CENTER_LEFT)
+                        this.gravity = Gravity.CENTER_LEFT
                     }
-                    label(sub, "sub") {
-                        scale = 0.6f
+                    text(sub, "sub") {
+                        scaleX = 0.6f
+                        scaleY = 0.6f
                         widthMode(SizeMode.MATCH_PARENT)
                         height(9f)
                         gravity(Gravity.CENTER_LEFT)
+                        this.gravity = Gravity.CENTER_LEFT
                     }
                 }
                 add(
@@ -1843,15 +624,16 @@ object MusicApp : App {
             }
         }
 
-        private fun createStatusLine(): LabelWidget {
-            return LabelWidget("").apply {
+        private fun createStatusLine(): TextWidget {
+            return TextWidget("").apply {
                 bindState(OnlineMusicManager.revisionState) {
                     val s = OnlineMusicManager.status
                     if (text != s) text = s
                     visibility = if (s.isBlank()) Widget.Visibility.GONE else Widget.Visibility.VISIBLE
                 }
-                scale = 0.58f
-                wrapText = true
+                scaleX = 0.58f
+                scaleY = 0.58f
+                singleLine = false
                 layoutParams = WidgetContainer.LayoutParams()
                     .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
                     .padding(2f, 0f)
@@ -1879,7 +661,7 @@ object MusicApp : App {
                         widthMode(SizeMode.MATCH_PARENT)
                         height(14f)
                     }
-                    label(L10n["app.academy.music_player.search_results"], "search_title") {
+                    text(L10n["app.academy.music_player.search_results"], "search_title") {
                         widthMode(SizeMode.MATCH_PARENT)
                         height(10f)
                     }
@@ -1888,14 +670,16 @@ object MusicApp : App {
                             spacing = 2f
                             widthMode(SizeMode.MATCH_PARENT)
                             height(24f)
-                            add("name", MarqueeLabelWidget(
-                                (if (entry.vip) "[VIP] " else "") + entry.title + " - " + entry.artist
-                            ).apply {
-                                scale = 0.62f
-                            }) {
+                            text(
+                                (if (entry.vip) "[VIP] " else "") + entry.title + " - " + entry.artist,
+                                "name"
+                            ) {
+                                ellipsize = Ellipsize.MARQUEE
+                                marqueeFadeSize = 6f
                                 weight(1f)
                                 height(0f)
                                 gravity(Gravity.CENTER_LEFT)
+                                this.gravity = Gravity.CENTER_LEFT
                             }
                             add(
                                 "add", createActionButton(
@@ -1954,39 +738,38 @@ object MusicApp : App {
                                         weight(1f)
                                     }
 
-                                    add("name", MarqueeLabelWidget(mediaInfo.name).apply {
-                                        baseFontSize = 6f
-                                    }) {
+                                    text(mediaInfo.name, "name") {
                                         widthMode(SizeMode.MATCH_PARENT)
                                         gravity(Gravity.CENTER_LEFT)
+                                        this.gravity = Gravity.CENTER_LEFT
+
+                                        textSize = 6f
+                                        ellipsize = Ellipsize.MARQUEE
+                                        marqueeFadeSize = 6f
                                     }
-                                    add("author", MarqueeLabelWidget(mediaInfo.subtitle).apply {
-                                        baseFontSize = 4f
-                                    }) {
+                                    text(mediaInfo.subtitle, "author") {
                                         widthMode(SizeMode.MATCH_PARENT)
                                         gravity(Gravity.CENTER_LEFT)
+                                        this.gravity = Gravity.CENTER_LEFT
+
+                                        textSize = 4f
+                                        ellipsize = Ellipsize.MARQUEE
+                                        marqueeFadeSize = 6f
                                     }
 
                                     add("bottom", EmptyWidget()) {
                                         weight(1f)
                                     }
                                 }
-                                label(formatTime(mediaInfo.durationSeconds.toFloat()), "duration") {
-                                    scale = 0.6f
+                                text(formatTime(mediaInfo.durationSeconds.toFloat()), "duration") {
+                                    scaleX = 0.6f
+                                    scaleY = 0.6f
                                     width(16f)
                                     height(0f)
                                     gravity(Gravity.CENTER)
+                                    this.gravity = Gravity.CENTER
                                 }
                                 val sharedEntry = mediaInfo.toSharedTrackEntry()
-                                add(
-                                    "play", createActionButton(
-                                        R.textures.gui.app.music.play,
-                                        L10n["app.academy.music_player.action.play"],
-                                        10f,
-                                        Gravity.CENTER
-                                    ) {
-                                        runLocalTransport { MusicPlayerBackend.getInstance().play(index) }
-                                    })
                                 if (sharedEntry != null) {
                                     add(
                                         "room", createActionButton(
@@ -2045,10 +828,12 @@ object MusicApp : App {
                 size(width, height)
                 onClick { action() }
                 gravity(Gravity.CENTER)
-                label(text) {
-                    scale = textScale
+                text(text) {
+                    scaleX = textScale
+                    scaleY = textScale
                     sizeMode(SizeMode.MATCH_PARENT)
                     gravity(Gravity.CENTER)
+                    this.gravity = Gravity.CENTER
                 }
             }
         }
@@ -2070,10 +855,12 @@ object MusicApp : App {
             b.background = bg
             if (tooltip != null) b.tooltipText = tooltip
             b.onClick { action() }
-            b.add("text", LabelWidget(text)) {
-                scale = textScale
+            b.add("text", TextWidget(text)) {
+                scaleX = textScale
+                scaleY = textScale
                 sizeMode(SizeMode.MATCH_PARENT)
                 gravity(Gravity.CENTER)
+                this.gravity = Gravity.CENTER
             }
             return b
         }
@@ -2287,10 +1074,12 @@ object MusicApp : App {
                 width(0f)
                 heightMode(SizeMode.MATCH_PARENT)
                 val volume = { min(MusicPlayerBackend.getInstance().volume / VOLUME_SCALE, 1f) }
-                val textLabel = label("${(volume() * 100).roundToInt()}%", "text") {
-                    scale = 0.75f
+                val textLabel = text("${(volume() * 100).roundToInt()}%", "text") {
+                    scaleX = 0.75f
+                    scaleY = 0.75f
                     marginTop(8f)
                     gravity(Gravity.CENTER)
+                    this.gravity = Gravity.CENTER
                 }
 
                 fun setText(progress: Float) {
@@ -2373,6 +1162,1308 @@ object MusicApp : App {
         fun formatTime(totalSeconds: Float): String {
             if (totalSeconds.isNaN() || totalSeconds < 0) return "00:00"
             return "%02d:%02d".format((totalSeconds / 60).toInt(), (totalSeconds % 60).toInt())
+        }
+
+        private fun createRoomView(): FrameLayoutWidget {
+            return standaloneFrame {
+                matchParent()
+                add("room_content", FrameLayoutWidget().apply {
+                    sizeMode(SizeMode.MATCH_PARENT)
+                    // 只在结构变化（进出房间/房主变更）时重建整体布局；
+                    // 成员、正在播放与队列由各自的 bindState 增量刷新，
+                    // 避免每次同步（含心跳与播放操作）把列表滚动位置刷回顶部喵。
+                    bindState(RoomSessionController.roomStateUi) {
+                        val key = currentRoomStructureKey()
+                        if (key != roomStructureKey) {
+                            roomStructureKey = key
+                            replace("room", buildRoomContent())
+                        }
+                    }
+                    bindState(roomRevisionState) { replace("room", buildRoomContent()) }
+                    add("room", buildRoomContent())
+                })
+            }
+        }
+
+        private fun currentRoomStructureKey(): String {
+            val state = RoomSessionController.roomState ?: return "lobby"
+            // 房间名与房主名一并纳入: 改名或房主转移时结构键变化，顶部信息才会刷新喵.
+            return "inside:${state.roomCode}:${state.roomName}:${state.isHost}:${state.hostName}"
+        }
+
+        private fun buildRoomContent(): Widget {
+            return if (RoomSessionController.roomState == null) buildRoomLobby() else buildRoomInside()
+        }
+
+        private fun buildRoomLobby(): LinearLayoutWidget {
+            return standaloneColumn {
+                spacing = 2f
+                sizeMode(SizeMode.MATCH_PARENT)
+                padding(2f, 2f)
+
+                row("create_area") {
+                    spacing = 2f
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(14f)
+
+                    roomNameBox = textBox(64, "room_name") {
+                        weight(1f)
+                        width(0f)
+                        height(14f)
+                        gravity(Gravity.CENTER_VERTICAL)
+                        this.gravity = Gravity.CENTER_VERTICAL
+                        padding(2f, 0f)
+                        enter { createRoomFromInput(it) }
+                        clearOnEnter(false)
+                    }
+                    add("create", createStyledButton(L10n["app.academy.music_player.room.create"], 38f, 14f) {
+                        createRoomFromInput(roomNameBox?.text)
+                    }) {
+                        gravity(Gravity.CENTER)
+                    }
+                    add("refresh", createStyledButton(L10n["app.academy.music_player.room.refresh"], 28f, 14f) {
+                        RoomSessionController.requestRoomList()
+                    }) {
+                        gravity(Gravity.CENTER)
+                    }
+                }
+
+                add("pending_invites", createPendingPanel(onlyApply = false))
+
+                text(L10n["app.academy.music_player.room.list.title"], "list_title") {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(10f)
+                }
+
+                scrollPanel(Orientation.VERTICAL, "room_list", createRoomListPanel()) {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    weight(1f)
+                }
+            }
+        }
+
+        private fun createRoomListPanel(): LinearLayoutWidget {
+            return LinearLayoutWidget().apply {
+                orientation = Orientation.VERTICAL
+                bindState(RoomSessionController.roomStateUi) { rebuildRoomList(this as LinearLayoutWidget) }
+            }
+        }
+
+        /**
+         * 待处理申请/邀请卡片面板：被邀者在音乐室大厅确认邀请，房主在房内确认申请喵。
+         */
+        private fun createPendingPanel(onlyApply: Boolean): LinearLayoutWidget {
+            return LinearLayoutWidget().apply {
+                orientation = Orientation.VERTICAL
+                spacing = 2f
+                widthMode(SizeMode.MATCH_PARENT)
+                heightMode(SizeMode.WRAP_CONTENT)
+                bindState(RoomSessionController.roomStateUi) { rebuildPendingPanel(this as LinearLayoutWidget, onlyApply) }
+            }
+        }
+
+        private fun rebuildPendingPanel(container: LinearLayoutWidget, onlyApply: Boolean) {
+            container.apply {
+                clearChildren()
+                val notices = RoomSessionController.pendingNotices.filter { it.apply() == onlyApply }
+                notices.forEachIndexed { index, notice ->
+                    add("pending_$index", standaloneRow(2f) {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(12f)
+                        text(
+                            String.format(
+                                L10n[
+                                    if (notice.apply()) "app.academy.music_player.room.apply_card"
+                                    else "app.academy.music_player.room.invite_card"
+                                ],
+                                notice.otherPlayer(),
+                                notice.roomName()
+                            ),
+                            "text"
+                        ) {
+                            weight(1f)
+                            width(0f)
+                            scaleX = 0.58f
+                            scaleY = 0.58f
+                            height(0f)
+                            gravity(Gravity.CENTER_LEFT)
+                            this.gravity = Gravity.CENTER_LEFT
+                        }
+                        add("accept", createStyledButton(
+                            L10n["ui.academy.music_room.accept"], 30f, 11f, 0.58f
+                        ) {
+                            RoomSessionController.respondToken(notice.token(), true)
+                        }) {
+                            gravity(Gravity.CENTER)
+                        }
+                        add("reject", createStyledButton(
+                            L10n["ui.academy.music_room.reject"], 30f, 11f, 0.58f
+                        ) {
+                            RoomSessionController.respondToken(notice.token(), false)
+                        }) {
+                            gravity(Gravity.CENTER)
+                        }
+                    })
+                }
+            }
+        }
+
+        private fun rebuildRoomList(container: LinearLayoutWidget) {
+            container.apply {
+                clearChildren()
+                val rooms = RoomSessionController.roomList
+                if (rooms.isEmpty()) {
+                    text(L10n["app.academy.music_player.room.list.empty"], "empty") {
+                        scaleX = 0.62f
+                        scaleY = 0.62f
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(12f)
+                        gravity(Gravity.CENTER)
+                        this.gravity = Gravity.CENTER
+                    }
+                    return
+                }
+                rooms.forEachIndexed { index, room ->
+                    add("room_$index", ButtonWidget()) {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(16f)
+                        background = createTrackBackground(false)
+                        add("content", standaloneRow(2f) {
+                            sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
+                            text("[${room.code()}]", "code") {
+                                scaleX = 0.62f
+                                scaleY = 0.62f
+                                width(22f)
+                                height(0f)
+                                gravity(Gravity.CENTER)
+                                this.gravity = Gravity.CENTER
+                            }
+                            column("info") {
+                                weight(1f)
+                                heightMode(SizeMode.MATCH_PARENT)
+                                gravity(Gravity.CENTER)
+                                add("name", createMarqueeText(room.name()).apply {
+                                    textSize = 6f
+                                }) {
+                                    widthMode(SizeMode.MATCH_PARENT)
+                                    gravity(Gravity.CENTER_LEFT)
+                                    this.gravity = Gravity.CENTER_LEFT
+                                }
+                                text(
+                                    "${room.hostName()} · ${room.memberCount()}",
+                                    "sub"
+                                ) {
+                                    widthMode(SizeMode.MATCH_PARENT)
+                                    textSize = 4f
+                                    gravity(Gravity.CENTER_LEFT)
+                                    this.gravity = Gravity.CENTER_LEFT
+                                }
+                            }
+                            add("apply", createStyledButton(
+                                L10n["app.academy.music_player.room.apply"], 34f, 12f, 0.58f
+                            ) {
+                                RoomSessionController.applyRoom(room.code())
+                            }) {
+                                size(34f, 12f)
+                                gravity(Gravity.CENTER)
+                            }
+                        })
+                    }
+                }
+            }
+        }
+
+        private fun buildRoomInside(): LinearLayoutWidget {
+            val state = RoomSessionController.roomState ?: return buildRoomLobby()
+            return standaloneColumn {
+                spacing = 2f
+                sizeMode(SizeMode.MATCH_PARENT)
+                padding(2f, 2f)
+
+                row("header") {
+                    spacing = 2f
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(14f)
+
+                    add("name", createMarqueeText("${state.roomName} [${state.roomCode}]")) {
+                        weight(1f)
+                        width(0f)
+                        height(0f)
+                        gravity(Gravity.CENTER_LEFT)
+                        this.gravity = Gravity.CENTER_LEFT
+                    }
+                    text(
+                        "${L10n["app.academy.music_player.room.host_label"]}: ${state.hostName}",
+                        "host"
+                    ) {
+                        scaleX = 0.62f
+                        scaleY = 0.62f
+                        height(0f)
+                        gravity(Gravity.CENTER)
+                        this.gravity = Gravity.CENTER
+                    }
+                    add("leave", createStyledButton(L10n["app.academy.music_player.room.leave"], 42f, 14f) {
+                        RoomSessionController.leaveRoom()
+                    }) {
+                        gravity(Gravity.CENTER)
+                    }
+                }
+
+                if (state.isHost) {
+                    add("pending_applies", createPendingPanel(onlyApply = true))
+                }
+
+                row("body") {
+                    spacing = 2f
+                    widthMode(SizeMode.MATCH_PARENT)
+                    weight(1f)
+                    height(0f)
+
+                    column("members") {
+                        width(76f)
+                        heightMode(SizeMode.MATCH_PARENT)
+
+                        add("members_title", createRoomMembersTitle())
+                        scrollPanel(Orientation.VERTICAL, "member_list", createMemberPanel()) {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            weight(1f)
+                        }
+                    }
+
+                    column("right") {
+                        weight(1f)
+                        width(0f)
+                        heightMode(SizeMode.MATCH_PARENT)
+
+                        add("now_playing", createRoomNowPlaying())
+
+                        row("room_search_area") {
+                            spacing = 2f
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(14f)
+
+                            roomSearchBox = textBox(64, "room_query") {
+                                weight(1f)
+                                width(0f)
+                                height(14f)
+                                gravity(Gravity.CENTER_VERTICAL)
+                                this.gravity = Gravity.CENTER_VERTICAL
+                                padding(2f, 0f)
+                                enter { roomSearch(it) }
+                                clearOnEnter(false)
+                            }
+                            add("search", createStyledButton(
+                                L10n["app.academy.music_player.search"], 26f, 14f
+                            ) {
+                                roomSearch(roomSearchBox?.text)
+                            }) {
+                                gravity(Gravity.CENTER)
+                            }
+                            if (roomShowingSearch) {
+                                add("back", createActionButton(
+                                    R.textures.gui.icon.close,
+                                    L10n["app.academy.music_player.back_to_list"],
+                                    12f
+                                ) {
+                                    roomShowingSearch = false
+                                    roomRevisionState.value += 1
+                                }) {
+                                    gravity(Gravity.CENTER)
+                                }
+                            }
+                        }
+
+                        add("queue_title", createRoomQueueTitle())
+
+                        scrollPanel(Orientation.VERTICAL, "queue_area", createRoomQueuePanel()) {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            weight(1f)
+                        }
+                    }
+                }
+
+                if (state.isHost) {
+                    row("host_actions") {
+                        spacing = 2f
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(14f)
+
+                        inviteNameBox = textBox(64, "invite_name") {
+                            weight(1f)
+                            width(0f)
+                            height(14f)
+                            gravity(Gravity.CENTER_VERTICAL)
+                            this.gravity = Gravity.CENTER_VERTICAL
+                            padding(2f, 0f)
+                            enter { inviteFromInput(it) }
+                            clearOnEnter(false)
+                        }
+                        add("invite", createStyledButton(L10n["app.academy.music_player.room.invite"], 38f, 14f) {
+                            inviteFromInput(inviteNameBox?.text)
+                        }) {
+                            gravity(Gravity.CENTER)
+                        }
+                    }
+                }
+            }
+        }
+
+        /** 成员数标题：跟随房间同步增量刷新喵。 */
+        private fun createRoomMembersTitle(): TextWidget {
+            return TextWidget("").apply {
+                bindState(RoomSessionController.roomStateUi) {
+                    val count = RoomSessionController.roomState?.members?.size ?: 0
+                    text = "${L10n["app.academy.music_player.room.members"]} ($count)"
+                }
+                widthMode(SizeMode.MATCH_PARENT)
+                height(10f)
+            }
+        }
+
+        /** 队列/搜索结果标题：跟随房间同步与管理器修订增量刷新喵。 */
+        private fun createRoomQueueTitle(): TextWidget {
+            return TextWidget("").apply {
+                bindState(RoomSessionController.roomStateUi) { text = roomQueueTitle() }
+                bindState(OnlineMusicManager.revisionState) { text = roomQueueTitle() }
+                widthMode(SizeMode.MATCH_PARENT)
+                height(10f)
+            }
+        }
+
+        private fun roomQueueTitle(): String {
+            return if (roomShowingSearch) {
+                L10n["app.academy.music_player.search_results"]
+            } else {
+                val count = RoomSessionController.roomState?.queue?.entries()?.size ?: 0
+                "${L10n["app.academy.music_player.room.queue"]} ($count)"
+            }
+        }
+
+        private fun createMemberPanel(): LinearLayoutWidget {
+            return LinearLayoutWidget().apply {
+                orientation = Orientation.VERTICAL
+                bindState(RoomSessionController.roomStateUi) { rebuildMemberPanel(this as LinearLayoutWidget) }
+            }
+        }
+
+        private fun rebuildMemberPanel(container: LinearLayoutWidget) {
+            container.clearChildren()
+            val state = RoomSessionController.roomState ?: return
+            state.members.forEachIndexed { index, member ->
+                container.add("member_$index", standaloneRow(2f) {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(12f)
+                    text(
+                        if (member == state.hostName) "◆ $member" else member,
+                        "name"
+                    ) {
+                        scaleX = 0.62f
+                        scaleY = 0.62f
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(0f)
+                        gravity(Gravity.CENTER_LEFT)
+                        this.gravity = Gravity.CENTER_LEFT
+                    }
+                })
+            }
+        }
+
+        /**
+         * 正在播放区：整体占位固定，内容跟随房间同步增量重建，
+         * 避免聊天空闲时同步把控制区结构刷掉喵。
+         */
+        private fun createRoomNowPlaying(): FrameLayoutWidget {
+            return FrameLayoutWidget().apply {
+                widthMode(SizeMode.MATCH_PARENT)
+                heightMode(SizeMode.WRAP_CONTENT)
+                bindState(RoomSessionController.roomStateUi) {
+                    replace("now_playing", buildRoomNowPlaying())
+                }
+                add("now_playing", buildRoomNowPlaying())
+            }
+        }
+
+        private fun buildRoomNowPlaying(): LinearLayoutWidget {
+            val timeline = RoomSessionController.roomState?.timeline
+            return standaloneColumn {
+                spacing = 1f
+                widthMode(SizeMode.MATCH_PARENT)
+                heightMode(SizeMode.WRAP_CONTENT)
+
+                if (timeline == null) {
+                    text(L10n["app.academy.music_player.room.idle"], "placeholder") {
+                        scaleX = 0.62f
+                        scaleY = 0.62f
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(12f)
+                        gravity(Gravity.CENTER)
+                        this.gravity = Gravity.CENTER
+                    }
+                } else {
+                    val entry = timeline.entry()
+                    row("meta") {
+                        spacing = 4f
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(14f)
+                        image(AlbumArtworkCache.textureFor(entry), "icon") {
+                            sampler(FilterMode.LINEAR, false)
+                            size(12f, 12f)
+                            gravity(Gravity.CENTER)
+                        }
+                        column("info") {
+                            weight(1f)
+                            heightMode(SizeMode.MATCH_PARENT)
+                            gravity(Gravity.CENTER)
+                            add("title", createMarqueeText(entry.title()).apply {
+                                textSize = 6f
+                            }) {
+                                widthMode(SizeMode.MATCH_PARENT)
+                                gravity(Gravity.CENTER_LEFT)
+                                this.gravity = Gravity.CENTER_LEFT
+                            }
+                            add("artist", createMarqueeText(entry.artist()).apply {
+                                textSize = 4f
+                            }) {
+                                widthMode(SizeMode.MATCH_PARENT)
+                                gravity(Gravity.CENTER_LEFT)
+                                this.gravity = Gravity.CENTER_LEFT
+                            }
+                        }
+                    }
+
+                    row("progress_area") {
+                        spacing = 4f
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(12f)
+
+                        add("current_time", TextWidget("00:00").apply {
+                            setFrameUpdate {
+                                text = formatTime(RoomSessionController.expectedPositionSeconds())
+                                true
+                            }
+                        }) {
+                            weight(1f)
+                            width(0f)
+                            gravity(Gravity.CENTER)
+                            this.gravity = Gravity.CENTER
+                        }
+                        add("progress", createRoomProgressBar(entry.durationSeconds().toFloat())) {
+                            gravity(Gravity.CENTER)
+                        }
+                        add("duration", TextWidget(formatTime(entry.durationSeconds().toFloat()))) {
+                            weight(1f)
+                            width(0f)
+                            gravity(Gravity.CENTER)
+                            this.gravity = Gravity.CENTER
+                        }
+                    }
+                }
+
+                // 控制区始终可见并居中于进度条下方: 用两侧 weight 占位实现水平居中，
+                // 房间空闲时播放键用于开播队列中的下一首喵.
+                row("controls") {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(14f)
+
+                    add("controls_lead", EmptyWidget()) { weight(1f) }
+                    button("previous") {
+                        size(14f, 14f)
+                        onClick { RoomSessionController.previousTrack() }
+                        image(R.textures.gui.app.music.previous) {
+                            sampler(FilterMode.LINEAR, false)
+                        }
+                    }
+                    button("play_pause") {
+                        size(14f, 14f)
+                        onClick {
+                            when {
+                                RoomSessionController.roomState?.timeline == null ->
+                                    RoomSessionController.nextTrack()
+                                RoomSessionController.expectedPlaying() -> RoomSessionController.pausePlayback()
+                                else -> RoomSessionController.resumePlayback()
+                            }
+                        }
+                        image(if (RoomSessionController.roomState?.timeline != null
+                                && RoomSessionController.expectedPlaying()
+                            ) {
+                            R.textures.gui.app.music.pause
+                        } else {
+                            R.textures.gui.app.music.play
+                        }) {
+                            sampler(FilterMode.LINEAR, false)
+                        }
+                    }
+                    button("next") {
+                        size(14f, 14f)
+                        onClick { RoomSessionController.nextTrack() }
+                        image(R.textures.gui.app.music.next) {
+                            sampler(FilterMode.LINEAR, false)
+                        }
+                    }
+                    add("controls_tail", EmptyWidget()) { weight(1f) }
+                }
+            }
+        }
+
+        private fun createRoomProgressBar(durationSeconds: Float): SeekBarWidget {
+            val progressBar = object : SeekBarWidget() {
+                init {
+                    setFrameUpdate {
+                        if (!isDragging && durationSeconds > 0f) {
+                            val progress = RoomSessionController.expectedPositionSeconds() / durationSeconds
+                            setProgress(min + progress * (max - min))
+                        }
+                        true
+                    }
+                }
+            }
+            progressBar.size(96f, 6f)
+            progressBar.gravity(Gravity.CENTER)
+            progressBar.setBarColors(TerminalHud.BACKGROUND_COLOR, TerminalHud.PRIMARY_COLOR)
+            progressBar.seekListener(object : OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBarWidget, progress: Float, fromUser: Boolean) {}
+
+                override fun onStartTrackingTouch(seekBar: SeekBarWidget) {}
+
+                override fun onStopTrackingTouch(seekBar: SeekBarWidget) {
+                    if (durationSeconds > 0f) {
+                        RoomSessionController.seekTo(progressBar.progress / progressBar.max * durationSeconds)
+                    }
+                }
+            })
+            return progressBar
+        }
+
+        private fun createRoomQueuePanel(): LinearLayoutWidget {
+            return LinearLayoutWidget().apply {
+                orientation = Orientation.VERTICAL
+                bindState(RoomSessionController.roomStateUi) {
+                    rebuildRoomQueue(this as LinearLayoutWidget)
+                }
+                bindState(OnlineMusicManager.revisionState) {
+                    rebuildRoomQueue(this as LinearLayoutWidget)
+                }
+                rebuildRoomQueue(this)
+            }
+        }
+
+        private fun rebuildRoomQueue(container: LinearLayoutWidget) {
+            container.apply {
+                clearChildren()
+                if (roomShowingSearch) {
+                    OnlineMusicManager.searchResults.forEachIndexed { index, result ->
+                        row("result_$index") {
+                            spacing = 2f
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(16f)
+                            text(
+                                (if (result.vip) "[VIP] " else "") + result.title + " - " + result.artist,
+                                "name"
+                            ) {
+                                scaleX = 0.6f
+                                scaleY = 0.6f
+                                weight(1f)
+                                height(0f)
+                                gravity(Gravity.CENTER_LEFT)
+                                this.gravity = Gravity.CENTER_LEFT
+                            }
+                            add("play", createActionButton(
+                                R.textures.gui.app.music.play,
+                                L10n["app.academy.music_player.action.play"]
+                            ) {
+                                RoomSessionController.playTrack(result.toSharedTrackEntry())
+                            })
+                            add("queue", createActionButton(
+                                R.textures.gui.icon.add,
+                                L10n["app.academy.music_player.room.action.queue_add"]
+                            ) {
+                                RoomSessionController.queueAdd(result.toSharedTrackEntry())
+                            })
+                        }
+                    }
+                    return
+                }
+                val queue = RoomSessionController.roomState?.queue
+                if (queue == null || queue.entries().isEmpty()) {
+                    text(L10n["app.academy.music_player.room.queue.empty"], "empty") {
+                        scaleX = 0.6f
+                        scaleY = 0.6f
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(12f)
+                        gravity(Gravity.CENTER)
+                        this.gravity = Gravity.CENTER
+                    }
+                    return
+                }
+                queue.entries().forEachIndexed { index, queueEntry ->
+                    val entry = queueEntry.entry()
+                    add("queue_$index", ButtonWidget()) {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(16f)
+                        background = createTrackBackground(false)
+                        add("content", standaloneRow(2f) {
+                            sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
+                            image(AlbumArtworkCache.textureFor(entry), "icon") {
+                                sampler(FilterMode.LINEAR, false)
+                                size(12f, 12f)
+                                gravity(Gravity.CENTER)
+                            }
+                            column("info") {
+                                weight(1f)
+                                heightMode(SizeMode.MATCH_PARENT)
+                                gravity(Gravity.CENTER)
+                                add("name", createMarqueeText(entry.title()).apply {
+                                    textSize = 6f
+                                }) {
+                                    widthMode(SizeMode.MATCH_PARENT)
+                                    gravity(Gravity.CENTER_LEFT)
+                                    this.gravity = Gravity.CENTER_LEFT
+                                }
+                                add("artist", createMarqueeText(entry.artist()).apply {
+                                    textSize = 4f
+                                }) {
+                                    widthMode(SizeMode.MATCH_PARENT)
+                                    gravity(Gravity.CENTER_LEFT)
+                                    this.gravity = Gravity.CENTER_LEFT
+                                }
+                            }
+                            text(
+                                queueEntry.requesterName(),
+                                "requester"
+                            ) {
+                                scaleX = 0.55f
+                                scaleY = 0.55f
+                                width(26f)
+                                height(0f)
+                                gravity(Gravity.CENTER)
+                                this.gravity = Gravity.CENTER
+                            }
+                            add("play_now", createActionButton(
+                                R.textures.gui.app.music.play,
+                                L10n["app.academy.music_player.action.play"],
+                                10f,
+                                Gravity.CENTER
+                            ) {
+                                RoomSessionController.playTrack(entry)
+                            })
+                            add("remove", createActionButton(
+                                R.textures.gui.icon.close,
+                                L10n["app.academy.music_player.action.remove"],
+                                10f,
+                                Gravity.CENTER
+                            ) {
+                                RoomSessionController.queueRemove(index)
+                            })
+                        })
+                    }
+                }
+            }
+        }
+
+        private fun createRoomFromInput(name: String?) {
+            val trimmed = name?.trim().orEmpty()
+            if (trimmed.isEmpty()) return
+            RoomSessionController.createRoom(trimmed)
+        }
+
+        private fun inviteFromInput(name: String?) {
+            val trimmed = name?.trim().orEmpty()
+            if (trimmed.isEmpty()) return
+            RoomSessionController.invitePlayer(trimmed)
+        }
+
+        private fun roomSearch(query: String?) {
+            val trimmed = query?.trim().orEmpty()
+            if (trimmed.isEmpty()) return
+            roomShowingSearch = true
+            roomRevisionState.value += 1
+            OnlineMusicManager.search(trimmed)
+        }
+
+        private fun OnlineMusicManager.SearchEntry.toSharedTrackEntry(): SharedTrackEntry {
+            return SharedTrackEntry(
+                provider.storageName,
+                id,
+                title,
+                artist,
+                durationSeconds,
+                vip,
+                artworkUrl
+            )
+        }
+
+        private fun MusicInfo.toSharedTrackEntry(): SharedTrackEntry? {
+            if (externalId.isNotBlank() && provider != "local") {
+                return SharedTrackEntry(
+                    provider,
+                    externalId,
+                    name,
+                    subtitle,
+                    durationSeconds,
+                    vip,
+                    artworkUrl
+                )
+            }
+            // 资源包曲目：资源定位符即曲目ID，装有同一资源包的客户端都能解析；本机绝对路径不可共享喵.
+            val location = source.path as? Identifier ?: return null
+            return SharedTrackEntry(
+                "local",
+                location.toString(),
+                name,
+                subtitle,
+                durationSeconds,
+                false,
+                ""
+            )
+        }
+
+        /**
+         * 把曲目送进音乐室队列；未入房时暂存曲目并切换到音乐室页签，
+         * 入住（成为房主）后自动入队喵。
+         */
+        private fun sendToRoomOrOpenView(entry: SharedTrackEntry) {
+            val roomState = RoomSessionController.roomState
+            if (roomState == null) {
+                pendingRoomEntry = entry
+                RoomSessionController.requestRoomList()
+                setViewMode(ViewMode.ROOM)
+                return
+            }
+            RoomSessionController.queueAdd(entry)
+        }
+
+        private fun consumePendingRoomEntry() {
+            val entry = pendingRoomEntry ?: return
+            RoomSessionController.roomState ?: return
+            pendingRoomEntry = null
+            RoomSessionController.queueAdd(entry)
+        }
+
+        private fun createJukeboxView(): FrameLayoutWidget {
+            return standaloneFrame {
+                matchParent()
+                add("jukebox_content", FrameLayoutWidget().apply {
+                    sizeMode(SizeMode.MATCH_PARENT)
+                    bindState(JukeboxSessionController.jukeboxStateUi) { replace("jukebox", buildJukeboxContent()) }
+                    bindState(SharedAccountClient.accountUi) { replace("jukebox", buildJukeboxContent()) }
+                    bindState(viewRevisionState) { replace("jukebox", buildJukeboxContent()) }
+                    add("jukebox", buildJukeboxContent())
+                })
+            }
+        }
+
+        private fun buildJukeboxContent(): Widget {
+            val state = JukeboxSessionController.state
+            return if (state == null || !state.enabled) buildJukeboxDisabled() else buildJukeboxMain(state)
+        }
+
+        private fun buildJukeboxDisabled(): LinearLayoutWidget {
+            return standaloneColumn {
+                spacing = 2f
+                sizeMode(SizeMode.MATCH_PARENT)
+                padding(2f, 2f)
+                text(L10n["app.academy.music_player.jukebox.disabled"], "disabled_hint") {
+                    scaleX = 0.62f
+                    scaleY = 0.62f
+                    widthMode(SizeMode.MATCH_PARENT)
+                    heightMode(SizeMode.WRAP_CONTENT)
+                    gravity(Gravity.CENTER)
+                    this.gravity = Gravity.CENTER
+                }
+            }
+        }
+
+        private fun buildJukeboxMain(state: JukeboxSessionController.JukeboxState): LinearLayoutWidget {
+            return standaloneColumn {
+                spacing = 2f
+                sizeMode(SizeMode.MATCH_PARENT)
+                padding(2f, 2f)
+
+                row("header") {
+                    spacing = 2f
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(14f)
+
+                    val modeText = when (state.mode) {
+                        MusicJukeboxPackets.MODE_PRESET -> L10n["app.academy.music_player.jukebox.mode_preset"]
+                        MusicJukeboxPackets.MODE_JUKEBOX -> L10n["app.academy.music_player.jukebox.mode_jukebox"]
+                        else -> L10n["app.academy.music_player.jukebox.mode_idle"]
+                    }
+                    text(modeText, "mode") {
+                        scaleX = 0.62f
+                        scaleY = 0.62f
+                        weight(1f)
+                        width(0f)
+                        height(0f)
+                        gravity(Gravity.CENTER_LEFT)
+                        this.gravity = Gravity.CENTER_LEFT
+                    }
+                    add("subscribe", createStyledButton(
+                        if (JukeboxSessionController.subscribed) {
+                            L10n["app.academy.music_player.jukebox.mute"]
+                        } else {
+                            L10n["app.academy.music_player.jukebox.listen"]
+                        },
+                        44f, 14f
+                    ) {
+                        JukeboxSessionController.setSubscribed(!JukeboxSessionController.subscribed)
+                    }) {
+                        gravity(Gravity.CENTER)
+                    }
+                    add("playlist_toggle", createStyledButton(
+                        if (jukeboxShowingPlaylist) L10n["app.academy.music_player.jukebox.playlist_back"]
+                        else L10n["app.academy.music_player.jukebox.playlist"],
+                        36f, 14f
+                    ) {
+                        jukeboxShowingPlaylist = !jukeboxShowingPlaylist
+                        if (jukeboxShowingPlaylist) SharedAccountClient.requestPlaylist()
+                        viewRevisionState.value += 1
+                    }) {
+                        gravity(Gravity.CENTER)
+                    }
+                }
+
+                add("now_playing", buildJukeboxNowPlaying(state))
+
+                if (jukeboxShowingPlaylist) {
+                    text(
+                        "${L10n["app.academy.music_player.jukebox.playlist"]} (${SharedAccountClient.serverPlaylist?.tracks?.size ?: 0})",
+                        "playlist_title"
+                    ) {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(10f)
+                    }
+                    scrollPanel(Orientation.VERTICAL, "server_playlist", createServerPlaylistPanel()) {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        weight(1f)
+                    }
+                } else {
+                    text(
+                        "${L10n["app.academy.music_player.jukebox.queue"]} (${state.queue.entries().size})",
+                        "queue_title"
+                    ) {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(10f)
+                    }
+                    scrollPanel(Orientation.VERTICAL, "jukebox_queue", createJukeboxQueuePanel()) {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        weight(1f)
+                    }
+                }
+            }
+        }
+
+        private fun createServerPlaylistPanel(): LinearLayoutWidget {
+            return LinearLayoutWidget().apply {
+                orientation = Orientation.VERTICAL
+                bindState(SharedAccountClient.accountUi) { rebuildServerPlaylist(this as LinearLayoutWidget) }
+                rebuildServerPlaylist(this)
+            }
+        }
+
+        private fun rebuildServerPlaylist(container: LinearLayoutWidget) {
+            container.apply {
+                clearChildren()
+                val tracks = SharedAccountClient.serverPlaylist?.tracks
+                if (tracks == null || tracks.isEmpty()) {
+                    text(L10n["app.academy.music_player.jukebox.playlist.empty"], "empty") {
+                        scaleX = 0.6f
+                        scaleY = 0.6f
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(12f)
+                        gravity(Gravity.CENTER)
+                        this.gravity = Gravity.CENTER
+                    }
+                    return
+                }
+                tracks.forEachIndexed { index, entry ->
+                    add("preset_$index", ButtonWidget()) {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(16f)
+                        background = createTrackBackground(false)
+                        add("content", standaloneRow(2f) {
+                            sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
+                            image(AlbumArtworkCache.textureFor(entry), "icon") {
+                                sampler(FilterMode.LINEAR, false)
+                                size(12f, 12f)
+                                gravity(Gravity.CENTER)
+                            }
+                            column("info") {
+                                weight(1f)
+                                heightMode(SizeMode.MATCH_PARENT)
+                                gravity(Gravity.CENTER)
+                                add("name", createMarqueeText(entry.title()).apply {
+                                    textSize = 6f
+                                }) {
+                                    widthMode(SizeMode.MATCH_PARENT)
+                                    gravity(Gravity.CENTER_LEFT)
+                                    this.gravity = Gravity.CENTER_LEFT
+                                }
+                                add("artist", createMarqueeText(entry.artist()).apply {
+                                    textSize = 4f
+                                }) {
+                                    widthMode(SizeMode.MATCH_PARENT)
+                                    gravity(Gravity.CENTER_LEFT)
+                                    this.gravity = Gravity.CENTER_LEFT
+                                }
+                            }
+                            add("play", createActionButton(
+                                R.textures.gui.app.music.play,
+                                L10n["app.academy.music_player.action.play"]
+                            ) {
+                                previewTrack(entry)
+                            })
+                            add("favorite", createActionButton(
+                                R.textures.gui.icon.add,
+                                L10n["app.academy.music_player.jukebox.playlist.favorite"]
+                            ) {
+                                OnlineMusicManager.addSharedEntry(entry)
+                            })
+                        })
+                    }
+                }
+            }
+        }
+
+        /**
+         * 共享播放（音乐室正在放曲/全服点播未静音在播）进行时，本地传输控制不得抢占播放通道，
+         * 否则会造成进度不同步与重播；此处提示用户到对应页面操作喵。
+         * 房间空闲或无点播在播时，本地播放正常可用喵。
+         */
+        private fun runLocalTransport(action: () -> Unit) {
+            if (RoomSessionController.roomState?.timeline != null || JukeboxSessionController.isActivelyPlaying()) {
+                OnlineMusicManager.notifyStatus(L10n["app.academy.music_player.transport.shared_hint"])
+                return
+            }
+            action()
+        }
+
+        /**
+         * 试听：未静音且点播正在播放时，点播优先级更高，给出提示而不抢占；
+         * 其余情况临时切回本地播放（下一次点播同步会自动重新接管共享时间线）喵。
+         */
+        private fun previewTrack(entry: SharedTrackEntry) {
+            if (JukeboxSessionController.isActivelyPlaying()) {
+                OnlineMusicManager.notifyStatus(
+                    L10n["app.academy.music_player.jukebox.preview_blocked"]
+                )
+                return
+            }
+            val info = OnlineMusicManager.toMusicInfo(entry) ?: return
+            MusicPlayerBackend.getInstance().setPlaybackController(
+                org.academy.internal.client.app.music.common.PlaybackController.LOCAL
+            )
+            MusicPlayerBackend.getInstance().addOnlineTrack(info, true)
+        }
+
+        private fun buildJukeboxNowPlaying(state: JukeboxSessionController.JukeboxState): LinearLayoutWidget {
+            val timeline = state.timeline
+            return standaloneColumn {
+                spacing = 1f
+                widthMode(SizeMode.MATCH_PARENT)
+                heightMode(SizeMode.WRAP_CONTENT)
+
+                if (timeline == null) {
+                    text(L10n["app.academy.music_player.jukebox.idle"], "placeholder") {
+                        scaleX = 0.62f
+                        scaleY = 0.62f
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(12f)
+                        gravity(Gravity.CENTER)
+                        this.gravity = Gravity.CENTER
+                    }
+                    return@standaloneColumn
+                }
+
+                val entry = timeline.entry()
+                row("meta") {
+                    spacing = 4f
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(14f)
+                    image(AlbumArtworkCache.textureFor(entry), "icon") {
+                        sampler(FilterMode.LINEAR, false)
+                        size(12f, 12f)
+                        gravity(Gravity.CENTER)
+                    }
+                    column("info") {
+                        weight(1f)
+                        heightMode(SizeMode.MATCH_PARENT)
+                        gravity(Gravity.CENTER)
+                        add("title", createMarqueeText(entry.title()).apply {
+                            textSize = 6f
+                        }) {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            gravity(Gravity.CENTER_LEFT)
+                            this.gravity = Gravity.CENTER_LEFT
+                        }
+                        add("artist", createMarqueeText(entry.artist()).apply {
+                            textSize = 4f
+                        }) {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            gravity(Gravity.CENTER_LEFT)
+                            this.gravity = Gravity.CENTER_LEFT
+                        }
+                    }
+                }
+
+                row("progress_area") {
+                    spacing = 4f
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(12f)
+
+                    add("current_time", TextWidget("00:00").apply {
+                        setFrameUpdate {
+                            text = formatTime(JukeboxSessionController.expectedPositionSeconds())
+                            true
+                        }
+                    }) {
+                        weight(1f)
+                        width(0f)
+                        gravity(Gravity.CENTER)
+                        this.gravity = Gravity.CENTER
+                    }
+                    add("progress", createJukeboxProgressBar(entry.durationSeconds().toFloat())) {
+                        gravity(Gravity.CENTER)
+                    }
+                    add("duration", TextWidget(formatTime(entry.durationSeconds().toFloat()))) {
+                        weight(1f)
+                        width(0f)
+                        gravity(Gravity.CENTER)
+                        this.gravity = Gravity.CENTER
+                    }
+                }
+
+                row("vote_area") {
+                    spacing = 4f
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(14f)
+                    gravity(Gravity.CENTER)
+
+                    if (state.voteActive) {
+                        text(
+                            "${L10n["app.academy.music_player.jukebox.vote_progress"]}: ${state.voteCount}/${state.voteThreshold}",
+                            "vote_status"
+                        ) {
+                            scaleX = 0.6f
+                            scaleY = 0.6f
+                            height(0f)
+                            gravity(Gravity.CENTER)
+                            this.gravity = Gravity.CENTER
+                        }
+                    }
+                    add("vote", createStyledButton(
+                        L10n["app.academy.music_player.jukebox.vote_skip"], 60f, 14f
+                    ) {
+                        JukeboxSessionController.voteSkip()
+                    }) {
+                        gravity(Gravity.CENTER)
+                    }
+                }
+            }
+        }
+
+        private fun createJukeboxProgressBar(durationSeconds: Float): SeekBarWidget {
+            val progressBar = object : SeekBarWidget() {
+                // 全服点播进度仅展示，不接受本地拖动（进度由服务器权威控制）喵
+                override fun onMousePressed(event: org.academy.api.client.gui.event.MouseEvent) {}
+                override fun onMouseDragged(event: org.academy.api.client.gui.event.MouseEvent) {}
+                override fun onMouseReleased(event: org.academy.api.client.gui.event.MouseEvent) {}
+
+                init {
+                    setFrameUpdate {
+                        if (durationSeconds > 0f) {
+                            val progress = JukeboxSessionController.expectedPositionSeconds() / durationSeconds
+                            setProgress(min + progress * (max - min))
+                        }
+                        true
+                    }
+                }
+            }
+            progressBar.size(128f, 6f)
+            progressBar.gravity(Gravity.CENTER)
+            progressBar.setBarColors(TerminalHud.BACKGROUND_COLOR, TerminalHud.PRIMARY_COLOR)
+            return progressBar
+        }
+
+        private fun createJukeboxQueuePanel(): LinearLayoutWidget {
+            return LinearLayoutWidget().apply {
+                orientation = Orientation.VERTICAL
+                bindState(JukeboxSessionController.jukeboxStateUi) {
+                    rebuildJukeboxQueue(this as LinearLayoutWidget)
+                }
+                rebuildJukeboxQueue(this)
+            }
+        }
+
+        private fun rebuildJukeboxQueue(container: LinearLayoutWidget) {
+            container.apply {
+                clearChildren()
+                val queue = JukeboxSessionController.state?.queue
+                if (queue == null || queue.entries().isEmpty()) {
+                    text(L10n["app.academy.music_player.jukebox.queue.empty"], "empty") {
+                        scaleX = 0.6f
+                        scaleY = 0.6f
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(12f)
+                        gravity(Gravity.CENTER)
+                        this.gravity = Gravity.CENTER
+                    }
+                    return
+                }
+                queue.entries().forEachIndexed { index, queueEntry ->
+                    val entry = queueEntry.entry()
+                    add("queue_$index", ButtonWidget()) {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(16f)
+                        background = createTrackBackground(false)
+                        add("content", standaloneRow(2f) {
+                            sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
+                            image(AlbumArtworkCache.textureFor(entry), "icon") {
+                                sampler(FilterMode.LINEAR, false)
+                                size(12f, 12f)
+                                gravity(Gravity.CENTER)
+                            }
+                            column("info") {
+                                weight(1f)
+                                heightMode(SizeMode.MATCH_PARENT)
+                                gravity(Gravity.CENTER)
+                                add("name", createMarqueeText(entry.title()).apply {
+                                    textSize = 6f
+                                }) {
+                                    widthMode(SizeMode.MATCH_PARENT)
+                                    gravity(Gravity.CENTER_LEFT)
+                                    this.gravity = Gravity.CENTER_LEFT
+                                }
+                                add("artist", createMarqueeText(entry.artist()).apply {
+                                    textSize = 4f
+                                }) {
+                                    widthMode(SizeMode.MATCH_PARENT)
+                                    gravity(Gravity.CENTER_LEFT)
+                                    this.gravity = Gravity.CENTER_LEFT
+                                }
+                            }
+                            text(
+                                queueEntry.requesterName().ifBlank {
+                                    L10n["app.academy.music_player.jukebox.preset_badge"]
+                                },
+                                "requester"
+                            ) {
+                                scaleX = 0.55f
+                                scaleY = 0.55f
+                                width(30f)
+                                height(0f)
+                                gravity(Gravity.CENTER)
+                                this.gravity = Gravity.CENTER
+                            }
+                        })
+                    }
+                }
+            }
+        }
+
+        private fun createSharedAccountPanel(): FrameLayoutWidget {
+            return standaloneFrame {
+                sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                add("content", FrameLayoutWidget().apply {
+                    sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                    bindState(SharedAccountClient.accountUi) { rebuildSharedAccountPanel(this as FrameLayoutWidget) }
+                    rebuildSharedAccountPanel(this)
+                })
+            }
+        }
+
+        private fun rebuildSharedAccountPanel(container: FrameLayoutWidget) {
+            container.clearChildren()
+            container.add("card", standaloneColumn(2f) {
+                sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                padding(4f, 4f)
+
+                text(L10n["app.academy.music_player.shared_account.title"], "title") {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(10f)
+                }
+
+                for (provider in listOf("qq", "netease")) {
+                    row("${provider}_row") {
+                        spacing = 2f
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(14f)
+                        text(
+                            if (provider == "qq") L10n["app.academy.music_player.provider.qq"]
+                            else L10n["app.academy.music_player.provider.netease"],
+                            "name"
+                        ) {
+                            scaleX = 0.62f
+                            scaleY = 0.62f
+                            weight(1f)
+                            width(0f)
+                            height(0f)
+                            gravity(Gravity.CENTER_LEFT)
+                            this.gravity = Gravity.CENTER_LEFT
+                        }
+                        add("upload", createStyledButton(
+                            L10n["app.academy.music_player.shared_account.upload"], 34f, 12f, 0.58f
+                        ) {
+                            if (SharedAccountClient.uploadLocalCredential(provider)) {
+                                sharedAccountHint = ""
+                            } else {
+                                sharedAccountHint = L10n["app.academy.music_player.shared_account.not_logged_in"]
+                            }
+                            viewRevisionState.value += 1
+                        }) {
+                            size(34f, 12f)
+                            gravity(Gravity.CENTER)
+                        }
+                        add("query", createStyledButton(
+                            L10n["app.academy.music_player.shared_account.query"], 34f, 12f, 0.58f
+                        ) {
+                            SharedAccountClient.queryStatus(provider)
+                        }) {
+                            size(34f, 12f)
+                            gravity(Gravity.CENTER)
+                        }
+                    }
+                }
+
+                val status = SharedAccountClient.lastStatus
+                val text = buildString {
+                    if (status != null) {
+                        append(
+                            if (status.sharedEnabled) L10n["app.academy.music_player.shared_account.enabled"]
+                            else L10n["app.academy.music_player.shared_account.disabled"]
+                        )
+                        append(" · ")
+                        append(
+                            if (status.hasCredential) L10n["app.academy.music_player.shared_account.configured"]
+                            else L10n["app.academy.music_player.shared_account.missing"]
+                        )
+                        if (status.messageKey.isNotBlank() && status.messageKey.startsWith("message.")) {
+                            append('\n')
+                            append(L10n[status.messageKey])
+                        }
+                    }
+                    if (sharedAccountHint.isNotBlank()) {
+                        if (isNotEmpty()) append('\n')
+                        append(sharedAccountHint)
+                    }
+                }
+                if (text.isNotBlank()) {
+                    text(text, "status") {
+                        scaleX = 0.58f
+                        scaleY = 0.58f
+                        widthMode(SizeMode.MATCH_PARENT)
+                        heightMode(SizeMode.WRAP_CONTENT)
+                        gravity(Gravity.CENTER_LEFT)
+                        this.gravity = Gravity.CENTER_LEFT
+                    }
+                }
+            })
+        }
+
+        private fun createMarqueeText(text: String): TextWidget = TextWidget(text).apply {
+            ellipsize = Ellipsize.MARQUEE
+            marqueeFadeSize = 6f
+            gravity = Gravity.CENTER_LEFT
         }
     }
 }
