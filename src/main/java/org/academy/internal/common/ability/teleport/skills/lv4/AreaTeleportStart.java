@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.teleport.skills.lv4;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
@@ -41,7 +42,12 @@ import java.util.List;
 import java.util.Set;
 
 public final class AreaTeleportStart {
-    private static final int BLOCK_FLAGS = Block.UPDATE_CLIENTS;
+    /**
+     * Area Teleport writes a complete snapshot transactionally. Per-cell side effects would drop container
+     * contents and detach supported blocks while their neighbours are only partially written.
+     */
+    private static final int BLOCK_FLAGS = Block.UPDATE_CLIENTS
+            | Block.UPDATE_SKIP_ALL_SIDEEFFECTS;
 
     private AreaTeleportStart() {
     }
@@ -147,11 +153,11 @@ public final class AreaTeleportStart {
             return !event.isCanceled();
         }
 
-        private static boolean move(ServerLevel level, ServerPlayer player,
-                                    AreaTeleportState.Region source, AreaTeleportState.Region destination,
-                                    AreaTeleportState.Transform transform,
-                                    boolean swap,
-                                    boolean fallProtection) {
+        static boolean move(ServerLevel level, ServerPlayer player,
+                            AreaTeleportState.Region source, AreaTeleportState.Region destination,
+                            AreaTeleportState.Transform transform,
+                            boolean swap,
+                            boolean fallProtection) {
             var sourceCells = capture(level, source);
             var destinationCells = capture(level, destination);
             var sourceBlockTicks = captureScheduledTicks(level.getBlockTicks(), source);
@@ -184,6 +190,7 @@ public final class AreaTeleportStart {
                         swap, sourceBlockTicks, destinationBlockTicks);
                 replaceScheduledTicks(level.getFluidTicks(), source, destination, transform,
                         swap, sourceFluidTicks, destinationFluidTicks);
+                updateBoundaries(level, source, destination);
                 if (fallProtection) {
                     for (var frozen : sourceEntities) frozen.grantFallProtection(player);
                     for (var frozen : destinationEntities) frozen.grantFallProtection(player);
@@ -202,6 +209,7 @@ public final class AreaTeleportStart {
                         sourceBlockTicks, destinationBlockTicks);
                 restoreScheduledTicks(level.getFluidTicks(), source, destination,
                         sourceFluidTicks, destinationFluidTicks);
+                updateBoundaries(level, source, destination);
                 return false;
             } finally {
                 sourceEntities.forEach(FrozenEntity::restore);
@@ -488,6 +496,38 @@ public final class AreaTeleportStart {
                             }
                         }
                     }
+        }
+
+        private static void updateBoundaries(
+                ServerLevel level,
+                AreaTeleportState.Region... regions
+        ) {
+            var updated = new HashSet<BlockPos>();
+            var cursor = new BlockPos.MutableBlockPos();
+            for (var region : regions) {
+                for (var x = region.min().getX(); x <= region.max().getX(); x++) {
+                    for (var y = region.min().getY(); y <= region.max().getY(); y++) {
+                        for (var z = region.min().getZ(); z <= region.max().getZ(); z++) {
+                            if (x != region.min().getX() && x != region.max().getX()
+                                    && y != region.min().getY() && y != region.max().getY()
+                                    && z != region.min().getZ() && z != region.max().getZ()) continue;
+                            notifyBoundary(level, updated, cursor.set(x, y, z).immutable());
+                        }
+                    }
+                }
+            }
+        }
+
+        private static void notifyBoundary(ServerLevel level, Set<BlockPos> updated, BlockPos position) {
+            if (updated.add(position)) {
+                level.updateNeighborsAt(position, level.getBlockState(position).getBlock());
+            }
+            for (var direction : Direction.values()) {
+                var adjacent = position.relative(direction);
+                if (updated.add(adjacent) && level.isLoaded(adjacent)) {
+                    level.updateNeighborsAt(adjacent, level.getBlockState(adjacent).getBlock());
+                }
+            }
         }
 
         private static List<FrozenEntity> freezeEntities(ServerLevel level, AreaTeleportState.Region source,
