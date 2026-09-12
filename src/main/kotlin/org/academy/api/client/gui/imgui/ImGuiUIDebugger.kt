@@ -22,11 +22,35 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 object ImGuiUIDebugger {
+    @Volatile
+    var enabled: Boolean = false
+        private set
+
+    fun toggle(): Boolean {
+        enabled = !enabled
+        return enabled
+    }
+
+    fun setEnabled(value: Boolean) {
+        enabled = value
+    }
+
     fun render(renderTarget: RenderTarget, root: WidgetContainer) {
         ImGuiUtilApi.render(renderTarget) { renderContent(root) }
     }
 
-    /** ImGui 帧内的内容部分, 供 [org.academy.api.client.gui.screen.ScreenDispatcher] 与其他窗口共享同一帧. */
+    fun renderHud(renderTarget: RenderTarget, roots: List<Pair<String, WidgetContainer>>) {
+        ImGuiUtilApi.render(renderTarget) {
+            for ((name, root) in roots) {
+                renderContent(
+                    root,
+                    true,
+                    tr("screen.academy.ui_debug.inspector.hud_title", name)
+                )
+            }
+        }
+    }
+
     fun renderContent(root: WidgetContainer, lockNames: Boolean = false, title: String? = null) {
         if (ImGui.begin((title ?: tr("screen.academy.ui_debug.inspector.title")) + "##academy_ui_inspector")) {
             ImGui.setWindowSize(450f, 700f, ImGuiCond.FirstUseEver)
@@ -36,6 +60,10 @@ object ImGuiUIDebugger {
             ImGui.sameLine()
             if (ImGui.button(tr("screen.academy.ui_debug.inspector.open_editor"))) {
                 UiLayoutEditorScreen.open()
+            }
+            ImGui.sameLine()
+            if (ImGui.button(tr("screen.academy.ui_debug.inspector.close"))) {
+                enabled = false
             }
             ImGui.separator()
             renderWidgetNode(root, root.hoveredWidget, lockNames)
@@ -110,11 +138,6 @@ object ImGuiUIDebugger {
             if (ImGui.inputText(label("screen.academy.ui_debug.inspector.name", "name"), nameBuffer)) {
                 widget.name = nameBuffer.get()
             }
-        }
-
-        val coverAllPrev = ImBoolean(widget.coverAllPrev)
-        if (ImGui.checkbox(label("screen.academy.ui_debug.inspector.cover_previous", "cover_previous"), coverAllPrev)) {
-            widget.coverAllPrev = coverAllPrev.get()
         }
 
         val enabled = ImBoolean(widget.isEnabled)
@@ -305,13 +328,14 @@ object ImGuiUIDebugger {
             changed = true
         }
 
-        val uniformScale = floatArrayOf(widget.scale)
+        val uniformScale = floatArrayOf(widget.scaleX)
         if (ImGui.dragFloat(
                 label("screen.academy.ui_debug.inspector.uniform_scale", "uniform_scale"),
                 uniformScale, 0.01f, 0.01f, 10.0f
             )
         ) {
-            widget.scale = uniformScale[0]
+            widget.scaleX = uniformScale[0]
+            widget.scaleY = uniformScale[0]
             changed = true
         }
 
@@ -372,19 +396,20 @@ object ImGuiUIDebugger {
     }
 
     private fun renderWidgetSpecificProperties(widget: Widget) {
-        if (widget is LabelWidget) {
+        if (widget is TextWidget) {
             val textBuffer = ImString(widget.text, 256)
             if (ImGui.inputText(label("screen.academy.ui_debug.inspector.text", "text"), textBuffer)) {
                 widget.text = textBuffer.get()
             }
 
-            val scale = floatArrayOf(widget.scale)
+            val scale = floatArrayOf(widget.scaleX)
             if (ImGui.dragFloat(
                     label("screen.academy.ui_debug.inspector.font_scale", "font_scale"),
                     scale, 0.05f, 0.1f, 5.0f
                 )
             ) {
-                widget.scale = scale[0]
+                widget.scaleX = scale[0]
+                widget.scaleY = scale[0]
             }
         }
 

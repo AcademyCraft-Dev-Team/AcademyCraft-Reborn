@@ -10,7 +10,7 @@ import com.mojang.blaze3d.textures.GpuTextureView
 import org.academy.api.client.gui.command.FillRectDrawCommand
 import org.academy.api.client.gui.command.RoundedRectDrawCommand
 import org.academy.api.client.gui.layout.MeasureSpec
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.render.UiContext
 import org.academy.api.client.gui.widget.AbstractWidgetContainer
 import org.academy.api.client.gui.widget.FrameLayoutWidget
@@ -175,7 +175,7 @@ private class PreviewUiContext : UiContext() {
     var gridEnabled: Boolean = false
 
     override fun generateCommands(
-        context: RenderContext,
+        context: Canvas,
         rootWidget: WidgetContainer,
         mouseX: Double,
         mouseY: Double,
@@ -195,7 +195,7 @@ private class PreviewUiContext : UiContext() {
         context.pose().popPose()
     }
 
-    private fun drawArtboard(context: RenderContext, w: Float, h: Float) {
+    private fun drawArtboard(context: Canvas, w: Float, h: Float) {
         context.submit(
             RoundedRectDrawCommand(
                 w, h,
@@ -216,7 +216,7 @@ private class PreviewUiContext : UiContext() {
     private val chG: Float get() = ((artboardColor shr 8) and 0xFF) / 255f
     private val chB: Float get() = (artboardColor and 0xFF) / 255f
 
-    private fun drawGrid(context: RenderContext, w: Float, h: Float) {
+    private fun drawGrid(context: Canvas, w: Float, h: Float) {
         var step = niceStep(GRID_MIN_PX / transform.scale)
         while (w / step * (h / step) > MAX_DOTS) step *= 2f
         val dot = (DOT_PX / transform.scale).coerceAtLeast(step / 40f)
@@ -237,7 +237,7 @@ private class PreviewUiContext : UiContext() {
         }
     }
 
-    private fun fill(context: RenderContext, x: Float, y: Float, w: Float, h: Float, color: Int, alpha: Float) {
+    private fun fill(context: Canvas, x: Float, y: Float, w: Float, h: Float, color: Int, alpha: Float) {
         context.pose().pushPose()
         context.pose().translate(x, y)
         context.submit(

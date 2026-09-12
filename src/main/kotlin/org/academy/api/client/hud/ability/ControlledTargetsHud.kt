@@ -6,7 +6,6 @@ import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent
 import net.neoforged.neoforge.client.event.ClientTickEvent
 import net.neoforged.neoforge.common.NeoForge
-import org.academy.AcademyCraft
 import org.academy.api.client.ability.AbilitySystemClient
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
@@ -18,7 +17,6 @@ import org.academy.api.common.util.L10n
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState.Entry
 import org.academy.internal.client.gui.DataTerminalTheme
-import org.academy.internal.client.gui.SerializedUiLayout
 import org.academy.internal.client.hud.HudLayout
 import org.academy.internal.common.ability.AbilityCategories
 import java.util.*
@@ -27,6 +25,9 @@ import java.util.*
 class ControlledTargetsHud private constructor() {
     private val context = Context()
     private val uiContext = UiContext()
+
+    val root: WidgetContainer
+        get() = context.get()
 
     fun perform(mouseX: Double, mouseY: Double, deltaPartialTick: Float) {
         uiContext.perform(context.get(), mouseX, mouseY, deltaPartialTick)
@@ -51,63 +52,72 @@ class ControlledTargetsHud private constructor() {
         MentaloutRosterClientState.clearLocal()
     }
 
+    fun rebuildLayout() {
+        context.rebuildLayout()
+    }
+
     @SubscribeEvent
     fun onResizeDisplay(@Suppress("unused") event: ResizeDisplayEvent) {
-        context.get().requestLayout()
+        context.rebuildLayout()
     }
 
     private class Context : WidgetContext {
-        private val panel: FrameLayoutWidget
-        private val content: LinearLayoutWidget
+        private lateinit var panel: FrameLayoutWidget
+        private lateinit var content: LinearLayoutWidget
+        private var cachedSignature: String? = null
         private val root = FrameLayoutWidget().apply {
             setFrameUpdate {
-                applyHudLayout()
                 refresh()
                 true
             }
         }
-        private var cachedSignature: String? = null
 
         init {
-            val layout = SerializedUiLayout.load(
-                AcademyCraft.academy("ui/layout/mental_control_hud.json"),
-                listOf("mental_control", "content", "header_divider")
-            ) { fallbackLayout() }
-            panel = SerializedUiLayout.require(layout, "mental_control") as FrameLayoutWidget
-            content = SerializedUiLayout.require(layout, "content") as LinearLayoutWidget
-            root.addChild("serialized_layout", layout)
+            build()
             root.dispatchAttached()
-        }
-
-        private fun fallbackLayout(): FrameLayoutWidget {
-            val layout = FrameLayoutWidget()
-            layout.layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-            val fallbackPanel = FrameLayoutWidget()
-            fallbackPanel.visibility = Widget.Visibility.GONE
-            fallbackPanel.origin = 0f
-            fallbackPanel.layoutParams = FrameLayoutWidget.LayoutParams().size(PANEL_WIDTH, PANEL_HEIGHT)
-            fallbackPanel.addChild("background", FillWidget(TRANSPARENT).also {
-                it.layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-            })
-            val fallbackContent = LinearLayoutWidget()
-            fallbackContent.orientation = Orientation.VERTICAL
-            fallbackContent.spacing = 1f
-            fallbackContent.layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-                .padding(4f, 3f, 4f, 3f)
-            fallbackPanel.addChild("content", fallbackContent)
-            layout.addChild("mental_control", fallbackPanel)
-            return layout
         }
 
         override fun get(): WidgetContainer = root
 
-        private fun applyHudLayout() {
+        fun rebuildLayout() {
+            root.clearChildren()
+            build()
+            root.requestLayout()
+        }
+
+        private fun build() {
+            cachedSignature = null
             val region = HudLayout.Region.MENTAL_CONTROL
-            val rect = region.rect(Minecraft.getInstance())
-            panel.translationX = rect.x()
-            panel.translationY = rect.y()
-            panel.scale = region.scale()
+            val base = region.baseRect(Minecraft.getInstance())
+            val layout = FrameLayoutWidget()
+            layout.layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+            val mount = FrameLayoutWidget()
+            mount.visibility = Widget.Visibility.GONE
+            mount.origin = 0f
+            mount.layoutParams = FrameLayoutWidget.LayoutParams().apply {
+                size(region.nominalWidth, region.nominalHeight)
+                gravity(Gravity.TOP_LEFT)
+                marginLeft = base.x
+                marginTop = base.y
+            }
+            mount.translationX = region.translateX
+            mount.translationY = region.translateY
+            mount.scaleX = region.scaleXY
+            mount.scaleY = region.scaleXY
+            mount.addChild("background", FillWidget(TRANSPARENT).also {
+                it.layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+            })
+            val mountContent = LinearLayoutWidget()
+            mountContent.orientation = Orientation.VERTICAL
+            mountContent.spacing = 1f
+            mountContent.layoutParams = FrameLayoutWidget.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT)
+                .padding(4f, 3f, 4f, 3f)
+            mount.addChild("content", mountContent)
+            panel = mount
+            content = mountContent
+            layout.addChild("mental_control", mount)
+            root.addChild("layout", layout)
         }
 
         private fun refresh() {
@@ -133,7 +143,11 @@ class ControlledTargetsHud private constructor() {
             }
             if (signature == cachedSignature) return
             cachedSignature = signature
-            panel.visibility = if (visible) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
+            panel.visibility = if (!HudLayout.Region.MENTAL_CONTROL.hidden && visible) {
+                Widget.Visibility.VISIBLE
+            } else {
+                Widget.Visibility.GONE
+            }
             content.clearChildren()
             if (!visible) return
 
@@ -274,8 +288,6 @@ class ControlledTargetsHud private constructor() {
     }
 
     companion object {
-        const val PANEL_WIDTH = 142f
-        const val PANEL_HEIGHT = 146f
         private const val CONTENT_WIDTH = 134f
         private const val INNER_WIDTH = 128f
         private const val HEADER_HEIGHT = 10f
@@ -306,15 +318,14 @@ class ControlledTargetsHud private constructor() {
             NeoForge.EVENT_BUS.register(INSTANCE)
         }
 
-        private fun label(text: String, fontSize: Float, width: Float, height: Float, color: Int): LabelWidget {
-            return LabelWidget(text).also {
-                it.baseFontSize = fontSize
+        private fun label(text: String, fontSize: Float, width: Float, height: Float, color: Int): TextWidget {
+            return TextWidget(text).also {
+                it.textSize = fontSize
                 it.layoutParams = LinearLayoutWidget.LayoutParams()
                     .size(width, height)
                     .gravity(Gravity.CENTER_VERTICAL)
-                it.setRed(((color shr 16) and 0xFF) / 255f)
-                it.setGreen(((color shr 8) and 0xFF) / 255f)
-                it.setBlue((color and 0xFF) / 255f)
+                it.gravity = Gravity.CENTER_VERTICAL
+                it.rgb(((color shr 16) and 0xFF) / 255f, ((color shr 8) and 0xFF) / 255f, (color and 0xFF) / 255f)
             }
         }
 

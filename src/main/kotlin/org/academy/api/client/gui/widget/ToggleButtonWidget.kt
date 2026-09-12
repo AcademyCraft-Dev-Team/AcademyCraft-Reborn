@@ -6,7 +6,7 @@ import org.academy.api.client.gui.animation.ValueAnimator
 import org.academy.api.client.gui.command.FillRectDrawCommand
 import org.academy.api.client.gui.event.MouseEvent
 import org.academy.api.client.gui.layout.MeasureSpec
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.util.ClientUtil
 
 /**
@@ -38,7 +38,7 @@ open class ToggleButtonWidget : AbstractWidget() {
         isClickable = true
     }
 
-    override fun renderInternal(context: RenderContext) {
+    override fun renderInternal(context: Canvas) {
         val width = width
         val height = height
         if (width <= 0 || height <= 0) return

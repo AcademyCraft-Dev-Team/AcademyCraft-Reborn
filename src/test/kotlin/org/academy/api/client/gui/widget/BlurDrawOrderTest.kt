@@ -1,7 +1,7 @@
 package org.academy.api.client.gui.widget
 
 import org.academy.api.client.gui.layout.MeasureSpec
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -28,7 +28,7 @@ class BlurDrawOrderTest {
 
         root.measureAndLayout(200f, 200f)
 
-        val context = RenderContext()
+        val context = Canvas()
         root.render(context)
 
         assertTrue(context.blurRegions.size == 1, "expected one blur region")
@@ -62,7 +62,7 @@ class BlurDrawOrderTest {
 
         root.measureAndLayout(200f, 200f)
 
-        val context = RenderContext()
+        val context = Canvas()
         root.render(context)
 
         val indices = context.commands.map { it.commandIndex }
@@ -83,18 +83,18 @@ class BlurDrawOrderTest {
         root.measureAndLayout(200f, 200f)
 
         // 第一次渲染建立子缓存
-        val ctx1 = RenderContext()
+        val ctx1 = Canvas()
         root.render(ctx1)
         assertTrue(ctx1.blurRegions.size == 1)
 
         // 只让 main 变脏, cover 缓存被复用
         belowFill.invalidate()
-        val ctx2 = RenderContext()
+        val ctx2 = Canvas()
         root.render(ctx2)
         assertTrue(ctx2.blurRegions.size == 1, "blur region lost on child cache reuse")
 
         // 全树干净后再次渲染 (整帧缓存路径)
-        val ctx3 = RenderContext()
+        val ctx3 = Canvas()
         root.render(ctx3)
         assertTrue(ctx3.blurRegions.size == 1, "blur region lost on fully cached frame")
     }

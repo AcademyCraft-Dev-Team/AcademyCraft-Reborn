@@ -216,7 +216,6 @@ class WidgetInspectorPanel(private val getDoc: () -> UiEditorDocument) {
             PropSpec("enabled", PropType.BOOLEAN),
             PropSpec("clickable", PropType.BOOLEAN),
             PropSpec("selected", PropType.BOOLEAN),
-            PropSpec("cover_all_prev", PropType.BOOLEAN),
             PropSpec("translation_x", PropType.FLOAT, -4096f, 4096f),
             PropSpec("translation_y", PropType.FLOAT, -4096f, 4096f),
             PropSpec("scale_x", PropType.FLOAT, -8f, 8f),

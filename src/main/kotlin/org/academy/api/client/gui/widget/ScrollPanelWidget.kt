@@ -7,21 +7,16 @@ import org.academy.api.client.gui.event.MouseEvent
 import org.academy.api.client.gui.event.ScrollEvent
 import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.layout.Orientation
-import org.academy.api.client.gui.render.RenderContext
-import org.academy.api.client.gui.render.ScissorRect
-import org.academy.api.client.util.ClientUtil
-import kotlin.math.abs
+import org.academy.api.client.gui.render.Canvas
+import org.academy.api.client.util.Chase
 import kotlin.math.max
 
 open class ScrollPanelWidget(protected val orientation: Orientation? = Orientation.VERTICAL) :
     AbstractWidgetContainer() {
-    protected var scrollTarget: Float = 0f
+    protected var scrollTargetX: Float = 0f
+    protected var scrollTargetY: Float = 0f
     protected var scrollSpeed: Float = 24f
     private var pendingScrollToEnd = false
-
-    private companion object {
-        const val SNAP_EPSILON: Float = 0.5f
-    }
 
     var content: Widget? = null
         private set
@@ -130,6 +125,9 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
             }
 
             if (needsClamping) scrollTo(currentScrollX, currentScrollY)
+
+            scrollTargetX = Mth.clamp(scrollTargetX, 0f, maxScrollX)
+            scrollTargetY = Mth.clamp(scrollTargetY, 0f, maxScrollY)
         }
         notifyScrollChanged()
     }
@@ -154,21 +152,26 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
     }
 
     val maxScroll: Float
+        get() = if (orientation == Orientation.VERTICAL) maxScrollY else maxScrollX
+
+    private val maxScrollX: Float
         get() {
             val content = content ?: return 0f
-
             val lp = layoutParams
             val contentLp = content.layoutParams
+            val contentWidth = content.measuredWidth + contentLp.marginLeft + contentLp.marginRight
+            val viewWidth = width - lp.paddingLeft - lp.paddingRight
+            return max(0f, contentWidth - viewWidth)
+        }
 
-            if (orientation == Orientation.VERTICAL) {
-                val contentHeight = content.measuredHeight + contentLp.marginTop + contentLp.marginBottom
-                val viewHeight = height - lp.paddingTop - lp.paddingBottom
-                return max(0f, contentHeight - viewHeight)
-            } else {
-                val contentWidth = content.measuredWidth + contentLp.marginLeft + contentLp.marginRight
-                val viewWidth = width - lp.paddingLeft - lp.paddingRight
-                return max(0f, contentWidth - viewWidth)
-            }
+    private val maxScrollY: Float
+        get() {
+            val content = content ?: return 0f
+            val lp = layoutParams
+            val contentLp = content.layoutParams
+            val contentHeight = content.measuredHeight + contentLp.marginTop + contentLp.marginBottom
+            val viewHeight = height - lp.paddingTop - lp.paddingBottom
+            return max(0f, contentHeight - viewHeight)
         }
 
     fun scrollToEnd() {
@@ -181,61 +184,54 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
         }
     }
 
-    override fun render(context: RenderContext) {
+    override fun render(context: Canvas) {
         if (!isVisible()) return
 
         if (pendingScrollToEnd) {
             pendingScrollToEnd = false
-            scrollTarget = maxScroll
+            if (orientation == Orientation.HORIZONTAL) scrollTargetX = maxScrollX
+            else scrollTargetY = maxScrollY
         }
 
-        val currentScrollY = scrollY
-        val newScrollY = Mth.lerp(ClientUtil.animationFactor(Mth.PI / 1.5f), currentScrollY, scrollTarget)
-        if (abs(newScrollY - scrollTarget) < SNAP_EPSILON) {
-            scrollTo(scrollX, scrollTarget)
-        } else {
-            scrollTo(scrollX, newScrollY)
-        }
-
-        context.alpha().push(alpha)
-        val scissor = ScissorRect(
-            getAbsoluteX() + getAbsoluteTranslationX(), getAbsoluteY() + getAbsoluteTranslationY(),
-            width, height
+        scrollTo(
+            Chase.approach(scrollX, scrollTargetX),
+            Chase.approach(scrollY, scrollTargetY)
         )
-        context.enableScissor(scissor)
-        run {
-            context.pose().pushPose()
-            run {
-                context.pose().translate(-scrollX, -scrollY)
-                if (content != null && content!!.isVisible()) {
-                    renderChildren(context)
-                }
-            }
-            context.pose().popPose()
-        }
-        context.disableScissor()
-        context.alpha().pop()
+
+        super.render(context)
+    }
+
+    override fun renderChildren(context: Canvas) {
+        context.pose().pushPose()
+        context.pose().translate(-scrollX, -scrollY)
+        super.renderChildren(context)
+        context.pose().popPose()
     }
 
     override fun onMouseScrolled(event: ScrollEvent) {
         if (isMouseOver(event.x, event.y)) {
             event.consume()
-            scrollTarget -= (event.delta * scrollSpeed).toFloat()
-            val max = this.maxScroll
-            scrollTarget = Mth.clamp(scrollTarget, 0f, max)
+            scrollTargetY = Mth.clamp(scrollTargetY - (event.delta * scrollSpeed).toFloat(), 0f, maxScrollY)
             if (event.xDelta != 0.0) {
-                scrollTo(scrollX - (event.xDelta * scrollSpeed).toFloat(), scrollY)
+                scrollTargetX = Mth.clamp(scrollTargetX - (event.xDelta * scrollSpeed).toFloat(), 0f, maxScrollX)
             }
             invalidate()
         }
     }
 
     fun setScrollTarget(scrollTarget: Float): ScrollPanelWidget {
-        val max = this.maxScroll
-        val clamped = Mth.clamp(scrollTarget, 0f, max)
-        if (this.scrollTarget != clamped) {
-            this.scrollTarget = clamped
-            invalidate()
+        if (orientation == Orientation.HORIZONTAL) {
+            val clamped = Mth.clamp(scrollTarget, 0f, maxScrollX)
+            if (this.scrollTargetX != clamped) {
+                this.scrollTargetX = clamped
+                invalidate()
+            }
+        } else {
+            val clamped = Mth.clamp(scrollTarget, 0f, maxScrollY)
+            if (this.scrollTargetY != clamped) {
+                this.scrollTargetY = clamped
+                invalidate()
+            }
         }
         return this
     }

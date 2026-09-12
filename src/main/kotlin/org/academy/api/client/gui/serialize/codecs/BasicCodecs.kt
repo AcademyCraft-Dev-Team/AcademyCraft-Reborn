@@ -6,41 +6,41 @@ import org.academy.api.client.gui.serialize.PropType
 import org.academy.api.client.gui.serialize.WidgetCodec
 import org.academy.api.client.gui.widget.*
 
-class LabelCodec : WidgetCodec<LabelWidget> {
+class TextCodec : WidgetCodec<TextWidget> {
     override val typeName = "label"
-    override val widgetClass = LabelWidget::class.java
+    override val widgetClass = TextWidget::class.java
 
-    override fun create(props: JsonObject) = LabelWidget(props.get("text")?.asString ?: "")
+    override fun create(props: JsonObject) = TextWidget(props.get("text")?.asString ?: "")
 
-    override fun encodeProps(widget: LabelWidget) = JsonObject().apply {
+    override fun encodeProps(widget: TextWidget) = JsonObject().apply {
         addProperty("text", widget.text)
-        addProperty("base_font_size", widget.baseFontSize)
+        addProperty("text_size", widget.textSize)
     }
 
-    override fun decodeProps(widget: LabelWidget, props: JsonObject) {
+    override fun decodeProps(widget: TextWidget, props: JsonObject) {
         props.get("text")?.asString?.let { widget.text = it }
-        props.get("base_font_size")?.asFloat?.let { widget.baseFontSize = it }
+        props.get("text_size")?.asFloat?.let { widget.textSize = it }
     }
 
     override val propertySchema = listOf(
         PropSpec("text", PropType.TEXT),
-        PropSpec("base_font_size", PropType.FLOAT, 1f, 64f)
+        PropSpec("text_size", PropType.FLOAT, 1f, 64f)
     )
 }
 
-class TextBoxCodec : WidgetCodec<TextBoxWidget> {
+class TextInputCodec : WidgetCodec<TextInputWidget> {
     override val typeName = "text_box"
-    override val widgetClass = TextBoxWidget::class.java
+    override val widgetClass = TextInputWidget::class.java
 
-    override fun create(props: JsonObject) = TextBoxWidget(props.get("max_length")?.asInt ?: 64)
+    override fun create(props: JsonObject) = TextInputWidget(props.get("max_length")?.asInt ?: 64)
 
-    override fun encodeProps(widget: TextBoxWidget) = JsonObject().apply {
+    override fun encodeProps(widget: TextInputWidget) = JsonObject().apply {
         addProperty("max_length", widget.getTextMaxLength())
         addProperty("text", widget.text)
         addProperty("allow_line_break", widget.allowLineBreak)
     }
 
-    override fun decodeProps(widget: TextBoxWidget, props: JsonObject) {
+    override fun decodeProps(widget: TextInputWidget, props: JsonObject) {
         props.get("text")?.asString?.let { widget.text = it }
         props.get("allow_line_break")?.asBoolean?.let { widget.setAllowLineBreak(it) }
     }

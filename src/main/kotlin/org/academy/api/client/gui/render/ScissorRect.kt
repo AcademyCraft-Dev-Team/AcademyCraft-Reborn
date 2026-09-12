@@ -4,6 +4,7 @@ import net.minecraft.util.Mth
 import org.academy.api.common.util.MathUtil.Axis2D
 import org.academy.api.common.util.MathUtil.Direction2D
 import org.joml.Matrix3x2f
+import org.joml.Matrix4f
 import org.joml.Vector2f
 import java.util.*
 import kotlin.math.max
@@ -62,6 +63,15 @@ class ScissorRect(val position: Position2D, val width: Float, val height: Float)
         return if (i < k && j < l) ScissorRect(i, j, k - i, l - j) else null
     }
 
+    /** 包围盒并集, 用于合并批次的 scissor (对标 AOSP `Rect::unionWith`). */
+    fun union(pRectangle: ScissorRect): ScissorRect {
+        val i = min(this.left, pRectangle.left)
+        val j = min(this.top, pRectangle.top)
+        val k = max(this.right, pRectangle.right)
+        val l = max(this.bottom, pRectangle.bottom)
+        return ScissorRect(i, j, k - i, l - j)
+    }
+
     fun intersects(pRectangle: ScissorRect): Boolean {
         return this.left < pRectangle.right && this.right > pRectangle.left && this.top < pRectangle.bottom && this.bottom > pRectangle.top
     }
@@ -72,6 +82,10 @@ class ScissorRect(val position: Position2D, val width: Float, val height: Float)
 
     val top: Float
         get() = position.y
+
+    /** 空/退化裁剪: 没有任何可见区域. */
+    val isEmpty: Boolean
+        get() = width <= 0f || height <= 0f
 
     val bottom: Float
         get() = position.y + height
@@ -144,6 +158,19 @@ class ScissorRect(val position: Position2D, val width: Float, val height: Float)
 
         fun empty(): ScissorRect {
             return EMPTY
+        }
+
+        /**
+         * 把本地坐标矩形经 CTM 变换为 gui 空间轴对齐包围盒, 对标 Android 在 Canvas 当前矩阵下
+         * 调 `clipRect` 的语义. 旋转/斜切时退化为包围盒 (只会多裁不会少裁).
+         */
+        fun fromLocal(left: Float, top: Float, right: Float, bottom: Float, matrix: Matrix4f): ScissorRect {
+            val m = Matrix3x2f(
+                matrix.m00(), matrix.m01(),
+                matrix.m10(), matrix.m11(),
+                matrix.m30(), matrix.m31()
+            )
+            return ScissorRect(left, top, right - left, bottom - top).transformMaxBounds(m)
         }
 
         fun of(

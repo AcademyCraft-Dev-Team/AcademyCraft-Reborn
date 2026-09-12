@@ -7,7 +7,7 @@ import net.minecraft.world.item.ItemStack
 import org.academy.AcademyCraft
 import org.academy.api.client.gui.command.ItemStackDrawCommand
 import org.academy.api.client.gui.layout.MeasureSpec
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 
 open class ItemStackWidget(stack: ItemStack) : AbstractWidget() {
     var stack: ItemStack = stack.copy()
@@ -25,7 +25,7 @@ open class ItemStackWidget(stack: ItemStack) : AbstractWidget() {
         )
     }
 
-    override fun renderInternal(context: RenderContext) {
+    override fun renderInternal(context: Canvas) {
         background?.draw(context, this)
         if (stack.isEmpty) return
 

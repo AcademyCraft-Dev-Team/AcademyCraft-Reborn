@@ -4,7 +4,6 @@ import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.player.Inventory
-import net.neoforged.bus.api.SubscribeEvent
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator
 import org.academy.api.client.gui.layout.Gravity
@@ -15,8 +14,6 @@ import org.academy.api.client.gui.util.InfoAreaUtil.createAttributeRow
 import org.academy.api.client.gui.util.InfoAreaUtil.createInfoRow
 import org.academy.api.client.gui.util.WirelessPanelUtil.create
 import org.academy.api.client.gui.widget.*
-import org.academy.api.client.gui.widget.TextBoxWidget.FocusGainedEvent
-import org.academy.api.client.gui.widget.TextBoxWidget.FocusLostEvent
 import org.academy.api.client.resources.R
 import org.academy.api.client.util.AnimationUtil
 import org.academy.internal.common.world.inventory.WindGenMenu
@@ -117,24 +114,26 @@ class WindGenScreen(
         run {
             val p = WidgetContainer.LayoutParams()
                 .gravity(Gravity.CENTER_RIGHT)
-            val bufferValueLabel = LabelWidget("0 AF")
+            val bufferValueLabel = TextWidget("0 AF")
             bufferValueLabel.layoutParams = p
             bufferValueSetter = { bufferValueLabel.text = it }
             val bufferLayout = createInfoRow("BUFFER", "icon_buffer", -0xda3b01, bufferValueLabel)
             info.addChild("energy_layout", bufferLayout)
 
-            val infoLabel = LabelWidget("Information")
+            val infoLabel = TextWidget("Information")
             infoLabel.layoutParams = LinearLayoutWidget.LayoutParams()
                 .padding(6.5f, 0f, 0f, 0f)
 
-            infoLabel.scale = 0.75f
+            infoLabel.scaleX = 0.75f
+            infoLabel.scaleY = 0.75f
             info.addChild("label_info", infoLabel)
 
             val altitudeValue = blockEntity.altitude.toString() + ""
-            val altitudeValueLabel = LabelWidget(altitudeValue)
+            val altitudeValueLabel = TextWidget(altitudeValue)
             altitudeValueLabel.layoutParams = WidgetContainer.LayoutParams()
                 .gravity(Gravity.CENTER_RIGHT)
                 .size(12f, 12f)
+            altitudeValueLabel.gravity = Gravity.CENTER_RIGHT
 
             val altitudeLayout = createAttributeRow("Altitude", altitudeValueLabel)
             info.addChild("altitude_layout", altitudeLayout)
@@ -185,16 +184,6 @@ class WindGenScreen(
     override fun containerTick() {
         super.containerTick()
         updateInfo()
-    }
-
-    @SubscribeEvent
-    fun onFocusGainedEvent(event: FocusGainedEvent) {
-        isHandleContainer = false
-    }
-
-    @SubscribeEvent
-    fun onFocusLostEvent(event: FocusLostEvent) {
-        isHandleContainer = true
     }
 
     companion object {

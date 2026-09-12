@@ -3,7 +3,7 @@ package org.academy.api.client.gui.widget
 import org.academy.api.client.gui.command.RoundedRectData
 import org.academy.api.client.gui.command.RoundedRectDrawCommand
 import org.academy.api.client.gui.layout.MeasureSpec
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -27,7 +27,7 @@ class RoundedRectWidgetTest {
         root.addChild("widget", widget)
         root.measureAndLayout(200f, 200f)
 
-        val context = RenderContext()
+        val context = Canvas()
         widget.render(context)
 
         assertEquals(1, context.commands.size)
@@ -50,7 +50,7 @@ class RoundedRectWidgetTest {
         root.addChild("widget", widget)
         root.measureAndLayout(100f, 100f)
 
-        val context = RenderContext()
+        val context = Canvas()
         widget.render(context)
         val command = context.commands[0].command
         val payload = command.uniforms.first()
@@ -69,7 +69,7 @@ class RoundedRectWidgetTest {
         root.addChild("widget", widget)
         root.measureAndLayout(100f, 100f)
 
-        val context = RenderContext()
+        val context = Canvas()
         widget.render(context)
         assertTrue(context.commands.isEmpty())
     }

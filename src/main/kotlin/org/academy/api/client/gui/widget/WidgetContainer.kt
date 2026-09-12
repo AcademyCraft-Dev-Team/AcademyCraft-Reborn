@@ -9,6 +9,12 @@ interface WidgetContainer : Widget {
 
     val dirtyChildren: Set<Widget>
 
+    /**
+     * 是否把子控件裁剪到自身边界内, 对标 Android `ViewGroup.clipChildren`。
+     * 默认开启; 需要让子控件溢出绘制的容器可置为 `false`。仅影响绘制, 不影响命中测试。
+     */
+    var clipChildren: Boolean
+
     fun onChildInvalidated(child: Widget)
 
     fun addChild(name: String, child: Widget)

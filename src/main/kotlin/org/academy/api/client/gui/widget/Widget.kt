@@ -5,12 +5,11 @@ import org.academy.api.client.gui.animation.StateListAnimator
 import org.academy.api.client.gui.drawable.Drawable
 import org.academy.api.client.gui.event.InputEvent
 import org.academy.api.client.gui.layout.MeasureSpec
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 
 interface Widget {
     val x: Float
     val y: Float
-    var coverAllPrev: Boolean
     var width: Float
     var height: Float
     var translationX: Float
@@ -26,7 +25,6 @@ interface Widget {
     var alpha: Float
     var scaleX: Float
     var scaleY: Float
-    var scale: Float
     var rotation: Float
     var originX: Float
     var originY: Float
@@ -42,7 +40,7 @@ interface Widget {
     val isPressed: Boolean
     var parent: WidgetContainer?
 
-    fun render(context: RenderContext)
+    fun render(context: Canvas)
     fun dispatchEvent(event: InputEvent)
     fun measure(widthMeasureSpec: MeasureSpec, heightMeasureSpec: MeasureSpec)
     fun layout(left: Float, top: Float, right: Float, bottom: Float)

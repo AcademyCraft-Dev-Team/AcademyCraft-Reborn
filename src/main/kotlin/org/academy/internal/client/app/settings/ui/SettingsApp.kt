@@ -61,7 +61,7 @@ object SettingsApp : App {
         private var pendingMouseButton: Int = -1
         private var pendingModifiers: Int = 0
 
-        private val captureHint: LabelWidget = LabelWidget("").apply {
+        private val captureHint: TextWidget = TextWidget("").apply {
             setFrameUpdate {
                 updateHint()
                 true
@@ -87,7 +87,7 @@ object SettingsApp : App {
         private data class CaptureTarget(
             val section: BindingSection,
             val bindingName: String,
-            val keyLabel: LabelWidget
+            val keyLabel: TextWidget
         )
 
         private fun createRoot(): FrameLayoutWidget {
@@ -113,10 +113,11 @@ object SettingsApp : App {
                             }
                         }
 
-                        label(name(), "title") {
+                        text(name(), "title") {
                             weight(1f)
                             height(0f)
                             gravity(Gravity.CENTER)
+                            this.gravity = Gravity.CENTER
                         }
                     }
 
@@ -192,9 +193,10 @@ object SettingsApp : App {
                     sizeMode(SizeMode.MATCH_PARENT)
                 }
 
-                label(text, "text") {
+                text(text, "text") {
                     sizeMode(SizeMode.MATCH_PARENT)
                     gravity(Gravity.CENTER)
+                    this.gravity = Gravity.CENTER
                 }
 
                 val progressState = AtomicReference(0f)
@@ -267,10 +269,11 @@ object SettingsApp : App {
                 widthMode(SizeMode.MATCH_PARENT)
                 height(18f)
 
-                label(L10n["app.academy.settings.general.hud_layout"], "label") {
+                text(L10n["app.academy.settings.general.hud_layout"], "label") {
                     weight(1f)
                     height(0f)
                     gravity(Gravity.CENTER_LEFT)
+                    this.gravity = Gravity.CENTER_LEFT
                 }
                 button("open") {
                     size(72f, 14f)
@@ -279,10 +282,12 @@ object SettingsApp : App {
                         val minecraft = Minecraft.getInstance()
                         minecraft.gui.setScreen(HudLayoutEditorScreen(minecraft.gui.screen()))
                     }
-                    label(L10n["app.academy.settings.general.hud_layout.open"], "text") {
-                        scale = 0.65f
+                    text(L10n["app.academy.settings.general.hud_layout.open"], "text") {
+                        scaleX = 0.65f
+                        scaleY = 0.65f
                         sizeMode(SizeMode.MATCH_PARENT)
                         gravity(Gravity.CENTER)
+                        this.gravity = Gravity.CENTER
                     }
                 }
             }
@@ -298,10 +303,11 @@ object SettingsApp : App {
                 widthMode(SizeMode.MATCH_PARENT)
                 height(18f)
 
-                label(text, "label") {
+                text(text, "label") {
                     weight(1f)
                     height(0f)
                     gravity(Gravity.CENTER_LEFT)
+                    this.gravity = Gravity.CENTER_LEFT
                 }
                 var applyingAuthoritativeState = false
                 toggle(checked, "toggle") {
@@ -339,11 +345,12 @@ object SettingsApp : App {
                     fill(0, "key_spacer") {
                         size(44f, 0f)
                     }
-                    label(
+                    text(
                         L10n["app.academy.settings.keybind.toggle"],
                         "toggle_title"
                     ) {
-                        scale = 0.65f
+                        scaleX = 0.65f
+                        scaleY = 0.65f
                         size(22f, 10f)
                         gravity(Gravity.CENTER)
                     }
@@ -441,10 +448,11 @@ object SettingsApp : App {
                         size(16f, 16f)
                     }
 
-                    label(sectionInfo.title, "name") {
+                    text(sectionInfo.title, "name") {
                         weight(1f)
                         height(0f)
                         gravity(Gravity.CENTER_LEFT)
+                        this.gravity = Gravity.CENTER_LEFT
                     }
                 }
 
@@ -463,7 +471,7 @@ object SettingsApp : App {
             return standaloneRow(2f) {
                 widthMode(SizeMode.MATCH_PARENT)
 
-                label(
+                text(
                     L10n["key.academy.$bindingName"],
                     "name"
                 ) {
@@ -472,11 +480,13 @@ object SettingsApp : App {
                     gravity(Gravity.CENTER_LEFT)
                 }
 
-                val keyLabel = label(displayBinding(combo), "key") {
-                    scale = 0.7f
+                val keyLabel = text(displayBinding(combo), "key") {
+                    scaleX = 0.7f
+                    scaleY = 0.7f
                     width(44f)
                     height(10f)
                     gravity(Gravity.CENTER)
+                    this.gravity = Gravity.CENTER
                 }
 
                 toggle(section.config.isKeyBindingEnabled(bindingName), "toggle") {
@@ -496,11 +506,12 @@ object SettingsApp : App {
                     onClick {
                         startCapture(section, bindingName, keyLabel)
                     }
-                    label(
+                    text(
                         L10n["app.academy.settings.keybind.rebind"],
                         "text"
                     ) {
-                        scale = 0.7f
+                        scaleX = 0.7f
+                        scaleY = 0.7f
                         sizeMode(SizeMode.MATCH_PARENT)
                         gravity(Gravity.CENTER)
                     }
@@ -512,11 +523,12 @@ object SettingsApp : App {
                     onClick {
                         resetBinding(section, bindingName, keyLabel)
                     }
-                    label(
+                    text(
                         L10n["app.academy.settings.keybind.reset"],
                         "text"
                     ) {
-                        scale = 0.7f
+                        scaleX = 0.7f
+                        scaleY = 0.7f
                         sizeMode(SizeMode.MATCH_PARENT)
                         gravity(Gravity.CENTER)
                     }
@@ -534,15 +546,18 @@ object SettingsApp : App {
                     marginTop(12f)
                 }
 
-                label(AcademyCraft.MOD_NAME, "title") {
+                text(AcademyCraft.MOD_NAME, "title") {
                     height(12f)
                     gravity(Gravity.CENTER)
+                    this.gravity = Gravity.CENTER
                 }
 
-                label("Version " + getModVersion(), "version") {
-                    scale = 0.7f
+                text("Version " + getModVersion(), "version") {
+                    scaleX = 0.7f
+                    scaleY = 0.7f
                     height(10f)
                     gravity(Gravity.CENTER)
+                    this.gravity = Gravity.CENTER
                 }
             }
         }
@@ -640,7 +655,7 @@ object SettingsApp : App {
         private fun startCapture(
             section: BindingSection,
             bindingName: String,
-            keyLabel: LabelWidget
+            keyLabel: TextWidget
         ) {
             if (bindingName in section.hiddenBindings || bindingName == TerminalHud.KEY_NAME_TOGGLE) return
             resetCaptureState()
@@ -670,7 +685,7 @@ object SettingsApp : App {
         private fun resetBinding(
             section: BindingSection,
             bindingName: String,
-            keyLabel: LabelWidget
+            keyLabel: TextWidget
         ) {
             val defaultCombo = InputSystem.getDefaultKeyBinding(bindingName) ?: return
             section.config.setKeyBinding(bindingName, defaultCombo)

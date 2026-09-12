@@ -4,7 +4,7 @@ import net.minecraft.client.Minecraft
 import net.minecraft.resources.Identifier
 import net.minecraft.util.Mth
 import org.academy.api.client.gui.event.MouseEvent
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 
 open class ParallaxImageWidget(texture: Identifier) : ImageWidget(texture) {
     private var parallaxFactorX: Float = 0.5f
@@ -14,7 +14,7 @@ open class ParallaxImageWidget(texture: Identifier) : ImageWidget(texture) {
     private var imageToViewRatioHeight: Float = 0.9f
     var parallaxEnabled: Boolean = true
 
-    override fun render(context: RenderContext) {
+    override fun render(context: Canvas) {
         if (!parallaxEnabled) {
             val uOffset = (1.0f - imageToViewRatioWidth) / 2.0f
             val vOffset = (1.0f - imageToViewRatioHeight) / 2.0f

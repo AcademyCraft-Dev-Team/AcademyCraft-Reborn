@@ -79,7 +79,8 @@ object PropsApp : App {
                             .widthMode(SizeMode.MATCH_PARENT)
                     })
                     addChild("footer", dynamicLabel { footerText() }.apply {
-                        scale = 0.68f
+                        scaleX = 0.68f
+                        scaleY = 0.68f
                         layoutParams = LinearLayoutWidget.LayoutParams()
                             .widthMode(SizeMode.MATCH_PARENT)
                             .height(22f)
@@ -99,7 +100,8 @@ object PropsApp : App {
             addChild("warning", dynamicLabel {
                 if (PropsClientState.isLocked(AbilityFactor.NEURAL_ACTIVITY)) tr("app.academy.props.neural_lock_warning") else ""
             }.apply {
-                scale = 0.68f
+                scaleX = 0.68f
+                scaleY = 0.68f
                 layoutParams = LinearLayoutWidget.LayoutParams()
                     .widthMode(SizeMode.MATCH_PARENT)
                     .height(9f)
@@ -125,19 +127,23 @@ object PropsApp : App {
                     .weight(1f)
                     .widthMode(SizeMode.MATCH_PARENT)
                     .padding(18f, 16f)
-                addChild("heading", LabelWidget(tr("app.academy.props.console.heading")).apply {
-                    scale = 1.15f
+                addChild("heading", TextWidget(tr("app.academy.props.console.heading")).apply {
+                    scaleX = 1.15f
+                    scaleY = 1.15f
                     layoutParams = LinearLayoutWidget.LayoutParams()
                         .widthMode(SizeMode.MATCH_PARENT)
                         .height(18f)
                         .gravity(Gravity.CENTER_LEFT)
+                        gravity = Gravity.CENTER_LEFT
                 })
-                addChild("description", LabelWidget(tr("app.academy.props.console.description")).apply {
-                    scale = 0.78f
+                addChild("description", TextWidget(tr("app.academy.props.console.description")).apply {
+                    scaleX = 0.78f
+                    scaleY = 0.78f
                     layoutParams = LinearLayoutWidget.LayoutParams()
                         .widthMode(SizeMode.MATCH_PARENT)
                         .height(24f)
                         .gravity(Gravity.CENTER_LEFT)
+                        gravity = Gravity.CENTER_LEFT
                 })
                 addChild("prompt", LinearLayoutWidget().apply {
                     orientation = Orientation.HORIZONTAL
@@ -145,13 +151,14 @@ object PropsApp : App {
                     layoutParams = LinearLayoutWidget.LayoutParams()
                         .widthMode(SizeMode.MATCH_PARENT)
                         .height(18f)
-                    addChild("marker", LabelWidget(">").apply {
+                    addChild("marker", TextWidget(">").apply {
                         layoutParams = LinearLayoutWidget.LayoutParams()
                             .width(8f)
                             .heightMode(SizeMode.MATCH_PARENT)
                             .gravity(Gravity.CENTER)
+                            gravity = Gravity.CENTER
                     })
-                    addChild("input", TextBoxWidget(16).apply {
+                    addChild("input", TextInputWidget(16).apply {
                         background = org.academy.api.client.gui.drawable.ColorDrawable(0x28000000)
                         layoutParams = LinearLayoutWidget.LayoutParams()
                             .weight(1f)
@@ -169,7 +176,8 @@ object PropsApp : App {
                     })
                 })
                 addChild("status", dynamicLabel { consoleStatus }.apply {
-                    scale = 0.72f
+                    scaleX = 0.72f
+                    scaleY = 0.72f
                     layoutParams = LinearLayoutWidget.LayoutParams()
                         .widthMode(SizeMode.MATCH_PARENT)
                         .height(12f)
@@ -189,8 +197,10 @@ object PropsApp : App {
                     layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
                 })
             })
-            addChild("title", LabelWidget(tr("app.academy.props.title")).apply {
+            addChild("title", TextWidget(tr("app.academy.props.title")).apply {
                 layoutParams = LinearLayoutWidget.LayoutParams().weight(1f).height(0f).gravity(Gravity.CENTER)
+                gravity = Gravity.CENTER
+                gravity = Gravity.CENTER
             })
         }
 
@@ -207,12 +217,14 @@ object PropsApp : App {
                     addChild("value", dynamicLabel {
                         "%s  %s".format(Locale.ROOT, factorName(factor), formatDecimal(PropsClientState.get(factor)))
                     }.apply {
-                        scale = 0.78f
+                        scaleX = 0.78f
+                        scaleY = 0.78f
                         layoutParams = LinearLayoutWidget.LayoutParams().weight(1f).widthMode(SizeMode.MATCH_PARENT)
                             .gravity(Gravity.CENTER_LEFT)
                     })
                     addChild("effect", dynamicLabel { effectText(factor) }.apply {
-                        scale = 0.58f
+                        scaleX = 0.58f
+                        scaleY = 0.58f
                         layoutParams = LinearLayoutWidget.LayoutParams().weight(1f).widthMode(SizeMode.MATCH_PARENT)
                             .gravity(Gravity.CENTER_LEFT)
                     })
@@ -231,7 +243,7 @@ object PropsApp : App {
             })
         }
 
-        private fun dynamicLabel(value: () -> String): LabelWidget = LabelWidget(value()).apply {
+        private fun dynamicLabel(value: () -> String): TextWidget = TextWidget(value()).apply {
             setFrameUpdate {
                 val updated = value()
                 if (text != updated) text = updated

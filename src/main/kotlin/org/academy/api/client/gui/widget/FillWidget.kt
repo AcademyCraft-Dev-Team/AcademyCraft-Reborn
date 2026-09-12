@@ -2,7 +2,7 @@ package org.academy.api.client.gui.widget
 
 import org.academy.api.client.gui.drawable.ColorDrawable
 import org.academy.api.client.gui.drawable.Drawable
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 
 class FillWidget(color: Int) : AbstractWidget() {
     override var background: Drawable? = null
@@ -14,7 +14,7 @@ class FillWidget(color: Int) : AbstractWidget() {
         background = ColorDrawable(color)
     }
 
-    override fun render(context: RenderContext) {
+    override fun render(context: Canvas) {
         if (!isVisible()) return
         super.render(context)
     }

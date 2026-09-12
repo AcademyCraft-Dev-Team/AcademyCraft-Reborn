@@ -9,7 +9,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.BlockPos;
 import org.academy.api.common.entitycontrol.WorkSelection;
 import org.academy.api.common.entitycontrol.WorkSettings;
-import org.academy.api.client.gui.widget.TextBoxWidget;
+import org.academy.api.client.gui.widget.TextInputWidget;
 import org.academy.api.client.gui.widget.Widget;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.network.chat.Component;
@@ -21,11 +21,11 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.gui.layout.SizeMode;
-import org.academy.api.client.gui.render.RenderContext;
+import org.academy.api.client.gui.render.Canvas;
 import org.academy.api.client.gui.screen.UiScreen;
 import org.academy.api.client.gui.widget.AbstractWidget;
 import org.academy.api.client.gui.widget.FrameLayoutWidget;
-import org.academy.api.client.gui.widget.LabelWidget;
+import org.academy.api.client.gui.widget.TextWidget;
 import org.academy.api.client.render.Render;
 import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
 import org.academy.internal.common.ability.mentalout.skills.lv5.WideAreaInterference;
@@ -102,8 +102,8 @@ public final class WideAreaInterferenceScreen extends UiScreen {
     private int workQueryTicks;
     private Set<UUID> queriedSelection = Set.of();
     private Rect workPanel;
-    private TextBoxWidget workFilter;
-    private final TextBoxWidget[] workCoordinates = new TextBoxWidget[6];
+    private TextInputWidget workFilter;
+    private final TextInputWidget[] workCoordinates = new TextInputWidget[6];
     private boolean editingVertices;
     private boolean fillingCoordinates;
     private WorkSettings.MiningReach workReach = WorkSettings.MiningReach.ADAPTIVE;
@@ -127,22 +127,19 @@ public final class WideAreaInterferenceScreen extends UiScreen {
     protected void onInit() {
         updateLayout();
         overlaySurface = new OverlaySurface();
-        overlaySurface.setCoverAllPrev(true);
         overlaySurface.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT));
         getRoot().addChild("wide_area_interference_overlay", overlaySurface);
-        workFilter = new TextBoxWidget(4096);
-        workFilter.setBaseFontSize(bodyFontSize);
+        workFilter = new TextInputWidget(4096);
+        workFilter.setTextSize(bodyFontSize);
         workFilter.setBackground(null);
-        workFilter.setPlaceholder("minecraft:iron_ore, #minecraft:logs");
+        workFilter.setHint("minecraft:iron_ore, #minecraft:logs");
         workFilter.setClearWhenEnter(false);
-        workFilter.setCoverAllPrev(true);
         getRoot().addChild("work_filter", workFilter);
         for (int index = 0; index < workCoordinates.length; index++) {
-            var field = new TextBoxWidget(12);
+            var field = new TextInputWidget(12);
             field.setBackground(null);
             field.setClearWhenEnter(false);
-            field.setCoverAllPrev(true);
             field.setOnTextChanged(ignored -> { if (!fillingCoordinates) applyVertexFields(); });
             workCoordinates[index] = field;
             getRoot().addChild("work_coordinate_" + index, field);
@@ -193,7 +190,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                 display.y + display.height / 2.0, width, height);
 
         var selectAllWidth = Math.clamp(
-                Math.round(LabelWidget.Companion.getTextWidth(
+                Math.round(TextWidget.Companion.getTextWidth(
                         Component.translatable("screen.academy.wide_area_interference.select_all").getString(),
                         bodyFontSize)) + scaled(12.0f),
                 scaled(34.0f),
@@ -207,9 +204,9 @@ public final class WideAreaInterferenceScreen extends UiScreen {
         );
         var switchWidth = Math.clamp(
                 Math.round(Math.max(
-                        LabelWidget.Companion.getTextWidth(Component.translatable(
+                        TextWidget.Companion.getTextWidth(Component.translatable(
                                 "screen.academy.wide_area_interference.switch.target").getString(), bodyFontSize),
-                        LabelWidget.Companion.getTextWidth(Component.translatable(
+                        TextWidget.Companion.getTextWidth(Component.translatable(
                                 "screen.academy.wide_area_interference.switch.rts").getString(), bodyFontSize)
                 )) + scaled(14.0f),
                 scaled(72.0f),
@@ -248,7 +245,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
             workFilter.setVisibility(editable ? Widget.Visibility.VISIBLE : Widget.Visibility.GONE);
             workFilter.setEnabled(editable);
             if (!workOpen || workPage != 3) workFilter.setFocused(false);
-            workFilter.setBaseFontSize(bodyFontSize);
+            workFilter.setTextSize(bodyFontSize);
             workFilter.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                     .width(workPanel.width - inset * 2).height(scaled(22))
                     .marginLeft(workPanel.x + inset).marginTop(workPanel.y + scaled(80)));
@@ -260,7 +257,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
             field.setVisibility(editable ? Widget.Visibility.VISIBLE : Widget.Visibility.GONE);
             field.setEnabled(editable);
             if (!editable) field.setFocused(false);
-            field.setBaseFontSize(bodyFontSize);
+            field.setTextSize(bodyFontSize);
             var bounds = coordinateBounds(index);
             field.setLayoutParams(new FrameLayoutWidget.LayoutParams().width(bounds.width).height(bounds.height)
                     .marginLeft(bounds.x).marginTop(bounds.y));
@@ -271,7 +268,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
         var minimumWidth = scaled(52.0f);
         for (var key : OPERATION_LABELS) {
             minimumWidth = Math.max(minimumWidth,
-                    Math.round(LabelWidget.Companion.getTextWidth(
+                    Math.round(TextWidget.Companion.getTextWidth(
                             Component.translatable(key).getString(), bodyFontSize)) + scaled(18.0f));
         }
         var available = Math.max(1, controlsWidth - inset * 2);
@@ -396,7 +393,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
 
     private final class OverlaySurface extends AbstractWidget {
         @Override
-        protected void renderInternal(RenderContext context) {
+        protected void renderInternal(Canvas context) {
             super.renderInternal(context);
             updateLayout();
             var window = minecraft.getWindow();
@@ -597,7 +594,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                 : "screen.academy.wide_area_interference.mode.target";
         var mode = Component.translatable(modeKey).getString();
         var modeWidth = Math.min(
-                Math.round(LabelWidget.Companion.getTextWidth(mode, captionFontSize)),
+                Math.round(TextWidget.Companion.getTextWidth(mode, captionFontSize)),
                 Math.max(1, display.width / 3)
         );
         text(graphics,
@@ -790,7 +787,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
         if (minecraft.level == null || workCoordinates[0] == null) return false;
         try {
             var region = WorkSelection.parseVertices(minecraft.level.dimension().identifier(),
-                    Arrays.stream(workCoordinates).map(TextBoxWidget::getText).toArray(String[]::new),
+                    Arrays.stream(workCoordinates).map(TextInputWidget::getText).toArray(String[]::new),
                     minecraft.level.getMinY(), minecraft.level.getMaxY());
             if (!minecraft.level.getWorldBorder().isWithinBounds(region.minimum())
                     || !minecraft.level.getWorldBorder().isWithinBounds(region.maximum())) {
@@ -1583,13 +1580,13 @@ public final class WideAreaInterferenceScreen extends UiScreen {
 
     private float fitFontSize(String value, float preferred, float minimum, float maximumWidth) {
         if (value == null || value.isEmpty() || maximumWidth <= 0.0f) return preferred;
-        var width = LabelWidget.Companion.getTextWidth(value, preferred);
+        var width = TextWidget.Companion.getTextWidth(value, preferred);
         if (width <= maximumWidth) return preferred;
         return Math.max(minimum, preferred * maximumWidth / width);
     }
 
     private int centeredTextY(int height, float fontSize) {
-        var textHeight = LabelWidget.Companion.getTextHeight("Ag", fontSize);
+        var textHeight = TextWidget.Companion.getTextHeight("Ag", fontSize);
         return Math.max(0, Math.round((height - textHeight) / 2.0f));
     }
 

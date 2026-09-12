@@ -9,7 +9,7 @@ import org.academy.api.client.gui.drawable.ColorDrawable
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.screen.UiScreen
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.input.InputSystem
@@ -62,20 +62,22 @@ class OutputControlScreen(
         }
         panel.addChild("content", content)
 
-        content.addChild("title", LabelWidget(title.string).apply {
+        content.addChild("title", TextWidget(title.string).apply {
             layoutParams = LinearLayoutWidget.LayoutParams()
                 .widthMode(SizeMode.MATCH_PARENT)
                 .height(10f)
                 .gravity(Gravity.CENTER)
+                gravity = Gravity.CENTER
         })
         content.addChild(
-            "hint", LabelWidget(
+            "hint", TextWidget(
                 Component.translatable(
                     "screen.academy.output_control.hint",
                     InputSystem.formatKeyBinding(OutputControl.Client.KEY_NAME_OPEN)
                 ).string
             ).apply {
-                scale = 0.7f
+                scaleX = 0.7f
+                scaleY = 0.7f
                 alpha = 0.7f
                 layoutParams = LinearLayoutWidget.LayoutParams()
                     .widthMode(SizeMode.MATCH_PARENT)
@@ -194,18 +196,21 @@ class OutputControlScreen(
                 .height(10f)
         }
         column.addChild("heading", heading)
-        heading.addChild("label", LabelWidget(Component.translatable(labelKey).string).apply {
+        heading.addChild("label", TextWidget(Component.translatable(labelKey).string).apply {
             alpha = 0.82f
             layoutParams = LinearLayoutWidget.LayoutParams()
                 .weight(1f)
                 .height(10f)
                 .gravity(Gravity.CENTER_LEFT)
+                gravity = Gravity.CENTER_LEFT
         })
-        val valueLabel = LabelWidget(formatter(initialValue)).apply {
+        val valueLabel = TextWidget(formatter(initialValue)).apply {
             layoutParams = LinearLayoutWidget.LayoutParams()
                 .width(88f)
                 .height(10f)
                 .gravity(Gravity.CENTER_RIGHT)
+                gravity = Gravity.CENTER_RIGHT
+            gravity = Gravity.CENTER_RIGHT
         }
         heading.addChild("value", valueLabel)
 
@@ -268,7 +273,7 @@ class OutputControlScreen(
     private class OutputSeekBar : SeekBarWidget() {
         override fun canFocus(): Boolean = true
 
-        override fun renderInternal(context: RenderContext) {
+        override fun renderInternal(context: Canvas) {
             super.renderInternal(context)
             val range = max - min
             if (width <= 0f || height <= 0f || range <= 0f) return
