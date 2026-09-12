@@ -12,6 +12,7 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.academy.AcademyCraft;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.teleport.skills.lv5.ChunkLeap;
 import org.misaka.MisakaNetworkServer;
@@ -23,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -137,6 +140,10 @@ public final class ChunkSwapService {
         private int cursor;
         /** Players carried by this swap, to be resynced once their new terrain has settled. */
         private final List<ServerPlayer> carriedPlayers = new ArrayList<>();
+        /** Vanilla relight operations started for every exchanged chunk pair. */
+        private final List<CompletableFuture<Void>> lightingTasks = new ArrayList<>();
+        /** One completion barrier, created after every pair has been exchanged. */
+        private CompletableFuture<Void> lightingCompletion;
 
         private ActiveSwap(ServerPlayer player, UUID opId, ServerLevel levelA, ServerLevel levelB,
                            ChunkLeapSelection source, ChunkLeapSelection target, boolean movePlayers) {
@@ -170,8 +177,27 @@ public final class ChunkSwapService {
             var swap = iterator.next();
             performSwap(swap, deadline);
             if (swap.cursor < swap.source.count()) break;
+            if (swap.lightingCompletion == null) {
+                swap.lightingCompletion = CompletableFuture.allOf(
+                        swap.lightingTasks.toArray(CompletableFuture<?>[]::new));
+            }
+            if (!swap.lightingCompletion.isDone()) break;
+            try {
+                swap.lightingCompletion.join();
+            } catch (CompletionException exception) {
+                iterator.remove();
+                AcademyCraft.LOGGER.error("Chunk leap lighting rebuild failed for operation {}", swap.opId,
+                        exception.getCause());
+                if (!swap.player.isRemoved() && !swap.player.hasDisconnected()) {
+                    MisakaNetworkServer.send(swap.player, new ChunkLeapPackets.SwapResultPacket(
+                            swap.opId, false, "chunk_leap.reason.relight_failed", List.of()));
+                }
+                releasePreloadLeases(swap.player);
+                continue;
+            }
             iterator.remove();
             var player = swap.player;
+            resendSwappedChunks(swap);
             // Heightmap priming is far too expensive to do inline (it scans every column of the chunk), so it
             // is queued and drained a few chunks per tick. Lighting, which cannot be deferred, is already done.
             enqueueRefresh(swap);
@@ -215,9 +241,25 @@ public final class ChunkSwapService {
                         : ChunkRegionSwap.apply(swap.levelA, chunkA, chunkB,
                         swap.source.bounds(), swap.target.bounds(), swap.movePlayers);
                 swap.carriedPlayers.addAll(result.playersMoved());
+                swap.lightingTasks.add(result.lightingTask());
             }
             swap.cursor++;
             if (net.minecraft.util.Util.getMillis() >= deadline) return;
+        }
+    }
+
+    /** Sends exchanged chunks only after their vanilla light tasks have completed. */
+    private static void resendSwappedChunks(ActiveSwap swap) {
+        for (var i = 0; i < swap.source.count(); i++) {
+            resendIfLoaded(swap.levelA, swap.source.chunkAt(i));
+            resendIfLoaded(swap.levelB, swap.target.chunkAt(i));
+        }
+    }
+
+    private static void resendIfLoaded(ServerLevel level, ChunkPos pos) {
+        var chunk = level.getChunkSource().getChunkNow(pos.x(), pos.z());
+        if (chunk != null) {
+            ChunkRegionSwap.resend(level, chunk);
         }
     }
 
