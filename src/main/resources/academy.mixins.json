@@ -33,6 +33,7 @@
     "common.MixinFlowingFluidWaterSuppression",
     "common.MixinGhast",
     "common.MixinLivingEntity",
+    "common.MixinTrueHealthOffset",
     "common.MixinLevelAccessorTemporalScaling",
     "common.MixinLevelTicksTemporalScaling",
     "common.MixinLevelTemporalScaling",

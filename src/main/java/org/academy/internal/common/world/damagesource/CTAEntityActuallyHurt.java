@@ -11,6 +11,7 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
+import org.academy.internal.common.entitycontrol.TrueHealthOffsetRuntime;
 
 /**
  * Applies an exact subtraction to the resolved combat-health pool after normal damage hooks run.
@@ -24,7 +25,7 @@ public final class CTAEntityActuallyHurt {
     }
 
     public static float readTrueHealth(LivingEntity entity) {
-        return EntityControlApi.getAuthoritativeHealth(entity);
+        return TrueHealthOffsetRuntime.effectiveHealth(entity);
     }
 
     public static void writeTrueHealth(LivingEntity entity, float value) {
@@ -90,20 +91,16 @@ public final class CTAEntityActuallyHurt {
         var before = readTrueHealth(entity);
         if (!Float.isFinite(before) || before <= 0.0f) return false;
         var expected = Math.max(0.0f, before - amount);
+        if (!TrueHealthOffsetRuntime.permits(entity, expected)) return false;
         var wrote = EntityControlApi.forceSetTrueHealth(entity, expected);
+        var projected = expected < before && TrueHealthOffsetRuntime.install(entity, expected);
         var observed = readTrueHealth(entity);
-        if (!wrote || !Float.isFinite(observed) || Math.abs(observed - expected) > EPSILON) {
+        if ((!wrote && !projected) || !Float.isFinite(observed) || Math.abs(observed - expected) > EPSILON) {
             return false;
         }
 
-        // A zero-health cap would also reject the recovery write performed by vanilla totems and
-        // other death protection. Because EntityControlApi keys that cap by UUID, it could then
-        // survive long enough to affect the replacement ServerPlayer created during respawn. A
-        // lethal hit proceeds directly into the normal death-protection/death flow below and does
-        // not need the short anti-heal ceiling used by surviving targets.
-        if (shouldInstallPostDamageHealthCap(expected)) {
-            EntityControlApi.capTrueHealthTemporarily(entity, expected, 2L);
-        }
+        // Unsupported custom pools retain their legacy best-effort cap; never stack it with projection.
+        if (!TrueHealthOffsetRuntime.supports(entity) && expected > 0) EntityControlApi.capTrueHealthTemporarily(entity, expected, 2L);
         var inflicted = Math.max(0.0f, before - observed);
         var declarationDamage = DamageCompletionDeclaration.resolveHealthDamageForDeclaration(
                 before, expected, observed, amount
@@ -131,10 +128,6 @@ public final class CTAEntityActuallyHurt {
         );
         DamageCompletionDeclaration.publish(entity, source, amount, declarationDamage);
         return true;
-    }
-
-    static boolean shouldInstallPostDamageHealthCap(float expectedHealth) {
-        return Float.isFinite(expectedHealth) && expectedHealth > 0.0f;
     }
 
     private boolean shouldPreventFriendlyFire(DamageSource source) {

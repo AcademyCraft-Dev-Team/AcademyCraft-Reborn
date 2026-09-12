@@ -63,13 +63,16 @@ public final class EntityControlApi {
     public static float getAuthoritativeHealth(LivingEntity entity) {
         if (entity == null) return 0.0f;
         var previous = BYPASS_GUARDS.get();
+        var rawPrevious = TrueHealthOffsetRuntime.RAW_READ.get();
         BYPASS_GUARDS.set(true);
+        TrueHealthOffsetRuntime.RAW_READ.set(true);
         try {
             var value = HEALTH_ACCESSORS.get(entity.getClass()).read(entity, Float.NaN);
             if (!Float.isFinite(value)) value = safeVisibleHealth(entity);
             return value;
         } finally {
             BYPASS_GUARDS.set(previous);
+            TrueHealthOffsetRuntime.RAW_READ.set(rawPrevious);
         }
     }
 
