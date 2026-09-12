@@ -15,11 +15,19 @@ class WingFlightSupportTest {
     }
 
     @Test
+    void blackSweepUsesMeleeAttackFortyFlatDamageAndFivePercentTrueMaxHealth() {
+        assertEquals(176.0f, WingFlightSupport.calculateBlackSweepDamage(2.0f, 1000.0f, 3.0f));
+        assertEquals(50.0f, WingFlightSupport.calculateBlackSweepDamage(2.0f, 1000.0f, 0.0f));
+    }
+
+    @Test
     void keepsReferenceCombatConstants() {
         assertEquals(32.0, WingFlightSupport.ATTACK_RANGE);
         assertEquals(0.35, WingFlightSupport.FAN_COS_THRESHOLD);
         assertEquals(0.01f, WingFlightSupport.MAX_HEALTH_DAMAGE_RATIO);
         assertEquals(10.0f, WingFlightSupport.FIXED_DAMAGE);
+        assertEquals(0.05f, WingFlightSupport.BLACK_SWEEP_MAX_HEALTH_DAMAGE_RATIO);
+        assertEquals(40.0f, WingFlightSupport.BLACK_SWEEP_FIXED_DAMAGE);
     }
 
     @Test
