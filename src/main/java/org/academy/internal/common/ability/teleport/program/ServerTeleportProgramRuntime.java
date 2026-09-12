@@ -485,10 +485,12 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                 var inventory = snapshotInventory();
                 var spawned = new ArrayList<ItemEntity>();
                 var damageTargets = entitiesTouchingBlockCell(target);
-                var damagePlan = planDamageAtTarget(target, transmitted, damageTargets);
+                var rawDamage = blockItemRawDamage(target, transmitted);
+                var maximumCp = AbilitySystemServer.getSystem(player)
+                        .getPlayerMaxCP(player.getUUID());
+                var damagePlan = planDamageAtTarget(rawDamage, maximumCp, damageTargets);
                 try {
-                    charge(Skills.SELF_TELEPORT.get(), blockItemTeleportCost(
-                            maximumBaseDamage(damagePlan)));
+                    charge(Skills.SELF_TELEPORT.get(), blockItemTeleportCost(rawDamage, maximumCp));
                     var drops = removeBlockCollectingDrops(target, replacedState, transmitted);
                     for (var drop : drops) spawned.add(spawnItem(target, drop));
                     var source = player.getInventory().getItem(inventorySlot);
@@ -841,11 +843,7 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                 && entityBounds.maxZ >= cell.minZ && entityBounds.minZ <= cell.maxZ;
     }
 
-    private List<BlockItemDamage> planDamageAtTarget(
-            BlockPos target,
-            ItemStack transmitted,
-            List<Entity> damageTargets
-    ) {
+    private float blockItemRawDamage(BlockPos target, ItemStack transmitted) {
         var rawDamage = transmitted.getItem() instanceof BlockItem blockItem
                 ? blockItemHardnessDamage(blockItem.getBlock().defaultBlockState()
                 .getDestroySpeed(targets.level(), target))
@@ -854,9 +852,15 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                 player.getAttributeBaseValue(Attributes.ATTACK_DAMAGE),
                 EquipmentSlot.MAINHAND
         ));
+        return Float.isFinite(rawDamage) ? rawDamage : 0.0f;
+    }
+
+    private List<BlockItemDamage> planDamageAtTarget(
+            float rawDamage,
+            float maximumCp,
+            List<Entity> damageTargets
+    ) {
         if (!(rawDamage > 0.0f) || !Float.isFinite(rawDamage)) return List.of();
-        var availableCp = AbilitySystemServer.getSystem(player)
-                .getPlayerAvailableCP(player.getUUID());
         var result = new ArrayList<BlockItemDamage>();
         for (var entity : damageTargets) {
             if (!entity.isAlive()) continue;
@@ -865,8 +869,8 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
             if (entity instanceof LivingEntity living) {
                 var maxHealthDamage = Math.max(0.0f, living.getMaxHealth())
                         * BLOCK_ITEM_MAX_HEALTH_DAMAGE_RATIO;
-                var cpLimited = blockItemBaseDamage(rawDamage, availableCp);
-                var baseDamage = blockItemBaseDamage(rawDamage, availableCp, living.getMaxHealth());
+                var cpLimited = blockItemBaseDamage(rawDamage, maximumCp);
+                var baseDamage = blockItemBaseDamage(rawDamage, maximumCp, living.getMaxHealth());
                 // The hit is whichever term is greater; only the winning term may be declared as the
                 // percentage portion so the pipeline's plain damage multiplier skips it correctly.
                 var maxHealthPart = maxHealthDamage >= cpLimited ? maxHealthDamage : 0.0f;
@@ -875,7 +879,7 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
                 }
                 continue;
             }
-            var baseDamage = blockItemBaseDamage(rawDamage, availableCp);
+            var baseDamage = blockItemBaseDamage(rawDamage, maximumCp);
             if (baseDamage > 0.0f) result.add(new BlockItemDamage(entity, baseDamage, 0.0f));
         }
         return List.copyOf(result);
@@ -892,19 +896,19 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
         }
     }
 
-    static float blockItemBaseDamage(float rawDamage, float availableCp) {
-        if (!Float.isFinite(rawDamage) || !Float.isFinite(availableCp)) return 0.0f;
-        return Math.min(Math.max(0.0f, rawDamage), Math.max(0.0f, availableCp));
+    static float blockItemBaseDamage(float rawDamage, float maximumCp) {
+        if (!Float.isFinite(rawDamage) || !Float.isFinite(maximumCp)) return 0.0f;
+        return Math.min(Math.max(0.0f, rawDamage), Math.max(0.0f, maximumCp));
     }
 
     static float blockItemBaseDamage(
             float rawDamage,
-            float availableCp,
+            float maximumCp,
             float targetMaxHealth
     ) {
         if (!Float.isFinite(targetMaxHealth)) return 0.0f;
-        if (!Float.isFinite(rawDamage) || !Float.isFinite(availableCp)) return 0.0f;
-        var cpLimitedDamage = blockItemBaseDamage(rawDamage, availableCp);
+        if (!Float.isFinite(rawDamage) || !Float.isFinite(maximumCp)) return 0.0f;
+        var cpLimitedDamage = blockItemBaseDamage(rawDamage, maximumCp);
         var maxHealthDamage = Math.max(0.0f, targetMaxHealth)
                 * BLOCK_ITEM_MAX_HEALTH_DAMAGE_RATIO;
         return Math.max(cpLimitedDamage, maxHealthDamage);
@@ -916,16 +920,9 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
         return Float.isFinite(damage) ? damage : 0.0f;
     }
 
-    static float blockItemTeleportCost(float baseDamage) {
-        if (!Float.isFinite(baseDamage)) return BLOCK_ITEM_BASE_CP_COST;
+    static float blockItemTeleportCost(float rawDamage, float maximumCp) {
         return BLOCK_ITEM_BASE_CP_COST
-                + Math.max(0.0f, baseDamage) * BLOCK_ITEM_DAMAGE_CP_RATIO;
-    }
-
-    private static float maximumBaseDamage(List<BlockItemDamage> damagePlan) {
-        var result = 0.0f;
-        for (var damage : damagePlan) result = Math.max(result, damage.baseDamage());
-        return result;
+                + blockItemBaseDamage(rawDamage, maximumCp) * BLOCK_ITEM_DAMAGE_CP_RATIO;
     }
 
     private static BlockState orient(
