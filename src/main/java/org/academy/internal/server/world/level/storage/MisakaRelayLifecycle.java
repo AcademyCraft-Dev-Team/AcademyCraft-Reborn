@@ -24,7 +24,7 @@ final class MisakaRelayLifecycle {
 
     boolean launch(
             MinecraftServer server,
-            BlockPos networkId,
+            UUID networkId,
             ResourceKey<Level> dimension,
             boolean hyper,
             BlockPos laserPos,
@@ -61,19 +61,20 @@ final class MisakaRelayLifecycle {
         return true;
     }
 
-    boolean retargetNetwork(MinecraftServer server, UUID satelliteId, BlockPos newNetworkId) {
+    boolean retargetNetwork(MinecraftServer server, UUID satelliteId, UUID newNetworkId) {
         var entry = registry.get(satelliteId);
         if (entry == null || newNetworkId == null || !entry.phase.isActive()) {
             return false;
         }
-        if (entry.networkId.equals(newNetworkId.immutable())) {
+        if (entry.networkId.equals(newNetworkId)) {
             return true;
         }
         boolean wasPowered = entry.powered;
         if (wasPowered) {
             registry.power.bumpPoweredCount(entry, -1);
         }
-        entry.networkId = newNetworkId.immutable();
+        entry.networkId = newNetworkId;
+        entry.legacyNetworkIdPos = null;
         if (wasPowered) {
             registry.power.bumpPoweredCount(entry, +1);
         }

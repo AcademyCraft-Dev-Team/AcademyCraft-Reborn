@@ -15,8 +15,13 @@ import org.academy.api.common.misaka.MisakaNAT;
 import net.minecraft.world.entity.EntitySpawnReason;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.misaka.MisakaDayTime;
+import org.academy.internal.server.misaka.MisakaActiveNetworkData;
 import org.academy.internal.server.misaka.MisakaComputeContribution;
+import org.academy.internal.server.misaka.MisakaPlayers;
+import org.academy.internal.server.world.level.storage.MisakaNetworkGovernance;
 import org.academy.internal.server.world.level.storage.MisakaSisterRoster;
+
+import java.util.UUID;
 
 public final class MisakaCommands {
     private MisakaCommands() {
@@ -46,7 +51,14 @@ public final class MisakaCommands {
                 .then(Commands.literal("bind")
                         .then(Commands.argument("serial", IntegerArgumentType.integer(1))
                                 .then(Commands.argument("nodeName", StringArgumentType.string())
-                                        .executes(MisakaCommands::bind))));
+                                        .executes(MisakaCommands::bind))))
+                .then(Commands.literal("network")
+                        .then(Commands.argument("serial", IntegerArgumentType.integer(1))
+                                .executes(MisakaCommands::network)))
+                .then(Commands.literal("active")
+                        .executes(MisakaCommands::activeNetwork)
+                        .then(Commands.argument("player", StringArgumentType.string())
+                                .executes(MisakaCommands::activeNetworkNamed)));
     }
 
     private static int rescue(CommandContext<CommandSourceStack> ctx, int count) throws CommandSyntaxException {
@@ -95,6 +107,8 @@ public final class MisakaCommands {
             lines.append("  #").append(record.serial)
                     .append(" uuid=").append(record.misakaUuid)
                     .append(" awakened=").append(record.awakened)
+                    .append(" recon=").append(record.isReconstruction)
+                    .append(" incap=").append(record.incapacitated)
                     .append(" perception=").append(record.perception)
                     .append('\n');
         }
@@ -113,10 +127,12 @@ public final class MisakaCommands {
             return 0;
         }
         ctx.getSource().sendSuccess(() -> Component.literal(String.format(
-                "Misaka %d: uuid=%s awakened=%s perception=%d/%d favor=%s node=%s",
+                "Misaka %d: uuid=%s awakened=%s reconstruction=%s incap=%s perception=%d/%d favor=%s node=%s",
                 record.serial,
                 record.misakaUuid,
                 record.awakened,
+                record.isReconstruction,
+                record.incapacitated,
                 record.perception,
                 record.perceptionCap,
                 record.favorByPlayerName,
@@ -153,7 +169,14 @@ public final class MisakaCommands {
             ctx.getSource().sendFailure(Component.literal("No Misaka sister with serial " + serial));
             return 0;
         }
-        roster.modify(record.misakaUuid, sister -> sister.perception = value);
+        roster.modify(record.misakaUuid, sister -> {
+            sister.perception = value;
+            if (value >= 101) {
+                sister.isReconstruction = true;
+                sister.highTierUnlocked = true;
+                sister.perceptionCap = Math.max(sister.perceptionCap, 200);
+            }
+        });
         MisakaComputeContribution.refreshCpForRecord(ctx.getSource().getServer(), record);
         ctx.getSource().sendSuccess(
                 () -> Component.literal("Set perception on #" + serial + " to " + value),
@@ -186,6 +209,54 @@ public final class MisakaCommands {
                 () -> Component.literal("Bound #" + serial + " to node " + nodeName),
                 true
         );
+        return 1;
+    }
+
+    private static int network(CommandContext<CommandSourceStack> ctx) {
+        int serial = IntegerArgumentType.getInteger(ctx, "serial");
+        var server = ctx.getSource().getServer();
+        var record = MisakaSisterRoster.get(server).findBySerial(serial).orElse(null);
+        if (record == null) {
+            ctx.getSource().sendFailure(Component.literal("No Misaka sister with serial " + serial));
+            return 0;
+        }
+        UUID networkId = MisakaNAT.get().resolveNetworkId(server.overworld(), record.networkNodePos);
+        var gov = MisakaNetworkGovernance.get(server);
+        boolean integrated = networkId != null && gov.hasEverIntegrated(networkId);
+        var admins = gov.listAdminDisplayNames(networkId);
+        String adminText = admins.isEmpty() ? "(none)" : String.join(", ", admins);
+        UUID recon = networkId == null ? null : gov.reconstructionUuid(networkId).orElse(null);
+        ctx.getSource().sendSuccess(() -> Component.literal(String.format(
+                "Network for #%d: id=%s integrated=%s reconUuid=%s admins=[%s]",
+                serial,
+                networkId,
+                integrated,
+                recon,
+                adminText
+        )), false);
+        return 1;
+    }
+
+    private static int activeNetwork(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        var player = ctx.getSource().getPlayerOrException();
+        return reportActive(ctx, player.getUUID(), player.getGameProfile().name());
+    }
+
+    private static int activeNetworkNamed(CommandContext<CommandSourceStack> ctx) {
+        String name = StringArgumentType.getString(ctx, "player");
+        var player = MisakaPlayers.findOnlineByName(ctx.getSource().getServer(), name);
+        if (player != null) {
+            return reportActive(ctx, player.getUUID(), player.getGameProfile().name());
+        }
+        ctx.getSource().sendFailure(Component.literal("Online player not found: " + name));
+        return 0;
+    }
+
+    private static int reportActive(CommandContext<CommandSourceStack> ctx, UUID playerUuid, String displayName) {
+        var active = MisakaActiveNetworkData.get(ctx.getSource().getServer()).getActive(playerUuid);
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                "ActiveNetwork for " + displayName + ": " + active.map(UUID::toString).orElse("(none)")
+        ), false);
         return 1;
     }
 }

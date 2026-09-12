@@ -8,6 +8,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -27,21 +28,26 @@ import org.academy.api.common.misaka.MisakaNAT;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.common.world.item.HyperNetworkRelaySatelliteItem;
 import org.academy.internal.common.world.item.NetworkRelaySatelliteItem;
+import org.academy.internal.server.misaka.MisakaNetworkLasers;
 import org.academy.internal.server.world.level.storage.MisakaRelayRegistry;
-import org.academy.internal.server.world.level.storage.WirelessNetworkData;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Launch pad: insert satellite, pick same-network laser tower, launch.
  * Seated satellite is rendered client-side when the slot is non-empty.
  */
 public final class SatelliteLaunchPadBlockEntity extends BlockEntity
-        implements WirelessUser, Container, GeoBlockEntity {
+        implements WirelessUser, Container, GeoBlockEntity, OwnedDevice {
     private static final int MAX_ENERGY = 50_000;
+    /** Sync-only; do not persist. Mirrors the cabin laser pick list. */
+    private static final String SYNC_LASER_PICKS = "launch_laser_picks";
+    private static final int LASER_PICK_LIMIT = 64;
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 
     private NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
@@ -50,13 +56,22 @@ public final class SatelliteLaunchPadBlockEntity extends BlockEntity
     private int energyStored;
     private int selectableLaserCount;
     private String launchFeedbackKey = "";
+    private @Nullable UUID ownerUuid;
+    private List<MisakaNetworkLasers.LaserRow> laserPickList = List.of();
 
     public SatelliteLaunchPadBlockEntity(BlockPos pos, BlockState state) {
         super(BlockEntityTypes.SATELLITE_LAUNCH_PAD.get(), pos, state);
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, SatelliteLaunchPadBlockEntity be) {
-        // No per-tick server work; GUI refreshes on open / button press.
+        if (!(level instanceof ServerLevel serverLevel) || level.getGameTime() % 20L != 0L) {
+            return;
+        }
+        var before = be.laserPickList;
+        be.refreshLaserPickList(serverLevel);
+        if (!before.equals(be.laserPickList)) {
+            be.markAndSync();
+        }
     }
 
     public boolean hasSeatedSatellite() {
@@ -73,6 +88,10 @@ public final class SatelliteLaunchPadBlockEntity extends BlockEntity
 
     public int getSelectableLaserCount() {
         return selectableLaserCount;
+    }
+
+    public List<MisakaNetworkLasers.LaserRow> getLaserPickList() {
+        return laserPickList;
     }
 
     public String getLaunchFeedbackKey() {
@@ -95,60 +114,64 @@ public final class SatelliteLaunchPadBlockEntity extends BlockEntity
     }
 
     public List<BlockPos> listSelectableLasers(ServerLevel level) {
-        var result = new ArrayList<BlockPos>();
-        if (connectedNodePos == null) {
-            return result;
-        }
-        var networkId = MisakaNAT.get().resolveNetworkId(level, connectedNodePos);
-        var registry = MisakaRelayRegistry.get(level.getServer());
-        var data = WirelessNetworkData.get(level);
-        for (var entry : data.getAllNodes().entrySet()) {
-            var nodePos = entry.getKey();
-            if (!MisakaNAT.get().resolveNetworkId(level, nodePos).equals(networkId)) {
-                continue;
-            }
-            for (var userPos : entry.getValue().connectedUsers.keySet()) {
-                if (!(level.getBlockEntity(userPos) instanceof EnergyLaserTowerBlockEntity tower)) {
-                    continue;
-                }
-                var main = tower.mainEntity();
-                if (main == null || !main.isMain()) {
-                    continue;
-                }
-                var mainPos = main.getBlockPos().immutable();
-                if (registry.laserBoundSatellite(level.dimension(), mainPos) != null) {
-                    continue;
-                }
-                result.add(mainPos);
-            }
-        }
-        result.sort(BlockPos::compareTo);
-        return result;
+        return MisakaNetworkLasers.listUnbound(level, connectedNodePos);
     }
 
     public void cycleSelectedLaser(ServerLevel level) {
-        var selectable = listSelectableLasers(level);
-        selectableLaserCount = selectable.size();
-        if (selectable.isEmpty()) {
+        refreshLaserPickList(level);
+        if (laserPickList.isEmpty()) {
             selectedLaserPos = null;
             markAndSync();
             return;
         }
-        int idx = selectedLaserPos == null ? -1 : selectable.indexOf(selectedLaserPos);
-        selectedLaserPos = selectable.get((idx + 1) % selectable.size());
+        int idx = selectedLaserPos == null ? -1 : indexOfSelected();
+        selectedLaserPos = laserPickList.get((idx + 1) % laserPickList.size()).pos();
         markAndSync();
     }
 
-    public void cycleHyperDimension() {
+    public boolean trySelectLaser(ServerLevel level, int index) {
+        refreshLaserPickList(level);
+        if (index < 0 || index >= laserPickList.size()) {
+            return false;
+        }
+        selectedLaserPos = laserPickList.get(index).pos();
+        markAndSync();
+        return true;
+    }
+
+    private int indexOfSelected() {
+        if (selectedLaserPos == null) {
+            return -1;
+        }
+        for (int i = 0; i < laserPickList.size(); i++) {
+            if (selectedLaserPos.equals(laserPickList.get(i).pos())) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private void refreshLaserPickList(ServerLevel level) {
+        var selectable = listSelectableLasers(level);
+        selectableLaserCount = selectable.size();
+        laserPickList = MisakaNetworkLasers.listUnboundRows(level, connectedNodePos, LASER_PICK_LIMIT);
+    }
+
+    public void cycleHyperDimension(ServerLevel serverLevel) {
         ItemStack stack = items.get(0);
-        if (!NetworkRelaySatelliteItem.isHyper(stack)) {
+        if (!NetworkRelaySatelliteItem.isHyper(stack) || serverLevel == null) {
             return;
         }
         var updated = stack.copy();
         var current = HyperNetworkRelaySatelliteItem.targetDimension(updated);
-        var next = net.minecraft.world.level.Level.NETHER.equals(current)
-                ? net.minecraft.world.level.Level.END
-                : net.minecraft.world.level.Level.NETHER;
+        var keys = new ArrayList<>(serverLevel.getServer().levelKeys());
+        keys.removeIf(net.minecraft.world.level.Level.OVERWORLD::equals);
+        keys.sort(Comparator.comparing(key -> key.identifier().toString()));
+        if (keys.isEmpty()) {
+            return;
+        }
+        int idx = keys.indexOf(current);
+        var next = keys.get((idx + 1 + keys.size()) % keys.size());
         HyperNetworkRelaySatelliteItem.setTargetDimension(updated, next);
         setItem(0, updated);
     }
@@ -186,8 +209,7 @@ public final class SatelliteLaunchPadBlockEntity extends BlockEntity
             markAndSync();
             return false;
         }
-        var laserBe = level.getBlockEntity(selectedLaserPos);
-        if (!(laserBe instanceof EnergyLaserTowerBlockEntity tower) || !tower.canPowerSatellite()) {
+        if (!MisakaNetworkLasers.canPower(level, selectedLaserPos)) {
             setLaunchFeedback("gui.academy.satellite_launch_pad.laser_unready");
             markAndSync();
             return false;
@@ -215,7 +237,7 @@ public final class SatelliteLaunchPadBlockEntity extends BlockEntity
     }
 
     public void syncLaunchSnapshot(ServerLevel level) {
-        selectableLaserCount = listSelectableLasers(level).size();
+        refreshLaserPickList(level);
         markAndSync();
     }
 
@@ -301,6 +323,7 @@ public final class SatelliteLaunchPadBlockEntity extends BlockEntity
         if (selectedLaserPos != null) {
             output.putLong("selected_laser_pos", selectedLaserPos.asLong());
         }
+        saveOwner(output);
     }
 
     @Override
@@ -315,11 +338,39 @@ public final class SatelliteLaunchPadBlockEntity extends BlockEntity
         input.getLong("connected_node_pos").ifPresent(pos -> connectedNodePos = BlockPos.of(pos));
         selectedLaserPos = null;
         input.getLong("selected_laser_pos").ifPresent(pos -> selectedLaserPos = BlockPos.of(pos));
+        loadOwner(input);
+        var picks = new ArrayList<MisakaNetworkLasers.LaserRow>();
+        input.childrenListOrEmpty(SYNC_LASER_PICKS).stream().forEach(row ->
+                row.getLong("pos").ifPresent(packed ->
+                        picks.add(new MisakaNetworkLasers.LaserRow(BlockPos.of(packed), row.getBooleanOr("ready", false)))
+                )
+        );
+        laserPickList = List.copyOf(picks);
+    }
+
+    @Override
+    public @Nullable UUID getOwnerUuid() {
+        return ownerUuid;
+    }
+
+    @Override
+    public void setOwnerUuid(@Nullable UUID ownerUuid) {
+        this.ownerUuid = ownerUuid;
+        setChanged();
     }
 
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        return saveWithoutMetadata(registries);
+        var tag = saveWithoutMetadata(registries);
+        var lasers = new ListTag();
+        for (var row : laserPickList) {
+            var c = new CompoundTag();
+            c.putLong("pos", row.pos().asLong());
+            c.putBoolean("ready", row.ready());
+            lasers.add(c);
+        }
+        tag.put(SYNC_LASER_PICKS, lasers);
+        return tag;
     }
 
     @Override

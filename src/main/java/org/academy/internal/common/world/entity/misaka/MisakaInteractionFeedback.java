@@ -58,6 +58,13 @@ public final class MisakaInteractionFeedback {
         actionBar(player, "message.academy.misaka_awakened");
     }
 
+    public static void recovered(MisakaSisterEntity sister, ServerPlayer player) {
+        lookAt(sister, player);
+        affection(sister, 8);
+        play(sister, SoundEvents.PLAYER_LEVELUP, 0.5f, 1.35f);
+        actionBar(player, "message.academy.misaka_recovered");
+    }
+
     public static void promaxOk(MisakaSisterEntity sister, ServerPlayer player) {
         lookAt(sister, player);
         if (sister.level() instanceof ServerLevel serverLevel) {

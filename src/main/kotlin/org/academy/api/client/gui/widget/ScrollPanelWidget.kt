@@ -135,7 +135,12 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
     }
 
     override fun dispatchEvent(event: InputEvent) {
-        if (!isAbsoluteEnabled() || !isVisible()) return
+        if (!isAbsoluteEnabled() || !isVisible()) {
+            if (gestureTarget != null || hoveredWidget != null) {
+                clearPointerCapture()
+            }
+            return
+        }
 
         if (event is MouseEvent && !isMouseOver(event.x, event.y)) {
             if (hoveredWidget != null) {

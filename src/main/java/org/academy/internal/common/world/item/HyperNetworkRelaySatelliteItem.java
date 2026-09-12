@@ -70,6 +70,11 @@ public final class HyperNetworkRelaySatelliteItem extends Item implements GeoIte
                     "item.academy.hyper_network_relay_satellite.target",
                     Component.translatable(dimKey)
             ));
+        } else {
+            tooltipAdder.accept(Component.translatable(
+                    "item.academy.hyper_network_relay_satellite.target",
+                    Component.literal(targetDimension(stack).identifier().toString())
+            ));
         }
     }
 

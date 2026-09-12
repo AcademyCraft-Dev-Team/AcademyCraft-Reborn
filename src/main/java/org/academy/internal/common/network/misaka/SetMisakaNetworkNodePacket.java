@@ -1,14 +1,19 @@
 package org.academy.internal.common.network.misaka;
 
 import io.netty.buffer.ByteBuf;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.api.common.misaka.MisakaNAT;
+import org.academy.internal.common.misaka.MisakaNetworkPermission;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.entity.misaka.InteractionGate;
+import org.academy.internal.common.world.entity.misaka.MisakaSisterEntity;
 import org.academy.internal.server.misaka.MisakaPanelSupport;
+import org.academy.internal.server.world.level.storage.MisakaNetworkGovernance;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
 import org.misaka.api.common.network.annotation.PacketTarget;
@@ -65,36 +70,63 @@ public final class SetMisakaNetworkNodePacket
 
         @SubscribePacket
         public static void handle(SetMisakaNetworkNodePacket packet) {
-            var player = packet.getPacketListener().getPlayer();
-            var level = (ServerLevel) player.level();
-            var sister = MisakaPanelSupport.findLoadedEntity(level, packet.entityUuid()).orElse(null);
-            if (sister == null) {
+            var session = MisakaPanelSupport.load(packet.getPacketListener().getPlayer(), packet.entityUuid());
+            if (session == null) {
                 return;
             }
-            var record = sister.rosterRecord().orElse(null);
-            if (record == null) {
+            var player = session.player();
+            var level = session.level();
+            var sister = session.sister();
+            var record = session.record();
+            boolean unbound = record.networkNodePos == null;
+            boolean unbindRequest = packet.nodeName().isBlank();
+            if (unbound && unbindRequest) {
                 return;
             }
-            String name = player.getGameProfile().name();
-            if (!InteractionGate.allow(record, name, InteractionGate.Intent.PANEL)) {
+            var intent = unbound ? InteractionGate.Intent.BIND_FIRST : InteractionGate.Intent.MIGRATE;
+            if (!session.allow(intent)) {
                 return;
             }
-            InteractionGate.touchBenevolent(record, name, level.getServer());
-            if (player.distanceToSqr(sister) > 64.0 * 64.0) {
+            session.touch();
+            if (!session.inRange(MisakaSisterEntity.PANEL_RANGE_SQR)) {
                 return;
             }
             var overworld = level.getServer().overworld();
-            if (packet.nodeName().isBlank()) {
+            if (unbindRequest) {
                 MisakaNAT.get().unbindSister(level.getServer(), record.misakaUuid);
                 MisakaPanelSupport.sendPanel(player, sister);
                 return;
             }
             var nodePos = MisakaNAT.get().findNode(overworld, packet.nodeName()).orElse(null);
             if (nodePos == null) {
+                player.sendSystemMessage(Component.translatable("message.academy.misaka_node_not_found"));
+                MisakaPanelSupport.sendPanel(player, sister);
                 return;
             }
-            MisakaNAT.get().bindSisterToNode(overworld, record.misakaUuid, nodePos);
+            if (!mayAccessTargetNetwork(player, overworld, nodePos)) {
+                player.sendSystemMessage(Component.translatable("message.academy.misaka_bind_no_access"));
+                MisakaPanelSupport.sendPanel(player, sister);
+                return;
+            }
+            boolean bound = MisakaNAT.get().bindSisterToNode(overworld, record.misakaUuid, nodePos);
+            if (!bound) {
+                player.sendSystemMessage(Component.translatable("message.academy.misaka_bind_rejected"));
+            }
             MisakaPanelSupport.sendPanel(player, sister);
+        }
+
+        /**
+         * First bind: empty governance → allow (password-era); otherwise require ACCESS.
+         * Migrate: require ACCESS on target, or empty admin list fallback.
+         */
+        private static boolean mayAccessTargetNetwork(
+                net.minecraft.server.level.ServerPlayer player,
+                ServerLevel overworld,
+                BlockPos nodePos
+        ) {
+            UUID networkId = MisakaNAT.get().resolveNetworkId(overworld, nodePos);
+            return MisakaNetworkGovernance.get(overworld.getServer())
+                    .hasPermissionOrOpen(player, networkId, MisakaNetworkPermission.ACCESS);
         }
     }
 }

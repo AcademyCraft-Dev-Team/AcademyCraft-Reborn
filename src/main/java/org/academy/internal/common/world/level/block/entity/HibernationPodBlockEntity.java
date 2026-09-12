@@ -37,7 +37,7 @@ import java.util.UUID;
  * One-time openable hibernation pod. Right-click spawns a Misaka Sister inside (hidden),
  * plays {@code openning} with VFX cold mist (she becomes visible), then she walks out when {@code opened}.
  */
-public final class HibernationPodBlockEntity extends MultiBlockEntity implements GeoBlockEntity {
+public final class HibernationPodBlockEntity extends MultiBlockEntity implements GeoBlockEntity, OwnedDevice {
     /** Matches {@code openning} length 0.5417s at 20 tps. */
     public static final int OPENING_TICKS = 11;
     /** Lids / fog have started; sister becomes visible through the opening. */
@@ -55,6 +55,7 @@ public final class HibernationPodBlockEntity extends MultiBlockEntity implements
     private OpenPhase openPhase = OpenPhase.CLOSED;
     private int openingProgress;
     private @Nullable UUID containedSisterId;
+    private @Nullable UUID ownerUuid;
     private boolean sisterReleased;
 
     public HibernationPodBlockEntity(BlockPos pos, BlockState state) {
@@ -306,6 +307,7 @@ public final class HibernationPodBlockEntity extends MultiBlockEntity implements
         if (containedSisterId != null) {
             output.putString("contained_sister", containedSisterId.toString());
         }
+        saveOwner(output);
     }
 
     @Override
@@ -323,6 +325,18 @@ public final class HibernationPodBlockEntity extends MultiBlockEntity implements
                     }
                 })
                 .orElse(null);
+        loadOwner(input);
+    }
+
+    @Override
+    public @Nullable UUID getOwnerUuid() {
+        return ownerUuid;
+    }
+
+    @Override
+    public void setOwnerUuid(@Nullable UUID ownerUuid) {
+        this.ownerUuid = ownerUuid;
+        setChanged();
     }
 
     public enum OpenPhase {

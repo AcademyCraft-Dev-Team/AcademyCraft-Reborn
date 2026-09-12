@@ -12,8 +12,10 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.academy.internal.common.misaka.MisakaNetworkPermission;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.misaka.OrbitalStrikeProxyEntity;
+import org.academy.internal.server.world.level.storage.MisakaNetworkGovernance;
 import org.academy.internal.server.world.level.storage.MisakaRelayEntry;
 import org.academy.internal.server.world.level.storage.MisakaRelayRegistry;
 import org.jspecify.annotations.Nullable;
@@ -54,7 +56,9 @@ public final class MisakaOrbitalStrikeSupport {
         COOLDOWN,
         NO_POWER,
         WRONG_DIMENSION,
-        CHUNK_UNLOADED
+        CHUNK_UNLOADED,
+        NO_PERMISSION,
+        INSUFFICIENT_COMPUTE
     }
 
     private MisakaOrbitalStrikeSupport() {
@@ -97,6 +101,38 @@ public final class MisakaOrbitalStrikeSupport {
             return BeginResult.CHUNK_UNLOADED;
         }
 
+        if (designator != null) {
+            var governance = MisakaNetworkGovernance.get(server);
+            if (!governance.hasPermissionOrOpen(
+                    designator,
+                    entry.networkId,
+                    MisakaNetworkPermission.SATELLITE_USE,
+                    MisakaNetworkPermission.SATELLITE_MANAGE,
+                    MisakaNetworkPermission.ADMIN
+            )) {
+                return BeginResult.NO_PERMISSION;
+            }
+            float cost = orbitalStrikeMskCost(server);
+            if (cost > 0.0f) {
+                float cpPerMsk = MisakaComputeContribution.cpPerMsk(server);
+                var academy = server.getAcademyCraftServer();
+                float availableCp = academy == null
+                        ? 0.0f
+                        : academy.getAbilitySystemServer().getPlayerAvailableCP(designator.getUUID());
+                float cpAsMsk = cpPerMsk > 0.0f ? availableCp / cpPerMsk : 0.0f;
+                if (cpAsMsk < cost) {
+                    return BeginResult.INSUFFICIENT_COMPUTE;
+                }
+                float spendCp = cost * cpPerMsk;
+                float cur = academy.getAbilitySystemServer().getPlayerAvailableCP(designator.getUUID());
+                academy.getAbilitySystemServer().setPlayerAvailableCP(
+                        designator.getUUID(),
+                        Math.max(0.0f, cur - spendCp)
+                );
+                MisakaComputeUsageTracker.addUsage(designator.getUUID(), cost);
+            }
+        }
+
         long time = level.getGameTime();
         int seed = satelliteId.hashCode();
         double orbitY = MisakaRelayOrbits.visualOrbitY(level, server);
@@ -115,6 +151,14 @@ public final class MisakaOrbitalStrikeSupport {
         entry.strikeLavaReplacements = 0;
         entry.strikeApproachFrom = from;
         return BeginResult.OK;
+    }
+
+    private static float orbitalStrikeMskCost(MinecraftServer server) {
+        var academy = server.getAcademyCraftServer();
+        if (academy == null) {
+            return 200.0f;
+        }
+        return Math.max(0.0f, academy.getGenericConfig().misakaOrbitalStrikeMskCost);
     }
 
     public static void tickAll(MinecraftServer server) {

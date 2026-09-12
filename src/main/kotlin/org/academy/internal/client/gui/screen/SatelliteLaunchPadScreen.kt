@@ -4,10 +4,8 @@ import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.player.Inventory
-import net.minecraft.world.inventory.ContainerLevelAccess
-import org.academy.api.client.gui.animation.EasingFunctions
-import org.academy.api.client.gui.event.OnClickListener
 import org.academy.api.client.gui.layout.Gravity
+import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.screen.ContainerUiScreen
 import org.academy.api.client.gui.util.InfoAreaUtil
@@ -18,6 +16,7 @@ import org.academy.api.client.util.AnimationUtil
 import org.academy.internal.common.world.inventory.SatelliteLaunchPadMenu
 import org.academy.internal.common.world.item.NetworkRelaySatelliteItem
 import org.academy.internal.common.world.level.block.entity.SatelliteLaunchPadBlockEntity
+import org.academy.internal.server.misaka.MisakaNetworkLasers.LaserRow
 
 class SatelliteLaunchPadScreen private constructor(
     menu: SatelliteLaunchPadMenu,
@@ -26,10 +25,12 @@ class SatelliteLaunchPadScreen private constructor(
     private val blockEntity: SatelliteLaunchPadBlockEntity
 ) : ContainerUiScreen<SatelliteLaunchPadMenu>(menu, playerInventory, title) {
     private val mainPos: BlockPos = blockEntity.blockPos
-    private var laserLabelSetter: (String) -> Unit = {}
     private var dimLabelSetter: (String) -> Unit = {}
     private var launchFeedbackSetter: (String) -> Unit = {}
     private lateinit var energyValueLabel: LabelWidget
+    private var laserListColumn: LinearLayoutWidget? = null
+    private var lastLaserList: List<LaserRow>? = null
+    private var assetPage: DeviceAssetPage? = null
 
     override fun onInit(
         pageButtons: RadioGroupWidget,
@@ -43,118 +44,81 @@ class SatelliteLaunchPadScreen private constructor(
         val hint = LabelWidget(Component.translatable("gui.academy.satellite_launch_pad.hint").string).apply {
             layoutParams = FrameLayoutWidget.LayoutParams()
                 .widthMode(SizeMode.MATCH_PARENT)
-                .height(12f)
+                .height(24f)
                 .gravity(Gravity.TOP)
                 .margin(8f, 2f, 8f, 0f)
             scale = 0.75f
         }
         invPage.addChild("hint", hint)
-        playOpenReveal(hint, 1f, duration, childDuration)
+        MisakaMachineUi.playOpenReveal(hint, 1f, duration, childDuration)
 
-        val laserLabel = LabelWidget(laserSelectionText()).apply {
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(12f)
-                .gravity(Gravity.TOP)
-                .margin(8f, 16f, 8f, 0f)
-            scale = 0.75f
-        }
-        laserLabelSetter = { laserLabel.text = it }
-        invPage.addChild("laser_label", laserLabel)
-        playOpenReveal(laserLabel, 1f, duration, childDuration)
-
-        val dimLabel = LabelWidget(launchDimText()).apply {
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(12f)
-                .gravity(Gravity.TOP)
-                .margin(8f, 30f, 8f, 0f)
-            scale = 0.75f
-        }
-        dimLabelSetter = { dimLabel.text = it }
-        invPage.addChild("dim_label", dimLabel)
-        playOpenReveal(dimLabel, 1f, duration, childDuration)
-
-        val launchFeedback = LabelWidget(launchFeedbackText()).apply {
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(10f)
-                .gravity(Gravity.TOP)
-                .margin(8f, 42f, 8f, 0f)
-            scale = 0.7f
-        }
-        launchFeedbackSetter = { launchFeedback.text = it }
-        invPage.addChild("launch_feedback", launchFeedback)
-        playOpenReveal(launchFeedback, 0.9f, duration, childDuration)
-
-        val cycleLaserBtn = createActionButton(
-            "gui.academy.satellite_launch_pad.cycle_laser",
-            SatelliteLaunchPadMenu.BUTTON_CYCLE_LASER
-        ).apply {
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .width(72f)
-                .height(16f)
-                .gravity(Gravity.TOP_LEFT)
-                .margin(8f, 54f, 0f, 0f)
-        }
-        invPage.addChild("cycle_laser", cycleLaserBtn)
-        playOpenReveal(cycleLaserBtn, 1f, duration, childDuration)
-
-        val launchBtn = createActionButton(
-            "gui.academy.satellite_launch_pad.launch",
-            SatelliteLaunchPadMenu.BUTTON_LAUNCH
-        ).apply {
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .width(72f)
-                .height(16f)
-                .gravity(Gravity.TOP_RIGHT)
-                .margin(0f, 54f, 8f, 0f)
-        }
-        invPage.addChild("launch", launchBtn)
-        playOpenReveal(launchBtn, 1f, duration, childDuration)
-
-        val cycleDimBtn = createActionButton(
-            "gui.academy.satellite_launch_pad.cycle_dim",
-            SatelliteLaunchPadMenu.BUTTON_CYCLE_DIM
-        ).apply {
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .width(96f)
-                .height(14f)
-                .gravity(Gravity.CENTER_TOP)
-                .margin(0f, 72f, 0f, 0f)
-        }
-        invPage.addChild("cycle_dim", cycleDimBtn)
-        playOpenReveal(cycleDimBtn, 1f, duration, childDuration)
+        val launchPage = createLaunchPage()
+        launchPage.visibility = Widget.Visibility.GONE
+        launchPage.isEnabled = false
+        content.addChild("page_launch", launchPage)
 
         val wirelessPage = WirelessPanelUtil.create(mainPos, true)
         wirelessPage.visibility = Widget.Visibility.GONE
         wirelessPage.isEnabled = false
         content.addChild("page_wireless", wirelessPage)
 
+        val launchButton = createButton(R.textures.gui.icon.icon_teleporter)
+        MisakaMachineUi.sizeRailButton(launchButton)
+        pageButtons.addChild("launch", launchButton)
+
         val wirelessButton = createButton(R.textures.gui.icon.icon_wireless)
-        wirelessButton.layoutParams = WidgetContainer.LayoutParams()
-            .widthMode(SizeMode.MATCH_PARENT)
-            .height(16f)
+        MisakaMachineUi.sizeRailButton(wirelessButton)
         pageButtons.addChild("wireless", wirelessButton)
+
+        val asset = DeviceAssetPage.attach(
+            pageButtons = pageButtons,
+            invButton = invButton,
+            content = content,
+            devicePos = mainPos,
+            isOwner = { menu.viewerIsOwner() },
+            createRailButton = { createButton(R.textures.gui.icon.icon_settings) }
+        )
+        assetPage = asset
 
         pageButtons.onSelectionChanged = {
             when (it.name) {
                 "inv" -> {
+                    AnimationUtil.hide(launchPage)
                     AnimationUtil.hide(wirelessPage)
+                    asset.hide()
                     AnimationUtil.show(invPage)
                     isHandleContainer = true
                     isRenderInventory = true
                 }
+                "launch" -> {
+                    AnimationUtil.hide(invPage)
+                    AnimationUtil.hide(wirelessPage)
+                    asset.hide()
+                    refreshLaserListUi(force = true)
+                    AnimationUtil.show(launchPage)
+                    isHandleContainer = false
+                    isRenderInventory = false
+                }
                 "wireless" -> {
                     AnimationUtil.hide(invPage)
+                    AnimationUtil.hide(launchPage)
+                    asset.hide()
                     AnimationUtil.show(wirelessPage)
+                    isHandleContainer = false
+                    isRenderInventory = false
+                }
+                "asset" -> {
+                    AnimationUtil.hide(invPage)
+                    AnimationUtil.hide(launchPage)
+                    AnimationUtil.hide(wirelessPage)
+                    asset.show()
                     isHandleContainer = false
                     isRenderInventory = false
                 }
             }
         }
         pageButtons.selectButton(invButton)
-        playOpenReveal(pageButtons, 1f, duration, childDuration)
+        MisakaMachineUi.playOpenReveal(pageButtons, 1f, duration, childDuration)
 
         val info = InfoAreaUtil.create(this, (leftPos + imageWidth).toFloat(), (topPos - 22).toFloat())
         run {
@@ -166,48 +130,199 @@ class SatelliteLaunchPadScreen private constructor(
         }
     }
 
-    private fun playOpenReveal(
-        widget: Widget,
-        targetAlpha: Float,
-        duration: Long,
-        childDuration: Long
-    ) {
-        AnimationUtil.reveal(
-            widget = widget,
-            targetAlpha = targetAlpha,
-            alphaDuration = childDuration,
-            translationDuration = duration,
-            yInterpolator = EasingFunctions.EASE_OUT_CUBIC,
-            applyShowFlags = false
+    private fun createLaunchPage(): FrameLayoutWidget {
+        val pane = FrameLayoutWidget()
+        pane.layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+        pane.addChild("back", BlendQuadWidget().apply {
+            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+            alpha = 0.5f
+        })
+
+        val column = LinearLayoutWidget().apply {
+            orientation = Orientation.VERTICAL
+            spacing = 2f
+            layoutParams = FrameLayoutWidget.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT)
+                .gravity(Gravity.TOP)
+                .margin(6f, 6f, 6f, 6f)
+        }
+
+        column.addChild("title", LabelWidget(
+            Component.translatable("gui.academy.satellite_launch_pad.ops_title").string
+        ).apply {
+            scale = 0.8f
+            alpha = 0.95f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(12f)
+        })
+
+        val dimLabel = LabelWidget(launchDimText()).apply {
+            scale = MisakaMachineUi.SCALE_BODY
+            alpha = 0.88f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(12f)
+        }
+        dimLabelSetter = { dimLabel.text = it }
+        column.addChild("dim", dimLabel)
+
+        val actions = LinearLayoutWidget().apply {
+            orientation = Orientation.HORIZONTAL
+            spacing = 4f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(16f)
+        }
+        actions.addChild(
+            "cycle_dim",
+            MisakaMachineUi.menuActionButton(
+                menu,
+                "gui.academy.satellite_launch_pad.cycle_dim",
+                SatelliteLaunchPadMenu.BUTTON_CYCLE_DIM
+            ).apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .weight(1f)
+                    .height(16f)
+            }
         )
+        actions.addChild(
+            "launch",
+            MisakaMachineUi.menuActionButton(
+                menu,
+                "gui.academy.satellite_launch_pad.launch",
+                SatelliteLaunchPadMenu.BUTTON_LAUNCH
+            ).apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .weight(1f)
+                    .height(16f)
+            }
+        )
+        column.addChild("actions", actions)
+
+        val feedback = LabelWidget(launchFeedbackText()).apply {
+            scale = 0.7f
+            alpha = 0.78f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(10f)
+        }
+        launchFeedbackSetter = { feedback.text = it }
+        column.addChild("feedback", feedback)
+
+        column.addChild("laser_section", LabelWidget(
+            Component.translatable("gui.academy.satellite_launch_pad.laser_pick").string
+        ).apply {
+            scale = 0.7f
+            alpha = 0.7f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(10f)
+                .margin(0f, 2f, 0f, 0f)
+        })
+
+        val listHost = FrameLayoutWidget().apply {
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .weight(1f)
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(0f)
+        }
+        listHost.addChild("frame", BlendQuadWidget().apply {
+            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+            alpha = 0.22f
+        })
+        val scroll = ScrollPanelWidget(Orientation.VERTICAL).apply {
+            layoutParams = FrameLayoutWidget.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT)
+                .margin(2f, 2f, 2f, 2f)
+        }
+        val rows = LinearLayoutWidget().apply {
+            orientation = Orientation.VERTICAL
+            spacing = 1f
+            layoutParams = FrameLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .heightMode(SizeMode.WRAP_CONTENT)
+        }
+        laserListColumn = rows
+        scroll.setContent(rows)
+        listHost.addChild("scroll", scroll)
+        column.addChild("lasers", listHost)
+
+        pane.addChild("column", column)
+        refreshLaserListUi(force = true)
+        return pane
     }
 
     override fun containerTick() {
         super.containerTick()
-        laserLabelSetter(laserSelectionText())
+        assetPage?.tick(menu.viewerIsOwner())
         dimLabelSetter(launchDimText())
         launchFeedbackSetter(launchFeedbackText())
+        refreshLaserListUi()
         if (::energyValueLabel.isInitialized) {
             energyValueLabel.text = "${blockEntity.energyStored} / ${blockEntity.maxEnergyStorage} AF"
         }
     }
 
-    private fun createActionButton(labelKey: String, buttonId: Int): ButtonWidget {
-        val button = ButtonWidget()
-        button.onClickListener = OnClickListener {
-            minecraft.gameMode?.handleInventoryButtonClick(menu.containerId, buttonId)
+    private fun refreshLaserListUi(force: Boolean = false) {
+        val column = laserListColumn ?: return
+        val rows = blockEntity.laserPickList
+        if (!force && rows == lastLaserList) {
+            return
         }
-        button.addChild("back", BlendQuadWidget().apply {
-            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-            alpha = 0.35f
-        })
-        button.addChild("label", LabelWidget(Component.translatable(labelKey).string).apply {
-            scale = SCALE_BODY
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-                .gravity(Gravity.CENTER)
-        })
-        return button
+        lastLaserList = rows
+        column.clearChildren()
+        if (rows.isEmpty()) {
+            val emptyKey = if (blockEntity.connectedNodePosition == null) {
+                "gui.academy.satellite_launch_pad.laser_need_wireless"
+            } else {
+                "gui.academy.satellite_launch_pad.no_lasers"
+            }
+            column.addChild("empty", LabelWidget(Component.translatable(emptyKey).string).apply {
+                scale = 0.75f
+                alpha = 0.85f
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .height(16f)
+            })
+            return
+        }
+        val selected = blockEntity.selectedLaserPos
+        rows.forEachIndexed { index, entry ->
+            if (index >= SatelliteLaunchPadMenu.BUTTON_SELECT_LASER_MAX) {
+                return@forEachIndexed
+            }
+            val pos = entry.pos
+            val coords = "${pos.x},${pos.y},${pos.z}"
+            val current = selected != null && selected == pos
+            val label = when {
+                current && entry.ready -> Component.translatable(
+                    "gui.academy.satellite_launch_pad.laser_row_current_ready",
+                    coords
+                ).string
+                current -> Component.translatable(
+                    "gui.academy.satellite_launch_pad.laser_row_current_unready",
+                    coords
+                ).string
+                entry.ready -> Component.translatable(
+                    "gui.academy.satellite_launch_pad.laser_row_ready",
+                    coords
+                ).string
+                else -> Component.translatable(
+                    "gui.academy.satellite_launch_pad.laser_row_unready",
+                    coords
+                ).string
+            }
+            val button = MisakaMachineUi.menuListSelectButton(
+                menu = menu,
+                label = label,
+                buttonId = SatelliteLaunchPadMenu.BUTTON_SELECT_LASER_BASE + index,
+                enabled = !current,
+                selected = current
+            )
+            button.alpha = if (current) 0.7f else if (entry.ready) 1f else 0.55f
+            column.addChild("laser_$index", button)
+        }
     }
 
     private fun launchDimText(): String {
@@ -225,55 +340,22 @@ class SatelliteLaunchPadScreen private constructor(
         ).string
     }
 
-    private fun laserSelectionText(): String {
-        if (blockEntity.connectedNodePosition == null) {
-            return Component.translatable("gui.academy.satellite_launch_pad.laser_need_wireless").string
-        }
-        val pos = blockEntity.selectedLaserPos
-        if (pos == null) {
-            return Component.translatable(
-                "gui.academy.satellite_launch_pad.laser_none",
-                blockEntity.selectableLaserCount
-            ).string
-        }
-        val tower = minecraft.level?.getBlockEntity(pos)
-            as? org.academy.internal.common.world.level.block.entity.EnergyLaserTowerBlockEntity
-        val key = when {
-            tower == null -> "gui.academy.satellite_launch_pad.laser_selected_unready"
-            !tower.hasClearSky() -> "gui.academy.satellite_launch_pad.laser_selected_blocked"
-            tower.energyStored <= 0 -> "gui.academy.satellite_launch_pad.laser_selected_nopower"
-            else -> "gui.academy.satellite_launch_pad.laser_selected_ready"
-        }
-        return Component.translatable(key, pos.x, pos.y, pos.z).string
-    }
-
     private fun launchFeedbackText(): String {
         val key = blockEntity.launchFeedbackKey
         return if (key.isBlank()) "" else Component.translatable(key).string
     }
 
     companion object {
-        private const val SCALE_BODY = 0.75f
-
         fun create(
             menu: SatelliteLaunchPadMenu,
             playerInventory: Inventory,
             title: Component,
             mainPos: BlockPos
         ): SatelliteLaunchPadScreen? {
-            val minecraft = Minecraft.getInstance()
-            val level = minecraft.level ?: return null
-            val player = minecraft.player ?: return null
-            val entity = level.getBlockEntity(mainPos)
+            val entity = Minecraft.getInstance().level?.getBlockEntity(mainPos)
+            // Keep the factory menu so server-synced owner ContainerData is not discarded.
             return if (entity is SatelliteLaunchPadBlockEntity) {
-                val boundMenu = SatelliteLaunchPadMenu(
-                    menu.containerId,
-                    playerInventory,
-                    ContainerLevelAccess.create(level, mainPos),
-                    entity
-                )
-                player.containerMenu = boundMenu
-                SatelliteLaunchPadScreen(boundMenu, playerInventory, title, entity)
+                SatelliteLaunchPadScreen(menu, playerInventory, title, entity)
             } else {
                 null
             }

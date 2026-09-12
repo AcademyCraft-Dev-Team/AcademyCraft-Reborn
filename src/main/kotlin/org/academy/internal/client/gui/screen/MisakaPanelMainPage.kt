@@ -48,18 +48,27 @@ internal object MisakaPanelMainPage {
                 )
             )
         }
+        val detailed = host.data.relation() >= MobRelation.DEFAULT.ordinal
+        val withheld = Component.translatable("screen.academy.misaka_value_withheld").string
         page.addChild(
             "perception",
             host.infoRow(
                 Component.translatable("screen.academy.misaka_perception_label").string,
-                host.data.perception().toString()
+                if (detailed) host.data.perception().toString() else withheld
             )
         )
         page.addChild(
             "msk",
             host.infoRow(
                 Component.translatable("screen.academy.misaka_msk_label").string,
-                Component.translatable("screen.academy.misaka_msk_value", "%.1f".format(host.data.msk())).string
+                if (detailed) {
+                    Component.translatable(
+                        "screen.academy.misaka_msk_value",
+                        "%.1f".format(host.data.msk())
+                    ).string
+                } else {
+                    withheld
+                }
             )
         )
         page.addChild(
@@ -74,7 +83,12 @@ internal object MisakaPanelMainPage {
             host.infoRow(
                 Component.translatable("screen.academy.misaka_node_label").string,
                 host.data.currentNodeName().ifEmpty {
-                    Component.translatable("screen.academy.misaka_node_none").string
+                    // Bound but withheld still reports "connected", just not which network.
+                    if (host.data.networkBound()) {
+                        Component.translatable("screen.academy.misaka_node_protected").string
+                    } else {
+                        Component.translatable("screen.academy.misaka_node_none").string
+                    }
                 }
             )
         )
@@ -95,7 +109,15 @@ internal object MisakaPanelMainPage {
             )
         }
 
-        if (host.data.privilege()) {
+        val readOnly = !detailed
+        if (readOnly) {
+            page.addChild(
+                "locked",
+                host.statusLine(lockedReason(host), MisakaNetworkPanelScreen.ACCENT_WARNING)
+            )
+        }
+
+        if (!readOnly && host.data.privilege()) {
             page.addChild("section_rule_wander", host.sectionRule())
             page.addChild(
                 "wander_label",
@@ -112,15 +134,22 @@ internal object MisakaPanelMainPage {
             wanderRow.addChild("waiting", host.styleButton(WanderStyle.WAITING))
             wanderRow.addChild("free", host.styleButton(WanderStyle.FREE_MOVE))
             wanderRow.addChild("follow", host.styleButton(WanderStyle.FOLLOW))
+            page.addChild(
+                "wander_anchor",
+                host.textActionButton(
+                    Component.translatable("screen.academy.misaka_wander_anchor").string
+                ) { host.setWanderAnchor() }
+            )
         }
 
-        if (host.data.reconstructionWork() && host.data.privilege() && host.data.currentNodeName().isNotEmpty()) {
+        if (!readOnly && host.data.reconstructionWork() && host.data.privilege() && host.data.networkBound()) {
             page.addChild("section_rule_manage", host.sectionRule())
             page.addChild("manage_entry", host.manageMenuEntry())
         }
 
-        val canBind = host.data.relation() >= MobRelation.DEFAULT.ordinal
-        if (canBind && host.data.availableNodes().isNotEmpty()) {
+        val unbound = !host.data.networkBound()
+        val canBind = !readOnly && if (unbound) true else host.data.privilege()
+        if (canBind && (host.data.availableNodes().isNotEmpty() || !unbound)) {
             page.addChild("section_rule_nodes", host.sectionRule())
             page.addChild("bind_entry", host.bindMenuEntry())
         }
@@ -150,5 +179,15 @@ internal object MisakaPanelMainPage {
         return Component.translatable("misaka.relation.${values[index].name.lowercase()}").string
     }
 
-
+    private fun lockedReason(host: MisakaPanelHost): String {
+        val values = MobRelation.entries
+        val index = host.data.relation()
+        val key = when {
+            index !in values.indices -> "screen.academy.misaka_locked_indifferent"
+            values[index] == MobRelation.DEADLY_ENEMY -> "screen.academy.misaka_locked_deadly"
+            values[index] == MobRelation.HOSTILE -> "screen.academy.misaka_locked_hostile"
+            else -> "screen.academy.misaka_locked_indifferent"
+        }
+        return Component.translatable(key).string
+    }
 }

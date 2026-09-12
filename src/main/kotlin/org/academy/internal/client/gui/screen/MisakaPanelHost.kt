@@ -6,6 +6,7 @@ import org.academy.api.client.gui.widget.*
 import org.academy.internal.common.network.misaka.MisakaNetManageDataPacket
 import org.academy.internal.common.network.misaka.MisakaPanelDataPacket
 import org.academy.internal.common.world.entity.misaka.WanderStyle
+import java.util.UUID
 
 /**
  * Host surface for Misaka panel page extracts. Implemented by [MisakaNetworkPanelScreen]
@@ -19,6 +20,11 @@ internal interface MisakaPanelHost {
     var managePageIndex: Int
     var manageTotalCount: Int
     var manageTotalMsk: Float
+    var manageDemandMsk: Float
+    var manageYourAllocatedMsk: Float
+    var manageYourSatisfaction: Float
+    var managePriorityAllocatedMsk: Float
+    var manageSharedAllocatedMsk: Float
     var localPercents: IntArray
     val allocSeekBars: Array<SeekBarWidget?>
     val allocInputs: Array<TextBoxWidget?>
@@ -26,15 +32,35 @@ internal interface MisakaPanelHost {
 
     var sistersTabContent: FrameLayoutWidget
     var allocTabContent: FrameLayoutWidget
+    var membersTabContent: FrameLayoutWidget
     var sistersList: ListWidget<MisakaNetManageDataPacket.SisterSummary>
+    var selectedSisterUuid: UUID?
+    var sisterSelectionLabel: LabelWidget?
+    var sisterDisconnectButton: ButtonWidget?
     var pageLabel: LabelWidget
     var allocatedLabel: LabelWidget
     var sistersTabButton: ButtonWidget
     var allocTabButton: ButtonWidget
+    var membersTabButton: ButtonWidget
     var emptySistersLabel: LabelWidget
     var networkTotalMskLabel: LabelWidget
+    var networkDemandLabel: LabelWidget
+    var networkSatisfactionLabel: LabelWidget
+    var membersListLabel: LabelWidget
+    var membersPermHintLabel: LabelWidget
+    var manageAdminNames: List<String>
+    var manageMembers: List<MisakaNetManageDataPacket.MemberSummary>
+    var manageCanEditMembers: Boolean
+    var memberNameInput: TextBoxWidget
+    var memberPermIndex: Int
 
+    val sistersListInitialized: Boolean
     val allocatedLabelInitialized: Boolean
+    val networkTotalMskLabelInitialized: Boolean
+    val networkDemandLabelInitialized: Boolean
+    val networkSatisfactionLabelInitialized: Boolean
+    val membersListLabelInitialized: Boolean
+    val membersPermHintLabelInitialized: Boolean
 
     fun showMainPage()
     fun showBindPage()
@@ -48,6 +74,7 @@ internal interface MisakaPanelHost {
     fun sectionRule(): FillWidget
     fun styleButton(style: WanderStyle): ButtonWidget
     fun textActionButton(text: String, onClick: () -> Unit): ButtonWidget
+    fun setWanderAnchor()
     fun actionBackground(selected: Boolean): StateListDrawable
     fun createSubmenuTopBar(titleText: String): LinearLayoutWidget
     fun manageMenuEntry(): ButtonWidget

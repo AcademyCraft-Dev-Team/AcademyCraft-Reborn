@@ -3,12 +3,11 @@ package org.academy.internal.common.network.misaka;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.entity.misaka.InteractionGate;
+import org.academy.internal.common.world.entity.misaka.MisakaSisterEntity;
 import org.academy.internal.common.world.entity.misaka.WanderStyle;
-import org.academy.internal.common.world.entity.misaka.favor.FavorService;
 import org.academy.internal.server.misaka.MisakaPanelSupport;
 import org.academy.internal.server.world.level.storage.MisakaSisterRoster;
 import org.misaka.MisakaNetworkServer;
@@ -67,28 +66,22 @@ public final class SetMisakaWanderStylePacket
 
         @SubscribePacket
         public static void handle(SetMisakaWanderStylePacket packet) {
-            var player = packet.getPacketListener().getPlayer();
-            var sister = MisakaPanelSupport.findLoadedEntity((ServerLevel) player.level(), packet.entityUuid()).orElse(null);
-            if (sister == null) {
+            var session = MisakaPanelSupport.load(packet.getPacketListener().getPlayer(), packet.entityUuid());
+            if (session == null) {
                 return;
             }
-            var record = sister.rosterRecord().orElse(null);
-            if (record == null) {
+            if (!session.allow(InteractionGate.Intent.STATE)) {
                 return;
             }
-            String name = player.getGameProfile().name();
-            if (!InteractionGate.allow(record, name, InteractionGate.Intent.STATE)) {
-                return;
-            }
-            InteractionGate.touchBenevolent(record, name, ((ServerLevel) player.level()).getServer());
-            if (player.distanceToSqr(sister) > 64.0 * 64.0) {
+            session.touch();
+            if (!session.inRange(MisakaSisterEntity.PANEL_RANGE_SQR)) {
                 return;
             }
             var wanderStyle = WanderStyle.fromOrdinal(packet.style());
-            MisakaSisterRoster.get(((ServerLevel) player.level()).getServer()).modify(record.misakaUuid, sisterRecord -> {
+            MisakaSisterRoster.get(session.level().getServer()).modify(session.record().misakaUuid, sisterRecord -> {
                 sisterRecord.wanderStyle = wanderStyle;
             });
-            sister.setWanderStyle(wanderStyle);
+            session.sister().setWanderStyle(wanderStyle);
         }
     }
 }

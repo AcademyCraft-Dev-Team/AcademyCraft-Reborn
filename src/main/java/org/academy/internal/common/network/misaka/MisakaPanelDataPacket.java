@@ -39,6 +39,7 @@ public final class MisakaPanelDataPacket extends Packet<ClientPacketListener, Mi
     private final boolean privilege;
     private final boolean reconstructionWork;
     private final boolean reconstructionBlocked;
+    private final boolean networkBound;
 
     public MisakaPanelDataPacket(
             UUID entityUuid,
@@ -53,7 +54,8 @@ public final class MisakaPanelDataPacket extends Packet<ClientPacketListener, Mi
             int relation,
             boolean privilege,
             boolean reconstructionWork,
-            boolean reconstructionBlocked
+            boolean reconstructionBlocked,
+            boolean networkBound
     ) {
         this.entityUuid = entityUuid;
         this.misakaUuid = misakaUuid;
@@ -68,6 +70,7 @@ public final class MisakaPanelDataPacket extends Packet<ClientPacketListener, Mi
         this.privilege = privilege;
         this.reconstructionWork = reconstructionWork;
         this.reconstructionBlocked = reconstructionBlocked;
+        this.networkBound = networkBound;
     }
 
     private static void encode(ByteBuf buf, MisakaPanelDataPacket packet) {
@@ -84,6 +87,7 @@ public final class MisakaPanelDataPacket extends Packet<ClientPacketListener, Mi
         buf.writeBoolean(packet.privilege);
         buf.writeBoolean(packet.reconstructionWork);
         buf.writeBoolean(packet.reconstructionBlocked);
+        buf.writeBoolean(packet.networkBound);
     }
 
     private static MisakaPanelDataPacket decode(ByteBuf buf) {
@@ -98,6 +102,7 @@ public final class MisakaPanelDataPacket extends Packet<ClientPacketListener, Mi
                 ByteBufCodecs.STRING_UTF8.decode(buf),
                 ByteBufCodecs.collection(ArrayList::new, ByteBufCodecs.STRING_UTF8).decode(buf),
                 ByteBufCodecs.VAR_INT.decode(buf),
+                buf.readBoolean(),
                 buf.readBoolean(),
                 buf.readBoolean(),
                 buf.readBoolean()
@@ -162,6 +167,11 @@ public final class MisakaPanelDataPacket extends Packet<ClientPacketListener, Mi
 
     public boolean reconstructionBlocked() {
         return reconstructionBlocked;
+    }
+
+    /** True when the sister is on a network, even if the network name is withheld. */
+    public boolean networkBound() {
+        return networkBound;
     }
 
     @Override

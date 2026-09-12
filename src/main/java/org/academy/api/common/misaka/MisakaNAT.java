@@ -41,7 +41,11 @@ public interface MisakaNAT {
 
     Optional<BlockPos> findNode(ServerLevel level, String nodeName);
 
-    BlockPos resolveNetworkId(ServerLevel level, BlockPos nodePos);
+    /**
+     * Stable network identity for the wireless component containing {@code nodePos}.
+     * Prefer this over any BlockPos-derived identity — UUIDs survive topology edits.
+     */
+    UUID resolveNetworkId(ServerLevel level, BlockPos nodePos);
 
     boolean bindSisterToNode(ServerLevel level, UUID misakaUuid, BlockPos nodePos);
 
@@ -55,8 +59,8 @@ public interface MisakaNAT {
     List<UUID> listNetworkSisters(ServerLevel level, BlockPos nodePos, int offset, int limit);
 
     /**
-     * Whether {@code pos} can use Misaka network services for the topology rooted at {@code networkId}
+     * Whether {@code pos} can use Misaka network services for the topology identified by {@code networkId}
      * (energy coverage or relay satellite).
      */
-    boolean canUseMisakaService(ServerLevel level, BlockPos networkId, BlockPos pos);
+    boolean canUseMisakaService(ServerLevel level, UUID networkId, BlockPos pos);
 }

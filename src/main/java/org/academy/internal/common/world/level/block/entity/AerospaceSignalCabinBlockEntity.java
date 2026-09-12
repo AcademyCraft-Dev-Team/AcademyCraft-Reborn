@@ -14,6 +14,7 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -26,10 +27,13 @@ import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import org.academy.api.common.misaka.MisakaNAT;
 import org.academy.api.common.wireless.WirelessUser;
+import org.academy.internal.common.misaka.MisakaNetworkPermission;
 import org.academy.internal.common.world.item.LaserDesignatorItem;
 import org.academy.internal.common.world.level.block.AerospaceSignalCabinBlock;
 import org.academy.internal.common.world.level.block.MultiBlock;
+import org.academy.internal.server.world.level.storage.MisakaNetworkGovernance;
 import org.academy.internal.server.world.level.storage.MisakaRelayEntry;
+import org.academy.internal.server.misaka.MisakaNetworkLasers;
 import org.academy.internal.server.world.level.storage.MisakaRelayRegistry;
 import org.academy.internal.server.world.level.storage.WirelessNetworkData;
 import org.jspecify.annotations.Nullable;
@@ -40,7 +44,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity implements WirelessUser, GeoBlockEntity {
+public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity
+        implements WirelessUser, GeoBlockEntity, OwnedDevice {
     private static final RawAnimation SPINNING = RawAnimation.begin().thenLoop("spinning");
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
     private static final int MAX_ENERGY = 50_000;
@@ -67,10 +72,8 @@ public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity impl
     public record RetargetNetRow(String nodeName, boolean isCurrentSatNetwork) {
     }
 
-    public record RebindLaserRow(BlockPos pos, boolean ready) {
-    }
-
     private @Nullable BlockPos connectedNodePos;
+    private @Nullable UUID ownerUuid;
     private int energyStored;
     private int selectedSatelliteIndex;
     /** Client-synced count of unbound lasers on the cabin's wireless topology. */
@@ -84,7 +87,7 @@ public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity impl
     /** Client-synced retarget targets (unique Misaka topologies; sync-only). */
     private List<RetargetNetRow> retargetNetworkList = List.of();
     /** Client-synced unbound lasers on the cabin wireless topology (sync-only). */
-    private List<RebindLaserRow> rebindLaserList = List.of();
+    private List<MisakaNetworkLasers.LaserRow> rebindLaserList = List.of();
     /** Display name of the selected satellite's current coverage network, if known. */
     private String selectedSatNetworkName = "";
 
@@ -156,7 +159,7 @@ public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity impl
         return retargetNetworkList;
     }
 
-    public List<RebindLaserRow> getRebindLaserList() {
+    public List<MisakaNetworkLasers.LaserRow> getRebindLaserList() {
         return rebindLaserList;
     }
 
@@ -166,6 +169,50 @@ public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity impl
 
     private void setOpsFeedback(String key) {
         opsFeedbackKey = key == null ? "" : key;
+    }
+
+    /**
+     * Owner / op, or a player with {@link MisakaNetworkPermission#SATELLITE_MANAGE} on the cabin's
+     * connected network, may run cabin ops. Null player skips the gate.
+     */
+    public boolean canManageOps(@Nullable Player player) {
+        if (player == null || isOwner(player)) {
+            return true;
+        }
+        return hasSatelliteManage(player);
+    }
+
+    private boolean hasSatelliteManage(@Nullable Player player) {
+        if (!(player instanceof ServerPlayer) || !(level instanceof ServerLevel sl) || connectedNodePos == null) {
+            return false;
+        }
+        var server = sl.getServer();
+        if (server == null) {
+            return false;
+        }
+        var networkId = MisakaNAT.get().resolveNetworkId(server.overworld(), connectedNodePos);
+        return MisakaNetworkGovernance.get(server)
+                .hasPermission(player, networkId, MisakaNetworkPermission.SATELLITE_MANAGE);
+    }
+
+    private boolean denyOpsIfNotOwner(@Nullable Player player) {
+        if (canManageOps(player)) {
+            return false;
+        }
+        setOpsFeedback("gui.academy.aerospace_signal_cabin.ops_no_permission");
+        markAndSync();
+        return true;
+    }
+
+    @Override
+    public @Nullable UUID getOwnerUuid() {
+        return ownerUuid;
+    }
+
+    @Override
+    public void setOwnerUuid(@Nullable UUID ownerUuid) {
+        this.ownerUuid = ownerUuid;
+        setChanged();
     }
 
     /** Satellites covering the cabin's connected wireless network (empty if unlinked). */
@@ -196,8 +243,7 @@ public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity impl
         var rows = new ArrayList<ManagedSatRow>(list.size());
         for (int i = 0; i < list.size(); i++) {
             var entry = list.get(i);
-            var id = entry.satelliteId.toString().replace("-", "");
-            var id8 = id.length() >= 8 ? id.substring(0, 8) : id;
+            var id8 = MisakaRelayEntry.shortId(entry.satelliteId);
             boolean powered = registry.isReceivingPower(entry.satelliteId);
             rows.add(new ManagedSatRow(
                     i,
@@ -220,8 +266,8 @@ public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity impl
 
     private void refreshRetargetNetworks(ServerLevel level) {
         var data = WirelessNetworkData.get(level);
-        // networkId long -> representative node name (lexicographically smallest)
-        var byNetwork = new java.util.TreeMap<Long, String>();
+        // networkId -> representative node name (lexicographically smallest)
+        var byNetwork = new java.util.TreeMap<UUID, String>();
         for (var entry : data.getAllNodes().entrySet()) {
             var nodePos = entry.getKey();
             var name = entry.getValue().name;
@@ -229,10 +275,9 @@ public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity impl
                 continue;
             }
             var networkId = MisakaNAT.get().resolveNetworkId(level, nodePos);
-            long key = networkId.asLong();
-            byNetwork.merge(key, name, (a, b) -> a.compareToIgnoreCase(b) <= 0 ? a : b);
+            byNetwork.merge(networkId, name, (a, b) -> a.compareToIgnoreCase(b) <= 0 ? a : b);
         }
-        BlockPos selectedNet = null;
+        UUID selectedNet = null;
         var sats = managedEntries(level);
         if (!sats.isEmpty()) {
             int idx = Mth.clamp(selectedSatelliteIndex, 0, sats.size() - 1);
@@ -240,33 +285,27 @@ public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity impl
         }
         selectedSatNetworkName = "";
         if (selectedNet != null) {
-            var match = byNetwork.get(selectedNet.asLong());
+            var match = byNetwork.get(selectedNet);
             if (match != null) {
                 selectedSatNetworkName = match;
             } else {
-                selectedSatNetworkName = selectedNet.getX() + "," + selectedNet.getY() + "," + selectedNet.getZ();
+                selectedSatNetworkName = selectedNet.toString();
             }
         }
         var names = new ArrayList<>(byNetwork.entrySet());
         names.sort((a, b) -> String.CASE_INSENSITIVE_ORDER.compare(a.getValue(), b.getValue()));
         var rows = new ArrayList<RetargetNetRow>(names.size());
         for (var e : names) {
-            boolean current = selectedNet != null && selectedNet.asLong() == e.getKey();
+            boolean current = selectedNet != null && selectedNet.equals(e.getKey());
             rows.add(new RetargetNetRow(e.getValue(), current));
         }
         retargetNetworkList = List.copyOf(rows);
     }
 
     private void refreshRebindLasers(ServerLevel level) {
-        var selectable = listSelectableLasers(level);
-        selectableLaserCount = selectable.size();
-        var rows = new ArrayList<RebindLaserRow>(selectable.size());
-        for (var pos : selectable) {
-            boolean ready = level.getBlockEntity(pos) instanceof EnergyLaserTowerBlockEntity tower
-                    && tower.canPowerSatellite();
-            rows.add(new RebindLaserRow(pos.immutable(), ready));
-        }
-        rebindLaserList = List.copyOf(rows);
+        var rows = MisakaNetworkLasers.listUnboundRows(level, connectedNodePos, Integer.MAX_VALUE);
+        selectableLaserCount = rows.size();
+        rebindLaserList = rows;
     }
 
     /** Refresh managed-satellite stats for the ops UI when the menu opens. */
@@ -296,39 +335,13 @@ public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity impl
      * Power/sky readiness is only required at rebind time.
      */
     public List<BlockPos> listSelectableLasers(ServerLevel level) {
-        var result = new ArrayList<BlockPos>();
-        if (connectedNodePos == null) {
-            return result;
-        }
-        var networkId = MisakaNAT.get().resolveNetworkId(level, connectedNodePos);
-        var registry = MisakaRelayRegistry.get(level.getServer());
-        var data = WirelessNetworkData.get(level);
-        for (var entry : data.getAllNodes().entrySet()) {
-            var nodePos = entry.getKey();
-            if (!MisakaNAT.get().resolveNetworkId(level, nodePos).equals(networkId)) {
-                continue;
-            }
-            for (var userPos : entry.getValue().connectedUsers.keySet()) {
-                if (!(level.getBlockEntity(userPos) instanceof EnergyLaserTowerBlockEntity tower)) {
-                    continue;
-                }
-                var main = tower.mainEntity();
-                if (main == null || !main.isMain()) {
-                    continue;
-                }
-                var mainPos = main.getBlockPos().immutable();
-                if (registry.laserBoundSatellite(level.dimension(), mainPos) != null) {
-                    continue;
-                }
-                if (!result.contains(mainPos)) {
-                    result.add(mainPos);
-                }
-            }
-        }
-        return result;
+        return MisakaNetworkLasers.listUnbound(level, connectedNodePos);
     }
 
-    public boolean tryRetarget(ServerLevel level) {
+    public boolean tryRetarget(ServerLevel level, @Nullable Player player) {
+        if (denyOpsIfNotOwner(player)) {
+            return false;
+        }
         // Legacy: retarget to the cabin's currently linked wireless topology.
         if (connectedNodePos == null) {
             setOpsFeedback("gui.academy.aerospace_signal_cabin.ops_need_wireless");
@@ -339,7 +352,16 @@ public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity impl
         return retargetSelectedTo(level, networkId);
     }
 
-    public boolean tryRetargetToNetworkIndex(ServerLevel level, int networkIndex) {
+    /** @deprecated use {@link #tryRetarget(ServerLevel, Player)} */
+    @Deprecated
+    public boolean tryRetarget(ServerLevel level) {
+        return tryRetarget(level, null);
+    }
+
+    public boolean tryRetargetToNetworkIndex(ServerLevel level, int networkIndex, @Nullable Player player) {
+        if (denyOpsIfNotOwner(player)) {
+            return false;
+        }
         refreshManagedCount(level);
         refreshRetargetNetworks(level);
         if (networkIndex < 0 || networkIndex >= retargetNetworkList.size()) {
@@ -358,7 +380,7 @@ public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity impl
         return retargetSelectedTo(level, networkId);
     }
 
-    private boolean retargetSelectedTo(ServerLevel level, BlockPos networkId) {
+    private boolean retargetSelectedTo(ServerLevel level, UUID networkId) {
         var list = managedEntries(level);
         if (list.isEmpty()) {
             setOpsFeedback("gui.academy.aerospace_signal_cabin.ops_no_satellites");
@@ -382,7 +404,10 @@ public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity impl
      * Rebind the selected satellite to an unbound energy laser tower from the ops list
      * (typically after its previous laser tower was destroyed).
      */
-    public boolean tryRebindToLaserIndex(ServerLevel level, int laserIndex) {
+    public boolean tryRebindToLaserIndex(ServerLevel level, int laserIndex, @Nullable Player player) {
+        if (denyOpsIfNotOwner(player)) {
+            return false;
+        }
         refreshManagedCount(level);
         refreshRebindLasers(level);
         var list = managedEntries(level);
@@ -412,8 +437,7 @@ public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity impl
             return false;
         }
         var laserPos = selectable.get(laserIndex);
-        var laserBe = level.getBlockEntity(laserPos);
-        if (!(laserBe instanceof EnergyLaserTowerBlockEntity tower) || !tower.canPowerSatellite()) {
+        if (!MisakaNetworkLasers.canPower(level, laserPos)) {
             setOpsFeedback("gui.academy.aerospace_signal_cabin.ops_rebind_laser_unready");
             markAndSync();
             return false;
@@ -435,6 +459,9 @@ public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity impl
 
     /** Arm a 60s forced-crash countdown for the selected satellite. */
     public boolean tryScheduleForceCrash(ServerLevel level, Player player) {
+        if (denyOpsIfNotOwner(player)) {
+            return false;
+        }
         refreshManagedCount(level);
         var list = managedEntries(level);
         if (list.isEmpty()) {
@@ -460,7 +487,10 @@ public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity impl
     }
 
     /** Cancel a pending forced-crash countdown before it begins. */
-    public boolean tryCancelForceCrash(ServerLevel level) {
+    public boolean tryCancelForceCrash(ServerLevel level, @Nullable Player player) {
+        if (denyOpsIfNotOwner(player)) {
+            return false;
+        }
         refreshManagedCount(level);
         var list = managedEntries(level);
         if (list.isEmpty()) {
@@ -485,6 +515,9 @@ public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity impl
 
     /** Bind the player's main-hand laser designator to the selected managed satellite. */
     public boolean tryBindDesignator(ServerLevel level, Player player) {
+        if (denyOpsIfNotOwner(player)) {
+            return false;
+        }
         refreshManagedCount(level);
         var list = managedEntries(level);
         if (list.isEmpty()) {
@@ -515,6 +548,9 @@ public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity impl
 
     /** Clear the satellite binding on the player's main-hand laser designator. */
     public boolean tryUnbindDesignator(ServerLevel level, Player player) {
+        if (denyOpsIfNotOwner(player)) {
+            return false;
+        }
         ItemStack stack = player.getMainHandItem();
         if (!LaserDesignatorItem.isDesignator(stack)) {
             setOpsFeedback("gui.academy.aerospace_signal_cabin.ops_designator_need_item");
@@ -652,6 +688,7 @@ public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity impl
         if (connectedNodePos != null) {
             output.putLong("connected_node_pos", connectedNodePos.asLong());
         }
+        saveOwner(output);
     }
 
     @Override
@@ -665,6 +702,7 @@ public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity impl
         selectedSatNetworkName = input.getString("selected_sat_network_name").orElse("");
         connectedNodePos = null;
         input.getLong("connected_node_pos").ifPresent(pos -> connectedNodePos = BlockPos.of(pos));
+        loadOwner(input);
         loadOpsSnapshot(input);
     }
 
@@ -700,10 +738,10 @@ public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity impl
         )));
         retargetNetworkList = List.copyOf(nets);
 
-        var lasers = new ArrayList<RebindLaserRow>();
+        var lasers = new ArrayList<MisakaNetworkLasers.LaserRow>();
         input.childrenListOrEmpty(OPS_REBIND_LASERS).stream().forEach(row ->
                 row.getLong("pos").ifPresent(packed ->
-                        lasers.add(new RebindLaserRow(BlockPos.of(packed), row.getBooleanOr("ready", false)))
+                        lasers.add(new MisakaNetworkLasers.LaserRow(BlockPos.of(packed), row.getBooleanOr("ready", false)))
                 )
         );
         rebindLaserList = List.copyOf(lasers);

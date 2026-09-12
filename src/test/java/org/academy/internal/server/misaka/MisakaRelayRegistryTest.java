@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MisakaRelayRegistryTest {
-    /** Avoid {@code Level.OVERWORLD} �?that static touches FML AttachmentHolder in unit tests. */
+    /** Avoid {@code Level.OVERWORLD} ->that static touches FML AttachmentHolder in unit tests. */
     private static final ResourceKey<Level> OVERWORLD =
             ResourceKey.create(Registries.DIMENSION, Identifier.withDefaultNamespace("overworld"));
     private static final ResourceKey<Level> NETHER =
@@ -42,17 +42,17 @@ class MisakaRelayRegistryTest {
 
     @Test
     void poweredSatelliteGrantsActiveRelay() {
-        var networkId = new BlockPos(10, 64, 10);
+        var networkId = netId(10, 64, 10);
         var entry = orbitEntry(UUID.randomUUID(), networkId, OVERWORLD, new BlockPos(0, 70, 0));
         registry.testingPutPowered(entry);
         assertTrue(registry.hasActiveRelay(networkId, OVERWORLD));
         assertFalse(registry.hasActiveRelay(networkId, NETHER));
-        assertFalse(registry.hasActiveRelay(new BlockPos(99, 0, 99), OVERWORLD));
+        assertFalse(registry.hasActiveRelay(netId(99, 0, 99), OVERWORLD));
     }
 
     @Test
     void multiSatelliteSameNetDimStaysActiveUntilLastPoweredOff() {
-        var networkId = new BlockPos(1, 2, 3);
+        var networkId = netId(1, 2, 3);
         var a = orbitEntry(UUID.randomUUID(), networkId, OVERWORLD, new BlockPos(0, 70, 0));
         var b = orbitEntry(UUID.randomUUID(), networkId, OVERWORLD, new BlockPos(1, 70, 0));
         registry.testingPutPowered(a);
@@ -70,15 +70,15 @@ class MisakaRelayRegistryTest {
     @Test
     void laserOneToOneOccupancy() {
         var laser = new BlockPos(5, 80, 5);
-        var first = orbitEntry(UUID.randomUUID(), new BlockPos(1, 1, 1), OVERWORLD, laser);
+        var first = orbitEntry(UUID.randomUUID(), netId(1, 1, 1), OVERWORLD, laser);
         registry.testingPutOrbit(first);
         assertEquals(first.satelliteId, registry.laserBoundSatellite(OVERWORLD, laser));
     }
 
     @Test
     void retargetMovesCoverageBetweenNetworks() {
-        var oldNet = new BlockPos(1, 0, 0);
-        var newNet = new BlockPos(2, 0, 0);
+        var oldNet = netId(1, 0, 0);
+        var newNet = netId(2, 0, 0);
         var entry = orbitEntry(UUID.randomUUID(), oldNet, OVERWORLD, new BlockPos(3, 70, 3));
         registry.testingPutPowered(entry);
         assertTrue(registry.hasActiveRelay(oldNet, OVERWORLD));
@@ -91,7 +91,7 @@ class MisakaRelayRegistryTest {
 
     @Test
     void unpoweredTimeoutCrashesWithoutLootAndClearsRegistry() {
-        var networkId = new BlockPos(7, 7, 7);
+        var networkId = netId(7, 7, 7);
         var entry = orbitEntry(UUID.randomUUID(), networkId, NETHER, new BlockPos(8, 80, 8));
         entry.hyper = true;
         registry.testingPutPowered(entry);
@@ -101,7 +101,7 @@ class MisakaRelayRegistryTest {
         assertFalse(registry.hasActiveRelay(networkId, NETHER));
         assertEquals(1, registry.all().size());
 
-        // No loaded entity �?beginCrash �?completeCrash (discard-only path; RenderOnlyEntity never drops items).
+        // No loaded entity -> beginCrash -> completeCrash (discard-only path; RenderOnlyEntity never drops items).
         registry.testingEndTick(2);
         assertTrue(registry.all().isEmpty());
         assertFalse(registry.hasActiveRelay(networkId, NETHER));
@@ -109,7 +109,7 @@ class MisakaRelayRegistryTest {
 
     @Test
     void allowsMultipleSatellitesSameNetworkAndDimension() {
-        var networkId = new BlockPos(4, 4, 4);
+        var networkId = netId(4, 4, 4);
         registry.testingPutOrbit(orbitEntry(UUID.randomUUID(), networkId, OVERWORLD, new BlockPos(0, 1, 0)));
         registry.testingPutOrbit(orbitEntry(UUID.randomUUID(), networkId, OVERWORLD, new BlockPos(0, 1, 1)));
         assertEquals(2, registry.all().size());
@@ -117,17 +117,17 @@ class MisakaRelayRegistryTest {
 
     @Test
     void poweredCountEdgeOnlyMarksComputeDirty() {
-        var networkId = new BlockPos(9, 9, 9);
+        var networkId = netId(9, 9, 9);
         index.testingSetDirty(false);
 
         var a = orbitEntry(UUID.randomUUID(), networkId, OVERWORLD, new BlockPos(0, 70, 0));
         registry.testingPutPowered(a);
-        assertTrue(index.testingIsDirty(), "0�? powered edge must dirty compute index");
+        assertTrue(index.testingIsDirty(), "0->1 powered edge must dirty compute index");
         index.testingSetDirty(false);
 
         var b = orbitEntry(UUID.randomUUID(), networkId, OVERWORLD, new BlockPos(1, 70, 0));
         registry.testingPutPowered(b);
-        assertFalse(index.testingIsDirty(), "1�? powered must not dirty");
+        assertFalse(index.testingIsDirty(), "1-> powered must not dirty");
 
         registry.feed(a.satelliteId);
         registry.feed(b.satelliteId);
@@ -136,17 +136,17 @@ class MisakaRelayRegistryTest {
 
         registry.feed(a.satelliteId);
         registry.testingEndTick(6000);
-        assertFalse(index.testingIsDirty(), "2�? powered must not dirty");
+        assertFalse(index.testingIsDirty(), "2-> powered must not dirty");
         assertTrue(registry.hasActiveRelay(networkId, OVERWORLD));
 
         registry.testingEndTick(6000);
-        assertTrue(index.testingIsDirty(), "1�? powered edge must dirty");
+        assertTrue(index.testingIsDirty(), "1-> powered edge must dirty");
         assertFalse(registry.hasActiveRelay(networkId, OVERWORLD));
     }
 
     @Test
     void laserDestroyedUnbindsWithoutImmediateCrash() {
-        var networkId = new BlockPos(11, 64, 11);
+        var networkId = netId(11, 64, 11);
         var laser = new BlockPos(20, 80, 20);
         var entry = orbitEntry(UUID.randomUUID(), networkId, OVERWORLD, laser);
         registry.testingPutPowered(entry);
@@ -163,7 +163,7 @@ class MisakaRelayRegistryTest {
 
     @Test
     void rebindLaserMovesOwnershipToNewTower() {
-        var networkId = new BlockPos(12, 64, 12);
+        var networkId = netId(12, 64, 12);
         var oldLaser = new BlockPos(1, 80, 1);
         var newLaser = new BlockPos(2, 80, 2);
         var entry = orbitEntry(UUID.randomUUID(), networkId, OVERWORLD, oldLaser);
@@ -180,7 +180,7 @@ class MisakaRelayRegistryTest {
 
     @Test
     void rebindLaserRejectsOccupiedTower() {
-        var networkId = new BlockPos(13, 64, 13);
+        var networkId = netId(13, 64, 13);
         var laserA = new BlockPos(3, 80, 3);
         var laserB = new BlockPos(4, 80, 4);
         var first = orbitEntry(UUID.randomUUID(), networkId, OVERWORLD, laserA);
@@ -196,7 +196,7 @@ class MisakaRelayRegistryTest {
 
     @Test
     void laserDestroyedEntersUnpoweredCountdownThenCrashes() {
-        var networkId = new BlockPos(14, 64, 14);
+        var networkId = netId(14, 64, 14);
         var laser = new BlockPos(30, 80, 30);
         var entry = orbitEntry(UUID.randomUUID(), networkId, OVERWORLD, laser);
         registry.testingPutPowered(entry);
@@ -214,7 +214,7 @@ class MisakaRelayRegistryTest {
 
     @Test
     void completeLaunchClearsEntityUuidAndStaysOrbit() {
-        var entry = orbitEntry(UUID.randomUUID(), new BlockPos(15, 64, 15), OVERWORLD, new BlockPos(40, 80, 40));
+        var entry = orbitEntry(UUID.randomUUID(), netId(15, 64, 15), OVERWORLD, new BlockPos(40, 80, 40));
         entry.phase = MisakaRelayEntry.Phase.LAUNCHING;
         entry.entityUuid = UUID.randomUUID();
         registry.testingPutOrbit(entry);
@@ -227,7 +227,7 @@ class MisakaRelayRegistryTest {
 
     @Test
     void launchingRefusesFeedUntilOrbit() {
-        var entry = orbitEntry(UUID.randomUUID(), new BlockPos(20, 64, 20), OVERWORLD, new BlockPos(45, 80, 45));
+        var entry = orbitEntry(UUID.randomUUID(), netId(20, 64, 20), OVERWORLD, new BlockPos(45, 80, 45));
         registry.testingPutOrbit(entry);
         entry.phase = MisakaRelayEntry.Phase.LAUNCHING;
 
@@ -248,7 +248,7 @@ class MisakaRelayRegistryTest {
 
     @Test
     void beginCrashWithoutEntityEntersCrashingViaHook() {
-        var entry = orbitEntry(UUID.randomUUID(), new BlockPos(16, 64, 16), OVERWORLD, new BlockPos(41, 80, 41));
+        var entry = orbitEntry(UUID.randomUUID(), netId(16, 64, 16), OVERWORLD, new BlockPos(41, 80, 41));
         registry.testingPutOrbit(entry);
         entry.entityUuid = null;
 
@@ -263,7 +263,7 @@ class MisakaRelayRegistryTest {
     @Test
     void beginCrashFreesLaserTowerBeforeImpact() {
         var laser = new BlockPos(50, 80, 50);
-        var entry = orbitEntry(UUID.randomUUID(), new BlockPos(21, 64, 21), OVERWORLD, laser);
+        var entry = orbitEntry(UUID.randomUUID(), netId(21, 64, 21), OVERWORLD, laser);
         registry.testingPutPowered(entry);
         assertEquals(entry.satelliteId, registry.laserBoundSatellite(OVERWORLD, laser));
 
@@ -277,18 +277,18 @@ class MisakaRelayRegistryTest {
 
     @Test
     void beginCrashWithoutEntityStillClearsRegistryWhenServerMissing() {
-        var entry = orbitEntry(UUID.randomUUID(), new BlockPos(16, 64, 16), OVERWORLD, new BlockPos(41, 80, 41));
+        var entry = orbitEntry(UUID.randomUUID(), netId(16, 64, 16), OVERWORLD, new BlockPos(41, 80, 41));
         registry.testingPutOrbit(entry);
         entry.entityUuid = null;
 
         registry.beginCrash(null, entry.satelliteId);
-        // No server �?spawnCrashEntity fails �?completeCrash removes entry.
+        // No server -> spawnCrashEntity fails -> completeCrash removes entry.
         assertTrue(registry.all().isEmpty());
     }
 
     @Test
     void forceCrashCountdownCanBeArmedAndCancelled() {
-        var entry = orbitEntry(UUID.randomUUID(), new BlockPos(17, 64, 17), OVERWORLD, new BlockPos(42, 80, 42));
+        var entry = orbitEntry(UUID.randomUUID(), netId(17, 64, 17), OVERWORLD, new BlockPos(42, 80, 42));
         registry.testingPutOrbit(entry);
 
         assertTrue(registry.scheduleForceCrash(null, entry.satelliteId, 5));
@@ -303,7 +303,7 @@ class MisakaRelayRegistryTest {
 
     @Test
     void forceCrashCountdownKeepsLaserPowerUntilCrashStarts() {
-        var entry = orbitEntry(UUID.randomUUID(), new BlockPos(19, 64, 19), OVERWORLD, new BlockPos(44, 80, 44));
+        var entry = orbitEntry(UUID.randomUUID(), netId(19, 64, 19), OVERWORLD, new BlockPos(44, 80, 44));
         registry.testingPutPowered(entry);
         assertTrue(entry.powered);
         assertTrue(registry.hasActiveRelay(entry.networkId, OVERWORLD));
@@ -325,7 +325,7 @@ class MisakaRelayRegistryTest {
 
     @Test
     void forceCrashCountdownExpiryBeginsCrash() {
-        var entry = orbitEntry(UUID.randomUUID(), new BlockPos(18, 64, 18), OVERWORLD, new BlockPos(43, 80, 43));
+        var entry = orbitEntry(UUID.randomUUID(), netId(18, 64, 18), OVERWORLD, new BlockPos(43, 80, 43));
         registry.testingPutOrbit(entry);
         assertTrue(registry.scheduleForceCrash(null, entry.satelliteId, 2));
 
@@ -334,13 +334,13 @@ class MisakaRelayRegistryTest {
         assertEquals(MisakaRelayEntry.Phase.ORBIT, entry.phase);
 
         registry.endTick(null);
-        // beginCrash(null) with no entity �?completeCrash removes entry.
+        // beginCrash(null) with no entity -> completeCrash removes entry.
         assertTrue(registry.all().isEmpty());
     }
 
     @Test
     void maintainFeedDoesNotClearCrashDebtInstantly() {
-        var entry = orbitEntry(UUID.randomUUID(), new BlockPos(19, 64, 19), OVERWORLD, new BlockPos(44, 80, 44));
+        var entry = orbitEntry(UUID.randomUUID(), netId(19, 64, 19), OVERWORLD, new BlockPos(44, 80, 44));
         registry.testingPutPowered(entry);
 
         registry.testingEndTick(6000);
@@ -357,7 +357,7 @@ class MisakaRelayRegistryTest {
 
     @Test
     void recoveryFeedHealsCrashDebtOneTickPerTick() {
-        var entry = orbitEntry(UUID.randomUUID(), new BlockPos(21, 64, 21), OVERWORLD, new BlockPos(46, 80, 46));
+        var entry = orbitEntry(UUID.randomUUID(), netId(21, 64, 21), OVERWORLD, new BlockPos(46, 80, 46));
         registry.testingPutOrbit(entry);
         entry.unpoweredTicks = 3;
         assertTrue(registry.needsCrashRecovery(entry.satelliteId));
@@ -381,9 +381,11 @@ class MisakaRelayRegistryTest {
         assertEquals(0, entry.unpoweredTicks);
     }
 
-    private static MisakaRelayEntry orbitEntry(
-            UUID id,
-            BlockPos networkId,
+    private static UUID netId(int x, int y, int z) {
+        return new UUID(0L, BlockPos.asLong(x, y, z));
+    }
+
+    private static MisakaRelayEntry orbitEntry(UUID id, UUID networkId,
             ResourceKey<Level> dimension,
             BlockPos laserPos
     ) {

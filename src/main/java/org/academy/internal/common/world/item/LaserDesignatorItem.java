@@ -15,6 +15,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import org.academy.internal.server.misaka.MisakaOrbitalStrikeSupport;
+import org.academy.internal.server.world.level.storage.MisakaRelayEntry;
 import org.academy.internal.server.world.level.storage.MisakaRelayRegistry;
 
 import java.util.Optional;
@@ -108,6 +109,8 @@ public final class LaserDesignatorItem extends Item {
             case NO_POWER -> "message.academy.laser_designator_no_power";
             case WRONG_DIMENSION -> "message.academy.laser_designator_wrong_dim";
             case CHUNK_UNLOADED -> "message.academy.laser_designator_chunk";
+            case NO_PERMISSION -> "message.academy.laser_designator_no_permission";
+            case INSUFFICIENT_COMPUTE -> "message.academy.laser_designator_no_compute";
         };
     }
 
@@ -121,9 +124,10 @@ public final class LaserDesignatorItem extends Item {
     ) {
         boundSatellite(stack).ifPresentOrElse(
                 id -> {
-                    String raw = id.toString().replace("-", "");
-                    String shortId = raw.length() >= 8 ? raw.substring(0, 8) : raw;
-                    tooltipAdder.accept(Component.translatable("item.academy.laser_designator.bound", shortId));
+                    tooltipAdder.accept(Component.translatable(
+                            "item.academy.laser_designator.bound",
+                            MisakaRelayEntry.shortId(id)
+                    ));
                 },
                 () -> tooltipAdder.accept(Component.translatable("item.academy.laser_designator.unbound"))
         );

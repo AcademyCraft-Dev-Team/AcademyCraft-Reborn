@@ -20,7 +20,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.Objects;
 import java.util.UUID;
 
-public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implements WirelessUser {
+public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implements WirelessUser, OwnedDevice {
     private static final int MAX_ENERGY = 500_000;
     /** Throttle client energy sync; per-tick updates made the beam flicker. */
     private static final int ENERGY_SYNC_INTERVAL = 20;
@@ -40,6 +40,7 @@ public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implemen
     private float strikeAimX;
     private float strikeAimY;
     private float strikeAimZ;
+    private @Nullable UUID ownerUuid;
 
     public EnergyLaserTowerBlockEntity(BlockPos pos, BlockState state) {
         super(BlockEntityTypes.ENERGY_LASER_TOWER.get(), pos, state);
@@ -327,6 +328,7 @@ public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implemen
         if (connectedNodePos != null) {
             output.putLong("connected_node_pos", connectedNodePos.asLong());
         }
+        saveOwner(output);
     }
 
     @Override
@@ -344,9 +346,21 @@ public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implemen
         strikeAimZ = input.getFloatOr("strike_aim_z", 0.0f);
         connectedNodePos = null;
         input.getLong("connected_node_pos").ifPresent(pos -> connectedNodePos = BlockPos.of(pos));
+        loadOwner(input);
         if (level != null && level.isClientSide() && isMain()) {
             OrbitSkyHooks.sync(this);
         }
+    }
+
+    @Override
+    public @Nullable UUID getOwnerUuid() {
+        return ownerUuid;
+    }
+
+    @Override
+    public void setOwnerUuid(@Nullable UUID ownerUuid) {
+        this.ownerUuid = ownerUuid;
+        setChanged();
     }
 
     @Override

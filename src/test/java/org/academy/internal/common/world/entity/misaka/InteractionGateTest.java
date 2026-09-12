@@ -30,8 +30,29 @@ class InteractionGateTest {
         assertTrue(InteractionGate.allow(record, "alice", InteractionGate.Intent.PET));
         assertTrue(InteractionGate.allow(record, "alice", InteractionGate.Intent.PANEL));
         assertTrue(InteractionGate.allow(record, "alice", InteractionGate.Intent.FEED_FOOD));
+        assertTrue(InteractionGate.allow(record, "alice", InteractionGate.Intent.BIND_FIRST));
+        assertFalse(InteractionGate.allow(record, "alice", InteractionGate.Intent.MIGRATE));
         assertFalse(InteractionGate.allow(record, "alice", InteractionGate.Intent.STATE));
         assertFalse(InteractionGate.allow(record, "alice", InteractionGate.Intent.PICKUP));
+    }
+
+    @Test
+    void panelAllowsAnyAwakenedRelationIncludingIndifferent() {
+        var record = awakened();
+        assertEquals(MobRelation.INDIFFERENT, FavorService.relation(record, "stranger"));
+        assertTrue(InteractionGate.allow(record, "stranger", InteractionGate.Intent.PANEL));
+        assertFalse(InteractionGate.allow(record, "stranger", InteractionGate.Intent.PET));
+        assertFalse(InteractionGate.allow(record, "stranger", InteractionGate.Intent.FEED_FOOD));
+        assertFalse(InteractionGate.allow(record, "stranger", InteractionGate.Intent.BIND_FIRST));
+
+        record.favorByPlayerName.put("foe", -15);
+        assertEquals(MobRelation.HOSTILE, FavorService.relation(record, "foe"));
+        assertTrue(InteractionGate.allow(record, "foe", InteractionGate.Intent.PANEL));
+        assertFalse(InteractionGate.allow(record, "foe", InteractionGate.Intent.PET));
+
+        record.favorByPlayerName.put("nemesis", -20);
+        assertEquals(MobRelation.DEADLY_ENEMY, FavorService.relation(record, "nemesis"));
+        assertTrue(InteractionGate.allow(record, "nemesis", InteractionGate.Intent.PANEL));
     }
 
     @Test
@@ -42,7 +63,19 @@ class InteractionGateTest {
         record.lastInteractedBenevolentPlayerName = "bob";
         assertTrue(InteractionGate.allow(record, "bob", InteractionGate.Intent.STATE));
         assertTrue(InteractionGate.allow(record, "bob", InteractionGate.Intent.PICKUP));
+        assertTrue(InteractionGate.allow(record, "bob", InteractionGate.Intent.MIGRATE));
         assertFalse(InteractionGate.allow(record, "alice", InteractionGate.Intent.STATE));
+        assertFalse(InteractionGate.allow(record, "alice", InteractionGate.Intent.MIGRATE));
+    }
+
+    @Test
+    void feedRecoverRequiresIncapacitated() {
+        var record = awakened();
+        record.favorByPlayerName.put("alice", 3);
+        assertFalse(InteractionGate.allow(record, "alice", InteractionGate.Intent.FEED_RECOVER));
+        record.incapacitated = true;
+        assertTrue(InteractionGate.allow(record, "alice", InteractionGate.Intent.FEED_RECOVER));
+        assertFalse(InteractionGate.allow(record, "stranger", InteractionGate.Intent.FEED_RECOVER));
     }
 
     @Test

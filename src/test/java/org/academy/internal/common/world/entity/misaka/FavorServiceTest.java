@@ -150,6 +150,54 @@ class FavorServiceTest {
     }
 
     @Test
+    void oneHopDoesNotRecurseThroughProximityChain() {
+        // A near B, B near C, A not near C — distinct networks. Origin A must not reach C.
+        var a = awakenedRecord(100_001);
+        var b = awakenedRecord(100_002);
+        var c = awakenedRecord(100_003);
+        a.networkNodePos = new BlockPos(0, 64, 0);
+        b.networkNodePos = new BlockPos(16, 64, 0);
+        c.networkNodePos = new BlockPos(32, 64, 0);
+        a.lastKnownChunk = new ChunkPos(0, 0);
+        b.lastKnownChunk = new ChunkPos(4, 0);
+        c.lastKnownChunk = new ChunkPos(8, 0);
+
+        var fromA = FavorService.resolveLanComponent(
+                a,
+                List.of(a, b, c),
+                record -> record.networkNodePos,
+                record -> record.lastKnownChunk
+        );
+        assertTrue(fromA.contains(a));
+        assertTrue(fromA.contains(b));
+        assertFalse(fromA.contains(c), "second proximity hop must not propagate");
+    }
+
+    @Test
+    void proximityNeighborPullsEntireNetworkOnce() {
+        var near = awakenedRecord(100_001);
+        var farOnNearNet = awakenedRecord(100_002);
+        var origin = awakenedRecord(100_003);
+        var nearNode = new BlockPos(8, 64, 8);
+        near.networkNodePos = nearNode;
+        farOnNearNet.networkNodePos = nearNode;
+        origin.networkNodePos = new BlockPos(0, 64, 0);
+        origin.lastKnownChunk = new ChunkPos(0, 0);
+        near.lastKnownChunk = new ChunkPos(3, 0);
+        farOnNearNet.lastKnownChunk = new ChunkPos(80, 80);
+
+        var component = FavorService.resolveLanComponent(
+                origin,
+                List.of(origin, near, farOnNearNet),
+                record -> record.networkNodePos,
+                record -> record.lastKnownChunk
+        );
+        assertTrue(component.contains(origin));
+        assertTrue(component.contains(near));
+        assertTrue(component.contains(farOnNearNet), "neighbor's whole network joins once");
+    }
+
+    @Test
     void proximityDoesNotBridgeAcrossDimensions() {
         var overworld = ResourceKey.create(
                 net.minecraft.core.registries.Registries.DIMENSION,

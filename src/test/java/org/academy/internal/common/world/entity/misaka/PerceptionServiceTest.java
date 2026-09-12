@@ -28,20 +28,32 @@ class PerceptionServiceTest {
     }
 
     @Test
-    void gainRespectsCapAndUnlocksHighTierAbove101() {
+    void gainRespectsCapAndUnlocksReconstructionAt101() {
         var record = awakenedRecord(95);
         record.perceptionCap = PerceptionService.PROMAX_CAP;
-        // 95 + 5 = 100: still within Promax tier, no high-tier unlock
+        // 95 + 5 = 100: still within Promax tier, no reconstruction yet
         assertEquals(5, PerceptionService.gain(null, record, 5));
         assertEquals(100, record.perception);
         assertFalse(record.highTierUnlocked);
+        assertFalse(record.isReconstruction);
         assertEquals(PerceptionService.PROMAX_CAP, record.perceptionCap);
 
-        // Crossing above 101 unlocks the 200 cap
-        assertEquals(2, PerceptionService.gain(null, record, 2));
-        assertEquals(102, record.perception);
+        // Reaching exactly 101 unlocks reconstruction + 200 cap
+        assertEquals(1, PerceptionService.gain(null, record, 1));
+        assertEquals(101, record.perception);
+        assertTrue(record.isReconstruction);
         assertTrue(record.highTierUnlocked);
         assertEquals(PerceptionService.HIGH_TIER_CAP, record.perceptionCap);
+    }
+
+    @Test
+    void decayAtExactly101UsesReconstructionFloor() {
+        var record = awakenedRecord(101);
+        record.isReconstruction = true;
+        record.highTierUnlocked = true;
+        PerceptionService.applyDailyDecay(record);
+        assertEquals(101, record.perception);
+        assertTrue(record.isReconstruction);
     }
 
     @Test

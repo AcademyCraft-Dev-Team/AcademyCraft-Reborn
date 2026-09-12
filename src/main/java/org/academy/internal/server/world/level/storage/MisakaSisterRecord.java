@@ -77,16 +77,33 @@ public final class MisakaSisterRecord {
         ).apply(instance, DailyState::new));
     }
 
+    private record StatusFlags(
+            boolean awakened,
+            boolean promaxUsed,
+            boolean highTierUnlocked,
+            boolean isReconstruction,
+            boolean incapacitated,
+            boolean starving,
+            int perception,
+            int perceptionCap
+    ) {
+        private static final Codec<StatusFlags> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                Codec.BOOL.fieldOf("awakened").orElse(false).forGetter(StatusFlags::awakened),
+                Codec.BOOL.fieldOf("promax_used").orElse(false).forGetter(StatusFlags::promaxUsed),
+                Codec.BOOL.fieldOf("high_tier_unlocked").orElse(false).forGetter(StatusFlags::highTierUnlocked),
+                Codec.BOOL.fieldOf("is_reconstruction").orElse(false).forGetter(StatusFlags::isReconstruction),
+                Codec.BOOL.fieldOf("incapacitated").orElse(false).forGetter(StatusFlags::incapacitated),
+                Codec.BOOL.fieldOf("starving").orElse(false).forGetter(StatusFlags::starving),
+                Codec.INT.fieldOf("perception").orElse(1).forGetter(StatusFlags::perception),
+                Codec.INT.fieldOf("perception_cap").orElse(100).forGetter(StatusFlags::perceptionCap)
+        ).apply(instance, StatusFlags::new));
+    }
+
     public static final Codec<MisakaSisterRecord> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             MisakaSavedDataCodecs.UUID_STRING_CODEC.fieldOf("misaka_uuid").forGetter(r -> r.misakaUuid),
             Codec.INT.fieldOf("serial").forGetter(r -> r.serial),
             MisakaPersonality.CODEC.fieldOf("personality").forGetter(r -> r.personality),
-            Codec.BOOL.fieldOf("awakened").orElse(false).forGetter(r -> r.awakened),
-            Codec.BOOL.fieldOf("promax_used").orElse(false).forGetter(r -> r.promaxUsed),
-            Codec.BOOL.fieldOf("high_tier_unlocked").orElse(false).forGetter(r -> r.highTierUnlocked),
-            Codec.INT.fieldOf("perception").orElse(1).forGetter(r -> r.perception),
-            Codec.INT.fieldOf("perception_cap").orElse(100).forGetter(r -> r.perceptionCap),
-            Codec.BOOL.fieldOf("starving").orElse(false).forGetter(r -> r.starving),
+            StatusFlags.CODEC.fieldOf("status").forGetter(MisakaSisterRecord::statusSnapshot),
             FAVOR_MAP_CODEC.fieldOf("favor_by_player").orElse(Map.of()).forGetter(MisakaSisterRecord::favorSnapshot),
             Codec.STRING.fieldOf("last_interacted_benevolent").orElse("").forGetter(r -> r.lastInteractedBenevolentPlayerName),
             NetworkState.CODEC.fieldOf("network").forGetter(MisakaSisterRecord::networkSnapshot),
@@ -101,6 +118,10 @@ public final class MisakaSisterRecord {
     public boolean awakened;
     public boolean promaxUsed;
     public boolean highTierUnlocked;
+    /** Explicit reconstruction identity; set when perception reaches 101+. */
+    public boolean isReconstruction;
+    /** Downed instead of permanent death; stops compute and combat. */
+    public boolean incapacitated;
     public int perception = 1;
     public int perceptionCap = 100;
     public boolean starving;
@@ -135,12 +156,7 @@ public final class MisakaSisterRecord {
             UUID misakaUuid,
             int serial,
             MisakaPersonality personality,
-            boolean awakened,
-            boolean promaxUsed,
-            boolean highTierUnlocked,
-            int perception,
-            int perceptionCap,
-            boolean starving,
+            StatusFlags status,
             Map<String, Integer> favorByPlayerName,
             String lastInteractedBenevolentPlayerName,
             NetworkState network,
@@ -149,12 +165,16 @@ public final class MisakaSisterRecord {
             int rescuedDayIndex
     ) {
         var record = new MisakaSisterRecord(misakaUuid, serial, personality, rescuedDayIndex);
-        record.awakened = awakened;
-        record.promaxUsed = promaxUsed;
-        record.highTierUnlocked = highTierUnlocked;
-        record.perception = perception;
-        record.perceptionCap = perceptionCap;
-        record.starving = starving;
+        record.awakened = status.awakened();
+        record.promaxUsed = status.promaxUsed();
+        record.highTierUnlocked = status.highTierUnlocked();
+        record.isReconstruction = status.isReconstruction()
+                || status.perception() >= 101
+                || status.highTierUnlocked();
+        record.incapacitated = status.incapacitated();
+        record.perception = status.perception();
+        record.perceptionCap = status.perceptionCap();
+        record.starving = status.starving();
         record.favorByPlayerName.putAll(favorByPlayerName);
         record.lastInteractedBenevolentPlayerName = lastInteractedBenevolentPlayerName;
         record.networkNodePos = network.networkNodePos() == null ? null : network.networkNodePos().immutable();
@@ -174,6 +194,19 @@ public final class MisakaSisterRecord {
         record.dailyCakeFavor = daily.dailyCakeFavor();
         record.lastHotSpringFavorDay = daily.lastHotSpringFavorDay();
         return record;
+    }
+
+    private StatusFlags statusSnapshot() {
+        return new StatusFlags(
+                awakened,
+                promaxUsed,
+                highTierUnlocked,
+                isReconstruction,
+                incapacitated,
+                starving,
+                perception,
+                perceptionCap
+        );
     }
 
     private Map<String, Integer> favorSnapshot() {

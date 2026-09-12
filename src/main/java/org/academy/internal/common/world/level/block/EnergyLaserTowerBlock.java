@@ -10,8 +10,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
@@ -30,6 +32,7 @@ import org.academy.internal.common.world.inventory.EnergyLaserTowerMenu;
 import org.academy.internal.common.world.level.block.entity.BlockEntityTypes;
 import org.academy.internal.common.world.level.block.entity.EnergyLaserTowerBlockEntity;
 import org.academy.internal.common.world.level.block.entity.MultiBlockEntity;
+import org.academy.internal.common.world.level.block.entity.OwnedDevice;
 import org.academy.internal.server.world.level.storage.MisakaRelayRegistry;
 import org.jspecify.annotations.Nullable;
 
@@ -65,6 +68,14 @@ public final class EnergyLaserTowerBlock extends MultiBlock {
         return defaultBlockState()
                 .setValue(TYPE, MultiBlockType.MAIN)
                 .setValue(BlockStateProperties.HORIZONTAL_FACING, context.getHorizontalDirection().getOpposite());
+    }
+
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (placer instanceof Player player) {
+            OwnedDevice.assignPlacer(level.getBlockEntity(pos), player);
+        }
     }
 
     @Override

@@ -7,6 +7,7 @@ import org.academy.api.common.misaka.MisakaNAT;
 import org.academy.internal.common.network.misaka.MisakaPanelDataPacket;
 import org.academy.internal.common.world.entity.misaka.InteractionGate;
 import org.academy.internal.common.world.entity.misaka.MisakaSisterEntity;
+import org.academy.internal.common.world.entity.misaka.MobRelation;
 import org.academy.internal.common.world.entity.misaka.favor.FavorService;
 import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
 import org.academy.internal.server.world.level.storage.WirelessNetworkData;
@@ -63,26 +64,39 @@ public final class MisakaPanelSupport {
         var server = level.getServer();
         var overworld = server != null ? server.overworld() : level;
         String playerName = player.getGameProfile().name();
+        var relation = FavorService.relation(record, playerName);
+        // §16.2: favor <= 0 viewers only get public facts — no network name, topology or exact compute.
+        boolean detailed = relation.ordinal() >= MobRelation.DEFAULT.ordinal();
         // Node configs live in overworld SavedData; position sample uses the sister entity.
-        String nodeName = WirelessNetworkData.displayName(overworld, record.networkNodePos, false);
-        var availableNodes = MisakaNAT.get().listAvailableNodes(overworld, sister.blockPosition());
-        boolean reconstructionWork = record.perception >= 101;
-        boolean reconstructionBlocked = record.networkNodePos != null
+        String nodeName = detailed
+                ? WirelessNetworkData.displayName(overworld, record.networkNodePos, false)
+                : "";
+        var availableNodes = detailed
+                ? MisakaNAT.get().listAvailableNodes(overworld, sister.blockPosition())
+                : List.<String>of();
+        boolean reconstructionWork = record.isReconstruction || record.perception >= 101;
+        boolean reconstructionBlocked = detailed
+                && record.networkNodePos != null
                 && MisakaNAT.get().hasReconstructionWork(server, record.networkNodePos, record.misakaUuid);
+        float msk = 0.0f;
+        if (record.awakened && !record.starving && !record.incapacitated) {
+            msk = MisakaComputeContribution.mskPerSecond(record.perception);
+        }
         return new MisakaPanelDataPacket(
                 sister.getUUID(),
                 record.misakaUuid,
                 record.serial,
-                record.perception,
-                MisakaComputeContribution.mskPerSecond(record.perception),
+                detailed ? record.perception : 0,
+                detailed ? msk : 0.0f,
                 record.personality.ordinal(),
                 record.awakened,
                 nodeName,
                 availableNodes,
-                FavorService.relation(record, playerName).ordinal(),
+                relation.ordinal(),
                 FavorService.isPrivilegePlayer(record, playerName),
                 reconstructionWork,
-                reconstructionBlocked
+                reconstructionBlocked,
+                record.networkNodePos != null
         );
     }
 
@@ -94,5 +108,45 @@ public final class MisakaPanelSupport {
             return null;
         }
         return sister.rosterRecord().orElse(null);
+    }
+
+    /**
+     * Same-dimension sister already loaded for this player. Gate and reach stay with the
+     * caller so pickup (range first) and panel packets (allow then touch then range) keep
+     * their existing order.
+     */
+    public static @Nullable SisterInteraction load(ServerPlayer player, UUID entityUuid) {
+        if (player == null || entityUuid == null || !(player.level() instanceof ServerLevel level)) {
+            return null;
+        }
+        var sister = findLoadedEntity(level, entityUuid).orElse(null);
+        if (sister == null) {
+            return null;
+        }
+        var record = resolveRecord(sister, sister.getMisakaUuid());
+        if (record == null) {
+            return null;
+        }
+        return new SisterInteraction(player, level, sister, record, player.getGameProfile().name());
+    }
+
+    public record SisterInteraction(
+            ServerPlayer player,
+            ServerLevel level,
+            MisakaSisterEntity sister,
+            MisakaSisterRecord record,
+            String playerName
+    ) {
+        public boolean inRange(double maxRangeSqr) {
+            return player.distanceToSqr(sister) <= maxRangeSqr;
+        }
+
+        public boolean allow(InteractionGate.Intent intent) {
+            return InteractionGate.allow(record, playerName, intent);
+        }
+
+        public void touch() {
+            InteractionGate.touchBenevolent(record, playerName, level.getServer());
+        }
     }
 }

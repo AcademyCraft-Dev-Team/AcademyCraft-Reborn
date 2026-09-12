@@ -70,6 +70,9 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
     /** Max distance (blocks) for player pickup / drop interactions. */
     public static final double PICKUP_RANGE = 4.0;
     public static final double PICKUP_RANGE_SQR = PICKUP_RANGE * PICKUP_RANGE;
+    /** Max distance (blocks) for panel / bind / wander packets. */
+    public static final double PANEL_RANGE = 64.0;
+    public static final double PANEL_RANGE_SQR = PANEL_RANGE * PANEL_RANGE;
 
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("idle");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("walk");
@@ -83,6 +86,8 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
     static final EntityDataAccessor<Integer> PERSONALITY = SynchedEntityData.defineId(
             MisakaSisterEntity.class, EntityDataSerializers.INT);
     static final EntityDataAccessor<Boolean> STARVING = SynchedEntityData.defineId(
+            MisakaSisterEntity.class, EntityDataSerializers.BOOLEAN);
+    static final EntityDataAccessor<Boolean> INCAPACITATED = SynchedEntityData.defineId(
             MisakaSisterEntity.class, EntityDataSerializers.BOOLEAN);
     static final EntityDataAccessor<Integer> WANDER_STYLE = SynchedEntityData.defineId(
             MisakaSisterEntity.class, EntityDataSerializers.INT);
@@ -138,6 +143,7 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
         builder.define(PERCEPTION, 1);
         builder.define(PERSONALITY, MisakaPersonality.TIMID.ordinal());
         builder.define(STARVING, false);
+        builder.define(INCAPACITATED, false);
         builder.define(WANDER_STYLE, WanderStyle.FREE_MOVE.ordinal());
         builder.define(FOOD_LEVEL, 20);
     }
@@ -161,8 +167,8 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
 
     @Override
     public boolean isNoAi() {
-        // Carried against the chest: freeze pathfinding / combat goals without editing each Goal.
-        return (getVehicle() instanceof Player) || super.isNoAi();
+        // Carried / incapacitated: freeze pathfinding and combat without editing each Goal.
+        return isIncapacitated() || (getVehicle() instanceof Player) || super.isNoAi();
     }
 
     @Override
@@ -253,7 +259,7 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
 
     @Override
     public boolean canBeSeenAsEnemy() {
-        return !isStarving() && super.canBeSeenAsEnemy();
+        return !isStarving() && !isIncapacitated() && super.canBeSeenAsEnemy();
     }
 
     @Override
@@ -279,6 +285,27 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
         }
         String name = serverPlayer.getGameProfile().name();
         ItemStack stack = player.getItemInHand(hand);
+
+        if (MisakaFoodTraits.isTower(stack) && record.incapacitated) {
+            if (!InteractionGate.allow(record, name, InteractionGate.Intent.FEED_RECOVER)) {
+                MisakaInteractionFeedback.refuse(this, serverPlayer);
+                return InteractionResult.FAIL;
+            }
+            record.incapacitated = false;
+            setHealth(Math.min(getMaxHealth(), Math.max(getHealth(), getMaxHealth() * 0.5f)));
+            InteractionGate.touchBenevolent(record, name, level().getServer());
+            MisakaSisterRosterSync.syncFromRecord(this, record);
+            stack.shrink(1);
+            MisakaSisterRoster.get(level().getServer()).setDirty();
+            MisakaComputeContribution.refreshCpForRecord(level().getServer(), record);
+            MisakaInteractionFeedback.recovered(this, serverPlayer);
+            return InteractionResult.CONSUME;
+        }
+
+        if (record.incapacitated) {
+            MisakaInteractionFeedback.refuse(this, serverPlayer);
+            return InteractionResult.FAIL;
+        }
 
         if (MisakaFoodTraits.isPromax(stack)) {
             if (!InteractionGate.allow(record, name, InteractionGate.Intent.FEED_PROMAX)) {
@@ -424,6 +451,10 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
 
     public boolean isStarving() {
         return entityData.get(STARVING);
+    }
+
+    public boolean isIncapacitated() {
+        return entityData.get(INCAPACITATED);
     }
 
     public MisakaPersonality getPersonality() {

@@ -114,7 +114,11 @@ import org.academy.internal.common.network.misaka.MisakaPanelDataPacket;
 import org.academy.internal.common.network.misaka.RequestMisakaNetManagePacket;
 import org.academy.internal.common.network.misaka.RequestMisakaPanelPacket;
 import org.academy.internal.common.network.misaka.SetMisakaNetworkAllocationPacket;
+import org.academy.internal.common.network.misaka.DisconnectMisakaFromNetworkPacket;
+import org.academy.internal.common.network.misaka.SetMisakaNetworkPermissionPacket;
+import org.academy.internal.common.network.misaka.TransferDeviceOwnerPacket;
 import org.academy.internal.common.network.misaka.SetMisakaNetworkNodePacket;
+import org.academy.internal.common.network.misaka.SetMisakaWanderAnchorPacket;
 import org.academy.internal.common.network.misaka.SetMisakaWanderStylePacket;
 import org.academy.internal.common.network.misaka.TogglePickUpMisakaPacket;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
@@ -945,6 +949,9 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, SetMisakaWanderStylePacket>>
             SET_MISAKA_WANDER_STYLE = PACKET_TYPES.register("set_misaka_wander_style",
             () -> new PacketType<>(SetMisakaWanderStylePacket.class, SetMisakaWanderStylePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, SetMisakaWanderAnchorPacket>>
+            SET_MISAKA_WANDER_ANCHOR = PACKET_TYPES.register("set_misaka_wander_anchor",
+            () -> new PacketType<>(SetMisakaWanderAnchorPacket.class, SetMisakaWanderAnchorPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, SetMisakaNetworkNodePacket>>
             SET_MISAKA_NETWORK_NODE = PACKET_TYPES.register("set_misaka_network_node",
             () -> new PacketType<>(SetMisakaNetworkNodePacket.class, SetMisakaNetworkNodePacket.CODEC));
@@ -966,6 +973,15 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, SetMisakaNetworkAllocationPacket>>
             SET_MISAKA_NETWORK_ALLOCATION = PACKET_TYPES.register("set_misaka_network_allocation",
             () -> new PacketType<>(SetMisakaNetworkAllocationPacket.class, SetMisakaNetworkAllocationPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, SetMisakaNetworkPermissionPacket>>
+            SET_MISAKA_NETWORK_PERMISSION = PACKET_TYPES.register("set_misaka_network_permission",
+            () -> new PacketType<>(SetMisakaNetworkPermissionPacket.class, SetMisakaNetworkPermissionPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DisconnectMisakaFromNetworkPacket>>
+            DISCONNECT_MISAKA_FROM_NETWORK = PACKET_TYPES.register("disconnect_misaka_from_network",
+            () -> new PacketType<>(DisconnectMisakaFromNetworkPacket.class, DisconnectMisakaFromNetworkPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, TransferDeviceOwnerPacket>>
+            TRANSFER_DEVICE_OWNER = PACKET_TYPES.register("transfer_device_owner",
+            () -> new PacketType<>(TransferDeviceOwnerPacket.class, TransferDeviceOwnerPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, DevSyncPacket>>
             DEV_SYNC = PACKET_TYPES.register("dev_sync",

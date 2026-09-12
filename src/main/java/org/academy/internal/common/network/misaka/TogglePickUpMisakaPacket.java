@@ -60,26 +60,20 @@ public final class TogglePickUpMisakaPacket
 
         @SubscribePacket
         public static void handle(TogglePickUpMisakaPacket packet) {
-            var player = packet.getPacketListener().getPlayer();
-            var sister = MisakaPanelSupport.findLoadedEntity((ServerLevel) player.level(), packet.entityUuid()).orElse(null);
-            if (sister == null || !player.isAlive()) {
+            var session = MisakaPanelSupport.load(packet.getPacketListener().getPlayer(), packet.entityUuid());
+            if (session == null || !session.player().isAlive()) {
                 return;
             }
-            if (player.distanceToSqr(sister) > MisakaSisterEntity.PICKUP_RANGE_SQR) {
+            if (!session.inRange(MisakaSisterEntity.PICKUP_RANGE_SQR)) {
                 return;
             }
-            var record = sister.rosterRecord().orElse(null);
-            if (record == null) {
+            if (!session.allow(InteractionGate.Intent.PICKUP)) {
+                MisakaInteractionFeedback.pickupDenied(session.player());
                 return;
             }
-            String name = player.getGameProfile().name();
-            if (!InteractionGate.allow(record, name, InteractionGate.Intent.PICKUP)) {
-                MisakaInteractionFeedback.pickupDenied(player);
-                return;
-            }
-            InteractionGate.touchBenevolent(record, name, ((ServerLevel) player.level()).getServer());
-            MisakaSisterRoster.get(player.level().getServer()).setDirty();
-            togglePickup(player, sister);
+            session.touch();
+            MisakaSisterRoster.get(session.level().getServer()).setDirty();
+            togglePickup(session.player(), session.sister());
         }
 
         private static void togglePickup(ServerPlayer player, MisakaSisterEntity sister) {
