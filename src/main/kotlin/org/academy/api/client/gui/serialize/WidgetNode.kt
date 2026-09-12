@@ -10,7 +10,7 @@ fun kindOfKey(key: String): String = when (key) {
     "margin_left", "margin_top", "margin_right", "margin_bottom",
     "padding_left", "padding_top", "padding_right", "padding_bottom", "weight" -> "layout"
 
-    "visibility", "alpha", "enabled", "clickable", "selected", "cover_all_prev",
+    "visibility", "alpha", "enabled", "clickable", "selected",
     "translation_x", "translation_y", "scale_x", "scale_y", "rotation",
     "origin_x", "origin_y", "tooltip_text" -> "common"
 

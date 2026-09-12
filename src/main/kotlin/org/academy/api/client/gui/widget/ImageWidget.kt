@@ -8,7 +8,7 @@ import net.minecraft.resources.Identifier
 import net.minecraft.util.ARGB
 import org.academy.api.client.gui.command.DrawCommand
 import org.academy.api.client.gui.command.ImageDrawCommand
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.texture.GpuTextureViewSource
 import org.academy.api.client.gui.texture.IdentifierTextureSource
 import org.academy.api.client.gui.texture.TextureSource
@@ -58,7 +58,7 @@ open class ImageWidget : AbstractWidget {
         return RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
     }
 
-    override fun renderInternal(context: RenderContext) {
+    override fun renderInternal(context: Canvas) {
         background?.draw(context, this)
         val source = textureSource ?: return
         val textureView = source.getTextureView()

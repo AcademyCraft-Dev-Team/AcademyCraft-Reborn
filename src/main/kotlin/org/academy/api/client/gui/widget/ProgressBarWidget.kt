@@ -5,7 +5,7 @@ import net.minecraft.util.Mth
 import org.academy.api.client.gui.command.DrawCommand
 import org.academy.api.client.gui.command.FillRectDrawCommand
 import org.academy.api.client.gui.layout.Orientation
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 
 open class ProgressBarWidget : AbstractWidget() {
     var max: Float = 100f
@@ -22,7 +22,7 @@ open class ProgressBarWidget : AbstractWidget() {
     var orientation: Orientation = Orientation.HORIZONTAL
         protected set
 
-    override fun renderInternal(context: RenderContext) {
+    override fun renderInternal(context: Canvas) {
         super.renderInternal(context)
 
         val width = width

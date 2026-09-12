@@ -41,16 +41,16 @@ public final class DarkmatterShapingScreen extends UiScreen {
     private ScrollPanelWidget modifierScroll;
     private double lastModifierMouseX = Double.NaN;
     private double lastModifierMouseY = Double.NaN;
-    private LabelWidget alphaLabel;
-    private LabelWidget betaLabel;
-    private LabelWidget budgetLabel;
-    private LabelWidget costLabel;
-    private LabelWidget parametersLabel;
-    private LabelWidget selectionLabel;
-    private LabelWidget statusLabel;
-    private LabelWidget blockHardnessLabel;
-    private LabelWidget blockResistanceLabel;
-    private LabelWidget blockGravityLabel;
+    private TextWidget alphaLabel;
+    private TextWidget betaLabel;
+    private TextWidget budgetLabel;
+    private TextWidget costLabel;
+    private TextWidget parametersLabel;
+    private TextWidget selectionLabel;
+    private TextWidget statusLabel;
+    private TextWidget blockHardnessLabel;
+    private TextWidget blockResistanceLabel;
+    private TextWidget blockGravityLabel;
     private ButtonWidget createButton;
     private float blockHardness = DarkmatterBlockProfile.DEFAULT.hardness();
     private float blockResistance = DarkmatterBlockProfile.DEFAULT.explosionResistance();
@@ -147,20 +147,20 @@ public final class DarkmatterShapingScreen extends UiScreen {
                 .gravity(Gravity.TOP_LEFT).margin(108, 31, 0, 0));
         panel.addChild("phase_header", section);
 
-        selectionLabel = new LabelWidget("");
-        selectionLabel.setBaseFontSize(8.0f);
+        selectionLabel = new TextWidget("");
+        selectionLabel.setTextSize(8.0f);
         selectionLabel.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .size(128, 12).gravity(Gravity.TOP_LEFT).margin(108, 46, 0, 0));
         panel.addChild("selection", selectionLabel);
 
-        alphaLabel = new LabelWidget("");
-        alphaLabel.setBaseFontSize(7.0f);
+        alphaLabel = new TextWidget("");
+        alphaLabel.setTextSize(7.0f);
         alphaLabel.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .size(60, 10).gravity(Gravity.TOP_LEFT).margin(108, 67, 0, 0));
         panel.addChild("alpha", alphaLabel);
         phaseWidgets.add(alphaLabel);
-        betaLabel = new LabelWidget("");
-        betaLabel.setBaseFontSize(7.0f);
+        betaLabel = new TextWidget("");
+        betaLabel.setTextSize(7.0f);
         betaLabel.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .size(60, 10).gravity(Gravity.TOP_RIGHT).margin(0, 67, 157, 0));
         panel.addChild("beta", betaLabel);
@@ -194,21 +194,21 @@ public final class DarkmatterShapingScreen extends UiScreen {
         panel.addChild("phase_slider", slider);
         phaseWidgets.add(slider);
 
-        budgetLabel = new LabelWidget("");
-        budgetLabel.setBaseFontSize(7.0f);
+        budgetLabel = new TextWidget("");
+        budgetLabel.setTextSize(7.0f);
         budgetLabel.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .size(128, 10).gravity(Gravity.TOP_LEFT).margin(108, 100, 0, 0));
         panel.addChild("budget", budgetLabel);
         phaseWidgets.add(budgetLabel);
-        costLabel = new LabelWidget("");
-        costLabel.setBaseFontSize(7.0f);
+        costLabel = new TextWidget("");
+        costLabel.setTextSize(7.0f);
         costLabel.setAlpha(0.72f);
         costLabel.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .size(128, 10).gravity(Gravity.TOP_LEFT).margin(108, 114, 0, 0));
         panel.addChild("cost", costLabel);
 
-        parametersLabel = new LabelWidget("");
-        parametersLabel.setBaseFontSize(6.25f);
+        parametersLabel = new TextWidget("");
+        parametersLabel.setTextSize(6.25f);
         parametersLabel.setAlpha(0.82f);
         parametersLabel.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .size(128, 48).gravity(Gravity.TOP_LEFT).margin(108, 130, 0, 0));
@@ -218,8 +218,8 @@ public final class DarkmatterShapingScreen extends UiScreen {
     }
 
     private void buildBlockEditor(FrameLayoutWidget panel) {
-        blockHardnessLabel = new LabelWidget("");
-        blockHardnessLabel.setBaseFontSize(7.0f);
+        blockHardnessLabel = new TextWidget("");
+        blockHardnessLabel.setTextSize(7.0f);
         blockHardnessLabel.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .size(128, 10).gravity(Gravity.TOP_LEFT).margin(108, 67, 0, 0));
         panel.addChild("block_hardness_label", blockHardnessLabel);
@@ -251,8 +251,8 @@ public final class DarkmatterShapingScreen extends UiScreen {
         panel.addChild("block_hardness_slider", hardnessSlider);
         blockWidgets.add(hardnessSlider);
 
-        blockResistanceLabel = new LabelWidget("");
-        blockResistanceLabel.setBaseFontSize(7.0f);
+        blockResistanceLabel = new TextWidget("");
+        blockResistanceLabel.setTextSize(7.0f);
         blockResistanceLabel.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .size(128, 10).gravity(Gravity.TOP_LEFT).margin(108, 92, 0, 0));
         panel.addChild("block_resistance_label", blockResistanceLabel);
@@ -284,8 +284,8 @@ public final class DarkmatterShapingScreen extends UiScreen {
         panel.addChild("block_resistance_slider", resistanceSlider);
         blockWidgets.add(resistanceSlider);
 
-        blockGravityLabel = new LabelWidget("");
-        blockGravityLabel.setBaseFontSize(7.0f);
+        blockGravityLabel = new TextWidget("");
+        blockGravityLabel.setTextSize(7.0f);
         blockGravityLabel.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .size(96, 12).gravity(Gravity.TOP_LEFT).margin(108, 132, 0, 0));
         panel.addChild("block_gravity_label", blockGravityLabel);
@@ -331,8 +331,8 @@ public final class DarkmatterShapingScreen extends UiScreen {
     }
 
     private void buildFooter(FrameLayoutWidget panel) {
-        statusLabel = new LabelWidget("");
-        statusLabel.setBaseFontSize(6.5f);
+        statusLabel = new TextWidget("");
+        statusLabel.setTextSize(6.5f);
         statusLabel.setAlpha(0.75f);
         statusLabel.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .size(128, 10).gravity(Gravity.BOTTOM_LEFT).margin(256, 0, 0, 12));
@@ -377,9 +377,9 @@ public final class DarkmatterShapingScreen extends UiScreen {
             modifierContent.addChild("modifier_" + index++, modifierRow(type));
         }
         if (index == 0) {
-            var empty = new LabelWidget(Component.translatable(
+            var empty = new TextWidget(Component.translatable(
                     "screen.academy.darkmatter_shaping.modifiers.none").getString());
-            empty.setBaseFontSize(6.5f);
+            empty.setTextSize(6.5f);
             empty.setAlpha(0.6f);
             empty.setLayoutParams(new LinearLayoutWidget.LayoutParams().size(114, 18));
             modifierContent.addChild("modifier_empty", empty);
@@ -403,8 +403,8 @@ public final class DarkmatterShapingScreen extends UiScreen {
         var displayName = unlocked ? name : Component.translatable(
                 "screen.academy.darkmatter_shaping.locked.entry", name,
                 type.requiredAbilityLevel()).getString();
-        var text = new LabelWidget(displayName + (level > 0 ? "  " + level : ""));
-        text.setBaseFontSize(6.5f);
+        var text = new TextWidget(displayName + (level > 0 ? "  " + level : ""));
+        text.setTextSize(6.5f);
         text.setAlpha(unlocked ? (level > 0 ? 1.0f : 0.68f) : 0.34f);
         text.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .size(78, 16).gravity(Gravity.CENTER));
@@ -756,9 +756,9 @@ public final class DarkmatterShapingScreen extends UiScreen {
         statusLabel.setText(Component.translatable(result.translationKey()).getString());
     }
 
-    private static LabelWidget label(String key, float size) {
-        var label = new LabelWidget(Component.translatable(key).getString());
-        label.setBaseFontSize(size);
+    private static TextWidget label(String key, float size) {
+        var label = new TextWidget(Component.translatable(key).getString());
+        label.setTextSize(size);
         return label;
     }
 
@@ -785,8 +785,8 @@ public final class DarkmatterShapingScreen extends UiScreen {
         states.addState(Widget.HOVERED, new ColorDrawable(0x50FFFFFF));
         states.addState(Widget.PRESSED, new ColorDrawable(0x907680DE));
         button.setBackground(states);
-        var label = new LabelWidget(text);
-        label.setBaseFontSize(7.0f);
+        var label = new TextWidget(text);
+        label.setTextSize(7.0f);
         label.setLayoutParams(new FrameLayoutWidget.LayoutParams()
                 .sizeMode(SizeMode.MATCH_PARENT).gravity(Gravity.CENTER));
         button.addChild("label", label);

@@ -8,7 +8,7 @@ import org.academy.api.client.gui.drawable.TextureDrawable
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.resources.R
 import org.academy.api.common.util.L10n
@@ -181,7 +181,7 @@ object TutorialUi {
 
     private class Context(private val onBack: () -> Unit) {
         val root = object : LinearLayoutWidget() {
-            override fun render(context: RenderContext) {
+            override fun render(context: Canvas) {
                 if (width < WIDTH) return
                 super.render(context)
             }
@@ -219,8 +219,10 @@ object TutorialUi {
                 onClickListener = { onBack() }
                 background = iconDrawable(R.textures.gui.icon.arrow_back)
             })
-            addChild("title", LabelWidget(L10n["app.academy.tutorial.title"]).apply {
+            addChild("title", TextWidget(L10n["app.academy.tutorial.title"]).apply {
                 layoutParams = LinearLayoutWidget.LayoutParams().weight(1f).height(0f).gravity(Gravity.CENTER)
+                gravity = Gravity.CENTER
+                gravity = Gravity.CENTER
             })
         }
 
@@ -256,13 +258,15 @@ object TutorialUi {
                 .width(NAV_WIDTH)
                 .heightMode(SizeMode.MATCH_PARENT)
                 .padding(4f, 4f, 3f, 4f)
-            addChild("label", LabelWidget(L10n["app.academy.tutorial.index"]).apply {
-                baseFontSize = 7.5f
+            addChild("label", TextWidget(L10n["app.academy.tutorial.index"]).apply {
+                textSize = 7.5f
                 alpha = 0.65f
                 layoutParams = LinearLayoutWidget.LayoutParams()
                     .widthMode(SizeMode.MATCH_PARENT)
                     .height(10f)
                     .gravity(Gravity.CENTER_LEFT)
+                    gravity = Gravity.CENTER_LEFT
+                gravity = Gravity.CENTER_LEFT
             })
             addChild("rule", FillWidget(0x60FFFFFF).apply {
                 layoutParams = LinearLayoutWidget.LayoutParams().widthMode(SizeMode.MATCH_PARENT).height(1f)
@@ -310,13 +314,15 @@ object TutorialUi {
                 addState(Widget.HOVERED, ColorDrawable(0x28FFFFFF))
                 setDefault(ColorDrawable(0x08000000))
             }
-            addChild("text", LabelWidget(L10n[page.navKey]).apply {
-                baseFontSize = 7.5f
+            addChild("text", TextWidget(L10n[page.navKey]).apply {
+                textSize = 7.5f
                 alpha = 0.82f
                 layoutParams = FrameLayoutWidget.LayoutParams()
                     .sizeMode(SizeMode.MATCH_PARENT)
                     .padding(3f, 1f)
                     .gravity(Gravity.CENTER_LEFT)
+                    gravity = Gravity.CENTER_LEFT
+                gravity = Gravity.CENTER_LEFT
             })
         }
 
@@ -357,9 +363,9 @@ object TutorialUi {
                 addChild("rule", FillWidget(0xA0FFFFFF.toInt()).apply {
                     layoutParams = LinearLayoutWidget.LayoutParams().widthMode(SizeMode.MATCH_PARENT).height(1f)
                 })
-                addChild("brief", LabelWidget(L10n[page.briefKey]).apply {
-                    baseFontSize = ARTICLE_BODY_FONT_SIZE
-                    wrapText = true
+                addChild("brief", TextWidget(L10n[page.briefKey]).apply {
+                    textSize = ARTICLE_BODY_FONT_SIZE
+                    singleLine = false
                     alpha = 0.88f
                     background = ColorDrawable(ROW_FILL)
                     layoutParams = LinearLayoutWidget.LayoutParams()
@@ -368,9 +374,9 @@ object TutorialUi {
                         .padding(4f, 3f)
                 })
                 page.bodyKeys.forEachIndexed { bodyIndex, key ->
-                    addChild("body_$bodyIndex", LabelWidget(L10n[key]).apply {
-                        baseFontSize = ARTICLE_BODY_FONT_SIZE
-                        wrapText = true
+                    addChild("body_$bodyIndex", TextWidget(L10n[key]).apply {
+                        textSize = ARTICLE_BODY_FONT_SIZE
+                        singleLine = false
                         alpha = 0.82f
                         layoutParams = LinearLayoutWidget.LayoutParams()
                             .widthMode(SizeMode.MATCH_PARENT)
@@ -496,12 +502,13 @@ object TutorialUi {
                     .width(38f)
                     .height(RECIPE_SLOT_SIZE)
                     .gravity(Gravity.CENTER)
-                addChild("arrow", LabelWidget("→").apply {
-                    baseFontSize = ARTICLE_BODY_FONT_SIZE
+                addChild("arrow", TextWidget("→").apply {
+                    textSize = ARTICLE_BODY_FONT_SIZE
                     alpha = 0.78f
                     layoutParams = LinearLayoutWidget.LayoutParams()
                         .size(RECIPE_SLOT_SIZE, RECIPE_SLOT_SIZE)
                         .gravity(Gravity.CENTER)
+                        gravity = Gravity.CENTER
                 })
                 addChild("item", ItemStackWidget(recipe.result.asItem().defaultInstance).apply {
                     tooltipText = L10n[recipe.result.asItem().descriptionId]
@@ -530,13 +537,15 @@ object TutorialUi {
                     navGroup.selectButton(navButtons[nextIndex])
                 }
             })
-            addChild("position", LabelWidget("${selectedPage + 1} / ${pages.size}").apply {
-                baseFontSize = 7f
+            addChild("position", TextWidget("${selectedPage + 1} / ${pages.size}").apply {
+                textSize = 7f
                 alpha = 0.6f
                 layoutParams = LinearLayoutWidget.LayoutParams()
                     .weight(1f)
                     .heightMode(SizeMode.MATCH_PARENT)
                     .gravity(Gravity.CENTER)
+                    gravity = Gravity.CENTER
+                gravity = Gravity.CENTER
             })
             addChild("next", ButtonWidget().apply {
                 layoutParams = LinearLayoutWidget.LayoutParams().size(14f, 14f)
@@ -549,9 +558,9 @@ object TutorialUi {
             })
         }
 
-        private fun previewText(key: String?): LabelWidget = LabelWidget(key?.let(L10n::get) ?: "").apply {
-            baseFontSize = ARTICLE_BODY_FONT_SIZE
-            wrapText = true
+        private fun previewText(key: String?): TextWidget = TextWidget(key?.let(L10n::get) ?: "").apply {
+            textSize = ARTICLE_BODY_FONT_SIZE
+            singleLine = false
             alpha = 0.78f
             layoutParams = LinearLayoutWidget.LayoutParams()
                 .widthMode(SizeMode.MATCH_PARENT)
@@ -564,13 +573,14 @@ object TutorialUi {
             alpha: Float,
             height: Float,
             gravity: Int = Gravity.CENTER_LEFT
-        ): LabelWidget = LabelWidget(text).apply {
-            baseFontSize = fontSize
+        ): TextWidget = TextWidget(text).apply {
+            textSize = fontSize
             this.alpha = alpha
             layoutParams = LinearLayoutWidget.LayoutParams()
                 .widthMode(SizeMode.MATCH_PARENT)
                 .height(height)
                 .gravity(gravity)
+            this.gravity = gravity
         }
 
         private fun iconDrawable(icon: net.minecraft.resources.Identifier): StateListDrawable {

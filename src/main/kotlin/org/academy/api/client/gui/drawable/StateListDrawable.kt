@@ -1,6 +1,6 @@
 package org.academy.api.client.gui.drawable
 
-import org.academy.api.client.gui.render.RenderContext
+import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.widget.Widget
 
 class StateListDrawable : Drawable {
@@ -9,7 +9,7 @@ class StateListDrawable : Drawable {
     private val stateList: MutableList<StatePair> = ArrayList<StatePair>()
     private var defaultDrawable: Drawable? = null
 
-    override fun draw(context: RenderContext, widget: Widget) {
+    override fun draw(context: Canvas, widget: Widget) {
         val currentState = widget.getWidgetState()
 
         for (pair in stateList) {

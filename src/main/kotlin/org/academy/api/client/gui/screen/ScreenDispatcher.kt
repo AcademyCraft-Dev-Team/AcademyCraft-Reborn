@@ -10,7 +10,6 @@ import net.neoforged.neoforge.client.event.ScreenEvent
 import net.neoforged.neoforge.client.event.lifecycle.ClientStoppedEvent
 import net.neoforged.neoforge.common.NeoForge
 import org.academy.AcademyCraft
-import org.academy.AcademyCraftClient
 import org.academy.api.client.gui.command.SubmittedCommand
 import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.imgui.ImGuiUIDebugger
@@ -142,7 +141,7 @@ class ScreenDispatcher private constructor() {
     private fun renderImGuiOverlay(target: RenderTarget, screen: RenderRoot) {
         ImGuiUtilApi.render(target) {
             val host = screen as? SerializedUiDebugHost
-            if (AcademyCraftClient.isUiDebugEnvironment() && host != null && UiDebugSession.shouldAttach(host)) {
+            if (ImGuiUIDebugger.enabled && host != null && UiDebugSession.shouldAttach(host)) {
                 ImGuiUIDebugger.renderContent(
                     host.debugLayoutRoot(),
                     true,

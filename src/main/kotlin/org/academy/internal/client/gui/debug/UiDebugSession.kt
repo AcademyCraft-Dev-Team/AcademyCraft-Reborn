@@ -12,7 +12,6 @@ import org.academy.api.client.gui.serialize.UiJson
 import org.academy.api.client.gui.serialize.WidgetSerializer
 import org.academy.api.client.gui.widget.FrameLayoutWidget
 import org.academy.internal.client.gui.SerializedUiLayout
-import org.academy.internal.client.hud.HudLayoutDefaults
 import java.nio.file.Files
 import java.nio.file.Path
 import java.text.SimpleDateFormat
@@ -24,17 +23,10 @@ object UiDebugSession {
     private val documents = LinkedHashMap<String, Document>()
     private val lock = Any()
     private val hostSnapshots = WeakHashMap<SerializedUiDebugHost, String>()
-    private var hudDefaultsInitial: HudLayoutDefaults.Config? = null
-    private var hudDefaultsDraft: HudLayoutDefaults.Config? = null
-    private var hudDefaultsDirty = false
-    private var hudDefaultsPendingPublish = false
 
     @Volatile
     var attachedLayoutId: String? = null
         private set
-
-    @Volatile
-    var hudEditorOpen: Boolean = false
 
     data class Document(
         val definition: UiDebugLayoutDefinition,
@@ -57,7 +49,7 @@ object UiDebugSession {
     }
 
     fun isAvailable(): Boolean {
-        return Dev.HAS_IM_GUI && System.getenv("IS_DEV")?.toBooleanStrictOrNull() == true
+        return Dev.HAS_IM_GUI
     }
 
     fun document(id: String): Document = synchronized(lock) {
@@ -133,45 +125,13 @@ object UiDebugSession {
     }
 
     fun hasUnsavedChanges(): Boolean = synchronized(lock) {
-        documents.values.any { it.dirty || it.pendingPublish } || hudDefaultsDirty || hudDefaultsPendingPublish
-    }
-
-    fun hudDefaults(): HudLayoutDefaults.Config = synchronized(lock) {
-        ensureHudDefaults()
-        hudDefaultsDraft!!.copyDeep()
-    }
-
-    fun updateHudDefaults(config: HudLayoutDefaults.Config): UpdateResult = synchronized(lock) {
-        ensureHudDefaults()
-        for ((name, value) in config.regions) {
-            if (!value.offsetX.isFinite() || !value.offsetY.isFinite() || !value.scale.isFinite()) {
-                return@synchronized UpdateResult(
-                    false,
-                    tr("screen.academy.ui_debug.error.invalid_hud_defaults", name)
-                )
-            }
-            value.scale = value.scale.coerceIn(0.5f, 2.0f)
-        }
-        hudDefaultsDraft = config.copyDeep()
-        hudDefaultsDirty =
-            HudLayoutDefaults.toJson(hudDefaultsDraft!!) != HudLayoutDefaults.toJson(hudDefaultsInitial!!)
-        HudLayoutDefaults.replace(hudDefaultsDraft!!)
-        UpdateResult(true)
-    }
-
-    fun revertHudDefaults() = synchronized(lock) {
-        ensureHudDefaults()
-        hudDefaultsDraft = hudDefaultsInitial!!.copyDeep()
-        hudDefaultsDirty = false
-        HudLayoutDefaults.replace(hudDefaultsDraft!!)
+        documents.values.any { it.dirty || it.pendingPublish }
     }
 
     fun publish(): PublishResult = synchronized(lock) {
         val dirty = documents.values.filter { it.dirty || it.pendingPublish }
-        ensureHudDefaults()
-        val publishHudDefaults = hudDefaultsDirty || hudDefaultsPendingPublish
         val workingDir = WidgetSerializer.layoutDir()
-        if (dirty.isEmpty() && !publishHudDefaults) {
+        if (dirty.isEmpty()) {
             return@synchronized PublishResult(0, findProjectRoot(), workingDir)
         }
         for (state in dirty) {
@@ -186,7 +146,7 @@ object UiDebugSession {
         val sourceDir = projectRoot?.resolve("src/main/resources/assets/academy/ui/layout")
         val stamp = SimpleDateFormat("yyyyMMdd-HHmmss-SSS").format(Date())
         val backupDir = workingDir.resolve("backup").resolve(stamp)
-        val plannedCount = dirty.size + if (publishHudDefaults) 1 else 0
+        val plannedCount = dirty.size
         var workingPublished = false
         return@synchronized try {
             Files.createDirectories(workingDir)
@@ -195,10 +155,6 @@ object UiDebugSession {
             for (state in dirty) {
                 val name = "${state.definition.id}.json"
                 workingFiles[name] = canonicalText(state.draft)
-            }
-            if (publishHudDefaults) {
-                workingFiles[HudLayoutDefaults.FILE_NAME] =
-                    canonicalText(HudLayoutDefaults.toJson(hudDefaultsDraft!!))
             }
             UiDebugFilePublisher.writeBatch(workingDir, workingFiles, backupDir, "working-")
             workingPublished = true
@@ -210,15 +166,9 @@ object UiDebugSession {
                     it.dirty = false
                     it.pendingPublish = false
                 }
-                if (publishHudDefaults) {
-                    hudDefaultsInitial = hudDefaultsDraft!!.copyDeep()
-                    hudDefaultsDirty = false
-                    hudDefaultsPendingPublish = false
-                }
                 PublishResult(plannedCount, projectRoot, workingDir)
             } else {
                 dirty.forEach { it.pendingPublish = true }
-                if (publishHudDefaults) hudDefaultsPendingPublish = true
                 logger.warn(
                     "[UiDebug] Saved working copies to {}, but the project source root could not be located",
                     workingDir
@@ -231,7 +181,6 @@ object UiDebugSession {
         } catch (exception: Exception) {
             logger.error("[UiDebug] Failed to publish layouts", exception)
             dirty.forEach { it.pendingPublish = true }
-            if (publishHudDefaults) hudDefaultsPendingPublish = true
             PublishResult(
                 if (workingPublished) plannedCount else 0,
                 projectRoot,
@@ -245,12 +194,7 @@ object UiDebugSession {
         if (hasUnsavedChanges()) logger.warn("[UiDebug] Client stopped with unpublished UI layout changes")
         documents.clear()
         hostSnapshots.clear()
-        hudDefaultsInitial = null
-        hudDefaultsDraft = null
-        hudDefaultsDirty = false
-        hudDefaultsPendingPublish = false
         attachedLayoutId = null
-        hudEditorOpen = false
     }
 
     private fun loadDocument(definition: UiDebugLayoutDefinition): Document {
@@ -269,14 +213,6 @@ object UiDebugSession {
         val normalized = normalize(json)
         validate(definition, normalized)?.let { throw IllegalArgumentException("${definition.id}: $it") }
         return Document(definition, normalized.deepCopy(), normalized.deepCopy())
-    }
-
-    private fun ensureHudDefaults() {
-        if (hudDefaultsDraft != null) return
-        val loaded = HudLayoutDefaults.loadJson(HudLayoutDefaults.loadSourceJson())
-        hudDefaultsInitial = loaded.copyDeep()
-        hudDefaultsDraft = loaded.copyDeep()
-        HudLayoutDefaults.replace(loaded)
     }
 
     private fun validate(definition: UiDebugLayoutDefinition, json: JsonObject): String? {

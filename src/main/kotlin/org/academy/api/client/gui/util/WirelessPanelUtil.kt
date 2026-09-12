@@ -50,7 +50,7 @@ object WirelessPanelUtil {
                     .size(16f, 16f)
                 content.addChild("icon", icon)
 
-                val connectedLabel = LabelWidget("Connected")
+                val connectedLabel = TextWidget("Connected")
                 content.addChild("connected_node_label", connectedLabel)
 
                 val connectedNodeContainer = FrameLayoutWidget()
@@ -61,7 +61,7 @@ object WirelessPanelUtil {
                     .marginRight(WirelessPanelUtil.SCROLLBAR_WIDTH + WirelessPanelUtil.SPACING_MINOR)
                 content.addChild("connected_node_container", connectedNodeContainer)
 
-                val availableLabel = LabelWidget("Available")
+                val availableLabel = TextWidget("Available")
                 content.addChild("available_node_label", availableLabel)
 
                 val listContainer = LinearLayoutWidget()
@@ -181,7 +181,7 @@ object WirelessPanelUtil {
                     .size(14f, 14f)
                 itemContent.addChild("icon", nodeIcon)
 
-                val nodeNameLabel = LabelWidget(nodeName)
+                val nodeNameLabel = TextWidget(nodeName)
                 nodeNameLabel.layoutParams = LinearLayoutWidget.LayoutParams()
                     .weight(1f)
                     .height(10f)
@@ -198,7 +198,7 @@ object WirelessPanelUtil {
                         )
                         WirelessPanelUtil.updateConnectedNodeDisplay(position, connectedNodeContainer, nodeList)
                     }
-                    val inputBox = TextBoxWidget(12)
+                    val inputBox = TextInputWidget(12)
                     inputBox.layoutParams = LinearLayoutWidget.LayoutParams()
                         .gravity(Gravity.CENTER)
                         .size(46f, 10f)

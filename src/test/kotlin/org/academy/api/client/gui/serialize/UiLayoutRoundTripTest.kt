@@ -32,8 +32,8 @@ class UiLayoutRoundTripTest {
         }
         root.addChild("content", content)
 
-        content.addChild("title", LabelWidget("Hello").apply {
-            baseFontSize = 12f
+        content.addChild("title", TextWidget("Hello").apply {
+            textSize = 12f
             isEnabled = false
             tooltipText = "tooltip"
         })
@@ -61,7 +61,7 @@ class UiLayoutRoundTripTest {
             setProgress(10f)
             setKeyProgressIncrement(5)
         })
-        content.addChild("textbox", TextBoxWidget(32).apply {
+        content.addChild("textbox", TextInputWidget(32).apply {
             setAllowLineBreak(true)
             text = "abc"
         })
@@ -74,7 +74,7 @@ class UiLayoutRoundTripTest {
         content.addChild("radio_group", radioGroup)
 
         val button = ButtonWidget().apply {
-            addChild("label", LabelWidget("Click"))
+            addChild("label", TextWidget("Click"))
         }
         content.addChild("button", button)
 
@@ -84,9 +84,9 @@ class UiLayoutRoundTripTest {
             isCurtain = true
             isIndicator = true
             itemAlign = WheelPickerWidget.ItemAlign.LEFT
-            addChild("item0", LabelWidget("0"))
-            addChild("item1", LabelWidget("1"))
-            addChild("item2", LabelWidget("2"))
+            addChild("item0", TextWidget("0"))
+            addChild("item1", TextWidget("1"))
+            addChild("item2", TextWidget("2"))
         }
         content.addChild("picker", picker)
 
@@ -95,8 +95,8 @@ class UiLayoutRoundTripTest {
         }
         panel.addChild("content", LinearLayoutWidget().apply {
             orientation = Orientation.VERTICAL
-            addChild("a", LabelWidget("A"))
-            addChild("b", LabelWidget("B"))
+            addChild("a", TextWidget("A"))
+            addChild("b", TextWidget("B"))
         })
         root.addChild("scroll", panel)
 
@@ -152,11 +152,11 @@ class UiLayoutRoundTripTest {
         assertEquals(Gravity.CENTER_HORIZONTAL, content.getLayoutGravity())
         assertEquals(2f, content.getLayoutWeightSum())
 
-        val title = content.children["title"] as LabelWidget
+        val title = content.children["title"] as TextWidget
         assertEquals("Hello", title.text)
-        assertEquals(12f, title.baseFontSize)
+        assertEquals(12f, title.textSize)
 
-        val textbox = content.children["textbox"] as TextBoxWidget
+        val textbox = content.children["textbox"] as TextInputWidget
         assertEquals("abc", textbox.text)
         assertEquals(32, textbox.getTextMaxLength())
 
@@ -181,7 +181,7 @@ class UiLayoutRoundTripTest {
         val column = LinearLayoutWidget().apply {
             orientation = Orientation.VERTICAL
         }
-        val weighted = LabelWidget("w").apply {
+        val weighted = TextWidget("w").apply {
             layoutParams = LinearLayoutWidget.LayoutParams().weight(3f).height(0f)
         }
         column.addChild("weighted", weighted)
@@ -205,7 +205,7 @@ class UiLayoutRoundTripTest {
         """.trimIndent()
 
         val decoded = WidgetSerializer.fromJsonString(json)
-        assertTrue(decoded is LabelWidget)
+        assertTrue(decoded is TextWidget)
         assertEquals(100f, decoded.layoutParams.width)
         assertEquals(48, decoded.layoutParams.gravity)
 

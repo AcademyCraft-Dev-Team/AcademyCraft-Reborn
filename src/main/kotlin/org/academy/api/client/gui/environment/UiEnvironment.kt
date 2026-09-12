@@ -3,6 +3,7 @@ package org.academy.api.client.gui.environment
 import com.mojang.blaze3d.textures.GpuTextureView
 import net.minecraft.resources.Identifier
 import org.academy.api.client.gui.texture.TextureSource
+import org.academy.api.client.gui.unit.Density
 import java.io.InputStream
 import java.nio.file.Path
 
@@ -24,6 +25,12 @@ interface UiEnvironment {
 
     /** GUI scale factor (physical pixels per GUI unit). */
     val guiScale: Float
+
+    /**
+     * 单位换算来源（dp/sp → 物理像素）。默认由 [guiScale] 推导；
+     * 桌面工具可通过覆写该属性自定义字体缩放等。
+     */
+    val density: Density get() = Density(guiScale)
 
     /** Physical (framebuffer) width in pixels. */
     val physicalWidth: Int
