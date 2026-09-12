@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Objects;
 
 public final class CtaFriendlyFireWhitelist {
-    private static final String CONFIG_KEY = "ctaFriendlyFireWhitelist";
     private static final String TAG_PREFIX = "tag:";
     private static final int RECENT_PLAYER_HOSTILITY_TICKS = 100;
     private static final List<String> DEFAULT = List.of("tamed", "touhou_little_maid:maid");
@@ -49,7 +48,7 @@ public final class CtaFriendlyFireWhitelist {
         try {
             var server = entity.level().getServer();
             if (server == null || server.getAcademyCraftServer() == null) return DEFAULT;
-            var configured = server.getAcademyCraftServer().getGenericConfig().stringListMap.get(CONFIG_KEY);
+            var configured = server.getAcademyCraftServer().getGenericConfig().friendlyFire.ctaWhitelist;
             return configured == null ? DEFAULT : configured;
         } catch (Throwable ignored) {
             return DEFAULT;

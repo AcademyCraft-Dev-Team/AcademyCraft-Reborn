@@ -362,9 +362,11 @@ public final class LightShield extends Skill {
         private void applyRadialPulse(LightShield skill, float abilityPower, float playerMultiplier) {
             var damage = calculateDamage(abilityPower, playerMultiplier);
             var source = SkillDamageSource.of(player, skill);
+            var pulseRadius = skill.scaledRange(player,
+                    skill.hasProficiencyMilestone(player, 2) ? 4.5f : ATTACK_RADIUS);
             var targets = initialLevel.getEntitiesOfClass(
                     Mob.class,
-                    player.getBoundingBox().inflate(skill.hasProficiencyMilestone(player, 2) ? 4.5 : ATTACK_RADIUS),
+                    player.getBoundingBox().inflate(pulseRadius),
                     mob -> mob.isAlive()
                             && mob.getType().getCategory() == MobCategory.MONSTER
                             && !TeamRelations.areAllied(player, mob)

@@ -236,12 +236,13 @@ public final class ThreateningTeleport extends Skill {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.THREATENING_TELEPORT.get();
             if (player.getMainHandItem().isEmpty()) return;
-            var lockedTarget = TeleportTargeting.findFirstLivingEntity(player, MAX_RANGE);
+            var targetRange = skill.scaledRange(player, MAX_RANGE);
+            var lockedTarget = TeleportTargeting.findFirstLivingEntity(player, targetRange);
 
             skill.executeActive(player, (ctx, actualCost) -> {
                 if (lockedTarget != null && (!lockedTarget.isAlive()
                         || lockedTarget.level() != player.level()
-                        || player.distanceToSqr(lockedTarget) > MAX_RANGE * MAX_RANGE)) {
+                        || player.distanceToSqr(lockedTarget) > targetRange * targetRange)) {
                     return;
                 }
                 var mainHand = player.getMainHandItem();

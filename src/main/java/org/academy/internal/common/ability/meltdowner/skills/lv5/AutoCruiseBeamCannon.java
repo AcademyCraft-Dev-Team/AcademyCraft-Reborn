@@ -26,6 +26,7 @@ import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.DamageComposition;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -233,11 +234,10 @@ public final class AutoCruiseBeamCannon extends Skill {
                     marked,
                     milestone >= 2 ? 1.6f : RadiationIntensify.MARK_DAMAGE_MULTIPLIER
             ) * damageScale;
-            var hurt = target.hurtServer(
-                    level,
-                    SkillDamageSource.of(owner, Skills.AUTO_CRUISE_BEAM_CANNON.get()),
-                    damage
-            );
+            var maxHealthPart = target.getMaxHealth() * MAX_HEALTH_DAMAGE_RATIO * damageScale;
+            var source = SkillDamageSource.of(owner, Skills.AUTO_CRUISE_BEAM_CANNON.get());
+            // Declare the max-health portion so the pipeline's plain damage multiplier skips it.
+            var hurt = DamageComposition.hurt(target, level, source, damage, maxHealthPart);
             if (hurt && Skills.RADIATION_INTENSIFY.get().isEnabled(owner)) {
                 RadiationIntensify.mark(owner, target, level.getGameTime());
             }
@@ -324,7 +324,7 @@ public final class AutoCruiseBeamCannon extends Skill {
                 var level = player.level();
                 var now = level.getGameTime();
                 var milestone = skill.getEffectiveProficiencyMilestone(player);
-                var scanRadius = milestone >= 2 ? 20.0 : SCAN_RADIUS;
+                var scanRadius = skill.scaledRange(player, milestone >= 2 ? 20.0 : SCAN_RADIUS);
                 if (now - lastDetect >= DETECT_INTERVAL_TICKS) {
                     detected.clear();
                     var targets = level.getEntitiesOfClass(

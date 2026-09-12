@@ -265,7 +265,8 @@ public class BallLightning extends Skill {
                 }
 
                 if (!hasTarget && currentState != BehaviorState.START) {
-                    var searchRadius = proficiencyMilestone >= 2 ? MAX_RADIUS * 1.2f : MAX_RADIUS;
+                    var searchRadius = Skills.BALL_LIGHTNING.get().scaledRange(player,
+                            proficiencyMilestone >= 2 ? MAX_RADIUS * 1.2f : MAX_RADIUS);
                     var entities = MathUtil.getEntitiesInSphereByHP(level(), position, searchRadius, e -> e != player);
                     if (!entities.isEmpty()) {
                         targetEntity = entities.getFirst();
@@ -396,7 +397,8 @@ public class BallLightning extends Skill {
             private void checkImpact() {
                 if (targetEntity != null && position.distanceTo(targetEntity.position()) <= 4.0) {
                     var level = level();
-                    var entities = MathUtil.getEntitiesInSphereByHP(level, position, 5.0, e -> e != player);
+                    var impactRadius = Skills.BALL_LIGHTNING.get().scaledRange(player, 5.0f);
+                    var entities = MathUtil.getEntitiesInSphereByHP(level, position, impactRadius, e -> e != player);
                     var damageSource = SkillDamageSource.of(player, Skills.BALL_LIGHTNING.get());
                     var system = AbilitySystemServer.getSystem(player);
                     for (var entity : entities) {
@@ -442,7 +444,8 @@ public class BallLightning extends Skill {
                         endMini();
                         return;
                     }
-                    var targets = MathUtil.getEntitiesInSphereByHP(level(), position, 24.0, entity -> entity != player);
+                    var seekRadius = Skills.BALL_LIGHTNING.get().scaledRange(player, 24.0f);
+                    var targets = MathUtil.getEntitiesInSphereByHP(level(), position, seekRadius, entity -> entity != player);
                     if (!targets.isEmpty()) {
                         var delta = targets.getFirst().getBoundingBox().getCenter().subtract(position);
                         if (delta.lengthSqr() > 1.0e-8)
@@ -454,7 +457,9 @@ public class BallLightning extends Skill {
                     if (!targets.isEmpty() && position.distanceToSqr(targets.getFirst().position()) <= 4.0) {
                         var system = AbilitySystemServer.getSystem(player);
                         var source = SkillDamageSource.of(player, Skills.BALL_LIGHTNING.get()).withElectricalChargePoints(1);
-                        for (var target : MathUtil.getEntitiesInSphereByHP(level(), position, 3.0, entity -> entity != player)) {
+                        var miniImpactRadius = Skills.BALL_LIGHTNING.get().scaledRange(player, 3.0f);
+                        for (var target : MathUtil.getEntitiesInSphereByHP(
+                                level(), position, miniImpactRadius, entity -> entity != player)) {
                             DamageComposition.hurt(
                                     target, level(), source, calculateImpactDamage(target.getMaxHealth(),
                                     system.getPlayerAbilityPowerMultiplier(player.getUUID()),

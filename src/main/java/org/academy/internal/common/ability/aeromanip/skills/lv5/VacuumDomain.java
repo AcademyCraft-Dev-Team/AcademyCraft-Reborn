@@ -242,8 +242,8 @@ public final class VacuumDomain extends Skill {
                         target.getAirSupply(), target.getMaxAirSupply(), drain, protectedByBubble);
                 target.setAirSupply(air);
                 if (!protectedByBubble && shouldDealDamage(owner.tickCount, air)) {
-                    var damage = baseDamage(target.getMaxHealth())
-                            * AeromanipConfig.damageMultiplier(owner, SkillNames.VACUUM_DOMAIN);
+                    // The damage pipeline applies the skill's configured damage multiplier centrally.
+                    var damage = baseDamage(target.getMaxHealth());
                     DamageComposition.hurt(
                             target, level, damageSource, damage, damage);
                 }
@@ -270,8 +270,7 @@ public final class VacuumDomain extends Skill {
             if (enabled) {
                 enabled = AbilitySystemServer.getSystem(player).ensurePermanentOccupation(
                         player.getUUID(),
-                        skill.getMaintenanceCost(player)
-                                * AeromanipConfig.cpMultiplier(player, SkillNames.VACUUM_DOMAIN),
+                        skill.getMaintenanceCost(player),
                         skill);
             }
             if (enabled) {

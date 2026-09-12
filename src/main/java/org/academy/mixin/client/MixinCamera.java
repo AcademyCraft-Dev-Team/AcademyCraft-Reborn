@@ -6,6 +6,7 @@ import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.client.animation.AbilityDeveloperSleepClient;
 import org.academy.internal.client.ability.mentalout.CameraSmoothingBridge;
+import org.academy.internal.client.ability.teleport.ChunkLeapGodView;
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
 import org.academy.internal.client.ability.mentalout.WideAreaInterferenceClientState;
 import org.academy.internal.client.render.vfx.CameraShakeManager;
@@ -98,6 +99,22 @@ public abstract class MixinCamera implements CameraSmoothingBridge {
                 WideAreaInterferenceClientState.cameraYaw(),
                 WideAreaInterferenceClientState.cameraPitch()
         );
+    }
+
+    /**
+     * Places the camera above the inspected location for the 区块跃迁 god view.
+     *
+     * <p>Same technique as the wide-area view: override the camera after vanilla has aligned it with the
+     * player, so the real renderer draws the target while the player entity stays where it is. The far clip
+     * is pushed out because the camera sits high above the ground it is looking at.
+     */
+    @Inject(method = "update", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/Camera;alignWithEntity(F)V", shift = At.Shift.AFTER))
+    private void academy$applyChunkLeapGodView(DeltaTracker deltaTracker, CallbackInfo ci) {
+        if (!ChunkLeapGodView.shouldOverrideCamera()) return;
+        depthFar = Math.max(depthFar, (float) ChunkLeapGodView.farExtra());
+        academy$setPosition(ChunkLeapGodView.cameraPosition());
+        academy$setRotation(ChunkLeapGodView.cameraYaw(), ChunkLeapGodView.cameraPitch());
     }
 
     @Inject(method = "extractRenderState", at = @At("TAIL"))

@@ -133,6 +133,7 @@ public final class PvpSetting {
         var playerTarget = target instanceof Player;
         var samePlayer = target == attacker;
         if (playerTarget && !samePlayer) {
+            if (!isServerPvpAllowed(target.level())) return ProtectionReason.SERVER_DISABLED;
             var decision = AbilityEffectPolicy.pvp(target.level());
             if (decision == AbilityEffectPolicy.Decision.DENY) return ProtectionReason.DIMENSION_DISABLED;
             if (decision == AbilityEffectPolicy.Decision.ALLOW) return ProtectionReason.NONE;
@@ -143,6 +144,17 @@ public final class PvpSetting {
                 isPvpEnabled(attacker),
                 !(target instanceof Player victim) || isPvpEnabled(victim)
         );
+    }
+
+    /** Server-wide master gate; when false no player-vs-player skill effect is admitted. */
+    public static boolean isServerPvpAllowed(net.minecraft.world.level.Level level) {
+        try {
+            var server = level.getServer();
+            if (server == null || server.getAcademyCraftServer() == null) return true;
+            return server.getAcademyCraftServer().getGenericConfig().general.pvp;
+        } catch (Throwable ignored) {
+            return true;
+        }
     }
 
     static ProtectionReason protectionReason(
@@ -198,6 +210,7 @@ public final class PvpSetting {
         NONE(""),
         ATTACKER_DISABLED("message.academy.pvp.disabled"),
         TARGET_DISABLED("message.academy.pvp.target_disabled"),
+        SERVER_DISABLED("message.academy.pvp.server_disabled"),
         DIMENSION_DISABLED("message.academy.pvp.dimension_disabled");
 
         private final String feedbackKey;

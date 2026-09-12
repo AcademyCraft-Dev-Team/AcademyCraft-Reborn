@@ -75,6 +75,10 @@ public final class AcademyDamageRules {
                     * (1.0f - percentage / container.getOriginalDamage()));
         }
         event.setNewDamage(CategoryDamageRuntime.outgoingDamage(container.getSource(), event.getNewDamage()));
+        event.setNewDamage(org.academy.api.server.ability.SkillTuning.scaleSkillDamage(
+                container.getSource(), event.getNewDamage(),
+                org.academy.api.common.damage.DamageComposition.maximumHealthPart(
+                        target, container.getSource())));
         VectorExternalInterceptionService.enforceAppliedBoundary(event);
         if (target instanceof ServerPlayer player) {
             AbilitySystemServer.getSystem(player).getPropsManager().onDamagePre(event);

@@ -31,6 +31,7 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.server.ability.SkillTuning;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -258,12 +259,14 @@ public class Disarm extends Skill {
         public static void handle(UsePacket packet) {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.DISARM.get();
-            var range = skill.hasProficiencyMilestone(player, 2) ? 20.0 : MAX_RANGE;
+            var range = skill.scaledRange(player, skill.hasProficiencyMilestone(player, 2) ? 20.0 : MAX_RANGE);
             if (!(player.level().getEntity(packet.getTargetEntityId()) instanceof LivingEntity target)
                     || target == player || !target.isAlive()
                     || CtaFriendlyFireWhitelist.shouldProtect(player, target)
                     || player.distanceToSqr(target) > range * range
                     || !EntityMotionGuard.canManipulateEquipmentFrom(player, target)) return;
+            // Taking items from another player is opt-in on the server; mobs are always disarmed.
+            if (target instanceof Player && !SkillTuning.allowDisarmPlayers(player, skill)) return;
             var canTakeSecond = skill.hasProficiencyMilestone(player, 2)
                     && !target.getOffhandItem().isEmpty() && !target.getMainHandItem().isEmpty();
             skill.executeActive(player, ctx -> canTakeSecond ? 40.0f : 20.0f, (ctx, actualCost) -> {

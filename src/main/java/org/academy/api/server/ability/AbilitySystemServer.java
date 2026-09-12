@@ -166,6 +166,9 @@ public final class AbilitySystemServer {
             return new StartSkillDevPacket.Response(false, "Unknown skill");
         }
         var skill = skillRef.get().value();
+        if (skill.isHidden()) {
+            return new StartSkillDevPacket.Response(false, "Skill is not available yet");
+        }
         var recommendedLevel = skill.getRecommendedLevel().getLevelCode();
         if (!AbilityDevelopmentAccess.canLearnSkill(source, recommendedLevel)) {
             return new StartSkillDevPacket.Response(
@@ -408,6 +411,7 @@ public final class AbilitySystemServer {
             DevelopmentSource source
     ) {
         if (!isPlayerReadyForDevelopment(player)) return false;
+        if (skill.isHidden()) return false;
         if (!AbilityDevelopmentAccess.canLearnSkill(
                 source, skill.getRecommendedLevel().getLevelCode())) return false;
         var instance = getSystem(player);
@@ -938,6 +942,8 @@ public final class AbilitySystemServer {
 
         var baseCost = calculator.calculate(ctx);
         if (!Float.isFinite(baseCost) || baseCost < 0) return false;
+        baseCost *= SkillTuning.costMultiplier(player, skill);
+        if (!Float.isFinite(baseCost) || baseCost < 0) return false;
         var actualCost = Math.max(0, OutputControl.adjustCpCost(this, uuid, skill, baseCost)
                 * playerCPManager.getCalculationIntensity(uuid));
         var iterationPoints = resolveIterationPoints(skill.getIterationTicks(player), baseCost);
@@ -979,7 +985,7 @@ public final class AbilitySystemServer {
                 this
         );
 
-        var baseCpCost = cpCalculator.calculate(ctx);
+        var baseCpCost = cpCalculator.calculate(ctx) * SkillTuning.costMultiplier(player, skill);
         var compressedAirCost = mpCalculator.calculate(ctx);
         if (!Float.isFinite(baseCpCost) || baseCpCost < 0.0f
                 || !Float.isFinite(compressedAirCost) || compressedAirCost < 0.0f) return false;
@@ -1048,14 +1054,19 @@ public final class AbilitySystemServer {
 
     public boolean tryPermanentOccupation(UUID uuid, float amount, Skill skill) {
         if (!Float.isFinite(amount) || amount < 0) return false;
+        // Single authority for the server's per-skill CP cost multiplier.
+        var scaled = Math.max(0, amount * SkillTuning.costMultiplier(minecraftServer, skill));
         var actualAmount = Math.max(
-                0, amount * playerCPManager.getCalculationIntensity(uuid));
+                0, scaled * playerCPManager.getCalculationIntensity(uuid));
         return playerCPManager.tryOccupation(uuid, actualAmount, skill, 0, true);
     }
 
     public boolean tryTimedOccupation(UUID uuid, float amount, Skill skill) {
-        var level = getPlayerSkillLevel(uuid, skill.getKeyString());
-        return tryTimedOccupation(uuid, amount, skill, skill.getIterationTicks(level));
+        var player = minecraftServer.getPlayerList().getPlayer(uuid);
+        var iterationTicks = player != null
+                ? skill.getIterationTicks(player)
+                : skill.getIterationTicks(getPlayerSkillLevel(uuid, skill.getKeyString()));
+        return tryTimedOccupation(uuid, amount, skill, iterationTicks);
     }
 
     /** Read-only cost quote matching the dynamic program charge, including proficiency and calculation efficiency. */
@@ -1096,16 +1107,19 @@ public final class AbilitySystemServer {
             boolean outputAdjustable
     ) {
         if (!Float.isFinite(amount) || amount < 0) return false;
+        // Single authority for the server's per-skill CP cost multiplier.
+        var scaled = amount * SkillTuning.costMultiplier(minecraftServer, skill);
+        if (!Float.isFinite(scaled) || scaled < 0) return false;
         var adjusted = outputAdjustable
-                ? OutputControl.adjustCpCost(this, uuid, skill, amount)
-                : amount;
+                ? OutputControl.adjustCpCost(this, uuid, skill, scaled)
+                : scaled;
         var actualAmount = Math.max(
                 0, adjusted * playerCPManager.getCalculationIntensity(uuid));
         return playerCPManager.tryOccupation(
                 uuid,
                 actualAmount,
                 skill,
-                resolveIterationPoints(iterationPoints, amount),
+                resolveIterationPoints(iterationPoints, scaled),
                 false
         );
     }
@@ -1135,8 +1149,10 @@ public final class AbilitySystemServer {
 
     public boolean ensurePermanentOccupation(UUID uuid, float amount, Skill skill) {
         if (!Float.isFinite(amount) || amount < 0) return false;
+        // Single authority for the server's per-skill CP cost multiplier.
+        var scaled = Math.max(0, amount * SkillTuning.costMultiplier(minecraftServer, skill));
         var actualAmount = Math.max(
-                0, amount * playerCPManager.getCalculationIntensity(uuid));
+                0, scaled * playerCPManager.getCalculationIntensity(uuid));
         return playerCPManager.ensurePermanentOccupation(uuid, actualAmount, skill);
     }
 
@@ -1236,10 +1252,7 @@ public final class AbilitySystemServer {
                 actualPermanent,
                 castSkill,
                 actualCast,
-                resolveIterationPoints(castSkill.getIterationTicks(getPlayerSkillLevel(
-                        uuid,
-                        castSkill.getKeyString()
-                )), castCost)
+                resolveIterationPoints(castSkill.getIterationTicks(player), castCost)
         )) {
             return false;
         }
@@ -1271,10 +1284,7 @@ public final class AbilitySystemServer {
                 actualPermanent,
                 castSkill,
                 actualCast,
-                resolveIterationPoints(castSkill.getIterationTicks(getPlayerSkillLevel(
-                        uuid,
-                        castSkill.getKeyString()
-                )), castCost)
+                resolveIterationPoints(castSkill.getIterationTicks(player), castCost)
         );
     }
 

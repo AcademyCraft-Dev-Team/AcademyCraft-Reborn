@@ -204,7 +204,8 @@ public final class MiningBeam extends Skill {
             super(player);
             initialLevel = player.level();
             proficiencyMilestone = Skills.MINING_BEAM.get().getEffectiveProficiencyMilestone(player);
-            maximumLength = proficiencyMilestone >= 2 ? 56.0f : MAX_LENGTH;
+            maximumLength = Skills.MINING_BEAM.get().scaledRange(player,
+                    proficiencyMilestone >= 2 ? 56.0f : MAX_LENGTH);
             breakRadius = proficiencyMilestone >= 2 ? BREAK_RADIUS * 1.2f : BREAK_RADIUS;
             currentLength = maximumLength;
             visual = ContinuousBeam.spawnFromMainHand(initialLevel, player, 1.0f, maximumLength);
@@ -269,7 +270,8 @@ public final class MiningBeam extends Skill {
                             player,
                             skill,
                             SkillDamageSource.of(player, skill),
-                            proficiencyMilestone >= 2 ? DAMAGE_RADIUS * 1.2f : DAMAGE_RADIUS
+                            skill.scaledRange(player,
+                                    proficiencyMilestone >= 2 ? DAMAGE_RADIUS * 1.2f : DAMAGE_RADIUS)
                     )
                     .damage(_ -> damage)
                     .build();

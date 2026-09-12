@@ -50,6 +50,7 @@ import org.academy.api.client.render.Render;
 import org.academy.api.client.render.post.GlowEffect;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.render.vfx.VfxManager;
+import org.academy.api.server.ability.SkillTuning;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.api.client.renderer.CylinderRenderer;
 import org.academy.api.client.sync.ClientSyncManager;
@@ -68,6 +69,7 @@ import org.academy.internal.client.app.props.PropsIcon;
 import org.academy.internal.client.app.settings.ui.SettingsApp;
 import org.academy.internal.client.app.settings.ui.SkillSettingsApp;
 import org.academy.internal.client.app.tutorial.TutorialApp;
+import org.academy.internal.client.commands.ClientMusicCommand;
 import org.academy.internal.client.commands.ClientProfileCommand;
 import org.academy.internal.client.gui.debug.UiDebugBrowserScreen;
 import org.academy.internal.client.gui.debug.UiDebugLayoutDefinition;
@@ -140,6 +142,7 @@ public final class AcademyCraftClient {
         org.academy.internal.common.network.SkillVfxPacket.initClient();
         org.academy.internal.client.render.vfx.ShockwaveVfx.register();
         ProficiencyPolicy.initClient();
+        SkillTuning.initClient();
         PvpSetting.initClient();
         ProficiencySkillSettingsClient.init();
         ClientSyncManager.init();
@@ -253,6 +256,7 @@ public final class AcademyCraftClient {
                                 ))
         );
         ClientProfileCommand.register(event.getDispatcher());
+        ClientMusicCommand.register(event.getDispatcher());
         if (!isUiDebugEnvironment()) return;
         event.getDispatcher().register(
                 Commands.literal("academy")

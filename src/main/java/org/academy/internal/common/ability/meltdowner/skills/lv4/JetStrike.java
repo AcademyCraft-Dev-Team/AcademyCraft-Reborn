@@ -183,7 +183,8 @@ public final class JetStrike extends Skill {
                     system.getPlayerDamageMultiplier(player.getUUID())
             );
             var source = SkillDamageSource.of(player, skill);
-            var radius = milestone >= 2 ? DAMAGE_RADIUS * 1.2 : DAMAGE_RADIUS;
+            var radius = skill.scaledRange(player,
+                    milestone >= 2 ? DAMAGE_RADIUS * 1.2 : DAMAGE_RADIUS);
             var targetBox = player.getBoundingBox().move(delta).inflate(radius);
             var targets = level.getEntitiesOfClass(
                     LivingEntity.class,

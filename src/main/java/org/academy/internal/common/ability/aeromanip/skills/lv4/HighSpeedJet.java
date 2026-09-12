@@ -397,8 +397,7 @@ public final class HighSpeedJet extends Skill {
                             player, SkillNames.HIGH_SPEED_JET)));
             return skill.executeActiveWithResource(
                     player,
-                    _ -> activationCpCost(count)
-                            * AeromanipConfig.cpMultiplier(player, SkillNames.HIGH_SPEED_JET),
+                    _ -> activationCpCost(count),
                     _ -> activationAirCost(count),
                     (_, _) -> resolvedNozzles.forEach(nozzle -> nozzle.activate(duration)));
         }
@@ -462,8 +461,7 @@ public final class HighSpeedJet extends Skill {
             var activated = skill.executeActiveWithResource(
                     player,
                     _ -> activationCpCost(nozzles.size())
-                            * costMultiplier
-                            * AeromanipConfig.cpMultiplier(player, SkillNames.HIGH_SPEED_JET),
+                            * costMultiplier,
                     _ -> activationAirCost(nozzles.size()),
                     (_, _) -> nozzles.forEach(nozzle -> nozzle.activate(durationTicks)));
             if (!activated) throw new IllegalStateException("Jet activation was rejected");
@@ -527,8 +525,7 @@ public final class HighSpeedJet extends Skill {
             var skill = Skills.HIGH_SPEED_JET.get();
             var executed = skill.executeActiveWithResource(
                     player,
-                    _ -> 18.0f * costMultiplier
-                            * AeromanipConfig.cpMultiplier(player, SkillNames.HIGH_SPEED_JET),
+                    _ -> 18.0f * costMultiplier,
                     _ -> 12.0f,
                     (_, _) -> {
                         var nozzle = new HighSpeedJetNozzle(

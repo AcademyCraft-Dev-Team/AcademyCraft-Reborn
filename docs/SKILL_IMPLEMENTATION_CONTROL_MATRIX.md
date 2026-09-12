@@ -1,6 +1,6 @@
 # 技能实现与调控总表
 
-本文档由当前 `Skills` 注册表、全技能效果总表和前置关系清单汇总，共 92 个已注册技能。运行 `powershell -NoProfile -ExecutionPolicy Bypass -File tools/docs/sync_skill_control_matrix.ps1` 可在基础文档变更后重新生成本表。按键是源码默认值或“见源码”提示；玩家实时覆盖值以 `config/academy-client.json` 为准。
+本文档由当前 `Skills` 注册表、全技能效果总表和前置关系清单汇总，共 93 个已注册技能。运行 `powershell -NoProfile -ExecutionPolicy Bypass -File tools/docs/sync_skill_control_matrix.ps1` 可在基础文档变更后重新生成本表。按键是源码默认值或“见源码”提示；玩家实时覆盖值以 `config/academy-client.json` 为准。
 
 ## 标记说明
 
@@ -110,6 +110,7 @@
 | `flashing` 高速闪现 | 现行 | L5 / 100k / 维持 50；每次 5 | 启用后沿移动方向安全闪现 8 格，客户端每 6 tick 可重复。 | `H↓` | `academy:location_teleport` | `Flashing` |
 | `defensive_teleport` 防御传送 | 现行 | L5 / 100k / 每次 20 | 按住框选前方 5×5×5 区域，松开后把其中敌对生物/投射物传送到位置传送当前坐标。 | `Alt+G↑` | `academy:quick_location_teleport` | `DefensiveTeleport` |
 | `spacial_excision` 空间切割 | 现行 | L5 / 100k / 100 CP | 激活后持续 600 tick（30 秒）；仅记录自身成功的同维传送，并在起终点生成世界空间裂缝；裂缝持续伤害轨迹周围 3×3 区域内的生物、吸引 7×7 范围内的非友方生物，并在生成首秒重创轨迹附近的生物；无切块或熟练度强化。 | `Alt+X↓` | `academy:area_teleport_select` | `SpacialExcision` |
+| `chunk_leap` 区块跃迁 | 现行 | L5 / 100k / 100 + 4×区块数 + 30×实体数 | 按 `Alt+C` 开启可缩放拖动的跨维度区块地图，按需加载区块并显示生物；框选两个等大区域交换其方块、方块实体、实体与生物群系。同维交换整列移动、玩家随区块无缝位移（不进入加载界面）；跨维度交换按绝对 Y 重叠带以字节回环交换，玩家跨维时用本模组轻量传送画面替代原版加载界面。也可选中生物传送到地图落点。 | `Alt+C↓` | `academy:area_teleport_select` | `ChunkLeap` |
 
 ## Darkmatter 未元物质
 

@@ -33,6 +33,22 @@ public final class QqAudioCache {
                 && (Files.exists(resolveFile(mid)) || Files.exists(resolveLegacyFile(mid)));
     }
 
+    /**
+     * 收录服务器共享账号解析得到的音频（校验后落盘并入内存缓存）。
+     * 同步执行，避免在双线程池上嵌套 join 造成死锁喵。
+     */
+    public static CompletableFuture<ByteBuffer> acceptServerResolved(String mid, byte[] bytes) {
+        try {
+            validate(bytes);
+            saveToDisk(mid, bytes);
+            var buffer = toDirectBuffer(bytes);
+            putInMemory(mid, buffer);
+            return CompletableFuture.completedFuture(buffer.duplicate());
+        } catch (Exception exception) {
+            return CompletableFuture.failedFuture(exception);
+        }
+    }
+
     public static CompletableFuture<ByteBuffer> ensureCachedAsync(String mid) {
         if (mid == null || mid.isBlank()) {
             return CompletableFuture.failedFuture(new IOException("Missing QQ music mid"));

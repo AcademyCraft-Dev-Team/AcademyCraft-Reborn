@@ -223,6 +223,7 @@ public class DirStrike extends Skill {
                 var playerPos = player.blockPosition();
                 var baseRadius = skill.hasProficiencyMilestone(player, 2) ? 14 : ATTACK_RADIUS;
                 var radius = airborne ? baseRadius + AIRBORNE_RADIUS_BONUS : baseRadius;
+                var targetRadius = skill.scaledRange(player, radius);
                 var look = horizontalLook(player);
                 level.playSound(null, playerPos, SoundEvents.DIR_STRIKE.get(),
                         SoundSource.PLAYERS, 1.0f, 1.0f);
@@ -233,8 +234,8 @@ public class DirStrike extends Skill {
                 var maxY = playerPos.getY() + EFFECT_MAX_Y_OFFSET + 1;
                 var center = player.position();
                 var area = new AABB(
-                        center.x - radius, minY, center.z - radius,
-                        center.x + radius, maxY, center.z + radius
+                        center.x - targetRadius, minY, center.z - targetRadius,
+                        center.x + targetRadius, maxY, center.z + targetRadius
                 );
                 var damage = getDamage(
                         ctx.system().getPlayerAbilityPowerMultiplier(player.getUUID()),
@@ -256,7 +257,7 @@ public class DirStrike extends Skill {
                                 && isInsideStrikeArea(
                                 target.getX() - center.x,
                                 target.getZ() - center.z,
-                                radius,
+                                targetRadius,
                                 airborne,
                                 look
                         ));

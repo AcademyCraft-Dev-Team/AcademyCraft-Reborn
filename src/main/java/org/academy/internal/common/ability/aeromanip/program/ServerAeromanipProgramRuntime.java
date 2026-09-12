@@ -10,9 +10,7 @@ import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipChargeTier;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
@@ -360,8 +358,7 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     }
 
     private void charge(Skill skill, float cost) {
-        var adjusted = cost * costMultiplier * AeromanipConfig.cpMultiplier(
-                player, SkillNames.PNEUMATIC_GRASP);
+        var adjusted = cost * costMultiplier;
         if (!AbilitySystemServer.getSystem(player)
                 .tryTimedOccupation(player, adjusted, skill)) {
             throw new IllegalStateException("Insufficient CP for Aeromanip program action");

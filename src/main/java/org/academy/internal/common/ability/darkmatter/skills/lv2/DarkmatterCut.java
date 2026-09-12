@@ -200,7 +200,7 @@ public final class DarkmatterCut extends Skill {
                     phase.alpha(), milestone, phase.gamma() > 0.0f,
                     Skills.DARKMATTER_SIX_WINGS.get().getEffectiveProficiencyMilestone(player));
             if (maximumRadius > 0.0) calculatedRadius = Math.min(calculatedRadius, maximumRadius);
-            var radius = calculatedRadius;
+            var radius = skill.scaledRange(player, calculatedRadius);
             var minimumDot = effectiveMinimumDot(phase.alpha(), milestone, false);
             var origin = player.position().add(0, player.getBbHeight() * 0.5, 0);
             var visualDirection = direction.normalize();

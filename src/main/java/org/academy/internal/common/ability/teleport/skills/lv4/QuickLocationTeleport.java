@@ -121,7 +121,8 @@ public final class QuickLocationTeleport extends Skill {
             if (mark == null) return;
             var level = LocationTeleport.Server.resolveLevel(player, mark);
             if (level == null) return;
-            var picked = pickEntity(player, skill.hasProficiencyMilestone(player, 2) ? PICK_REACH * 1.5 : PICK_REACH);
+            var picked = pickEntity(player, skill.scaledRange(player,
+                    skill.hasProficiencyMilestone(player, 2) ? PICK_REACH * 1.5 : PICK_REACH));
             Entity target = player;
             var destination = LocationTeleport.Server.safeDestination(player, level, mark);
             if (picked != null && picked.level() == level) {

@@ -222,14 +222,15 @@ public final class FleshRipping extends Skill {
         public static void handle(CastPacket packet) {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.FLESH_RIPPING.get();
+            var range = skill.scaledRange(player, MAX_RANGE);
             if (!(player.level().getEntity(packet.getTargetEntityId()) instanceof LivingEntity target)
                     || target == player || !target.isAlive()
                     || CtaFriendlyFireWhitelist.shouldProtect(player, target)
-                    || player.distanceToSqr(target) > MAX_RANGE * MAX_RANGE) return;
+                    || player.distanceToSqr(target) > range * range) return;
 
             skill.executeActive(player, (ctx, actualCost) -> {
                 if (!target.isAlive() || target.level() != player.level()
-                        || player.distanceToSqr(target) > MAX_RANGE * MAX_RANGE) return;
+                        || player.distanceToSqr(target) > range * range) return;
                 var damage = TeleportDamage.fleshRipping(
                         BASE_DAMAGE,
                         target.getMaxHealth(),

@@ -321,8 +321,9 @@ public final class ElectromagneticShield extends Skill {
             TimedSkillEffectRuntime.put(player, player.getUUID(), skill, "overload_pulse", 200, 1.0f);
             var handled = 0;
             var cap = ProficiencyPolicy.server(player).maxBonusEntitiesPerTick();
+            var pulseRadius = skill.scaledRange(player, 4.0f);
             for (var target : player.level().getEntitiesOfClass(LivingEntity.class,
-                    player.getBoundingBox().inflate(4.0),
+                    player.getBoundingBox().inflate(pulseRadius),
                     target -> target != player && target.isAlive() && !TeamRelations.areAllied(player, target)
                             && !PvpSetting.shouldPrevent(player, target))) {
                 if (handled++ >= cap) break;

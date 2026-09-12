@@ -228,7 +228,7 @@ public class Thunderclap extends Skill {
 
         private static @Nullable Vec3 resolveTarget(ServerPlayer player, ServerLevel level, int milestone) {
             var start = player.getEyePosition();
-            var range = milestone >= 2 ? 80.0 : RANGE;
+            var range = Skills.THUNDERCLAP.get().scaledRange(player, milestone >= 2 ? 80.0 : RANGE);
             var end = start.add(player.getLookAngle().scale(range));
             var blockHit = level.clip(new ClipContext(
                     start,
@@ -262,7 +262,9 @@ public class Thunderclap extends Skill {
             var damageMultiplier = system.getPlayerDamageMultiplier(player.getUUID());
             var source = SkillDamageSource.of(player, Skills.THUNDERCLAP.get());
             var targets = AreaEffectTargets.inSphere(level, targetPos,
-                    SkyStrikeProfile.THUNDERCLAP.ringEndRadius(), entity -> entity != player);
+                    Skills.THUNDERCLAP.get()
+                            .scaledRange(player, SkyStrikeProfile.THUNDERCLAP.ringEndRadius()),
+                    entity -> entity != player);
             for (var target : targets) {
                 if (PvpSetting.shouldPrevent(player, target)) continue;
                 DamageComposition.hurt(
