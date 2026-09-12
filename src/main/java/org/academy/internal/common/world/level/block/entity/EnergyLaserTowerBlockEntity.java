@@ -8,8 +8,10 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.common.world.level.block.EnergyLaserTowerBlock;
+import org.academy.internal.server.misaka.MisakaOrbitalStrikeSupport;
 import org.academy.internal.server.misaka.MisakaRelayOrbits;
 import org.academy.internal.server.world.level.storage.MisakaRelayEntry;
 import org.academy.internal.server.world.level.storage.MisakaRelayRegistry;
@@ -22,6 +24,8 @@ public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implemen
     private static final int MAX_ENERGY = 500_000;
     /** Throttle client energy sync; per-tick updates made the beam flicker. */
     private static final int ENERGY_SYNC_INTERVAL = 20;
+    /** Min world-space move before re-syncing strike aim (blocks). */
+    private static final float STRIKE_AIM_SYNC_EPS = 0.35f;
 
     private @Nullable BlockPos connectedNodePos;
     private int energyStored;
@@ -31,6 +35,11 @@ public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implemen
     private int orbitAngleSeed;
     private float orbitVisualY;
     private int energySyncCooldown;
+    /** True while the bound satellite is on an orbital-strike path (approach/fire/return). */
+    private boolean strikeAiming;
+    private float strikeAimX;
+    private float strikeAimY;
+    private float strikeAimZ;
 
     public EnergyLaserTowerBlockEntity(BlockPos pos, BlockState state) {
         super(BlockEntityTypes.ENERGY_LASER_TOWER.get(), pos, state);
@@ -48,6 +57,10 @@ public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implemen
         boolean nextHyper = false;
         int nextSeed = 0;
         float nextVisualY = be.orbitVisualY;
+        boolean nextStrikeAiming = false;
+        float nextAimX = be.strikeAimX;
+        float nextAimY = be.strikeAimY;
+        float nextAimZ = be.strikeAimZ;
         boolean supplying = false;
         if (bound != null) {
             int drain = 2000;
@@ -90,19 +103,39 @@ public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implemen
                 nextHyper = entry.hyper;
                 nextSeed = entry.satelliteId.hashCode();
                 nextVisualY = (float) MisakaRelayOrbits.visualOrbitY(serverLevel, server);
+                Vec3 aim = MisakaOrbitalStrikeSupport.visualAim(serverLevel, entry);
+                if (aim != null) {
+                    nextStrikeAiming = true;
+                    nextAimX = (float) aim.x;
+                    nextAimY = (float) aim.y;
+                    nextAimZ = (float) aim.z;
+                }
             }
         }
         boolean active = supplying;
+        // While striking, push aim every tick so beam + sky mark track the proxy smoothly.
         boolean beamChanged = be.beamActive != active
                 || be.orbiting != nextOrbiting
                 || be.orbitHyper != nextHyper
                 || be.orbitAngleSeed != nextSeed
-                || Float.compare(be.orbitVisualY, nextVisualY) != 0;
+                || Float.compare(be.orbitVisualY, nextVisualY) != 0
+                || be.strikeAiming != nextStrikeAiming
+                || (nextStrikeAiming && (
+                Math.abs(be.strikeAimX - nextAimX) >= STRIKE_AIM_SYNC_EPS
+                        || Math.abs(be.strikeAimY - nextAimY) >= STRIKE_AIM_SYNC_EPS
+                        || Math.abs(be.strikeAimZ - nextAimZ) >= STRIKE_AIM_SYNC_EPS
+                        || !be.strikeAiming));
         be.beamActive = active;
         be.orbiting = nextOrbiting;
         be.orbitHyper = nextHyper;
         be.orbitAngleSeed = nextSeed;
         be.orbitVisualY = nextVisualY;
+        be.strikeAiming = nextStrikeAiming;
+        if (nextStrikeAiming) {
+            be.strikeAimX = nextAimX;
+            be.strikeAimY = nextAimY;
+            be.strikeAimZ = nextAimZ;
+        }
 
         boolean energyDirty = be.energyStored != energyBefore;
         if (energyDirty) {
@@ -161,6 +194,19 @@ public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implemen
     public float getOrbitVisualY() {
         var main = mainEntity();
         return main == null ? 0.0f : main.orbitVisualY;
+    }
+
+    public boolean isStrikeAiming() {
+        var main = mainEntity();
+        return main != null && main.strikeAiming;
+    }
+
+    public Vec3 getStrikeAim() {
+        var main = mainEntity();
+        if (main == null) {
+            return Vec3.ZERO;
+        }
+        return new Vec3(main.strikeAimX, main.strikeAimY, main.strikeAimZ);
     }
 
     @Nullable
@@ -272,6 +318,12 @@ public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implemen
         output.putBoolean("orbit_hyper", orbitHyper);
         output.putInt("orbit_angle_seed", orbitAngleSeed);
         output.putFloat("orbit_visual_y", orbitVisualY);
+        output.putBoolean("strike_aiming", strikeAiming);
+        if (strikeAiming) {
+            output.putFloat("strike_aim_x", strikeAimX);
+            output.putFloat("strike_aim_y", strikeAimY);
+            output.putFloat("strike_aim_z", strikeAimZ);
+        }
         if (connectedNodePos != null) {
             output.putLong("connected_node_pos", connectedNodePos.asLong());
         }
@@ -286,7 +338,30 @@ public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implemen
         orbitHyper = input.getBooleanOr("orbit_hyper", false);
         orbitAngleSeed = input.getIntOr("orbit_angle_seed", 0);
         orbitVisualY = input.getFloatOr("orbit_visual_y", 0.0f);
+        strikeAiming = input.getBooleanOr("strike_aiming", false);
+        strikeAimX = input.getFloatOr("strike_aim_x", 0.0f);
+        strikeAimY = input.getFloatOr("strike_aim_y", 0.0f);
+        strikeAimZ = input.getFloatOr("strike_aim_z", 0.0f);
         connectedNodePos = null;
         input.getLong("connected_node_pos").ifPresent(pos -> connectedNodePos = BlockPos.of(pos));
+        if (level != null && level.isClientSide() && isMain()) {
+            OrbitSkyHooks.sync(this);
+        }
+    }
+
+    @Override
+    public void setRemoved() {
+        if (level != null && level.isClientSide() && isMain()) {
+            OrbitSkyHooks.remove(worldPosition);
+        }
+        super.setRemoved();
+    }
+
+    @Override
+    public void clearRemoved() {
+        super.clearRemoved();
+        if (level != null && level.isClientSide() && isMain()) {
+            OrbitSkyHooks.sync(this);
+        }
     }
 }

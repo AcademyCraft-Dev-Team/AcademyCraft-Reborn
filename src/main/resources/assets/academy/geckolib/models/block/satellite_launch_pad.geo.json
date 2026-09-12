@@ -1,0 +1,33 @@
+{
+	"format_version": "1.12.0",
+	"minecraft:geometry": [
+		{
+			"description": {
+				"identifier": "geometry.satellite_launch_pad",
+				"texture_width": 128,
+				"texture_height": 128,
+				"visible_bounds_width": 3,
+				"visible_bounds_height": 2.5,
+				"visible_bounds_offset": [0, 0.75, 0]
+			},
+			"bones": [
+				{
+					"name": "all",
+					"pivot": [0, 5, 0]
+				},
+				{
+					"name": "launchingPad",
+					"parent": "all",
+					"pivot": [0, 5.25, 0],
+					"rotation": [0, 90, 0],
+					"cubes": [
+						{"origin": [-6, 0, -8], "size": [12, 3, 16], "pivot": [0, 5.25, 0], "rotation": [0, -90, 0], "uv": [0, 0]},
+						{"origin": [-4, 3, -4], "size": [8, 1, 8], "pivot": [0, 6.25, 0], "rotation": [0, -90, 0], "uv": [49, 56]},
+						{"origin": [4.5, -0.48296, -1.37059], "size": [6, 7, 3], "pivot": [7.5, 3.5, 0], "rotation": [0, -90, -15], "uv": [25, 57], "mirror": true},
+						{"origin": [-10.5, -0.48296, -1.37059], "size": [6, 7, 3], "pivot": [-7.5, 3.5, 0], "rotation": [0, 90, 15], "uv": [25, 57]}
+					]
+				}
+			]
+		}
+	]
+}

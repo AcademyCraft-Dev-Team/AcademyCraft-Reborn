@@ -15,12 +15,12 @@ class MisakaRelayOrbitsTest {
     }
 
     @Test
-    void skyVisibilityWindowIsFirstQuarterOfOrbit() {
+    void skyVisibilityWindowCoversFullOrbitWhenFractionIsOne() {
         int seed = 0;
-        // angle = gameTime * 0.01; TWO_PI ≈ 6.2832 → period ≈ 628.32 ticks
+        // With SKY_VISIBLE_FRACTION = 1, any phase of the orbit is visible.
         assertTrue(MisakaRelayOrbits.isSkyModelVisible(0, seed));
         assertTrue(MisakaRelayOrbits.isSkyModelVisible(100, seed));
-        assertFalse(MisakaRelayOrbits.isSkyModelVisible(400, seed));
+        assertTrue(MisakaRelayOrbits.isSkyModelVisible(400, seed));
     }
 
     @Test

@@ -191,7 +191,7 @@ public final class MisakaRelayRegistry {
     /**
      * True if the satellite is powered for coverage, including a feed already queued this tick
      * (before {@link #endTick} flips the persistent {@code powered} flag).
-     * Force-crash arming and crash phase reject power immediately.
+     * Crash phase rejects power; force-crash countdown still accepts feed.
      */
     public boolean isReceivingPower(UUID satelliteId) {
         return power.isReceivingPower(satelliteId);
@@ -199,7 +199,7 @@ public final class MisakaRelayRegistry {
 
     /**
      * Lasers may drain and call {@link #feed} only while the satellite still accepts power.
-     * Launch ascent, armed force-crash, and non-orbit phases refuse feed (no coverage / no beam).
+     * Launch ascent and non-orbit phases refuse feed. Armed force-crash countdown still accepts power.
      */
     public boolean acceptsPowerFeed(UUID satelliteId) {
         return power.acceptsPowerFeed(satelliteId);
@@ -233,12 +233,14 @@ public final class MisakaRelayRegistry {
 
     public void endTick(MinecraftServer server) {
         power.endTick(server);
-        MisakaOrbitalStrikeSupport.tickAll(server);
+        if (server != null) {
+            MisakaOrbitalStrikeSupport.tickAll(server);
+        }
     }
 
     /**
      * Arm a forced crash countdown for an active satellite. Fails if already crashing or already armed.
-     * Cuts coverage power immediately; lasers stop feeding until cancel or crash completes.
+     * Coverage power and laser feed continue until the countdown expires and crash begins.
      */
     public boolean scheduleForceCrash(MinecraftServer server, UUID satelliteId, int ticks) {
         return scheduleForceCrash(server, satelliteId, ticks, null);
@@ -335,7 +337,8 @@ public final class MisakaRelayRegistry {
 
     /**
      * Test hook: enter {@link MisakaRelayEntry.Phase#CRASHING} without a live server spawn.
-     * Mirrors the pre-spawn side of {@link #beginCrash} when no resident entity exists.
+     * Mirrors the pre-spawn side of {@link #beginCrash} when no resident entity exists
+     * (including immediate laser unbind).
      */
     public void testingBeginCrashPhaseOnly(UUID satelliteId) {
         var entry = get(satelliteId);
@@ -345,6 +348,10 @@ public final class MisakaRelayRegistry {
         if (entry.powered) {
             entry.powered = false;
             power.bumpPoweredCount(entry, -1);
+        }
+        if (entry.laserBound) {
+            laserOwner.remove(laserKey(entry.laserDimension, entry.laserPos));
+            entry.laserBound = false;
         }
         entry.phase = MisakaRelayEntry.Phase.CRASHING;
         entry.entityUuid = null;

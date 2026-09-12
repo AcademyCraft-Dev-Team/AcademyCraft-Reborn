@@ -1,12 +1,10 @@
 package org.academy.internal.common.world.entity.misaka;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
@@ -80,7 +78,7 @@ public final class OrbitalStrikeProxyEntity extends RenderOnlyEntity {
     public void tick() {
         super.tick();
         if (level().isClientSide()) {
-            spawnClientParticles();
+            // Continuous trails + downlink beam: OrbitalStrikeProxyVfxClient.
             return;
         }
         if (level() instanceof ServerLevel serverLevel) {
@@ -91,45 +89,6 @@ public final class OrbitalStrikeProxyEntity extends RenderOnlyEntity {
                     .shouldDiscardOrphan(serverLevel.getServer(), this)) {
                 discard();
             }
-        }
-    }
-
-    private void spawnClientParticles() {
-        RandomSource random = getRandom();
-        if (isFiring()) {
-            BlockPos impact = getImpact();
-            double x = impact.getX() + 0.5;
-            double y = impact.getY() + 1.0;
-            double z = impact.getZ() + 0.5;
-            for (int i = 0; i < 3; i++) {
-                level().addParticle(
-                        ParticleTypes.LAVA,
-                        x + (random.nextDouble() - 0.5) * 1.6,
-                        y + random.nextDouble() * 0.8,
-                        z + (random.nextDouble() - 0.5) * 1.6,
-                        0.0, 0.05, 0.0
-                );
-                level().addParticle(
-                        ParticleTypes.FLAME,
-                        x + (random.nextDouble() - 0.5) * 1.2,
-                        y + random.nextDouble(),
-                        z + (random.nextDouble() - 0.5) * 1.2,
-                        0.0, 0.08, 0.0
-                );
-            }
-            if (tickCount % 2 == 0) {
-                level().addParticle(ParticleTypes.LARGE_SMOKE, x, y + 0.5, z, 0.0, 0.04, 0.0);
-            }
-            return;
-        }
-        if (tickCount % 4 == 0) {
-            level().addParticle(
-                    ParticleTypes.CLOUD,
-                    getX() + (random.nextDouble() - 0.5) * 0.8,
-                    getY() + (random.nextDouble() - 0.5) * 0.4,
-                    getZ() + (random.nextDouble() - 0.5) * 0.8,
-                    0.0, 0.02, 0.0
-            );
         }
     }
 

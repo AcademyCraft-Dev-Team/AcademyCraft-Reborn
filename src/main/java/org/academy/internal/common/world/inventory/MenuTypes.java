@@ -21,6 +21,9 @@ public class MenuTypes {
     public static final DeferredHolder<MenuType<?>, MenuType<AerospaceSignalCabinMenu>> AEROSPACE_SIGNAL_CABIN =
             MENU_TYPES.register("aerospace_signal_cabin",
                     () -> new MenuType<>(AerospaceSignalCabinMenu::new, FeatureFlags.VANILLA_SET));
+    public static final DeferredHolder<MenuType<?>, MenuType<SatelliteLaunchPadMenu>> SATELLITE_LAUNCH_PAD =
+            MENU_TYPES.register("satellite_launch_pad",
+                    () -> new MenuType<>(SatelliteLaunchPadMenu::new, FeatureFlags.VANILLA_SET));
     public static final DeferredHolder<MenuType<?>, MenuType<EnergyLaserTowerMenu>> ENERGY_LASER_TOWER =
             MENU_TYPES.register("energy_laser_tower",
                     () -> new MenuType<>(EnergyLaserTowerMenu::new, FeatureFlags.VANILLA_SET));

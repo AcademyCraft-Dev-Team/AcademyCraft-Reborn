@@ -158,6 +158,11 @@ final class MisakaRelayLifecycle {
         registry.markComputeDirty(server);
     }
 
+    /**
+     * Begin dive: drop coverage power, free the laser tower immediately, then spawn/drive the
+     * cosmetic crash entity. Laser ownership must not wait for ground impact — the pad can relaunch
+     * while the old satellite is still falling.
+     */
     void beginCrash(MinecraftServer server, UUID satelliteId) {
         var entry = registry.get(satelliteId);
         if (entry == null || entry.phase == MisakaRelayEntry.Phase.CRASHING) {
@@ -168,6 +173,10 @@ final class MisakaRelayLifecycle {
         if (entry.powered) {
             entry.powered = false;
             registry.power.bumpPoweredCount(entry, -1);
+        }
+        if (entry.laserBound) {
+            registry.laserOwner.remove(MisakaRelayRegistry.laserKey(entry.laserDimension, entry.laserPos));
+            entry.laserBound = false;
         }
         entry.phase = MisakaRelayEntry.Phase.CRASHING;
         registry.markPersistentDirty();

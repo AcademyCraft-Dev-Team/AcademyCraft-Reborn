@@ -37,6 +37,12 @@ public final class MisakaOrbitalStrikeSupport {
     public static final double HYPER_COLUMN_RADIUS = 2.5;
     public static final int MELT_RADIUS = 2;
     public static final int HYPER_MELT_RADIUS = 3;
+    /**
+     * Visual strike apex above impact (blocks). Full orbit altitude (~1000) is fog/far-plane invisible
+     * and forces a huge {@code clientTrackingRange}; this height stays on-screen and tracks at ~256.
+     * Worst-case player distance ≈ {@code hypot(DESIGNATOR_RANGE, STRIKE_APEX_HEIGHT)} ≈ 250.
+     */
+    public static final double STRIKE_APEX_HEIGHT = 160.0;
 
     public enum BeginResult {
         OK,
@@ -95,7 +101,6 @@ public final class MisakaOrbitalStrikeSupport {
         int seed = satelliteId.hashCode();
         double orbitY = MisakaRelayOrbits.visualOrbitY(level, server);
         Vec3 from = MisakaRelayOrbits.orbitSlotWorld(entry.laserPos, orbitY, time, seed);
-        Vec3 to = new Vec3(target.getX() + 0.5, orbitY, target.getZ() + 0.5);
 
         var proxy = new OrbitalStrikeProxyEntity(EntityTypes.ORBITAL_STRIKE_PROXY.get(), level);
         proxy.configure(satelliteId, entry.hyper, target.immutable());
@@ -127,6 +132,9 @@ public final class MisakaOrbitalStrikeSupport {
     }
 
     public static void cancel(MinecraftServer server, UUID satelliteId) {
+        if (server == null || satelliteId == null) {
+            return;
+        }
         var entry = MisakaRelayRegistry.get(server).get(satelliteId);
         if (entry == null) {
             return;
@@ -161,11 +169,7 @@ public final class MisakaOrbitalStrikeSupport {
         }
 
         double orbitY = MisakaRelayOrbits.visualOrbitY(level, server);
-        Vec3 zenith = new Vec3(
-                entry.strikeTarget.getX() + 0.5,
-                orbitY,
-                entry.strikeTarget.getZ() + 0.5
-        );
+        Vec3 zenith = strikeApex(level, entry.strikeTarget, orbitY);
 
         entry.strikeTicks++;
         switch (entry.strikeMode) {
@@ -214,6 +218,59 @@ public final class MisakaOrbitalStrikeSupport {
             default -> {
             }
         }
+    }
+
+    /**
+     * Strike hold / fire slot above the target — capped for visibility and entity tracking cost.
+     * Real orbital home slot remains {@link MisakaRelayOrbits#orbitSlotWorld}.
+     */
+    public static Vec3 strikeApex(ServerLevel level, BlockPos impact, double orbitY) {
+        int groundY = level.getHeight(
+                net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                impact.getX(),
+                impact.getZ()
+        );
+        double baseY = Math.max(impact.getY(), groundY);
+        double apexY = Math.min(orbitY, baseY + STRIKE_APEX_HEIGHT);
+        return new Vec3(impact.getX() + 0.5, apexY, impact.getZ() + 0.5);
+    }
+
+    /**
+     * Where the power-beam / sky sat should aim during an active strike.
+     * Prefer the live proxy pose so tower beam, sky mark, and downlink share one tip.
+     */
+    public static @Nullable Vec3 visualAim(ServerLevel level, MisakaRelayEntry entry) {
+        if (entry == null
+                || entry.strikeMode == MisakaRelayEntry.StrikeMode.IDLE
+                || entry.strikeTarget == null) {
+            return null;
+        }
+        var proxy = findProxy(level, entry);
+        if (proxy != null) {
+            return proxy.position();
+        }
+        double orbitY = MisakaRelayOrbits.visualOrbitY(level, level.getServer());
+        Vec3 zenith = strikeApex(level, entry.strikeTarget, orbitY);
+        return switch (entry.strikeMode) {
+            case APPROACHING -> {
+                float t = Mth.clamp(entry.strikeTicks / (float) APPROACH_TICKS, 0.0f, 1.0f);
+                float eased = t * t * (3.0f - 2.0f * t);
+                Vec3 from = entry.strikeApproachFrom != null ? entry.strikeApproachFrom : zenith;
+                yield from.lerp(zenith, eased);
+            }
+            case FIRING -> zenith;
+            case RETURNING -> {
+                long time = level.getGameTime();
+                Vec3 home = MisakaRelayOrbits.orbitSlotWorld(
+                        entry.laserPos, orbitY, time, entry.satelliteId.hashCode()
+                );
+                float t = Mth.clamp(entry.strikeTicks / (float) RETURN_TICKS, 0.0f, 1.0f);
+                float eased = t * t * (3.0f - 2.0f * t);
+                Vec3 from = entry.strikeApproachFrom != null ? entry.strikeApproachFrom : zenith;
+                yield from.lerp(home, eased);
+            }
+            default -> null;
+        };
     }
 
     private static void applyFirePulse(ServerLevel level, MisakaRelayEntry entry, OrbitalStrikeProxyEntity proxy) {
@@ -279,17 +336,6 @@ public final class MisakaOrbitalStrikeSupport {
                 broken++;
             }
         }
-
-        level.sendParticles(
-                net.minecraft.core.particles.ParticleTypes.LAVA,
-                impact.getX() + 0.5, impact.getY() + 1.0, impact.getZ() + 0.5,
-                6, 0.4, 0.3, 0.4, 0.02
-        );
-        level.sendParticles(
-                net.minecraft.core.particles.ParticleTypes.SMOKE,
-                impact.getX() + 0.5, impact.getY() + 1.2, impact.getZ() + 0.5,
-                8, 0.5, 0.4, 0.5, 0.02
-        );
     }
 
     private static boolean tryMeltOrBreak(ServerLevel level, MisakaRelayEntry entry, BlockPos pos) {

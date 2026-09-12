@@ -1,109 +1,116 @@
 package org.academy.internal.client.renderer.entity;
 
+import com.geckolib.constant.dataticket.DataTicket;
+import com.geckolib.renderer.GeoEntityRenderer;
+import com.geckolib.renderer.base.GeoRenderState;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
-import net.minecraft.client.renderer.entity.ItemEntityRenderer;
-import net.minecraft.client.renderer.item.ItemModelResolver;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.util.Mth;
-import net.minecraft.world.item.ItemStack;
-import org.academy.api.common.util.MathUtil;
-import org.academy.internal.client.renderer.entity.state.RelaySatelliteRenderState;
+import org.academy.AcademyCraft;
+import org.academy.internal.client.renderer.RelayPlatformGeo;
 import org.academy.internal.common.world.entity.misaka.RelaySatelliteEntity;
-import org.academy.internal.common.world.item.Items;
 import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
+import org.jspecify.annotations.Nullable;
 
 import static org.academy.api.client.render.Render.RenderTypes.POS_COLOR_QUADS_ADDITIVE;
 
-public final class RelaySatelliteRenderer extends EntityRenderer<RelaySatelliteEntity, RelaySatelliteRenderState> {
-    private final ItemModelResolver itemModelResolver;
+public final class RelaySatelliteRenderer
+        extends GeoEntityRenderer<RelaySatelliteEntity, EntityRenderState> {
+    private static final DataTicket<Float> SPIN = DataTicket.create("academy_relay_sat_spin", Float.class);
+    private static final DataTicket<Boolean> CRASHING = DataTicket.create("academy_relay_sat_crash", Boolean.class);
+    private static final DataTicket<Boolean> LAUNCHING = DataTicket.create("academy_relay_sat_launch", Boolean.class);
+    private static final DataTicket<Vector3f> TRAIL_VEL = DataTicket.create("academy_relay_sat_trail", Vector3f.class);
 
     public RelaySatelliteRenderer(EntityRendererProvider.Context context) {
-        super(context);
-        itemModelResolver = context.getItemModelResolver();
+        super(context, RelayPlatformGeo.entityModel(AcademyCraft.academy("relay_satellite")));
+        withScale(0.85F);
+        this.shadowRadius = 0.6f;
     }
 
     @Override
-    public RelaySatelliteRenderState createRenderState() {
-        return new RelaySatelliteRenderState();
-    }
-
-    @Override
-    public void extractRenderState(RelaySatelliteEntity entity, RelaySatelliteRenderState state, float partialTick) {
-        super.extractRenderState(entity, state, partialTick);
-        state.spin = (entity.tickCount + partialTick) * 4.0f;
-        state.crashing = entity.isCrashing();
-        state.launching = entity.isLaunching();
-        var motion = entity.getDeltaMovement();
-        if (state.launching && motion.lengthSqr() < 1.0e-6) {
-            state.trailVelocity.set(0.0f, 0.2f, 0.0f);
+    public void addRenderData(
+            RelaySatelliteEntity animatable,
+            @Nullable Void relatedObject,
+            EntityRenderState renderState,
+            float partialTick
+    ) {
+        super.addRenderData(animatable, relatedObject, renderState, partialTick);
+        var geo = asGeo(renderState);
+        geo.addGeckolibData(SPIN, (animatable.tickCount + partialTick) * 4.0f);
+        geo.addGeckolibData(CRASHING, animatable.isCrashing());
+        geo.addGeckolibData(LAUNCHING, animatable.isLaunching());
+        var motion = animatable.getDeltaMovement();
+        var trail = new Vector3f();
+        if (animatable.isLaunching() && motion.lengthSqr() < 1.0e-6) {
+            trail.set(0.0f, 0.2f, 0.0f);
         } else {
-            state.trailVelocity.set((float) motion.x, (float) motion.y, (float) motion.z);
+            trail.set((float) motion.x, (float) motion.y, (float) motion.z);
         }
-        var stack = new ItemStack(entity.isHyper()
-                ? Items.HYPER_NETWORK_RELAY_SATELLITE.get()
-                : Items.NETWORK_RELAY_SATELLITE.get());
-        state.extractItemGroupRenderState(entity, stack, itemModelResolver);
+        geo.addGeckolibData(TRAIL_VEL, trail);
     }
 
     @Override
     public void submit(
-            RelaySatelliteRenderState state,
+            EntityRenderState state,
             PoseStack poseStack,
             SubmitNodeCollector collector,
             CameraRenderState camera
     ) {
-        if (state.crashing) {
-            submitTrail(state, poseStack, collector, 1.0f, 0.45f, 0.08f, 1.0f, 0.75f, 0.2f, 1.0f, 0.95f, 0.55f);
-        } else if (state.launching) {
-            submitTrail(state, poseStack, collector, 0.55f, 0.85f, 1.0f, 0.75f, 0.95f, 1.0f, 1.0f, 1.0f, 0.85f);
+        var geo = asGeo(state);
+        boolean crashing = Boolean.TRUE.equals(geo.getOrDefaultGeckolibData(CRASHING, false));
+        boolean launching = Boolean.TRUE.equals(geo.getOrDefaultGeckolibData(LAUNCHING, false));
+        float spin = geo.getOrDefaultGeckolibData(SPIN, 0.0f);
+        Vector3f trail = geo.getOrDefaultGeckolibData(TRAIL_VEL, new Vector3f());
+
+        if (crashing) {
+            submitTrail(poseStack, collector, trail, 1.0f, 0.45f, 0.08f, 1.0f, 0.75f, 0.2f, 1.0f, 0.95f, 0.55f);
+        } else if (launching) {
+            submitTrail(poseStack, collector, trail, 0.55f, 0.85f, 1.0f, 0.75f, 0.95f, 1.0f, 1.0f, 1.0f, 0.85f);
         }
         poseStack.pushPose();
-        poseStack.translate(0.0, 0.25, 0.0);
-        if (state.crashing || state.launching) {
-            alignToTrailVelocity(poseStack, state.trailVelocity);
-            poseStack.mulPose(Axis.ZP.rotationDegrees(state.spin * (state.launching ? 1.2f : 2.5f)));
-            poseStack.scale(1.6f, 1.6f, 1.6f);
+        poseStack.translate(0.0, 0.15, 0.0);
+        if (launching) {
+            // Geo sat is Y-up (same as on the pad). Keep upright during ascent — do not tip +Z into velocity.
+            poseStack.mulPose(Axis.YP.rotationDegrees(spin));
+        } else if (crashing) {
+            // Model +Y is the antenna/"head". Point it along dive velocity (head-down).
+            alignHeadAlongVelocity(poseStack, trail);
+            poseStack.mulPose(Axis.YP.rotationDegrees(spin * 2.5f));
         } else {
-            poseStack.mulPose(Axis.YP.rotationDegrees(state.spin));
-            poseStack.scale(1.75f, 1.75f, 1.75f);
+            poseStack.mulPose(Axis.YP.rotationDegrees(spin));
         }
-        ItemEntityRenderer.submitMultipleFromCount(
-                poseStack, collector, state.lightCoords, state, MathUtil.RANDOM_SOURCE
-        );
+        super.submit(state, poseStack, collector, camera);
         poseStack.popPose();
     }
 
-    private static void alignToTrailVelocity(PoseStack poseStack, Vector3f velocity) {
+    /** Maps local +Y (head) onto the velocity direction. */
+    private static void alignHeadAlongVelocity(PoseStack poseStack, Vector3f velocity) {
         var speedSqr = velocity.lengthSquared();
+        var target = new Vector3f();
         if (speedSqr < 1.0e-6f) {
-            poseStack.mulPose(Axis.XP.rotationDegrees(75.0f));
-            return;
+            target.set(0.0f, -1.0f, 0.0f);
+        } else {
+            target.set(velocity).normalize();
         }
-        var speed = Mth.sqrt(speedSqr);
-        var yaw = (float) (Mth.atan2(velocity.x, velocity.z) * Mth.RAD_TO_DEG);
-        var pitch = (float) (Mth.atan2(-velocity.y, Mth.sqrt(velocity.x * velocity.x + velocity.z * velocity.z))
-                * Mth.RAD_TO_DEG);
-        poseStack.mulPose(Axis.YP.rotationDegrees(yaw));
-        poseStack.mulPose(Axis.XP.rotationDegrees(pitch));
-        var stretch = Mth.clamp(1.0f + speed * 0.35f, 1.15f, 2.8f);
-        poseStack.scale(1.0f, stretch, 1.0f);
+        var rotation = new Quaternionf().rotationTo(new Vector3f(0.0f, 1.0f, 0.0f), target);
+        poseStack.mulPose(rotation);
     }
 
     private static void submitTrail(
-            RelaySatelliteRenderState state,
             PoseStack poseStack,
             SubmitNodeCollector collector,
+            Vector3f velocity,
             float r0, float g0, float b0,
             float r1, float g1, float b1,
             float r2, float g2, float b2
     ) {
-        var velocity = state.trailVelocity;
         var speedSqr = velocity.lengthSquared();
         if (speedSqr < 1.0e-6f) {
             return;
@@ -160,5 +167,9 @@ public final class RelaySatelliteRenderer extends EntityRenderer<RelaySatelliteE
                 .setColor(red, green, blue, 0.0f);
         consumer.addVertex(matrix, tailX - hx * 0.15f, tailY - hy * 0.15f, tailZ - hz * 0.15f)
                 .setColor(red, green, blue, 0.0f);
+    }
+
+    private static GeoRenderState asGeo(EntityRenderState state) {
+        return (GeoRenderState) (Object) state;
     }
 }

@@ -126,7 +126,9 @@ public class EntityTypes {
     public static final DeferredHolder<EntityType<?>, EntityType<OrbitalStrikeProxyEntity>> ORBITAL_STRIKE_PROXY =
             ENTITY_TYPES.registerEntityType(
                     "orbital_strike_proxy", OrbitalStrikeProxyEntity::new, MobCategory.MISC,
-                    builder -> builder.sized(0.8f, 0.8f).clientTrackingRange(160).updateInterval(1));
+                    // Fire apex is STRIKE_APEX_HEIGHT (~160) above impact; worst case ≈ hypot(192,160)≈250.
+                    // Avoid 2048: that would keep every player in a ~128-chunk radius on the tracker with updateInterval 1.
+                    builder -> builder.sized(0.8f, 0.8f).clientTrackingRange(256).updateInterval(2));
 
     private EntityTypes() {
     }

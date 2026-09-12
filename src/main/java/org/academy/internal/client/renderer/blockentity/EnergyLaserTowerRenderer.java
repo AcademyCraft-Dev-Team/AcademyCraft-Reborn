@@ -1,32 +1,29 @@
 package org.academy.internal.client.renderer.blockentity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
-import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.util.Mth;
-import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.renderer.OrientedCylinderBeam;
 import org.academy.internal.client.renderer.blockentity.state.EnergyLaserTowerRenderState;
 import org.academy.internal.common.world.entity.misaka.RelaySatelliteEntity;
-import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.EnergyLaserTowerBlock;
 import org.academy.internal.common.world.level.block.entity.EnergyLaserTowerBlockEntity;
 import org.academy.internal.server.misaka.MisakaRelayOrbits;
 import org.jspecify.annotations.Nullable;
-import net.minecraft.util.LightCoordsUtil;
 
 import static org.academy.api.client.render.Render.RenderTypes.POS_COLOR_QUADS_ADDITIVE;
 import static org.academy.api.client.render.Render.RenderTypes.POS_COLOR_QUADS_NO_DEPTH_WRITE;
 
-/** Skyward / satellite-aimed power beam, plus occasional sky-layer orbit item model. */
+/**
+ * Skyward / satellite-aimed power beam only.
+ * In-orbit sky model is drawn by {@code MisakaOrbitSkyClient} under the satellite slot
+ * (independent of standing at this tower; no orbit entity).
+ */
 public final class EnergyLaserTowerRenderer
         implements BlockEntityRenderer<EnergyLaserTowerBlockEntity, EnergyLaserTowerRenderState> {
     public static final EnergyLaserTowerRenderer INSTANCE = new EnergyLaserTowerRenderer();
@@ -52,59 +49,40 @@ public final class EnergyLaserTowerRenderer
                 blockEntity, renderState, partialTick, cameraPosition, breakProgress
         );
         renderState.beamActive = false;
-        renderState.showSkySatellite = false;
-        renderState.skySatelliteItem.clear();
         if (!blockEntity.isMain()) {
             return;
         }
         renderState.beamActive = blockEntity.isBeamActive() && blockEntity.getEnergyStored() > 0;
         renderState.beamEndRelative = new Vec3(0.5, EnergyLaserTowerBlock.HEIGHT + DEFAULT_BEAM_HEIGHT, 0.5);
+        if (!renderState.beamActive) {
+            return;
+        }
 
         var level = Minecraft.getInstance().level;
-        var origin = Vec3.atLowerCornerOf(blockEntity.getBlockPos());
-
-        if (blockEntity.isOrbiting() && level != null) {
-            long time = level.getGameTime();
-            int seed = blockEntity.getOrbitAngleSeed();
-            var slot = MisakaRelayOrbits.orbitSlotWorld(
-                    blockEntity.getBlockPos(),
-                    blockEntity.getOrbitVisualY(),
-                    time,
-                    seed
-            );
-            var relative = slot.subtract(origin);
-            // Horizon lock: never aim the beam at a slot below the tower base (ground stab).
-            if (renderState.beamActive && !MisakaRelayOrbits.isAboveLaserHorizon(blockEntity.getBlockPos(), slot)) {
-                renderState.beamActive = false;
-            }
-            if (renderState.beamActive) {
-                renderState.beamEndRelative = clampBeamEnd(relative);
-            }
-            renderState.orbitHyper = blockEntity.isOrbitHyper();
-            renderState.skySatelliteRelative = relative;
-            renderState.skySatelliteSpin = (time + partialTick) * 4.0f;
-
-            var player = Minecraft.getInstance().player;
-            boolean near = player != null
-                    && player.distanceToSqr(slot.x, player.getY(), slot.z)
-                    <= MisakaRelayOrbits.SKY_VIEW_RANGE * MisakaRelayOrbits.SKY_VIEW_RANGE;
-            boolean lookingUp = player != null && player.getXRot() < -25.0f;
-            boolean window = MisakaRelayOrbits.isSkyModelVisible(time, seed);
-            if (near && lookingUp && window) {
-                renderState.showSkySatellite = true;
-                var stack = new ItemStack(renderState.orbitHyper
-                        ? Items.HYPER_NETWORK_RELAY_SATELLITE.get()
-                        : Items.NETWORK_RELAY_SATELLITE.get());
-                Minecraft.getInstance().getItemModelResolver().updateForTopItem(
-                        renderState.skySatelliteItem,
-                        stack,
-                        ItemDisplayContext.GROUND,
-                        level,
-                        null,
-                        seed
-                );
-            }
+        if (level == null || !blockEntity.isOrbiting()) {
+            return;
         }
+        Vec3 tip;
+        if (blockEntity.isStrikeAiming()) {
+            tip = blockEntity.getStrikeAim();
+        } else {
+            double orbitY = blockEntity.getOrbitVisualY();
+            if (!(orbitY > 1.0)) {
+                orbitY = MisakaRelayOrbits.visualOrbitY(level, MisakaRelayOrbits.DEFAULT_ORBIT_HEIGHT);
+            }
+            tip = MisakaRelayOrbits.orbitSlotWorld(
+                    blockEntity.getBlockPos(),
+                    orbitY,
+                    level.getGameTime(),
+                    blockEntity.getOrbitAngleSeed()
+            );
+        }
+        if (!MisakaRelayOrbits.isAboveLaserHorizon(blockEntity.getBlockPos(), tip)) {
+            renderState.beamActive = false;
+            return;
+        }
+        var relative = tip.subtract(Vec3.atLowerCornerOf(blockEntity.getBlockPos()));
+        renderState.beamEndRelative = clampBeamEnd(relative);
     }
 
     @Override
@@ -117,15 +95,8 @@ public final class EnergyLaserTowerRenderer
         if (renderState.beamActive) {
             submitBeam(renderState, poseStack, nodeCollector);
         }
-        if (renderState.showSkySatellite && !renderState.skySatelliteItem.isEmpty()) {
-            submitSkySatellite(renderState, poseStack, nodeCollector);
-        }
     }
 
-    /**
-     * Caps extreme lengths for mesh/AABB sanity; does not cut sky-low elevation targets
-     * (that is {@link MisakaRelayOrbits#isAboveLaserHorizon}).
-     */
     private static Vec3 clampBeamEnd(Vec3 relativeEnd) {
         var start = new Vec3(0.5, EnergyLaserTowerBlock.HEIGHT, 0.5);
         var delta = relativeEnd.subtract(start);
@@ -144,7 +115,6 @@ public final class EnergyLaserTowerRenderer
     ) {
         var start = new Vec3(0.5, EnergyLaserTowerBlock.HEIGHT, 0.5);
         var end = renderState.beamEndRelative;
-        // Belt-and-suspenders: relative end Y below emitter ⇒ do not draw.
         if (end.y < start.y) {
             return;
         }
@@ -167,56 +137,56 @@ public final class EnergyLaserTowerRenderer
         poseStack.popPose();
     }
 
-    private static void submitSkySatellite(
-            EnergyLaserTowerRenderState renderState,
-            PoseStack poseStack,
-            SubmitNodeCollector nodeCollector
-    ) {
-        var rel = renderState.skySatelliteRelative;
-        // Shrunk sky item model: smaller than launch/crash entities, grows slightly with range.
-        float scale = (float) Mth.clamp(0.35 + rel.length() * 0.0015, 0.45, 0.95);
-        poseStack.pushPose();
-        poseStack.translate(rel.x, rel.y, rel.z);
-        poseStack.mulPose(Axis.YP.rotationDegrees(renderState.skySatelliteSpin));
-        poseStack.scale(scale, scale, scale);
-        renderState.skySatelliteItem.submit(
-                poseStack,
-                nodeCollector,
-                LightCoordsUtil.FULL_BRIGHT,
-                OverlayTexture.NO_OVERLAY,
-                0
-        );
-        poseStack.popPose();
-    }
-
     @Override
     public AABB getRenderBoundingBox(EnergyLaserTowerBlockEntity blockEntity) {
         if (!blockEntity.isMain()) {
             return new AABB(blockEntity.getBlockPos());
         }
         var pos = blockEntity.getBlockPos();
-        double top = Math.max(
-                pos.getY() + EnergyLaserTowerBlock.HEIGHT + 128,
-                blockEntity.getOrbitVisualY() + 8.0
-        );
-        double radius = RelaySatelliteEntity.ORBIT_RADIUS + 8.0;
-        if (blockEntity.isBeamActive() || blockEntity.isOrbiting()) {
+        if (!blockEntity.isBeamActive()) {
             return new AABB(
-                    pos.getX() + 0.5 - radius,
+                    pos.getX(),
                     pos.getY(),
-                    pos.getZ() + 0.5 - radius,
-                    pos.getX() + 0.5 + radius,
-                    top,
-                    pos.getZ() + 0.5 + radius
+                    pos.getZ(),
+                    pos.getX() + 1,
+                    pos.getY() + EnergyLaserTowerBlock.HEIGHT,
+                    pos.getZ() + 1
             );
         }
-        return new AABB(
-                pos.getX(),
-                pos.getY(),
-                pos.getZ(),
-                pos.getX() + 1,
-                pos.getY() + EnergyLaserTowerBlock.HEIGHT,
-                pos.getZ() + 1
+        double orbitY = blockEntity.getOrbitVisualY();
+        if (!(orbitY > 1.0)) {
+            var level = blockEntity.getLevel();
+            orbitY = level != null
+                    ? MisakaRelayOrbits.visualOrbitY(level, MisakaRelayOrbits.DEFAULT_ORBIT_HEIGHT)
+                    : pos.getY() + 304.0;
+        }
+        double top = Math.max(pos.getY() + EnergyLaserTowerBlock.HEIGHT + 128, orbitY + 8.0);
+        double radius = RelaySatelliteEntity.ORBIT_RADIUS + 8.0;
+        double minX = pos.getX() + 0.5 - radius;
+        double minZ = pos.getZ() + 0.5 - radius;
+        double maxX = pos.getX() + 0.5 + radius;
+        double maxZ = pos.getZ() + 0.5 + radius;
+        if (blockEntity.isStrikeAiming()) {
+            var aim = blockEntity.getStrikeAim();
+            minX = Math.min(minX, aim.x - 8.0);
+            minZ = Math.min(minZ, aim.z - 8.0);
+            maxX = Math.max(maxX, aim.x + 8.0);
+            maxZ = Math.max(maxZ, aim.z + 8.0);
+            top = Math.max(top, aim.y + 8.0);
+        }
+        return new AABB(minX, pos.getY(), minZ, maxX, top, maxZ);
+    }
+
+    @Override
+    public boolean shouldRenderOffScreen() {
+        return true;
+    }
+
+    @Override
+    public int getViewDistance() {
+        return Math.max(
+                Minecraft.getInstance().options.getEffectiveRenderDistance() * 16,
+                128
         );
     }
 }

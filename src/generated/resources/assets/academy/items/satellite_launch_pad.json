@@ -1,0 +1,9 @@
+{
+  "model": {
+    "type": "minecraft:special",
+    "base": "academy:item/satellite_launch_pad",
+    "model": {
+      "type": "geckolib:geckolib"
+    }
+  }
+}

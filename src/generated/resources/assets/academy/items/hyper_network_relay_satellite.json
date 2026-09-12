@@ -1,6 +1,9 @@
 {
   "model": {
-    "type": "minecraft:model",
-    "model": "academy:item/hyper_network_relay_satellite"
+    "type": "minecraft:special",
+    "base": "academy:item/relay_satellite",
+    "model": {
+      "type": "geckolib:geckolib"
+    }
   }
 }
