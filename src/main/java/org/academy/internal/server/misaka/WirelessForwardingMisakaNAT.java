@@ -5,6 +5,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import org.academy.api.common.misaka.MisakaNAT;
 import org.academy.api.server.wireless.WirelessManager;
+import org.academy.internal.common.world.entity.misaka.perception.PerceptionService;
 import org.academy.internal.server.world.level.storage.MisakaNetworkRegistry;
 import org.academy.internal.server.world.level.storage.MisakaSisterRoster;
 import org.academy.internal.server.world.level.storage.WirelessNetworkData;
@@ -65,7 +66,10 @@ public final class WirelessForwardingMisakaNAT implements MisakaNAT {
         }
         roster.modify(misakaUuid, sister -> sister.networkNodePos = nodePos.immutable());
         MisakaComputeIndex.get(server).markDirty();
-        MisakaComputeContribution.refreshCpForRecord(server, record);
+        roster.get(misakaUuid).ifPresent(updated -> {
+            PerceptionService.tryIntegrateIfEligible(server, updated);
+            MisakaComputeContribution.refreshCpForRecord(server, updated);
+        });
         return true;
     }
 

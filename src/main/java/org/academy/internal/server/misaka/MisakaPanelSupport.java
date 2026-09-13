@@ -3,6 +3,7 @@ package org.academy.internal.server.misaka;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import org.academy.AcademyCraft;
 import org.academy.api.common.misaka.MisakaNAT;
 import org.academy.internal.common.network.misaka.MisakaPanelDataPacket;
 import org.academy.internal.common.world.entity.misaka.InteractionGate;
@@ -52,7 +53,16 @@ public final class MisakaPanelSupport {
         if (record == null) {
             return;
         }
-        MisakaNetworkServer.send(player, buildPanel(player, sister, record));
+        try {
+            MisakaNetworkServer.send(player, buildPanel(player, sister, record));
+        } catch (RuntimeException ex) {
+            AcademyCraft.LOGGER.error(
+                    "Failed to open Misaka panel for {} on sister {}",
+                    player.getGameProfile().name(),
+                    record.misakaUuid,
+                    ex
+            );
+        }
     }
 
     public static MisakaPanelDataPacket buildPanel(
@@ -68,16 +78,28 @@ public final class MisakaPanelSupport {
         // §16.2: favor <= 0 viewers only get public facts — no network name, topology or exact compute.
         boolean detailed = relation.ordinal() >= MobRelation.DEFAULT.ordinal();
         // Node configs live in overworld SavedData; position sample uses the sister entity.
-        String nodeName = detailed
-                ? WirelessNetworkData.displayName(overworld, record.networkNodePos, false)
-                : "";
-        var availableNodes = detailed
-                ? MisakaNAT.get().listAvailableNodes(overworld, sister.blockPosition())
-                : List.<String>of();
+        String nodeName = "";
+        List<String> availableNodes = List.of();
+        boolean reconstructionBlocked = false;
+        if (detailed) {
+            try {
+                nodeName = WirelessNetworkData.displayName(overworld, record.networkNodePos, false);
+                availableNodes = MisakaNAT.get().listAvailableNodes(overworld, sister.blockPosition());
+                // hasReconstructionWork may rebuild the compute index (heavy at max favor /
+                // privilege). Never let that abort panel open.
+                if (record.networkNodePos != null && server != null) {
+                    reconstructionBlocked = MisakaNAT.get().hasReconstructionWork(
+                            server, record.networkNodePos, record.misakaUuid);
+                }
+            } catch (RuntimeException ex) {
+                AcademyCraft.LOGGER.error(
+                        "Misaka panel detail lookup failed for sister {}",
+                        record.misakaUuid,
+                        ex
+                );
+            }
+        }
         boolean reconstructionWork = record.isReconstruction || record.perception >= 101;
-        boolean reconstructionBlocked = detailed
-                && record.networkNodePos != null
-                && MisakaNAT.get().hasReconstructionWork(server, record.networkNodePos, record.misakaUuid);
         float msk = 0.0f;
         if (record.awakened && !record.starving && !record.incapacitated) {
             msk = MisakaComputeContribution.mskPerSecond(record.perception);
@@ -96,7 +118,8 @@ public final class MisakaPanelSupport {
                 FavorService.isPrivilegePlayer(record, playerName),
                 reconstructionWork,
                 reconstructionBlocked,
-                record.networkNodePos != null
+                record.networkNodePos != null,
+                record.incapacitated || sister.isIncapacitated()
         );
     }
 

@@ -6,6 +6,7 @@ import org.academy.api.common.misaka.MisakaNAT;
 import org.academy.internal.common.misaka.MisakaNetworkPermission;
 import org.academy.internal.common.network.misaka.MisakaNetManageDataPacket;
 import org.academy.internal.common.world.entity.misaka.favor.FavorService;
+import org.academy.internal.common.world.entity.misaka.perception.PerceptionService;
 import org.academy.internal.server.world.level.storage.MisakaNetworkAllocations;
 import org.academy.internal.server.world.level.storage.MisakaNetworkGovernance;
 import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
@@ -67,6 +68,8 @@ public final class MisakaNetManageSupport {
         if (!canManage(player, record)) {
             return null;
         }
+        // Retry first integration for worlds that became reconstruction while unbound / without privilege.
+        PerceptionService.tryIntegrateIfEligible(server, record);
         var level = (ServerLevel) player.level();
         MisakaComputeIndex.get(server).rebuildIfDirty(server);
         var overworld = server.overworld();
@@ -104,6 +107,7 @@ public final class MisakaNetManageSupport {
                     msk,
                     nodeName,
                     sister.starving,
+                    sister.incapacitated,
                     inCoverage
             ));
         }
@@ -111,8 +115,9 @@ public final class MisakaNetManageSupport {
         float totalMsk = MisakaComputeIndex.get(server).networkTotals().getOrDefault(networkId, 0f);
         float demandMsk = MisakaComputeContribution.networkDemandMsk(server, networkId);
         String playerName = player.getGameProfile().name();
-        float yourAllocated = MisakaComputeContribution.lastAllocatedMsk(playerName);
-        float yourSatisfaction = MisakaComputeContribution.lastSatisfactionByName.containsKey(playerName)
+        float yourAllocated = MisakaComputeContribution.claimableMskPerSecond(server, playerName, networkId);
+        float filled = MisakaComputeContribution.lastAllocatedMsk(playerName);
+        float yourSatisfaction = filled > 0.0f && MisakaComputeContribution.lastSatisfactionByName.containsKey(playerName)
                 ? MisakaComputeContribution.lastSatisfaction(playerName)
                 : MisakaComputeContribution.networkSatisfaction(totalMsk, demandMsk);
         var governance = MisakaNetworkGovernance.get(server);
@@ -246,6 +251,11 @@ public final class MisakaNetManageSupport {
                     return false;
                 }
             }
+            return false;
+        }
+        // Admins may view themselves in the roster, but must not grant/revoke their own perms
+        // (self-demote lockout / pointless self-grant of implied rights).
+        if (targetUuid.equals(actor.getUUID())) {
             return false;
         }
         if (grant) {

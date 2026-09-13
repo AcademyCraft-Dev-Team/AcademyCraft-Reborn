@@ -49,7 +49,10 @@ public final class FavorRuleRegistry {
             }
         }
         if (server != null) {
-            MisakaComputeContribution.refreshCpForRecord(server, context.record());
+            // Defer CP refresh so favor-max rebuild/sync cannot run inside hand-feed /
+            // damage handlers before action-bar feedback returns.
+            final MisakaSisterRecord target = context.record();
+            server.execute(() -> MisakaComputeContribution.refreshCpForRecord(server, target));
         }
     }
 
@@ -108,6 +111,8 @@ public final class FavorRuleRegistry {
     ) {
         event.setCanceled(true);
         sister.setHealth(1.0f);
+        sister.sanitizePoseAfterLoad();
+        sister.setPersistenceRequired();
         if (sister.isPassenger()) {
             sister.stopRiding();
         }
@@ -119,6 +124,7 @@ public final class FavorRuleRegistry {
 
         var record = sister.rosterRecord().orElse(null);
         if (record == null) {
+            sister.applyIncapacitatedHold();
             return;
         }
         boolean entering = !record.incapacitated;
@@ -132,6 +138,7 @@ public final class FavorRuleRegistry {
         } else {
             MisakaSisterRosterSync.syncFromRecord(sister, record);
         }
+        sister.applyIncapacitatedHold();
     }
 
     private static void applyKilledBenevolentLan(

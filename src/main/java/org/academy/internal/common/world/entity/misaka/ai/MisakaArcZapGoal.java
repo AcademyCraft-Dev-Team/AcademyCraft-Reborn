@@ -5,7 +5,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
-import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
+import org.academy.internal.common.world.entity.misaka.MisakaArcAttack;
 import org.academy.internal.common.world.entity.misaka.MisakaPersonality;
 import org.academy.internal.common.world.entity.misaka.MisakaSisterEntity;
 import org.academy.internal.common.world.entity.misaka.MobRelation;
@@ -15,7 +15,7 @@ import org.academy.internal.common.world.entity.misaka.favor.FavorService;
 import java.util.EnumSet;
 
 /**
- * Close-range zap when no higher-priority combat goal owns the sister
+ * Close-range Arc Generate when no higher-priority combat goal owns the sister
  * (e.g. threat just outside flee radius but still in zap range is handled in combat).
  * Kept for LIVELY/COLD when combat goal is inactive.
  */
@@ -64,8 +64,9 @@ public final class MisakaArcZapGoal extends Goal {
             return;
         }
         sister.getLookControl().setLookAt(target, 30.0f, 30.0f);
-        if (sister.distanceToSqr(target) <= ZAP_RANGE * ZAP_RANGE) {
-            zap(target);
+        if (sister.distanceToSqr(target) <= ZAP_RANGE * ZAP_RANGE
+                && sister.level() instanceof ServerLevel
+                && MisakaArcAttack.tryFire(sister, target)) {
             cooldown = COOLDOWN_TICKS;
             target = null;
         }
@@ -100,14 +101,5 @@ public final class MisakaArcZapGoal extends Goal {
                     .orElse(false);
         }
         return false;
-    }
-
-    private void zap(LivingEntity victim) {
-        if (sister.level() instanceof ServerLevel serverLevel) {
-            var start = sister.position().add(0.0, sister.getEyeHeight() * 0.8, 0.0);
-            var end = victim.position().add(0.0, victim.getEyeHeight() * 0.5, 0.0);
-            ElectromasterArcEffects.spawnChainArc(serverLevel, start, end);
-        }
-        victim.hurt(sister.level().damageSources().lightningBolt(), 3.0f);
     }
 }

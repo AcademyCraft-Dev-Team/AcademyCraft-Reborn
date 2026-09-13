@@ -7,7 +7,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.AABB;
 import org.academy.api.common.misaka.MisakaRelayAccess;
 import org.academy.internal.common.world.entity.misaka.MisakaSisterEntity;
 import org.academy.internal.server.world.level.storage.MisakaNetworkRegistry;
@@ -141,6 +140,9 @@ public final class MisakaNetworkCoverage {
         if (record == null) {
             return BlockPos.ZERO;
         }
+        if (record.lastKnownBlockPos != null) {
+            return record.lastKnownBlockPos.immutable();
+        }
         if (record.lastKnownChunk != null) {
             ChunkPos chunk = record.lastKnownChunk;
             int y = record.networkNodePos != null ? record.networkNodePos.getY() : 64;
@@ -179,46 +181,45 @@ public final class MisakaNetworkCoverage {
      * <p>
      * This is <strong>not</strong> the entity UUID — use
      * {@link MisakaPanelSupport#findLoadedEntityAnyDimension} for that.
+     * Lookup is O(1) via {@link MisakaLoadedSisterIndex}.
      */
     public static @Nullable MisakaSisterEntity findLoadedSister(MinecraftServer server, UUID misakaUuid) {
         if (server == null || misakaUuid == null) {
             return null;
         }
-        for (ServerLevel level : server.getAllLevels()) {
-            for (var sister : loadedSisterEntities(level)) {
-                if (misakaUuid.equals(sister.getMisakaUuid()) && !sister.isRemoved()) {
-                    return sister;
-                }
-            }
-        }
-        return null;
+        return MisakaLoadedSisterIndex.getByMisakaUuid(misakaUuid);
     }
 
-    /** One pass over loaded Misaka sister entities in {@code level}. Prefer {@link #findLoadedSister} for cross-dim. */
+    /**
+     * Prefer roster uuid, then fall back to synched/persisted serial so a rebound
+     * entity (uuid lost on reload) is still reachable by {@code /misaka tp}.
+     */
+    public static @Nullable MisakaSisterEntity findLoadedSister(
+            MinecraftServer server,
+            UUID misakaUuid,
+            int serial
+    ) {
+        if (server == null) {
+            return null;
+        }
+        return MisakaLoadedSisterIndex.get(misakaUuid, serial);
+    }
+
+    /** Snapshot of currently loaded sisters keyed by roster uuid. */
     public static Map<UUID, MisakaSisterEntity> loadedSistersByUuid(ServerLevel level) {
         if (level == null) {
             return Map.of();
         }
         var map = new HashMap<UUID, MisakaSisterEntity>();
-        for (var sister : loadedSisterEntities(level)) {
+        for (var sister : MisakaLoadedSisterIndex.all()) {
+            if (sister.isRemoved() || sister.level() != level) {
+                continue;
+            }
             var uuid = sister.getMisakaUuid();
             if (uuid != null) {
                 map.put(uuid, sister);
             }
         }
         return map;
-    }
-
-    private static List<MisakaSisterEntity> loadedSisterEntities(ServerLevel level) {
-        var border = level.getWorldBorder();
-        var box = new AABB(
-                border.getMinX(),
-                level.dimensionType().minY(),
-                border.getMinZ(),
-                border.getMaxX(),
-                level.dimensionType().minY() + level.dimensionType().logicalHeight(),
-                border.getMaxZ()
-        );
-        return level.getEntitiesOfClass(MisakaSisterEntity.class, box);
     }
 }

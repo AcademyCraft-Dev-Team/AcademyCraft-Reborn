@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import org.academy.api.common.ability.Skill;
 import org.academy.internal.common.world.damagesource.SkillDamageTypeResolver;
 import org.jetbrains.annotations.Nullable;
@@ -18,6 +19,24 @@ public class SkillDamageSource extends DamageSource {
     protected SkillDamageSource(Holder<DamageType> type, @Nullable Entity directEntity, @Nullable Entity causingEntity, Skill skill) {
         super(type, directEntity, causingEntity);
         this.skill = skill;
+    }
+
+    /**
+     * Living caster (player or mob) using a skill's category damage type when available.
+     */
+    public static SkillDamageSource of(LivingEntity caster, Skill skill) {
+        if (caster instanceof ServerPlayer player) {
+            return of(player, skill);
+        }
+        var categoryType = SkillDamageTypeResolver.resolve(skill);
+        if (categoryType != null) {
+            var registry = caster.level().registryAccess()
+                    .lookupOrThrow(Registries.DAMAGE_TYPE);
+            Holder<DamageType> typeHolder = registry.getOrThrow(categoryType);
+            return new SkillDamageSource(typeHolder, caster, caster, skill);
+        }
+        var original = caster.damageSources().mobAttack(caster);
+        return new SkillDamageSource(original.typeHolder(), original.getDirectEntity(), original.getEntity(), skill);
     }
 
     /**

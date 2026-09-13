@@ -37,7 +37,11 @@ public final class MisakaForageFoodGoal extends Goal {
             return false;
         }
         targetPos = findForageTarget();
-        return targetPos != null;
+        if (targetPos == null) {
+            cooldown = 80;
+            return false;
+        }
+        return true;
     }
 
     @Override

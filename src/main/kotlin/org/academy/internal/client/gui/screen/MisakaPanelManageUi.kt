@@ -5,6 +5,7 @@ import net.minecraft.util.Mth
 import org.academy.api.client.gui.command.FillRectDrawCommand
 import org.academy.api.client.gui.drawable.ColorDrawable
 import org.academy.api.client.gui.drawable.StateListDrawable
+import org.academy.api.client.gui.event.OnClickListener
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
@@ -127,113 +128,341 @@ internal object MisakaPanelManageUi {
     }
 
     fun buildMembersTab(host: MisakaPanelHost): FrameLayoutWidget {
-        val root = FrameLayoutWidget().apply {
-            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-        }
-        val column = LinearLayoutWidget().apply {
-            orientation = Orientation.VERTICAL
-            spacing = MisakaNetworkPanelScreen.SPACING_MINOR
-            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-        }
-        root.addChild("column", column)
-        column.addChild(
-            "admins_title",
-            host.sectionLabel(Component.translatable("screen.academy.misaka_net_admins_title").string)
-        )
-        host.membersListLabel = LabelWidget(formatMembers(host)).apply {
-            scale = 0.72f
-            alpha = 0.88f
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .heightMode(SizeMode.WRAP_CONTENT)
-        }
-        column.addChild("members", host.membersListLabel)
-        column.addChild("rule", host.sectionRule())
-        column.addChild(
-            "edit_title",
-            host.sectionLabel(Component.translatable("screen.academy.misaka_net_perm_edit_title").string)
-        )
+        // Sticky access banner + column header + editor; only the member list scrolls.
+        return MisakaPanelLayouts.tabColumn {
+            host.membersAccessLabel = LabelWidget(formatMembersAccess(host)).apply {
+                scale = 0.72f
+                alpha = 0.78f
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .height(10f)
+            }
+            addChild("access", host.membersAccessLabel)
+            addChild(
+                "list_title",
+                host.sectionLabel(Component.translatable("screen.academy.misaka_net_members_list_title").string)
+            )
+            addChild("header", memberColumnsRow(
+                Component.translatable("screen.academy.misaka_net_col_name").string,
+                Component.translatable("screen.academy.misaka_net_col_role").string,
+                Component.translatable("screen.academy.misaka_net_col_perms").string,
+                header = true
+            ))
 
-        host.memberNameInput = TextBoxWidget(16).apply {
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(14f)
-        }
-        column.addChild("name_input", host.memberNameInput)
+            addChild(
+                "list_scroll",
+                MisakaPanelLayouts.scrollBody {
+                    host.membersListLabel = LabelWidget(formatMembersEmptyHint(host)).apply {
+                        scale = 0.72f
+                        alpha = 0.7f
+                        layoutParams = LinearLayoutWidget.LayoutParams()
+                            .widthMode(SizeMode.MATCH_PARENT)
+                            .heightMode(SizeMode.WRAP_CONTENT)
+                    }
+                    addChild("members_empty", host.membersListLabel)
+                    host.membersListHost = LinearLayoutWidget().apply {
+                        orientation = Orientation.VERTICAL
+                        spacing = MisakaNetworkPanelScreen.SPACING_MICRO
+                        isClickable = false
+                        layoutParams = LinearLayoutWidget.LayoutParams()
+                            .widthMode(SizeMode.MATCH_PARENT)
+                            .heightMode(SizeMode.WRAP_CONTENT)
+                    }
+                    addChild("members_rows", host.membersListHost)
+                }
+            )
 
-        val actions = LinearLayoutWidget().apply {
-            orientation = Orientation.HORIZONTAL
-            spacing = MisakaNetworkPanelScreen.SPACING_MINOR
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(14f)
-        }
-        actions.addChild("cycle_perm", host.textActionButton(
-            Component.translatable("screen.academy.misaka_net_perm_cycle").string
-        ) {
-            host.memberPermIndex =
-                (host.memberPermIndex + 1) % EDITABLE_PERMISSIONS.size
+            addChild("editor_rule", host.sectionRule())
+            host.membersEditorHost = LinearLayoutWidget().apply {
+                orientation = Orientation.VERTICAL
+                spacing = MisakaNetworkPanelScreen.SPACING_MICRO
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .heightMode(SizeMode.WRAP_CONTENT)
+            }
+            addChild("editor", host.membersEditorHost)
+
+            host.membersEditorHost.addChild(
+                "edit_title",
+                host.sectionLabel(Component.translatable("screen.academy.misaka_net_perm_edit_title").string)
+            )
+            host.memberTargetLabel = LabelWidget(formatMemberTarget(host)).apply {
+                scale = 0.7f
+                alpha = 0.8f
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .height(10f)
+            }
+            host.membersEditorHost.addChild("target", host.memberTargetLabel)
+
+            host.memberNameInput = TextBoxWidget(16).apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .height(14f)
+            }
+            host.membersEditorHost.addChild("name_input", host.memberNameInput)
+
+            host.membersPermHintLabel = LabelWidget(formatSelectedPermission(host)).apply {
+                scale = 0.68f
+                alpha = 0.72f
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .height(10f)
+            }
+            host.membersEditorHost.addChild("perm_hint", host.membersPermHintLabel)
+
+            val actions = LinearLayoutWidget().apply {
+                orientation = Orientation.HORIZONTAL
+                spacing = MisakaNetworkPanelScreen.SPACING_MINOR
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .height(MisakaNetworkPanelScreen.LIST_ITEM_HEIGHT)
+            }
+            host.membersEditorHost.addChild("actions", actions)
+
+            host.memberCycleButton = host.textActionButton(currentPermissionLabel(host)) {
+                if (!host.manageCanEditMembers) {
+                    return@textActionButton
+                }
+                host.memberPermIndex =
+                    (host.memberPermIndex + 1) % EDITABLE_PERMISSIONS.size
+                refreshMembersTab(host)
+            }.apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .weight(1.4f)
+                    .width(0f)
+                    .heightMode(SizeMode.MATCH_PARENT)
+            }
+            host.memberGrantButton = host.textActionButton(
+                Component.translatable("screen.academy.misaka_net_perm_grant").string
+            ) {
+                sendPermissionEdit(host, grant = true)
+            }.apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .weight(1f)
+                    .width(0f)
+                    .heightMode(SizeMode.MATCH_PARENT)
+            }
+            host.memberRevokeButton = host.textActionButton(
+                Component.translatable("screen.academy.misaka_net_perm_revoke").string
+            ) {
+                sendPermissionEdit(host, grant = false)
+            }.apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .weight(1f)
+                    .width(0f)
+                    .heightMode(SizeMode.MATCH_PARENT)
+            }
+            actions.addChild("cycle_perm", host.memberCycleButton)
+            actions.addChild("grant", host.memberGrantButton)
+            actions.addChild("revoke", host.memberRevokeButton)
             refreshMembersTab(host)
-        })
-        actions.addChild("grant", host.textActionButton(
-            Component.translatable("screen.academy.misaka_net_perm_grant").string
-        ) {
-            sendPermissionEdit(host, grant = true)
-        })
-        actions.addChild("revoke", host.textActionButton(
-            Component.translatable("screen.academy.misaka_net_perm_revoke").string
-        ) {
-            sendPermissionEdit(host, grant = false)
-        })
-        column.addChild("actions", actions)
-        host.membersPermHintLabel = LabelWidget(formatSelectedPermission(host)).apply {
-            scale = 0.7f
-            alpha = 0.75f
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(10f)
         }
-        column.addChild("perm_hint", host.membersPermHintLabel)
-        return root
     }
 
     fun refreshMembersTab(host: MisakaPanelHost) {
+        syncSelectedMemberName(host)
+        if (host.membersListHostInitialized) {
+            rebuildMemberRows(host)
+        }
         if (host.membersListLabelInitialized) {
-            host.membersListLabel.text = formatMembers(host)
+            val empty = host.manageMembers.isEmpty()
+            host.membersListLabel.visibility =
+                if (empty) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
+            host.membersListLabel.text = formatMembersEmptyHint(host)
+        }
+        if (host.membersAccessLabelInitialized) {
+            host.membersAccessLabel.text = formatMembersAccess(host)
+            host.membersAccessLabel.alpha = if (host.manageCanEditMembers) 0.78f else 0.9f
+        }
+        if (host.memberTargetLabelInitialized) {
+            host.memberTargetLabel.text = formatMemberTarget(host)
         }
         if (host.membersPermHintLabelInitialized) {
             host.membersPermHintLabel.text = formatSelectedPermission(host)
         }
+        if (host.memberEditButtonsInitialized) {
+            setButtonLabel(host.memberCycleButton, currentPermissionLabel(host))
+        }
+        refreshMemberEditControls(host)
     }
 
-    private fun formatMembers(host: MisakaPanelHost): String {
-        val rows = host.manageMembers
-        if (rows.isEmpty()) {
-            return Component.translatable("screen.academy.misaka_net_admins_empty").string
+    private fun syncSelectedMemberName(host: MisakaPanelHost) {
+        val typed = if (memberNameInputReady(host)) {
+            host.memberNameInput.text.trim()
+        } else {
+            ""
         }
-        return rows.joinToString("\n") { row ->
-            val perms = if (row.permissions().isEmpty()) "-" else row.permissions().joinToString(",")
-            val role = if (row.admin()) "ADMIN" else "MEMBER"
-            "${row.name()} [$role] $perms"
+        if (typed.isNotEmpty()) {
+            host.selectedMemberName = typed
+            return
         }
+        if (host.selectedMemberName.isNotEmpty()
+            && host.manageMembers.none { it.name() == host.selectedMemberName }
+        ) {
+            host.selectedMemberName = ""
+        }
+    }
+
+    private fun memberNameInputReady(host: MisakaPanelHost): Boolean {
+        return try {
+            host.memberNameInput
+            true
+        } catch (_: UninitializedPropertyAccessException) {
+            false
+        }
+    }
+
+    private fun rebuildMemberRows(host: MisakaPanelHost) {
+        host.membersListHost.clearChildren()
+        for (row in host.manageMembers) {
+            val selected = row.name() == host.selectedMemberName
+            val role = if (row.admin()) {
+                Component.translatable("screen.academy.misaka_net_role_admin").string
+            } else {
+                Component.translatable("screen.academy.misaka_net_role_member").string
+            }
+            val perms = if (row.permissions().isEmpty()) {
+                "-"
+            } else {
+                row.permissions().joinToString(",")
+            }
+            val button = ButtonWidget().apply {
+                background = sisterRowBackground(selected)
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .height(MisakaNetworkPanelScreen.LIST_ITEM_HEIGHT)
+                onClickListener = OnClickListener {
+                    host.selectedMemberName = row.name()
+                    if (memberNameInputReady(host)) {
+                        host.memberNameInput.text = row.name()
+                    }
+                    refreshMembersTab(host)
+                }
+                addChild(
+                    "cols",
+                    memberColumnsRow(row.name(), role, perms, header = false, selected = selected).apply {
+                        layoutParams = FrameLayoutWidget.LayoutParams()
+                            .sizeMode(SizeMode.MATCH_PARENT)
+                            .paddingHorizontal(2f)
+                            .gravity(Gravity.CENTER_VERTICAL)
+                    }
+                )
+            }
+            host.membersListHost.addChild("member_${row.name()}", button)
+        }
+    }
+
+    private fun refreshMemberEditControls(host: MisakaPanelHost) {
+        val canEdit = host.manageCanEditMembers
+        val target = memberTargetName(host)
+        val hasTarget = target.isNotEmpty()
+        val targetingSelf = hasTarget && isLocalPlayerName(target)
+        // Select-self is fine for viewing; mutate only other players.
+        val canMutate = canEdit && hasTarget && !targetingSelf
+        if (host.membersEditorHostInitialized) {
+            host.membersEditorHost.alpha = if (canEdit) 1f else 0.55f
+        }
+        if (memberNameInputReady(host)) {
+            host.memberNameInput.isEnabled = canEdit
+            host.memberNameInput.alpha = if (canEdit) 1f else 0.4f
+        }
+        if (!host.memberEditButtonsInitialized) {
+            return
+        }
+        setActionEnabled(host.memberCycleButton, canEdit && !targetingSelf)
+        setActionEnabled(host.memberGrantButton, canMutate)
+        setActionEnabled(host.memberRevokeButton, canMutate)
+    }
+
+    private fun setActionEnabled(button: ButtonWidget, enabled: Boolean) {
+        button.isEnabled = enabled
+        button.alpha = if (enabled) 1f else 0.35f
+        button.background = hostActionBackground(enabled)
+    }
+
+    private fun hostActionBackground(enabled: Boolean): StateListDrawable {
+        val resting = ColorDrawable(
+            if (enabled) MisakaNetworkPanelScreen.ACTION_RESTING_PLANE else 0x22000000
+        )
+        return StateListDrawable().apply {
+            setDefault(resting)
+            if (enabled) {
+                addState(Widget.HOVERED, ColorDrawable(MisakaNetworkPanelScreen.HOVER_PLANE))
+                addState(Widget.FOCUSED, ColorDrawable(MisakaNetworkPanelScreen.HOVER_PLANE))
+                addState(Widget.PRESSED, ColorDrawable(MisakaNetworkPanelScreen.SELECTED_PLANE))
+            }
+            addState(Widget.DISABLED, ColorDrawable(0x18000000))
+        }
+    }
+
+    private fun setButtonLabel(button: ButtonWidget, text: String) {
+        if (!button.children.containsKey("label")) {
+            return
+        }
+        (button.children["label"] as? LabelWidget)?.text = text
+    }
+
+    private fun memberTargetName(host: MisakaPanelHost): String {
+        val typed = if (memberNameInputReady(host)) host.memberNameInput.text.trim() else ""
+        return typed.ifEmpty { host.selectedMemberName.trim() }
+    }
+
+    private fun isLocalPlayerName(name: String): Boolean {
+        val local = net.minecraft.client.Minecraft.getInstance().player ?: return false
+        return local.gameProfile.name().equals(name, ignoreCase = true)
+    }
+
+    private fun formatMembersEmptyHint(host: MisakaPanelHost): String {
+        return if (host.manageMembers.isEmpty()) {
+            Component.translatable("screen.academy.misaka_net_members_empty").string
+        } else {
+            ""
+        }
+    }
+
+    private fun formatMembersAccess(host: MisakaPanelHost): String {
+        return if (host.manageCanEditMembers) {
+            Component.translatable("screen.academy.misaka_net_members_editable").string
+        } else {
+            Component.translatable("screen.academy.misaka_net_members_readonly").string
+        }
+    }
+
+    private fun formatMemberTarget(host: MisakaPanelHost): String {
+        val name = memberTargetName(host)
+        return if (name.isEmpty()) {
+            Component.translatable("screen.academy.misaka_net_target_none").string
+        } else {
+            Component.translatable("screen.academy.misaka_net_perm_target", name).string
+        }
+    }
+
+    private fun currentPermissionLabel(host: MisakaPanelHost): String {
+        val perm = EDITABLE_PERMISSIONS[host.memberPermIndex.coerceIn(0, EDITABLE_PERMISSIONS.lastIndex)]
+        return Component.translatable("screen.academy.misaka_net_perm_cycle_value", perm).string
     }
 
     private fun formatSelectedPermission(host: MisakaPanelHost): String {
-        val perm = EDITABLE_PERMISSIONS[host.memberPermIndex.coerceIn(0, EDITABLE_PERMISSIONS.lastIndex)]
-        val lock = if (host.manageCanEditMembers) {
-            ""
-        } else {
-            " — " + Component.translatable("screen.academy.misaka_net_perm_edit_locked").string
+        val target = memberTargetName(host)
+        return when {
+            !host.manageCanEditMembers ->
+                Component.translatable("screen.academy.misaka_net_perm_edit_locked").string
+            target.isEmpty() ->
+                Component.translatable("screen.academy.misaka_net_perm_need_name").string
+            isLocalPlayerName(target) ->
+                Component.translatable("screen.academy.misaka_net_perm_self_locked").string
+            else ->
+                Component.translatable("screen.academy.misaka_net_perm_action_hint").string
         }
-        return Component.translatable("screen.academy.misaka_net_perm_selected", perm).string + lock
     }
 
     private fun sendPermissionEdit(host: MisakaPanelHost, grant: Boolean) {
         if (!host.manageCanEditMembers) {
             return
         }
-        val name = host.memberNameInput.text.trim()
-        if (name.isEmpty()) {
+        val name = memberTargetName(host)
+        if (name.isEmpty() || isLocalPlayerName(name)) {
             return
         }
         val perm = EDITABLE_PERMISSIONS[host.memberPermIndex.coerceIn(0, EDITABLE_PERMISSIONS.lastIndex)]
@@ -248,213 +477,254 @@ internal object MisakaPanelManageUi {
         )
     }
 
-    fun buildSistersTab(host: MisakaPanelHost): FrameLayoutWidget {
-        val root = FrameLayoutWidget().apply {
-            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+    private fun memberColumnsRow(
+        name: String,
+        role: String,
+        perms: String,
+        header: Boolean,
+        selected: Boolean = false
+    ): LinearLayoutWidget {
+        val alpha = when {
+            header -> 0.55f
+            selected -> 1f
+            else -> 0.88f
         }
-        val column = LinearLayoutWidget().apply {
-            orientation = Orientation.VERTICAL
-            spacing = MisakaNetworkPanelScreen.SPACING_MINOR
-            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-        }
-        root.addChild("column", column)
-
-        host.networkTotalMskLabel = LabelWidget(formatSupply(host)).apply {
-            scale = 0.75f
-            alpha = 0.82f
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(10f)
-        }
-        column.addChild("total_msk", host.networkTotalMskLabel)
-        host.networkDemandLabel = LabelWidget(formatDemand(host)).apply {
-            scale = 0.75f
-            alpha = 0.82f
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(10f)
-        }
-        column.addChild("demand_msk", host.networkDemandLabel)
-        host.networkSatisfactionLabel = LabelWidget(formatSatisfaction(host)).apply {
-            scale = 0.75f
-            alpha = 0.82f
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(10f)
-        }
-        column.addChild("satisfaction", host.networkSatisfactionLabel)
-        column.addChild("header", sisterColumnsRow(
-            Component.translatable("screen.academy.misaka_net_col_serial").string,
-            Component.translatable("screen.academy.misaka_net_col_perception").string,
-            Component.translatable("screen.academy.misaka_net_col_msk").string,
-            Component.translatable("screen.academy.misaka_net_col_node").string,
-            Component.translatable("screen.academy.misaka_net_col_coverage").string,
-            Component.translatable("screen.academy.misaka_net_col_status").string,
-            header = true
-        ))
-        column.addChild("header_rule", FillWidget(MisakaNetworkPanelScreen.PRIMARY_FOREGROUND).apply {
-            alpha = 0.35f
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(1f)
-        })
-
-        val listHost = FrameLayoutWidget().apply {
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .weight(1f)
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(0f)
-        }
-        column.addChild("list_host", listHost)
-
-        val scrollPanel = ScrollPanelWidget().apply {
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-                .marginRight(MisakaNetworkPanelScreen.SCROLLBAR_WIDTH + MisakaNetworkPanelScreen.SPACING_MINOR)
-        }
-        listHost.addChild("scroll_panel", scrollPanel)
-        listHost.addChild("scroll_bar", ScrollBarWidget(scrollPanel, Orientation.VERTICAL).apply {
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .width(MisakaNetworkPanelScreen.SCROLLBAR_WIDTH)
-                .heightMode(SizeMode.MATCH_PARENT)
-                .gravity(Gravity.CENTER_RIGHT)
-        })
-        host.emptySistersLabel = LabelWidget(
-            Component.translatable("screen.academy.misaka_net_empty").string
-        ).apply {
-            scale = 0.75f
-            alpha = 0.7f
-            visibility = Widget.Visibility.GONE
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-                .gravity(Gravity.CENTER)
-        }
-        listHost.addChild("empty", host.emptySistersLabel)
-
-        host.sistersList = ListWidget<MisakaNetManageDataPacket.SisterSummary>().apply {
-            itemHeight = { _, _ -> MisakaNetworkPanelScreen.LIST_ITEM_HEIGHT }
+        return LinearLayoutWidget().apply {
+            orientation = Orientation.HORIZONTAL
             spacing = MisakaNetworkPanelScreen.SPACING_MICRO
-            createItem = { _ -> FrameLayoutWidget() }
-            bindItem = { view, item, _ ->
-                view.clearChildren()
-                val selected = item.misakaUuid() == host.selectedSisterUuid
-                // The row itself is the selector; ejecting is then confirmed from the footer.
-                view.addChild("back", ButtonWidget().apply {
-                    background = sisterRowBackground(selected)
-                    layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-                    onClickListener = {
-                        host.selectedSisterUuid =
-                            if (selected) null else item.misakaUuid()
-                        refreshSisterSelection(host, rebuildRows = true)
-                    }
-                })
-                val status = if (item.starving()) {
-                    Component.translatable("screen.academy.misaka_net_starving").string
-                } else {
-                    Component.translatable("screen.academy.misaka_net_status_ok").string
-                }
-                val coverage = if (item.inCoverage()) {
-                    Component.translatable("screen.academy.misaka_net_coverage_in").string
-                } else {
-                    Component.translatable("screen.academy.misaka_net_coverage_out").string
-                }
-                view.addChild(
-                    "cols",
-                    sisterColumnsRow(
-                        Component.translatable("screen.academy.misaka_serial_value", item.serial()).string,
-                        item.perception().toString(),
-                        String.format(Locale.ROOT, "%.1f", item.msk()),
-                        item.nodeName().ifEmpty { "-" },
-                        coverage,
-                        status,
-                        header = false,
-                        coverageAccent = !item.inCoverage(),
-                        statusAccent = item.starving()
-                    ).apply {
-                        layoutParams = FrameLayoutWidget.LayoutParams()
-                            .sizeMode(SizeMode.MATCH_PARENT)
-                            .paddingHorizontal(2f)
-                            .gravity(Gravity.CENTER_VERTICAL)
-                    }
-                )
-            }
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
-        }
-        scrollPanel.setContent(host.sistersList)
-
-        // §7.2 eject: pick a row above, read back who is targeted, then act.
-        val selectionRow = LinearLayoutWidget().apply {
-            orientation = Orientation.HORIZONTAL
-            spacing = MisakaNetworkPanelScreen.SPACING_MINOR
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(MisakaNetworkPanelScreen.INFO_ROW_HEIGHT)
-        }
-        val selectionLabel = LabelWidget(selectionText(host)).apply {
-            scale = 0.7f
-            alpha = 0.78f
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .weight(1f)
-                .height(10f)
-                .gravity(Gravity.CENTER_VERTICAL)
-        }
-        host.sisterSelectionLabel = selectionLabel
-        selectionRow.addChild("selection", selectionLabel)
-        val disconnectButton = host.textActionButton(
-            Component.translatable("screen.academy.misaka_net_disconnect").string
-        ) {
-            sendDisconnect(host)
-        }.apply {
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .width(DISCONNECT_BUTTON_WIDTH)
-                .height(MisakaNetworkPanelScreen.INFO_ROW_HEIGHT)
-        }
-        host.sisterDisconnectButton = disconnectButton
-        selectionRow.addChild("disconnect", disconnectButton)
-        column.addChild("selection_row", selectionRow)
-        refreshSisterSelection(host)
-
-        val pager = LinearLayoutWidget().apply {
-            orientation = Orientation.HORIZONTAL
-            spacing = MisakaNetworkPanelScreen.SPACING_MINOR
+            isClickable = false
             layoutParams = LinearLayoutWidget.LayoutParams()
                 .widthMode(SizeMode.MATCH_PARENT)
                 .height(MisakaNetworkPanelScreen.LIST_ITEM_HEIGHT)
+            addChild("name", memberCell(name, 0.42f, alpha, header))
+            addChild("role", memberCell(role, 0.22f, alpha, header))
+            addChild("perms", memberCell(perms, 0.36f, alpha, header))
         }
-        column.addChild("pager", pager)
-        pager.addChild("prev", host.textActionButton(
-            Component.translatable("screen.academy.misaka_net_prev").string
-        ) {
-            if (host.managePageIndex > 0) {
-                requestManagePage(host, host.managePageIndex - 1)
-            }
-        }.apply {
+    }
+
+    private fun memberCell(text: String, weight: Float, alpha: Float, header: Boolean): LabelWidget {
+        return LabelWidget(text).apply {
+            scale = if (header) 0.65f else 0.7f
+            this.alpha = alpha
             layoutParams = LinearLayoutWidget.LayoutParams()
-                .weight(1f)
+                .weight(weight)
+                .width(0f)
                 .heightMode(SizeMode.MATCH_PARENT)
-        })
-        host.pageLabel = LabelWidget("1/1").apply {
-            scale = 0.75f
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .weight(1f)
-                .height(10f)
-                .gravity(Gravity.CENTER)
+                .gravity(Gravity.CENTER_VERTICAL)
         }
-        pager.addChild("page", host.pageLabel)
-        pager.addChild("next", host.textActionButton(
-            Component.translatable("screen.academy.misaka_net_next").string
-        ) {
-            val maxPage = if (host.manageTotalCount <= 0) 0 else (host.manageTotalCount - 1) / WirelessForwardingMisakaNAT.MANAGE_PAGE_SIZE
-            if (host.managePageIndex < maxPage) {
-                requestManagePage(host, host.managePageIndex + 1)
+    }
+
+    fun buildSistersTab(host: MisakaPanelHost): FrameLayoutWidget {
+        // Sticky metrics / header / selection / pager outside the scroll viewport.
+        // Only the sister rows scroll — keeps hit targets on a non-zero-height panel.
+        return MisakaPanelLayouts.tabColumn {
+            host.networkTotalMskLabel = LabelWidget(formatSupply(host)).apply {
+                scale = 0.75f
+                alpha = 0.82f
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .height(10f)
             }
-        }.apply {
+            addChild("total_msk", host.networkTotalMskLabel)
+            host.networkDemandLabel = LabelWidget(formatDemand(host)).apply {
+                scale = 0.75f
+                alpha = 0.82f
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .height(10f)
+            }
+            addChild("demand_msk", host.networkDemandLabel)
+            host.networkSatisfactionLabel = LabelWidget(formatSatisfaction(host)).apply {
+                scale = 0.75f
+                alpha = 0.82f
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .height(10f)
+            }
+            addChild("satisfaction", host.networkSatisfactionLabel)
+            addChild("header", sisterColumnsRow(
+                Component.translatable("screen.academy.misaka_net_col_serial").string,
+                Component.translatable("screen.academy.misaka_net_col_perception").string,
+                Component.translatable("screen.academy.misaka_net_col_msk").string,
+                Component.translatable("screen.academy.misaka_net_col_node").string,
+                Component.translatable("screen.academy.misaka_net_col_coverage").string,
+                Component.translatable("screen.academy.misaka_net_col_status").string,
+                header = true
+            ).also { it.isClickable = false })
+            addChild("header_rule", FillWidget(MisakaNetworkPanelScreen.PRIMARY_FOREGROUND).apply {
+                alpha = 0.35f
+                isClickable = false
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .height(1f)
+            })
+
+            host.emptySistersLabel = LabelWidget(
+                Component.translatable("screen.academy.misaka_net_empty").string
+            ).apply {
+                scale = 0.75f
+                alpha = 0.7f
+                visibility = Widget.Visibility.GONE
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .height(MisakaNetworkPanelScreen.LIST_ITEM_HEIGHT)
+            }
+            addChild("empty", host.emptySistersLabel)
+
+            host.sistersRows = LinearLayoutWidget().apply {
+                orientation = Orientation.VERTICAL
+                spacing = MisakaNetworkPanelScreen.SPACING_MICRO
+                isClickable = false
+                layoutParams = FrameLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .heightMode(SizeMode.WRAP_CONTENT)
+            }
+            addChild(
+                "rows_scroll",
+                MisakaPanelLayouts.scrollBody {
+                    addChild("rows", host.sistersRows)
+                }
+            )
+            refreshSisterRows(host)
+
+            // §7.2 eject: pick a row above, read back who is targeted, then act.
+            val selectionRow = LinearLayoutWidget().apply {
+                orientation = Orientation.HORIZONTAL
+                spacing = MisakaNetworkPanelScreen.SPACING_MINOR
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .height(MisakaNetworkPanelScreen.INFO_ROW_HEIGHT)
+                    .marginTop(MisakaNetworkPanelScreen.SPACING_MINOR)
+            }
+            val selectionLabel = LabelWidget(selectionText(host)).apply {
+                scale = 0.7f
+                alpha = 0.78f
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .weight(1f)
+                    .height(10f)
+                    .gravity(Gravity.CENTER_VERTICAL)
+            }
+            host.sisterSelectionLabel = selectionLabel
+            selectionRow.addChild("selection", selectionLabel)
+            val disconnectButton = host.textActionButton(
+                Component.translatable("screen.academy.misaka_net_disconnect").string
+            ) {
+                sendDisconnect(host)
+            }.apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .width(DISCONNECT_BUTTON_WIDTH)
+                    .height(MisakaNetworkPanelScreen.INFO_ROW_HEIGHT)
+            }
+            host.sisterDisconnectButton = disconnectButton
+            selectionRow.addChild("disconnect", disconnectButton)
+            addChild("selection_row", selectionRow)
+            refreshSisterSelection(host)
+
+            val pager = LinearLayoutWidget().apply {
+                orientation = Orientation.HORIZONTAL
+                spacing = MisakaNetworkPanelScreen.SPACING_MINOR
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .height(MisakaNetworkPanelScreen.LIST_ITEM_HEIGHT)
+            }
+            addChild("pager", pager)
+            pager.addChild("prev", host.textActionButton(
+                Component.translatable("screen.academy.misaka_net_prev").string
+            ) {
+                if (host.managePageIndex > 0) {
+                    requestManagePage(host, host.managePageIndex - 1)
+                }
+            }.apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .weight(1f)
+                    .heightMode(SizeMode.MATCH_PARENT)
+            })
+            host.pageLabel = LabelWidget("1/1").apply {
+                scale = 0.75f
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .weight(1f)
+                    .height(10f)
+                    .gravity(Gravity.CENTER)
+            }
+            pager.addChild("page", host.pageLabel)
+            pager.addChild("next", host.textActionButton(
+                Component.translatable("screen.academy.misaka_net_next").string
+            ) {
+                val maxPage = if (host.manageTotalCount <= 0) {
+                    0
+                } else {
+                    (host.manageTotalCount - 1) / WirelessForwardingMisakaNAT.MANAGE_PAGE_SIZE
+                }
+                if (host.managePageIndex < maxPage) {
+                    requestManagePage(host, host.managePageIndex + 1)
+                }
+            }.apply {
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .weight(1f)
+                    .heightMode(SizeMode.MATCH_PARENT)
+            })
+        }
+    }
+
+    fun refreshSisterRows(host: MisakaPanelHost) {
+        if (!host.sistersRowsInitialized) {
+            return
+        }
+        host.sistersRows.clearChildren()
+        for (item in host.manageSisters) {
+            host.sistersRows.addChild("sister_${item.misakaUuid()}", sisterRow(host, item))
+        }
+    }
+
+    private fun sisterRow(
+        host: MisakaPanelHost,
+        item: MisakaNetManageDataPacket.SisterSummary
+    ): ButtonWidget {
+        val selected = item.misakaUuid() == host.selectedSisterUuid
+        val status = when {
+            item.incapacitated() ->
+                Component.translatable("screen.academy.misaka_net_incapacitated").string
+            item.starving() ->
+                Component.translatable("screen.academy.misaka_net_starving").string
+            else ->
+                Component.translatable("screen.academy.misaka_net_status_ok").string
+        }
+        val coverage = if (item.inCoverage()) {
+            Component.translatable("screen.academy.misaka_net_coverage_in").string
+        } else {
+            Component.translatable("screen.academy.misaka_net_coverage_out").string
+        }
+        // Whole row is the button so column labels cannot steal presses from an underlay.
+        return ButtonWidget().apply {
+            background = sisterRowBackground(selected)
             layoutParams = LinearLayoutWidget.LayoutParams()
-                .weight(1f)
-                .heightMode(SizeMode.MATCH_PARENT)
-        })
-        return root
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(MisakaNetworkPanelScreen.LIST_ITEM_HEIGHT)
+            onClickListener = OnClickListener {
+                host.selectedSisterUuid =
+                    if (item.misakaUuid() == host.selectedSisterUuid) null else item.misakaUuid()
+                refreshSisterSelection(host, rebuildRows = true)
+            }
+            addChild(
+                "cols",
+                sisterColumnsRow(
+                    Component.translatable("screen.academy.misaka_serial_value", item.serial()).string,
+                    item.perception().toString(),
+                    String.format(Locale.ROOT, "%.1f", item.msk()),
+                    item.nodeName().ifEmpty { "-" },
+                    coverage,
+                    status,
+                    header = false,
+                    coverageAccent = !item.inCoverage(),
+                    statusAccent = item.incapacitated() || item.starving()
+                ).apply {
+                    layoutParams = FrameLayoutWidget.LayoutParams()
+                        .sizeMode(SizeMode.MATCH_PARENT)
+                        .paddingHorizontal(2f)
+                        .gravity(Gravity.CENTER_VERTICAL)
+                }
+            )
+        }
     }
 
     /** Row plane ladder: keeps the list's white 20% resting fill, adds hover/selected states. */
@@ -476,10 +746,7 @@ internal object MisakaPanelManageUi {
 
     private fun selectedSister(host: MisakaPanelHost): MisakaNetManageDataPacket.SisterSummary? {
         val selected = host.selectedSisterUuid ?: return null
-        if (!host.sistersListInitialized) {
-            return null
-        }
-        return host.sistersList.items.firstOrNull { it.misakaUuid() == selected }
+        return host.manageSisters.firstOrNull { it.misakaUuid() == selected }
     }
 
     private fun selectionText(host: MisakaPanelHost): String {
@@ -512,9 +779,8 @@ internal object MisakaPanelManageUi {
             it.isEnabled = enabled
             it.alpha = if (enabled) 1f else 0.4f
         }
-        if (rebuildRows && host.sistersListInitialized) {
-            // Virtualized rows rebuild from a fresh list instance, refreshing the highlight.
-            host.sistersList.items = host.sistersList.items.toList()
+        if (rebuildRows) {
+            refreshSisterRows(host)
         }
     }
 
@@ -581,60 +847,24 @@ internal object MisakaPanelManageUi {
     }
 
     fun buildAllocTab(host: MisakaPanelHost): FrameLayoutWidget {
-        val root = FrameLayoutWidget().apply {
-            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-            visibility = Widget.Visibility.GONE
-            isEnabled = false
+        val root = MisakaPanelLayouts.scrollTab {
+            for (sink in MisakaComputeSink.entries) {
+                addChild("sink_${sink.id()}", allocRow(host, sink))
+            }
+            host.allocatedLabel = LabelWidget(
+                Component.translatable("screen.academy.misaka_net_allocated", 0).string
+            ).apply {
+                scale = 0.75f
+                alpha = 0.82f
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .height(10f)
+                    .marginTop(MisakaNetworkPanelScreen.SPACING_MINOR)
+            }
+            addChild("allocated", host.allocatedLabel)
         }
-        val column = LinearLayoutWidget().apply {
-            orientation = Orientation.VERTICAL
-            spacing = MisakaNetworkPanelScreen.SPACING_MINOR
-            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-        }
-        root.addChild("column", column)
-
-        val listHost = FrameLayoutWidget().apply {
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .weight(1f)
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(0f)
-        }
-        column.addChild("list_host", listHost)
-        val scrollPanel = ScrollPanelWidget().apply {
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-                .marginRight(MisakaNetworkPanelScreen.SCROLLBAR_WIDTH + MisakaNetworkPanelScreen.SPACING_MINOR)
-        }
-        listHost.addChild("scroll_panel", scrollPanel)
-        listHost.addChild("scroll_bar", ScrollBarWidget(scrollPanel, Orientation.VERTICAL).apply {
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .width(MisakaNetworkPanelScreen.SCROLLBAR_WIDTH)
-                .heightMode(SizeMode.MATCH_PARENT)
-                .gravity(Gravity.CENTER_RIGHT)
-        })
-
-        val rows = LinearLayoutWidget().apply {
-            orientation = Orientation.VERTICAL
-            spacing = MisakaNetworkPanelScreen.SPACING_MICRO
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
-        }
-        scrollPanel.setContent(rows)
-
-        for (sink in MisakaComputeSink.entries) {
-            rows.addChild("sink_${sink.id()}", allocRow(host, sink))
-        }
-
-        host.allocatedLabel = LabelWidget(
-            Component.translatable("screen.academy.misaka_net_allocated", 0).string
-        ).apply {
-            scale = 0.75f
-            alpha = 0.82f
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(10f)
-        }
-        column.addChild("allocated", host.allocatedLabel)
+        root.visibility = Widget.Visibility.GONE
+        root.isEnabled = false
         return root
     }
 

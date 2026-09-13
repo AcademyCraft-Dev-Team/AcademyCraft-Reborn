@@ -31,7 +31,8 @@ public final class MisakaNetworkWanderGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (!enabled || !sister.isAwakened() || sister.getWanderStyle() != WanderStyle.FREE_MOVE) {
+        if (!enabled || !sister.isAwakened() || sister.isIncapacitated()
+                || sister.getWanderStyle() != WanderStyle.FREE_MOVE) {
             return false;
         }
         if (repathCooldown > 0) {
@@ -89,11 +90,20 @@ public final class MisakaNetworkWanderGoal extends Goal {
             }
         }
 
-        int x = chunkX * 16 + sister.getRandom().nextInt(16);
-        int z = chunkZ * 16 + sister.getRandom().nextInt(16);
-        int y = sister.level().getHeight(
-                net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
-        return sister.getNavigation().moveTo(x + 0.5, y, z + 0.5, 0.6);
+        for (int attempt = 0; attempt < 8; attempt++) {
+            int x = chunkX * 16 + sister.getRandom().nextInt(16);
+            int z = chunkZ * 16 + sister.getRandom().nextInt(16);
+            int y = sister.level().getHeight(
+                    net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+            var feet = new BlockPos(x, y, z);
+            // Heightmap can land on powder snow; walking there sinks and freezes.
+            if (sister.level().getBlockState(feet).is(net.minecraft.world.level.block.Blocks.POWDER_SNOW)
+                    || sister.level().getBlockState(feet.below()).is(net.minecraft.world.level.block.Blocks.POWDER_SNOW)) {
+                continue;
+            }
+            return sister.getNavigation().moveTo(x + 0.5, y, z + 0.5, 0.6);
+        }
+        return false;
     }
 
     private List<ChunkPos> findBedChunks(ChunkPos core, int radius) {

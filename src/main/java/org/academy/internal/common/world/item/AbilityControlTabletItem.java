@@ -11,11 +11,14 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.academy.api.common.ability.DevelopmentSource;
 import org.academy.api.common.energy.AcademyEnergyItem;
+import org.academy.internal.common.network.misaka.RequestMisakaPanelPacket;
 import org.academy.internal.common.world.entity.misaka.InteractionGate;
+import org.academy.internal.common.world.entity.misaka.MisakaInteractionFeedback;
 import org.academy.internal.common.world.entity.misaka.MisakaSisterEntity;
-import org.academy.internal.server.misaka.MisakaPanelSupport;
 import org.academy.internal.common.world.level.block.AbilityDeveloperBlock;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
+import org.academy.internal.server.misaka.MisakaPanelSupport;
+import org.misaka.MisakaNetworkClient;
 
 public final class AbilityControlTabletItem extends Item implements AcademyEnergyItem {
     public static final int ENERGY_CAPACITY = AbilityDeveloperBlockEntity.MAX_ENERGY_STORAGE / 4;
@@ -26,6 +29,15 @@ public final class AbilityControlTabletItem extends Item implements AcademyEnerg
 
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
+        // If vanilla EntityInteract missed but we are clearly aiming at a sister, open the
+        // Misaka panel via packet instead of Ability Developer (or a silent PASS).
+        var aimed = MisakaSisterEntity.findAimedSister(player);
+        if (aimed.isPresent()) {
+            if (level.isClientSide()) {
+                MisakaNetworkClient.send(new RequestMisakaPanelPacket(aimed.get().getUUID()));
+            }
+            return InteractionResult.SUCCESS.withoutItem();
+        }
         if (player instanceof ServerPlayer serverPlayer) {
             AbilityDeveloperBlock.openScreen(serverPlayer, DevelopmentSource.tablet(hand));
         }
@@ -40,7 +52,7 @@ public final class AbilityControlTabletItem extends Item implements AcademyEnerg
             InteractionHand hand
     ) {
         if (player.level().isClientSide()) {
-            return InteractionResult.SUCCESS;
+            return InteractionResult.SUCCESS.withoutItem();
         }
         if (!(player instanceof ServerPlayer serverPlayer) || !(target instanceof MisakaSisterEntity sister)) {
             return InteractionResult.PASS;
@@ -51,11 +63,16 @@ public final class AbilityControlTabletItem extends Item implements AcademyEnerg
         }
         String name = serverPlayer.getGameProfile().name();
         if (!InteractionGate.allow(record, name, InteractionGate.Intent.PANEL)) {
-            return InteractionResult.FAIL;
+            MisakaInteractionFeedback.refuse(sister, serverPlayer);
+            return InteractionResult.SUCCESS_SERVER.withoutItem();
         }
-        InteractionGate.touchBenevolent(record, name, ((ServerLevel) serverPlayer.level()).getServer());
         MisakaPanelSupport.sendPanel(serverPlayer, sister);
-        return InteractionResult.SUCCESS;
+        InteractionGate.scheduleAfterInteract(
+                ((ServerLevel) serverPlayer.level()).getServer(),
+                record,
+                name
+        );
+        return InteractionResult.SUCCESS_SERVER.withoutItem();
     }
 
     public static int storedEnergy(ItemStack stack) {

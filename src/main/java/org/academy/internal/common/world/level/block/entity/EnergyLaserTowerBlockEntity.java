@@ -53,6 +53,19 @@ public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implemen
         var server = serverLevel.getServer();
         var registry = MisakaRelayRegistry.get(server);
         UUID bound = registry.laserBoundSatellite(serverLevel.dimension(), pos);
+        if (bound == null) {
+            // Unbound: clear leftover beam/orbit/strike visuals once, then idle (no full next* rebuild).
+            if (be.beamActive || be.orbiting || be.strikeAiming) {
+                be.beamActive = false;
+                be.orbiting = false;
+                be.orbitHyper = false;
+                be.orbitAngleSeed = 0;
+                be.strikeAiming = false;
+                be.setChanged();
+                level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
+            }
+            return;
+        }
         int energyBefore = be.energyStored;
         boolean nextOrbiting = false;
         boolean nextHyper = false;
@@ -63,54 +76,52 @@ public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implemen
         float nextAimY = be.strikeAimY;
         float nextAimZ = be.strikeAimZ;
         boolean supplying = false;
-        if (bound != null) {
-            int drain = 2000;
-            int hyperMul = 2;
-            var academy = server.getAcademyCraftServer();
-            if (academy != null) {
-                var config = academy.getGenericConfig();
-                drain = Math.max(1, config.misakaRelayLaserDrainPerTick);
-                hyperMul = Math.max(1, config.misakaRelayHyperDrainMultiplier);
+        int drain = 2000;
+        int hyperMul = 2;
+        var academy = server.getAcademyCraftServer();
+        if (academy != null) {
+            var config = academy.getGenericConfig();
+            drain = Math.max(1, config.misakaRelayLaserDrainPerTick);
+            hyperMul = Math.max(1, config.misakaRelayHyperDrainMultiplier);
+        }
+        var entry = registry.get(bound);
+        if (entry != null && entry.hyper) {
+            drain = (int) Math.min(Integer.MAX_VALUE, (long) drain * (long) hyperMul);
+        }
+        boolean acceptsFeed = registry.acceptsPowerFeed(bound);
+        boolean needsRecovery = registry.needsCrashRecovery(bound);
+        // Extra maintain-sized drain heals 1 crash-debt tick per tick while recovering.
+        int recoveryDrain = needsRecovery ? drain : 0;
+        long totalNeeded = (long) drain + (long) recoveryDrain;
+        boolean skyOk = be.hasClearSky();
+        if (acceptsFeed && skyOk) {
+            if (needsRecovery && be.energyStored >= totalNeeded) {
+                be.energyStored = (int) (be.energyStored - totalNeeded);
+                registry.feed(bound, true);
+                supplying = true;
+                be.setChanged();
+            } else if (be.energyStored >= drain) {
+                be.energyStored -= drain;
+                registry.feed(bound, false);
+                supplying = true;
+                be.setChanged();
             }
-            var entry = registry.get(bound);
-            if (entry != null && entry.hyper) {
-                drain = (int) Math.min(Integer.MAX_VALUE, (long) drain * (long) hyperMul);
-            }
-            boolean acceptsFeed = registry.acceptsPowerFeed(bound);
-            boolean needsRecovery = registry.needsCrashRecovery(bound);
-            // Extra maintain-sized drain heals 1 crash-debt tick per tick while recovering.
-            int recoveryDrain = needsRecovery ? drain : 0;
-            long totalNeeded = (long) drain + (long) recoveryDrain;
-            boolean skyOk = be.hasClearSky();
-            if (acceptsFeed && skyOk) {
-                if (needsRecovery && be.energyStored >= totalNeeded) {
-                    be.energyStored = (int) (be.energyStored - totalNeeded);
-                    registry.feed(bound, true);
-                    supplying = true;
-                    be.setChanged();
-                } else if (be.energyStored >= drain) {
-                    be.energyStored -= drain;
-                    registry.feed(bound, false);
-                    supplying = true;
-                    be.setChanged();
-                }
-            }
-            // Sky orbit marker may stay; laser beam only while actually supplying (see beamActive).
-            if (entry != null
-                    && entry.phase == MisakaRelayEntry.Phase.ORBIT
-                    && entry.laserBound
-                    && acceptsFeed) {
-                nextOrbiting = true;
-                nextHyper = entry.hyper;
-                nextSeed = entry.satelliteId.hashCode();
-                nextVisualY = (float) MisakaRelayOrbits.visualOrbitY(serverLevel, server);
-                Vec3 aim = MisakaOrbitalStrikeSupport.visualAim(serverLevel, entry);
-                if (aim != null) {
-                    nextStrikeAiming = true;
-                    nextAimX = (float) aim.x;
-                    nextAimY = (float) aim.y;
-                    nextAimZ = (float) aim.z;
-                }
+        }
+        // Sky orbit marker may stay; laser beam only while actually supplying (see beamActive).
+        if (entry != null
+                && entry.phase == MisakaRelayEntry.Phase.ORBIT
+                && entry.laserBound
+                && acceptsFeed) {
+            nextOrbiting = true;
+            nextHyper = entry.hyper;
+            nextSeed = entry.satelliteId.hashCode();
+            nextVisualY = (float) MisakaRelayOrbits.visualOrbitY(serverLevel, server);
+            Vec3 aim = MisakaOrbitalStrikeSupport.visualAim(serverLevel, entry);
+            if (aim != null) {
+                nextStrikeAiming = true;
+                nextAimX = (float) aim.x;
+                nextAimY = (float) aim.y;
+                nextAimZ = (float) aim.z;
             }
         }
         boolean active = supplying;

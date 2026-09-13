@@ -28,9 +28,9 @@ class MisakaNetManageDataPacketCoverageTest {
                 1.5f,
                 List.of(
                         new MisakaNetManageDataPacket.SisterSummary(
-                                SISTER_A, 1, 50, 50f, "node-a", false, true),
+                                SISTER_A, 1, 50, 50f, "node-a", false, false, true),
                         new MisakaNetManageDataPacket.SisterSummary(
-                                SISTER_B, 2, 80, 0f, "node-a", true, false)
+                                SISTER_B, 2, 80, 0f, "node-a", true, false, false)
                 ),
                 new int[]{40, 0, 0, 0},
                 List.of("alice", "bob"),
@@ -49,6 +49,8 @@ class MisakaNetManageDataPacketCoverageTest {
         assertFalse(decoded.sisters().get(1).inCoverage());
         assertEquals(0f, decoded.sisters().get(1).msk(), 0.001f);
         assertTrue(decoded.sisters().get(1).starving());
+        assertFalse(decoded.sisters().get(0).incapacitated());
+        assertFalse(decoded.sisters().get(1).incapacitated());
         assertEquals(12.5f, decoded.totalMskPerSecond(), 0.001f);
         assertEquals(8.0f, decoded.totalDemandMsk(), 0.001f);
         assertEquals(6.5f, decoded.yourAllocatedMsk(), 0.001f);

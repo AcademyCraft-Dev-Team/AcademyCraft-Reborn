@@ -2,6 +2,8 @@ package org.academy.internal.common.world.entity.misaka;
 
 import net.minecraft.server.MinecraftServer;
 import org.academy.internal.common.world.entity.misaka.favor.FavorService;
+import org.academy.internal.common.world.entity.misaka.perception.PerceptionService;
+import org.academy.internal.server.misaka.MisakaComputeContribution;
 import org.academy.internal.server.misaka.MisakaComputeIndex;
 import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
 import org.academy.internal.server.world.level.storage.MisakaSisterRoster;
@@ -35,9 +37,7 @@ public final class InteractionGate {
             return !record.awakened && !record.incapacitated;
         }
         if (intent == Intent.FEED_RECOVER) {
-            if (!record.incapacitated) {
-                return false;
-            }
+            // Caller already verified the sister is downed (roster and/or entity flag).
             if (!record.awakened) {
                 return true;
             }
@@ -73,5 +73,26 @@ public final class InteractionGate {
                 }
             }
         }
+    }
+
+    /**
+     * Privilege / CP side-effects for max-favor (BENEVOLENT) interactions.
+     * Always deferred to the next server tick so index rebuild + CP sync cannot
+     * abort {@code mobInteract} / wash action-bar feedback on the interact tick.
+     * At favor &lt; max these calls are mostly no-ops; at favor == max they become heavy.
+     */
+    public static void scheduleAfterInteract(
+            @Nullable MinecraftServer server,
+            MisakaSisterRecord record,
+            String name
+    ) {
+        if (server == null || record == null || name == null || name.isEmpty()) {
+            return;
+        }
+        server.execute(() -> {
+            touchBenevolent(record, name, server);
+            PerceptionService.tryIntegrateIfEligible(server, record);
+            MisakaComputeContribution.refreshCpForRecord(server, record);
+        });
     }
 }

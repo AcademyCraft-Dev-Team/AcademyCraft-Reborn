@@ -27,14 +27,16 @@ public final class MisakaFoodTraits {
         if (stack.isEmpty()) {
             return false;
         }
-        return MISAKA_TOWER_ID.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()));
+        return stack.is(org.academy.internal.common.world.item.Items.MISAKA_TOWER.get())
+                || MISAKA_TOWER_ID.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()));
     }
 
     public static boolean isPromax(ItemStack stack) {
         if (stack.isEmpty()) {
             return false;
         }
-        return MISAKA_TOWER_PROMAX_ID.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()));
+        return stack.is(org.academy.internal.common.world.item.Items.MISAKA_TOWER_PROMAX.get())
+                || MISAKA_TOWER_PROMAX_ID.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()));
     }
 
     public static boolean isFavorite(ItemStack stack) {

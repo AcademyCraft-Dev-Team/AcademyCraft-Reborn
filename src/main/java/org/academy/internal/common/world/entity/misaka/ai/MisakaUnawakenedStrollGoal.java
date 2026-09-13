@@ -21,7 +21,7 @@ public final class MisakaUnawakenedStrollGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (sister.isAwakened() || sister.getNavigation().isInProgress()) {
+        if (sister.isAwakened() || sister.isIncapacitated() || sister.getNavigation().isInProgress()) {
             return false;
         }
         if (sister.getRandom().nextInt(INTERVAL) != 0) {
@@ -32,6 +32,11 @@ public final class MisakaUnawakenedStrollGoal extends Goal {
             int x = pos.getX() + sister.getRandom().nextInt(13) - 6;
             int z = pos.getZ() + sister.getRandom().nextInt(13) - 6;
             int y = sister.level().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+            var feet = new net.minecraft.core.BlockPos(x, y, z);
+            if (sister.level().getBlockState(feet).is(net.minecraft.world.level.block.Blocks.POWDER_SNOW)
+                    || sister.level().getBlockState(feet.below()).is(net.minecraft.world.level.block.Blocks.POWDER_SNOW)) {
+                continue;
+            }
             var candidate = new Vec3(x + 0.5, y, z + 0.5);
             if (sister.getNavigation().createPath(candidate.x, candidate.y, candidate.z, 0) != null) {
                 targetX = candidate.x;

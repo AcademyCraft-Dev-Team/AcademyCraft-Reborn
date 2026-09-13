@@ -5,6 +5,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.entity.misaka.InteractionGate;
+import org.academy.internal.common.world.entity.misaka.MisakaInteractionFeedback;
 import org.academy.internal.common.world.entity.misaka.MisakaSisterEntity;
 import org.academy.internal.server.misaka.MisakaPanelSupport;
 import org.misaka.MisakaNetworkServer;
@@ -55,18 +56,25 @@ public final class RequestMisakaPanelPacket
 
         @SubscribePacket
         public static void handle(RequestMisakaPanelPacket packet) {
-            var session = MisakaPanelSupport.load(packet.getPacketListener().getPlayer(), packet.entityUuid());
+            var player = packet.getPacketListener().getPlayer();
+            var session = MisakaPanelSupport.load(player, packet.entityUuid());
             if (session == null) {
                 return;
             }
             if (!session.allow(InteractionGate.Intent.PANEL)) {
+                MisakaInteractionFeedback.refuse(session.sister(), session.player());
                 return;
             }
-            session.touch();
             if (!session.inRange(MisakaSisterEntity.PANEL_RANGE_SQR)) {
                 return;
             }
+            // Panel first; privilege touch deferred — never block UI on index rebuild.
             MisakaPanelSupport.sendPanel(session.player(), session.sister());
+            InteractionGate.scheduleAfterInteract(
+                    session.level().getServer(),
+                    session.record(),
+                    session.playerName()
+            );
         }
     }
 }

@@ -54,9 +54,17 @@ public class GenericConfig {
     @SerializedName("misakaActiveNetworkCooldownTicks")
     public int misakaActiveNetworkCooldownTicks = 0;
 
-    /** MSk demanded (and consumed from usage ledger) to start an orbital strike. */
+    /** Legacy: treated as charge rate fallback when chargeRate field is unset. */
     @SerializedName("misakaOrbitalStrikeMskCost")
     public float misakaOrbitalStrikeMskCost = 200.0f;
+
+    /** Max MSk drawn per second from the player's allocated Misaka compute while charging. */
+    @SerializedName("misakaOrbitalStrikeChargeRateMskPerSec")
+    public float misakaOrbitalStrikeChargeRateMskPerSec = 200.0f;
+
+    /** Total MSk that must be charged before an orbital strike fires. */
+    @SerializedName("misakaOrbitalStrikeChargeNeedMsk")
+    public float misakaOrbitalStrikeChargeNeedMsk = 1000.0f;
 
     public static final class Action implements TypeHandler<GenericConfig> {
         public static final TypeHandler<GenericConfig> INSTANCE = new Action();

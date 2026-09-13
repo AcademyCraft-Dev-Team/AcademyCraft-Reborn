@@ -29,8 +29,8 @@ public final class MisakaHotSpringSoak {
             reset();
             return;
         }
-        // Idle sisters: cheap probe every 10 ticks before starting a soak session.
-        if (soakTicks == 0 && sister.tickCount % 10 != 0) {
+        // Idle sisters: cheap probe every 40 ticks before starting a soak session.
+        if (soakTicks == 0 && sister.tickCount % 40 != 0) {
             return;
         }
 

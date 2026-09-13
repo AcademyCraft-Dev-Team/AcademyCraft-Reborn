@@ -33,7 +33,9 @@ internal interface MisakaPanelHost {
     var sistersTabContent: FrameLayoutWidget
     var allocTabContent: FrameLayoutWidget
     var membersTabContent: FrameLayoutWidget
-    var sistersList: ListWidget<MisakaNetManageDataPacket.SisterSummary>
+    /** Current manage-page sister rows (source of truth for selection / rebuild). */
+    var manageSisters: List<MisakaNetManageDataPacket.SisterSummary>
+    var sistersRows: LinearLayoutWidget
     var selectedSisterUuid: UUID?
     var sisterSelectionLabel: LabelWidget?
     var sisterDisconnectButton: ButtonWidget?
@@ -47,20 +49,34 @@ internal interface MisakaPanelHost {
     var networkDemandLabel: LabelWidget
     var networkSatisfactionLabel: LabelWidget
     var membersListLabel: LabelWidget
+    var membersListHost: LinearLayoutWidget
+    var membersAccessLabel: LabelWidget
+    var memberTargetLabel: LabelWidget
     var membersPermHintLabel: LabelWidget
+    var memberCycleButton: ButtonWidget
+    var memberGrantButton: ButtonWidget
+    var memberRevokeButton: ButtonWidget
+    var membersEditorHost: LinearLayoutWidget
     var manageAdminNames: List<String>
     var manageMembers: List<MisakaNetManageDataPacket.MemberSummary>
     var manageCanEditMembers: Boolean
     var memberNameInput: TextBoxWidget
     var memberPermIndex: Int
+    /** Player name currently targeted by grant/revoke (empty = no target). */
+    var selectedMemberName: String
 
-    val sistersListInitialized: Boolean
+    val sistersRowsInitialized: Boolean
     val allocatedLabelInitialized: Boolean
     val networkTotalMskLabelInitialized: Boolean
     val networkDemandLabelInitialized: Boolean
     val networkSatisfactionLabelInitialized: Boolean
     val membersListLabelInitialized: Boolean
+    val membersListHostInitialized: Boolean
+    val membersAccessLabelInitialized: Boolean
+    val memberTargetLabelInitialized: Boolean
     val membersPermHintLabelInitialized: Boolean
+    val memberEditButtonsInitialized: Boolean
+    val membersEditorHostInitialized: Boolean
 
     fun showMainPage()
     fun showBindPage()
