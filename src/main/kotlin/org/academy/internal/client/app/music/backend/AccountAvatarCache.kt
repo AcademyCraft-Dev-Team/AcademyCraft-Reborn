@@ -10,17 +10,11 @@ import org.academy.internal.client.app.music.netease.NeteaseMusicService
 import java.io.ByteArrayInputStream
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
-import java.util.function.Supplier
 
-/**
- * 账号头像下载缓存喵. 下载在后台线程, NativeImage/DynamicTexture 创建与
- * textureManager 注册全部切回渲染线程 (与 [AlbumArtworkCache] 一致的线程模型).
- */
 object AccountAvatarCache {
     private val textures = ConcurrentHashMap<String, Identifier>()
     private val downloads = ConcurrentHashMap<String, CompletableFuture<*>>()
 
-    /** 纹理注册完成时递增, 供控件订阅刷新 (事件驱动, 取代 tick 轮询). */
     val textureState = UiState(0)
 
     fun textureFor(provider: OnlineMusicManager.Provider, avatarUrl: String?): Identifier? {
@@ -51,11 +45,11 @@ object AccountAvatarCache {
     private fun registerTexture(key: String, bytes: ByteArray) {
         runCatching {
             val image = NativeImage.read(ByteArrayInputStream(bytes))
-            val texture = DynamicTexture(Supplier { "academy_music_avatar_$key" }, image)
+            val texture = DynamicTexture({ "academy_music_avatar_$key" }, image)
             val location = AcademyCraft.academy("music_avatar/$key")
             Minecraft.getInstance().textureManager.register(location, texture)
             textures[key] = location
-            textureState.value = textureState.value + 1
+            textureState.value += 1
         }.onFailure {
             AcademyCraft.LOGGER.error("Failed to register account avatar texture for {}", key, it)
         }

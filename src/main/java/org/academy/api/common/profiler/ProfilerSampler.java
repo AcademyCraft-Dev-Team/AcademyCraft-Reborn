@@ -77,7 +77,7 @@ public final class ProfilerSampler {
             running = true;
             paused = false;
             everStarted = true;
-            ProfilerSampler.intervalMicros = Math.max(100L, Math.min(1_000_000L, intervalMicros));
+            ProfilerSampler.intervalMicros = Math.clamp(intervalMicros, 100L, 1_000_000L);
             captureStartNanos = System.nanoTime();
             resetInternal();
             var thread = new Thread(ProfilerSampler::loop, "Academy Profiler Sampler");

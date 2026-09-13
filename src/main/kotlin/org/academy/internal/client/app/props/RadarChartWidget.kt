@@ -30,9 +30,9 @@ class RadarChartWidget : AbstractWidget() {
         }
         outer.forEach { drawLine(context, center, it, 0.45f, 0.55f, 0.62f, 0.28f, 0.5f) }
 
-        val values = AbilityFactor.values().mapIndexed { index, factor ->
+        val values = AbilityFactor.entries.mapIndexed { index, factor ->
             val ratio = (PropsClientState.get(factor) / PropsMath.MAX_TOTAL).coerceIn(0.0, 1.0).toFloat()
-            val angle = -Mth.PI / 2.0 + index * Mth.TWO_PI / AbilityFactor.values().size
+            val angle = -Mth.PI / 2.0 + index * Mth.TWO_PI / AbilityFactor.entries.size
             Point(
                 center.x + Mth.cos(angle) * radius * ratio,
                 center.y + Mth.sin(angle) * radius * ratio
@@ -42,8 +42,8 @@ class RadarChartWidget : AbstractWidget() {
     }
 
     private fun points(center: Point, radius: Float): List<Point> =
-        AbilityFactor.values().indices.map { index ->
-            val angle = -Mth.PI / 2.0 + index * Mth.TWO_PI / AbilityFactor.values().size
+        AbilityFactor.entries.indices.map { index ->
+            val angle = -Mth.PI / 2.0 + index * Mth.TWO_PI / AbilityFactor.entries.size
             Point(
                 center.x + Mth.cos(angle) * radius,
                 center.y + Mth.sin(angle) * radius

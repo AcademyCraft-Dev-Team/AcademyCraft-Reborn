@@ -25,9 +25,6 @@ import org.academy.internal.common.world.damagesource.DamageTypes;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-/**
- * Applies the linear bonuses derived from effective P.R.O.P.S player attributes.
- */
 @EventBusSubscriber
 public final class PlayerAttributeRuntime {
     private static final Identifier MUSCLE_DAMAGE = AcademyCraft.academy("attribute_bonus.muscle_damage");
@@ -68,7 +65,6 @@ public final class PlayerAttributeRuntime {
                 AttributeModifier.Operation.ADD_VALUE,
                 true
         );
-        // Remove the permanent bonus saved by earlier P.R.O.P.S versions.
         syncModifier(
                 player.getAttribute(Attributes.ATTACK_KNOCKBACK),
                 LEGACY_MUSCLE_KNOCKBACK,
@@ -200,10 +196,6 @@ public final class PlayerAttributeRuntime {
         return (float) (damage * multiplier);
     }
 
-    /**
-     * Reduces a negative health write. This is intentionally the last line of defense so direct
-     * calls to setHealth receive the same protection as hurtServer and actuallyHurt.
-     */
     public static float modifyHealthWrite(Player player, float requestedHealth) {
         if (RESISTANCE_BYPASS_DEPTH.get() > 0 || !Float.isFinite(requestedHealth)) return requestedHealth;
         var source = DAMAGE_CONTEXT.get().peek();
@@ -217,8 +209,6 @@ public final class PlayerAttributeRuntime {
 
     static float healthAfterResistanceWrite(boolean clientSide, float current, float requested,
                                             double resistance, double reductionPerPoint) {
-        // Health packets are authoritative, including zero on death. Applying resistance again
-        // on the client leaves a dead server player displaying positive health.
         if (clientSide || !Float.isFinite(requested) || !(requested < current)) return requested;
         var multiplier = Math.max(0.0, 1.0 - Math.clamp(resistance, 0.0, 8.0) * reductionPerPoint);
         return current - (float) ((current - requested) * multiplier);
@@ -251,10 +241,7 @@ public final class PlayerAttributeRuntime {
 
     static float healthAfterMaxHealthChange(float health, float newMaxHealth) {
         if (!Float.isFinite(health) || !Float.isFinite(newMaxHealth)) return health;
-        // ENDURANCE grows when damage is taken. Raising current health together with its maximum
-        // therefore turns a lethal hit into a positive-health dead player on the following tick.
-        // Attribute synchronization may clamp health after a maximum decrease, but must never heal.
-        return Math.min(health, Math.max(0.0f, newMaxHealth));
+        return Math.clamp(newMaxHealth, 0.0f, health);
     }
 
     private static double value(Player player, Holder<Attribute> attribute) {
@@ -282,9 +269,6 @@ public final class PlayerAttributeRuntime {
 
         var replacement = new AttributeModifier(id, amount, operation);
         if (permanent) {
-            // Stable P.R.O.P.S bonuses must be effective as soon as attributes are loaded. This is
-            // essential for MAX_HEALTH: otherwise saved health is clamped to the vanilla limit
-            // before the first player tick restores the endurance bonus.
             attribute.addOrReplacePermanentModifier(replacement);
         } else if (current == null) {
             attribute.addTransientModifier(replacement);

@@ -18,7 +18,7 @@ object AnimationManager {
     fun onFrameUpdate() {
         val currentTime = System.nanoTime() / 1000000
 
-        if (!pendingAdditions.isEmpty()) {
+        if (pendingAdditions.isNotEmpty()) {
             for (anim in pendingAdditions) {
                 anim.startTime = currentTime + anim.startDelay
                 anim.onStartInternal()
@@ -36,6 +36,6 @@ object AnimationManager {
             }
         }
 
-        if (!toRemove.isEmpty()) runningAnimations.removeAll(toRemove)
+        if (toRemove.isNotEmpty()) runningAnimations.removeAll(toRemove)
     }
 }

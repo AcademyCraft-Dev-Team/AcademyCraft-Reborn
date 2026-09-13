@@ -242,7 +242,7 @@ public final class AtmosphereShield extends Skill {
                 event.setCanceled(true);
                 return;
             }
-            var level = Math.max(0, Math.min(2, skill.getLevel(player)));
+            var level = Math.clamp(skill.getLevel(player), 0, 2);
             var reduction = REDUCTION[level];
             if (skill.hasProficiencyMilestone(player, 3)) reduction = Math.min(0.5f, reduction + 0.1f);
             var prevented = event.getAmount() * reduction;

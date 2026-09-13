@@ -52,15 +52,20 @@ object PropsApp : App {
             root.addChild("content", if (displayedStarted) createDashboard() else createConsole())
         }
 
-        private fun createDashboard(): LinearLayoutWidget = LinearLayoutWidget().apply {
+        private fun createBaseLayout(): LinearLayoutWidget = LinearLayoutWidget().apply {
             orientation = Orientation.VERTICAL
             spacing = 1f
             layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
             addChild("top_bar", createTopBar())
             addChild("separator", FillWidget(0xBFFFFFFF.toInt()).apply {
-                layoutParams =
-                    LinearLayoutWidget.LayoutParams().widthMode(SizeMode.MATCH_PARENT).height(1f).padding(2f, 0f)
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .height(1f)
+                    .padding(2f, 0f)
             })
+        }
+
+        private fun createDashboard(): LinearLayoutWidget = createBaseLayout().apply {
             addChild("main", LinearLayoutWidget().apply {
                 orientation = Orientation.HORIZONTAL
                 spacing = 4f
@@ -93,7 +98,7 @@ object PropsApp : App {
                     layoutParams = LinearLayoutWidget.LayoutParams()
                         .width(178f)
                         .heightMode(SizeMode.MATCH_PARENT)
-                    AbilityFactor.values()
+                    AbilityFactor.entries
                         .forEach { factor -> addChild(factor.name.lowercase(), createFactorRow(factor)) }
                 })
             })
@@ -109,17 +114,7 @@ object PropsApp : App {
             })
         }
 
-        private fun createConsole(): LinearLayoutWidget = LinearLayoutWidget().apply {
-            orientation = Orientation.VERTICAL
-            spacing = 1f
-            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-            addChild("top_bar", createTopBar())
-            addChild("separator", FillWidget(0xBFFFFFFF.toInt()).apply {
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .widthMode(SizeMode.MATCH_PARENT)
-                    .height(1f)
-                    .padding(2f, 0f)
-            })
+        private fun createConsole(): LinearLayoutWidget = createBaseLayout().apply {
             addChild("console", LinearLayoutWidget().apply {
                 orientation = Orientation.VERTICAL
                 spacing = 5f

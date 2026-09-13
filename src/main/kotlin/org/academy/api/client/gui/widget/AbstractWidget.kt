@@ -44,11 +44,6 @@ abstract class AbstractWidget : Widget {
             }
         }
 
-    /**
-     * Materializes a private [WidgetContainer.LayoutParams] before mutating it, so the
-     * shared [WidgetContainer.LayoutParams.NONE] sentinel is never poisoned for other
-     * widgets. Ownership of padding/layout params is being migrated to the widget.
-     */
     protected fun ensureOwnLayoutParams() {
         if (layoutParams === WidgetContainer.LayoutParams.NONE) {
             layoutParams = WidgetContainer.LayoutParams()
@@ -227,22 +222,8 @@ abstract class AbstractWidget : Widget {
     override fun render(context: Canvas) {
         if (!isVisible()) return
 
-        val pivotX = width * originX
-        val pivotY = height * originY
-
-        val hasTransform = scaleX != 1.0f || scaleY != 1.0f || rotation != 0.0f
-
         context.pose().pushPose()
-        if (hasTransform) {
-            context.pose().translate(pivotX, pivotY)
-            if (rotation != 0.0f) {
-                context.pose().mulPose(Axis.ZP.rotationDegrees(rotation))
-            }
-            if (scaleX != 1.0f || scaleY != 1.0f) {
-                context.pose().scale(scaleX, scaleY)
-            }
-            context.pose().translate(-pivotX, -pivotY)
-        }
+        applyTransform(context)
 
         renderInternal(context)
 
@@ -252,6 +233,20 @@ abstract class AbstractWidget : Widget {
     protected open fun renderInternal(context: Canvas) {
         background?.draw(context, this)
         foreground?.draw(context, this)
+    }
+
+    protected fun applyTransform(context: Canvas) {
+        if (scaleX == 1.0f && scaleY == 1.0f && rotation == 0.0f) return
+        val pivotX = width * originX
+        val pivotY = height * originY
+        context.pose().translate(pivotX, pivotY)
+        if (rotation != 0.0f) {
+            context.pose().mulPose(Axis.ZP.rotationDegrees(rotation))
+        }
+        if (scaleX != 1.0f || scaleY != 1.0f) {
+            context.pose().scale(scaleX, scaleY)
+        }
+        context.pose().translate(-pivotX, -pivotY)
     }
 
     override fun dispatchEvent(event: InputEvent) {

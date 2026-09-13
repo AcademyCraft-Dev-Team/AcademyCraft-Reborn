@@ -26,9 +26,6 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Scans loaded chunk sections around the user for imag phase fluid.
- */
 public final class ImagPhaseDowsingRodItem extends Item {
     private static final int MAX_SCAN_RADIUS_CHUNKS = 12;
     private static final int MAX_TARGET_SECTIONS = 1024;
@@ -64,7 +61,7 @@ public final class ImagPhaseDowsingRodItem extends Item {
     private static ScanResult scanImagPhase(ServerLevel level, ServerPlayer player) {
         var center = player.chunkPosition();
         var serverViewDistance = level.getServer().getPlayerList().getViewDistance();
-        var radius = Math.min(MAX_SCAN_RADIUS_CHUNKS, Math.max(0, serverViewDistance));
+        var radius = Math.clamp(serverViewDistance, 0, MAX_SCAN_RADIUS_CHUNKS);
         var targets = new ArrayList<BlockPos>();
         var chunkSource = level.getChunkSource();
         BlockPos nearestFluid = null;

@@ -210,7 +210,7 @@ public final class PneumaticGrasp extends Skill {
                 var eye = player.getEyePosition();
                 var look = player.getLookAngle().normalize();
                 if (look.lengthSqr() <= 1.0e-8) return;
-                var skillLevel = Math.max(0, Math.min(2, skill.getLevel(player)));
+                var skillLevel = Math.clamp(skill.getLevel(player), 0, 2);
                 var milestone = skill.getEffectiveProficiencyMilestone(player);
                 var range = 16.0 + skillLevel * 4.0 + (milestone >= 1 ? 8.0 : 0.0);
                 if (!isValidTarget(controlledTarget, skillLevel, range)) {
@@ -293,7 +293,7 @@ public final class PneumaticGrasp extends Skill {
 
             private void adjustDistance(int steps) {
                 if (steps == 0) return;
-                var skillLevel = Math.max(0, Math.min(2, Skills.PNEUMATIC_GRASP.get().getLevel(player)));
+                var skillLevel = Math.clamp(Skills.PNEUMATIC_GRASP.get().getLevel(player), 0, 2);
                 var maxDistance = 12.0 + skillLevel * 2.0;
                 holdDistance = AeromanipTargeting.adjustControlDistance(
                         holdDistance, steps, DISTANCE_STEP, MIN_CONTROL_DISTANCE, maxDistance);

@@ -111,7 +111,7 @@ object WidgetSerializer {
             throw IllegalArgumentException("Layout 'version' must be a number")
         }
         val version = element.asInt
-        if (version < MIN_SUPPORTED_VERSION || version > FORMAT_VERSION) {
+        if (version !in MIN_SUPPORTED_VERSION..FORMAT_VERSION) {
             throw IllegalArgumentException(
                 "Unsupported layout format version $version (supported: $MIN_SUPPORTED_VERSION..$FORMAT_VERSION)"
             )

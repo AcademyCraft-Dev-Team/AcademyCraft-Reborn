@@ -9,16 +9,9 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 
-/**
- * 开发辅助：把 R8 位图图集页导出为 PNG。
- *
- * [com.mojang.blaze3d.platform.TextureUtil.writeAsPNG] 只支持 RGBA8_UNORM，位图图集是
- * R8_UNORM，因此这里用同一套 copy→map 回读方式自实现单通道导出（灰度复制到 RGBA）。
- */
 object BitmapAtlasDebugger {
     private val logger = AcademyCraft.getLogger()
 
-    /** @return 成功写入的文件路径列表。 */
     fun dumpAtlas(atlas: BitmapAtlas, outputDir: Path, fileNamePrefix: String): List<Path> {
         RenderSystem.assertOnRenderThread()
         val pages = atlas.getPages()
@@ -34,7 +27,7 @@ object BitmapAtlasDebugger {
         val bufferLength = size.toLong() * size.toLong()
         require(bufferLength <= Int.MAX_VALUE) { "Bitmap atlas page is too large to export: $bufferLength bytes" }
 
-        val file = outputDir.resolve(fileNamePrefix + pageIndex + ".png")
+        val file = outputDir.resolve("$fileNamePrefix$pageIndex.png")
         val buffer = RenderSystem.getDevice().createBuffer(
             { "Bitmap atlas output buffer" },
             GpuBuffer.USAGE_COPY_DST or GpuBuffer.USAGE_MAP_READ,

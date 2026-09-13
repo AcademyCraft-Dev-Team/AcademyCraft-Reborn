@@ -69,43 +69,45 @@ open class FrameLayoutWidget : AbstractWidgetContainer() {
             for (child in matchParentChildren) {
                 val lp = child.layoutParams as LayoutParams
 
-                val childWidthMeasureSpec: MeasureSpec?
-                if (lp.widthMode == SizeMode.MATCH_PARENT) {
-                    val width = max(
-                        0f, (measuredWidth
-                                - containerLp.paddingLeft - containerLp.paddingRight
-                                - lp.marginLeft - lp.marginRight)
-                    )
-                    childWidthMeasureSpec = MeasureSpec(MeasureSpec.Mode.EXACTLY, width)
-                } else {
-                    childWidthMeasureSpec = getChildMeasureSpec(
-                        widthMeasureSpec,
-                        containerLp.paddingLeft + containerLp.paddingRight +
-                                lp.marginLeft + lp.marginRight,
-                        lp.width, lp.widthMode, lp.widthPercent
-                    )
-                }
+                val childWidthMeasureSpec = resolveMatchParentChildSpec(
+                    widthMeasureSpec, measuredWidth,
+                    containerLp.paddingLeft, containerLp.paddingRight,
+                    lp.width, lp.widthMode, lp.widthPercent,
+                    lp.marginLeft, lp.marginRight
+                )
 
-                val childHeightMeasureSpec: MeasureSpec?
-                if (lp.heightMode == SizeMode.MATCH_PARENT) {
-                    val height = max(
-                        0f, (measuredHeight
-                                - containerLp.paddingTop - containerLp.paddingBottom
-                                - lp.marginTop - lp.marginBottom)
-                    )
-                    childHeightMeasureSpec = MeasureSpec(MeasureSpec.Mode.EXACTLY, height)
-                } else {
-                    childHeightMeasureSpec = getChildMeasureSpec(
-                        heightMeasureSpec,
-                        containerLp.paddingTop + containerLp.paddingBottom +
-                                lp.marginTop + lp.marginBottom,
-                        lp.height, lp.heightMode, lp.heightPercent
-                    )
-                }
+                val childHeightMeasureSpec = resolveMatchParentChildSpec(
+                    heightMeasureSpec, measuredHeight,
+                    containerLp.paddingTop, containerLp.paddingBottom,
+                    lp.height, lp.heightMode, lp.heightPercent,
+                    lp.marginTop, lp.marginBottom
+                )
 
                 child.measure(childWidthMeasureSpec, childHeightMeasureSpec)
             }
         }
+    }
+
+    private fun resolveMatchParentChildSpec(
+        parentSpec: MeasureSpec,
+        measuredSize: Float,
+        paddingBefore: Float,
+        paddingAfter: Float,
+        childDimension: Float,
+        childMode: SizeMode,
+        childPercent: Float,
+        marginBefore: Float,
+        marginAfter: Float
+    ): MeasureSpec {
+        if (childMode == SizeMode.MATCH_PARENT) {
+            val size = max(0f, measuredSize - paddingBefore - paddingAfter - marginBefore - marginAfter)
+            return MeasureSpec(MeasureSpec.Mode.EXACTLY, size)
+        }
+        return getChildMeasureSpec(
+            parentSpec,
+            paddingBefore + paddingAfter + marginBefore + marginAfter,
+            childDimension, childMode, childPercent
+        )
     }
 
     override fun onLayout() {

@@ -30,7 +30,6 @@ open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), Tex
     private val painter = TextPainter()
     private val hintPainter = TextPainter()
 
-    /** 文本字号，sp。 */
     override var textSize: Float = TextWidget.DEFAULT_TEXT_SIZE
         set(value) {
             if (field != value) {
@@ -40,7 +39,6 @@ open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), Tex
             }
         }
 
-    /** 文本颜色，ARGB。 */
     override var textColor: Int = 0xFFFFFFFF.toInt()
         set(value) {
             if (field != value) {
@@ -49,7 +47,6 @@ open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), Tex
             }
         }
 
-    /** 提示文本颜色，ARGB（对标 Android `textColorHint`）。 */
     var hintTextColor: Int = 0xFF808080.toInt()
         set(value) {
             if (field != value) {
@@ -58,7 +55,6 @@ open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), Tex
             }
         }
 
-    /** 文本在 bounds 内的对齐。 */
     var gravity: Int = Gravity.TOP_LEFT
         set(value) {
             if (field != value) {
@@ -68,7 +64,6 @@ open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), Tex
             }
         }
 
-    /** 当前显示文本（含 IME 预编辑）。 */
     override var text: String
         get() = editing.composedText
         set(value) {
@@ -76,7 +71,6 @@ open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), Tex
             afterTextChanged()
         }
 
-    /** 空内容时的提示文本（对标 Android `hint`，替代旧 `placeholder`）。 */
     var hint: String = ""
         set(value) {
             if (field != value) {
@@ -176,7 +170,6 @@ open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), Tex
         val empty = blob.lines.isEmpty()
         val metrics = if (empty) TextLayoutManager.lineMetrics(textSize) else null
         val caretUnit = editing.caretUnit + editing.preeditText.length
-        // 换行后光标 == 上一行 charEnd 时应归属下一行（或最后一行兜底）。
         val line = blob.lines.firstOrNull { caretUnit < it.charEnd } ?: blob.lines.lastOrNull()
 
         val ascent = line?.ascent ?: metrics?.ascent ?: textSize
@@ -345,12 +338,10 @@ open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), Tex
 
         val textX = ((mouseX - getAbsoluteX()).toFloat() - originX) / finalScale
         val unitOffset = hitTestLine(blob, target, textX)
-        // 命中用的是 composed blob（含 IME preedit），须映射回 committed 空间再交给编辑状态。
         val composedCp = blob.text.codePointCount(0, unitOffset)
         return mapComposedToCommitted(composedCp)
     }
 
-    /** 把 composed（committed + preedit）空间的码点偏移映射为 committed 空间。 */
     private fun mapComposedToCommitted(composedCp: Int): Int {
         val preedit = editing.preeditText
         if (preedit.isEmpty()) return composedCp
@@ -375,7 +366,6 @@ open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), Tex
         return cached
     }
 
-    /** Shared padding+gravity alignment; block dimensions are unscaled font px. */
     private fun textOrigin(blockWidth: Float, blockHeight: Float): Pair<Float, Float> {
         val lp = layoutParams
         val finalScale = 1f
@@ -387,10 +377,6 @@ open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), Tex
         )
     }
 
-    /**
-     * Caret x (AWT user units) for absolute code-unit [unit] within [line], taken from
-     * the AWT glyph positions in [blob] so it is consistent with the rendered advance.
-     */
     private fun caretX(blob: TextBlob, line: TextLine, unit: Int): Float {
         var prevEnd = 0f
         var nextPos = -1f
@@ -408,10 +394,6 @@ open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), Tex
         return if (nextPos >= 0f) nextPos else if (have) prevEnd else 0f
     }
 
-    /**
-     * Hit-tests a local text-space x against the AWT glyph advance boundaries of [line],
-     * returning the absolute code-unit offset.
-     */
     private fun hitTestLine(blob: TextBlob, line: TextLine, localX: Float): Int {
         var best = line.charStart
         var bestDist = Float.MAX_VALUE
@@ -455,8 +437,7 @@ open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), Tex
 
     private fun pasteFromClipboard(): Boolean {
         val clipboardText = UiEnvironment.get().clipboard()
-        if (clipboardText.isEmpty()) return false
-        return editing.insertString(clipboardText)
+        return clipboardText.isNotEmpty() && editing.insertString(clipboardText)
     }
 
     private fun afterTextChanged() {
@@ -492,7 +473,6 @@ open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), Tex
         return this
     }
 
-    /** Invoked after the committed text changes; IME preedit-only updates are ignored. */
     fun setOnTextChanged(callback: Consumer<String>?): TextInputWidget {
         onTextChanged = callback
         return this

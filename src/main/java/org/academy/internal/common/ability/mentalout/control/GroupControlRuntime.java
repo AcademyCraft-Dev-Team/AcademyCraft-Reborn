@@ -39,7 +39,6 @@ import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 
 import java.util.*;
 
-/** Internal scheduler and default living-entity adapter for public group-control orders. */
 public final class GroupControlRuntime {
     private static final int PATH_GRACE_TICKS = 40;
     private static final int PATH_STALL_TICKS = 200;
@@ -452,8 +451,6 @@ public final class GroupControlRuntime {
                 if (aiControl.state().isTerminal()) {
                     finish(GroupControlTaskEvent.Status.CANCELLED);
                 } else {
-                    // Atomic work ownership: pause the complete job while AI execution is
-                    // preempted instead of continuing movement/action with only half the rights.
                     closeMovement();
                     workStatus = "preempted";
                 }
@@ -664,7 +661,6 @@ public final class GroupControlRuntime {
                     blockMiningTarget("path", 40);
                     return;
                 }
-                // Keep a stable position instead of repeatedly walking into an excavation pit.
                 remoteMining = true;
             }
             closeMovement();
@@ -695,7 +691,7 @@ public final class GroupControlRuntime {
             var remaining = drop.copy();
             for (var cargo : bufferedDrops) {
                 if (!ItemStack.isSameItemSameComponents(cargo, remaining)) continue;
-                var moved = Math.min(remaining.getCount(), Math.max(0, cargo.getMaxStackSize() - cargo.getCount()));
+                var moved = Math.clamp(cargo.getMaxStackSize() - cargo.getCount(), 0, remaining.getCount());
                 cargo.grow(moved);
                 remaining.shrink(moved);
                 if (remaining.isEmpty()) return;
@@ -722,8 +718,6 @@ public final class GroupControlRuntime {
                     workStatus = "waiting";
                     if (!settings.repeat()) { finish(GroupControlTaskEvent.Status.COMPLETED); return; }
                 } else depositFarmDrops(controller, region, false);
-                // Farming is persistent. Waiting for the next mature crop must never turn
-                // into an invalid path-to-the-solid-region-center order that ends the task.
                 closeMovement();
                 return;
             }
@@ -991,14 +985,13 @@ public final class GroupControlRuntime {
             if (stack.isEmpty()) return;
             var remainder = stack.copy();
             var inventory = controller.getInventory();
-            // Inventory.add deliberately discards overflow for creative players. Work cargo is real.
             for (int pass = 0; pass < 2 && !remainder.isEmpty(); pass++) {
                 for (int slot = 0; slot < inventory.getNonEquipmentItems().size() && !remainder.isEmpty(); slot++) {
                     var existing = inventory.getItem(slot);
                     if (pass == 0 && (existing.isEmpty() || !ItemStack.isSameItemSameComponents(existing, remainder))) continue;
                     if (pass == 1 && !existing.isEmpty()) continue;
                     var room = Math.min(inventory.getMaxStackSize(), remainder.getMaxStackSize()) - existing.getCount();
-                    var moved = Math.min(remainder.getCount(), Math.max(0, room));
+                    var moved = Math.clamp(room, 0, remainder.getCount());
                     if (moved == 0) continue;
                     if (existing.isEmpty()) inventory.setItem(slot, remainder.split(moved));
                     else { existing.grow(moved); remainder.shrink(moved); }
@@ -1259,7 +1252,6 @@ public final class GroupControlRuntime {
             bufferedDrops.removeIf(ItemStack::isEmpty);
             if (bufferedDrops.isEmpty()) return true;
             if (settings.output().isEmpty()) {
-                // No remote player-inventory teleport: carry a bounded amount until output is assigned.
                 if (bufferedDrops.size() < 18) return true;
                 workStatus = "output";
                 closeMovement();
@@ -1388,7 +1380,6 @@ public final class GroupControlRuntime {
     private record AdapterEntry(Identifier id, int priority, GroupControlAdapter adapter) {
     }
 
-    /** One region scan and one work-stealing queue shared by every worker in a dispatch. */
     private static final class SharedWorkPlan {
         private static final int FARM_SCAN_INTERVAL_TICKS = 20;
         private final BlockWorkRegion region;
