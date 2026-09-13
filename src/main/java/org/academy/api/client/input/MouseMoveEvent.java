@@ -1,9 +1,7 @@
 package org.academy.api.client.input;
 
-import net.neoforged.bus.api.Event;
-import net.neoforged.bus.api.ICancellableEvent;
 
-public class MouseMoveEvent extends Event implements ICancellableEvent {
+public class MouseMoveEvent extends InputControlEvent {
     public double xpos;
     public double ypos;
 
