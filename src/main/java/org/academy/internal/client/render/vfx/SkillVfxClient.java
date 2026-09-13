@@ -58,6 +58,10 @@ public final class SkillVfxClient {
             else VfxManager.INSTANCE.spawn(new ShockwaveVfx(burst));
             return;
         }
+        if (packet.state instanceof SkillVfxState.DistortionRing ring) {
+            GlowCircleVfx.spawn(level, ring);
+            return;
+        }
         if (packet.state instanceof SkillVfxState.End end) {
             var replica = ACTIVE.get(packet.id);
             if (replica != null) {

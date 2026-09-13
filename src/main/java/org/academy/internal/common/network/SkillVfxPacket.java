@@ -43,6 +43,7 @@ public final class SkillVfxPacket extends Packet<ClientPacketListener, SkillVfxP
             case SkillVfxState.End ignored -> 3;
             case SkillVfxState.Smoke ignored -> 4;
             case SkillVfxState.Slash ignored -> 5;
+            case SkillVfxState.DistortionRing ignored -> 6;
         });
         Vec3.STREAM_CODEC.encode(b, state.position());
         switch (state) {
@@ -84,6 +85,11 @@ public final class SkillVfxPacket extends Packet<ClientPacketListener, SkillVfxP
             case SkillVfxState.Slash s -> {
                 b.writeFloat(s.xRot()); b.writeFloat(s.yRot()); b.writeFloat(s.scale());
                 b.writeBoolean(s.direction() < 0); ByteBufCodecs.VAR_INT.encode(b, s.lifetimeTicks());
+            }
+            case SkillVfxState.DistortionRing s -> {
+                b.writeFloat(s.xRot()); b.writeFloat(s.yRot());
+                ByteBufCodecs.VAR_INT.encode(b, s.ownerEntityId());
+                ByteBufCodecs.VAR_INT.encode(b, s.lifetimeTicks());
             }
         }
     }
@@ -134,6 +140,14 @@ public final class SkillVfxPacket extends Packet<ClientPacketListener, SkillVfxP
                 int direction = b.readBoolean() ? -1 : 1, duration = ticks(b);
                 if (duration < 1 || duration > 200) throw new IllegalArgumentException("Invalid slash lifetime");
                 yield new SkillVfxState.Slash(pos, xRot, yRot, scale, direction, duration);
+            }
+            case 6 -> {
+                float xRot = finite(b), yRot = finite(b);
+                int ownerEntityId = ByteBufCodecs.VAR_INT.decode(b), duration = ticks(b);
+                if (ownerEntityId < -1 || duration < 1 || duration > 200) {
+                    throw new IllegalArgumentException("Invalid distortion ring parameters");
+                }
+                yield new SkillVfxState.DistortionRing(pos, xRot, yRot, ownerEntityId, duration);
             }
             default -> throw new IllegalArgumentException("Unknown skill VFX type");
         };

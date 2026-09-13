@@ -43,7 +43,7 @@ public final class VectorEnvironmentalFeedbackController {
     ) {
         if (emitEnvironmental(defender, source, VectorRedirectKind.REFLECTION)) return;
         VectorReflection.Server.spawnGlowCircle(
-                defender, fallbackDirection, fallbackPosition, VectorRedirectKind.REFLECTION);
+                defender, fallbackDirection, fallbackPosition);
         VectorReflection.Server.playReflectionSound(defender);
     }
 
@@ -136,8 +136,7 @@ public final class VectorEnvironmentalFeedbackController {
                 VectorReflection.Server.spawnGlowCircle(
                         defender,
                         origin.normal,
-                        origin.ringPosition,
-                        redirectKind
+                        origin.ringPosition
                 );
             }
             state.lastVisualTick = now;

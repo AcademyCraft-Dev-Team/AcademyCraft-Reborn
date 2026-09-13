@@ -11,8 +11,6 @@ import net.minecraft.util.Mth;
 import org.academy.api.client.render.Render;
 import org.academy.api.client.render.post.PostEffect;
 import org.academy.internal.client.renderer.entity.state.GlowCircleRenderState;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectKind;
-import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.world.entity.skill.GlowCircle;
 
@@ -23,15 +21,17 @@ public class GlowCircleRenderer extends EntityRenderer<GlowCircle, GlowCircleRen
         super(context);
     }
 
-    private float sizeCurve(float p) {
+    public static float radiusAt(float p) {
         return MAX_RADIUS * Mth.sin(p * Mth.PI);
     }
 
     @Override
     public void submit(GlowCircleRenderState renderState, PoseStack poseStack, SubmitNodeCollector nodeCollector, CameraRenderState cameraRenderState) {
-        if (!isVisibleForCurrentCamera(renderState)) return;
-        var yaw = renderState.yRot;
-        var pitch = renderState.xRot;
+        if (!isVisibleForCurrentCamera(renderState.ownerEntityId)) return;
+        renderRing(poseStack, renderState.radius, renderState.xRot, renderState.yRot);
+    }
+
+    public static void renderRing(PoseStack poseStack, float radius, float xRot, float yRot) {
         var distortionStrength = 0.025f;
         var ringWidth = 0.5f;
         var ringEdgeBlur = 0.05f;
@@ -39,17 +39,17 @@ public class GlowCircleRenderer extends EntityRenderer<GlowCircle, GlowCircleRen
         poseStack.pushPose();
 
         var matrix = poseStack.last().pose();
-        var radius = renderState.radius / 2f;
+        var halfRadius = radius / 2f;
 
-        poseStack.mulPose(Axis.YP.rotationDegrees(90 - yaw));
-        poseStack.mulPose(Axis.ZP.rotationDegrees(90 + pitch));
+        poseStack.mulPose(Axis.YP.rotationDegrees(90 - yRot));
+        poseStack.mulPose(Axis.ZP.rotationDegrees(90 + xRot));
         poseStack.mulPose(Axis.XP.rotationDegrees(180));
 
         var vertexConsumer = PostEffect.getPre().getBuffer(Render.RenderTypes.DISTORTION_RING);
-        vertexConsumer.addVertex(matrix, -radius, 0, -radius).setUv(0, 0).setNormal(distortionStrength, ringWidth, ringEdgeBlur);
-        vertexConsumer.addVertex(matrix, radius, 0, -radius).setUv(1, 0).setNormal(distortionStrength, ringWidth, ringEdgeBlur);
-        vertexConsumer.addVertex(matrix, radius, 0, radius).setUv(1, 1).setNormal(distortionStrength, ringWidth, ringEdgeBlur);
-        vertexConsumer.addVertex(matrix, -radius, 0, radius).setUv(0, 1).setNormal(distortionStrength, ringWidth, ringEdgeBlur);
+        vertexConsumer.addVertex(matrix, -halfRadius, 0, -halfRadius).setUv(0, 0).setNormal(distortionStrength, ringWidth, ringEdgeBlur);
+        vertexConsumer.addVertex(matrix, halfRadius, 0, -halfRadius).setUv(1, 0).setNormal(distortionStrength, ringWidth, ringEdgeBlur);
+        vertexConsumer.addVertex(matrix, halfRadius, 0, halfRadius).setUv(1, 1).setNormal(distortionStrength, ringWidth, ringEdgeBlur);
+        vertexConsumer.addVertex(matrix, -halfRadius, 0, halfRadius).setUv(0, 1).setNormal(distortionStrength, ringWidth, ringEdgeBlur);
 
         poseStack.popPose();
     }
@@ -63,23 +63,20 @@ public class GlowCircleRenderer extends EntityRenderer<GlowCircle, GlowCircleRen
     public void extractRenderState(GlowCircle entity, GlowCircleRenderState reusedState, float partialTick) {
         super.extractRenderState(entity, reusedState, partialTick);
         var progress = Math.min((entity.ticks + partialTick) / GlowCircle.LIFE_TICKS, 1.0f);
-        reusedState.radius = sizeCurve(progress);
+        reusedState.radius = radiusAt(progress);
         reusedState.xRot = entity.getXRot();
         reusedState.yRot = entity.getYRot();
         reusedState.ownerEntityId = entity.getEffectOwnerId();
-        reusedState.redirectKind = entity.getRedirectKind();
     }
 
-    private static boolean isVisibleForCurrentCamera(GlowCircleRenderState state) {
+    public static boolean isVisibleForCurrentCamera(int ownerEntityId) {
         var minecraft = Minecraft.getInstance();
         var player = minecraft.player;
         if (player == null
                 || !minecraft.options.getCameraType().isFirstPerson()
-                || state.ownerEntityId != player.getId()) {
+                || ownerEntityId != player.getId()) {
             return true;
         }
-        return state.redirectKind == VectorRedirectKind.REFRACTION
-                ? VectorDeviation.Client.CONFIG.isFirstPersonDistortionRingVisible()
-                : VectorReflection.Client.CONFIG.isFirstPersonDistortionRingVisible();
+        return VectorReflection.Client.CONFIG.isFirstPersonDistortionRingVisible();
     }
 }

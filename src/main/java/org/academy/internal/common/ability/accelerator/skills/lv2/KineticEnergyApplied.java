@@ -59,6 +59,7 @@ import org.academy.api.common.ability.*;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.vfx.SkillVfxService;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -71,9 +72,6 @@ import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.SkillData;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.*;
-import org.academy.internal.common.world.entity.EntityTypes;
-import org.academy.internal.common.world.entity.skill.GlowCircle;
-import org.academy.internal.common.world.entity.skill.KineticShockwave;
 import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -650,12 +648,11 @@ public class KineticEnergyApplied extends Skill {
         }
 
         private static void spawnProjectileEffect(Projectile projectile, Entity shooter) {
-            var glowCircle = new GlowCircle(EntityTypes.GLOW_CIRCLE.get(), shooter.level());
             var look = shooter.getLookAngle();
-            glowCircle.setPos(projectile.getX() + look.x, projectile.getY() + look.y, projectile.getZ() + look.z);
-            glowCircle.setYRot(shooter.getYRot());
-            glowCircle.setXRot(shooter.getXRot());
-            shooter.level().addFreshEntity(glowCircle);
+            if (shooter.level() instanceof ServerLevel level) {
+                SkillVfxService.distortionRing(
+                        level, projectile.position().add(look), look, -1);
+            }
         }
 
         private static boolean serverSeesAir(ServerPlayer player, ServerLevel level) {

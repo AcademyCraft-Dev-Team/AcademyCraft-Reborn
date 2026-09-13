@@ -556,7 +556,7 @@ public class VectorDeviation extends Skill {
                         if (emitFeedback) {
                             var direction = refractedDirection(player.getLookAngle(), incomingDirection);
                             VectorReflection.Server.spawnGlowCircle(
-                                    player, direction, mirrorPoint, VectorRedirectKind.REFRACTION);
+                                    player, direction, mirrorPoint);
                             VectorReflection.Server.playReflectionSound(player);
                         }
                     },
@@ -627,7 +627,7 @@ public class VectorDeviation extends Skill {
                         .add(refracted.normalize().scale(pushDistance)));
                 VectorProjectileStateAdapter.applyRedirect(projectile, refracted, previousOwner);
                 VectorReflection.Server.spawnGlowCircle(
-                        player, refracted, projectile.position(), VectorRedirectKind.REFRACTION);
+                        player, refracted, projectile.position());
                 VectorReflection.Server.playReflectionSound(player);
             }, true);
             if (executed) VectorReflection.Server.deactivateAfterVectorChargeIfNeeded(player);
