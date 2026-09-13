@@ -1,8 +1,10 @@
 package org.academy.internal.client.gui.screen
 
+import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.player.Inventory
+import net.minecraft.world.inventory.ContainerLevelAccess
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator
 import org.academy.api.client.gui.layout.SizeMode
@@ -98,5 +100,25 @@ class OmniCraftingTableScreen(
         private const val FLUID_Y = 12f
         private const val FLUID_WIDTH = 7f
         private const val FLUID_HEIGHT = 59f
+
+        fun create(
+            menu: OmniCraftingMenu,
+            playerInventory: Inventory,
+            title: Component,
+            mainPos: BlockPos
+        ): OmniCraftingTableScreen? {
+            val level = Minecraft.getInstance().level ?: return null
+            val entity = level.getBlockEntity(mainPos)
+            if (entity !is OmniCraftingTableBlockEntity) {
+                return null
+            }
+            val boundMenu = OmniCraftingMenu(
+                menu.containerId,
+                playerInventory,
+                ContainerLevelAccess.create(level, mainPos),
+                entity
+            )
+            return OmniCraftingTableScreen(boundMenu, playerInventory, title, mainPos)
+        }
     }
 }

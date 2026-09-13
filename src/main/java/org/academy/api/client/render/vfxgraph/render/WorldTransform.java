@@ -8,14 +8,20 @@ import org.joml.Vector3f;
  *
  * <p>{@code world = position + rotation * (scale * local)}。纯数学，供渲染器在写实例/轨迹顶点时
  * 逐粒子应用，亦供运行时效果实例持有。恒等变换由 [GraphEffect] 编辑器路径保持零改动。</p>
+ *
+ * <p>{@code ignoreSceneDepth}：跳过 soft-particle 场景深度采样（用远平面兜底）。用于尾焰撞上
+ * waterlogged 水面之类会把 depthDiff 打成负值、整柱 alpha 灭掉的场合。</p>
  */
-public record WorldTransform(Vector3f position, Quaternionf rotation, float scale) {
-    private static final WorldTransform IDENTITY = new WorldTransform(new Vector3f(), new Quaternionf(), 1f);
+public record WorldTransform(Vector3f position, Quaternionf rotation, float scale, boolean ignoreSceneDepth) {
+    private static final WorldTransform IDENTITY = new WorldTransform(new Vector3f(), new Quaternionf(), 1f, false);
+
+    public WorldTransform {
+        position = new Vector3f(position);
+        rotation = new Quaternionf(rotation);
+    }
 
     public WorldTransform(Vector3f position, Quaternionf rotation, float scale) {
-        this.position = new Vector3f(position);
-        this.rotation = new Quaternionf(rotation);
-        this.scale = scale;
+        this(position, rotation, scale, false);
     }
 
     public static WorldTransform identity() {

@@ -236,13 +236,18 @@ class WirelessNodeScreen(
             title: Component,
             mainPos: BlockPos
         ): WirelessNodeScreen? {
-            val level = Minecraft.getInstance().level
-            val entity = level?.getBlockEntity(mainPos)
-            return if (entity is WirelessNodeBlockEntity) {
-                WirelessNodeScreen(menu, playerInventory, title, entity)
-            } else {
-                null
+            val level = Minecraft.getInstance().level ?: return null
+            val entity = level.getBlockEntity(mainPos)
+            if (entity !is WirelessNodeBlockEntity) {
+                return null
             }
+            val boundMenu = WirelessNodeMenu(
+                menu.containerId,
+                playerInventory,
+                net.minecraft.world.inventory.ContainerLevelAccess.create(level, mainPos),
+                entity
+            )
+            return WirelessNodeScreen(boundMenu, playerInventory, title, entity)
         }
     }
 }

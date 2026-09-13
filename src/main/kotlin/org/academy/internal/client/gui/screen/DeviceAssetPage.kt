@@ -10,6 +10,10 @@ import org.academy.api.client.util.AnimationUtil
 /**
  * Rail-mounted owner-only asset page for compact Misaka machine screens.
  * Cabin keeps a pane inside Ops instead, because that screen already has an ops stack.
+ *
+ * The rail button stays visible from attach so the tab count does not pop 3→4 after
+ * ContainerData / owner sync catches up. Non-owners can open the pane; transfer actions
+ * stay gated by [DeviceAssetUi] / server checks.
  */
 internal class DeviceAssetPage(
     val ui: DeviceAssetUi,
@@ -29,12 +33,10 @@ internal class DeviceAssetPage(
         AnimationUtil.show(page)
     }
 
-    /** Show or hide the rail button when ownership syncs; bounce to inventory if it is lost. */
+    /** Keep ownership state fresh; bounce off the asset pane if ownership is lost. */
     fun tick(owner: Boolean) {
         if (lastOwner != owner) {
             lastOwner = owner
-            button.visibility = if (owner) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
-            button.isEnabled = owner
             if (!owner && page.visibility == Widget.Visibility.VISIBLE) {
                 pageButtons.selectButton(invButton)
             }
@@ -61,11 +63,14 @@ internal class DeviceAssetPage(
 
             val button = createRailButton()
             MisakaMachineUi.sizeRailButton(button)
-            button.visibility = Widget.Visibility.GONE
-            button.isEnabled = false
+            // Visible from the first frame — hiding until owner sync is what caused 3→4 tabs.
+            button.visibility = Widget.Visibility.VISIBLE
+            button.isEnabled = true
             pageButtons.addChild("asset", button)
 
-            return DeviceAssetPage(ui, page, button, pageButtons, invButton)
+            val attached = DeviceAssetPage(ui, page, button, pageButtons, invButton)
+            attached.tick(isOwner())
+            return attached
         }
     }
 }

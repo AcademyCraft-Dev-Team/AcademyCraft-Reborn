@@ -10,6 +10,7 @@ import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.academy.internal.common.world.item.NetworkRelaySatelliteItem;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.entity.SatelliteLaunchPadBlockEntity;
@@ -22,6 +23,12 @@ public final class SatelliteLaunchPadMenu extends AbstractContainerMenu {
     /** Select a networked laser by list index: BASE + index (0..MAX-1). */
     public static final int BUTTON_SELECT_LASER_BASE = 100;
     public static final int BUTTON_SELECT_LASER_MAX = 64;
+
+    public static final int SLOT_SATELLITE = SatelliteLaunchPadBlockEntity.SLOT_SATELLITE;
+    public static final int SLOT_OBSIDIAN = SatelliteLaunchPadBlockEntity.SLOT_OBSIDIAN;
+    public static final int SLOT_TNT = SatelliteLaunchPadBlockEntity.SLOT_TNT;
+    public static final int PAD_SLOT_COUNT = SatelliteLaunchPadBlockEntity.SLOT_COUNT;
+
     public final ContainerLevelAccess access;
     private final @Nullable SatelliteLaunchPadBlockEntity blockEntity;
     private final ContainerData viewerData = OwnedDeviceViewerData.create();
@@ -42,7 +49,7 @@ public final class SatelliteLaunchPadMenu extends AbstractContainerMenu {
         if (this.blockEntity != null && this.blockEntity.getLevel() instanceof ServerLevel serverLevel) {
             this.blockEntity.syncLaunchSnapshot(serverLevel);
         }
-        addSlot(new Slot(padContainer, 0, 80, 35) {
+        addSlot(new Slot(padContainer, SLOT_SATELLITE, 80, 12) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return NetworkRelaySatelliteItem.isSatellite(stack);
@@ -53,13 +60,35 @@ public final class SatelliteLaunchPadMenu extends AbstractContainerMenu {
                 return 16;
             }
         });
+        addSlot(new Slot(padContainer, SLOT_OBSIDIAN, 80, 30) {
+            @Override
+            public boolean mayPlace(ItemStack stack) {
+                return stack.is(Items.OBSIDIAN);
+            }
+
+            @Override
+            public int getMaxStackSize() {
+                return 1;
+            }
+        });
+        addSlot(new Slot(padContainer, SLOT_TNT, 80, 48) {
+            @Override
+            public boolean mayPlace(ItemStack stack) {
+                return stack.is(Items.TNT);
+            }
+
+            @Override
+            public int getMaxStackSize() {
+                return SatelliteLaunchPadBlockEntity.TNT_REQUIRED;
+            }
+        });
         OwnedDeviceViewerData.sync(viewerData, this.blockEntity, playerInventory.player);
         addPlayerInv(playerInventory);
         addDataSlots(viewerData);
     }
 
     public SatelliteLaunchPadMenu(int id, Inventory playerInventory) {
-        this(id, playerInventory, ContainerLevelAccess.NULL, new SimpleContainer(1));
+        this(id, playerInventory, ContainerLevelAccess.NULL, new SimpleContainer(PAD_SLOT_COUNT));
     }
 
     public boolean viewerIsOwner() {
@@ -83,7 +112,7 @@ public final class SatelliteLaunchPadMenu extends AbstractContainerMenu {
             return false;
         }
         return switch (id) {
-            case BUTTON_LAUNCH -> blockEntity.tryLaunch(serverLevel);
+            case BUTTON_LAUNCH -> blockEntity.tryLaunch(serverLevel, player);
             case BUTTON_CYCLE_DIM -> {
                 blockEntity.cycleHyperDimension(serverLevel);
                 broadcastChanges();
@@ -109,19 +138,27 @@ public final class SatelliteLaunchPadMenu extends AbstractContainerMenu {
         if (slot.hasItem()) {
             ItemStack stack = slot.getItem();
             result = stack.copy();
-            if (index == 0) {
-                if (!moveItemStackTo(stack, 1, slots.size(), true)) {
+            if (index < PAD_SLOT_COUNT) {
+                if (!moveItemStackTo(stack, PAD_SLOT_COUNT, slots.size(), true)) {
                     return ItemStack.EMPTY;
                 }
             } else if (NetworkRelaySatelliteItem.isSatellite(stack)) {
-                if (!moveItemStackTo(stack, 0, 1, false)) {
+                if (!moveItemStackTo(stack, SLOT_SATELLITE, SLOT_SATELLITE + 1, false)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (index < 28) {
-                if (!moveItemStackTo(stack, 28, slots.size(), false)) {
+            } else if (stack.is(Items.OBSIDIAN)) {
+                if (!moveItemStackTo(stack, SLOT_OBSIDIAN, SLOT_OBSIDIAN + 1, false)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (!moveItemStackTo(stack, 1, 28, false)) {
+            } else if (stack.is(Items.TNT)) {
+                if (!moveItemStackTo(stack, SLOT_TNT, SLOT_TNT + 1, false)) {
+                    return ItemStack.EMPTY;
+                }
+            } else if (index < PAD_SLOT_COUNT + 27) {
+                if (!moveItemStackTo(stack, PAD_SLOT_COUNT + 27, slots.size(), false)) {
+                    return ItemStack.EMPTY;
+                }
+            } else if (!moveItemStackTo(stack, PAD_SLOT_COUNT, PAD_SLOT_COUNT + 27, false)) {
                 return ItemStack.EMPTY;
             }
             if (stack.isEmpty()) {
