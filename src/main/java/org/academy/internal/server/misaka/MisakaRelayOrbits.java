@@ -32,6 +32,28 @@ public final class MisakaRelayOrbits {
      */
     public static final double MAX_BEAM_TRACK_RANGE = 2048.0;
 
+    /**
+     * Launch-pad visual SHAPE top ({@code SatelliteLaunchPadBlock}); spawn is blockY+2.
+     * Keep in sync with pad collision / VFX pad-surface probes.
+     */
+    public static final double LAUNCH_PAD_SURFACE_HEIGHT = 0.5;
+    /** Matches {@code MisakaRelayLifecycle.resolveLaunchStart} cabin spawn. */
+    public static final double LAUNCH_START_Y_OFFSET = 2.0;
+    /**
+     * Matches {@code RelaySatelliteTrailVfxClient.LAUNCH_NOZZLE_Y}
+     * ({@code RENDER_Y_LIFT - 0.04}).
+     */
+    public static final double LAUNCH_NOZZLE_Y = 0.11;
+    // Early-launch exhaust anchors (t≈0) from RelaySatelliteTrailVfxClient — tip = along + half visual size.
+    private static final float EXHAUST_SMOKE_ALONG0 = 0.72f;
+    private static final float EXHAUST_SMOKE_ALONG1 = 0.72f + 0.55f;
+    private static final float EXHAUST_SMOKE_SIZE0 = 1.9f;
+    private static final float EXHAUST_SMOKE_SIZE1 = 1.15f;
+    private static final float EXHAUST_PLUME_ALONG0 = 0.38f;
+    private static final float EXHAUST_PLUME_ALONG1 = 0.38f + 0.35f;
+    private static final float EXHAUST_PLUME_SCALE0 = 3.4f;
+    private static final float EXHAUST_PLUME_SCALE1 = 1.4f;
+
     private MisakaRelayOrbits() {
     }
 
@@ -117,6 +139,66 @@ public final class MisakaRelayOrbits {
         double x = laserPos.getX() + 0.5 + Mth.cos(angle) * RelaySatelliteEntity.ORBIT_RADIUS;
         double z = laserPos.getZ() + 0.5 + Mth.sin(angle) * RelaySatelliteEntity.ORBIT_RADIUS;
         return new Vec3(x, visualOrbitY, z);
+    }
+
+    /**
+     * World Y of the satellite at launch age {@code ageTicks}, matching
+     * {@link RelaySatelliteEntity} smoothstep quadratic Bezier ascent.
+     */
+    public static double launchAltitudeY(double startY, double endY, int ageTicks, int launchDurationTicks) {
+        int duration = Math.max(1, launchDurationTicks);
+        int age = Mth.clamp(ageTicks, 0, duration);
+        float t = age / (float) duration;
+        float eased = t * t * (3.0f - 2.0f * t);
+        double u = 1.0 - eased;
+        return u * u * startY + (1.0 - u * u) * endY;
+    }
+
+    /**
+     * Distance below the nozzle to the farthest early-launch exhaust tip
+     * (smoke / plume fire), matching {@code RelaySatelliteTrailVfxClient} scales.
+     */
+    public static float launchExhaustTipAlong(float launchProgress) {
+        float t = Mth.clamp(launchProgress, 0.0f, 1.0f);
+        float smokeAlong = Mth.lerp(t, EXHAUST_SMOKE_ALONG0, EXHAUST_SMOKE_ALONG1);
+        float smokeSize = Mth.lerp(t, EXHAUST_SMOKE_SIZE0, EXHAUST_SMOKE_SIZE1);
+        float plumeAlong = Mth.lerp(t, EXHAUST_PLUME_ALONG0, EXHAUST_PLUME_ALONG1);
+        float plumeScale = Mth.lerp(t, EXHAUST_PLUME_SCALE0, EXHAUST_PLUME_SCALE1);
+        return Math.max(smokeAlong + smokeSize * 0.5f, plumeAlong + plumeScale * 0.5f);
+    }
+
+    /**
+     * Ticks from ignition until the downward exhaust tip clears the pad top surface.
+     * Uses the real ascent curve and configured launch duration / orbit height.
+     */
+    public static int launchPadExhaustClearTicks(
+            double padBlockY,
+            double startY,
+            double endY,
+            int launchDurationTicks
+    ) {
+        double padTopY = padBlockY + LAUNCH_PAD_SURFACE_HEIGHT;
+        int duration = Math.max(1, launchDurationTicks);
+        for (int age = 1; age <= duration; age++) {
+            double satY = launchAltitudeY(startY, endY, age, duration);
+            float progress = age / (float) duration;
+            double tipY = satY + LAUNCH_NOZZLE_Y - launchExhaustTipAlong(progress);
+            if (tipY >= padTopY) {
+                return age;
+            }
+        }
+        return duration;
+    }
+
+    /**
+     * Coolant drain window for a pad at {@code padPos}: one bucket is spent over
+     * {@link #launchPadExhaustClearTicks} for the current server launch profile.
+     */
+    public static int launchPadCoolantDrainTicks(Level level, @Nullable MinecraftServer server, BlockPos padPos) {
+        double startY = padPos.getY() + LAUNCH_START_Y_OFFSET;
+        double endY = visualOrbitY(level, server);
+        int duration = launchTicks(server);
+        return Math.max(1, launchPadExhaustClearTicks(padPos.getY(), startY, endY, duration));
     }
 
     /** True during the first {@link #SKY_VISIBLE_FRACTION} of each orbit period. */

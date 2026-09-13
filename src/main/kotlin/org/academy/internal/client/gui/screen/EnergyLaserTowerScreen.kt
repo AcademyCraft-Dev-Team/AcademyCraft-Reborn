@@ -60,7 +60,7 @@ class EnergyLaserTowerScreen private constructor(
             invButton = invButton,
             content = content,
             devicePos = mainPos,
-            isOwner = { menu.viewerIsOwner() },
+            isOwner = { viewerOwnsTower() },
             createRailButton = { createButton(R.textures.gui.icon.icon_settings) }
         )
         assetPage = asset
@@ -126,7 +126,7 @@ class EnergyLaserTowerScreen private constructor(
 
     override fun containerTick() {
         super.containerTick()
-        assetPage?.tick(menu.viewerIsOwner())
+        assetPage?.tick(viewerOwnsTower())
         energyValueLabel.text = "${blockEntity.energyStored} / ${blockEntity.maxEnergyStorage} AF"
         statusValueLabel.text = when {
             !blockEntity.hasClearSky() -> Component.translatable("gui.academy.energy_laser_tower.status_blocked").string
@@ -143,6 +143,11 @@ class EnergyLaserTowerScreen private constructor(
                 else -> "gui.academy.energy_laser_tower.feed_idle"
             }
         ).string
+    }
+
+    private fun viewerOwnsTower(): Boolean {
+        val player = Minecraft.getInstance().player
+        return menu.viewerIsOwner() || (player != null && blockEntity.isOwner(player))
     }
 
     companion object {

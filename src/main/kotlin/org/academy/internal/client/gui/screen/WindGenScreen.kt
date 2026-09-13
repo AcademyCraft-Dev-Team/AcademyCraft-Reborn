@@ -200,13 +200,18 @@ class WindGenScreen(
     companion object {
         const val AF: String = "%d AF"
         fun create(menu: WindGenMenu, playerInventory: Inventory, title: Component, mainPos: BlockPos): WindGenScreen? {
-            val level = Minecraft.getInstance().level
-            val entity = level?.getBlockEntity(mainPos)
-            return if (entity is WindGenBaseBlockEntity) {
-                WindGenScreen(menu, playerInventory, title, entity)
-            } else {
-                null
+            val level = Minecraft.getInstance().level ?: return null
+            val entity = level.getBlockEntity(mainPos)
+            if (entity !is WindGenBaseBlockEntity) {
+                return null
             }
+            val boundMenu = WindGenMenu(
+                menu.containerId,
+                playerInventory,
+                net.minecraft.world.inventory.ContainerLevelAccess.create(level, mainPos),
+                entity
+            )
+            return WindGenScreen(boundMenu, playerInventory, title, entity)
         }
     }
 }

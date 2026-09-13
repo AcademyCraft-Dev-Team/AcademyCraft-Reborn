@@ -13,14 +13,19 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
@@ -29,7 +34,9 @@ import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.common.world.inventory.SatelliteLaunchPadMenu;
 import org.academy.internal.common.world.item.HyperNetworkRelaySatelliteItem;
 import org.academy.internal.common.world.item.NetworkRelaySatelliteItem;
+import org.academy.internal.common.world.level.block.SatelliteLaunchPadBlock;
 import org.academy.internal.server.misaka.MisakaNetworkLasers;
+import org.academy.internal.server.misaka.MisakaRelayOrbits;
 import org.academy.internal.server.world.level.storage.MisakaRelayRegistry;
 import org.jspecify.annotations.Nullable;
 
@@ -40,21 +47,38 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Launch pad: insert satellite, pick same-network laser tower, launch.
- * Seated satellite is rendered client-side when the slot is non-empty.
+ * Launch pad: stack satellite / obsidian / TNT, fill coolant tank, pick laser, launch.
+ * Seated satellite is rendered client-side when the top slot is non-empty.
  */
 public final class SatelliteLaunchPadBlockEntity extends BlockEntity
         implements WirelessUser, Container, GeoBlockEntity, OwnedDevice {
+    public static final int SLOT_SATELLITE = 0;
+    public static final int SLOT_OBSIDIAN = 1;
+    public static final int SLOT_TNT = 2;
+    public static final int SLOT_COUNT = 3;
+    public static final int TNT_REQUIRED = 64;
+    /** Three buckets. */
+    public static final int WATER_CAPACITY_MB = 3000;
+    public static final int WATER_BUCKET_MB = 1000;
+    public static final int LAUNCH_WATER_COST_MB = 1000;
+    public static final float FORCE_LAUNCH_EXPLOSION_POWER = 4.0f;
+
     private static final int MAX_ENERGY = 50_000;
     /** Sync-only; do not persist. Mirrors the cabin laser pick list. */
     private static final String SYNC_LASER_PICKS = "launch_laser_picks";
     private static final int LASER_PICK_LIMIT = 64;
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 
-    private NonNullList<ItemStack> items = NonNullList.withSize(1, ItemStack.EMPTY);
+    private NonNullList<ItemStack> items = NonNullList.withSize(SLOT_COUNT, ItemStack.EMPTY);
     private @Nullable BlockPos connectedNodePos;
     private @Nullable BlockPos selectedLaserPos;
     private int energyStored;
+    private int waterMb;
+    /** Remaining ticks of the post-launch coolant drain; 0 = idle. */
+    private int coolantDrainTicksRemaining;
+    /** Millibuckets still owed for the current launch drain (starts at {@link #LAUNCH_WATER_COST_MB}). */
+    private int coolantDrainMbRemaining;
+    private @Nullable UUID coolantDrainLauncherUuid;
     private int selectableLaserCount;
     private String launchFeedbackKey = "";
     private @Nullable UUID ownerUuid;
@@ -65,9 +89,17 @@ public final class SatelliteLaunchPadBlockEntity extends BlockEntity
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, SatelliteLaunchPadBlockEntity be) {
-        if (!(level instanceof ServerLevel serverLevel)
-                || level.getGameTime() % 20L != 0L
-                || !be.hasMenuOpen(serverLevel)) {
+        if (!(level instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        if (be.coolantDrainTicksRemaining > 0) {
+            be.tickCoolantDrain(serverLevel);
+            // Pad may be destroyed mid-drain.
+            if (level.getBlockEntity(pos) != be) {
+                return;
+            }
+        }
+        if (level.getGameTime() % 20L != 0L || !be.hasMenuOpen(serverLevel)) {
             return;
         }
         var before = be.laserPickList;
@@ -88,11 +120,19 @@ public final class SatelliteLaunchPadBlockEntity extends BlockEntity
     }
 
     public boolean hasSeatedSatellite() {
-        return NetworkRelaySatelliteItem.isSatellite(items.get(0));
+        return NetworkRelaySatelliteItem.isSatellite(items.get(SLOT_SATELLITE));
     }
 
     public boolean isSeatedHyper() {
-        return NetworkRelaySatelliteItem.isHyper(items.get(0));
+        return NetworkRelaySatelliteItem.isHyper(items.get(SLOT_SATELLITE));
+    }
+
+    public int getWaterMb() {
+        return waterMb;
+    }
+
+    public boolean hasEnoughLaunchWater() {
+        return waterMb >= LAUNCH_WATER_COST_MB;
     }
 
     public @Nullable BlockPos getSelectedLaserPos() {
@@ -171,7 +211,7 @@ public final class SatelliteLaunchPadBlockEntity extends BlockEntity
     }
 
     public void cycleHyperDimension(ServerLevel serverLevel) {
-        ItemStack stack = items.get(0);
+        ItemStack stack = items.get(SLOT_SATELLITE);
         if (!NetworkRelaySatelliteItem.isHyper(stack) || serverLevel == null) {
             return;
         }
@@ -186,13 +226,87 @@ public final class SatelliteLaunchPadBlockEntity extends BlockEntity
         int idx = keys.indexOf(current);
         var next = keys.get((idx + 1 + keys.size()) % keys.size());
         HyperNetworkRelaySatelliteItem.setTargetDimension(updated, next);
-        setItem(0, updated);
+        setItem(SLOT_SATELLITE, updated);
     }
 
-    public boolean tryLaunch(ServerLevel level) {
-        ItemStack stack = items.get(0);
-        if (!NetworkRelaySatelliteItem.isSatellite(stack)) {
+    /**
+     * When the pad replaces a water source on place, seed the tank with one bucket.
+     */
+    public void absorbPlacementWater() {
+        if (waterMb > 0) {
+            return;
+        }
+        waterMb = WATER_BUCKET_MB;
+        syncWaterloggedVisual();
+        markAndSync();
+    }
+
+    /**
+     * Fill one bucket into the coolant tank. Returns true if the interaction was handled.
+     */
+    public boolean tryFillWater(Player player, InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
+        if (!stack.is(Items.WATER_BUCKET)) {
+            return false;
+        }
+        if (waterMb + WATER_BUCKET_MB > WATER_CAPACITY_MB) {
+            return false;
+        }
+        if (level == null || level.isClientSide()) {
+            return true;
+        }
+        waterMb += WATER_BUCKET_MB;
+        level.playSound(null, worldPosition, SoundEvents.BUCKET_EMPTY, SoundSource.BLOCKS, 1.0f, 1.0f);
+        level.gameEvent(player, GameEvent.FLUID_PLACE, worldPosition);
+        if (!player.getAbilities().instabuild) {
+            player.setItemInHand(hand, new ItemStack(Items.BUCKET));
+        }
+        syncWaterloggedVisual();
+        markAndSync();
+        return true;
+    }
+
+    /**
+     * Drain one bucket from the coolant tank. Returns true if the interaction was handled.
+     */
+    public boolean tryDrainWater(Player player, InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
+        if (!stack.is(Items.BUCKET) || stack.getCount() != 1) {
+            return false;
+        }
+        if (waterMb < WATER_BUCKET_MB) {
+            return false;
+        }
+        if (level == null || level.isClientSide()) {
+            return true;
+        }
+        waterMb -= WATER_BUCKET_MB;
+        level.playSound(null, worldPosition, SoundEvents.BUCKET_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
+        level.gameEvent(player, GameEvent.FLUID_PICKUP, worldPosition);
+        if (!player.getAbilities().instabuild) {
+            player.setItemInHand(hand, new ItemStack(Items.WATER_BUCKET));
+        }
+        syncWaterloggedVisual();
+        markAndSync();
+        return true;
+    }
+
+    public boolean tryLaunch(ServerLevel level, @Nullable Player launcher) {
+        ItemStack satellite = items.get(SLOT_SATELLITE);
+        ItemStack obsidian = items.get(SLOT_OBSIDIAN);
+        ItemStack tnt = items.get(SLOT_TNT);
+        if (!NetworkRelaySatelliteItem.isSatellite(satellite)) {
             setLaunchFeedback("gui.academy.satellite_launch_pad.need_satellite");
+            markAndSync();
+            return false;
+        }
+        if (!obsidian.is(Items.OBSIDIAN) || obsidian.getCount() < 1) {
+            setLaunchFeedback("gui.academy.satellite_launch_pad.need_obsidian");
+            markAndSync();
+            return false;
+        }
+        if (!tnt.is(Items.TNT) || tnt.getCount() < TNT_REQUIRED) {
+            setLaunchFeedback("gui.academy.satellite_launch_pad.need_tnt");
             markAndSync();
             return false;
         }
@@ -202,8 +316,8 @@ public final class SatelliteLaunchPadBlockEntity extends BlockEntity
             return false;
         }
         var networkId = MisakaNAT.get().resolveNetworkId(level, connectedNodePos);
-        var targetDim = NetworkRelaySatelliteItem.targetDimension(stack);
-        boolean hyper = NetworkRelaySatelliteItem.isHyper(stack);
+        var targetDim = NetworkRelaySatelliteItem.targetDimension(satellite);
+        boolean hyper = NetworkRelaySatelliteItem.isHyper(satellite);
         if (!hyper && !net.minecraft.world.level.Level.OVERWORLD.equals(targetDim)) {
             setLaunchFeedback("gui.academy.satellite_launch_pad.bad_dim");
             markAndSync();
@@ -227,6 +341,7 @@ public final class SatelliteLaunchPadBlockEntity extends BlockEntity
             markAndSync();
             return false;
         }
+        boolean safeWater = hasEnoughLaunchWater();
         boolean ok = MisakaRelayRegistry.get(level.getServer()).launch(
                 level.getServer(),
                 networkId,
@@ -237,21 +352,113 @@ public final class SatelliteLaunchPadBlockEntity extends BlockEntity
                 worldPosition,
                 level.dimension()
         );
-        if (ok) {
-            stack.shrink(1);
-            selectedLaserPos = null;
-            setLaunchFeedback("gui.academy.satellite_launch_pad.launch_ok");
-            markAndSync();
-        } else {
+        if (!ok) {
             setLaunchFeedback("gui.academy.satellite_launch_pad.launch_fail");
             markAndSync();
+            return false;
         }
-        return ok;
+
+        satellite.shrink(1);
+        obsidian.shrink(1);
+        tnt.shrink(TNT_REQUIRED);
+        selectedLaserPos = null;
+
+        beginCoolantDrain(level, launcher);
+        setLaunchFeedback(safeWater
+                ? "gui.academy.satellite_launch_pad.launch_ok"
+                : "gui.academy.satellite_launch_pad.launch_force_armed");
+        markAndSync();
+        return true;
+    }
+
+    private void beginCoolantDrain(ServerLevel level, @Nullable Player launcher) {
+        coolantDrainTicksRemaining = MisakaRelayOrbits.launchPadCoolantDrainTicks(
+                level,
+                level.getServer(),
+                worldPosition
+        );
+        coolantDrainMbRemaining = LAUNCH_WATER_COST_MB;
+        coolantDrainLauncherUuid = launcher != null ? launcher.getUUID() : null;
+    }
+
+    private void clearCoolantDrain() {
+        coolantDrainTicksRemaining = 0;
+        coolantDrainMbRemaining = 0;
+        coolantDrainLauncherUuid = null;
+    }
+
+    /**
+     * Spread {@link #LAUNCH_WATER_COST_MB} evenly over the exhaust-clearance window
+     * ({@link MisakaRelayOrbits#launchPadCoolantDrainTicks}).
+     * Drain may reach 0 safely; the tick that would push the tank below 0 detonates the pad.
+     */
+    private void tickCoolantDrain(ServerLevel level) {
+        if (coolantDrainTicksRemaining <= 0 || coolantDrainMbRemaining <= 0) {
+            clearCoolantDrain();
+            return;
+        }
+        int take = (coolantDrainMbRemaining + coolantDrainTicksRemaining - 1) / coolantDrainTicksRemaining;
+        coolantDrainTicksRemaining--;
+        coolantDrainMbRemaining -= take;
+
+        if (take > waterMb) {
+            // Would go below 0 — empty first, then detonate (waterMb == 0 alone never explodes).
+            waterMb = 0;
+            syncWaterloggedVisual();
+            clearCoolantDrain();
+            setLaunchFeedback("gui.academy.satellite_launch_pad.launch_force_explode");
+            detonatePad(level, resolveCoolantDrainLauncher(level));
+            return;
+        }
+
+        waterMb -= take;
+        syncWaterloggedVisual();
+        if (coolantDrainTicksRemaining <= 0 || coolantDrainMbRemaining <= 0) {
+            clearCoolantDrain();
+        }
+        markAndSync();
+    }
+
+    private @Nullable Player resolveCoolantDrainLauncher(ServerLevel level) {
+        if (coolantDrainLauncherUuid == null) {
+            return null;
+        }
+        return level.getServer().getPlayerList().getPlayer(coolantDrainLauncherUuid);
+    }
+
+    private void detonatePad(ServerLevel level, @Nullable Player launcher) {
+        double x = worldPosition.getX() + 0.5;
+        double y = worldPosition.getY() + 0.25;
+        double z = worldPosition.getZ() + 0.5;
+        level.explode(
+                launcher,
+                x,
+                y,
+                z,
+                FORCE_LAUNCH_EXPLOSION_POWER,
+                false,
+                Level.ExplosionInteraction.NONE
+        );
+        level.destroyBlock(worldPosition, true);
     }
 
     public void syncLaunchSnapshot(ServerLevel level) {
         refreshLaserPickList(level);
         markAndSync();
+    }
+
+    /** Mirror tank fill into block fluid level so the vanilla water surface tracks consumption. */
+    private void syncWaterloggedVisual() {
+        if (level == null || level.isClientSide()) {
+            return;
+        }
+        SatelliteLaunchPadBlock.syncWaterlogged(level, worldPosition, waterMb);
+    }
+
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        syncWaterloggedVisual();
     }
 
     private void markAndSync() {
@@ -328,6 +535,9 @@ public final class SatelliteLaunchPadBlockEntity extends BlockEntity
         super.saveAdditional(output);
         ContainerHelper.saveAllItems(output, items);
         output.putInt("energy_stored", energyStored);
+        output.putInt("water_mb", waterMb);
+        output.putInt("coolant_drain_ticks", coolantDrainTicksRemaining);
+        output.putInt("coolant_drain_mb", coolantDrainMbRemaining);
         output.putInt("selectable_laser_count", selectableLaserCount);
         output.putString("launch_feedback", launchFeedbackKey);
         if (connectedNodePos != null) {
@@ -335,6 +545,9 @@ public final class SatelliteLaunchPadBlockEntity extends BlockEntity
         }
         if (selectedLaserPos != null) {
             output.putLong("selected_laser_pos", selectedLaserPos.asLong());
+        }
+        if (coolantDrainLauncherUuid != null) {
+            output.putString("coolant_drain_launcher", coolantDrainLauncherUuid.toString());
         }
         saveOwner(output);
     }
@@ -345,6 +558,20 @@ public final class SatelliteLaunchPadBlockEntity extends BlockEntity
         items = NonNullList.withSize(getContainerSize(), ItemStack.EMPTY);
         ContainerHelper.loadAllItems(input, items);
         energyStored = input.getIntOr("energy_stored", 0);
+        waterMb = Math.clamp(input.getIntOr("water_mb", 0), 0, WATER_CAPACITY_MB);
+        coolantDrainTicksRemaining = Math.max(0, input.getIntOr("coolant_drain_ticks", 0));
+        coolantDrainMbRemaining = Math.max(0, input.getIntOr("coolant_drain_mb", 0));
+        coolantDrainLauncherUuid = null;
+        input.getString("coolant_drain_launcher").ifPresent(id -> {
+            try {
+                coolantDrainLauncherUuid = UUID.fromString(id);
+            } catch (IllegalArgumentException ignored) {
+                coolantDrainLauncherUuid = null;
+            }
+        });
+        if (coolantDrainTicksRemaining <= 0 || coolantDrainMbRemaining <= 0) {
+            clearCoolantDrain();
+        }
         selectableLaserCount = input.getIntOr("selectable_laser_count", 0);
         launchFeedbackKey = input.getString("launch_feedback").orElse("");
         connectedNodePos = null;
@@ -393,12 +620,17 @@ public final class SatelliteLaunchPadBlockEntity extends BlockEntity
 
     @Override
     public int getContainerSize() {
-        return 1;
+        return SLOT_COUNT;
     }
 
     @Override
     public boolean isEmpty() {
-        return items.get(0).isEmpty();
+        for (var stack : items) {
+            if (!stack.isEmpty()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
@@ -424,13 +656,33 @@ public final class SatelliteLaunchPadBlockEntity extends BlockEntity
     @Override
     public void setItem(int slot, ItemStack stack) {
         items.set(slot, stack);
-        if (stack.getCount() > getMaxStackSize()) {
-            stack.setCount(getMaxStackSize());
+        int max = maxStackForSlot(slot);
+        if (stack.getCount() > max) {
+            stack.setCount(max);
         }
         setChanged();
         if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
         }
+    }
+
+    @Override
+    public boolean canPlaceItem(int slot, ItemStack stack) {
+        return switch (slot) {
+            case SLOT_SATELLITE -> NetworkRelaySatelliteItem.isSatellite(stack);
+            case SLOT_OBSIDIAN -> stack.is(Items.OBSIDIAN);
+            case SLOT_TNT -> stack.is(Items.TNT);
+            default -> false;
+        };
+    }
+
+    private static int maxStackForSlot(int slot) {
+        return switch (slot) {
+            case SLOT_SATELLITE -> 16;
+            case SLOT_OBSIDIAN -> 1;
+            case SLOT_TNT -> TNT_REQUIRED;
+            default -> 64;
+        };
     }
 
     @Override

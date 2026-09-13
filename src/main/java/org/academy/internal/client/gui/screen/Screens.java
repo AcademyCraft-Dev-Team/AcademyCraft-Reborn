@@ -27,11 +27,10 @@ public final class Screens {
                     var pos = buf.readBlockPos();
                     if (Minecraft.getInstance().player != null) {
                         var inventory = Minecraft.getInstance().player.getInventory();
-                        var menuType = MenuTypes.WIND_GEN.get();
-                        var windGenMenu = menuType.create(containerId, inventory);
+                        var windGenMenu = MenuTypes.WIND_GEN.get().create(containerId, inventory);
                         var windGenScreen = WindGenScreen.Companion.create(windGenMenu, inventory, Component.literal(title), pos);
-                        if (windGenScreen != null && Minecraft.getInstance().player != null) {
-                            Minecraft.getInstance().player.containerMenu = windGenMenu;
+                        if (windGenScreen != null) {
+                            Minecraft.getInstance().player.containerMenu = windGenScreen.getMenu();
                         }
                         Minecraft.getInstance().gui.setScreen(windGenScreen);
                     }
@@ -49,10 +48,9 @@ public final class Screens {
                     if (Minecraft.getInstance().player != null) {
                         var inventory = Minecraft.getInstance().player.getInventory();
                         var menu = MenuTypes.NODE.get().create(containerId, inventory);
-                        Minecraft.getInstance().player.containerMenu = menu;
                         var screen = WirelessNodeScreen.Companion.create(menu, inventory, Component.literal(title), pos);
-                        if (screen != null && Minecraft.getInstance().player != null) {
-                            Minecraft.getInstance().player.containerMenu = menu;
+                        if (screen != null) {
+                            Minecraft.getInstance().player.containerMenu = screen.getMenu();
                         }
                         Minecraft.getInstance().gui.setScreen(screen);
                     }
@@ -65,8 +63,13 @@ public final class Screens {
                     if (Minecraft.getInstance().player != null) {
                         var inventory = Minecraft.getInstance().player.getInventory();
                         var menu = MenuTypes.OMNI_CRAFTING_TABLE.get().create(containerId, inventory);
-                        Minecraft.getInstance().player.containerMenu = menu;
-                        Minecraft.getInstance().gui.setScreen(new OmniCraftingTableScreen(menu, inventory, Component.literal(title), pos));
+                        var screen = OmniCraftingTableScreen.Companion.create(
+                                menu, inventory, Component.literal(title), pos
+                        );
+                        if (screen != null) {
+                            Minecraft.getInstance().player.containerMenu = screen.getMenu();
+                        }
+                        Minecraft.getInstance().gui.setScreen(screen);
                     }
                 });
         SCREEN_HANDLERS.put(SolarGenBlock.SOLAR_GEN_SCREEN,
@@ -76,11 +79,10 @@ public final class Screens {
                     var pos = buf.readBlockPos();
                     if (Minecraft.getInstance().player != null) {
                         var inventory = Minecraft.getInstance().player.getInventory();
-                        var menuType = MenuTypes.SOLAR_GEN.get();
-                        var windGenMenu = menuType.create(containerId, inventory);
-                        var screen = SolarGenScreen.Companion.create(windGenMenu, inventory, Component.literal(title), pos);
-                        if (screen != null && Minecraft.getInstance().player != null) {
-                            Minecraft.getInstance().player.containerMenu = windGenMenu;
+                        var factoryMenu = MenuTypes.SOLAR_GEN.get().create(containerId, inventory);
+                        var screen = SolarGenScreen.Companion.create(factoryMenu, inventory, Component.literal(title), pos);
+                        if (screen != null) {
+                            Minecraft.getInstance().player.containerMenu = screen.getMenu();
                         }
                         Minecraft.getInstance().gui.setScreen(screen);
                     }
@@ -129,7 +131,7 @@ public final class Screens {
                         var menu = MenuTypes.ENERGY_LASER_TOWER.get().create(containerId, inventory);
                         var screen = EnergyLaserTowerScreen.Companion.create(menu, inventory, Component.literal(title), pos);
                         if (screen != null) {
-                            Minecraft.getInstance().player.containerMenu = menu;
+                            Minecraft.getInstance().player.containerMenu = screen.getMenu();
                         }
                         Minecraft.getInstance().gui.setScreen(screen);
                     }

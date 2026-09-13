@@ -129,13 +129,18 @@ class SolarGenScreen private constructor(
             title: Component,
             mainPos: BlockPos
         ): SolarGenScreen? {
-            val level = Minecraft.getInstance().level
-            val entity = level?.getBlockEntity(mainPos)
-            return if (entity is SolarGenBlockEntity) {
-                SolarGenScreen(menu, playerInventory, title, entity)
-            } else {
-                null
+            val level = Minecraft.getInstance().level ?: return null
+            val entity = level.getBlockEntity(mainPos)
+            if (entity !is SolarGenBlockEntity) {
+                return null
             }
+            val boundMenu = SolarGenMenu(
+                menu.containerId,
+                playerInventory,
+                net.minecraft.world.inventory.ContainerLevelAccess.create(level, mainPos),
+                entity
+            )
+            return SolarGenScreen(boundMenu, playerInventory, title, entity)
         }
     }
 }

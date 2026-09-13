@@ -129,6 +129,7 @@ public final class VfxGraphRenderer {
      * 按 RenderSpec 缓存的管线（数据驱动，M21l）：着色器来自图数据，渲染器零着色器引用。
      */
     private final ConcurrentHashMap<RenderSpec, RenderPipeline> pipelines = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<RenderSpec, RenderPipeline> pipelinesNoDepth = new ConcurrentHashMap<>();
     private final GpuBuffer quadBuffer;
     private final GpuBuffer cubeBuffer;
     private final GpuBuffer cameraUbo;
@@ -242,7 +243,18 @@ public final class VfxGraphRenderer {
      * 渲染器不引用任何具体着色器 id；几何决定顶点缓冲/图元（结构性）。
      */
     private RenderPipeline pipelineFor(RenderSpec spec) {
-        return pipelines.computeIfAbsent(spec, s -> {
+        return pipelineFor(spec, false);
+    }
+
+    /**
+     * @param ignoreDepthTest when true, depth compare is ALWAYS (still no depth write). Used with
+     *                        {@link WorldTransform#ignoreSceneDepth()} so trail billboards are not
+     *                        discarded when the main depth attachment is near-cleared or stale at
+     *                        late world-compose time — soft-particle farView alone is not enough.
+     */
+    private RenderPipeline pipelineFor(RenderSpec spec, boolean ignoreDepthTest) {
+        var map = ignoreDepthTest ? pipelinesNoDepth : pipelines;
+        return map.computeIfAbsent(spec, s -> {
             // QUAD 采样噪声/深度（Sampler0/Sampler1）；ARC 走旧式管绑定组（GraphCamera + ArcLightning）
             var bindGroup = switch (s.geometry()) {
                 case QUAD -> NOISE_BIND_GROUP;
@@ -266,11 +278,12 @@ public final class VfxGraphRenderer {
                     ? PrimitiveTopology.TRIANGLES
                     : PrimitiveTopology.QUADS;
             // pipeline location 需是合法 Identifier（[a-z0-9/._-]）：用安全字段拼名，不用 record toString
-            var locationName = "vfx_graph_" + s.geometry().name().toLowerCase(Locale.ROOT)
+            var locationName = "vfx_graph_" + (ignoreDepthTest ? "nodepth_" : "")
+                    + s.geometry().name().toLowerCase(Locale.ROOT)
                     + "_" + s.blend().name().toLowerCase(Locale.ROOT)
                     + "_" + s.vertexShader().getPath() + "_" + s.fragmentShader().getPath();
             var pipeline = buildPipeline(locationName, s.vertexShader(), s.fragmentShader(),
-                    bindGroup, vertexFormat, instanceFormat, blend, topology);
+                    bindGroup, vertexFormat, instanceFormat, blend, topology, ignoreDepthTest);
             RenderSystem.getDevice().precompilePipeline(pipeline);
             return pipeline;
         });
@@ -287,7 +300,7 @@ public final class VfxGraphRenderer {
             var pipeline = buildPipeline(locationName, spec.vertexShader(), spec.fragmentShader(),
                     ARC_BIND_GROUP, ARC_TUBE_FORMAT, null,
                     bloomPass ? BlendFunction.ADDITIVE : BlendFunction.TRANSLUCENT,
-                    PrimitiveTopology.TRIANGLES);
+                    PrimitiveTopology.TRIANGLES, false);
             RenderSystem.getDevice().precompilePipeline(pipeline);
             return pipeline;
         });
@@ -301,7 +314,7 @@ public final class VfxGraphRenderer {
             surfacePipeline = buildPipeline("vfx_graph_surface",
                     R.shaders.core.vfxgraph_surface, R.shaders.core.vfxgraph_surface,
                     CAMERA_BIND_GROUP, SIMPLE_FORMAT, null,
-                    BlendFunction.TRANSLUCENT, PrimitiveTopology.TRIANGLES);
+                    BlendFunction.TRANSLUCENT, PrimitiveTopology.TRIANGLES, false);
             RenderSystem.getDevice().precompilePipeline(surfacePipeline);
         }
         return surfacePipeline;
@@ -321,7 +334,7 @@ public final class VfxGraphRenderer {
     private static RenderPipeline buildPipeline(
             String name, Identifier vs, Identifier fs,
             BindGroupLayout bindGroup, VertexFormat vertexFormat, VertexFormat instanceFormat,
-            BlendFunction blend, PrimitiveTopology topology
+            BlendFunction blend, PrimitiveTopology topology, boolean ignoreDepthTest
     ) {
         var builder = RenderPipeline.builder()
                 .withLocation(Identifier.fromNamespaceAndPath("academy", "pipeline/" + name))
@@ -330,8 +343,11 @@ public final class VfxGraphRenderer {
                 .withBindGroupLayout(bindGroup)
                 .withCull(false)
                 // 深度测试：与 Minecraft 主渲染一致的反向 Z（近=1.0/远=0.0，GEQUAL 通过），
-                // 粒子与场景正确遮挡（不写深度——半透明粒子彼此不遮挡）
-                .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
+                // 粒子与场景正确遮挡（不写深度——半透明粒子彼此不遮挡）。
+                // ignoreDepthTest：晚合成时深度附件可能已近清/失效，GEQUAL 会整批灭掉粒子。
+                .withDepthStencilState(new DepthStencilState(
+                        ignoreDepthTest ? CompareOp.ALWAYS_PASS : CompareOp.GREATER_THAN_OR_EQUAL,
+                        false))
                 .withColorTargetState(new ColorTargetState(blend))
                 .withPrimitiveTopology(topology)
                 .withVertexBinding(0, vertexFormat);
@@ -396,7 +412,7 @@ public final class VfxGraphRenderer {
         var preClearedDepth = false;
         // soft particles（仅 quad 系）：任一输出规格为 quad（billboard）才拷深度；Iris shader pack 下退回 farView。
         var anyBillboard = specs.stream().anyMatch(s -> s.geometry() == RenderSpec.Geometry.QUAD);
-        var useSceneDepth = anyBillboard && sceneDepthUsable(RenderSpec.Geometry.QUAD);
+        var useSceneDepth = anyBillboard && !transform.ignoreSceneDepth() && sceneDepthUsable(RenderSpec.Geometry.QUAD);
         if (useSceneDepth && depth != null) {
             if (clear) {
                 encoder.clearDepthTexture(depth.texture(), 0.0);
@@ -661,10 +677,11 @@ public final class VfxGraphRenderer {
         instanceData.flip();
         RenderSystem.getDevice().createCommandEncoder().writeToBuffer(instanceBuffer.slice(0, bytes), instanceData);
 
-        var depthView = sceneDepthUsable(spec.geometry())
+        var depthView = !transform.ignoreSceneDepth()
+                && sceneDepthUsable(spec.geometry())
                 && sceneDepth.view() != null ? sceneDepth.view() : farView;
         var billboard = spec.geometry() == RenderSpec.Geometry.QUAD;
-        drawInstancedPass(pass, pipelineFor(spec), shapeBuffer, cameraUbo.slice(),
+        drawInstancedPass(pass, pipelineFor(spec, transform.ignoreSceneDepth()), shapeBuffer, cameraUbo.slice(),
                 instanceBuffer.slice(0, bytes), matched, billboard, depthView, spec);
     }
 
@@ -757,7 +774,7 @@ public final class VfxGraphRenderer {
         lineData.flip();
         RenderSystem.getDevice().createCommandEncoder().writeToBuffer(lineBuffer.slice(0, neededBytes), lineData);
 
-        pass.setPipeline(pipelineFor(spec));
+        pass.setPipeline(pipelineFor(spec, transform.ignoreSceneDepth()));
         pass.setUniform("GraphCamera", cameraUbo.slice());
         pass.setVertexBuffer(0, lineBuffer.slice(0, neededBytes));
         // LINE/RIBBON 同样是单缓冲管线，清理前一个实例化输出留下的槽 1。

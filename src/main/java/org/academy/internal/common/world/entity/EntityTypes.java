@@ -122,7 +122,7 @@ public class EntityTypes {
     public static final DeferredHolder<EntityType<?>, EntityType<RelaySatelliteEntity>> RELAY_SATELLITE =
             ENTITY_TYPES.registerEntityType(
                     "relay_satellite", RelaySatelliteEntity::new, MobCategory.MISC,
-                    builder -> builder.sized(0.8f, 0.8f).clientTrackingRange(96).updateInterval(2));
+                    builder -> builder.sized(0.8f, 0.8f).clientTrackingRange(256).updateInterval(2));
     public static final DeferredHolder<EntityType<?>, EntityType<OrbitalStrikeProxyEntity>> ORBITAL_STRIKE_PROXY =
             ENTITY_TYPES.registerEntityType(
                     "orbital_strike_proxy", OrbitalStrikeProxyEntity::new, MobCategory.MISC,

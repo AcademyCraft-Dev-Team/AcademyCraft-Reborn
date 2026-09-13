@@ -180,18 +180,10 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
         )
 
         if (this.isRenderInventory) {
-            val originHeight = 187f
-            val currentHeight = invHeightSupplier()
-            val scaleY = currentHeight / originHeight
-            graphics.pose().pushMatrix()
-            graphics.pose().translate(0f, topPos.toFloat())
-            graphics.pose().scale(1f, scaleY)
-            graphics.pose().translate(0f, -topPos + invTranslationYSupplier())
-
+            // Slots use vanilla leftPos/topPos; do not offset by invPage.translationY — that
+            // value can be non-zero from page transitions and desync item icons from wells.
             extractContents(graphics, mouseX, mouseY, a)
             extractCarriedItem(graphics, mouseX, mouseY)
-
-            graphics.pose().popMatrix()
         }
         extractTooltip(graphics, mouseX, mouseY)
     }
