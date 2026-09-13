@@ -40,6 +40,9 @@ public class MixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
+        if (mixinClassName.endsWith(".MixinBetterEndWorldConfig")) {
+            org.academy.internal.coremod.WorldWeaverConfigTransformer.apply(targetClass);
+        }
         if (mixinClassName.endsWith(".MixinTrueHealthOffset")) org.academy.internal.coremod.HealthReadInliner.apply(targetClass);
     }
 }

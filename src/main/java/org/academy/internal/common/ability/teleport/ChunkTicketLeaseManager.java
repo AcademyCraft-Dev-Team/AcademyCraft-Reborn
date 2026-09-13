@@ -1,6 +1,7 @@
 package org.academy.internal.common.ability.teleport;
 
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ChunkResult;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
@@ -110,15 +111,53 @@ public final class ChunkTicketLeaseManager {
      */
     public static CompletableFuture<Void> acquireAndLoad(ServerLevel level, String owner, ChunkLeapRegion region) {
         var lease = acquire(level, owner, region, 1);
-        if (lease == null) return CompletableFuture.completedFuture(null);
+        if (lease == null) return CompletableFuture.failedFuture(
+                new IllegalArgumentException("Invalid chunk preload lease"));
         var futures = new CompletableFuture<?>[lease.chunks.size()];
-        for (var i = 0; i < lease.chunks.size(); i++) {
-            // Await the same radius ticket acquired above. Using radius zero here creates a second,
-            // untracked NO_TIMEOUT ticket which release(owner) can never remove.
-            futures[i] = level.getChunkSource()
-                    .addTicketAndLoadWithRadius(ChunkLeapTickets.MAP_VIEW.get(), lease.chunks.get(i), lease.radius);
+        CompletableFuture<Void> loading;
+        try {
+            for (var i = 0; i < lease.chunks.size(); i++) {
+                // Await the same radius ticket acquired above. Using radius zero here creates a second,
+                // untracked NO_TIMEOUT ticket which release(owner) can never remove.
+                futures[i] = level.getChunkSource()
+                        .addTicketAndLoadWithRadius(ChunkLeapTickets.MAP_VIEW.get(), lease.chunks.get(i), lease.radius);
+            }
+            loading = awaitLoads(futures);
+        } catch (RuntimeException exception) {
+            loading = CompletableFuture.failedFuture(exception);
         }
-        return CompletableFuture.allOf(futures).exceptionally(throwable -> null);
+        return loading.thenRunAsync(() -> {
+            for (var pos : lease.chunks) {
+                for (var dx = -lease.radius; dx <= lease.radius; dx++) {
+                    for (var dz = -lease.radius; dz <= lease.radius; dz++) {
+                        if (level.getChunkSource().getChunkNow(pos.x() + dx, pos.z() + dz) == null) {
+                            throw new IllegalStateException("Chunk preload is not resident in "
+                                    + level.dimension().identifier() + " at " + (pos.x() + dx) + "," + (pos.z() + dz));
+                        }
+                    }
+                }
+            }
+        }, level.getServer()).whenCompleteAsync((ignored, failure) -> {
+            if (failure != null) {
+                synchronized (ChunkTicketLeaseManager.class) {
+                    // An older load must not release a replacement request's tickets.
+                    if (LEASES.get(owner) == lease) release(owner);
+                }
+            }
+        }, level.getServer());
+    }
+
+    /** A completed future can still contain an unloaded ChunkResult rather than loaded chunks. */
+    static CompletableFuture<Void> awaitLoads(CompletableFuture<?>... loads) {
+        var checked = new CompletableFuture<?>[loads.length];
+        for (var i = 0; i < loads.length; i++) {
+            checked[i] = loads[i].thenAccept(result -> {
+                if (result instanceof ChunkResult<?> chunkResult && !chunkResult.isSuccess()) {
+                    throw new IllegalStateException("Chunk preload failed: " + chunkResult.getError());
+                }
+            });
+        }
+        return CompletableFuture.allOf(checked);
     }
 
     public static synchronized void release(String owner) {

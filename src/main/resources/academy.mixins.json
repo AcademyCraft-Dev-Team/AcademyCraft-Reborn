@@ -5,6 +5,8 @@
   "compatibilityLevel": "JAVA_25",
   "plugin": "org.academy.mixin.plugin.MixinPlugin",
   "mixins": [
+    "common.compat.MixinWorldWeaverWorldConfig",
+    "common.compat.MixinBetterEndWorldConfig",
     "common.MixinCommonHooksDamageComposition",
     "common.ItemCooldownsAccess",
     "common.CooldownInstanceAccess",
