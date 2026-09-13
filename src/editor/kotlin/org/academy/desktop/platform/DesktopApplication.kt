@@ -12,19 +12,12 @@ import com.mojang.blaze3d.systems.SurfaceException
 import net.minecraft.util.Util
 import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.text.font.MsdfFontService
-import org.academy.api.client.gui.widget.Widget
-import org.academy.api.client.gui.widget.WidgetContainer
 import org.academy.api.client.render.Render
 import org.lwjgl.glfw.GLFW
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.*
 
-/**
- * Boots Blaze3D standalone (GLFW window + OpenGL device) following the vanilla
- * bootstrap chain in `net.minecraft.client.Minecraft`, then hosts an [EditorApp]
- * on it. Reusable by any future desktop editor.
- */
 object DesktopApplication {
     private val LOGGER: Logger = LoggerFactory.getLogger(DesktopApplication::class.java)
 
@@ -36,7 +29,6 @@ object DesktopApplication {
         RenderSystem.initRenderThread()
         Util.setTimeSource(RenderSystem.initBackendSystem())
 
-        // 着色器优先从项目源目录读取（配合 ShaderHotReload 实现热重载）
         ClasspathShaderSource.sourceDir = environment.workingDir.resolve("src").resolve("main").resolve("resources")
 
         GLFW.glfwDefaultWindowHints()
@@ -62,9 +54,8 @@ object DesktopApplication {
         val device = window.backend().createDevice(
             window.handle(),
             ClasspathShaderSource::read,
-            GpuDebugOptions(0, false, false, false),
-            { }
-        )
+            GpuDebugOptions(0, false, false, false)
+        ) { }
         RenderSystem.initRenderer(device)
         val surface = device.createSurface(window.handle())
 
@@ -77,12 +68,9 @@ object DesktopApplication {
 
         GLFW.glfwShowWindow(window.handle())
 
-        val dumpLayout = System.getProperty("academy.desktop.dumpLayout") != null
-        var frameCount = 0L
         var lastNanos = Util.getNanos()
         var lastTitle: String? = null
         while (!window.shouldClose() && !app.quitRequested()) {
-            frameCount++
             val now = Util.getNanos()
             val partialTick = ((now - lastNanos).toFloat() / NANOS_PER_TICK).coerceIn(0f, 1f)
             lastNanos = now
@@ -93,13 +81,6 @@ object DesktopApplication {
             }
 
             RenderSystem.pollEvents()
-
-            if (dumpLayout && frameCount == 60L) {
-                System.out.println(
-                    "[layout-dump] screen=${window.screenWidth}x${window.screenHeight} framebuffer=${window.width}x${window.height} guiScale=${environment.guiScale} guiSize=${environment.guiScaledWidth}x${environment.guiScaledHeight}"
-                )
-                printTree(host.root, 0)
-            }
 
             if (host.surfaceNeedsReconfigure) {
                 host.surfaceNeedsReconfigure = false
@@ -145,19 +126,6 @@ object DesktopApplication {
     private fun configureSurface(surface: GpuSurface, window: Window) {
         val presentMode = GpuSurface.PresentMode.getSupportedVsyncMode(surface.supportedPresentModes(), true)
         surface.configure(GpuSurface.Configuration(window.width, window.height, presentMode))
-    }
-
-    private fun printTree(w: Widget, depth: Int) {
-        val sb = StringBuilder()
-        sb.append("  ".repeat(depth))
-        sb.append("'").append(w.name).append("' [").append(w.javaClass.simpleName).append("]")
-        sb.append(" x=").append(w.x).append(" y=").append(w.y)
-        sb.append(" w=").append(w.width).append(" h=").append(w.height)
-        sb.append(" vis=").append(w.visibility)
-        System.out.println(sb)
-        if (w is WidgetContainer) {
-            for (child in w.children.values) printTree(child, depth + 1)
-        }
     }
 
     private fun precompilePipelines(device: GpuDevice) {

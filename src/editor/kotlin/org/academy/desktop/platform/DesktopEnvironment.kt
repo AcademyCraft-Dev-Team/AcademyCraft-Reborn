@@ -2,7 +2,6 @@ package org.academy.desktop.platform
 
 import com.mojang.blaze3d.textures.GpuTextureView
 import net.minecraft.resources.Identifier
-import org.academy.AcademyCraft
 import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.texture.IdentifierTextureSource
 import org.academy.api.client.gui.texture.TextureSource
@@ -78,7 +77,4 @@ class DesktopEnvironment(
         DesktopTextures.register(identifier, bytes)
         return IdentifierTextureSource(identifier, this)
     }
-
-    override fun layoutDir(): Path = workingDir.resolve("src").resolve("main").resolve("resources")
-        .resolve("assets").resolve(AcademyCraft.MOD_ID).resolve("ui").resolve("layout")
 }

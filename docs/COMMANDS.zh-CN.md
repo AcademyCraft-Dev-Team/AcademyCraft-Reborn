@@ -20,7 +20,7 @@
 客户端命令在本地执行，不要求服务端管理员权限：
 
 - `/academy debug skillgui ...` 在普通客户端和开发客户端中都会注册。
-- `/academy debug ui ...`、`/academy debug hud`、`/academy debug save` 和 `/academy uieditor ...` 只会在 ImGui 可用且环境变量 `IS_DEV=true` 时注册，通常通过 `runClientDev` 使用。
+- `/academy debug imgui [on|off|toggle]` 在支持 ImGui 的构建中注册（`Dev.HAS_IM_GUI`），用于开关运行时控件检查器。
 
 ## 命令总览
 
@@ -45,9 +45,7 @@
 │  ├─ skillgui [on|off|toggle|reset|export]                 （客户端）
 │  ├─ textdump <px> <text>                                 （客户端）
 │  ├─ atlasdump [all|bitmap|msdf]                          （客户端）
-│  ├─ ui [<layout>]                                        （仅开发客户端）
-│  ├─ hud                                                  （仅开发客户端）
-│  └─ save                                                 （仅开发客户端）
+│  └─ imgui [on|off|toggle]                                （客户端，仅支持 ImGui 的构建）
 ├─ dev <state>
 ├─ ability_exp
 │  ├─ get [<target>]
@@ -62,10 +60,9 @@
 │  ├─ reset
 │  ├─ snapshot
 │  └─ dump
-├─ vectorcompat
-│  ├─ inspect
-│  └─ mode [strict|safe|aggressive]
-└─ uieditor [<layout>]                                     （仅开发客户端）
+└─ vectorcompat
+   ├─ inspect
+   └─ mode [strict|safe|aggressive]
 ```
 
 ## P.R.O.P.S
@@ -204,17 +201,7 @@
 
 导出目录为 `<gameDir>/academy/debug`：位图页命名 `bitmap_atlas_page<页码>.png`，MSDF 页命名 `msdf_<字体命名空间>_<字体路径>_page<页码>_0.png`。图集不存在时（尚未绘制过对应文本）会在命令反馈中说明，不会强制创建。整页导出保留字形槽位、gutter 与空白区域，便于直接观察排布。
 
-## 开发客户端 UI 调试
+## UI 控件检查器
 
-以下命令只在 ImGui 可用且 `IS_DEV=true` 时注册。
+`/academy debug imgui [on|off|toggle]` 在支持 ImGui 的构建中开关运行时控件检查器，可查看当前界面的控件树、布局参数与状态。UI 布局已改为 Kotlin DSL 构建，不再有 JSON 布局文件或独立布局编辑器。
 
-| 命令 | 作用 |
-| --- | --- |
-| `/academy debug ui` | 打开已注册 GUI 布局的调试浏览器。 |
-| `/academy debug ui <layout>` | 按布局 ID 直接打开指定 GUI 布局编辑器；输入时会补全已注册的 GUI 布局。 |
-| `/academy debug hud` | 打开四区域能力 HUD 预览。 |
-| `/academy debug save` | 发布当前会话中全部已修改的布局。 |
-| `/academy uieditor` | 打开 GUI 布局调试浏览器，是兼容入口。 |
-| `/academy uieditor <layout>` | 按布局 ID 打开布局编辑器，可补全全部已注册布局。 |
-
-布局发布位置、备份策略和实时挂接方法参见 [RunClientDev UI Debug Workflow](UI_DEBUG_WORKFLOW.md)。
