@@ -22,9 +22,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Server-authoritative lifecycle data for client-side field visuals.
- */
 @PacketTarget(ThreadType.CLIENT)
 public final class AeromanipFieldSyncPacket extends Packet<ClientPacketListener, AeromanipFieldSyncPacket> {
     public static final StreamCodec<ByteBuf, AeromanipFieldSyncPacket> CODEC = StreamCodec.of(
@@ -103,8 +100,8 @@ public final class AeromanipFieldSyncPacket extends Packet<ClientPacketListener,
     }
 
     public AirflowField toField() {
-        var safeType = Math.max(0, Math.min(AirflowField.Type.values().length - 1, type));
-        var safeShape = Math.max(0, Math.min(AirflowField.Shape.values().length - 1, shape));
+        var safeType = Math.clamp(type, 0, AirflowField.Type.values().length - 1);
+        var safeShape = Math.clamp(shape, 0, AirflowField.Shape.values().length - 1);
         return new AirflowField(fieldId, ownerId,
                 ResourceKey.create(Registries.DIMENSION, Identifier.parse(dimension)),
                 AirflowField.Type.values()[safeType], AirflowField.Shape.values()[safeShape],

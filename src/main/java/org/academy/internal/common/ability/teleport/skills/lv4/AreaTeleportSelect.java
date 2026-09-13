@@ -278,7 +278,7 @@ public final class AreaTeleportSelect extends Skill {
                     }
                 },
                 buf -> {
-                    var count = Math.min(3, Math.max(0, ByteBufCodecs.VAR_INT.decode(buf)));
+                    var count = Math.clamp(ByteBufCodecs.VAR_INT.decode(buf), 0, 3);
                     var previews = new ArrayList<Preview>(count);
                     for (var i = 0; i < count; i++) {
                         previews.add(new Preview(ByteBufCodecs.STRING_UTF8.decode(buf),

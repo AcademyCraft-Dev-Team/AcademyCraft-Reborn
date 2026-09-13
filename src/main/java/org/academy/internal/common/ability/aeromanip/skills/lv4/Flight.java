@@ -43,7 +43,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
-/** Toggleable Lv4 creative flight with speed progression at every proficiency milestone. */
 public final class Flight extends Skill {
     private static final Identifier FLIGHT_SOURCE = AcademyCraft.academy(SkillNames.FLIGHT);
     private static final float DEFAULT_FLYING_SPEED = 0.05f;
@@ -62,7 +61,7 @@ public final class Flight extends Skill {
     }
 
     static float flyingSpeed(int milestone) {
-        return switch (Math.max(0, Math.min(3, milestone))) {
+        return switch (Math.clamp(milestone, 0, 3)) {
             case 0 -> 0.035f;
             case 1 -> 0.05f;
             case 2 -> 0.065f;

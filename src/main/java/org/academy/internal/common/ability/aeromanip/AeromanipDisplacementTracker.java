@@ -19,7 +19,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/** Tracks refreshable Turbulent Cavitation marks and resolves their batched damage. */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class AeromanipDisplacementTracker {
     static final int MARK_DURATION_TICKS = 100;
@@ -45,11 +44,6 @@ public final class AeromanipDisplacementTracker {
         mark(owner, target, velocity, velocity);
     }
 
-    /**
-     * Applies or refreshes a five-second mark after an Aeromanipulation movement operation.
-     * The before/after velocities retain enough information to measure a block-obstructed push
-     * on the target's next entity tick.
-     */
     public static void mark(
             ServerPlayer owner,
             Entity target,
@@ -99,8 +93,7 @@ public final class AeromanipDisplacementTracker {
     static int armorWearForDistance(double distance, int milestone) {
         if (!Double.isFinite(distance) || distance <= 0.0) return 0;
         var perBlock = milestone >= 2 ? 18.0 : 12.0;
-        return Math.min(milestone >= 3 ? 64 : 40,
-                Math.max(1, (int) Math.ceil(distance * perBlock)));
+        return Math.clamp((int) Math.ceil(distance * perBlock), 1, milestone >= 3 ? 64 : 40);
     }
 
     static double collisionSpeed(
@@ -168,14 +161,12 @@ public final class AeromanipDisplacementTracker {
         ticket.nextSettlementAt = now + SETTLEMENT_INTERVAL_TICKS;
     }
 
-    /** Keeps travel below one damage step between settlements, discarding capped excess damage. */
     static double distanceRemainder(double distance) {
         if (!Double.isFinite(distance) || distance <= 0.0) return 0.0;
         return Math.clamp(distance - Math.floor((distance + 1.0e-9) / DISTANCE_PER_DAMAGE_STEP)
                 * DISTANCE_PER_DAMAGE_STEP, 0.0, DISTANCE_PER_DAMAGE_STEP);
     }
 
-    /** Damage and impact feedback share the same successful-hit result. */
     public static boolean applyHit(ServerPlayer owner, LivingEntity target, float baseDamage, boolean collision) {
         if (owner == null || target == null || owner.level() != target.level()
                 || !Float.isFinite(baseDamage) || baseDamage <= 0.0f

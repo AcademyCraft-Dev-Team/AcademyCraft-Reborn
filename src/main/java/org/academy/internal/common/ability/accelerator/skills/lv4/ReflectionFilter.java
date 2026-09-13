@@ -95,8 +95,6 @@ public final class ReflectionFilter extends Skill {
 
     public static boolean shouldAcceptEffect(ServerPlayer player, MobEffectInstance effect) {
         if (player == null) return shouldAcceptEffect(new Data(), effect);
-        // Consumable effects run inside the user's explicit source context. They are voluntary,
-        // so the external-effect filter must not reflect them back at the player.
         if (EntityMotionGuard.currentMotionSourceEntity() == player) return true;
         var filter = Skills.REFLECTION_FILTER.get();
         if (!filter.isEnabled(player)) return shouldAcceptEffect(new Data(), effect);
@@ -597,15 +595,15 @@ public final class ReflectionFilter extends Skill {
             middleColumnLayout = SerializedUiLayout.INSTANCE.require(layout, "middle_column");
             rightColumnLayout = SerializedUiLayout.INSTANCE.require(layout, "right_column");
 
-            panelW = Math.min(PREFERRED_W, Math.max(MIN_W, width - 24));
+            panelW = Math.clamp(width - 24, MIN_W, PREFERRED_W);
             panelW = Math.min(panelW, width - 12);
-            panelH = Math.min(PREFERRED_H, Math.max(MIN_H, height - 24));
+            panelH = Math.clamp(height - 24, MIN_H, PREFERRED_H);
             panelH = Math.min(panelH, height - 12);
             panelX = (width - panelW) / 2;
             panelY = (height - panelH) / 2;
 
             var columnsW = Math.max(1, panelW - INNER_PAD * 2 - MIDDLE_W - COLUMN_GAP * 2);
-            leftW = Math.min(170, Math.max(140, (int) (columnsW * 0.4f)));
+            leftW = Math.clamp((int) (columnsW * 0.4f), 140, 170);
             if (columnsW - leftW < 196) leftW = Math.max(120, columnsW - 196);
             rightW = Math.max(1, columnsW - leftW);
             leftX = panelX + INNER_PAD;
@@ -662,7 +660,7 @@ public final class ReflectionFilter extends Skill {
                     .size(fallbackWidth - 14, 1).margin(7, 24, 7, 0));
             panel.addChild("title_divider", titleDivider);
             var columnsW = fallbackWidth - INNER_PAD * 2 - MIDDLE_W - COLUMN_GAP * 2;
-            var leftWidth = Math.min(170, Math.max(120, (int) (columnsW * 0.4f)));
+            var leftWidth = Math.clamp((int) (columnsW * 0.4f), 120, 170);
             var rightWidth = Math.max(1, columnsW - leftWidth);
             addLayoutSlot(panel, "left_column", INNER_PAD, 30, leftWidth, fallbackHeight - 30);
             addLayoutSlot(panel, "middle_column", INNER_PAD + leftWidth + COLUMN_GAP,

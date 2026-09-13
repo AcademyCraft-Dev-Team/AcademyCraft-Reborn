@@ -4,16 +4,9 @@ import org.academy.api.client.gui.command.TextBlobDrawCommand
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.render.Canvas
 
-/**
- * 可复用的文本块绘制器：在控件局部坐标 [originX]/[originY] 处向 [Canvas] 记录一条
- * 设备无关的 [TextBlobDrawCommand]，并统一计算 gravity + padding 对齐。
- *
- * 每个使用方持有一个实例（内部复用同一条命令），[TextWidget] 与 [TextInputWidget] 共用。
- */
 class TextPainter {
     private val blobCommand = TextBlobDrawCommand()
 
-    /** 按显式字号与颜色分量绘制；[shaping] 携带影响布局的样式参数。 */
     fun draw(
         context: Canvas,
         text: CharSequence,
@@ -55,7 +48,6 @@ class TextPainter {
     }
 
     companion object {
-        /** 依据 gravity 在可用区域内居中/贴边，并叠加 [paddingLeft]/[paddingTop]。 */
         fun blockOrigin(
             availableWidth: Float,
             availableHeight: Float,

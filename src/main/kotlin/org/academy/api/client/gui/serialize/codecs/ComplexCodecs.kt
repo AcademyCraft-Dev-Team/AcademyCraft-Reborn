@@ -7,6 +7,24 @@ import org.academy.api.client.gui.serialize.PropType
 import org.academy.api.client.gui.serialize.WidgetCodec
 import org.academy.api.client.gui.widget.*
 
+private fun JsonObject.encodeProgressBarProps(widget: ProgressBarWidget) {
+    addProperty("min", widget.min)
+    addProperty("max", widget.max)
+    addProperty("progress", widget.progress)
+    addProperty("background_color", widget.backgroundColor)
+    addProperty("progress_color", widget.progressColor)
+    addProperty("orientation", widget.orientation.name)
+}
+
+private fun JsonObject.decodeProgressBarProps(widget: ProgressBarWidget) {
+    get("min")?.asFloat?.let { widget.setMin(it) }
+    get("max")?.asFloat?.let { widget.setMax(it) }
+    get("progress")?.asFloat?.let { widget.setProgress(it) }
+    get("background_color")?.asInt?.let { widget.setBackgroundColor(it) }
+    get("progress_color")?.asInt?.let { widget.setProgressColor(it) }
+    get("orientation")?.asString?.let { widget.setOrientation(Orientation.valueOf(it)) }
+}
+
 class ProgressBarCodec : WidgetCodec<ProgressBarWidget> {
     override val typeName = "progress_bar"
     override val widgetClass = ProgressBarWidget::class.java
@@ -14,21 +32,11 @@ class ProgressBarCodec : WidgetCodec<ProgressBarWidget> {
     override fun create(props: JsonObject) = ProgressBarWidget()
 
     override fun encodeProps(widget: ProgressBarWidget) = JsonObject().apply {
-        addProperty("min", widget.min)
-        addProperty("max", widget.max)
-        addProperty("progress", widget.progress)
-        addProperty("background_color", widget.backgroundColor)
-        addProperty("progress_color", widget.progressColor)
-        addProperty("orientation", widget.orientation.name)
+        encodeProgressBarProps(widget)
     }
 
     override fun decodeProps(widget: ProgressBarWidget, props: JsonObject) {
-        props.get("min")?.asFloat?.let { widget.setMin(it) }
-        props.get("max")?.asFloat?.let { widget.setMax(it) }
-        props.get("progress")?.asFloat?.let { widget.setProgress(it) }
-        props.get("background_color")?.asInt?.let { widget.setBackgroundColor(it) }
-        props.get("progress_color")?.asInt?.let { widget.setProgressColor(it) }
-        props.get("orientation")?.asString?.let { widget.setOrientation(Orientation.valueOf(it)) }
+        props.decodeProgressBarProps(widget)
     }
 
     override val propertySchema = listOf(
@@ -48,22 +56,12 @@ class SeekBarCodec : WidgetCodec<SeekBarWidget> {
     override fun create(props: JsonObject) = SeekBarWidget()
 
     override fun encodeProps(widget: SeekBarWidget) = JsonObject().apply {
-        addProperty("min", widget.min)
-        addProperty("max", widget.max)
-        addProperty("progress", widget.progress)
-        addProperty("background_color", widget.backgroundColor)
-        addProperty("progress_color", widget.progressColor)
-        addProperty("orientation", widget.orientation.name)
+        encodeProgressBarProps(widget)
         addProperty("key_progress_increment", widget.keyProgressIncrement)
     }
 
     override fun decodeProps(widget: SeekBarWidget, props: JsonObject) {
-        props.get("min")?.asFloat?.let { widget.setMin(it) }
-        props.get("max")?.asFloat?.let { widget.setMax(it) }
-        props.get("progress")?.asFloat?.let { widget.setProgress(it) }
-        props.get("background_color")?.asInt?.let { widget.setBackgroundColor(it) }
-        props.get("progress_color")?.asInt?.let { widget.setProgressColor(it) }
-        props.get("orientation")?.asString?.let { widget.setOrientation(Orientation.valueOf(it)) }
+        props.decodeProgressBarProps(widget)
         props.get("key_progress_increment")?.asInt?.let { widget.setKeyProgressIncrement(it) }
     }
 
@@ -132,9 +130,6 @@ class ScrollBarCodec : WidgetCodec<ScrollBarWidget> {
     override val typeName = "scroll_bar"
     override val widgetClass = ScrollBarWidget::class.java
 
-    /**
-     * panel 不参与序列化, 反序列化后需由调用方手动绑定.
-     */
     override fun create(props: JsonObject): ScrollBarWidget {
         val orientation = props.get("orientation")?.asString?.let { Orientation.valueOf(it) }
             ?: Orientation.VERTICAL

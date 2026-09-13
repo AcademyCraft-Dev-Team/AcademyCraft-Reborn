@@ -89,7 +89,7 @@ class PlaylistManager {
     }
 
     fun getPlaylist(): MutableList<MusicInfo> {
-        return Collections.unmodifiableList(playlist)
+        return ArrayList(playlist)
     }
 
     fun getCurrentTrackIndex(): Int {
@@ -102,7 +102,7 @@ class PlaylistManager {
             val newShuffleIndex = shuffledPlaylist.indexOf(currentTrackIndex)
             if (newShuffleIndex != -1) {
                 shuffleIndex = newShuffleIndex
-            } else if (!shuffledPlaylist.isEmpty()) generateShuffledPlaylist()
+            } else if (shuffledPlaylist.isNotEmpty()) generateShuffledPlaylist()
         }
     }
 }

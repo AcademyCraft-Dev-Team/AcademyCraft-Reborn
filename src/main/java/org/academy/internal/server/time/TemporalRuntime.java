@@ -54,13 +54,6 @@ import java.util.UUID;
 import java.util.WeakHashMap;
 import java.util.function.BiConsumer;
 
-/**
- * Server-owned temporal state and anti-freeze heartbeat.
- *
- * <p>The heartbeat deliberately does not depend on {@code TickRateManager}.
- * It detects protected root entities whose normal tick did not advance and
- * supplies the missing tick from the server, level, or wall-clock boundary.</p>
- */
 public final class TemporalRuntime implements TemporalService {
     private static final StackWalker STATE_STACK_WALKER = StackWalker.getInstance(
             StackWalker.Option.RETAIN_CLASS_REFERENCE
@@ -215,7 +208,6 @@ public final class TemporalRuntime implements TemporalService {
         return resolveScale(level.dimension(), center, null, channel);
     }
 
-    /** Captures a read-only operator snapshot for {@code /academy debug tick}. */
     public TemporalTickDiagnostics debugSnapshot(
             ServerLevel level,
             BlockPos position,
@@ -329,7 +321,6 @@ public final class TemporalRuntime implements TemporalService {
         );
     }
 
-    /** Adds one operator-owned field for tick-system validation. */
     public UUID addDebugField(TemporalField field) {
         requireAcademyStateCaller("addDebugField");
         requireServerThread();
@@ -339,7 +330,6 @@ public final class TemporalRuntime implements TemporalService {
         return lease.fieldId();
     }
 
-    /** Removes one field created by the tick debugger. */
     public boolean removeDebugField(UUID fieldId) {
         requireAcademyStateCaller("removeDebugField");
         requireServerThread();
@@ -349,7 +339,6 @@ public final class TemporalRuntime implements TemporalService {
         return true;
     }
 
-    /** Removes every field created by the tick debugger. */
     public int clearDebugFields() {
         requireAcademyStateCaller("clearDebugFields");
         requireServerThread();
@@ -359,7 +348,6 @@ public final class TemporalRuntime implements TemporalService {
         return leases.size();
     }
 
-    /** Adds one removable immunity contribution to every selected entity. */
     public UUID addDebugImmunity(
             Collection<? extends Entity> entities,
             Set<TemporalPauseSource> sources
@@ -405,7 +393,6 @@ public final class TemporalRuntime implements TemporalService {
         return controlId;
     }
 
-    /** Removes one grouped immunity contribution created by the debugger. */
     public boolean removeDebugImmunity(UUID controlId) {
         requireAcademyStateCaller("removeDebugImmunity");
         requireServerThread();
@@ -415,7 +402,6 @@ public final class TemporalRuntime implements TemporalService {
         return true;
     }
 
-    /** Removes every immunity contribution created by the debugger. */
     public int clearDebugImmunities() {
         requireAcademyStateCaller("clearDebugImmunities");
         requireServerThread();
@@ -427,7 +413,6 @@ public final class TemporalRuntime implements TemporalService {
         return groups.size();
     }
 
-    /** Clears all command-owned temporal test state. */
     public int clearDebugControls() {
         requireAcademyStateCaller("clearDebugControls");
         requireServerThread();
@@ -469,10 +454,6 @@ public final class TemporalRuntime implements TemporalService {
         return transientImmunities.hasAny(entityId) || savedData.hasAny(entityId);
     }
 
-    /**
-     * Dispatches zero or more complete root-entity ticks for one server pass.
-     * Returns true when the injected outer invocation must be cancelled.
-     */
     public boolean dispatchEntityTicks(ServerLevel level, Entity entity) {
         requireHookCaller("dispatchEntityTicks", ServerLevel.class);
         requireServerThread();
@@ -504,11 +485,6 @@ public final class TemporalRuntime implements TemporalService {
         return true;
     }
 
-    /**
-     * Runs only the authoritative player simulation portion of the connection
-     * tick. Network transport, keepalive, throttlers, movement bookkeeping and
-     * disconnect checks deliberately remain on the physical server clock.
-     */
     public void dispatchPlayerSimulationTicks(
             ServerPlayer player,
             Runnable vanillaPlayerTick
@@ -529,7 +505,6 @@ public final class TemporalRuntime implements TemporalService {
         }
     }
 
-    /** Whether gameplay actions may execute in this physical tick. Transport remains unscaled. */
     public boolean isPlayerActionTick(ServerPlayer player) {
         requireServerThread();
         if (stopped || player.level().getServer() != server) return true;
@@ -537,7 +512,6 @@ public final class TemporalRuntime implements TemporalService {
         return scale > 0.0D && (scale >= 1.0D || playerTickPlan(player).logicalTicks() > 0);
     }
 
-    /** Server-authoritative hard-pause check used by packet action guards. */
     public boolean isPlayerSimulationPaused(ServerPlayer player) {
         requireServerThread();
         return !stopped
@@ -545,7 +519,6 @@ public final class TemporalRuntime implements TemporalService {
                 && effectiveScale(player, TemporalChannel.ENTITY) == 0.0D;
     }
 
-    /** Runs a block-entity ticker according to its effective local scale. */
     public void dispatchBlockEntityTicks(
             ServerLevel level,
             TickingBlockEntity ticker
@@ -572,10 +545,6 @@ public final class TemporalRuntime implements TemporalService {
         }
     }
 
-    /**
-     * Dispatches the protected level clock according to its level-wide scale.
-     * Returns true when the injected outer invocation must be cancelled.
-     */
     public boolean dispatchLevelClockTicks(
             ServerLevel level,
             Runnable vanillaTickTime
@@ -609,7 +578,6 @@ public final class TemporalRuntime implements TemporalService {
         return true;
     }
 
-    /** Runs the vanilla save-global clock manager without stopping I/O. */
     public void dispatchServerClockTicks(Runnable vanillaClockTick) {
         requireHookCaller("dispatchServerClockTicks", MinecraftServer.class);
         requireServerThread();
@@ -627,10 +595,6 @@ public final class TemporalRuntime implements TemporalService {
         }
     }
 
-    /**
-     * Advances one owner-bound Academy program session at its local rate.
-     * The scheduler owns its logical age, so physical pauses cannot expire it.
-     */
     public void dispatchAcademySchedulerTicks(
             UUID ownerId,
             UUID sessionId,
@@ -661,7 +625,6 @@ public final class TemporalRuntime implements TemporalService {
         }
     }
 
-    /** Runs the dimension weather state machine at its effective level rate. */
     public void dispatchWeatherTicks(
             ServerLevel level,
             Runnable vanillaWeatherTick
@@ -675,7 +638,6 @@ public final class TemporalRuntime implements TemporalService {
         );
     }
 
-    /** Runs one dimension's world-border interpolation at its local rate. */
     public void dispatchWorldBorderTicks(
             ServerLevel level,
             Runnable vanillaWorldBorderTick
@@ -689,7 +651,6 @@ public final class TemporalRuntime implements TemporalService {
         );
     }
 
-    /** Scales one selected rain, snow, or ice update at its exact position. */
     public void dispatchPrecipitationTicks(
             ServerLevel level,
             BlockPos position,
@@ -704,7 +665,6 @@ public final class TemporalRuntime implements TemporalService {
         );
     }
 
-    /** Scales one chunk-local lightning attempt without pausing chunk I/O. */
     public void dispatchThunderTicks(
             ServerLevel level,
             BlockPos chunkCenter,
@@ -719,7 +679,6 @@ public final class TemporalRuntime implements TemporalService {
         );
     }
 
-    /** Scales one natural-spawn category attempt at its selected position. */
     public void dispatchNaturalSpawningTicks(
             ServerLevel level,
             BlockPos position,
@@ -737,7 +696,6 @@ public final class TemporalRuntime implements TemporalService {
         );
     }
 
-    /** Runs dimension-wide custom spawners at their logical rate. */
     public boolean dispatchCustomSpawnerTicks(
             ServerLevel level,
             Runnable vanillaSpawnerTick
@@ -769,7 +727,6 @@ public final class TemporalRuntime implements TemporalService {
         return true;
     }
 
-    /** Runs the End dragon-fight state machine at its dimension rate. */
     public void dispatchDragonFightTicks(
             ServerLevel level,
             Runnable vanillaDragonFightTick
@@ -783,7 +740,6 @@ public final class TemporalRuntime implements TemporalService {
         );
     }
 
-    /** Runs the dimension raid manager at the same effective level rate. */
     public void dispatchRaidTicks(
             ServerLevel level,
             Runnable vanillaRaidTick
@@ -797,10 +753,6 @@ public final class TemporalRuntime implements TemporalService {
         );
     }
 
-    /**
-     * Defers a one-shot block event until its local temporal credit reaches
-     * one logical invocation. Events are never duplicated by acceleration.
-     */
     public boolean deferBlockEvent(
             ServerLevel level,
             BlockEventData eventData
@@ -828,7 +780,6 @@ public final class TemporalRuntime implements TemporalService {
         return logicalTicks(blockEventAccumulators, key, scale) == 0;
     }
 
-    /** Wraps one vanilla scheduled-tick queue pass with safe rebasing. */
     public <T> void dispatchScheduledQueue(
             ServerLevel level,
             LevelTicks<T> queue,
@@ -859,10 +810,6 @@ public final class TemporalRuntime implements TemporalService {
         }
     }
 
-    /**
-     * Rewrites a newly requested block/fluid delay into physical level ticks.
-     * Called only from the protected {@link LevelAccessor#createTick} hook.
-     */
     public int scaleScheduledDelay(
             ServerLevel level,
             BlockPos position,
@@ -901,10 +848,6 @@ public final class TemporalRuntime implements TemporalService {
         return TemporalScheduledTickMath.scaleNewDelay(delay, relativeScale);
     }
 
-    /**
-     * Prevents a collected tick from entering the callback queue while its
-     * local temporal channel is hard-paused.
-     */
     public static <T> boolean deferScheduledTickIfPaused(
             LevelTicks<T> queue,
             ScheduledTick<T> tick
@@ -920,7 +863,6 @@ public final class TemporalRuntime implements TemporalService {
         return binding.runtime.deferScheduledTick(binding, tick);
     }
 
-    /** Dispatches one selected block random tick at its local temporal rate. */
     public void dispatchRandomBlockTick(
             BlockState originalState,
             ServerLevel level,
@@ -945,7 +887,6 @@ public final class TemporalRuntime implements TemporalService {
         }
     }
 
-    /** Dispatches one selected fluid random tick at its local temporal rate. */
     public void dispatchRandomFluidTick(
             FluidState originalState,
             ServerLevel level,
@@ -970,7 +911,6 @@ public final class TemporalRuntime implements TemporalService {
         }
     }
 
-    /** Internal persistence boundary for ability-state reconciliation. */
     public void setPersistentImmunity(
             Entity entity,
             Set<TemporalPauseSource> sources,
@@ -992,7 +932,6 @@ public final class TemporalRuntime implements TemporalService {
         }
     }
 
-    /** Immutable, full transport snapshot used by the client temporal runtime. */
     public ClientStateSnapshot clientStateSnapshot() {
         requireServerThread();
         return new ClientStateSnapshot(
@@ -1028,7 +967,6 @@ public final class TemporalRuntime implements TemporalService {
         return Map.copyOf(scales);
     }
 
-    /** Captures the independent server heartbeat before vanilla child ticking. */
     public void beginServerHeartbeat() {
         requireHookCaller("beginServerHeartbeat", MinecraftServer.class);
         requireServerThread();
@@ -1049,7 +987,6 @@ public final class TemporalRuntime implements TemporalService {
         }
     }
 
-    /** Supplies one missing tick after vanilla child ticking. */
     public void finishServerHeartbeat() {
         requireHookCaller("finishServerHeartbeat", MinecraftServer.class);
         requireServerThread();
@@ -1060,7 +997,6 @@ public final class TemporalRuntime implements TemporalService {
         runFallbacks(null, serverTickSnapshots, ForcedTickReason.SERVER_HEARTBEAT, true);
     }
 
-    /** Captures protected entities belonging to one level before it ticks. */
     public void beginLevelTick(ServerLevel level) {
         requireHookCaller("beginLevelTick", ServerLevel.class);
         requireServerThread();
@@ -1073,7 +1009,6 @@ public final class TemporalRuntime implements TemporalService {
         snapshotTrackedEntities(level, snapshots);
     }
 
-    /** Supplies one missing tick at the level boundary. */
     public void finishLevelTick(ServerLevel level) {
         requireHookCaller("finishLevelTick", ServerLevel.class);
         requireServerThread();
@@ -1086,10 +1021,6 @@ public final class TemporalRuntime implements TemporalService {
         runFallbacks(level, snapshots, ForcedTickReason.SERVER_LEVEL, true);
     }
 
-    /**
-     * Starts the high-priority {@link Level#guardEntityTick} bypass.
-     * A per-thread identity stack prevents recursive entry for the same entity.
-     */
     public boolean tryEnterGuardBypass(Level level, Entity entity) {
         if (stopped || level.isClientSide() || entity.isPassenger()) return false;
         if (level.getServer() != server || !isTimeStopImmune(entity)) return false;
@@ -1105,10 +1036,6 @@ public final class TemporalRuntime implements TemporalService {
         if (inProgress.isEmpty()) guardBypassStack.remove();
     }
 
-    /**
-     * Uses elapsed wall time to keep immunity alive even if a foreign time stop
-     * suppresses the ordinary server or level tick method entirely.
-     */
     public void compensateWallClockDebt() {
         requireHookCaller("compensateWallClockDebt", MinecraftServer.class);
         requireServerThread();
@@ -1234,7 +1161,7 @@ public final class TemporalRuntime implements TemporalService {
     }
 
     private static int clampDiagnosticCount(long value) {
-        return (int) Math.min(Integer.MAX_VALUE, Math.max(0L, value));
+        return (int) Math.clamp(value, 0L, Integer.MAX_VALUE);
     }
 
     private static String describeScope(TemporalScope scope) {
@@ -1621,7 +1548,6 @@ public final class TemporalRuntime implements TemporalService {
             if (field.channels().contains(TemporalChannel.ACADEMY_SCHEDULER)) {
                 academySchedulerAccumulators.keySet().removeIf(key -> ids.contains(key.ownerId()));
             }
-            // Entity scopes cannot change scheduled block/fluid clocks or other players' phases.
             return;
         }
         resetScaleAccumulators();

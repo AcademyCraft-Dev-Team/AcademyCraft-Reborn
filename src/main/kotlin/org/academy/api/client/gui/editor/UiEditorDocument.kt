@@ -6,10 +6,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
 
-/**
- * 布局编辑器的文档模型：中性的 [WidgetNode] 树 + 选中状态 + undo/redo，与渲染宿主解耦。
- * 游戏内编辑器与桌面编辑器共用；改动经 [onMutated] 通知宿主（如游戏内推给 UiDebugSession）。
- */
 class UiEditorDocument(
     var fileName: String,
     var root: WidgetNode,
@@ -18,10 +14,8 @@ class UiEditorDocument(
     private val redoStack = ArrayDeque<WidgetNode>()
     private val maxUndoDepth = 50
 
-    /** debug 模式锁定名称/类型/结构编辑（游戏内实时布局编辑器）。 */
     var structureLocked: Boolean = false
 
-    /** 每次内容性改动（mutate/undo/redo/replaceRoot）后回调（宿主可推送运行时草稿）。 */
     var onMutated: (() -> Unit)? = null
 
     var selectedPath: List<String> = emptyList()
@@ -32,7 +26,6 @@ class UiEditorDocument(
     var error: String? = null
         private set
 
-    /** Reports a validation error surfaced by the view layer (e.g. preview decode). */
     fun reportError(message: String?) {
         error = message
     }
@@ -64,7 +57,6 @@ class UiEditorDocument(
         onMutated?.invoke()
     }
 
-    /** 整体替换文档（打开/加载/revert 用），不清空历史。 */
     fun replaceRoot(node: WidgetNode) {
         root = node
         selectedPath = emptyList()
@@ -73,20 +65,13 @@ class UiEditorDocument(
         onMutated?.invoke()
     }
 
-    fun undo(): Boolean {
-        val snapshot = undoStack.pollLast() ?: return false
-        redoStack.addLast(root)
-        root = snapshot
-        selectedPath = emptyList()
-        dirty = true
-        error = null
-        onMutated?.invoke()
-        return true
-    }
+    fun undo(): Boolean = replay(undoStack, redoStack)
 
-    fun redo(): Boolean {
-        val snapshot = redoStack.pollLast() ?: return false
-        undoStack.addLast(root)
+    fun redo(): Boolean = replay(redoStack, undoStack)
+
+    private fun replay(source: ArrayDeque<WidgetNode>, target: ArrayDeque<WidgetNode>): Boolean {
+        val snapshot = source.pollLast() ?: return false
+        target.addLast(root)
         root = snapshot
         selectedPath = emptyList()
         dirty = true
@@ -100,7 +85,6 @@ class UiEditorDocument(
         redoStack.clear()
     }
 
-    // ============ structure operations ============
 
     fun renameSelected(newName: String) {
         val sel = selectedNode ?: return
@@ -113,7 +97,6 @@ class UiEditorDocument(
         }
     }
 
-    /** Adds a child of [type] to the selected container (or the root). */
     fun addChild(type: String): Boolean {
         val parent = selectedNode ?: root
         if (!canHostChildren(parent)) return false
@@ -163,7 +146,6 @@ class UiEditorDocument(
         }
     }
 
-    /** 单次撤销地把 [name] 移动到 [containerPath] 容器的 [targetIndex] 位置。 */
     fun moveChildTo(containerPath: List<String>, name: String, targetIndex: Int): Boolean {
         val container = findNodeByPath(root, containerPath) ?: return false
         val from = container.children.indexOfFirst { it.name == name }
@@ -177,24 +159,20 @@ class UiEditorDocument(
         return true
     }
 
-    /** 单次撤销地把 [path] 节点的 [key] 属性改为 [value]（类型经 [type] 编码）。 */
     fun setNodeProperty(path: List<String>, key: String, type: PropType, value: String) = editNode(path) {
         it.setValue(key, type, value)
     }
 
-    /** 单次撤销地对 [path] 节点执行 [action]（属性/结构修改用）。 */
     fun editNode(path: List<String>, action: (WidgetNode) -> Unit) {
         val node = findNodeByPath(root, path) ?: return
         mutate { action(node) }
     }
 
-    /** Serializes the selected node to a JSON string (for clipboard). */
     fun copyNode(): String? {
         val node = selectedNode ?: return null
         return UiJson.GSON.toJson(node.toJson())
     }
 
-    /** Parses a node JSON string and adds it as a child of the selected container. */
     fun pasteNode(json: String): Boolean {
         return try {
             val obj = UiJson.GSON.fromJson(json, JsonObject::class.java)
@@ -213,7 +191,6 @@ class UiEditorDocument(
         }
     }
 
-    /** Replaces the whole document from raw JSON text; returns an error message or null. */
     fun applyJsonText(text: String): String? {
         return try {
             val obj = UiJson.GSON.fromJson(text, JsonObject::class.java)
@@ -229,9 +206,7 @@ class UiEditorDocument(
         }
     }
 
-    // ============ validation / persistence ============
 
-    /** Revalidates the document by decoding it through [WidgetSerializer]. */
     fun validate() {
         error = try {
             WidgetSerializer.decode(documentJson())
@@ -241,7 +216,6 @@ class UiEditorDocument(
         }
     }
 
-    /** Writes the pretty JSON to [dir]/<fileName>.json (creating dirs). */
     fun saveTo(dir: Path): Path {
         Files.createDirectories(dir)
         val file = dir.resolve("$fileName.json")
@@ -250,7 +224,6 @@ class UiEditorDocument(
         return file
     }
 
-    /** Reads a layout file and returns the document, or null on failure. */
     fun loadFrom(dir: Path, name: String): UiEditorDocument? {
         return try {
             val obj = UiJson.GSON.fromJson(Files.readString(dir.resolve("$name.json")), JsonObject::class.java)
@@ -262,7 +235,6 @@ class UiEditorDocument(
         }
     }
 
-    // ============ internals ============
 
     private fun pushUndo() {
         undoStack.addLast(WidgetNode.fromJson(root.toJson()))
@@ -270,7 +242,6 @@ class UiEditorDocument(
         redoStack.clear()
     }
 
-    /** The root frame is always a container; other nodes only if their codec says so. */
     private fun canHostChildren(node: WidgetNode): Boolean {
         return node === root || WidgetCodecRegistry.isContainerType(node.type)
     }
