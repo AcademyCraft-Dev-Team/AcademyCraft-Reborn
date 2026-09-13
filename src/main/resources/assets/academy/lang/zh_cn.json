@@ -1879,7 +1879,6 @@
   "screen.academy.ui_debug.inspector.info.visual_position": "视觉位置（X/Y）：%s, %s",
   "screen.academy.ui_debug.inspector.live_title": "实际界面调试：%s",
   "screen.academy.ui_debug.inspector.margin": "外边距（上/右/下/左）",
-  "screen.academy.ui_debug.inspector.name": "名称",
   "screen.academy.ui_debug.inspector.name_value": "名称：%s",
   "screen.academy.ui_debug.inspector.orientation": "排列方向",
   "screen.academy.ui_debug.inspector.origin": "变换原点",

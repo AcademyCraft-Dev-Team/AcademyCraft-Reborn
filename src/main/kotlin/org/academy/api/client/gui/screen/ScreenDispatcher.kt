@@ -131,7 +131,6 @@ class ScreenDispatcher private constructor() {
         ImGuiUtilApi.render(target) {
             ImGuiUIDebugger.renderContent(
                 screen.root,
-                true,
                 Component.translatable(
                     "screen.academy.ui_debug.inspector.live_title",
                     screen.javaClass.simpleName
