@@ -2,6 +2,7 @@ package example.academy;
 
 import com.google.gson.JsonObject;
 import com.mojang.authlib.GameProfile;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.MapCodec;
 import io.netty.channel.embedded.EmbeddedChannel;
 import net.minecraft.core.BlockPos;
@@ -15,7 +16,10 @@ import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
+import net.minecraft.server.permissions.PermissionSet;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.block.Rotation;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -26,6 +30,9 @@ import org.academy.api.common.ability.program.*;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.program.AbilityProgramService;
+import org.academy.api.server.damage.AbilityDamageService;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -49,8 +56,8 @@ public final class ExampleGameTests {
     private static AbilityProgram program(int actions) {
         var config = new JsonObject();
         config.addProperty("ticks", 20);
-        var nodes = new java.util.ArrayList<ProgramGraph.Node>();
-        var edges = new java.util.ArrayList<ProgramGraph.Edge>();
+        var nodes = new ArrayList<ProgramGraph.Node>();
+        var edges = new ArrayList<ProgramGraph.Edge>();
         nodes.add(new ProgramGraph.Node(0, ExampleAddon.ENTRY_ID, 1, new JsonObject()));
         for (int i = 1; i <= actions; i++) {
             nodes.add(new ProgramGraph.Node(i, ExampleAddon.ACTION_ID, 1, config));
@@ -64,11 +71,11 @@ public final class ExampleGameTests {
         var server = player.level().getServer();
         try {
             var source = server.createCommandSourceStack().withEntity(player)
-                    .withPermission(net.minecraft.server.permissions.PermissionSet.ALL_PERMISSIONS);
+                    .withPermission(PermissionSet.ALL_PERMISSIONS);
             if (server.getCommands().getDispatcher().execute("academy " + command, source) <= 0) {
                 throw new AssertionError("Fixture setup command failed: " + command);
             }
-        } catch (com.mojang.brigadier.exceptions.CommandSyntaxException exception) {
+        } catch (CommandSyntaxException exception) {
             throw new AssertionError("Fixture setup command failed: " + command, exception);
         }
     }
@@ -142,7 +149,7 @@ public final class ExampleGameTests {
             var target = helper.spawn(EntityTypes.PIG, new BlockPos(3, 2, 3));
             helper.assertTrue(SkillDamageSource.of(player, primary).is(ExampleAddon.DAMAGE_TYPE),
                     "Category profile must supply the damage type");
-            helper.assertTrue(SkillDamageSource.of(player, secondary).is(net.minecraft.world.damagesource.DamageTypes.MAGIC),
+            helper.assertTrue(SkillDamageSource.of(player, secondary).is(DamageTypes.MAGIC),
                     "Skill declaration must override the category default");
             var oldHealth = target.getHealth();
             helper.assertTrue(primary.hit(player, target), "Registered skill must cast");
@@ -151,12 +158,12 @@ public final class ExampleGameTests {
             for (var damageProfile : List.of(ExampleAddon.DIRECT.getKey(), ExampleAddon.TRUE.getKey())) {
                 var victim = helper.spawn(EntityTypes.PIG, new BlockPos(3, 2, 3));
                 try {
-                    victim.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_ABSORPTION).setBaseValue(6);
+                    victim.getAttribute(Attributes.MAX_ABSORPTION).setBaseValue(6);
                     victim.setAbsorptionAmount(6);
                     helper.assertTrue(victim.getAbsorptionAmount() == 6, "Fixture must have absorption before damage");
                     var health = victim.getHealth();
-                    var result = org.academy.api.server.damage.AbilityDamageService.apply(player, victim, secondary,
-                            org.academy.api.server.damage.AbilityDamageService.Request.of(4).withProfile(damageProfile));
+                    var result = AbilityDamageService.apply(player, victim, secondary,
+                            AbilityDamageService.Request.of(4).withProfile(damageProfile));
                     helper.assertTrue(result.applied() && victim.getHealth() < health,
                             "Explicit addon profile must override skill and reach its settlement: " + damageProfile);
                     helper.assertTrue(victim.getAbsorptionAmount() == 6,

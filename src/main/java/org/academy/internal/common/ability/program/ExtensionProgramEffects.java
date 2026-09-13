@@ -1,5 +1,7 @@
 package org.academy.internal.common.ability.program;
 
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -7,9 +9,13 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import org.academy.AcademyCraft;
+import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.program.ProgramEffect;
+import org.academy.api.server.ability.AbilitySystemServer;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class ExtensionProgramEffects {
@@ -20,20 +26,20 @@ public final class ExtensionProgramEffects {
 
     static ProgramActionTransaction.Undo track(ServerPlayer player, List<LivingEntity> targets, ProgramEffect effect,
                                                 ServerProgramScheduler.SessionKey key,
-                                                net.minecraft.resources.Identifier category, org.academy.api.common.ability.Skill skill) {
+                                                Identifier category, Skill skill) {
         var lease = new Lease(player, targets, effect, player.level().dimension().identifier(),
                 player.level().getGameTime() + effect.lifetimeTicks(), key, category, skill);
         if (effect.lifetimeTicks() > 0) ACTIVE.add(lease);
         return lease::close;
     }
 
-    static void cancel(net.minecraft.server.MinecraftServer server, ServerProgramScheduler.SessionKey key) {
+    static void cancel(MinecraftServer server, ServerProgramScheduler.SessionKey key) {
         for (var lease : List.copyOf(ACTIVE)) {
             if (lease.player.level().getServer() == server && key.equals(lease.key)) lease.close();
         }
     }
 
-    static void cancelOwner(net.minecraft.server.MinecraftServer server, java.util.UUID owner) {
+    static void cancelOwner(MinecraftServer server, UUID owner) {
         for (var lease : List.copyOf(ACTIVE)) {
             if (lease.player.level().getServer() == server && lease.player.getUUID().equals(owner)) lease.close();
         }
@@ -43,7 +49,7 @@ public final class ExtensionProgramEffects {
     public static void tick(ServerTickEvent.Post event) {
         for (var lease : List.copyOf(ACTIVE)) {
             if (lease.player.level().getServer() != event.getServer()) continue;
-            var system = org.academy.api.server.ability.AbilitySystemServer.getSystem(lease.player);
+            var system = AbilitySystemServer.getSystem(lease.player);
             if (!lease.player.isAlive() || lease.player.hasDisconnected()
                     || !system.getPlayerAbilityCategory(lease.player.getUUID()).getKey().equals(lease.category)
                     || system.getPlayerLevel(lease.player.getUUID()) < 5 || !lease.skill.isEnabled(lease.player)
@@ -65,16 +71,16 @@ public final class ExtensionProgramEffects {
         private final ServerPlayer player;
         private final List<LivingEntity> targets;
         private final ProgramEffect effect;
-        private final net.minecraft.resources.Identifier category;
-        private final org.academy.api.common.ability.Skill skill;
-        private final net.minecraft.resources.Identifier dimension;
+        private final Identifier category;
+        private final Skill skill;
+        private final Identifier dimension;
         private final long until;
         private final ServerProgramScheduler.SessionKey key;
         private boolean closed;
 
         private Lease(ServerPlayer player, List<LivingEntity> targets, ProgramEffect effect,
-                      net.minecraft.resources.Identifier dimension, long until, ServerProgramScheduler.SessionKey key,
-                      net.minecraft.resources.Identifier category, org.academy.api.common.ability.Skill skill) {
+                      Identifier dimension, long until, ServerProgramScheduler.SessionKey key,
+                      Identifier category, Skill skill) {
             this.player = player;
             this.targets = targets;
             this.effect = effect;

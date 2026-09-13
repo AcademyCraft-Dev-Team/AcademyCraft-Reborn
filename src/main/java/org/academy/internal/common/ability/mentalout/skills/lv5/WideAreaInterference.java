@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.mentalout.skills.lv5;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.DecoderException;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -11,6 +12,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -30,6 +32,7 @@ import org.academy.api.common.entitycontrol.*;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.ability.mentalout.WideAreaInterferenceScreen;
+import org.academy.internal.client.ability.mentalout.WorkOrderClientState;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -58,6 +61,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /** Lv5 Mentalout group-command workspace and RTS control surface. */
 public final class WideAreaInterference extends Skill {
@@ -133,7 +137,7 @@ public final class WideAreaInterference extends Skill {
         }
 
         private static void open() {
-            var minecraft = net.minecraft.client.Minecraft.getInstance();
+            var minecraft = Minecraft.getInstance();
             if (minecraft.player == null || minecraft.gui.screen() != null
                     || !AbilitySystemClient.canUseSkill(Skills.WIDE_AREA_INTERFERENCE.get())) return;
             minecraft.gui.setScreen(new WideAreaInterferenceScreen());
@@ -249,7 +253,7 @@ public final class WideAreaInterference extends Skill {
                 return;
             }
             var subjectIds = subjects.stream().map(LivingEntity::getUUID)
-                    .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                    .collect(Collectors.toUnmodifiableSet());
             var source = Skills.WIDE_AREA_INTERFERENCE.get().getKey();
             // Work replacement is validated completely before cancelling the previous order.
             if (packet.action != Action.WORK) {
@@ -365,11 +369,11 @@ public final class WideAreaInterference extends Skill {
                     feedback(controller, FeedbackCode.INVALID_REGION, 0, 0, 0);
                     return;
                 }
-                subjects = subjects.stream().filter(subject -> !(subject instanceof net.minecraft.world.entity.player.Player)
+                subjects = subjects.stream().filter(subject -> !(subject instanceof Player)
                         && MentalControlApi.supports(subject, ControlCapability.AI_CONTROL)
                         && MentalControlApi.supports(subject, ControlCapability.PATH_CONTROL)).toList();
                 if (subjects.isEmpty()) { feedback(controller, FeedbackCode.NO_TARGETS, 0, 0, 0); return; }
-                var workers = subjects.stream().map(LivingEntity::getUUID).collect(java.util.stream.Collectors.toSet());
+                var workers = subjects.stream().map(LivingEntity::getUUID).collect(Collectors.toSet());
                 GroupControlRuntime.cancelWork(controller.level().getServer(), controller.getUUID(), workers);
                 cancelPositioning(controller.getUUID(), workers);
             }
@@ -460,10 +464,10 @@ public final class WideAreaInterference extends Skill {
         @SubscribePacket
         public static void feedback(FeedbackPacket packet) {
             if (packet.code == FeedbackCode.WORK_STATUS) {
-                org.academy.internal.client.ability.mentalout.WorkOrderClientState.accept(packet.detail);
+                WorkOrderClientState.accept(packet.detail);
                 return;
             }
-            var player = net.minecraft.client.Minecraft.getInstance().player;
+            var player = Minecraft.getInstance().player;
             if (player == null) return;
             var message = switch (packet.code) {
                 case TASK_COMPLETED, TASK_PATH_FAILED ->

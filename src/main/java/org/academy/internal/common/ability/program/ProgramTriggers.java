@@ -8,6 +8,7 @@ import org.academy.api.common.ability.program.ProgramGraph;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -30,14 +31,14 @@ public final class ProgramTriggers {
     /**
      * Toggles the saved enabled flag of a periodic-trigger program.
      */
-    public static java.util.Optional<LoopToggle> toggleLoop(AbilityProgram program) {
+    public static Optional<LoopToggle> toggleLoop(AbilityProgram program) {
         var entry = triggerEntry(program);
-        if (entry == null || type(entry.type()) != Type.LOOP) return java.util.Optional.empty();
+        if (entry == null || type(entry.type()) != Type.LOOP) return Optional.empty();
         var decoded = CommonProgramNodeCatalog.LoopTriggerConfiguration.CODEC
                 .parse(JsonOps.INSTANCE, entry.configuration())
                 .result()
                 .orElse(null);
-        if (decoded == null) return java.util.Optional.empty();
+        if (decoded == null) return Optional.empty();
         var configuration = entry.configuration().getAsJsonObject().deepCopy();
         configuration.addProperty("enabled", !decoded.enabled());
         var nodes = program.graph().nodes().stream()
@@ -46,7 +47,7 @@ public final class ProgramTriggers {
                         node.id(), node.type(), node.schemaVersion(), configuration)
                         : node)
                 .toList();
-        return java.util.Optional.of(new LoopToggle(
+        return Optional.of(new LoopToggle(
                 new AbilityProgram(
                         program.schemaVersion(),
                         program.id(),

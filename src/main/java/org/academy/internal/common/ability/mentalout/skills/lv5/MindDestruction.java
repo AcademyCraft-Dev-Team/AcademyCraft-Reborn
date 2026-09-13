@@ -22,6 +22,7 @@ import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.ReactionSlowdown;
 import org.academy.api.common.entitycontrol.ControlDirective;
 import org.academy.api.common.entitycontrol.ControlHandle;
 import org.academy.api.common.entitycontrol.ControlRequest;
@@ -140,7 +141,7 @@ public final class MindDestruction extends Skill {
                     target.getMaxHealth() * MAX_HEALTH_DAMAGE_RATIO
             );
             if (damaged && target.getHealth() < healthBeforePulse && target.isAlive() && effect.reaction == null) {
-                effect.reaction = org.academy.api.common.damage.ReactionSlowdown.acquire(target);
+                effect.reaction = ReactionSlowdown.acquire(target);
             }
             if (target.level() instanceof ServerLevel level) {
                 var center = target.getBoundingBox().getCenter();
@@ -338,7 +339,7 @@ public final class MindDestruction extends Skill {
         private long nextDamageTick;
         private int pulsesRemaining;
         private final ControlHandle stupor;
-        private org.academy.api.common.damage.ReactionSlowdown reaction;
+        private ReactionSlowdown reaction;
 
         private ActiveEffect(
                 EffectKey key,

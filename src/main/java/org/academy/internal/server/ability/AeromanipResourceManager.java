@@ -3,10 +3,12 @@ package org.academy.internal.server.ability;
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.SyncTypes;
+import org.academy.api.server.world.WaterSuppression;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.aeromanip.Aeromanip;
 import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AirAccessResolver;
+import org.academy.internal.server.world.level.storage.Player;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -148,7 +150,7 @@ public final class AeromanipResourceManager implements AbilitySubsystem {
                 && AirAccessResolver.hasAmbientAir(player);
         var recovered = recover(
                 cpData.getCurrMP(), capacity, configuredRecovery(player)
-                        * (org.academy.api.server.world.WaterSuppression.suppliesAir(player.level(), player.getEyePosition()) ? 0.5f : 1.0f), canRecover);
+                        * (WaterSuppression.suppliesAir(player.level(), player.getEyePosition()) ? 0.5f : 1.0f), canRecover);
         if (recovered > cpData.getCurrMP() + EPSILON) {
             cpData.setCurrMP(recovered);
             changed = true;
@@ -160,7 +162,7 @@ public final class AeromanipResourceManager implements AbilitySubsystem {
         }
     }
 
-    private void commitUse(ServerPlayer player, org.academy.internal.server.world.level.storage.Player data) {
+    private void commitUse(ServerPlayer player, Player data) {
         markUsed(player);
         data.markDirty();
         syncManager.schedulePlayerSync(player.getUUID(), SyncTypes.CP_DATA);

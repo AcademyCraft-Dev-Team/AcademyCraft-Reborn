@@ -65,7 +65,7 @@ public final class ProficiencySkillSettings {
         if (normalized == 0) values.remove(option);
         else values.put(option, normalized);
         player.setData(AttachmentTypes.SKILL_PROFICIENCY_MODES.get(), values);
-        if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+        if (player instanceof ServerPlayer serverPlayer) {
             serverPlayer.syncData(AttachmentTypes.SKILL_PROFICIENCY_MODES.get());
         }
     }

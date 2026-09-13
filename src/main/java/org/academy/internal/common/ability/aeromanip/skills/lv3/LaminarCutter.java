@@ -33,9 +33,11 @@ import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.AbilityHitEffects;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.ViewTargetScanner;
+import org.academy.api.server.ability.AbilityBlockDrops;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -535,10 +537,10 @@ public final class LaminarCutter extends Skill {
             AeromanipVfx.blade(level, start, direction, bladeRight, range);
         }
 
-        private static void clearSoftBlocks(net.minecraft.server.level.ServerPlayer player, ServerLevel level,
-                                             Vec3 start, Vec3 end, Vec3 direction,
-                                             Vec3 bladeRight, Vec3 bladeNormal,
-                                             AeromanipChargeTier tier) {
+        private static void clearSoftBlocks(ServerPlayer player, ServerLevel level,
+                                            Vec3 start, Vec3 end, Vec3 direction,
+                                            Vec3 bladeRight, Vec3 bladeNormal,
+                                            AeromanipChargeTier tier) {
             var settings = AeromanipConfig.settings(player);
             if (!settings.allowSoftBlockInteraction
                     || !DestroyBlocksSetting.canDestroyBlocks(player, Skills.LAMINAR_CUTTER.get())) return;
@@ -574,12 +576,12 @@ public final class LaminarCutter extends Skill {
                         || state.is(BlockTags.LEAVES);
                 if (!predefinedSoft && (tier != AeromanipChargeTier.FULL || state.getDestroySpeed(level, pos) < 0.0f
                         || state.getDestroySpeed(level, pos) > 1.5f)) continue;
-                org.academy.api.server.ability.AbilityBlockDrops.destroyBlock(level, pos.immutable(), true, player);
+                AbilityBlockDrops.destroyBlock(level, pos.immutable(), true, player);
             }
         }
 
         private static void damageEquipment(LivingEntity target, int amount) {
-            org.academy.api.common.damage.AbilityHitEffects.damageEquipment(target, amount, true);
+            AbilityHitEffects.damageEquipment(target, amount, true);
         }
 
         private static void disarm(ServerPlayer owner, LivingEntity target) {
@@ -595,7 +597,7 @@ public final class LaminarCutter extends Skill {
             target.level().addFreshEntity(dropped);
         }
 
-        private static void applyFracture(net.minecraft.server.level.ServerPlayer owner, LivingEntity target) {
+        private static void applyFracture(ServerPlayer owner, LivingEntity target) {
             var armor = target.getAttribute(Attributes.ARMOR);
             if (armor == null) return;
             var amount = target instanceof Player ? -0.1 : -0.2;

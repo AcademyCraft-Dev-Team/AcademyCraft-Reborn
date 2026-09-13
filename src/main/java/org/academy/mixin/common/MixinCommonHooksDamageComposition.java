@@ -8,6 +8,7 @@ import net.neoforged.neoforge.common.damagesource.DamageContainer;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.mentalout.skills.lv4.PainSuppression;
 import org.academy.internal.common.world.damagesource.AcademyDamageRules;
+import org.academy.internal.common.world.damagesource.CategoryDamageRuntime;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.spongepowered.asm.mixin.Mixin;
 
@@ -23,7 +24,7 @@ public abstract class MixinCommonHooksDamageComposition {
     @WrapMethod(method = "onLivingDamagePost")
     private static void academy$completed(LivingEntity entity, DamageContainer container, Operation<Void> original) {
         PainSuppression.Server.afterDamage(entity, container);
-        org.academy.internal.common.world.damagesource.CategoryDamageRuntime.completed(entity, container);
+        CategoryDamageRuntime.completed(entity, container);
         original.call(entity, container);
     }
 

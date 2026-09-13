@@ -5,6 +5,11 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.MouseButtonInfo;
+import net.minecraft.client.tutorial.TutorialSteps;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,12 +21,16 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.gui.LoadingErrorScreen;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.network.registration.NetworkRegistry;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.client.render.vfx.WingVfx;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.skills.lv5.BlackWing;
+import org.academy.internal.common.attachment.AttachmentTypes;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -53,7 +62,7 @@ public final class BlackWingClientSmoke {
         player.setGameMode(GameType.CREATIVE);
     }
 
-    @SubscribeEvent public static void serverTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+    @SubscribeEvent public static void serverTick(ServerTickEvent.Post event) {
         if (!Boolean.getBoolean("academy.blackWingSmoke")) return;
         // Embedded connections have no movement packets to drive ServerPlayer.doTick().
         for (var actor : actors) actor.doTick();
@@ -64,17 +73,17 @@ public final class BlackWingClientSmoke {
         var mc = Minecraft.getInstance();
         if (mc.level == null) {
             if (++loadingTicks > 1800) { System.out.println("[black-wing-smoke] loading timeout " + mc.gui.screen()); mc.stop(); return; }
-            if (mc.gui.screen() instanceof net.neoforged.neoforge.client.gui.LoadingErrorScreen warning) {
+            if (mc.gui.screen() instanceof LoadingErrorScreen warning) {
                 for (var widget : warning.children()) {
-                    if (widget instanceof net.minecraft.client.gui.components.Button button
+                    if (widget instanceof Button button
                             && button.getMessage().getString().equals("Proceed to main menu")) {
-                        button.onPress(new net.minecraft.client.input.MouseButtonEvent(0, 0,
-                                new net.minecraft.client.input.MouseButtonInfo(0, 0)));
+                        button.onPress(new MouseButtonEvent(0, 0,
+                                new MouseButtonInfo(0, 0)));
                         break;
                     }
                 }
             }
-            if (!opened && mc.gui.screen() instanceof net.minecraft.client.gui.screens.TitleScreen) {
+            if (!opened && mc.gui.screen() instanceof TitleScreen) {
                 opened = true;
                 System.out.println("[black-wing-smoke] opening isolated world");
                 mc.createWorldOpenFlows().openWorld("black_wing", mc::stop);
@@ -91,7 +100,7 @@ public final class BlackWingClientSmoke {
         if (!configured) {
             configured = true;
             mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
-            mc.getTutorial().setStep(net.minecraft.client.tutorial.TutorialSteps.NONE);
+            mc.getTutorial().setStep(TutorialSteps.NONE);
             var id = mc.player.getUUID();
             mc.getSingleplayerServer().execute(() -> {
                 var server = mc.getSingleplayerServer(); var player = server.getPlayerList().getPlayer(id);
@@ -137,7 +146,7 @@ public final class BlackWingClientSmoke {
         }
         if (ticks == 220 || ticks == 280) {
             for (var player : mc.level.players()) System.out.println("[black-wing-smoke] client actor " + player.getName().getString()
-                    + " position=" + player.position() + " active=" + player.getData(org.academy.internal.common.attachment.AttachmentTypes.ACTIVATED_BLACK_WING.get()));
+                    + " position=" + player.position() + " active=" + player.getData(AttachmentTypes.ACTIVATED_BLACK_WING.get()));
             mc.getSingleplayerServer().execute(() -> {
                 for (var actor : actors) System.out.println("[black-wing-smoke] server actor " + actor.getName().getString()
                         + " position=" + actor.position() + " active=" + BlackWing.Server.isActive(actor)

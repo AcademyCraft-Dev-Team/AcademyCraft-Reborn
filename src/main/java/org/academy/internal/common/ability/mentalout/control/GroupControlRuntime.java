@@ -1,6 +1,7 @@
 package org.academy.internal.common.ability.mentalout.control;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -11,16 +12,21 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.animal.cow.Cow;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.common.IShearable;
 import net.minecraft.world.phys.AABB;
+import org.academy.api.server.ability.AbilityBlockDrops;
 import org.academy.internal.common.ability.mentalout.MentalControlMemory;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CropBlock;
@@ -36,8 +42,12 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.entitycontrol.*;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
+import org.academy.internal.server.storage.SpatialStorageService;
 
 import java.util.*;
+import java.util.function.BiPredicate;
+import java.util.function.Predicate;
+import java.util.stream.StreamSupport;
 
 public final class GroupControlRuntime {
     private static final int PATH_GRACE_TICKS = 40;
@@ -196,7 +206,7 @@ public final class GroupControlRuntime {
             var group = groupEntry.getKey();
             var controller = server.getPlayerList().getPlayer(group.controller());
             if (controller == null || !controller.isAlive()) continue;
-            var level = java.util.stream.StreamSupport.stream(server.getAllLevels().spliterator(), false)
+            var level = StreamSupport.stream(server.getAllLevels().spliterator(), false)
                     .filter(candidate -> candidate.dimension().identifier().equals(group.region().dimension())).findFirst().orElse(null);
             if (level == null) continue;
             var subjects = new ArrayList<LivingEntity>();
@@ -574,12 +584,12 @@ public final class GroupControlRuntime {
             if (miningProgressTicks % 5 == 1) subject.swing(InteractionHand.MAIN_HAND);
             if (miningProgressTicks < miningTicks(state, tool, level, currentBlock)) return;
             if (canBreak(controller, level, currentBlock)) {
-                var drops = org.academy.api.server.ability.AbilityBlockDrops.getDrops(controller,
+                var drops = AbilityBlockDrops.getDrops(controller,
                         state, level, currentBlock, level.getBlockEntity(currentBlock), subject, tool);
-                if (org.academy.api.server.ability.AbilityBlockDrops.run(
+                if (AbilityBlockDrops.run(
                         level, controller, () -> level.destroyBlock(currentBlock, false, subject))) {
                     drops.stream().filter(stack -> !stack.isEmpty())
-                            .filter(stack -> !org.academy.internal.server.storage.SpatialStorageService.collect(controller, stack))
+                            .filter(stack -> !SpatialStorageService.collect(controller, stack))
                             .map(ItemStack::copy).forEach(bufferedDrops::add);
                     if (settings != null) ControlledEquipment.damageRealTool(subject, tool, 1);
                 }
@@ -669,15 +679,15 @@ public final class GroupControlRuntime {
             if (miningProgressTicks % 5 == 1) subject.swing(InteractionHand.MAIN_HAND);
             if (miningProgressTicks < miningTicks(state, tool, level, currentBlock)) return;
             if (!canBreak(controller, level, currentBlock)) { blockMiningTarget("permission", 100); return; }
-            var drops = org.academy.api.server.ability.AbilityBlockDrops.getDrops(controller,
+            var drops = AbilityBlockDrops.getDrops(controller,
                     state, level, currentBlock, level.getBlockEntity(currentBlock), subject, tool);
-            if (!org.academy.api.server.ability.AbilityBlockDrops.run(
+            if (!AbilityBlockDrops.run(
                     level, controller, () -> level.destroyBlock(currentBlock, false, subject))) {
                 blockMiningTarget("permission", 100);
                 return;
             }
             for (var drop : drops) {
-                if (!drop.isEmpty() && !org.academy.internal.server.storage.SpatialStorageService.collect(controller, drop)) {
+                if (!drop.isEmpty() && !SpatialStorageService.collect(controller, drop)) {
                     bufferMiningDrop(drop);
                 }
             }
@@ -723,8 +733,8 @@ public final class GroupControlRuntime {
             }
             if (settings != null && subject.level().getBlockState(currentBlock).isAir()) {
                 if (!subject.level().getBlockState(currentBlock.below()).is(Blocks.FARMLAND)
-                        && !(ControlledEquipment.tool(subject, Items.IRON_HOE).getItem() instanceof net.minecraft.world.item.HoeItem)
-                        && !supplyTool(controller, region, stack -> stack.getItem() instanceof net.minecraft.world.item.HoeItem)) return;
+                        && !(ControlledEquipment.tool(subject, Items.IRON_HOE).getItem() instanceof HoeItem)
+                        && !supplyTool(controller, region, stack -> stack.getItem() instanceof HoeItem)) return;
                 if (bufferedDrops.stream().noneMatch(this::isSeed) && !collectSeeds(controller, region)) return;
             }
             var target = Vec3.atCenterOf(currentBlock);
@@ -811,7 +821,7 @@ public final class GroupControlRuntime {
             workApproachPoint = null;
         }
 
-        private ItemStack miningTool(net.minecraft.world.level.block.state.BlockState state) {
+        private ItemStack miningTool(BlockState state) {
             var held = subject.getMainHandItem();
             if (settings != null) return ControlledEquipment.miningTool(subject, state);
             var ironPickaxe = new ItemStack(Items.IRON_PICKAXE);
@@ -829,7 +839,7 @@ public final class GroupControlRuntime {
         }
 
         private static boolean isHarvestable(
-                net.minecraft.world.level.block.state.BlockState state,
+                BlockState state,
                 ItemStack tool
         ) {
             return !state.isAir() && (!state.requiresCorrectToolForDrops()
@@ -837,7 +847,7 @@ public final class GroupControlRuntime {
         }
 
         private static int miningTicks(
-                net.minecraft.world.level.block.state.BlockState state,
+                BlockState state,
                 ItemStack tool,
                 ServerLevel level,
                 BlockPos pos
@@ -912,9 +922,9 @@ public final class GroupControlRuntime {
                     || settings != null && (!settings.harvest() || !settings.matches(state))
                     || !canBreak(controller, level, pos)) return;
             subject.swing(InteractionHand.MAIN_HAND);
-            var drops = org.academy.api.server.ability.AbilityBlockDrops.getDrops(controller,
+            var drops = AbilityBlockDrops.getDrops(controller,
                     state, level, pos, level.getBlockEntity(pos), subject, subject.getMainHandItem());
-            if (!org.academy.api.server.ability.AbilityBlockDrops.run(
+            if (!AbilityBlockDrops.run(
                     level, controller, () -> level.destroyBlock(pos, false, subject))) return;
             if (settings == null) level.setBlock(pos, crop.getStateForAge(0), Block.UPDATE_ALL);
             else if (settings.replant()) {
@@ -926,7 +936,7 @@ public final class GroupControlRuntime {
                 }
             }
             drops.stream().filter(stack -> !stack.isEmpty())
-                    .filter(stack -> !org.academy.internal.server.storage.SpatialStorageService.collect(controller, stack))
+                    .filter(stack -> !SpatialStorageService.collect(controller, stack))
                     .map(ItemStack::copy).forEach(bufferedDrops::add);
         }
 
@@ -1037,7 +1047,7 @@ public final class GroupControlRuntime {
             }
         }
 
-        private boolean matchesWorkBlock(BlockPos pos, net.minecraft.world.level.block.state.BlockState state) {
+        private boolean matchesWorkBlock(BlockPos pos, BlockState state) {
             if (state.isAir() || !settings.harvest() || !settings.matches(state) || state.getDestroySpeed(subject.level(), pos) < 0
                     || subject.level().getBlockEntity(pos) != null) return false;
             return switch (settings.mode()) {
@@ -1051,7 +1061,7 @@ public final class GroupControlRuntime {
             };
         }
 
-        private boolean isFarmCandidate(BlockPos pos, net.minecraft.world.level.block.state.BlockState state) {
+        private boolean isFarmCandidate(BlockPos pos, BlockState state) {
             if (state.getBlock() instanceof CropBlock crop && crop.isMaxAge(state)) {
                 return settings == null || settings.harvest() && settings.matches(state);
             }
@@ -1067,7 +1077,7 @@ public final class GroupControlRuntime {
             if (level.getGameTime() < nextAnimalAction || !settings.harvest()) return;
             var bounds = new AABB(region.minimum().getX(), region.minimum().getY(), region.minimum().getZ(),
                     region.maximum().getX() + 1, region.maximum().getY() + 1, region.maximum().getZ() + 1);
-            var item = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, bounds,
+            var item = level.getEntitiesOfClass(ItemEntity.class, bounds,
                     candidate -> candidate.isAlive() && !candidate.hasPickUpDelay()
                             && settings.matches(candidate.getItem())).stream()
                     .min(Comparator.comparingDouble(subject::distanceToSqr)).orElse(null);
@@ -1097,7 +1107,7 @@ public final class GroupControlRuntime {
         }
 
         private boolean supplyTool(ServerPlayer controller, BlockWorkRegion region,
-                                   java.util.function.Predicate<ItemStack> suitable) {
+                                   Predicate<ItemStack> suitable) {
             workStatus = "tool";
             if (settings.input().isEmpty()) { closeMovement(); return false; }
             var pos = settings.input().get();
@@ -1135,7 +1145,7 @@ public final class GroupControlRuntime {
             var level = (ServerLevel) subject.level();
             if (level.getGameTime() < nextAnimalAction) return;
             if (!settings.harvest()) { workStatus = "waiting"; return; }
-            java.util.function.Predicate<ItemStack> suitable = stack -> switch (settings.mode()) {
+            Predicate<ItemStack> suitable = stack -> switch (settings.mode()) {
                 case SHEARING -> stack.is(Items.SHEARS);
                 case MILKING -> stack.is(Items.BUCKET);
                 case FEEDING -> !stack.isEmpty() && level.getEntitiesOfClass(Animal.class,
@@ -1229,7 +1239,7 @@ public final class GroupControlRuntime {
                 var soil = level.getBlockState(pos.below());
                 if (pos.getY() <= workRegion().minimum().getY()
                         || !(soil.is(Blocks.DIRT) || soil.is(Blocks.GRASS_BLOCK))
-                        || !(ControlledEquipment.tool(subject, Items.IRON_HOE).getItem() instanceof net.minecraft.world.item.HoeItem)) return;
+                        || !(ControlledEquipment.tool(subject, Items.IRON_HOE).getItem() instanceof HoeItem)) return;
                 if (!level.setBlock(pos.below(), Blocks.FARMLAND.defaultBlockState(), Block.UPDATE_ALL)) return;
                 ControlledEquipment.damageRealTool(subject, ControlledEquipment.tool(subject, Items.IRON_HOE), 1);
             }
@@ -1420,7 +1430,7 @@ public final class GroupControlRuntime {
         private boolean exposed(ServerLevel level, BlockPos pos) {
             if (surfaceTick != level.getGameTime()) { surfaceTick = level.getGameTime(); surfaces.clear(); }
             return surfaces.computeIfAbsent(pos, candidate -> {
-                for (var direction : net.minecraft.core.Direction.values()) {
+                for (var direction : Direction.values()) {
                     var adjacent = candidate.relative(direction);
                     if (level.hasChunkAt(adjacent) && level.getBlockState(adjacent).isAir()) return true;
                 }
@@ -1471,8 +1481,8 @@ public final class GroupControlRuntime {
             return pending.size();
         }
 
-        private synchronized void refreshFiltered(net.minecraft.world.level.Level level, long now, int interval,
-                java.util.function.BiPredicate<BlockPos, net.minecraft.world.level.block.state.BlockState> filter) {
+        private synchronized void refreshFiltered(Level level, long now, int interval,
+                                                  BiPredicate<BlockPos, BlockState> filter) {
             if (now < nextFarmScanTick) return;
             nextFarmScanTick = now + interval;
             for (var pos : BlockPos.betweenClosed(region.minimum(), region.maximum())) {
@@ -1480,7 +1490,7 @@ public final class GroupControlRuntime {
             }
         }
 
-        private synchronized void refreshCrops(net.minecraft.world.level.Level level, long now) {
+        private synchronized void refreshCrops(Level level, long now) {
             if (!farming || now < nextFarmScanTick) return;
             nextFarmScanTick = now + FARM_SCAN_INTERVAL_TICKS;
             for (var pos : BlockPos.betweenClosed(region.minimum(), region.maximum())) {

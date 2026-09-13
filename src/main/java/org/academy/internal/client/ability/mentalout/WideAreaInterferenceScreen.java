@@ -7,6 +7,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.CropBlock;
 import org.academy.api.common.entitycontrol.WorkSelection;
 import org.academy.api.common.entitycontrol.WorkSettings;
 import org.academy.api.client.gui.widget.TextInputWidget;
@@ -959,7 +960,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                     regionFirst = raycastBlock(x, y);
                     if (armedAction == WideAreaInterference.Action.WORK && workMode == WorkSettings.Mode.FARMING
                             && regionFirst != null && !(minecraft.level.getBlockState(regionFirst).getBlock()
-                            instanceof net.minecraft.world.level.block.CropBlock)) {
+                            instanceof CropBlock)) {
                         regionFirst = regionFirst.above();
                         regionHeight = 2;
                     }

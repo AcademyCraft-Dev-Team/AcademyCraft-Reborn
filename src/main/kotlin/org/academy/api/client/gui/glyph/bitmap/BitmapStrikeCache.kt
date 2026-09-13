@@ -18,6 +18,7 @@ import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
 object BitmapStrikeCache {
+    private val LOGGER = org.academy.AcademyCraft.getLogger()
     private val CACHE = ConcurrentHashMap<PackedGlyphID, BitmapGlyph>()
 
     fun clear() {
@@ -74,7 +75,13 @@ object BitmapStrikeCache {
             val face = font.getOrCreateBitmapFace()
             font.bitmapFaceLock().lock()
             try {
-                if (glyphIndex == 0) return@runOnRenderThread null
+                if (glyphIndex == 0) {
+                    LOGGER.error(
+                        "Bitmap generation for glyph index 0 (missing glyph/.notdef) in font {}",
+                        font.descriptor
+                    )
+                    return@runOnRenderThread null
+                }
 
                 MemoryStack.stackPush().use { stack ->
                     val unitsPerStep = (64 / (1 shl Constants.BITMAP_SUBPIXEL_BITS)).toLong()
@@ -115,8 +122,7 @@ object BitmapStrikeCache {
                     )
                 }
             } catch (e: RuntimeException) {
-                org.academy.AcademyCraft.getLogger()
-                    .error("Failed to rasterize bitmap glyph index $glyphIndex", e)
+                LOGGER.error("Failed to rasterize bitmap glyph index $glyphIndex", e)
                 null
             } finally {
                 font.bitmapFaceLock().unlock()

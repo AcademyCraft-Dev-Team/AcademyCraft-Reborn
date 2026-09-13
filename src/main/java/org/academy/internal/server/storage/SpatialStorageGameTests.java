@@ -29,7 +29,9 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.core.Direction;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import org.academy.AcademyCraft;
@@ -72,7 +74,7 @@ public final class SpatialStorageGameTests {
         public void run(GameTestHelper helper) {
             var level = helper.getLevel();
             var profile = new GameProfile(UUID.randomUUID(), "spatial-test");
-            var player = net.neoforged.neoforge.common.util.FakePlayerFactory.get(level, profile);
+            var player = FakePlayerFactory.get(level, profile);
             try {
                 var unit = new ItemStack(Items.SPATIAL_STORAGE_UNIT.get());
                 unit.set(ItemDataComponents.SPATIAL_STORAGE_ENABLED.get(), true);
@@ -147,8 +149,8 @@ public final class SpatialStorageGameTests {
                 } catch (IllegalStateException expected) {
                     helper.assertTrue(AbilityBlockDrops.currentBreaker() == null, "Capture leaked after exception");
                 }
-                if (net.neoforged.fml.ModList.get().isLoaded("curios")
-                        && net.neoforged.fml.ModList.get().isLoaded("beyonddimensions")) {
+                if (ModList.get().isLoaded("curios")
+                        && ModList.get().isLoaded("beyonddimensions")) {
                     SpatialStorageCompatGameTests.verify(helper, player, second, secondId);
                 }
                 helper.succeed();

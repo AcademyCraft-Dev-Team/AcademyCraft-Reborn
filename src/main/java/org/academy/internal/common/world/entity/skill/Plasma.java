@@ -15,6 +15,8 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.util.LevelUtil;
+import org.academy.api.common.vfx.SkillVfxState;
+import org.academy.api.server.vfx.SkillVfxService;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
 import org.academy.internal.common.sounds.SoundEvents;
@@ -48,7 +50,7 @@ public class Plasma extends RenderOnlyEntity {
     private int proficiencyMilestone;
     private int launchDelayTicks;
     private Vec3 visualChargeOrigin;
-    private org.academy.api.common.vfx.SkillVfxState.Plasma visualSnapshot;
+    private SkillVfxState.Plasma visualSnapshot;
     private long visualReceivedAt;
 
     public Plasma(EntityType<?> entityType, Level level) {
@@ -146,7 +148,7 @@ public class Plasma extends RenderOnlyEntity {
     private void impact() {
         if (!(level() instanceof ServerLevel level)) return;
         var impact = position();
-        org.academy.api.server.vfx.SkillVfxService.plasmaImpact(level, impact, damageRadius);
+        SkillVfxService.plasmaImpact(level, impact, damageRadius);
         var owner = ownerUUID == null
                 ? null
                 : level.getServer().getPlayerList().getPlayer(ownerUUID);
@@ -201,7 +203,7 @@ public class Plasma extends RenderOnlyEntity {
     public int visualLaunchDelay() { return launchDelayTicks; }
     public Vec3 visualChargeOrigin() { return visualChargeOrigin; }
 
-    public void applyVisualSnapshot(org.academy.api.common.vfx.SkillVfxState.Plasma state, float elapsed) {
+    public void applyVisualSnapshot(SkillVfxState.Plasma state, float elapsed) {
         if (!level().isClientSide()) throw new IllegalStateException("Visual snapshot on server");
         visualSnapshot = state;
         visualReceivedAt = System.nanoTime() - (long) (elapsed * 50_000_000L);

@@ -25,6 +25,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -32,11 +33,13 @@ import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.vfx.SkillVfxState;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vfx.SkillVfxService;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.network.SkillVfxPacket;
 import org.academy.internal.common.world.entity.EntityTypes;
+import org.academy.internal.common.world.entity.skill.DarkmatterCutSlash;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
 import org.academy.internal.common.world.entity.skill.Plasma;
 import org.misaka.api.common.network.packet.S2CPacket;
@@ -185,11 +188,11 @@ public final class SkillVfxMultiplayerGameTests {
             }
             check(helper.getLevel().getEntitiesOfClass(
                     org.academy.internal.common.world.entity.skill.Smoke.class,
-                    new net.minecraft.world.phys.AABB(center, center).inflate(16)).isEmpty(),
+                    new AABB(center, center).inflate(16)).isEmpty(),
                     "Smoke event must not create a server entity");
             check(helper.getLevel().getEntitiesOfClass(
-                    org.academy.internal.common.world.entity.skill.DarkmatterCutSlash.class,
-                    new net.minecraft.world.phys.AABB(center, center).inflate(16)).isEmpty(),
+                    DarkmatterCutSlash.class,
+                    new AABB(center, center).inflate(16)).isEmpty(),
                     "Slash event must not create a server entity");
             beam = beam(true); plasma = plasma();
             after(6, this::initial);
@@ -235,7 +238,7 @@ public final class SkillVfxMultiplayerGameTests {
             // Exercise a real fire immediately followed by removal within one server tick.
             var caster = observers.getFirst().player;
             var skill = Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get();
-            var ability = org.academy.api.server.ability.AbilitySystemServer.getSystem(caster);
+            var ability = AbilitySystemServer.getSystem(caster);
             ability.setPlayerAbilityCategory(caster.getUUID(), skill.getCategory());
             ability.addPlayerSkill(caster, skill.getKeyString());
             if (!skill.isEnabled(caster)) ability.toggleSkill(caster.getUUID(), skill.getKeyString());

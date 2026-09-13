@@ -1,5 +1,6 @@
 package org.academy.internal.client.ability.program;
 
+import org.academy.api.common.ability.program.ProgramValueType;
 import org.academy.api.common.ability.program.ProgramValueTypes;
 import org.academy.internal.common.ability.program.AbilityProgramDefinitions;
 import org.academy.internal.common.ability.program.CommonProgramNodeIds;
@@ -12,7 +13,7 @@ class ProgramConnectionDefaultsTest {
     void scalarConstantsMatchDraggedInputsWithoutChangingPaletteDefaults() {
         var catalog = AbilityProgramDefinitions.mentalout().editorCatalog();
         var entry = catalog.entry(CommonProgramNodeIds.SCALAR_CONSTANT);
-        for (var type : new org.academy.api.common.ability.program.ProgramValueType[]{
+        for (var type : new ProgramValueType[]{
                 ProgramValueTypes.FLOAT, ProgramValueTypes.INTEGER,
                 ProgramValueTypes.BIG_INTEGER, ProgramValueTypes.BOOLEAN}) {
             var configuration = ProgramConfigurationOptions.defaultsForConnection(catalog, entry, type, true);

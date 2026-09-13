@@ -24,11 +24,15 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.program.ForwardingProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
+import org.academy.api.common.ability.program.ProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.server.ability.AbilityBlockDrops;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.ability.BlockItemDropCapture;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
 import org.academy.internal.common.ability.program.AbilityProgramSpatialRanges;
@@ -48,7 +52,7 @@ import java.util.Optional;
 /**
  * Authoritative Minecraft-server adapter for Teleport programs.
  */
-public final class ServerTeleportProgramRuntime implements TeleportProgramRuntime, org.academy.api.common.ability.program.ForwardingProgramTargetResolver {
+public final class ServerTeleportProgramRuntime implements TeleportProgramRuntime, ForwardingProgramTargetResolver {
     public static final double MAX_QUERY_RANGE = AbilityProgramSpatialRanges.forCategory(
             TeleportProgramNodeCatalog.TELEPORT).queryRange();
     public static final double MAX_ACTION_RANGE = AbilityProgramSpatialRanges.forCategory(
@@ -60,7 +64,7 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
     private final float costMultiplier;
     private final ServerProgramTargetResolver targets;
     @Override
-    public org.academy.api.common.ability.program.ProgramTargetResolver targetResolver() {
+    public ProgramTargetResolver targetResolver() {
         return targets;
     }
 
@@ -750,7 +754,7 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
         var level = targets.level();
         // Chests emit their inventory from onRemove, independently of the block loot table.
         // Keep those emissions in the same transaction as the primary drops and inventory edits.
-        try (var capture = org.academy.api.server.ability.BlockItemDropCapture.capture(level)) {
+        try (var capture = BlockItemDropCapture.capture(level)) {
             if (!state.isAir() && !level.setBlock(position, Blocks.AIR.defaultBlockState(),
                     Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS)) {
                 throw new IllegalStateException("Unable to break collected block");
@@ -766,7 +770,7 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
             ItemStack tool
     ) {
         if (state.isAir()) return List.of();
-        return org.academy.api.server.ability.AbilityBlockDrops.getDrops(player,
+        return AbilityBlockDrops.getDrops(player,
                 state,
                 targets.level(),
                 position,

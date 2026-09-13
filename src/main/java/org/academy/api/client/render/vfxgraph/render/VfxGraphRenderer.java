@@ -30,11 +30,14 @@ import org.academy.api.client.render.vfxgraph.arc.BlenderArcCurves;
 import org.academy.api.client.render.vfxgraph.arc.CurveToMeshBuilder;
 import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
 import org.academy.api.client.resources.R;
+import org.joml.FrustumIntersection;
+import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.system.MemoryStack;
+import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -83,8 +86,8 @@ public final class VfxGraphRenderer {
             .build();
     private static final Vector4f CLEAR_COLOR = new Vector4f(0.07f, 0.08f, 0.1f, 1f);
     private final float[] worldScratch = new float[3];
-    private final org.joml.FrustumIntersection particleFrustum = new org.joml.FrustumIntersection();
-    private final org.joml.Matrix4f particleProjection = new org.joml.Matrix4f();
+    private final FrustumIntersection particleFrustum = new FrustumIntersection();
+    private final Matrix4f particleProjection = new Matrix4f();
     private int[] selectedParticles = new int[4096];
 
     public record SurfaceMesh(float[] triangles, float r, float g, float b, float a) {
@@ -431,8 +434,8 @@ public final class VfxGraphRenderer {
     private static ByteBuffer ensureArcStaging(@Nullable ByteBuffer buffer, int needed) {
         if (buffer == null || buffer.capacity() < needed) {
             int capacity = Math.max(needed, buffer == null ? 65536 : Math.multiplyExact(buffer.capacity(), 2));
-            var replacement = org.lwjgl.system.MemoryUtil.memAlloc(capacity);
-            if (buffer != null) org.lwjgl.system.MemoryUtil.memFree(buffer);
+            var replacement = MemoryUtil.memAlloc(capacity);
+            if (buffer != null) MemoryUtil.memFree(buffer);
             buffer = replacement;
         }
         buffer.clear();
@@ -752,8 +755,8 @@ public final class VfxGraphRenderer {
         sceneDepth.close();
         if (instanceBuffer != null) instanceBuffer.close();
         if (lineBuffer != null) lineBuffer.close();
-        if (arcVertexStaging != null) { org.lwjgl.system.MemoryUtil.memFree(arcVertexStaging); arcVertexStaging = null; }
-        if (arcIndexStaging != null) { org.lwjgl.system.MemoryUtil.memFree(arcIndexStaging); arcIndexStaging = null; }
+        if (arcVertexStaging != null) { MemoryUtil.memFree(arcVertexStaging); arcVertexStaging = null; }
+        if (arcIndexStaging != null) { MemoryUtil.memFree(arcIndexStaging); arcIndexStaging = null; }
         if (arcTubeVertexBuffer != null) arcTubeVertexBuffer.close();
         if (arcTubeIndexBuffer != null) arcTubeIndexBuffer.close();
         arcLightningUbo.close();

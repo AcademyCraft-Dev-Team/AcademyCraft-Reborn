@@ -13,6 +13,8 @@ import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.level.block.Rotation;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -150,8 +152,8 @@ public final class TemporalAcademySchedulerGameTests {
 
     private static void validateOwnerIsolation(
             GameTestHelper helper,
-            net.minecraft.world.entity.Entity pausedOwner,
-            net.minecraft.world.entity.Entity normalOwner,
+            Entity pausedOwner,
+            Entity normalOwner,
             ServerProgramScheduler.SessionKey pausedKey,
             ServerProgramScheduler.SessionKey normalKey,
             AtomicReference<ProgramSessionScheduler.TerminationKind> pausedTermination,
@@ -203,7 +205,7 @@ public final class TemporalAcademySchedulerGameTests {
     }
 
     private static boolean start(
-            net.minecraft.server.MinecraftServer server,
+            MinecraftServer server,
             ServerProgramScheduler.SessionKey key,
             AtomicReference<ProgramSessionScheduler.TerminationKind> termination
     ) {
@@ -220,9 +222,9 @@ public final class TemporalAcademySchedulerGameTests {
     }
 
     private static void cleanup(
-            net.minecraft.server.MinecraftServer server,
-            net.minecraft.world.entity.Entity pausedOwner,
-            net.minecraft.world.entity.Entity normalOwner,
+            MinecraftServer server,
+            Entity pausedOwner,
+            Entity normalOwner,
             ServerProgramScheduler.SessionKey pausedKey,
             ServerProgramScheduler.SessionKey normalKey,
             TemporalFieldLease lease

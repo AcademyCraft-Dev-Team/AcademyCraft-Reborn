@@ -1,5 +1,6 @@
 package org.academy.api.server.ability;
 
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -994,10 +995,10 @@ public final class AbilitySystemServer {
                 var availableAir = aeromanipResourceManager.getCurrent(player);
                 var availableCp = playerCPManager.getAvailableCP(uuid);
                 var message = availableAir + 1.0e-4f < compressedAirCost
-                        ? net.minecraft.network.chat.Component.translatable("message.academy.aeromanip.insufficient_air", compressedAirCost, availableAir)
+                        ? Component.translatable("message.academy.aeromanip.insufficient_air", compressedAirCost, availableAir)
                         : availableCp + 1.0e-4f < actualCpCost
-                        ? net.minecraft.network.chat.Component.translatable("message.academy.aeromanip.insufficient_cp", actualCpCost, availableCp)
-                        : net.minecraft.network.chat.Component.translatable("message.academy.aeromanip.cast_restricted");
+                        ? Component.translatable("message.academy.aeromanip.insufficient_cp", actualCpCost, availableCp)
+                        : Component.translatable("message.academy.aeromanip.cast_restricted");
                 player.sendSystemMessage(message);
             }
             return false;

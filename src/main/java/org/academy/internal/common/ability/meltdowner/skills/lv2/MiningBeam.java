@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -13,10 +14,12 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.SingleRecipeInput;
+import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
@@ -426,8 +429,8 @@ public final class MiningBeam extends Skill {
             output.setCount(output.getCount() * drop.getCount());
             Block.popResource(level, pos, output);
             var experience = Math.round(recipe.value().experience() * drop.getCount());
-            if (experience > 0) net.minecraft.world.entity.ExperienceOrb.award(level,
-                    net.minecraft.world.phys.Vec3.atCenterOf(pos), experience);
+            if (experience > 0) ExperienceOrb.award(level,
+                    Vec3.atCenterOf(pos), experience);
         }
         return true;
     }
@@ -438,7 +441,7 @@ public final class MiningBeam extends Skill {
             BlockState state,
             BlockEntity blockEntity,
             ServerPlayer player,
-            net.minecraft.resources.ResourceKey<net.minecraft.world.item.enchantment.Enchantment> enchantment,
+            ResourceKey<Enchantment> enchantment,
             int enchantmentLevel
     ) {
         var tool = new ItemStack(Items.NETHERITE_PICKAXE);

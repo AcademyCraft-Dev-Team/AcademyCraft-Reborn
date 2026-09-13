@@ -6,6 +6,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.ability.aeromanip.AirMobilitySyncPacket;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.WeakHashMap;
 
@@ -14,8 +15,8 @@ public final class AirMobility {
     public static final int NONE = 0;
     public static final int SLOW_FALL = 1;
     public static final int HOVER = 2;
-    private static final Map<LivingEntity, State> STATES = java.util.Collections.synchronizedMap(new WeakHashMap<>());
-    private static final Map<LivingEntity, Long> PROPULSION = java.util.Collections.synchronizedMap(new WeakHashMap<>());
+    private static final Map<LivingEntity, State> STATES = Collections.synchronizedMap(new WeakHashMap<>());
+    private static final Map<LivingEntity, Long> PROPULSION = Collections.synchronizedMap(new WeakHashMap<>());
 
     private AirMobility() {
     }

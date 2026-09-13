@@ -49,6 +49,12 @@ class MsdfAtlas(
         glyphIndex: Int,
         codePoint: Int
     ): MsdfGlyph? {
+        if (glyphIndex == 0) {
+            LOGGER.error(
+                "MSDF generation for glyph index 0 (missing glyph/.notdef), codepoint U+{} in font {}",
+                String.format("%04X", codePoint), fontId
+            )
+        }
         glyphCache[glyphIndex]?.let { return it }
 
         val shape = Shape()

@@ -5,8 +5,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.program.ForwardingProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
+import org.academy.api.common.ability.program.ProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
@@ -26,7 +28,7 @@ import java.util.Optional;
 /**
  * Authoritative Minecraft-server adapter for Darkmatter programs.
  */
-public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRuntime, org.academy.api.common.ability.program.ForwardingProgramTargetResolver {
+public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRuntime, ForwardingProgramTargetResolver {
     public static final double MAX_QUERY_RANGE = AbilityProgramSpatialRanges.forCategory(
             DarkmatterProgramNodeCatalog.DARKMATTER).queryRange();
     public static final double MAX_ACTION_RANGE = AbilityProgramSpatialRanges.forCategory(
@@ -37,7 +39,7 @@ public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRu
     private final float costMultiplier;
     private final ServerProgramTargetResolver targets;
     @Override
-    public org.academy.api.common.ability.program.ProgramTargetResolver targetResolver() {
+    public ProgramTargetResolver targetResolver() {
         return targets;
     }
 
