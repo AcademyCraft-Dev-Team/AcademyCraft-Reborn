@@ -23,10 +23,11 @@ class SkillVfxPacketTest {
         } finally { buffer.release(); }
     }
 
-    @Test void smokeAndSlashCarryAppearanceInOneSmallPacket() {
+    @Test void oneShotEffectsCarryAppearanceInOneSmallPacket() {
         for (var state : new SkillVfxState[]{
                 new SkillVfxState.Smoke(new Vec3(2, 3, 4), .5f, .7f, 3, 80),
-                new SkillVfxState.Slash(new Vec3(2, 3, 4), -20, 270, 2, -1, 4)}) {
+                new SkillVfxState.Slash(new Vec3(2, 3, 4), -20, 270, 2, -1, 4),
+                new SkillVfxState.DistortionRing(new Vec3(2, 3, 4), -20, 270, 42, 10)}) {
             assertEquals(state, roundTrip(state));
             assertTrue(state.oneShot());
             var buffer = Unpooled.buffer();
@@ -45,7 +46,10 @@ class SkillVfxPacketTest {
                 new SkillVfxState.Smoke(Vec3.ZERO, 1, .5f, 0, 0),
                 new SkillVfxState.Slash(Vec3.ZERO, Float.NaN, 0, 1, 1, 4),
                 new SkillVfxState.Slash(Vec3.ZERO, 0, 0, 33, 1, 4),
-                new SkillVfxState.Slash(Vec3.ZERO, 0, 0, 1, 1, 201)}) {
+                new SkillVfxState.Slash(Vec3.ZERO, 0, 0, 1, 1, 201),
+                new SkillVfxState.DistortionRing(Vec3.ZERO, Float.NaN, 0, 1, 10),
+                new SkillVfxState.DistortionRing(Vec3.ZERO, 0, 0, -2, 10),
+                new SkillVfxState.DistortionRing(Vec3.ZERO, 0, 0, 1, 0)}) {
             assertThrows(IllegalArgumentException.class, () -> roundTrip(state));
         }
     }

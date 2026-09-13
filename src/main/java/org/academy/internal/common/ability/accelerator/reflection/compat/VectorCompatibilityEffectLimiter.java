@@ -31,7 +31,7 @@ public final class VectorCompatibilityEffectLimiter {
         if (LAST_EFFECT_TICKS.size() > 2048) {
             LAST_EFFECT_TICKS.entrySet().removeIf(entry -> now - entry.getValue() > 100L);
         }
-        VectorReflection.Server.spawnGlowCircle(defender, direction, position, kind);
+        VectorReflection.Server.spawnGlowCircle(defender, direction, position);
         VectorReflection.Server.playReflectionSound(defender);
     }
 

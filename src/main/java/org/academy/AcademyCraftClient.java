@@ -143,6 +143,7 @@ public final class AcademyCraftClient {
         SpawnVfxGraphPacket.initClient();
         SkillVfxPacket.initClient();
         ShockwaveVfx.register();
+        GlowCircleVfx.register();
         ProficiencyPolicy.initClient();
         SkillTuning.initClient();
         PvpSetting.initClient();
