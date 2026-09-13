@@ -1,6 +1,8 @@
 package org.academy.internal.common.ability.teleport;
 
+import com.mojang.authlib.GameProfile;
 import com.mojang.serialization.MapCodec;
+import io.netty.channel.embedded.EmbeddedChannel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
@@ -8,10 +10,14 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.GameTestInstance;
 import net.minecraft.gametest.framework.TestData;
 import net.minecraft.gametest.framework.TestEnvironmentDefinition;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -19,6 +25,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
@@ -27,6 +34,7 @@ import org.academy.AcademyCraft;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 /**
  * Live-world verification for the 区块跃迁 swap.
@@ -68,6 +76,9 @@ public final class ChunkSwapGameTests {
                 new SwapTest(data(environment), SwapScenario.SECTION_BYTES));
         event.registerTest(AcademyCraft.academy("chunk_swap_cross_dimension_relights_empty_section"),
                 new SwapTest(data(environment), SwapScenario.CROSS_DIMENSION_LIGHT));
+        event.registerTest(AcademyCraft.academy("chunk_leap_end_player_preload"),
+                new SwapTest(new TestData<>(environment, Identifier.withDefaultNamespace("empty"),
+                        12000, 0, true, Rotation.NONE, false, 1, 1, false, 16), SwapScenario.END_PLAYER_PRELOAD));
     }
 
     private static TestData<Holder<TestEnvironmentDefinition<?>>> data(
@@ -92,7 +103,8 @@ public final class ChunkSwapGameTests {
          * finish the vanilla relight pipeline. This is the empty/non-empty transition that previously left
          * light storage without a DataLayer and killed a light worker.
          */
-        CROSS_DIMENSION_LIGHT
+        CROSS_DIMENSION_LIGHT,
+        END_PLAYER_PRELOAD
     }
 
     private static final class SwapTest extends GameTestInstance {
@@ -111,6 +123,10 @@ public final class ChunkSwapGameTests {
         @Override
         public void run(GameTestHelper helper) {
             var level = helper.getLevel();
+            if (scenario == SwapScenario.END_PLAYER_PRELOAD) {
+                endPlayerPreload(helper, level);
+                return;
+            }
             if (scenario == SwapScenario.CROSS_DIMENSION_LIGHT) {
                 crossDimensionLight(helper, level);
                 return;
@@ -145,6 +161,61 @@ public final class ChunkSwapGameTests {
                     release(level, chunkAX, chunkBX);
                 }
             });
+        }
+
+        private void endPlayerPreload(GameTestHelper helper, ServerLevel overworld) {
+            var server = overworld.getServer();
+            var end = server.getLevel(Level.END);
+            if (end == null) {
+                fail(helper, "the End must exist for the player preload test");
+                return;
+            }
+            var owner = "chunk_leap_test:" + UUID.randomUUID();
+            var playerRef = new ServerPlayer[1];
+            Runnable cleanup = () -> {
+                ChunkTicketLeaseManager.release(owner);
+                var player = playerRef[0];
+                if (player != null && server.getPlayerList().getPlayer(player.getUUID()) == player) {
+                    server.getPlayerList().remove(player);
+                    player.connection.getConnection().disconnect(Component.literal("Test complete"));
+                }
+            };
+            helper.runAtTickTime(11990, cleanup);
+            var loading = ChunkTicketLeaseManager.acquireAndLoad(end, owner,
+                    ChunkLeapRegion.ofChunks(Level.END, -2, -6, 3, 3));
+            helper.startSequence().thenWaitUntil(() -> helper.assertTrue(loading.isDone(), "End preload must finish"))
+                    .thenExecute(() -> {
+                        try {
+                            helper.assertTrue(!loading.isCompletedExceptionally(),
+                                    "End preload failed: " + loading.handle((value, failure) -> failure).join());
+                            loading.join();
+                            var profile = new GameProfile(UUID.randomUUID(), "leap-preload");
+                            var cookie = CommonListenerCookie.createInitial(profile, false);
+                            var player = new ServerPlayer(server, overworld, profile, cookie.clientInformation());
+                            var connection = new Connection(PacketFlow.SERVERBOUND);
+                            new EmbeddedChannel(connection);
+                            playerRef[0] = player;
+                            server.getPlayerList().placeNewPlayer(connection, player, cookie);
+                            player.connection.markClientLoaded();
+                            player.setNoGravity(true);
+                            helper.assertTrue(TeleportSync.teleportInstantly(player, end,
+                                            new Vec3(-1.5, 80.0, -70.5), 0.0f, 0.0f),
+                                    "preloaded player teleport to the End must succeed");
+                            player.connection.markClientLoaded();
+                            ChunkTicketLeaseManager.release(owner);
+                        } catch (RuntimeException | Error failure) {
+                            cleanup.run();
+                            throw failure;
+                        }
+                    })
+                    .thenExecuteAfter(40, () -> {
+                        try {
+                            helper.assertTrue(playerRef[0].level() == end && !playerRef[0].isRemoved(),
+                                    "player must remain in the End after subsequent world ticks");
+                        } finally {
+                            cleanup.run();
+                        }
+                    }).thenSucceed();
         }
 
         private void crossDimensionLight(GameTestHelper helper, ServerLevel overworld) {

@@ -373,6 +373,7 @@
   "chunk_leap.reason.dimension_missing": "维度不存在",
   "chunk_leap.reason.entity_missing": "目标生物不存在",
   "chunk_leap.reason.invalid_region": "区域无效",
+  "chunk_leap.reason.load_failed": "目标区块加载失败",
   "chunk_leap.reason.no_vertical_overlap": "两个维度没有可交换的高度范围",
   "chunk_leap.reason.overlap": "区域重叠",
   "chunk_leap.reason.relight_failed": "区块光照重建失败",
