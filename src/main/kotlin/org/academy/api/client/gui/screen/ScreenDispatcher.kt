@@ -22,8 +22,6 @@ import org.academy.api.client.thread.RenderThread
 import org.academy.api.client.vanilla.RenderLoopEvent
 import org.academy.api.client.vanilla.ResizeDisplayEvent
 import org.academy.api.client.vanilla.WorldCompositeEvent
-import org.academy.internal.client.gui.debug.SerializedUiDebugHost
-import org.academy.internal.client.gui.debug.UiDebugSession
 
 class ScreenDispatcher private constructor() {
     private val renderTarget: RenderTarget
@@ -129,19 +127,16 @@ class ScreenDispatcher private constructor() {
     }
 
     private fun renderImGuiOverlay(target: RenderTarget, screen: RenderRoot) {
+        if (!ImGuiUIDebugger.enabled) return
         ImGuiUtilApi.render(target) {
-            val host = screen as? SerializedUiDebugHost
-            if (ImGuiUIDebugger.enabled && host != null && UiDebugSession.shouldAttach(host)) {
-                ImGuiUIDebugger.renderContent(
-                    host.debugLayoutRoot(),
-                    true,
-                    Component.translatable(
-                        "screen.academy.ui_debug.inspector.live_title",
-                        host.debugLayoutId()
-                    ).string
-                )
-                UiDebugSession.capture(host)
-            }
+            ImGuiUIDebugger.renderContent(
+                screen.root,
+                true,
+                Component.translatable(
+                    "screen.academy.ui_debug.inspector.live_title",
+                    screen.javaClass.simpleName
+                ).string
+            )
         }
     }
 

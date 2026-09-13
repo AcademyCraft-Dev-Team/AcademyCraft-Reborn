@@ -19,7 +19,7 @@
 | Standalone full screen | `UiScreen` |
 | Terminal launcher | `TerminalHud.Context` |
 | Terminal application | Terminal `App` plus its `WidgetContext` |
-| HUD/overlay | `HudManager` and neighboring serialized UI layout JSON |
+| HUD/overlay | `HudManager` and neighboring layout DSL factories |
 | Repeated screen fragment | A shared widget or utility, not copied screen-local drawing |
 
 Use the host already selected by the target's nearest current implementation. Changing frameworks is not part of a visual refresh.
@@ -34,7 +34,7 @@ Read the target and at least one adjacent implementation of the same archetype. 
 - animation and visibility state;
 - mouse, keyboard, focus, IME, and tooltip behavior;
 - packets or state mutations triggered by controls;
-- layout JSON under `src/main/resources/assets/academy/ui/layout` when present.
+- layout DSL factories under `org.academy.internal.client.gui.layout` when present.
 
 Useful current implementations include:
 
@@ -66,7 +66,7 @@ The legacy reference project uses LambdaLib/CGUI. Preserve its visual and intera
 | `DragBar` | Current `ScrollBarWidget` |
 | Per-frame listener | Current screen/widget tick or bound state update |
 | `doesDraw = false` page switch | Visibility plus enabled/focus state, preferably through `AnimationUtil` |
-| CGUI XML | Kotlin widget composition, or existing serialized layout format for that subsystem |
+| CGUI XML | Kotlin widget composition, or the shared layout DSL factories under `org.academy.internal.client.gui.layout` for that subsystem |
 
 Never add a LambdaLib or CGUI dependency merely to reuse reference code.
 

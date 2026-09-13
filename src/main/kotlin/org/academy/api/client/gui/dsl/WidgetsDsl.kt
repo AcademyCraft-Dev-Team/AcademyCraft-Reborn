@@ -6,9 +6,6 @@ import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.texture.TextureSource
 import org.academy.api.client.gui.widget.*
 
-// ============ 名称生成 ============
-
-/** 生成容器内唯一的默认子控件名: `base`, `base_1`, `base_2`... */
 fun WidgetContainer.nextChildName(base: String): String {
     if (base !in children) return base
     var n = 1
@@ -114,6 +111,16 @@ fun WidgetContainer.nineSlice(
     init: NineSliceWidget.() -> Unit = {}
 ): NineSliceWidget {
     val widget = NineSliceWidget(texture, left, right, top, bottom)
+    addChild(name, widget)
+    widget.init()
+    return widget
+}
+
+fun WidgetContainer.blendQuad(
+    name: String = nextChildName("blend_quad"),
+    init: BlendQuadWidget.() -> Unit = {}
+): BlendQuadWidget {
+    val widget = BlendQuadWidget()
     addChild(name, widget)
     widget.init()
     return widget
