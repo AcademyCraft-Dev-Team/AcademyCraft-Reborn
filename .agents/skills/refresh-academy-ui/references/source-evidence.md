@@ -48,7 +48,7 @@ This file is intentionally self-contained for everyday use. Re-open the legacy s
 ### HUD
 
 - The legacy CP bar implementation uses a wide edge-aligned low-profile texture, smoothed CP/overload values, a short blend-in, semantic white/orange/red states, and overload-only glow.
-- Current serialized HUD layouts under `src/main/resources/assets/academy/ui/layout` are the implementation authority for placement.
+- Layout DSL factories under `org.academy.internal.client.gui.layout` are the implementation authority for placement.
 
 ## Measured layouts
 

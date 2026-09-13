@@ -50,7 +50,7 @@ public record AirflowField(
         length = finitePositive(length);
         strength = Float.isFinite(strength) ? strength : 0.0f;
         durationTicks = Math.max(1, durationTicks);
-        proficiencyMilestone = Math.max(0, Math.min(3, proficiencyMilestone));
+        proficiencyMilestone = Math.clamp(proficiencyMilestone, 0, 3);
     }
 
     private static boolean finite(Vec3 value) {

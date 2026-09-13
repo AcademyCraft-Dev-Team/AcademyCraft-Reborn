@@ -52,6 +52,6 @@ public final class AeromanipConfig {
 
     private static float clamp(float value, float min, float max) {
         if (!Float.isFinite(value)) return min;
-        return Math.max(min, Math.min(max, value));
+        return Math.clamp(value, min, max);
     }
 }

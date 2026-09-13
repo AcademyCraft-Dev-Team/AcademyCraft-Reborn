@@ -11,10 +11,6 @@ import java.nio.ByteBuffer
 import kotlin.math.max
 import kotlin.math.min
 
-/**
- * SDF 圆角矩形绘制命令喵. 单一 pipeline 覆盖 圆角/描边/阴影/渐变,
- * 顶点仍为 QUAD (POSITION_TEX), 片元内做圆角盒 SDF.
- */
 class RoundedRectDrawCommand(
     width: Float,
     height: Float,
@@ -57,10 +53,6 @@ class RoundedRectDrawCommand(
     private val shadowOffsetValue: Vector2f = Vector2f(shadowOffset)
     private val borderWidthValue: Float = borderWidth
 
-    /**
-     * 圆角盒 SDF 会绘制到标称矩形之外: 阴影按 [shadowBlur] 外扩并叠加 [shadowOffset],
-     * 描边再外扩一半宽度. 取保守 AABB, 否则合并重排会漏裁.
-     */
     override fun localBounds(): LocalBounds {
         val pad = shadowBlurValue + borderWidthValue * 0.5f + PosColorRectDrawCommand.AA
         val left = min(0f, shadowOffsetValue.x) - pad

@@ -1,6 +1,7 @@
 package org.academy.api.client.gui.util
 
 import net.minecraft.core.BlockPos
+import net.minecraft.resources.Identifier
 import org.academy.api.client.gui.drawable.StateListDrawable
 import org.academy.api.client.gui.drawable.TextureDrawable
 import org.academy.api.client.gui.layout.Gravity
@@ -150,6 +151,30 @@ object WirelessPanelUtil {
             })
     }
 
+    private fun addButtonWithIcon(
+        parent: LinearLayoutWidget,
+        button: ButtonWidget,
+        icon: Identifier
+    ) {
+        parent.addChild("button", button) {
+            val content = ImageWidget()
+            val defaultDrawable = TextureDrawable(icon)
+            defaultDrawable.tintColor = 0xFFE6E6E6.toInt()
+
+            val hoveredDrawable = TextureDrawable(icon)
+            hoveredDrawable.tintColor = -0x1
+
+            val sld = StateListDrawable()
+            sld.setDefault(defaultDrawable)
+            sld.addState(Widget.HOVERED, hoveredDrawable)
+
+            content.background = sld
+            content.layoutParams = FrameLayoutWidget.LayoutParams()
+                .sizeMode(SizeMode.MATCH_PARENT)
+            button.addChild("content", content)
+        }
+    }
+
     private fun getNodeWidget(
         position: BlockPos,
         connectedNodeContainer: FrameLayoutWidget,
@@ -210,23 +235,7 @@ object WirelessPanelUtil {
                         .gravity(Gravity.CENTER)
                         .size(14f, 14f)
                     connectButton.onClickListener = { _ -> connectAction(inputBox.text) }
-                    itemContent.addChild("button", connectButton) {
-                        val content = ImageWidget()
-                        val defaultDrawable = TextureDrawable(R.textures.gui.icon.icon_unconnected)
-                        defaultDrawable.tintColor = 0xFFE6E6E6.toInt()
-
-                        val hoveredDrawable = TextureDrawable(R.textures.gui.icon.icon_unconnected)
-                        hoveredDrawable.tintColor = -0x1
-
-                        val sld = StateListDrawable()
-                        sld.setDefault(defaultDrawable)
-                        sld.addState(Widget.HOVERED, hoveredDrawable)
-
-                        content.background = sld
-                        content.layoutParams = FrameLayoutWidget.LayoutParams()
-                            .sizeMode(SizeMode.MATCH_PARENT)
-                        connectButton.addChild("content", content)
-                    }
+                    addButtonWithIcon(itemContent, connectButton, R.textures.gui.icon.icon_unconnected)
                 } else if (!isNone) {
                     val disconnectButton = ButtonWidget()
                     disconnectButton.onClickListener = {
@@ -236,23 +245,7 @@ object WirelessPanelUtil {
                     disconnectButton.layoutParams = LinearLayoutWidget.LayoutParams()
                         .gravity(Gravity.CENTER)
                         .size(14f, 14f)
-                    itemContent.addChild("button", disconnectButton) {
-                        val content = ImageWidget()
-                        val defaultDrawable = TextureDrawable(R.textures.gui.icon.icon_connected)
-                        defaultDrawable.tintColor = 0xFFE6E6E6.toInt()
-
-                        val hoveredDrawable = TextureDrawable(R.textures.gui.icon.icon_connected)
-                        hoveredDrawable.tintColor = -0x1
-
-                        val sld = StateListDrawable()
-                        sld.setDefault(defaultDrawable)
-                        sld.addState(Widget.HOVERED, hoveredDrawable)
-
-                        content.background = sld
-                        content.layoutParams = FrameLayoutWidget.LayoutParams()
-                            .sizeMode(SizeMode.MATCH_PARENT)
-                        disconnectButton.addChild("content", content)
-                    }
+                    addButtonWithIcon(itemContent, disconnectButton, R.textures.gui.icon.icon_connected)
                 }
             }
         }

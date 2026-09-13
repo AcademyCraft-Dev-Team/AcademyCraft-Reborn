@@ -4,7 +4,6 @@ import net.minecraft.world.phys.Vec3;
 
 import java.util.Optional;
 
-/** Pure geometry and timeline helpers shared by the server contract and the client renderer. */
 public final class SpacialExcisionMath {
     public static final double MIN_DISPLACEMENT_SQUARED = 1.0e-6;
     public static final int TRANSITION_TICKS = 4;
@@ -51,10 +50,6 @@ public final class SpacialExcisionMath {
         return transitionProgress((double) now, createdTick, endTick);
     }
 
-    /**
-     * Fractional-tick variant used by the renderer so the four-tick transition
-     * remains smooth at render rates above the server tick rate.
-     */
     public static float transitionProgress(double now, long createdTick, long endTick) {
         return transitionProgress(now, (double) createdTick, (double) endTick);
     }
@@ -75,11 +70,6 @@ public final class SpacialExcisionMath {
                 && Double.isFinite(vector.z);
     }
 
-    /**
-     * Interpolation fraction where a homogeneous line crosses a minimum front-facing w.
-     * Invalid and parallel inputs return NaN so callers can drop only the affected
-     * primitive instead of manufacturing an arbitrary screen-space fallback.
-     */
     public static float frontClipInterpolation(float fromW, float toW, float minimumW) {
         if (!Float.isFinite(fromW) || !Float.isFinite(toW)
                 || !Float.isFinite(minimumW) || minimumW < 0.0f) {
@@ -91,7 +81,7 @@ public final class SpacialExcisionMath {
         }
         var fraction = (minimumW - fromW) / denominator;
         return Float.isFinite(fraction)
-                ? Math.max(0.0f, Math.min(1.0f, fraction))
+                ? Math.clamp(fraction, 0.0f, 1.0f)
                 : Float.NaN;
     }
 

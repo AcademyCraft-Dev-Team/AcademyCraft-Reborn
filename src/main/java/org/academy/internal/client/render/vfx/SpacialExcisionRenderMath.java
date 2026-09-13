@@ -9,7 +9,6 @@ import org.joml.Vector3fc;
 import org.joml.Vector4f;
 import org.jspecify.annotations.Nullable;
 
-/** Pure helpers shared by the spatial-cut CPU layout and its regression tests. */
 final class SpacialExcisionRenderMath {
     private static final float SCREEN_DIRECTION_EPSILON = 1.0e-6f;
     private static final float FALLOFF_DISTANCE_FACTOR = 2.5f;
@@ -82,12 +81,6 @@ final class SpacialExcisionRenderMath {
         return Math.max(minimum, FALLOFF_DISTANCE_FACTOR * requested);
     }
 
-    /**
-     * Limits a world-space recovery band by its projected width while retaining
-     * the configured width at ordinary distances. The caller supplies the
-     * largest measured screen-space size of one world unit along the cut's
-     * tangent or plane-up direction.
-     */
     static float screenBoundedFalloffWidth(
             float requestedWorldWidth,
             float projectedPixelsPerWorldUnit,
@@ -106,21 +99,13 @@ final class SpacialExcisionRenderMath {
                 * Math.min(viewportWidth, viewportHeight);
         var projectedLimit = maximumPixels / projectedPixelsPerWorldUnit;
         if (!Float.isFinite(projectedLimit)) return requestedWorldWidth;
-        return Math.min(requestedWorldWidth,
-                Math.max(MIN_NEAR_FALLOFF_WORLD_WIDTH, projectedLimit));
+        return Math.clamp(projectedLimit, MIN_NEAR_FALLOFF_WORLD_WIDTH, requestedWorldWidth);
     }
 
     private static float finiteNonNegative(float value) {
         return Float.isFinite(value) ? Math.max(value, 0.0f) : 0.0f;
     }
 
-    /**
-     * Produces one source-UV translation for each physical half of a cut. The
-     * support point may move only along its existing view ray, preserving its
-     * destination UV while reducing an unsafe near-camera projection. The
-     * returned offsets are therefore cut-wide constants rather than a
-     * per-pixel physical-plane homography.
-     */
     static @Nullable AffineCutMapping regularizedAffineCutMapping(
             Vector3fc supportViewPosition,
             Vector3fc displacementView,
@@ -267,7 +252,6 @@ final class SpacialExcisionRenderMath {
                 : Long.compare(first.stableId(), second.stableId());
     }
 
-    /** Source classification must flip as soon as the camera crosses the plane. */
     static int sourceValidationSide(double signedDistance, int previousSide) {
         if (!Double.isFinite(signedDistance)) return previousSide < 0 ? -1 : 1;
         if (signedDistance > 1.0e-6) return 1;
@@ -275,11 +259,6 @@ final class SpacialExcisionRenderMath {
         return previousSide < 0 ? -1 : 1;
     }
 
-    /**
-     * Prepares a cut that intersects the camera/near gap. A footprint crossing
-     * the camera plane must first be clipped at w=0 so translating it cannot
-     * resurrect geometry that was behind the camera.
-     */
     static NearProxyPlan nearMaskProxyPlan(
             float minimumClipW,
             float maximumClipW,
@@ -299,11 +278,6 @@ final class SpacialExcisionRenderMath {
                 clipsCameraFront);
     }
 
-    /**
-     * Clips a perimeter-ordered clip-space polygon to the near plane and the
-     * viewport, then returns its NDC area. A partial near-plane intersection
-     * must remain selectable instead of invalidating the entire cut.
-     */
     static double clippedProjectedArea(List<ClipPoint> input, float nearW) {
         if (input.size() < 3 || !Float.isFinite(nearW) || nearW <= 0.0f) return 0.0;
         var polygon = List.copyOf(input);

@@ -2,9 +2,6 @@ package org.academy.internal.client.animation;
 
 import org.academy.internal.common.ability.accelerator.skills.WingFlightPose;
 
-/**
- * Deterministic transition timeline for the five authored wing-flight clips.
- */
 public final class WingFlightAnimationTimeline {
     private Phase phase = Phase.IDLE;
     private WingFlightPose.Pose target = WingFlightPose.Pose.IDLE;
@@ -47,14 +44,12 @@ public final class WingFlightAnimationTimeline {
             }
             case FAST -> {
                 if (phase == Phase.IDLE) {
-                    // startFlyingFast is authored from the low-speed pose, so enter that pose first.
                     start(Phase.START_FLYING_SLOW, nowTick);
                 } else if (phase == Phase.STOP_FLYING_SLOW) {
                     switchSlowDirection(Phase.START_FLYING_SLOW, nowTick);
                 } else if (phase == Phase.FLYING_SLOW || phase == Phase.QUIT_FLYING_FAST) {
                     start(Phase.START_FLYING_FAST, nowTick);
                 }
-                // Do not interrupt startFlyingSlow; startFlyingFast follows when it completes.
             }
         }
     }
@@ -99,7 +94,7 @@ public final class WingFlightAnimationTimeline {
 
     private void switchSlowDirection(Phase next, float nowTick) {
         var duration = Phase.START_FLYING_SLOW.durationTicks;
-        var elapsed = Math.max(0.0f, Math.min(duration, nowTick - phaseStartTick));
+        var elapsed = Math.clamp(nowTick - phaseStartTick, 0.0f, duration);
         var clipTick = phase == Phase.START_FLYING_SLOW ? elapsed : duration - elapsed;
         phase = next;
         phaseStartTick = nowTick - (next == Phase.START_FLYING_SLOW

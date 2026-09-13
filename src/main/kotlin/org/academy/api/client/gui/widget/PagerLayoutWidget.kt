@@ -9,13 +9,6 @@ import org.academy.api.client.gui.event.MouseEvent
 import org.academy.api.client.gui.event.ScrollEvent
 import org.academy.api.client.gui.render.Canvas
 
-/**
- * 横向翻页容器 (pager).
- *
- * 子控件按加入顺序排成水平条带: 每页宽度 = 容器宽度, 一次只显示一页.
- * [switchToPage] 以 [pageSwitchDuration]/[pageSwitchInterpolator] 播放平移动画,
- * 渲染时用 scissor 裁剪到自身矩形, 溢出页面不可见.
- */
 open class PagerLayoutWidget : FrameLayoutWidget() {
     private var pageOffset = 0f
 
@@ -29,7 +22,6 @@ open class PagerLayoutWidget : FrameLayoutWidget() {
 
     private var activeAnimator: Animator? = null
 
-    /** 切换到 [index] 页并播放平移动画. */
     fun switchToPage(index: Int, animate: Boolean = true) {
         if (index < 0 || index >= children.size || index == currentPage) return
         activeAnimator?.cancel()
@@ -53,7 +45,6 @@ open class PagerLayoutWidget : FrameLayoutWidget() {
         invalidate()
     }
 
-    /** 无动画跳到指定页 (初始布局). */
     fun jumpToPage(index: Int) {
         if (index < 0 || index >= children.size) return
         currentPage = index
@@ -62,10 +53,6 @@ open class PagerLayoutWidget : FrameLayoutWidget() {
         invalidate()
     }
 
-    /**
-     * 序列化/编辑器专用: 不检查 children 是否就绪 (反序列化时子控件晚于属性应用) 设置当前页.
-     * [render] 会对实际页数做钳制, 不会越界.
-     */
     fun setCurrentPageUnchecked(index: Int) {
         currentPage = index.coerceAtLeast(0)
         pageOffset = index.coerceAtLeast(0).toFloat()
@@ -73,17 +60,10 @@ open class PagerLayoutWidget : FrameLayoutWidget() {
         invalidate()
     }
 
-    /**
-     * 将每页按当前 [pageOffset] 平移到对应屏幕位置.
-     * 在 [onLayout] 与翻页动画中调用, 偏移持久化到子控件的 [translationX],
-     * 使命中测试 (依赖 [Widget.getAbsoluteTranslationX]) 与渲染一致, 且空闲时无重绘.
-     */
     private fun applyPageOffset() {
-        var index = 0
-        for (child in children.values) {
+        for ((index, child) in children.values.withIndex()) {
             val tx = (index - pageOffset) * width
             if (child.translationX != tx) child.translationX = tx
-            index++
         }
     }
 
@@ -100,8 +80,6 @@ open class PagerLayoutWidget : FrameLayoutWidget() {
     }
 
     override fun dispatchEvent(event: InputEvent) {
-        // 事件命中测试不感知 scissor 裁剪: 离屏页的控件按绝对坐标仍可被 isMouseOver 命中.
-        // 这里把鼠标类事件裁剪到 Pager 可见矩形, 防止点击/滚动穿透到被裁掉的页面.
         if (event is MouseEvent && !isWithinVisibleBounds(event.x, event.y)) return
         if (event is ScrollEvent && !isWithinVisibleBounds(event.x, event.y)) return
         super.dispatchEvent(event)

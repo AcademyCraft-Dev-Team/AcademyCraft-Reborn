@@ -10,16 +10,11 @@ import imgui.type.ImInt
 import imgui.type.ImString
 import net.minecraft.network.chat.Component
 import net.minecraft.util.ARGB
-import org.academy.AcademyCraft
-import org.academy.api.client.gui.editor.UiLayoutEditorScreen
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
-import org.academy.api.client.gui.serialize.WidgetSerializer
 import org.academy.api.client.gui.widget.*
-import java.nio.file.Files
-import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Locale
 
 object ImGuiUIDebugger {
     @Volatile
@@ -35,56 +30,30 @@ object ImGuiUIDebugger {
         enabled = value
     }
 
-    fun render(renderTarget: RenderTarget, root: WidgetContainer) {
-        ImGuiUtilApi.render(renderTarget) { renderContent(root) }
-    }
-
     fun renderHud(renderTarget: RenderTarget, roots: List<Pair<String, WidgetContainer>>) {
         ImGuiUtilApi.render(renderTarget) {
             for ((name, root) in roots) {
                 renderContent(
                     root,
-                    true,
                     tr("screen.academy.ui_debug.inspector.hud_title", name)
                 )
             }
         }
     }
 
-    fun renderContent(root: WidgetContainer, lockNames: Boolean = false, title: String? = null) {
+    fun renderContent(root: WidgetContainer, title: String? = null) {
         if (ImGui.begin((title ?: tr("screen.academy.ui_debug.inspector.title")) + "##academy_ui_inspector")) {
             ImGui.setWindowSize(450f, 700f, ImGuiCond.FirstUseEver)
-            if (ImGui.button(tr("screen.academy.ui_debug.inspector.export_json"))) {
-                exportLayout(root)
-            }
-            ImGui.sameLine()
-            if (ImGui.button(tr("screen.academy.ui_debug.inspector.open_editor"))) {
-                UiLayoutEditorScreen.open()
-            }
-            ImGui.sameLine()
             if (ImGui.button(tr("screen.academy.ui_debug.inspector.close"))) {
                 enabled = false
             }
             ImGui.separator()
-            renderWidgetNode(root, root.hoveredWidget, lockNames)
+            renderWidgetNode(root, root.hoveredWidget)
         }
         ImGui.end()
     }
 
-    private fun exportLayout(root: WidgetContainer) {
-        try {
-            val dir = WidgetSerializer.layoutDir().resolve("dump")
-            Files.createDirectories(dir)
-            val stamp = SimpleDateFormat("yyyyMMdd-HHmmss").format(Date())
-            val file = dir.resolve("layout-$stamp.json")
-            WidgetSerializer.export(root, file)
-            AcademyCraft.getLogger().info("[UiLayout] Exported current screen layout to {}", file)
-        } catch (e: Exception) {
-            AcademyCraft.getLogger().error("[UiLayout] Failed to export layout", e)
-        }
-    }
-
-    private fun renderWidgetNode(widget: Widget, hoveredWidget: Widget?, lockNames: Boolean) {
+    private fun renderWidgetNode(widget: Widget, hoveredWidget: Widget?) {
         val nodeFlags = ImGuiTreeNodeFlags.DefaultOpen or ImGuiTreeNodeFlags.FramePadding
         val isHovered = (widget === hoveredWidget)
 
@@ -101,7 +70,7 @@ object ImGuiUIDebugger {
         if (nodeOpen) {
             ImGui.indent()
             if (ImGui.collapsingHeader(tr("screen.academy.ui_debug.inspector.section.basic"))) {
-                renderBasicProperties(widget, lockNames)
+                renderBasicProperties(widget)
             }
             if (ImGui.collapsingHeader(tr("screen.academy.ui_debug.inspector.section.layout"))) {
                 renderLayoutParams(widget)
@@ -123,22 +92,15 @@ object ImGuiUIDebugger {
             if (widget is WidgetContainer) {
                 ImGui.separator()
                 for (child in widget.children.values) {
-                    renderWidgetNode(child, hoveredWidget, lockNames)
+                    renderWidgetNode(child, hoveredWidget)
                 }
             }
             ImGui.treePop()
         }
     }
 
-    private fun renderBasicProperties(widget: Widget, lockNames: Boolean) {
-        if (lockNames) {
-            ImGui.textDisabled(tr("screen.academy.ui_debug.inspector.name_value", widget.name))
-        } else {
-            val nameBuffer = ImString(widget.name, 256)
-            if (ImGui.inputText(label("screen.academy.ui_debug.inspector.name", "name"), nameBuffer)) {
-                widget.name = nameBuffer.get()
-            }
-        }
+    private fun renderBasicProperties(widget: Widget) {
+        ImGui.textDisabled(tr("screen.academy.ui_debug.inspector.name_value", widget.name))
 
         val enabled = ImBoolean(widget.isEnabled)
         if (ImGui.checkbox(label("screen.academy.ui_debug.inspector.enabled", "enabled"), enabled)) {

@@ -4,17 +4,6 @@ import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.layout.SizeMode
 import kotlin.math.max
 
-/**
- * 布局 v2 的锚点约束容器喵.
- *
- * 每个子控件通过 [WidgetContainer.LayoutParams.anchorX]/[anchorY] 在内容区内定位:
- * - 点锚点: 子控件的边/中心按 `anchorX * (contentW - childW)` 摆放, `offset*` 叠加像素偏移.
- *   例: anchors(0f,0f) 左上, anchors(0.5f,0.5f) 居中, anchors(1f,1f) 右下.
- * - 拉伸: [WidgetContainer.LayoutParams.stretchX]/[stretchY] 为 true 时, 从 [WidgetContainer.LayoutParams.anchorX]
- *   拉伸到 [WidgetContainer.LayoutParams.anchorX2] (未设置则到内容区右/下边缘).
- *
- * 尺寸模式支持 [SizeMode.PERCENT] (相对父容器内容区的百分比).
- */
 open class AnchorLayoutWidget : AbstractWidgetContainer() {
     private val matchChildren: MutableList<Widget> = ArrayList()
 
@@ -109,48 +98,51 @@ open class AnchorLayoutWidget : AbstractWidgetContainer() {
         for (child in children.values) {
             if (!child.isVisible()) continue
             val lp = child.layoutParams
-            val childWidth = child.measuredWidth
-            val childHeight = child.measuredHeight
 
             val availW = max(0f, contentWidth - lp.marginLeft - lp.marginRight)
             val availH = max(0f, contentHeight - lp.marginTop - lp.marginBottom)
             val baseLeft = contentLeft + lp.marginLeft
             val baseTop = contentTop + lp.marginTop
 
-            var childLeft: Float
-            var childTop: Float
-            var layoutWidth = childWidth
-            var layoutHeight = childHeight
+            val horizontal = resolveAxis(
+                lp.stretchX, lp.anchorX, lp.anchorX2, lp.offsetX,
+                baseLeft, availW, child.measuredWidth
+            )
+            val vertical = resolveAxis(
+                lp.stretchY, lp.anchorY, lp.anchorY2, lp.offsetY,
+                baseTop, availH, child.measuredHeight
+            )
 
-            if (lp.stretchX) {
-                val left = baseLeft + lp.anchorX * availW + lp.offsetX
-                val right = if (lp.anchorX2 >= 0f) {
-                    baseLeft + lp.anchorX2 * availW + lp.offsetX
-                } else {
-                    baseLeft + availW + lp.offsetX
-                }
-                childLeft = left
-                layoutWidth = max(0f, right - left)
-            } else {
-                childLeft = baseLeft + lp.anchorX * (availW - childWidth) + lp.offsetX
-            }
-
-            if (lp.stretchY) {
-                val top = baseTop + lp.anchorY * availH + lp.offsetY
-                val bottom = if (lp.anchorY2 >= 0f) {
-                    baseTop + lp.anchorY2 * availH + lp.offsetY
-                } else {
-                    baseTop + availH + lp.offsetY
-                }
-                childTop = top
-                layoutHeight = max(0f, bottom - top)
-            } else {
-                childTop = baseTop + lp.anchorY * (availH - childHeight) + lp.offsetY
-            }
-
-            child.layout(childLeft, childTop, childLeft + layoutWidth, childTop + layoutHeight)
+            child.layout(
+                horizontal.start,
+                vertical.start,
+                horizontal.start + horizontal.extent,
+                vertical.start + vertical.extent
+            )
         }
     }
+
+    private fun resolveAxis(
+        stretch: Boolean,
+        anchor: Float,
+        anchor2: Float,
+        offset: Float,
+        base: Float,
+        available: Float,
+        childSize: Float
+    ): AxisPlacement {
+        if (!stretch) return AxisPlacement(base + anchor * (available - childSize) + offset, childSize)
+
+        val start = base + anchor * available + offset
+        val end = if (anchor2 >= 0f) {
+            base + anchor2 * available + offset
+        } else {
+            base + available + offset
+        }
+        return AxisPlacement(start, max(0f, end - start))
+    }
+
+    private class AxisPlacement(val start: Float, val extent: Float)
 
     class LayoutParams : WidgetContainer.LayoutParams {
         constructor()

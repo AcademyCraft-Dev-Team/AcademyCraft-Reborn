@@ -17,7 +17,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
-import java.util.function.Supplier
 import javax.imageio.ImageIO
 
 object AlbumArtworkCache {
@@ -130,7 +129,7 @@ object AlbumArtworkCache {
 
     private fun registerTexture(key: String, bytes: ByteArray) {
         val image = NativeImage.read(ByteArrayInputStream(bytes))
-        val texture = DynamicTexture(Supplier { "academy_music_cover_$key" }, image)
+        val texture = DynamicTexture({ "academy_music_cover_$key" }, image)
         val location = AcademyCraft.academy("music_cover/$key")
         Minecraft.getInstance().textureManager.register(location, texture)
         textures[key] = location

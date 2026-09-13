@@ -200,10 +200,8 @@ public final class AbilityControlTabletSpecialRenderer implements SpecialModelRe
     }
 
     private static long animationTime(HandAnimationState state, long now) {
-        return Math.min(
-                OPEN_ANIMATION_MILLIS,
-                Math.max(0L, (now - state.animationStartNanos()) / 1_000_000L)
-        );
+        return Math.clamp((now - state.animationStartNanos()) / 1_000_000L, 0L,
+                OPEN_ANIMATION_MILLIS);
     }
 
     private record HandAnimationState(boolean tabletSelected, long animationStartNanos) {

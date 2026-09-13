@@ -16,13 +16,11 @@ import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 import org.academy.mixin.client.ClientInputAccessor;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 
 import java.util.UUID;
 
-/**
- * Client-side capture/injection endpoint for an authorized player-control session.
- */
 public final class PlayerControlClientState {
     private static UUID sessionId;
     private static UUID subjectUuid;
@@ -175,8 +173,6 @@ public final class PlayerControlClientState {
         }
         if (role == PlayerControlSessionManager.Role.CONTROLLER
                 && controlledViewEntity() == null) {
-            // Lifecycle packets are best effort during death/removal. Never leave the local input
-            // proxy latched if the controlled entity has already disappeared client-side.
             requestStop();
             clearSessionKeys();
             clearSession();
@@ -210,11 +206,6 @@ public final class PlayerControlClientState {
         return sessionId != null && role == PlayerControlSessionManager.Role.CONTROLLER;
     }
 
-    /**
-     * Keeps vanilla creative-flight physics active while a path frame is driving the vertical
-     * axis. Vanilla interprets repeated jump edges as a request to toggle flight and also clears
-     * flight while touching the ground; both behaviours fight an authorized FLY frame.
-     */
     public static boolean prepareAuthorizedFlight(LocalPlayer player) {
         if (player == null || player != Minecraft.getInstance().player
                 || !isInputSubject() || authorizedSequence < 0L
@@ -240,9 +231,6 @@ public final class PlayerControlClientState {
         return virtualPitch;
     }
 
-    /**
-     * Receives the same sensitivity/inversion-adjusted deltas vanilla would pass to Entity.turn.
-     */
     public static boolean captureViewTurn(double yawDelta, double pitchDelta) {
         if (isSelfControlled()) {
             if (yawDelta != 0.0 || pitchDelta != 0.0) requestStop();
@@ -274,7 +262,7 @@ public final class PlayerControlClientState {
         return controllerMaxCp;
     }
 
-    public static PlayerControlSessionManager.TargetViewState targetViewState() {
+    public static PlayerControlSessionManager.@Nullable TargetViewState targetViewState() {
         return isController() ? targetViewState : null;
     }
 
@@ -292,9 +280,6 @@ public final class PlayerControlClientState {
         revision = 0L;
     }
 
-    /**
-     * Projects an authorized frame into the input object actually consumed by LocalPlayer physics.
-     */
     public static void applyAuthorizedInput(LocalPlayer player) {
         if (sessionId == null || player != Minecraft.getInstance().player) return;
         var frame = isInputSubject() ? authorizedFrame : PlayerControlFrame.NEUTRAL;

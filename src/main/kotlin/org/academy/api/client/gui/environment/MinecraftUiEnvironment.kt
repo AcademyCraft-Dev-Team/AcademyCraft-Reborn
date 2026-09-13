@@ -10,12 +10,7 @@ import org.academy.api.client.gui.texture.TextureSource
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.nio.file.Path
-import java.util.function.Supplier
 
-/**
- * Default [UiEnvironment] backing onto a running Minecraft client. Keeps the
- * in-game behavior of the UI framework identical to before the abstraction.
- */
 class MinecraftUiEnvironment : UiEnvironment {
     private val mc get() = Minecraft.getInstance()
 
@@ -35,7 +30,7 @@ class MinecraftUiEnvironment : UiEnvironment {
 
     override fun createDynamicTextureSource(identifier: Identifier, bytes: ByteArray): TextureSource {
         val image = NativeImage.read(ByteArrayInputStream(bytes))
-        val texture = DynamicTexture(Supplier { "academy_${identifier.namespace}_${identifier.path}" }, image)
+        val texture = DynamicTexture({ "academy_${identifier.namespace}_${identifier.path}" }, image)
         mc.textureManager.register(identifier, texture)
         return IdentifierTextureSource(identifier, this)
     }
@@ -48,6 +43,4 @@ class MinecraftUiEnvironment : UiEnvironment {
     override fun textInputFocusChanged(focused: Boolean) {
         mc.textInputManager().onTextInputFocusChange(focused)
     }
-
-    override fun layoutDir(): Path = gameDirectory.resolve("academy").resolve("ui")
 }

@@ -4,27 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-/**
- * 曲线生成器（M22-Rev2）：复刻 Blender「闪电附着」的**两点闪电**。
- *
- * <p>参考几何节点树（闪电附着.blend）观感核心是一条**细、锯齿、白炽**的闪电折线，
- * 两端附着表面，主弧 from→to + 递归中点位移（fractal jagged）+ 轻微法线起拱，
- * 外加细分支。所有分支展平写入同一 ArcCurve（generation 标记层级、segment 标记连续折线段，
- * 建管时按 segment 分 run 避免分支被缝成一根管）。</p>
- */
 public final class CurveGenerator {
-    /**
-     * 递归位移深度：控制锯齿细化层数。
-     */
     private static final int JAGGED_DEPTH = 4;
 
     private CurveGenerator() {
     }
 
-    /**
-     * 兼容入口：以 (px,py,pz) 为中心、沿表面法线两侧生成一条两点闪电（含递归分支）。
-     * 等价于 {@link #generateFromTo}，两点由中心沿法线 ±halfHeight 展开。
-     */
     public static void generate(ArcCurve arc,
                                 float px, float py, float pz,
                                 float nx, float ny, float nz,
@@ -45,30 +30,6 @@ public final class CurveGenerator {
                 branchLengthScale, branchWidthScale, branchBrightnessScale);
     }
 
-    /**
-     * 生成一条**表面短弧**（M30 复刻 Blender「闪电附着」主流水线）：
-     * 平躺在表面的 Curve Line（长 = 电弧高度），Bezier 起拱控制柄沿**表面法线**上推，
-     * 重采样到 {@code segments} 点。弧随 age 从近平展长成帐篷拱。
-     *
-     * <p>Blender 对应：{@code Curve Line(Start 0,0,-0.5 / End 0,0,0.5, 长度=电弧高度)} →
-     * {@code Instance on Points}（Rotation=Align(axis=X, 法线)+AxisAngle(法线, 随机 0~2π)，
-     * Scale=Random(0.4~1.2)×电弧宽度）→ {@code Realize} → {@code Set Spline Type(Bezier)} +
-     * {@code Set Handle Positions(Offset = 表面法线 × FloatCurve.001(age/生命) × Random(0.4~1.2) × 电弧高度)} →
-     * {@code Resample(Count=12)}。</p>
-     *
-     * <p>噪声位移与端点吸附由容器执行器每帧执行（{@code VfxSystemSimulator}：
-     * NoiseAnimator + SurfaceConstraint）。弧拱基线存入 {@link ArcCurve}，供逐帧按 age 重采样
-     * （复刻 Blender 每帧从基线几何重新求值）。</p>
-     *
-     * @param arc      目标弧线（清空后填充）
-     * @param px,py,pz 表面附着点
-     * @param nx,ny,nz 表面法线（弧沿法线上拱，基线躺在切平面）
-     * @param height   电弧高度（Curve Line 长度）
-     * @param curve    电弧粗细（控制柄上推基准乘数，相对高度比例）
-     * @param width    管半径（两端 taper）
-     * @param segments 重采样点数（Blender Resample Count=12）
-     * @param seed     随机种子（决定随机轴角/起拱方位）
-     */
     public static void generateSurfaceArc(ArcCurve arc,
                                           float px, float py, float pz,
                                           float nx, float ny, float nz,
@@ -80,10 +41,8 @@ public final class CurveGenerator {
         arc.setLifetime(lifetime);
         arc.setSeed(seed);
 
-        // 随机轴角：绕法线旋转（Blender Axis Angle to Rotation，Axis=法线, Angle=Random 0~2π）
         var random = new Random(seed);
         var az = random.nextFloat() * 2f * (float) Math.PI;
-        // 切平面参考轴（与法线不平行的任意轴 → 去法向分量 → 归一）
         var refAxis = Math.abs(ny) < 0.9f ? new float[]{0, 1, 0} : new float[]{1, 0, 0};
         var dot = refAxis[0] * nx + refAxis[1] * ny + refAxis[2] * nz;
         float t1x = refAxis[0] - dot * nx, t1y = refAxis[1] - dot * ny, t1z = refAxis[2] - dot * nz;
@@ -98,64 +57,41 @@ public final class CurveGenerator {
             t1y /= t1l;
             t1z /= t1l;
         }
-        // 绕法线旋转 az：t1 旋转
         float c = (float) Math.cos(az), s = (float) Math.sin(az);
         var rx = t1x * c + (ny * t1z - nz * t1y) * s;
         var ry = t1y * c + (nz * t1x - nx * t1z) * s;
         var rz = t1z * c + (nx * t1y - ny * t1x) * s;
 
-        // 每弧随机缩放（Blender Random Value 0.4~1.2，ID=curveID）
         var handleRandom = 0.4f + 0.8f * random.nextFloat();
-        // 实例随机跨度缩放（Blender Instance Scale = Random[0.4..1.2]×电弧宽度，每弧一个）
         var spanScale = 0.4f + 0.8f * random.nextFloat();
 
-        // 弧拱基线：平躺在表面、沿切平面方向 rx/ry/rz、长 = height（Curve Line 沿 local Z，
-        // Align Rotation axis=X 使 local X → 法线、local Z 落在切平面，再绕法线随机旋转）
         arc.setArchBase(px, py, pz, nx, ny, nz, rx, ry, rz, handleRandom, height);
         arc.setArchSpanScale(spanScale);
         arc.setArchResample(curve, width, segments);
 
-        // 首次采样（age=0：FloatCurve.001(0)=0.112 → 近平展）
         sampleSurfaceArch(arc);
     }
 
-    /**
-     * 按当前 age 重采样弧拱（M30 复刻 Blender 每帧 Set Handle Positions + Resample）。
-     *
-     * <p>基线沿切平面方向 dx/dy/dz 从 {@code -half} 到 {@code +half} 展开（平躺表面），
-     * 两个控制柄沿法线方向各上推 {@code growth × randomScale × height × curve}（Blender 两个
-     * Set Handle Positions 都用同一 Offset），形成帐篷拱；重采样 cubic Bezier 到 segments 点。</p>
-     *
-     * <p>管半径剖面随 spline 与 age 变化（Blender FloatCurve.002 / .005）：端粗中细 +
-     * 随 age 衰减，存入每点 width 供 CurveToMeshBuilder 使用。</p>
-     *
-     * @param arc 目标弧线（读取 {@link ArcCurve#archX()} 等拱形基线数据及 age/lifetime）
-     */
     public static void sampleSurfaceArch(ArcCurve arc) {
         var lifetime = Math.max(1e-3f, arc.lifetime());
-        var ageFrac = Math.max(0f, Math.min(1f, arc.age() / lifetime));
+        var ageFrac = Math.clamp(arc.age() / lifetime, 0f, 1f);
 
         float nx = arc.archNx(), ny = arc.archNy(), nz = arc.archNz();
         float dx = arc.archDx(), dy = arc.archDy(), dz = arc.archDz();
         var half = arc.archHalf() * arc.archSpanScale();
-        // M30 仿真区爬行：弧基座中心 = 附着点 + 累积游走偏移（Blender Set Position 语义，端点随后吸附拉回）
         var ax = arc.archX() + arc.wanderX();
         var ay = arc.archY() + arc.wanderY();
         var az = arc.archZ() + arc.wanderZ();
         var width = arc.archWidth();
         var segments = arc.archSegments();
 
-        // 起点/终点：平躺在表面沿切平面 ±half（Blender Curve Line + Align 后 local Z 落在切平面）
         float sx = ax - dx * half, sy = ay - dy * half, sz = az - dz * half;
         float ex = ax + dx * half, ey = ay + dy * half, ez = az + dz * half;
 
-        // 控制柄幅度：FloatCurve.001(ageFrac) × Random(0.4~1.2) × 电弧高度（M30 修正：**不含电弧粗细**，
-        // 电弧粗细只缩放管半径）
         var growth = BlenderArcCurves.sample(BlenderArcCurves.ARCH_GROWTH, ageFrac);
         var handle = growth * arc.archRandom() * arc.archHeight();
         float hx = nx * handle, hy = ny * handle, hz = nz * handle;
 
-        // 重采样 cubic Bezier 到 segments 点（两个控制柄同向量 → 对称帐篷拱）
         var n = Math.max(3, segments);
         arc.clearPoints();
         for (var i = 0; i < n; i++) {
@@ -169,8 +105,6 @@ public final class CurveGenerator {
             var by = w0 * sy + w1 * (sy + hy) + w2 * (ey + hy) + w3 * ey;
             var bz = w0 * sz + w1 * (sz + hz) + w2 * (ez + hz) + w3 * ez;
 
-            // 管半径：表面弧 = FloatCurve.002(端粗中细) × FloatCurve.005(age 衰减)；
-            // 接触弧 = 仅 FloatCurve.009(生命系数)（Blender Curve to Mesh.002 Scale）
             var radiusAge = arc.flatRadius()
                     ? BlenderArcCurves.sample(BlenderArcCurves.CONTACT_RADIUS_AGE, ageFrac)
                     : BlenderArcCurves.sample(BlenderArcCurves.RADIUS_AGE, ageFrac);
@@ -178,16 +112,11 @@ public final class CurveGenerator {
                     ? 1f
                     : BlenderArcCurves.sample(BlenderArcCurves.RADIUS_PROFILE, t);
             arc.addPoint(bx, by, bz, width * radiusProfile * radiusAge, 0, 0);
-            // M30 噪声乘数 pa = 脉冲曲线(spline因子) × Random[0.4..2.2]（确定性：每弧每点稳定，
-            // Blender Store Named Attribute "pa"）
             var paVal = BlenderArcCurves.sample(BlenderArcCurves.NOISE_PA, t) * paRandom(arc.seed(), i);
             arc.setPa(arc.size() - 1, paVal);
         }
     }
 
-    /**
-     * M30：逐点噪声随机乘数（Blender Random Value.002[0.4..2.2]，ID 驱动 → 确定性）。
-     */
     private static float paRandom(long seed, int i) {
         var h = seed * 0x9E3779B97F4A7C15L + i * 0xBF58476D1CE4E5B9L;
         h = (h ^ (h >>> 30)) * 0xBF58476D1CE4E5B9L;
@@ -196,27 +125,6 @@ public final class CurveGenerator {
         return 0.4f + 1.8f * ((h & 0xFFFFFFFFL) / (float) 0xFFFFFFFFL);
     }
 
-    /**
-     * 生成一条**接触闪电弧**（M30 复刻 Blender 主组第二套系统）：
-     * 从表面点 P 到接触表面最近点 N 的**直线弧**（无 Bezier 起拱），仅末端（N）吸附接触面。
-     *
-     * <p>Blender 对应：{@code Curve Line.002(Start 0,0,0 / End 0,0,1)}（垂直段，不旋转）→
-     * {@code Set Position.004(Position=Sample Nearest Surface.002.Value, Selection=Endpoint End Size=1)}
-     * → {@code Resample(12)} → 噪声 → {@code Curve to Mesh.002}。</p>
-     *
-     * <p>使用 {@link ArcCurve#setArchBase} 记录基线（P→N 直线），{@code curve=0} 使
-     * {@link #sampleSurfaceArch} 生成直线而非帐篷拱；{@code flatRadius} 使半径仅随 age 衰减
-     * （Blender FloatCurve.009）；{@code pinStart} 使端点吸附只作用于末端 N（Blender End Size=1）。</p>
-     *
-     * @param arc                           目标弧线
-     * @param px,py,pz                      表面附着点（起点，固定在表面）
-     * @param contactNx,contactNy,contactNz 接触表面最近点（末端，吸附接触面）
-     * @param radius                        管半径基准（Blender Curve Circle r=0.01 × 接触闪电半径 0.8）
-     * @param segments                      重采样点数（Blender Resample Count=12）
-     * @param r,g,b,a                       颜色
-     * @param lifetime                      生命周期（接触闪电 6 帧）
-     * @param seed                          随机种子
-     */
     public static void generateContactArc(ArcCurve arc,
                                           float px, float py, float pz,
                                           float contactNx, float contactNy, float contactNz,
@@ -228,7 +136,6 @@ public final class CurveGenerator {
         arc.setLifetime(lifetime);
         arc.setSeed(seed);
 
-        // 基线方向：P → N（直线弧，无拱）。长度 |P-N|。
         float dx = contactNx - px, dy = contactNy - py, dz = contactNz - pz;
         var len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
         if (len < 1e-6f) len = 1f;
@@ -236,7 +143,6 @@ public final class CurveGenerator {
         dy /= len;
         dz /= len;
 
-        // 基线：中心 = (P+N)/2，方向 = 直线方向，长 = |P-N|；curve=0 → 直线；flatRadius → 半径仅 age 衰减
         var cx = (px + contactNx) * 0.5f;
         var cy = (py + contactNy) * 0.5f;
         var cz = (pz + contactNz) * 0.5f;
@@ -245,16 +151,9 @@ public final class CurveGenerator {
         arc.setFlatRadius(true);
         arc.setPinStart(true);
 
-        // 首次采样（直线，age=0 满半径）
         sampleSurfaceArch(arc);
     }
 
-    /**
-     * 从 from→to 两点 + 表面法线生成一条**两点闪电**（Blender 流水线核心），含递归分支。
-     *
-     * <p>主弧：两端点固定（附着表面），经递归中点位移成锯齿闪电，中部沿法线轻微起拱，
-     * 再重采样到 {@code segments} 点。宽度 taper 中间鼓两端收。</p>
-     */
     public static void generateFromTo(ArcCurve arc,
                                       float fromX, float fromY, float fromZ,
                                       float toX, float toY, float toZ,
@@ -273,21 +172,14 @@ public final class CurveGenerator {
         var random = new Random(seed);
         int[] segmentCounter = {0};
 
-        // 主弧：两点锯齿闪电 + 轻微法线起拱
         generateBolt(arc, fromX, fromY, fromZ, toX, toY, toZ,
                 nx, ny, nz, width, segments, 0, random, segmentCounter);
 
-        // 自由电弧端点锚定：起点/终点噪声乘数归零（复刻 Blender NOISE_PA 端点 0），
-        // 使平滑噪声只蠕动中段、端点不漂移（否则整条电弧随噪声整体晃动 → 蛆/水草观感）。
         if (arc.size() >= 2) {
             arc.setPa(0, 0f);
             arc.setPa(arc.size() - 1, 0f);
         }
 
-        // 树状锥形分叉：每级分支围绕父段方向在半角 branchAngle 的锥体内散开
-        // （{@link SurfaceDistributor#coneDirection}），形成真实闪电的树状 3D 分叉，
-        // 而不是局限于单一平面的扇形。
-        // 递归分支（附着在主弧中部控制点）
         if (branchDepth > 0 && branchCount > 0) {
             generateBranchesRecursive(arc, 0, branchDepth, branchCount,
                     branchAngle, branchLengthScale, branchWidthScale,
@@ -297,12 +189,6 @@ public final class CurveGenerator {
         }
     }
 
-    /**
-     * 生成一条 from→to 的两点闪电折线（递归中点位移 fractal jagged + 轻微法线起拱）。
-     *
-     * <p>位移量随深度递减（fractal），得到粗细变化的锯齿闪电。起拱幅度取弦长的很小比例，
-     * 避免变成平滑大弓。</p>
-     */
     private static void generateBolt(ArcCurve arc,
                                      float fromX, float fromY, float fromZ,
                                      float toX, float toY, float toZ,
@@ -314,20 +200,16 @@ public final class CurveGenerator {
         var chordLen = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
         if (chordLen < 1e-6f) chordLen = 1f;
 
-        // 垂直方向基（位移方向）：切平面内随机 + 轻微法线分量（起拱）
         float tx = dx / chordLen, ty = dy / chordLen, tz = dz / chordLen;
-        // 找与切线不共线的参考轴
         float rx, ry, rz;
         if (Math.abs(ty) < 0.9f) {
             rx = 0;
             ry = 1;
-            rz = 0;
         } else {
             rx = 1;
             ry = 0;
-            rz = 0;
         }
-        // 参考轴去切向分量 → 切平面内的一根轴
+        rz = 0;
         var dot = rx * tx + ry * ty + rz * tz;
         float ux = rx - dot * tx, uy = ry - dot * ty, uz = rz - dot * tz;
         var ulen = (float) Math.sqrt(ux * ux + uy * uy + uz * uz);
@@ -341,8 +223,6 @@ public final class CurveGenerator {
             uz /= ulen;
         }
 
-        // 每 seed 随机旋转锯齿平面（绕切线 t 旋转垂直轴 u）：不同 seed/步进重掷产生在空间上
-        // 明显不同的闪电折线（端点不动、整体朝向/偏折平面变化），形成真实的"跳动"运动感。
         var planeAngle = random.nextFloat() * 2f * (float) Math.PI;
         var pc = (float) Math.cos(planeAngle);
         var ps = (float) Math.sin(planeAngle);
@@ -350,14 +230,12 @@ public final class CurveGenerator {
         float ruy = uy * pc + (tz * ux - tx * uz) * ps;
         float ruz = uz * pc + (tx * uy - ty * ux) * ps;
 
-        // 递归中点位移生成锯齿点列
         var pts = new ArrayList<float[]>();
         pts.add(new float[]{fromX, fromY, fromZ});
         midpointDisplace(pts, fromX, fromY, fromZ, toX, toY, toZ,
                 rux, ruy, ruz, nx, ny, nz, chordLen, 0, random);
         pts.add(new float[]{toX, toY, toZ});
 
-        // 重采样到 segments 点（等距）
         var n = Math.max(3, segments);
         var sampled = new ArrayList<float[]>(n);
         for (var i = 0; i < n; i++) {
@@ -365,7 +243,6 @@ public final class CurveGenerator {
             sampled.add(sampleAlong(pts, t));
         }
 
-        // 宽度 taper：中间鼓、两端收
         for (var i = 0; i < n; i++) {
             var t = (float) i / (n - 1);
             var taper = (float) Math.sin(t * Math.PI);
@@ -376,9 +253,6 @@ public final class CurveGenerator {
         }
     }
 
-    /**
-     * 递归中点位移：把 from→to 的线段在中点沿垂直方向随机偏移，深度递减。
-     */
     private static void midpointDisplace(List<float[]> pts,
                                          float ax, float ay, float az,
                                          float bx, float by, float bz,
@@ -387,9 +261,7 @@ public final class CurveGenerator {
                                          float chordLen, int depth, Random random) {
         if (depth >= JAGGED_DEPTH) return;
         float mx = (ax + bx) * 0.5f, my = (ay + by) * 0.5f, mz = (az + bz) * 0.5f;
-        // 位移幅度：随深度递减（fractal）；沿切平面随机 + 轻微法线起拱
         var amp = chordLen * (0.12f / (depth + 1));
-        // 随机方位角
         var ang = random.nextFloat() * 2f * (float) Math.PI;
         var px = ux * (float) Math.cos(ang) + nx * 0.3f;
         var py = uy * (float) Math.cos(ang) + ny * 0.3f;
@@ -410,9 +282,6 @@ public final class CurveGenerator {
         midpointDisplace(pts, ox, oy, oz, bx, by, bz, ux, uy, uz, nx, ny, nz, chordLen, depth + 1, random);
     }
 
-    /**
-     * 沿点列按弧长参数 t 取点（简单折线线性插值）。
-     */
     private static float[] sampleAlong(List<float[]> pts, float t) {
         var total = 0f;
         var segLen = new float[Math.max(1, pts.size() - 1)];
@@ -430,7 +299,7 @@ public final class CurveGenerator {
         for (var i = 0; i < segLen.length; i++) {
             if (acc + segLen[i] >= target || i == segLen.length - 1) {
                 var lt = segLen[i] < 1e-6f ? 0f : (target - acc) / segLen[i];
-                lt = Math.max(0f, Math.min(1f, lt));
+                lt = Math.clamp(lt, 0f, 1f);
                 float[] a = pts.get(i), b = pts.get(i + 1);
                 return new float[]{
                         a[0] + (b[0] - a[0]) * lt,
@@ -442,11 +311,6 @@ public final class CurveGenerator {
         return pts.getLast();
     }
 
-    /**
-     * 递归生成分支：在主弧中部控制点附着子弧。每级分支围绕父段方向在半角
-     * {@code branchAngle} 的锥体内散开（{@link SurfaceDistributor#coneDirection}），
-     * 形成真实闪电的树状 3D 分叉；锥角受限，不会绕树干径向散开成鸡毛掸子。
-     */
     private static void generateBranchesRecursive(ArcCurve arc,
                                                   int currentGen, int maxDepth,
                                                   int branchCount, float branchAngle,
@@ -470,10 +334,9 @@ public final class CurveGenerator {
         if (genPoints.isEmpty()) return;
 
         var total = genPoints.size();
-        var attachCount = Math.min(branchCount, Math.max(0, total - 2));
+        var attachCount = Math.clamp(total - 2, 0, branchCount);
         if (attachCount <= 0) return;
 
-        // 父段整体方向（起点→终点）：分支围绕该方向在锥体内散开（真实树状分叉）
         float fx = toX - fromX, fy = toY - fromY, fz = toZ - fromZ;
         var flen = (float) Math.sqrt(fx * fx + fy * fy + fz * fz);
         if (flen < 1e-6f) {

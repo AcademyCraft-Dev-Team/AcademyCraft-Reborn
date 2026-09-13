@@ -190,7 +190,7 @@ Do not use the source bitmap dimensions directly as layout dimensions.
 - Align HUD information to screen edges and keep bars low-profile.
 - Smooth live values rather than snapping noisy telemetry every tick.
 - Reserve glow and pulsing for overload, urgency, selection, or another meaningful state.
-- Prefer serialized layout when the neighboring HUD already uses `assets/academy/ui/layout` so placement remains consistent and adjustable.
+- Prefer the shared layout DSL factories when the neighboring HUD already uses them so placement remains consistent and adjustable.
 
 ## Controls and state
 

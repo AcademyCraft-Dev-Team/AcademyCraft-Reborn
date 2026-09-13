@@ -99,7 +99,7 @@ final class WingTransitionAnimation {
     }
 
     private static float clamp(float value) {
-        return Math.max(0.0f, Math.min(1.0f, value));
+        return Math.clamp(value, 0.0f, 1.0f);
     }
 
     record Projection(Pose blackWing, Pose whiteWing, Pose ascension) {

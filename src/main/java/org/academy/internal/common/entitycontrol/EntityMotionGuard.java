@@ -21,9 +21,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/**
- * Guards vanilla entity motion entry points for imprisonment and vector-reflection protection.
- */
 public final class EntityMotionGuard {
     private static final double POSITION_EPSILON_SQUARED = 1.0e-8;
     private static final int MIN_VISIBLE_EFFECT_DURATION_TICKS = 10;
@@ -185,10 +182,8 @@ public final class EntityMotionGuard {
     }
 
     static int visibleEffectDuration(long durationTicks) {
-        return (int) Math.min(
-                Integer.MAX_VALUE,
-                Math.max(MIN_VISIBLE_EFFECT_DURATION_TICKS, durationTicks)
-        );
+        return (int) Math.clamp(durationTicks, MIN_VISIBLE_EFFECT_DURATION_TICKS,
+                Integer.MAX_VALUE);
     }
 
     public static void release(LivingEntity entity, String sourceId) {
@@ -363,7 +358,6 @@ public final class EntityMotionGuard {
                 || VectorDeviation.Server.isActive(player));
     }
 
-    /** Returns the server-thread source established by an ability or self-initiated action. */
     public static Entity currentMotionSourceEntity() {
         var sources = MOTION_SOURCES.get();
         return sources == null ? null : sources.peek();

@@ -8,10 +8,6 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.network.SpawnVfxGraphPacket;
 
-/**
- * 空力使 VFX Graph 入口。常规气流共享低密度白雾材质；需要明确轮廓的技能可以在图资产内
- * 组合专用遮罩层，技能逻辑仍只负责空间造型与尺度，避免重新散落 vanilla 粒子参数。
- */
 public final class AeromanipVfx {
     private static final Vec3 UP = new Vec3(0, 1, 0);
     private static final Identifier MIST_BURST = graph("aeromanip_mist_burst");
@@ -40,24 +36,20 @@ public final class AeromanipVfx {
         spawn(level, MIST_VORTEX, center, UP, radius, 1.65f);
     }
 
-    /** 流束从局部 +Y 的 4 格初始管线继续向前运动，完整轨迹约为 5.5 格。 */
     public static void stream(ServerLevel level, Vec3 origin, Vec3 direction, double length) {
         spawn(level, MIST_STREAM, origin, direction, Math.max(0.18, length / 5.5), 0.95f);
     }
 
-    /** 切割图的局部 +Y 长度为 5 格，局部 +X 为默认的横向气流刃轴。 */
     public static void blade(ServerLevel level, Vec3 origin, Vec3 direction, double length) {
         spawn(level, MIST_BLADE, origin, direction, Math.max(0.05, length / 5.0), 0.8f);
     }
 
-    /** 切割图的局部 +X 为刀刃横轴，可显式固定平面效果的翻滚方向。 */
     public static void blade(ServerLevel level, Vec3 origin, Vec3 direction,
             Vec3 bladeRight, double length) {
         spawn(level, MIST_BLADE, origin, direction, bladeRight,
                 Math.max(0.05, length / 5.0), 0.8f);
     }
 
-    /** 仅发送给施法者的流场感知标记。 */
     public static void marker(ServerPlayer observer, Vec3 center, double radius) {
         SpawnVfxGraphPacket.send(observer, MIST_RING, center, UP,
                 finiteScale(radius), 1.25f, Map.of());
@@ -82,7 +74,7 @@ public final class AeromanipVfx {
 
     private static float finiteScale(double scale) {
         if (!Double.isFinite(scale)) return 1f;
-        return (float) Math.max(0.05, Math.min(128.0, scale));
+        return (float) Math.clamp(scale, 0.05, 128.0);
     }
 
     private static Identifier graph(String name) {
