@@ -52,6 +52,7 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.WeakHashMap;
 
 /** Tap pulse or maintained point vortex selected by a server-authoritative charge gesture. */
@@ -240,7 +241,7 @@ public final class VortexPull extends Skill {
                     * AeromanipConfig.durationMultiplier(player, SkillNames.VORTEX_PULL)));
             var strength = baseStrength(tier);
             var field = new AirflowField(
-                    java.util.UUID.randomUUID(), player.getUUID(), level.dimension(),
+                    UUID.randomUUID(), player.getUUID(), level.dimension(),
                     AirflowField.Type.VORTEX, AirflowField.Shape.SPHERE,
                     center, player.getLookAngle(), radius, 0.0,
                     strength, duration, milestone);

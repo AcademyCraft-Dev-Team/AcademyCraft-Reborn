@@ -144,7 +144,7 @@ public final class VfxGraphManager {
 
     public record FrameStatistics(int active, int visible, int culled, int simulated) {}
     private FrameStatistics frameStatistics = new FrameStatistics(0, 0, 0, 0);
-    private final java.util.Map<Float, GraphCamera> frameCameras = new java.util.HashMap<>();
+    private final Map<Float, GraphCamera> frameCameras = new HashMap<>();
     public FrameStatistics frameStatistics() { return frameStatistics; }
 
     /** Cull before simulation, vertex building, staging and draw submission. */

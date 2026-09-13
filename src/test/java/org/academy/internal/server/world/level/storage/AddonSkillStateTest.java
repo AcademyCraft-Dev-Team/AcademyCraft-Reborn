@@ -7,7 +7,11 @@ import net.minecraft.resources.Identifier;
 import org.academy.api.common.ability.data.SkillStateType;
 import org.academy.internal.common.skilldata.*;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class AddonSkillStateTest {
@@ -43,7 +47,7 @@ class AddonSkillStateTest {
 
     @Test
     void migrationRunsOnceAndDoesNotMutateOriginalData() {
-        var migrations = new java.util.concurrent.atomic.AtomicInteger();
+        var migrations = new AtomicInteger();
         var type = new SkillStateType<>(uniqueId(), Codec.INT, () -> 0, 2, (version, state) -> {
             assertEquals(1, version);
             migrations.incrementAndGet();
@@ -88,7 +92,7 @@ class AddonSkillStateTest {
         var invalidId = raw(type.id(), 1);
         invalidId.addProperty("type", "INVALID TYPE");
         var gson = WorldData.createGson();
-        for (var raw : java.util.List.of(future, invalid, invalidId)) {
+        for (var raw : List.of(future, invalid, invalidId)) {
             var loaded = gson.fromJson(raw, SkillData.class);
             assertInstanceOf(UnknownSkillData.class, loaded);
             assertFalse(loaded.isEnabled());

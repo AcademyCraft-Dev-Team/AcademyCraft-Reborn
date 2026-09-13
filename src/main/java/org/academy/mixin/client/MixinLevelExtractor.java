@@ -4,7 +4,9 @@ import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.extract.LevelExtractor;
 import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
+import org.academy.internal.client.renderer.entity.layers.CloudroomLayer;
 import org.academy.internal.common.ability.accelerator.skills.WingFlightPose;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -26,8 +28,8 @@ public abstract class MixinLevelExtractor {
             cir.setReturnValue(false);
             return;
         }
-        if (entity instanceof net.minecraft.world.entity.LivingEntity living
-                && org.academy.internal.client.renderer.entity.layers.CloudroomLayer.shouldReveal(living)
+        if (entity instanceof LivingEntity living
+                && CloudroomLayer.shouldReveal(living)
                 && frustum.isVisible(entity.getBoundingBox())) {
             cir.setReturnValue(true);
             return;

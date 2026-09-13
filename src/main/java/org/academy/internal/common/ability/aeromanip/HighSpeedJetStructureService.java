@@ -11,10 +11,12 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.structure.BlockStructure;
 import org.academy.api.common.structure.BlockStructureApi;
 import org.academy.api.common.structure.BlockStructureCaptureOptions;
+import org.academy.api.common.structure.BlockStructureImpact;
 import org.academy.api.common.structure.BlockStructureKineticHandle;
 import org.academy.api.common.structure.BlockStructureKineticOptions;
 import org.academy.api.common.structure.BlockStructureKinetics;
 import org.academy.api.common.structure.BlockStructurePlacementPolicy;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.skills.lv4.HighSpeedJet;
@@ -197,7 +199,7 @@ public final class HighSpeedJetStructureService {
     private static void applyImpact(
             ServerPlayer player,
             float power,
-            org.academy.api.common.structure.BlockStructureImpact impact
+            BlockStructureImpact impact
     ) {
         var target = impact.target();
         if (!player.isAlive() || player.hasDisconnected()
@@ -206,7 +208,7 @@ public final class HighSpeedJetStructureService {
         var blockCount = impact.structure().snapshot().blockCount();
         var damage = impactDamage(blockCount, impact.closingSpeed(), power)
                 * AeromanipConfig.damageMultiplier(player, SkillNames.HIGH_SPEED_JET);
-        var system = org.academy.api.server.ability.AbilitySystemServer.getSystem(player);
+        var system = AbilitySystemServer.getSystem(player);
         damage *= system.getPlayerAbilityPowerMultiplier(player.getUUID())
                 * system.getPlayerDamageMultiplier(player.getUUID());
         if (target instanceof LivingEntity living && damage > 0.0f) {

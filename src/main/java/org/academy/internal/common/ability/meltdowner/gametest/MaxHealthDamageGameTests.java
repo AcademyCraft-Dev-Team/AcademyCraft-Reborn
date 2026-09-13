@@ -26,6 +26,8 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import org.academy.AcademyCraft;
+import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.meltdowner.skills.lv5.Disintegrate;
 import org.academy.internal.common.world.damagesource.DamageTypes;
@@ -68,9 +70,9 @@ public final class MaxHealthDamageGameTests {
         var beam = new HighSpeedElectronBeam(
                 org.academy.internal.common.world.entity.EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get(), level);
         try {
-            var system = org.academy.api.server.ability.AbilitySystemServer.getSystem(player);
+            var system = AbilitySystemServer.getSystem(player);
             system.setPlayerAbilityCategory(player.getUUID(),
-                    org.academy.internal.common.ability.AbilityCategories.MELTDOWNER.get());
+                    AbilityCategories.MELTDOWNER.get());
             system.setPlayerLevel(player.getUUID(), 5);
             system.addPlayerSkill(player, Skills.DISINTEGRATE.get().getKeyString());
             if (!Skills.DISINTEGRATE.get().isEnabled(player)) Skills.DISINTEGRATE.get().toggle(player);

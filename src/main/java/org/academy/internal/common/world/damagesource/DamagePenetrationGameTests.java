@@ -36,6 +36,7 @@ import net.neoforged.neoforge.registries.RegisterEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.attribute.PlayerAttributes;
+import org.academy.api.common.damage.AbilityHitEffects;
 import org.academy.api.common.damage.DamageComposition;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.Skills;
@@ -223,7 +224,7 @@ public final class DamagePenetrationGameTests {
             closeTo(helper, target.getHealth(), 989, "Six more points trigger one two-damage discharge");
             helper.assertTrue(CategoryDamageRuntime.electricalCharge(target) == 1,
                     "Discharge preserves excess charge");
-            org.academy.api.common.damage.AbilityHitEffects.addElectricalCharge(target, 9, arc);
+            AbilityHitEffects.addElectricalCharge(target, 9, arc);
             closeTo(helper, target.getHealth(), 985, "Each threshold in a batched charge adds two damage");
             helper.assertTrue(CategoryDamageRuntime.electricalCharge(target) == 0,
                     "Batched discharge cannot recurse");
@@ -237,14 +238,14 @@ public final class DamagePenetrationGameTests {
                     "Reflection must also retain explicit primary-hit charge points");
 
             reset(target, true, 50);
-            org.academy.api.common.damage.AbilityHitEffects.addElectricalCharge(target, 5, arc);
+            AbilityHitEffects.addElectricalCharge(target, 5, arc);
             closeTo(helper, target.getHealth(), 1000, "Discharge still respects absorption");
             closeTo(helper, target.getAbsorptionAmount(), 49.28f,
                     "Discharge still respects Protection enchantment");
 
             reset(target, false, 0);
             target.invulnerableTime = 20;
-            org.academy.api.common.damage.AbilityHitEffects.addElectricalCharge(target, 5);
+            AbilityHitEffects.addElectricalCharge(target, 5);
             closeTo(helper, target.getHealth(), 998,
                     "Unattributed public charge API also discharges through direct actuallyHurt");
             helper.assertTrue(target.getLastDamageSource().is(DamageTypes.ELECTRO_DAMAGE),
@@ -252,7 +253,7 @@ public final class DamagePenetrationGameTests {
 
             reset(target, false, 0);
             target.setHealth(1);
-            org.academy.api.common.damage.AbilityHitEffects.addElectricalCharge(target, 5, arc);
+            AbilityHitEffects.addElectricalCharge(target, 5, arc);
             helper.assertTrue(target.isDeadOrDying() && target.getLastDamageSource().getEntity() == attacker,
                     "A lethal discharge retains normal death completion and kill attribution");
         } finally {

@@ -48,7 +48,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Moves every compatible roster member to the block or entity under the caster's crosshair.
@@ -114,7 +116,7 @@ public final class CommandPositioning extends Skill {
         Objects.requireNonNull(destination, "destination");
         Objects.requireNonNull(source, "source");
 
-        var unique = new LinkedHashMap<java.util.UUID, LivingEntity>();
+        var unique = new LinkedHashMap<UUID, LivingEntity>();
         requestedSubjects.forEach(subject -> {
             if (subject != null) unique.putIfAbsent(subject.getUUID(), subject);
         });
@@ -139,7 +141,7 @@ public final class CommandPositioning extends Skill {
             eligible.add(subject);
         }
 
-        var handles = new LinkedHashMap<java.util.UUID, AutoCloseable>();
+        var handles = new LinkedHashMap<UUID, AutoCloseable>();
         var applied = 0;
         var failed = 0;
         var formationIndex = 0;
@@ -173,11 +175,11 @@ public final class CommandPositioning extends Skill {
             int applied,
             int skipped,
             int failed,
-            java.util.Map<java.util.UUID, AutoCloseable> handles,
+            Map<UUID, AutoCloseable> handles,
             LivingEntity protectedTarget
     ) {
         public PositioningResult {
-            handles = java.util.Map.copyOf(handles);
+            handles = Map.copyOf(handles);
         }
     }
 

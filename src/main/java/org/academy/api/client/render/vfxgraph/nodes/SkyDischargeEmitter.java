@@ -7,10 +7,12 @@ import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
 import org.academy.api.client.render.vfxgraph.arc.ArcCurve;
 import org.academy.api.client.render.vfxgraph.model.VfxBlock;
 import org.academy.api.client.render.vfxgraph.shape.SkyDischargeGeometry;
+import org.academy.api.client.render.vfxgraph.shape.StormCloudShape;
 import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
 import org.academy.api.client.render.vfxgraph.sim.SimContext;
 import org.academy.api.client.render.vfxgraph.sim.SimNode;
 import org.joml.Vector3f;
+import org.joml.Vector4f;
 
 import java.util.List;
 import java.util.Optional;
@@ -158,8 +160,8 @@ public final class SkyDischargeEmitter {
             long seed = seed(context);
             for (int i = 0; i < count; i++) {
                 float u = (i + 0.5f) / count;
-                var lobe = org.academy.api.client.render.vfxgraph.shape.StormCloudShape.lobe(
-                        i, count, t, seed, height, radius, new org.joml.Vector4f());
+                var lobe = StormCloudShape.lobe(
+                        i, count, t, seed, height, radius, new Vector4f());
                 float light = current * (1f - u) * (0.20f + impactPulse(t) * 0.55f);
                 particle(buffer, owner, "sky_cloud", lobe.x, lobe.y, lobe.z, lobe.w,
                         0.045f + light * 0.20f, 0.065f + light * 0.70f, 0.10f + light * 1.5f,

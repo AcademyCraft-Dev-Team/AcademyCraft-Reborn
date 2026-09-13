@@ -3,6 +3,9 @@ package org.academy.internal.client.render.vfx;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.List;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import org.academy.api.client.render.vfx.*;
 import org.academy.api.common.vfx.SkillVfxState;
 import org.academy.internal.client.renderer.entity.KineticShockwaveRenderer;
@@ -10,7 +13,7 @@ import org.academy.internal.client.renderer.entity.KineticShockwaveRenderer;
 /** Short local playback survives the original server tick and entity lifetime. */
 public final class ShockwaveVfx implements Vfx {
     private final SkillVfxState.Burst burst;
-    private final net.minecraft.client.multiplayer.ClientLevel level = net.minecraft.client.Minecraft.getInstance().level;
+    private final ClientLevel level = Minecraft.getInstance().level;
     private final long startedAt = System.nanoTime();
     private final long lifetime;
     public ShockwaveVfx(SkillVfxState.Burst burst) {
@@ -28,7 +31,7 @@ public final class ShockwaveVfx implements Vfx {
     }
     @Override
     public boolean isAlive() {
-        return net.minecraft.client.Minecraft.getInstance().level == level && System.nanoTime() - startedAt < lifetime;
+        return Minecraft.getInstance().level == level && System.nanoTime() - startedAt < lifetime;
     }
 
     public record Data(SkillVfxState.Burst burst, float progress) implements VfxRenderData {}

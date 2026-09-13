@@ -14,6 +14,7 @@ import org.academy.api.client.render.vfxgraph.render.GraphCamera;
 import org.academy.api.client.render.vfxgraph.render.RenderSpec;
 import org.academy.api.client.render.vfxgraph.render.VfxGraphRenderer;
 import org.academy.api.client.render.vfxgraph.render.WorldTransform;
+import org.academy.api.client.render.vfxgraph.shape.SurfaceProjector;
 import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
 import org.academy.api.client.render.vfxgraph.sim.VfxSimulator;
 import org.academy.api.client.render.vfxgraph.sim.VfxSystemSimulator;
@@ -130,7 +131,7 @@ public final class GraphEffect {
     }
 
     /** Supplies an emitter-local projection surface to container simulation blocks. */
-    public void setSurfaceProjector(String name, org.academy.api.client.render.vfxgraph.shape.SurfaceProjector surface) {
+    public void setSurfaceProjector(String name, SurfaceProjector surface) {
         if (systemSimulator != null) systemSimulator.setSurfaceProjector(name, surface);
     }
 

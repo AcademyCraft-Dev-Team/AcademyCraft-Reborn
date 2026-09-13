@@ -12,6 +12,7 @@ import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource
 import org.academy.internal.common.world.entity.EntityTypes;
 
 import java.util.*;
+import java.util.function.Predicate;
 
 public final class LinearAttackExecutor {
     private LinearAttackExecutor() {
@@ -90,7 +91,7 @@ public final class LinearAttackExecutor {
         if (!segment.hasFiniteCoordinates()) return List.of();
         var pointSegment = !(segment.lengthSqr() > 1.0E-12);
         var hits = new ArrayList<Entity>();
-        var targetFilter = (java.util.function.Predicate<Entity>) entity ->
+        var targetFilter = (Predicate<Entity>) entity ->
                 entity.getType() != EntityTypes.HIGH_SPEED_ELECTRON_BEAM.get()
                         && payload.canTarget(entity, reflected, reflector)
                         && (!reflected

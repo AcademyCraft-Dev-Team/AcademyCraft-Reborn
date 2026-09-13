@@ -9,6 +9,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.program.ProgramNodeEditorMetadata;
 import org.academy.api.common.ability.program.ProgramNodeExtension;
 import org.academy.api.common.ability.program.ProgramNodeType;
+import org.academy.api.common.ability.program.ProgramPortDefinition;
 import org.academy.api.common.registries.Registries;
 import org.jspecify.annotations.Nullable;
 
@@ -204,8 +205,8 @@ public final class ProgramNodeExtensionIndex {
     }
 
     private static void updatePorts(MessageDigest digest, String direction,
-                                    List<org.academy.api.common.ability.program.ProgramPortDefinition> ports) {
-        ports.stream().sorted(Comparator.comparing(org.academy.api.common.ability.program.ProgramPortDefinition::name))
+                                    List<ProgramPortDefinition> ports) {
+        ports.stream().sorted(Comparator.comparing(ProgramPortDefinition::name))
                 .forEach(port -> {
                     var value = new JsonObject();
                     value.addProperty("direction", direction);

@@ -7,6 +7,7 @@ import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -52,7 +53,7 @@ public final class GroupControlNavigation {
             Vec3 preferred
     ) {
         if (!isFinite(preferred)) return Optional.empty();
-        var candidates = java.util.Arrays.stream(SEARCH_OFFSETS)
+        var candidates = Arrays.stream(SEARCH_OFFSETS)
                 .map(offset -> preferred.add(offset[0], offset[1], offset[2]))
                 .filter(candidate -> canOccupy(subject, candidate))
                 .toList();

@@ -3,6 +3,7 @@ package org.academy.internal.server.ability;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.EventPriority;
@@ -83,7 +84,7 @@ public final class HostileTargetRuntime {
 
     private static boolean isIntentional(DamageSource source) {
         if (VectorRedirectedDamageSourceInfo.isRedirected(source)
-                || source.is(net.minecraft.world.damagesource.DamageTypes.THORNS)) return false;
+                || source.is(DamageTypes.THORNS)) return false;
         if (!(source instanceof SkillDamageSource skillSource)) return true;
         if (!skillSource.canMarkHostility()) return false;
         // These skills only deal automatic damage; mixed skills opt out at their passive hit sites.

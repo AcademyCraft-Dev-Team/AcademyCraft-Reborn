@@ -10,6 +10,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /** Bounded, versioned clipboard exchange for program selections and complete programs. */
 public final class ProgramClipboardCodec {
@@ -28,7 +29,7 @@ public final class ProgramClipboardCodec {
                 .toList();
         if (nodes.isEmpty()) throw new IllegalArgumentException("The selected nodes do not exist");
         var retainedIds = nodes.stream().map(ProgramGraph.Node::id)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
         var edges = source.graph().edges().stream().filter(edge ->
                 retainedIds.contains(edge.from().nodeId())
                         && retainedIds.contains(edge.to().nodeId())).toList();

@@ -28,6 +28,7 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 /** Server-authoritative player counterplay and tagged living-entity automatic resistance. */
@@ -416,7 +417,7 @@ public final class MentalResistanceManager {
         }
 
         private void sync() {
-            var hash = java.util.Objects.hash(eligible, points, threshold, controllerLevel, takeover);
+            var hash = Objects.hash(eligible, points, threshold, controllerLevel, takeover);
             if (hash == lastSyncedHash) return;
             lastSyncedHash = hash;
             MisakaNetworkServer.send(subject, new StatePacket(

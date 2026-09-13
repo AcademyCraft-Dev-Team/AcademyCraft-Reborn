@@ -6,8 +6,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.program.ForwardingProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
+import org.academy.api.common.ability.program.ProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.SkillNames;
@@ -35,7 +37,7 @@ import java.util.Optional;
 /**
  * Authoritative Minecraft-server adapter for Aeromanip programs.
  */
-public final class ServerAeromanipProgramRuntime implements AeromanipProgramRuntime, org.academy.api.common.ability.program.ForwardingProgramTargetResolver {
+public final class ServerAeromanipProgramRuntime implements AeromanipProgramRuntime, ForwardingProgramTargetResolver {
     public static final double MAX_QUERY_RANGE = AbilityProgramSpatialRanges.forCategory(
             AeromanipProgramNodeCatalog.AEROMANIP).queryRange();
     public static final double MAX_ACTION_RANGE = AbilityProgramSpatialRanges.forCategory(
@@ -46,7 +48,7 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     private final float costMultiplier;
     private final ServerProgramTargetResolver targets;
     @Override
-    public org.academy.api.common.ability.program.ProgramTargetResolver targetResolver() {
+    public ProgramTargetResolver targetResolver() {
         return targets;
     }
 

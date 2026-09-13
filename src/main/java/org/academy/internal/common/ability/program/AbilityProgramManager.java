@@ -18,6 +18,7 @@ import org.academy.api.common.ability.program.AbilityProgram;
 import org.academy.api.common.ability.program.ProgramBook;
 import org.academy.api.common.ability.program.ProgramDiagnosticCode;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.ability.program.AbilityProgramService;
 import org.academy.internal.client.ability.program.AbilityProgramEditorClient;
 import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.accelerator.program.AcceleratorProgramExecutionBridge;
@@ -267,14 +268,14 @@ public final class AbilityProgramManager {
     }
 
     private static void requireAddonThread(ServerPlayer player, int slot) {
-        java.util.Objects.requireNonNull(player);
+        Objects.requireNonNull(player);
         if (!player.level().getServer().isSameThread()) throw new IllegalStateException("Program API requires server thread");
         if (slot < 0 || slot >= SLOT_COUNT) throw new IllegalArgumentException("Program slot is out of range");
     }
 
-    private static org.academy.api.server.ability.program.AbilityProgramService.Result addonRejected(String reason) {
-        return new org.academy.api.server.ability.program.AbilityProgramService.Result(
-                org.academy.api.server.ability.program.AbilityProgramService.Status.REJECTED, -1, reason, List.of());
+    private static AbilityProgramService.Result addonRejected(String reason) {
+        return new AbilityProgramService.Result(
+                AbilityProgramService.Status.REJECTED, -1, reason, List.of());
     }
 
     private static boolean addonAllowed(ServerPlayer player, AbilityProgram program) {
@@ -282,15 +283,15 @@ public final class AbilityProgramManager {
                 && unlocked(player) && isSupportedCategory(program.category()) && ownsCategory(player, program.category());
     }
 
-    public static org.academy.api.server.ability.program.AbilityProgramService.Result saveForAddon(
+    public static AbilityProgramService.Result saveForAddon(
             ServerPlayer player, int slot, AbilityProgram program) {
         requireAddonThread(player, slot);
-        java.util.Objects.requireNonNull(program);
+        Objects.requireNonNull(program);
         if (!addonAllowed(player, program)) return addonRejected("Category is unavailable or precision operations are locked");
         var data = AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID());
         var compiled = AbilityProgramDefinitions.require(program.category()).compile(program, learnedCapabilities(data));
-        if (!compiled.valid()) return new org.academy.api.server.ability.program.AbilityProgramService.Result(
-                org.academy.api.server.ability.program.AbilityProgramService.Status.REJECTED, -1, "Invalid program", compiled.diagnostics());
+        if (!compiled.valid()) return new AbilityProgramService.Result(
+                AbilityProgramService.Status.REJECTED, -1, "Invalid program", compiled.diagnostics());
         var current = book(data, program.category(), player.getUUID());
         var previous = current.slot(slot).program();
         if (previous != null) ServerProgramScheduler.cancel(player.level().getServer(),
@@ -298,8 +299,8 @@ public final class AbilityProgramManager {
         var changed = current.replaceSlot(slot, program).select(slot);
         store(data, program.category(), changed);
         sync(player, program.category(), changed);
-        return new org.academy.api.server.ability.program.AbilityProgramService.Result(
-                org.academy.api.server.ability.program.AbilityProgramService.Status.COMPLETED, -1, "", List.of());
+        return new AbilityProgramService.Result(
+                AbilityProgramService.Status.COMPLETED, -1, "", List.of());
     }
 
     public static ProgramBook bookForAddon(ServerPlayer player) {
@@ -317,15 +318,15 @@ public final class AbilityProgramManager {
                 new ServerProgramScheduler.SessionKey(player.getUUID(), category, programId, slot));
     }
 
-    public static org.academy.api.server.ability.program.AbilityProgramService.Result executeForAddon(
+    public static AbilityProgramService.Result executeForAddon(
             ServerPlayer player, int slot, AbilityProgram program) {
         requireAddonThread(player, slot);
-        java.util.Objects.requireNonNull(program);
+        Objects.requireNonNull(program);
         if (!addonAllowed(player, program)) return addonRejected("Category is unavailable or precision operations are locked");
         var data = AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID());
         var compiled = AbilityProgramDefinitions.require(program.category()).compile(program, learnedCapabilities(data));
-        if (!compiled.valid()) return new org.academy.api.server.ability.program.AbilityProgramService.Result(
-                org.academy.api.server.ability.program.AbilityProgramService.Status.REJECTED, -1, "Invalid program", compiled.diagnostics());
+        if (!compiled.valid()) return new AbilityProgramService.Result(
+                AbilityProgramService.Status.REJECTED, -1, "Invalid program", compiled.diagnostics());
         if (!ProgramTriggers.acceptsManualExecution(compiled.program())) return addonRejected("Entry requires an automatic trigger");
         if (ServerProgramScheduler.contains(player.level().getServer(),
                 new ServerProgramScheduler.SessionKey(player.getUUID(), program.category(), program.id(), slot))) {
@@ -334,10 +335,10 @@ public final class AbilityProgramManager {
         var adapter = executionAdapter(program.category());
         var result = OutputControl.callWithoutOutputAdjustment(() -> adapter.execute(compiled.program(), player, 1, slot,
                 new ProgramInvocationContext(program.id(), slot, null, null, 0, null, null, null)));
-        var status = !result.successful ? org.academy.api.server.ability.program.AbilityProgramService.Status.FAILED
-                : result.deferred ? org.academy.api.server.ability.program.AbilityProgramService.Status.DEFERRED
-                : org.academy.api.server.ability.program.AbilityProgramService.Status.COMPLETED;
-        return new org.academy.api.server.ability.program.AbilityProgramService.Result(
+        var status = !result.successful ? AbilityProgramService.Status.FAILED
+                : result.deferred ? AbilityProgramService.Status.DEFERRED
+                : AbilityProgramService.Status.COMPLETED;
+        return new AbilityProgramService.Result(
                 status, result.nodeId, result.vmDiagnostic.name(), List.of());
     }
 

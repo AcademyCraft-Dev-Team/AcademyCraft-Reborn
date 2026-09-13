@@ -9,6 +9,8 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.input.InputSystem;
 import org.junit.jupiter.api.Test;
 
+import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -91,6 +93,6 @@ class HighSpeedJetTest {
         assertEquals(InputSystem.InputType.KEYBOARD, binding.type());
         assertEquals(InputConstants.RELEASE, binding.action());
         assertEquals(InputConstants.MOD_SHIFT, binding.modifiers());
-        assertEquals(java.util.Set.of(InputConstants.KEY_H), binding.keys());
+        assertEquals(Set.of(InputConstants.KEY_H), binding.keys());
     }
 }

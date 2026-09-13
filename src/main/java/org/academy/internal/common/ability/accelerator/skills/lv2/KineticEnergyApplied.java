@@ -58,8 +58,11 @@ import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.*;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.server.ability.AbilityBlockDrops;
+import org.academy.api.server.ability.AbilityEffectPolicy;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.api.server.vfx.SkillVfxService;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -638,7 +641,7 @@ public class KineticEnergyApplied extends Skill {
         private static void spawnShockwave(ServerLevel level, ServerPlayer player, Vec3 center,
                                            Vec3 direction, float radius, int impactLevel) {
             var normalized = normalizeOrDefault(direction);
-            org.academy.api.server.vfx.SkillVfxService.shockwave(
+            SkillVfxService.shockwave(
                     level, center, normalized, Math.min(radius, MAX_VISUAL_RADIUS), impactLevel);
 
             var soundPosition = audiblePosition(player, center);
@@ -684,9 +687,9 @@ public class KineticEnergyApplied extends Skill {
         }
 
         private static boolean canDestroyBlocks(ServerPlayer player) {
-            var decision = org.academy.api.server.ability.AbilityEffectPolicy.blockDestruction(player.level());
-            if (decision != org.academy.api.server.ability.AbilityEffectPolicy.Decision.DEFAULT) {
-                return decision == org.academy.api.server.ability.AbilityEffectPolicy.Decision.ALLOW;
+            var decision = AbilityEffectPolicy.blockDestruction(player.level());
+            if (decision != AbilityEffectPolicy.Decision.DEFAULT) {
+                return decision == AbilityEffectPolicy.Decision.ALLOW;
             }
             return player.getData(AttachmentTypes.KINETIC_BLOCK_BREAK_ENABLED.get())
                     && DestroyBlocksSetting.canDestroyBlocks(player, Skills.KINETIC_ENERGY_APPLIED.get());
@@ -928,8 +931,8 @@ public class KineticEnergyApplied extends Skill {
         }
 
         private boolean tick(ServerLevel level, ServerPlayer player) {
-            if (org.academy.api.server.ability.AbilityEffectPolicy.blockDestruction(level)
-                    == org.academy.api.server.ability.AbilityEffectPolicy.Decision.DENY) return true;
+            if (AbilityEffectPolicy.blockDestruction(level)
+                    == AbilityEffectPolicy.Decision.DENY) return true;
             var changed = 0;
             var scanned = 0;
             if (!priorityProcessed) {
@@ -958,7 +961,7 @@ public class KineticEnergyApplied extends Skill {
             if (state.getDestroySpeed(level, pos) < 0.0f) {
                 return clearFluid(level, player, pos, state);
             }
-            return org.academy.api.server.ability.AbilityBlockDrops.destroyBlock(level, pos, dropBlocks, player);
+            return AbilityBlockDrops.destroyBlock(level, pos, dropBlocks, player);
         }
 
         private boolean clearFluid(ServerLevel level, ServerPlayer player, BlockPos pos, BlockState state) {

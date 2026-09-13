@@ -1,8 +1,14 @@
 package org.academy.internal.common.world.damagesource;
 
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.LivingEntity;
+import org.academy.api.common.ability.Skill;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -15,12 +21,12 @@ class VerifiedTrueDamageRouteTest {
         // Addons resolve this exact descriptor when SkillDamageUtil is transformed on first hit.
         // Missing it prevents the entire utility class (including CTA/VEC) from loading.
         var method = SkillDamageUtil.class.getDeclaredMethod("applyDirectWithFallback",
-                net.minecraft.server.level.ServerLevel.class,
-                net.minecraft.server.level.ServerPlayer.class,
-                net.minecraft.world.entity.LivingEntity.class,
-                org.academy.api.common.ability.Skill.class,
-                net.minecraft.world.damagesource.DamageSource.class, float.class);
-        assertTrue(java.lang.reflect.Modifier.isStatic(method.getModifiers()));
+                ServerLevel.class,
+                ServerPlayer.class,
+                LivingEntity.class,
+                Skill.class,
+                DamageSource.class, float.class);
+        assertTrue(Modifier.isStatic(method.getModifiers()));
         assertTrue(method.getReturnType() == boolean.class);
     }
 

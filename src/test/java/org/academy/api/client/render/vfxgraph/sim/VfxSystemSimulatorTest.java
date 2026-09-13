@@ -1,6 +1,9 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
+import org.academy.api.client.render.graph.model.GraphParameter;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
+import org.academy.api.client.render.graph.type.Value;
+import org.academy.api.client.render.graph.type.ValueType;
 import org.academy.api.client.render.vfxgraph.model.*;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
@@ -9,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -171,15 +175,15 @@ class VfxSystemSimulatorTest {
     @Test
     void updateLiveAppliesBoundVisualAttributes() {
         var parameters = List.of(
-                new org.academy.api.client.render.graph.model.GraphParameter(
-                        "live_size", "Live Size", org.academy.api.client.render.graph.type.ValueType.FLOAT,
-                        org.academy.api.client.render.graph.type.Value.of(1f), java.util.Optional.empty()),
-                new org.academy.api.client.render.graph.model.GraphParameter(
-                        "live_alpha", "Live Alpha", org.academy.api.client.render.graph.type.ValueType.FLOAT,
-                        org.academy.api.client.render.graph.type.Value.of(1f), java.util.Optional.empty()),
-                new org.academy.api.client.render.graph.model.GraphParameter(
-                        "live_frame", "Live Frame", org.academy.api.client.render.graph.type.ValueType.FLOAT,
-                        org.academy.api.client.render.graph.type.Value.of(0f), java.util.Optional.empty()));
+                new GraphParameter(
+                        "live_size", "Live Size", ValueType.FLOAT,
+                        Value.of(1f), Optional.empty()),
+                new GraphParameter(
+                        "live_alpha", "Live Alpha", ValueType.FLOAT,
+                        Value.of(1f), Optional.empty()),
+                new GraphParameter(
+                        "live_frame", "Live Frame", ValueType.FLOAT,
+                        Value.of(0f), Optional.empty()));
         var system = new VfxSystem("live-attributes",
                 List.of(
                         ctx("spawn", VfxContextType.SPAWN,
@@ -199,9 +203,9 @@ class VfxSystemSimulatorTest {
                 List.of());
 
         var sim = new VfxSystemSimulator(system, blocks, 42L, parameters);
-        sim.setLiveParam("live_size", org.academy.api.client.render.graph.type.Value.of(2.5f));
-        sim.setLiveParam("live_alpha", org.academy.api.client.render.graph.type.Value.of(0.4f));
-        sim.setLiveParam("live_frame", org.academy.api.client.render.graph.type.Value.of(3f));
+        sim.setLiveParam("live_size", Value.of(2.5f));
+        sim.setLiveParam("live_alpha", Value.of(0.4f));
+        sim.setLiveParam("live_frame", Value.of(3f));
         sim.step(1f / 60f);
 
         assertEquals(1, sim.buffer().count());

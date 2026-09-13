@@ -11,6 +11,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.academy.api.common.ability.AirMobility;
 import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
@@ -186,9 +187,9 @@ public final class AeromanipTargeting {
         if (EntityMotionGuard.currentMotionSourceEntity() instanceof ServerPlayer owner) {
             AeromanipDisplacementTracker.mark(owner, entity, previousVelocity, appliedVelocity);
         }
-        if (entity instanceof net.minecraft.world.entity.LivingEntity living
+        if (entity instanceof LivingEntity living
                 && appliedVelocity.subtract(previousVelocity).lengthSqr() > 1.0e-8) {
-            org.academy.api.common.ability.AirMobility.prioritizePropulsion(living, 20);
+            AirMobility.prioritizePropulsion(living, 20);
         }
         entity.setDeltaMovement(appliedVelocity);
         entity.hurtMarked = true;

@@ -412,7 +412,7 @@ class VfxContainerModel(private val registry: NodeRegistry) {
         parameters.clear()
         outputs.clear()
         for (ctx in system.contexts()) {
-            val ed = createContext(ctx.id(), ctx.type(), ctx.name(), ctx.x(), ctx.y())
+            val ed = createContext(ctx.id(), ctx.type(), ctx.displayName(), ctx.x(), ctx.y())
             for (block in ctx.blocks()) {
                 ed.blocks[block.id()] = EdBlock(block.id(), block.type(), block.properties().toMutableMap())
             }

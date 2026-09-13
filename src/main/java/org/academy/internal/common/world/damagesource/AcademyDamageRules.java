@@ -5,6 +5,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.neoforge.common.damagesource.DamageContainer;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import org.academy.api.common.damage.DamageComposition;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorExternalInterceptionService;
 import org.academy.internal.common.ability.accelerator.skills.lv2.KineticEnergyApplied;
@@ -70,7 +71,7 @@ public final class AcademyDamageRules {
         OutputControl.Events.onDamagePre(event);
         if (event.getNewDamage() > beforeOutput && container.getOriginalDamage() > 0.0f) {
             var percentage = Math.min(container.getOriginalDamage(),
-                    org.academy.api.common.damage.DamageComposition.maximumHealthPart(target, container.getSource()));
+                    DamageComposition.maximumHealthPart(target, container.getSource()));
             event.setNewDamage(beforeOutput + (event.getNewDamage() - beforeOutput)
                     * (1.0f - percentage / container.getOriginalDamage()));
         }

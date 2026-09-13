@@ -16,6 +16,7 @@ import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.operator.OperatorContext;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperator;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
+import org.academy.api.client.render.vfxgraph.shape.SurfaceProjector;
 
 import java.util.*;
 
@@ -68,9 +69,9 @@ public final class VfxSystemSimulator {
     private final Map<String, Gradient> gradients = new LinkedHashMap<>();
     private final Random random;
     private float time;
-    private final Map<String, org.academy.api.client.render.vfxgraph.shape.SurfaceProjector> surfaces = new HashMap<>();
+    private final Map<String, SurfaceProjector> surfaces = new HashMap<>();
 
-    public void setSurfaceProjector(String name, org.academy.api.client.render.vfxgraph.shape.SurfaceProjector surface) {
+    public void setSurfaceProjector(String name, SurfaceProjector surface) {
         surfaces.put(name, Objects.requireNonNull(surface));
     }
 

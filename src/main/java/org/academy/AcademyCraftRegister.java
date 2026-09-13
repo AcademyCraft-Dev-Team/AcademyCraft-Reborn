@@ -22,7 +22,9 @@ import org.academy.api.common.ability.event.AbilitySystemFinalizedEvent;
 import org.academy.api.common.attribute.PlayerAttributes;
 import org.academy.api.common.entitycontrol.MentalControlApi;
 import org.academy.api.common.entitycontrol.PlayerNavigationApi;
+import org.academy.api.common.registries.AcademyRegistrationsReadyEvent;
 import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.AbilityRegistrationFinalizer;
 import org.academy.internal.common.ability.AbilityRegistrationValidator;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.control.*;
@@ -31,6 +33,7 @@ import org.academy.internal.common.ability.program.ProgramNodeExtensionIndex;
 import org.academy.internal.common.arc.PathModifierTypes;
 import org.academy.internal.common.arc.PathTypes;
 import org.academy.internal.common.attachment.AttachmentTypes;
+import org.academy.internal.common.compatibility.SpatialStorageCuriosCompat;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.compatibility.MagneticHookCuriosCompat;
 import org.academy.internal.common.network.PacketTypes;
@@ -125,10 +128,10 @@ public final class AcademyCraftRegister {
 
     private static void onCommonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
-            org.academy.internal.common.ability.AbilityRegistrationFinalizer.resolve();
+            AbilityRegistrationFinalizer.resolve();
             if (ModList.get().isLoaded("curios")) {
                 MagneticHookCuriosCompat.register();
-                org.academy.internal.common.compatibility.SpatialStorageCuriosCompat.register();
+                SpatialStorageCuriosCompat.register();
             }
             MentalControlApi.registerAdapter(
                     Identifier.fromNamespaceAndPath(MOD_ID, "warden"),
@@ -163,7 +166,7 @@ public final class AcademyCraftRegister {
             NeoForge.EVENT_BUS.post(new AbilitySystemFinalizedEvent());
             AbilityRegistrationValidator.validate();
             ABILITY_CATEGORIES.forEach(AbilityCategory::seal);
-            NeoForge.EVENT_BUS.post(new org.academy.api.common.registries.AcademyRegistrationsReadyEvent());
+            NeoForge.EVENT_BUS.post(new AcademyRegistrationsReadyEvent());
         });
     }
 

@@ -2,13 +2,17 @@ package org.academy.internal.common.ability.accelerator.skills.lv5;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.entity.LivingEntity;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import org.academy.api.common.ability.VortexAttackPattern;
 import org.academy.api.common.ability.WingControlIntent;
 import org.academy.api.common.ability.VortexAttackTargets;
@@ -32,6 +36,7 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.client.render.vfx.WingVfx;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -46,10 +51,15 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.WeakHashMap;
+import java.util.function.Consumer;
 
 import static org.lwjgl.glfw.GLFW.*;
 
@@ -107,7 +117,7 @@ public final class BlackWing extends Skill {
         public static Config CONFIG = new Config();
         private static final WingControlIntent.Sender CONTROL_SENDER = new WingControlIntent.Sender();
         private static long controlEpoch = -1, controlSequence;
-        private static net.minecraft.client.multiplayer.ClientLevel controlLevel;
+        private static ClientLevel controlLevel;
 
         private Client() {
         }
@@ -115,7 +125,7 @@ public final class BlackWing extends Skill {
         @SubscribeEvent
         public static void tick(ClientTickEvent.Post event) {
             var player = Minecraft.getInstance().player;
-            long epoch = player == null ? -1 : org.academy.internal.client.render.vfx.WingVfx.blackActivationEpoch(player.getId());
+            long epoch = player == null ? -1 : WingVfx.blackActivationEpoch(player.getId());
             if (player == null || !player.getData(AttachmentTypes.ACTIVATED_BLACK_WING.get()) || epoch < 0) {
                 CONTROL_SENDER.reset(); controlEpoch = -1; controlLevel = null; return;
             }
@@ -155,14 +165,14 @@ public final class BlackWing extends Skill {
 
     public static final class Server {
         private static final Map<UUID, Long> LAST_BOOST_TICK = new HashMap<>();
-        private static final Map<ServerPlayer, AttackSession> ATTACK_SESSIONS = new java.util.WeakHashMap<>();
-        private static final Map<ServerPlayer, java.util.Set<ServerPlayer>> OBSERVERS = new java.util.WeakHashMap<>();
+        private static final Map<ServerPlayer, AttackSession> ATTACK_SESSIONS = new WeakHashMap<>();
+        private static final Map<ServerPlayer, Set<ServerPlayer>> OBSERVERS = new WeakHashMap<>();
         private static long nextEpoch;
 
         private static final class AttackSession {
             final long epoch = ++nextEpoch;
             final VortexAttackSequence attacks = new VortexAttackSequence();
-            final net.minecraft.server.level.ServerLevel level;
+            final ServerLevel level;
             long sequence;
             long lastControlTick = Long.MIN_VALUE;
             final WingControlIntent.Mailbox controls = new WingControlIntent.Mailbox();
@@ -170,7 +180,7 @@ public final class BlackWing extends Skill {
             AttackSession(ServerPlayer player) { level = player.level(); }
         }
 
-        private static void sendObservers(ServerPlayer player, java.util.function.Consumer<ServerPlayer> send) {
+        private static void sendObservers(ServerPlayer player, Consumer<ServerPlayer> send) {
             send.accept(player);
             var observers = OBSERVERS.get(player);
             if (observers == null) return;
@@ -199,7 +209,7 @@ public final class BlackWing extends Skill {
         }
 
         private static void startTracking(ServerPlayer observer, ServerPlayer target) {
-            OBSERVERS.computeIfAbsent(target, _ -> java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>())).add(observer);
+            OBSERVERS.computeIfAbsent(target, _ -> Collections.newSetFromMap(new WeakHashMap<>())).add(observer);
             var session = refreshSession(target);
             if (session == null) return;
             var last = session.lastAttack;
@@ -331,26 +341,26 @@ public final class BlackWing extends Skill {
         }
 
         @SubscribeEvent
-        public static void onStartTracking(net.neoforged.neoforge.event.entity.player.PlayerEvent.StartTracking event) {
+        public static void onStartTracking(PlayerEvent.StartTracking event) {
             if (event.getEntity() instanceof ServerPlayer observer && event.getTarget() instanceof ServerPlayer target)
                 Server.startTracking(observer, target);
         }
 
         @SubscribeEvent
-        public static void onStopTracking(net.neoforged.neoforge.event.entity.player.PlayerEvent.StopTracking event) {
+        public static void onStopTracking(PlayerEvent.StopTracking event) {
             if (event.getEntity() instanceof ServerPlayer observer && event.getTarget() instanceof ServerPlayer target)
                 Server.stopTracking(observer, target);
         }
 
         @SubscribeEvent
-        public static void onServerStopped(net.neoforged.neoforge.event.server.ServerStoppedEvent event) {
+        public static void onServerStopped(ServerStoppedEvent event) {
             Server.ATTACK_SESSIONS.clear();
             Server.OBSERVERS.clear();
             Server.LAST_BOOST_TICK.clear();
         }
 
         @SubscribeEvent
-        public static void onLogout(net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent event) {
+        public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
             if (event.getEntity() instanceof ServerPlayer player) Server.disconnected(player);
         }
 
@@ -387,7 +397,7 @@ public final class BlackWing extends Skill {
         final long epoch, sequence;
         final WingControlIntent input;
         public ControlPacket(long epoch, long sequence, WingControlIntent input) {
-            this.epoch = epoch; this.sequence = sequence; this.input = java.util.Objects.requireNonNull(input);
+            this.epoch = epoch; this.sequence = sequence; this.input = Objects.requireNonNull(input);
         }
 
         @Override

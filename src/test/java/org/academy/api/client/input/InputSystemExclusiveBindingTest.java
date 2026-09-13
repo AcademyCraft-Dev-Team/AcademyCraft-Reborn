@@ -3,6 +3,8 @@ package org.academy.api.client.input;
 import com.mojang.blaze3d.platform.InputConstants;
 import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class InputSystemExclusiveBindingTest {
@@ -23,8 +25,8 @@ class InputSystemExclusiveBindingTest {
             InputSystem.dispatch(type, InputConstants.KEY_C, InputConstants.RELEASE, 0);
             InputSystem.dispatch(type, InputConstants.KEY_J, InputConstants.PRESS, 0);
             InputSystem.dispatch(type, InputConstants.KEY_J, InputConstants.RELEASE, 0);
-            assertEquals(java.util.List.of(InputConstants.PRESS, InputConstants.RELEASE), phases);
-            assertEquals(java.util.List.of(), ordinary);
+            assertEquals(List.of(InputConstants.PRESS, InputConstants.RELEASE), phases);
+            assertEquals(List.of(), ordinary);
         } finally {
             InputSystem.removeKeyBinding("test_selected_cast");
             InputSystem.removeKeyBinding("test_other_skill");

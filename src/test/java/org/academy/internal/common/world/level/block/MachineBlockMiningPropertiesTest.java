@@ -1,5 +1,6 @@
 package org.academy.internal.common.world.level.block;
 
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.junit.jupiter.api.Test;
 
@@ -39,7 +40,7 @@ class MachineBlockMiningPropertiesTest {
         }
     }
 
-    private static com.google.gson.JsonObject resourceJson(String path) throws Exception {
+    private static JsonObject resourceJson(String path) throws Exception {
         var stream = MachineBlockMiningPropertiesTest.class.getResourceAsStream(path);
         assertNotNull(stream, path);
         try (stream; var reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {

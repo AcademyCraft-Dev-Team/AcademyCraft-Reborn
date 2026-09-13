@@ -7,6 +7,7 @@ import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.player.Player;
 import org.academy.AcademyCraft;
 import org.academy.api.common.damage.DamageSettlement;
+import org.academy.api.common.damage.LawDetonationDamageSource;
 
 import java.util.Set;
 
@@ -48,7 +49,7 @@ public final class DamageTypes {
     }
 
     public static boolean usesResistanceBackdoor(DamageSource source) {
-        return source instanceof org.academy.api.common.damage.LawDetonationDamageSource
+        return source instanceof LawDetonationDamageSource
                 || source != null && (source.is(VEC) || source.is(CTA))
                 || AbilityDamageProfiles.uses(source, DamageSettlement.TRUE_HEALTH);
     }
@@ -64,7 +65,7 @@ public final class DamageTypes {
     }
 
     public static boolean usesDirectActuallyHurt(DamageSource source) {
-        return source instanceof org.academy.api.common.damage.LawDetonationDamageSource
+        return source instanceof LawDetonationDamageSource
                 || source != null && DIRECT_ACTUALLY_HURT_TYPES.stream().anyMatch(source::is)
                 || AbilityDamageProfiles.uses(source, DamageSettlement.DIRECT)
                 || AbilityDamageProfiles.uses(source, DamageSettlement.TRUE_HEALTH);
@@ -75,7 +76,7 @@ public final class DamageTypes {
     }
 
     public static boolean usesVerifiedTrueHealth(DamageSource source) {
-        return source instanceof org.academy.api.common.damage.LawDetonationDamageSource
+        return source instanceof LawDetonationDamageSource
                 || source != null && VERIFIED_TRUE_HEALTH_TYPES.stream().anyMatch(source::is)
                 || AbilityDamageProfiles.uses(source, DamageSettlement.TRUE_HEALTH);
     }

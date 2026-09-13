@@ -14,11 +14,13 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.player.Input;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.phys.Vec3;
@@ -71,7 +73,7 @@ public final class ShieldAndMagneticRegressionGameTests {
         new EmbeddedChannel(connection);
         helper.getLevel().getServer().getPlayerList().placeNewPlayer(connection, player, cookie);
         player.connection.markClientLoaded();
-        player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+        player.setGameMode(GameType.SURVIVAL);
         var position = helper.absoluteVec(new Vec3(x, y, z));
         player.snapTo(position.x, position.y, position.z, 0, 0);
         player.setNoGravity(true);
@@ -127,7 +129,7 @@ public final class ShieldAndMagneticRegressionGameTests {
         beam.setBeamLength(12);
         // Invoke the firing entry directly so the test is independent of learned skills/charge time.
         var fire = HighSpeedElectronBeam.class.getDeclaredMethod("fire",
-                net.minecraft.server.level.ServerLevel.class, ServerPlayer.class);
+                ServerLevel.class, ServerPlayer.class);
         fire.setAccessible(true);
         fire.invoke(beam, helper.getLevel(), attacker);
         check(helper, beam.isReflectionActive(), "Beam visuals must retain the fold");

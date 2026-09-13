@@ -13,6 +13,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.WingControlIntent;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -84,10 +85,10 @@ final class WingFlightSupport {
         if (!sent) sender.send(StormWing.State.KEEP, yRot, xRot);
     }
 
-    static org.academy.api.common.ability.WingControlIntent readControl() {
+    static WingControlIntent readControl() {
         var minecraft = Minecraft.getInstance();
         var player = minecraft.player;
-        if (player == null) return new org.academy.api.common.ability.WingControlIntent(0, 0, 0);
+        if (player == null) return new WingControlIntent(0, 0, 0);
         int buttons = 0;
         if (minecraft.gui.screen() == null) {
             if (InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_W)) buttons |= 1;
@@ -96,10 +97,10 @@ final class WingFlightSupport {
             if (InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_D)) buttons |= 8;
             if (InputSystem.isDown(InputSystem.InputType.KEYBOARD, GLFW_KEY_SPACE)) buttons |= 16;
         }
-        return new org.academy.api.common.ability.WingControlIntent(buttons, player.getYRot(), player.getXRot());
+        return new WingControlIntent(buttons, player.getYRot(), player.getXRot());
     }
 
-    static void applyHeldControl(ServerPlayer player, org.academy.api.common.ability.WingControlIntent input,
+    static void applyHeldControl(ServerPlayer player, WingControlIntent input,
                                  Map<UUID, Long> lastBoostTick) {
         if (input.has(16)) applyControl(player, StormWing.State.BOOST, input.yaw(), input.pitch(), lastBoostTick, false);
         else if (input.buttons() == 0) applyControl(player, StormWing.State.KEEP, input.yaw(), input.pitch(), lastBoostTick, false);

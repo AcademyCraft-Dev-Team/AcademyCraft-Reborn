@@ -18,6 +18,12 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.stats.Stats;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.phys.Vec3;
@@ -26,12 +32,18 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import org.academy.AcademyCraft;
+import org.academy.api.common.damage.AbilityHitEffects;
+import org.academy.api.common.damage.ReactionSlowdown;
 import org.academy.api.server.time.TemporalApi;
 import org.academy.api.server.time.TemporalChannel;
 import org.academy.api.server.time.TemporalField;
 import org.academy.api.server.time.TemporalFieldLease;
 import org.academy.api.server.time.TemporalPauseSource;
 import org.academy.api.server.time.TemporalScope;
+import org.academy.internal.common.ability.mentalout.skills.lv5.MindDestruction;
+import org.academy.internal.common.world.damagesource.CategoryDamageRuntime;
+import org.academy.internal.common.world.damagesource.PvpSetting;
+import org.academy.internal.server.time.TemporalRuntime;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
@@ -131,8 +143,8 @@ public final class TemporalPlayerTickGameTests {
         private final ServerPlayer reference;
         @Nullable
         private TemporalFieldLease lease;
-        private org.academy.api.common.damage.ReactionSlowdown reactionA;
-        private org.academy.api.common.damage.ReactionSlowdown reactionB;
+        private ReactionSlowdown reactionA;
+        private ReactionSlowdown reactionB;
         private int controlledTicks;
         private int controlledPlayTime;
         private int referencePlayTime;
@@ -162,7 +174,7 @@ public final class TemporalPlayerTickGameTests {
                     "Connected test players did not receive baseline simulation ticks"
             );
             lease = field(Set.of(controlled.getUUID()), 0.0D);
-            helper.assertTrue(!((org.academy.internal.server.time.TemporalRuntime) TemporalApi.get(controlled))
+            helper.assertTrue(!((TemporalRuntime) TemporalApi.get(controlled))
                     .isPlayerActionTick(controlled), "A new hard pause must block actions immediately");
             snapshot();
             helper.runAfterDelay(4L, () -> guarded(this::validatePause));
@@ -202,24 +214,24 @@ public final class TemporalPlayerTickGameTests {
         private void validateSlowdown() {
             assertDeltas(3, "Half-speed player tick plan was not deterministic");
             closeLease();
-            reactionA = org.academy.api.common.damage.ReactionSlowdown.acquire(controlled);
-            reactionB = org.academy.api.common.damage.ReactionSlowdown.acquire(controlled);
-            var stick = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK);
-            var dirt = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIRT);
+            reactionA = ReactionSlowdown.acquire(controlled);
+            reactionB = ReactionSlowdown.acquire(controlled);
+            var stick = new ItemStack(Items.STICK);
+            var dirt = new ItemStack(Items.DIRT);
             controlled.getInventory().setItem(0, stick);
             controlled.getInventory().setItem(1, dirt);
             controlled.getCooldowns().addCooldown(stick, 300);
-            org.academy.api.common.damage.AbilityHitEffects.addElectricalCharge(controlled, 5);
+            AbilityHitEffects.addElectricalCharge(controlled, 5);
             helper.assertTrue(controlled.getCooldowns().isOnCooldown(dirt),
                     "Paralysis must cool down carried items");
-            var randomDuration = org.academy.api.common.damage.AbilityHitEffects.electricalInterruptionTicks(controlled);
+            var randomDuration = AbilityHitEffects.electricalInterruptionTicks(controlled);
             helper.assertTrue(randomDuration >= 10 && randomDuration <= 20,
                     "Player cooldown must use an inclusive random 10-20 tick interval");
-            helper.assertTrue(org.academy.internal.common.world.damagesource.CategoryDamageRuntime.outgoingDamage(
+            helper.assertTrue(CategoryDamageRuntime.outgoingDamage(
                     controlled.damageSources().playerAttack(controlled), 10) == 8,
                     "The original player outgoing damage penalty must remain 20 percent");
             helper.runAfterDelay(10L, () -> guarded(() -> {
-                helper.assertTrue(!org.academy.api.common.damage.AbilityHitEffects.isParalyzed(controlled),
+                helper.assertTrue(!AbilityHitEffects.isParalyzed(controlled),
                         "Paralysis must end after ten physical ticks even at two-thirds speed");
                 helper.assertTrue(controlled.getCooldowns().isOnCooldown(dirt) == (randomDuration > 10),
                         "Extra cooldown must follow its own duration after base paralysis ends");
@@ -232,10 +244,10 @@ public final class TemporalPlayerTickGameTests {
                 helper.assertTrue(controlled.getCooldowns().isOnCooldown(stick),
                         "Extra cooldown expiry must preserve a longer existing cooldown");
             }));
-            var monster = helper.spawn(net.minecraft.world.entity.EntityTypes.ZOMBIE, 3, 2, 5);
+            var monster = helper.spawn(EntityTypes.ZOMBIE, 3, 2, 5);
             monster.setNoAi(true);
-            monster.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD,
-                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND_HELMET));
+            monster.setItemSlot(EquipmentSlot.HEAD,
+                    new ItemStack(Items.DIAMOND_HELMET));
             // Select the upper endpoint without depending on other entities' random consumption.
             for (var seed = 0L; ; seed++) {
                 monster.getRandom().setSeed(seed);
@@ -244,16 +256,16 @@ public final class TemporalPlayerTickGameTests {
                     break;
                 }
             }
-            org.academy.api.common.damage.AbilityHitEffects.addElectricalCharge(monster, 5);
-            helper.assertTrue(org.academy.api.common.damage.AbilityHitEffects.electricalInterruptionTicks(monster) == 20,
+            AbilityHitEffects.addElectricalCharge(monster, 5);
+            helper.assertTrue(AbilityHitEffects.electricalInterruptionTicks(monster) == 20,
                     "Random interruption must include the full one-second endpoint");
             helper.runAfterDelay(11L, () -> guarded(() -> {
-                helper.assertTrue(!org.academy.api.common.damage.AbilityHitEffects.isParalyzed(monster)
-                                && org.academy.internal.common.world.damagesource.CategoryDamageRuntime.blocksMobAttack(monster),
+                helper.assertTrue(!AbilityHitEffects.isParalyzed(monster)
+                                && CategoryDamageRuntime.blocksMobAttack(monster),
                         "Mob attack lock must continue after the original half-second paralysis");
             }));
             helper.runAfterDelay(21L, () -> guarded(() -> {
-                helper.assertTrue(!org.academy.internal.common.world.damagesource.CategoryDamageRuntime.blocksMobAttack(monster),
+                helper.assertTrue(!CategoryDamageRuntime.blocksMobAttack(monster),
                         "Mob attack lock must clear by twenty physical ticks");
                 monster.discard();
             }));
@@ -274,7 +286,7 @@ public final class TemporalPlayerTickGameTests {
             helper.assertTrue(controlled.connection.isAcceptingMessages(),
                     "Reaction slowdown stopped network transport");
             var remaining = controlled.getCooldowns().getCooldownPercent(
-                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK), 0);
+                    new ItemStack(Items.STICK), 0);
             helper.assertTrue(Math.abs(remaining - 1.0f / 3.0f) < 0.001f,
                     "Item cooldown did not follow the player's logical clock");
             reactionA.close();
@@ -318,7 +330,7 @@ public final class TemporalPlayerTickGameTests {
                         "Mind Destruction must release its clock at skill expiry");
                 beginMindDestruction();
                 helper.runAfterDelay(21L, () -> guarded(() -> {
-                    org.academy.internal.common.ability.mentalout.skills.lv5.MindDestruction
+                    MindDestruction
                             .releaseEntity(reference.getUUID());
                     helper.assertTrue(TemporalApi.get(controlled).effectiveScale(
                             controlled, TemporalChannel.ENTITY) == 1.0D,
@@ -330,13 +342,13 @@ public final class TemporalPlayerTickGameTests {
         }
 
         private void beginMindDestruction() {
-            org.academy.internal.common.world.damagesource.PvpSetting.trySetPvpEnabled(controlled, true);
-            org.academy.internal.common.world.damagesource.PvpSetting.trySetPvpEnabled(reference, true);
-            controlled.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH).setBaseValue(1000);
+            PvpSetting.trySetPvpEnabled(controlled, true);
+            PvpSetting.trySetPvpEnabled(reference, true);
+            controlled.getAttribute(Attributes.MAX_HEALTH).setBaseValue(1000);
             controlled.setHealth(1000);
             try {
-                var start = org.academy.internal.common.ability.mentalout.skills.lv5.MindDestruction.class
-                        .getDeclaredMethod("start", ServerPlayer.class, net.minecraft.world.entity.LivingEntity.class, boolean.class);
+                var start = MindDestruction.class
+                        .getDeclaredMethod("start", ServerPlayer.class, LivingEntity.class, boolean.class);
                 start.setAccessible(true);
                 start.invoke(null, reference, controlled, false);
             } catch (ReflectiveOperationException error) {
