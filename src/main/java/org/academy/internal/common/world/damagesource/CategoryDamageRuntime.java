@@ -40,7 +40,6 @@ import org.jspecify.annotations.Nullable;
 import java.lang.ref.WeakReference;
 import java.util.*;
 
-/** Transient category hit state; expiry follows physical server ticks, never a slowed entity clock. */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class CategoryDamageRuntime {
     public static final int PARALYSIS_TICKS = 10;
@@ -73,7 +72,7 @@ public final class CategoryDamageRuntime {
         return switch (skill) {
             case "lightning_nova", "thunder_lance" -> 2;
             case "railgun", "thunderclap", "ball_lightning" -> 3;
-            default -> 1; // Arc, contact, storm pulses, magnetism and iron-sand impacts.
+            default -> 1;
         };
     }
 
@@ -94,7 +93,6 @@ public final class CategoryDamageRuntime {
         return state != null && state.target.get() == target && now(target) < state.paralyzedUntil;
     }
 
-    /** Remaining physical ticks of the additional item/attack lock, independently of paralysis. */
     public static int electricalInterruptionTicks(LivingEntity target) {
         if (!(target.level() instanceof ServerLevel)) return 0;
         var state = CHARGES.get(target.getUUID());
@@ -106,7 +104,6 @@ public final class CategoryDamageRuntime {
         return attacker instanceof Mob && electricalInterruptionTicks(attacker) > 0;
     }
 
-    /** Includes an attributed projectile fired before the discharge. Never blocks incoming hits. */
     public static boolean blocksOutgoingDamage(DamageSource source) {
         var owner = source.getEntity();
         if (owner == null && source.getDirectEntity() instanceof net.minecraft.world.entity.projectile.Projectile projectile) {
@@ -214,8 +211,6 @@ public final class CategoryDamageRuntime {
 
     private static void syncItemCooldowns(LivingEntity target, ChargeState state) {
         if (target instanceof ServerPlayer player) {
-            // Cool down every carried group, not just the selected hand. Record only our extensions
-            // so expiry cannot erase a longer cooldown subsequently installed by another mechanic.
             for (var index = 0; index < player.getInventory().getContainerSize(); index++) {
                 var stack = player.getInventory().getItem(index);
                 if (stack.isEmpty()) continue;
@@ -279,10 +274,9 @@ public final class CategoryDamageRuntime {
     private static void wearSlot(LivingEntity target, EquipmentSlot slot, int amount, WearState state) {
         var stack = target.getItemBySlot(slot);
         if (stack.isEmpty() || !stack.isDamageableItem()) return;
-        // Heavy cutting retains its 80-durability burst; ordinary sustained hits get a 20 budget.
         var cap = amount > 20 ? 80 : 20;
         var used = state.used.getOrDefault(slot, 0);
-        var accepted = Math.min(amount, Math.max(0, cap - used));
+        var accepted = Math.clamp(cap - used, 0, amount);
         if (accepted <= 0) return;
         state.used.put(slot, used + accepted);
         stack.hurtAndBreak(accepted, target, slot);
@@ -315,7 +309,6 @@ public final class CategoryDamageRuntime {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onOrdinaryDamagePre(LivingDamageEvent.Pre event) {
-        // Academy pre is dispatched internally; this adapter handles everyone else's damage.
         event.setNewDamage(outgoingDamage(event.getSource(), event.getNewDamage()));
     }
 
@@ -339,7 +332,6 @@ public final class CategoryDamageRuntime {
         event.getDrops().add(new ItemEntity(target.level(), target.getX(), target.getY(), target.getZ(), head));
     }
 
-    /** Supported vanilla heads; no fabricated generic head for unsupported entity types. */
     public static ItemStack headFor(LivingEntity target) {
         if (target instanceof Player player) {
             var head = new ItemStack(Items.PLAYER_HEAD);

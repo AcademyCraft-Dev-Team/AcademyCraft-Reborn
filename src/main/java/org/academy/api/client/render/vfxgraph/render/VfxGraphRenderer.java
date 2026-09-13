@@ -40,42 +40,19 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * 自持 VFX 粒子渲染器（M13-07）：数据驱动，按 {@link RenderSpec} 动态构建/缓存管线。
- * <ul>
- *   <li>{@link RenderSpec.Geometry#QUAD}：面向相机软边粒子四边形（含旋转/速度拉伸）。</li>
- *   <li>{@link RenderSpec.Geometry#MESH}：实例化单位立方体（旋转绕 Y 轴）。</li>
- *   <li>{@link RenderSpec.Geometry#LINE}：每粒子 trail 折线（LINES）。</li>
- *   <li>{@link RenderSpec.Geometry#RIBBON}：trail 四边形条带（QUADS，垂直相机偏移）。</li>
- * </ul>
- * 片元着色器与混合模式来自图数据（输出节点 {@code shader}/{@code blend} 属性），不在此枚举；
- * 几何（quad/mesh/line/ribbon）是结构性的，决定顶点着色器/顶点缓冲/图元。
- * 一次渲染可带**多个输出规格**（M21n）：逐 spec 按自身 {@code layer} 过滤粒子绘制（多输出分层，无 smoke 概念）；
- * {@code bloomPass} 只画 GLOW 规格（translucent 层不参与 bloom）。
- * 仅使用 Blaze3D 抽象层，不依赖现有 VFX 数据/管理器/管线。
- */
 public final class VfxGraphRenderer {
     private static final int INSTANCE_STRIDE = (3 + 3 + 1 + 4 + 1 + 1 + 1) * 4;
     private static final int CAMERA_UBO_SIZE = 2 * 64;
     private static final int INITIAL_INSTANCES = 4096;
     private static final int INITIAL_VERTICES = 16384;
     private static final int NOISE_SIZE = 256;
-    /**
-     * 旧 vfx 电弧管环分辨率（同 LightningRenderer/ArcTube 的 SEGMENT_RESOLUTION）。
-     */
     private static final int ARC_SEGMENT_RESOLUTION = 4;
     private static final int ARC_LIGHTNING_UBO_SIZE = 16;
 
-    /**
-     * trail 顶点格式（M16-02：缓存避免每帧重建 VertexFormat）。
-     */
     private static final VertexFormat TRAIL_FORMAT = VertexFormat.builder(0)
             .addAttribute("Position", GpuFormat.RGB32_FLOAT)
             .addAttribute("Color", GpuFormat.RGBA32_FLOAT)
             .build();
-    /**
-     * 实例化顶点格式（billboard/mesh 共用；M21 增 InstanceSeed/InstanceAge）。
-     */
     private static final VertexFormat INSTANCE_FORMAT = VertexFormat.builder(1)
             .addAttribute("InstancePos", GpuFormat.RGB32_FLOAT)
             .addAttribute("InstanceVel", GpuFormat.RGB32_FLOAT)
@@ -95,9 +72,6 @@ public final class VfxGraphRenderer {
     private static final BindGroupLayout CAMERA_BIND_GROUP = BindGroupLayout.builder()
             .withUniform("GraphCamera", UniformType.UNIFORM_BUFFER)
             .build();
-    /**
-     * 旧 vfx 电弧管绑定组：GraphCamera + ArcLightning（基色/发射/参数，复刻 LightningRenderer）。
-     */
     private static final BindGroupLayout ARC_BIND_GROUP = BindGroupLayout.builder()
             .withUniform("GraphCamera", UniformType.UNIFORM_BUFFER)
             .withUniform("ArcLightning", UniformType.UNIFORM_BUFFER)
@@ -107,30 +81,15 @@ public final class VfxGraphRenderer {
             .withSampler("Sampler0")
             .withSampler("Sampler1")
             .build();
-    /**
-     * 编辑器预览清屏：不透明深色，便于确认视口在渲染（运行时 clear=false 不受影响）。
-     */
     private static final Vector4f CLEAR_COLOR = new Vector4f(0.07f, 0.08f, 0.1f, 1f);
-    /**
-     * 复用的世界变换 scratch（M16-02：避免每粒子分配 float[3]）。
-     */
     private final float[] worldScratch = new float[3];
     private final org.joml.FrustumIntersection particleFrustum = new org.joml.FrustumIntersection();
     private final org.joml.Matrix4f particleProjection = new org.joml.Matrix4f();
     private int[] selectedParticles = new int[4096];
 
-    /**
-     * 视口表面网格（M29b-03）：编辑器预览中的 plane/sphere 三角面（Blender 场景复刻）。
-     *
-     * <p>{@code triangles} 为世界坐标三角面数组（xyz*3/三角形，已含 origin 位移），
-     * {@code r/g/b/a} 为半透明材质色。仅在编辑器预览中传入（VfxPreview），运行时传空列表。</p>
-     */
     public record SurfaceMesh(float[] triangles, float r, float g, float b, float a) {
     }
 
-    /**
-     * 按 RenderSpec 缓存的管线（数据驱动，M21l）：着色器来自图数据，渲染器零着色器引用。
-     */
     private final ConcurrentHashMap<RenderSpec, RenderPipeline> pipelines = new ConcurrentHashMap<>();
     private final GpuBuffer quadBuffer;
     private final GpuBuffer cubeBuffer;
@@ -149,39 +108,23 @@ public final class VfxGraphRenderer {
     private ByteBuffer lineData;
     private int lineCapacity;
     private final GpuBuffer arcLightningUbo;
-    // --- M22-Rev2 Blender 式电弧渲染 ---
-    /**
-     * 电弧管顶点格式（Position+Normal+UV+Color）：匹配 vfxgraph_arc 着色器。
-     */
     private static final VertexFormat ARC_TUBE_FORMAT = VertexFormat.builder(0)
             .addAttribute("Position", GpuFormat.RGB32_FLOAT)
             .addAttribute("Normal", GpuFormat.RGB32_FLOAT)
             .addAttribute("UV0", GpuFormat.RG32_FLOAT)
             .addAttribute("Color", GpuFormat.RGBA32_FLOAT)
             .build();
-    /**
-     * 电弧管管线缓存。
-     */
     private final ConcurrentHashMap<String, RenderPipeline> arcTubePipelines = new ConcurrentHashMap<>();
-    /**
-     * 表面网格管线（M29b-03）：半透明平面/球三角面，编辑器预览场景。
-     */
     private RenderPipeline surfacePipeline;
     private GpuBuffer surfaceBuffer;
     private ByteBuffer surfaceData;
     private int surfaceCapacity;
-    /**
-     * 电弧管顶点/索引缓冲（growable）。
-     */
     private GpuBuffer arcTubeVertexBuffer;
     private GpuBuffer arcTubeIndexBuffer;
     private ByteBuffer arcVertexStaging;
     private ByteBuffer arcIndexStaging;
     private int arcTubeVertexCapacity;
     private int arcTubeIndexCapacity;
-    /**
-     * Blender 式电弧缓冲（由调用方在 render 前设置）。
-     */
     private ArcBuffer arcBuffer;
 
     public VfxGraphRenderer() {
@@ -199,7 +142,6 @@ public final class VfxGraphRenderer {
                 AddressMode.REPEAT, AddressMode.REPEAT, FilterMode.LINEAR, FilterMode.LINEAR, 1, OptionalDouble.empty());
         var noiseBytes = buildNoiseTile(NOISE_SIZE);
         device.createCommandEncoder().writeToTexture(noiseTexture, noiseBytes, 0, 0, 0, 0, NOISE_SIZE, NOISE_SIZE);
-        // soft particles 兜底：1x1 远平面（反向 Z 远=0）→ 无深度时火焰/烟始终可见
         farTexture = device.createTexture(
                 () -> "VfxGraph FarDepth", GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING,
                 GpuFormat.R32_FLOAT, 1, 1, 1, 1);
@@ -219,11 +161,9 @@ public final class VfxGraphRenderer {
                 GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST,
                 (long) SIMPLE_FORMAT.getVertexSize() * INITIAL_VERTICES);
         lineCapacity = INITIAL_VERTICES;
-        // 电弧：发射 UBO
         arcLightningUbo = device.createBuffer(
                 () -> "VfxGraph Arc Lightning", GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, ARC_LIGHTNING_UBO_SIZE);
         writeArcLightning(device, RenderSpec.ArcRender.DEFAULT.emission(), false);
-        // 电弧管缓冲
         arcTubeVertexBuffer = device.createBuffer(
                 () -> "VfxGraph Arc Tube Vertices",
                 GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST,
@@ -234,7 +174,6 @@ public final class VfxGraphRenderer {
                 GpuBuffer.USAGE_INDEX | GpuBuffer.USAGE_COPY_DST,
                 1024L * 4);
         arcTubeIndexCapacity = 1024;
-        // 表面网格缓冲（M29b-03，编辑器预览 scene）
         surfaceBuffer = device.createBuffer(
                 () -> "VfxGraph Surface",
                 GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST,
@@ -242,13 +181,8 @@ public final class VfxGraphRenderer {
         surfaceCapacity = 1024;
     }
 
-    /**
-     * 按 RenderSpec 构建/取用管线（数据驱动，M21l）。顶点/片元着色器与混合全部来自 spec（图数据），
-     * 渲染器不引用任何具体着色器 id；几何决定顶点缓冲/图元（结构性）。
-     */
     private RenderPipeline pipelineFor(RenderSpec spec) {
         return pipelines.computeIfAbsent(spec, s -> {
-            // QUAD 采样噪声/深度（Sampler0/Sampler1）；ARC 走旧式管绑定组（GraphCamera + ArcLightning）
             var bindGroup = switch (s.geometry()) {
                 case QUAD -> NOISE_BIND_GROUP;
                 case ARC -> ARC_BIND_GROUP;
@@ -266,11 +200,9 @@ public final class VfxGraphRenderer {
                     || s.geometry() == RenderSpec.Geometry.ARC
                     ? null
                     : INSTANCE_FORMAT;
-            // ARC 管为 TRIANGLES（ring 网格）；其余 QUADS
             var topology = s.geometry() == RenderSpec.Geometry.ARC
                     ? PrimitiveTopology.TRIANGLES
                     : PrimitiveTopology.QUADS;
-            // pipeline location 需是合法 Identifier（[a-z0-9/._-]）：用安全字段拼名，不用 record toString
             var locationName = "vfx_graph_" + s.geometry().name().toLowerCase(Locale.ROOT)
                     + "_" + s.blend().name().toLowerCase(Locale.ROOT)
                     + "_" + s.vertexShader().getPath() + "_" + s.fragmentShader().getPath();
@@ -281,7 +213,6 @@ public final class VfxGraphRenderer {
         });
     }
 
-    /** 电弧管管线：透明主 pass / additive bloom pass。 */
     private RenderPipeline arcTubePipeline(RenderSpec spec, boolean bloomPass) {
         var key = (bloomPass ? "bloom_" : "main_")
                 + spec.vertexShader() + "_" + spec.fragmentShader();
@@ -298,9 +229,6 @@ public final class VfxGraphRenderer {
         });
     }
 
-    /**
-     * 表面网格管线（M29b-03）：SIMPLE_FORMAT（Position+Color）+ CAMERA_BIND_GROUP + TRIANGLES，半透明。
-     */
     private RenderPipeline surfacePipeline() {
         if (surfacePipeline == null) {
             surfacePipeline = buildPipeline("vfx_graph_surface",
@@ -312,13 +240,10 @@ public final class VfxGraphRenderer {
         return surfacePipeline;
     }
 
-    /**
-     * 写入旧式电弧渲染参数 UBO：仅渲染标量（aces 开关、发射增强），**无任何颜色常量**——电弧颜色全由图数据顶点色驱动。
-     */
     private void writeArcLightning(GpuDevice device, float emission, boolean bloomPass) {
         try (var stack = MemoryStack.stackPush()) {
             var builder = Std140Builder.onStack(stack, ARC_LIGHTNING_UBO_SIZE);
-            builder.putVec4(new Vector4f(0f, bloomPass ? 1f : 0f, emission, 0f)); // LightningParams(aces=0, bloom pass, 发射增强 emission)
+            builder.putVec4(new Vector4f(0f, bloomPass ? 1f : 0f, emission, 0f));
             device.createCommandEncoder().writeToBuffer(arcLightningUbo.slice(), builder.get());
         }
     }
@@ -334,8 +259,6 @@ public final class VfxGraphRenderer {
                 .withFragmentShader(fs)
                 .withBindGroupLayout(bindGroup)
                 .withCull(false)
-                // 深度测试：与 Minecraft 主渲染一致的反向 Z（近=1.0/远=0.0，GEQUAL 通过），
-                // 粒子与场景正确遮挡（不写深度——半透明粒子彼此不遮挡）
                 .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
                 .withColorTargetState(new ColorTargetState(blend))
                 .withPrimitiveTopology(topology)
@@ -346,9 +269,6 @@ public final class VfxGraphRenderer {
         return builder.build();
     }
 
-    /**
-     * 设置 M22-Rev2 Blender 式电弧缓冲（render 前调用；null = 不渲染 arc2）。
-     */
     public void setArcBuffer(ArcBuffer buffer) {
         this.arcBuffer = buffer;
     }
@@ -376,10 +296,6 @@ public final class VfxGraphRenderer {
         render(target, depth, buffer, camera, clear, specs, transform, bloomPass, List.of());
     }
 
-    /**
-     * 数据驱动多输出渲染：对 {@code specs} 逐规格绘制，ARC 规格用 drawArcTubes 渲染；
-     * {@code surfaces} 为编辑器预览场景表面网格（plane/sphere，M29b-03），先于粒子/电弧绘制。
-     */
     public void render(GpuTextureView target, @Nullable GpuTextureView depth, ParticleBuffer buffer,
                        GraphCamera camera, boolean clear, List<RenderSpec> specs, WorldTransform transform, boolean bloomPass,
                        List<SurfaceMesh> surfaces) {
@@ -395,12 +311,7 @@ public final class VfxGraphRenderer {
         particleFrustum.set(particleProjection.set(camera.projection()).mul(camera.viewRotation()));
         writeCamera(device, camera);
         var encoder = device.createCommandEncoder();
-        // soft particles（仅 quad 系）：先把深度附件拷到可采样纹理（must be outside render pass）。
-        // 清屏时先清深度到远平面 0.0（反向 Z），再拷贝，保证编辑器视口采样到"无遮挡"。
-        // Iris shader pack 下主目标深度不是场景深度（世界深度在 Iris 内部 gbuffer），
-        // 采样它会使 depthDiff<0 → 粒子被 discard/alpha 灭掉（不可见），改用 farView（0.0）兜底。
         var preClearedDepth = false;
-        // soft particles（仅 quad 系）：任一输出规格为 quad（billboard）才拷深度；Iris shader pack 下退回 farView。
         var anyBillboard = specs.stream().anyMatch(s -> s.geometry() == RenderSpec.Geometry.QUAD);
         var useSceneDepth = anyBillboard && sceneDepthUsable(RenderSpec.Geometry.QUAD);
         if (useSceneDepth && depth != null) {
@@ -416,12 +327,9 @@ public final class VfxGraphRenderer {
                 clear ? Optional.of(CLEAR_COLOR) : Optional.empty(),
                 depth, clearDepth
         )) {
-            // 编辑器预览场景表面网格（先画，深度 GEQUAL，半透明材质色）
             if (hasSurfaces) {
                 drawSurfaces(renderPass, surfaces, camera);
             }
-            // 电弧无 layer 语义：整批电弧只画一次（首个 ARC 规格），避免多 ARC 输出重复叠加过曝。
-            // bloom 输入（bloomPass=true）只画 GLOW 规格，同样只画一次。
             var arcsDrawn = false;
             for (var spec : specs) {
                 if (bloomPass && !spec.feedsBloom()) continue;
@@ -441,18 +349,10 @@ public final class VfxGraphRenderer {
         }
     }
 
-    // --- M22-Rev2 Blender 式电弧渲染 ---
 
-    /**
-     * M30 age 亮度闪烁（复刻 Blender 材质 Emission）：
-     * 表面弧 {@code Light = FloatCurve.004(age/寿命)×亮度 + 0.33×亮度}（先亮后灭）；
-     * 接触弧 {@code TLight = FloatCurve.009(生命系数)}（直接，无 ×6）；自由弧无闪烁返回 1。
-     * 返回 {rgb 乘数, alpha 乘数}，烘焙进管顶点色（UBO emission 仍由图数据 {@code output_arc} 驱动）。
-     */
     private static float[] arcLight(ArcCurve arc) {
         var lifetime = Math.max(1e-3f, arc.lifetime());
-        var ageFrac = Math.max(0f, Math.min(1f, arc.age() / lifetime));
-        // 粒子火花（Blender PLight = FloatCurve.003(生命系数)×粒子亮度 ×6）：随生命衰减熄灭
+        var ageFrac = Math.clamp(arc.age() / lifetime, 0f, 1f);
         if (arc.sparkVelocity() != null) {
             var f = BlenderArcCurves.sample(
                     BlenderArcCurves.PARTICLE_LIFE, ageFrac);
@@ -468,15 +368,10 @@ public final class VfxGraphRenderer {
                     BlenderArcCurves.LIGHT, ageFrac) + 0.33f;
             return new float[]{f, 1f};
         }
-        // 自由电弧（arc_bolt 等）：出生即亮 → 抖动 → 临终熄灭，形状不变仅亮度动态
         var f = BlenderArcCurves.sample(BlenderArcCurves.FLICKER, ageFrac);
         return new float[]{f, 1f};
     }
 
-    /**
-     * M22-Rev2 电弧渲染入口：遍历 ArcBuffer，对每条弧线构建管网格并绘制。
-     * Blender 对应：Curve to Mesh(Circle) → Set Material → 输出到 Join Geometry。
-     */
     public void drawArcTubes(
             RenderPass pass,
             ArcBuffer arcBuffer,
@@ -515,26 +410,19 @@ public final class VfxGraphRenderer {
         vertexData.flip();
         indexData.flip();
 
-        // 顶点烘焙世界变换（旋转/缩放/平移）并转为相机相对坐标（视图为纯旋转矩阵，平移必须写进顶点）；
-        // overall_scale 为图数据驱动（output_arc 块属性）的整体缩放。与粒子/轨迹路径一致。
         transformArcTubeVertices(vertexData, totalVerts, camera.position(), transform, arcRender.overallScale());
 
-        // 上传 GPU
         var writeEncoder = device.createCommandEncoder();
         writeEncoder.writeToBuffer(arcTubeVertexBuffer.slice(0, vertexBytes), vertexData);
         writeEncoder.writeToBuffer(arcTubeIndexBuffer.slice(0, indexBytes), indexData);
 
-        // 写入 UBO
         writeArcLightning(device, arcRender.emission(), bloomPass);
 
-        // 绘制
         var pipeline = arcTubePipeline(spec, bloomPass);
         pass.setPipeline(pipeline);
         pass.setUniform("GraphCamera", cameraUbo.slice());
         pass.setUniform("ArcLightning", arcLightningUbo.slice());
         pass.setVertexBuffer(0, arcTubeVertexBuffer.slice(0, vertexBytes));
-        // 同一 RenderPass 中较早的 billboard/mesh 输出会在槽 1 留下实例缓冲；
-        // ARC 管线只有槽 0，必须显式解绑，否则 OpenGL VAO 缓存会用 null VertexFormat 解读槽 1。
         pass.setVertexBuffer(1, null);
         pass.setIndexBuffer(arcTubeIndexBuffer, IndexType.INT);
         pass.drawIndexed(totalIndices, 1, 0, 0, 0);
@@ -551,12 +439,6 @@ public final class VfxGraphRenderer {
         return buffer;
     }
 
-    /**
-     * 电弧管顶点烘焙（包内静态，可单测）：overall_scale（图数据整体缩放）→ WorldTransform（局部→世界）→
-     * 相机相对坐标（视图为纯旋转矩阵，平移必须写进顶点）。法线仅旋转（均匀缩放在归一化后无影响）。
-     *
-     * <p>顶点布局与 {@link CurveToMeshBuilder} 一致：Position(3) + Normal(3) + UV(2) + Color(4)。</p>
-     */
     static void transformArcTubeVertices(ByteBuffer vertexData, int vertexCount,
                                          Vector3f camPos, WorldTransform transform, float overallScale) {
         var identity = transform.isIdentity();
@@ -595,9 +477,6 @@ public final class VfxGraphRenderer {
         }
     }
 
-    /**
-     * 新式电弧管顶点缓冲扩容。
-     */
     private void growArc2TubeBuffer(int requiredVertices) {
         var newCapacity = Math.max(requiredVertices, arcTubeVertexCapacity * 2);
         var old = arcTubeVertexBuffer;
@@ -609,9 +488,6 @@ public final class VfxGraphRenderer {
         old.close();
     }
 
-    /**
-     * 新式电弧管索引缓冲扩容。
-     */
     private void growArc2TubeIndexBuffer(int requiredIndices) {
         var newCapacity = Math.max(requiredIndices, arcTubeIndexCapacity * 2);
         var old = arcTubeIndexBuffer;
@@ -629,7 +505,6 @@ public final class VfxGraphRenderer {
             RenderSpec spec
     ) {
         var count = buffer.count();
-        // 只写该 spec 负责的层（layer 过滤，数据驱动）：分层外观由图上多输出节点表达，无 fire/smoke 硬编码。
         var matched = 0;
         if (selectedParticles.length < count) selectedParticles = new int[Math.max(count, selectedParticles.length * 2)];
         for (var i = 0; i < count; i++) {
@@ -763,7 +638,6 @@ public final class VfxGraphRenderer {
         pass.setPipeline(pipelineFor(spec));
         pass.setUniform("GraphCamera", cameraUbo.slice());
         pass.setVertexBuffer(0, lineBuffer.slice(0, neededBytes));
-        // LINE/RIBBON 同样是单缓冲管线，清理前一个实例化输出留下的槽 1。
         pass.setVertexBuffer(1, null);
         var sequential = RenderSystem.getSequentialBuffer(primitive);
         var indices = sequential.getBuffer(vertexCount);
@@ -898,11 +772,6 @@ public final class VfxGraphRenderer {
         }
     }
 
-    /**
-     * 场景深度（soft particles 采样）仅在无 Iris shader pack 的 billboard 系下可用：
-     * Iris shader pack 时主目标深度不是场景深度（世界深度在 Iris 内部 gbuffer），采样会令
-     * depthDiff<0 → 粒子被 discard/alpha 灭掉，退回 farView（0.0）保证可见。
-     */
     static boolean sceneDepthUsable(RenderSpec.Geometry geometry) {
         return sceneDepthUsable(geometry, IrisIntegration.isShaderPackInUse());
     }
@@ -917,7 +786,6 @@ public final class VfxGraphRenderer {
     private static void clearTarget(GpuDevice device, GpuTextureView target, @Nullable GpuTextureView depth) {
         var encoder = device.createCommandEncoder();
         try (var pass = encoder.createRenderPass(() -> "VfxGraph Clear", target, Optional.of(CLEAR_COLOR), depth, OptionalDouble.of(0.0))) {
-            // 空 pass 仅清屏（反向 Z：深度清到远平面 0.0）
         }
     }
 
@@ -943,10 +811,6 @@ public final class VfxGraphRenderer {
         old.close();
     }
 
-    /**
-     * 编辑器预览表面网格（M29b-03）：把 plane/sphere 三角面烘焙为相机相对坐标顶点
-     * （视图纯旋转，平移写进顶点，同电弧/粒子），半透明材质色，TRIANGLES 绘制。
-     */
     private void drawSurfaces(RenderPass pass, List<SurfaceMesh> surfaces, GraphCamera camera) {
         var totalVerts = 0;
         for (var sm : surfaces) {
@@ -994,10 +858,6 @@ public final class VfxGraphRenderer {
         old.close();
     }
 
-    /**
-     * 生成可平铺的 fBm value-noise 灰度瓦片（RGBA8，四通道同值），供火焰片元着色器采样
-     * （被啃轮廓 / 参差边缘 / 摆动 / 闪烁）。
-     */
     private static ByteBuffer buildNoiseTile(int size) {
         var rng = new Random(0xC0FFEEL);
         var grid = new float[size + 1][size + 1];
@@ -1013,7 +873,6 @@ public final class VfxGraphRenderer {
             for (var x = 0; x < size; x++) {
                 var sum = 0f;
                 var amp = 0.5f;
-                // 3 octaves（freq 1/2/4）：去掉最细 octave（32px 特征），避免小尺度采样混叠成边缘锯齿
                 for (var o = 0; o < 3; o++) {
                     var freq = (float) (1 << o);
                     sum += amp * valueNoise(x * freq, y * freq, size, grid);
@@ -1035,9 +894,6 @@ public final class VfxGraphRenderer {
         return out;
     }
 
-    /**
-     * 周期 = size 的双线性 value noise（可平铺）。
-     */
     private static float valueNoise(float x, float y, int size, float[][] grid) {
         var xi = Math.floorMod((int) Math.floor(x), size);
         var yi = Math.floorMod((int) Math.floor(y), size);
@@ -1072,7 +928,6 @@ public final class VfxGraphRenderer {
         var format = VertexFormat.builder(0).addAttribute("Position", GpuFormat.RGB32_FLOAT).build();
         try (var byteBufferBuilder = ByteBufferBuilder.exactlySized(format.getVertexSize() * 24)) {
             var builder = new BufferBuilder(byteBufferBuilder, PrimitiveTopology.QUADS, format);
-            // +X, -X, +Y, -Y, +Z, -Z 六个面（单位立方体 0..1）
             builder.addVertex(1, 0, 0).addVertex(1, 1, 0).addVertex(1, 1, 1).addVertex(1, 0, 1);
             builder.addVertex(0, 0, 1).addVertex(0, 1, 1).addVertex(0, 1, 0).addVertex(0, 0, 0);
             builder.addVertex(0, 1, 0).addVertex(1, 1, 0).addVertex(1, 1, 1).addVertex(0, 1, 1);

@@ -4,13 +4,6 @@ import org.academy.api.client.gui.layout.MeasureSpec
 import kotlin.math.ceil
 import kotlin.math.max
 
-/**
- * 等分网格布局喵. 子控件按行主序填入 `columns` 列网格.
- *
- * - [rows] 为 0 时按子控件数量自动推导.
- * - [fill] 为 true 且父容器给出明确尺寸时, 单元格等分铺满容器.
- * - 子控件默认占满所在单元格 (等效 MATCH_PARENT).
- */
 open class GridLayoutWidget : AbstractWidgetContainer() {
     var columns: Int = 0
         set(value) {
@@ -77,10 +70,11 @@ open class GridLayoutWidget : AbstractWidgetContainer() {
         val containerLp = layoutParams
         val (cols, rowCount) = gridDimensions(count)
 
-        val hasWidth = widthMeasureSpec.mode != MeasureSpec.Mode.UNSPECIFIED
-        val hasHeight = heightMeasureSpec.mode != MeasureSpec.Mode.UNSPECIFIED
-        val availW = max(0f, widthMeasureSpec.size - containerLp.paddingLeft - containerLp.paddingRight)
-        val availH = max(0f, heightMeasureSpec.size - containerLp.paddingTop - containerLp.paddingBottom)
+        val window = measureWindow(widthMeasureSpec, heightMeasureSpec)
+        val hasWidth = window.hasWidth
+        val hasHeight = window.hasHeight
+        val availW = window.availableWidth
+        val availH = window.availableHeight
 
         val cellW = if (hasWidth) availW / cols else -1f
         val cellH = if (hasHeight) availH / rowCount else -1f

@@ -15,6 +15,7 @@ import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
 import org.academy.internal.common.ability.program.*;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 
 import java.nio.charset.StandardCharsets;
@@ -24,17 +25,18 @@ import java.util.UUID;
 
 public final class PrecisionOperationClient {
     private static final int SLOT_COUNT = AbilityProgramManager.SLOT_COUNT;
-    private static final AbilityProgram[] PROGRAMS = new AbilityProgram[SLOT_COUNT];
-    private static final AbilityProgram[] SERVER_PROGRAMS = new AbilityProgram[SLOT_COUNT];
+    private static final @Nullable AbilityProgram[] PROGRAMS = new AbilityProgram[SLOT_COUNT];
+    private static final @Nullable AbilityProgram[] SERVER_PROGRAMS = new AbilityProgram[SLOT_COUNT];
     private static final PrecisionGraph[] GRAPHS = emptyGraphs();
     private static final PrecisionGraph[] SERVER_GRAPHS = GRAPHS.clone();
     private static final PrecisionGraph.Diagnostic[] LAST_DIAGNOSTICS = emptyDiagnostics();
-    private static final int[] LAST_NODES = filledInts(-1);
-    private static final int[] LAST_PORTS = filledInts(-1);
+    private static final int[] LAST_NODES = filledInts();
+    private static final int[] LAST_PORTS = filledInts();
     private static final boolean[] ACTIVE_SLOTS = new boolean[SLOT_COUNT];
     private static final boolean[] ACTIVE_FAILURES = new boolean[SLOT_COUNT];
     private static long revision;
     private static int selectedSlot;
+    @Nullable
     private static ModularProgramScreen screen;
     private static final ModularProgramEditorSession EDITOR_SESSION =
             new ModularProgramEditorSession() {
@@ -69,7 +71,7 @@ public final class PrecisionOperationClient {
                 }
 
                 @Override
-                public AbilityProgram restoredProgram(int slot) {
+                public @Nullable AbilityProgram restoredProgram(int slot) {
                     return PrecisionOperationClient.serverProgram(slot);
                 }
 
@@ -91,7 +93,7 @@ public final class PrecisionOperationClient {
                 @Override
                 public void saveProgram(
                         int slot,
-                        AbilityProgram program,
+                        @Nullable AbilityProgram program,
                         long expectedRevision
                 ) {
                     PrecisionOperationClient.saveProgram(slot, program, expectedRevision);
@@ -135,9 +137,9 @@ public final class PrecisionOperationClient {
         return diagnostics;
     }
 
-    private static int[] filledInts(int value) {
+    private static int[] filledInts() {
         var values = new int[SLOT_COUNT];
-        Arrays.fill(values, value);
+        Arrays.fill(values, -1);
         return values;
     }
 
@@ -147,7 +149,6 @@ public final class PrecisionOperationClient {
     public static void openEditor() {
         var minecraft = Minecraft.getInstance();
         if (minecraft.player == null || minecraft.gui.screen() != null
-                || AbilitySystemClient.category == null
                 || !AbilitySystemClient.category.getKey().equals(
                 AbilityProgramDefinitions.mentalout().category())
                 || AbilitySystemClient.getLevel().getLevelCode() < 5) return;
@@ -158,8 +159,7 @@ public final class PrecisionOperationClient {
                     PrecisionOperationManager.FeedbackType.ERROR,
                     revision,
                     LAST_DIAGNOSTICS[selectedSlot],
-                    LAST_NODES[selectedSlot],
-                    LAST_PORTS[selectedSlot]
+                    LAST_NODES[selectedSlot]
             );
         }
         minecraft.gui.setScreen(screen);
@@ -172,7 +172,6 @@ public final class PrecisionOperationClient {
 
     public static void execute(int slot) {
         if (Minecraft.getInstance().gui.screen() != null
-                || AbilitySystemClient.category == null
                 || !AbilitySystemClient.category.getKey().equals(
                 AbilityProgramDefinitions.mentalout().category())
                 || AbilitySystemClient.getLevel().getLevelCode() < 5) return;
@@ -185,10 +184,11 @@ public final class PrecisionOperationClient {
 
     public static void handleSync(byte[] encoded) {
         var result = ProgramBookCodec.decode(encoded);
-        if (!result.valid() || result.book().slots().isEmpty()
-                || result.book().slots().size() > SLOT_COUNT
-                || result.book().revision() < revision) return;
-        var book = PrecisionProgramAliases.canonicalize(result.book().resize(SLOT_COUNT));
+        var decodedBook = result.book();
+        if (decodedBook == null || !result.valid() || decodedBook.slots().isEmpty()
+                || decodedBook.slots().size() > SLOT_COUNT
+                || decodedBook.revision() < revision) return;
+        var book = PrecisionProgramAliases.canonicalize(decodedBook.resize(SLOT_COUNT));
         var decoded = new PrecisionGraph[SLOT_COUNT];
         for (var slot = 0; slot < SLOT_COUNT; slot++) {
             var exported = PrecisionProgramExporter.export(book.slot(slot).program());
@@ -237,7 +237,7 @@ public final class PrecisionOperationClient {
             showActionBar("message.academy.precision_operation.feedback.completed", slot);
         }
         if (screen != null && Minecraft.getInstance().gui.screen() == screen) {
-            screen.applyResult(slot, type, revision, diagnostic, nodeId, port);
+            screen.applyResult(slot, type, revision, diagnostic, nodeId);
         }
     }
 
@@ -269,10 +269,12 @@ public final class PrecisionOperationClient {
         return SERVER_GRAPHS[Mth.clamp(slot, 0, SLOT_COUNT - 1)];
     }
 
+    @Nullable
     static AbilityProgram program(int slot) {
         return PROGRAMS[Mth.clamp(slot, 0, SLOT_COUNT - 1)];
     }
 
+    @Nullable
     static AbilityProgram serverProgram(int slot) {
         return SERVER_PROGRAMS[Mth.clamp(slot, 0, SLOT_COUNT - 1)];
     }
@@ -296,7 +298,7 @@ public final class PrecisionOperationClient {
         GRAPHS[slot] = exported.valid() ? exported.graph() : PrecisionGraph.EMPTY;
     }
 
-    static void saveProgram(int slot, AbilityProgram program, long expectedRevision) {
+    static void saveProgram(int slot, @Nullable AbilityProgram program, long expectedRevision) {
         slot = Mth.clamp(slot, 0, SLOT_COUNT - 1);
         var definition = AbilityProgramDefinitions.mentalout();
         if (program != null && !program.category().equals(definition.category())) {
@@ -420,8 +422,9 @@ public final class PrecisionOperationClient {
                 Component.translatable(diagnostic.translationKey())
         );
         if (nodeId >= 0) {
-            var programNode = PROGRAMS[slot] == null ? null
-                    : PROGRAMS[slot].graph().nodes().stream()
+            var stored = PROGRAMS[slot];
+            var programNode = stored == null ? null
+                    : stored.graph().nodes().stream()
                     .filter(candidate -> candidate.id() == nodeId).findFirst().orElse(null);
             var entry = programNode == null ? null
                     : AbilityProgramDefinitions.mentalout().editorCatalog().entry(programNode.type());

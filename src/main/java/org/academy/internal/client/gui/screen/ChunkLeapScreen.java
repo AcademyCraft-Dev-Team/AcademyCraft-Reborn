@@ -9,7 +9,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
-import org.academy.AcademyCraft;
 import org.academy.api.client.gui.layout.Gravity;
 import org.academy.api.client.gui.layout.SizeMode;
 import org.academy.api.client.gui.screen.UiScreen;
@@ -21,7 +20,6 @@ import org.academy.internal.client.ability.teleport.ChunkLeapGodView;
 import org.academy.internal.client.ability.teleport.ChunkLeapGodViewClient;
 import org.academy.internal.client.ability.teleport.ChunkMapTexture;
 import org.academy.internal.client.ability.teleport.ChunkMapViewClient;
-import org.academy.internal.client.gui.SerializedUiLayout;
 import org.academy.internal.common.ability.teleport.ChunkLeapCost;
 import org.academy.internal.common.ability.teleport.ChunkLeapPackets;
 import org.academy.internal.common.ability.teleport.ChunkLeapRegion;
@@ -109,7 +107,6 @@ public final class ChunkLeapScreen extends UiScreen {
     private int[] executeRect = {-1, -1, 0, 0};
 
 
-    private FrameLayoutWidget serializedLayout;
     /** Independent block-coordinate entries; pressing Enter in either moves the map centre. */
     private EditBox coordinateXBox;
     private EditBox coordinateZBox;
@@ -132,12 +129,7 @@ public final class ChunkLeapScreen extends UiScreen {
 
     @Override
     protected void onInit() {
-        var layout = SerializedUiLayout.INSTANCE.load(
-                AcademyCraft.academy("ui/layout/chunk_leap.json"),
-                List.of("map_canvas", "info_panel"),
-                this::fallbackLayout);
-        serializedLayout = layout;
-        getRoot().addChild("serialized_layout", layout);
+        getRoot().addChild("chunk_leap_layout", fallbackLayout());
 
         coordinateXBox = createCoordinateBox("chunk_leap.coord.x_hint");
         coordinateZBox = createCoordinateBox("chunk_leap.coord.z_hint");

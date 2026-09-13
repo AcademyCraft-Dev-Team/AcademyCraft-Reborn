@@ -66,9 +66,6 @@ public class PlayerCPManager implements AbilitySubsystem {
         NeoForge.EVENT_BUS.post(new AbilityOverloadEvent(player));
     }
 
-    /**
-     * Advances every timed stack independently so one cast never waits for earlier stacks.
-     */
     static boolean advanceTimedOccupationIterations(
             List<AbilityData.CpOccupationData> occupations,
             int recoverySteps
@@ -103,7 +100,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         }
         var normalizedRemainder = normalizeRecoveryRemainder(remainderCp, safeRecoveredCpPerSp);
         var recoverableBeforeEmpty = currentSp * safeRecoveredCpPerSp - normalizedRemainder;
-        var recovered = Math.min(requestedCp, Math.max(0.0f, recoverableBeforeEmpty));
+        var recovered = Math.clamp(recoverableBeforeEmpty, 0.0f, requestedCp);
         if (recovered <= CP_EPSILON) {
             return new CpRecoveryPlan(0.0f, normalizedRemainder, 0);
         }
@@ -310,8 +307,6 @@ public class PlayerCPManager implements AbilitySubsystem {
         return true;
     }
 
-    // Retain these extension entry points for addon categories. Built-in categories use the
-    // shared recovery implementation directly so an addon cannot carry its recovery veto over.
     private boolean tickOverload(AbilityData cpData, List<AbilityData.CpOccupationData> occupations, ServerPlayer player) {
         return recoverOverload(cpData, occupations, player);
     }
@@ -322,9 +317,9 @@ public class PlayerCPManager implements AbilitySubsystem {
             cpData.setStatus(AbilityData.Status.NORMAL);
             cpData.setStateTimer(0);
 
-            occupations.clear(); // 清空占用队列
+            occupations.clear();
             var maxCP = getMaxCP(player.getUUID());
-            cpData.setAvailableCP(maxCP, maxCP); // 恢复 CP
+            cpData.setAvailableCP(maxCP, maxCP);
 
             NeoForge.EVENT_BUS.post(new AbilityRecoveryEvent(player));
             return true;
@@ -441,7 +436,6 @@ public class PlayerCPManager implements AbilitySubsystem {
                 uuid, amount, 0.0f, skill, iterationTicks, isPermanent, stackGroup, stackLimit);
     }
 
-    /** Atomically reserves CP and consumes MP, or changes neither resource. */
     public boolean tryOccupationAndConsumeMP(
             UUID uuid,
             float cpAmount,
@@ -657,9 +651,6 @@ public class PlayerCPManager implements AbilitySubsystem {
         return true;
     }
 
-    /**
-     * Atomically adds a group of timed charges without changing the skill's permanent charge.
-     */
     public boolean tryTimedOccupations(
             UUID uuid,
             Skill skill,
@@ -1111,7 +1102,6 @@ public class PlayerCPManager implements AbilitySubsystem {
         if (changed) syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
 
-    /** Migrates the old mutable maximum once; later category writes cannot replace this ledger. */
     static float academyMaxCp(Player playerData) {
         var recorded = playerData.getAcademyMaxCp();
         var baseline = Float.isFinite(recorded) && recorded >= BASE_MAX_CP
@@ -1143,7 +1133,6 @@ public class PlayerCPManager implements AbilitySubsystem {
         playerData.setAcademyMaxCp(restored);
         var oldMaximum = normalizeDebugMaxCP(cpData.getMaxCP());
         var available = normalizeDebugMaxCP(cpData.getAvailableCP());
-        // Preserve existing expenditure, including legitimate permanent and timed occupations.
         var effectiveMax = resolveEffectiveMaxCP(restored, debugOverride);
         var adjusted = Math.clamp(available + (restored - oldMaximum), 0.0f, effectiveMax);
         if (Float.compare(cpData.getMaxCP(), restored) != 0) {
@@ -1157,7 +1146,6 @@ public class PlayerCPManager implements AbilitySubsystem {
         return changed;
     }
 
-    /** Refund only foreign/unregistered or malformed entries, retaining valid category/common debt. */
     static boolean releaseInvalidOccupations(
             AbilityData cpData, List<AbilityData.CpOccupationData> occupations,
             Predicate<String> availableSkill, float maximum

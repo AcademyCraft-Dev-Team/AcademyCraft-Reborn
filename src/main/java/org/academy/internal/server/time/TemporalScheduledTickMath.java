@@ -1,15 +1,9 @@
 package org.academy.internal.server.time;
 
-/** Numeric rules for rebasing scheduled block and fluid ticks. */
 final class TemporalScheduledTickMath {
     private TemporalScheduledTickMath() {
     }
 
-    /**
-     * Converts a channel scale into a multiplier relative to the level clock.
-     * A stopped level clock is an upstream pause, so positive scheduled scales
-     * retain their physical delay until that clock resumes.
-     */
     static double relativeScale(double scheduledScale, double levelClockScale) {
         requireScale(scheduledScale, "scheduledScale");
         requireScale(levelClockScale, "levelClockScale");
@@ -64,10 +58,8 @@ final class TemporalScheduledTickMath {
         requireScale(relativeScale, "relativeScale");
         if (delay <= 0) return delay;
         if (relativeScale == 0.0D) return 1;
-        return (int) Math.min(
-                Integer.MAX_VALUE,
-                Math.max(1L, ceilToLong(delay / relativeScale))
-        );
+        return (int) Math.clamp(ceilToLong(delay / relativeScale), 1L,
+                Integer.MAX_VALUE);
     }
 
     private static long ceilToLong(double value) {

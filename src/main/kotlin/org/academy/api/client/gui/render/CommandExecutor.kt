@@ -73,18 +73,7 @@ class CommandExecutor : AutoCloseable {
 
     private fun tryAllocate(batches: List<PendingBatch>, outOffsets: MutableList<MeshOffsetInfo>): AllocationResult {
         outOffsets.clear()
-        var currentPtr = writeOffset
-
-        for (batchIdx in batches.indices) {
-            val batch = batches[batchIdx]
-            for (meshIdx in batch.meshDataList.indices) {
-                val mesh = batch.meshDataList[meshIdx]
-                val stride = mesh.drawState().format().vertexSize
-                currentPtr = align(currentPtr, stride)
-                outOffsets.add(MeshOffsetInfo(batchIdx, meshIdx, currentPtr, mesh.vertexBuffer().remaining().toLong()))
-                currentPtr += mesh.vertexBuffer().remaining().toLong()
-            }
-        }
+        var currentPtr = allocateMeshOffsets(batches, writeOffset, outOffsets)
 
         var endPtr = currentPtr
         var startPtr = writeOffset
@@ -92,25 +81,8 @@ class CommandExecutor : AutoCloseable {
         var needsRotate = false
 
         if (globalBuffer != null && endPtr > globalBuffer!!.size()) {
-            currentPtr = 0
             outOffsets.clear()
-            for (batchIdx in batches.indices) {
-                val batch = batches[batchIdx]
-                for (meshIdx in batch.meshDataList.indices) {
-                    val mesh = batch.meshDataList[meshIdx]
-                    val stride = mesh.drawState().format().vertexSize
-                    currentPtr = align(currentPtr, stride)
-                    outOffsets.add(
-                        MeshOffsetInfo(
-                            batchIdx,
-                            meshIdx,
-                            currentPtr,
-                            mesh.vertexBuffer().remaining().toLong()
-                        )
-                    )
-                    currentPtr += mesh.vertexBuffer().remaining().toLong()
-                }
-            }
+            currentPtr = allocateMeshOffsets(batches, 0, outOffsets)
             startPtr = 0
             endPtr = currentPtr
             requiredLength = endPtr
@@ -121,6 +93,25 @@ class CommandExecutor : AutoCloseable {
         } else if (isRegionConflicted(startPtr, endPtr)) needsRotate = true
 
         return AllocationResult(startPtr, endPtr, requiredLength, requiredLength, needsRotate)
+    }
+
+    private fun allocateMeshOffsets(
+        batches: List<PendingBatch>,
+        startPtr: Long,
+        outOffsets: MutableList<MeshOffsetInfo>
+    ): Long {
+        var currentPtr = startPtr
+        for (batchIdx in batches.indices) {
+            val batch = batches[batchIdx]
+            for (meshIdx in batch.meshDataList.indices) {
+                val mesh = batch.meshDataList[meshIdx]
+                val stride = mesh.drawState().format().vertexSize
+                currentPtr = align(currentPtr, stride)
+                outOffsets.add(MeshOffsetInfo(batchIdx, meshIdx, currentPtr, mesh.vertexBuffer().remaining().toLong()))
+                currentPtr += mesh.vertexBuffer().remaining().toLong()
+            }
+        }
+        return currentPtr
     }
 
     private fun uploadAndBuildDrawCalls(
@@ -235,10 +226,6 @@ class CommandExecutor : AutoCloseable {
             val physicalWidth = UiEnvironment.get().physicalWidth
             val physicalHeight = UiEnvironment.get().physicalHeight
             val pos = scissor.position
-            // Outer pixel bounds (floor the near edges, ceil the far edges) so a
-            // fractional scissor never truncates a pixel of content. The old
-            // floor(pos)*+floor(width) form could clip one pixel off the right, and
-            // the Y-flip path truncated with a different rule.
             val eps = 1e-4f
             val left = floor(pos.x * guiScale + eps).toInt()
             val right = ceil((pos.x + scissor.width) * guiScale - eps).toInt()
@@ -250,12 +237,7 @@ class CommandExecutor : AutoCloseable {
             val clampedBottom = glTop.coerceIn(0, physicalHeight)
             val clampedWidth = (clampedRight - clampedX).coerceAtLeast(0)
             val clampedHeight = (clampedBottom - clampedY).coerceAtLeast(0)
-            if (clampedWidth <= 0 || clampedHeight <= 0) {
-                // 裁剪区域完全出屏/退化: 整条 draw 不可见, 直接跳过 (对标 Skia quickReject).
-                // 不能 enableScissor(0x0) (RenderPass 要求 size>0), 也绝不能 disableScissor,
-                // 否则会把本应被裁掉的内容画出来.
-                return false
-            }
+            if (clampedWidth <= 0 || clampedHeight <= 0) return false
             renderPass.enableScissor(clampedX, clampedY, clampedWidth, clampedHeight)
         } else {
             renderPass.disableScissor()

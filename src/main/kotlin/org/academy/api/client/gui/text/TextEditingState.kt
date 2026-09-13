@@ -6,13 +6,6 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
-/**
- * 文本编辑器的设备无关状态：提交文本、预编辑（IME）、caret、选区与输入约束。
- *
- * 纯逻辑、无渲染、无控件依赖，便于单独测试；[TextInputWidget] 只负责绘制与事件编排。
- * caret/selection 偏移使用 UTF-16 code unit（与 AWT/Android 一致），对外的 caretPos 使用
- * code point 计数。
- */
 class TextEditingState(var maxLength: Int) {
     private val committed = StringBuilder()
 
@@ -30,15 +23,12 @@ class TextEditingState(var maxLength: Int) {
     var inputValidator: Predicate<String>? = null
     var allowLineBreak: Boolean = false
 
-    /** 提交文本（不含 preedit）变化时回调；用于 `onTextChanged`/`bindText`。 */
     var onCommittedTextChanged: ((String) -> Unit)? = null
 
     private var lastNotifiedText = ""
 
-    /** 提交文本（不含 IME preedit）。 */
     val committedText: String get() = committed.toString()
 
-    /** 实际显示文本：focused 且有 preedit 时把 preedit 插入 caret 处。 */
     val composedText: String
         get() = if (preeditText.isEmpty()) committedText
         else StringBuilder(committed).insert(caretUnit, preeditText).toString()
@@ -47,7 +37,6 @@ class TextEditingState(var maxLength: Int) {
 
     val caretUnit: Int get() = codeUnitIndex(caretPos)
 
-    /** 重置为 [text]，超长按 code point 截断，caret 移到末尾并清空选区。 */
     fun setText(text: String) {
         committed.setLength(0)
         val count = text.codePointCount(0, text.length)
@@ -68,20 +57,17 @@ class TextEditingState(var maxLength: Int) {
         hasSelection = true
     }
 
-    /** 鼠标按下：caret 移到 [position]（code point），清空选区。 */
     fun setCaret(position: Int) {
         caretPos = Mth.clamp(position, 0, codePointCount)
         clearSelection()
     }
 
-    /** 鼠标按下开始拖选：锚点与 caret 都落在 [position]。 */
     fun beginSelection(position: Int) {
         setCaret(position)
         selectionStart = caretPos
         selectionEnd = caretPos
     }
 
-    /** 鼠标拖选：以 [anchor] 为固定端，caret 移到 [position]。 */
     fun dragSelection(anchor: Int, position: Int) {
         val a = Mth.clamp(anchor, 0, codePointCount)
         val p = Mth.clamp(position, 0, codePointCount)
@@ -115,7 +101,6 @@ class TextEditingState(var maxLength: Int) {
             return committed.substring(codeUnitIndex(start), codeUnitIndex(end))
         }
 
-    /** charTyped：插入一个 code point，受 maxLength/validator/换行约束。 */
     fun insertCodePoint(codePoint: Int): Boolean {
         if (Character.isISOControl(codePoint)) return false
         if (!allowLineBreak && (codePoint == '\n'.code || codePoint == '\r'.code)) return false
@@ -178,14 +163,12 @@ class TextEditingState(var maxLength: Int) {
         if (extend) selectionEnd = caretPos
     }
 
-    /** 回车：允许换行则插入 `\n`，否则返回 false 由控件处理 `whenEnter`。 */
     fun insertNewline(): Boolean {
         if (!allowLineBreak) return false
         if (codePointCount - selectionSize() >= maxLength) return false
         return commitInsert("\n")
     }
 
-    /** 粘贴/程序化插入，返回是否实际改变文本。 */
     fun insertString(text: String): Boolean {
         if (text.isEmpty()) return false
 
@@ -203,10 +186,6 @@ class TextEditingState(var maxLength: Int) {
         return commitInsert(toInsert)
     }
 
-    /**
-     * 统一插入路径：先构造"删除选区 + 插入"后的潜在文本并验证（maxLength + validator），
-     * 通过后再一次性提交，避免"先删后验"导致拒绝时选区已丢失、回调已触发。
-     */
     private fun commitInsert(insertText: String): Boolean {
         caretPos = Mth.clamp(caretPos, 0, codePointCount)
         val potential = buildPotential(insertText)
@@ -227,7 +206,6 @@ class TextEditingState(var maxLength: Int) {
         return true
     }
 
-    /** 非修改地构造提交后的潜在文本（caret 在选区时落在选区起始处）。 */
     private fun buildPotential(insertText: String): String {
         val sb = StringBuilder(committed)
         if (hasSelection) {
@@ -243,7 +221,6 @@ class TextEditingState(var maxLength: Int) {
     private fun selectionSize(): Int =
         if (hasSelection) abs(selectionEnd - selectionStart) else 0
 
-    /** 用 IME 预编辑文本替换当前 preedit（[fullText] 为 null 表示清空）。 */
     fun updatePreedit(fullText: String?) {
         val remaining = maxLength - codePointCount
         preeditText = fullText?.takeCodePoints(remaining.coerceAtLeast(0)) ?: ""

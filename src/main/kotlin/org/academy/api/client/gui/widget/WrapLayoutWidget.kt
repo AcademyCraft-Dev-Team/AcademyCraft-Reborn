@@ -3,10 +3,6 @@ package org.academy.api.client.gui.widget
 import org.academy.api.client.gui.layout.MeasureSpec
 import kotlin.math.max
 
-/**
- * 流式换行布局喵. 子控件在可用的行宽内从左到右依次排列, 放不下时换行.
- * 行高取该行子控件最大高度, 换行间距由 [verticalSpacing] 控制.
- */
 open class WrapLayoutWidget : AbstractWidgetContainer() {
     var horizontalSpacing: Float = 0f
         set(value) {
@@ -37,19 +33,17 @@ open class WrapLayoutWidget : AbstractWidgetContainer() {
 
     override fun onMeasure(widthMeasureSpec: MeasureSpec, heightMeasureSpec: MeasureSpec) {
         val containerLp = layoutParams
-        val hasWidth = widthMeasureSpec.mode != MeasureSpec.Mode.UNSPECIFIED
-        val availW = max(0f, widthMeasureSpec.size - containerLp.paddingLeft - containerLp.paddingRight)
+        val window = measureWindow(widthMeasureSpec, heightMeasureSpec)
+        val hasWidth = window.hasWidth
+        val availW = window.availableWidth
 
-        var x = 0f
-        var y = 0f
-        var rowHeight = 0f
+        val line = WrapLine()
         var maxWidth = 0f
-        var firstInRow = true
 
         for (child in children.values) {
             if (!child.isVisible()) continue
             val lp = child.layoutParams
-            val parentSpec = if (hasWidth) MeasureSpec(MeasureSpec.Mode.AT_MOST, max(0f, availW - x))
+            val parentSpec = if (hasWidth) MeasureSpec(MeasureSpec.Mode.AT_MOST, max(0f, availW - line.x))
             else MeasureSpec(MeasureSpec.Mode.UNSPECIFIED, 0f)
             val childSpec = getChildMeasureSpec(
                 parentSpec,
@@ -66,21 +60,16 @@ open class WrapLayoutWidget : AbstractWidgetContainer() {
             val childW = child.measuredWidth + lp.marginLeft + lp.marginRight
             val childH = child.measuredHeight + lp.marginTop + lp.marginBottom
 
-            if (!firstInRow && x + childW > availW && availW > 0f) {
-                y += rowHeight + verticalSpacing
-                x = 0f
-                rowHeight = 0f
-                firstInRow = true
-            }
+            line.wrapIfNeeded(childW, availW, verticalSpacing)
 
-            x += childW
-            if (!firstInRow) x += horizontalSpacing
-            maxWidth = max(maxWidth, x)
-            rowHeight = max(rowHeight, childH)
-            firstInRow = false
+            line.x += childW
+            if (!line.firstInRow) line.x += horizontalSpacing
+            maxWidth = max(maxWidth, line.x)
+            line.rowHeight = max(line.rowHeight, childH)
+            line.firstInRow = false
         }
 
-        val totalHeight = y + rowHeight
+        val totalHeight = line.y + line.rowHeight
         val totalWidth = if (hasWidth) availW else maxWidth
 
         setMeasuredDimension(
@@ -93,10 +82,7 @@ open class WrapLayoutWidget : AbstractWidgetContainer() {
         val containerLp = layoutParams
         val availW = max(0f, width - containerLp.paddingLeft - containerLp.paddingRight)
 
-        var x = 0f
-        var y = 0f
-        var rowHeight = 0f
-        var firstInRow = true
+        val line = WrapLine()
 
         for (child in children.values) {
             if (!child.isVisible()) continue
@@ -104,21 +90,32 @@ open class WrapLayoutWidget : AbstractWidgetContainer() {
             val childW = child.measuredWidth + lp.marginLeft + lp.marginRight
             val childH = child.measuredHeight + lp.marginTop + lp.marginBottom
 
-            if (!firstInRow && x + childW > availW && availW > 0f) {
+            line.wrapIfNeeded(childW, availW, verticalSpacing)
+
+            if (!line.firstInRow) line.x += horizontalSpacing
+            val left = containerLp.paddingLeft + line.x + lp.marginLeft
+            val top = containerLp.paddingTop + line.y + lp.marginTop
+            child.layout(left, top, left + child.measuredWidth, top + child.measuredHeight)
+
+            line.x += childW
+            line.rowHeight = max(line.rowHeight, childH)
+            line.firstInRow = false
+        }
+    }
+
+    private class WrapLine {
+        var x = 0f
+        var y = 0f
+        var rowHeight = 0f
+        var firstInRow = true
+
+        fun wrapIfNeeded(childWidth: Float, availableWidth: Float, verticalSpacing: Float) {
+            if (!firstInRow && x + childWidth > availableWidth && availableWidth > 0f) {
                 y += rowHeight + verticalSpacing
                 x = 0f
                 rowHeight = 0f
                 firstInRow = true
             }
-
-            if (!firstInRow) x += horizontalSpacing
-            val left = containerLp.paddingLeft + x + lp.marginLeft
-            val top = containerLp.paddingTop + y + lp.marginTop
-            child.layout(left, top, left + child.measuredWidth, top + child.measuredHeight)
-
-            x += childW
-            rowHeight = max(rowHeight, childH)
-            firstInRow = false
         }
     }
 

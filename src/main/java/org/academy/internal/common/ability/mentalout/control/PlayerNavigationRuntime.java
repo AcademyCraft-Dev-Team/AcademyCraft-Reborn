@@ -63,7 +63,7 @@ public final class PlayerNavigationRuntime {
 
     static synchronized int claimExpansionBudget(long gameTick, int requested) {
         beginServerTick(gameTick);
-        var granted = Math.min(Math.max(0, requested), remainingBudget);
+        var granted = Math.clamp(requested, 0, remainingBudget);
         remainingBudget -= granted;
         return granted;
     }

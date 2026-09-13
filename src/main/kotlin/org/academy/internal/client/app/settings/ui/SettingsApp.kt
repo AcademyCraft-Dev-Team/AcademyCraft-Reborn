@@ -31,7 +31,6 @@ import org.academy.internal.common.ability.level0.skills.OutputControl
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting
 import org.academy.internal.common.world.damagesource.PvpSetting
-import org.lwjgl.glfw.GLFW
 import org.misaka.MisakaNetworkClient
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Consumer
@@ -53,9 +52,10 @@ object SettingsApp : App {
         return R.textures.gui.icon.icon_settings
     }
 
-    private class Context : WidgetContext {
+    private class Context : WidgetContext, CaptureHost {
         private lateinit var panelContainer: FrameLayoutWidget
         private var capturing: CaptureTarget? = null
+        override val captureTarget: CaptureTarget? get() = capturing
         private var pendingType: InputSystem.InputType? = null
         private val pendingKeys: MutableSet<Int> = linkedSetOf()
         private var pendingMouseButton: Int = -1
@@ -79,16 +79,10 @@ object SettingsApp : App {
             val id: String,
             val title: String,
             val icon: Identifier,
-            val config: KeyBindingConfig,
+            override val config: KeyBindingConfig,
             val hiddenBindings: Set<String> = emptySet(),
-            val persist: (KeyBindingConfig) -> Unit
-        )
-
-        private data class CaptureTarget(
-            val section: BindingSection,
-            val bindingName: String,
-            val keyLabel: TextWidget
-        )
+            override val persist: (KeyBindingConfig) -> Unit
+        ) : KeyBindingSection
 
         private fun createRoot(): FrameLayoutWidget {
             return standaloneFrame {
@@ -521,7 +515,7 @@ object SettingsApp : App {
                     size(26f, 12f)
                     gravity(Gravity.CENTER)
                     onClick {
-                        resetBinding(section, bindingName, keyLabel)
+                        resetKeyBinding(section, bindingName, keyLabel)
                     }
                     text(
                         L10n["app.academy.settings.keybind.reset"],
@@ -573,15 +567,8 @@ object SettingsApp : App {
         private fun createCaptureLayer(): AbstractWidget {
             return object : AbstractWidget() {
                 override fun onKeyPressed(event: KeyEvent) {
-                    event.consume()
+                    if (handleCaptureEscape(event, this@Context)) return
                     val key = event.keyCode
-                    if (key == GLFW.GLFW_KEY_ESCAPE) {
-                        val target = capturing ?: return
-                        val current = target.section.config.getKeyBinding(target.bindingName) ?: return
-                        resetCaptureState()
-                        applyCapture(InputSystem.unbound(current))
-                        return
-                    }
                     if (isModifierKey(key)) return
                     if (pendingType == InputSystem.InputType.MOUSE) return
                     pendingType = InputSystem.InputType.KEYBOARD
@@ -645,7 +632,7 @@ object SettingsApp : App {
             }
         }
 
-        private fun resetCaptureState() {
+        override fun resetCaptureState() {
             pendingType = null
             pendingKeys.clear()
             pendingMouseButton = -1
@@ -672,35 +659,10 @@ object SettingsApp : App {
             updateHint()
         }
 
-        private fun applyCapture(combo: InputSystem.KeyCombination) {
+        override fun applyCapture(combo: InputSystem.KeyCombination) {
             val target = capturing ?: return
-            target.section.config.setKeyBinding(target.bindingName, combo)
-            InputSystem.updateKeyBinding(target.bindingName, combo)
-            target.section.persist(target.section.config)
-            AcademyCraftClient.Config.INSTANCE.save()
-            target.keyLabel.text = displayBinding(combo)
+            writeKeyBinding(target.section, target.bindingName, combo, target.keyLabel)
             exitCapture()
-        }
-
-        private fun resetBinding(
-            section: BindingSection,
-            bindingName: String,
-            keyLabel: TextWidget
-        ) {
-            val defaultCombo = InputSystem.getDefaultKeyBinding(bindingName) ?: return
-            section.config.setKeyBinding(bindingName, defaultCombo)
-            InputSystem.updateKeyBinding(bindingName, defaultCombo)
-            section.persist(section.config)
-            AcademyCraftClient.Config.INSTANCE.save()
-            keyLabel.text = displayBinding(defaultCombo)
-        }
-
-        private fun displayBinding(combo: InputSystem.KeyCombination): String {
-            return if (combo.unbound) {
-                L10n["app.academy.settings.keybind.format.none"]
-            } else {
-                combo.displayName()
-            }
         }
 
         private fun updateHint() {
@@ -715,13 +677,6 @@ object SettingsApp : App {
                 ""
             }
             captureHint.visibility = if (target != null) Widget.Visibility.VISIBLE else Widget.Visibility.INVISIBLE
-        }
-
-        private fun isModifierKey(key: Int): Boolean {
-            return key == GLFW.GLFW_KEY_LEFT_SHIFT || key == GLFW.GLFW_KEY_RIGHT_SHIFT
-                    || key == GLFW.GLFW_KEY_LEFT_CONTROL || key == GLFW.GLFW_KEY_RIGHT_CONTROL
-                    || key == GLFW.GLFW_KEY_LEFT_ALT || key == GLFW.GLFW_KEY_RIGHT_ALT
-                    || key == GLFW.GLFW_KEY_LEFT_SUPER || key == GLFW.GLFW_KEY_RIGHT_SUPER
         }
     }
 }
