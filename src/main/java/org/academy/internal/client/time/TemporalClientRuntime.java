@@ -1,5 +1,11 @@
 package org.academy.internal.client.time;
 
+import org.academy.api.server.time.TemporalPauseSource;
+import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.input.UiInputContext;
+import org.academy.internal.server.time.TemporalBoundaryProtection;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
@@ -43,6 +49,7 @@ public final class TemporalClientRuntime {
     ) {
         if (newSessionId == null) return;
         if (!newSessionId.equals(serverSessionId)) {
+            if (serverSessionId != null) InputSystem.clearTemporalBindingRestrictions();
             serverSessionId = newSessionId;
             revision = Long.MIN_VALUE;
             serverHeartbeat = Long.MIN_VALUE;
@@ -75,12 +82,37 @@ public final class TemporalClientRuntime {
         revision = newRevision;
         serverHeartbeat = newServerHeartbeat;
         immunityMasks = Map.copyOf(masks);
+        InputSystem.refreshTemporalBindingRestrictions();
         playerScales = nextScales;
         TICK_STATES.keySet().removeIf(entityId -> !immunityMasks.containsKey(entityId));
     }
 
     public static boolean isImmune(Entity entity) {
         return entity != null && immunityMasks.getOrDefault(entity.getUUID(), 0) != 0;
+    }
+
+    public static boolean isExternallyImmune(Entity entity) {
+        return entity != null && (immunityMasks.getOrDefault(entity.getUUID(), 0)
+                & (1 << TemporalPauseSource.EXTERNAL_COMPATIBILITY.ordinal())) != 0;
+    }
+
+    public static CallbackInfo protectTickCallback(
+            CallbackInfo callback, Entity entity) {
+        return TemporalBoundaryProtection.protectCallback(
+                callback, isExternallyImmune(entity));
+    }
+
+    public static CallbackInfo protectInputCallback(
+            CallbackInfo callback) {
+        var minecraft = Minecraft.getInstance();
+        return TemporalBoundaryProtection.protectCallback(
+                callback, minecraft != null && minecraft.gui.screen() == null && isExternallyImmune(minecraft.player),
+                UiInputContext::isActive);
+    }
+
+    public static boolean isLocalExternallyImmune() {
+        var minecraft = Minecraft.getInstance();
+        return minecraft != null && isExternallyImmune(minecraft.player);
     }
 
     public static boolean isRemoteCompensationActive() {
@@ -125,6 +157,7 @@ public final class TemporalClientRuntime {
     }
 
     public static void afterVanillaTick(Minecraft minecraft) {
+        InputSystem.refreshTemporalBindingRestrictions();
         observeProgress(minecraft, System.nanoTime());
     }
 
@@ -151,6 +184,7 @@ public final class TemporalClientRuntime {
     }
 
     public static void reset() {
+        InputSystem.clearTemporalBindingRestrictions();
         immunityMasks = Map.of();
         playerScales = Map.of();
         serverSessionId = null;

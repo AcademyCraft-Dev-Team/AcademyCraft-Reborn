@@ -1,5 +1,9 @@
 package org.academy.api.client.input;
 
+import org.academy.internal.client.time.TemporalBindingRestrictions;
+import org.academy.internal.client.time.TemporalClientRuntime;
+import org.academy.internal.server.time.TemporalControlProvenance;
+
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -48,11 +52,14 @@ public final class InputSystem {
     private static @Nullable Config config;
     private static @Nullable RebindSession rebindSession;
     private static long bindingRevision;
+    private static final TemporalBindingRestrictions TEMPORAL_RESTRICTIONS =
+            new TemporalBindingRestrictions();
 
     private InputSystem() {
     }
 
     public static void addKeyBinding(String keyName, KeyCombination combo, Consumer<BindingContext> handler) {
+        TEMPORAL_RESTRICTIONS.ownedWrite(keyName);
         rememberDefaultKeyBinding(keyName, combo);
         cancelMaintainedKeyBinding(keyName);
         cancelPairedBindingsFor(keyName);
@@ -74,6 +81,7 @@ public final class InputSystem {
             Consumer<BindingContext> onHeartbeat,
             BooleanSupplier canRemainActive
     ) {
+        TEMPORAL_RESTRICTIONS.ownedWrite(keyName);
         var maintainedCombo = withAction(combo, ANY_ACTION);
         rememberDefaultKeyBinding(keyName, maintainedCombo);
         cancelMaintainedKeyBinding(keyName);
@@ -113,11 +121,13 @@ public final class InputSystem {
     public static void addExclusiveKeyBinding(
             String keyName, KeyCombination combo, Consumer<BindingContext> handler, BooleanSupplier active
     ) {
-        addKeyBinding(keyName, withAction(combo, ANY_ACTION), handler);
+        addKeyBinding(keyName, withAction(combo, ANY_ACTION),
+                context -> UiInputContext.run(() -> handler.accept(context)));
         EXCLUSIVE_BINDINGS.put(keyName, active);
     }
 
     public static void removeKeyBinding(String keyName) {
+        TEMPORAL_RESTRICTIONS.ownedWrite(keyName);
         EXCLUSIVE_BINDINGS.remove(keyName);
         cancelMaintainedKeyBinding(keyName);
         cancelPairedBindingsFor(keyName);
@@ -319,6 +329,29 @@ public final class InputSystem {
     }
 
     public static void setKeyBindingEnabled(String keyName, boolean enabled) {
+        var current = KEY_BINDINGS.get(keyName);
+        if (current == null) return;
+        if (!UiInputContext.isActive()
+                && TemporalControlProvenance.isExternalControl()) {
+            enabled = TEMPORAL_RESTRICTIONS.externalWrite(keyName, enabled, current.enabled,
+                    TemporalClientRuntime.isLocalExternallyImmune());
+        } else {
+            TEMPORAL_RESTRICTIONS.ownedWrite(keyName);
+        }
+        setBindingEnabledUnchecked(keyName, enabled);
+    }
+
+    public static void refreshTemporalBindingRestrictions() {
+        TEMPORAL_RESTRICTIONS.effectiveStates(
+                TemporalClientRuntime.isLocalExternallyImmune()
+        ).forEach(InputSystem::setBindingEnabledUnchecked);
+    }
+
+    public static void clearTemporalBindingRestrictions() {
+        TEMPORAL_RESTRICTIONS.clear().forEach(InputSystem::setBindingEnabledUnchecked);
+    }
+
+    private static void setBindingEnabledUnchecked(String keyName, boolean enabled) {
         var existing = KEY_BINDINGS.get(keyName);
         if (existing == null) {
             return;

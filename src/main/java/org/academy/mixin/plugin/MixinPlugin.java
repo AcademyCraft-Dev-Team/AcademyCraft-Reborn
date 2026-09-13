@@ -40,6 +40,11 @@ public class MixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
+        if (mixinClassName.endsWith(".MixinTemporalServerBoundary")
+                || mixinClassName.endsWith(".MixinTemporalClientBoundary")
+                || mixinClassName.endsWith(".MixinTemporalInputBoundary")) {
+            org.academy.internal.coremod.TemporalBoundaryTransformer.apply(targetClass);
+        }
         if (mixinClassName.endsWith(".MixinBetterEndWorldConfig")) {
             org.academy.internal.coremod.WorldWeaverConfigTransformer.apply(targetClass);
         }
