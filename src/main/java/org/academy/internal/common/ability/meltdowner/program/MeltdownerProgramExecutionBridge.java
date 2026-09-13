@@ -5,10 +5,13 @@ import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.program.*;
 import org.academy.internal.common.ability.program.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.LongSupplier;
 
 /**
  * Shared-VM execution gateway for Meltdowner programs.
@@ -83,7 +86,7 @@ public final class MeltdownerProgramExecutionBridge {
             MeltdownerProgramRuntime runtime,
             ProgramActionTransaction transaction,
             ProgramInvocationContext invocation,
-            java.util.function.LongSupplier worldGameTime
+            LongSupplier worldGameTime
     ) {
         Objects.requireNonNull(program, "program");
         Objects.requireNonNull(runtime, "runtime");
@@ -218,7 +221,7 @@ public final class MeltdownerProgramExecutionBridge {
         return inputs.requireCompatible(port, ProgramValueTypes.ENTITY_REFERENCE).value();
     }
 
-    static java.util.List<ProgramDirection> fanDirections(
+    static List<ProgramDirection> fanDirections(
             ProgramDirection forward,
             int count,
             float spreadDegrees
@@ -236,7 +239,7 @@ public final class MeltdownerProgramExecutionBridge {
         var right = f.cross(reference).direction();
         var up = ProgramVector.of(right).cross(f).direction();
         var tangent = Math.tan(Math.toRadians(spreadDegrees));
-        var result = new java.util.ArrayList<ProgramDirection>(count);
+        var result = new ArrayList<ProgramDirection>(count);
         result.add(forward);
         for (var index = 1; index < count; index++) {
             var angle = (index - 1) * Math.PI * 2.0 / (count - 1);
@@ -244,7 +247,7 @@ public final class MeltdownerProgramExecutionBridge {
                     .add(ProgramVector.of(up).scale(Math.sin(angle) * tangent));
             result.add(f.add(offset).direction());
         }
-        return java.util.List.copyOf(result);
+        return List.copyOf(result);
     }
 
     private static ProgramBlockPosition blockPosition(ProgramInputView inputs, String port) {

@@ -13,6 +13,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.client.render.vfx.VfxManager;
+import org.academy.api.common.vfx.EffectSequence;
 import org.academy.api.common.vfx.SkillVfxState;
 import org.academy.internal.common.network.SkillVfxPacket;
 import org.academy.internal.common.world.entity.EntityTypes;
@@ -23,8 +24,8 @@ import org.academy.internal.common.world.entity.skill.Plasma;
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class SkillVfxClient {
     private static final Map<Long, Replica> ACTIVE = new HashMap<>();
-    private static final org.academy.api.common.vfx.EffectSequence SEQUENCE =
-            new org.academy.api.common.vfx.EffectSequence(16384);
+    private static final EffectSequence SEQUENCE =
+            new EffectSequence(16384);
     private static ClientLevel world;
     private static long received;
     private static long clientTick;

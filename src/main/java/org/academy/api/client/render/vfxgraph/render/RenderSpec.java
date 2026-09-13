@@ -4,6 +4,7 @@ import net.minecraft.resources.Identifier;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
 import org.academy.api.client.resources.R;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
 
@@ -33,14 +34,14 @@ public record RenderSpec(
         Blend blend,
         Identifier vertexShader,
         Identifier fragmentShader,
-        @org.jspecify.annotations.Nullable Identifier texture,
+        @Nullable Identifier texture,
         String layer,
         ArcRender arc,
         float particleBoundsScale
 ) {
     /** Existing/custom shaders remain uncullable until their output declares a conservative bound. */
     public RenderSpec(Geometry geometry, Blend blend, Identifier vertexShader, Identifier fragmentShader,
-                      @org.jspecify.annotations.Nullable Identifier texture, String layer, ArcRender arc) {
+                      @Nullable Identifier texture, String layer, ArcRender arc) {
         this(geometry, blend, vertexShader, fragmentShader, texture, layer, arc, 0f);
     }
 
@@ -180,7 +181,7 @@ public record RenderSpec(
         return v.isEmpty() ? fallback : Identifier.parse(v);
     }
 
-    private static @org.jspecify.annotations.Nullable Identifier optionalId(GraphNode node, String key) {
+    private static @Nullable Identifier optionalId(GraphNode node, String key) {
         var value = node.properties().getOrDefault(key, "").trim();
         return value.isEmpty() ? null : Identifier.parse(value);
     }

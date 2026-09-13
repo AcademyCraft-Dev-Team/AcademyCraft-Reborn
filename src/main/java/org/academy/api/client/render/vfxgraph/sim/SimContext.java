@@ -5,6 +5,7 @@ import org.academy.api.client.render.graph.type.Gradient;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.type.ValueType;
 import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
+import org.academy.api.client.render.vfxgraph.shape.SurfaceProjector;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -24,15 +25,15 @@ public final class SimContext {
     private final Map<String, Gradient> gradients;
     private final Map<String, Value> liveParams;
     private final ArcBuffer arcs;
-    private Map<String, org.academy.api.client.render.vfxgraph.shape.SurfaceProjector> surfaces = Map.of();
+    private Map<String, SurfaceProjector> surfaces = Map.of();
     public int spawnStart;
 
-    public void setSurfaces(Map<String, org.academy.api.client.render.vfxgraph.shape.SurfaceProjector> surfaces) {
+    public void setSurfaces(Map<String, SurfaceProjector> surfaces) {
         this.surfaces = surfaces;
     }
 
-    public org.academy.api.client.render.vfxgraph.shape.SurfaceProjector surface(String name) {
-        return surfaces.getOrDefault(name, org.academy.api.client.render.vfxgraph.shape.SurfaceProjector.IDENTITY);
+    public SurfaceProjector surface(String name) {
+        return surfaces.getOrDefault(name, SurfaceProjector.IDENTITY);
     }
     private final List<SpawnBatch> emittedBatches = new ArrayList<>();
     private List<SpawnBatch> incomingBatches = List.of();

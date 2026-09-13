@@ -3,6 +3,8 @@ package org.academy.internal.client.render.vfx;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.Map;
+
+import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -218,7 +220,7 @@ public final class PlasmaVfxClient {
     }
 
     private static Vector3f worldPosition(Entity entity) {
-        return entity instanceof Plasma plasma && !net.minecraft.client.Minecraft.getInstance().isPaused()
+        return entity instanceof Plasma plasma && !Minecraft.getInstance().isPaused()
                 ? plasma.visualPosition().toVector3f()
                 : new Vector3f((float) entity.getX(), (float) entity.getY(), (float) entity.getZ());
     }

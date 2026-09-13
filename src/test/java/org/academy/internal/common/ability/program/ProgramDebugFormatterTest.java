@@ -7,6 +7,7 @@ import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -29,7 +30,7 @@ class ProgramDebugFormatterTest {
 
     @Test
     void outputIsSingleLineAndBounded() {
-        var values = java.util.stream.IntStream.range(0, 40).boxed().toList();
+        var values = IntStream.range(0, 40).boxed().toList();
         var formatted = ProgramDebugFormatter.render("line one\n{value}", values);
 
         assertTrue(formatted.startsWith("line one [0, 1, 2"));

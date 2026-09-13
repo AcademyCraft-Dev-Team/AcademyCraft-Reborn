@@ -3,15 +3,23 @@ package org.academy.api.client.render.vfxgraph.sim;
 import com.google.gson.JsonParser;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.graph.type.Value;
+import org.academy.api.client.render.vfxgraph.arc.ArcCurve;
+import org.academy.api.client.render.vfxgraph.arc.CurveToMeshBuilder;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
 import org.academy.api.client.render.vfxgraph.serialize.JsonVfxGraphCodec;
 import org.academy.api.client.render.vfxgraph.shape.SkyDischargeGeometry;
+import org.academy.api.client.render.vfxgraph.shape.StormCloudShape;
 import org.joml.Vector3f;
+import org.joml.Vector4f;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -28,7 +36,7 @@ class SkyDischargeVfxTest {
         }
     }
 
-    private org.academy.api.client.render.vfxgraph.arc.ArcCurve core(VfxSystemSimulator sim) {
+    private ArcCurve core(VfxSystemSimulator sim) {
         for (int i = 0; i < sim.arcBuffer().count(); i++) {
             var arc = sim.arcBuffer().arc(i);
             if (arc.r() == 0.91f) return arc;
@@ -36,15 +44,15 @@ class SkyDischargeVfxTest {
         throw new AssertionError("No white discharge core");
     }
 
-    private java.util.List<org.academy.api.client.render.vfxgraph.arc.ArcCurve> channelPaths(VfxSystemSimulator sim) {
-        var paths = new java.util.ArrayList<org.academy.api.client.render.vfxgraph.arc.ArcCurve>();
+    private List<ArcCurve> channelPaths(VfxSystemSimulator sim) {
+        var paths = new ArrayList<ArcCurve>();
         for (int i = 0; i < sim.arcBuffer().count(); i++) {
             var arc = sim.arcBuffer().arc(i);
             if (arc.r() == 0.10f || arc.r() == 0.91f || arc.r() == 0.28f) paths.add(arc);
         }
-        paths.sort(java.util.Comparator.comparingDouble(
-                org.academy.api.client.render.vfxgraph.arc.ArcCurve::r).thenComparingLong(
-                org.academy.api.client.render.vfxgraph.arc.ArcCurve::seed));
+        paths.sort(Comparator.comparingDouble(
+                ArcCurve::r).thenComparingLong(
+                ArcCurve::seed));
         return paths;
     }
 
@@ -140,7 +148,7 @@ class SkyDischargeVfxTest {
             var sim = simulator(name);
             sim.setLiveParam("time", Value.of(0.20f));
             sim.step(0);
-            var snapshots = new java.util.ArrayList<float[]>();
+            var snapshots = new ArrayList<float[]>();
             // Identify the channel independently of other emitters' buffer ordering.
             var before = channelPaths(sim);
             for (int i = 0; i < before.size(); i++) {
@@ -198,10 +206,10 @@ class SkyDischargeVfxTest {
         int ground = 0;
         int cloud = 0;
         int awayFromOrigin = 0;
-        var lobes = new org.joml.Vector4f[44];
+        var lobes = new Vector4f[44];
         for (int i = 0; i < lobes.length; i++) {
-            lobes[i] = org.academy.api.client.render.vfxgraph.shape.StormCloudShape.lobe(
-                    i, 44, 1f, 42, 72, 20, new org.joml.Vector4f());
+            lobes[i] = StormCloudShape.lobe(
+                    i, 44, 1f, 42, 72, 20, new Vector4f());
         }
         for (int i = 0; i < sim.arcBuffer().count(); i++) {
             var arc = sim.arcBuffer().arc(i);
@@ -214,7 +222,7 @@ class SkyDischargeVfxTest {
                 if (onGround) {
                     assertEquals(arc.x(p) * 0.25f - arc.z(p) * 0.1f + 0.08f, arc.y(p), 0.0001f);
                 } else {
-                    assertEquals(org.academy.api.client.render.vfxgraph.shape.StormCloudShape.underside(
+                    assertEquals(StormCloudShape.underside(
                             arc.x(p), arc.z(p), lobes) - 0.07f, arc.y(p), 0.0001f);
                 }
             }
@@ -275,7 +283,7 @@ class SkyDischargeVfxTest {
             for (int i = 0; i < sim.arcBuffer().count(); i++) {
                 var arc = sim.arcBuffer().arc(i);
                 points += arc.size();
-                vertices += org.academy.api.client.render.vfxgraph.arc.CurveToMeshBuilder.build(
+                vertices += CurveToMeshBuilder.build(
                         arc, 12, arc.r(), arc.g(), arc.b(), arc.a(), 0.95f).vertexCount();
             }
             assertTrue(vertices > 0 && vertices <= (name.endsWith("storm") ? 1000 : 2500));
@@ -302,7 +310,7 @@ class SkyDischargeVfxTest {
     void attachmentSilhouettesIncludeOneSidedBendsAndAlternatingTurns() throws Exception {
         int oneSided = 0;
         int alternating = 0;
-        var silhouettes = new java.util.HashSet<String>();
+        var silhouettes = new HashSet<String>();
         for (int seed = 0; seed < 12; seed++) {
             var sim = simulator("sky_strike_thunderclap");
             sim.setLiveParam("seed", Value.of((float) (42 + seed * 137)));
@@ -330,7 +338,7 @@ class SkyDischargeVfxTest {
     }
 
     /** Lateral deviation relative to the stroke's endpoint chord, independent of angle and scale. */
-    private float lateralAt(org.academy.api.client.render.vfxgraph.arc.ArcCurve arc, float fraction) {
+    private float lateralAt(ArcCurve arc, float fraction) {
         int count = 1;
         while (count < arc.size() && arc.generation(count) == 0 && arc.segment(count) == arc.segment(0)) count++;
         float dx = arc.x(count - 1) - arc.x(0);

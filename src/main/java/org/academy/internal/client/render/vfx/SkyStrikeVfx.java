@@ -1,5 +1,6 @@
 package org.academy.internal.client.render.vfx;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
@@ -13,12 +14,16 @@ import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
 import org.joml.Vector3f;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 /** Owns the graph-authored world effect and bounded screen feedback on the same paused game clock. */
 public final class SkyStrikeVfx implements Vfx {
     private static final int MAX_DETAILED_EFFECTS = 12;
     private static final int FULL_SURFACE_BUDGET = 4;
     private static int activeDetailedEffects;
-    private static final java.util.Set<SkyStrikeVfx> ACTIVE = new java.util.HashSet<>();
+    private static final Set<SkyStrikeVfx> ACTIVE = new HashSet<>();
 
     private final SkyStrikeProfile profile;
     private final float flashIntensity;
@@ -61,7 +66,7 @@ public final class SkyStrikeVfx implements Vfx {
         graph.bind("surface_detail", () -> Value.of(surfaceDetailScale()));
         graph.bind("cloud_opacity", () -> Value.of(profile == SkyStrikeProfile.THUNDERCLAP ? 1f : 0.32f));
         // The cloud extends far above the impact point used by the normal small-effect culler.
-        var level = net.minecraft.client.Minecraft.getInstance().level;
+        var level = Minecraft.getInstance().level;
         if (level != null) graph.bindSurface("ground", new SkyStrikeTerrain(level, impact));
         graph.setAlwaysVisible(true);
         graph.setMinimumFarPlane(256);
@@ -79,7 +84,7 @@ public final class SkyStrikeVfx implements Vfx {
     }
 
     static synchronized void clearConcurrency() {
-        for (var effect : java.util.List.copyOf(ACTIVE)) effect.finish();
+        for (var effect : List.copyOf(ACTIVE)) effect.finish();
         activeDetailedEffects = 0;
     }
 

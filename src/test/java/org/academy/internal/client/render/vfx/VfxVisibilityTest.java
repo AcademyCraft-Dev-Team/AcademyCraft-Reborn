@@ -2,6 +2,7 @@ package org.academy.internal.client.render.vfx;
 
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.client.render.vfx.VfxCamera;
+import org.academy.api.client.render.vfxgraph.runtime.EffectBudget;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -43,7 +44,7 @@ class VfxVisibilityTest {
 
     @Test
     void plasmaFocusUsesTranslatedBoundsAtCasterView() {
-        var budget = new org.academy.api.client.render.vfxgraph.runtime.EffectBudget();
+        var budget = new EffectBudget();
         var view = camera(0);
         var focus = CAMERA.add(0, 31, -6).toVector3f();
         assertTrue(budget.sphereInFrustum(view.projectionMatrix(), view.viewRotationMatrix(),

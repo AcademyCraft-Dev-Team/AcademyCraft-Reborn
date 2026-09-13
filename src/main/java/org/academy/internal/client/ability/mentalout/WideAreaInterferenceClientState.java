@@ -3,6 +3,7 @@ package org.academy.internal.client.ability.mentalout;
 import com.mojang.blaze3d.GpuFormat;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
@@ -617,8 +618,8 @@ public final class WideAreaInterferenceClientState {
     }
 
     private static void copyFrame(
-            com.mojang.blaze3d.textures.GpuTexture source,
-            com.mojang.blaze3d.textures.GpuTexture destination,
+            GpuTexture source,
+            GpuTexture destination,
             int width,
             int height
     ) {

@@ -8,8 +8,10 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.GameMasterBlock;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.program.ForwardingProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
+import org.academy.api.common.ability.program.ProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -33,7 +35,7 @@ import java.util.Optional;
 /**
  * Authoritative Minecraft-server adapter for Meltdowner programs.
  */
-public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRuntime, org.academy.api.common.ability.program.ForwardingProgramTargetResolver {
+public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRuntime, ForwardingProgramTargetResolver {
     public static final double MAX_QUERY_RANGE = AbilityProgramSpatialRanges.forCategory(
             MeltdownerProgramNodeCatalog.MELTDOWNER).queryRange();
     public static final double MAX_ACTION_RANGE = AbilityProgramSpatialRanges.forCategory(
@@ -44,7 +46,7 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
     private final float costMultiplier;
     private final ServerProgramTargetResolver targets;
     @Override
-    public org.academy.api.common.ability.program.ProgramTargetResolver targetResolver() {
+    public ProgramTargetResolver targetResolver() {
         return targets;
     }
 

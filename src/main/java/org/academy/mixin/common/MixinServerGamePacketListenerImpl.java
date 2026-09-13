@@ -2,6 +2,7 @@ package org.academy.mixin.common;
 
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import org.academy.api.common.damage.AbilityHitEffects;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
@@ -114,6 +115,6 @@ public abstract class MixinServerGamePacketListenerImpl {
                 || MentalControlRuntime
                 .isFrozen(player)
                 || temporallyPaused
-                || org.academy.api.common.damage.AbilityHitEffects.isParalyzed(player);
+                || AbilityHitEffects.isParalyzed(player);
     }
 }

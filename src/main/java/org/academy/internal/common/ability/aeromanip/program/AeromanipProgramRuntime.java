@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.aeromanip.program;
 
+import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
@@ -48,7 +49,7 @@ public interface AeromanipProgramRuntime extends ProgramTargetResolver {
     );
 
     ProgramActionTransaction.ProgramAction launchBlockStructure(
-            org.academy.api.common.ability.program.ProgramBlockPosition seed,
+            ProgramBlockPosition seed,
             ProgramDirection direction,
             AeromanipProgramNodeCatalog.BlockStructureLaunchConfiguration configuration
     );

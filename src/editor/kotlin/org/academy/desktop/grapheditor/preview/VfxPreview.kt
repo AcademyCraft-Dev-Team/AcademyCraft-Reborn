@@ -144,7 +144,7 @@ class VfxPreview(
         color: FloatArray
     ): SurfaceMesh? {
         val id = block.properties[meshProp] ?: return null
-        val tris = MeshAssets.resolve(id)
+        val tris = MeshAssets.resolve(id) ?: return null
         val ox = block.properties["${originPrefix}x"]?.toFloatOrNull() ?: 0f
         val oy = block.properties["${originPrefix}y"]?.toFloatOrNull() ?: 0f
         val oz = block.properties["${originPrefix}z"]?.toFloatOrNull() ?: 0f

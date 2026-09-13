@@ -1,15 +1,18 @@
 package org.academy.api.common.ability;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.util.Util;
 import net.minecraft.world.damagesource.DamageType;
 import org.academy.api.common.damage.AbilityDamageProfile;
 import org.academy.api.common.ability.program.ProgramProfile;
 import org.academy.api.common.registries.Registries;
+import org.academy.api.common.util.L10nUtil;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.jspecify.annotations.Nullable;
 
@@ -38,9 +41,9 @@ public abstract class AbilityCategory {
     /** Stable namespaced codec for persistence; CODEC retains the legacy numeric representation. */
     public static final Codec<AbilityCategory> ID_CODEC = Identifier.CODEC.flatXmap(
             id -> Registries.ABILITY_CATEGORIES.get(id)
-                    .map(holder -> com.mojang.serialization.DataResult.success(holder.value()))
-                    .orElseGet(() -> com.mojang.serialization.DataResult.error(() -> "Unknown ability category " + id)),
-            category -> com.mojang.serialization.DataResult.success(category.getKey()));
+                    .map(holder -> DataResult.success(holder.value()))
+                    .orElseGet(() -> DataResult.error(() -> "Unknown ability category " + id)),
+            category -> DataResult.success(category.getKey()));
 
     public static Builder builder() {
         return new Builder();
@@ -137,7 +140,7 @@ public abstract class AbilityCategory {
     public abstract String getDisplayName();
 
     public String getDescriptionId() {
-        return net.minecraft.util.Util.makeDescriptionId("ability_category", getKey());
+        return Util.makeDescriptionId("ability_category", getKey());
     }
 
     public static final class Builder {
@@ -228,7 +231,7 @@ public abstract class AbilityCategory {
             program = Optional.ofNullable(builder.program);
         }
 
-        @Override public String getDisplayName() { return org.academy.api.common.util.L10nUtil.get(name); }
+        @Override public String getDisplayName() { return L10nUtil.get(name); }
         @Override public String getDescriptionId() { return name; }
         @Override public Identifier getDeveloperIcon() { return icon; }
         @Override public boolean supportsCommonSkills() { return commonSkills; }

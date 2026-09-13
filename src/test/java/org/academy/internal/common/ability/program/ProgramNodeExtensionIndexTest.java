@@ -7,12 +7,15 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.program.ProgramExecutionContext;
 import org.academy.api.common.ability.program.ProgramInputView;
 import org.academy.api.common.ability.program.ProgramNodeEditorMetadata;
+import org.academy.api.common.ability.program.ProgramNodeExecution;
 import org.academy.api.common.ability.program.ProgramNodeExtension;
 import org.academy.api.common.ability.program.ProgramNodePurity;
 import org.academy.api.common.ability.program.ProgramNodeRole;
 import org.academy.api.common.ability.program.ProgramNodeSchema;
 import org.academy.api.common.ability.program.ProgramNodeScope;
 import org.academy.api.common.ability.program.ProgramNodeStep;
+import org.academy.api.common.ability.program.ProgramNodeType;
+import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -29,14 +32,14 @@ class ProgramNodeExtensionIndexTest {
     private static final Identifier SECOND = Identifier.fromNamespaceAndPath(
             "extension_fixture", "program/query/second");
 
-    @org.junit.jupiter.api.Test
+    @Test
     void buildsDeterministicValidatedSnapshotIndependentOfCandidateOrder() {
         var first = new FixtureExtension("first");
         var second = new FixtureExtension("second");
-        var forward = new LinkedHashMap<Identifier, org.academy.api.common.ability.program.ProgramNodeType<?>>();
+        var forward = new LinkedHashMap<Identifier, ProgramNodeType<?>>();
         forward.put(FIRST, first);
         forward.put(SECOND, second);
-        var reverse = new LinkedHashMap<Identifier, org.academy.api.common.ability.program.ProgramNodeType<?>>();
+        var reverse = new LinkedHashMap<Identifier, ProgramNodeType<?>>();
         reverse.put(SECOND, second);
         reverse.put(FIRST, first);
 
@@ -52,7 +55,7 @@ class ProgramNodeExtensionIndexTest {
                 .defaultConfiguration().getAsJsonObject().get("value").getAsString());
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     void excludesExtensionsFromAnotherAbilityCategory() {
         var snapshot = ProgramNodeExtensionIndex.build(
                 AcademyCraft.academy("mentalout"),
@@ -108,7 +111,7 @@ class ProgramNodeExtensionIndexTest {
         }
 
         @Override
-        public org.academy.api.common.ability.program.ProgramNodeExecution<String> execution() {
+        public ProgramNodeExecution<String> execution() {
             return FixtureExtension::execute;
         }
 

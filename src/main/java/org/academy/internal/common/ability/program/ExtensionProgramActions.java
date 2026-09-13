@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.program;
 
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.LearningHelper;
 import org.academy.api.common.ability.program.*;
@@ -17,7 +18,7 @@ import java.util.function.DoubleSupplier;
 final class ExtensionProgramActions {
     private final ProgramExecutionFrame frame;
     private final ServerPlayer player;
-    private final net.minecraft.resources.Identifier category;
+    private final Identifier category;
     private final double range;
     private final List<PendingCost> costs = new ArrayList<>();
 

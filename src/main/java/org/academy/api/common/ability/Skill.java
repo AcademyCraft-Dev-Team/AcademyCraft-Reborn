@@ -2,6 +2,7 @@ package org.academy.api.common.ability;
 
 import com.google.common.collect.ImmutableSet;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -22,6 +23,7 @@ import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.data.SkillStateType;
 import org.academy.api.common.ability.event.*;
 import org.academy.api.common.data.AbilityData;
+import org.academy.api.common.registries.AcademyKeys;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.common.util.L10nUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -29,9 +31,11 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.common.ability.electromaster.skills.lv3.CurrentSymbiosis;
+import org.academy.internal.common.skilldata.CodecSkillData;
 import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.common.skilldata.SkillData;
 import org.academy.internal.server.world.level.storage.SkillDataSerializer;
+import org.jetbrains.annotations.ApiStatus;
 import org.jspecify.annotations.Nullable;
 
 import java.net.URL;
@@ -53,9 +57,9 @@ public abstract class Skill {
             Codec.INT.xmap(Registries.SKILLS::byIdOrThrow, Registries.SKILLS::getId);
     public static final Codec<Skill> ID_CODEC = Identifier.CODEC.flatXmap(
             id -> Registries.SKILLS.get(id)
-                    .map(holder -> com.mojang.serialization.DataResult.success(holder.value()))
-                    .orElseGet(() -> com.mojang.serialization.DataResult.error(() -> "Unknown skill " + id)),
-            skill -> com.mojang.serialization.DataResult.success(skill.getKey()));
+                    .map(holder -> DataResult.success(holder.value()))
+                    .orElseGet(() -> DataResult.error(() -> "Unknown skill " + id)),
+            skill -> DataResult.success(skill.getKey()));
     public static final StreamCodec<ByteBuf, Skill> STREAM_CODEC = ByteBufCodecs.idMapper(Registries.SKILLS);
     public static final StreamCodec<ByteBuf, Set<Skill>> STREAM_CODEC_SET = STREAM_CODEC.apply(
             codec -> ByteBufCodecs.collection(HashSet::new, codec)
@@ -504,8 +508,8 @@ public abstract class Skill {
     @SuppressWarnings("unchecked")
     public final <T> Optional<T> state(ServerPlayer player, SkillStateType<T> type) {
         if (stateType != type) throw new IllegalArgumentException("State type does not belong to this skill");
-        return getRuntimeData(player).filter(data -> data instanceof org.academy.internal.common.skilldata.CodecSkillData<?>)
-                .map(data -> ((org.academy.internal.common.skilldata.CodecSkillData<T>) data).value());
+        return getRuntimeData(player).filter(data -> data instanceof CodecSkillData<?>)
+                .map(data -> ((CodecSkillData<T>) data).value());
     }
 
     /** Validates and persists an addon value on the server thread; false if no supported state exists. */
@@ -517,8 +521,8 @@ public abstract class Skill {
             throw new IllegalStateException("Skill state must be updated on the server thread");
         }
         var data = getRuntimeData(player).orElse(null);
-        if (!(data instanceof org.academy.internal.common.skilldata.CodecSkillData<?>)) return false;
-        ((org.academy.internal.common.skilldata.CodecSkillData<T>) data).value(value);
+        if (!(data instanceof CodecSkillData<?>)) return false;
+        ((CodecSkillData<T>) data).value(value);
         AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID()).markDirty();
         return true;
     }
@@ -529,11 +533,11 @@ public abstract class Skill {
 
     /** Common skills retain the Level 0 backing category for compatibility, without joining its skill list. */
     public static Builder common() {
-        return Builder.of(org.academy.api.common.registries.AcademyKeys.category("level0")).common();
+        return Builder.of(AcademyKeys.category("level0")).common();
     }
 
     /** Called by Academy after static registry construction; not an addon mutation hook. */
-    @org.jetbrains.annotations.ApiStatus.Internal
+    @ApiStatus.Internal
     public final void resolveRegistration() {
         if (resolved) return;
         var owner = getCategory();
@@ -866,8 +870,8 @@ public abstract class Skill {
         public <T> Builder stateType(SkillStateType<T> type) {
             stateType = Objects.requireNonNull(type);
             dataTypeId = type.id();
-            dataClass = org.academy.internal.common.skilldata.CodecSkillData.class;
-            dataFactory = () -> new org.academy.internal.common.skilldata.CodecSkillData<>(type);
+            dataClass = CodecSkillData.class;
+            dataFactory = () -> new CodecSkillData<>(type);
             return this;
         }
 

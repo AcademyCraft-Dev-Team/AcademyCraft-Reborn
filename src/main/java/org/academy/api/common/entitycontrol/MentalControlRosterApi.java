@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /** Stable public access to the Mentalout controller's retained subject roster. */
 public final class MentalControlRosterApi {
@@ -50,7 +51,7 @@ public final class MentalControlRosterApi {
         var controlled = MentaloutControlContext.subjects(controller).stream()
                 .map(LivingEntity::getUUID)
                 .filter(subjectIds::contains)
-                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                .collect(Collectors.toUnmodifiableSet());
         MentaloutControlContext.releaseInterventionSubjects(controller, controlled);
         return controlled.size();
     }

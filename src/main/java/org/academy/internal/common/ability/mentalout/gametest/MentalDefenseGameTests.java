@@ -21,6 +21,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.storage.ServerLevelData;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
@@ -158,7 +159,7 @@ public final class MentalDefenseGameTests {
             // Advance the authoritative clock and invoke real runtimes without simulating physical input.
             // Repeated calls in one tick must neither speed up nor postpone automatic resistance.
             for (int elapsed = 0; elapsed <= 501; elapsed++) {
-                ((net.minecraft.world.level.storage.ServerLevelData) level.getLevelData()).setGameTime(start + elapsed);
+                ((ServerLevelData) level.getLevelData()).setGameTime(start + elapsed);
                 MentalControlRuntime.tick(server);
                 MentalPerceptionRuntime.tick(server);
                 MentalResistanceManager.tick(server);
@@ -202,7 +203,7 @@ public final class MentalDefenseGameTests {
                 entity.discard();
             }
             for (var player : players) server.getPlayerList().remove(player);
-            ((net.minecraft.world.level.storage.ServerLevelData) level.getLevelData()).setGameTime(originalTime);
+            ((ServerLevelData) level.getLevelData()).setGameTime(originalTime);
             registry.prepareTagReload(new TagLoader.LoadResult<>(registry.key(), originalTags)).apply();
         }
     }

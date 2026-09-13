@@ -11,6 +11,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.structure.BlockStructureManager;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -173,7 +174,7 @@ public final class BlockStructureApi {
                                 candidate.getBoundingBox(), viewer.getBoundingBox(),
                                 viewer.position(), start))
                 .stream()
-                .min(java.util.Comparator.comparingDouble(candidate ->
+                .min(Comparator.comparingDouble(candidate ->
                         candidate.getBoundingBox().getCenter().distanceToSqr(start)));
         if (containingStructure.isPresent()
                 && containingStructure.get() instanceof BlockStructure structure) {

@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.accelerator.skills.lv3;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
@@ -43,6 +44,7 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.structure.BlockStructure;
 import org.academy.api.common.structure.BlockStructureApi;
 import org.academy.api.common.structure.BlockStructureCaptureOptions;
+import org.academy.api.common.structure.BlockStructureImpact;
 import org.academy.api.common.structure.BlockStructureKineticHandle;
 import org.academy.api.common.structure.BlockStructureKineticOptions;
 import org.academy.api.common.structure.BlockStructureKinetics;
@@ -201,7 +203,7 @@ public final class KineticThrow extends Skill {
         }
 
         private static void startCharge() {
-            var minecraft = net.minecraft.client.Minecraft.getInstance();
+            var minecraft = Minecraft.getInstance();
             if (charging || minecraft.gui.screen() != null
                     || !AbilitySystemClient.canUseSkill(Skills.KINETIC_THROW.get())) return;
             charging = true;
@@ -215,7 +217,7 @@ public final class KineticThrow extends Skill {
         }
 
         private static void throwLookedAtStructure() {
-            var minecraft = net.minecraft.client.Minecraft.getInstance();
+            var minecraft = Minecraft.getInstance();
             var player = minecraft.player;
             if (player == null || minecraft.gui.screen() != null) return;
             MisakaNetworkClient.send(ThrowPacket.INSTANCE);
@@ -415,7 +417,7 @@ public final class KineticThrow extends Skill {
 
         private static void applyEntityImpact(
                 ServerPlayer player,
-                org.academy.api.common.structure.BlockStructureImpact impact
+                BlockStructureImpact impact
         ) {
             var target = impact.target();
             if (!canAffect(player, target) || target instanceof BlockStructure) return;

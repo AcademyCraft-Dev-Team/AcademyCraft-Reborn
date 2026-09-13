@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -111,14 +112,14 @@ class SpacialExcisionRenderMathTest {
 
     @Test
     void backgroundSelectionIsStableAndBoundedWithoutSortingTheWholeInput() {
-        var candidates = java.util.List.of(
+        var candidates = List.of(
                 new SpacialExcisionRenderMath.BackgroundCandidate(7L, 4.0, 20.0),
                 new SpacialExcisionRenderMath.BackgroundCandidate(3L, 4.0, 10.0),
                 new SpacialExcisionRenderMath.BackgroundCandidate(2L, 4.0, 10.0),
                 new SpacialExcisionRenderMath.BackgroundCandidate(9L, 9.0, 90.0),
                 new SpacialExcisionRenderMath.BackgroundCandidate(1L, Double.NaN, 0.0));
 
-        assertEquals(java.util.List.of(9L, 2L, 3L),
+        assertEquals(List.of(9L, 2L, 3L),
                 SpacialExcisionRenderMath.selectBackgroundIds(candidates, 3));
     }
 

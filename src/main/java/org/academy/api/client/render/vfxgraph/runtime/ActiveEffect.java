@@ -13,6 +13,7 @@ import org.academy.api.client.render.vfxgraph.render.GraphCamera;
 import org.academy.api.client.render.vfxgraph.render.RenderSpec;
 import org.academy.api.client.render.vfxgraph.render.VfxGraphRenderer;
 import org.academy.api.client.render.vfxgraph.render.WorldTransform;
+import org.academy.api.client.render.vfxgraph.shape.SurfaceProjector;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
@@ -20,6 +21,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Supplier;
 
 /**
@@ -37,12 +39,12 @@ public final class ActiveEffect {
     private final Vector3f position = new Vector3f();
     private final Quaternionf rotation = new Quaternionf();
     private final Map<String, Supplier<Value>> bindings = new LinkedHashMap<>();
-    private final Map<String, org.academy.api.client.render.vfxgraph.shape.SurfaceProjector> surfaces = new LinkedHashMap<>();
+    private final Map<String, SurfaceProjector> surfaces = new LinkedHashMap<>();
     private GraphEffect effect;
 
     /** Bind a local projection surface; preserved through asset reloads, independent of player entities. */
-    public void bindSurface(String name, org.academy.api.client.render.vfxgraph.shape.SurfaceProjector surface) {
-        surfaces.put(name, java.util.Objects.requireNonNull(surface));
+    public void bindSurface(String name, SurfaceProjector surface) {
+        surfaces.put(name, Objects.requireNonNull(surface));
         effect.setSurfaceProjector(name, surface);
     }
     private float scale = 1f;
@@ -80,7 +82,7 @@ public final class ActiveEffect {
         hiddenElapsed = 0f;
         return step;
     }
-    private @org.jspecify.annotations.Nullable Entity followEntity;
+    private @Nullable Entity followEntity;
     private boolean stopped;
 
     ActiveEffect(String assetKey, Graph graph, VfxNodeRegistry registry, Vector3f position) {
@@ -275,8 +277,8 @@ public final class ActiveEffect {
      * 容器资产重载（M27）：用新解码的 VfxSystem 重建效果，保留位置/绑定。
      */
     void reload(VfxSystem system) {
-        effect = GraphEffect.container(system, java.util.Objects.requireNonNull(blockRegistry),
-                java.util.Objects.requireNonNull(operatorRegistry), system.parameters());
+        effect = GraphEffect.container(system, Objects.requireNonNull(blockRegistry),
+                Objects.requireNonNull(operatorRegistry), system.parameters());
         for (var entry : bindings.entrySet()) {
             effect.setLiveParam(entry.getKey(), entry.getValue().get());
         }

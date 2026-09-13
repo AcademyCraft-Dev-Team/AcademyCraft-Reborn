@@ -7,6 +7,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.player.Player;
 import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
+import org.academy.internal.common.world.damagesource.CategoryDamageRuntime;
 import org.spongepowered.asm.mixin.Mixin;
 
 /** Player overrides actuallyHurt, so LivingEntity's context injections do not cover player health writes. */
@@ -14,7 +15,7 @@ import org.spongepowered.asm.mixin.Mixin;
 public abstract class MixinPlayerDamageContext {
     @WrapMethod(method = "actuallyHurt")
     private void academy$damageContext(ServerLevel level, DamageSource source, float amount, Operation<Void> original) {
-        if (org.academy.internal.common.world.damagesource.CategoryDamageRuntime.blocksOutgoingDamage(source)) return;
+        if (CategoryDamageRuntime.blocksOutgoingDamage(source)) return;
         PlayerAttributeRuntime.pushDamageContext(source);
         OutputControl.pushDamageContext(source);
         try {

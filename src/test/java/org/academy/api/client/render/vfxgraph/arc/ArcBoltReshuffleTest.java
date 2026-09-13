@@ -17,6 +17,7 @@ import org.academy.api.client.render.vfxgraph.sim.VfxSystemSimulator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -66,7 +67,7 @@ class ArcBoltReshuffleTest {
                 Map.entry("branch_depth", "0"), Map.entry("segments", "8"), Map.entry("width", "0.01"),
                 Map.entry("interval", "0"))), blocks, ops, 42L, List.of());
 
-        java.util.List<float[]> snapshots = new java.util.ArrayList<>();
+        List<float[]> snapshots = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
             sim.step(0.1f);
             var buf = sim.arcBuffer();

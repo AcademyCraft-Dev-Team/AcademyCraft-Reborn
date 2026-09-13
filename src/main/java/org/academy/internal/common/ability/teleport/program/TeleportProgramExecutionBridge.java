@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.LongSupplier;
 
 /**
  * Shared-VM execution gateway for Teleport programs.
@@ -83,7 +84,7 @@ public final class TeleportProgramExecutionBridge {
             TeleportProgramRuntime runtime,
             ProgramActionTransaction transaction,
             ProgramInvocationContext invocation,
-            java.util.function.LongSupplier worldGameTime
+            LongSupplier worldGameTime
     ) {
         Objects.requireNonNull(program, "program");
         Objects.requireNonNull(runtime, "runtime");

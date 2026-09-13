@@ -6,6 +6,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.program.*;
 import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.SkillNames;
+import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.server.world.level.storage.Player;
 import org.academy.internal.server.world.level.storage.WorldData;
 import org.junit.jupiter.api.Test;
@@ -20,11 +21,11 @@ class AbilityProgramManagerTest {
     @Test
     void mentaloutFeedbackRetainsItsSpecificReason() {
         assertEquals(ProgramVmDiagnostic.CONTROL_RESISTANCE, AbilityProgramManager.precisionDiagnostic(
-                org.academy.internal.common.ability.mentalout.precision.PrecisionGraph.Diagnostic.CONTROL_RESISTANCE));
+                PrecisionGraph.Diagnostic.CONTROL_RESISTANCE));
         assertEquals(ProgramVmDiagnostic.PROFICIENCY_REQUIRED, AbilityProgramManager.precisionDiagnostic(
-                org.academy.internal.common.ability.mentalout.precision.PrecisionGraph.Diagnostic.PROFICIENCY_REQUIRED));
+                PrecisionGraph.Diagnostic.PROFICIENCY_REQUIRED));
         assertEquals(ProgramVmDiagnostic.INSUFFICIENT_CP, AbilityProgramManager.precisionDiagnostic(
-                org.academy.internal.common.ability.mentalout.precision.PrecisionGraph.Diagnostic.INSUFFICIENT_CP));
+                PrecisionGraph.Diagnostic.INSUFFICIENT_CP));
     }
 
     @Test

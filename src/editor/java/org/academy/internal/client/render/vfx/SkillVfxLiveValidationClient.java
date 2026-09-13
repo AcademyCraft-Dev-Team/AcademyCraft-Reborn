@@ -14,6 +14,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 
@@ -35,7 +36,7 @@ public final class SkillVfxLiveValidationClient {
     }
 
     @SubscribeEvent
-    public static void screen(net.neoforged.neoforge.client.event.ScreenEvent.Init.Post event) {
+    public static void screen(ScreenEvent.Init.Post event) {
         if (!ROLE.isEmpty()) AcademyCraft.getLogger().info("VFX_LIVE_SCREEN {} {}", ROLE, event.getScreen().getClass().getName());
     }
     @SubscribeEvent

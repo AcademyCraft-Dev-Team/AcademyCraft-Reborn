@@ -7,6 +7,8 @@ import com.google.gson.annotations.SerializedName;
 import org.academy.api.client.input.InputSystem;
 import org.jspecify.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -134,9 +136,9 @@ public abstract class KeyBindingConfig {
             InputSystem.KeyCombination defaultConfig,
             InputSystem.KeyCombination[] obsoleteDefaults
     ) {
-        var values = new java.util.ArrayList<InputSystem.KeyCombination>();
+        var values = new ArrayList<InputSystem.KeyCombination>();
         values.add(defaultConfig);
-        java.util.Collections.addAll(values, obsoleteDefaults);
+        Collections.addAll(values, obsoleteDefaults);
         return GSON.toJson(values);
     }
 

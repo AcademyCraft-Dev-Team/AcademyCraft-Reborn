@@ -8,6 +8,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -209,7 +210,7 @@ public final class ServerProgramScheduler {
             sessionIds.clear();
         }
 
-        private java.util.List<SessionKey> keys() {
+        private List<SessionKey> keys() {
             return scheduler.keys();
         }
 

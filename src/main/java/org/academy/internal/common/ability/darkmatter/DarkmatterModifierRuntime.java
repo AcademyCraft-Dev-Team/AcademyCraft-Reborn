@@ -50,10 +50,15 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.darkmatter.DarkmatterModifiers;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.server.ability.AbilityBlockDrops;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterShaping;
 import org.academy.internal.common.world.item.DarkmatterItemUtil;
+import org.academy.internal.common.world.item.ItemDataComponents;
+import org.academy.internal.common.world.item.SpatialStorageUnitItem;
+import org.academy.internal.server.storage.SpatialStorageSavedData;
+import org.academy.internal.server.storage.SpatialStorageService;
 
 import java.util.Map;
 import java.util.UUID;
@@ -419,7 +424,7 @@ public final class DarkmatterModifierRuntime {
                     }
                     var second = bottom.above();
                     if (world.getBlockState(second).is(STACKABLE_HARVESTABLES)) {
-                        changed |= org.academy.api.server.ability.AbilityBlockDrops.run(
+                        changed |= AbilityBlockDrops.run(
                                 player, () -> player.gameMode.destroyBlock(second));
                     }
                     continue;
@@ -427,7 +432,7 @@ public final class DarkmatterModifierRuntime {
                 var crop = state.getBlock() instanceof CropBlock cropBlock && cropBlock.isMaxAge(state);
                 if (!(crop || state.is(ADDITIONAL_HARVESTABLE_CROPS)
                         || state.is(BlockTags.CROPS))) continue;
-                if (!org.academy.api.server.ability.AbilityBlockDrops.run(player, () -> player.gameMode.destroyBlock(pos))) continue;
+                if (!AbilityBlockDrops.run(player, () -> player.gameMode.destroyBlock(pos))) continue;
                 changed = true;
                 if (consumeNearbySeed(world, pos, player)) {
                     world.setBlock(pos, crop
@@ -453,10 +458,10 @@ public final class DarkmatterModifierRuntime {
     }
 
     private static boolean consumeNearbySeed(ServerLevel level, BlockPos pos, ServerPlayer player) {
-        for (var unit : org.academy.internal.server.storage.SpatialStorageService.carriedUnits(player)) {
-            if (!org.academy.internal.common.world.item.SpatialStorageUnitItem.isEnabled(unit)) continue;
-            var id = unit.get(org.academy.internal.common.world.item.ItemDataComponents.SPATIAL_STORAGE_ID.get());
-            if (id != null && org.academy.internal.server.storage.SpatialStorageSavedData.get(level.getServer())
+        for (var unit : SpatialStorageService.carriedUnits(player)) {
+            if (!SpatialStorageUnitItem.isEnabled(unit)) continue;
+            var id = unit.get(ItemDataComponents.SPATIAL_STORAGE_ID.get());
+            if (id != null && SpatialStorageSavedData.get(level.getServer())
                     .consumeOne(id, resource -> resource.toStack().is(HARVEST_REPLANT_ITEMS))) return true;
         }
         for (var item : level.getEntitiesOfClass(ItemEntity.class,

@@ -19,6 +19,9 @@ import org.academy.api.client.render.vfxgraph.shape.*;
 import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
 import org.academy.api.client.render.vfxgraph.sim.SimContext;
 import org.academy.api.client.render.vfxgraph.sim.SimNode;
+import org.academy.api.common.ability.VortexAttackPattern;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -1690,12 +1693,12 @@ public final class VfxBlocks {
         String pitchParam = propString(block, "pitch_param", "pitch_right");
         float[] color = propColor(block, "color");
         long group = NEXT_TRANSIENT_ARC_GROUP.getAndIncrement();
-        var point = new org.joml.Vector3f();
-        var spine = new org.joml.Vector3f();
-        var surfaceNormal = new org.joml.Vector3f();
-        var rotation = new org.joml.Quaternionf();
-        var shape = new org.academy.api.client.render.vfxgraph.shape.VortexAttackGeometry();
-        var bodyOcclusion = new org.academy.api.client.render.vfxgraph.shape.FirstPersonBodyOcclusion();
+        var point = new Vector3f();
+        var spine = new Vector3f();
+        var surfaceNormal = new Vector3f();
+        var rotation = new Quaternionf();
+        var shape = new VortexAttackGeometry();
+        var bodyOcclusion = new FirstPersonBodyOcclusion();
         return (buf, ctx) -> {
             ctx.arcs().removeGroup(group);
             float radial = Math.max(0f, ctx.paramFloat("radial_scale", 1f));
@@ -1719,7 +1722,7 @@ public final class VfxBlocks {
                 bodyOcclusion.max.set(ctx.paramVec3("body_clip_max", 0, 0), ctx.paramVec3("body_clip_max", 1, 0), ctx.paramVec3("body_clip_max", 2, 0));
             }
             if (attackProgress < 0f) {
-                float duration = org.academy.api.common.ability.VortexAttackPattern.byId(attackMode).durationSeconds();
+                float duration = VortexAttackPattern.byId(attackMode).durationSeconds();
                 attackProgress = (ctx.time() % duration) / duration;
             }
             if (attackMode == 4 && side > 0f || attackMode == 5 && side < 0f) attackMode = 0;
@@ -2455,7 +2458,7 @@ public final class VfxBlocks {
     }
 
     private static void configureCleanArc(
-            org.academy.api.client.render.vfxgraph.arc.ArcCurve arc,
+            ArcCurve arc,
             float[] color, float emission, float lifetime, long seed
     ) {
         arc.setColor(color[0] * emission, color[1] * emission, color[2] * emission, color[3] * emission);
