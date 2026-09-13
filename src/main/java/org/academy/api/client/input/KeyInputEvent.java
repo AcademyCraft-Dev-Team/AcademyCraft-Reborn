@@ -3,10 +3,8 @@ package org.academy.api.client.input;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.client.input.KeyEvent;
-import net.neoforged.bus.api.Event;
-import net.neoforged.bus.api.ICancellableEvent;
 
-public class KeyInputEvent extends Event implements ICancellableEvent {
+public class KeyInputEvent extends InputControlEvent {
     public @InputConstants.Value int key;
     public int scanCode;
     public @KeyEvent.Action int action;

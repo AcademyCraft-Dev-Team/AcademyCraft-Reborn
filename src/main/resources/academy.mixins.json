@@ -30,6 +30,7 @@
     "common.MixinDragonStrafePlayerPhase",
     "common.MixinEnderDragon",
     "common.MixinEntity",
+    "common.MixinEntityTemporalOrientation",
     "common.MixinEntityGetter",
     "common.MixinFoodData",
     "common.MixinFlowingFluidWaterSuppression",
@@ -67,6 +68,9 @@
     "common.MixinThrownTridentDarkmatterReturning",
     "common.MixinThrownTridentVectorPickup",
     "common.MixinTickRateManagerTimeImmunity",
+    "common.MixinTemporalServerBoundary",
+    "common.MixinTemporalTeleportBoundary",
+    "common.MixinLivingEntityTemporalOrientation",
     "common.MixinVibrationSystemListener",
     "common.MixinWardenDiggingBehavior",
     "common.MixinWitherBoss",
@@ -109,6 +113,8 @@
     "client.MixinMouseHandler",
     "client.MixinSoundEngine",
     "client.MixinTextureAtlas",
+    "client.MixinTemporalClientBoundary",
+    "client.MixinTemporalInputBoundary",
     "client.MixinThrownTridentRenderer"
   ],
   "injectors": {

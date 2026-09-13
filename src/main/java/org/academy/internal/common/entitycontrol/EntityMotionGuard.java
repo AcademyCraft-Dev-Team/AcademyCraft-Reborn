@@ -1,5 +1,7 @@
 package org.academy.internal.common.entitycontrol;
 
+import org.academy.internal.server.time.TemporalMutationProtection;
+
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -302,6 +304,7 @@ public final class EntityMotionGuard {
     private static boolean shouldBlockMotion(Entity entity) {
         if (entity == null || entity.level().isClientSide()) return false;
         if (isInternalCorrection(entity)) return false;
+        if (TemporalMutationProtection.shouldBlock(entity)) return true;
         var imprisoned = entity instanceof LivingEntity living && isImprisoned(living);
         if (imprisoned) return true;
         var source = currentMotionSourceEntity();
