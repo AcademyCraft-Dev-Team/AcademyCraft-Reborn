@@ -50,12 +50,9 @@ import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.UUID;
 
-/** Client state and renderer for the world-space spatial cut. */
 public final class SpacialExcisionVfxClient {
     private static final int VERTEX_STRIDE = 7 * Float.BYTES;
     private static final int LINE_VERTEX_STRIDE = VfxPipelines.SPATIAL_CUT_LINE_FORMAT.getVertexSize();
-    // The crack and its immediate surroundings move as one rigid slab. Only
-    // the short region outside that slab rapidly returns to the untouched scene.
     private static final float DISPLACEMENT_RIGID_HALF_WIDTH = 12.0f;
     private static final float MIN_DISPLACEMENT_FALLOFF_WIDTH = 6.0f;
     private static final float HORIZONTAL_SLIDE_DISTANCE_BLOCKS = 6.0f;
@@ -71,7 +68,6 @@ public final class SpacialExcisionVfxClient {
     private static final int MASK_CROSS_SECTIONS = MASK_FALLOFF_STEPS + 2;
     private static final int MASK_LONGITUDINAL_SECTIONS =
             MASK_FALLOFF_STEPS * 2 + LINE_LONGITUDINAL_SECTIONS + 1;
-    // Clipping one triangle against the near plane can turn it into a quad (six vertices).
     private static final int MASK_MAX_VERTICES_PER_SEGMENT =
             (MASK_LONGITUDINAL_SECTIONS - 1)
                     * (MASK_CROSS_SECTIONS - 1) * 2 * 2 * 6;
@@ -89,8 +85,6 @@ public final class SpacialExcisionVfxClient {
             Identifier.withDefaultNamespace("textures/environment/end_sky.png");
     private static final Identifier END_PORTAL_TEXTURE =
             Identifier.withDefaultNamespace("textures/entity/end_portal/end_portal.png");
-    // Launch with -Dacademy.spatialCut.debugClassification=true to color the
-    // post path by selected-depth, mask, near-guard, UV, and source-plane result.
     private static final boolean DEBUG_POST_CLASSIFICATION =
             Boolean.getBoolean("academy.spatialCut.debugClassification");
     private static final Map<UUID, Session> SESSIONS = new LinkedHashMap<>();
@@ -183,11 +177,6 @@ public final class SpacialExcisionVfxClient {
         return growthVertexRequirement(writtenVertices, LINE_MAX_VERTICES_PER_SEGMENT, 64);
     }
 
-    /**
-     * Clips one triangle-derived convex polygon against {@code clipW >= minimumW} without
-     * allocating. Input and output must be distinct fixed scratch arrays. A triangle clipped by
-     * one plane has at most four vertices; anything outside that contract fails closed.
-     */
     static int clipLineVertices(
             double[] input,
             int inputCount,
@@ -290,12 +279,9 @@ public final class SpacialExcisionVfxClient {
         return replacement;
     }
 
-    /** Called during skill client initialization, before VfxManager.init(). */
     public static synchronized void register() {
         if (registered) return;
         registered = true;
-        // The material renderer is initialized by the registry but receives no
-        // frame data: its geometry is drawn after the scene displacement.
         VfxRegistry.register(CutMaterialData.class, VfxPhase.WORLD_TRANSLUCENT, MATERIAL_RENDERER);
         VfxRegistry.register(CutGlowData.class, VfxPhase.WORLD_GLOW, GLOW_RENDERER);
         VfxManager.INSTANCE.spawn(VFX);
@@ -394,7 +380,6 @@ public final class SpacialExcisionVfxClient {
         }
     }
 
-    /** Releases frame-sized targets after a world/resource lifecycle boundary. */
     public static void releaseTransientResources() {
         clear();
         for (var i = 0; i < MAX_SOURCE_VALIDATION_CUTS; i++) {
@@ -437,11 +422,6 @@ public final class SpacialExcisionVfxClient {
         registered = false;
     }
 
-    /**
-     * Selects at most five cuts for source-coordinate validation. Each slot keeps
-     * one segment's mask, plane depth and projected basis together; this never
-     * re-enters LevelRenderer or replaces its targets.
-     */
     public static void prepareSourceValidation() {
         for (var slot = 0; slot < MAX_SOURCE_VALIDATION_CUTS; slot++) {
             sourceValidationReady[slot] = false;
@@ -587,8 +567,6 @@ public final class SpacialExcisionVfxClient {
         var segment = visible.segment();
         var basis = visible.basis();
         var cameraWorld = new Vec3(camera.pos());
-        // The near proxy is only a rasterization aid. Source half-space
-        // validation must remain anchored to the physical world cut.
         var planePoint = segment.start();
         var signedDistance = cameraWorld.subtract(planePoint).dot(basis.planeNormal());
         if (!Double.isFinite(signedDistance)) return null;
@@ -643,7 +621,6 @@ public final class SpacialExcisionVfxClient {
         return target;
     }
 
-    /** Runs after PostEffect.pre() has copied the complete current frame. */
     public static void renderPost() {
         var minecraft = Minecraft.getInstance();
         var camera = VFX.latestCamera;
@@ -660,9 +637,6 @@ public final class SpacialExcisionVfxClient {
             if (validationDepth0 != null && validationMask0 != null) {
                 var sceneSampler = RenderSystem.getSamplerCache()
                         .getClampToEdge(FilterMode.LINEAR);
-                // Linear mask sampling removes sub-pixel stair stepping. Each
-                // validation slot contains only one cut, so unrelated segments
-                // cannot average or cancel its signed half direction.
                 var maskSampler = RenderSystem.getSamplerCache()
                         .getClampToEdge(FilterMode.LINEAR);
                 var depthSampler = RenderSystem.getSamplerCache()
@@ -710,8 +684,6 @@ public final class SpacialExcisionVfxClient {
                 );
             }
         }
-        // The visible portal material is drawn after the scene has moved. There
-        // is deliberately no independent flat-color core pass over the crack.
         VFX.renderVisibleLines();
     }
 
@@ -805,7 +777,6 @@ public final class SpacialExcisionVfxClient {
     private static final class CutVfx implements Vfx {
         private ByteBuffer lineVertexData = BufferUtils.createByteBuffer(
                 INITIAL_VERTICES * LINE_VERTEX_STRIDE);
-        // Render-thread-only, fixed scratch. putLineTriangle is deliberately non-reentrant.
         private final double[] lineClipScratchA = new double[LINE_CLIP_SCRATCH_COMPONENTS];
         private final double[] lineClipScratchB = new double[LINE_CLIP_SCRATCH_COMPONENTS];
         private @Nullable ByteBuffer latestLineVertices;
@@ -937,8 +908,6 @@ public final class SpacialExcisionVfxClient {
                 var coverage1 = longitudinalCoverage(nextAlong, length, falloffWidth);
                 var start = segment.start.add(basis.tangent().scale(along));
                 var end = segment.start.add(basis.tangent().scale(nextAlong));
-                // Both halves are rigid slabs. The mask alpha applies this
-                // unsigned world displacement in equal and opposite directions.
                 count += appendMaskHalf(
                         target, start, end, basis, false, worldDisplacement,
                         falloffWidth,
@@ -965,9 +934,6 @@ public final class SpacialExcisionVfxClient {
                 minimumW = Math.min(minimumW, clip.w);
                 maximumW = Math.max(maximumW, clip.w);
             }
-            // Any footprint that touches the near gap is moved as one parallel
-            // plane. If it crosses the camera, crop at w=0 first so rear
-            // geometry is never resurrected.
             var plan = SpacialExcisionRenderMath.nearMaskProxyPlan(
                     minimumW, maximumW, NEAR_CLIP_MIN_W);
             if (plan.offset() <= 0.0f) return NearProxy.NONE;
@@ -1010,7 +976,6 @@ public final class SpacialExcisionVfxClient {
             var outerHalfWidth = DISPLACEMENT_RIGID_HALF_WIDTH + falloffWidth;
             var left = basis.planeUp().scale(-outerHalfWidth);
             var right = basis.planeUp().scale(outerHalfWidth);
-            // Perimeter order is required by homogeneous polygon clipping.
             return List.of(
                     visibleStart.add(left),
                     visibleEnd.add(left),
@@ -1046,7 +1011,7 @@ public final class SpacialExcisionVfxClient {
             var lengthSquared = segment.length * segment.length;
             if (!Double.isFinite(lengthSquared) || lengthSquared <= 0.0) return requested;
             var along = cameraPosition.subtract(segment.start).dot(delta) / lengthSquared;
-            along = Math.max(0.0, Math.min(1.0, along));
+            along = Math.clamp(along, 0.0, 1.0);
             var support = segment.start.add(delta.scale(along));
 
             var tangent = vector(basis.tangent());
@@ -1170,10 +1135,6 @@ public final class SpacialExcisionVfxClient {
                 var nextCoverage0 = nextCoverage * longitudinalCoverage1;
                 var previousCoverage1 = previousCoverage * longitudinalCoverage1;
                 if (right) {
-                    // Keep the center edge oppositely directed on the two halves.
-                    // With additive signed rendering, identical edge direction can
-                    // make the top-left rasterization rule include both center
-                    // triangles (cancelling -1/+1) or exclude both (leaving zero).
                     count += putMaskTriangle(
                             target, previousStart, nextEnd, nextStart,
                             worldDisplacement,
@@ -1214,9 +1175,6 @@ public final class SpacialExcisionVfxClient {
             var length = segment.length;
             if (!Double.isFinite(length) || length <= 0.001) return 0;
 
-            // The visible portal material is independent from the post-process
-            // tangent. Looking along the cut may fade the displacement direction,
-            // but it must not hide the world-space crack itself.
             var flowParams = segment.flowParams;
             var center = segment.center;
             var breathScale = visible.breathScale();
@@ -1278,15 +1236,12 @@ public final class SpacialExcisionVfxClient {
 
             var cameraWorld = new Vec3(camera.pos().x, camera.pos().y, camera.pos().z);
             var along = cameraWorld.subtract(segment.start).dot(delta) / lengthSquared;
-            along = Math.max(0.0, Math.min(1.0, along));
+            along = Math.clamp(along, 0.0, 1.0);
             var closest = segment.start.add(delta.scale(along));
             if (cameraWorld.distanceToSqr(closest) > MAX_RENDER_DISTANCE * MAX_RENDER_DISTANCE) {
                 return false;
             }
 
-            // Do not binary-cull edge-on cuts. The projected mask naturally
-            // narrows, and a hard facing threshold made the crack disappear or
-            // switch behavior while the player crossed the plane.
             var visibleStart = segment.start.subtract(
                     basis.tangent().scale(falloffWidth));
             var visibleEnd = segment.end.add(
@@ -1376,18 +1331,18 @@ public final class SpacialExcisionVfxClient {
 
         private static float centeredSpindleProfile(double coordinate) {
             if (!Double.isFinite(coordinate)) return 0.0f;
-            var t = Math.max(0.0, Math.min(1.0, coordinate));
+            var t = Math.clamp(coordinate, 0.0, 1.0);
             var centeredDistance = Math.abs(t * 2.0 - 1.0);
             var profile = 1.0 - centeredDistance * centeredDistance;
             return Double.isFinite(profile) ? (float) Math.max(0.0, profile) : 0.0f;
         }
 
         private static float clamp01(float value) {
-            return Float.isFinite(value) ? Math.max(0.0f, Math.min(1.0f, value)) : 0.0f;
+            return Float.isFinite(value) ? Math.clamp(value, 0.0f, 1.0f) : 0.0f;
         }
 
         private static float clampSigned(float value) {
-            return Float.isFinite(value) ? Math.max(-1.0f, Math.min(1.0f, value)) : 0.0f;
+            return Float.isFinite(value) ? Math.clamp(value, -1.0f, 1.0f) : 0.0f;
         }
 
         private static float finiteOrZero(float value) {

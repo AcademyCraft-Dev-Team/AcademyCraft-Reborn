@@ -2,21 +2,10 @@ package org.academy.api.client.gui.serialize
 
 import com.google.gson.JsonObject
 
-/**
- * 模板展开函数: 接收 include 的 [params] 并返回展开后的 [WidgetNode] 子树.
- * 模板作者在函数内自行处理参数 (或经 [UiTemplateRegistry] 的 `$param` 替换).
- */
 fun interface UiTemplate {
     fun expand(params: JsonObject): WidgetNode
 }
 
-/**
- * 布局模板注册表 (v2 `include`/`repeat` 的支撑) 喵.
- *
- * - 函数式模板: `registry.register("skill_row") { params -> buildNode(params) }`
- * - JSON 模板: `registry.register("skill_row", rawNodeJson)`, 展开时把 `$param.key`
- *   替换为 params 中的字符串值.
- */
 class UiTemplateRegistry {
     private val templates: MutableMap<String, UiTemplate> = LinkedHashMap()
 
@@ -36,7 +25,6 @@ class UiTemplateRegistry {
 
     fun isEmpty(): Boolean = templates.isEmpty()
 
-    /** 递归克隆节点树 (注册原始节点时避免共享引用). */
     private fun cloneNode(node: WidgetNode): WidgetNode {
         val copy = WidgetNode(
             node.type, node.name,
@@ -52,7 +40,6 @@ class UiTemplateRegistry {
         return copy
     }
 
-    /** 把模板节点中的 `$param.key` 替换为 params 的值. */
     private fun substituteParams(node: WidgetNode, params: JsonObject): WidgetNode {
         substituteIn(node.layout, params)
         substituteIn(node.common, params)

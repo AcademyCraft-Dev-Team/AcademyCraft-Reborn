@@ -215,7 +215,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
     ) {
         configure(owner, sourceSkill, baseDamage, targetMaxHealthDamageRatio,
                 playerDamageMultiplier, radiationEnabled, destroysBlocks);
-        this.proficiencyMilestone = Math.max(0, Math.min(3, proficiencyMilestone));
+        this.proficiencyMilestone = Math.clamp(proficiencyMilestone, 0, 3);
     }
 
     public void configure(
@@ -273,7 +273,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         }
 
         if (isHeldCharge() && !hasFired()) {
-            currentChargerTicks = Math.min(currentChargerTicks + 1, Math.max(0, getAttackDelayTicks() - 1));
+            currentChargerTicks = Math.clamp(getAttackDelayTicks() - 1, 0, currentChargerTicks + 1);
             currentRayLifeTicks = MAX_RAY_LIFE_TICKS;
             shouldStopRay = true;
             fired = false;
@@ -352,7 +352,6 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
                         && MeltdownerTargeting.canAffectNegatively(owner, target))
                 .damage(target -> {
                     var living = target instanceof LivingEntity entity ? entity : null;
-                    // Candidate probes must not consume the first hit before execution.
                     var index = hitIndex.get();
                     if (index > (proficiencyMilestone >= 3 ? 1 : 0)) return 0.0f;
                     var marked = radiationEnabled && living != null
@@ -426,7 +425,6 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         return owner;
     }
 
-    /** This entity remains authoritative on the server; visual snapshots own client playback. */
     @Override
     public boolean broadcastToPlayer(ServerPlayer player) { return false; }
 
@@ -454,9 +452,6 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         return currentChargerTicks < getAttackDelayTicks();
     }
 
-    /**
-     * Excludes one launch subject from this beam without making its allies immune.
-     */
     public void setIgnoredTarget(Entity target) {
         ignoredTargetId = target == null ? null : target.getUUID();
     }
@@ -515,7 +510,6 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         return entityData.get(DESTROYS_BLOCKS);
     }
 
-    /** Enables defensive interception only for program-created attack beams. */
     public void setDestroysProjectiles(boolean destroysProjectiles) {
         this.destroysProjectiles = destroysProjectiles;
     }

@@ -36,17 +36,9 @@ import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 
-/**
- * A render-only Dir Strike timeline rendered through the Vfx pipeline. Block models are baked
- * once when the packet arrives, then every active block is appended to a per-frame world-space
- * vertex mesh sampled by {@link #sample}.
- */
 public final class DirStrikeGroundEffect implements Vfx {
     private static final int MIN_Y_OFFSET = -3;
     private static final int MAX_Y_OFFSET = 5;
-    // Radius 12's 90-degree ground sector contains at most 123 columns, while the
-    // radius 18 airborne circle contains 1009. These budgets therefore preserve
-    // the complete single-player wave instead of randomly dropping edge columns.
     private static final int MAX_GROUND_BLOCKS = 128;
     private static final int MAX_AIRBORNE_BLOCKS = 1024;
     private static final int MAX_ACTIVE_TIMELINES = 4;
@@ -185,7 +177,7 @@ public final class DirStrikeGroundEffect implements Vfx {
     }
 
     static float motion(float activeTick, int duration, int holdTicks) {
-        var riseTicks = Math.min(RISE_TICKS, Math.max(2.0f, duration * 0.45f));
+        var riseTicks = Math.clamp(duration * 0.45f, 2.0f, RISE_TICKS);
         var fallTicks = Math.max(6.0f, duration - riseTicks);
         if (activeTick <= riseTicks) {
             var rise = Mth.clamp(activeTick / riseTicks, 0.0f, 1.0f);

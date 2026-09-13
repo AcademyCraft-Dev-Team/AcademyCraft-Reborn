@@ -24,9 +24,6 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-/**
- * Four-slot creature editor implemented exclusively with the Academy widget/event tree.
- */
 public final class DarkmatterCreationScreen extends UiScreen {
     private static final int PANEL_W = 540;
     private static final int PANEL_H = 320;
@@ -157,8 +154,8 @@ public final class DarkmatterCreationScreen extends UiScreen {
         widgetCounter = 0;
         moduleHoverTargets.clear();
         nameBox = null;
-        panelWidth = Math.min(PANEL_W, Math.max(300, width - 12));
-        panelHeight = Math.min(PANEL_H, Math.max(220, height - 12));
+        panelWidth = Math.clamp(width - 12, 300, PANEL_W);
+        panelHeight = Math.clamp(height - 12, 220, PANEL_H);
         panelX = (width - panelWidth) / 2;
         panelY = (height - panelHeight) / 2;
         compact = panelWidth < 500 || panelHeight < 285;
@@ -226,9 +223,6 @@ public final class DarkmatterCreationScreen extends UiScreen {
         if (previewEntity == null || previewEntity.level() != Minecraft.getInstance().level) {
             previewEntity = new DarkmatterBeetle(EntityTypes.DARKMATTER_BEETLE.get(),
                     Minecraft.getInstance().level);
-            // InventoryScreen's living-entity preview now resolves held-item models with the
-            // entity id as part of the model seed. This preview is deliberately not inserted
-            // into the client level, so give it a stable, non-world id before extraction.
             previewEntity.setId(Integer.MIN_VALUE + 1);
         }
         previewEntity.applyBlueprint(editing, selectedSlot, snapshot.abilityLevel, 0, false);
@@ -347,7 +341,7 @@ public final class DarkmatterCreationScreen extends UiScreen {
 
     private void buildSummonedTab() {
         var roster = snapshot.roster;
-        var rowsPerPage = compact ? Math.max(1, Math.min(4, (panelHeight - 110) / 32)) : 6;
+        var rowsPerPage = compact ? Math.clamp((panelHeight - 110) / 32, 1, 4) : 6;
         var from = Math.min(roster.size(), rosterPage * rowsPerPage);
         var to = Math.min(roster.size(), from + rowsPerPage);
         if (roster.isEmpty()) addLabel("screen.academy.darkmatter_creation.empty", 24, 86, "");
@@ -377,7 +371,7 @@ public final class DarkmatterCreationScreen extends UiScreen {
             rebuild();
         }, false, false);
         addButton(58, controlsY, 30, 18, ">", () -> {
-            rosterPage = Math.min(Math.max(0, (roster.size() - 1) / rowsPerPage), rosterPage + 1);
+            rosterPage = Math.clamp((roster.size() - 1) / rowsPerPage, 0, rosterPage + 1);
             rebuild();
         }, false, false);
         addButton(panelWidth / 2 - 66, controlsY, 132, 18,

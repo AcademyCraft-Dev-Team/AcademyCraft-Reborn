@@ -4,10 +4,6 @@ import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.layout.SizeMode
 import kotlin.math.max
 
-/**
- * 宽高比约束布局喵. 唯一子控件在可用空间内保持 [aspectRatio] (宽/高),
- * 等比缩放至最大适配尺寸后铺满整个容器.
- */
 open class AspectLayoutWidget(aspectRatio: Float = 1f) : AbstractWidgetContainer() {
     var aspectRatio: Float = aspectRatio
         set(value) {
@@ -62,10 +58,11 @@ open class AspectLayoutWidget(aspectRatio: Float = 1f) : AbstractWidgetContainer
 
         child.measure(MeasureSpec(MeasureSpec.Mode.UNSPECIFIED, 0f), MeasureSpec(MeasureSpec.Mode.UNSPECIFIED, 0f))
 
-        val hasWidth = widthMeasureSpec.mode != MeasureSpec.Mode.UNSPECIFIED
-        val hasHeight = heightMeasureSpec.mode != MeasureSpec.Mode.UNSPECIFIED
-        val availW = max(0f, widthMeasureSpec.size - containerLp.paddingLeft - containerLp.paddingRight)
-        val availH = max(0f, heightMeasureSpec.size - containerLp.paddingTop - containerLp.paddingBottom)
+        val window = measureWindow(widthMeasureSpec, heightMeasureSpec)
+        val hasWidth = window.hasWidth
+        val hasHeight = window.hasHeight
+        val availW = window.availableWidth
+        val availH = window.availableHeight
 
         val ratio = max(0.0001f, aspectRatio)
 

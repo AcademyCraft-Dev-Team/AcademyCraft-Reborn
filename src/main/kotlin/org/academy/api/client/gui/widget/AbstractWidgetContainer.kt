@@ -1,6 +1,5 @@
 package org.academy.api.client.gui.widget
 
-import com.mojang.math.Axis
 import net.minecraft.util.ARGB
 import org.academy.AcademyCraft
 import org.academy.api.client.gui.command.FillRectDrawCommand
@@ -12,7 +11,6 @@ import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.layout.SizeMode
-import org.academy.api.client.gui.render.BlurRegion
 import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.render.SubtreeCache
 import org.academy.api.client.gui.text.subrun.SubRunContainer
@@ -27,7 +25,6 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
     protected val dirtyChildrenSet: MutableSet<Widget> = linkedSetOf()
     override val dirtyChildren: Set<Widget> get() = dirtyChildrenSet
 
-    /** 自身内容 (renderInternal) 的缓存, 对齐安卓 DisplayList: 只缓存本控件, 不展平子控件. */
     private var ownRenderCache: SubtreeCache? = null
 
     override var isLayoutDirty: Boolean = true
@@ -189,9 +186,6 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
     }
 
     override fun invalidate() {
-        // 定向失效 (对齐安卓): 仅重录自身内容并向上传播, 不递归后代.
-        // 后代内容变化由各自 invalidate 自录; 位姿/alpha/scissor 变化均走缓存重组;
-        // 布局尺寸变化由 layout() 按"尺寸变化"逐控件自录.
         isRenderDirty = true
         parent?.onChildInvalidated(this)
     }
@@ -206,23 +200,9 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
             return
         }
 
-        val pivotX = width * originX
-        val pivotY = height * originY
-
-        val hasTransform = scaleX != 1.0f || scaleY != 1.0f || rotation != 0.0f
-
         context.pose().pushPose()
         run {
-            if (hasTransform) {
-                context.pose().translate(pivotX, pivotY)
-                if (rotation != 0.0f) {
-                    context.pose().mulPose(Axis.ZP.rotationDegrees(rotation))
-                }
-                if (scaleX != 1.0f || scaleY != 1.0f) {
-                    context.pose().scale(scaleX, scaleY)
-                }
-                context.pose().translate(-pivotX, -pivotY)
-            }
+            applyTransform(context)
             context.alpha().push(alpha)
             run {
                 if (AcademyCraft.DEBUG_UI) {
@@ -257,8 +237,7 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
         val origin = Matrix4f(context.pose().last().pose())
         renderInternal(context)
         val built = buildCache(context, start, blurStart, origin)
-        // 祖先 alpha 过低 (如淡入首帧) 时烘焙颜色接近全透明, 缓存既无意义又会放大校正噪声, 不建立缓存.
-        if (built != null && context.accumulatedAlpha > ALPHA_CACHE_EPSILON) {
+        if (context.accumulatedAlpha > ALPHA_CACHE_EPSILON) {
             ownRenderCache = built
         } else {
             ownRenderCache = null
@@ -293,25 +272,17 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
         }
     }
 
-    /**
-     * 把本次 [start, commands.size) 段录制为 [SubtreeCache] 喵.
-     * 命令位姿按"世界位姿"保存 (与录制帧提交时一致); 祖先位姿未变时 fast path 直接复用,
-     * 变化时以 `current * invRecordOrigin * worldPose` 重组. 位姿矩阵不可逆时返回 null (调用方不缓存) 喵.
-     */
     private fun buildCache(
         context: Canvas,
         start: Int,
         blurStart: Int,
         origin: Matrix4f
-    ): SubtreeCache? {
-        // 录制期的祖先 scissor: 命中它的命令纯属祖先裁剪, 回放时用当前 scissor 栈重取 (对齐 P2-7),
-        // 否则缓存会烘焙滚动面板的旧裁剪矩形导致深失效重录.
+    ): SubtreeCache {
         val recordScissor = context.currentScissor()
         val localized = ArrayList<SubmittedCommand>(context.commands.size - start)
         for (i in start until context.commands.size) {
             val c = context.commands[i]
             val localScissor = if (c.scissorRect == recordScissor) null else c.scissorRect
-            // 保留世界位姿 (fast path 直接复用); 命令保持记录顺序.
             localized.add(SubmittedCommand(c.command, c.pose, localScissor, c.commandIndex))
         }
         return SubtreeCache(localized, context.blurRegionsSince(blurStart), origin, context.accumulatedAlpha)
@@ -343,8 +314,6 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
         super.layout(left, top, right, bottom)
         if (needsOnLayout) {
             onLayout()
-            // 自身尺寸变化已在 super.layout 中定向失效; 后代各自按自身尺寸变化失效,
-            // 不再深失效 (位置变化走位姿重组, alpha/scissor 走缓存外置).
         }
         isLayoutDirty = false
     }
@@ -493,65 +462,36 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
     override fun addChild(name: String, child: Widget) {
         val cp = child.parent
         cp?.removeChild(name)
-
-        var lp = child.layoutParams
-        if (lp === WidgetContainer.LayoutParams.NONE) {
-            lp = generateDefaultLayoutParams()
-        }
-        if (!checkLayoutParams(lp)) {
-            lp = generateLayoutParams(lp)
-        }
-        child.layoutParams = lp
-
-        child.parent = this
-        child.name = name
-        protectedChildren[name] = child
-
-        if (isAttached()) {
-            child.dispatchAttached()
-        }
-
-        requestLayout()
-        invalidate()
+        installChild(name, child)
     }
 
     override fun removeChild(name: String) {
         val widget = children[name]
         if (widget != null) {
-            if (widget.isAttached()) {
-                widget.dispatchDetached()
-            }
-
-            widget.parent = null
-            if (focusedChild === widget) {
-                focusedChild = null
-            }
-            if (hoveredWidget === widget) {
-                hoveredWidget = null
-            }
-            if (gestureTarget === widget) {
-                gestureTarget = null
-            }
+            detachChild(widget)
             protectedChildren.remove(name)
-            dirtyChildrenSet.remove(widget)
             requestLayout()
             invalidate()
         }
     }
 
     override fun replaceChild(name: String, child: Widget) {
-        val old = protectedChildren[name]
-        if (old != null) {
-            if (old.isAttached()) {
-                old.dispatchDetached()
-            }
-            old.parent = null
-            if (focusedChild === old) focusedChild = null
-            if (hoveredWidget === old) hoveredWidget = null
-            if (gestureTarget === old) gestureTarget = null
-            dirtyChildrenSet.remove(old)
-        }
+        protectedChildren[name]?.let { detachChild(it) }
+        installChild(name, child)
+    }
 
+    private fun detachChild(widget: Widget) {
+        if (widget.isAttached()) {
+            widget.dispatchDetached()
+        }
+        widget.parent = null
+        if (focusedChild === widget) focusedChild = null
+        if (hoveredWidget === widget) hoveredWidget = null
+        if (gestureTarget === widget) gestureTarget = null
+        dirtyChildrenSet.remove(widget)
+    }
+
+    private fun installChild(name: String, child: Widget) {
         var lp = child.layoutParams
         if (lp === WidgetContainer.LayoutParams.NONE) {
             lp = generateDefaultLayoutParams()
@@ -560,6 +500,7 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
             lp = generateLayoutParams(lp)
         }
         child.layoutParams = lp
+
         child.parent = this
         child.name = name
         protectedChildren[name] = child
@@ -598,7 +539,6 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
     companion object {
         private val LOGGER = AcademyCraft.getLogger()
 
-        /** 祖先 alpha 低于此值时不建立内容缓存 (淡入首帧), 避免校正乘子放大噪声. */
         private const val ALPHA_CACHE_EPSILON = 1e-3f
 
         fun getChildMeasureSpec(

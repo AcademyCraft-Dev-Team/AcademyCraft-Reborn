@@ -53,11 +53,11 @@ class UiDebugBrowserScreen : Screen(Component.translatable("screen.academy.ui_de
         }
         val bottomY = panelY + panelHeight - 25
         drawButton(
-            graphics, panelX + 8, bottomY, 96, 17,
+            graphics, panelX + 8, bottomY,
             tr("screen.academy.ui_debug.action.publish"), mouseX, mouseY
         )
         drawButton(
-            graphics, panelX + panelWidth - 104, bottomY, 96, 17,
+            graphics, panelX + panelWidth - 104, bottomY,
             tr("screen.academy.ui_debug.action.close"), mouseX, mouseY
         )
     }
@@ -89,6 +89,9 @@ class UiDebugBrowserScreen : Screen(Component.translatable("screen.academy.ui_de
     }
 
     companion object {
+        private const val BUTTON_WIDTH = 96
+        private const val BUTTON_HEIGHT = 17
+
         fun open() {
             Minecraft.getInstance().execute { Minecraft.getInstance().gui.setScreen(UiDebugBrowserScreen()) }
         }
@@ -144,13 +147,13 @@ class UiDebugBrowserScreen : Screen(Component.translatable("screen.academy.ui_de
         }
 
         private fun drawButton(
-            graphics: GuiGraphicsExtractor, x: Int, y: Int, width: Int, height: Int,
+            graphics: GuiGraphicsExtractor, x: Int, y: Int,
             label: String, mouseX: Int, mouseY: Int
         ) {
-            val hovered = inside(mouseX.toDouble(), mouseY.toDouble(), x, y, width, height)
-            graphics.fill(x, y, x + width, y + height, if (hovered) 0x554AA9C8 else 0x22FFFFFF)
-            border(graphics, x, y, width, height, if (hovered) 0xFF65D5F2.toInt() else 0x884AA9C8.toInt())
-            graphics.centeredText(Minecraft.getInstance().font, label, x + width / 2, y + 5, 0xFFE8F5F8.toInt())
+            val hovered = inside(mouseX.toDouble(), mouseY.toDouble(), x, y, BUTTON_WIDTH, BUTTON_HEIGHT)
+            graphics.fill(x, y, x + BUTTON_WIDTH, y + BUTTON_HEIGHT, if (hovered) 0x554AA9C8 else 0x22FFFFFF)
+            border(graphics, x, y, BUTTON_WIDTH, BUTTON_HEIGHT, if (hovered) 0xFF65D5F2.toInt() else 0x884AA9C8.toInt())
+            graphics.centeredText(Minecraft.getInstance().font, label, x + BUTTON_WIDTH / 2, y + 5, 0xFFE8F5F8.toInt())
         }
     }
 }

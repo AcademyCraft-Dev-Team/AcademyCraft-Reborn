@@ -78,7 +78,7 @@ public abstract class MixinHud {
         graphics.fill(0, 3, 3, height - 3, color);
         graphics.fill(width - 3, 3, width, height - 3, color);
         if (PlayerControlClientState.isActive() || MentalResistanceClientState.isActive()) {
-            var barWidth = Math.min(160, Math.max(80, width / 5));
+            var barWidth = Math.clamp(width / 5, 80, 160);
             var left = (width - barWidth) / 2;
             var top = PlayerControlClientState.isController() ? height - 65 : height - 18;
             graphics.fill(left - 1, top - 1, left + barWidth + 1, top + 7, 0xB0000000);

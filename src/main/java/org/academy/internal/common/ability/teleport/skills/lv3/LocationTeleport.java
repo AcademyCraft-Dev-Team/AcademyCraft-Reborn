@@ -497,7 +497,7 @@ public final class LocationTeleport extends Skill {
                     ByteBufCodecs.INT.encode(buf, packet.defensiveMarkIndex);
                 },
                 buf -> {
-                    var count = Math.min(MILESTONE_MAX_MARKS, Math.max(0, ByteBufCodecs.VAR_INT.decode(buf)));
+                    var count = Math.clamp(ByteBufCodecs.VAR_INT.decode(buf), 0, MILESTONE_MAX_MARKS);
                     var marks = new ArrayList<Mark>(count);
                     for (var i = 0; i < count; i++) {
                         marks.add(new Mark(ByteBufCodecs.STRING_UTF8.decode(buf), ByteBufCodecs.STRING_UTF8.decode(buf),

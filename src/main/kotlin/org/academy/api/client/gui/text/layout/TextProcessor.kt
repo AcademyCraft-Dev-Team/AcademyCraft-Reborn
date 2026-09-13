@@ -8,15 +8,9 @@ import org.academy.api.client.gui.text.TextBlob
 import org.academy.api.client.gui.text.font.MsdfFontService
 import org.academy.api.client.gui.text.subrun.SubRunControl
 import org.academy.api.client.gui.text.subrun.TextKind
+import kotlin.math.roundToLong
 
-/**
- * 设备展开：把设备无关的 [TextBlob]（AWT 布局，glyph index + user-units 位置）按 canvas CTM
- * 展开为 GUI 像素的字形四边形。选路/4×4 亚像素/图集 UV 在此；不再做任何 shaping/换行。
- *
- * 一段（run）统一选路：位图带、或 MSDF 带；MSDF 未就绪时整段回退位图占位。
- */
 object TextProcessor {
-    /** 一个已定位到 GUI 像素的字形（块本地坐标，pose 会再加原点）。 */
     class DeviceGlyph(
         val kind: TextKind,
         val textureView: GpuTextureView,
@@ -42,16 +36,11 @@ object TextProcessor {
     ): List<DeviceGlyph> {
         if (blob.runs.isEmpty()) return emptyList()
 
-        // 淡出窗口与字形同在块本地坐标；调用方传入的是布局本地单位，按 contentScale 换算。
         val fadeLeftEdge = fadeViewportLeft * contentScale
         val fadeWidth = fadeViewportWidth * contentScale
         val fadeLen = fadeLength * contentScale
 
-        // 光栅分辨率跟随最终 CTM（Skia strike spec）：contentScale × CTM 缩放。
         val rasterPx = BitmapStrikeCache.quantize(fontSize * deviceScale * maxOf(guiScale, 0f))
-        // 几何只按内容缩放（局部空间），CTM 缩放由 appendInstances 一次施加。
-        // 但位图 ink 的 bearing 是物理像素量：笔位需含 CTM 缩放来定相位/落点，
-        // 再把贴回局部的落点除以 CTM 缩放，避免 bearing 被 pose 二次放大。
         val ctmScale = if (contentScale > 0f && deviceScale > 0f) deviceScale / contentScale else 1f
         val unitDevice = contentScale * ctmScale * guiScale
         val originPhysX = originXGui * guiScale
@@ -69,8 +58,6 @@ object TextProcessor {
             val runBitmap = decideBitmap(run.glyphIndices, run.charIndices, font, rasterPx, revealCodeUnits)
 
             if (runBitmap && rasterPx > SubRunControl.BITMAP_PX_THRESHOLD) {
-                // 大字走位图占位时，确保 MSDF 生成已入队；否则 GlyphReadiness.version
-                // 永远不会变化，"占位 → MSDF" 的晋升无法发生（拉取式失效空转）。
                 for (g in run.glyphIndices.indices) {
                     val charIndex = run.charIndices[g]
                     if (charIndex >= revealCodeUnits) continue
@@ -91,12 +78,12 @@ object TextProcessor {
                 if (runBitmap) {
                     if (rasterPx < 1f) continue
                     val penPhysX = originPhysX + penX * unitDevice
-                    val qx = Math.round(penPhysX * subpixelSteps)
+                    val qx = (penPhysX * subpixelSteps).roundToLong()
                     val phaseX = (qx and subpixelMask).toInt()
                     val basePhysX = (qx - phaseX) * subpixelInv
 
                     val penPhysY = originPhysY + baselineY * unitDevice
-                    val qy = Math.round(penPhysY * subpixelSteps)
+                    val qy = (penPhysY * subpixelSteps).roundToLong()
                     val phaseY = (qy and subpixelMask).toInt()
                     val basePhysY = (qy - phaseY) * subpixelInv
 
@@ -111,8 +98,22 @@ object TextProcessor {
                             TextKind.BITMAP, bg.page.textureView,
                             x, y, w, bg.heightPx * unit * contentScale,
                             bg.u0, bg.v0, bg.u1, bg.v1,
-                            MarqueeState.fadeFactor(x, fadeLeftEdge, fadeWidth, fadeLen, fadeLeftStrength, fadeRightStrength),
-                            MarqueeState.fadeFactor(x + w, fadeLeftEdge, fadeWidth, fadeLen, fadeLeftStrength, fadeRightStrength)
+                            MarqueeState.fadeFactor(
+                                x,
+                                fadeLeftEdge,
+                                fadeWidth,
+                                fadeLen,
+                                fadeLeftStrength,
+                                fadeRightStrength
+                            ),
+                            MarqueeState.fadeFactor(
+                                x + w,
+                                fadeLeftEdge,
+                                fadeWidth,
+                                fadeLen,
+                                fadeLeftStrength,
+                                fadeRightStrength
+                            )
                         )
                     )
                 } else {
@@ -126,8 +127,22 @@ object TextProcessor {
                             x, y, w,
                             (mg.planeTop - mg.planeBottom) * fontUnitScale * contentScale,
                             mg.u0, mg.v0, mg.u1, mg.v1,
-                            MarqueeState.fadeFactor(x, fadeLeftEdge, fadeWidth, fadeLen, fadeLeftStrength, fadeRightStrength),
-                            MarqueeState.fadeFactor(x + w, fadeLeftEdge, fadeWidth, fadeLen, fadeLeftStrength, fadeRightStrength)
+                            MarqueeState.fadeFactor(
+                                x,
+                                fadeLeftEdge,
+                                fadeWidth,
+                                fadeLen,
+                                fadeLeftStrength,
+                                fadeRightStrength
+                            ),
+                            MarqueeState.fadeFactor(
+                                x + w,
+                                fadeLeftEdge,
+                                fadeWidth,
+                                fadeLen,
+                                fadeLeftStrength,
+                                fadeRightStrength
+                            )
                         )
                     )
                 }
@@ -163,5 +178,5 @@ object TextProcessor {
     }
 
     private fun codePointAt(text: String, charIndex: Int): Int =
-        if (charIndex in 0 until text.length) text.codePointAt(charIndex) else 0
+        if (charIndex in text.indices) text.codePointAt(charIndex) else 0
 }

@@ -2,11 +2,6 @@ package org.academy.api.client.gui.widget
 
 import java.util.function.Consumer
 
-/**
- * A container that acts as both a logical controller and a visual layout
- * for a group of [RadioButtonWidget]s, ensuring only one can be selected at a time.
- * It inherits from LinearLayoutWidget to automatically arrange its children.
- */
 open class RadioGroupWidget : LinearLayoutWidget() {
     var selectedButton: RadioButtonWidget? = null
         protected set
@@ -19,10 +14,10 @@ open class RadioGroupWidget : LinearLayoutWidget() {
             return
         }
 
-        internalSelect(buttonToSelect, true)
+        internalSelect(buttonToSelect)
     }
 
-    private fun internalSelect(buttonToSelect: RadioButtonWidget?, triggerCallback: Boolean) {
+    private fun internalSelect(buttonToSelect: RadioButtonWidget?) {
         if (buttonToSelect != null && !buttonToSelect.isEnabled) {
             return
         }
@@ -38,7 +33,7 @@ open class RadioGroupWidget : LinearLayoutWidget() {
             selectedButton!!.isSelected = true
         }
 
-        if (triggerCallback && (selectionChanged || allowReselect) && onSelectionChanged != null && this.selectedButton != null) {
+        if ((selectionChanged || allowReselect) && onSelectionChanged != null && this.selectedButton != null) {
             onSelectionChanged!!.accept(this.selectedButton!!)
         }
     }
@@ -54,7 +49,7 @@ open class RadioGroupWidget : LinearLayoutWidget() {
     override fun removeChild(name: String) {
         val removedWidget = children[name]
         if (removedWidget === selectedButton) {
-            internalSelect(null, true)
+            internalSelect(null)
         }
 
         if (removedWidget is RadioButtonWidget) {
@@ -71,7 +66,7 @@ open class RadioGroupWidget : LinearLayoutWidget() {
             }
         }
         if (selectedButton != null) {
-            internalSelect(null, true)
+            internalSelect(null)
         }
         super.clearChildren()
     }

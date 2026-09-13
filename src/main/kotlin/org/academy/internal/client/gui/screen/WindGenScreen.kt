@@ -12,10 +12,8 @@ import org.academy.api.client.gui.screen.ContainerUiScreen
 import org.academy.api.client.gui.util.InfoAreaUtil.create
 import org.academy.api.client.gui.util.InfoAreaUtil.createAttributeRow
 import org.academy.api.client.gui.util.InfoAreaUtil.createInfoRow
-import org.academy.api.client.gui.util.WirelessPanelUtil.create
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.resources.R
-import org.academy.api.client.util.AnimationUtil
 import org.academy.internal.common.world.inventory.WindGenMenu
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity
 import java.util.function.Consumer
@@ -80,35 +78,7 @@ class WindGenScreen(
             effect.addChild("icon_base", baseIcon)
         }
 
-        val wirelessPage = create(mainPos, true)
-        wirelessPage.visibility = Widget.Visibility.GONE
-        wirelessPage.isEnabled = false
-        content.addChild("page_wireless", wirelessPage)
-
-        val wirelessButton = createButton(R.textures.gui.icon.icon_wireless)
-        wirelessButton.layoutParams = WidgetContainer.LayoutParams()
-            .widthMode(SizeMode.MATCH_PARENT)
-            .height(16f)
-
-        pageButtons.addChild("wireless", wirelessButton)
-        pageButtons.onSelectionChanged = Consumer { button: RadioButtonWidget? ->
-            when (button!!.name) {
-                "inv" -> {
-                    AnimationUtil.hide(wirelessPage)
-                    AnimationUtil.show(invPage)
-                    isHandleContainer = true
-                    isRenderInventory = true
-                }
-
-                "wireless" -> {
-                    AnimationUtil.hide(invPage)
-                    AnimationUtil.show(wirelessPage)
-                    isHandleContainer = false
-                    isRenderInventory = false
-                }
-            }
-        }
-        pageButtons.selectButton(invButton)
+        setupWirelessPage(pageButtons, invButton, content, invPage, mainPos, createButton(R.textures.gui.icon.icon_wireless))
 
         val info = create(this, (leftPos + imageWidth).toFloat(), (topPos - 22).toFloat())
         run {

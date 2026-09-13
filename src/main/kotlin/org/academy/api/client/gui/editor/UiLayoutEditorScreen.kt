@@ -36,7 +36,6 @@ class UiLayoutEditorScreen(
     private lateinit var previewHost: FrameLayoutWidget
     private var previewRoot: Widget? = null
 
-    // ImGui 侧共享状态
     @Volatile
     var fileName: String = "layout"
 
@@ -66,7 +65,6 @@ class UiLayoutEditorScreen(
         super.tick()
     }
 
-    // ============ 文档访问 (线程安全) ============
 
     fun readDoc(): WidgetNode = synchronized(lock) { docNode }
 
@@ -81,7 +79,6 @@ class UiLayoutEditorScreen(
         return o
     }
 
-    /** 在锁内修改文档, 随后刷新预览. */
     fun mutateDoc(action: (WidgetNode) -> Unit) {
         synchronized(lock) {
             action(docNode)
@@ -144,7 +141,6 @@ class UiLayoutEditorScreen(
         validationError = result.error
     }
 
-    // ============ 预览 ============
 
     private fun rebuildPreview() {
         val path = synchronized(lock) { selectedPath }
@@ -184,22 +180,25 @@ class UiLayoutEditorScreen(
             val dx = t.getAbsoluteX() - host.getAbsoluteX()
             val dy = t.getAbsoluteY() - host.getAbsoluteY()
             val thickness = 1f
-            val r = 0.4f
-            val g = 0.8f
-            val b = 1f
-            val a = 0.9f
             context.pose().pushPose()
             context.pose().translate(dx, dy)
-            context.submit(FillRectDrawCommand(t.width, thickness, r, g, b, a))
-            context.pose().pushPose()
-            context.pose().translate(0f, t.height - thickness)
-            context.submit(FillRectDrawCommand(t.width, thickness, r, g, b, a))
+            drawEdge(context, 0f, 0f, t.width, thickness)
+            drawEdge(context, 0f, t.height - thickness, t.width, thickness)
+            drawEdge(context, 0f, 0f, thickness, t.height)
+            drawEdge(context, t.width - thickness, 0f, thickness, t.height)
             context.pose().popPose()
-            context.submit(FillRectDrawCommand(thickness, t.height, r, g, b, a))
+        }
+
+        private fun drawEdge(
+            context: Canvas,
+            x: Float,
+            y: Float,
+            width: Float,
+            height: Float,
+        ) {
             context.pose().pushPose()
-            context.pose().translate(t.width - thickness, 0f)
-            context.submit(FillRectDrawCommand(thickness, t.height, r, g, b, a))
-            context.pose().popPose()
+            context.pose().translate(x, y)
+            context.submit(FillRectDrawCommand(width, height, 0.4f, 0.8f, 1f, 0.9f))
             context.pose().popPose()
         }
     }

@@ -34,15 +34,15 @@ object UiDebugLayoutRegistry {
         ),
         UiDebugLayoutDefinition(
             "precision_operation_wide",
-            bindings = frameBindings("panel", "palette", "canvas", "inspector")
+            bindings = frameBindings()
         ),
         UiDebugLayoutDefinition(
             "precision_operation_medium",
-            bindings = frameBindings("panel", "palette", "canvas", "inspector")
+            bindings = frameBindings()
         ),
         UiDebugLayoutDefinition(
             "precision_operation_compact",
-            bindings = frameBindings("panel", "palette", "canvas", "inspector")
+            bindings = frameBindings()
         ),
         UiDebugLayoutDefinition(
             "reflection_filter_wide",
@@ -67,5 +67,5 @@ object UiDebugLayoutRegistry {
 
     private fun empty(name: String) = UiDebugBinding(name, EmptyWidget::class.java)
 
-    private fun frameBindings(vararg names: String) = names.map(::frame)
+    private fun frameBindings() = listOf("panel", "palette", "canvas", "inspector").map(::frame)
 }

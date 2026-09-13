@@ -34,9 +34,6 @@ import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 
 import java.util.*;
 
-/**
- * Authoritative Minecraft-server adapter for vector-manipulation programs.
- */
 public final class ServerAcceleratorProgramRuntime implements AcceleratorProgramRuntime, org.academy.api.common.ability.program.ForwardingProgramTargetResolver {
     public static final double MAX_QUERY_RANGE = AbilityProgramSpatialRanges.forCategory(
             AcceleratorProgramNodeCatalog.ACCELERATOR).queryRange();
@@ -243,7 +240,7 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
             @Override
             public ProgramActionTransaction.Undo apply() {
                 var previousVelocity = projectile.getDeltaMovement();
-                var speed = Math.max(0.5, Math.min(4.0, previousVelocity.length()));
+                var speed = Math.clamp(previousVelocity.length(), 0.5, 4.0);
                 var previousOwner = projectile.getOwner();
                 charge(Skills.VECTOR_REFLECTION.get(), 8.0f + (float) speed * 2.0f);
                 projectile.setOwner(player);
@@ -738,9 +735,6 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
         };
     }
 
-    /**
-     * All impacts staged by one VM run reserve their charges before the first world effect.
-     */
     private static final class ImpactBatch {
         private final ArrayList<Float> costs = new ArrayList<>();
         private boolean reserved;

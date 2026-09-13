@@ -22,11 +22,6 @@ import org.academy.api.common.profiler.SamplerSnapshot
 import org.academy.api.common.profiler.ZoneProfiler
 import org.joml.Vector4f
 
-/**
- * ImGui 性能分析窗口（开发构建）。
- *
- * 数据全部来自 [AcademyProfiler]（自包含采集层），本类只负责可视化。
- */
 object ImGuiProfilerWindow {
     @Volatile
     var visible = false
@@ -35,6 +30,7 @@ object ImGuiProfilerWindow {
     private const val TAB_SAMPLER = 0
     private const val TAB_ZONES = 1
     private const val TAB_FRAME = 2
+    private const val TOP_SAMPLED_COUNT = 10
     private var tab = TAB_SAMPLER
 
     private var samplerIntervalUs = 1000
@@ -50,7 +46,6 @@ object ImGuiProfilerWindow {
         visible = value
     }
 
-    /** 渲染到主屏幕（由 HudManager 在帧末调用）。 */
     fun renderToMainScreen() {
         if (!visible || !Dev.HAS_IM_GUI) return
         val mc = Minecraft.getInstance()
@@ -140,9 +135,6 @@ object ImGuiProfilerWindow {
         }
     }
 
-    // ------------------------------------------------------------------
-    // Sampler tab
-    // ------------------------------------------------------------------
 
     private fun drawSamplerTab() {
         val snapshot = AcademyProfiler.snapshot()
@@ -161,7 +153,7 @@ object ImGuiProfilerWindow {
         )
 
         if (sampler.totalSamples() > 0 && ImPlot.beginPlot("Sampler Pie", 0f, 200f)) {
-            val top = topSampledMethods(sampler, 10)
+            val top = topSampledMethods(sampler)
             if (top.isNotEmpty()) {
                 ImPlot.setupAxes("", "")
                 ImPlot.setupAxesLimits(-1.5, 1.5, -1.5, 1.5)
@@ -185,7 +177,7 @@ object ImGuiProfilerWindow {
         ImGui.endChild()
     }
 
-    private fun topSampledMethods(sampler: SamplerSnapshot, n: Int): List<Pair<String, Double>> {
+    private fun topSampledMethods(sampler: SamplerSnapshot): List<Pair<String, Double>> {
         val map = HashMap<String, Long>()
         for (view in sampler.threads().values) {
             collectSelf(view.root(), map)
@@ -193,7 +185,7 @@ object ImGuiProfilerWindow {
         val total = sampler.totalSamples()
         return map.entries
             .sortedByDescending { it.value }
-            .take(n)
+            .take(TOP_SAMPLED_COUNT)
             .map { it.key to (if (total > 0) it.value * 100.0 / total else 0.0) }
     }
 
@@ -218,9 +210,6 @@ object ImGuiProfilerWindow {
         }
     }
 
-    // ------------------------------------------------------------------
-    // Zones tab
-    // ------------------------------------------------------------------
 
     private fun drawZonesTab() {
         if (!AcademyProfiler.isCapturingZones()) {
@@ -278,9 +267,7 @@ object ImGuiProfilerWindow {
             for (child in children) {
                 ImGui.tableNextRow()
                 ImGui.tableNextColumn()
-                if (ImGui.selectable(child.name() + "##" + child.path())) {
-                    // single click selects
-                }
+                ImGui.selectable(child.name() + "##" + child.path())
                 if (ImGui.isItemHovered() && ImGui.isMouseDoubleClicked(0)) {
                     zonePath = child.path()
                 }
@@ -309,9 +296,6 @@ object ImGuiProfilerWindow {
         return if (idx < 0) ZoneProfiler.ROOT else path.substring(0, idx)
     }
 
-    // ------------------------------------------------------------------
-    // Frame Time tab
-    // ------------------------------------------------------------------
 
     private fun drawFrameTab() {
         val frame = AcademyProfiler.snapshot().frame

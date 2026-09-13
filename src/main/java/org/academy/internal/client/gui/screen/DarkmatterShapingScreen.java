@@ -17,9 +17,6 @@ import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterShapi
 
 import java.util.*;
 
-/**
- * Standalone editor for native dark-matter equipment and material blueprints.
- */
 public final class DarkmatterShapingScreen extends UiScreen {
     private static final int PANEL_W = 392;
     private static final int PANEL_H = 210;
@@ -465,9 +462,9 @@ public final class DarkmatterShapingScreen extends UiScreen {
     }
 
     static int modifierTooltipTextWidth(int screenWidth) {
-        return Math.max(1, Math.min(
-                MODIFIER_TOOLTIP_MAX_WIDTH,
-                screenWidth - MODIFIER_TOOLTIP_SCREEN_MARGIN));
+        return Math.clamp(
+                screenWidth - MODIFIER_TOOLTIP_SCREEN_MARGIN, 1,
+                MODIFIER_TOOLTIP_MAX_WIDTH);
     }
 
     private void addWrappedTooltipText(

@@ -73,7 +73,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
 
-/** A 30-second state that records the owner's successful same-dimension teleports. */
 public final class SpacialExcision extends Skill {
     public static final int ACTIVATION_CP = 100;
     public static final int DURATION_TICKS = 600;
@@ -247,8 +246,6 @@ public final class SpacialExcision extends Skill {
         private final Deque<Skill.ActiveExecutionContext> teleportExecutions = new ArrayDeque<>();
         private final Set<ServerPlayer> observers =
                 Collections.newSetFromMap(new IdentityHashMap<>());
-        // Queries are executed serially on the server thread. Reuse the scan
-        // scratch so each segment does not allocate a new candidate list.
         private final ArrayList<LivingEntity> queryCandidates = new ArrayList<>();
         private boolean ended;
 
@@ -303,9 +300,6 @@ public final class SpacialExcision extends Skill {
 
         private void tickCombat(long now) {
             if (ended) return;
-            // Damage and teleport callbacks may synchronously record another segment or end this
-            // context.  A per-tick snapshot gives those reentrant changes deterministic semantics:
-            // new segments start dealing damage next tick, and cleanup cannot invalidate iteration.
             for (var segment : List.copyOf(segments)) {
                 if (ended) break;
                 querySegment(now, segment);
@@ -425,7 +419,7 @@ public final class SpacialExcision extends Skill {
             var rangeSquared = OBSERVER_RANGE * OBSERVER_RANGE;
             for (var observer : sourceLevel.players()) {
                 var along = observer.position().subtract(segment.start()).dot(delta) / lengthSquared;
-                along = Math.max(0.0, Math.min(1.0, along));
+                along = Math.clamp(along, 0.0, 1.0);
                 var closest = segment.start().add(delta.scale(along));
                 if (observer.position().distanceToSqr(closest) > rangeSquared) continue;
                 MisakaNetworkServer.send(observer, packet);
@@ -467,9 +461,7 @@ public final class SpacialExcision extends Skill {
         }
     }
 
-    /** Server-only combat geometry for one spatial-excision segment. */
     static final class Field {
-        /** Original 3x3 crack damage range, independent from attraction. */
         static final double DAMAGE_HALF_EXTENT = 1.5;
         static final double ATTRACTION_HALF_EXTENT = 3.5;
         static final int PULSE_INTERVAL_TICKS = 10;

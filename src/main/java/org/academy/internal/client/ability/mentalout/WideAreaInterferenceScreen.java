@@ -34,7 +34,6 @@ import org.misaka.MisakaNetworkClient;
 
 import java.util.*;
 
-/** Full-screen Mentalout command workspace with a roster, large display, and extensible action rail. */
 public final class WideAreaInterferenceScreen extends UiScreen {
     private static final int PANEL = 0xB8000000;
     private static final int PANEL_SOFT = 0x78000000;
@@ -236,7 +235,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
         }
 
         var workWidth = Math.min(scaled(250), Math.max(scaled(160), display.width / 2));
-        var workTop = display.y + Math.min(scaled(30), Math.max(0, panel.bottom() - display.y - gap - scaled(230)));
+        var workTop = display.y + Math.clamp(panel.bottom() - display.y - gap - scaled(230), 0, scaled(30));
         var workHeight = Math.min(panel.bottom() - workTop - gap,
                 Math.max(scaled(230), display.height - scaled(34)));
         workPanel = new Rect(display.right() - workWidth - gap, workTop, workWidth, Math.max(1, workHeight));
@@ -369,7 +368,6 @@ public final class WideAreaInterferenceScreen extends UiScreen {
 
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        // The live world is deliberately retained as the display-area background.
     }
 
     @Override
@@ -593,10 +591,8 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                 ? "screen.academy.wide_area_interference.mode.god"
                 : "screen.academy.wide_area_interference.mode.target";
         var mode = Component.translatable(modeKey).getString();
-        var modeWidth = Math.min(
-                Math.round(TextWidget.Companion.getTextWidth(mode, captionFontSize)),
-                Math.max(1, display.width / 3)
-        );
+        var modeWidth = Math.clamp(display.width / 3, 1,
+                Math.round(TextWidget.Companion.getTextWidth(mode, captionFontSize)));
         text(graphics,
                 mode,
                 display.right() - inset - modeWidth,
@@ -653,7 +649,6 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                 buttons.add(workButton(y, (workMode == mode ? "> " : "") + workText("mode." + mode.name().toLowerCase(Locale.ROOT)), () -> workMode = value));
                 y += row;
             }
-            // Only fully visible rows participate in rendering and hit testing.
             var top = workPanel.y + scaled(47);
             var bottom = workPanel.bottom() - scaled(85);
             var scroll = workScroll * row;
@@ -1053,8 +1048,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                     regionVerticalOffset += step;
                 } else {
                     var horizontal = regionDimensions();
-                    var maxHeight = Math.max(1,
-                            Math.min(32, 4096 / Math.max(1, horizontal[0] * horizontal[2])));
+                    var maxHeight = Math.clamp(4096 / Math.max(1, horizontal[0] * horizontal[2]), 1, 32);
                     regionHeight = Math.clamp(regionHeight + step, 1, maxHeight);
                 }
                 clampRegionVerticalOffset();
