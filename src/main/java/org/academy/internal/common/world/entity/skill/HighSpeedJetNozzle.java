@@ -32,7 +32,6 @@ import org.academy.internal.common.sounds.SoundEvents;
 
 import java.util.UUID;
 
-/** Block-face or entity-mounted nozzle shared by High-Speed Jet and ability programs. */
 public final class HighSpeedJetNozzle extends Entity {
     private static final EntityDataAccessor<Integer> FACE =
             SynchedEntityData.defineId(HighSpeedJetNozzle.class, EntityDataSerializers.INT);
@@ -100,7 +99,6 @@ public final class HighSpeedJetNozzle extends Entity {
         snapToSurface();
     }
 
-    /** Attaches the nozzle to the captured block that originally supported it. */
     public void attachToStructure(
             UUID ownerUuid,
             BlockStructure support,
@@ -271,7 +269,6 @@ public final class HighSpeedJetNozzle extends Entity {
         });
     }
 
-    /** Returns whether this nozzle's current jet corridor reaches the supplied bounds. */
     public boolean jetIntersects(AABB bounds, ServerPlayer owner) {
         if (bounds == null || owner == null || owner.level() != level()) return false;
         var direction = direction();
@@ -393,8 +390,8 @@ public final class HighSpeedJetNozzle extends Entity {
         var segment = end.subtract(start);
         var lengthSqr = segment.lengthSqr();
         var t = lengthSqr <= 1.0e-8 ? 0.0
-                : Math.max(0.0, Math.min(1.0,
-                point.subtract(start).dot(segment) / lengthSqr));
+                : Math.clamp(
+                point.subtract(start).dot(segment) / lengthSqr, 0.0, 1.0);
         return point.distanceToSqr(start.add(segment.scale(t)))
                 <= Math.max(0.0, radius) * Math.max(0.0, radius);
     }

@@ -59,7 +59,6 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
 
-/** Places persistent block-face or entity-mounted jet nozzles and remotely fires them. */
 public final class HighSpeedJet extends Skill {
     private static final double PLACEMENT_RANGE = 8.0;
     public static final double NOZZLE_RETENTION_RANGE = 64.0;
@@ -402,10 +401,6 @@ public final class HighSpeedJet extends Skill {
                     (_, _) -> resolvedNozzles.forEach(nozzle -> nozzle.activate(duration)));
         }
 
-        /**
-         * Places a non-persistent program nozzle on the requested block face.
-         * The direction is reduced to its dominant world axis so it maps to one block face.
-         */
         public static HighSpeedJetNozzle placeTemporaryBlockNozzle(
                 ServerPlayer player,
                 BlockPos supportPos,
@@ -420,7 +415,6 @@ public final class HighSpeedJet extends Skill {
                     costMultiplier);
         }
 
-        /** Places a non-persistent program nozzle on an entity, aimed in the supplied direction. */
         public static HighSpeedJetNozzle placeTemporaryEntityNozzle(
                 ServerPlayer player,
                 Entity support,
@@ -439,7 +433,6 @@ public final class HighSpeedJet extends Skill {
                     costMultiplier);
         }
 
-        /** Activates every currently retained nozzle owned by the player. */
         public static List<HighSpeedJetNozzle> activateOwnedNozzles(
                 ServerPlayer player,
                 int durationTicks,
@@ -468,7 +461,6 @@ public final class HighSpeedJet extends Skill {
             return nozzles;
         }
 
-        /** Runs a shared High-Speed Jet effect through the skill's resource gate. */
         public static boolean executeWithResources(
                 ServerPlayer player,
                 float cpCost,
@@ -562,9 +554,9 @@ public final class HighSpeedJet extends Skill {
         private static int resolvedMaximumNozzles(ServerPlayer player, HighSpeedJet skill) {
             var configuredBaseMaximum = Math.round(AeromanipConfig.skillFloat(
                     player, SkillNames.HIGH_SPEED_JET, "maximumNozzles", 8.0f));
-            return Math.max(1, Math.min(32,
+            return Math.clamp(
                     configuredBaseMaximum
-                            + (skill.getEffectiveProficiencyMilestone(player) >= 1 ? 4 : 0)));
+                            + (skill.getEffectiveProficiencyMilestone(player) >= 1 ? 4 : 0), 1, 32);
         }
 
         private static boolean matches(HighSpeedJetNozzle nozzle, PlacementTarget target) {

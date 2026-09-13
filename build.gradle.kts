@@ -171,9 +171,10 @@ tasks.register<Jar>("apiExampleJar") {
 
 val verifyApiExample = tasks.register("verifyApiExample") {
     dependsOn(tasks.named(apiExampleSourceSet.compileJavaTaskName))
-    inputs.files(apiExampleSourceSet.allJava)
+    val apiExampleSources = apiExampleSourceSet.allJava.files.toList()
+    inputs.files(apiExampleSources)
     doLast {
-        apiExampleSourceSet.allJava.forEach { source ->
+        apiExampleSources.forEach { source ->
             require(!source.readText().contains("org.academy.internal")) {
                 "API example imports or references internal Academy implementation: $source"
             }
@@ -346,25 +347,6 @@ neoForge {
             gameDirectory.set(file("run/server-compat"))
             programArguments.add("--nogui")
         }
-        register("uiEditor") {
-            client()
-            environment("IS_DEV", "true")
-            mainClass.set("org.academy.desktop.launch.EditorEntrypoint")
-            sourceSet.set(editorSourceSet)
-            systemProperty("academy.desktop.main", "org.academy.desktop.uieditor.UiEditorMainKt")
-            programArguments.add("--project-root=${layout.projectDirectory}")
-            providers.gradleProperty("academyDumpLayout").orNull?.let {
-                systemProperty("academy.desktop.dumpLayout", it)
-            }
-        }
-        register("desktopSample") {
-            client()
-            environment("IS_DEV", "true")
-            mainClass.set("org.academy.desktop.launch.EditorEntrypoint")
-            sourceSet.set(editorSourceSet)
-            systemProperty("academy.desktop.main", "org.academy.desktop.SampleMainKt")
-            programArguments.add("--project-root=${layout.projectDirectory}")
-        }
         register("graphEditor") {
             client()
             environment("IS_DEV", "true")
@@ -475,8 +457,6 @@ dependencies {
 
     apiAndJarJar(libs.jmsdfgen.core)
     apiAndJarJar(libs.jmsdfgen.ext)
-
-    annotationProcessor(libs.auto)
 
     testImplementation(platform("org.junit:junit-bom:5.10.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")

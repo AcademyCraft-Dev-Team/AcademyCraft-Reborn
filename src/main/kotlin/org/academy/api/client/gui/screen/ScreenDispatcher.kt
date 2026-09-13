@@ -22,8 +22,6 @@ import org.academy.api.client.thread.RenderThread
 import org.academy.api.client.vanilla.RenderLoopEvent
 import org.academy.api.client.vanilla.ResizeDisplayEvent
 import org.academy.api.client.vanilla.WorldCompositeEvent
-import org.academy.internal.client.gui.debug.SerializedUiDebugHost
-import org.academy.internal.client.gui.debug.UiDebugSession
 
 class ScreenDispatcher private constructor() {
     private val renderTarget: RenderTarget
@@ -31,7 +29,6 @@ class ScreenDispatcher private constructor() {
     private val backdropBlur = BackdropBlurEngine()
     private val uiContext: UiContext
 
-    /** 待合成的层: 每个 Pair 是 (above 命令列表, 对应的模糊区域). */
     @Volatile
     private var pendingLayers: List<Pair<List<SubmittedCommand>, List<BlurRegion>>> = emptyList()
 
@@ -61,10 +58,6 @@ class ScreenDispatcher private constructor() {
         )
     }
 
-    /**
-     * 由 Render 线程调用喵. 无模糊区时单 pass; 有模糊区时只渲染第一段 (below) 到
-     * [renderTarget], 剩余层存入 [pendingLayers] 待 [onWorldComposite] 合成喵.
-     */
     @SubscribeEvent
     fun onRenderLoop(@Suppress("unused") event: RenderLoopEvent) {
         val mc = Minecraft.getInstance()
@@ -99,11 +92,6 @@ class ScreenDispatcher private constructor() {
         }
     }
 
-    /**
-     * GUI 渲染完成 (主缓冲已含世界 + 原版屏幕背景 + Academy below 内容).
-     * 逐层模糊+合成喵: 每个 blur region 从 [mainTarget] 采样 pyramid,
-     * 就地模糊后 blit 对应的 above 层叠回.
-     */
     @SubscribeEvent
     fun onWorldComposite(@Suppress("unused") event: WorldCompositeEvent) {
         val mc = Minecraft.getInstance()
@@ -117,11 +105,11 @@ class ScreenDispatcher private constructor() {
                 if (regions.isNotEmpty()) {
                     val mainView = mainTarget.getColorTextureView() ?: continue
                     backdropBlur.capture(mainView, regions.maxOf { it.radius })
-                    for (region in regions) {
+                    for ((x, y, width, height, radius) in regions) {
                         backdropBlur.fillRegion(
                             mainView,
-                            region.x, region.y, region.width, region.height,
-                            region.radius,
+                            x, y, width, height,
+                            radius,
                             UiCompositor.NEUTRAL_TINT
                         )
                     }
@@ -139,19 +127,15 @@ class ScreenDispatcher private constructor() {
     }
 
     private fun renderImGuiOverlay(target: RenderTarget, screen: RenderRoot) {
+        if (!ImGuiUIDebugger.enabled) return
         ImGuiUtilApi.render(target) {
-            val host = screen as? SerializedUiDebugHost
-            if (ImGuiUIDebugger.enabled && host != null && UiDebugSession.shouldAttach(host)) {
-                ImGuiUIDebugger.renderContent(
-                    host.debugLayoutRoot(),
-                    true,
-                    Component.translatable(
-                        "screen.academy.ui_debug.inspector.live_title",
-                        host.debugLayoutId()
-                    ).string
-                )
-                UiDebugSession.capture(host)
-            }
+            ImGuiUIDebugger.renderContent(
+                screen.root,
+                Component.translatable(
+                    "screen.academy.ui_debug.inspector.live_title",
+                    screen.javaClass.simpleName
+                ).string
+            )
         }
     }
 

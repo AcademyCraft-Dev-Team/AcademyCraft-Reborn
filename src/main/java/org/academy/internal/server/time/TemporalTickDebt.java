@@ -1,6 +1,5 @@
 package org.academy.internal.server.time;
 
-/** Fixed-rate wall-clock debt accounting independent of Minecraft state. */
 final class TemporalTickDebt {
     private final long tickNanos;
     private final long maxDebtNanos;
@@ -31,10 +30,8 @@ final class TemporalTickDebt {
         var advancedTicks = Math.max(0, tickCount - lastTickCount);
         lastCheckNanos = nowNanos;
         lastTickCount = tickCount;
-        debtNanos = Math.min(
-                maxDebtNanos,
-                Math.max(0L, debtNanos + elapsed - advancedTicks * tickNanos)
-        );
+        debtNanos = Math.clamp(debtNanos + elapsed - advancedTicks * tickNanos, 0L,
+                maxDebtNanos);
         return (int) Math.min(maxTicksPerPass, debtNanos / tickNanos);
     }
 

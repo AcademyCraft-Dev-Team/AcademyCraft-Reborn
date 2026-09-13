@@ -749,7 +749,6 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
             margin(2f, 1f, 0f, 0f)
             size(250f, 8f)
         }
-        // Update from the frame callback, never by mutating state inside render().
         layoutDebugStatus.setFrameUpdate {
             val status = if (AbilityDeveloperLayoutEditor.isDebugMode()) {
                 "LAYOUT: ${category.key} / ${page.name.lowercase()}  (drag icons; snap 0.5px)"
@@ -816,15 +815,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                     translationX = 0f
                     translationY = 0f
                 } else {
-                    val mc = Minecraft.getInstance()
-                    val mh = mc.mouseHandler
-                    val w = mc.window
-                    val mouseX = mh.getScaledXPos(w)
-                    val mouseY = mh.getScaledYPos(w)
-                    val skillTreeMouseX = (mouseX / w.width).toFloat().coerceIn(0f, 1f)
-                    val skillTreeMouseY = (mouseY / w.height).toFloat().coerceIn(0f, 1f)
-                    translationX = -((skillTreeMouseX - 0.5f) * maxDuSkills)
-                    translationY = -((skillTreeMouseY - 0.5f) * maxDuSkills)
+                    applySkillTreeParallax(this)
                 }
                 super.render(context)
             }
@@ -874,6 +865,24 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         for ((widget, category, child, dependency) in skillLineBindings) {
             updateSkillLineGeometry(widget, category, child, dependency)
         }
+    }
+
+    private fun applySkillTreeParallax(widget: Widget) {
+        val mc = Minecraft.getInstance()
+        val mh = mc.mouseHandler
+        val w = mc.window
+        val mouseX = mh.getScaledXPos(w)
+        val mouseY = mh.getScaledYPos(w)
+        val skillTreeMouseX = (mouseX / w.width).toFloat().coerceIn(0f, 1f)
+        val skillTreeMouseY = (mouseY / w.height).toFloat().coerceIn(0f, 1f)
+        widget.translationX = -((skillTreeMouseX - 0.5f) * maxDuSkills)
+        widget.translationY = -((skillTreeMouseY - 0.5f) * maxDuSkills)
+    }
+
+    private fun Widget.hasPaddedArea(): Boolean {
+        val paddedWidth = width - layoutParams.paddingLeft - layoutParams.paddingRight
+        val paddedHeight = height - layoutParams.paddingTop - layoutParams.paddingBottom
+        return paddedWidth > 0 && paddedHeight > 0
     }
 
     private fun createSkillNode(category: AbilityCategory, info: AbilitySystemClient.SkillInfo): ButtonWidget {
@@ -961,15 +970,12 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                         maskTexView = texManager.getTexture(skill_radial_mask).getTextureView()
                     }
 
-                    val lp = layoutParams
-                    val paddedWidth = width - lp.paddingLeft - lp.paddingRight
-                    val paddedHeight = height - lp.paddingTop - lp.paddingBottom
-                    if (paddedWidth <= 0 || paddedHeight <= 0) return
+                    if (!hasPaddedArea()) return
 
                     val finalAlpha = alpha * context.accumulatedAlpha
 
                     context.pose().pushPose()
-                    context.pose().translate(lp.paddingLeft, lp.paddingTop)
+                    context.pose().translate(layoutParams.paddingLeft, layoutParams.paddingTop)
                     context.submit(
                         SkillProgressDrawCommand(
                             outlineTexView, maskTexView,
@@ -1093,15 +1099,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                 translationY = 0f
                 return
             }
-            val mc = Minecraft.getInstance()
-            val mh = mc.mouseHandler
-            val w = mc.window
-            val mouseX = mh.getScaledXPos(w)
-            val mouseY = mh.getScaledYPos(w)
-            val skillTreeMouseX = (mouseX / w.width).toFloat().coerceIn(0f, 1f)
-            val skillTreeMouseY = (mouseY / w.height).toFloat().coerceIn(0f, 1f)
-            translationX = -((skillTreeMouseX - 0.5f) * maxDuSkills)
-            translationY = -((skillTreeMouseY - 0.5f) * maxDuSkills)
+            applySkillTreeParallax(this)
         }
     }
 
@@ -1275,6 +1273,63 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         return button
     }
 
+    private fun renderSkillIcon(context: Canvas, finalAlpha: Float, progress: Float, iconTexture: Identifier) {
+        val texManager = Minecraft.getInstance().textureManager
+        val outlineTex = if (progress >= 1.0f) skill_view_outline_glow else skill_view_outline
+        val backView = texManager.getTexture(skill_back).getTextureView()
+        val outlineView = texManager.getTexture(outlineTex).getTextureView()
+        val maskView = texManager.getTexture(skill_radial_mask).getTextureView()
+        val iconView = texManager.getTexture(iconTexture).getTextureView()
+        val sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
+
+        context.pose().pushPose()
+        context.submit(
+            ImageDrawCommand(
+                backView,
+                sampler,
+                50f,
+                50f,
+                0f,
+                0f,
+                1f,
+                1f,
+                1f,
+                1f,
+                1f,
+                finalAlpha
+            )
+        )
+        context.pose().translate(11.5f, 11.5f)
+        context.submit(
+            ImageDrawCommand(
+                iconView,
+                sampler,
+                27f,
+                27f,
+                0f,
+                0f,
+                1f,
+                1f,
+                1f,
+                1f,
+                1f,
+                finalAlpha
+            )
+        )
+        context.pose().translate(-11.5f, -11.5f)
+        context.submit(
+            SkillProgressDrawCommand(
+                outlineView,
+                maskView,
+                50f,
+                50f,
+                progress,
+                finalAlpha
+            )
+        )
+        context.pose().popPose()
+    }
+
     private fun createSkillViewCover(info: AbilitySystemClient.SkillInfo): FrameLayoutWidget {
         val isLearned = AbilitySystemClient.isSkillLearned(info.skill)
         val skill = info.skill
@@ -1315,61 +1370,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                     } else {
                         iconProgressRef.get()
                     }
-                    val texManager = Minecraft.getInstance().textureManager
-                    val outlineTex = if (progress >= 1.0f) skill_view_outline_glow else skill_view_outline
-                    val backView =
-                        texManager.getTexture(skill_back).getTextureView()
-                    val outlineView = texManager.getTexture(outlineTex).getTextureView()
-                    val maskView = texManager.getTexture(skill_radial_mask).getTextureView()
-                    val iconView = texManager.getTexture(info.texture).getTextureView()
-                    val sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
-
-                    context.pose().pushPose()
-                    context.submit(
-                        ImageDrawCommand(
-                            backView,
-                            sampler,
-                            50f,
-                            50f,
-                            0f,
-                            0f,
-                            1f,
-                            1f,
-                            1f,
-                            1f,
-                            1f,
-                            finalAlpha
-                        )
-                    )
-                    context.pose().translate(11.5f, 11.5f)
-                    context.submit(
-                        ImageDrawCommand(
-                            iconView,
-                            sampler,
-                            27f,
-                            27f,
-                            0f,
-                            0f,
-                            1f,
-                            1f,
-                            1f,
-                            1f,
-                            1f,
-                            finalAlpha
-                        )
-                    )
-                    context.pose().translate(-11.5f, -11.5f)
-                    context.submit(
-                        SkillProgressDrawCommand(
-                            outlineView,
-                            maskView,
-                            50f,
-                            50f,
-                            progress,
-                            finalAlpha
-                        )
-                    )
-                    context.pose().popPose()
+                    renderSkillIcon(context, finalAlpha, progress, info.texture)
                 }
             }) {
                 gravity(Gravity.CENTER)
@@ -1512,15 +1513,9 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                                     rgb(0.93f, if (accepted) 1.0f else 0.35f, if (accepted) 1.0f else 0.35f)
                                     val hintX = widget.x - x + widget.width
                                     val hintY = 0f
-                                    var moved = false
-                                    if (translationX != hintX) {
-                                        translationX = hintX
-                                        moved = true
-                                    }
-                                    if (translationY != hintY) {
-                                        translationY = hintY
-                                        moved = true
-                                    }
+                                    val moved = translationX != hintX || translationY != hintY
+                                    translationX = hintX
+                                    translationY = hintY
                                     if (moved) invalidate()
                                 } else if (text.isNotEmpty()) {
                                     text = ""
@@ -1681,59 +1676,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                         val finalAlpha = alpha * context.accumulatedAlpha
                         val progress = iconProgressRef.get()
                         try {
-                            val texManager = Minecraft.getInstance().textureManager
-                            val outlineTex = if (progress >= 1.0f) skill_view_outline_glow else skill_view_outline
-                            val backView = texManager.getTexture(skill_back).getTextureView()
-                            val outlineView = texManager.getTexture(outlineTex).getTextureView()
-                            val maskView = texManager.getTexture(skill_radial_mask).getTextureView()
-                            val levelView = texManager.getTexture(levelIconPath).getTextureView()
-                            val sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
-                            context.pose().pushPose()
-                            context.submit(
-                                ImageDrawCommand(
-                                    backView,
-                                    sampler,
-                                    50f,
-                                    50f,
-                                    0f,
-                                    0f,
-                                    1f,
-                                    1f,
-                                    1f,
-                                    1f,
-                                    1f,
-                                    finalAlpha
-                                )
-                            )
-                            context.pose().translate(11.5f, 11.5f)
-                            context.submit(
-                                ImageDrawCommand(
-                                    levelView,
-                                    sampler,
-                                    27f,
-                                    27f,
-                                    0f,
-                                    0f,
-                                    1f,
-                                    1f,
-                                    1f,
-                                    1f,
-                                    1f,
-                                    finalAlpha
-                                )
-                            )
-                            context.pose().translate(-11.5f, -11.5f)
-                            context.submit(
-                                SkillProgressDrawCommand(
-                                    outlineView,
-                                    maskView,
-                                    50f,
-                                    50f,
-                                    progress,
-                                    finalAlpha
-                                )
-                            )
-                            context.pose().popPose()
+                            renderSkillIcon(context, finalAlpha, progress, levelIconPath)
                         } catch (_: Exception) {
                         }
                     }

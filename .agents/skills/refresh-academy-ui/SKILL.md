@@ -1,6 +1,6 @@
 ---
 name: refresh-academy-ui
-description: Update, port, restyle, or review AcademyCraft Reborn GUI/UI/HUD/terminal surfaces using its line-led, high-contrast, translucent, and blur-masked technological visual language. Use for machine container screens, data-terminal apps, ability/developer screens, overlays, widgets, GUI textures, UI layout JSON, and client rendering code in this repository; trigger on requests to update or redo a GUI, match the legacy or supplied in-game examples, reduce decorative color, or create technology through rules, highlights, alpha, and backdrop blur. Do not use for unrelated world, entity, or VFX rendering.
+description: Update, port, restyle, or review AcademyCraft Reborn GUI/UI/HUD/terminal surfaces using its line-led, high-contrast, translucent, and blur-masked technological visual language. Use for machine container screens, data-terminal apps, ability/developer screens, overlays, widgets, GUI textures, UI layout DSL, and client rendering code in this repository; trigger on requests to update or redo a GUI, match the legacy or supplied in-game examples, reduce decorative color, or create technology through rules, highlights, alpha, and backdrop blur. Do not use for unrelated world, entity, or VFX rendering.
 ---
 
 # Refresh AcademyCraft UI
@@ -17,7 +17,7 @@ Preserve the legacy AcademyCraft identity while implementing with the current Ko
 ## Workflow
 
 1. Classify the target as a compact machine screen, developer/skill screen, terminal/app surface, or HUD/overlay.
-2. Inspect the target class, its nearest same-archetype implementation, referenced `R` entries, textures, menu slot coordinates, and layout JSON. Preserve unrelated worktree changes.
+2. Inspect the target class, its nearest same-archetype implementation, referenced `R` entries, textures, menu slot coordinates, and layout DSL factories under `org.academy.internal.client.gui.layout`. Preserve unrelated worktree changes.
 3. Define a logical-coordinate layout before editing. Keep the archetype's canonical canvas, layer order, density, and alignment; do not size from raw texture pixels.
 4. Design the hierarchy in grayscale first. Establish separation with blur, neutral alpha planes, rules, and foreground brightness; add semantic color only after the interface reads clearly without it.
 5. Compose the surface in this order: world image, archetype-appropriate blur mask, neutral translucent structural plane, sparse white rule/texture overlay, content, then state/feedback layers. Keep blur out of foreground UI.

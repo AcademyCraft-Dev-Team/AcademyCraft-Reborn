@@ -198,9 +198,6 @@ public final class LaminarCutter extends Skill {
                     maximumRange, damageScale, baseCost, tier, null);
         }
 
-        /**
-         * Program-facing cast entry point with an explicit, server-validated blade origin.
-         */
         public static boolean tryProgramCast(
                 ServerPlayer player,
                 Vec3 origin,
@@ -214,9 +211,6 @@ public final class LaminarCutter extends Skill {
                     maximumRange, damageScale, baseCost, tier, null);
         }
 
-        /**
-         * Program-facing cast entry point with an explicit blade-plane direction.
-         */
         public static boolean tryProgramCast(
                 ServerPlayer player,
                 Vec3 origin,
@@ -231,7 +225,6 @@ public final class LaminarCutter extends Skill {
                     maximumRange, damageScale, baseCost, tier, bladePlaneDirection);
         }
 
-        /** Precision nodes supply their own output cost curve without stacking global output. */
         public static boolean tryProgramCast(
                 ServerPlayer player,
                 Vec3 origin,
@@ -383,7 +376,7 @@ public final class LaminarCutter extends Skill {
         ) {
             if (!(player.level() instanceof ServerLevel level)) return;
             var skill = Skills.LAMINAR_CUTTER.get();
-            var cutterLevel = Math.max(0, Math.min(2, skill.getLevel(player)));
+            var cutterLevel = Math.clamp(skill.getLevel(player), 0, 2);
             var length = (24.0 + cutterLevel * 4.0)
                     * AeromanipConfig.rangeMultiplier(player, SkillNames.LAMINAR_CUTTER);
             if (context.milestone() >= 2) length *= 1.2;

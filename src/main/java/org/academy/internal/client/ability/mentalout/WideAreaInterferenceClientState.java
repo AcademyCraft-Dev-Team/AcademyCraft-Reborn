@@ -30,7 +30,6 @@ import org.joml.Vector4f;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Owns the temporary RTS camera, up to nine cached target feeds, and client-only hidden blocks. */
 public final class WideAreaInterferenceClientState {
     public static final int MAX_TARGET_VIEWS = 9;
     public static final int WHITE_OUTLINE = 0xFFFFFFFF;
@@ -114,7 +113,7 @@ public final class WideAreaInterferenceClientState {
             }
         }
         if (VIEW_FRAMES.isEmpty() && mode == Mode.TARGETS) showRts();
-        captureIndex = Math.min(captureIndex, Math.max(0, VIEW_FRAMES.size() - 1));
+        captureIndex = Math.clamp(VIEW_FRAMES.size() - 1, 0, captureIndex);
         if (mode == Mode.TARGETS && captureTargetUuid != null
                 && !retained.contains(captureTargetUuid)) {
             schedulePlayerCapture(Minecraft.getInstance());
@@ -289,7 +288,6 @@ public final class WideAreaInterferenceClientState {
         godFocus = godFocus.add(forward.scale(forwardAmount)).add(right.scale(rightAmount));
     }
 
-    /** Caches the exact matrices used by the most recently rendered world frame. */
     public static void captureRenderCamera(
             Vec3 position,
             Matrix4fc viewRotation,
@@ -684,7 +682,6 @@ public final class WideAreaInterferenceClientState {
                 }
             });
             event.submitCustomGeometry(Render.RenderTypes.MINE_DETECT_LINES, (snapshot, consumer) -> {
-                // Bound grid density while keeping block-aligned major guides at wide zoom.
                 var step = Math.max(1, (int) Math.ceil(Math.max(box.getXsize(), box.getZsize()) / 32));
                 for (double x = Math.ceil(box.minX); x < box.maxX; x += step) {
                     LineBoxRenderer.renderWireframeBox(snapshot, consumer,

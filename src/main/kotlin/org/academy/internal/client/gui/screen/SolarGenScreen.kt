@@ -10,10 +10,8 @@ import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.screen.ContainerUiScreen
-import org.academy.api.client.gui.util.WirelessPanelUtil.create
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.resources.R
-import org.academy.api.client.util.AnimationUtil
 import org.academy.internal.common.world.inventory.SolarGenMenu
 import org.academy.internal.common.world.level.block.entity.SolarGenBlockEntity
 import java.util.function.Consumer
@@ -76,35 +74,7 @@ class SolarGenScreen private constructor(
 
         invPage.addChild("effect", effect)
 
-        val wirelessPage = create(mainPos, true)
-        wirelessPage.visibility = Widget.Visibility.GONE
-        wirelessPage.isEnabled = false
-        content.addChild("page_wireless", wirelessPage)
-
-        val wirelessButton = createButton(R.textures.gui.icon.icon_wireless)
-        wirelessButton.layoutParams = WidgetContainer.LayoutParams()
-            .widthMode(SizeMode.MATCH_PARENT)
-            .height(16f)
-
-        pageButtons.addChild("wireless", wirelessButton)
-        pageButtons.onSelectionChanged = {
-            when (it.name) {
-                "inv" -> {
-                    AnimationUtil.hide(wirelessPage)
-                    AnimationUtil.show(invPage)
-                    isHandleContainer = true
-                    isRenderInventory = true
-                }
-
-                "wireless" -> {
-                    AnimationUtil.hide(invPage)
-                    AnimationUtil.show(wirelessPage)
-                    isHandleContainer = false
-                    isRenderInventory = false
-                }
-            }
-        }
-        pageButtons.selectButton(invButton)
+        setupWirelessPage(pageButtons, invButton, content, invPage, mainPos, createButton(R.textures.gui.icon.icon_wireless))
 
         pageButtons.startAnimation(
             ObjectAnimator.ofFloat({ pageButtons.alpha = it }, 0f, 1f).setDuration(childDuration)

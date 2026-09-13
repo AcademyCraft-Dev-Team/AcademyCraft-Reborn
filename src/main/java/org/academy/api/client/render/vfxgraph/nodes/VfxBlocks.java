@@ -25,25 +25,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-/**
- * VFX 容器块目录（M24–M27）：注册块元数据（核心 NodeRegistry）与块工厂（VfxBlockRegistry）。
- *
- * <p><b>阶段约定（容器执行器）</b>：spawn 块经 {@code SimContext.emitBatch} 记录本帧新粒子批次；
- * init 块只处理 {@code SimContext.incomingBatches}（由执行器按 flow 边注入）；
- * update/collision/over-life/orient 块处理全部存活粒子；output 块仅提供 RenderSpec（M21l 数据驱动）。</p>
- *
- * <p>基础块语义与 {@code VfxNodes} 对应节点一致，但用批次（emitBatch/incomingBatches）替代
- * {@code spawnStart} 单点耦合；另含路径电弧和技能专用的连续几何块。</p>
- */
 public final class VfxBlocks {
     private static final AtomicLong NEXT_TRANSIENT_ARC_GROUP = new AtomicLong(1L);
 
     private VfxBlocks() {
     }
 
-    /**
-     * spawn/init 块共享的基础属性。
-     */
     private static final List<PropertySpec> PARTICLE_BASIC = List.of(
             prop("lifetime", ValueType.FLOAT, Value.of(1f)),
             prop("size", ValueType.FLOAT, Value.of(0.1f)),
@@ -54,9 +41,6 @@ public final class VfxBlocks {
             prop("layer", ValueType.STRING, Value.string("fire"))
     );
 
-    /**
-     * 发射形状属性（spawn/init_position 共用）。
-     */
     private static final List<PropertySpec> SHAPE_PROPS = List.of(
             prop("shape", ValueType.STRING, Value.string("point")),
             prop("position_param", ValueType.STRING, Value.string("")),
@@ -72,17 +56,9 @@ public final class VfxBlocks {
             prop("mesh_scale", ValueType.FLOAT, Value.of(1f))
     );
 
-    /**
-     * spawn 尾块：PARTICLE_BASIC + SHAPE_PROPS。
-     */
     private static final List<PropertySpec> SPAWN_TAIL = Stream.concat(
             PARTICLE_BASIC.stream(), SHAPE_PROPS.stream()).toList();
 
-    /**
-     * output 块共享属性默认（数据驱动，M21l）：着色器/混合值**不写死具体 shader id**，
-     * 一律空串中性默认，由图上显式指定（缺失时渲染层兜底 billboard/translucent）；
-     * layer 过滤该输出负责渲染的粒子层（空串=全部，分层外观用多输出块表达）。
-     */
     private static final List<PropertySpec> OUTPUT_PROPERTIES = List.of(
             prop("vertex", ValueType.STRING, Value.string("")),
             prop("shader", ValueType.STRING, Value.string("")),
@@ -91,9 +67,6 @@ public final class VfxBlocks {
             prop("layer", ValueType.STRING, Value.string(""))
     );
 
-    /**
-     * arc_surface/arc_contact 共享属性（M29，Blender 表面电弧：布点 + 短弧 + 噪声 + 端点吸附）。
-     */
     private static final List<PropertySpec> ARC_SURFACE_PROPS = List.of(
             prop("mesh", ValueType.STRING, Value.string("builtin:plane")),
             prop("density", ValueType.FLOAT, Value.of(3.8f)),
@@ -115,9 +88,6 @@ public final class VfxBlocks {
             prop("origin_z", ValueType.FLOAT, Value.of(0f))
     );
 
-    /**
-     * arc_contact 专属属性：接触对象（MeshAssets id）+ 距离剔除阈值 + 接触对象位移。
-     */
     private static final List<PropertySpec> ARC_CONTACT_PROPS = List.of(
             prop("contact_mesh", ValueType.STRING, Value.string("builtin:sphere")),
             prop("contact_range", ValueType.FLOAT, Value.of(4.1f)),
@@ -126,9 +96,6 @@ public final class VfxBlocks {
             prop("contact_origin_z", ValueType.FLOAT, Value.of(0f))
     );
 
-    /**
-     * arc_spark 粒子火花属性（M30，Blender 粒子系统：弧→点 + 溅射 + 重力 + 迷你管）。
-     */
     private static final List<PropertySpec> ARC_SPARK_PROPS = List.of(
             prop("probability", ValueType.FLOAT, Value.of(0.48f)),
             prop("max_sparks", ValueType.INT, Value.of(10)),
@@ -141,9 +108,6 @@ public final class VfxBlocks {
             prop("emission", ValueType.FLOAT, Value.of(1f))
     );
 
-    /**
-     * output_arc 的 ARC 观感参数（数据驱动，M22-Rev2）：Blender 式参数 + 火花参数。
-     */
     private static final List<PropertySpec> ARC_OUTPUT_PROPERTIES = List.of(
             prop("sparks", ValueType.INT, Value.of(8)),
             prop("spark_speed", ValueType.FLOAT, Value.of(2.2f)),
@@ -165,25 +129,16 @@ public final class VfxBlocks {
             prop("branch_brightness_scale", ValueType.FLOAT, Value.of(0.6f))
     );
 
-    /**
-     * over-life curve 系共享（curve/layer）。
-     */
     private static final List<PropertySpec> CURVE_LAYER = List.of(
             prop("curve", ValueType.STRING, Value.string("")),
             prop("layer", ValueType.STRING, Value.string(""))
     );
 
-    /**
-     * noise/turbulence 共享（amplitude/frequency）。
-     */
     private static final List<PropertySpec> NOISE = List.of(
             prop("amplitude", ValueType.FLOAT, Value.of(1f)),
             prop("frequency", ValueType.FLOAT, Value.of(1f))
     );
 
-    /**
-     * collision_ground/plane 共享尾块（bounce/kill）。
-     */
     private static final List<PropertySpec> BOUNCE_KILL = List.of(
             prop("bounce", ValueType.FLOAT, Value.of(0.5f)),
             prop("kill", ValueType.BOOL, Value.of(false))
@@ -199,7 +154,6 @@ public final class VfxBlocks {
         metadata.register(type("vfx.block.surface_discharge", "spawn", "Surface-Attached Lightning Patches",
                 SurfaceDischargeEmitter.properties()));
         blocks.register("vfx.block.surface_discharge", SurfaceDischargeEmitter::create);
-        // ==================== spawn ====================
 
         metadata.register(typeWithPorts("vfx.block.spawn_rate", "spawn", "Spawn Rate",
                 List.of(in("rate", "Rate", ValueType.FLOAT)),
@@ -224,7 +178,6 @@ public final class VfxBlocks {
                 SPAWN_TAIL));
         blocks.register("vfx.block.spawn_distance", VfxBlocks::spawnDistance);
 
-        // ==================== init（只处理传入批次） ====================
 
         metadata.register(type("vfx.block.init_position", "init", "Set Position (Shape)", SHAPE_PROPS));
         blocks.register("vfx.block.init_position", VfxBlocks::initPosition);
@@ -271,7 +224,6 @@ public final class VfxBlocks {
                 )));
         blocks.register("vfx.block.init_randomize", VfxBlocks::initRandomize);
 
-        // ==================== update（全部存活粒子） ====================
 
         metadata.register(type("vfx.block.update_velocity", "update", "Integrate Velocity", List.of()));
         blocks.register("vfx.block.update_velocity", VfxBlocks::updateVelocity);
@@ -342,7 +294,6 @@ public final class VfxBlocks {
         metadata.register(type("vfx.block.update_fade", "update", "Fade", List.of()));
         blocks.register("vfx.block.update_fade", VfxBlocks::updateFade);
 
-        // ==================== collision / bounds ====================
 
         metadata.register(type("vfx.block.collision_ground", "collision", "Ground Collision", BOUNCE_KILL));
         blocks.register("vfx.block.collision_ground", VfxBlocks::collisionGround);
@@ -367,7 +318,6 @@ public final class VfxBlocks {
                 List.of(prop("time", ValueType.FLOAT, Value.of(5f)))));
         blocks.register("vfx.block.kill", VfxBlocks::kill);
 
-        // ==================== over-life（曲线/渐变） ====================
 
         metadata.register(type("vfx.block.life_color", "over-life", "Color Over Lifetime",
                 List.of(prop("gradient", ValueType.STRING, Value.string("")), prop("layer", ValueType.STRING, Value.string("")))));
@@ -382,7 +332,6 @@ public final class VfxBlocks {
         metadata.register(type("vfx.block.life_velocity", "over-life", "Velocity Over Lifetime", CURVE_LAYER));
         blocks.register("vfx.block.life_velocity", VfxBlocks::lifeVelocity);
 
-        // ==================== orient ====================
 
         metadata.register(type("vfx.block.orient_face_camera", "orient", "Face Camera", List.of()));
         blocks.register("vfx.block.orient_face_camera", (n, p) -> (buf, ctx) -> {
@@ -401,7 +350,6 @@ public final class VfxBlocks {
                 List.of(prop("speed", ValueType.FLOAT, Value.of(1f)))));
         blocks.register("vfx.block.orient_spin", VfxBlocks::orientSpin);
 
-        // ==================== output（仅提供 RenderSpec，不碰缓冲） ====================
 
         metadata.register(type("vfx.block.output_point", "output", "Output Points", OUTPUT_PROPERTIES));
         blocks.register("vfx.block.output_point", (n, p) -> (buf, ctx) -> {
@@ -441,7 +389,6 @@ public final class VfxBlocks {
             }
         });
 
-        // ==================== arc（M22，ADR-026：路径驱动，CPU 约束 spine + GPU 锯齿/辉光，无线程） ====================
 
         metadata.register(type("vfx.block.arc_bolt", "spawn", "Arc Bolt",
                 List.of(
@@ -699,14 +646,12 @@ public final class VfxBlocks {
                 ARC_SPARK_PROPS));
         blocks.register("vfx.block.arc_spark", VfxBlocks::arcSpark);
 
-        // output_arc：OUTPUT_PROPERTIES（vertex/shader/blend/layer）+ ARC 观感参数（数据驱动，M22g）
         metadata.register(type("vfx.block.output_arc", "output", "Output Arc",
                 Stream.concat(OUTPUT_PROPERTIES.stream(), ARC_OUTPUT_PROPERTIES.stream()).toList()));
         blocks.register("vfx.block.output_arc", (n, p) -> (buf, ctx) -> {
         });
     }
 
-    // ==================== spawn 块 ====================
 
     private static SimNode spawnRate(VfxBlock block, PortValueSource ports) {
         float lifetime = propFloat(block, "lifetime", 1f);
@@ -848,7 +793,6 @@ public final class VfxBlocks {
         };
     }
 
-    // ==================== init 块（只处理传入批次） ====================
 
     private static SimNode initPosition(VfxBlock block, PortValueSource ports) {
         EmitterShape shape = buildShape(block);
@@ -951,7 +895,6 @@ public final class VfxBlocks {
         });
     }
 
-    // ==================== update 块 ====================
 
     private static SimNode updateVelocity(VfxBlock block, PortValueSource ports) {
         return (buf, ctx) -> {
@@ -1144,10 +1087,6 @@ public final class VfxBlocks {
         };
     }
 
-    /**
-     * 把运行时黑板标量直接写入已存在粒子的可视属性。该块与实体跟随解耦，
-     * 便于实体型旧 VFX 逐个迁移时保留尺寸、透明度与帧/旋转的实时语义。
-     */
     private static SimNode updateLive(VfxBlock block, PortValueSource ports) {
         byte filter = layerFilter(block);
         String sizeParam = propString(block, "size_param", "");
@@ -1221,7 +1160,6 @@ public final class VfxBlocks {
         };
     }
 
-    // ==================== collision / bounds ====================
 
     private static SimNode collisionGround(VfxBlock block, PortValueSource ports) {
         var bounce = propFloat(block, "bounce", 0.5f);
@@ -1326,7 +1264,6 @@ public final class VfxBlocks {
         };
     }
 
-    // ==================== over-life ====================
 
     private static SimNode lifeColor(VfxBlock block, PortValueSource ports) {
         var gradientId = propString(block, "gradient", "");
@@ -1385,7 +1322,6 @@ public final class VfxBlocks {
         };
     }
 
-    // ==================== orient ====================
 
     private static SimNode orientVelocity(VfxBlock block, PortValueSource ports) {
         var offset = propFloat(block, "offset", 0f);
@@ -1415,11 +1351,7 @@ public final class VfxBlocks {
         };
     }
 
-    // ==================== arc（M22，路径驱动，CPU spine + GPU 观感，无线程） ====================
 
-    /**
-     * 两点电弧（Blender 式：from→to + 表面法线起拱 + 递归分支 + 噪声动画）。
-     */
     private static SimNode arcBolt(VfxBlock block, PortValueSource ports) {
         var ox = propFloat(block, "origin_x", 0f);
         var oy = propFloat(block, "origin_y", 0f);
@@ -1440,12 +1372,9 @@ public final class VfxBlocks {
         var branchCount = propInt(block, "branch_count", 2);
         var branchAngle = propFloat(block, "branch_angle", 1.57f);
         var branchLengthScale = propFloat(block, "branch_length_scale", 0.3f);
-        // 存活参数覆写（技能经 SpawnVfxGraphPacket.floatParams 绑定）：指定参数 id 则每帧
-        // 从 ctx.paramFloat 读取分叉长度比例（弧长被整体放大时，技能可调小该比例保持分叉不过长）。
         var branchLengthScaleParam = propString(block, "branch_length_scale_param", "");
         var branchWidthScale = propFloat(block, "branch_width_scale", 0.35f);
         var branchBrightnessScale = propFloat(block, "branch_brightness_scale", 0.6f);
-        // 主弧法线：from→to 连线方向（起拱方向，贴表面）
         float vx = toX - fromX, vy = toY - fromY, vz = toZ - fromZ;
         var vlen = (float) Math.sqrt(vx * vx + vy * vy + vz * vz);
         float nx, ny, nz;
@@ -1459,15 +1388,11 @@ public final class VfxBlocks {
             nz = vz / vlen;
         }
         long[] seed = {0L};
-        // 每 N 秒生成一条电弧（低频，避免每帧生成导致几十上百条累积）；interval=0 则每帧概率生成
         var interval = propFloat(block, "interval", 0f);
         float[] accumulator = {0f};
-        // 步进重掷（reshuffle>0）：本段寿命内按固定节奏整体重新生成锯齿折线（端点不动），
-        // 复刻真实闪电「路径保持片刻后跳到新随机构型」的运动感，而非噪声平滑蠕动。
         var reshuffle = propFloat(block, "reshuffle", 0f);
         long[] transientGroup = {NEXT_TRANSIENT_ARC_GROUP.getAndIncrement()};
         float[] carryAge = {0f};
-        // 断续出现（复刻 Blender 随机点云阵列 Delete Geometry）：按概率随机跳过，产生零星断档
         return (buf, ctx) -> {
             var bls = branchLengthScaleParam.isEmpty()
                     ? branchLengthScale
@@ -1477,10 +1402,8 @@ public final class VfxBlocks {
                 if (accumulator[0] < reshuffle) return;
                 accumulator[0] = 0f;
                 if (carryAge[0] >= 0f && carryAge[0] < lifetime) {
-                    // 步进重掷：替换上一次采样，同组唯一，端点不变、锯齿构型随 seed 变化
                     carryAge[0] += reshuffle;
                     if (carryAge[0] >= lifetime) {
-                        // 本段寿命结束：移除旧弧，进入等待重亮（概率门控，避免连续无断档地生成）
                         ctx.arcs().removeGroup(transientGroup[0]);
                         carryAge[0] = Float.NaN;
                     } else {
@@ -1498,7 +1421,6 @@ public final class VfxBlocks {
                                 bls, branchWidthScale, branchBrightnessScale);
                     }
                 } else {
-                    // 等待重亮：概率通过才重新生成（新 seed → 新构型，形成断续噼啪）
                     if (ctx.random().nextFloat() > probability) return;
                     ctx.arcs().removeGroup(transientGroup[0]);
                     carryAge[0] = 0f;
@@ -1535,9 +1457,6 @@ public final class VfxBlocks {
         };
     }
 
-    /**
-     * 环绕电弧。
-     */
     private static SimNode arcOrbit(VfxBlock block, PortValueSource ports) {
         var ox = propFloat(block, "origin_x", 0f);
         var oy = propFloat(block, "origin_y", 0f);
@@ -1574,10 +1493,6 @@ public final class VfxBlocks {
         };
     }
 
-    /**
-     * 风之翼式压缩风环：粗环与内嵌副环快速扩张，随后整体压向固定充能点。
-     * 几何直接写入 ArcBuffer，避免 billboard 方块，同时保留非规则厚度、倾斜和半径起伏。
-     */
     private static SimNode arcTornado(VfxBlock block, PortValueSource ports) {
         String expandParam = propString(block, "expand_param", "expand_rate");
         String chargeParam = propString(block, "charge_param", "charge_progress");
@@ -1604,12 +1519,12 @@ public final class VfxBlocks {
         float centerWander = Math.max(0f, propFloat(block, "center_wander", 0.055f));
         float fragmentation = clamp01(propFloat(block, "fragmentation", 0.22f));
         float tilt = Math.max(0f, propFloat(block, "tilt", 0.075f));
-        float nestedRadius = Math.max(0.1f, Math.min(0.9f, propFloat(block, "nested_radius", 0.54f)));
+        float nestedRadius = Math.clamp(propFloat(block, "nested_radius", 0.54f), 0.1f, 0.9f);
         float nestedWidth = Math.max(0f, propFloat(block, "nested_width", 0.72f));
-        float collapseStart = Math.max(0f, Math.min(0.99f,
-                propFloat(block, "collapse_start", 0.8f)));
-        float collapseEnd = Math.max(collapseStart + 0.01f, Math.min(1f,
-                propFloat(block, "collapse_end", 0.94f)));
+        float collapseStart = Math.clamp(
+                propFloat(block, "collapse_start", 0.8f), 0f, 0.99f);
+        float collapseEnd = Math.clamp(
+                propFloat(block, "collapse_end", 0.94f), collapseStart + 0.01f, 1f);
         float lifetime = propFloat(block, "lifetime", 0.075f);
         float[] dark = propColor(block, "color_dark");
         float[] light = propColor(block, "color_light");
@@ -1695,8 +1610,6 @@ public final class VfxBlocks {
                     configureCleanArc(arc, color, brightness, lifetime, ++seed[0]);
                 }
 
-                // Wind Wing uses a smaller ring nested inside every primary ring. Rebuild the
-                // same broad silhouette procedurally here instead of reusing its old texture.
                 if (nestedWidth > 0.001f) {
                     float innerRadius = ringRadius * nestedRadius
                             * (0.96f + stableWave(ring, 7.77f) * irregularity * 0.22f);
@@ -1756,7 +1669,6 @@ public final class VfxBlocks {
         };
     }
 
-    /** Continuously resampled ink jet; each block owns and replaces only its own curve group. */
     private static SimNode vortexJet(VfxBlock block, PortValueSource ports) {
         float side = propFloat(block, "side", 1f) < 0f ? -1f : 1f;
         float root = propFloat(block, "root_x", 0.18f);
@@ -1806,12 +1718,10 @@ public final class VfxBlocks {
                 bodyOcclusion.min.set(ctx.paramVec3("body_clip_min", 0, 0), ctx.paramVec3("body_clip_min", 1, 0), ctx.paramVec3("body_clip_min", 2, 0));
                 bodyOcclusion.max.set(ctx.paramVec3("body_clip_max", 0, 0), ctx.paramVec3("body_clip_max", 1, 0), ctx.paramVec3("body_clip_max", 2, 0));
             }
-            // Negative progress is reserved for standalone looping attack previews in the editor.
             if (attackProgress < 0f) {
                 float duration = org.academy.api.common.ability.VortexAttackPattern.byId(attackMode).durationSeconds();
                 attackProgress = (ctx.time() % duration) / duration;
             }
-            // Single-wing lateral strokes leave the opposite emitter in its exact idle state.
             if (attackMode == 4 && side > 0f || attackMode == 5 && side < 0f) attackMode = 0;
             int branchCount = attackMode == 3 && attackProgress > 0f && attackProgress < 1f ? 2 : 1;
             for (int branch = 0; branch < branchCount; branch++) {
@@ -1831,7 +1741,6 @@ public final class VfxBlocks {
                 shape.prepareGrid(liveSegments);
                 float branchAlpha = branch == 0 ? 1f : shape.activity();
                 if (branchAlpha < 0.001f) continue;
-                // Keep the approved spine and envelope; open a few windows between bridging strands.
                 for (int strand = 0; strand <= liveFilaments; strand++) {
                     boolean core = strand == 0;
                     float strandPhase = strand * 2.399963f + phase;
@@ -1846,8 +1755,7 @@ public final class VfxBlocks {
                         float localRadius = VortexJetGeometry.radius(u, radius * radial);
                         float width = localRadius * (core ? 0.72f : 0.12f + 0.05f * stableUnit(strand, 6.1f));
                         width *= 0.86f + 0.14f * (float) Math.sin(u * 57f - time * speed + strandPhase);
-                        // Only the terminal few percent disperse; the silhouette stays a wide-ended funnel.
-                        width *= Math.max(0.015f, Math.min(1f, (1f - u) * 28f)) * shape.widthScale(u);
+                        width *= Math.clamp((1f - u) * 28f, 0.015f, 1f) * shape.widthScale(u);
                         boolean hidden = clipBody && bodyOcclusion.occludes(point, side * root);
                         if (hidden) width = 0f;
                         int run = hidden || VortexJetGeometry.hollow(u, time, strand, hollow) ? segment + 1 : 0;
@@ -1860,15 +1768,12 @@ public final class VfxBlocks {
                     arc.setNoiseStrength(0f);
                     arc.setDriftSpeed(0f);
                 }
-                // Short violet pulses follow existing outer filaments from nozzle to tip. Their
-                // endpoints taper and fade at wraparound, so the entire wing never flashes purple.
                 for (int highlight = 0; highlight < highlights; highlight++) {
                     int strand = 1 + (highlight * 7) % filaments;
                     if (strand > liveFilaments) continue;
                     float strandPhase = strand * 2.399963f + phase;
                     float orbit = 0.70f + 0.32f * stableUnit(strand, 3.17f);
                     float start = (stableUnit(highlight, 4.71f) + time * highlightSpeed) % 1f;
-                    // 10 rather than 8 traces, with 4% longer coverage: 1.25 * 1.04 = 1.30.
                     float pulseLength = 1.04f * (0.045f + 0.035f * stableUnit(highlight, 7.31f));
                     float fade = Math.min(1f, start * 16f) * Math.min(1f, (1f - start) * 14f);
                     var arc = ctx.arcs().add(group);
@@ -1879,9 +1784,7 @@ public final class VfxBlocks {
                         float width = VortexJetGeometry.radius(u, radius * radial)
                                 * (0.12f + 0.05f * stableUnit(strand, 6.1f));
                         width *= 0.86f + 0.14f * (float) Math.sin(u * 57f - time * speed + strandPhase);
-                        width *= Math.max(0.015f, Math.min(1f, (1f - u) * 28f)) * shape.widthScale(u);
-                        // Place a fine trace on the outward surface, instead of painting the whole
-                        // thick filament purple. Simply shrinking a concentric tube would bury it.
+                        width *= Math.clamp((1f - u) * 28f, 0.015f, 1f) * shape.widthScale(u);
                         shape.sample(u, 0f, strandPhase, spine);
                         point.sub(spine, surfaceNormal).normalize();
                         point.fma(width * 0.98f, surfaceNormal);
@@ -1901,7 +1804,6 @@ public final class VfxBlocks {
                     arc.setNoiseStrength(0f);
                     arc.setDriftSpeed(0f);
                 }
-                // Short orbiting ink shreds travel outward, wrap at the nozzle, and fade at both ends.
                 for (int fleck = 0; fleck < liveFlecks; fleck++) {
                     float u = (stableUnit(fleck, 2.13f) + time * 0.22f) % 1f;
                     float fade = Math.min(1f, u * 12f) * Math.min(1f, (1f - u) * 12f);
@@ -1927,11 +1829,6 @@ public final class VfxBlocks {
         };
     }
 
-    /**
-     * Blender 力场式倒锥风暴：体积雾与尘粒是两个独立的圆柱侧面发射系统，各自积分
-     * 漩涡、向内约束、上升力、湍流和阻力。贝塞尔式漏斗曲线只定义力场边界，不再把粒子
-     * 硬排成规则螺旋；Start Size 与逐帧 Scale 仍直接乘 ExpandRate（0.5 → 3.0）。
-     */
     private static SimNode tornadoVolume(VfxBlock block, PortValueSource ports) {
         String expandParam = propString(block, "expand_param", "expand_rate");
         String chargeParam = propString(block, "charge_param", "charge_progress");
@@ -1957,10 +1854,10 @@ public final class VfxBlocks {
         float dustTurns = propFloat(block, "dust_turns", 8.5f);
         float volumeRadiusScale = Math.max(1f, propFloat(block, "volume_radius_scale", 1.45f));
         float dustRadiusScale = Math.max(1f, propFloat(block, "dust_radius_scale", 1.55f));
-        float collapseStart = Math.max(0f, Math.min(0.99f,
-                propFloat(block, "collapse_start", 0.8f)));
-        float collapseEnd = Math.max(collapseStart + 0.01f, Math.min(1f,
-                propFloat(block, "collapse_end", 0.94f)));
+        float collapseStart = Math.clamp(
+                propFloat(block, "collapse_start", 0.8f), 0f, 0.99f);
+        float collapseEnd = Math.clamp(
+                propFloat(block, "collapse_end", 0.94f), collapseStart + 0.01f, 1f);
         float lifetime = Math.max(1f, propFloat(block, "lifetime", 120f));
         byte volumeLayer = ParticleBuffer.layerByte(propString(block, "volume_layer", "wind_volume"));
         byte dustLayer = ParticleBuffer.layerByte(propString(block, "dust_layer", "wind_dust"));
@@ -2034,7 +1931,7 @@ public final class VfxBlocks {
             float focusY = ctx.paramVec3(focusParam, 1, 31f);
             float focusZ = ctx.paramVec3(focusParam, 2, 6f);
             float time = ctx.time();
-            float dt = Math.max(0f, Math.min(ctx.dt(), 0.05f));
+            float dt = Math.clamp(ctx.dt(), 0f, 0.05f);
             float radialDamping = (float) Math.exp(-drag * dt);
 
             int volumeIndex = 0;
@@ -2073,8 +1970,8 @@ public final class VfxBlocks {
                         + centrifugal * (1f - u * 0.38f) + radialNoise;
                 volumeRadialVelocity[index] = (volumeRadialVelocity[index] + radialAcceleration * dt)
                         * radialDamping;
-                volumeDepthState[index] = Math.max(0.58f, Math.min(1.08f,
-                        volumeDepthState[index] + volumeRadialVelocity[index] * dt));
+                volumeDepthState[index] = Math.clamp(
+                        volumeDepthState[index] + volumeRadialVelocity[index] * dt, 0.58f, 1.08f);
 
                 float bezierHeight = u * u * (3f - 2f * u);
                 float coneRadius = lerp(bottomRadius, radius, (float) Math.pow(bezierHeight, 0.72f))
@@ -2143,8 +2040,8 @@ public final class VfxBlocks {
                         + centrifugal * (1f - u * 0.32f) + radialNoise;
                 dustRadialVelocity[index] = (dustRadialVelocity[index] + radialAcceleration * dt)
                         * radialDamping;
-                dustDepthState[index] = Math.max(0.66f, Math.min(1.1f,
-                        dustDepthState[index] + dustRadialVelocity[index] * dt));
+                dustDepthState[index] = Math.clamp(
+                        dustDepthState[index] + dustRadialVelocity[index] * dt, 0.66f, 1.1f);
 
                 float bezierHeight = u * u * (3f - 2f * u);
                 float coneRadius = lerp(bottomRadius * 0.86f, radius * 0.96f,
@@ -2176,24 +2073,20 @@ public final class VfxBlocks {
         };
     }
 
-    /**
-     * 几何粒子式液态等离子凝聚：将实例粒子均匀铺在多条错相螺旋曲线上，沿曲线顺序收小
-     * 半径并提高角速度，而不是对每个粒子做直线吸附；末段保留少量缓慢凸出、收起的表面团块。
-     */
     private static SimNode plasmaConvergence(VfxBlock block, PortValueSource ports) {
         String progressParam = propString(block, "progress_param", "focus_progress");
         int count = Math.max(8, propInt(block, "count", 72));
-        int armCount = Math.max(2, Math.min(8, propInt(block, "arm_count", 4)));
+        int armCount = Math.clamp(propInt(block, "arm_count", 4), 2, 8);
         float turns = Math.max(0.5f, propFloat(block, "turns", 5.5f));
-        float stagger = Math.max(0f, Math.min(0.48f, propFloat(block, "stagger", 0.28f)));
+        float stagger = Math.clamp(propFloat(block, "stagger", 0.28f), 0f, 0.48f);
         float angularAcceleration = Math.max(0f, propFloat(block, "angular_acceleration", 6.2f));
-        float irregularity = Math.max(0f, Math.min(0.35f, propFloat(block, "irregularity", 0.09f)));
+        float irregularity = Math.clamp(propFloat(block, "irregularity", 0.09f), 0f, 0.35f);
         float startRadius = Math.max(0f, propFloat(block, "start_radius", 18f));
         float startHeight = Math.max(0f, propFloat(block, "start_height", 12f));
         float endRadius = Math.max(0f, propFloat(block, "end_radius", 0.24f));
         float sizeMin = Math.max(0.01f, propFloat(block, "size_min", 0.16f));
         float sizeMax = Math.max(sizeMin, propFloat(block, "size_max", 0.88f));
-        int surfaceBulges = Math.max(2, Math.min(3, propInt(block, "surface_bulges", 3)));
+        int surfaceBulges = Math.clamp(propInt(block, "surface_bulges", 3), 2, 3);
         float surfaceRadius = Math.max(0.1f, propFloat(block, "surface_radius", 6.65f));
         float surfacePulse = Math.max(0f, propFloat(block, "surface_pulse", 0.42f));
         float lifetime = Math.max(1f, propFloat(block, "lifetime", 120f));
@@ -2300,11 +2193,6 @@ public final class VfxBlocks {
         };
     }
 
-    /**
-     * 球面环绕闪电：多条不同倾角的短弧贴着液态球外壳爬行。每个闪烁节拍都会重选
-     * 弧段起点、长度与折点，但基础轨道仍连续旋转，形成 Blender 几何曲线式的“绕球跳闪”，
-     * 不再出现规则、完整、恒定的发光圆环。
-     */
     private static SimNode arcPlasmaShell(VfxBlock block, PortValueSource ports) {
         String positionParam = propString(block, "position_param", "");
         String emissionParam = propString(block, "emission_param", "");
@@ -2328,8 +2216,6 @@ public final class VfxBlocks {
         long[] seed = {0L};
         long transientGroup = NEXT_TRANSIENT_ARC_GROUP.getAndIncrement();
         return (buf, ctx) -> {
-            // 环绕球体的电弧是当前帧几何，不是拖尾：先替换掉上一次采样。
-            // 否则球体半径/旋转变化时，旧弧会在 lifetime 内与新弧分离成多排副本。
             ctx.arcs().removeGroup(transientGroup);
             float emission = clamp01(ctx.paramFloat(emissionParam, 1f));
             if (duration > 0f) {
@@ -2406,7 +2292,6 @@ public final class VfxBlocks {
         };
     }
 
-    /** 命中时向外展开的多层灰色冲击环。 */
     private static SimNode arcShockwave(VfxBlock block, PortValueSource ports) {
         float duration = propFloat(block, "duration", 1.25f);
         float baseRadius = propFloat(block, "base_radius", 1.5f);
@@ -2441,10 +2326,6 @@ public final class VfxBlocks {
         };
     }
 
-    /**
-     * 水平世界平面上的同心径向涟漪：前半段展开、后半段回收，多条管状弧覆盖从核心到边缘的圆盘。
-     * 寿命、强度和两端颜色可从运行时黑板覆盖，供一次性世界空间扭曲/冲击效果复用。
-     */
     private static SimNode arcRadialRipple(VfxBlock block, PortValueSource ports) {
         float duration = Math.max(0.001f, propFloat(block, "duration", 1f));
         String durationParam = propString(block, "duration_param", "");
@@ -2506,10 +2387,6 @@ public final class VfxBlocks {
         };
     }
 
-    /**
-     * 由实时进度驱动的线框盒：先按实体偏航对齐，再在效果前 72% 中以三次缓动向下折叠，
-     * 末段渐隐。每条棱都产生一条无噪声短寿命弧，因此可直接走 Graph 电弧管线。
-     */
     private static SimNode arcCollapsingBox(VfxBlock block, PortValueSource ports) {
         String progressParam = propString(block, "progress_param", "progress");
         String widthParam = propString(block, "width_param", "width");
@@ -2588,7 +2465,6 @@ public final class VfxBlocks {
         arc.setDriftSpeed(0f);
     }
 
-    /** 表面电弧（M29，Blender「闪电附着」主流水线）：表面布点 + per-point 短弧 + 断续时序 + 端点吸附。 */
     private static SimNode arcSurface(VfxBlock block, PortValueSource ports) {
         var ox = propFloat(block, "origin_x", 0f);
         var oy = propFloat(block, "origin_y", 0f);
@@ -2609,16 +2485,12 @@ public final class VfxBlocks {
         var noiseStrength = propFloat(block, "noise_strength", 0.5f);
         var driftSpeed = propFloat(block, "drift_speed", 1.5f);
         var base = MeshAssets.resolve(mesh);
-        // 表面网格平移 origin（布点 + 端点吸附都在同一位移后的表面，保持一致性）
         var surface = base == null ? null : offsetTriangles(base, ox, oy, oz);
         var distributor = surface == null ? null : new SurfaceDistributor(surface);
         long[] seed = {0L};
         long[] lastGateFrame = {Long.MIN_VALUE};
         return (buf, ctx) -> {
             if (distributor == null || surface == null) return;
-            // 帧周期断续时序（M29b-01，复刻 Blender Compare(Frame MOD N) EQUAL 0）：
-            // frequency<=0 时每帧 spawn（兼容旧资产/测试）；否则只在 frame % frame_period == 0
-            // 的帧 spawn 一批，其余帧跳过——避免每帧全密度 spawn 导致弧数爆炸（稳态 ~450 → <30）。
             var frame = (long) (ctx.time() * fps);
             if (frequency > 0f) {
                 if (frame % framePeriod != 0) return;
@@ -2626,7 +2498,6 @@ public final class VfxBlocks {
             }
             lastGateFrame[0] = frame;
             seed[0]++;
-            // 表面布点 + 随机删减（Blender 随机点云阵列子组）
             var samples = distributor.distribute(density, probability, ctx.time(), frequency, seed[0]);
             for (var s : samples) {
                 var arc = ctx.arcs().add();
@@ -2644,9 +2515,6 @@ public final class VfxBlocks {
         };
     }
 
-    /**
-     * 接触闪电（M30，复刻 Blender 主组第二套系统）：源面布点 + 到接触对象距离剔除 + 直线弧末端吸附接触面。
-     */
     private static SimNode arcContact(VfxBlock block, PortValueSource ports) {
         var ox = propFloat(block, "origin_x", 0f);
         var oy = propFloat(block, "origin_y", 0f);
@@ -2680,7 +2548,6 @@ public final class VfxBlocks {
         long[] lastGateFrame = {Long.MIN_VALUE};
         return (buf, ctx) -> {
             if (distributor == null || surface == null || contact == null) return;
-            // 帧周期断续时序（M29b-01，同 arc_surface）：frequency<=0 每帧，否则按帧周期门控
             var frame = (long) (ctx.time() * fps);
             if (frequency > 0f) {
                 if (frame % framePeriod != 0) return;
@@ -2691,10 +2558,8 @@ public final class VfxBlocks {
             var samples = distributor.distribute(density, probability, ctx.time(), frequency, seed[0]);
             for (var s : samples) {
                 float px = s.x(), py = s.y(), pz = s.z();
-                // 到接触对象最近距离 → 超出接触范围剔除（Blender Compare GREATER_THAN → Delete Geometry）
                 var dist = MeshDistance.nearestDistance(contact, px, py, pz);
                 if (dist > contactRange) continue;
-                // 接触表面最近点（Blender Sample Nearest Surface.002.Value → Set Position.004 末端）
                 var nearest = MeshDistance.nearestPoint(contact, px, py, pz);
                 var arc = ctx.arcs().add();
                 CurveGenerator.generateContactArc(
@@ -2703,7 +2568,6 @@ public final class VfxBlocks {
                         width, segments,
                         color[0] * emission, color[1] * emission, color[2] * emission, color[3],
                         lifetime, seed[0] * 97 + (long) (s.x() * 1000f));
-                // 末端吸附到接触对象表面（Blender Set Position.004 = Sample Nearest Surface.002 + Endpoint）
                 arc.setSurface(contact);
                 arc.setNoiseStrength(noiseStrength);
                 arc.setDriftSpeed(driftSpeed);
@@ -2711,9 +2575,6 @@ public final class VfxBlocks {
         };
     }
 
-    /**
-     * 粒子火花（M30，复刻 Blender 主组第三套系统）：弧→点 + 概率删减 + 溅射方向+重力 + 迷你管对齐速度。
-     */
     private static SimNode arcSpark(VfxBlock block, PortValueSource ports) {
         var probability = propFloat(block, "probability", 0.5f);
         var maxSparks = propInt(block, "max_sparks", 3);
@@ -2732,32 +2593,23 @@ public final class VfxBlocks {
             var n = arcs.count();
             for (var a = 0; a < n; a++) {
                 var arc = arcs.arc(a);
-                // 只从本帧新增的带表面弧（arc_surface/arc_contact 源弧）取点；火花弧（无表面、
-                // fresh=false 于下帧）不再派生火花，消除指数放大（M29b-02）
                 if (!arc.fresh() || !arc.hasSurface()) continue;
                 var size = arc.size();
                 if (size < 2) continue;
-                // 每弧火花数上限（防本帧新增多条弧时火花总量过大）
                 var spawned = 0;
-                // 弧→点（Blender Curve to Points，Count=10 → 按控制点取点）
                 var pointCount = Math.min(size, 10);
                 for (var i = 0; i < pointCount; i++) {
                     if (spawned >= maxSparks) break;
-                    // 概率删减（Blender Delete Geometry + Random Value：保留 = 粒子密度）
                     if (random.nextFloat() > probability) continue;
                     var idx = i * (size - 1) / Math.max(1, pointCount - 1);
                     float px = arc.x(idx), py = arc.y(idx), pz = arc.z(idx);
-                    // 溅射方向：绕表面法线随机（Blender 矢量选择：约束矢量=法线，角度 π/2）
                     var ref = surfaceTangent(arc, idx);
                     var dir = SurfaceDistributor.tangentDirection(ref[0], ref[1], ref[2],
                             (float) Math.PI / 3f, random);
-                    // 初始速度：溅射速度 × Random(0.3~1.2)（Blender Math.007 = Random.006 × 溅射速度）
                     var speed = splashSpeed * (0.3f + 0.9f * random.nextFloat());
                     var vx = dir[0] * speed;
                     var vy = dir[1] * speed;
                     var vz = dir[2] * speed;
-                    // 迷你电弧：2 点短弧，方向 = 速度（复刻 Align Rotation to Vector(速度)）
-                    // 长度 = 实例 Scale（Random.005 0.01~0.03 × 粒子缩放）× 生命系数曲线
                     var lifeScale = BlenderArcCurves.sample(BlenderArcCurves.PARTICLE_LIFE, 0f);
                     var len = (0.01f + 0.02f * random.nextFloat()) * scale * lifeScale;
                     var vlen = (float) Math.sqrt(vx * vx + vy * vy + vz * vz);
@@ -2780,9 +2632,6 @@ public final class VfxBlocks {
         };
     }
 
-    /**
-     * 估算弧线第 i 控制点的表面切向（相邻点差，供火花方向参考）。
-     */
     private static float[] surfaceTangent(ArcCurve arc, int i) {
         var prev = Math.max(0, i - 1);
         var next = Math.min(arc.size() - 1, i + 1);
@@ -2794,9 +2643,6 @@ public final class VfxBlocks {
         return new float[]{tx / len, ty / len, tz / len};
     }
 
-    /**
-     * 平移三角形网格（每 3 个浮点 +x、+y、+z），返回新数组。
-     */
     private static float[] offsetTriangles(float[] tris, float ox, float oy, float oz) {
         if (tris.length == 0) return tris;
         var out = tris.clone();
@@ -2808,11 +2654,7 @@ public final class VfxBlocks {
         return out;
     }
 
-    // ==================== 辅助 ====================
 
-    /**
-     * 端口求值：有数据流绑定返回算子值（逐粒子），否则返回属性默认。
-     */
     private static float portFloat(PortValueSource ports, String portId, int particleIndex,
                                    ParticleBuffer buffer, SimContext ctx, float fallback) {
         var v = ports.eval(portId, particleIndex, buffer, ctx);
@@ -2824,9 +2666,6 @@ public final class VfxBlocks {
         return ParticleBuffer.layerByte(propString(block, "layer", "fire"));
     }
 
-    /**
-     * over-life layer 过滤：""=全部，fire=0，smoke=1。
-     */
     private static byte layerFilter(VfxBlock block) {
         return ParticleBuffer.layerFilter(propString(block, "layer", ""));
     }
@@ -2848,7 +2687,6 @@ public final class VfxBlocks {
         position[2] += ctx.paramVec3(param, 2, 0f);
     }
 
-    /** 跨帧稳定的伪随机波形，避免空气流线和凝聚团出现逐帧跳动。 */
     private static float stableWave(int index, float salt) {
         return (float) Math.sin((index + 1) * 12.9898f + salt * 78.233f);
     }
@@ -2858,7 +2696,7 @@ public final class VfxBlocks {
     }
 
     private static float clamp01(float value) {
-        return Math.max(0f, Math.min(1f, value));
+        return Math.clamp(value, 0f, 1f);
     }
 
     private static float lerp(float from, float to, float t) {

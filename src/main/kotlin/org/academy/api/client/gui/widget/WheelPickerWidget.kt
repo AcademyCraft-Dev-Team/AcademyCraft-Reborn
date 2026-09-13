@@ -1,7 +1,6 @@
 package org.academy.api.client.gui.widget
 
 import com.mojang.blaze3d.platform.InputConstants
-import com.mojang.math.Axis
 import net.minecraft.util.ARGB
 import net.minecraft.util.Mth
 import org.academy.api.client.gui.command.FillRectDrawCommand
@@ -10,22 +9,10 @@ import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.util.Chase
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.round
 
-/**
- * A wheel picker widget that hosts arbitrary widgets as its items.
- *
- * Each child of this container is treated as one item of the wheel. Items are
- * arranged vertically and the wheel scrolls through them. The selected item is
- * always settled at the vertical center of the widget.
- *
- * Visual effects (selected highlight, atmospheric alpha falloff, curtain and
- * indicator) are implemented as overridable functions so subclasses can fully
- * customize the look. Scrolling is driven by a target-offset chase that eases
- * toward the goal every rendered frame (see [ScrollPanelWidget]), so the wheel
- * glides smoothly and always lands exactly on an item boundary.
- */
 open class WheelPickerWidget : AbstractWidgetContainer() {
     enum class ItemAlign {
         CENTER, LEFT, RIGHT
@@ -41,11 +28,6 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
         fun onScrollStateChanged(state: Int)
     }
 
-    /**
-     * Number of items that fit into the widget's height. Must be >= 1.
-     * Setting this to 1 turns the wheel into a single-row counter that rolls
-     * from one item to the next (e.g. a timer display).
-     */
     var visibleItemCount: Int = DEFAULT_VISIBLE_ITEM_COUNT
         set(value) {
             val clamped = max(1, value)
@@ -55,7 +37,6 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
             }
         }
 
-    /** Extra vertical gap added to every item slot. */
     var itemSpace: Float = DEFAULT_ITEM_SPACE
         set(value) {
             if (field != value) {
@@ -64,7 +45,6 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
             }
         }
 
-    /** Whether items wrap around cyclically. */
     var isCyclic: Boolean = false
         set(value) {
             if (field != value) {
@@ -73,7 +53,6 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
             }
         }
 
-    /** Whether the selected row is highlighted by a translucent curtain. */
     var isCurtain: Boolean = false
         set(value) {
             if (field != value) {
@@ -84,7 +63,6 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
 
     var curtainColor: Int = 0x33FFFFFF
 
-    /** Whether indicator lines are drawn above and below the selected row. */
     var isIndicator: Boolean = false
         set(value) {
             if (field != value) {
@@ -97,7 +75,6 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
 
     var indicatorSize: Float = 2.0f
 
-    /** Horizontal alignment of each item inside the wheel. */
     var itemAlign: ItemAlign = ItemAlign.CENTER
         set(value) {
             if (field != value) {
@@ -106,7 +83,6 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
             }
         }
 
-    /** Enables alpha falloff for items that are far away from the center. */
     var isAtmospheric: Boolean = true
         set(value) {
             if (field != value) {
@@ -115,7 +91,6 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
             }
         }
 
-    /** Enables slight scale-up of the selected item. */
     var isSelectedScaleEnabled: Boolean = true
         set(value) {
             if (field != value) {
@@ -124,11 +99,9 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
             }
         }
 
-    /** The item index that is currently settled at the center. */
     val selectedPosition: Int
         get() = _selectedPosition
 
-    /** Item index the current animation is targeting, including queued rapid scrolls. */
     val targetSelectedPosition: Int
         get() = if (itemCount == 0) {
             0
@@ -138,11 +111,9 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
             (_selectedPosition + targetPosition).coerceIn(0, itemCount - 1)
         }
 
-    /** The item index currently at the center (may differ from [selectedPosition] while scrolling). */
     val currentPosition: Int
         get() = _currentPosition
 
-    /** Signed vertical offset (px) of the selected item relative to the wheel center. */
     var scrollOffset: Float = 0f
         private set
 
@@ -152,10 +123,8 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
     private var _selectedPosition = 0
     private var _currentPosition = 0
 
-    /** Signed net item offset the wheel is gliding toward, relative to [_selectedPosition]. */
     private var targetPosition = 0
 
-    /** True while the wheel is gliding to a fling target (slower chase). */
     private var isFlinging = false
 
     private var computedItemHeight: Float = 0f
@@ -168,14 +137,8 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
     private var lastDragY = 0.0
     private var lastDragTime = 0L
 
-    /** Vertical drag velocity in pixels/second (smoothed). */
     private var velocityY = 0.0
 
-    /**
-     * Signed vertical offset (px) the wheel is gliding toward. For the target
-     * item ([_selectedPosition] + [targetPosition]) to sit at the center,
-     * [scrollOffset] must equal -[targetPosition] * itemHeight (see renderItems).
-     */
     private val scrollTarget: Float
         get() = -targetPosition * itemHeight
 
@@ -258,23 +221,9 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
 
         chaseScrollTarget()
 
-        val pivotX = width * originX
-        val pivotY = height * originY
-
-        val hasTransform = scaleX != 1.0f || scaleY != 1.0f || rotation != 0.0f
-
         context.pose().pushPose()
         run {
-            if (hasTransform) {
-                context.pose().translate(pivotX, pivotY)
-                if (rotation != 0.0f) {
-                    context.pose().mulPose(Axis.ZP.rotationDegrees(rotation))
-                }
-                if (scaleX != 1.0f || scaleY != 1.0f) {
-                    context.pose().scale(scaleX, scaleY)
-                }
-                context.pose().translate(-pivotX, -pivotY)
-            }
+            applyTransform(context)
             context.alpha().push(alpha)
             run {
                 renderInternal(context)
@@ -287,17 +236,11 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
         dirtyChildrenSet.clear()
     }
 
-    /**
-     * Glides [scrollOffset] toward [scrollTarget] once per rendered frame. The
-     * chase factor is frame-time normalized so the motion feels identical at any
-     * frame rate. No snap is applied: the wheel settles only once the chase has
-     * numerically converged, so the final frames do not pop onto the boundary.
-     */
     private fun chaseScrollTarget() {
         if (isDragging || itemCount == 0 || itemHeight <= 0f) return
         if (targetPosition == 0 && scrollOffset == 0f) return
         val newOffset = Chase.approach(scrollOffset, scrollTarget)
-        if (Math.abs(scrollTarget - newOffset) < SETTLE_EPSILON_PX) {
+        if (abs(scrollTarget - newOffset) < SETTLE_EPSILON_PX) {
             scrollOffset = scrollTarget
             settleToTarget()
         } else {
@@ -335,15 +278,11 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
             val contentIndex = if (isCyclic) normalizePosition(i) else i
             if (contentIndex < 0 || contentIndex >= list.size) continue
             val itemCenterY = centerY + (i - _selectedPosition) * itemHeight + scrollOffset
-            val distanceRatio = Math.abs(itemCenterY - centerY) / itemHeight
+            val distanceRatio = abs(itemCenterY - centerY) / itemHeight
             renderItem(context, list[contentIndex], itemCenterY, distanceRatio)
         }
     }
 
-    /**
-     * Renders a single item at the given vertical center. Override to fully
-     * control how an item is drawn.
-     */
     protected open fun renderItem(context: Canvas, child: Widget, centerY: Float, distanceRatio: Float) {
         val scale = computeItemScale(distanceRatio)
         val alpha = computeItemAlpha(distanceRatio)
@@ -374,11 +313,6 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
         context.pose().popPose()
     }
 
-    /**
-     * Horizontal offset of an item inside the wheel. A child that explicitly
-     * specifies a horizontal gravity overrides the wheel's [itemAlign], otherwise
-     * [itemAlign] is used.
-     */
     protected open fun computeItemAlignX(child: Widget, childWidth: Float): Float {
         val horizontalGravity = child.layoutParams.gravity and Gravity.HORIZONTAL_GRAVITY_MASK
         if (horizontalGravity == Gravity.CENTER_HORIZONTAL) {
@@ -397,19 +331,16 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
         }
     }
 
-    /** Alpha of an item based on its distance from the center in item units. */
     protected open fun computeItemAlpha(distanceRatio: Float): Float {
         if (!isAtmospheric) return 1f
         return Mth.clamp(1.0f - distanceRatio * 0.4f, 0.15f, 1.0f)
     }
 
-    /** Scale of an item based on its distance from the center in item units. */
     protected open fun computeItemScale(distanceRatio: Float): Float {
         if (!isSelectedScaleEnabled) return 1f
         return 1f - Mth.clamp(distanceRatio * 0.08f, 0.0f, 0.08f)
     }
 
-    /** Draws the curtain highlight over the selected row. */
     protected open fun renderCurtain(context: Canvas, centerY: Float) {
         val alpha = ARGB.alpha(curtainColor) / 255.0f * context.accumulatedAlpha
         if (alpha <= 0f) return
@@ -431,7 +362,6 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
         context.pose().popPose()
     }
 
-    /** Draws the indicator lines above and below the selected row. */
     protected open fun renderIndicator(context: Canvas, centerY: Float) {
         val alpha = ARGB.alpha(indicatorColor) / 255.0f * context.accumulatedAlpha
         if (alpha <= 0f) return
@@ -548,20 +478,12 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
         return items[if (isCyclic) normalizePosition(_selectedPosition) else _selectedPosition]
     }
 
-    /**
-     * Animates the wheel to the given item position.
-     */
     open fun setSelectedPosition(position: Int): WheelPickerWidget {
         if (itemCount == 0) return this
         animateToPosition(position)
         return this
     }
 
-    /**
-     * Animated scroll to the given item position. For a cyclic wheel the shortest
-     * direction around the loop is chosen. The target accumulates exactly, so
-     * rapid successive calls keep piling up instead of re-targeting the same item.
-     */
     open fun animateToPosition(position: Int) {
         if (itemCount == 0) return
         if (isCyclic) {
@@ -579,7 +501,6 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
         startChase()
     }
 
-    /** Scrolls the wheel by the given number of items (negative = previous). */
     open fun scrollByItems(direction: Int) {
         if (itemCount == 0) return
         if (isCyclic) {
@@ -701,7 +622,7 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
         if (itemCount == 0) return
         var targetPos = computeSnapTarget().first
         isFlinging = false
-        if (Math.abs(velocityY) > FLING_VELOCITY_THRESHOLD) {
+        if (abs(velocityY) > FLING_VELOCITY_THRESHOLD) {
             val v = velocityY.toFloat()
             var extra = round(v / itemHeight * FLING_MOMENTUM_FACTOR).toInt()
             if (extra == 0) extra = if (v > 0) 1 else -1
@@ -763,9 +684,6 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
             return
         }
 
-        // Measuring and laying out a valid wheel must not cancel a queued scroll. Dynamic HUD
-        // labels can request layout while the wheel is moving, so only clamp the pending target
-        // when a non-cyclic list has actually become too short for it.
         if (!isCyclic) {
             val clampedTarget = (_selectedPosition + targetPosition)
                 .coerceIn(0, itemCount - 1) - _selectedPosition
@@ -817,22 +735,16 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
         const val DEFAULT_VISIBLE_ITEM_COUNT = 3
         const val DEFAULT_ITEM_SPACE = 2.0f
 
-        /** Numerical convergence distance (px) before the wheel commits its item. */
         private const val SETTLE_EPSILON_PX = 1e-3f
 
-        /** Minimum drag delta-time (s) used for velocity sampling, guards against spikey frames. */
         private const val MIN_VELOCITY_DT_SEC = 0.001
 
-        /** Exponential smoothing factor for the drag velocity estimate. */
         private const val VELOCITY_SMOOTHING = 0.82
 
-        /** Hard cap on fling velocity in pixels/second. */
         private const val MAX_FLING_VELOCITY = 6000f
 
-        /** Fling triggers only above this velocity in pixels/second. */
         private const val FLING_VELOCITY_THRESHOLD = 320f
 
-        /** Flung items = velocity(px/s) * this factor / itemHeight. */
         private const val FLING_MOMENTUM_FACTOR = 0.35f
     }
 }

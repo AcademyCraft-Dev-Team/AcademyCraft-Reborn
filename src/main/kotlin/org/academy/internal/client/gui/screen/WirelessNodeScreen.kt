@@ -1,7 +1,5 @@
 package org.academy.internal.client.gui.screen
 
-/*import org.academy.api.client.gui.glyph.MsdfAtlasDebugger
-import org.academy.api.client.gui.text.font.MsdfFontService*/
 import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
@@ -17,17 +15,14 @@ import org.academy.api.client.gui.util.InfoAreaUtil.create
 import org.academy.api.client.gui.util.InfoAreaUtil.createAttributeRow
 import org.academy.api.client.gui.util.InfoAreaUtil.createInfoRow
 import org.academy.api.client.gui.util.InfoAreaUtil.createInputRow
-import org.academy.api.client.gui.util.WirelessPanelUtil.create
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.resources.R
-import org.academy.api.client.util.AnimationUtil
 import org.academy.api.common.wireless.SetNodeNamePacket
 import org.academy.api.common.wireless.SetNodePassPacket
 import org.academy.internal.common.world.inventory.WirelessNodeMenu
 import org.academy.internal.common.world.level.block.entity.WirelessNodeBlockEntity
 import org.misaka.MisakaNetworkClient
 import java.lang.Float
-import java.util.function.Consumer
 import kotlin.Int
 import kotlin.String
 import kotlin.run
@@ -89,35 +84,7 @@ class WirelessNodeScreen(
 
         invPage.addChild("effect", effect)
 
-        val wirelessPage = create(mainPos, true)
-        wirelessPage.visibility = Widget.Visibility.GONE
-        wirelessPage.isEnabled = false
-        content.addChild("page_wireless", wirelessPage)
-
-        val wirelessButton = createButton(R.textures.gui.icon.icon_wireless)
-        wirelessButton.layoutParams = WidgetContainer.LayoutParams()
-            .widthMode(SizeMode.MATCH_PARENT)
-            .height(16f)
-
-        pageButtons.addChild("wireless", wirelessButton)
-        pageButtons.onSelectionChanged = Consumer { button: RadioButtonWidget? ->
-            when (button!!.name) {
-                "inv" -> {
-                    AnimationUtil.hide(wirelessPage)
-                    AnimationUtil.show(invPage)
-                    isHandleContainer = true
-                    isRenderInventory = true
-                }
-
-                "wireless" -> {
-                    AnimationUtil.hide(invPage)
-                    AnimationUtil.show(wirelessPage)
-                    isHandleContainer = false
-                    isRenderInventory = false
-                }
-            }
-        }
-        pageButtons.selectButton(invButton)
+        setupWirelessPage(pageButtons, invButton, content, invPage, mainPos, createButton(R.textures.gui.icon.icon_wireless))
 
         val info = create(this, (leftPos + imageWidth).toFloat(), (topPos - 22).toFloat())
         run {

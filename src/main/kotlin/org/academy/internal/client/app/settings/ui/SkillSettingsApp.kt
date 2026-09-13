@@ -22,7 +22,6 @@ import org.academy.api.client.resources.R
 import org.academy.api.common.ability.Skill
 import org.academy.api.common.util.L10n
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting
-import org.lwjgl.glfw.GLFW
 import org.misaka.MisakaNetworkClient
 import kotlin.math.roundToInt
 
@@ -41,7 +40,7 @@ object SkillSettingsApp : App {
         return L10n[key]
     }
 
-    private class Context : WidgetContext {
+    private class Context : WidgetContext, CaptureHost {
         companion object {
             private const val TOOLTIP_WIDTH = 190f
             private const val TOOLTIP_PADDING = 5f
@@ -55,6 +54,7 @@ object SkillSettingsApp : App {
         private var tooltipSkill: Skill? = null
         private var tooltipBindingRevision = -1L
         private var capturing: CaptureTarget? = null
+        override val captureTarget: CaptureTarget? get() = capturing
         private var pendingType: InputSystem.InputType? = null
         private val pendingKeys: MutableSet<Int> = linkedSetOf()
         private var pendingMouseButton: Int = -1
@@ -78,15 +78,9 @@ object SkillSettingsApp : App {
 
         private data class BindingSection(
             val skill: Skill,
-            val config: KeyBindingConfig,
-            val persist: (KeyBindingConfig) -> Unit
-        )
-
-        private data class CaptureTarget(
-            val section: BindingSection,
-            val bindingName: String,
-            val keyLabel: TextWidget
-        )
+            override val config: KeyBindingConfig,
+            override val persist: (KeyBindingConfig) -> Unit
+        ) : KeyBindingSection
 
         private fun createRoot(): FrameLayoutWidget {
             val root = FrameLayoutWidget().apply {
@@ -443,11 +437,11 @@ object SkillSettingsApp : App {
         }
 
         private fun wrapTooltipText(text: String): String {
-            val maxWidth = TOOLTIP_WIDTH - TOOLTIP_PADDING * 2
-            return text.lines().flatMap { wrapTooltipLine(it, maxWidth) }.joinToString("\n")
+            return text.lines().flatMap { wrapTooltipLine(it) }.joinToString("\n")
         }
 
-        private fun wrapTooltipLine(line: String, maxWidth: Float): List<String> {
+        private fun wrapTooltipLine(line: String): List<String> {
+            val maxWidth = TOOLTIP_WIDTH - TOOLTIP_PADDING * 2
             if (line.isEmpty() || TextWidget.getTextWidth(line, TOOLTIP_FONT_SIZE) <= maxWidth) return listOf(line)
             val output = mutableListOf<String>()
             var remaining = line
@@ -530,7 +524,7 @@ object SkillSettingsApp : App {
             reset.layoutParams = LinearLayoutWidget.LayoutParams()
                 .size(26f, 12f)
                 .gravity(Gravity.CENTER)
-            reset.onClickListener = { resetBinding(section, bindingName, keyLabel) }
+            reset.onClickListener = { resetKeyBinding(section, bindingName, keyLabel) }
             reset.addChild("text", TextWidget(translate("app.academy.settings.keybind.reset")).apply {
                 scaleX = 0.7f
                 scaleY = 0.7f
@@ -835,15 +829,8 @@ object SkillSettingsApp : App {
         private fun createCaptureLayer(): AbstractWidget {
             return object : AbstractWidget() {
                 override fun onKeyPressed(event: KeyEvent) {
-                    event.consume()
+                    if (handleCaptureEscape(event, this@Context)) return
                     val key = event.keyCode
-                    if (key == GLFW.GLFW_KEY_ESCAPE) {
-                        val target = capturing ?: return
-                        val current = target.section.config.getKeyBinding(target.bindingName) ?: return
-                        resetCaptureState()
-                        applyCapture(InputSystem.unbound(current))
-                        return
-                    }
                     if (isModifierKey(key) || pendingType == InputSystem.InputType.MOUSE) return
                     pendingType = InputSystem.InputType.KEYBOARD
                     pendingKeys.add(key)
@@ -907,7 +894,7 @@ object SkillSettingsApp : App {
             }
         }
 
-        private fun resetCaptureState() {
+        override fun resetCaptureState() {
             pendingType = null
             pendingKeys.clear()
             pendingMouseButton = -1
@@ -933,31 +920,10 @@ object SkillSettingsApp : App {
             updateCaptureHint()
         }
 
-        private fun applyCapture(combo: InputSystem.KeyCombination) {
+        override fun applyCapture(combo: InputSystem.KeyCombination) {
             val target = capturing ?: return
-            target.section.config.setKeyBinding(target.bindingName, combo)
-            InputSystem.updateKeyBinding(target.bindingName, combo)
-            target.section.persist(target.section.config)
-            AcademyCraftClient.Config.INSTANCE.save()
-            target.keyLabel.text = displayBinding(combo)
+            writeKeyBinding(target.section, target.bindingName, combo, target.keyLabel)
             exitCapture()
-        }
-
-        private fun resetBinding(
-            section: BindingSection,
-            bindingName: String,
-            keyLabel: TextWidget
-        ) {
-            val defaultCombo = InputSystem.getDefaultKeyBinding(bindingName) ?: return
-            section.config.setKeyBinding(bindingName, defaultCombo)
-            InputSystem.updateKeyBinding(bindingName, defaultCombo)
-            section.persist(section.config)
-            AcademyCraftClient.Config.INSTANCE.save()
-            keyLabel.text = displayBinding(defaultCombo)
-        }
-
-        private fun displayBinding(combo: InputSystem.KeyCombination): String {
-            return if (combo.unbound) translate("app.academy.settings.keybind.format.none") else combo.displayName()
         }
 
         private fun updateCaptureHint() {
@@ -972,13 +938,6 @@ object SkillSettingsApp : App {
                     .replace($$"%2$s", preview)
             }
             captureHint.visibility = if (target == null) Widget.Visibility.INVISIBLE else Widget.Visibility.VISIBLE
-        }
-
-        private fun isModifierKey(key: Int): Boolean {
-            return key == GLFW.GLFW_KEY_LEFT_SHIFT || key == GLFW.GLFW_KEY_RIGHT_SHIFT
-                    || key == GLFW.GLFW_KEY_LEFT_CONTROL || key == GLFW.GLFW_KEY_RIGHT_CONTROL
-                    || key == GLFW.GLFW_KEY_LEFT_ALT || key == GLFW.GLFW_KEY_RIGHT_ALT
-                    || key == GLFW.GLFW_KEY_LEFT_SUPER || key == GLFW.GLFW_KEY_RIGHT_SUPER
         }
 
         private fun bindingDisplayName(bindingName: String): String {

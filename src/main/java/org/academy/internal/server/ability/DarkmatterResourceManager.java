@@ -19,17 +19,11 @@ import org.misaka.MisakaNetworkServer;
 
 import java.util.Map;
 
-/**
- * Owns the natural/generated MP split, generated-MP CP debt and phase allocation.
- */
 public final class DarkmatterResourceManager implements AbilitySubsystem, DarkmatterResourceService {
     private static final float EPSILON = 1.0e-4f;
     private static final float BASE_MATTER = 100.0f;
     private static final float MATTER_PER_LEVEL_SQUARED = 8.0f;
     private static final float NATURAL_RECOVERY_PER_SECOND = 1.0f;
-    /**
-     * The generation formula is clamped to at least one CP for every created MP.
-     */
     private static final float MIN_CREATED_CP_PER_UNIT = 1.0f;
     private static final String GENERATION_SKILL_ID = "academy:darkmatter_generation";
     private static final AbilityResourceSpec RESOURCE = Darkmatter.MATTER_RESOURCE;
@@ -138,9 +132,6 @@ public final class DarkmatterResourceManager implements AbilitySubsystem, Darkma
         return true;
     }
 
-    /**
-     * Legacy normalized tuning entry retained for integrations compiled against the old API.
-     */
     public boolean tunePhase(ServerPlayer player, float delta) {
         var total = getPhaseSnapshot(player).totalPoints();
         return tuneAlphaPoints(player, -delta * total * 0.5f);
@@ -248,9 +239,6 @@ public final class DarkmatterResourceManager implements AbilitySubsystem, Darkma
         if (player != null) scheduleAllSync(player);
     }
 
-    /**
-     * Controlled mutation used only by the operator debug command and automated game tests.
-     */
     public boolean debugSetPools(ServerPlayer player, float natural, float created,
                                  float cpDebt, float reserved) {
         if (!supportsMatter(player) || !Float.isFinite(natural) || !Float.isFinite(created)
@@ -416,10 +404,9 @@ public final class DarkmatterResourceManager implements AbilitySubsystem, Darkma
     static float recoverNaturalTotal(float current, float created, float baseCapacity) {
         if (!Float.isFinite(current) || !Float.isFinite(created) || !Float.isFinite(baseCapacity)) return 0.0f;
         var safeCurrent = Math.max(0.0f, current);
-        var safeCreated = Math.min(safeCurrent, Math.max(0.0f, created));
+        var safeCreated = Math.clamp(created, 0.0f, safeCurrent);
         var natural = safeCurrent - safeCreated;
-        return safeCurrent + Math.min(NATURAL_RECOVERY_PER_SECOND,
-                Math.max(0.0f, Math.max(0.0f, baseCapacity) - natural));
+        return safeCurrent + Math.clamp(Math.max(0.0f, baseCapacity) - natural, 0.0f, NATURAL_RECOVERY_PER_SECOND);
     }
 
     static float recoverNaturalMatter(float naturalMatter, float effectiveCapacity) {

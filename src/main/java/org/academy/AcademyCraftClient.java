@@ -17,7 +17,6 @@ import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.resources.model.EquipmentClientInfo;
 import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.commands.Commands;
-import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.InteractionHand;
@@ -37,8 +36,6 @@ import net.neoforged.neoforge.client.fluid.FluidTintSources;
 import net.neoforged.neoforge.client.renderstate.AvatarRenderStateModifier;
 import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
 import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.gui.editor.UiLayoutEditor;
-import org.academy.api.client.gui.editor.UiLayoutEditorScreen;
 import org.academy.api.client.gui.environment.UiEnvironment;
 import org.academy.api.client.gui.imgui.ImGuiUIDebugger;
 import org.academy.api.client.gui.imgui.ImGuiUtilApi;
@@ -76,10 +73,6 @@ import org.academy.internal.client.app.settings.ui.SkillSettingsApp;
 import org.academy.internal.client.app.tutorial.TutorialApp;
 import org.academy.internal.client.commands.ClientMusicCommand;
 import org.academy.internal.client.commands.ClientProfileCommand;
-import org.academy.internal.client.gui.debug.UiDebugBrowserScreen;
-import org.academy.internal.client.gui.debug.UiDebugLayoutDefinition;
-import org.academy.internal.client.gui.debug.UiDebugLayoutRegistry;
-import org.academy.internal.client.gui.debug.UiDebugSession;
 import org.academy.internal.client.gui.screen.AbilityDeveloperLayoutEditor;
 import org.academy.internal.client.gui.screen.Screens;
 import org.academy.internal.client.hud.HudLayoutConfig;
@@ -89,6 +82,7 @@ import org.academy.internal.client.render.fluid.ImagPhaseFluidRenderer;
 import org.academy.internal.client.render.vfx.*;
 import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
 import org.academy.internal.client.renderer.effect.LightShieldEffectRenderer;
+import org.academy.internal.client.renderer.entity.layers.CloudroomLayer;
 import org.academy.internal.client.renderer.entity.layers.SkillEffectsLayer;
 import org.academy.internal.client.renderer.entity.layers.quantum.QuantumInterferenceLayer;
 import org.academy.internal.client.renderer.special.*;
@@ -98,6 +92,7 @@ import org.academy.internal.common.ability.ProficiencyPolicy;
 import org.academy.internal.common.ability.teleport.InstantTeleportSyncPacket;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.core.particles.ParticleTypes;
+import org.academy.internal.common.network.SkillVfxPacket;
 import org.academy.internal.common.network.SpawnVfxGraphPacket;
 import org.academy.internal.common.network.TemporalImmunitySyncPacket;
 import org.academy.internal.common.world.damagesource.PvpSetting;
@@ -106,6 +101,7 @@ import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.common.world.level.block.MultiBlock;
 import org.academy.internal.common.world.level.material.Fluids;
 import org.joml.Vector3f;
+import org.jspecify.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
@@ -145,8 +141,8 @@ public final class AcademyCraftClient {
         InstantTeleportSyncPacket.initClient();
         TemporalImmunitySyncPacket.initClient();
         SpawnVfxGraphPacket.initClient();
-        org.academy.internal.common.network.SkillVfxPacket.initClient();
-        org.academy.internal.client.render.vfx.ShockwaveVfx.register();
+        SkillVfxPacket.initClient();
+        ShockwaveVfx.register();
         ProficiencyPolicy.initClient();
         SkillTuning.initClient();
         PvpSetting.initClient();
@@ -155,7 +151,7 @@ public final class AcademyCraftClient {
         ImagPhaseDowsingRodClient.init();
         BeamVfxClient.register();
         SmokeVfxClient.register();
-        org.academy.internal.client.render.vfx.DarkmatterSlashVfx.register();
+        DarkmatterSlashVfx.register();
         ArcVfxClient.register();
         WingVfxClient.register();
         PlasmaVfxClient.register();
@@ -167,7 +163,6 @@ public final class AcademyCraftClient {
         VfxManager.INSTANCE.init();
         VfxGraphManager.INSTANCE.init();
         if (isUiDebugEnvironment()) {
-            // dev 热重载：监听运行目录下的 vfxgraph 资产（与资源包目录一致）
             var root = Minecraft.getInstance().gameDirectory.toPath().resolve("vfxgraph");
             try {
                 Files.createDirectories(root);
@@ -285,71 +280,6 @@ public final class AcademyCraftClient {
         );
         ClientProfileCommand.register(event.getDispatcher());
         ClientMusicCommand.register(event.getDispatcher());
-        if (!isUiDebugEnvironment()) return;
-        event.getDispatcher().register(
-                Commands.literal("academy")
-                        .then(
-                                Commands.literal("debug")
-                                        .then(
-                                                Commands.literal("ui")
-                                                        .executes(_ -> {
-                                                            UiDebugBrowserScreen.Companion.open();
-                                                            return 1;
-                                                        })
-                                                        .then(
-                                                                Commands.argument(
-                                                                                "layout",
-                                                                                StringArgumentType.word()
-                                                                        )
-                                                                        .suggests((_, builder) -> SharedSuggestionProvider.suggest(
-                                                                                UiDebugLayoutRegistry.INSTANCE.gui().stream()
-                                                                                        .map(UiDebugLayoutDefinition::getId)
-                                                                                        .toList(),
-                                                                                builder
-                                                                        ))
-                                                                        .executes(ctx -> {
-                                                                            var layout = StringArgumentType
-                                                                                    .getString(ctx, "layout");
-                                                                            if (UiDebugLayoutRegistry.INSTANCE.gui().stream()
-                                                                                    .noneMatch(definition -> definition.getId().equals(layout))) {
-                                                                                return 0;
-                                                                            }
-                                                                            UiLayoutEditorScreen.Companion
-                                                                                    .openDebug(layout);
-                                                                            return 1;
-                                                                        })
-                                                        )
-                                         )
-                                         .then(
-                                                 Commands.literal("save")
-                                                        .executes(_ -> {
-                                                            UiDebugBrowserScreen.Companion.notifyPublish(UiDebugSession.INSTANCE.publish());
-                                                            return 1;
-                                                        })
-                                        )
-                        )
-                        .then(
-                                Commands.literal("uieditor")
-                                        .executes(_ -> {
-                                            UiDebugBrowserScreen.Companion.open();
-                                            return 1;
-                                        })
-                                        .then(
-                                                Commands.argument("file", StringArgumentType.word())
-                                                        .suggests((_, builder) -> SharedSuggestionProvider.suggest(
-                                                                UiDebugLayoutRegistry.INSTANCE.all().stream()
-                                                                        .map(UiDebugLayoutDefinition::getId)
-                                                                        .toList(),
-                                                                builder
-                                                        ))
-                                                        .executes(ctx -> {
-                                                            var file = StringArgumentType.getString(ctx, "file");
-                                                            UiLayoutEditor.INSTANCE.open(file);
-                                                            return 1;
-                                                        })
-                                        )
-                        )
-        );
     }
 
     private static int setSkillGuiDebug(boolean enabled) {
@@ -368,7 +298,7 @@ public final class AcademyCraftClient {
         return 1;
     }
 
-    private static int spawnVfx(String graph, Vector3f position) {
+    private static int spawnVfx(String graph, @Nullable Vector3f position) {
         var mc = Minecraft.getInstance();
         if (mc.level == null) {
             notifyClient("No world loaded.");
@@ -418,8 +348,6 @@ public final class AcademyCraftClient {
                     : summary);
         }
         notifyClient("Dumped " + dumped + " glyph(s) at " + px + "px to " + outputDir + summaries);
-        // Commands run before a world/netcode exists must still be observable:
-        // notifyClient silently drops the message when no player is present.
         AcademyCraft.getLogger().info(
                 "Bitmap glyph dump ({}, {}px):\n{}{}", text, px, outputDir, summaries
         );
@@ -462,8 +390,6 @@ public final class AcademyCraftClient {
         }
 
         notifyClient("Dumped " + dumped.size() + " atlas page(s) to " + outputDir + summary);
-        // Commands runs before a world/netcode exists must still be observable:
-        // notifyClient silently drops the message when no player is present.
         AcademyCraft.getLogger().info("Atlas dump ({}): {}{}", filter, outputDir, summary);
         return 1;
     }
@@ -488,7 +414,6 @@ public final class AcademyCraftClient {
     public static void onClientStopped(ClientStoppedEvent event) {
         TemporalClientRuntime.reset();
         MentaloutRosterClientState.clearLocal();
-        if (isUiDebugEnvironment()) UiDebugSession.INSTANCE.close();
         ImGuiUtilApi.INSTANCE.close();
         MsdfFontService.INSTANCE.close();
 
@@ -574,7 +499,7 @@ public final class AcademyCraftClient {
             LivingEntityRenderer<T, S, M> renderer
     ) {
         renderer.addLayer(new QuantumInterferenceLayer<>(renderer));
-        renderer.addLayer(new org.academy.internal.client.renderer.entity.layers.CloudroomLayer<>(renderer));
+        renderer.addLayer(new CloudroomLayer<>(renderer));
     }
 
     @SubscribeEvent
@@ -583,8 +508,8 @@ public final class AcademyCraftClient {
             @Override
             public <T extends Avatar & ClientAvatarEntity> void accept(T avatar, AvatarRenderState renderState) {
                 AbilityDeveloperSleepClient.extract(avatar, renderState);
-                renderState.setRenderData(org.academy.internal.client.renderer.entity.layers.CloudroomLayer.VISIBLE,
-                        org.academy.internal.client.renderer.entity.layers.CloudroomLayer.shouldReveal(avatar));
+                renderState.setRenderData(CloudroomLayer.VISIBLE,
+                        CloudroomLayer.shouldReveal(avatar));
                 renderState.setRenderData(ElectromasterWeaponVfx.ENTITY_ID_CONTEXT, avatar.getId());
                 renderState.setRenderData(
                         ElectromasterWeaponVfx.MAGNETIC_CONTEXT,
@@ -613,8 +538,8 @@ public final class AcademyCraftClient {
                     QuantumInterferenceLayer.CONTEXT_KEY,
                     livingEntity.getExistingDataOrNull(AttachmentTypes.QUANTUM_DATA.get())
             );
-            livingEntityRenderState.setRenderData(org.academy.internal.client.renderer.entity.layers.CloudroomLayer.VISIBLE,
-                    org.academy.internal.client.renderer.entity.layers.CloudroomLayer.shouldReveal(livingEntity));
+            livingEntityRenderState.setRenderData(CloudroomLayer.VISIBLE,
+                    CloudroomLayer.shouldReveal(livingEntity));
         };
     }
 
@@ -622,7 +547,7 @@ public final class AcademyCraftClient {
     public static void onRegisterParticleProviders(RegisterParticleProvidersEvent event) {
         event.registerSpriteSet(ParticleTypes.IMAG_PHASE_LEAVES.get(), ImagPhaseLeavesParticle.Provider::new);
         event.registerSpriteSet(ParticleTypes.IMAG_PHASE_FLUID.get(), sprites ->
-                (type, level, x, y, z, xSpeed, ySpeed, zSpeed, random) -> {
+                (_, level, x, y, z, xSpeed, ySpeed, zSpeed, random) -> {
                     var particle = new ImagPhaseFluidParticle(
                             level, sprites, x, y, z, xSpeed, ySpeed, zSpeed, random
                     );
@@ -633,9 +558,9 @@ public final class AcademyCraftClient {
                     };
                     var color = colors[random.nextInt(colors.length)];
                     particle.setColor(
-                            Math.max(0, Math.min(255, color[0] + random.nextInt(-20, 20))) / 255.0F,
-                            Math.max(0, Math.min(255, color[1] + random.nextInt(-20, 20))) / 255.0F,
-                            Math.max(0, Math.min(255, color[2] + random.nextInt(-20, 20))) / 255.0F
+                            Math.clamp(color[0] + random.nextInt(-20, 20), 0, 255) / 255.0F,
+                            Math.clamp(color[1] + random.nextInt(-20, 20), 0, 255) / 255.0F,
+                            Math.clamp(color[2] + random.nextInt(-20, 20), 0, 255) / 255.0F
                     );
                     return particle;
                 });
@@ -701,9 +626,6 @@ public final class AcademyCraftClient {
                 return HumanoidModel.ArmPose.CROSSBOW_HOLD;
             }
         }, Items.IMAG_PHASE_DOWSING_ROD.get());
-        // The shaped armor remains a fully functional equipment set, but its worn layer is
-        // intentionally invisible. Keep the equipment asset and animated textures available
-        // for item rendering/resource packs while suppressing only the humanoid layer submit.
         event.registerItem(new IClientItemExtensions() {
                                @Override
                                public int getArmorLayerTintColor(

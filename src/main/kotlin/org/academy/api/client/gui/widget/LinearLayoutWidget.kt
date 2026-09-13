@@ -51,140 +51,57 @@ open class LinearLayoutWidget : AbstractWidgetContainer() {
     }
 
     fun measureVertical(widthMeasureSpec: MeasureSpec, heightMeasureSpec: MeasureSpec) {
-        totalLength = 0f
-        var maxWidth = 0.0f
-        var totalWeight = 0.0f
-        var visibleChildCount = 0
-        var hasMatchParentWidth = false
-
-        for (child in children.values) {
-            if (!child.isVisible()) continue
-            visibleChildCount++
-            val lp = child.layoutParams as LayoutParams
-            totalWeight += lp.weight
-            if (lp.widthMode == SizeMode.MATCH_PARENT) {
-                hasMatchParentWidth = true
-            }
-        }
-
-        val containerLp = layoutParams
-        val widthMode = widthMeasureSpec.mode
-        var allFillParent = true
-
-        for (child in children.values) {
-            if (!child.isVisible()) continue
-            val lp = child.layoutParams as LayoutParams
-            measureChild(child, widthMeasureSpec, heightMeasureSpec)
-            totalLength += child.measuredHeight + lp.marginTop + lp.marginBottom
-            maxWidth = max(maxWidth, child.measuredWidth + lp.marginLeft + lp.marginRight)
-            allFillParent = allFillParent and (lp.heightMode == SizeMode.MATCH_PARENT)
-        }
-
-        if (visibleChildCount > 0) {
-            totalLength += (visibleChildCount - 1) * spacing
-        }
-        totalLength += containerLp.paddingTop + containerLp.paddingBottom
-        maxWidth += containerLp.paddingLeft + containerLp.paddingRight
-
-        val finalHeight: Float = resolveSize(totalLength, heightMeasureSpec)
-        val remainingSpace = finalHeight - totalLength
-
-        if (remainingSpace != 0f && totalWeight > 0) {
-            val actualWeightSum = if (weightSum > 0) weightSum else totalWeight
-            allFillParent = true
-
-            for (child in children.values) {
-                if (!child.isVisible()) continue
-                val lp = child.layoutParams as LayoutParams
-                if (lp.weight > 0) {
-                    val share = remainingSpace * lp.weight / actualWeightSum
-                    val childHeight = child.measuredHeight + share
-                    val childHeightSpec = MeasureSpec(MeasureSpec.Mode.EXACTLY, max(0f, childHeight))
-                    val childWidthSpec: MeasureSpec = getChildMeasureSpec(
-                        widthMeasureSpec,
-                        containerLp.paddingLeft + containerLp.paddingRight + lp.marginLeft + lp.marginRight,
-                        lp.width, lp.widthMode
-                    )
-                    child.measure(childWidthSpec, childHeightSpec)
-                }
-                allFillParent = allFillParent and (lp.heightMode == SizeMode.MATCH_PARENT)
-            }
-
-            totalLength = 0f
-            maxWidth = 0f
-            var finalVisibleChildCount = 0
-            for (child in children.values) {
-                if (!child.isVisible()) continue
-                val lp = child.layoutParams as LayoutParams
-                totalLength += child.measuredHeight + lp.marginTop + lp.marginBottom
-                maxWidth = max(maxWidth, child.measuredWidth + lp.marginLeft + lp.marginRight)
-                finalVisibleChildCount++
-            }
-
-            if (finalVisibleChildCount > 0) {
-                totalLength += (finalVisibleChildCount - 1) * spacing
-            }
-            totalLength += containerLp.paddingTop + containerLp.paddingBottom
-            maxWidth += containerLp.paddingLeft + containerLp.paddingRight
-        }
-
-        val finalWidth: Float = resolveSize(maxWidth, widthMeasureSpec)
-        if (hasMatchParentWidth && widthMode != MeasureSpec.Mode.UNSPECIFIED) {
-            val innerWidth = finalWidth - containerLp.paddingLeft - containerLp.paddingRight
-            for (child in children.values) {
-                if (!child.isVisible()) continue
-                val lp = child.layoutParams as LayoutParams
-                if (lp.widthMode == SizeMode.MATCH_PARENT) {
-                    val childTargetWidth = innerWidth - lp.marginLeft - lp.marginRight
-                    val childWidthSpec = MeasureSpec(MeasureSpec.Mode.EXACTLY, max(0f, childTargetWidth))
-                    val childHeightSpec = MeasureSpec(MeasureSpec.Mode.EXACTLY, child.measuredHeight)
-                    child.measure(childWidthSpec, childHeightSpec)
-                }
-            }
-        }
-
-        setMeasuredDimension(finalWidth, finalHeight)
+        measureAlongAxis(false, widthMeasureSpec, heightMeasureSpec)
     }
 
     fun measureHorizontal(widthMeasureSpec: MeasureSpec, heightMeasureSpec: MeasureSpec) {
+        measureAlongAxis(true, widthMeasureSpec, heightMeasureSpec)
+    }
+
+    private fun measureAlongAxis(horizontal: Boolean, widthMeasureSpec: MeasureSpec, heightMeasureSpec: MeasureSpec) {
+        val mainSpec = if (horizontal) widthMeasureSpec else heightMeasureSpec
+        val crossSpec = if (horizontal) heightMeasureSpec else widthMeasureSpec
+
         totalLength = 0f
-        var maxHeight = 0.0f
+        var maxCross = 0.0f
         var totalWeight = 0.0f
         var visibleChildCount = 0
-        var hasMatchParentHeight = false
+        var hasMatchParentCross = false
 
         for (child in children.values) {
             if (!child.isVisible()) continue
             visibleChildCount++
             val lp = child.layoutParams as LayoutParams
             totalWeight += lp.weight
-            if (lp.heightMode == SizeMode.MATCH_PARENT) {
-                hasMatchParentHeight = true
+            if (lp.crossMode(horizontal) == SizeMode.MATCH_PARENT) {
+                hasMatchParentCross = true
             }
         }
 
         val containerLp = layoutParams
-        val heightMode = heightMeasureSpec.mode
+        val crossMode = crossSpec.mode
         var allFillParent = true
 
         for (child in children.values) {
             if (!child.isVisible()) continue
-
             measureChild(child, widthMeasureSpec, heightMeasureSpec)
             val lp = child.layoutParams as LayoutParams
-            totalLength += child.measuredWidth + lp.marginLeft + lp.marginRight
-            maxHeight = max(maxHeight, child.measuredHeight + lp.marginTop + lp.marginBottom)
-            allFillParent = allFillParent and (lp.widthMode == SizeMode.MATCH_PARENT)
+            totalLength += child.measuredMain(horizontal) + lp.mainStartMargin(horizontal) + lp.mainEndMargin(horizontal)
+            maxCross = max(
+                maxCross,
+                child.measuredCross(horizontal) + lp.crossStartMargin(horizontal) + lp.crossEndMargin(horizontal)
+            )
+            allFillParent = allFillParent and (lp.mainMode(horizontal) == SizeMode.MATCH_PARENT)
         }
 
         if (visibleChildCount > 0) {
             totalLength += (visibleChildCount - 1) * spacing
         }
-        totalLength += containerLp.paddingLeft + containerLp.paddingRight
-        maxHeight += containerLp.paddingTop + containerLp.paddingBottom
+        totalLength += containerLp.mainPaddingStart(horizontal) + containerLp.mainPaddingEnd(horizontal)
+        maxCross += containerLp.crossPaddingStart(horizontal) + containerLp.crossPaddingEnd(horizontal)
 
-        val finalWidth: Float = resolveSize(totalLength, widthMeasureSpec)
-        val remainingSpace = finalWidth - totalLength
+        val finalMain: Float = resolveSize(totalLength, mainSpec)
+        val remainingSpace = finalMain - totalLength
 
         if (remainingSpace != 0f && totalWeight > 0) {
             val actualWeightSum = if (weightSum > 0) weightSum else totalWeight
@@ -195,52 +112,60 @@ open class LinearLayoutWidget : AbstractWidgetContainer() {
                 val lp = child.layoutParams as LayoutParams
                 if (lp.weight > 0) {
                     val share = remainingSpace * lp.weight / actualWeightSum
-                    val childWidth = child.measuredWidth + share
-                    val childWidthSpec = MeasureSpec(MeasureSpec.Mode.EXACTLY, max(0f, childWidth))
-                    val childHeightSpec: MeasureSpec = getChildMeasureSpec(
-                        heightMeasureSpec,
-                        containerLp.paddingTop + containerLp.paddingBottom + lp.marginTop + lp.marginBottom,
-                        lp.height, lp.heightMode
+                    val childMain = child.measuredMain(horizontal) + share
+                    val childMainSpec = MeasureSpec(MeasureSpec.Mode.EXACTLY, max(0f, childMain))
+                    val childCrossSpec: MeasureSpec = getChildMeasureSpec(
+                        crossSpec,
+                        containerLp.crossPaddingStart(horizontal) + containerLp.crossPaddingEnd(horizontal) +
+                                lp.crossStartMargin(horizontal) + lp.crossEndMargin(horizontal),
+                        lp.crossSize(horizontal), lp.crossMode(horizontal)
                     )
-                    child.measure(childWidthSpec, childHeightSpec)
+                    child.measureWithAxis(horizontal, childMainSpec, childCrossSpec)
                 }
-                allFillParent = allFillParent and (lp.widthMode == SizeMode.MATCH_PARENT)
+                allFillParent = allFillParent and (lp.mainMode(horizontal) == SizeMode.MATCH_PARENT)
             }
 
             totalLength = 0f
-            maxHeight = 0f
+            maxCross = 0f
             var finalVisibleChildCount = 0
             for (child in children.values) {
                 if (!child.isVisible()) continue
                 val lp = child.layoutParams as LayoutParams
-                totalLength += child.measuredWidth + lp.marginLeft + lp.marginRight
-                maxHeight = max(maxHeight, child.measuredHeight + lp.marginTop + lp.marginBottom)
+                totalLength += child.measuredMain(horizontal) + lp.mainStartMargin(horizontal) + lp.mainEndMargin(horizontal)
+                maxCross = max(
+                    maxCross,
+                    child.measuredCross(horizontal) + lp.crossStartMargin(horizontal) + lp.crossEndMargin(horizontal)
+                )
                 finalVisibleChildCount++
             }
 
             if (finalVisibleChildCount > 0) {
                 totalLength += (finalVisibleChildCount - 1) * spacing
             }
-            totalLength += containerLp.paddingLeft + containerLp.paddingRight
-            maxHeight += containerLp.paddingTop + containerLp.paddingBottom
+            totalLength += containerLp.mainPaddingStart(horizontal) + containerLp.mainPaddingEnd(horizontal)
+            maxCross += containerLp.crossPaddingStart(horizontal) + containerLp.crossPaddingEnd(horizontal)
         }
 
-        val finalHeight: Float = resolveSize(maxHeight, heightMeasureSpec)
-        if (hasMatchParentHeight && heightMode != MeasureSpec.Mode.UNSPECIFIED) {
-            val innerHeight = finalHeight - containerLp.paddingTop - containerLp.paddingBottom
+        val finalCross: Float = resolveSize(maxCross, crossSpec)
+        if (hasMatchParentCross && crossMode != MeasureSpec.Mode.UNSPECIFIED) {
+            val innerCross = finalCross - containerLp.crossPaddingStart(horizontal) - containerLp.crossPaddingEnd(horizontal)
             for (child in children.values) {
                 if (!child.isVisible()) continue
                 val lp = child.layoutParams as LayoutParams
-                if (lp.heightMode == SizeMode.MATCH_PARENT) {
-                    val childTargetHeight = innerHeight - lp.marginTop - lp.marginBottom
-                    val childHeightSpec = MeasureSpec(MeasureSpec.Mode.EXACTLY, max(0f, childTargetHeight))
-                    val childWidthSpec = MeasureSpec(MeasureSpec.Mode.EXACTLY, child.measuredWidth)
-                    child.measure(childWidthSpec, childHeightSpec)
+                if (lp.crossMode(horizontal) == SizeMode.MATCH_PARENT) {
+                    val childTargetCross = innerCross - lp.crossStartMargin(horizontal) - lp.crossEndMargin(horizontal)
+                    val childCrossSpec = MeasureSpec(MeasureSpec.Mode.EXACTLY, max(0f, childTargetCross))
+                    val childMainSpec = MeasureSpec(MeasureSpec.Mode.EXACTLY, child.measuredMain(horizontal))
+                    child.measureWithAxis(horizontal, childMainSpec, childCrossSpec)
                 }
             }
         }
 
-        setMeasuredDimension(finalWidth, finalHeight)
+        if (horizontal) {
+            setMeasuredDimension(finalMain, finalCross)
+        } else {
+            setMeasuredDimension(finalCross, finalMain)
+        }
     }
 
     override fun onLayout() {
@@ -382,5 +307,52 @@ open class LinearLayoutWidget : AbstractWidgetContainer() {
             this.weight = weight
             return this
         }
+    }
+}
+
+private fun WidgetContainer.LayoutParams.mainMode(horizontal: Boolean): SizeMode =
+    if (horizontal) widthMode else heightMode
+
+private fun WidgetContainer.LayoutParams.crossMode(horizontal: Boolean): SizeMode =
+    if (horizontal) heightMode else widthMode
+
+private fun WidgetContainer.LayoutParams.crossSize(horizontal: Boolean): Float =
+    if (horizontal) height else width
+
+private fun WidgetContainer.LayoutParams.mainStartMargin(horizontal: Boolean): Float =
+    if (horizontal) marginLeft else marginTop
+
+private fun WidgetContainer.LayoutParams.mainEndMargin(horizontal: Boolean): Float =
+    if (horizontal) marginRight else marginBottom
+
+private fun WidgetContainer.LayoutParams.crossStartMargin(horizontal: Boolean): Float =
+    if (horizontal) marginTop else marginLeft
+
+private fun WidgetContainer.LayoutParams.crossEndMargin(horizontal: Boolean): Float =
+    if (horizontal) marginBottom else marginRight
+
+private fun WidgetContainer.LayoutParams.mainPaddingStart(horizontal: Boolean): Float =
+    if (horizontal) paddingLeft else paddingTop
+
+private fun WidgetContainer.LayoutParams.mainPaddingEnd(horizontal: Boolean): Float =
+    if (horizontal) paddingRight else paddingBottom
+
+private fun WidgetContainer.LayoutParams.crossPaddingStart(horizontal: Boolean): Float =
+    if (horizontal) paddingTop else paddingLeft
+
+private fun WidgetContainer.LayoutParams.crossPaddingEnd(horizontal: Boolean): Float =
+    if (horizontal) paddingBottom else paddingRight
+
+private fun Widget.measuredMain(horizontal: Boolean): Float =
+    if (horizontal) measuredWidth else measuredHeight
+
+private fun Widget.measuredCross(horizontal: Boolean): Float =
+    if (horizontal) measuredHeight else measuredWidth
+
+private fun Widget.measureWithAxis(horizontal: Boolean, mainSpec: MeasureSpec, crossSpec: MeasureSpec) {
+    if (horizontal) {
+        measure(mainSpec, crossSpec)
+    } else {
+        measure(crossSpec, mainSpec)
     }
 }

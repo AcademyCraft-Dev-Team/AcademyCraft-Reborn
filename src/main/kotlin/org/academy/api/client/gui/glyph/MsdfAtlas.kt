@@ -1,37 +1,19 @@
 package org.academy.api.client.gui.glyph
 
-import com.mojang.blaze3d.systems.RenderSystem
-import lovely.cane.jmsdfgen.Arithmetic
-import lovely.cane.jmsdfgen.Bitmap
-import lovely.cane.jmsdfgen.EdgeColoring
-import lovely.cane.jmsdfgen.GeneratorConfig
-import lovely.cane.jmsdfgen.ImportFont
-import lovely.cane.jmsdfgen.MSDFErrorCorrection
-import lovely.cane.jmsdfgen.MSDFGen
-import lovely.cane.jmsdfgen.Projection
-import lovely.cane.jmsdfgen.Range
-import lovely.cane.jmsdfgen.SDFTransformation
-import lovely.cane.jmsdfgen.Shape
-import lovely.cane.jmsdfgen.Vector2
-import lovely.cane.jmsdfgen.YAxisOrientation
+import lovely.cane.jmsdfgen.*
 import net.minecraft.resources.Identifier
 import net.minecraft.util.Mth
 import org.academy.AcademyCraft
 import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.glyph.allocator.Rect
 import org.academy.api.client.thread.RenderThread
+import org.academy.api.client.thread.runOnRenderThread
 import org.lwjgl.system.MemoryUtil
 import org.lwjgl.util.freetype.FT_Face
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executor
 import java.util.concurrent.locks.ReentrantLock
 
-/**
- * 每个字体一块 MSDF 图集：按字形索引生成（异步）并缓存 [MsdfGlyph]。
- *
- * 字形标识用字体 glyph index（AWT 布局选定），与位图 strike / 就绪状态一致。
- */
 class MsdfAtlas(
     private val fontId: Identifier,
     private val pageSize: Int,
@@ -86,14 +68,12 @@ class MsdfAtlas(
         }
 
         shape.normalize()
-        // Shape.orientContours 忠实移植自 c++，但 c++ 版依赖 Skia 做更准的修正；
-        // java 无完整 Skia 绑定时部分文字会出错，需按 CJK 跳过。
         if (!isCjk(codePoint)) shape.orientContours()
-        shape.setYAxisOrientation(YAxisOrientation.Y_DOWNWARD)
+        shape.yAxisOrientation = YAxisOrientation.Y_DOWNWARD
 
         EdgeColoring.edgeColoringSimple(shape, 3.0, 0)
 
-        val bounds = shape.getBounds()
+        val bounds = shape.bounds
         var l = bounds.l
         var b = bounds.b
         var r = bounds.r
@@ -135,7 +115,7 @@ class MsdfAtlas(
 
         executor.execute {
             try {
-                val bitmap = Bitmap<Float>(texWidth, texHeight, 3) { n -> Array(n) { 0f } }
+                val bitmap = Bitmap(texWidth, texHeight, 3) { n -> Array(n) { 0f } }
                 val transform = SDFTransformation(
                     Projection(Vector2(scale), Vector2(tx, ty)), Range(rangeInEM)
                 )
@@ -184,19 +164,6 @@ class MsdfAtlas(
         return glyph
     }
 
-    private fun <T> runOnRenderThread(task: () -> T): T {
-        if (RenderSystem.isOnRenderThread()) return task()
-        val future = CompletableFuture<T>()
-        UiEnvironment.get().runOnMainThread {
-            try {
-                future.complete(task())
-            } catch (t: Throwable) {
-                future.completeExceptionally(t)
-            }
-        }
-        return future.join()
-    }
-
     @RenderThread
     private fun reserveSlot(
         glyphIndex: Int, slotWidth: Int, slotHeight: Int, texWidth: Int, texHeight: Int,
@@ -241,10 +208,9 @@ class MsdfAtlas(
             rect = newRect
         }
 
-        val targetPage = page ?: error("no atlas page")
         val targetRect = rect ?: error("no atlas rect")
         val glyph = MsdfGlyph(
-            targetPage,
+            page,
             targetRect.x.toFloat() / pageSize,
             targetRect.y.toFloat() / pageSize,
             (targetRect.x + texWidth).toFloat() / pageSize,

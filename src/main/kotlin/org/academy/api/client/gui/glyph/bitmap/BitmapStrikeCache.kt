@@ -1,10 +1,9 @@
 package org.academy.api.client.gui.glyph.bitmap
 
-import com.mojang.blaze3d.systems.RenderSystem
-import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.glyph.AtlasManager
 import org.academy.api.client.gui.glyph.Constants
 import org.academy.api.client.gui.glyph.allocator.Rect
+import org.academy.api.client.thread.runOnRenderThread
 import org.academy.api.client.gui.text.font.MsdfFont
 import org.academy.api.client.gui.text.subrun.PackedGlyphID
 import org.academy.api.client.gui.text.subrun.SubRunControl
@@ -13,24 +12,18 @@ import org.lwjgl.system.MemoryUtil
 import org.lwjgl.util.freetype.FT_Bitmap
 import org.lwjgl.util.freetype.FT_Vector
 import org.lwjgl.util.freetype.FreeType
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.pow
+import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 
-/**
- * 同步 FreeType A8 字形光栅化，喂给共享 [BitmapAtlas]。
- *
- * 光栅化很便宜（UI 尺寸下亚毫秒），直接在调用线程生成，不走 MSDF 的异步队列。
- * 缓存 key 把 em 尺寸量化到 1/4 px，避免动画分数尺寸反复生成。
- */
 object BitmapStrikeCache {
     private val CACHE = ConcurrentHashMap<PackedGlyphID, BitmapGlyph>()
 
-    /** 清空缓存。字体重载后旧字体 identityHash 条目永久滞留，需显式清理。 */
     fun clear() {
         CACHE.clear()
     }
 
-    /** 原始光栅字形：紧凑的 alpha 行。 */
     data class RawGlyph(
         val pixels: ByteArray,
         val width: Int,
@@ -38,19 +31,34 @@ object BitmapStrikeCache {
         val bearingLeft: Float,
         val bearingTop: Float,
         val advance: Float
-    )
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is RawGlyph) return false
+            return pixels.contentEquals(other.pixels) &&
+                    width == other.width &&
+                    height == other.height &&
+                    bearingLeft == other.bearingLeft &&
+                    bearingTop == other.bearingTop &&
+                    advance == other.advance
+        }
 
-    /** 把 [px] 量化到 1/[Constants.BITMAP_SUBPIXEL_STEPS] 像素。 */
+        override fun hashCode(): Int {
+            var result = pixels.contentHashCode()
+            result = 31 * result + width
+            result = 31 * result + height
+            result = 31 * result + bearingLeft.hashCode()
+            result = 31 * result + bearingTop.hashCode()
+            result = 31 * result + advance.hashCode()
+            return result
+        }
+    }
+
     fun quantize(px: Float): Float =
-        Math.round(px * Constants.BITMAP_SUBPIXEL_STEPS) / Constants.BITMAP_SUBPIXEL_STEPS
+        (px * Constants.BITMAP_SUBPIXEL_STEPS).roundToInt() / Constants.BITMAP_SUBPIXEL_STEPS
 
-    /** 是否应施加极小字号 gamma 加深（比位图/MSDF 分界更小的一段）。 */
     fun isSmallPx(quantizedRasterPx: Float): Boolean = SubRunControl.usesGamma(quantizedRasterPx)
 
-    /**
-     * 以生产设置（轻微 hinting、gamma 加深、亚像素相位）光栅化一个字形。
-     * @return 无轮廓（如空格）时返回 null
-     */
     fun rasterRaw(
         font: MsdfFont,
         glyphIndex: Int,
@@ -66,7 +74,6 @@ object BitmapStrikeCache {
             val face = font.getOrCreateBitmapFace()
             font.bitmapFaceLock().lock()
             try {
-                // Layout (AWT) already selected the glyph; rasterize by its font glyph index.
                 if (glyphIndex == 0) return@runOnRenderThread null
 
                 MemoryStack.stackPush().use { stack ->
@@ -75,7 +82,7 @@ object BitmapStrikeCache {
                     FreeType.FT_Set_Transform(face, null, shifted)
 
                     var error = FreeType.FT_Set_Char_Size(
-                        face, 0L, Math.round(quantizedRasterPx * 64.0), 72, 72
+                        face, 0L, (quantizedRasterPx * 64.0).roundToLong(), 72, 72
                     )
                     if (error != 0) {
                         throw RuntimeException("FT_Set_Char_Size failed (error $error) for ${font.descriptor}")
@@ -117,10 +124,6 @@ object BitmapStrikeCache {
         }
     }
 
-    /**
-     * 取回 [glyphIndex] 在量化 [rasterPx]（物理 em 像素）与亚像素相位下的字形，缓存于
-     * (font, glyphIndex, size, phaseX, phaseY)。
-     */
     fun getGlyph(
         font: MsdfFont,
         glyphIndex: Int,
@@ -149,7 +152,6 @@ object BitmapStrikeCache {
         val width = raw.width
         val height = raw.height
         val padding = Constants.BITMAP_GLYPH_PADDING
-        // Guttered slot: glyph pixels sit in the inner rect, UVs map only that rect.
         val reservation = AtlasManager.bitmap()
             .reserve(width + padding * 2, height + padding * 2) ?: return null
 
@@ -199,23 +201,9 @@ object BitmapStrikeCache {
     private fun buildGammaLut(): IntArray {
         val lut = IntArray(256)
         val gamma = Constants.BITMAP_SMALL_PX_GAMMA
-        // Coverage exponent 1/gamma darkens strokes (raises coverage), matching Skia/Chrome contrast.
         for (i in 0 until 256) {
-            lut[i] = Math.round(255.0 * Math.pow(i / 255.0, 1.0 / gamma)).toInt()
+            lut[i] = (255.0 * (i / 255.0).pow(1.0 / gamma)).roundToInt()
         }
         return lut
-    }
-
-    private fun <T> runOnRenderThread(task: () -> T): T {
-        if (RenderSystem.isOnRenderThread()) return task()
-        val future = CompletableFuture<T>()
-        UiEnvironment.get().runOnMainThread {
-            try {
-                future.complete(task())
-            } catch (t: Throwable) {
-                future.completeExceptionally(t)
-            }
-        }
-        return future.join()
     }
 }
