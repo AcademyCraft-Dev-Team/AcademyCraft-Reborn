@@ -10,6 +10,7 @@ import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
+import org.academy.api.client.ability.program.ProgramNodePalette
 import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.SizeMode
@@ -515,7 +516,8 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     }
 
     private fun nodeLabel(entry: ProgramEditorNodeCatalog.Entry): Component =
-        Component.translatable(entry.translationKey())
+        ProgramNodePalette.label(entry.id(), entry.defaultConfiguration())
+            ?: Component.translatable(entry.translationKey())
 
     private fun nodeDescription(entry: ProgramEditorNodeCatalog.Entry): Component =
         Component.translatable(entry.descriptionTranslationKey())
@@ -1936,10 +1938,33 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         return ProgramEditorDocument(program, definition, capabilities)
     }
 
+    private fun paletteEntries(): List<ProgramEditorNodeCatalog.Entry> = buildList {
+        for (entry in catalog.entries()) {
+            if (!ProgramNodePalette.hasProvider(entry.id())) {
+                add(entry)
+                continue
+            }
+            for (preset in ProgramNodePalette.presets(entry.id())) {
+                val schema = catalog.schema(entry.id(), preset.configuration()) ?: continue
+                add(presetEntry(entry, preset.configuration(), schema))
+            }
+        }
+    }
+
+    private fun presetEntry(
+        entry: ProgramEditorNodeCatalog.Entry,
+        configuration: JsonElement,
+        schema: ProgramNodeSchema
+    ): ProgramEditorNodeCatalog.Entry = ProgramEditorNodeCatalog.Entry(
+        entry.id(), entry.type(), configuration, schema,
+        entry.group(), entry.displayName(), entry.translationKey(), entry.portTranslationPrefix(),
+        entry.visible(), entry.metadata()
+    )
+
     private fun visibleEntries(): List<ProgramEditorNodeCatalog.Entry> {
         val query = search?.text?.trim()?.lowercase(Locale.ROOT) ?: ""
         val hasEntry = nodes().any { it.entry.type().role() == ProgramNodeRole.ENTRY }
-        return catalog.entries()
+        return paletteEntries()
             .filter { it.visible() }
             .filter { !hasEntry || it.type().role() != ProgramNodeRole.ENTRY }
             .filter { entryUnlocked(it) }
@@ -1954,7 +1979,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     }
 
     private fun compatibleEntries(anchor: Endpoint): List<ProgramEditorNodeCatalog.Entry> {
-        return catalog.entries()
+        return paletteEntries()
             .asSequence()
             .filter { it.visible() }
             .filter { it.type().role() != ProgramNodeRole.ENTRY }
@@ -2270,9 +2295,12 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     }
 
     private fun view(source: ProgramGraph.Node): NodeView? {
-        val entry = catalog.entry(source.type()) ?: return null
+        var entry = catalog.entry(source.type()) ?: return null
         val schema = catalog.schema(source.type(), source.configuration()) ?: return null
         val position = document.program().editorLayout().nodePositions()[source.id()]
+        if (ProgramNodePalette.hasProvider(entry.id())) {
+            entry = presetEntry(entry, source.configuration(), schema)
+        }
         return NodeView(source, entry, schema, position?.x() ?: 0.0, position?.y() ?: 0.0)
     }
 
@@ -2492,6 +2520,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         }
 
         private fun configurationFields(node: NodeView): List<String> {
+            if (ProgramNodePalette.hasProvider(node.entry.id())) return emptyList()
             if (!node.source.configuration().isJsonObject) return emptyList()
             return node.source.configuration().asJsonObject.keySet().sorted()
         }
