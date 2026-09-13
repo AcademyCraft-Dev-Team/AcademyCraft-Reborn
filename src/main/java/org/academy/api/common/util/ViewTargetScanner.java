@@ -470,7 +470,7 @@ public final class ViewTargetScanner {
 
     /** Returns the normalized entry progress of a segment through an AABB. */
     public static OptionalDouble intersectionProgress(Vec3 start, Vec3 end, AABB bounds) {
-        if (!finite(start) || !finite(end) || bounds == null) return OptionalDouble.empty();
+        if (!finite(start) || !finite(end)) return OptionalDouble.empty();
         var direction = end.subtract(start);
         var lengthSqr = direction.lengthSqr();
         if (!(lengthSqr > 1.0e-12) || !Double.isFinite(lengthSqr)) {
@@ -518,8 +518,7 @@ public final class ViewTargetScanner {
     }
 
     private static boolean finite(Vec3 value) {
-        return value != null
-                && Double.isFinite(value.x)
+        return Double.isFinite(value.x)
                 && Double.isFinite(value.y)
                 && Double.isFinite(value.z);
     }

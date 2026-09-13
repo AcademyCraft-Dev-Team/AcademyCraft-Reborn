@@ -4,13 +4,14 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.jspecify.annotations.Nullable;
 
 /** Shared block-grid geometry for previews, picking and authoritative work regions. */
 public final class WorkSelection {
     private WorkSelection() {
     }
 
-    public static Vec3 intersectHorizontal(Vec3 origin, Vec3 direction, double height) {
+    public static @Nullable Vec3 intersectHorizontal(Vec3 origin, Vec3 direction, double height) {
         if (Math.abs(direction.y) < 1.0e-6) return null;
         var distance = (height - origin.y) / direction.y;
         if (!Double.isFinite(distance) || distance < 0 || distance > 65536) return null;

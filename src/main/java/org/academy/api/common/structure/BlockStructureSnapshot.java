@@ -390,7 +390,7 @@ public final class BlockStructureSnapshot {
         }
     }
 
-    private static List<AABB> readCollisionBoxes(ValueInput input) {
+    private static @Nullable List<AABB> readCollisionBoxes(ValueInput input) {
         if (!input.getBooleanOr("has_collision_snapshot", false)) return null;
         var collisionInput = input.childrenList("collision");
         if (collisionInput.isEmpty()) return List.of();
@@ -410,8 +410,7 @@ public final class BlockStructureSnapshot {
     }
 
     private static boolean validCollisionBox(AABB box) {
-        return box != null
-                && !box.hasNaN()
+        return !box.hasNaN()
                 && Double.isFinite(box.minX)
                 && Double.isFinite(box.minY)
                 && Double.isFinite(box.minZ)

@@ -53,7 +53,7 @@ public final class VfxGraphManager {
     private final EffectBudget budget = new EffectBudget();
     private final Set<ActiveEffect> effects = new LinkedHashSet<>();
     private final Map<List<RenderSpec>, VfxGraphRenderer> rendererPool = new LinkedHashMap<>();
-    private GraphFileWatcher fileWatcher;
+    private @Nullable GraphFileWatcher fileWatcher;
     private boolean initialized;
     private long lastRenderNanos = -1;
     /**

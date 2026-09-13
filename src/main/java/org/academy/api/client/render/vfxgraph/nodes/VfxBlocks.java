@@ -2485,12 +2485,13 @@ public final class VfxBlocks {
         var noiseStrength = propFloat(block, "noise_strength", 0.5f);
         var driftSpeed = propFloat(block, "drift_speed", 1.5f);
         var base = MeshAssets.resolve(mesh);
-        var surface = base == null ? null : offsetTriangles(base, ox, oy, oz);
-        var distributor = surface == null ? null : new SurfaceDistributor(surface);
+        if (base == null) return (buf, ctx) -> {
+        };
+        var surface = offsetTriangles(base, ox, oy, oz);
+        var distributor = new SurfaceDistributor(surface);
         long[] seed = {0L};
         long[] lastGateFrame = {Long.MIN_VALUE};
         return (buf, ctx) -> {
-            if (distributor == null || surface == null) return;
             var frame = (long) (ctx.time() * fps);
             if (frequency > 0f) {
                 if (frame % framePeriod != 0) return;
@@ -2541,13 +2542,14 @@ public final class VfxBlocks {
         var driftSpeed = propFloat(block, "drift_speed", 1.5f);
         var base = MeshAssets.resolve(mesh);
         var contactBase = MeshAssets.resolve(contactMesh);
-        var surface = base == null ? null : offsetTriangles(base, ox, oy, oz);
-        var contact = contactBase == null ? null : offsetTriangles(contactBase, cox, coy, coz);
-        var distributor = surface == null ? null : new SurfaceDistributor(surface);
+        if (base == null || contactBase == null) return (buf, ctx) -> {
+        };
+        var surface = offsetTriangles(base, ox, oy, oz);
+        var contact = offsetTriangles(contactBase, cox, coy, coz);
+        var distributor = new SurfaceDistributor(surface);
         long[] seed = {0L};
         long[] lastGateFrame = {Long.MIN_VALUE};
         return (buf, ctx) -> {
-            if (distributor == null || surface == null || contact == null) return;
             var frame = (long) (ctx.time() * fps);
             if (frequency > 0f) {
                 if (frame % framePeriod != 0) return;

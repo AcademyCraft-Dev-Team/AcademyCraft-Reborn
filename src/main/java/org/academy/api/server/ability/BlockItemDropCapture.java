@@ -16,7 +16,7 @@ import java.util.List;
 /** Captures secondary item spawns while a block mutation is part of a reversible transaction. */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class BlockItemDropCapture implements AutoCloseable {
-    private static final ThreadLocal<BlockItemDropCapture> ACTIVE = new ThreadLocal<>();
+    private static final ThreadLocal<@Nullable BlockItemDropCapture> ACTIVE = new ThreadLocal<>();
     private final ServerLevel level;
     private final @Nullable BlockItemDropCapture previous;
     private final List<ItemStack> drops = new ArrayList<>();

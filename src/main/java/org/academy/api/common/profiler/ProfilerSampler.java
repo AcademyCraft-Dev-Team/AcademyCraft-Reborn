@@ -2,6 +2,7 @@ package org.academy.api.common.profiler;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.jspecify.annotations.Nullable;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
@@ -22,7 +23,7 @@ public final class ProfilerSampler {
     private static volatile long captureStartNanos = System.nanoTime();
     private static volatile boolean everStarted = false;
 
-    private static volatile Thread worker = null;
+    private static volatile @Nullable Thread worker = null;
     private static final Object lock = new Object();
 
     private ProfilerSampler() {
@@ -93,8 +94,9 @@ public final class ProfilerSampler {
                 return;
             }
             running = false;
-            if (worker != null) {
-                worker.interrupt();
+            var current = worker;
+            if (current != null) {
+                current.interrupt();
             }
             worker = null;
         }
@@ -163,7 +165,7 @@ public final class ProfilerSampler {
             return;
         }
         for (var i = 0; i < ids.length; i++) {
-            var info = infos[i];
+            var info = threadInfoAt(infos, i);
             if (info == null) {
                 continue;
             }
@@ -176,6 +178,10 @@ public final class ProfilerSampler {
                 tree.insert(stack);
             }
         }
+    }
+
+    private static @Nullable ThreadInfo threadInfoAt(ThreadInfo[] infos, int index) {
+        return infos[index];
     }
 
     public static SamplerSnapshot snapshot() {

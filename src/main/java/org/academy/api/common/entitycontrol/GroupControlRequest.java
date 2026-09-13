@@ -31,8 +31,7 @@ public record GroupControlRequest(
         Objects.requireNonNull(source, "source");
         subjects = List.copyOf(Objects.requireNonNull(subjects, "subjects"));
         Objects.requireNonNull(command, "command");
-        observer = observer == null ? GroupControlObserver.NONE : observer;
-        if (subjects.isEmpty() || subjects.stream().anyMatch(Objects::isNull)) {
+        if (subjects.isEmpty()) {
             throw new IllegalArgumentException("At least one non-null subject is required");
         }
     }

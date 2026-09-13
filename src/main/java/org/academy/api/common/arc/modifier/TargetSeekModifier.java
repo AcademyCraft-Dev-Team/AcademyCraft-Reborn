@@ -1,5 +1,7 @@
 package org.academy.api.common.arc.modifier;
 
+import java.util.Objects;
+
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -54,10 +56,10 @@ public record TargetSeekModifier(Vector3fc target, AttributeCurve force) impleme
 
         var newData = new PathData(newFrames);
         if (data.hasProperty(PropertyType.THICKNESS)) {
-            newData.setProperty(PropertyType.THICKNESS, new ArrayList<>(data.getProperty(PropertyType.THICKNESS)));
+            newData.setProperty(PropertyType.THICKNESS, new ArrayList<>(Objects.requireNonNull(data.getProperty(PropertyType.THICKNESS))));
         }
         if (data.hasProperty(PropertyType.COLOR)) {
-            newData.setProperty(PropertyType.COLOR, new ArrayList<>(data.getProperty(PropertyType.COLOR)));
+            newData.setProperty(PropertyType.COLOR, new ArrayList<>(Objects.requireNonNull(data.getProperty(PropertyType.COLOR))));
         }
         return newData;
     }

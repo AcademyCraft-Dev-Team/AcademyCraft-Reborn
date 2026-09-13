@@ -15,8 +15,8 @@ public record ProgramGraph(List<Node> nodes, List<Edge> edges) {
     public static final ProgramGraph EMPTY = new ProgramGraph(List.of(), List.of());
 
     public ProgramGraph {
-        nodes = nodes == null ? List.of() : List.copyOf(nodes);
-        edges = edges == null ? List.of() : List.copyOf(edges);
+        nodes = List.copyOf(nodes);
+        edges = List.copyOf(edges);
     }
 
     public record Node(
@@ -27,7 +27,7 @@ public record ProgramGraph(List<Node> nodes, List<Edge> edges) {
     ) {
         public Node {
             Objects.requireNonNull(type, "type");
-            configuration = configuration == null ? JsonNull.INSTANCE : configuration.deepCopy();
+            configuration = configuration.deepCopy();
         }
 
         @Override

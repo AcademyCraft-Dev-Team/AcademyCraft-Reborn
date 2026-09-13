@@ -322,7 +322,7 @@ public final class VfxSystemSimulator {
                 if (factory == null) {
                     throw new IllegalStateException("no VFX block factory for: " + block.type());
                 }
-                var portSource = blockPortSource(block.id(), blockPortInputs.get(block.id()), operators);
+                var portSource = blockPortSource(block.id(), blockPortInputs.getOrDefault(block.id(), Map.of()), operators);
                 nodes.add(new BlockNode(block.id(), factory.create(block, portSource)));
             }
             switch (ctx.type()) {
@@ -381,7 +381,7 @@ public final class VfxSystemSimulator {
 
     private PortValueSource blockPortSource(String blockId, Map<String, Edge.PortRef> portInputs,
                                             Map<String, VfxOperator> operators) {
-        if (portInputs == null || portInputs.isEmpty()) {
+        if (portInputs.isEmpty()) {
             return PortValueSource.none();
         }
         var resolved = new LinkedHashMap<String, VfxOperator>();

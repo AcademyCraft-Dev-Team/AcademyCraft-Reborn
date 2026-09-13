@@ -1,5 +1,7 @@
 package org.academy.api.common.arc.modifier;
 
+import java.util.Objects;
+
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -111,7 +113,7 @@ public record JaggedModifier(float jaggedness, int subdivisions, long seed) impl
 
         if (originalData.hasProperty(PropertyType.COLOR)) {
             List<Vector3f> newColor = new ArrayList<>(newSize);
-            var firstColor = originalData.getProperty(PropertyType.COLOR).getFirst();
+            var firstColor = Objects.requireNonNull(originalData.getProperty(PropertyType.COLOR)).getFirst();
             for (var i = 0; i < newSize; i++) {
                 newColor.add(new Vector3f(firstColor));
             }

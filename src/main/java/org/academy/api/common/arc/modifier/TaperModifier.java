@@ -1,5 +1,7 @@
 package org.academy.api.common.arc.modifier;
 
+import java.util.Objects;
+
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -23,7 +25,7 @@ public record TaperModifier(AttributeCurve curve, float globalScale) implements 
             return data;
         }
 
-        var thicknessTrack = data.getProperty(PropertyType.THICKNESS);
+        var thicknessTrack = Objects.requireNonNull(data.getProperty(PropertyType.THICKNESS));
         var frameCount = data.getFrames().size();
         if (frameCount <= 1) {
             return data;

@@ -53,7 +53,7 @@ public class LevelUtil {
 
     /** Uses the actual world and position for blocks with context-dependent hardness. */
     public static boolean canBreakBlock(
-            BlockState blockState, BlockGetter level, BlockPos pos, int miningLevel
+            BlockState blockState, @Nullable BlockGetter level, @Nullable BlockPos pos, int miningLevel
     ) {
         if (miningLevel < 0 || blockState.getDestroySpeed(level, pos) < 0.0f) {
             return false;

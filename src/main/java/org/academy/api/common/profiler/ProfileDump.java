@@ -3,6 +3,7 @@ package org.academy.api.common.profiler;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import org.jspecify.annotations.Nullable;
 
 public final class ProfileDump {
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
@@ -124,7 +125,7 @@ public final class ProfileDump {
         return sb.toString();
     }
 
-    public static String zonesText(ProfilerSnapshot snapshot, String threadName, int maxDepth) {
+    public static String zonesText(ProfilerSnapshot snapshot, @Nullable String threadName, int maxDepth) {
         var zones = snapshot.getZones();
         if (zones.isEmpty()) {
             var state = snapshot.isZonesEnabled() ? "capture ON" : "capture OFF";

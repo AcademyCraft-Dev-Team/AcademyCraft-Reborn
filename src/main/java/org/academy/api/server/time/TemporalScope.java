@@ -3,6 +3,7 @@ package org.academy.api.server.time;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Objects;
@@ -43,7 +44,7 @@ public sealed interface TemporalScope permits TemporalScope.Save,
      * Tests this scope against a dimension and optional position.
      * Spatial scopes never match when {@code position} is {@code null}.
      */
-    boolean contains(ResourceKey<Level> dimension, Vec3 position);
+    boolean contains(ResourceKey<Level> dimension, @Nullable Vec3 position);
 
     /**
      * Tests this scope with an optional entity subject. Spatial and world
@@ -51,8 +52,8 @@ public sealed interface TemporalScope permits TemporalScope.Save,
      */
     default boolean contains(
             ResourceKey<Level> dimension,
-            Vec3 position,
-            UUID entityId
+            @Nullable Vec3 position,
+            @Nullable UUID entityId
     ) {
         return contains(dimension, position);
     }
@@ -64,8 +65,8 @@ public sealed interface TemporalScope permits TemporalScope.Save,
         private static final Save INSTANCE = new Save();
 
         @Override
-        public boolean contains(ResourceKey<Level> dimension, Vec3 position) {
-            return dimension != null;
+        public boolean contains(ResourceKey<Level> dimension, @Nullable Vec3 position) {
+            return true;
         }
 
         @Override
@@ -82,7 +83,7 @@ public sealed interface TemporalScope permits TemporalScope.Save,
         @Override
         public boolean contains(
                 ResourceKey<Level> candidateDimension,
-                Vec3 position
+                @Nullable Vec3 position
         ) {
             return dimension.equals(candidateDimension);
         }
@@ -114,7 +115,7 @@ public sealed interface TemporalScope permits TemporalScope.Save,
         @Override
         public boolean contains(
                 ResourceKey<Level> candidateDimension,
-                Vec3 position
+                @Nullable Vec3 position
         ) {
             return position != null
                     && dimension.equals(candidateDimension)
@@ -140,19 +141,17 @@ public sealed interface TemporalScope permits TemporalScope.Save,
         }
 
         @Override
-        public boolean contains(ResourceKey<Level> dimension, Vec3 position) {
+        public boolean contains(ResourceKey<Level> dimension, @Nullable Vec3 position) {
             return false;
         }
 
         @Override
         public boolean contains(
                 ResourceKey<Level> dimension,
-                Vec3 position,
-                UUID entityId
+                @Nullable Vec3 position,
+                @Nullable UUID entityId
         ) {
-            return dimension != null
-                    && entityId != null
-                    && entityIds.contains(entityId);
+            return entityId != null && entityIds.contains(entityId);
         }
 
         @Override

@@ -51,7 +51,7 @@ public class StartLevelDevPacket extends RequestPacket<ServerGamePacketListenerI
 
     public StartLevelDevPacket(DevelopmentSource source, Mode mode) {
         this.source = source;
-        this.mode = mode == null ? Mode.DIRECT : mode;
+        this.mode = mode;
     }
 
     public long getUserPos() {
@@ -118,7 +118,7 @@ public class StartLevelDevPacket extends RequestPacket<ServerGamePacketListenerI
         }
 
         public Response(Status status, String message, @Nullable Identifier recommendedCategory) {
-            this.status = status == null ? Status.REJECTED : status;
+            this.status = status;
             this.message = message;
             this.recommendedCategory = recommendedCategory;
         }

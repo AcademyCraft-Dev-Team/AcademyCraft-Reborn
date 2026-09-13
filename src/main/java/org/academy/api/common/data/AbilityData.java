@@ -3,6 +3,7 @@ package org.academy.api.common.data;
 import net.minecraft.util.Mth;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityLevel;
+import org.jspecify.annotations.Nullable;
 
 import java.net.URL;
 import java.security.ProtectionDomain;
@@ -32,7 +33,7 @@ public class AbilityData {
     private float abilityExp = 0;
 
     private transient boolean isDirty = false;
-    private transient Class<?> statusOwner;
+    private transient @Nullable Class<?> statusOwner;
 
     public AbilityData() {
     }
@@ -169,7 +170,7 @@ public class AbilityData {
                 || sameStateCodeSource(caller, owner);
     }
 
-    private static boolean sameStateCodeSource(Class<?> left, Class<?> right) {
+    private static boolean sameStateCodeSource(@Nullable Class<?> left, @Nullable Class<?> right) {
         if (left == null || right == null) return false;
         var leftDomain = stateProtectionDomain(left);
         var rightDomain = stateProtectionDomain(right);
@@ -179,7 +180,7 @@ public class AbilityData {
         return leftLocation != null && leftLocation.equals(rightLocation);
     }
 
-    private static ProtectionDomain stateProtectionDomain(Class<?> type) {
+    private static @Nullable ProtectionDomain stateProtectionDomain(Class<?> type) {
         try {
             return type.getProtectionDomain();
         } catch (SecurityException ignored) {
@@ -187,7 +188,7 @@ public class AbilityData {
         }
     }
 
-    private static URL stateCodeSourceLocation(ProtectionDomain domain) {
+    private static @Nullable URL stateCodeSourceLocation(@Nullable ProtectionDomain domain) {
         return domain == null || domain.getCodeSource() == null
                 ? null : domain.getCodeSource().getLocation();
     }
@@ -442,7 +443,7 @@ public class AbilityData {
         }
 
         public String getStackGroup() {
-            return stackGroup == null || stackGroup.isBlank() ? skillId : stackGroup;
+            return stackGroup.isBlank() ? skillId : stackGroup;
         }
 
         public boolean isPermanent() {

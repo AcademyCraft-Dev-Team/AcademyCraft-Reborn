@@ -22,7 +22,7 @@ public final class SurvivalDefense {
             LivingEntity entity,
             SurvivalDefenseProfile profile
     ) {
-        var owner = CALLER_WALKER.walk(frames -> frames
+        var owner = CALLER_WALKER.<Class<?>>walk(frames -> frames
                 .map(StackWalker.StackFrame::getDeclaringClass)
                 .dropWhile(type -> type == SurvivalDefense.class)
                 .findFirst()

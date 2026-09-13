@@ -54,7 +54,7 @@ public final class WaterSuppression extends SavedData {
     }
 
     public static void refresh(ServerLevel level, UUID source, Vec3 center, double radius) {
-        if (source == null || center == null || !Double.isFinite(center.x) || !Double.isFinite(center.y)
+        if (!Double.isFinite(center.x) || !Double.isFinite(center.y)
                 || !Double.isFinite(center.z) || !Double.isFinite(radius) || radius <= 0.0) return;
         var data = get(level);
         data.zones.put(source, new Zone(center, Math.min(8.0, radius), level.getGameTime() + 2));

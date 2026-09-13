@@ -10,6 +10,7 @@ import org.academy.api.client.render.vfxgraph.model.VfxContext;
 import org.academy.api.client.render.vfxgraph.model.VfxContextType;
 import org.academy.api.client.render.vfxgraph.model.VfxNode;
 import org.academy.api.client.render.vfxgraph.model.VfxSystem;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
@@ -207,7 +208,7 @@ public final class VfxGraphValidator {
         }
     }
 
-    private static Port findPort(VfxNode node, String portId) {
+    private static @Nullable Port findPort(VfxNode node, String portId) {
         for (var port : node.ports()) {
             if (port.id().equals(portId)) return port;
         }

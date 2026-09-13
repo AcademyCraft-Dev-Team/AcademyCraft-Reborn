@@ -1,5 +1,7 @@
 package org.academy.api.common.ability;
 
+import org.jspecify.annotations.Nullable;
+
 /** Held flight input. Sequence/activation validation belongs to the owning server session. */
 public record WingControlIntent(int buttons, float yaw, float pitch) {
     public static final int FRONT = 1, BACK = 2, LEFT = 4, RIGHT = 8, BOOST = 16;
@@ -19,7 +21,7 @@ public record WingControlIntent(int buttons, float yaw, float pitch) {
 
     /** Change-driven client sender with a four-tick heartbeat and wrap-safe heading comparison. */
     public static final class Sender {
-        private WingControlIntent previous;
+        private @Nullable WingControlIntent previous;
         private long lastTick;
         public boolean shouldSend(WingControlIntent input, long tick) {
             if (previous != null && tick == lastTick) return false;
@@ -37,7 +39,7 @@ public record WingControlIntent(int buttons, float yaw, float pitch) {
     /** The server consumes the newest intention once per game tick, never once per packet. */
     public static final class Mailbox {
         private long sequence = -1, receivedTick;
-        private WingControlIntent held;
+        private @Nullable WingControlIntent held;
         public boolean accept(long incomingSequence, WingControlIntent input, long tick) {
             if (incomingSequence <= sequence) return false;
             sequence = incomingSequence;

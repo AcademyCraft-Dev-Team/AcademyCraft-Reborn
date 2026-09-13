@@ -1,5 +1,7 @@
 package org.academy.api.common.attribute;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * The five base factors managed by the P.R.O.P.S system.
  */
@@ -10,7 +12,7 @@ public enum AbilityFactor {
     PERCEPTION,
     NEURAL_ACTIVITY;
 
-    public static AbilityFactor byOrdinal(int ordinal) {
+    public static @Nullable AbilityFactor byOrdinal(int ordinal) {
         var values = values();
         return ordinal >= 0 && ordinal < values.length ? values[ordinal] : null;
     }
