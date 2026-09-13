@@ -100,10 +100,16 @@ public final class ChunkSwapService {
         // Report progress while the regions load, then once more when they are ready, so the map can show
         // "preloading" instead of appearing stuck before the swap begins.
         sendPreload(player, packet.opId(), boundsA, 0, total, false);
-        loadA.thenCombine(loadB, (a, b) -> null).thenRun(() -> server.execute(() -> {
+        runAfterPreload(player, CompletableFuture.allOf(loadA, loadB), () -> {
             sendPreload(player, packet.opId(), boundsA, total, total, true);
             commit(player, skill, packet, source, target, levelA, levelB);
-        }));
+        }, () -> {
+            releasePreloadLeases(player);
+            if (!player.isRemoved() && !player.hasDisconnected()) {
+                MisakaNetworkServer.send(player, new ChunkLeapPackets.SwapResultPacket(
+                        packet.opId(), false, "chunk_leap.reason.load_failed", List.of()));
+            }
+        });
     }
 
     private static void commit(ServerPlayer player, ChunkLeap skill, ChunkLeapPackets.SwapRequestPacket packet,
@@ -397,9 +403,10 @@ public final class ChunkSwapService {
         }
         var target = new net.minecraft.core.BlockPos(packet.targetX(), packet.targetY(), packet.targetZ());
         var region = ChunkLeapRegion.ofChunks(level.dimension(), target.getX() >> 4, target.getZ() >> 4, 1, 1);
-        ChunkTicketLeaseManager.acquireAndLoad(level,
-                ChunkTicketLeaseManager.preloadOwner(player.getUUID()), region).thenRun(() ->
-                server.execute(() -> commitEntityTeleport(player, skill, packet, level, target)));
+        runAfterPreload(player, ChunkTicketLeaseManager.acquireAndLoad(level,
+                ChunkTicketLeaseManager.preloadOwner(player.getUUID()), region),
+                () -> commitEntityTeleport(player, skill, packet, level, target),
+                () -> reportPreloadFailure(player));
     }
 
     private static void commitEntityTeleport(ServerPlayer player, ChunkLeap skill,
@@ -463,14 +470,17 @@ public final class ChunkSwapService {
         }
         var chunkX = packet.blockX() >> 4;
         var chunkZ = packet.blockZ() >> 4;
-        var owner = ChunkTicketLeaseManager.preloadOwner(player.getUUID()) + ":tp";
+        var owner = ChunkTicketLeaseManager.preloadOwner(player.getUUID()) + ":tp:" + UUID.randomUUID();
         // A 3x3 neighbourhood, so the safety search has the blocks around the landing spot to work with.
         var region = ChunkLeapRegion.ofChunks(level.dimension(), chunkX - 1, chunkZ - 1, 3, 3);
-        ChunkTicketLeaseManager.acquireAndLoad(level, owner, region).thenRun(() -> server.execute(() -> {
-            if (player.isRemoved() || player.hasDisconnected()) return;
-            commitPlayerTeleport(player, skill, level, packet.blockX(), packet.blockZ());
-            ChunkTicketLeaseManager.release(owner);
-        }));
+        runAfterPreload(player, ChunkTicketLeaseManager.acquireAndLoad(level, owner, region), () -> {
+            try {
+                if (player.isRemoved() || player.hasDisconnected()) return;
+                commitPlayerTeleport(player, skill, level, packet.blockX(), packet.blockZ());
+            } finally {
+                ChunkTicketLeaseManager.release(owner);
+            }
+        }, () -> reportPreloadFailure(player));
     }
 
     private static void commitPlayerTeleport(ServerPlayer player, ChunkLeap skill, ServerLevel level,
@@ -523,12 +533,15 @@ public final class ChunkSwapService {
         }
         var owner = ChunkTicketLeaseManager.preloadOwner(player.getUUID());
         var region = ChunkLeapRegion.ofChunks(level.dimension(), chunkX, chunkZ, 1, 1);
-        ChunkTicketLeaseManager.acquireAndLoad(level, owner, region).thenRun(() -> server.execute(() -> {
-            if (player.isRemoved() || player.hasDisconnected()) return;
-            MisakaNetworkServer.send(player, ChunkLeapPackets.InspectResultPacket.from(
-                    ChunkLeapInspector.inspect(level, chunkX, chunkZ)));
-            ChunkTicketLeaseManager.release(owner);
-        }));
+        runAfterPreload(player, ChunkTicketLeaseManager.acquireAndLoad(level, owner, region), () -> {
+            try {
+                if (player.isRemoved() || player.hasDisconnected()) return;
+                MisakaNetworkServer.send(player, ChunkLeapPackets.InspectResultPacket.from(
+                        ChunkLeapInspector.inspect(level, chunkX, chunkZ)));
+            } finally {
+                ChunkTicketLeaseManager.release(owner);
+            }
+        }, () -> reportPreloadFailure(player));
     }
 
     /** The exact standing position for a clicked block column. */
@@ -669,7 +682,7 @@ public final class ChunkSwapService {
         var owner = godViewOwner(player);
         var region = ChunkLeapRegion.ofChunks(level.dimension(),
                 chunkX - radius, chunkZ - radius, radius * 2 + 1, radius * 2 + 1);
-        ChunkTicketLeaseManager.acquireAndLoad(level, owner, region).thenRun(() -> server.execute(() -> {
+        runAfterPreload(player, ChunkTicketLeaseManager.acquireAndLoad(level, owner, region), () -> {
             var playerId = player.getUUID();
             var stillCurrent = generation.equals(GOD_VIEW_GENERATIONS.get(playerId));
             if (!stillCurrent || player.isRemoved() || player.hasDisconnected() || player.level() != level) {
@@ -683,7 +696,9 @@ public final class ChunkSwapService {
             streamGodView(player, level, chunkX, chunkZ, radius);
             MisakaNetworkServer.send(player, new ChunkLeapPackets.GodViewStatusPacket(
                     packet.dimensionId(), true, true, packet.blockX(), surfaceY, packet.blockZ()));
-        }));
+        }, () -> {
+            if (GOD_VIEW_GENERATIONS.remove(player.getUUID(), generation)) reportPreloadFailure(player);
+        });
     }
 
     /** Sends the target area as real chunk packets, after moving the client cache window onto it. */
@@ -765,6 +780,30 @@ public final class ChunkSwapService {
     }
 
     // ---------------------------------------------------------------- shared
+
+    /** Loading failures must never reach CP charging or world mutation. */
+    private static void runAfterPreload(ServerPlayer player, CompletableFuture<?> loading,
+                                        Runnable onLoaded, Runnable onFailure) {
+        loading.whenCompleteAsync((ignored, failure) -> {
+            if (failure == null) {
+                onLoaded.run();
+            } else {
+                AcademyCraft.LOGGER.error("Chunk leap preload failed for player {}", player.getUUID(), failure);
+                onFailure.run();
+            }
+        }, player.level().getServer()).exceptionally(failure -> {
+            AcademyCraft.LOGGER.error("Chunk leap operation failed after preload for player {}",
+                    player.getUUID(), failure);
+            return null;
+        });
+    }
+
+    private static void reportPreloadFailure(ServerPlayer player) {
+        if (!player.isRemoved() && !player.hasDisconnected()) {
+            MisakaNetworkServer.send(player, new ChunkLeapPackets.TeleportResultPacket(
+                    false, "chunk_leap.reason.load_failed"));
+        }
+    }
 
     private static void sendPreload(ServerPlayer player, UUID opId, ChunkLeapRegion region,
                                     int loaded, int total, boolean ready) {

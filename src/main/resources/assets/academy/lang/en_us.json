@@ -373,6 +373,7 @@
   "chunk_leap.reason.dimension_missing": "Dimension not found",
   "chunk_leap.reason.entity_missing": "That entity no longer exists",
   "chunk_leap.reason.invalid_region": "Invalid region",
+  "chunk_leap.reason.load_failed": "Destination chunks could not be loaded",
   "chunk_leap.reason.no_vertical_overlap": "The two dimensions share no exchangeable height range",
   "chunk_leap.reason.overlap": "Regions overlap",
   "chunk_leap.reason.relight_failed": "Chunk lighting could not be rebuilt",
