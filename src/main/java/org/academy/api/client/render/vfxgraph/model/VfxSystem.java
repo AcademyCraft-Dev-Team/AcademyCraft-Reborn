@@ -1,6 +1,7 @@
 package org.academy.api.client.render.vfxgraph.model;
 
 import org.academy.api.client.render.graph.model.GraphParameter;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -73,7 +74,7 @@ public record VfxSystem(
     /**
      * 按 id 查块或算子；无则返回 null。
      */
-    public VfxNode findNode(String nodeId) {
+    public @Nullable VfxNode findNode(String nodeId) {
         for (var node : nodes()) {
             if (node.id().equals(nodeId)) return node;
         }
@@ -83,7 +84,7 @@ public record VfxSystem(
     /**
      * 按 id 查 context；无则返回 null。
      */
-    public VfxContext findContext(String contextId) {
+    public @Nullable VfxContext findContext(String contextId) {
         for (var context : contexts) {
             if (context.id().equals(contextId)) return context;
         }

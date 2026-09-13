@@ -34,7 +34,7 @@ import org.academy.internal.server.ability.*;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.world.level.storage.Player;
 import org.academy.internal.server.world.level.storage.WorldData;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.future.annotation.HandleFuture;
@@ -687,7 +687,7 @@ public final class AbilitySystemServer {
         if (!categoryChanged && !clearCategorySkills) return;
 
         var playerData = getPlayerData(uuid);
-        if (playerData != null && !clearCategorySkills) {
+        if (!clearCategorySkills) {
             playerData.getSkillDataMap().forEach((skillId, data) -> {
                 if (!data.isEnabled()) return;
                 var id = Identifier.tryParse(skillId);
@@ -818,7 +818,7 @@ public final class AbilitySystemServer {
         if (skill == null || !isStateMutationCallerAllowed("toggleSkill", skill.getClass())) return;
         skillDataManager.toggleSkill(uuid, skillId);
         var playerData = getPlayerData(uuid);
-        var skillData = playerData == null ? null : playerData.getSkillDataMap().get(skillId);
+        var skillData = playerData.getSkillDataMap().get(skillId);
         if (skillData == null || !skillData.isEnabled()) {
             playerCPManager.releaseMaintenanceOccupation(uuid, skillId);
         }
@@ -860,7 +860,7 @@ public final class AbilitySystemServer {
     public boolean castCpIfPossible(ServerPlayer player, Skill skill,
                                     Skill.CostCalculator calculator,
                                     Skill.SkillAction action) {
-        return castCpIfPossible(player, skill, calculator, action, true, true, null, Skill.NO_STACK_LIMIT);
+        return castCpIfPossible(player, skill, calculator, action, true, true, Skill.NO_STACK_GROUP, Skill.NO_STACK_LIMIT);
     }
 
     public boolean castCpIfPossible(ServerPlayer player, Skill skill,
@@ -875,7 +875,7 @@ public final class AbilitySystemServer {
                                               Skill.CostCalculator calculator,
                                               Skill.SkillAction action,
                                               boolean effective) {
-        return castCpIfPossible(player, skill, calculator, action, false, effective, null, Skill.NO_STACK_LIMIT);
+        return castCpIfPossible(player, skill, calculator, action, false, effective, Skill.NO_STACK_GROUP, Skill.NO_STACK_LIMIT);
     }
 
     public boolean castCpAndMpIfPossible(
@@ -887,7 +887,7 @@ public final class AbilitySystemServer {
     ) {
         return castCpAndMpIfPossible(
                 player, skill, cpCalculator, mpCalculator, action,
-                true, true, null, Skill.NO_STACK_LIMIT);
+                true, true, Skill.NO_STACK_GROUP, Skill.NO_STACK_LIMIT);
     }
 
     public boolean castCpAndMpIfPossible(
@@ -914,7 +914,7 @@ public final class AbilitySystemServer {
     ) {
         return castCpAndMpIfPossible(
                 player, skill, cpCalculator, mpCalculator, action,
-                false, effective, null, Skill.NO_STACK_LIMIT);
+                false, effective, Skill.NO_STACK_GROUP, Skill.NO_STACK_LIMIT);
     }
 
     private boolean castCpIfPossible(ServerPlayer player, Skill skill,
@@ -966,7 +966,6 @@ public final class AbilitySystemServer {
             String stackGroup,
             int stackLimit
     ) {
-        if (cpCalculator == null || mpCalculator == null || action == null) return false;
         var uuid = player.getUUID();
         var level = getPlayerSkillLevel(uuid, skill.getKeyString());
         var proficiency = skill.getProficiency(player);
@@ -1025,7 +1024,7 @@ public final class AbilitySystemServer {
             float cost,
             BooleanSupplier action
     ) {
-        if (action == null || !Float.isFinite(cost) || cost < 0) return false;
+        if (!Float.isFinite(cost) || cost < 0) return false;
         var uuid = player.getUUID();
         var actualCost = Math.max(0, OutputControl.adjustCpCost(this, uuid, skill, cost)
                 * playerCPManager.getCalculationIntensity(uuid));
@@ -1118,11 +1117,10 @@ public final class AbilitySystemServer {
             Skill skill,
             List<TimedOccupationCharge> timedCharges
     ) {
-        if (skill == null || timedCharges == null) return false;
         var intensity = playerCPManager.getCalculationIntensity(uuid);
         var actual = new ArrayList<PlayerCPManager.TimedOccupationCharge>(timedCharges.size());
         for (var charge : timedCharges) {
-            if (charge == null || !Float.isFinite(charge.amount()) || charge.amount() < 0.0f) {
+            if (!Float.isFinite(charge.amount()) || charge.amount() < 0.0f) {
                 return false;
             }
             actual.add(new PlayerCPManager.TimedOccupationCharge(
@@ -1145,12 +1143,11 @@ public final class AbilitySystemServer {
     }
 
     public boolean replacePermanentOccupations(UUID uuid, Map<Skill, Float> amounts) {
-        if (amounts == null) return false;
         var intensity = playerCPManager.getCalculationIntensity(uuid);
         var actual = new LinkedHashMap<Skill, Float>();
         for (var entry : amounts.entrySet()) {
             var amount = entry.getValue();
-            if (entry.getKey() == null || amount == null || !Float.isFinite(amount) || amount < 0) return false;
+            if (!Float.isFinite(amount) || amount < 0) return false;
             actual.put(entry.getKey(), Math.max(0, amount * intensity));
         }
         return playerCPManager.replacePermanentOccupationsAndTryOccupation(
@@ -1184,18 +1181,17 @@ public final class AbilitySystemServer {
                 uuid, skill, actual.permanentAmount(), actual.timedCharges());
     }
 
-    private MixedOccupationCharges prepareMixedOccupationCharges(
+    private @Nullable MixedOccupationCharges prepareMixedOccupationCharges(
             UUID uuid,
             Skill skill,
             float permanentAmount,
             List<TimedOccupationCharge> timedCharges
     ) {
-        if (skill == null || timedCharges == null
-                || !Float.isFinite(permanentAmount) || permanentAmount < 0.0f) return null;
+        if (!Float.isFinite(permanentAmount) || permanentAmount < 0.0f) return null;
         var intensity = playerCPManager.getCalculationIntensity(uuid);
         var actualTimed = new ArrayList<PlayerCPManager.TimedOccupationCharge>(timedCharges.size());
         for (var charge : timedCharges) {
-            if (charge == null || !Float.isFinite(charge.amount()) || charge.amount() < 0.0f) return null;
+            if (!Float.isFinite(charge.amount()) || charge.amount() < 0.0f) return null;
             actualTimed.add(new PlayerCPManager.TimedOccupationCharge(
                     Math.max(0.0f, charge.amount() * intensity), charge.iterationPoints()));
         }
@@ -1218,7 +1214,7 @@ public final class AbilitySystemServer {
             float castCost,
             Map<Skill, Float> permanentAmounts
     ) {
-        if (castSkill == null || permanentAmounts == null || !Float.isFinite(castCost) || castCost < 0) {
+        if (!Float.isFinite(castCost) || castCost < 0) {
             return false;
         }
         var uuid = player.getUUID();
@@ -1226,7 +1222,7 @@ public final class AbilitySystemServer {
         var actualPermanent = new LinkedHashMap<Skill, Float>();
         for (var entry : permanentAmounts.entrySet()) {
             var amount = entry.getValue();
-            if (entry.getKey() == null || amount == null || !Float.isFinite(amount) || amount < 0) return false;
+            if (!Float.isFinite(amount) || amount < 0) return false;
             actualPermanent.put(entry.getKey(), Math.max(0, amount * intensity));
         }
         var actualCast = Math.max(0, OutputControl.adjustCpCost(
@@ -1253,7 +1249,7 @@ public final class AbilitySystemServer {
             float castCost,
             Map<Skill, Float> permanentAmounts
     ) {
-        if (castSkill == null || permanentAmounts == null || !Float.isFinite(castCost) || castCost < 0) {
+        if (!Float.isFinite(castCost) || castCost < 0) {
             return false;
         }
         var uuid = player.getUUID();
@@ -1261,7 +1257,7 @@ public final class AbilitySystemServer {
         var actualPermanent = new LinkedHashMap<Skill, Float>();
         for (var entry : permanentAmounts.entrySet()) {
             var amount = entry.getValue();
-            if (entry.getKey() == null || amount == null || !Float.isFinite(amount) || amount < 0) return false;
+            if (!Float.isFinite(amount) || amount < 0) return false;
             actualPermanent.put(entry.getKey(), Math.max(0, amount * intensity));
         }
         var actualCast = Math.max(0, OutputControl.adjustCpCost(
@@ -1440,7 +1436,7 @@ public final class AbilitySystemServer {
                 || sameStateCodeSource(caller, owner);
     }
 
-    private static boolean sameStateCodeSource(Class<?> left, Class<?> right) {
+    private static boolean sameStateCodeSource(@Nullable Class<?> left, @Nullable Class<?> right) {
         if (left == null || right == null) return false;
         var leftDomain = stateProtectionDomain(left);
         var rightDomain = stateProtectionDomain(right);
@@ -1450,7 +1446,7 @@ public final class AbilitySystemServer {
         return leftLocation != null && leftLocation.equals(rightLocation);
     }
 
-    private static ProtectionDomain stateProtectionDomain(Class<?> type) {
+    private static @Nullable ProtectionDomain stateProtectionDomain(Class<?> type) {
         try {
             return type.getProtectionDomain();
         } catch (SecurityException ignored) {
@@ -1458,7 +1454,7 @@ public final class AbilitySystemServer {
         }
     }
 
-    private static URL stateCodeSourceLocation(ProtectionDomain domain) {
+    private static @Nullable URL stateCodeSourceLocation(@Nullable ProtectionDomain domain) {
         return domain == null || domain.getCodeSource() == null
                 ? null : domain.getCodeSource().getLocation();
     }
@@ -1466,7 +1462,7 @@ public final class AbilitySystemServer {
     public static final class SubsystemRegistry {
         private static final Map<Identifier, AbilitySubsystem> SYNC_ROUTERS = new ConcurrentHashMap<>();
 
-        public static void registerSubsystem(@NotNull AbilitySubsystem subsystem, Identifier syncType) {
+        public static void registerSubsystem(AbilitySubsystem subsystem, Identifier syncType) {
             SYNC_ROUTERS.put(syncType, subsystem);
         }
 

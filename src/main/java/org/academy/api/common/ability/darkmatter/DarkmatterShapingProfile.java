@@ -54,8 +54,8 @@ public record DarkmatterShapingProfile(
         betaPoints = Math.clamp(betaPoints, 0, total);
         if (alphaPoints + betaPoints != total) betaPoints = total - alphaPoints;
         var copy = new LinkedHashMap<String, Integer>();
-        if (modifiers != null) modifiers.forEach((id, level) -> {
-            if (id != null && !id.isBlank() && level != null && level > 0) {
+        modifiers.forEach((id, level) -> {
+            if (!id.isBlank() && level > 0) {
                 copy.put(id, level);
             }
         });

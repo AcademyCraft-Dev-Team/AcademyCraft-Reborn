@@ -127,7 +127,6 @@ public abstract class KeyBindingConfig {
     }
 
     private Map<String, String> defaultMigrationMap() {
-        if (defaultMigrations == null) defaultMigrations = new LinkedHashMap<>();
         return defaultMigrations;
     }
 

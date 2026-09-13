@@ -19,6 +19,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import org.academy.AcademyCraft;
 import org.academy.api.client.resources.R;
+import org.academy.api.common.ability.data.SkillStateType;
 import org.academy.api.common.ability.event.*;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
@@ -31,7 +32,7 @@ import org.academy.internal.common.ability.electromaster.skills.lv3.CurrentSymbi
 import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.common.skilldata.SkillData;
 import org.academy.internal.server.world.level.storage.SkillDataSerializer;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.net.URL;
 import java.security.ProtectionDomain;
@@ -39,6 +40,7 @@ import java.util.*;
 
 public abstract class Skill {
     public static final int NO_STACK_LIMIT = -1;
+    public static final String NO_STACK_GROUP = "";
     public static final int MAX_CP_ITERATION_TICKS = 20;
     private static final StackWalker STATE_STACK_WALKER = StackWalker.getInstance(
             StackWalker.Option.RETAIN_CLASS_REFERENCE
@@ -73,7 +75,7 @@ public abstract class Skill {
     private boolean resolved;
     private final SkillScope scope;
     private final DataFactory dataFactory;
-    private final org.academy.api.common.ability.data.SkillStateType<?> stateType;
+    private final SkillStateType<?> stateType;
     private final int maxSkillLevel;
     /**
      * 技能迭代时间间隔，单位为tick
@@ -170,7 +172,7 @@ public abstract class Skill {
      */
     protected final boolean executeActive(ServerPlayer player, CostCalculator calculator, SkillAction action) {
         return executeActiveInternal(
-                player, calculator, null, action, null, NO_STACK_LIMIT);
+                player, calculator, null, action, NO_STACK_GROUP, NO_STACK_LIMIT);
     }
 
     protected final boolean executeActive(ServerPlayer player, SkillAction action) {
@@ -191,7 +193,7 @@ public abstract class Skill {
             SkillAction action
     ) {
         return executeActiveInternal(
-                player, cpCalculator, resourceCalculator, action, null, NO_STACK_LIMIT);
+                player, cpCalculator, resourceCalculator, action, NO_STACK_GROUP, NO_STACK_LIMIT);
     }
 
     protected final boolean executeActiveWithResource(
@@ -253,14 +255,14 @@ public abstract class Skill {
 
         var system = AbilitySystemServer.getSystem(player);
         if (resourceCalculator != null) {
-            if (stackGroup == null) {
+            if (stackGroup.isBlank()) {
                 return system.castCpAndMpIfPossible(
                         player, this, eventCost, resourceCalculator, eventAction);
             }
             return system.castCpAndMpIfPossible(
                     player, this, eventCost, resourceCalculator, eventAction, stackGroup, stackLimit);
         }
-        if (stackGroup == null) {
+        if (stackGroup.isBlank()) {
             return system.castCpIfPossible(player, this, eventCost, eventAction);
         }
         return system.castCpIfPossible(
@@ -438,7 +440,7 @@ public abstract class Skill {
                 || sameStateCodeSource(caller, owner);
     }
 
-    private static boolean sameStateCodeSource(Class<?> left, Class<?> right) {
+    private static boolean sameStateCodeSource(@Nullable Class<?> left, @Nullable Class<?> right) {
         if (left == null || right == null) return false;
         var leftDomain = stateProtectionDomain(left);
         var rightDomain = stateProtectionDomain(right);
@@ -448,7 +450,7 @@ public abstract class Skill {
         return leftLocation != null && leftLocation.equals(rightLocation);
     }
 
-    private static ProtectionDomain stateProtectionDomain(Class<?> type) {
+    private static @Nullable ProtectionDomain stateProtectionDomain(Class<?> type) {
         try {
             return type.getProtectionDomain();
         } catch (SecurityException ignored) {
@@ -456,7 +458,7 @@ public abstract class Skill {
         }
     }
 
-    private static URL stateCodeSourceLocation(ProtectionDomain domain) {
+    private static @Nullable URL stateCodeSourceLocation(@Nullable ProtectionDomain domain) {
         return domain == null || domain.getCodeSource() == null
                 ? null : domain.getCodeSource().getLocation();
     }
@@ -500,7 +502,7 @@ public abstract class Skill {
 
     /** Returns this skill's addon state, separate from enabled/proficiency. Use immutable values. */
     @SuppressWarnings("unchecked")
-    public final <T> Optional<T> state(ServerPlayer player, org.academy.api.common.ability.data.SkillStateType<T> type) {
+    public final <T> Optional<T> state(ServerPlayer player, SkillStateType<T> type) {
         if (stateType != type) throw new IllegalArgumentException("State type does not belong to this skill");
         return getRuntimeData(player).filter(data -> data instanceof org.academy.internal.common.skilldata.CodecSkillData<?>)
                 .map(data -> ((org.academy.internal.common.skilldata.CodecSkillData<T>) data).value());
@@ -509,7 +511,7 @@ public abstract class Skill {
     /** Validates and persists an addon value on the server thread; false if no supported state exists. */
     @SuppressWarnings("unchecked")
     public final <T> boolean updateState(ServerPlayer player,
-                                        org.academy.api.common.ability.data.SkillStateType<T> type, T value) {
+                                        SkillStateType<T> type, T value) {
         if (stateType != type) throw new IllegalArgumentException("State type does not belong to this skill");
         if (!player.level().getServer().isSameThread()) {
             throw new IllegalStateException("Skill state must be updated on the server thread");
@@ -744,8 +746,8 @@ public abstract class Skill {
         private final Set<ResourceKey<Skill>> dependencyKeys = new LinkedHashSet<>();
         private final Set<ResourceKey<Skill>> optionalDependencyKeys = new LinkedHashSet<>();
         private int displayOrder;
-        private ResourceKey<DamageType> damageType;
-        private ResourceKey<AbilityDamageProfile> damageProfile;
+        private @Nullable ResourceKey<DamageType> damageType;
+        private @Nullable ResourceKey<AbilityDamageProfile> damageProfile;
         private final List<DevCondition> devConditions = new ArrayList<>();
         private AbilityLevel recommendedLevel = AbilityLevel.LEVEL0;
         private int energyCostToLearn = 5000;
@@ -762,7 +764,7 @@ public abstract class Skill {
         private boolean explicitProficiencyProfile = false;
         private SkillScope scope = SkillScope.CATEGORY;
 
-        private org.academy.api.common.ability.data.SkillStateType<?> stateType;
+        private @Nullable SkillStateType<?> stateType;
         private DataFactory dataFactory = CommonSkillData::new;
         private Class<? extends SkillData> dataClass = CommonSkillData.class;
         private Identifier dataTypeId = CommonSkillData.ID;
@@ -861,7 +863,7 @@ public abstract class Skill {
             return this;
         }
 
-        public <T> Builder stateType(org.academy.api.common.ability.data.SkillStateType<T> type) {
+        public <T> Builder stateType(SkillStateType<T> type) {
             stateType = Objects.requireNonNull(type);
             dataTypeId = type.id();
             dataClass = org.academy.internal.common.skilldata.CodecSkillData.class;

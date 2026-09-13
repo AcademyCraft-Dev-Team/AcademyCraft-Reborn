@@ -3,6 +3,7 @@ package org.academy.api.common.ability;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 
 import static org.academy.api.common.ability.SkillProficiencyProfile.CostKind.*;
 
@@ -68,12 +69,12 @@ public final class SkillProficiencyProfiles {
     private SkillProficiencyProfiles() {
     }
 
-    public static SkillProficiencyProfile forSkill(String skillId) {
+    public static SkillProficiencyProfile forSkill(@Nullable String skillId) {
         if (skillId == null || !skillId.startsWith(PREFIX)) return SkillProficiencyProfile.NONE;
         return PROFILES.getOrDefault(skillId.substring(PREFIX.length()), SkillProficiencyProfile.NONE);
     }
 
-    public static boolean isDeclared(String skillId) {
+    public static boolean isDeclared(@Nullable String skillId) {
         return skillId != null && skillId.startsWith(PREFIX)
                 && DECLARED_SKILLS.contains(skillId.substring(PREFIX.length()));
     }
@@ -82,7 +83,7 @@ public final class SkillProficiencyProfiles {
         return DECLARED_SKILLS;
     }
 
-    public static String customProfileReason(String skillId) {
+    public static @Nullable String customProfileReason(@Nullable String skillId) {
         if (skillId == null || !skillId.startsWith(PREFIX)) return null;
         return CUSTOM_PROFILE_REASONS.get(skillId.substring(PREFIX.length()));
     }

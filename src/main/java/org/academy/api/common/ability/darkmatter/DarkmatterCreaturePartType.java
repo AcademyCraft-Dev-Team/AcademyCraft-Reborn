@@ -1,6 +1,7 @@
 package org.academy.api.common.ability.darkmatter;
 
 import net.minecraft.resources.Identifier;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -11,7 +12,7 @@ public record DarkmatterCreaturePartType(
         Identifier id,
         BodySlot slot,
         int clientModelId,
-        StatProcessor statProcessor
+        @Nullable StatProcessor statProcessor
 ) {
     public DarkmatterCreaturePartType {
         Objects.requireNonNull(id, "id");

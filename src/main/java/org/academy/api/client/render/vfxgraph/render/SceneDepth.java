@@ -12,11 +12,11 @@ import org.jspecify.annotations.Nullable;
  * 大小/格式变化时自动重建；格式跟随源深度（D32_FLOAT / D24_UNORM_S8_UINT 等）。
  */
 public final class SceneDepth {
-    private GpuTexture texture;
-    private GpuTextureView view;
+    private @Nullable GpuTexture texture;
+    private @Nullable GpuTextureView view;
     private int width;
     private int height;
-    private GpuFormat format;
+    private @Nullable GpuFormat format;
 
     /**
      * 把深度附件拷贝到 scratch（大小/格式变化时重建）。必须在 render pass 外调用。

@@ -24,6 +24,7 @@ import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.world.level.block.AbilityDeveloperSleep;
 import org.academy.internal.server.config.AbilityConfig;
 import org.academy.internal.server.world.level.storage.Player;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 
 import java.util.*;
@@ -561,7 +562,7 @@ public class PlayerCPManager implements AbilitySubsystem {
     public boolean replacePermanentOccupationsAndTryOccupation(
             UUID uuid,
             Map<Skill, Float> permanentAmounts,
-            Skill timedSkill,
+            @Nullable Skill timedSkill,
             float timedAmount,
             int iterationTicks
     ) {

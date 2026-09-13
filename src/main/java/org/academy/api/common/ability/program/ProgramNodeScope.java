@@ -14,8 +14,8 @@ public record ProgramNodeScope(
     public static final ProgramNodeScope COMMON = new ProgramNodeScope(Set.of(), Set.of());
 
     public ProgramNodeScope {
-        allowedCategories = allowedCategories == null ? Set.of() : Set.copyOf(allowedCategories);
-        requiredCapabilities = requiredCapabilities == null ? Set.of() : Set.copyOf(requiredCapabilities);
+        allowedCategories = Set.copyOf(allowedCategories);
+        requiredCapabilities = Set.copyOf(requiredCapabilities);
     }
 
     public static ProgramNodeScope category(Identifier category) {

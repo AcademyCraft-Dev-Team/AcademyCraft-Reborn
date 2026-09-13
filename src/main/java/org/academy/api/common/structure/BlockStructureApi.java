@@ -156,7 +156,7 @@ public final class BlockStructureApi {
             double maximumRange,
             Predicate<BlockStructure> filter
     ) {
-        if (viewer == null || filter == null || !Double.isFinite(maximumRange)
+        if (!Double.isFinite(maximumRange)
                 || maximumRange <= 0.0 || maximumRange > 256.0) {
             return Optional.empty();
         }
@@ -209,8 +209,7 @@ public final class BlockStructureApi {
 
     /** Returns whether any part of the viewer occupies a structure's outer AABB. */
     public static boolean isViewerInside(Entity viewer, BlockStructure structure) {
-        return viewer != null && structure != null
-                && viewer.level() == structure.asEntity().level()
+        return viewer.level() == structure.asEntity().level()
                 && viewerInsideStructureBounds(
                 structure.asEntity().getBoundingBox(),
                 viewer.getBoundingBox(),
@@ -225,9 +224,7 @@ public final class BlockStructureApi {
             Vec3 position,
             Vec3 eyePosition
     ) {
-        return structureBounds != null && viewerBounds != null
-                && position != null && eyePosition != null
-                && (structureBounds.contains(position)
+        return (structureBounds.contains(position)
                 || structureBounds.contains(eyePosition)
                 || structureBounds.intersects(viewerBounds));
     }

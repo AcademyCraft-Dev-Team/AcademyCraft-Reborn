@@ -47,7 +47,7 @@ public final class AirMobility {
     }
 
     public static Vec3 supportedVelocity(Vec3 velocity, int mode, double heightError) {
-        if (velocity == null || !Double.isFinite(velocity.x) || !Double.isFinite(velocity.y)
+        if (!Double.isFinite(velocity.x) || !Double.isFinite(velocity.y)
                 || !Double.isFinite(velocity.z)) return Vec3.ZERO;
         var y = switch (mode) {
             case SLOW_FALL -> Math.max(-0.12, velocity.y);

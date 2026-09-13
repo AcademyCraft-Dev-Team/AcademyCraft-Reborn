@@ -3,6 +3,7 @@ package org.academy.api.common.entitycontrol;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 public sealed interface ControlDirective permits ControlDirective.TakeoverAi, ControlDirective.ForceTarget,
         ControlDirective.FreezeAi, ControlDirective.ImpressionAlliance, ControlDirective.MoveTo,
@@ -64,7 +65,7 @@ public sealed interface ControlDirective permits ControlDirective.TakeoverAi, Co
             this(new ControlDestination.Entity(targetUuid), 1.0);
         }
 
-        public UUID targetUuid() {
+        public @Nullable UUID targetUuid() {
             return destination instanceof ControlDestination.Entity(var uuid) ? uuid : null;
         }
 
