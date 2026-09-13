@@ -31,9 +31,6 @@ public record ControlRequest(
         if (directives.isEmpty()) {
             throw new IllegalArgumentException("At least one control directive is required");
         }
-        if (directives.stream().anyMatch(Objects::isNull)) {
-            throw new IllegalArgumentException("Control directives must not contain null values");
-        }
     }
 
     /**

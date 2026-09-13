@@ -12,10 +12,7 @@ public record BlockStructureSelectionResult(
         Optional<BlockPos> problemPosition
 ) {
     public BlockStructureSelectionResult {
-        positions = positions == null
-                ? List.of()
-                : positions.stream().map(BlockPos::immutable).toList();
-        problemPosition = problemPosition == null ? Optional.empty() : problemPosition;
+        positions = positions.stream().map(BlockPos::immutable).toList();
     }
 
     public static BlockStructureSelectionResult success(List<BlockPos> positions) {
@@ -31,7 +28,7 @@ public record BlockStructureSelectionResult(
         return new BlockStructureSelectionResult(
                 status,
                 List.of(),
-                Optional.ofNullable(position)
+                Optional.of(position)
         );
     }
 

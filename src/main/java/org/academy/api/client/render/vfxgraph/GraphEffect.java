@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * 运行时 VFX 图效果（自持）：持有模拟器 + [VfxGraphRenderer]，
@@ -36,15 +37,15 @@ import java.util.Map;
  * 存活参数（[setLiveParam]，M15-04）不重建模拟器，供游戏值连续绑定。</p>
  */
 public final class GraphEffect {
-    private final VfxNodeRegistry registry;
+    private final @Nullable VfxNodeRegistry registry;
     private final List<GraphNode> sourceNodes;
     private final List<GraphParameter> parameters;
     private final Map<String, String> overrides = new HashMap<>();
     private final Map<String, Value> liveParams = new HashMap<>();
     private final List<RenderSpec> specs;
-    private VfxSimulator simulator;
-    private VfxSystemSimulator systemSimulator;
-    private VfxGraphRenderer renderer;
+    private @Nullable VfxSimulator simulator;
+    private @Nullable VfxSystemSimulator systemSimulator;
+    private @Nullable VfxGraphRenderer renderer;
     private boolean dirty;
 
     public GraphEffect(Graph graph, VfxNodeRegistry registry) {
@@ -124,7 +125,7 @@ public final class GraphEffect {
         if (systemSimulator != null) {
             systemSimulator.setLiveParam(parameterId, value);
         } else {
-            simulator.setLiveParam(parameterId, value);
+            Objects.requireNonNull(simulator).setLiveParam(parameterId, value);
         }
     }
 
@@ -140,12 +141,12 @@ public final class GraphEffect {
         if (systemSimulator != null) {
             systemSimulator.step(dt);
         } else {
-            simulator.step(dt);
+            Objects.requireNonNull(simulator).step(dt);
         }
     }
 
     public ParticleBuffer buffer() {
-        return systemSimulator != null ? systemSimulator.buffer() : simulator.buffer();
+        return systemSimulator != null ? systemSimulator.buffer() : Objects.requireNonNull(simulator).buffer();
     }
 
     /**
@@ -167,8 +168,8 @@ public final class GraphEffect {
      *
      * @param sharedRenderer 由管理器按拓扑共享的渲染器；null 则用实例私有渲染器
      */
-    public void render(GpuTextureView target, @org.jspecify.annotations.Nullable GpuTextureView depth, GraphCamera camera,
-                       VfxGraphRenderer sharedRenderer, boolean clear, WorldTransform transform) {
+    public void render(GpuTextureView target, @Nullable GpuTextureView depth, GraphCamera camera,
+                       @Nullable VfxGraphRenderer sharedRenderer, boolean clear, WorldTransform transform) {
         render(target, depth, camera, sharedRenderer, clear, transform, false);
     }
 
@@ -177,8 +178,8 @@ public final class GraphEffect {
      *
      * @param bloomPass glow/bloom 输入（renderGlowFrame）：只画 GLOW 输出规格，translucent 层不参与 bloom
      */
-    public void render(GpuTextureView target, @org.jspecify.annotations.Nullable GpuTextureView depth, GraphCamera camera,
-                       VfxGraphRenderer sharedRenderer, boolean clear, WorldTransform transform, boolean bloomPass) {
+    public void render(GpuTextureView target, @Nullable GpuTextureView depth, GraphCamera camera,
+                       @Nullable VfxGraphRenderer sharedRenderer, boolean clear, WorldTransform transform, boolean bloomPass) {
         if (dirty) {
             rebuild();
         }
@@ -187,7 +188,7 @@ public final class GraphEffect {
             renderer = new VfxGraphRenderer();
             this.renderer = renderer;
         }
-        var buffer = systemSimulator != null ? systemSimulator.buffer() : simulator.buffer();
+        var buffer = systemSimulator != null ? systemSimulator.buffer() : Objects.requireNonNull(simulator).buffer();
         renderer.setArcBuffer(arcBuffer());
         renderer.render(target, depth, buffer, camera, clear, specs, transform, bloomPass);
     }
@@ -197,7 +198,7 @@ public final class GraphEffect {
         for (var node : sourceNodes) {
             nodes.add(applyOverrides(node));
         }
-        simulator = new VfxSimulator(nodes, registry, 0L, parameters);
+        simulator = new VfxSimulator(nodes, Objects.requireNonNull(registry), 0L, parameters);
         for (var entry : liveParams.entrySet()) {
             simulator.setLiveParam(entry.getKey(), entry.getValue());
         }

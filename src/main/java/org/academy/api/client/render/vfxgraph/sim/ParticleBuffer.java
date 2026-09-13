@@ -1,6 +1,7 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
 import java.util.Arrays;
+import org.jspecify.annotations.Nullable;
 
 /**
  * SoA（结构体数组）粒子缓冲。并行 float 数组，swap-remove 删除，容量翻倍增长。
@@ -227,7 +228,7 @@ public final class ParticleBuffer {
     /**
      * 层过滤编码：{@code ""}（或 null）→ -1（全部），否则按 {@link #layerByte}。
      */
-    public static byte layerFilter(String layer) {
+    public static byte layerFilter(@Nullable String layer) {
         return layer == null || layer.isEmpty() ? -1 : layerByte(layer);
     }
 

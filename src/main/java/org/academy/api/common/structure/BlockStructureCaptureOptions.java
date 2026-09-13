@@ -29,9 +29,6 @@ public record BlockStructureCaptureOptions(
         if (maximumBlockEntityBytes < 0) {
             throw new IllegalArgumentException("maximumBlockEntityBytes cannot be negative");
         }
-        if (policy == null || settlementPolicy == null) {
-            throw new IllegalArgumentException("capture and settlement policies cannot be null");
-        }
     }
 
     /** Compatibility constructor using natural-only falling settlement. */

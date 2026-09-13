@@ -2,12 +2,13 @@ package org.academy.api.common.profiler;
 
 import java.util.List;
 import java.util.function.Supplier;
+import org.jspecify.annotations.Nullable;
 
 public final class AcademyProfiler {
     private static final long SNAPSHOT_TTL_NANOS = 250_000_000L;
 
     private static volatile long cachedSnapshotAt = 0L;
-    private static volatile ProfilerSnapshot cachedSnapshot = null;
+    private static volatile @Nullable ProfilerSnapshot cachedSnapshot = null;
 
     private AcademyProfiler() {
     }

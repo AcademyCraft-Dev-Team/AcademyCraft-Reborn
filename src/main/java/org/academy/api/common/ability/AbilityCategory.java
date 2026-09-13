@@ -141,15 +141,15 @@ public abstract class AbilityCategory {
     }
 
     public static final class Builder {
-        private String translationKey;
-        private Identifier icon;
+        private @Nullable String translationKey;
+        private @Nullable Identifier icon;
         private float probability;
-        private AbilityFactorProfile development;
-        private AbilityResourceSpec resource;
+        private @Nullable AbilityFactorProfile development;
+        private @Nullable AbilityResourceSpec resource;
         private boolean commonSkills = true;
-        private ResourceKey<DamageType> damageType;
-        private ResourceKey<AbilityDamageProfile> damageProfile;
-        private ProgramProfile program;
+        private @Nullable ResourceKey<DamageType> damageType;
+        private @Nullable ResourceKey<AbilityDamageProfile> damageProfile;
+        private @Nullable ProgramProfile program;
 
         public Builder translationKey(String value) {
             translationKey = Objects.requireNonNull(value);
@@ -219,8 +219,8 @@ public abstract class AbilityCategory {
 
         private DeclaredCategory(Builder builder) {
             super(builder.probability, builder.development);
-            name = builder.translationKey;
-            icon = builder.icon;
+            name = Objects.requireNonNull(builder.translationKey);
+            icon = Objects.requireNonNull(builder.icon);
             commonSkills = builder.commonSkills;
             resource = Optional.ofNullable(builder.resource);
             damageType = Optional.ofNullable(builder.damageType);

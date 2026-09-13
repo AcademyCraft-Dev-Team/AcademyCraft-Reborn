@@ -64,8 +64,9 @@ public final class BlockStructureManager {
             case OUT_OF_WORLD -> BlockStructureCaptureResult.Status.OUT_OF_WORLD;
             case SUCCESS -> throw new IllegalStateException("Successful selection has no positions");
         };
-        return BlockStructureCaptureResult.failure(
-                status, selection.problemPosition().orElse(null));
+        return selection.problemPosition()
+                .map(position -> BlockStructureCaptureResult.failure(status, position))
+                .orElseGet(() -> BlockStructureCaptureResult.failure(status));
     }
 
     public static BlockStructureSelectionResult selectConnected(
@@ -455,7 +456,7 @@ public final class BlockStructureManager {
         var positions = normalizedPositions(requestedPositions);
         if (positions.isEmpty()) {
             return BlockStructureCaptureResult.failure(
-                    BlockStructureCaptureResult.Status.EMPTY, null);
+                    BlockStructureCaptureResult.Status.EMPTY);
         }
         if (positions.size() > options.maximumBlocks()) {
             return BlockStructureCaptureResult.failure(
@@ -572,12 +573,12 @@ public final class BlockStructureManager {
     ) {
         if (!(entity.level() instanceof ServerLevel level)) {
             return BlockStructureRestoreResult.failure(
-                    BlockStructureRestoreResult.Status.WRONG_LEVEL, null);
+                    BlockStructureRestoreResult.Status.WRONG_LEVEL);
         }
         var snapshot = entity.snapshot();
         if (snapshot.isEmpty()) {
             return BlockStructureRestoreResult.failure(
-                    BlockStructureRestoreResult.Status.INVALID_STRUCTURE, null);
+                    BlockStructureRestoreResult.Status.INVALID_STRUCTURE);
         }
         if (placementPolicy == null) throw new IllegalArgumentException("placementPolicy cannot be null");
         var alignment = BlockStructureGridAlignment.nearest(

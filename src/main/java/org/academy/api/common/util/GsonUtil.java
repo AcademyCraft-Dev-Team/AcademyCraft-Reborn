@@ -11,8 +11,6 @@ import java.util.Map;
 public class GsonUtil {
 
     public static boolean isValidField(JsonObject jsonObject, Field[] fields) {
-        if (jsonObject == null) return false;
-
         for (var field : fields) {
             var modifiers = field.getModifiers();
             if (Modifier.isStatic(modifiers) || Modifier.isTransient(modifiers)) {
@@ -38,7 +36,7 @@ public class GsonUtil {
     }
 
     private static boolean isTypeCompatible(Class<?> type, JsonElement element) {
-        if (element == null || element.isJsonNull()) return true;
+        if (element.isJsonNull()) return true;
 
         if (Iterable.class.isAssignableFrom(type) || type.isArray()) {
             return element.isJsonArray();

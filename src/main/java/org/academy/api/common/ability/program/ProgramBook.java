@@ -20,7 +20,7 @@ public record ProgramBook(
     public ProgramBook {
         if (schemaVersion <= 0) throw new IllegalArgumentException("Invalid program book schema");
         if (revision < 0) throw new IllegalArgumentException("Program book revision cannot be negative");
-        slots = slots == null ? List.of() : List.copyOf(slots);
+        slots = List.copyOf(slots);
         if (slots.isEmpty()) {
             if (selectedSlot != 0) throw new IllegalArgumentException("Empty program book selects slot zero");
         } else if (selectedSlot < 0 || selectedSlot >= slots.size()) {

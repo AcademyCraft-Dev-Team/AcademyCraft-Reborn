@@ -14,8 +14,8 @@ public record ProgramNodeSchema(
     public static final ProgramNodeSchema EMPTY = new ProgramNodeSchema(List.of(), List.of());
 
     public ProgramNodeSchema {
-        inputs = inputs == null ? List.of() : List.copyOf(inputs);
-        outputs = outputs == null ? List.of() : List.copyOf(outputs);
+        inputs = List.copyOf(inputs);
+        outputs = List.copyOf(outputs);
         requireUniqueNames(inputs, "input");
         requireUniqueNames(outputs, "output");
     }

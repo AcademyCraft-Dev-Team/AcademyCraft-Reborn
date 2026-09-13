@@ -23,8 +23,6 @@ public record AbilityProgram(
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(category, "category");
-        graph = graph == null ? ProgramGraph.EMPTY : graph;
-        editorLayout = editorLayout == null ? ProgramEditorLayout.EMPTY : editorLayout;
         if (name.isBlank()) throw new IllegalArgumentException("Ability program name cannot be blank");
         if (name.length() > 64) throw new IllegalArgumentException("Ability program name is too long");
     }

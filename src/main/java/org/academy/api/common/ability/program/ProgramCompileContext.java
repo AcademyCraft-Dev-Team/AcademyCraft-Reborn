@@ -15,7 +15,6 @@ public record ProgramCompileContext(
 ) {
     public ProgramCompileContext {
         Objects.requireNonNull(category, "category");
-        capabilities = capabilities == null ? Set.of() : Set.copyOf(capabilities);
-        limits = limits == null ? ProgramLimits.DEFAULT : limits;
+        capabilities = Set.copyOf(capabilities);
     }
 }
