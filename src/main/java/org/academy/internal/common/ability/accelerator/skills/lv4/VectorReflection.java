@@ -36,6 +36,7 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.vfx.SkillVfxService;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -49,8 +50,6 @@ import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
-import org.academy.internal.common.world.entity.EntityTypes;
-import org.academy.internal.common.world.entity.skill.GlowCircle;
 import org.apache.commons.lang3.tuple.Pair;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -778,23 +777,8 @@ public class VectorReflection extends Skill {
         }
 
         public static void spawnGlowCircle(ServerPlayer player, Vec3 direction, Vec3 position) {
-            spawnGlowCircle(player, direction, position, VectorRedirectKind.REFLECTION);
-        }
-
-        public static void spawnGlowCircle(
-                ServerPlayer player,
-                Vec3 direction,
-                Vec3 position,
-                VectorRedirectKind kind
-        ) {
-            var glowCircle = new GlowCircle(EntityTypes.GLOW_CIRCLE.get(), player.level());
-            glowCircle.setPos(position);
-            glowCircle.setEffectOwner(player.getId(), kind);
-            var yaw = (float) (Mth.atan2(direction.z, direction.x)) * Mth.RAD_TO_DEG - 90.0f;
-            var pitch = (float) -(Math.asin(direction.y)) * Mth.RAD_TO_DEG;
-            glowCircle.setYRot(yaw);
-            glowCircle.setXRot(pitch);
-            player.level().addFreshEntity(glowCircle);
+            SkillVfxService.distortionRing(
+                    player.level(), position, direction, player.getId());
         }
 
         public static void playReflectionSound(ServerPlayer player) {

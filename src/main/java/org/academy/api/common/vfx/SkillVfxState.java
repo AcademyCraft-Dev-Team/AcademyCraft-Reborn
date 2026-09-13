@@ -6,7 +6,10 @@ import net.minecraft.world.phys.Vec3;
 public sealed interface SkillVfxState {
     Vec3 position();
 
-    default boolean oneShot() { return this instanceof Burst || this instanceof Smoke || this instanceof Slash; }
+    default boolean oneShot() {
+        return this instanceof Burst || this instanceof Smoke || this instanceof Slash
+                || this instanceof DistortionRing;
+    }
 
     record Smoke(Vec3 position, float size, float lifeModifier, int frame, int lifetimeTicks) implements SkillVfxState {
         public float alphaAt(float ageTicks) {
@@ -20,6 +23,9 @@ public sealed interface SkillVfxState {
     }
 
     record Slash(Vec3 position, float xRot, float yRot, float scale, int direction, int lifetimeTicks)
+            implements SkillVfxState {}
+
+    record DistortionRing(Vec3 position, float xRot, float yRot, int ownerEntityId, int lifetimeTicks)
             implements SkillVfxState {}
 
     record Beam(Vec3 position, float xRot, float yRot, float length, float scale, float sideOffset,

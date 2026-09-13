@@ -24,6 +24,15 @@ public final class SkillVfxService {
                 direction < 0 ? -1 : 1, Math.clamp(lifetimeTicks, 1, 200)));
     }
 
+    public static void distortionRing(ServerLevel level, Vec3 position, Vec3 direction, int ownerEntityId) {
+        if (!Double.isFinite(position.lengthSqr()) || !Double.isFinite(direction.lengthSqr())) return;
+        var normalized = direction.lengthSqr() < 1.0e-6 ? new Vec3(0, 0, 1) : direction.normalize();
+        float yRot = (float) Math.toDegrees(Math.atan2(normalized.z, normalized.x)) - 90.0f;
+        float xRot = (float) -Math.toDegrees(Math.asin(Math.clamp(normalized.y, -1.0, 1.0)));
+        SkillVfxRuntime.emit(level, new SkillVfxState.DistortionRing(
+                position, xRot, yRot, Math.max(-1, ownerEntityId), 10));
+    }
+
     public static void shockwave(ServerLevel level, Vec3 position, Vec3 direction, float radius, float intensity) {
         if (!Double.isFinite(position.lengthSqr()) || !Double.isFinite(direction.lengthSqr())
                 || !Float.isFinite(radius) || !Float.isFinite(intensity)) return;

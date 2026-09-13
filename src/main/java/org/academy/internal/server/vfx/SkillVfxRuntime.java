@@ -55,6 +55,7 @@ public final class SkillVfxRuntime {
             case SkillVfxState.Burst b -> b.plasmaImpact() ? Math.max(96, b.radius()) : b.radius();
             case SkillVfxState.Smoke s -> s.size() * 2;
             case SkillVfxState.Slash s -> s.scale() * 4;
+            case SkillVfxState.DistortionRing ignored -> 4;
             default -> throw new IllegalArgumentException("Only one-shot VFX may be emitted");
         };
         var packet = new SkillVfxPacket(level.dimension().identifier(), ++nextId, 1, state);
