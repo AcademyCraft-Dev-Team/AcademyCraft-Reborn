@@ -42,16 +42,4 @@ class UiStateTest {
         state.value = 2
         assertEquals(1, notified)
     }
-
-    @Test
-    fun `state scope clears all subscriptions`() {
-        val state = UiState(0)
-        val scope = StateScope()
-        var notified = 0
-        state.observe(scope, { notified++ })
-        state.value = 1
-        scope.clear()
-        state.value = 2
-        assertEquals(2, notified)
-    }
 }

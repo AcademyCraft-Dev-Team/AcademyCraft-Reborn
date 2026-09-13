@@ -18,27 +18,7 @@ class UiState<T>(initial: T) {
         return { subscribers.remove(fn) }
     }
 
-    fun observe(scope: StateScope, fn: (T) -> Unit): () -> Unit {
-        return scope.track(observe(fn, true))
-    }
-
     fun dispose() {
         subscribers.clear()
     }
 }
-
-class StateScope {
-    private val unsubscribers: MutableList<() -> Unit> = ArrayList()
-
-    fun track(unsubscribe: () -> Unit): () -> Unit {
-        unsubscribers.add(unsubscribe)
-        return unsubscribe
-    }
-
-    fun clear() {
-        for (unsubscribe in unsubscribers) unsubscribe()
-        unsubscribers.clear()
-    }
-}
-
-fun <T> uiState(initial: T): UiState<T> = UiState(initial)
