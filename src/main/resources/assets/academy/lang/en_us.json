@@ -1879,7 +1879,6 @@
   "screen.academy.ui_debug.inspector.info.visual_position": "Visual position (X/Y): %s, %s",
   "screen.academy.ui_debug.inspector.live_title": "Live UI Debug: %s",
   "screen.academy.ui_debug.inspector.margin": "Margin (T/R/B/L)",
-  "screen.academy.ui_debug.inspector.name": "Name",
   "screen.academy.ui_debug.inspector.name_value": "Name: %s",
   "screen.academy.ui_debug.inspector.orientation": "Orientation",
   "screen.academy.ui_debug.inspector.origin": "Transform origin",
