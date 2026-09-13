@@ -43,6 +43,4 @@ class MinecraftUiEnvironment : UiEnvironment {
     override fun textInputFocusChanged(focused: Boolean) {
         mc.textInputManager().onTextInputFocusChange(focused)
     }
-
-    override fun layoutDir(): Path = gameDirectory.resolve("academy").resolve("ui")
 }

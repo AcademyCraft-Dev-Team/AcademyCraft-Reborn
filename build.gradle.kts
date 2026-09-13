@@ -347,25 +347,6 @@ neoForge {
             gameDirectory.set(file("run/server-compat"))
             programArguments.add("--nogui")
         }
-        register("uiEditor") {
-            client()
-            environment("IS_DEV", "true")
-            mainClass.set("org.academy.desktop.launch.EditorEntrypoint")
-            sourceSet.set(editorSourceSet)
-            systemProperty("academy.desktop.main", "org.academy.desktop.uieditor.UiEditorMainKt")
-            programArguments.add("--project-root=${layout.projectDirectory}")
-            providers.gradleProperty("academyDumpLayout").orNull?.let {
-                systemProperty("academy.desktop.dumpLayout", it)
-            }
-        }
-        register("desktopSample") {
-            client()
-            environment("IS_DEV", "true")
-            mainClass.set("org.academy.desktop.launch.EditorEntrypoint")
-            sourceSet.set(editorSourceSet)
-            systemProperty("academy.desktop.main", "org.academy.desktop.SampleMainKt")
-            programArguments.add("--project-root=${layout.projectDirectory}")
-        }
         register("graphEditor") {
             client()
             environment("IS_DEV", "true")
