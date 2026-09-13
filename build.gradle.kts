@@ -171,9 +171,10 @@ tasks.register<Jar>("apiExampleJar") {
 
 val verifyApiExample = tasks.register("verifyApiExample") {
     dependsOn(tasks.named(apiExampleSourceSet.compileJavaTaskName))
-    inputs.files(apiExampleSourceSet.allJava)
+    val apiExampleSources = apiExampleSourceSet.allJava.files.toList()
+    inputs.files(apiExampleSources)
     doLast {
-        apiExampleSourceSet.allJava.forEach { source ->
+        apiExampleSources.forEach { source ->
             require(!source.readText().contains("org.academy.internal")) {
                 "API example imports or references internal Academy implementation: $source"
             }
@@ -475,8 +476,6 @@ dependencies {
 
     apiAndJarJar(libs.jmsdfgen.core)
     apiAndJarJar(libs.jmsdfgen.ext)
-
-    annotationProcessor(libs.auto)
 
     testImplementation(platform("org.junit:junit-bom:5.10.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
