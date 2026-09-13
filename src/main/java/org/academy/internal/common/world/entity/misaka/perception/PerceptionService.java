@@ -7,6 +7,7 @@ import org.academy.internal.server.misaka.MisakaComputeIndex;
 import org.academy.internal.server.misaka.MisakaPlayers;
 import org.academy.internal.server.world.level.storage.MisakaNetworkGovernance;
 import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
+import org.academy.internal.server.world.level.storage.MisakaSisterRoster;
 import org.jspecify.annotations.Nullable;
 
 import java.util.UUID;
@@ -75,18 +76,31 @@ public final class PerceptionService {
                 record.perceptionCap = HIGH_TIER_CAP;
             }
             if (!wasReconstruction) {
-                tryFirstIntegration(server, record);
+                tryIntegrateIfEligible(server, record);
             }
+        }
+        if (gained > 0 && server != null) {
+            MisakaSisterRoster.get(server).markEntitySyncDirty(record.misakaUuid);
         }
         return gained;
     }
 
     /**
-     * First sister on a network to become reconstruction while bound triggers network integration
-     * (first ADMIN) when a privilege/feeder player can be resolved.
+     * First reconstruction sister on a network while bound + privilege-resolvable
+     * triggers network integration (first ADMIN). Safe to call repeatedly — no-ops when
+     * already integrated, not reconstruction, unbound, or privilege cannot be resolved.
+     * <p>
+     * Must also run on bind / privilege-touch: becoming reconstruction while unbound
+     * used to miss integration forever and leave manage UI on “await first integration”.
      */
-    private static void tryFirstIntegration(MinecraftServer server, MisakaSisterRecord record) {
-        if (server == null || record == null || record.networkNodePos == null) {
+    public static void tryIntegrateIfEligible(MinecraftServer server, MisakaSisterRecord record) {
+        if (server == null || record == null) {
+            return;
+        }
+        if (!(record.isReconstruction || record.perception >= 101)) {
+            return;
+        }
+        if (record.networkNodePos == null) {
             return;
         }
         var overworld = server.overworld();

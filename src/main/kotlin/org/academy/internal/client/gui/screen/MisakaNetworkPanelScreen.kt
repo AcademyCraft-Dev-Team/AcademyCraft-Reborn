@@ -4,6 +4,7 @@ import com.mojang.blaze3d.textures.FilterMode
 import net.minecraft.network.chat.Component
 import org.academy.api.client.gui.drawable.ColorDrawable
 import org.academy.api.client.gui.drawable.StateListDrawable
+import org.academy.api.client.gui.event.OnClickListener
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
@@ -32,7 +33,8 @@ class MisakaNetworkPanelScreen(
     override lateinit var sistersTabContent: FrameLayoutWidget
     override lateinit var allocTabContent: FrameLayoutWidget
     override lateinit var membersTabContent: FrameLayoutWidget
-    override lateinit var sistersList: ListWidget<MisakaNetManageDataPacket.SisterSummary>
+    override var manageSisters: List<MisakaNetManageDataPacket.SisterSummary> = emptyList()
+    override lateinit var sistersRows: LinearLayoutWidget
     override var selectedSisterUuid: UUID? = null
     override var sisterSelectionLabel: LabelWidget? = null
     override var sisterDisconnectButton: ButtonWidget? = null
@@ -46,7 +48,14 @@ class MisakaNetworkPanelScreen(
     override lateinit var networkDemandLabel: LabelWidget
     override lateinit var networkSatisfactionLabel: LabelWidget
     override lateinit var membersListLabel: LabelWidget
+    override lateinit var membersListHost: LinearLayoutWidget
+    override lateinit var membersAccessLabel: LabelWidget
+    override lateinit var memberTargetLabel: LabelWidget
     override lateinit var membersPermHintLabel: LabelWidget
+    override lateinit var memberCycleButton: ButtonWidget
+    override lateinit var memberGrantButton: ButtonWidget
+    override lateinit var memberRevokeButton: ButtonWidget
+    override lateinit var membersEditorHost: LinearLayoutWidget
 
     override var manageTab = MisakaPanelManageTab.SISTERS
     override var managePageIndex = 0
@@ -61,6 +70,7 @@ class MisakaNetworkPanelScreen(
     override var manageMembers: List<MisakaNetManageDataPacket.MemberSummary> = emptyList()
     override var manageCanEditMembers = false
     override var memberPermIndex = 0
+    override var selectedMemberName: String = ""
     override var localPercents = IntArray(MisakaComputeSink.COUNT)
     override val allocSeekBars = arrayOfNulls<SeekBarWidget>(MisakaComputeSink.COUNT)
     override val allocInputs = arrayOfNulls<TextBoxWidget>(MisakaComputeSink.COUNT)
@@ -70,8 +80,8 @@ class MisakaNetworkPanelScreen(
     override val screenTitle: String
         get() = title.string
 
-    override val sistersListInitialized: Boolean
-        get() = ::sistersList.isInitialized
+    override val sistersRowsInitialized: Boolean
+        get() = ::sistersRows.isInitialized
 
     override val allocatedLabelInitialized: Boolean
         get() = ::allocatedLabel.isInitialized
@@ -88,8 +98,25 @@ class MisakaNetworkPanelScreen(
     override val membersListLabelInitialized: Boolean
         get() = ::membersListLabel.isInitialized
 
+    override val membersListHostInitialized: Boolean
+        get() = ::membersListHost.isInitialized
+
+    override val membersAccessLabelInitialized: Boolean
+        get() = ::membersAccessLabel.isInitialized
+
+    override val memberTargetLabelInitialized: Boolean
+        get() = ::memberTargetLabel.isInitialized
+
     override val membersPermHintLabelInitialized: Boolean
         get() = ::membersPermHintLabel.isInitialized
+
+    override val memberEditButtonsInitialized: Boolean
+        get() = ::memberGrantButton.isInitialized
+                && ::memberRevokeButton.isInitialized
+                && ::memberCycleButton.isInitialized
+
+    override val membersEditorHostInitialized: Boolean
+        get() = ::membersEditorHost.isInitialized
 
     override fun onInit() {
         val panel = FrameLayoutWidget().apply {
@@ -151,9 +178,8 @@ class MisakaNetworkPanelScreen(
         manageMembers = packet.members()
         manageCanEditMembers = packet.viewerCanEditMembers()
         localPercents = packet.percents()
-        if (::sistersList.isInitialized) {
-            sistersList.items = packet.sisters()
-        }
+        manageSisters = packet.sisters()
+        MisakaPanelManageUi.refreshSisterRows(this)
         MisakaPanelManageUi.refreshSisterSelection(this)
         MisakaPanelManageUi.refreshNetworkMetrics(this)
         MisakaPanelManageUi.refreshMembersTab(this)
@@ -161,7 +187,7 @@ class MisakaNetworkPanelScreen(
             val empty = manageTotalCount <= 0
             emptySistersLabel.visibility =
                 if (empty) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
-            sistersList.visibility =
+            sistersRows.visibility =
                 if (empty) Widget.Visibility.GONE else Widget.Visibility.VISIBLE
         }
         if (::pageLabel.isInitialized) {
@@ -477,12 +503,18 @@ class MisakaNetworkPanelScreen(
     }
 
     override fun textActionButton(text: String, onClick: () -> Unit): ButtonWidget {
-        val button = ButtonWidget().apply {
+        lateinit var button: ButtonWidget
+        button = ButtonWidget().apply {
             background = actionBackground(false)
             layoutParams = LinearLayoutWidget.LayoutParams()
                 .widthMode(SizeMode.MATCH_PARENT)
                 .height(LIST_ITEM_HEIGHT)
-            onClickListener = { onClick() }
+            onClickListener = OnClickListener {
+                if (!button.isAbsoluteEnabled()) {
+                    return@OnClickListener
+                }
+                onClick()
+            }
         }
         button.addChild("label", LabelWidget(text).apply {
             scale = 0.75f

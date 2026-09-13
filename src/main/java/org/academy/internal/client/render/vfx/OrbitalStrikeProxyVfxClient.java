@@ -1,5 +1,6 @@
 package org.academy.internal.client.render.vfx;
 
+import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -81,6 +82,7 @@ public final class OrbitalStrikeProxyVfxClient {
         }
 
         Iterator<Map.Entry<OrbitalStrikeProxyEntity, Bundle>> iterator = EFFECTS.entrySet().iterator();
+        ArrayList<OrbitalStrikeProxyEntity> reattach = null;
         while (iterator.hasNext()) {
             var entry = iterator.next();
             var proxy = entry.getKey();
@@ -94,13 +96,17 @@ public final class OrbitalStrikeProxyVfxClient {
             if (bundle.firing != firing) {
                 bundle.stop();
                 iterator.remove();
+                // Approach → fire (and reverse): re-spawn without sweeping entitiesForRendering.
+                if (reattach == null) {
+                    reattach = new ArrayList<>(2);
+                }
+                reattach.add(proxy);
                 continue;
             }
             tickBundle(proxy, bundle);
         }
-
-        for (var entity : level.entitiesForRendering()) {
-            if (entity instanceof OrbitalStrikeProxyEntity proxy) {
+        if (reattach != null) {
+            for (var proxy : reattach) {
                 ensure(proxy);
             }
         }

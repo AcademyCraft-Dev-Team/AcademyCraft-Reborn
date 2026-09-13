@@ -28,7 +28,8 @@ public final class MisakaFollowGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (!enabled || !sister.isAwakened() || sister.getWanderStyle() != WanderStyle.FOLLOW) {
+        if (!enabled || !sister.isAwakened() || sister.isIncapacitated()
+                || sister.getWanderStyle() != WanderStyle.FOLLOW) {
             return false;
         }
         followTarget = findFollowTarget();

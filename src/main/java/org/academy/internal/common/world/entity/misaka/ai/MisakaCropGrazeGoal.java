@@ -19,6 +19,7 @@ public final class MisakaCropGrazeGoal extends Goal {
     private static final int CONTAINER_RADIUS = 8;
     private final MisakaSisterEntity sister;
     private BlockPos targetPos;
+    private int cooldown;
 
     public MisakaCropGrazeGoal(MisakaSisterEntity sister) {
         this.sister = sister;
@@ -27,17 +28,26 @@ public final class MisakaCropGrazeGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        if (cooldown > 0) {
+            cooldown--;
+        }
         if (!sister.isAwakened()
                 || sister.getWanderStyle() == WanderStyle.WAITING
-                || sister.getFoodLevel() > 6) {
+                || sister.getFoodLevel() > 6
+                || cooldown > 0) {
             return false;
         }
         // Plan: graze only when hungry AND forage containers have no edible food.
         if (hasNearbyContainerFood()) {
+            cooldown = 80;
             return false;
         }
         targetPos = findMatureCrop();
-        return targetPos != null;
+        if (targetPos == null) {
+            cooldown = 80;
+            return false;
+        }
+        return true;
     }
 
     @Override

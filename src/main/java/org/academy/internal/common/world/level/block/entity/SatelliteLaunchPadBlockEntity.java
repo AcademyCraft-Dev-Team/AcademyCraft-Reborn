@@ -26,6 +26,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import org.academy.api.common.misaka.MisakaNAT;
 import org.academy.api.common.wireless.WirelessUser;
+import org.academy.internal.common.world.inventory.SatelliteLaunchPadMenu;
 import org.academy.internal.common.world.item.HyperNetworkRelaySatelliteItem;
 import org.academy.internal.common.world.item.NetworkRelaySatelliteItem;
 import org.academy.internal.server.misaka.MisakaNetworkLasers;
@@ -64,7 +65,9 @@ public final class SatelliteLaunchPadBlockEntity extends BlockEntity
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, SatelliteLaunchPadBlockEntity be) {
-        if (!(level instanceof ServerLevel serverLevel) || level.getGameTime() % 20L != 0L) {
+        if (!(level instanceof ServerLevel serverLevel)
+                || level.getGameTime() % 20L != 0L
+                || !be.hasMenuOpen(serverLevel)) {
             return;
         }
         var before = be.laserPickList;
@@ -72,6 +75,16 @@ public final class SatelliteLaunchPadBlockEntity extends BlockEntity
         if (!before.equals(be.laserPickList)) {
             be.markAndSync();
         }
+    }
+
+    private boolean hasMenuOpen(ServerLevel serverLevel) {
+        for (var player : serverLevel.players()) {
+            if (player.containerMenu instanceof SatelliteLaunchPadMenu menu
+                    && menu.getBlockEntity() == this) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public boolean hasSeatedSatellite() {

@@ -1,5 +1,6 @@
 package org.academy.internal.client.render.vfx;
 
+import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -98,6 +99,7 @@ public final class RelaySatelliteTrailVfxClient {
         }
 
         Iterator<Map.Entry<RelaySatelliteEntity, TrailBundle>> iterator = EFFECTS.entrySet().iterator();
+        ArrayList<RelaySatelliteEntity> reattach = null;
         while (iterator.hasNext()) {
             var entry = iterator.next();
             var satellite = entry.getKey();
@@ -111,13 +113,17 @@ public final class RelaySatelliteTrailVfxClient {
             if (bundle.mode != mode) {
                 bundle.stop();
                 iterator.remove();
+                // Mode flipped mid-life (e.g. launch→crash); re-attach without a full entity sweep.
+                if (reattach == null) {
+                    reattach = new ArrayList<>(2);
+                }
+                reattach.add(satellite);
                 continue;
             }
             tickBundle(satellite, bundle, 1.0f);
         }
-
-        for (var entity : level.entitiesForRendering()) {
-            if (entity instanceof RelaySatelliteEntity satellite) {
+        if (reattach != null) {
+            for (var satellite : reattach) {
                 ensureTrail(satellite);
             }
         }

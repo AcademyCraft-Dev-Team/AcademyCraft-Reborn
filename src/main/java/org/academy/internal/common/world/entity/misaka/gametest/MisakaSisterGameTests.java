@@ -427,6 +427,10 @@ public final class MisakaSisterGameTests {
         });
         helper.runAtTickTime(3L, () -> {
             helper.assertFalse(sister.isSleeping(), "WAITING style should wake sleeping sister");
+            helper.assertTrue(
+                    sister.getPose() != net.minecraft.world.entity.Pose.SLEEPING,
+                    "Waking must clear SLEEPING pose or she stays sideways"
+            );
             helper.succeed();
         });
     }

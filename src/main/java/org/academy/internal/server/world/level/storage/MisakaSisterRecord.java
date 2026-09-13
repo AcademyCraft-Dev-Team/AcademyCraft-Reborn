@@ -30,6 +30,7 @@ public final class MisakaSisterRecord {
             @Nullable BlockPos networkNodePos,
             @Nullable ChunkPos wanderAnchorChunk,
             @Nullable ChunkPos lastKnownChunk,
+            @Nullable BlockPos lastKnownBlockPos,
             ResourceKey<Level> lastKnownDimension,
             WanderStyle wanderStyle
     ) {
@@ -37,14 +38,16 @@ public final class MisakaSisterRecord {
                 MisakaSavedDataCodecs.BLOCK_POS_STRING_CODEC.optionalFieldOf("network_node_pos").forGetter(state -> Optional.ofNullable(state.networkNodePos)),
                 ChunkPos.CODEC.optionalFieldOf("wander_anchor_chunk").forGetter(state -> Optional.ofNullable(state.wanderAnchorChunk)),
                 ChunkPos.CODEC.optionalFieldOf("last_known_chunk").forGetter(state -> Optional.ofNullable(state.lastKnownChunk)),
+                MisakaSavedDataCodecs.BLOCK_POS_STRING_CODEC.optionalFieldOf("last_known_block_pos").forGetter(state -> Optional.ofNullable(state.lastKnownBlockPos)),
                 MisakaSavedDataCodecs.DIMENSION_CODEC.optionalFieldOf("last_known_dimension", MisakaSavedDataCodecs.DEFAULT_OVERWORLD)
                         .forGetter(NetworkState::lastKnownDimension),
                 WanderStyle.CODEC.fieldOf("wander_style").orElse(WanderStyle.FREE_MOVE).forGetter(NetworkState::wanderStyle)
-        ).apply(instance, (networkNodePos, wanderAnchorChunk, lastKnownChunk, lastKnownDimension, wanderStyle) ->
+        ).apply(instance, (networkNodePos, wanderAnchorChunk, lastKnownChunk, lastKnownBlockPos, lastKnownDimension, wanderStyle) ->
                 new NetworkState(
                         networkNodePos.orElse(null),
                         wanderAnchorChunk.orElse(null),
                         lastKnownChunk.orElse(null),
+                        lastKnownBlockPos.orElse(null),
                         lastKnownDimension,
                         wanderStyle
                 )));
@@ -131,6 +134,8 @@ public final class MisakaSisterRecord {
     public @Nullable ChunkPos wanderAnchorChunk;
     /** Last loaded chunk; used for favor LAN proximity when the entity is unloaded. */
     public @Nullable ChunkPos lastKnownChunk;
+    /** Exact last loaded feet block; preferred over chunk center for teleport / coverage. */
+    public @Nullable BlockPos lastKnownBlockPos;
     /** Dimension of {@link #lastKnownChunk} / last loaded position. */
     public ResourceKey<Level> lastKnownDimension = MisakaSavedDataCodecs.DEFAULT_OVERWORLD;
     public WanderStyle wanderStyle = WanderStyle.FREE_MOVE;
@@ -180,6 +185,9 @@ public final class MisakaSisterRecord {
         record.networkNodePos = network.networkNodePos() == null ? null : network.networkNodePos().immutable();
         record.wanderAnchorChunk = network.wanderAnchorChunk();
         record.lastKnownChunk = network.lastKnownChunk();
+        record.lastKnownBlockPos = network.lastKnownBlockPos() == null
+                ? null
+                : network.lastKnownBlockPos().immutable();
         record.lastKnownDimension = network.lastKnownDimension() == null
                 ? MisakaSavedDataCodecs.DEFAULT_OVERWORLD
                 : network.lastKnownDimension();
@@ -218,6 +226,7 @@ public final class MisakaSisterRecord {
                 networkNodePos,
                 wanderAnchorChunk,
                 lastKnownChunk,
+                lastKnownBlockPos,
                 lastKnownDimension == null ? MisakaSavedDataCodecs.DEFAULT_OVERWORLD : lastKnownDimension,
                 wanderStyle
         );

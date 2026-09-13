@@ -40,6 +40,7 @@ public final class MisakaPanelDataPacket extends Packet<ClientPacketListener, Mi
     private final boolean reconstructionWork;
     private final boolean reconstructionBlocked;
     private final boolean networkBound;
+    private final boolean incapacitated;
 
     public MisakaPanelDataPacket(
             UUID entityUuid,
@@ -55,7 +56,8 @@ public final class MisakaPanelDataPacket extends Packet<ClientPacketListener, Mi
             boolean privilege,
             boolean reconstructionWork,
             boolean reconstructionBlocked,
-            boolean networkBound
+            boolean networkBound,
+            boolean incapacitated
     ) {
         this.entityUuid = entityUuid;
         this.misakaUuid = misakaUuid;
@@ -71,6 +73,7 @@ public final class MisakaPanelDataPacket extends Packet<ClientPacketListener, Mi
         this.reconstructionWork = reconstructionWork;
         this.reconstructionBlocked = reconstructionBlocked;
         this.networkBound = networkBound;
+        this.incapacitated = incapacitated;
     }
 
     private static void encode(ByteBuf buf, MisakaPanelDataPacket packet) {
@@ -88,6 +91,7 @@ public final class MisakaPanelDataPacket extends Packet<ClientPacketListener, Mi
         buf.writeBoolean(packet.reconstructionWork);
         buf.writeBoolean(packet.reconstructionBlocked);
         buf.writeBoolean(packet.networkBound);
+        buf.writeBoolean(packet.incapacitated);
     }
 
     private static MisakaPanelDataPacket decode(ByteBuf buf) {
@@ -102,6 +106,7 @@ public final class MisakaPanelDataPacket extends Packet<ClientPacketListener, Mi
                 ByteBufCodecs.STRING_UTF8.decode(buf),
                 ByteBufCodecs.collection(ArrayList::new, ByteBufCodecs.STRING_UTF8).decode(buf),
                 ByteBufCodecs.VAR_INT.decode(buf),
+                buf.readBoolean(),
                 buf.readBoolean(),
                 buf.readBoolean(),
                 buf.readBoolean(),
@@ -172,6 +177,10 @@ public final class MisakaPanelDataPacket extends Packet<ClientPacketListener, Mi
     /** True when the sister is on a network, even if the network name is withheld. */
     public boolean networkBound() {
         return networkBound;
+    }
+
+    public boolean incapacitated() {
+        return incapacitated;
     }
 
     @Override

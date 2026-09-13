@@ -15,8 +15,10 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -42,6 +44,11 @@ public final class MisakaSisterRoster extends SavedData {
     private final ArrayList<Integer> freeSerials = new ArrayList<>();
     private boolean freeSerialsReady;
     private @Nullable transient MinecraftServer owningServer;
+    /**
+     * Living sister entities only re-pull roster → entityData when their UUID is here
+     * (set by {@link #modify} / register / release). Avoids per-tick full mirrors.
+     */
+    private final transient Set<UUID> entitySyncDirty = new HashSet<>();
 
     public MisakaSisterRoster() {
     }
@@ -87,6 +94,32 @@ public final class MisakaSisterRoster extends SavedData {
         }
         int index = random.nextInt(freeSerials.size());
         int serial = freeSerials.remove(index);
+        return Optional.of(insertNew(serial, random, dayIndex));
+    }
+
+    /**
+     * Living entity kept a persisted serial but no roster row (uuid lost + row released, or
+     * partial save). Reclaim that serial if free; otherwise allocate a fresh one.
+     */
+    public Optional<MisakaSisterRecord> tryAdoptPersistedSerial(
+            int preferredSerial,
+            RandomSource random,
+            int dayIndex
+    ) {
+        ensureFreeSerials();
+        if (preferredSerial >= SERIAL_MIN && preferredSerial <= SERIAL_MAX) {
+            var existing = findBySerial(preferredSerial);
+            if (existing.isPresent()) {
+                return existing;
+            }
+            if (freeSerials.remove((Integer) preferredSerial)) {
+                return Optional.of(insertNew(preferredSerial, random, dayIndex));
+            }
+        }
+        return tryRegisterRescued(random, dayIndex);
+    }
+
+    private MisakaSisterRecord insertNew(int serial, RandomSource random, int dayIndex) {
         var record = new MisakaSisterRecord(
                 UUID.randomUUID(),
                 serial,
@@ -96,7 +129,8 @@ public final class MisakaSisterRoster extends SavedData {
         byUuid.put(record.misakaUuid, record);
         setDirty();
         markComputeDirty();
-        return Optional.of(record);
+        markEntitySyncDirty(record.misakaUuid);
+        return record;
     }
 
     public MisakaSisterRecord registerRescued(RandomSource random, int dayIndex) {
@@ -122,11 +156,23 @@ public final class MisakaSisterRoster extends SavedData {
         }
         setDirty();
         markComputeDirty();
+        markEntitySyncDirty(misakaUuid);
         return true;
     }
 
     public Optional<MisakaSisterRecord> get(UUID misakaUuid) {
         return Optional.ofNullable(byUuid.get(misakaUuid));
+    }
+
+    public void markEntitySyncDirty(@Nullable UUID misakaUuid) {
+        if (misakaUuid != null) {
+            entitySyncDirty.add(misakaUuid);
+        }
+    }
+
+    /** True if this sister should re-mirror roster fields into entityData. */
+    public boolean consumeEntitySyncDirty(@Nullable UUID misakaUuid) {
+        return misakaUuid != null && entitySyncDirty.remove(misakaUuid);
     }
 
     public void modify(UUID misakaUuid, Consumer<MisakaSisterRecord> mutator) {
@@ -137,6 +183,7 @@ public final class MisakaSisterRoster extends SavedData {
         mutator.accept(record);
         setDirty();
         markComputeDirty();
+        markEntitySyncDirty(misakaUuid);
     }
 
     public Collection<MisakaSisterRecord> all() {

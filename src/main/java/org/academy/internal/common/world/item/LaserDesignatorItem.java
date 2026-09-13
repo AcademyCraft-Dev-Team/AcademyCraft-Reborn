@@ -1,22 +1,24 @@
 package org.academy.internal.common.world.item;
 
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
+import org.academy.internal.common.misaka.MisakaOrbitalChargeDisplay;
+import org.academy.internal.server.misaka.MisakaOrbitalCharge;
 import org.academy.internal.server.misaka.MisakaOrbitalStrikeSupport;
 import org.academy.internal.server.world.level.storage.MisakaRelayEntry;
-import org.academy.internal.server.world.level.storage.MisakaRelayRegistry;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -62,56 +64,81 @@ public final class LaserDesignatorItem extends Item {
                 }
                 unbind(stack);
                 if (player instanceof ServerPlayer serverPlayer) {
+                    MisakaOrbitalCharge.clear(serverPlayer);
                     serverPlayer.sendOverlayMessage(Component.translatable("message.academy.laser_designator_unbound"));
                 }
             }
             return InteractionResult.SUCCESS;
         }
-        if (level.isClientSide()) {
-            return InteractionResult.SUCCESS;
+
+        UUID satId = boundSatellite(stack).orElse(null);
+        if (satId == null) {
+            if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {
+                serverPlayer.sendOverlayMessage(Component.translatable("message.academy.laser_designator_unbound_need"));
+            }
+            return InteractionResult.FAIL;
         }
-        if (!(player instanceof ServerPlayer serverPlayer) || !(level instanceof ServerLevel serverLevel)) {
-            return InteractionResult.PASS;
+
+        player.startUsingItem(hand);
+        return InteractionResult.CONSUME;
+    }
+
+    @Override
+    public void onUseTick(Level level, LivingEntity entity, ItemStack stack, int remainingUseDuration) {
+        if (level.isClientSide() || !(entity instanceof ServerPlayer player)) {
+            return;
         }
         UUID satId = boundSatellite(stack).orElse(null);
         if (satId == null) {
-            serverPlayer.sendOverlayMessage(Component.translatable("message.academy.laser_designator_unbound_need"));
-            return InteractionResult.FAIL;
+            player.stopUsingItem();
+            MisakaOrbitalCharge.clear(player);
+            return;
         }
-        var eye = player.getEyePosition();
-        var look = player.getViewVector(1.0f);
-        var end = eye.add(look.scale(MisakaOrbitalStrikeSupport.DESIGNATOR_RANGE));
-        BlockHitResult hit = level.clip(new ClipContext(
-                eye, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player
-        ));
-        if (hit.getType() != HitResult.Type.BLOCK) {
-            serverPlayer.sendOverlayMessage(Component.translatable("message.academy.laser_designator_no_target"));
-            return InteractionResult.FAIL;
+        boolean fired = MisakaOrbitalCharge.tickCharge(
+                player,
+                satId,
+                p -> MisakaOrbitalCharge.clipTarget(p, MisakaOrbitalStrikeSupport.DESIGNATOR_RANGE)
+        );
+        if (fired) {
+            player.stopUsingItem();
         }
-        var target = hit.getBlockPos();
-        var result = MisakaRelayRegistry.get(serverLevel.getServer())
-                .beginOrbitalStrike(serverLevel.getServer(), satId, target, serverPlayer);
-        serverPlayer.sendOverlayMessage(Component.translatable(messageKey(result)));
-        return result == MisakaOrbitalStrikeSupport.BeginResult.OK
-                ? InteractionResult.SUCCESS
-                : InteractionResult.FAIL;
     }
 
-    private static String messageKey(MisakaOrbitalStrikeSupport.BeginResult result) {
-        return switch (result) {
-            case OK -> "message.academy.laser_designator_strike_ok";
-            case NOT_FOUND -> "message.academy.laser_designator_sat_missing";
-            case BAD_PHASE -> "message.academy.laser_designator_bad_phase";
-            case NOT_BOUND -> "message.academy.laser_designator_laser_unbound";
-            case FORCE_CRASH_ARMED -> "message.academy.laser_designator_force_crash";
-            case BUSY -> "message.academy.laser_designator_busy";
-            case COOLDOWN -> "message.academy.laser_designator_cooldown";
-            case NO_POWER -> "message.academy.laser_designator_no_power";
-            case WRONG_DIMENSION -> "message.academy.laser_designator_wrong_dim";
-            case CHUNK_UNLOADED -> "message.academy.laser_designator_chunk";
-            case NO_PERMISSION -> "message.academy.laser_designator_no_permission";
-            case INSUFFICIENT_COMPUTE -> "message.academy.laser_designator_no_compute";
-        };
+    @Override
+    public boolean releaseUsing(ItemStack stack, Level level, LivingEntity entity, int timeLeft) {
+        if (!level.isClientSide() && entity instanceof ServerPlayer player) {
+            MisakaOrbitalCharge.onReleased(player);
+        }
+        return true;
+    }
+
+    @Override
+    public int getUseDuration(ItemStack stack, LivingEntity entity) {
+        return 72000;
+    }
+
+    @Override
+    public ItemUseAnimation getUseAnimation(ItemStack stack) {
+        return ItemUseAnimation.BOW;
+    }
+
+    @Override
+    public boolean isBarVisible(ItemStack stack) {
+        return MisakaOrbitalChargeDisplay.isActive();
+    }
+
+    @Override
+    public int getBarWidth(ItemStack stack) {
+        return Math.round(MisakaOrbitalChargeDisplay.progress() * 13.0f);
+    }
+
+    @Override
+    public int getBarColor(ItemStack stack) {
+        float p = MisakaOrbitalChargeDisplay.progress();
+        int r = (int) ((1.0f - p) * 80 + p * 40);
+        int g = (int) ((1.0f - p) * 180 + p * 220);
+        int b = (int) ((1.0f - p) * 255 + p * 120);
+        return (r << 16) | (g << 8) | b;
     }
 
     @Override
@@ -123,13 +150,12 @@ public final class LaserDesignatorItem extends Item {
             TooltipFlag flag
     ) {
         boundSatellite(stack).ifPresentOrElse(
-                id -> {
-                    tooltipAdder.accept(Component.translatable(
-                            "item.academy.laser_designator.bound",
-                            MisakaRelayEntry.shortId(id)
-                    ));
-                },
+                id -> tooltipAdder.accept(Component.translatable(
+                        "item.academy.laser_designator.bound",
+                        MisakaRelayEntry.shortId(id)
+                )),
                 () -> tooltipAdder.accept(Component.translatable("item.academy.laser_designator.unbound"))
         );
+        tooltipAdder.accept(Component.translatable("item.academy.laser_designator.charge_hint"));
     }
 }

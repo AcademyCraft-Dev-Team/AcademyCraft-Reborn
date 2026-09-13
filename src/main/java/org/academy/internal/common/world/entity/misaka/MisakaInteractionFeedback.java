@@ -27,6 +27,14 @@ public final class MisakaInteractionFeedback {
         lookAt(sister, player);
         affection(sister, 5);
         play(sister, SoundEvents.VILLAGER_YES, 0.8f, 1.15f);
+        actionBar(player, "message.academy.misaka_pet");
+    }
+
+    public static void petAlready(MisakaSisterEntity sister, ServerPlayer player) {
+        lookAt(sister, player);
+        affection(sister, 2);
+        play(sister, SoundEvents.VILLAGER_YES, 0.55f, 1.25f);
+        actionBar(player, "message.academy.misaka_pet_already");
     }
 
     public static void fed(MisakaSisterEntity sister, ServerPlayer player, ItemStack food, boolean favorite) {
@@ -36,6 +44,9 @@ public final class MisakaInteractionFeedback {
             affection(sister, 3);
         }
         play(sister, SoundEvents.GENERIC_EAT, 0.9f, 1.0f);
+        actionBar(player, favorite
+                ? "message.academy.misaka_fed_favorite"
+                : "message.academy.misaka_fed");
     }
 
     public static void full(MisakaSisterEntity sister, ServerPlayer player) {
@@ -49,6 +60,13 @@ public final class MisakaInteractionFeedback {
         reject(sister);
         play(sister, SoundEvents.VILLAGER_NO, 0.8f, 0.95f);
         actionBar(player, "message.academy.misaka_refuse");
+    }
+
+    public static void incapacitated(MisakaSisterEntity sister, ServerPlayer player) {
+        lookAt(sister, player);
+        reject(sister);
+        play(sister, SoundEvents.VILLAGER_NO, 0.75f, 0.8f);
+        actionBar(player, "message.academy.misaka_incapacitated");
     }
 
     public static void awaken(MisakaSisterEntity sister, ServerPlayer player) {

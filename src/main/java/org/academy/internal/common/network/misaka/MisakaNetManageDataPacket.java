@@ -93,6 +93,7 @@ public final class MisakaNetManageDataPacket
             buf.writeFloat(sister.msk());
             ByteBufCodecs.STRING_UTF8.encode(buf, sister.nodeName());
             buf.writeBoolean(sister.starving());
+            buf.writeBoolean(sister.incapacitated());
             buf.writeBoolean(sister.inCoverage());
         }
         for (int i = 0; i < MisakaComputeSink.COUNT; i++) {
@@ -129,6 +130,7 @@ public final class MisakaNetManageDataPacket
                     ByteBufCodecs.VAR_INT.decode(buf),
                     buf.readFloat(),
                     ByteBufCodecs.STRING_UTF8.decode(buf),
+                    buf.readBoolean(),
                     buf.readBoolean(),
                     buf.readBoolean()
             ));
@@ -246,6 +248,7 @@ public final class MisakaNetManageDataPacket
             float msk,
             String nodeName,
             boolean starving,
+            boolean incapacitated,
             boolean inCoverage
     ) {
         public SisterSummary {

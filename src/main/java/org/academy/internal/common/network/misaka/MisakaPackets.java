@@ -10,6 +10,7 @@ public final class MisakaPackets {
         SetMisakaNetworkNodePacket.initServer();
         TogglePickUpMisakaPacket.initServer();
         RequestMisakaPanelPacket.initServer();
+        MisakaSisterHandInteractPacket.initServer();
         RequestMisakaNetManagePacket.initServer();
         SetMisakaNetworkAllocationPacket.initServer();
         SetMisakaNetworkPermissionPacket.initServer();
@@ -20,5 +21,6 @@ public final class MisakaPackets {
     public static void initClient() {
         MisakaPanelDataPacket.initClient();
         MisakaNetManageDataPacket.initClient();
+        MisakaOrbitalChargePacket.initClient();
     }
 }

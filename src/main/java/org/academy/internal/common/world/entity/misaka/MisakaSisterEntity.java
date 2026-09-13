@@ -1,5 +1,6 @@
 package org.academy.internal.common.world.entity.misaka;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -13,32 +14,38 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.BreathAirGoal;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.academy.internal.common.world.entity.misaka.ai.MisakaArcZapGoal;
-import org.academy.internal.common.world.entity.misaka.ai.MisakaLivelyGoal;
 import org.academy.internal.common.world.entity.misaka.ai.MisakaCropGrazeGoal;
+import org.academy.internal.common.world.entity.misaka.ai.MisakaEscapeHazardGoal;
 import org.academy.internal.common.world.entity.misaka.ai.MisakaFollowGoal;
 import org.academy.internal.common.world.entity.misaka.ai.MisakaForageFoodGoal;
+import org.academy.internal.common.world.entity.misaka.ai.MisakaLivelyGoal;
 import org.academy.internal.common.world.entity.misaka.ai.MisakaNetworkWanderGoal;
 import org.academy.internal.common.world.entity.misaka.ai.MisakaPersonalityCombatGoal;
 import org.academy.internal.common.world.entity.misaka.ai.MisakaSleepInBedGoal;
 import org.academy.internal.common.world.entity.misaka.ai.MisakaSocialGoal;
 import org.academy.internal.common.world.entity.misaka.ai.MisakaStarveGuardGoal;
+import org.academy.internal.common.world.entity.misaka.ai.MisakaSwimAshoreGoal;
 import org.academy.internal.common.world.entity.misaka.ai.MisakaUnawakenedStrollGoal;
 import org.academy.internal.common.world.entity.misaka.perception.PerceptionService;
-import org.academy.internal.server.misaka.MisakaComputeContribution;
+import org.academy.internal.server.misaka.MisakaPanelSupport;
 import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
 import org.academy.internal.server.world.level.storage.MisakaSisterRoster;
 import com.geckolib.animatable.GeoEntity;
@@ -98,18 +105,45 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
     private final MisakaHotSpringSoak hotSpringSoak = new MisakaHotSpringSoak();
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
     @Nullable UUID misakaUuid;
+    /** Survives uuid-loss on reload so {@link MisakaSisterRosterSync#ensureRegistered} can rebind. */
+    int pendingSerial;
+    private long lastHandInteractGameTime = Long.MIN_VALUE;
     private @Nullable MisakaFollowGoal followGoal;
     private @Nullable MisakaNetworkWanderGoal networkWanderGoal;
+    /** First tick after spawn/load must mirror roster once even if not dirty. */
+    private boolean needsInitialRosterSync = true;
+    /** True after incap hold was entered this downed stretch (skip repeat sanitize). */
+    private boolean incapHoldLatched;
+    private @Nullable BlockPos lastCoverageSamplePos;
 
     public MisakaSisterEntity(EntityType<? extends MisakaSisterEntity> type, Level level) {
         super(type, level);
+        // PathfinderMob (not Animal) uses Mob despawn by default. Roster identity must outlive
+        // player distance — otherwise discard leaves orphan roster rows (e.g. incap ghosts).
+        setPersistenceRequired();
+    }
+
+    /**
+     * Sisters are persistent NPCs tied to {@link MisakaSisterRoster}; never cull when far away.
+     */
+    @Override
+    public boolean removeWhenFarAway(double distanceToClosestPlayer) {
+        return false;
+    }
+
+    @Override
+    public boolean requiresCustomPersistence() {
+        return true;
     }
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<>("Movement", test -> {
-            // Carried by player: freeze movement clips; renderer applies hug silhouette.
+            // Carried / downed: freeze movement clips; renderer applies static silhouette.
             if (isPassenger() && getVehicle() instanceof Player) {
+                return PlayState.STOP;
+            }
+            if (isIncapacitated()) {
                 return PlayState.STOP;
             }
             if (!onGround()) {
@@ -150,50 +184,220 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
 
     @Override
     protected void registerGoals() {
+        // Vanilla hazard stack: float in fluids, surface for air, panic after env damage.
         goalSelector.addGoal(0, new FloatGoal(this));
-        goalSelector.addGoal(1, new MisakaUnawakenedStrollGoal(this));
-        goalSelector.addGoal(2, new MisakaStarveGuardGoal(this));
-        goalSelector.addGoal(3, new MisakaForageFoodGoal(this));
-        goalSelector.addGoal(4, new MisakaCropGrazeGoal(this));
-        goalSelector.addGoal(5, new MisakaSleepInBedGoal(this));
-        goalSelector.addGoal(6, new MisakaPersonalityCombatGoal(this));
-        goalSelector.addGoal(7, followGoal = new MisakaFollowGoal(this));
-        goalSelector.addGoal(8, networkWanderGoal = new MisakaNetworkWanderGoal(this));
-        goalSelector.addGoal(9, new MisakaSocialGoal(this));
-        goalSelector.addGoal(10, new MisakaArcZapGoal(this));
-        goalSelector.addGoal(11, new MisakaLivelyGoal(this));
-        goalSelector.addGoal(12, new LookAtPlayerGoal(this, Player.class, 8.0f));
+        goalSelector.addGoal(0, new BreathAirGoal(this));
+        // Powder-snow preempt + vanilla PanicGoal (lava/fire/cactus/freeze after hit).
+        goalSelector.addGoal(1, new MisakaEscapeHazardGoal(this));
+        // Vanilla has no land-exit after Float/BreathAir — swim to nearest dry stand.
+        goalSelector.addGoal(1, new MisakaSwimAshoreGoal(this));
+        goalSelector.addGoal(2, new MisakaUnawakenedStrollGoal(this));
+        goalSelector.addGoal(3, new MisakaStarveGuardGoal(this));
+        goalSelector.addGoal(4, new MisakaForageFoodGoal(this));
+        goalSelector.addGoal(5, new MisakaCropGrazeGoal(this));
+        goalSelector.addGoal(6, new MisakaSleepInBedGoal(this));
+        goalSelector.addGoal(7, new MisakaPersonalityCombatGoal(this));
+        goalSelector.addGoal(8, followGoal = new MisakaFollowGoal(this));
+        goalSelector.addGoal(9, networkWanderGoal = new MisakaNetworkWanderGoal(this));
+        goalSelector.addGoal(10, new MisakaSocialGoal(this));
+        goalSelector.addGoal(11, new MisakaArcZapGoal(this));
+        goalSelector.addGoal(12, new MisakaLivelyGoal(this));
+        goalSelector.addGoal(13, new LookAtPlayerGoal(this, Player.class, 8.0f));
     }
 
     @Override
     public boolean isNoAi() {
-        // Carried / incapacitated: freeze pathfinding and combat without editing each Goal.
         return isIncapacitated() || (getVehicle() instanceof Player) || super.isNoAi();
+    }
+
+    /** Hard gate for Mob.serverAiStep in MC 26.2 (goals + navigation). */
+    @Override
+    public boolean isEffectiveAi() {
+        if (isIncapacitated() || getVehicle() instanceof Player) {
+            return false;
+        }
+        return super.isEffectiveAi();
+    }
+
+    /** Immobile also zeroes walk/jump input in LivingEntity.aiStep (MC 26.2). */
+    @Override
+    protected boolean isImmobile() {
+        return isIncapacitated() || super.isImmobile();
+    }
+
+    @Override
+    public void travel(Vec3 travelVector) {
+        if (isIncapacitated() && !(getVehicle() instanceof Player)) {
+            if (onGround()) {
+                setDeltaMovement(Vec3.ZERO);
+                return;
+            }
+            // Allow falling only — no path / knockback glide while downed.
+            super.travel(Vec3.ZERO);
+            return;
+        }
+        super.travel(travelVector);
     }
 
     @Override
     public void tick() {
+        // Roster → entityData → NoAI must be applied BEFORE super.tick(), otherwise
+        // Mob.serverAiStep runs goals/navigation for a full tick while still "able".
+        if (!level().isClientSide()) {
+            MisakaSisterRosterSync.ensureRegistered(this);
+            MisakaSisterRosterSync.syncFromRosterIfDirty(this);
+            if (rosterOrDataIncapacitated()) {
+                applyIncapacitatedHold();
+            } else {
+                incapHoldLatched = false;
+            }
+        }
+
         super.tick();
+
         if (level().isClientSide()) {
             return;
         }
-        MisakaSisterRosterSync.ensureRegistered(this);
-        MisakaSisterRosterSync.syncFromRoster(this);
+
+        // Re-assert motion hold after AI without re-sanitizing pose every tick.
+        if (rosterOrDataIncapacitated()) {
+            applyIncapacitatedHoldMotionOnly();
+        }
+
         MisakaSisterRosterSync.updateLastKnownChunk(this);
-        if (tickCount % 20 == 0) {
+        BlockPos here = blockPosition();
+        if (!here.equals(lastCoverageSamplePos) || tickCount % 100 == 0) {
+            lastCoverageSamplePos = here.immutable();
             MisakaSisterRosterSync.recheckNetworkCoverage(this);
         }
         tickSleepWake();
-        if (isAwakened()) {
+        if (isAwakened() && !isIncapacitated()) {
+            int foodBefore = foodData.getFoodLevel();
             if (!isPassenger()) {
                 foodData.tick(this);
             }
             foodData.tickFoodAndStarvation(this);
-            MisakaSisterRosterSync.syncStarvingToRoster(this);
+            if (foodBefore != foodData.getFoodLevel()
+                    || (foodData.getFoodLevel() == 0) != isStarving()) {
+                MisakaSisterRosterSync.syncStarvingToRoster(this);
+            }
             hotSpringSoak.tick(this);
         }
         MisakaSisterRosterSync.tickAwakeWindowSpotting(this);
         syncFoodLevel();
+    }
+
+    boolean needsInitialRosterSync() {
+        return needsInitialRosterSync;
+    }
+
+    void clearInitialRosterSync() {
+        needsInitialRosterSync = false;
+    }
+
+    /**
+     * Keep a downed sister planted: real NoAI flag + clear nav / motion.
+     * Pose sanitize runs once when entering the hold.
+     */
+    public void applyIncapacitatedHold() {
+        boolean entering = !incapHoldLatched;
+        if (!entityData.get(INCAPACITATED)) {
+            entityData.set(INCAPACITATED, true);
+            entering = true;
+        }
+        applyIncapacitatedHoldMotionOnly();
+        if (entering) {
+            sanitizePoseAfterLoad();
+            clearNearbyAttackers();
+            refreshNametag();
+            incapHoldLatched = true;
+        }
+    }
+
+    private void applyIncapacitatedHoldMotionOnly() {
+        setNoAi(true);
+        setTarget(null);
+        getNavigation().stop();
+        getMoveControl().setWantedPosition(getX(), getY(), getZ(), 0.0);
+        jumping = false;
+        clearFire();
+        setTicksFrozen(0);
+        if (!(getVehicle() instanceof Player)) {
+            if (onGround()) {
+                setDeltaMovement(Vec3.ZERO);
+            } else {
+                setDeltaMovement(getDeltaMovement().multiply(0.0, 1.0, 0.0));
+            }
+        }
+    }
+
+    /** Drop mob targets that already locked her before she went down. */
+    private void clearNearbyAttackers() {
+        if (!(level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        var box = getBoundingBox().inflate(48.0);
+        for (Mob mob : serverLevel.getEntitiesOfClass(Mob.class, box)) {
+            if (mob.getTarget() == this) {
+                mob.setTarget(null);
+            }
+        }
+    }
+
+    /**
+     * Roster is authoritative on the server when linked; entityData alone can lag a tick
+     * behind {@code incap=true} in SavedData (which is what {@code /misaka info} prints).
+     */
+    private boolean rosterOrDataIncapacitated() {
+        if (entityData.get(INCAPACITATED)) {
+            return true;
+        }
+        if (level().isClientSide() || misakaUuid == null || level().getServer() == null) {
+            return false;
+        }
+        return MisakaSisterRoster.get(level().getServer())
+                .get(misakaUuid)
+                .map(record -> record.incapacitated)
+                .orElse(false);
+    }
+
+    /**
+     * Clear death flip / orphaned SLEEPING pose leftovers.
+     * Call on load, incap transitions, and wake — not every tick.
+     */
+    public void sanitizePoseAfterLoad() {
+        dead = false;
+        deathTime = 0;
+        if (getPose() == Pose.DYING) {
+            setPose(Pose.STANDING);
+        }
+        if (getPose() == Pose.SLEEPING && !isSleeping()) {
+            setPose(Pose.STANDING);
+        }
+        if (!(getVehicle() instanceof Player) && onGround() && Math.abs(getXRot()) > 60.0f) {
+            setXRot(0.0f);
+        }
+    }
+
+    @Override
+    public void stopSleeping() {
+        super.stopSleeping();
+        // One-shot upright restore at the wake transition (server syncs pose to clients).
+        setPose(Pose.STANDING);
+        setXRot(0.0f);
+        deathTime = 0;
+        dead = false;
+    }
+
+    /** Called when roster incap flips false (tower recover). */
+    public void clearIncapacitatedHold() {
+        incapHoldLatched = false;
+        sanitizePoseAfterLoad();
+        // Only clear the synched NoAI bit if we are not still carried.
+        if (!(getVehicle() instanceof Player)) {
+            setNoAi(false);
+        }
+        refreshNametag();
     }
 
     private void tickSleepWake() {
@@ -203,6 +407,7 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
         if (!MisakaDayTime.isNight(level())
                 || getWanderStyle() == WanderStyle.WAITING
                 || isStarving()
+                || isIncapacitated()
                 || isPassenger()) {
             stopSleeping();
         }
@@ -212,8 +417,18 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
     public void onAddedToLevel() {
         super.onAddedToLevel();
         if (!level().isClientSide()) {
+            setPersistenceRequired();
             MisakaSisterRosterSync.ensureRegistered(this);
+            org.academy.internal.server.misaka.MisakaLoadedSisterIndex.put(this);
         }
+    }
+
+    @Override
+    public void remove(RemovalReason reason) {
+        if (!level().isClientSide()) {
+            org.academy.internal.server.misaka.MisakaLoadedSisterIndex.remove(this);
+        }
+        super.remove(reason);
     }
 
     @Override
@@ -254,7 +469,16 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
         if (getVehicle() instanceof Player && source.is(DamageTypes.IN_WALL)) {
             return false;
         }
+        // Downed sisters cannot flee hazards; block non-player damage so rescue stays viable.
+        if (isIncapacitated() && !(source.getEntity() instanceof Player)) {
+            return false;
+        }
         return super.hurtServer(level, source, amount);
+    }
+
+    @Override
+    public boolean canFreeze() {
+        return !isIncapacitated() && super.canFreeze();
     }
 
     @Override
@@ -263,22 +487,64 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
     }
 
     @Override
-    public Component getDisplayName() {
+    public Component getName() {
         int serial = entityData.get(SERIAL);
         if (serial <= 0) {
-            return super.getDisplayName();
+            return super.getName();
         }
-        return Component.literal("御坂" + serial + "号");
+        Component base = Component.literal("御坂" + serial + "号");
+        if (isIncapacitated()) {
+            return base.copy()
+                    .append(Component.translatable("entity.academy.misaka_sister.incap_suffix")
+                            .withStyle(ChatFormatting.RED));
+        }
+        return base;
+    }
+
+    @Override
+    public Component getDisplayName() {
+        return getName();
+    }
+
+    /** Keep nametag in sync with roster serial (visible above head). */
+    public void refreshNametag() {
+        int serial = entityData.get(SERIAL);
+        if (serial > 0) {
+            setCustomName(getName());
+            setCustomNameVisible(true);
+        }
+    }
+
+    @Override
+    public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
+        super.onSyncedDataUpdated(key);
+        if (SERIAL.equals(key) || INCAPACITATED.equals(key)) {
+            refreshNametag();
+        }
     }
 
     @Override
     protected InteractionResult mobInteract(Player player, InteractionHand hand) {
         if (level().isClientSide()) {
-            return InteractionResult.SUCCESS;
+            // Relay tower/food/tablet/pet to server — client withoutItem alone never recovers.
+            ItemStack held = player.getItemInHand(hand);
+            if (shouldClientRelayHandInteract(held)) {
+                org.misaka.MisakaNetworkClient.send(
+                        new org.academy.internal.common.network.misaka.MisakaSisterHandInteractPacket(
+                                getUUID(), hand));
+            }
+            return handledWithoutItemClient();
         }
         if (!(player instanceof ServerPlayer serverPlayer)) {
             return InteractionResult.PASS;
         }
+        // Dedupe EntityInteract + HandInteractPacket / Item#use in the same tick.
+        long gameTime = level().getGameTime();
+        if (gameTime == lastHandInteractGameTime) {
+            return handledWithoutItem();
+        }
+        lastHandInteractGameTime = gameTime;
+        MisakaSisterRosterSync.ensureRegistered(this);
         var record = rosterRecord().orElse(null);
         if (record == null) {
             return InteractionResult.PASS;
@@ -286,25 +552,37 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
         String name = serverPlayer.getGameProfile().name();
         ItemStack stack = player.getItemInHand(hand);
 
-        if (MisakaFoodTraits.isTower(stack) && record.incapacitated) {
+        boolean downed = record.incapacitated || entityData.get(INCAPACITATED);
+        if (MisakaFoodTraits.isTower(stack) && downed) {
             if (!InteractionGate.allow(record, name, InteractionGate.Intent.FEED_RECOVER)) {
                 MisakaInteractionFeedback.refuse(this, serverPlayer);
-                return InteractionResult.FAIL;
+                return handledWithoutItem();
             }
+            var server = level().getServer();
+            MisakaSisterRoster.get(server).modify(record.misakaUuid, r -> r.incapacitated = false);
             record.incapacitated = false;
             setHealth(Math.min(getMaxHealth(), Math.max(getHealth(), getMaxHealth() * 0.5f)));
-            InteractionGate.touchBenevolent(record, name, level().getServer());
-            MisakaSisterRosterSync.syncFromRecord(this, record);
+            entityData.set(INCAPACITATED, false);
+            clearIncapacitatedHold();
             stack.shrink(1);
-            MisakaSisterRoster.get(level().getServer()).setDirty();
-            MisakaComputeContribution.refreshCpForRecord(level().getServer(), record);
+            MisakaSisterRosterSync.syncFromRecord(this, record);
             MisakaInteractionFeedback.recovered(this, serverPlayer);
+            InteractionGate.scheduleAfterInteract(server, record, name);
             return InteractionResult.CONSUME;
         }
 
-        if (record.incapacitated) {
-            MisakaInteractionFeedback.refuse(this, serverPlayer);
-            return InteractionResult.FAIL;
+        if (downed) {
+            // Panel stays available so players can see why she is unresponsive.
+            if (stack.is(org.academy.internal.common.world.item.Items.ABILITY_CONTROL_TABLET.get())) {
+                if (!InteractionGate.allow(record, name, InteractionGate.Intent.PANEL)) {
+                    MisakaInteractionFeedback.refuse(this, serverPlayer);
+                    return handledWithoutItem();
+                }
+                MisakaPanelSupport.sendPanel(serverPlayer, this);
+                return handledWithoutItem();
+            }
+            MisakaInteractionFeedback.incapacitated(this, serverPlayer);
+            return handledWithoutItem();
         }
 
         if (MisakaFoodTraits.isPromax(stack)) {
@@ -314,56 +592,50 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
                 } else {
                     MisakaInteractionFeedback.refuse(this, serverPlayer);
                 }
-                return InteractionResult.FAIL;
+                return handledWithoutItem();
             }
             if (PerceptionService.tryBreakLimit(level().getServer(), record)) {
                 stack.shrink(1);
-                InteractionGate.touchBenevolent(record, name, level().getServer());
                 MisakaSisterRosterSync.syncFromRecord(this, record);
                 MisakaSisterRoster.get(level().getServer()).setDirty();
-                MisakaComputeContribution.refreshCpForRecord(
-                        level().getServer(), record);
                 MisakaInteractionFeedback.promaxOk(this, serverPlayer);
+                InteractionGate.scheduleAfterInteract(level().getServer(), record, name);
                 return InteractionResult.CONSUME;
             }
             MisakaInteractionFeedback.reconstructionBlocked(this, serverPlayer);
-            return InteractionResult.FAIL;
+            return handledWithoutItem();
         }
 
         if (MisakaFoodTraits.isTower(stack) && !record.awakened) {
             if (!InteractionGate.allow(record, name, InteractionGate.Intent.FEED_TOWER_AWAKEN)) {
                 MisakaInteractionFeedback.refuse(this, serverPlayer);
-                return InteractionResult.FAIL;
+                return handledWithoutItem();
             }
             PerceptionService.awakenWithTower(record, name, level().getGameTime(), level().getServer());
-            InteractionGate.touchBenevolent(record, name, level().getServer());
-            MisakaSisterRosterSync.syncFromRecord(this, record);
             stack.shrink(1);
+            MisakaSisterRosterSync.syncFromRecord(this, record);
             MisakaSisterRoster.get(level().getServer()).setDirty();
-            MisakaComputeContribution.refreshCpForRecord(
-                    level().getServer(), record);
             MisakaInteractionFeedback.awaken(this, serverPlayer);
+            InteractionGate.scheduleAfterInteract(level().getServer(), record, name);
             return InteractionResult.CONSUME;
         }
 
         if (MisakaFoodTraits.isTower(stack) && record.awakened) {
             if (!InteractionGate.allow(record, name, InteractionGate.Intent.FEED_FOOD)) {
                 MisakaInteractionFeedback.refuse(this, serverPlayer);
-                return InteractionResult.FAIL;
+                return handledWithoutItem();
             }
             if (!foodData.needsFood()) {
                 MisakaInteractionFeedback.full(this, serverPlayer);
-                return InteractionResult.FAIL;
+                return handledWithoutItem();
             }
             ItemStack fed = stack.copyWithCount(1);
             MisakaFoodTraits.applyTo(this, stack);
             foodData.onHandFed(this, serverPlayer, stack);
             stack.shrink(1);
-            InteractionGate.touchBenevolent(record, name, level().getServer());
             MisakaSisterRoster.get(level().getServer()).setDirty();
-            MisakaComputeContribution.refreshCpForRecord(
-                    level().getServer(), record);
             MisakaInteractionFeedback.fed(this, serverPlayer, fed, MisakaFoodTraits.isFavorite(fed));
+            InteractionGate.scheduleAfterInteract(level().getServer(), record, name);
             return InteractionResult.CONSUME;
         }
 
@@ -372,43 +644,114 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
         if (isCake || isFood) {
             if (!InteractionGate.allow(record, name, InteractionGate.Intent.FEED_FOOD)) {
                 MisakaInteractionFeedback.refuse(this, serverPlayer);
-                return InteractionResult.FAIL;
+                return handledWithoutItem();
             }
             if (!foodData.needsFood()) {
                 MisakaInteractionFeedback.full(this, serverPlayer);
-                return InteractionResult.FAIL;
+                return handledWithoutItem();
             }
             ItemStack fed = stack.copyWithCount(1);
             MisakaFoodTraits.applyTo(this, stack);
             foodData.onHandFed(this, serverPlayer, stack);
             stack.shrink(1);
-            InteractionGate.touchBenevolent(record, name, level().getServer());
             MisakaSisterRoster.get(level().getServer()).setDirty();
-            MisakaComputeContribution.refreshCpForRecord(
-                    level().getServer(), record);
             MisakaInteractionFeedback.fed(this, serverPlayer, fed, MisakaFoodTraits.isFavorite(fed));
+            InteractionGate.scheduleAfterInteract(level().getServer(), record, name);
             return InteractionResult.CONSUME;
+        }
+
+        // Tablet: open panel only; privilege/CP deferred so max-favor rebuild cannot block UI.
+        if (stack.is(org.academy.internal.common.world.item.Items.ABILITY_CONTROL_TABLET.get())) {
+            if (!InteractionGate.allow(record, name, InteractionGate.Intent.PANEL)) {
+                MisakaInteractionFeedback.refuse(this, serverPlayer);
+                return handledWithoutItem();
+            }
+            MisakaPanelSupport.sendPanel(serverPlayer, this);
+            InteractionGate.scheduleAfterInteract(level().getServer(), record, name);
+            return handledWithoutItem();
         }
 
         if (stack.isEmpty()) {
             if (!InteractionGate.allow(record, name, InteractionGate.Intent.PET)) {
                 MisakaInteractionFeedback.refuse(this, serverPlayer);
-                return InteractionResult.FAIL;
+                return handledWithoutItem();
             }
-            if (!record.dailyPet) {
+            boolean firstToday = !record.dailyPet;
+            if (firstToday) {
                 record.dailyPet = true;
                 PerceptionService.gain(level().getServer(), record, 1);
                 MisakaSisterRoster.get(level().getServer()).setDirty();
             }
-            InteractionGate.touchBenevolent(record, name, level().getServer());
             MisakaSisterRosterSync.syncFromRecord(this, record);
-            MisakaComputeContribution.refreshCpForRecord(
-                    level().getServer(), record);
-            MisakaInteractionFeedback.pet(this, serverPlayer);
-            return InteractionResult.SUCCESS;
+            if (firstToday) {
+                MisakaInteractionFeedback.pet(this, serverPlayer);
+            } else {
+                MisakaInteractionFeedback.petAlready(this, serverPlayer);
+            }
+            InteractionGate.scheduleAfterInteract(level().getServer(), record, name);
+            return handledWithoutItem();
         }
 
         return InteractionResult.PASS;
+    }
+
+    /**
+     * Re-entry from Item#use when vanilla EntityInteract missed the sister but our aim ray
+     * still hits her (common when privilege follow / carry puts the AABB on the crosshair).
+     */
+    public InteractionResult forceMobInteract(Player player, InteractionHand hand) {
+        return mobInteract(player, hand);
+    }
+
+    /** Ends the interact pipeline without falling through to Item#use (food / tablet). */
+    private static InteractionResult handledWithoutItem() {
+        return InteractionResult.SUCCESS_SERVER.withoutItem();
+    }
+
+    /**
+     * Client-side: same consumable result without claiming an item transform, so the client
+     * does not continue into {@code Item#use} after a predicted entity hit.
+     */
+    private static InteractionResult handledWithoutItemClient() {
+        return InteractionResult.SUCCESS.withoutItem();
+    }
+
+    private static boolean shouldClientRelayHandInteract(ItemStack stack) {
+        if (stack.isEmpty()) {
+            return true;
+        }
+        if (MisakaFoodTraits.isTower(stack) || MisakaFoodTraits.isPromax(stack)) {
+            return true;
+        }
+        if (stack.is(org.academy.internal.common.world.item.Items.ABILITY_CONTROL_TABLET.get())) {
+            return true;
+        }
+        return stack.is(Items.CAKE) || stack.get(DataComponents.FOOD) != null;
+    }
+
+    /** Aimed living Misaka sister within entity interaction range, or empty. */
+    public static java.util.Optional<MisakaSisterEntity> findAimedSister(Player player) {
+        double range = player.entityInteractionRange();
+        Vec3 from = player.getEyePosition();
+        Vec3 look = player.getViewVector(1.0f);
+        Vec3 to = from.add(look.scale(range));
+        var box = player.getBoundingBox().expandTowards(look.scale(range)).inflate(1.0);
+        var hit = net.minecraft.world.entity.projectile.ProjectileUtil.getEntityHitResult(
+                player,
+                from,
+                to,
+                box,
+                entity -> entity instanceof MisakaSisterEntity && entity.isAlive(),
+                range * range
+        );
+        if (hit != null && hit.getEntity() instanceof MisakaSisterEntity sister) {
+            return java.util.Optional.of(sister);
+        }
+        return java.util.Optional.empty();
+    }
+
+    public static boolean isPlayerAimingAtSister(Player player) {
+        return findAimedSister(player).isPresent();
     }
 
     @Override
@@ -420,6 +763,7 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
             } catch (IllegalArgumentException ignored) {
             }
         });
+        pendingSerial = input.getIntOr("academy_misaka_serial", 0);
         foodData.read(input);
         syncFoodLevel();
     }
@@ -429,6 +773,13 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
         super.addAdditionalSaveData(output);
         if (misakaUuid != null) {
             output.putString("academy_misaka_uuid", misakaUuid.toString());
+        }
+        int serial = entityData.get(SERIAL);
+        if (serial <= 0) {
+            serial = pendingSerial;
+        }
+        if (serial > 0) {
+            output.putInt("academy_misaka_serial", serial);
         }
         foodData.write(output);
     }
@@ -454,7 +805,17 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
     }
 
     public boolean isIncapacitated() {
-        return entityData.get(INCAPACITATED);
+        if (entityData.get(INCAPACITATED)) {
+            return true;
+        }
+        // Server: trust roster so AI gates match /misaka info before entityData catches up.
+        if (!level().isClientSide() && misakaUuid != null && level().getServer() != null) {
+            return MisakaSisterRoster.get(level().getServer())
+                    .get(misakaUuid)
+                    .map(record -> record.incapacitated)
+                    .orElse(false);
+        }
+        return false;
     }
 
     public MisakaPersonality getPersonality() {
@@ -467,6 +828,12 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
 
     public @Nullable UUID getMisakaUuid() {
         return misakaUuid;
+    }
+
+    /** Synched roster serial (0 if not yet bound). */
+    public int getSerial() {
+        int serial = entityData.get(SERIAL);
+        return serial > 0 ? serial : pendingSerial;
     }
 
     public void bindToRecord(MisakaSisterRecord record) {

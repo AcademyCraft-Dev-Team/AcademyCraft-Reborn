@@ -658,7 +658,7 @@ open class TextBoxWidget(protected val maxLength: Int) : LabelWidget("") {
     }
 
     override fun canFocus(): Boolean {
-        return true
+        return isAbsoluteEnabled()
     }
 
     override fun onFocusGained() {

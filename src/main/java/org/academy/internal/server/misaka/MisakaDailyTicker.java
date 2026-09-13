@@ -13,6 +13,8 @@ import java.util.HashSet;
 
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class MisakaDailyTicker {
+    private static int lastProcessedDay = Integer.MIN_VALUE;
+
     private MisakaDailyTicker() {
     }
 
@@ -26,6 +28,10 @@ public final class MisakaDailyTicker {
             return;
         }
         int day = MisakaDayTime.dayIndex(server.overworld());
+        if (day == lastProcessedDay) {
+            return;
+        }
+        lastProcessedDay = day;
         var roster = MisakaSisterRoster.get(server);
         boolean dirty = false;
         var namesToRefresh = new HashSet<String>();
@@ -43,6 +49,7 @@ public final class MisakaDailyTicker {
             record.dailyCakeFavor = false;
             record.lastDailyResetDay = day;
             dirty = true;
+            roster.markEntitySyncDirty(record.misakaUuid);
             if (record.lastInteractedBenevolentPlayerName != null
                     && !record.lastInteractedBenevolentPlayerName.isEmpty()) {
                 namesToRefresh.add(record.lastInteractedBenevolentPlayerName);

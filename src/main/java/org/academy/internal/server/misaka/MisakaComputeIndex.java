@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 import org.academy.AcademyCraft;
+import org.academy.internal.common.world.entity.misaka.MisakaSisterEntity;
 import org.academy.internal.common.world.entity.misaka.favor.FavorService;
 import org.academy.internal.server.world.level.storage.MisakaNetworkRegistry;
 import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
@@ -324,6 +325,12 @@ public final class MisakaComputeIndex extends SavedData {
         }
         var sorted = new ArrayList<SisterSort>();
 
+        // One entity pass per dimension instead of findLoadedSister (world scan) per record.
+        var loadedByUuid = new HashMap<UUID, MisakaSisterEntity>();
+        for (ServerLevel dim : server.getAllLevels()) {
+            loadedByUuid.putAll(MisakaNetworkCoverage.loadedSistersByUuid(dim));
+        }
+
         for (var record : roster.all()) {
             if (!record.awakened || record.networkNodePos == null) {
                 continue;
@@ -333,7 +340,7 @@ public final class MisakaComputeIndex extends SavedData {
             String group = groupKey(record);
             String privilege = privilegeName(record);
             boolean reconstruction = record.isReconstruction || record.perception >= 101;
-            var loadedSister = MisakaNetworkCoverage.findLoadedSister(server, record.misakaUuid);
+            var loadedSister = loadedByUuid.get(record.misakaUuid);
             var sampleLevel = MisakaNetworkCoverage.sampleLevel(server, record, loadedSister);
             BlockPos sample = MisakaNetworkCoverage.samplePos(record, loadedSister);
             boolean inCoverage = MisakaNetworkCoverage.canUseMisakaService(sampleLevel, networkId, sample);

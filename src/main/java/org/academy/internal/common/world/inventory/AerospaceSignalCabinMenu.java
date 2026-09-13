@@ -41,6 +41,10 @@ public final class AerospaceSignalCabinMenu extends AbstractContainerMenu {
     private final @Nullable AerospaceSignalCabinBlockEntity blockEntity;
     private final ContainerData viewerData = new SimpleContainerData(2);
 
+    public @Nullable AerospaceSignalCabinBlockEntity getBlockEntity() {
+        return blockEntity;
+    }
+
     public AerospaceSignalCabinMenu(
             int containerId,
             Inventory playerInventory,

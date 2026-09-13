@@ -110,9 +110,11 @@ import org.academy.internal.common.ability.teleport.skills.lv5.SpacialExcision;
 import org.academy.internal.common.attribute.PropsPackets;
 import org.academy.internal.common.network.MagneticHookActionPacket;
 import org.academy.internal.common.network.misaka.MisakaNetManageDataPacket;
+import org.academy.internal.common.network.misaka.MisakaOrbitalChargePacket;
 import org.academy.internal.common.network.misaka.MisakaPanelDataPacket;
 import org.academy.internal.common.network.misaka.RequestMisakaNetManagePacket;
 import org.academy.internal.common.network.misaka.RequestMisakaPanelPacket;
+import org.academy.internal.common.network.misaka.MisakaSisterHandInteractPacket;
 import org.academy.internal.common.network.misaka.SetMisakaNetworkAllocationPacket;
 import org.academy.internal.common.network.misaka.DisconnectMisakaFromNetworkPacket;
 import org.academy.internal.common.network.misaka.SetMisakaNetworkPermissionPacket;
@@ -961,9 +963,15 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, RequestMisakaPanelPacket>>
             REQUEST_MISAKA_PANEL = PACKET_TYPES.register("request_misaka_panel",
             () -> new PacketType<>(RequestMisakaPanelPacket.class, RequestMisakaPanelPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MisakaSisterHandInteractPacket>>
+            MISAKA_SISTER_HAND_INTERACT = PACKET_TYPES.register("misaka_sister_hand_interact",
+            () -> new PacketType<>(MisakaSisterHandInteractPacket.class, MisakaSisterHandInteractPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MisakaPanelDataPacket>>
             MISAKA_PANEL_DATA = PACKET_TYPES.register("misaka_panel_data",
             () -> new PacketType<>(MisakaPanelDataPacket.class, MisakaPanelDataPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MisakaOrbitalChargePacket>>
+            MISAKA_ORBITAL_CHARGE = PACKET_TYPES.register("misaka_orbital_charge",
+            () -> new PacketType<>(MisakaOrbitalChargePacket.class, MisakaOrbitalChargePacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, RequestMisakaNetManagePacket>>
             REQUEST_MISAKA_NET_MANAGE = PACKET_TYPES.register("request_misaka_net_manage",
             () -> new PacketType<>(RequestMisakaNetManagePacket.class, RequestMisakaNetManagePacket.CODEC));

@@ -18,6 +18,7 @@ public final class MisakaSleepInBedGoal extends Goal {
     private static final int SEARCH_RADIUS = 10;
     private final MisakaSisterEntity sister;
     private BlockPos bedPos;
+    private int cooldown;
 
     public MisakaSleepInBedGoal(MisakaSisterEntity sister) {
         this.sister = sister;
@@ -26,6 +27,9 @@ public final class MisakaSleepInBedGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        if (cooldown > 0) {
+            cooldown--;
+        }
         if (!sister.isAwakened() || sister.isSleeping()) {
             return false;
         }
@@ -35,8 +39,15 @@ public final class MisakaSleepInBedGoal extends Goal {
         if (!MisakaDayTime.isNight(sister.level())) {
             return false;
         }
+        if (cooldown > 0) {
+            return false;
+        }
         bedPos = findBed();
-        return bedPos != null;
+        if (bedPos == null) {
+            cooldown = 100;
+            return false;
+        }
+        return true;
     }
 
     @Override

@@ -2,6 +2,7 @@ package org.academy.internal.server.misaka;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import org.academy.AcademyCraft;
 import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.misaka.MisakaNAT;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -83,6 +84,8 @@ public final class MisakaComputeContribution {
 
         float ratio = cpPerMsk(server);
         var usageByUuid = MisakaComputeUsageTracker.snapshot();
+        var chargeByUuid = MisakaComputeUsageTracker.chargeSnapshot();
+        var networkUsageById = new HashMap<>(MisakaComputeUsageTracker.networkSnapshot());
         var usageByName = new HashMap<String, Float>();
         var playerByName = new HashMap<String, ServerPlayer>();
 
@@ -93,6 +96,29 @@ public final class MisakaComputeContribution {
             float used = usageByUuid.getOrDefault(player.getUUID(), 0.0f);
             if (used > 0.0f) {
                 usageByName.put(name, used);
+            }
+        }
+
+        // Fold designator charge into per-network supply burn (no CP payout).
+        var activeDataEarly = MisakaActiveNetworkData.get(server);
+        for (var entry : chargeByUuid.entrySet()) {
+            float charge = entry.getValue() == null ? 0.0f : entry.getValue();
+            if (!(charge > 0.0f)) {
+                continue;
+            }
+            ServerPlayer owner = null;
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                if (player.getUUID().equals(entry.getKey())) {
+                    owner = player;
+                    break;
+                }
+            }
+            if (owner == null) {
+                continue;
+            }
+            var active = activeDataEarly.getActive(owner).orElse(null);
+            if (active != null) {
+                networkUsageById.merge(active, charge, Float::sum);
             }
         }
 
@@ -170,7 +196,15 @@ public final class MisakaComputeContribution {
             nextNetworkDemand.put(networkId, demandSum);
             Map<String, Boolean> online = onlineByNetwork.getOrDefault(networkId, Map.of());
             var accessNames = sharedAccessNames(governance, networkId, demandForNet.keySet(), playerByName);
-            var groupsForNet = groupsByNetwork.getOrDefault(networkId, List.of());
+            float networkBurn = networkUsageById.getOrDefault(networkId, 0.0f);
+            var groupsForNet = applyNetworkBurn(
+                    groupsByNetwork.getOrDefault(networkId, List.of()),
+                    networkBurn
+            );
+            // Include direct network draws in demand for UI satisfaction.
+            if (networkBurn > 0.0f) {
+                nextNetworkDemand.put(networkId, demandSum + networkBurn);
+            }
             // §7.1: a network without a reconstruction work stays dispersed — each benevolent
             // set keeps its own sisters' output instead of feeding one network-wide pool.
             var partial = index.reconstructionSisterUuid(networkId) == null
@@ -246,6 +280,70 @@ public final class MisakaComputeContribution {
             return 0.0f;
         }
         return lastAllocatedMskByName.getOrDefault(name, 0.0f);
+    }
+
+    /**
+     * MSk/s this player can claim from {@code networkId} right now (benevolent-set share, or
+     * full integrated pool with ACCESS). Independent of last-settle demand allocation — idle
+     * supply still counts so friendly sisters always yield usable compute.
+     */
+    public static float claimableMskPerSecond(
+            MinecraftServer server,
+            String playerName,
+            UUID networkId
+    ) {
+        if (server == null || networkId == null || playerName == null || playerName.isEmpty()) {
+            return 0.0f;
+        }
+        var index = MisakaComputeIndex.get(server);
+        index.rebuildIfDirty(server);
+        float total = index.networkTotals().getOrDefault(networkId, 0.0f);
+        if (!(total > 0.0f)) {
+            return 0.0f;
+        }
+
+        ServerPlayer online = null;
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (playerName.equals(player.getGameProfile().name())) {
+                online = player;
+                break;
+            }
+        }
+        if (online == null) {
+            return 0.0f;
+        }
+
+        var governance = MisakaNetworkGovernance.get(server);
+        boolean access = governance.hasPermissionOrOpen(
+                online,
+                networkId,
+                MisakaNetworkPermission.ACCESS,
+                MisakaNetworkPermission.ADMIN
+        );
+        if (!access) {
+            return 0.0f;
+        }
+
+        // Integrated network: ACCESS members may draw on the whole pool.
+        if (index.reconstructionSisterUuid(networkId) != null) {
+            return total;
+        }
+
+        // Dispersed: only buckets that list this player as benevolent.
+        float sum = 0.0f;
+        for (var entry : index.benevolentGroups().entrySet()) {
+            if (!networkId.equals(entry.getKey().networkId())) {
+                continue;
+            }
+            if (!entry.getKey().groupNames().contains(playerName)) {
+                continue;
+            }
+            float msk = entry.getValue() == null ? 0.0f : entry.getValue();
+            if (msk > 0.0f) {
+                sum += msk;
+            }
+        }
+        return sum;
     }
 
     /**
@@ -396,6 +494,38 @@ public final class MisakaComputeContribution {
         }
     }
 
+    /** Scale group supply so a direct network burn is removed before CP allocation. */
+    private static List<MisakaComputeSettle.GroupBucket> applyNetworkBurn(
+            List<MisakaComputeSettle.GroupBucket> groups,
+            float burnMsk
+    ) {
+        if (groups == null || groups.isEmpty() || !(burnMsk > 0.0f)) {
+            return groups == null ? List.of() : groups;
+        }
+        float total = 0.0f;
+        for (var bucket : groups) {
+            if (bucket != null) {
+                total += Math.max(0.0f, bucket.mskTick());
+            }
+        }
+        if (!(total > 0.0f)) {
+            return groups;
+        }
+        float remain = Math.max(0.0f, total - burnMsk);
+        float scale = remain / total;
+        if (scale >= 1.0f) {
+            return groups;
+        }
+        var scaled = new ArrayList<MisakaComputeSettle.GroupBucket>(groups.size());
+        for (var bucket : groups) {
+            if (bucket == null) {
+                continue;
+            }
+            scaled.add(new MisakaComputeSettle.GroupBucket(bucket.groupNames(), bucket.mskTick() * scale));
+        }
+        return scaled;
+    }
+
     private static void applyNamedCp(
             Map<String, Float> deltas,
             Map<String, ServerPlayer> players,
@@ -423,14 +553,22 @@ public final class MisakaComputeContribution {
 
     /** Notify after Misaka contribution may have changed; also dirties the compute index. */
     public static void refreshCpForRecord(MinecraftServer server, MisakaSisterRecord record) {
-        MisakaComputeIndex.get(server).markDirty();
-        var names = new HashSet<String>();
-        if (record.lastInteractedBenevolentPlayerName != null
-                && !record.lastInteractedBenevolentPlayerName.isEmpty()) {
-            names.add(record.lastInteractedBenevolentPlayerName);
+        try {
+            MisakaComputeIndex.get(server).markDirty();
+            var names = new HashSet<String>();
+            if (record.lastInteractedBenevolentPlayerName != null
+                    && !record.lastInteractedBenevolentPlayerName.isEmpty()) {
+                names.add(record.lastInteractedBenevolentPlayerName);
+            }
+            names.addAll(FavorService.benevolentNames(record));
+            refreshCpForNames(server, names);
+        } catch (RuntimeException ex) {
+            AcademyCraft.LOGGER.error(
+                    "Misaka CP refresh failed for sister {}",
+                    record.misakaUuid,
+                    ex
+            );
         }
-        names.addAll(FavorService.benevolentNames(record));
-        refreshCpForNames(server, names);
     }
 
     public static void refreshCpForNames(MinecraftServer server, Iterable<String> names) {

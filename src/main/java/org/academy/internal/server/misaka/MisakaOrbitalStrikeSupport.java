@@ -112,26 +112,9 @@ public final class MisakaOrbitalStrikeSupport {
             )) {
                 return BeginResult.NO_PERMISSION;
             }
-            float cost = orbitalStrikeMskCost(server);
-            if (cost > 0.0f) {
-                float cpPerMsk = MisakaComputeContribution.cpPerMsk(server);
-                var academy = server.getAcademyCraftServer();
-                float availableCp = academy == null
-                        ? 0.0f
-                        : academy.getAbilitySystemServer().getPlayerAvailableCP(designator.getUUID());
-                float cpAsMsk = cpPerMsk > 0.0f ? availableCp / cpPerMsk : 0.0f;
-                if (cpAsMsk < cost) {
-                    return BeginResult.INSUFFICIENT_COMPUTE;
-                }
-                float spendCp = cost * cpPerMsk;
-                float cur = academy.getAbilitySystemServer().getPlayerAvailableCP(designator.getUUID());
-                academy.getAbilitySystemServer().setPlayerAvailableCP(
-                        designator.getUUID(),
-                        Math.max(0.0f, cur - spendCp)
-                );
-                MisakaComputeUsageTracker.addUsage(designator.getUUID(), cost);
-            }
         }
+
+        // Compute is paid during designator hold-charge ({@link MisakaOrbitalCharge}).
 
         long time = level.getGameTime();
         int seed = satelliteId.hashCode();
@@ -153,25 +136,84 @@ public final class MisakaOrbitalStrikeSupport {
         return BeginResult.OK;
     }
 
-    private static float orbitalStrikeMskCost(MinecraftServer server) {
-        var academy = server.getAcademyCraftServer();
-        if (academy == null) {
-            return 200.0f;
+    /** Preconditions for starting a strike (no side effects, no compute spend). */
+    public static BeginResult validateBegin(
+            MinecraftServer server,
+            UUID satelliteId,
+            @Nullable ServerPlayer designator
+    ) {
+        var registry = MisakaRelayRegistry.get(server);
+        var entry = registry.get(satelliteId);
+        if (entry == null) {
+            return BeginResult.NOT_FOUND;
         }
-        return Math.max(0.0f, academy.getGenericConfig().misakaOrbitalStrikeMskCost);
+        if (entry.phase != MisakaRelayEntry.Phase.ORBIT) {
+            return BeginResult.BAD_PHASE;
+        }
+        if (!entry.laserBound) {
+            return BeginResult.NOT_BOUND;
+        }
+        if (entry.forceCrashCountdownTicks > 0) {
+            return BeginResult.FORCE_CRASH_ARMED;
+        }
+        if (entry.strikeMode != MisakaRelayEntry.StrikeMode.IDLE) {
+            return BeginResult.BUSY;
+        }
+        if (entry.strikeCooldownTicks > 0) {
+            return BeginResult.COOLDOWN;
+        }
+        if (!registry.isReceivingPower(satelliteId)) {
+            return BeginResult.NO_POWER;
+        }
+        if (designator != null && !designator.level().dimension().equals(entry.dimension)) {
+            return BeginResult.WRONG_DIMENSION;
+        }
+        if (designator != null) {
+            var governance = MisakaNetworkGovernance.get(server);
+            if (!governance.hasPermissionOrOpen(
+                    designator,
+                    entry.networkId,
+                    MisakaNetworkPermission.SATELLITE_USE,
+                    MisakaNetworkPermission.SATELLITE_MANAGE,
+                    MisakaNetworkPermission.ADMIN
+            )) {
+                return BeginResult.NO_PERMISSION;
+            }
+        }
+        return BeginResult.OK;
+    }
+
+    public static String messageKey(BeginResult result) {
+        return switch (result) {
+            case OK -> "message.academy.laser_designator_strike_ok";
+            case NOT_FOUND -> "message.academy.laser_designator_sat_missing";
+            case BAD_PHASE -> "message.academy.laser_designator_bad_phase";
+            case NOT_BOUND -> "message.academy.laser_designator_laser_unbound";
+            case FORCE_CRASH_ARMED -> "message.academy.laser_designator_force_crash";
+            case BUSY -> "message.academy.laser_designator_busy";
+            case COOLDOWN -> "message.academy.laser_designator_cooldown";
+            case NO_POWER -> "message.academy.laser_designator_no_power";
+            case WRONG_DIMENSION -> "message.academy.laser_designator_wrong_dim";
+            case CHUNK_UNLOADED -> "message.academy.laser_designator_chunk";
+            case NO_PERMISSION -> "message.academy.laser_designator_no_permission";
+            case INSUFFICIENT_COMPUTE -> "message.academy.laser_designator_no_compute";
+        };
+    }
+
+    private static float orbitalStrikeMskCost(MinecraftServer server) {
+        return MisakaOrbitalCharge.chargeRate(server);
     }
 
     public static void tickAll(MinecraftServer server) {
         var registry = MisakaRelayRegistry.get(server);
-        var ids = new ArrayList<>(registry.all());
-        for (var entry : ids) {
+        // Walk registry once; skip pure-idle sats (no cooldown, no strike).
+        for (var entry : registry.all()) {
             if (entry.strikeCooldownTicks > 0 && entry.strikeMode == MisakaRelayEntry.StrikeMode.IDLE) {
                 entry.strikeCooldownTicks--;
             }
-            if (entry.strikeMode == MisakaRelayEntry.StrikeMode.IDLE) {
-                continue;
+            if (entry.strikeMode != MisakaRelayEntry.StrikeMode.IDLE) {
+                tickEntry(server, registry, entry);
             }
-            tickEntry(server, registry, entry);
         }
     }
 
@@ -349,12 +391,18 @@ public final class MisakaOrbitalStrikeSupport {
         }
 
         int meltR = entry.hyper ? HYPER_MELT_RADIUS : MELT_RADIUS;
-        // Prefer highest solid blocks (Chebyshev disk around impact).
+        // Expand the melt front from the impact center over the fire window.
+        float fireT = Mth.clamp(entry.strikeTicks / (float) FIRE_TICKS, 0.0f, 1.0f);
+        int waveR = Math.max(0, Mth.ceil(fireT * meltR));
+        int cx = impact.getX();
+        int cy = impact.getY();
+        int cz = impact.getZ();
         var candidates = new ArrayList<BlockPos>();
         for (int dy = 8; dy >= -4; dy--) {
-            for (int dx = -meltR; dx <= meltR; dx++) {
-                for (int dz = -meltR; dz <= meltR; dz++) {
-                    if (Math.max(Math.abs(dx), Math.abs(dz)) > meltR) {
+            for (int dx = -waveR; dx <= waveR; dx++) {
+                for (int dz = -waveR; dz <= waveR; dz++) {
+                    int chebyshev = Math.max(Math.abs(dx), Math.abs(dz));
+                    if (chebyshev > waveR) {
                         continue;
                     }
                     BlockPos pos = impact.offset(dx, dy, dz);
@@ -370,7 +418,20 @@ public final class MisakaOrbitalStrikeSupport {
                 }
             }
         }
-        candidates.sort((a, b) -> Integer.compare(b.getY(), a.getY()));
+        // Center-out: horizontal ring first, then closer in Y, then higher blocks in-ring.
+        candidates.sort((a, b) -> {
+            int da = Math.max(Math.abs(a.getX() - cx), Math.abs(a.getZ() - cz));
+            int db = Math.max(Math.abs(b.getX() - cx), Math.abs(b.getZ() - cz));
+            if (da != db) {
+                return Integer.compare(da, db);
+            }
+            int va = Math.abs(a.getY() - cy);
+            int vb = Math.abs(b.getY() - cy);
+            if (va != vb) {
+                return Integer.compare(va, vb);
+            }
+            return Integer.compare(b.getY(), a.getY());
+        });
         int broken = 0;
         for (BlockPos pos : candidates) {
             if (broken >= 3) {

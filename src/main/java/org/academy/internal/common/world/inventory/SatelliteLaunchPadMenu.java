@@ -26,6 +26,10 @@ public final class SatelliteLaunchPadMenu extends AbstractContainerMenu {
     private final @Nullable SatelliteLaunchPadBlockEntity blockEntity;
     private final ContainerData viewerData = OwnedDeviceViewerData.create();
 
+    public @Nullable SatelliteLaunchPadBlockEntity getBlockEntity() {
+        return blockEntity;
+    }
+
     public SatelliteLaunchPadMenu(
             int containerId,
             Inventory playerInventory,

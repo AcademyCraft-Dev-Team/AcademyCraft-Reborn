@@ -6,7 +6,7 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
-import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
+import org.academy.internal.common.world.entity.misaka.MisakaArcAttack;
 import org.academy.internal.common.world.entity.misaka.MisakaPersonality;
 import org.academy.internal.common.world.entity.misaka.MisakaSisterEntity;
 import org.academy.internal.common.world.entity.misaka.MobRelation;
@@ -68,8 +68,9 @@ public final class MisakaPersonalityCombatGoal extends Goal {
         fleeFrom(threat, personality == MisakaPersonality.TIMID ? 1.35 : 1.0);
         if ((personality == MisakaPersonality.LIVELY || personality == MisakaPersonality.COLD)
                 && zapCooldown <= 0
-                && sister.distanceToSqr(threat) <= ZAP_RANGE * ZAP_RANGE) {
-            zap(threat);
+                && sister.distanceToSqr(threat) <= ZAP_RANGE * ZAP_RANGE
+                && sister.level() instanceof ServerLevel
+                && MisakaArcAttack.tryFire(sister, threat)) {
             zapCooldown = ZAP_COOLDOWN_TICKS;
         }
     }
@@ -87,15 +88,6 @@ public final class MisakaPersonalityCombatGoal extends Goal {
                 && sister.level() instanceof ServerLevel serverLevel) {
             sister.doHurtTarget(serverLevel, target);
         }
-    }
-
-    private void zap(LivingEntity victim) {
-        if (sister.level() instanceof ServerLevel serverLevel) {
-            var start = sister.position().add(0.0, sister.getEyeHeight() * 0.8, 0.0);
-            var end = victim.position().add(0.0, victim.getEyeHeight() * 0.5, 0.0);
-            ElectromasterArcEffects.spawnChainArc(serverLevel, start, end);
-        }
-        victim.hurt(sister.level().damageSources().lightningBolt(), 3.0f);
     }
 
     private LivingEntity findThreat() {

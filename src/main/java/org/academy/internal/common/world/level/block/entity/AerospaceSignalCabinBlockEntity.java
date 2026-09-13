@@ -28,6 +28,7 @@ import net.minecraft.world.phys.AABB;
 import org.academy.api.common.misaka.MisakaNAT;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.internal.common.misaka.MisakaNetworkPermission;
+import org.academy.internal.common.world.inventory.AerospaceSignalCabinMenu;
 import org.academy.internal.common.world.item.LaserDesignatorItem;
 import org.academy.internal.common.world.level.block.AerospaceSignalCabinBlock;
 import org.academy.internal.common.world.level.block.MultiBlock;
@@ -90,9 +91,20 @@ public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity
     private List<MisakaNetworkLasers.LaserRow> rebindLaserList = List.of();
     /** Display name of the selected satellite's current coverage network, if known. */
     private String selectedSatNetworkName = "";
+    /** One-shot legacy subject placement; cleared work stays out of the hot tick path. */
+    private boolean subjectsEnsured;
 
     public AerospaceSignalCabinBlockEntity(BlockPos pos, BlockState state) {
         super(BlockEntityTypes.AEROSPACE_SIGNAL_CABIN.get(), pos, state);
+    }
+
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (!subjectsEnsured && level instanceof ServerLevel serverLevel && isMain()) {
+            ensureSubjectPresent(serverLevel);
+            subjectsEnsured = true;
+        }
     }
 
     public @Nullable AerospaceSignalCabinBlockEntity mainEntity() {
@@ -116,23 +128,37 @@ public final class AerospaceSignalCabinBlockEntity extends MultiBlockEntity
         if (level.isClientSide() || !(level instanceof ServerLevel serverLevel) || !be.isMain()) {
             return;
         }
-        be.ensureSubjectPresent(serverLevel);
-        // Keep ops list power flags fresh while the cabin GUI may be open.
-        if (serverLevel.getGameTime() % 20L == 0L) {
-            var beforeSats = be.managedSatelliteList;
-            var beforeNets = be.retargetNetworkList;
-            var beforeLasers = be.rebindLaserList;
-            var beforeNetName = be.selectedSatNetworkName;
-            be.refreshManagedCount(serverLevel);
-            be.refreshRetargetNetworks(serverLevel);
-            be.refreshRebindLasers(serverLevel);
-            if (!beforeSats.equals(be.managedSatelliteList)
-                    || !beforeNets.equals(be.retargetNetworkList)
-                    || !beforeLasers.equals(be.rebindLaserList)
-                    || !Objects.equals(beforeNetName, be.selectedSatNetworkName)) {
-                be.markAndSync();
+        if (!be.subjectsEnsured) {
+            be.ensureSubjectPresent(serverLevel);
+            be.subjectsEnsured = true;
+        }
+        // Ops list refresh is only useful while a player has this cabin's menu open.
+        if (serverLevel.getGameTime() % 20L != 0L || !be.hasMenuOpen(serverLevel)) {
+            return;
+        }
+        var beforeSats = be.managedSatelliteList;
+        var beforeNets = be.retargetNetworkList;
+        var beforeLasers = be.rebindLaserList;
+        var beforeNetName = be.selectedSatNetworkName;
+        // refreshManagedCount already refreshes retarget networks.
+        be.refreshManagedCount(serverLevel);
+        be.refreshRebindLasers(serverLevel);
+        if (!beforeSats.equals(be.managedSatelliteList)
+                || !beforeNets.equals(be.retargetNetworkList)
+                || !beforeLasers.equals(be.rebindLaserList)
+                || !Objects.equals(beforeNetName, be.selectedSatNetworkName)) {
+            be.markAndSync();
+        }
+    }
+
+    private boolean hasMenuOpen(ServerLevel serverLevel) {
+        for (var player : serverLevel.players()) {
+            if (player.containerMenu instanceof AerospaceSignalCabinMenu menu
+                    && menu.getBlockEntity() == this) {
+                return true;
             }
         }
+        return false;
     }
 
     public int getSelectableLaserCount() {
