@@ -66,6 +66,9 @@ public final class RailgunVfx implements Vfx {
     private static void submitFirstPerson(VfxFrameContext ctx, VfxSink sink, Player player) {
         var data = player.getExistingDataOrNull(AttachmentTypes.RAILGUN_DATA);
         if (data == null) return;
+        // Once fired, the world-space shot owns the hand-to-target trace. The charging rings
+        // sit very close to the camera and otherwise cover that trace during the release ticks.
+        if (data.released()) return;
         var ticks = data.ticks() + ctx.partialTick();
         var strength = visualStrength(data, ticks);
         if (strength <= 0.0f) return;

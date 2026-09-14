@@ -145,6 +145,15 @@ public final class VfxBlocks {
     );
 
     public static void registerAll(NodeRegistry metadata, VfxBlockRegistry blocks) {
+        metadata.register(type("vfx.block.axial_beam", "spawn", "Axial Burst / Beam Layer",
+                AxialBurstEmitter.beamProperties()));
+        blocks.register("vfx.block.axial_beam", AxialBurstEmitter::beam);
+        metadata.register(type("vfx.block.axial_discharge", "spawn", "Axial Burst / Discharge",
+                AxialBurstEmitter.dischargeProperties()));
+        blocks.register("vfx.block.axial_discharge", AxialBurstEmitter::discharge);
+        metadata.register(type("vfx.block.axial_shock", "spawn", "Axial Burst / Pressure and Sparks",
+                AxialBurstEmitter.shockProperties()));
+        blocks.register("vfx.block.axial_shock", AxialBurstEmitter::shock);
         metadata.register(type("vfx.block.sky_discharge", "spawn", "Cloud-to-ground Discharge",
                 SkyDischargeEmitter.channelProperties()));
         blocks.register("vfx.block.sky_discharge", SkyDischargeEmitter::channel);
