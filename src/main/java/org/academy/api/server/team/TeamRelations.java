@@ -11,14 +11,13 @@ public final class TeamRelations {
     }
 
     public static boolean areTeammates(Entity first, Entity second) {
-        if (first == null || second == null) return false;
         if (first == second) return true;
         var vanillaTeam = first.getTeam();
         if (vanillaTeam != null && vanillaTeam == second.getTeam()) return true;
         if (!(first instanceof ServerPlayer firstPlayer)
                 || !(second instanceof ServerPlayer secondPlayer)) return false;
         var server = firstPlayer.level().getServer();
-        return server != null && AcademyTeamData.get(server).areTeammates(
+        return AcademyTeamData.get(server).areTeammates(
                 firstPlayer.getUUID(), secondPlayer.getUUID());
     }
 
@@ -33,7 +32,6 @@ public final class TeamRelations {
      * owned entities) while also admitting members of the self-service {@code /teams} system.</p>
      */
     public static boolean areAllied(Entity first, Entity second) {
-        if (first == null || second == null) return false;
         if (areTeammates(first, second)) return true;
         return first.isAlliedTo(second);
     }

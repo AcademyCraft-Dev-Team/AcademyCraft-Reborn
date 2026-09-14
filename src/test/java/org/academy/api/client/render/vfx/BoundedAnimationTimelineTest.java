@@ -1,6 +1,10 @@
 package org.academy.api.client.render.vfx;
 
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class BoundedAnimationTimelineTest {
@@ -17,7 +21,7 @@ class BoundedAnimationTimelineTest {
         var timeline = new BoundedAnimationTimeline<Integer>(0);
         double[] arrival = {0, .72, 1.65, 2.3, 3.22};
         int next = 0;
-        var seen = new java.util.ArrayList<Integer>();
+        var seen = new ArrayList<Integer>();
         Integer last = null;
         float previousProgress = 0;
         for (int frame = 0; frame < 310; frame++) {
@@ -32,7 +36,7 @@ class BoundedAnimationTimelineTest {
             assertTrue(sample.progress() >= previousProgress);
             previousProgress = sample.progress(); last = sample.value();
         }
-        assertEquals(java.util.List.of(0, 1, 2, 3, 4), seen);
+        assertEquals(List.of(0, 1, 2, 3, 4), seen);
         assertEquals(0, timeline.coalesced());
     }
     @Test void duplicateAndBurstRecoveryAreBounded() {

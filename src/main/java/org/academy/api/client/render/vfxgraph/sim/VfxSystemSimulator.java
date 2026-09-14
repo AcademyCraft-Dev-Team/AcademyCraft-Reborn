@@ -16,6 +16,7 @@ import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.operator.OperatorContext;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperator;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
+import org.academy.api.client.render.vfxgraph.shape.SurfaceProjector;
 
 import java.util.*;
 
@@ -68,9 +69,9 @@ public final class VfxSystemSimulator {
     private final Map<String, Gradient> gradients = new LinkedHashMap<>();
     private final Random random;
     private float time;
-    private final Map<String, org.academy.api.client.render.vfxgraph.shape.SurfaceProjector> surfaces = new HashMap<>();
+    private final Map<String, SurfaceProjector> surfaces = new HashMap<>();
 
-    public void setSurfaceProjector(String name, org.academy.api.client.render.vfxgraph.shape.SurfaceProjector surface) {
+    public void setSurfaceProjector(String name, SurfaceProjector surface) {
         surfaces.put(name, Objects.requireNonNull(surface));
     }
 
@@ -322,7 +323,7 @@ public final class VfxSystemSimulator {
                 if (factory == null) {
                     throw new IllegalStateException("no VFX block factory for: " + block.type());
                 }
-                var portSource = blockPortSource(block.id(), blockPortInputs.get(block.id()), operators);
+                var portSource = blockPortSource(block.id(), blockPortInputs.getOrDefault(block.id(), Map.of()), operators);
                 nodes.add(new BlockNode(block.id(), factory.create(block, portSource)));
             }
             switch (ctx.type()) {
@@ -381,7 +382,7 @@ public final class VfxSystemSimulator {
 
     private PortValueSource blockPortSource(String blockId, Map<String, Edge.PortRef> portInputs,
                                             Map<String, VfxOperator> operators) {
-        if (portInputs == null || portInputs.isEmpty()) {
+        if (portInputs.isEmpty()) {
             return PortValueSource.none();
         }
         var resolved = new LinkedHashMap<String, VfxOperator>();

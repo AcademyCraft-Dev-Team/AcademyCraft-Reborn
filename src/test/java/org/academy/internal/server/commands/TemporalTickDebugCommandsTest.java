@@ -3,6 +3,7 @@ package org.academy.internal.server.commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import org.academy.api.server.time.TemporalChannel;
+import org.academy.api.server.time.TemporalPauseSource;
 import org.academy.internal.server.time.TemporalTickDiagnostics;
 import org.junit.jupiter.api.Test;
 
@@ -63,8 +64,8 @@ class TemporalTickDebugCommandsTest {
                         "entity,random_tick"
                 ));
         assertEquals(Set.of(
-                        org.academy.api.server.time.TemporalPauseSource.ACADEMY_PAUSE,
-                        org.academy.api.server.time.TemporalPauseSource.EXTERNAL_COMPATIBILITY
+                        TemporalPauseSource.ACADEMY_PAUSE,
+                        TemporalPauseSource.EXTERNAL_COMPATIBILITY
                 ),
                 TemporalTickDebugCommands.parseSources(
                         "academy_pause,external_compatibility"

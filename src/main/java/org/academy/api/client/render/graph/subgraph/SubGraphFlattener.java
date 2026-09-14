@@ -4,6 +4,7 @@ import org.academy.api.client.render.graph.model.Edge;
 import org.academy.api.client.render.graph.model.Graph;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.model.GraphParameter;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
@@ -23,7 +24,7 @@ public final class SubGraphFlattener {
     private SubGraphFlattener() {
     }
 
-    public static Graph flatten(Graph graph, SubGraphRegistry registry) {
+    public static Graph flatten(Graph graph, @Nullable SubGraphRegistry registry) {
         var hasSub = graph.nodes().stream().anyMatch(n -> "subgraph".equals(n.type()));
         if (!hasSub || registry == null) return graph;
 
@@ -122,7 +123,7 @@ public final class SubGraphFlattener {
         return typeId.startsWith("input.param_");
     }
 
-    private static GraphNode findNode(Graph graph, String id) {
+    private static @Nullable GraphNode findNode(Graph graph, String id) {
         for (var n : graph.nodes()) {
             if (n.id().equals(id)) return n;
         }

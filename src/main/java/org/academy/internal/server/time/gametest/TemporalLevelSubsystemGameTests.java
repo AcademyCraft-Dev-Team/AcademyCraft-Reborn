@@ -12,6 +12,7 @@ import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.ShulkerBoxBlockEntity;
@@ -286,7 +287,7 @@ public final class TemporalLevelSubsystemGameTests {
     }
 
     private static void cleanup(
-            net.minecraft.server.level.ServerLevel level,
+            ServerLevel level,
             BlockPos inside,
             BlockPos outside,
             WeatherSnapshot weatherSnapshot,
@@ -309,7 +310,7 @@ public final class TemporalLevelSubsystemGameTests {
             boolean advanceWeather
     ) {
         private static WeatherSnapshot capture(
-                net.minecraft.server.level.ServerLevel level
+                ServerLevel level
         ) {
             var data = level.getWeatherData();
             return new WeatherSnapshot(
@@ -322,7 +323,7 @@ public final class TemporalLevelSubsystemGameTests {
             );
         }
 
-        private void restore(net.minecraft.server.level.ServerLevel level) {
+        private void restore(ServerLevel level) {
             var data = level.getWeatherData();
             data.setClearWeatherTime(clearWeatherTime);
             data.setRainTime(rainTime);

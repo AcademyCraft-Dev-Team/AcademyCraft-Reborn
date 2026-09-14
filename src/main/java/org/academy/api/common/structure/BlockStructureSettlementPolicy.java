@@ -32,9 +32,6 @@ public interface BlockStructureSettlementPolicy {
             int maximumFallingY,
             BlockStructureSettlementPolicy lowerRegionPolicy
     ) {
-        if (lowerRegionPolicy == null) {
-            throw new IllegalArgumentException("lowerRegionPolicy cannot be null");
-        }
         return (level, position, state, blockEntity) -> position.getY() > maximumFallingY
                 ? BlockStructureSettlementMode.FIXED
                 : lowerRegionPolicy.settlementMode(level, position, state, blockEntity);
@@ -45,7 +42,7 @@ public interface BlockStructureSettlementPolicy {
             BlockState state,
             boolean hasBlockEntity
     ) {
-        return state != null && !hasBlockEntity && state.is(BlockStructureTags.NATURAL_SETTLEMENT)
+        return !hasBlockEntity && state.is(BlockStructureTags.NATURAL_SETTLEMENT)
                 ? BlockStructureSettlementMode.FALLING
                 : BlockStructureSettlementMode.FIXED;
     }

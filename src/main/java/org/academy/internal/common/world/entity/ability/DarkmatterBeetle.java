@@ -44,6 +44,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.darkmatter.DarkmatterCreaturePartType;
 import org.academy.api.common.ability.darkmatter.DarkmatterCreatureRegistries;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.server.ability.AbilityBlockDrops;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.ability.Skills;
@@ -524,7 +525,7 @@ public final class DarkmatterBeetle extends Monster {
                 > Math.pow(8.0 + betaPower(limbsAlpha), 2.0)) return;
         var hardness = level.getBlockState(pos).getDestroySpeed(level, pos);
         if (hardness < 0.0f || hardness > 10.0f + 10.0f * alphaPower(limbsAlpha)) return;
-        if (org.academy.api.server.ability.AbilityBlockDrops.run(owner, () -> owner.gameMode.destroyBlock(pos))) {
+        if (AbilityBlockDrops.run(owner, () -> owner.gameMode.destroyBlock(pos))) {
             var alpha = alphaPower(limbsAlpha);
             nextExcavationTick = tickCount
                     + Math.max(4, Math.round(20.0f / (1.0f + 0.25f * alpha)));

@@ -19,6 +19,7 @@ import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramInputView;
 import org.academy.api.common.ability.program.ProgramNodeStep;
+import org.academy.api.common.ability.program.ProgramNumericMath;
 import org.academy.api.common.ability.program.ProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramValue;
 import org.academy.api.common.ability.program.ProgramValueType;
@@ -38,6 +39,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Comparator;
+import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiFunction;
 import java.util.function.DoubleBinaryOperator;
@@ -115,7 +118,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
         put(result, CommonProgramNodeIds.NUMERIC_CONVERT,
                 (ProgramVmContext _, CommonProgramNodeCatalog.NumericConversionConfiguration configuration,
                  ProgramInputView inputs) -> data("result", configuration.target().type(),
-                        org.academy.api.common.ability.program.ProgramNumericMath.convert(
+                        ProgramNumericMath.convert(
                                 (Number) inputs.requireCompatible("value", configuration.source().type()).value(),
                                 configuration.target().type())));
         put(result, CommonProgramNodeIds.NUMERIC_COMPARE,
@@ -1248,7 +1251,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                 .orElseThrow(() -> new IllegalStateException("No program target resolver is available"));
     }
 
-    private static java.util.Optional<Object> damageAttacker(ProgramVmContext context) {
+    private static Optional<Object> damageAttacker(ProgramVmContext context) {
         var invocation = context.attachment(ProgramExecutionFrame.class)
                 .flatMap(ProgramExecutionFrame::invocation)
                 .orElse(null);
@@ -1257,7 +1260,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                 : invocation.damageAttacker();
     }
 
-    private static java.util.OptionalDouble damageAmount(ProgramVmContext context) {
+    private static OptionalDouble damageAmount(ProgramVmContext context) {
         var invocation = context.attachment(ProgramExecutionFrame.class)
                 .flatMap(ProgramExecutionFrame::invocation)
                 .orElse(null);
@@ -1266,7 +1269,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                 : invocation.damageAmount();
     }
 
-    private static java.util.Optional<Object> meleeTarget(ProgramVmContext context) {
+    private static Optional<Object> meleeTarget(ProgramVmContext context) {
         var invocation = context.attachment(ProgramExecutionFrame.class)
                 .flatMap(ProgramExecutionFrame::invocation)
                 .orElse(null);
@@ -1304,9 +1307,9 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                                 integer(inputs, "left"), integer(inputs, "right"));
                         case MULTIPLY -> Math.multiplyExact(
                                 integer(inputs, "left"), integer(inputs, "right"));
-                        case DIVIDE, INTEGER_DIVIDE -> org.academy.api.common.ability.program.ProgramNumericMath.integerDivide(
+                        case DIVIDE, INTEGER_DIVIDE -> ProgramNumericMath.integerDivide(
                                 integer(inputs, "left"), integer(inputs, "right"));
-                        case POWER -> org.academy.api.common.ability.program.ProgramNumericMath.power(
+                        case POWER -> ProgramNumericMath.power(
                                 BigInteger.valueOf(integer(inputs, "left")), BigInteger.valueOf(integer(inputs, "right"))).intValueExact();
                         case MODULO -> integer(inputs, "left") % integer(inputs, "right");
                         case ABSOLUTE -> {
@@ -1326,7 +1329,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                         case SUBTRACT -> bigInteger(inputs, "left").subtract(bigInteger(inputs, "right"));
                         case MULTIPLY -> bigInteger(inputs, "left").multiply(bigInteger(inputs, "right"));
                         case DIVIDE, INTEGER_DIVIDE -> bigInteger(inputs, "left").divide(bigInteger(inputs, "right"));
-                        case POWER -> org.academy.api.common.ability.program.ProgramNumericMath.power(
+                        case POWER -> ProgramNumericMath.power(
                                 bigInteger(inputs, "left"), bigInteger(inputs, "right"));
                         case MODULO -> bigInteger(inputs, "left").remainder(bigInteger(inputs, "right"));
                         case ABSOLUTE -> bigInteger(inputs, "value").abs();
@@ -1340,7 +1343,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                         case SUBTRACT -> floatValue(inputs, "left") - floatValue(inputs, "right");
                         case MULTIPLY -> floatValue(inputs, "left") * floatValue(inputs, "right");
                         case DIVIDE -> floatValue(inputs, "left") / floatValue(inputs, "right");
-                        case INTEGER_DIVIDE -> org.academy.api.common.ability.program.ProgramNumericMath.integerDivide(
+                        case INTEGER_DIVIDE -> ProgramNumericMath.integerDivide(
                                 floatValue(inputs, "left"), floatValue(inputs, "right"));
                         case POWER -> Math.pow(floatValue(inputs, "left"), floatValue(inputs, "right"));
                         case MODULO -> floatValue(inputs, "left") % floatValue(inputs, "right");

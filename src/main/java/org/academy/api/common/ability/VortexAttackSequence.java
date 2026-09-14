@@ -1,6 +1,7 @@
 package org.academy.api.common.ability;
 
 import java.util.function.BooleanSupplier;
+import org.jspecify.annotations.Nullable;
 
 /** Tick-driven attack sequence; independent of CP recovery speed, rendering and entity type. */
 public final class VortexAttackSequence {
@@ -8,7 +9,7 @@ public final class VortexAttackSequence {
     private long availableTick = Long.MIN_VALUE;
 
     /** A rejected or unaffordable request neither pays a cost nor skips a pattern. */
-    public VortexAttackPattern tryBegin(long tick, BooleanSupplier payCost) {
+    public @Nullable VortexAttackPattern tryBegin(long tick, BooleanSupplier payCost) {
         if (tick < availableTick || !payCost.getAsBoolean()) return null;
         var accepted = next;
         availableTick = tick + accepted.durationTicks();

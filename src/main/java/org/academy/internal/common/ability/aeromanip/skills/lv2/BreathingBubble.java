@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.aeromanip.skills.lv2;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -11,6 +12,7 @@ import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
@@ -22,10 +24,12 @@ import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.api.server.world.WaterSuppression;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -153,7 +157,7 @@ public final class BreathingBubble extends Skill {
             }
             if (!player.isAlive() || player.hasDisconnected() || player.level() != level || !skill.isEnabled(player)
                     || AbilitySystemServer.getSystem(player).getPlayerStatus(player.getUUID())
-                    == org.academy.api.common.data.AbilityData.Status.OVERLOAD) {
+                    == AbilityData.Status.OVERLOAD) {
                 Server.stop(player);
                 return;
             }
@@ -161,7 +165,7 @@ public final class BreathingBubble extends Skill {
         }
 
         @SubscribeEvent
-        public static void onLogout(net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent event) {
+        public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
             if (event.getEntity() instanceof ServerPlayer player) Server.stop(player);
         }
     }
@@ -177,7 +181,7 @@ public final class BreathingBubble extends Skill {
             var player = packet.getPacketListener().getPlayer();
             if (ACTIVE.containsKey(player)) {
                 stop(player);
-                player.sendSystemMessage(net.minecraft.network.chat.Component.translatable("message.academy.breathing_bubble.off"));
+                player.sendSystemMessage(Component.translatable("message.academy.breathing_bubble.off"));
                 return;
             }
             var skill = Skills.BREATHING_BUBBLE.get();
@@ -186,7 +190,7 @@ public final class BreathingBubble extends Skill {
             var cost = activationAirCost(skill.getEffectiveProficiencyMilestone(player));
             var air = system.getAeromanipResourceManager();
             if (air.getCurrent(player) + 1.0e-4f < cost) {
-                player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
+                player.sendSystemMessage(Component.translatable(
                         "message.academy.aeromanip.insufficient_air", cost, air.getCurrent(player)));
                 return;
             }
@@ -204,7 +208,7 @@ public final class BreathingBubble extends Skill {
                 system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
                 return;
             }
-            player.sendSystemMessage(net.minecraft.network.chat.Component.translatable("message.academy.breathing_bubble.on"));
+            player.sendSystemMessage(Component.translatable("message.academy.breathing_bubble.on"));
         }
 
         public static boolean isSustained(ServerPlayer player) {
@@ -226,14 +230,14 @@ public final class BreathingBubble extends Skill {
 
         public static void stop(ServerPlayer player) {
             var level = ACTIVE.remove(player);
-            if (level != null) org.academy.api.server.world.WaterSuppression.release(level, player.getUUID());
+            if (level != null) WaterSuppression.release(level, player.getUUID());
             AbilitySystemServer.getSystem(player).releaseMaintenanceOccupation(
                     player.getUUID(), Skills.BREATHING_BUBBLE.get().getKeyString());
         }
 
         private static void refresh(ServerPlayer player, BreathingBubble skill) {
             var radius = activeRadius(skill.getEffectiveProficiencyMilestone(player));
-            org.academy.api.server.world.WaterSuppression.refresh(player.level(), player.getUUID(), player.getEyePosition(), radius);
+            WaterSuppression.refresh(player.level(), player.getUUID(), player.getEyePosition(), radius);
             player.setAirSupply(player.getMaxAirSupply());
             if (skill.hasProficiencyMilestone(player, 2)) {
                 for (var target : player.level().getEntitiesOfClass(LivingEntity.class,

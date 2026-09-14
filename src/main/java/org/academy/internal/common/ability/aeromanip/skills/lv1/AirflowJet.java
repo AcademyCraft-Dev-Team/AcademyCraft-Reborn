@@ -27,6 +27,7 @@ import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.AirMobility;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
@@ -45,6 +46,7 @@ import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.AeromanipFieldSyncPacket;
 import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
 import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
+import org.academy.internal.common.ability.aeromanip.AirMobilitySyncPacket;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.client.ability.aeromanip.AeromanipChargeHud;
 import org.academy.internal.common.network.PacketTypes;
@@ -125,8 +127,8 @@ public final class AirflowJet extends Skill {
     @Override
     public void initClient() {
         AeromanipFieldSyncPacket.initClient();
-        MisakaNetworkClient.NETWORK_MANAGER.register(org.academy.internal.common.ability.aeromanip.AeromanipChargeSync.Client.class);
-        MisakaNetworkClient.NETWORK_MANAGER.register(org.academy.internal.common.ability.aeromanip.AirMobilitySyncPacket.Client.class);
+        MisakaNetworkClient.NETWORK_MANAGER.register(AeromanipChargeSync.Client.class);
+        MisakaNetworkClient.NETWORK_MANAGER.register(AirMobilitySyncPacket.Client.class);
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -167,7 +169,7 @@ public final class AirflowJet extends Skill {
     @Override
     public void initServer(MinecraftServerContext context) {
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
-        MisakaNetworkServer.NETWORK_MANAGER.register(org.academy.internal.common.ability.aeromanip.AeromanipChargeSync.class);
+        MisakaNetworkServer.NETWORK_MANAGER.register(AeromanipChargeSync.class);
     }
 
     public static final class Client {
@@ -444,7 +446,7 @@ public final class AirflowJet extends Skill {
         }
 
         private static void castFull(ServerPlayer player, AirflowJet skill) {
-            org.academy.api.common.ability.AirMobility.prioritizePropulsion(player, 20);
+            AirMobility.prioritizePropulsion(player, 20);
             var level = player.level();
             var center = player.position().add(0.0, player.getBbHeight() * 0.5, 0.0);
             var range = FULL_RADIUS * AeromanipConfig.rangeMultiplier(player, SkillNames.AIRFLOW_JET);

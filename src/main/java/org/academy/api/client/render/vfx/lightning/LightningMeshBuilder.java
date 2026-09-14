@@ -13,13 +13,13 @@ public final class LightningMeshBuilder implements TubeMeshView {
 
     private int totalPointsCount = NOT_INITIALIZED;
     private int segmentResolution = NOT_INITIALIZED;
-    private float[] positions;
-    private float[] uvs;
-    private int[] indices;
+    private float @Nullable [] positions;
+    private float @Nullable [] uvs;
+    private int @Nullable [] indices;
     private int vertexCount;
     private int indexCount;
-    private float[] ringCos;
-    private float[] ringSin;
+    private float @Nullable [] ringCos;
+    private float @Nullable [] ringSin;
     private long version;
 
     public void update(List<LightningBranch> lightningBranches, int segmentResolution, float segmentRadius) {

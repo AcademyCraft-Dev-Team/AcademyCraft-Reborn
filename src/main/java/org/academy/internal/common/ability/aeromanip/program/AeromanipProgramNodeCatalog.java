@@ -9,6 +9,7 @@ import org.academy.api.common.ability.program.*;
 import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.program.ProgramNodeLookup;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -95,7 +96,7 @@ public final class AeromanipProgramNodeCatalog implements ProgramNodeLookup {
     }
 
     private static ProgramNodeSchema laminarCutSchema(BladePlaneMode planeMode) {
-        var inputs = new java.util.ArrayList<ProgramPortDefinition>();
+        var inputs = new ArrayList<ProgramPortDefinition>();
         inputs.add(ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW));
         inputs.add(ProgramPortDefinition.optionalInput(
                 "origin", ProgramValueTypes.WORLD_POSITION));

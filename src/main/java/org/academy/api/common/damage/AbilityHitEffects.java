@@ -2,6 +2,7 @@ package org.academy.api.common.damage;
 
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
+import org.academy.internal.common.ability.darkmatter.DarkmatterLawMark;
 import org.academy.internal.common.world.damagesource.CategoryDamageRuntime;
 
 /**
@@ -13,7 +14,7 @@ public final class AbilityHitEffects {
 
     /** Law-mark/exposure detonation; keeps source attribution and the darkmatter targeting policy. */
     public static boolean detonateLaw(LivingEntity target, SkillDamageSource source, float amount) {
-        return org.academy.internal.common.ability.darkmatter.DarkmatterLawMark.damageDetonation(target, source, amount);
+        return DarkmatterLawMark.damageDetonation(target, source, amount);
     }
 
     /** Adds charge, consuming five points per paralysis discharge. Returns discharge count. */

@@ -2,6 +2,14 @@ package org.academy.desktop.grapheditor.preview;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.tutorial.TutorialSteps;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
@@ -9,10 +17,14 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import org.academy.api.server.ability.AreaEffectTargets;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
 import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 /** Opt-in smoke probe, only enabled by the isolated development run. Never packaged in the mod. */
@@ -24,7 +36,7 @@ public final class SkyStrikeClientSmoke {
     private static boolean openedWorld;
 
     @SubscribeEvent
-    public static void screenInitialized(net.neoforged.neoforge.client.event.ScreenEvent.Init.Post event) {
+    public static void screenInitialized(ScreenEvent.Init.Post event) {
         if (Boolean.getBoolean("academy.skyStrikeSmoke"))
             System.out.println("[sky-strike-smoke] screen " + event.getScreen().getClass().getName());
     }
@@ -34,7 +46,7 @@ public final class SkyStrikeClientSmoke {
         if (!Boolean.getBoolean("academy.skyStrikeSmoke")) return;
         var mc = Minecraft.getInstance();
         if (mc.level == null) {
-            if (!openedWorld && mc.gui.screen() instanceof net.minecraft.client.gui.screens.TitleScreen) {
+            if (!openedWorld && mc.gui.screen() instanceof TitleScreen) {
                 openedWorld = true;
                 System.out.println("[sky-strike-smoke] opening isolated test world");
                 mc.createWorldOpenFlows().openWorld("sky_strike", mc::stop);
@@ -51,14 +63,14 @@ public final class SkyStrikeClientSmoke {
 
         if (!configured) {
             configured = true;
-            mc.getTutorial().setStep(net.minecraft.client.tutorial.TutorialSteps.NONE);
+            mc.getTutorial().setStep(TutorialSteps.NONE);
             var id = mc.player.getUUID();
             mc.getSingleplayerServer().execute(() -> {
                 var server = mc.getSingleplayerServer();
                 var player = server.getPlayerList().getPlayer(id);
                 if (player == null) return;
                 var level = player.level();
-                var p = new net.minecraft.core.BlockPos(0, 64, 175);
+                var p = new BlockPos(0, 64, 175);
                 // The isolated client may start before this saved chunk enters its view distance.
                 level.getChunk(p.getX() >> 4, p.getZ() >> 4);
                 double y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, p.getX(), p.getZ());
@@ -89,17 +101,17 @@ public final class SkyStrikeClientSmoke {
         }
     }
 
-    private static void verifyImpactTargets(net.minecraft.server.level.ServerLevel level, Vec3 origin) {
+    private static void verifyImpactTargets(ServerLevel level, Vec3 origin) {
         var center = origin.add(0, 120, 0);
         for (var profile : SkyStrikeProfile.values()) {
             double radius = profile.ringEndRadius();
-            var subjects = new java.util.ArrayList<net.minecraft.world.entity.LivingEntity>();
+            var subjects = new ArrayList<LivingEntity>();
             try {
                 var offsets = new Vec3[]{new Vec3(radius - 0.25, 0, 0), new Vec3(radius + 0.25, 0, 0),
                         new Vec3(radius * 0.8, 0, radius * 0.8), Vec3.ZERO};
                 for (var offset : offsets) {
-                    var subject = net.minecraft.world.entity.EntityTypes.COW.create(
-                            level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+                    var subject = EntityTypes.COW.create(
+                            level, EntitySpawnReason.COMMAND);
                     if (subject == null) throw new IllegalStateException("Cannot create radius probe");
                     subject.setPos(center.add(offset));
                     subject.setNoAi(true);
@@ -107,13 +119,13 @@ public final class SkyStrikeClientSmoke {
                     if (!level.addFreshEntity(subject)) throw new IllegalStateException("Cannot add radius probe");
                     subjects.add(subject);
                 }
-                var selected = org.academy.api.server.ability.AreaEffectTargets.inSphere(level, center, radius,
+                var selected = AreaEffectTargets.inSphere(level, center, radius,
                         target -> subjects.contains(target) && target != subjects.get(3));
-                if (!selected.equals(java.util.List.of(subjects.getFirst()))) {
+                if (!selected.equals(List.of(subjects.getFirst()))) {
                     throw new IllegalStateException("Impact radius selected incorrect targets: " + profile
                             + " selected=" + selected.stream().map(subjects::indexOf).toList()
                             + " contained=" + subjects.stream().map(subject ->
-                            org.academy.api.server.ability.AreaEffectTargets.contains(center, subject.position(), radius)).toList());
+                            AreaEffectTargets.contains(center, subject.position(), radius)).toList());
                 }
                 float health = subjects.getFirst().getHealth();
                 for (var target : selected) target.hurtServer(level, level.damageSources().generic(), 1f);
@@ -125,7 +137,7 @@ public final class SkyStrikeClientSmoke {
                 }
                 System.out.println("[sky-strike-smoke] impact radius passed " + profile + " radius=" + radius);
             } finally {
-                subjects.forEach(net.minecraft.world.entity.Entity::discard);
+                subjects.forEach(Entity::discard);
             }
         }
     }

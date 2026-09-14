@@ -47,6 +47,7 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Supplier;
 import net.minecraft.util.Mth;
 
@@ -474,7 +475,7 @@ public class VectorDeviation extends Skill {
             return VectorIncomingDamageResult.partial(result.remainingDamage());
         }
 
-        private record HealthReductionContext(java.util.UUID playerId, DamageSource source) {
+        private record HealthReductionContext(UUID playerId, DamageSource source) {
         }
 
         public static boolean absorbAnomalousDamage(

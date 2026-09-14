@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 
 /**
  * Strongly typed common algebra shared by every ability category.
@@ -764,7 +765,7 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         put(result, domain.id("empty"), type(
                 CollectionBuilderConfiguration.CODEC,
                 configuration -> {
-                    var inputs = java.util.stream.IntStream
+                    var inputs = IntStream
                             .rangeClosed(1, configuration.inputs())
                             .mapToObj(index -> ProgramPortDefinition.requiredInput(
                                     "value_" + index, domain.elementType))

@@ -6,9 +6,11 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageType;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.academy.api.common.ability.*;
 import org.academy.api.common.ability.data.SkillStateType;
@@ -39,33 +41,33 @@ public final class ExampleAddon {
     public static final Identifier ENTRY_ID = id("program/cryokinesis/entry/on_cast");
     public static final Identifier ACTION_ID = id("program/cryokinesis/action/focus");
 
-    public static final net.neoforged.neoforge.registries.DeferredHolder<AbilityDamageProfile, AbilityDamageProfile> FROST =
+    public static final DeferredHolder<AbilityDamageProfile, AbilityDamageProfile> FROST =
             CONTENT.damageProfiles().register("frost", () -> AbilityDamageProfile.builder(DAMAGE_TYPE)
                     .settlement(DamageSettlement.STANDARD).build());
-    public static final net.neoforged.neoforge.registries.DeferredHolder<AbilityDamageProfile, AbilityDamageProfile> DIRECT =
+    public static final DeferredHolder<AbilityDamageProfile, AbilityDamageProfile> DIRECT =
             CONTENT.damageProfiles().register("direct_frost", () -> AbilityDamageProfile.builder(DIRECT_TYPE)
                     .settlement(DamageSettlement.DIRECT).bypassAbsorption(true).build());
-    public static final net.neoforged.neoforge.registries.DeferredHolder<AbilityDamageProfile, AbilityDamageProfile> TRUE =
+    public static final DeferredHolder<AbilityDamageProfile, AbilityDamageProfile> TRUE =
             CONTENT.damageProfiles().register("true_frost", () -> AbilityDamageProfile.builder(TRUE_TYPE)
                     .settlement(DamageSettlement.TRUE_HEALTH).bypassAbsorption(true).build());
-    public static final net.neoforged.neoforge.registries.DeferredHolder<AbilityCategory, AbilityCategory> CATEGORY =
+    public static final DeferredHolder<AbilityCategory, AbilityCategory> CATEGORY =
             CONTENT.categories().register("cryokinesis", () -> AbilityCategory.builder()
                     .translationKey("ability.academy_api_example.cryokinesis")
                     .icon(Identifier.withDefaultNamespace("textures/item/snowball.png"))
                     .defaultDamageProfile(FROST.getKey())
                     .program(ProgramProfile.standard(ENTRY_ID)).build());
 
-    public static final net.neoforged.neoforge.registries.DeferredHolder<Skill, ExampleSkill> PRIMARY =
+    public static final DeferredHolder<Skill, ExampleSkill> PRIMARY =
             CONTENT.skills().register("frost_bolt", () -> new ExampleSkill(Skill.Builder.of(CATEGORY_KEY)
                     .level(AbilityLevel.LEVEL1).cpCost(5).proficiencyProfile(SkillProficiencyProfile.NONE)
                     .stateType(CAST_COUNT).icon(Identifier.withDefaultNamespace("textures/item/snowball.png"))));
     // Same Java implementation, registered through the native path, with a deferred dependency.
     public static final DeferredRegister<Skill> NATIVE_SKILLS = DeferredRegister.create(Registries.Keys.SKILLS, MOD_ID);
-    public static final net.neoforged.neoforge.registries.DeferredHolder<Skill, ExampleSkill> SECONDARY =
+    public static final DeferredHolder<Skill, ExampleSkill> SECONDARY =
             NATIVE_SKILLS.register("focus", () -> new ExampleSkill(Skill.Builder.of(CATEGORY_KEY)
                     .level(AbilityLevel.LEVEL2).cpCost(10).dependsOn(PRIMARY.getKey())
                     .optionallyDependsOn(ResourceKey.create(Registries.Keys.SKILLS, id("optional_missing")))
-                    .damageType(net.minecraft.world.damagesource.DamageTypes.MAGIC)
+                    .damageType(DamageTypes.MAGIC)
                     .proficiencyProfile(SkillProficiencyProfile.NONE).stateType(CAST_COUNT)
                     .icon(Identifier.withDefaultNamespace("textures/item/snowball.png"))));
 

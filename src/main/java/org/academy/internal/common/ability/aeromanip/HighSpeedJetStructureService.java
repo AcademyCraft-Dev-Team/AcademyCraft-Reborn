@@ -11,6 +11,7 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.structure.BlockStructure;
 import org.academy.api.common.structure.BlockStructureApi;
 import org.academy.api.common.structure.BlockStructureCaptureOptions;
+import org.academy.api.common.structure.BlockStructureImpact;
 import org.academy.api.common.structure.BlockStructureKineticHandle;
 import org.academy.api.common.structure.BlockStructureKineticOptions;
 import org.academy.api.common.structure.BlockStructureKinetics;
@@ -195,7 +196,7 @@ public final class HighSpeedJetStructureService {
     private static void applyImpact(
             ServerPlayer player,
             float power,
-            org.academy.api.common.structure.BlockStructureImpact impact
+            BlockStructureImpact impact
     ) {
         var target = impact.target();
         if (!player.isAlive() || player.hasDisconnected()

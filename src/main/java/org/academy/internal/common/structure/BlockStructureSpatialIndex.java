@@ -5,6 +5,7 @@ import net.minecraft.world.phys.AABB;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -32,7 +33,7 @@ final class BlockStructureSpatialIndex<T> {
         for (var sectionKey : sectionKeys) {
             sections.computeIfAbsent(
                     sectionKey,
-                    ignored -> java.util.Collections.newSetFromMap(new IdentityHashMap<>())
+                    ignored -> Collections.newSetFromMap(new IdentityHashMap<>())
             ).add(value);
         }
     }
@@ -45,7 +46,7 @@ final class BlockStructureSpatialIndex<T> {
     List<T> query(AABB bounds) {
         if (bounds == null) throw new IllegalArgumentException("bounds cannot be null");
         var result = new ArrayList<T>();
-        var visited = java.util.Collections.newSetFromMap(new IdentityHashMap<T, Boolean>());
+        var visited = Collections.newSetFromMap(new IdentityHashMap<T, Boolean>());
         for (var sectionKey : sectionKeys(bounds)) {
             var candidates = sections.get(sectionKey);
             if (candidates == null) continue;

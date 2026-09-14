@@ -63,7 +63,7 @@ public final class MagneticMovement {
     }
 
     private static boolean finite(Vec3 value) {
-        return value != null && Double.isFinite(value.x)
+        return Double.isFinite(value.x)
                 && Double.isFinite(value.y) && Double.isFinite(value.z);
     }
 }

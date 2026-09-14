@@ -1,6 +1,9 @@
 package org.academy.internal.common.ability.teleport;
 
+import io.netty.buffer.Unpooled;
 import net.minecraft.world.entity.Relative;
+import net.minecraft.world.phys.Vec3;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
@@ -10,13 +13,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class InstantTeleportSyncPacketTest {
     @Test
     void explicitRotationSurvivesPacketRoundTrip() {
-        var buffer = io.netty.buffer.Unpooled.buffer();
+        var buffer = Unpooled.buffer();
         try {
-            var packet = new InstantTeleportSyncPacket(7, net.minecraft.world.phys.Vec3.ZERO,
+            var packet = new InstantTeleportSyncPacket(7, Vec3.ZERO,
                     -90.0f, 30.0f, false);
             InstantTeleportSyncPacket.CODEC.encode(buffer, packet);
             var decoded = InstantTeleportSyncPacket.CODEC.decode(buffer);
-            org.junit.jupiter.api.Assertions.assertFalse(decoded.preserveViewRotation());
+            Assertions.assertFalse(decoded.preserveViewRotation());
             assertEquals(-90.0f, InstantTeleportSyncPacket.resolveRotation(
                     decoded.preserveViewRotation(), 73.0f, decoded.yRot()));
             assertEquals(30.0f, decoded.xRot());

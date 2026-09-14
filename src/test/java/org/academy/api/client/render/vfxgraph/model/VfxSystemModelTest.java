@@ -1,6 +1,9 @@
 package org.academy.api.client.render.vfxgraph.model;
 
+import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.type.ValueType;
+import org.academy.api.client.render.graph.model.Port;
+import org.academy.api.client.render.graph.model.PortDirection;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -58,6 +61,7 @@ class VfxSystemModelTest {
         assertEquals(1, block.properties().size());
         // Map.copyOf/List.copyOf 是防御拷贝：对返回的不可变视图修改必须抛异常
         assertThrows(UnsupportedOperationException.class, () -> block.properties().put("x", "1"));
-        assertThrows(UnsupportedOperationException.class, () -> block.ports().add(null));
+        assertThrows(UnsupportedOperationException.class, () -> block.ports().add(
+                new Port("x", "X", PortDirection.INPUT, ValueType.FLOAT, Value.of(0f))));
     }
 }

@@ -13,6 +13,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
+import org.academy.api.common.damage.AbilityHitEffects;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
@@ -126,7 +127,7 @@ public final class DarkmatterFeatherProjectile extends AbstractArrow implements 
         var hit = damage > 0.0f && DarkmatterTargeting.hurt(level, target, source, damage);
         if (exposureBurstDamage > 0.0f && target.isAlive()) {
             target.invulnerableTime = 0;
-            hit |= org.academy.api.common.damage.AbilityHitEffects.detonateLaw(target, source, exposureBurstDamage);
+            hit |= AbilityHitEffects.detonateLaw(target, source, exposureBurstDamage);
         }
         return hit;
     }

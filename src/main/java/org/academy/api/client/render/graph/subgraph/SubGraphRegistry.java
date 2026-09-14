@@ -1,6 +1,7 @@
 package org.academy.api.client.render.graph.subgraph;
 
 import org.academy.api.client.render.graph.model.Graph;
+import org.jspecify.annotations.Nullable;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -15,7 +16,7 @@ public final class SubGraphRegistry {
         graphs.put(id, graph);
     }
 
-    public Graph find(String id) {
+    public @Nullable Graph find(String id) {
         return graphs.get(id);
     }
 

@@ -2,6 +2,7 @@ package org.academy.api.client.render.vfxgraph.arc;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 
 /**
  * 表面约束器（M22-Rev2 / M29）：复刻 Blender「闪电附着」的 Sample Nearest Surface。
@@ -19,7 +20,7 @@ import java.util.Map;
  * </ol>
  */
 public final class SurfaceConstraint {
-    private final SurfaceDistributor fixed;
+    private final @Nullable SurfaceDistributor fixed;
     private final Map<float[], SurfaceDistributor> cache = new IdentityHashMap<>();
 
     /**
@@ -47,7 +48,7 @@ public final class SurfaceConstraint {
         constrain(arc, distributor);
     }
 
-    private SurfaceDistributor distributorFor(ArcCurve arc) {
+    private @Nullable SurfaceDistributor distributorFor(ArcCurve arc) {
         if (fixed != null) return fixed;
         var surface = arc.surface();
         if (surface == null || surface.length == 0) return null;

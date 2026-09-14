@@ -64,9 +64,9 @@ public final class AbilityProgramTriggerRuntime {
         }
     }
 
-    static java.util.Optional<Object> currentDamageAttacker(Object entity) {
-        if (!(entity instanceof ServerPlayer player)) return java.util.Optional.empty();
-        return java.util.Optional.ofNullable(DAMAGE_ATTACKERS.get(player.getUUID()));
+    static Optional<Object> currentDamageAttacker(Object entity) {
+        if (!(entity instanceof ServerPlayer player)) return Optional.empty();
+        return Optional.ofNullable(DAMAGE_ATTACKERS.get(player.getUUID()));
     }
 
     static OptionalDouble currentDamageAmount(Object entity) {

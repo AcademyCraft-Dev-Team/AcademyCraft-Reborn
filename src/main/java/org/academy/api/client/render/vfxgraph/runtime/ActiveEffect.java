@@ -13,6 +13,7 @@ import org.academy.api.client.render.vfxgraph.render.GraphCamera;
 import org.academy.api.client.render.vfxgraph.render.RenderSpec;
 import org.academy.api.client.render.vfxgraph.render.VfxGraphRenderer;
 import org.academy.api.client.render.vfxgraph.render.WorldTransform;
+import org.academy.api.client.render.vfxgraph.shape.SurfaceProjector;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
@@ -20,6 +21,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Supplier;
 
 /**
@@ -32,17 +34,17 @@ import java.util.function.Supplier;
 public final class ActiveEffect {
     private final String assetKey;
     private final VfxNodeRegistry registry;
-    private final VfxBlockRegistry blockRegistry;
-    private final VfxOperatorRegistry operatorRegistry;
+    private final @Nullable VfxBlockRegistry blockRegistry;
+    private final @Nullable VfxOperatorRegistry operatorRegistry;
     private final Vector3f position = new Vector3f();
     private final Quaternionf rotation = new Quaternionf();
     private final Map<String, Supplier<Value>> bindings = new LinkedHashMap<>();
-    private final Map<String, org.academy.api.client.render.vfxgraph.shape.SurfaceProjector> surfaces = new LinkedHashMap<>();
+    private final Map<String, SurfaceProjector> surfaces = new LinkedHashMap<>();
     private GraphEffect effect;
 
     /** Bind a local projection surface; preserved through asset reloads, independent of player entities. */
-    public void bindSurface(String name, org.academy.api.client.render.vfxgraph.shape.SurfaceProjector surface) {
-        surfaces.put(name, java.util.Objects.requireNonNull(surface));
+    public void bindSurface(String name, SurfaceProjector surface) {
+        surfaces.put(name, Objects.requireNonNull(surface));
         effect.setSurfaceProjector(name, surface);
     }
     private float scale = 1f;
@@ -80,7 +82,7 @@ public final class ActiveEffect {
         hiddenElapsed = 0f;
         return step;
     }
-    private @org.jspecify.annotations.Nullable Entity followEntity;
+    private @Nullable Entity followEntity;
     private boolean stopped;
 
     ActiveEffect(String assetKey, Graph graph, VfxNodeRegistry registry, Vector3f position) {
@@ -191,7 +193,7 @@ public final class ActiveEffect {
     }
 
     /** 跟随实体：每 tick 把发射器原点对齐实体位置。 */
-    public void follow(Entity entity) {
+    public void follow(@Nullable Entity entity) {
         this.followEntity = entity;
         if (entity != null) {
             this.position.set((float) entity.getX(), (float) entity.getY(), (float) entity.getZ());
@@ -241,9 +243,7 @@ public final class ActiveEffect {
         }
         for (var entry : bindings.entrySet()) {
             var value = entry.getValue().get();
-            if (value != null) {
-                effect.setLiveParam(entry.getKey(), value);
-            }
+            effect.setLiveParam(entry.getKey(), value);
         }
         surfaces.forEach(effect::setSurfaceProjector);
         return false;
@@ -269,10 +269,7 @@ public final class ActiveEffect {
     void reload(Graph graph) {
         effect = new GraphEffect(graph, registry);
         for (var entry : bindings.entrySet()) {
-            var value = entry.getValue().get();
-            if (value != null) {
-                effect.setLiveParam(entry.getKey(), value);
-            }
+            effect.setLiveParam(entry.getKey(), entry.getValue().get());
         }
     }
 
@@ -280,12 +277,10 @@ public final class ActiveEffect {
      * 容器资产重载（M27）：用新解码的 VfxSystem 重建效果，保留位置/绑定。
      */
     void reload(VfxSystem system) {
-        effect = GraphEffect.container(system, blockRegistry, operatorRegistry, system.parameters());
+        effect = GraphEffect.container(system, Objects.requireNonNull(blockRegistry),
+                Objects.requireNonNull(operatorRegistry), system.parameters());
         for (var entry : bindings.entrySet()) {
-            var value = entry.getValue().get();
-            if (value != null) {
-                effect.setLiveParam(entry.getKey(), value);
-            }
+            effect.setLiveParam(entry.getKey(), entry.getValue().get());
         }
     }
 }

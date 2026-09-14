@@ -671,10 +671,10 @@ public final class PacketTypes {
             BLACK_WING_ATTACK = PACKET_TYPES.register("black_wing_attack_v2",
             () -> new PacketType<>(BlackWingAttackPacket.class, BlackWingAttackPacket.CODEC));
 
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, org.academy.internal.common.ability.accelerator.skills.lv5.BlackWingStatePacket>>
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, BlackWingStatePacket>>
             BLACK_WING_STATE = PACKET_TYPES.register("black_wing_state_v1",
-            () -> new PacketType<>(org.academy.internal.common.ability.accelerator.skills.lv5.BlackWingStatePacket.class,
-                    org.academy.internal.common.ability.accelerator.skills.lv5.BlackWingStatePacket.CODEC));
+            () -> new PacketType<>(BlackWingStatePacket.class,
+                    BlackWingStatePacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AdvancedWingTransitionPacket>>
             ADVANCED_WING_TRANSITION = PACKET_TYPES.register("advanced_wing_transition",

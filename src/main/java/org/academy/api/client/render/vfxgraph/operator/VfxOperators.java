@@ -177,8 +177,9 @@ public final class VfxOperators {
             if (param.isEmpty() || ctx.simContext() == null)
                 return Value.gradient(new Gradient(
                         List.of(new Gradient.ColorStop(0f, 1f, 1f, 1f, 1f))));
-            if (ctx.simContext().gradient(param) != null) {
-                return Value.gradient(ctx.simContext().gradient(param));
+            var existing = ctx.simContext().gradient(param);
+            if (existing != null) {
+                return Value.gradient(existing);
             }
             var source = ctx.simContext().gradient(propString(node, "gradient", ""));
             if (source != null) {

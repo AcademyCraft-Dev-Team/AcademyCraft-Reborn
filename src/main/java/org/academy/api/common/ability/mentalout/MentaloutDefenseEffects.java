@@ -11,7 +11,7 @@ public final class MentaloutDefenseEffects {
 
     /** Owns only the supplied transient modifier; entities without the attribute are left unchanged. */
     public static void setTrueResistance(LivingEntity subject, Identifier source, double points, boolean enabled) {
-        if (subject == null || subject.level().isClientSide()) return;
+        if (subject.level().isClientSide()) return;
         var attribute = subject.getAttribute(PlayerAttributes.TRUE_RESISTANCE);
         if (attribute == null) return;
         var amount = enabled && Double.isFinite(points) ? Math.max(0.0, points) : 0.0;
