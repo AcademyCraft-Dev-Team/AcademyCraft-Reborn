@@ -25,7 +25,11 @@ public final class CurveToMeshBuilder {
         for (int to = 1; to <= arc.size(); to++) {
             if (to < arc.size() && arc.segment(to) == arc.segment(to - 1)) continue;
             int length = to - from;
-            if (length >= 2) { vertices += length * rings; indices += (length - 1) * rings * 6; }
+            if (length >= 2) {
+                vertices += length * rings;
+                indices += (length - 1) * rings * 6;
+                if (arc.endCap()) { vertices += rings + 1; indices += rings * 3; }
+            }
             from = to;
         }
         return new Size(vertices, indices);
@@ -79,6 +83,19 @@ public final class CurveToMeshBuilder {
                     vertices.putFloat((float) j / rings).putFloat(v);
                     vertices.putFloat(r * brightness).putFloat(g * brightness).putFloat(b * brightness).putFloat(a);
                 }
+                if (arc.endCap() && i == to - 1) {
+                    // Separate rim vertices preserve the hard normal between the tube and its flat end.
+                    for (int j = 0; j <= rings; j++) {
+                        float cx = j == rings ? 0 : profile.cos[j];
+                        float cy = j == rings ? 0 : profile.sin[j];
+                        vertices.putFloat(arc.x(i) + (rx * cx + ux * cy) * radius)
+                                .putFloat(arc.y(i) + (ry * cx + uy * cy) * radius)
+                                .putFloat(arc.z(i) + (rz * cx + uz * cy) * radius);
+                        vertices.putFloat(tx).putFloat(ty).putFloat(tz);
+                        vertices.putFloat(0.5f + cx * 0.5f).putFloat(0.5f + cy * 0.5f);
+                        vertices.putFloat(r * brightness).putFloat(g * brightness).putFloat(b * brightness).putFloat(a);
+                    }
+                }
             }
             for (int i = from; i < to - 1; i++) {
                 int ring0 = vertexOffset + (i - from) * rings, ring1 = ring0 + rings;
@@ -89,6 +106,13 @@ public final class CurveToMeshBuilder {
                 }
             }
             vertexOffset += length * rings;
+            if (arc.endCap()) {
+                int center = vertexOffset + rings;
+                for (int j = 0; j < rings; j++) {
+                    indices.putInt(center).putInt(vertexOffset + j).putInt(vertexOffset + (j + 1) % rings);
+                }
+                vertexOffset += rings + 1;
+            }
             from = to;
         }
         return vertexOffset - baseVertex;

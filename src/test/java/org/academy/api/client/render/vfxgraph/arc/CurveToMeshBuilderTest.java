@@ -58,8 +58,50 @@ class CurveToMeshBuilderTest {
         arc.setMaxTubeSegments(6);
         assertEquals(12, CurveToMeshBuilder.build(arc, 12, 1, 1, 1, 1, 1).vertexCount());
         assertEquals(8, CurveToMeshBuilder.build(arc, 4, 1, 1, 1, 1, 1).vertexCount());
+        arc.setEndCap(true);
         buffer.clear();
-        assertEquals(0, buffer.add().maxTubeSegments(), "A later main column must not inherit attachment LOD");
+        var reused = buffer.add();
+        assertEquals(0, reused.maxTubeSegments(), "A later main column must not inherit attachment LOD");
+        assertTrue(!reused.endCap(), "Ordinary arcs must not inherit the beam's terminal disk");
+    }
+
+    @Test
+    void flatEndCapsPreserveRunBoundariesOffsetsAndOutwardNormals() {
+        var arc = new ArcCurve();
+        arc.setEndCap(true);
+        arc.addPoint(0, 0, 0, 2, 0, 0);
+        arc.addPoint(0, 0, 5, 2, 0, 0);
+        arc.addPoint(10, 0, 0, 1, 0, 1);
+        arc.addPoint(10, 0, 3, 1, 0, 1);
+        var size = CurveToMeshBuilder.measure(arc, 8);
+        assertEquals(50, size.vertices());
+        assertEquals(144, size.indices());
+        var vertices = java.nio.ByteBuffer.allocate(size.vertices() * 48);
+        var indices = java.nio.ByteBuffer.allocate(size.indices() * 4);
+        assertEquals(size.vertices(), CurveToMeshBuilder.append(arc, 8, 1, 1, 1, 1, 1,
+                vertices, indices, 100));
+        assertEquals(vertices.capacity(), vertices.position());
+        assertEquals(indices.capacity(), indices.position());
+        indices.flip();
+        for (int i = 0; i < size.indices(); i++) {
+            int index = indices.getInt();
+            assertTrue(i < 72 ? index >= 100 && index < 125 : index >= 125 && index < 150);
+        }
+        for (int run = 0; run < 2; run++) {
+            int cap = run * 25 + 16;
+            for (int i = cap; i < cap + 9; i++) {
+                assertEquals(run == 0 ? 5 : 3, vertices.getFloat(i * 48 + 8), 0.0001f);
+                assertEquals(0, vertices.getFloat(i * 48 + 12), 0.0001f);
+                assertEquals(0, vertices.getFloat(i * 48 + 16), 0.0001f);
+                assertEquals(1, vertices.getFloat(i * 48 + 20), 0.0001f);
+            }
+            int a = cap * 48, b = (cap + 1) * 48, center = (cap + 8) * 48;
+            float ax = vertices.getFloat(a) - vertices.getFloat(center);
+            float ay = vertices.getFloat(a + 4) - vertices.getFloat(center + 4);
+            float bx = vertices.getFloat(b) - vertices.getFloat(center);
+            float by = vertices.getFloat(b + 4) - vertices.getFloat(center + 4);
+            assertTrue(ax * by - ay * bx > 0, "Cap winding must face the forward tangent");
+        }
     }
 
     @Test
