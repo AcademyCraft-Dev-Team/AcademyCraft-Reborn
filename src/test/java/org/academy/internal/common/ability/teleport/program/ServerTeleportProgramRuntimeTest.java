@@ -1,6 +1,7 @@
 package org.academy.internal.common.ability.teleport.program;
 
 import net.minecraft.world.phys.AABB;
+import org.academy.api.common.ability.program.ProgramDirection;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -8,8 +9,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class ServerTeleportProgramRuntimeTest {
     @Test
     void targetDirectionsProduceMinecraftYawAndPitch() {
-        var east = new org.academy.api.common.ability.program.ProgramDirection(1, 0, 0);
-        var up = new org.academy.api.common.ability.program.ProgramDirection(0, 1, 0);
+        var east = new ProgramDirection(1, 0, 0);
+        var up = new ProgramDirection(0, 1, 0);
         assertEquals(-90.0f, ServerTeleportProgramRuntime.rotationYaw(east));
         assertEquals(0.0f, ServerTeleportProgramRuntime.rotationPitch(east), 0.0001f);
         assertEquals(-90.0f, ServerTeleportProgramRuntime.rotationPitch(up));

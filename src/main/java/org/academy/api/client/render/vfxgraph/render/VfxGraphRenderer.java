@@ -30,11 +30,14 @@ import org.academy.api.client.render.vfxgraph.arc.BlenderArcCurves;
 import org.academy.api.client.render.vfxgraph.arc.CurveToMeshBuilder;
 import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
 import org.academy.api.client.resources.R;
+import org.joml.FrustumIntersection;
+import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.system.MemoryStack;
+import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -83,8 +86,8 @@ public final class VfxGraphRenderer {
             .build();
     private static final Vector4f CLEAR_COLOR = new Vector4f(0.07f, 0.08f, 0.1f, 1f);
     private final float[] worldScratch = new float[3];
-    private final org.joml.FrustumIntersection particleFrustum = new org.joml.FrustumIntersection();
-    private final org.joml.Matrix4f particleProjection = new org.joml.Matrix4f();
+    private final FrustumIntersection particleFrustum = new FrustumIntersection();
+    private final Matrix4f particleProjection = new Matrix4f();
     private int[] selectedParticles = new int[4096];
 
     public record SurfaceMesh(float[] triangles, float r, float g, float b, float a) {
@@ -101,11 +104,11 @@ public final class VfxGraphRenderer {
     private final GpuTexture farTexture;
     private final GpuTextureView farView;
     private final GpuSampler depthSampler;
-    private GpuBuffer instanceBuffer;
-    private ByteBuffer instanceData;
+    private @Nullable GpuBuffer instanceBuffer;
+    private @Nullable ByteBuffer instanceData;
     private int instanceCapacity;
-    private GpuBuffer lineBuffer;
-    private ByteBuffer lineData;
+    private @Nullable GpuBuffer lineBuffer;
+    private @Nullable ByteBuffer lineData;
     private int lineCapacity;
     private final GpuBuffer arcLightningUbo;
     private static final VertexFormat ARC_TUBE_FORMAT = VertexFormat.builder(0)
@@ -115,17 +118,17 @@ public final class VfxGraphRenderer {
             .addAttribute("Color", GpuFormat.RGBA32_FLOAT)
             .build();
     private final ConcurrentHashMap<String, RenderPipeline> arcTubePipelines = new ConcurrentHashMap<>();
-    private RenderPipeline surfacePipeline;
-    private GpuBuffer surfaceBuffer;
-    private ByteBuffer surfaceData;
+    private @Nullable RenderPipeline surfacePipeline;
+    private @Nullable GpuBuffer surfaceBuffer;
+    private @Nullable ByteBuffer surfaceData;
     private int surfaceCapacity;
-    private GpuBuffer arcTubeVertexBuffer;
-    private GpuBuffer arcTubeIndexBuffer;
-    private ByteBuffer arcVertexStaging;
-    private ByteBuffer arcIndexStaging;
+    private @Nullable GpuBuffer arcTubeVertexBuffer;
+    private @Nullable GpuBuffer arcTubeIndexBuffer;
+    private @Nullable ByteBuffer arcVertexStaging;
+    private @Nullable ByteBuffer arcIndexStaging;
     private int arcTubeVertexCapacity;
     private int arcTubeIndexCapacity;
-    private ArcBuffer arcBuffer;
+    private @Nullable ArcBuffer arcBuffer;
 
     public VfxGraphRenderer() {
         var device = RenderSystem.getDevice();
@@ -250,7 +253,7 @@ public final class VfxGraphRenderer {
 
     private static RenderPipeline buildPipeline(
             String name, Identifier vs, Identifier fs,
-            BindGroupLayout bindGroup, VertexFormat vertexFormat, VertexFormat instanceFormat,
+            BindGroupLayout bindGroup, VertexFormat vertexFormat, @Nullable VertexFormat instanceFormat,
             BlendFunction blend, PrimitiveTopology topology
     ) {
         var builder = RenderPipeline.builder()
@@ -269,7 +272,7 @@ public final class VfxGraphRenderer {
         return builder.build();
     }
 
-    public void setArcBuffer(ArcBuffer buffer) {
+    public void setArcBuffer(@Nullable ArcBuffer buffer) {
         this.arcBuffer = buffer;
     }
 
@@ -393,8 +396,8 @@ public final class VfxGraphRenderer {
         if (totalVerts == 0) return;
         long vertexBytes = (long) totalVerts * ARC_TUBE_FORMAT.getVertexSize();
         long indexBytes = (long) totalIndices * 4;
-        if (vertexBytes > arcTubeVertexBuffer.size()) growArc2TubeBuffer(totalVerts);
-        if (indexBytes > arcTubeIndexBuffer.size()) growArc2TubeIndexBuffer(totalIndices);
+        if (arcTubeVertexBuffer == null || vertexBytes > arcTubeVertexBuffer.size()) growArc2TubeBuffer(totalVerts);
+        if (arcTubeIndexBuffer == null || indexBytes > arcTubeIndexBuffer.size()) growArc2TubeIndexBuffer(totalIndices);
         arcVertexStaging = ensureArcStaging(arcVertexStaging, Math.toIntExact(vertexBytes));
         arcIndexStaging = ensureArcStaging(arcIndexStaging, Math.toIntExact(indexBytes));
         var vertexData = arcVertexStaging;
@@ -413,8 +416,8 @@ public final class VfxGraphRenderer {
         transformArcTubeVertices(vertexData, totalVerts, camera.position(), transform, arcRender.overallScale());
 
         var writeEncoder = device.createCommandEncoder();
-        writeEncoder.writeToBuffer(arcTubeVertexBuffer.slice(0, vertexBytes), vertexData);
-        writeEncoder.writeToBuffer(arcTubeIndexBuffer.slice(0, indexBytes), indexData);
+        writeEncoder.writeToBuffer(Objects.requireNonNull(arcTubeVertexBuffer).slice(0, vertexBytes), vertexData);
+        writeEncoder.writeToBuffer(Objects.requireNonNull(arcTubeIndexBuffer).slice(0, indexBytes), indexData);
 
         writeArcLightning(device, arcRender.emission(), bloomPass);
 
@@ -422,17 +425,17 @@ public final class VfxGraphRenderer {
         pass.setPipeline(pipeline);
         pass.setUniform("GraphCamera", cameraUbo.slice());
         pass.setUniform("ArcLightning", arcLightningUbo.slice());
-        pass.setVertexBuffer(0, arcTubeVertexBuffer.slice(0, vertexBytes));
+        pass.setVertexBuffer(0, Objects.requireNonNull(arcTubeVertexBuffer).slice(0, vertexBytes));
         pass.setVertexBuffer(1, null);
-        pass.setIndexBuffer(arcTubeIndexBuffer, IndexType.INT);
+        pass.setIndexBuffer(Objects.requireNonNull(arcTubeIndexBuffer), IndexType.INT);
         pass.drawIndexed(totalIndices, 1, 0, 0, 0);
     }
 
-    private static ByteBuffer ensureArcStaging(ByteBuffer buffer, int needed) {
+    private static ByteBuffer ensureArcStaging(@Nullable ByteBuffer buffer, int needed) {
         if (buffer == null || buffer.capacity() < needed) {
             int capacity = Math.max(needed, buffer == null ? 65536 : Math.multiplyExact(buffer.capacity(), 2));
-            var replacement = org.lwjgl.system.MemoryUtil.memAlloc(capacity);
-            if (buffer != null) org.lwjgl.system.MemoryUtil.memFree(buffer);
+            var replacement = MemoryUtil.memAlloc(capacity);
+            if (buffer != null) MemoryUtil.memFree(buffer);
             buffer = replacement;
         }
         buffer.clear();
@@ -485,7 +488,7 @@ public final class VfxGraphRenderer {
                 GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST,
                 (long) ARC_TUBE_FORMAT.getVertexSize() * newCapacity);
         arcTubeVertexCapacity = newCapacity;
-        old.close();
+        if (old != null) old.close();
     }
 
     private void growArc2TubeIndexBuffer(int requiredIndices) {
@@ -496,7 +499,7 @@ public final class VfxGraphRenderer {
                 GpuBuffer.USAGE_INDEX | GpuBuffer.USAGE_COPY_DST,
                 (long) newCapacity * 4);
         arcTubeIndexCapacity = newCapacity;
-        old.close();
+        if (old != null) old.close();
     }
 
     private void drawInstanced(
@@ -515,11 +518,11 @@ public final class VfxGraphRenderer {
         if (matched == 0) return;
 
         var bytes = (long) INSTANCE_STRIDE * matched;
-        if (bytes > instanceBuffer.size()) {
+        if (instanceBuffer == null || bytes > instanceBuffer.size()) {
             growInstances(matched);
         }
         if (instanceData == null || instanceData.capacity() < bytes) {
-            instanceData = BufferUtils.createByteBuffer(Math.toIntExact(instanceBuffer.size()));
+            instanceData = BufferUtils.createByteBuffer(Math.toIntExact(Objects.requireNonNull(instanceBuffer).size()));
         }
         var camPos = camera.position();
         var identity = transform.isIdentity();
@@ -620,11 +623,11 @@ public final class VfxGraphRenderer {
         if (vertexCount == 0) return;
 
         var neededBytes = (long) TRAIL_FORMAT.getVertexSize() * vertexCount;
-        if (neededBytes > lineBuffer.size()) {
+        if (lineBuffer == null || neededBytes > lineBuffer.size()) {
             growLine(vertexCount);
         }
         if (lineData == null || lineData.capacity() < neededBytes) {
-            lineData = BufferUtils.createByteBuffer(Math.toIntExact(lineBuffer.size()));
+            lineData = BufferUtils.createByteBuffer(Math.toIntExact(Objects.requireNonNull(lineBuffer).size()));
         }
         lineData.clear();
         if (line) {
@@ -750,14 +753,14 @@ public final class VfxGraphRenderer {
         farView.close();
         farTexture.close();
         sceneDepth.close();
-        instanceBuffer.close();
-        lineBuffer.close();
-        if (arcVertexStaging != null) { org.lwjgl.system.MemoryUtil.memFree(arcVertexStaging); arcVertexStaging = null; }
-        if (arcIndexStaging != null) { org.lwjgl.system.MemoryUtil.memFree(arcIndexStaging); arcIndexStaging = null; }
-        arcTubeVertexBuffer.close();
-        arcTubeIndexBuffer.close();
+        if (instanceBuffer != null) instanceBuffer.close();
+        if (lineBuffer != null) lineBuffer.close();
+        if (arcVertexStaging != null) { MemoryUtil.memFree(arcVertexStaging); arcVertexStaging = null; }
+        if (arcIndexStaging != null) { MemoryUtil.memFree(arcIndexStaging); arcIndexStaging = null; }
+        if (arcTubeVertexBuffer != null) arcTubeVertexBuffer.close();
+        if (arcTubeIndexBuffer != null) arcTubeIndexBuffer.close();
         arcLightningUbo.close();
-        surfaceBuffer.close();
+        if (surfaceBuffer != null) surfaceBuffer.close();
         instanceData = null;
         lineData = null;
         surfaceData = null;
@@ -797,7 +800,7 @@ public final class VfxGraphRenderer {
                 GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST,
                 (long) INSTANCE_STRIDE * newCapacity);
         instanceCapacity = newCapacity;
-        old.close();
+        if (old != null) old.close();
     }
 
     private void growLine(int requiredVertices) {
@@ -808,7 +811,7 @@ public final class VfxGraphRenderer {
                 GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST,
                 (long) (3 + 4) * 4 * newCapacity);
         lineCapacity = newCapacity;
-        old.close();
+        if (old != null) old.close();
     }
 
     private void drawSurfaces(RenderPass pass, List<SurfaceMesh> surfaces, GraphCamera camera) {
@@ -819,7 +822,7 @@ public final class VfxGraphRenderer {
         if (totalVerts == 0) return;
 
         var bytes = (long) SIMPLE_FORMAT.getVertexSize() * totalVerts;
-        if (bytes > surfaceBuffer.size()) {
+        if (surfaceBuffer == null || bytes > surfaceBuffer.size()) {
             growSurface(totalVerts);
         }
         if (surfaceData == null || surfaceData.capacity() < bytes) {
@@ -855,7 +858,7 @@ public final class VfxGraphRenderer {
                 GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST,
                 (long) SIMPLE_FORMAT.getVertexSize() * newCapacity);
         surfaceCapacity = newCapacity;
-        old.close();
+        if (old != null) old.close();
     }
 
     private static ByteBuffer buildNoiseTile(int size) {

@@ -2,6 +2,9 @@ package org.academy.api.client.render.vfxgraph.shape;
 
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
+import org.jspecify.annotations.Nullable;
+
+import java.util.Objects;
 
 /**
  * Reusable vortex deformation around an animated spine with a travelling whip bend. +Y is up, +Z is forward.
@@ -26,7 +29,7 @@ public final class VortexAttackGeometry {
         final Quaternionf transport = new Quaternionf();
         float width;
     }
-    private final SampleFrame[] grid = new SampleFrame[193];
+    private final @Nullable SampleFrame[] grid = new SampleFrame[193];
     private final SampleFrame offGrid = new SampleFrame();
     private int gridSegments;
     private float offGridU = Float.NaN;
@@ -79,8 +82,12 @@ public final class VortexAttackGeometry {
         gridSegments = Math.clamp(segments, 1, grid.length - 1);
         if (activity <= 0f) return;
         for (int i = 0; i <= gridSegments; i++) {
-            if (grid[i] == null) grid[i] = new SampleFrame();
-            buildFrame(i / (float) gridSegments, grid[i]);
+            var frame = grid[i];
+            if (frame == null) {
+                frame = new SampleFrame();
+                grid[i] = frame;
+            }
+            buildFrame(i / (float) gridSegments, frame);
         }
     }
 
@@ -106,7 +113,7 @@ public final class VortexAttackGeometry {
         int index = Math.round(u * gridSegments);
         SampleFrame frame;
         if (gridSegments > 0 && index >= 0 && index <= gridSegments && u == index / (float) gridSegments) {
-            frame = grid[index];
+            frame = Objects.requireNonNull(grid[index]);
         } else {
             if (u != offGridU) { buildFrame(u, offGrid); offGridU = u; }
             frame = offGrid;

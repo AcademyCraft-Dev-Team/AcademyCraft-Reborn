@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class SkillDataSerializer<T extends SkillData> implements JsonSerializer<T>, JsonDeserializer<T> {
     private static final Logger LOGGER = AcademyCraft.getLogger();
@@ -28,8 +29,8 @@ public class SkillDataSerializer<T extends SkillData> implements JsonSerializer<
     }
 
     public static void registerType(Identifier id, Class<? extends SkillData> clazz) {
-        java.util.Objects.requireNonNull(id, "id");
-        java.util.Objects.requireNonNull(clazz, "clazz");
+        Objects.requireNonNull(id, "id");
+        Objects.requireNonNull(clazz, "clazz");
         var previous = TYPE_MAP.putIfAbsent(id, clazz);
         if (previous != null && previous != clazz) {
             throw new IllegalStateException("Conflicting skill state type " + id + ": "

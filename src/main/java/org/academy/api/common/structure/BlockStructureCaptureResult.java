@@ -12,8 +12,6 @@ public record BlockStructureCaptureResult(
         int affectedBlocks
 ) {
     public BlockStructureCaptureResult {
-        structure = structure == null ? Optional.empty() : structure;
-        problemPosition = problemPosition == null ? Optional.empty() : problemPosition;
         affectedBlocks = Math.max(0, affectedBlocks);
     }
 
@@ -26,12 +24,22 @@ public record BlockStructureCaptureResult(
         );
     }
 
+    public static BlockStructureCaptureResult failure(Status status) {
+        if (status == Status.SUCCESS) throw new IllegalArgumentException("SUCCESS requires a structure");
+        return new BlockStructureCaptureResult(
+                status,
+                Optional.empty(),
+                Optional.empty(),
+                0
+        );
+    }
+
     public static BlockStructureCaptureResult failure(Status status, BlockPos problemPosition) {
         if (status == Status.SUCCESS) throw new IllegalArgumentException("SUCCESS requires a structure");
         return new BlockStructureCaptureResult(
                 status,
                 Optional.empty(),
-                Optional.ofNullable(problemPosition),
+                Optional.of(problemPosition),
                 0
         );
     }

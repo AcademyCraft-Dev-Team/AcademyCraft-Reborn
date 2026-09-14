@@ -8,6 +8,7 @@ import org.academy.api.common.ability.pakcet.SyncSkillDataPacket;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.skilldata.SkillData;
+import org.academy.internal.server.world.level.storage.Player;
 import org.misaka.MisakaNetworkServer;
 
 import java.util.Map;
@@ -371,7 +372,7 @@ public class SkillDataManager implements AbilitySubsystem {
     }
 
     private boolean maintainSkillActivationStates(
-            org.academy.internal.server.world.level.storage.Player playerData
+            Player playerData
     ) {
         var changed = false;
         for (var entry : playerData.getSkillDataMap().entrySet()) {
@@ -383,7 +384,7 @@ public class SkillDataManager implements AbilitySubsystem {
     }
 
     private boolean bindSkillActivationState(
-            org.academy.internal.server.world.level.storage.Player playerData,
+            Player playerData,
             String skillId,
             SkillData data
     ) {

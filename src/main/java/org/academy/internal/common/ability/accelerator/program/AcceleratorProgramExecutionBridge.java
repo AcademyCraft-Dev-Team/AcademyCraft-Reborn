@@ -9,6 +9,7 @@ import org.academy.internal.common.ability.program.*;
 import org.academy.internal.server.world.level.storage.Player;
 
 import java.util.*;
+import java.util.function.LongSupplier;
 
 /**
  * Shared-VM execution gateway for vector-manipulation programs.
@@ -106,7 +107,7 @@ public final class AcceleratorProgramExecutionBridge {
             AcceleratorProgramRuntime runtime,
             ProgramActionTransaction transaction,
             ProgramInvocationContext invocation,
-            java.util.function.LongSupplier worldGameTime
+            LongSupplier worldGameTime
     ) {
         Objects.requireNonNull(program, "program");
         Objects.requireNonNull(runtime, "runtime");

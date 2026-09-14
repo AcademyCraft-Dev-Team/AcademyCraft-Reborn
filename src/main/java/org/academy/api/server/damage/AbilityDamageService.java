@@ -1,8 +1,10 @@
 package org.academy.api.server.damage;
 
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageType;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.AbilityDamageProfile;
@@ -54,8 +56,8 @@ public final class AbilityDamageService {
         var type = request.damageType() != null ? request.damageType()
                 : request.damageProfile() != null ? AbilityDamageProfiles.require(request.damageProfile()).damageType()
                 : SkillDamageTypeResolver.resolve(skill);
-        if (type == null) type = net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK;
-        controller.level().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE).getOrThrow(type);
+        if (type == null) type = DamageTypes.PLAYER_ATTACK;
+        controller.level().registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(type);
         var health = target.getHealth();
         var absorption = target.getAbsorptionAmount();
         var applied = SkillDamageUtil.apply(controller, target, skill, type, request.amount(), request.maximumHealthPart());

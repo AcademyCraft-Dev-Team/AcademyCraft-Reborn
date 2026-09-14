@@ -1,15 +1,18 @@
 package org.academy.api.common.ability;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.util.Util;
 import net.minecraft.world.damagesource.DamageType;
 import org.academy.api.common.damage.AbilityDamageProfile;
 import org.academy.api.common.ability.program.ProgramProfile;
 import org.academy.api.common.registries.Registries;
+import org.academy.api.common.util.L10nUtil;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.jspecify.annotations.Nullable;
 
@@ -38,9 +41,9 @@ public abstract class AbilityCategory {
     /** Stable namespaced codec for persistence; CODEC retains the legacy numeric representation. */
     public static final Codec<AbilityCategory> ID_CODEC = Identifier.CODEC.flatXmap(
             id -> Registries.ABILITY_CATEGORIES.get(id)
-                    .map(holder -> com.mojang.serialization.DataResult.success(holder.value()))
-                    .orElseGet(() -> com.mojang.serialization.DataResult.error(() -> "Unknown ability category " + id)),
-            category -> com.mojang.serialization.DataResult.success(category.getKey()));
+                    .map(holder -> DataResult.success(holder.value()))
+                    .orElseGet(() -> DataResult.error(() -> "Unknown ability category " + id)),
+            category -> DataResult.success(category.getKey()));
 
     public static Builder builder() {
         return new Builder();
@@ -137,19 +140,19 @@ public abstract class AbilityCategory {
     public abstract String getDisplayName();
 
     public String getDescriptionId() {
-        return net.minecraft.util.Util.makeDescriptionId("ability_category", getKey());
+        return Util.makeDescriptionId("ability_category", getKey());
     }
 
     public static final class Builder {
-        private String translationKey;
-        private Identifier icon;
+        private @Nullable String translationKey;
+        private @Nullable Identifier icon;
         private float probability;
-        private AbilityFactorProfile development;
-        private AbilityResourceSpec resource;
+        private @Nullable AbilityFactorProfile development;
+        private @Nullable AbilityResourceSpec resource;
         private boolean commonSkills = true;
-        private ResourceKey<DamageType> damageType;
-        private ResourceKey<AbilityDamageProfile> damageProfile;
-        private ProgramProfile program;
+        private @Nullable ResourceKey<DamageType> damageType;
+        private @Nullable ResourceKey<AbilityDamageProfile> damageProfile;
+        private @Nullable ProgramProfile program;
 
         public Builder translationKey(String value) {
             translationKey = Objects.requireNonNull(value);
@@ -219,8 +222,8 @@ public abstract class AbilityCategory {
 
         private DeclaredCategory(Builder builder) {
             super(builder.probability, builder.development);
-            name = builder.translationKey;
-            icon = builder.icon;
+            name = Objects.requireNonNull(builder.translationKey);
+            icon = Objects.requireNonNull(builder.icon);
             commonSkills = builder.commonSkills;
             resource = Optional.ofNullable(builder.resource);
             damageType = Optional.ofNullable(builder.damageType);
@@ -228,7 +231,7 @@ public abstract class AbilityCategory {
             program = Optional.ofNullable(builder.program);
         }
 
-        @Override public String getDisplayName() { return org.academy.api.common.util.L10nUtil.get(name); }
+        @Override public String getDisplayName() { return L10nUtil.get(name); }
         @Override public String getDescriptionId() { return name; }
         @Override public Identifier getDeveloperIcon() { return icon; }
         @Override public boolean supportsCommonSkills() { return commonSkills; }

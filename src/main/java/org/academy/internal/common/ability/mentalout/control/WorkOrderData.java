@@ -34,8 +34,8 @@ public final class WorkOrderData extends SavedData {
         public Entry {
             UUID.fromString(controller);
             UUID.fromString(subject);
-            java.util.Objects.requireNonNull(source);
-            java.util.Objects.requireNonNull(settings);
+            Objects.requireNonNull(source);
+            Objects.requireNonNull(settings);
             new BlockWorkRegion(dimension, minimum, maximum);
             cargo = cargo.stream().filter(stack -> !stack.isEmpty()).map(ItemStack::copy).toList();
         }

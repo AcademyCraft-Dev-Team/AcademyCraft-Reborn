@@ -6,6 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
@@ -19,6 +20,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
@@ -46,6 +48,7 @@ import org.academy.internal.common.ability.teleport.TeleportSafety;
 import org.academy.internal.common.ability.teleport.TeleportSync;
 import org.academy.internal.common.ability.teleport.TeleportTargeting;
 import org.academy.internal.common.ability.teleport.skills.lv3.LocationTeleport;
+import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.misaka.MisakaNetworkClient;
@@ -56,6 +59,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.lang.ref.WeakReference;
 import java.util.*;
 
 import static org.lwjgl.glfw.GLFW.*;
@@ -65,7 +69,7 @@ public final class Flashing extends Skill {
     static final int REPEAT_TICKS = 6;
     static final int DASH_INVULNERABILITY_TICKS = 4;
     static final double DASH_TRUE_RESISTANCE = 8.0;
-    private static final net.minecraft.resources.Identifier DASH_RESISTANCE_ID =
+    private static final Identifier DASH_RESISTANCE_ID =
             AcademyCraft.academy("flashing_true_resistance");
     static final int AUTO_ESCAPE_COOLDOWN_TICKS = 200;
     private static final double[] AUTO_ESCAPE_ANGLE_OFFSETS = {
@@ -430,14 +434,14 @@ public final class Flashing extends Skill {
         public static void beginDashInvulnerability(ServerPlayer player) {
             beginDashInvulnerability(player.getUUID());
             var state = DASH_INVULNERABILITY.get(player.getUUID());
-            state.player = new java.lang.ref.WeakReference<>(player);
+            state.player = new WeakReference<>(player);
             syncDashResistance(state);
         }
 
         private static void syncDashResistance(DashInvulnerabilityState state) {
             var player = state.player == null ? null : state.player.get();
             if (player == null) return;
-            org.academy.internal.common.attribute.PlayerAttributeRuntime.syncTrueResistanceModifier(
+            PlayerAttributeRuntime.syncTrueResistanceModifier(
                     player, DASH_RESISTANCE_ID, DASH_TRUE_RESISTANCE,
                     isDashInvulnerable(player.getUUID(), player.level().getGameTime()));
         }
@@ -511,7 +515,7 @@ public final class Flashing extends Skill {
         }
 
         private static final class DashInvulnerabilityState {
-            private java.lang.ref.WeakReference<ServerPlayer> player;
+            private WeakReference<ServerPlayer> player;
             private int pendingDashes;
             private long graceEndTick = Long.MIN_VALUE;
         }
@@ -584,7 +588,7 @@ public final class Flashing extends Skill {
         }
 
         @SubscribeEvent
-        public static void onDeath(net.neoforged.neoforge.event.entity.living.LivingDeathEvent event) {
+        public static void onDeath(LivingDeathEvent event) {
             if (!(event.getEntity() instanceof ServerPlayer player)) return;
             Server.clearDashInvulnerability(player.getUUID());
             Server.DASH_QUEUES.remove(player.getUUID());

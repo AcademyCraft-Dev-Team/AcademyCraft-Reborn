@@ -1,12 +1,15 @@
 package org.academy.internal.common.ability.mentalout.control;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.ai.Brain;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.monster.Ghast;
 import net.minecraft.world.entity.monster.RangedAttackMob;
@@ -57,8 +60,8 @@ final class StandardMobControlBindings {
         private TakeoverBinding(Mob mob) {
             this.mob = mob;
             if (mob instanceof MentalControlMobAccess access) access.academy$stopAutonomousGoals();
-            ((net.minecraft.world.entity.ai.Brain<LivingEntity>) mob.getBrain())
-                    .stopAll((net.minecraft.server.level.ServerLevel) mob.level(), mob);
+            ((Brain<LivingEntity>) mob.getBrain())
+                    .stopAll((ServerLevel) mob.level(), mob);
             mob.getNavigation().stop();
             mob.setTarget(null);
         }
@@ -215,7 +218,7 @@ final class StandardMobControlBindings {
         private void attackIfReady() {
             var gameTime = mob.level().getGameTime();
             if (gameTime < nextFallbackAttackTime
-                    || !(mob.level() instanceof net.minecraft.server.level.ServerLevel level)) return;
+                    || !(mob.level() instanceof ServerLevel level)) return;
 
             var attacked = false;
             if (mob instanceof RangedAttackMob ranged && !rangedFallbackDisabled) {
@@ -234,7 +237,7 @@ final class StandardMobControlBindings {
             if (!attacked && mob.isWithinMeleeAttackRange(target)) {
                 mob.swing(InteractionHand.MAIN_HAND, true);
                 if (MentalControlApi.hasAiTakeover(mob) && mob.getMainHandItem().isEmpty()
-                        && mob.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE) == null) {
+                        && mob.getAttribute(Attributes.ATTACK_DAMAGE) == null) {
                     ControlledEquipment.attackWithoutAttribute(mob, level, target);
                 } else mob.doHurtTarget(level, target);
                 attacked = true;

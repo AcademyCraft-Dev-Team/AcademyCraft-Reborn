@@ -1,6 +1,7 @@
 package org.academy.internal.common.world.item;
 
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -9,6 +10,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.Item;
@@ -60,7 +62,7 @@ public final class MagneticHookItem extends Item {
     }
 
     @Override
-    public InteractionResult interactLivingEntity(ItemStack stack, Player player, net.minecraft.world.entity.LivingEntity target,
+    public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target,
                                                    InteractionHand hand) {
         if (player instanceof ServerPlayer serverPlayer) {
             if (player.isShiftKeyDown()) {
@@ -143,7 +145,7 @@ public final class MagneticHookItem extends Item {
                 .filter(hook -> hook.isAttachedTo(target)).findFirst().orElse(null));
     }
 
-    public static boolean recallAttachedTo(ServerPlayer player, net.minecraft.core.BlockPos target) {
+    public static boolean recallAttachedTo(ServerPlayer player, BlockPos target) {
         return recall(player, findOwnedHooks(player).stream()
                 .filter(hook -> hook.isAttachedTo(target)).findFirst().orElse(null));
     }

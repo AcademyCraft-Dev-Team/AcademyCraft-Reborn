@@ -232,18 +232,18 @@ class VfxContainerFullCatalogTest {
 
     @Test
     void radialRippleUsesLiveDurationIntensityAndColors() {
-        var duration = new org.academy.api.client.render.graph.model.GraphParameter(
-                "duration", "Duration", org.academy.api.client.render.graph.type.ValueType.FLOAT,
-                org.academy.api.client.render.graph.type.Value.of(1f), java.util.Optional.empty());
-        var intensity = new org.academy.api.client.render.graph.model.GraphParameter(
-                "intensity", "Intensity", org.academy.api.client.render.graph.type.ValueType.FLOAT,
-                org.academy.api.client.render.graph.type.Value.of(1f), java.util.Optional.empty());
-        var core = new org.academy.api.client.render.graph.model.GraphParameter(
-                "core", "Core", org.academy.api.client.render.graph.type.ValueType.COLOR,
-                org.academy.api.client.render.graph.type.Value.color(1f, 0f, 0f, 1f), java.util.Optional.empty());
-        var edge = new org.academy.api.client.render.graph.model.GraphParameter(
-                "edge", "Edge", org.academy.api.client.render.graph.type.ValueType.COLOR,
-                org.academy.api.client.render.graph.type.Value.color(0f, 0f, 1f, 0f), java.util.Optional.empty());
+        var duration = new GraphParameter(
+                "duration", "Duration", ValueType.FLOAT,
+                Value.of(1f), Optional.empty());
+        var intensity = new GraphParameter(
+                "intensity", "Intensity", ValueType.FLOAT,
+                Value.of(1f), Optional.empty());
+        var core = new GraphParameter(
+                "core", "Core", ValueType.COLOR,
+                Value.color(1f, 0f, 0f, 1f), Optional.empty());
+        var edge = new GraphParameter(
+                "edge", "Edge", ValueType.COLOR,
+                Value.color(0f, 0f, 1f, 0f), Optional.empty());
         var parameters = List.of(duration, intensity, core, edge);
         var system = new VfxSystem("radial-ripple",
                 List.of(
@@ -267,8 +267,8 @@ class VfxContainerFullCatalogTest {
                 List.of("bO"));
 
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, parameters);
-        sim.setLiveParam("duration", org.academy.api.client.render.graph.type.Value.of(0.5f));
-        sim.setLiveParam("intensity", org.academy.api.client.render.graph.type.Value.of(0.75f));
+        sim.setLiveParam("duration", Value.of(0.5f));
+        sim.setLiveParam("intensity", Value.of(0.75f));
         sim.step(0.25f);
         sim.step(0.01f);
 
@@ -284,18 +284,18 @@ class VfxContainerFullCatalogTest {
 
     @Test
     void collapsingBoxUsesLiveDimensionsYawAndProgress() {
-        var progress = new org.academy.api.client.render.graph.model.GraphParameter(
-                "progress", "Progress", org.academy.api.client.render.graph.type.ValueType.FLOAT,
-                org.academy.api.client.render.graph.type.Value.of(0f), java.util.Optional.empty());
-        var width = new org.academy.api.client.render.graph.model.GraphParameter(
-                "width", "Width", org.academy.api.client.render.graph.type.ValueType.FLOAT,
-                org.academy.api.client.render.graph.type.Value.of(1f), java.util.Optional.empty());
-        var height = new org.academy.api.client.render.graph.model.GraphParameter(
-                "height", "Height", org.academy.api.client.render.graph.type.ValueType.FLOAT,
-                org.academy.api.client.render.graph.type.Value.of(2f), java.util.Optional.empty());
-        var yaw = new org.academy.api.client.render.graph.model.GraphParameter(
-                "yaw", "Yaw", org.academy.api.client.render.graph.type.ValueType.FLOAT,
-                org.academy.api.client.render.graph.type.Value.of(0f), java.util.Optional.empty());
+        var progress = new GraphParameter(
+                "progress", "Progress", ValueType.FLOAT,
+                Value.of(0f), Optional.empty());
+        var width = new GraphParameter(
+                "width", "Width", ValueType.FLOAT,
+                Value.of(1f), Optional.empty());
+        var height = new GraphParameter(
+                "height", "Height", ValueType.FLOAT,
+                Value.of(2f), Optional.empty());
+        var yaw = new GraphParameter(
+                "yaw", "Yaw", ValueType.FLOAT,
+                Value.of(0f), Optional.empty());
         var parameters = List.of(progress, width, height, yaw);
         var system = new VfxSystem("collapsing-box",
                 List.of(
@@ -316,10 +316,10 @@ class VfxContainerFullCatalogTest {
                 List.of("bO"));
 
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, parameters);
-        sim.setLiveParam("progress", org.academy.api.client.render.graph.type.Value.of(0.5f));
-        sim.setLiveParam("width", org.academy.api.client.render.graph.type.Value.of(2f));
-        sim.setLiveParam("height", org.academy.api.client.render.graph.type.Value.of(3f));
-        sim.setLiveParam("yaw", org.academy.api.client.render.graph.type.Value.of(35f));
+        sim.setLiveParam("progress", Value.of(0.5f));
+        sim.setLiveParam("width", Value.of(2f));
+        sim.setLiveParam("height", Value.of(3f));
+        sim.setLiveParam("yaw", Value.of(35f));
         sim.step(0.01f);
 
         assertEquals(12, sim.arcBuffer().count(), "wireframe box should have twelve edges");
@@ -358,12 +358,12 @@ class VfxContainerFullCatalogTest {
                 List.of("bO"));
 
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, List.of());
-        sim.setLiveParam("emission", org.academy.api.client.render.graph.type.Value.of(1f));
-        sim.setLiveParam("formation", org.academy.api.client.render.graph.type.Value.of(0.1f));
+        sim.setLiveParam("emission", Value.of(1f));
+        sim.setLiveParam("formation", Value.of(0.1f));
         sim.step(0.01f);
         assertTrue(sim.arcBuffer().count() > 0 && sim.arcBuffer().count() <= 32);
 
-        sim.setLiveParam("formation", org.academy.api.client.render.graph.type.Value.of(1f));
+        sim.setLiveParam("formation", Value.of(1f));
         sim.step(0.01f);
         assertTrue(sim.arcBuffer().count() > 0 && sim.arcBuffer().count() <= 32,
                 "only the current plasma-shell generation may remain alive");

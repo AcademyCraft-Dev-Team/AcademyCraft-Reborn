@@ -2,6 +2,7 @@ package org.academy.api.client.render.vfxgraph.arc;
 
 import org.junit.jupiter.api.Test;
 
+import java.nio.ByteBuffer;
 import java.util.HashSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -17,8 +18,8 @@ class CurveToMeshBuilderTest {
         arc.addPoint(5, 1, 0, .1f, 0, 1); // isolated hole sample
         arc.addPoint(10, 1, 0, .1f, 0, 0);
         arc.addPoint(10, 2, 0, .1f, 0, 0);
-        var vertices = java.nio.ByteBuffer.allocate(16 * 48);
-        var indices = java.nio.ByteBuffer.allocate(48 * 4);
+        var vertices = ByteBuffer.allocate(16 * 48);
+        var indices = ByteBuffer.allocate(48 * 4);
         assertEquals(16, CurveToMeshBuilder.append(arc, 4, 1, 1, 1, 1, 1, vertices, indices, 100));
         assertEquals(vertices.capacity(), vertices.position());
         assertEquals(indices.capacity(), indices.position());

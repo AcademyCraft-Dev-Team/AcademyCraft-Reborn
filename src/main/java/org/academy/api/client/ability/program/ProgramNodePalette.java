@@ -3,6 +3,7 @@ package org.academy.api.client.ability.program;
 import com.google.gson.JsonElement;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import org.jspecify.annotations.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -26,6 +27,7 @@ public final class ProgramNodePalette {
         if (values.size() > 512) throw new IllegalArgumentException("Too many node presets");
         return values;
     }
+    @Nullable
     public static Component label(Identifier id, JsonElement configuration) {
         return presets(id).stream().filter(p -> p.configuration().equals(configuration))
                 .map(Preset::label).findFirst().orElse(null);

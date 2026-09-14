@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.program;
 
+import org.academy.AcademyCraft;
 import org.academy.api.common.ability.program.ProgramNodeRole;
 import org.academy.api.common.ability.program.ProgramInputView;
 import org.academy.api.common.ability.program.ProgramNodeStep;
@@ -347,7 +348,7 @@ public final class ProgramVm {
         } catch (RuntimeException exception) {
             var diagnostic = AbilityProgramManager.actionDiagnostic(exception);
             if (diagnostic == ProgramVmDiagnostic.ACTION_REJECTED) {
-                org.academy.AcademyCraft.LOGGER.warn(
+                AcademyCraft.LOGGER.warn(
                         "Program node {} ({}) failed", node.id(), node.typeId(), exception);
             }
             throw new ExecutionFailure(diagnostic == ProgramVmDiagnostic.ACTION_REJECTED

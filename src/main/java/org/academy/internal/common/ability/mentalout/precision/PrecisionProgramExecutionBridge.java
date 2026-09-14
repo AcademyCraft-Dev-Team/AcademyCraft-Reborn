@@ -5,6 +5,7 @@ import org.academy.api.common.ability.program.*;
 import org.academy.internal.common.ability.program.*;
 
 import java.util.*;
+import java.util.function.LongSupplier;
 
 /**
  * Shared-VM execution gateway for Precision Operation.
@@ -53,7 +54,7 @@ final class PrecisionProgramExecutionBridge {
             ProgramActionTransaction transaction,
             NativeNodeHandler nodeHandler,
             ProgramInvocationContext invocation,
-            java.util.function.LongSupplier worldGameTime
+            LongSupplier worldGameTime
     ) {
         var execution = prepareNative(
                 program,
@@ -74,7 +75,7 @@ final class PrecisionProgramExecutionBridge {
             ProgramActionTransaction transaction,
             NativeNodeHandler nodeHandler,
             ProgramInvocationContext invocation,
-            java.util.function.LongSupplier worldGameTime
+            LongSupplier worldGameTime
     ) {
         var environment = new NativeEnvironment(runtimeView, targetResolver, nodeHandler);
         return new NativeExecution(

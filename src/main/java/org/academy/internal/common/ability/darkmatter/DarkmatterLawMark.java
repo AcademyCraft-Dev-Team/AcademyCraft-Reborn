@@ -2,8 +2,11 @@ package org.academy.internal.common.ability.darkmatter;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
+import org.academy.api.common.damage.LawDetonationDamageSource;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.TimedSkillEffectRuntime;
+import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 
 /**
  * Short-lived server-side abnormal-law mark shared by Cut, Disassemble and Interference.
@@ -42,13 +45,13 @@ public final class DarkmatterLawMark {
 
     /** Resolves mark and exposure detonations at CTA health-write strength, retaining their skill. */
     public static boolean damageDetonation(LivingEntity target,
-                                           org.academy.api.common.damage.SkillDamageSource source,
+                                           SkillDamageSource source,
                                            float amount) {
         if (!DarkmatterTargeting.isDarkmatterDamage(source) || DarkmatterTargeting.isNetworkMember(target)) return false;
         if (source.getEntity() instanceof ServerPlayer owner && !DarkmatterTargeting.isAttackableBy(owner, target)) return false;
         if (DarkmatterTargeting.areAllied(source.getEntity(), target)) return false;
-        return org.academy.internal.common.world.damagesource.SkillDamageUtil.applyVerifiedTrueHealth(
-                target, new org.academy.api.common.damage.LawDetonationDamageSource(source), amount);
+        return SkillDamageUtil.applyVerifiedTrueHealth(
+                target, new LawDetonationDamageSource(source), amount);
     }
 
     public static boolean isMarkedBy(ServerPlayer owner, LivingEntity target) {

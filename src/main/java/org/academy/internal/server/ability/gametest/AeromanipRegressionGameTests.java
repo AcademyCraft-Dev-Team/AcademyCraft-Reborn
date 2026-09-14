@@ -4,19 +4,27 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.GameTestInstance;
 import net.minecraft.gametest.framework.TestData;
 import net.minecraft.gametest.framework.TestEnvironmentDefinition;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.SlabType;
+import net.minecraft.world.level.material.FlowingFluid;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -66,10 +74,10 @@ public final class AeromanipRegressionGameTests {
         // A player edit made inside the bubble must survive restoration.
         level.setBlockAndUpdate(pos.east(), Blocks.STONE.defaultBlockState());
         level.setBlockAndUpdate(pos, level.getBlockState(pos).setValue(BlockStateProperties.SLAB_TYPE,
-                net.minecraft.world.level.block.state.properties.SlabType.TOP));
+                SlabType.TOP));
         WaterSuppression.release(level, second);
         helper.assertTrue(level.getBlockState(pos).equals(waterlogged.setValue(BlockStateProperties.SLAB_TYPE,
-                net.minecraft.world.level.block.state.properties.SlabType.TOP)), Component.literal("Original waterlogged slab must return"));
+                SlabType.TOP)), Component.literal("Original waterlogged slab must return"));
         helper.assertTrue(level.getBlockState(pos.east()).is(Blocks.STONE), Component.literal("Restoration must preserve player edits"));
         helper.succeed();
     }
@@ -85,14 +93,14 @@ public final class AeromanipRegressionGameTests {
         WaterSuppression.refresh(level, lease, Vec3.atCenterOf(pos), 1.0);
         // Exercise the actual mixin entry point before any refresh can remove incoming water.
         try {
-            var spread = net.minecraft.world.level.material.FlowingFluid.class.getDeclaredMethod("spreadTo",
-                    net.minecraft.world.level.LevelAccessor.class, BlockPos.class,
-                    net.minecraft.world.level.block.state.BlockState.class, net.minecraft.core.Direction.class,
-                    net.minecraft.world.level.material.FluidState.class);
+            var spread = FlowingFluid.class.getDeclaredMethod("spreadTo",
+                    LevelAccessor.class, BlockPos.class,
+                    BlockState.class, Direction.class,
+                    FluidState.class);
             spread.setAccessible(true);
-            spread.invoke(net.minecraft.world.level.material.Fluids.FLOWING_WATER, level, pos.east(),
-                    level.getBlockState(pos.east()), net.minecraft.core.Direction.WEST,
-                    net.minecraft.world.level.material.Fluids.FLOWING_WATER.defaultFluidState());
+            spread.invoke(Fluids.FLOWING_WATER, level, pos.east(),
+                    level.getBlockState(pos.east()), Direction.WEST,
+                    Fluids.FLOWING_WATER.defaultFluidState());
         } catch (ReflectiveOperationException exception) {
             throw new IllegalStateException("Cannot exercise the runtime fluid-spread entry point", exception);
         }
@@ -119,8 +127,8 @@ public final class AeromanipRegressionGameTests {
         level.setBlockAndUpdate(pos, original);
         WaterSuppression.refresh(level, UUID.randomUUID(), Vec3.atCenterOf(pos), 2.0);
         var data = level.getDataStorage().computeIfAbsent(WaterSuppression.SAVED_DATA_TYPE);
-        var encoded = WaterSuppression.CODEC.encodeStart(net.minecraft.nbt.NbtOps.INSTANCE, data).getOrThrow();
-        var reloaded = WaterSuppression.CODEC.parse(net.minecraft.nbt.NbtOps.INSTANCE, encoded).getOrThrow();
+        var encoded = WaterSuppression.CODEC.encodeStart(NbtOps.INSTANCE, data).getOrThrow();
+        var reloaded = WaterSuppression.CODEC.parse(NbtOps.INSTANCE, encoded).getOrThrow();
         level.getDataStorage().set(WaterSuppression.SAVED_DATA_TYPE, reloaded);
         helper.runAfterDelay(2, () -> {
             helper.assertTrue(level.getBlockState(pos).equals(original), Component.literal("Reloaded restoration journal must restore the original slab without an owner"));

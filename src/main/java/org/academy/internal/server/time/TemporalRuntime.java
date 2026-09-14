@@ -7,6 +7,7 @@ import net.minecraft.server.ServerTickRateManager;
 import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.BlockEventData;
@@ -53,6 +54,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 
 public final class TemporalRuntime implements TemporalService {
     private static final StackWalker STATE_STACK_WALKER = StackWalker.getInstance(
@@ -491,7 +493,7 @@ public final class TemporalRuntime implements TemporalService {
     ) {
         requireHookCaller(
                 "dispatchPlayerSimulationTicks",
-                net.minecraft.server.network.ServerGamePacketListenerImpl.class
+                ServerGamePacketListenerImpl.class
         );
         requireServerThread();
         if (stopped || player.level().getServer() != server) {
@@ -1184,7 +1186,7 @@ public final class TemporalRuntime implements TemporalService {
             return "entities " + entities.entityIds().stream()
                     .map(UUID::toString)
                     .sorted()
-                    .collect(java.util.stream.Collectors.joining(","));
+                    .collect(Collectors.joining(","));
         }
         return scope.toString();
     }

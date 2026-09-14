@@ -138,7 +138,7 @@ object ImGuiProfilerWindow {
 
     private fun drawSamplerTab() {
         val snapshot = AcademyProfiler.snapshot()
-        val sampler = snapshot.sampler
+        val sampler = snapshot.sampler ?: return
 
         for (ref in AcademyProfiler.samplerThreads()) {
             val enabled = ImBoolean(ref.enabled)

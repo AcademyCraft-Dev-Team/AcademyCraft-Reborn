@@ -5,6 +5,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.internal.common.world.item.ItemDataComponents;
@@ -30,7 +31,7 @@ final class SpatialStorageCompatGameTests {
         unit.set(ItemDataComponents.SPATIAL_STORAGE_ENABLED.get(), true);
         slot.getValue().getStacks().setStackInSlot(0, unit);
         helper.assertTrue(SpatialStorageService.hasEnabledUnit(player), "Equipped Curios unit was not found");
-        helper.assertTrue(SpatialStorageService.collect(player, new ItemStack(net.minecraft.world.item.Items.STONE, 2)),
+        helper.assertTrue(SpatialStorageService.collect(player, new ItemStack(Items.STONE, 2)),
                 "Curios-only unit did not collect drops");
         var data = SpatialStorageSavedData.get(player.level().getServer());
         long before = data.count(id);
@@ -49,7 +50,7 @@ final class SpatialStorageCompatGameTests {
             var storage = netClass.getMethod("getUnifiedStorage").invoke(network);
             var keyClass = Class.forName("com.wintercogs.beyonddimensions.api.storage.key.IStackKey");
             var key = Class.forName("com.wintercogs.beyonddimensions.api.storage.key.impl.ItemStackKey")
-                    .getConstructor(ItemStack.class).newInstance(new ItemStack(net.minecraft.world.item.Items.STONE));
+                    .getConstructor(ItemStack.class).newInstance(new ItemStack(Items.STONE));
             var entry = storage.getClass().getMethod("getStackByKey", keyClass).invoke(storage, key);
             helper.assertTrue((long) entry.getClass().getMethod("amount").invoke(entry) == 5,
                     "Accepted items did not reach the dimension network");

@@ -19,6 +19,9 @@ import org.academy.api.client.render.vfxgraph.shape.*;
 import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
 import org.academy.api.client.render.vfxgraph.sim.SimContext;
 import org.academy.api.client.render.vfxgraph.sim.SimNode;
+import org.academy.api.common.ability.VortexAttackPattern;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -1699,12 +1702,12 @@ public final class VfxBlocks {
         String pitchParam = propString(block, "pitch_param", "pitch_right");
         float[] color = propColor(block, "color");
         long group = NEXT_TRANSIENT_ARC_GROUP.getAndIncrement();
-        var point = new org.joml.Vector3f();
-        var spine = new org.joml.Vector3f();
-        var surfaceNormal = new org.joml.Vector3f();
-        var rotation = new org.joml.Quaternionf();
-        var shape = new org.academy.api.client.render.vfxgraph.shape.VortexAttackGeometry();
-        var bodyOcclusion = new org.academy.api.client.render.vfxgraph.shape.FirstPersonBodyOcclusion();
+        var point = new Vector3f();
+        var spine = new Vector3f();
+        var surfaceNormal = new Vector3f();
+        var rotation = new Quaternionf();
+        var shape = new VortexAttackGeometry();
+        var bodyOcclusion = new FirstPersonBodyOcclusion();
         return (buf, ctx) -> {
             ctx.arcs().removeGroup(group);
             float radial = Math.max(0f, ctx.paramFloat("radial_scale", 1f));
@@ -1728,7 +1731,7 @@ public final class VfxBlocks {
                 bodyOcclusion.max.set(ctx.paramVec3("body_clip_max", 0, 0), ctx.paramVec3("body_clip_max", 1, 0), ctx.paramVec3("body_clip_max", 2, 0));
             }
             if (attackProgress < 0f) {
-                float duration = org.academy.api.common.ability.VortexAttackPattern.byId(attackMode).durationSeconds();
+                float duration = VortexAttackPattern.byId(attackMode).durationSeconds();
                 attackProgress = (ctx.time() % duration) / duration;
             }
             if (attackMode == 4 && side > 0f || attackMode == 5 && side < 0f) attackMode = 0;
@@ -2464,7 +2467,7 @@ public final class VfxBlocks {
     }
 
     private static void configureCleanArc(
-            org.academy.api.client.render.vfxgraph.arc.ArcCurve arc,
+            ArcCurve arc,
             float[] color, float emission, float lifetime, long seed
     ) {
         arc.setColor(color[0] * emission, color[1] * emission, color[2] * emission, color[3] * emission);
@@ -2494,12 +2497,13 @@ public final class VfxBlocks {
         var noiseStrength = propFloat(block, "noise_strength", 0.5f);
         var driftSpeed = propFloat(block, "drift_speed", 1.5f);
         var base = MeshAssets.resolve(mesh);
-        var surface = base == null ? null : offsetTriangles(base, ox, oy, oz);
-        var distributor = surface == null ? null : new SurfaceDistributor(surface);
+        if (base == null) return (buf, ctx) -> {
+        };
+        var surface = offsetTriangles(base, ox, oy, oz);
+        var distributor = new SurfaceDistributor(surface);
         long[] seed = {0L};
         long[] lastGateFrame = {Long.MIN_VALUE};
         return (buf, ctx) -> {
-            if (distributor == null || surface == null) return;
             var frame = (long) (ctx.time() * fps);
             if (frequency > 0f) {
                 if (frame % framePeriod != 0) return;
@@ -2550,13 +2554,14 @@ public final class VfxBlocks {
         var driftSpeed = propFloat(block, "drift_speed", 1.5f);
         var base = MeshAssets.resolve(mesh);
         var contactBase = MeshAssets.resolve(contactMesh);
-        var surface = base == null ? null : offsetTriangles(base, ox, oy, oz);
-        var contact = contactBase == null ? null : offsetTriangles(contactBase, cox, coy, coz);
-        var distributor = surface == null ? null : new SurfaceDistributor(surface);
+        if (base == null || contactBase == null) return (buf, ctx) -> {
+        };
+        var surface = offsetTriangles(base, ox, oy, oz);
+        var contact = offsetTriangles(contactBase, cox, coy, coz);
+        var distributor = new SurfaceDistributor(surface);
         long[] seed = {0L};
         long[] lastGateFrame = {Long.MIN_VALUE};
         return (buf, ctx) -> {
-            if (distributor == null || surface == null || contact == null) return;
             var frame = (long) (ctx.time() * fps);
             if (frequency > 0f) {
                 if (frame % framePeriod != 0) return;

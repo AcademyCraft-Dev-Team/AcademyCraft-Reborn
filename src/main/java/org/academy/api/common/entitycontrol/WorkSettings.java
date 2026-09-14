@@ -7,9 +7,12 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /** Immutable, validated settings shared by RTS orders, adapters and precision programs. */
@@ -46,8 +49,8 @@ public record WorkSettings(Mode mode, boolean repeat, boolean harvest, boolean r
     ).apply(instance, WorkSettings::new));
 
     public WorkSettings {
-        java.util.Objects.requireNonNull(mode);
-        java.util.Objects.requireNonNull(miningReach);
+        Objects.requireNonNull(mode);
+        Objects.requireNonNull(miningReach);
         filters = List.copyOf(filters);
         if (filters.size() > 32) throw new IllegalArgumentException("Too many filters");
         for (var filter : filters) {
@@ -65,7 +68,7 @@ public record WorkSettings(Mode mode, boolean repeat, boolean harvest, boolean r
                 Optional.empty(), Optional.empty());
     }
 
-    public boolean matches(net.minecraft.world.item.ItemStack stack) {
+    public boolean matches(ItemStack stack) {
         if (filters.isEmpty()) return true;
         var matched = filters.stream().anyMatch(filter -> filter.startsWith("#")
                 ? stack.is(TagKey.create(Registries.ITEM, Identifier.parse(filter.substring(1))))
@@ -73,7 +76,7 @@ public record WorkSettings(Mode mode, boolean repeat, boolean harvest, boolean r
         return denyList != matched;
     }
 
-    public boolean matches(net.minecraft.world.entity.LivingEntity entity) {
+    public boolean matches(LivingEntity entity) {
         if (filters.isEmpty()) return true;
         var matched = filters.stream().anyMatch(filter -> filter.startsWith("#")
                 ? entity.getType().builtInRegistryHolder().is(TagKey.create(Registries.ENTITY_TYPE, Identifier.parse(filter.substring(1))))

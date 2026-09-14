@@ -40,6 +40,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.attribute.PlayerAttributes;
+import org.academy.api.common.damage.AbilityHitEffects;
 import org.academy.api.common.damage.DamageComposition;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.Skills;
@@ -302,7 +303,7 @@ public final class DamagePenetrationGameTests {
 
             reset(target, false, 0);
             target.setHealth(1);
-            org.academy.api.common.damage.AbilityHitEffects.addElectricalCharge(target, 5, arc);
+            AbilityHitEffects.addElectricalCharge(target, 5, arc);
             helper.assertTrue(target.isDeadOrDying() && target.getLastDamageSource().getEntity() == attacker,
                     "A lethal discharge retains normal death completion and kill attribution");
         } finally {

@@ -1,6 +1,9 @@
 package org.academy.internal.common.ability.program;
 
 import net.minecraft.resources.Identifier;
+import org.academy.api.common.ability.program.ProgramNodeExtension;
+import org.academy.api.common.ability.program.ProgramNodeRole;
+import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.ability.accelerator.program.AcceleratorProgramDefinition;
 import org.academy.internal.common.ability.aeromanip.program.AeromanipProgramDefinition;
 import org.academy.internal.common.ability.darkmatter.program.DarkmatterProgramDefinition;
@@ -34,16 +37,16 @@ public final class AbilityProgramDefinitions {
 
     public static synchronized void includeRegisteredCategories() {
         var result = new LinkedHashMap<>(DEFINITIONS);
-        for (var category : org.academy.api.common.registries.Registries.ABILITY_CATEGORIES) {
+        for (var category : Registries.ABILITY_CATEGORIES) {
             var profile = category.getProgramProfile().orElse(null);
             if (profile == null) continue;
             if (result.containsKey(category.getKey())) {
                 throw new IllegalStateException("Duplicate program profile for " + category.getKey());
             }
-            var entry = org.academy.api.common.registries.Registries.PROGRAM_NODE_TYPES.get(profile.entryNode())
+            var entry = Registries.PROGRAM_NODE_TYPES.get(profile.entryNode())
                     .orElseThrow(() -> new IllegalStateException("Missing entry node " + profile.entryNode().identifier())).value();
-            if (!(entry instanceof org.academy.api.common.ability.program.ProgramNodeExtension<?> extension)
-                    || entry.role() != org.academy.api.common.ability.program.ProgramNodeRole.ENTRY) {
+            if (!(entry instanceof ProgramNodeExtension<?> extension)
+                    || entry.role() != ProgramNodeRole.ENTRY) {
                 throw new IllegalStateException("Program entry must be a registered ENTRY extension: " + profile.entryNode());
             }
             var metadata = extension.editorMetadata();

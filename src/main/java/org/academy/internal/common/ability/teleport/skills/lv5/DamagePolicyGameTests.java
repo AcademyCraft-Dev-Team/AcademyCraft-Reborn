@@ -4,6 +4,7 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.serialization.MapCodec;
 import io.netty.channel.embedded.EmbeddedChannel;
 import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.*;
 import net.minecraft.network.Connection;
@@ -13,26 +14,44 @@ import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
+import net.minecraft.world.Container;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.arrow.Arrow;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Rotation;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.attribute.PlayerAttributes;
+import org.academy.api.common.damage.AbilityHitEffects;
 import org.academy.api.common.damage.DamageComposition;
+import org.academy.api.common.damage.LawDetonationDamageSource;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.world.damagesource.CategoryDamageRuntime;
 import org.academy.internal.common.world.damagesource.DamageTypes;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 /** Runs with the live NeoForge event bus and applied damage mixins. */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
@@ -130,17 +149,17 @@ public final class DamagePolicyGameTests {
     }
 
     private static void verifyChestItem(GameTestHelper helper, ServerPlayer player) {
-        if (!net.neoforged.fml.ModList.get().isLoaded("chest_item")) return;
+        if (!ModList.get().isLoaded("chest_item")) return;
         try {
             var handler = Class.forName("com.ytgld.chest_item.Handler");
-            var inventory = (net.minecraft.world.Container) handler
-                    .getMethod("getItem", net.minecraft.world.entity.player.Player.class).invoke(null, player);
+            var inventory = (Container) handler
+                    .getMethod("getItem", Player.class).invoke(null, player);
             helper.assertTrue(inventory != null, "Chest Item must attach its actual player inventory");
-            inventory.setItem(0, net.minecraft.core.registries.BuiltInRegistries.ITEM
+            inventory.setItem(0, BuiltInRegistries.ITEM
                     .getValue(Identifier.parse("chest_item:stronger_stone")).getDefaultInstance());
-            inventory.setItem(1, net.minecraft.core.registries.BuiltInRegistries.ITEM
+            inventory.setItem(1, BuiltInRegistries.ITEM
                     .getValue(Identifier.parse("chest_item:fission_emblem")).getDefaultInstance());
-            var config = (java.util.function.Supplier<?>) Class
+            var config = (Supplier<?>) Class
                     .forName("com.ytgld.chest_item.items.gold.StrongerStone$ConfigItem")
                     .getField("intValue").get(null);
             var multiplier = ((Number) config.get()).floatValue() * 1.1f;
@@ -180,14 +199,14 @@ public final class DamagePolicyGameTests {
             electric.invulnerableTime = 0;
             electric.hurtServer(level, arc, 1);
         }
-        helper.assertTrue(org.academy.api.common.damage.AbilityHitEffects.electricalCharge(electric) == 4,
+        helper.assertTrue(AbilityHitEffects.electricalCharge(electric) == 4,
                 "Four ordinary arc hits must accumulate four points");
         var originalSpeed = electric.getAttributeValue(Attributes.MOVEMENT_SPEED);
         electric.invulnerableTime = 0;
         electric.hurtServer(level, arc, 1);
-        helper.assertTrue(org.academy.api.common.damage.AbilityHitEffects.isParalyzed(electric),
+        helper.assertTrue(AbilityHitEffects.isParalyzed(electric),
                 "Fifth charge point must trigger paralysis");
-        helper.assertTrue(org.academy.api.common.damage.AbilityHitEffects.electricalCharge(electric) == 0,
+        helper.assertTrue(AbilityHitEffects.electricalCharge(electric) == 0,
                 "Discharge must consume five points");
         helper.assertTrue(Math.abs(electric.getAttributeValue(Attributes.MOVEMENT_SPEED) - originalSpeed * 0.2) < 1e-6,
                 "Paralysis must reduce movement speed by exactly 80%");
@@ -197,13 +216,13 @@ public final class DamagePolicyGameTests {
         helper.assertTrue(receiver.getHealth() == receiver.getMaxHealth(),
                 "Extra electrical interruption must cancel mob outgoing hurt");
         helper.assertTrue(!electric.doHurtTarget(level, receiver), "Mob attack must be canceled before execution");
-        var interruption = org.academy.api.common.damage.AbilityHitEffects.electricalInterruptionTicks(electric);
+        var interruption = AbilityHitEffects.electricalInterruptionTicks(electric);
         helper.assertTrue(interruption >= 10 && interruption <= 20, "Extra lock must roll 10 through 20 ticks");
-        var arrow = new net.minecraft.world.entity.projectile.arrow.Arrow(level, electric,
-                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ARROW), null);
+        var arrow = new Arrow(level, electric,
+                new ItemStack(Items.ARROW), null);
         var arrowSource = electric.damageSources().arrow(arrow, electric);
         helper.assertTrue(!receiver.hurtServer(level, arrowSource, 10), "Attributed projectiles must also be canceled");
-        var cta = new net.minecraft.world.damagesource.DamageSource(level.registryAccess()
+        var cta = new DamageSource(level.registryAccess()
                 .lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(DamageTypes.CTA), electric);
         helper.assertTrue(!SkillDamageUtil.applyVerifiedTrueHealth(receiver, cta, 10),
                 "Direct true health damage from an interrupted mob must be canceled");
@@ -220,28 +239,28 @@ public final class DamagePolicyGameTests {
         blocked.getAttribute(Attributes.MAX_ABSORPTION).setBaseValue(100);
         blocked.setAbsorptionAmount(100);
         blocked.hurtServer(level, arc, 5);
-        helper.assertTrue(org.academy.api.common.damage.AbilityHitEffects.electricalCharge(blocked) == 0,
+        helper.assertTrue(AbilityHitEffects.electricalCharge(blocked) == 0,
                 "An absorption-only hit must not award electrical charge");
         blocked.discard();
 
         var irradiated = helper.spawn(EntityTypes.COW, 3, 2, 5);
         irradiated.getAttribute(Attributes.MAX_HEALTH).setBaseValue(1000);
         irradiated.setHealth(1000);
-        irradiated.addEffect(new net.minecraft.world.effect.MobEffectInstance(
-                net.minecraft.world.effect.MobEffects.RESISTANCE, 400, 4));
-        irradiated.addEffect(new net.minecraft.world.effect.MobEffectInstance(
-                net.minecraft.world.effect.MobEffects.NAUSEA, 400, 2));
+        irradiated.addEffect(new MobEffectInstance(
+                MobEffects.RESISTANCE, 400, 4));
+        irradiated.addEffect(new MobEffectInstance(
+                MobEffects.NAUSEA, 400, 2));
         SkillDamageUtil.apply(player, irradiated, Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get(),
                 DamageTypes.MELT_DAMAGE, 10);
         helper.assertTrue(Math.abs(irradiated.getHealth() - 990) < 0.01,
                 "Meltdowner must ignore resistance V");
-        for (var effect : List.of(net.minecraft.world.effect.MobEffects.NAUSEA,
-                net.minecraft.world.effect.MobEffects.SLOWNESS,
-                net.minecraft.world.effect.MobEffects.MINING_FATIGUE,
-                net.minecraft.world.effect.MobEffects.WEAKNESS)) {
+        for (var effect : List.of(MobEffects.NAUSEA,
+                MobEffects.SLOWNESS,
+                MobEffects.MINING_FATIGUE,
+                MobEffects.WEAKNESS)) {
             helper.assertTrue(irradiated.hasEffect(effect), "Successful melt hit must apply all radiation effects");
         }
-        helper.assertTrue(irradiated.getEffect(net.minecraft.world.effect.MobEffects.NAUSEA).getAmplifier() == 2,
+        helper.assertTrue(irradiated.getEffect(MobEffects.NAUSEA).getAmplifier() == 2,
                 "Radiation must preserve a stronger existing debuff");
         irradiated.discard();
 
@@ -251,9 +270,9 @@ public final class DamagePolicyGameTests {
         lawTarget.getAttribute(Attributes.ARMOR).setBaseValue(1000);
         lawTarget.getAttribute(Attributes.MAX_ABSORPTION).setBaseValue(1000);
         lawTarget.setAbsorptionAmount(1000);
-        lawTarget.addEffect(new net.minecraft.world.effect.MobEffectInstance(
-                net.minecraft.world.effect.MobEffects.RESISTANCE, 400, 4));
-        var law = new org.academy.api.common.damage.LawDetonationDamageSource(
+        lawTarget.addEffect(new MobEffectInstance(
+                MobEffects.RESISTANCE, 400, 4));
+        var law = new LawDetonationDamageSource(
                 SkillDamageSource.of(player, Skills.DARKMATTER_CUT.get()));
         SkillDamageUtil.applyDirect(level, lawTarget, law, 10);
         helper.assertTrue(Math.abs(lawTarget.getHealth() - 990) < 0.01,
@@ -265,15 +284,15 @@ public final class DamagePolicyGameTests {
         var armored = helper.spawn(EntityTypes.COW, 3, 2, 5);
         armored.getAttribute(Attributes.MAX_HEALTH).setBaseValue(1000);
         armored.setHealth(1000);
-        var chest = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND_CHESTPLATE);
-        armored.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST, chest);
+        var chest = new ItemStack(Items.DIAMOND_CHESTPLATE);
+        armored.setItemSlot(EquipmentSlot.CHEST, chest);
         var aero = SkillDamageSource.of(player, Skills.LAMINAR_CUTTER.get(), DamageTypes.LAMINAR_CUT);
         armored.hurtServer(level, aero, 10);
         helper.assertTrue(chest.getDamageValue() >= 9, "Air cutting must add durability wear to actual hits");
         var beforeWear = chest.getDamageValue();
-        org.academy.api.common.damage.AbilityHitEffects.damageEquipment(armored, 80, true);
+        AbilityHitEffects.damageEquipment(armored, 80, true);
         var heavyWear = chest.getDamageValue();
-        org.academy.api.common.damage.AbilityHitEffects.damageEquipment(armored, 80, true);
+        AbilityHitEffects.damageEquipment(armored, 80, true);
         helper.assertTrue(heavyWear > beforeWear && chest.getDamageValue() == heavyWear,
                 "Repeated heavy cuts must share the same short durability budget");
         armored.discard();
@@ -287,13 +306,13 @@ public final class DamagePolicyGameTests {
         defender.connection.markClientLoaded();
         defender.setGameMode(GameType.SURVIVAL);
         try {
-            org.academy.internal.common.world.damagesource.PvpSetting.trySetPvpEnabled(player, true);
-            org.academy.internal.common.world.damagesource.PvpSetting.trySetPvpEnabled(defender, true);
+            PvpSetting.trySetPvpEnabled(player, true);
+            PvpSetting.trySetPvpEnabled(defender, true);
             defender.getAttribute(Attributes.MAX_HEALTH).setBaseValue(1000);
             defender.setHealth(1000);
             defender.getAttribute(PlayerAttributes.TRUE_RESISTANCE).setBaseValue(8);
-            defender.addEffect(new net.minecraft.world.effect.MobEffectInstance(
-                    net.minecraft.world.effect.MobEffects.RESISTANCE, 400, 4));
+            defender.addEffect(new MobEffectInstance(
+                    MobEffects.RESISTANCE, 400, 4));
             SkillDamageUtil.apply(player, defender, Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get(),
                     DamageTypes.MELT_DAMAGE, 10);
             helper.assertTrue(Math.abs(defender.getHealth() - 990) < 0.01,
@@ -310,20 +329,20 @@ public final class DamagePolicyGameTests {
 
         var zombie = helper.spawn(EntityTypes.ZOMBIE, 3, 2, 5);
         zombie.setNoAi(true);
-        var drops = new java.util.ArrayList<net.minecraft.world.entity.item.ItemEntity>();
+        var drops = new ArrayList<ItemEntity>();
         var space = SkillDamageSource.of(player, Skills.THREATENING_TELEPORT.get());
-        var dropEvent = new net.neoforged.neoforge.event.entity.living.LivingDropsEvent(zombie, space, drops, true);
+        var dropEvent = new LivingDropsEvent(zombie, space, drops, true);
         long seed = 0;
         for (; seed < 100_000; seed++) {
             zombie.getRandom().setSeed(seed);
             if (zombie.getRandom().nextFloat() < 0.25f) break;
         }
         zombie.getRandom().setSeed(seed);
-        org.academy.internal.common.world.damagesource.CategoryDamageRuntime.onDrops(dropEvent);
-        helper.assertTrue(drops.size() == 1 && drops.getFirst().getItem().is(net.minecraft.world.item.Items.ZOMBIE_HEAD),
+        CategoryDamageRuntime.onDrops(dropEvent);
+        helper.assertTrue(drops.size() == 1 && drops.getFirst().getItem().is(Items.ZOMBIE_HEAD),
                 "Successful teleport lethal roll must add the matching head");
         zombie.getRandom().setSeed(seed);
-        org.academy.internal.common.world.damagesource.CategoryDamageRuntime.onDrops(dropEvent);
+        CategoryDamageRuntime.onDrops(dropEvent);
         helper.assertTrue(drops.size() == 1, "Teleport roll must not duplicate an existing head");
         zombie.discard();
     }

@@ -8,6 +8,7 @@ import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
+import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.material.Fluids;
 import org.jspecify.annotations.Nullable;
 
@@ -42,6 +43,6 @@ public final class ImagPhaseLiquidBlock extends LiquidBlock {
             return ItemStack.EMPTY;
         }
         level.setBlock(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 11);
-        return new ItemStack(org.academy.internal.common.world.item.Items.IMAG_PHASE_UNIT.get());
+        return new ItemStack(Items.IMAG_PHASE_UNIT.get());
     }
 }

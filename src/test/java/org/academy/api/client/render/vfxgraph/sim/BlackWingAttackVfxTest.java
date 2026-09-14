@@ -7,6 +7,7 @@ import org.academy.api.client.render.vfxgraph.arc.ArcCurve;
 import org.academy.api.client.render.vfxgraph.arc.CurveToMeshBuilder;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
+import org.academy.api.client.render.vfxgraph.runtime.VortexRenderBudget;
 import org.academy.api.client.render.vfxgraph.serialize.JsonVfxGraphCodec;
 import org.junit.jupiter.api.Test;
 import org.joml.Vector3f;
@@ -259,7 +260,7 @@ class BlackWingAttackVfxTest {
 
     @Test
     void everyLodStaysWithinItsReservationAndPreservesFourLandingPoints() throws Exception {
-        for (var detail : org.academy.api.client.render.vfxgraph.runtime.VortexRenderBudget.DETAILS) {
+        for (var detail : VortexRenderBudget.DETAILS) {
             var sim = simulator("black_wings");
             sim.setLiveParam("vortex_filaments", Value.of((float) detail.filaments()));
             sim.setLiveParam("vortex_segments", Value.of((float) detail.segments()));

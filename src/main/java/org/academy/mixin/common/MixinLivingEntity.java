@@ -1,5 +1,7 @@
 package org.academy.mixin.common;
 
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -32,6 +34,7 @@ import org.academy.internal.common.ability.teleport.skills.lv3.FleshRipping;
 import org.academy.internal.common.ability.teleport.skills.lv5.Flashing;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
+import org.academy.internal.common.world.damagesource.CategoryDamageRuntime;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
@@ -60,7 +63,7 @@ public abstract class MixinLivingEntity {
             CallbackInfoReturnable<Boolean> cir
     ) {
         var victim = (LivingEntity) (Object) this;
-        if (org.academy.internal.common.world.damagesource.CategoryDamageRuntime.blocksOutgoingDamage(source)) {
+        if (CategoryDamageRuntime.blocksOutgoingDamage(source)) {
             cir.setReturnValue(false);
             return;
         }
@@ -178,10 +181,10 @@ public abstract class MixinLivingEntity {
         return VectorDeviation.Server.limitHealthWrite(player, player.getHealth(), requested);
     }
 
-    @com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod(method = "actuallyHurt")
+    @WrapMethod(method = "actuallyHurt")
     private void academy$blockElectricalHurt(ServerLevel level, DamageSource source, float amount,
-                                             com.llamalad7.mixinextras.injector.wrapoperation.Operation<Void> original) {
-        if (!org.academy.internal.common.world.damagesource.CategoryDamageRuntime.blocksOutgoingDamage(source)) {
+                                             Operation<Void> original) {
+        if (!CategoryDamageRuntime.blocksOutgoingDamage(source)) {
             original.call(level, source, amount);
         }
     }

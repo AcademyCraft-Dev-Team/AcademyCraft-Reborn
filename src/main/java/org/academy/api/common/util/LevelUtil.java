@@ -27,8 +27,11 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
+import org.academy.api.server.ability.AbilityBlockDrops;
+import org.academy.api.server.ability.AbilityEffectPolicy;
 import org.academy.internal.common.ability.meltdowner.skills.lv2.MiningBeam;
 import org.academy.internal.common.world.entity.EntityTypes;
+import org.academy.internal.server.storage.SpatialStorageService;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jspecify.annotations.Nullable;
 
@@ -53,7 +56,7 @@ public class LevelUtil {
 
     /** Uses the actual world and position for blocks with context-dependent hardness. */
     public static boolean canBreakBlock(
-            BlockState blockState, BlockGetter level, BlockPos pos, int miningLevel
+            BlockState blockState, @Nullable BlockGetter level, @Nullable BlockPos pos, int miningLevel
     ) {
         if (miningLevel < 0 || blockState.getDestroySpeed(level, pos) < 0.0f) {
             return false;
@@ -362,12 +365,12 @@ public class LevelUtil {
             if (dist < minBlockedDist) {
                 var blockState = level.getBlockState(pos);
                 if (!canAbilityBreak(level, pos, blockState, breaker)) continue;
-                try (var dropScope = org.academy.api.server.ability.AbilityBlockDrops.capture(breaker)) {
+                try (var dropScope = AbilityBlockDrops.capture(breaker)) {
                     // Capture BE before setting block to air meow
                     var blockEntity = blockState.hasBlockEntity() ? level.getBlockEntity(pos) : null;
 
                     if (dropBlock || breaker != null
-                            && org.academy.internal.server.storage.SpatialStorageService.hasEnabledUnit(breaker)) {
+                            && SpatialStorageService.hasEnabledUnit(breaker)) {
                         var handled = breaker != null && level instanceof ServerLevel serverLevel
                                 && dropHandler != null
                                 && dropHandler.drop(serverLevel, pos, blockState, blockEntity, breaker);
@@ -409,7 +412,7 @@ public class LevelUtil {
             var candidateState = level.getBlockState(candidate);
             if (candidateState.isAir() || candidateState.canSurvive(level, candidate)) continue;
             if (!canAbilityBreak(level, candidate, candidateState, breaker)) continue;
-            if (breaker != null && org.academy.internal.server.storage.SpatialStorageService.hasEnabledUnit(breaker)) {
+            if (breaker != null && SpatialStorageService.hasEnabledUnit(breaker)) {
                 Block.dropResources(candidateState, level, candidate, level.getBlockEntity(candidate), breaker, ItemStack.EMPTY);
             }
             if (!level.setBlock(candidate, air, SILENT_BLOCK_UPDATE_FLAGS)) continue;
@@ -454,8 +457,8 @@ public class LevelUtil {
             BlockState state,
             @Nullable ServerPlayer breaker
     ) {
-        if (org.academy.api.server.ability.AbilityEffectPolicy.blockDestruction(level)
-                == org.academy.api.server.ability.AbilityEffectPolicy.Decision.DENY) return false;
+        if (AbilityEffectPolicy.blockDestruction(level)
+                == AbilityEffectPolicy.Decision.DENY) return false;
         if (breaker == null) return true;
         var restricted = breaker.blockActionRestricted(
                 level,

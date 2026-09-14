@@ -14,6 +14,7 @@ import org.academy.AcademyCraft;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class VectorProjectileCompatRegistry extends
@@ -48,7 +49,7 @@ public final class VectorProjectileCompatRegistry extends
         ownerlessPeerCollisionSuppressedTypes = prepared.values().stream()
                 .filter(VectorProjectileCompatProfile::suppressOwnerlessPeerCollision)
                 .flatMap(profile -> profile.entityTypes().stream())
-                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                .collect(Collectors.toUnmodifiableSet());
         AcademyCraft.LOGGER.info(
                 "Loaded {} vector projectile compatibility collision guards",
                 ownerlessPeerCollisionSuppressedTypes.size());

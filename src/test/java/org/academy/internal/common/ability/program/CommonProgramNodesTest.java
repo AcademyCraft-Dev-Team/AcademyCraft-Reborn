@@ -15,10 +15,13 @@ import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -334,8 +337,8 @@ class CommonProgramNodesTest {
 
     @Test
     void randomNodesHaveIndependentDrawsAndFanOutReusesEachNodesDraw() {
-        var randomNodes = new java.util.ArrayList<ProgramGraph.Node>();
-        var edges = new java.util.ArrayList<ProgramGraph.Edge>();
+        var randomNodes = new ArrayList<ProgramGraph.Node>();
+        var edges = new ArrayList<ProgramGraph.Edge>();
         randomNodes.add(node(1, PrecisionProgramNodeIds.ON_CAST));
         for (int i = 0; i < 24; i++) {
             int randomId = 2 + i * 3, first = randomId + 1, second = randomId + 2;
@@ -350,7 +353,7 @@ class CommonProgramNodesTest {
         randomNodes.add(node(74, CommonProgramNodeIds.STOP));
         edges.add(edge(73, "flow", 74, "flow"));
         var variables = run(new ProgramGraph(randomNodes, edges), null).variables();
-        var unique = new java.util.HashSet<Object>();
+        var unique = new HashSet<Object>();
         for (int i = 0; i < 24; i++) {
             var value = variables.get("a" + i).value();
             assertEquals(value, variables.get("b" + i).value());
@@ -448,7 +451,7 @@ class CommonProgramNodesTest {
                 )
         );
         var invocation = new ProgramInvocationContext(
-                java.util.UUID.randomUUID(),
+                UUID.randomUUID(),
                 2,
                 ProgramTriggers.Type.LOOP,
                 null,

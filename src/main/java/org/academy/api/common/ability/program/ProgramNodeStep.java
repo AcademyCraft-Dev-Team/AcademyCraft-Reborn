@@ -14,7 +14,7 @@ public record ProgramNodeStep(
         long delayTicks
 ) {
     public ProgramNodeStep {
-        outputs = outputs == null ? Map.of() : Map.copyOf(outputs);
+        outputs = Map.copyOf(outputs);
         if (delayTicks < 0) throw new IllegalArgumentException("Program delay cannot be negative");
         if (directive == Directive.YIELD && delayTicks < 1) {
             throw new IllegalArgumentException("Yielding program node must delay at least one tick");

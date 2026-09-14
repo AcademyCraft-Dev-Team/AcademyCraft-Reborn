@@ -9,7 +9,7 @@ public record ProgramEditorLayout(Map<Integer, NodePosition> nodePositions) {
     public static final ProgramEditorLayout EMPTY = new ProgramEditorLayout(Map.of());
 
     public ProgramEditorLayout {
-        nodePositions = nodePositions == null ? Map.of() : Map.copyOf(nodePositions);
+        nodePositions = Map.copyOf(nodePositions);
     }
 
     public record NodePosition(double x, double y) {

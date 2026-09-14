@@ -18,6 +18,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.api.common.util.ViewTargetScanner;
+import org.academy.api.common.vfx.SkillVfxState;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackExecutor;
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackPayload;
@@ -29,6 +30,7 @@ import org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage;
 import org.academy.internal.common.ability.meltdowner.MeltdownerTargeting;
 import org.academy.internal.common.ability.meltdowner.skills.lv1.RadiationIntensify;
 import org.academy.internal.common.ability.level0.skills.OutputControl;
+import org.academy.internal.common.ability.meltdowner.skills.lv2.MiningBeam;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
 
 import java.util.UUID;
@@ -126,7 +128,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         if (sourceSkill == Skills.MINING_BEAM.get()) {
             var harvester = resolveOwner(level);
             if (harvester != null) {
-                org.academy.internal.common.ability.meltdowner.skills.lv2.MiningBeam.executeMiningSegment(
+                MiningBeam.executeMiningSegment(
                         level, segment, 0.25f, false, breaker, harvester);
             }
             return;
@@ -335,7 +337,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         var start = position();
         var end = start.add(getLookAngle().scale(length));
         if (sourceSkill == Skills.MINING_BEAM.get()) {
-            var miningLength = org.academy.internal.common.ability.meltdowner.skills.lv2.MiningBeam
+            var miningLength = MiningBeam
                     .executeMiningSegment(level, new LinearSegment(start, end), 0.25f, true, owner, owner);
             end = start.add(getLookAngle().scale(miningLength));
             setBeamLength((float) miningLength);
@@ -428,7 +430,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
     @Override
     public boolean broadcastToPlayer(ServerPlayer player) { return false; }
 
-    public void applyVisualSnapshot(org.academy.api.common.vfx.SkillVfxState.Beam state, float elapsed) {
+    public void applyVisualSnapshot(SkillVfxState.Beam state, float elapsed) {
         if (!level().isClientSide()) throw new IllegalStateException("Visual snapshot on server");
         setPos(state.position());
         setXRot(state.xRot());

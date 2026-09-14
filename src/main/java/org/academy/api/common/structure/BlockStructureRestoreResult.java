@@ -11,7 +11,6 @@ public record BlockStructureRestoreResult(
         int affectedBlocks
 ) {
     public BlockStructureRestoreResult {
-        problemPosition = problemPosition == null ? Optional.empty() : problemPosition;
         affectedBlocks = Math.max(0, affectedBlocks);
     }
 
@@ -19,9 +18,14 @@ public record BlockStructureRestoreResult(
         return new BlockStructureRestoreResult(Status.SUCCESS, Optional.empty(), affectedBlocks);
     }
 
+    public static BlockStructureRestoreResult failure(Status status) {
+        if (status == Status.SUCCESS) throw new IllegalArgumentException("SUCCESS is not a failure");
+        return new BlockStructureRestoreResult(status, Optional.empty(), 0);
+    }
+
     public static BlockStructureRestoreResult failure(Status status, BlockPos problemPosition) {
         if (status == Status.SUCCESS) throw new IllegalArgumentException("SUCCESS is not a failure");
-        return new BlockStructureRestoreResult(status, Optional.ofNullable(problemPosition), 0);
+        return new BlockStructureRestoreResult(status, Optional.of(problemPosition), 0);
     }
 
     public boolean succeeded() {

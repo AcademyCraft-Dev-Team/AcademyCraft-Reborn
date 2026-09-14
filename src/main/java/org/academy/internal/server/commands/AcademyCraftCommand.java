@@ -40,6 +40,7 @@ import org.academy.internal.common.ability.accelerator.reflection.compat.VectorC
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatibilityMode;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.common.skilldata.SkillData;
+import org.academy.internal.server.vfx.SkillVfxRuntime;
 
 import java.io.File;
 import java.io.IOException;
@@ -101,7 +102,7 @@ public final class AcademyCraftCommand {
                         .then(Commands.literal("god")
                                 .executes(AcademyCraftCommand::toggleSkillDebugMode))
                         .then(Commands.literal("vfxstats").executes(ctx -> {
-                            var stats = org.academy.internal.server.vfx.SkillVfxRuntime.statistics();
+                            var stats = SkillVfxRuntime.statistics();
                             ctx.getSource().sendSuccess(() -> Component.literal(stats.toString()), false);
                             return 1;
                         }))

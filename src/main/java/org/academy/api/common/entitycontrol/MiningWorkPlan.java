@@ -2,6 +2,7 @@ package org.academy.api.common.entitycontrol;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
+import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -15,7 +16,7 @@ public final class MiningWorkPlan {
     public enum Eligibility { ELIGIBLE, EXCLUDED, UNLOADED }
     public record Progress(int completed, int remaining, int blocked, int active) {}
     private static final class Target {
-        UUID owner;
+        @Nullable UUID owner;
         boolean resolved;
         long retryAt;
         String reason = "";
@@ -23,7 +24,7 @@ public final class MiningWorkPlan {
     private final BlockWorkRegion region;
     private final Map<BlockPos, Target> targets = new LinkedHashMap<>();
     private long lastScan = Long.MIN_VALUE;
-    private Progress cachedProgress;
+    private @Nullable Progress cachedProgress;
 
     public MiningWorkPlan(BlockWorkRegion region) { this.region = region; }
 
@@ -49,7 +50,7 @@ public final class MiningWorkPlan {
     }
 
     /** Upper layers and exposed faces first; distribute workers across four-block work faces. */
-    public BlockPos claim(UUID worker, Vec3 position, long now, Predicate<BlockPos> exposed) {
+    public @Nullable BlockPos claim(UUID worker, Vec3 position, long now, Predicate<BlockPos> exposed) {
         var faces = new HashMap<Long, Integer>();
         targets.forEach((pos, target) -> { if (target.owner != null) faces.merge(face(pos), 1, Integer::sum); });
         BlockPos best = null;

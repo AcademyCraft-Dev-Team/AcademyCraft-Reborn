@@ -11,25 +11,31 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.util.Mth;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
+import org.academy.api.client.render.vfx.BoundedAnimationTimeline;
 import org.academy.api.client.render.vfx.Vfx;
 import org.academy.api.client.render.vfx.VfxFrameContext;
 import org.academy.api.client.render.vfx.VfxSink;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
+import org.academy.api.client.render.vfxgraph.runtime.VortexRenderBudget;
 import org.academy.api.client.util.VertexUtil;
 import org.academy.api.common.util.ImprovedNoise;
 import org.academy.api.common.ability.VortexAttackPattern;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.attachment.AttachmentTypes;
+import org.joml.FrustumIntersection;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.lwjgl.BufferUtils;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -108,8 +114,8 @@ public final class WingVfx implements Vfx {
     private static final Map<Integer, ActiveEffect> BLACK_GRAPHS = new HashMap<>();
     private static final Map<Integer, BlackPlayback> BLACK_ATTACKS = new HashMap<>();
     private static final Map<Integer, BlackVisual> BLACK_VISUALS = new HashMap<>();
-    private static final org.academy.api.client.render.vfxgraph.runtime.VortexRenderBudget BLACK_BUDGET =
-            new org.academy.api.client.render.vfxgraph.runtime.VortexRenderBudget();
+    private static final VortexRenderBudget BLACK_BUDGET =
+            new VortexRenderBudget();
     private static final class BlackVisual {
         final Matrix4f relativeRoot = new Matrix4f();
         boolean hasRoot;
@@ -139,7 +145,7 @@ public final class WingVfx implements Vfx {
 
     private static final class BlackPlayback {
         final long epoch;
-        final org.academy.api.client.render.vfx.BoundedAnimationTimeline<BlackAttack> timeline;
+        final BoundedAnimationTimeline<BlackAttack> timeline;
         final double receivedAt;
         boolean active;
         boolean entitySeen;
@@ -147,7 +153,7 @@ public final class WingVfx implements Vfx {
             this.epoch = epoch;
             this.active = active;
             receivedAt = blackTime;
-            timeline = new org.academy.api.client.render.vfx.BoundedAnimationTimeline<>(sequenceFloor);
+            timeline = new BoundedAnimationTimeline<>(sequenceFloor);
         }
     }
 
@@ -388,18 +394,18 @@ public final class WingVfx implements Vfx {
         if (level == null || !manager.isInitialized()) return;
         double now = blackVisualTime();
         var camera = ctx.camera().pos();
-        var frustum = new org.joml.FrustumIntersection(new Matrix4f(ctx.camera().projectionMatrix())
+        var frustum = new FrustumIntersection(new Matrix4f(ctx.camera().projectionMatrix())
                 .mul(ctx.camera().viewRotationMatrix()));
-        var players = new java.util.ArrayList<Player>(level.players());
+        var players = new ArrayList<Player>(level.players());
         // Reserve the local hero before admitting nearby/attacking observers to the shared budget.
-        players.sort(java.util.Comparator.comparingDouble(player -> player == minecraft.player ? -1e12
+        players.sort(Comparator.comparingDouble(player -> player == minecraft.player ? -1e12
                 : player.distanceToSqr(camera.x, camera.y, camera.z)
                 - (BLACK_ATTACKS.containsKey(player.getId()) && BLACK_ATTACKS.get(player.getId()).timeline.hasEvents() ? 256 : 0)));
         BLACK_BUDGET.beginFrame((int) players.stream().filter(player -> isActive(player, WingKind.BLACK)
                 || BLACK_TO_WHITE_TRANSITIONS.containsKey(player.getId())).count());
         blackVisibleCount = 0;
         BLACK_GRAPHS.values().forEach(effect -> effect.setFrameVisible(false));
-        var retained = new java.util.HashSet<Integer>();
+        var retained = new HashSet<Integer>();
         for (var player : players) {
             var transition = transitionProjection(player.getId(), ctx.gameTime());
             boolean active = isActive(player, WingKind.BLACK);
@@ -429,10 +435,10 @@ public final class WingVfx implements Vfx {
                     (float) (position.y - camera.y + 1.4), (float) (position.z - camera.z), (float) radius)) continue;
             double projectedDistance = distance * 1.428 / Math.max(0.1, Math.abs(ctx.camera().projectionMatrix().m11()));
             visual.requestedTier = player == minecraft.player ? 0
-                    : org.academy.api.client.render.vfxgraph.runtime.VortexRenderBudget.preferred(projectedDistance, visual.requestedTier);
+                    : VortexRenderBudget.preferred(projectedDistance, visual.requestedTier);
             int tier = BLACK_BUDGET.allocate(visual.requestedTier, fourfold);
             if (tier < 0) continue;
-            var detail = org.academy.api.client.render.vfxgraph.runtime.VortexRenderBudget.DETAILS.get(tier);
+            var detail = VortexRenderBudget.DETAILS.get(tier);
             visual.lastVisible = now;
             blackVisibleCount++;
             var effect = BLACK_GRAPHS.get(player.getId());

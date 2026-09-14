@@ -3,6 +3,7 @@ package org.academy.api.common.ability.darkmatter;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Mob;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -12,7 +13,7 @@ import java.util.Objects;
 public record DarkmatterCreatureModuleType(
         Identifier id,
         int budgetCost,
-        ModuleHandler handler
+        @Nullable ModuleHandler handler
 ) {
     public DarkmatterCreatureModuleType {
         Objects.requireNonNull(id, "id");

@@ -7,7 +7,7 @@ import org.academy.api.client.resources.R;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.api.server.ability.AbilitySystemServer;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -86,7 +86,7 @@ public interface DevCondition {
         }
 
         static boolean isSatisfied(String dependencyId, Predicate<String> isLearned) {
-            return dependencyId == null || dependencyId.isEmpty() || isLearned.test(dependencyId);
+            return dependencyId.isEmpty() || isLearned.test(dependencyId);
         }
 
         @Override

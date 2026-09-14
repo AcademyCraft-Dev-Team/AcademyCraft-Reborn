@@ -17,6 +17,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -558,7 +559,7 @@ public final class ShaderNodes {
         register(metadata, codegen,
                 type(id, "math", name,
                         List.of(in("x", "X", ValueType.FLOAT), out("out", "Out", ValueType.FLOAT)), List.of()),
-                (_, i, _) -> Map.of("out", new Expr(template.replace("{x}", i.get("x").code()), ValueType.FLOAT)));
+                (_, i, _) -> Map.of("out", new Expr(Objects.requireNonNull(template).replace("{x}", Objects.requireNonNull(i.get("x")).code()), ValueType.FLOAT)));
     }
 
     private static void registerBinaryFloat(NodeRegistry metadata, GlslNodeRegistry codegen, String id, String name, String fn) {

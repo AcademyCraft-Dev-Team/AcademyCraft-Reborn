@@ -46,6 +46,7 @@ import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.ViewTargetScanner;
+import org.academy.api.server.ability.AbilityBlockDrops;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -59,6 +60,7 @@ import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.academy.internal.common.world.item.DarkmatterItemUtil;
 import org.academy.internal.common.world.item.Items;
+import org.academy.internal.server.storage.SpatialStorageService;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -730,13 +732,13 @@ public final class DarkmatterDisassemble extends Skill {
             var state = level.getBlockState(pos);
             if (state.isAir()) return false;
             var tool = createLootTool(level.registryAccess(), fortune);
-            var drops = org.academy.api.server.ability.AbilityBlockDrops.getDrops(player,
+            var drops = AbilityBlockDrops.getDrops(player,
                     state, level, pos, level.getBlockEntity(pos), player, tool);
-            if (!org.academy.api.server.ability.AbilityBlockDrops.run(
+            if (!AbilityBlockDrops.run(
                     level, player, () -> level.destroyBlock(pos, false, player))) return false;
             for (var drop : drops) {
                 if (drop.isEmpty()) continue;
-                if (org.academy.internal.server.storage.SpatialStorageService.collect(player, drop)) continue;
+                if (SpatialStorageService.collect(player, drop)) continue;
                 if (directToInventory) player.getInventory().add(drop);
                 if (!drop.isEmpty()) Block.popResource(level, pos, drop);
             }
