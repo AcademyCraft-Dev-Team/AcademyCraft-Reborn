@@ -11,6 +11,7 @@ import org.academy.internal.common.world.entity.RenderOnlyEntity;
 
 public class RailgunRay extends RenderOnlyEntity {
     public static final float DEFAULT_LENGTH = 50.0f;
+    public static final int LIFETIME_TICKS = 40;
     private static final EntityDataAccessor<Float> BEAM_LENGTH = SynchedEntityData.defineId(
             RailgunRay.class,
             EntityDataSerializers.FLOAT
@@ -124,7 +125,7 @@ public class RailgunRay extends RenderOnlyEntity {
     @Override
     public void tick() {
         super.tick();
-        if (tickCount > 30) {
+        if (tickCount > LIFETIME_TICKS) {
             discard();
         }
     }

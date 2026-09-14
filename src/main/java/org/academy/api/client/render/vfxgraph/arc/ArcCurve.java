@@ -40,6 +40,8 @@ public final class ArcCurve {
     private long replacementGroup;
     /** Optional tube tessellation cap for thin curves; zero uses the output setting. */
     private int maxTubeSegments;
+    /** Close the last cross-section of each continuous run with a flat disk. */
+    private boolean endCap;
 
     /**
      * 可选的端点吸附表面（三角形 xyz*3/三角形；null = 自由弧不做表面吸附）。
@@ -152,6 +154,7 @@ public final class ArcCurve {
         this.driftSpeed = Float.NaN;
         this.replacementGroup = 0L;
         this.maxTubeSegments = 0;
+        this.endCap = false;
         this.archRandom = 1f;
         this.archHeight = 1f;
         this.archHalf = 0.5f;
@@ -163,6 +166,14 @@ public final class ArcCurve {
 
     public int maxTubeSegments() {
         return maxTubeSegments;
+    }
+
+    public boolean endCap() {
+        return endCap;
+    }
+
+    public void setEndCap(boolean endCap) {
+        this.endCap = endCap;
     }
 
     /** Limits thin tubes without reducing the resolution of other arcs in the same output. */

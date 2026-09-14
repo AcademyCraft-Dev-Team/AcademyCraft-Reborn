@@ -561,9 +561,6 @@ public final class Railgun extends Skill {
                                 .orElse(Vec3.ZERO)
                 );
                 player.level().addFreshEntity(railgunRay);
-                ElectromasterArcEffects.spawnBeamCoils(player.level(), resolved.outbound());
-                resolved.returnSegment().ifPresent(segment ->
-                        ElectromasterArcEffects.spawnBeamCoils(player.level(), segment));
 
                 if (DestroyBlocksSetting.canDestroyBlocks(player, skill)) {
                     destroyBlocksAlongSegment(resolved.outbound(), player, beamRadius);

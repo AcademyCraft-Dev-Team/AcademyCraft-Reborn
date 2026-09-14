@@ -1,0 +1,380 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "railgun_shot",
+  "parameters": [
+    {
+      "id": "time",
+      "name": "time",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": -1
+      }
+    },
+    {
+      "id": "seed",
+      "name": "seed",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 42
+      }
+    },
+    {
+      "id": "length",
+      "name": "length",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 50
+      }
+    },
+    {
+      "id": "width_scale",
+      "name": "width scale",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "radius",
+      "name": "radius",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.832
+      }
+    },
+    {
+      "id": "duration",
+      "name": "duration",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1.6
+      }
+    },
+    {
+      "id": "opacity",
+      "name": "opacity",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "detail",
+      "name": "detail",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "muzzle",
+      "name": "muzzle",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "view_near_origin",
+      "name": "view near origin",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    },
+    {
+      "id": "radius_envelope",
+      "name": "半径 / 小 → 大 → 中",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0,
+            "v": 0.18,
+            "i": "SMOOTH",
+            "it": 0,
+            "ot": 0
+          },
+          {
+            "t": 0.048124999999999994,
+            "v": 1,
+            "i": "SMOOTH",
+            "it": 0,
+            "ot": 0
+          },
+          {
+            "t": 0.15125,
+            "v": 0.56,
+            "i": "SMOOTH",
+            "it": 0,
+            "ot": 0
+          },
+          {
+            "t": 0.8281249999999999,
+            "v": 0.56,
+            "i": "SMOOTH",
+            "it": 0,
+            "ot": 0
+          },
+          {
+            "t": 1,
+            "v": 0.45,
+            "i": "SMOOTH",
+            "it": 0,
+            "ot": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "beam_opacity",
+      "name": "炮束 / 点火与余辉",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0,
+            "v": 0.7,
+            "i": "SMOOTH",
+            "it": 0,
+            "ot": 0
+          },
+          {
+            "t": 0.017187499999999998,
+            "v": 1,
+            "i": "SMOOTH",
+            "it": 0,
+            "ot": 0
+          },
+          {
+            "t": 0.6906249999999999,
+            "v": 0.96,
+            "i": "SMOOTH",
+            "it": 0,
+            "ot": 0
+          },
+          {
+            "t": 0.84875,
+            "v": 0.45,
+            "i": "SMOOTH",
+            "it": 0,
+            "ot": 0
+          },
+          {
+            "t": 1,
+            "v": 0,
+            "i": "SMOOTH",
+            "it": 0,
+            "ot": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "arc_opacity",
+      "name": "电弧 / 爆发与消散",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0,
+            "v": 0,
+            "i": "SMOOTH",
+            "it": 0,
+            "ot": 0
+          },
+          {
+            "t": 0.0309375,
+            "v": 1,
+            "i": "SMOOTH",
+            "it": 0,
+            "ot": 0
+          },
+          {
+            "t": 0.165,
+            "v": 0.92,
+            "i": "SMOOTH",
+            "it": 0,
+            "ot": 0
+          },
+          {
+            "t": 0.65625,
+            "v": 0.42,
+            "i": "SMOOTH",
+            "it": 0,
+            "ot": 0
+          },
+          {
+            "t": 0.8075,
+            "v": 0,
+            "i": "SMOOTH",
+            "it": 0,
+            "ot": 0
+          },
+          {
+            "t": 1,
+            "v": 0,
+            "i": "SMOOTH",
+            "it": 0,
+            "ot": 0
+          }
+        ]
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "beam",
+      "name": "01 / 橙色外焰 · 金色内焰 · 白热炮芯",
+      "type": "SPAWN",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "outer_corona",
+          "type": "vfx.block.axial_beam",
+          "properties": {
+            "radius_scale": "1.95",
+            "intensity": "0.15",
+            "red": "1",
+            "green": "0.2",
+            "blue": "0.025"
+          }
+        },
+        {
+          "id": "orange_stream",
+          "type": "vfx.block.axial_beam",
+          "properties": {
+            "radius_scale": "1",
+            "intensity": "0.6",
+            "red": "1",
+            "green": "0.34",
+            "blue": "0.055"
+          }
+        },
+        {
+          "id": "gold_channel",
+          "type": "vfx.block.axial_beam",
+          "properties": {
+            "radius_scale": "0.56",
+            "intensity": "0.94",
+            "red": "1",
+            "green": "0.69",
+            "blue": "0.28"
+          }
+        },
+        {
+          "id": "white_core",
+          "type": "vfx.block.axial_beam",
+          "properties": {
+            "radius_scale": "0.25",
+            "intensity": "1",
+            "red": "1",
+            "green": "0.98",
+            "blue": "0.85"
+          }
+        }
+      ]
+    },
+    {
+      "id": "electricity",
+      "name": "02 / 蓝白电弧 · 空间折返与细分支",
+      "type": "SPAWN",
+      "x": 0,
+      "y": 600,
+      "blocks": [
+        {
+          "id": "blue_discharge",
+          "type": "vfx.block.axial_discharge",
+          "properties": {
+            "spread": "2.8",
+            "arcs": "7",
+            "arc_width": "0.11",
+            "arc_reach": "25",
+            "flicker_rate": "18"
+          }
+        }
+      ]
+    },
+    {
+      "id": "pressure",
+      "name": "03 / 破碎气浪 · 放射火星",
+      "type": "SPAWN",
+      "x": 0,
+      "y": 950,
+      "blocks": [
+        {
+          "id": "pressure_front",
+          "type": "vfx.block.axial_shock",
+          "properties": {
+            "shock_radius": "3.8",
+            "rings": "3",
+            "sparks": "22"
+          }
+        }
+      ]
+    },
+    {
+      "id": "render",
+      "name": "04 / 柔边体积光与辉光",
+      "type": "OUTPUT",
+      "x": 700,
+      "y": 180,
+      "blocks": [
+        {
+          "id": "luminous_output",
+          "type": "vfx.block.output_arc",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_arc",
+            "shader": "academy:core/vfxgraph_axial_burst",
+            "blend": "glow",
+            "thickness": "1",
+            "emission": "1.15",
+            "sparks": "0",
+            "segments": "16",
+            "overall_scale": "1",
+            "branch_depth": "0",
+            "branch_count": "0",
+            "noise_strength": "0",
+            "drift_speed": "0",
+            "branch_brightness_scale": "1"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "beam",
+      "to": "render"
+    },
+    {
+      "from": "electricity",
+      "to": "render"
+    },
+    {
+      "from": "pressure",
+      "to": "render"
+    }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "luminous_output"
+  ]
+}
