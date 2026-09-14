@@ -9,10 +9,12 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.ResolvableProfile;
@@ -31,8 +33,10 @@ import org.academy.api.common.ability.event.SkillExecutionPreEvent;
 import org.academy.api.common.damage.DamageComposition;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.time.TemporalApi;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.mentalout.control.MentalControlMobAccess;
+import org.academy.internal.server.time.TemporalRuntime;
 import org.academy.mixin.common.CooldownInstanceAccess;
 import org.academy.mixin.common.ItemCooldownsAccess;
 import org.jspecify.annotations.Nullable;
@@ -106,7 +110,7 @@ public final class CategoryDamageRuntime {
 
     public static boolean blocksOutgoingDamage(DamageSource source) {
         var owner = source.getEntity();
-        if (owner == null && source.getDirectEntity() instanceof net.minecraft.world.entity.projectile.Projectile projectile) {
+        if (owner == null && source.getDirectEntity() instanceof Projectile projectile) {
             owner = projectile.getOwner();
         }
         if (owner == null) owner = source.getDirectEntity();
@@ -195,7 +199,7 @@ public final class CategoryDamageRuntime {
         }
         if (target instanceof Mob mob) {
             if (mob instanceof MentalControlMobAccess access) access.academy$stopAutonomousGoals();
-            ((net.minecraft.world.entity.ai.Brain<LivingEntity>) mob.getBrain())
+            ((Brain<LivingEntity>) mob.getBrain())
                     .stopAll((ServerLevel) mob.level(), mob);
             mob.getNavigation().stop();
         }

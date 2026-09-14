@@ -1,6 +1,7 @@
 package org.academy.api.common.ability.darkmatter;
 
 import java.util.Locale;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Built-in shape catalogue. The GUI is populated from this catalogue instead of fixed buttons.
@@ -75,7 +76,7 @@ public enum DarkmatterShape {
         return this != COATING && this != BLOCK;
     }
 
-    public static DarkmatterShape byId(String id) {
+    public static DarkmatterShape byId(@Nullable String id) {
         if (id == null) return TOOL;
         for (var value : values()) if (value.id().equals(id)) return value;
         return TOOL;

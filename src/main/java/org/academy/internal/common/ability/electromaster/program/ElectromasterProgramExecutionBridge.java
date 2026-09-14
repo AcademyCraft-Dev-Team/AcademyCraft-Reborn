@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.LongSupplier;
 
 /**
  * Shared-VM execution gateway for Electromaster programs.
@@ -84,7 +85,7 @@ public final class ElectromasterProgramExecutionBridge {
             ElectromasterProgramRuntime runtime,
             ProgramActionTransaction transaction,
             ProgramInvocationContext invocation,
-            java.util.function.LongSupplier worldGameTime
+            LongSupplier worldGameTime
     ) {
         Objects.requireNonNull(program, "program");
         Objects.requireNonNull(runtime, "runtime");

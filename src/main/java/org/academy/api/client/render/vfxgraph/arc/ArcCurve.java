@@ -1,6 +1,7 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
 import java.util.Arrays;
+import org.jspecify.annotations.Nullable;
 
 /**
  * 单条电弧（M22-Rev2）：控制点序列 + 每点宽度 + 分支层级 + 颜色 + 生命周期。
@@ -46,7 +47,7 @@ public final class ArcCurve {
     /**
      * 可选的端点吸附表面（三角形 xyz*3/三角形；null = 自由弧不做表面吸附）。
      */
-    private float[] surface;
+    private float @Nullable [] surface;
 
     /**
      * 本帧新增标记（M29b-02）：{@link ArcBuffer#add} 置 true，{@link ArcBuffer#advance} 开头清全量。
@@ -126,7 +127,7 @@ public final class ArcCurve {
     /**
      * 火花粒子速度（Blender 粒子模拟：位置 += 速度×dt + 重力×dt²；null 或未设置 = 非粒子）。
      */
-    private float[] sparkVelocity;
+    private float @Nullable [] sparkVelocity;
 
     public ArcCurve() {
     }
@@ -434,14 +435,14 @@ public final class ArcCurve {
     /**
      * 设置端点吸附表面（三角形数组；null = 自由弧）。
      */
-    public void setSurface(float[] triangles) {
+    public void setSurface(float @Nullable [] triangles) {
         this.surface = triangles;
     }
 
     /**
      * 获取端点吸附表面；null = 自由弧。
      */
-    public float[] surface() {
+    public float @Nullable [] surface() {
         return surface;
     }
 
@@ -544,7 +545,7 @@ public final class ArcCurve {
     /**
      * 火花粒子初速度；null = 非粒子弧（普通弧/接触弧）。
      */
-    public float[] sparkVelocity() {
+    public float @Nullable [] sparkVelocity() {
         return sparkVelocity;
     }
 

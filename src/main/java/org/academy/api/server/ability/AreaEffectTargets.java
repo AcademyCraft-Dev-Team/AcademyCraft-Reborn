@@ -27,6 +27,6 @@ public final class AreaEffectTargets {
     }
 
     private static boolean valid(Vec3 value) {
-        return value != null && Double.isFinite(value.x) && Double.isFinite(value.y) && Double.isFinite(value.z);
+        return Double.isFinite(value.x) && Double.isFinite(value.y) && Double.isFinite(value.z);
     }
 }

@@ -1,6 +1,7 @@
 package org.academy.mixin.common;
 
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.Pose;
@@ -9,6 +10,7 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import org.academy.api.common.entitycontrol.AttackDecision;
 import org.academy.internal.common.ability.mentalout.control.MentalControlMobAccess;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
+import org.academy.internal.common.world.damagesource.CategoryDamageRuntime;
 import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -21,9 +23,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(Mob.class)
 public abstract class MixinMob implements MentalControlMobAccess {
     @Inject(method = "doHurtTarget", at = @At("HEAD"), cancellable = true)
-    private void academy$blockElectricalAttack(ServerLevel level, net.minecraft.world.entity.Entity target,
+    private void academy$blockElectricalAttack(ServerLevel level, Entity target,
                                                CallbackInfoReturnable<Boolean> cir) {
-        if (org.academy.internal.common.world.damagesource.CategoryDamageRuntime.blocksMobAttack((Mob) (Object) this)) {
+        if (CategoryDamageRuntime.blocksMobAttack((Mob) (Object) this)) {
             cir.setReturnValue(false);
         }
     }

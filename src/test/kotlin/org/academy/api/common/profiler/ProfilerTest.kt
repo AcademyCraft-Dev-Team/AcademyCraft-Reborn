@@ -43,8 +43,7 @@ class ProfilerTest {
             AcademyProfiler.stopSampling()
         }
         val snap = AcademyProfiler.snapshot()
-        val sampler = snap.sampler
-        assertNotNull(sampler, "sampler snapshot should exist after start/stop")
+        val sampler = snap.sampler ?: error("sampler snapshot should exist after start/stop")
         assertTrue(sampler.totalSamples() > 0, "expected samples to be captured")
         val view = sampler.threads()[target.id]
         assertNotNull(view)

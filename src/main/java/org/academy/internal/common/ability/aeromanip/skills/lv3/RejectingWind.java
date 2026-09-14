@@ -49,6 +49,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -168,7 +169,7 @@ public final class RejectingWind extends Skill {
 
     public static final class Server {
         private static final Map<ServerPlayer, ChargeContext> CHARGES = new WeakHashMap<>();
-        private static final Map<UUID, LowDragContext> LOW_DRAG = new java.util.HashMap<>();
+        private static final Map<UUID, LowDragContext> LOW_DRAG = new HashMap<>();
 
         private Server() {
         }

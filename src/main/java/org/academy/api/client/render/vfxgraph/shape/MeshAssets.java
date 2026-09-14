@@ -33,7 +33,7 @@ public final class MeshAssets {
     /**
      * 查询网格三角形；未注册返回 null。
      */
-    public static @Nullable float[] triangles(String id) {
+    public static float @Nullable [] triangles(String id) {
         return TRIANGLES.get(id);
     }
 
@@ -48,7 +48,7 @@ public final class MeshAssets {
      * 查询表面三角形：先查注册表（外部 OBJ 注册），再查内置生成器
      * （{@code builtin:plane}/{@code builtin:sphere}）；均无返回 null。
      */
-    public static @Nullable float[] resolve(String id) {
+    public static float @Nullable [] resolve(@Nullable String id) {
         if (id == null || id.isEmpty()) return null;
         var registered = TRIANGLES.get(id);
         if (registered != null) return registered;

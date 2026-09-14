@@ -14,8 +14,10 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.program.ForwardingProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
+import org.academy.api.common.ability.program.ProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.util.ViewTargetScanner;
@@ -39,7 +41,7 @@ import java.util.*;
  * Authoritative Minecraft-server adapter for Electromaster programs.
  */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
-public final class ServerElectromasterProgramRuntime implements ElectromasterProgramRuntime, org.academy.api.common.ability.program.ForwardingProgramTargetResolver {
+public final class ServerElectromasterProgramRuntime implements ElectromasterProgramRuntime, ForwardingProgramTargetResolver {
     public static final double MAX_QUERY_RANGE = AbilityProgramSpatialRanges.forCategory(
             ElectromasterProgramNodeCatalog.ELECTROMASTER).queryRange();
     public static final double MAX_ACTION_RANGE = AbilityProgramSpatialRanges.forCategory(
@@ -53,7 +55,7 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     private final float costMultiplier;
     private final ServerProgramTargetResolver targets;
     @Override
-    public org.academy.api.common.ability.program.ProgramTargetResolver targetResolver() {
+    public ProgramTargetResolver targetResolver() {
         return targets;
     }
 

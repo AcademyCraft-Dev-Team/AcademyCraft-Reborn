@@ -2,6 +2,7 @@ package org.academy.api.common.ability.program;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
+import org.jspecify.annotations.Nullable;
 
 import java.util.HashSet;
 import java.util.List;
@@ -30,9 +31,7 @@ public record ProgramNodeEditorMetadata(
         requireText(translationKey, "translationKey");
         requireText(portTranslationPrefix, "portTranslationPrefix");
         defaultConfiguration = defaultConfiguration.deepCopy();
-        configurationOptions = configurationOptions == null
-                ? Map.of()
-                : configurationOptions.entrySet().stream().collect(Collectors.toUnmodifiableMap(
+        configurationOptions = configurationOptions.entrySet().stream().collect(Collectors.toUnmodifiableMap(
                 entry -> requireText(entry.getKey(), "configuration field"),
                 entry -> validatedOptions(entry.getKey(), entry.getValue())
         ));
@@ -57,7 +56,7 @@ public record ProgramNodeEditorMetadata(
     }
 
     public Optional<ConfigurationOption> selectedOption(String field, JsonElement value) {
-        if (value == null || !value.isJsonPrimitive()) return Optional.empty();
+        if (!value.isJsonPrimitive()) return Optional.empty();
         var primitive = value.getAsJsonPrimitive();
         return options(field).stream().filter(option -> option.value().equals(primitive)).findFirst();
     }
@@ -66,7 +65,7 @@ public record ProgramNodeEditorMetadata(
             String field,
             List<ConfigurationOption> options
     ) {
-        if (options == null || options.isEmpty()) {
+        if (options.isEmpty()) {
             throw new IllegalArgumentException(
                     "Program editor options cannot be empty for field " + field);
         }
@@ -82,7 +81,7 @@ public record ProgramNodeEditorMetadata(
         return copy;
     }
 
-    private static String requireText(String value, String name) {
+    private static String requireText(@Nullable String value, String name) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException("Program editor " + name + " cannot be blank");
         }

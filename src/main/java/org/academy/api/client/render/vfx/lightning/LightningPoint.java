@@ -1,12 +1,13 @@
 package org.academy.api.client.render.vfx.lightning;
 
 import org.joml.Vector3f;
+import org.jspecify.annotations.Nullable;
 
 public final class LightningPoint {
-    public Vector3f position;
-    public Vector3f forwardAxis;
-    public Vector3f rightAxis;
-    public Vector3f upAxis;
+    public @Nullable Vector3f position;
+    public @Nullable Vector3f forwardAxis;
+    public @Nullable Vector3f rightAxis;
+    public @Nullable Vector3f upAxis;
     public boolean supportsNextGenerations;
 
     public LightningPoint() {

@@ -1,6 +1,7 @@
 package org.academy.internal.server.storage;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.server.MinecraftServer;
@@ -11,10 +12,13 @@ import net.neoforged.neoforge.transfer.item.ItemResource;
 import org.academy.AcademyCraft;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Predicate;
 import java.util.function.ToLongBiFunction;
 
 /** Contents belong to the world, and survive transfers of the physical unit between players. */
@@ -22,8 +26,8 @@ public final class SpatialStorageSavedData extends SavedData {
     private record Entry(ItemResource resource, long count) {
         private static final Codec<Entry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 ItemResource.CODEC.fieldOf("resource").forGetter(Entry::resource),
-                Codec.LONG.validate(value -> value > 0 ? com.mojang.serialization.DataResult.success(value)
-                        : com.mojang.serialization.DataResult.error(() -> "Storage count must be positive")).fieldOf("count").forGetter(Entry::count)
+                Codec.LONG.validate(value -> value > 0 ? DataResult.success(value)
+                        : DataResult.error(() -> "Storage count must be positive")).fieldOf("count").forGetter(Entry::count)
         ).apply(instance, Entry::new));
     }
 
@@ -39,7 +43,7 @@ public final class SpatialStorageSavedData extends SavedData {
     public static final SavedDataType<SpatialStorageSavedData> TYPE = new SavedDataType<>(
             AcademyCraft.academy("spatial_storage"), SpatialStorageSavedData::new, CODEC);
     private final Map<UUID, LinkedHashMap<ItemResource, Long>> contents = new LinkedHashMap<>();
-    private final java.util.Set<UUID> transferring = new java.util.HashSet<>();
+    private final Set<UUID> transferring = new HashSet<>();
 
     public SpatialStorageSavedData() {
     }
@@ -70,7 +74,7 @@ public final class SpatialStorageSavedData extends SavedData {
     }
 
     /** Consume a single matching item, used when a harvesting effect replants its crop. */
-    public boolean consumeOne(UUID id, java.util.function.Predicate<ItemResource> predicate) {
+    public boolean consumeOne(UUID id, Predicate<ItemResource> predicate) {
         var items = contents.get(id);
         if (items == null || transferring.contains(id)) return false;
         var iterator = items.entrySet().iterator();

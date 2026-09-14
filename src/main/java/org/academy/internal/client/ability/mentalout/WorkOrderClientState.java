@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.core.BlockPos;
+import org.academy.api.common.entitycontrol.MiningWorkPlan;
 import org.academy.api.common.entitycontrol.WorkSettings;
 import java.util.*;
 
@@ -25,10 +26,10 @@ public final class WorkOrderClientState {
         var states = snapshot.getAsJsonObject("states");
         return states != null && states.has(id.toString()) ? states.get(id.toString()).getAsString() : "none";
     }
-    public static Optional<org.academy.api.common.entitycontrol.MiningWorkPlan.Progress> progress() {
+    public static Optional<MiningWorkPlan.Progress> progress() {
         try {
             var value = snapshot.getAsJsonObject("progress");
-            return value == null ? Optional.empty() : Optional.of(new org.academy.api.common.entitycontrol.MiningWorkPlan.Progress(
+            return value == null ? Optional.empty() : Optional.of(new MiningWorkPlan.Progress(
                     value.get("completed").getAsInt(), value.get("remaining").getAsInt(),
                     value.get("blocked").getAsInt(), value.get("active").getAsInt()));
         } catch (RuntimeException ignored) { return Optional.empty(); }

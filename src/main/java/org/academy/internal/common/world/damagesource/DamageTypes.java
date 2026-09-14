@@ -7,6 +7,7 @@ import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.player.Player;
 import org.academy.AcademyCraft;
 import org.academy.api.common.damage.DamageSettlement;
+import org.academy.api.common.damage.LawDetonationDamageSource;
 
 import java.util.Set;
 

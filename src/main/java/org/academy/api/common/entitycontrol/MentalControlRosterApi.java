@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /** Stable public access to the Mentalout controller's retained subject roster. */
 public final class MentalControlRosterApi {
@@ -28,11 +29,7 @@ public final class MentalControlRosterApi {
         var results = new ArrayList<MentaloutControlContext.ToggleResult>();
         var existing = MentaloutControlContext.get(controller);
         for (var candidate : List.copyOf(candidates)) {
-            if (candidate == null) {
-                rejected++;
-                continue;
-            }
-            if (existing != null && existing.contains(candidate.getUUID())) {
+            if (existing.contains(candidate.getUUID())) {
                 alreadyControlled++;
                 continue;
             }
@@ -50,11 +47,11 @@ public final class MentalControlRosterApi {
 
     /** Releases the requested subjects through the same path used by Mental Intervention. */
     public static int release(ServerPlayer controller, Set<UUID> subjectIds) {
-        if (controller == null || subjectIds == null || subjectIds.isEmpty()) return 0;
+        if (subjectIds.isEmpty()) return 0;
         var controlled = MentaloutControlContext.subjects(controller).stream()
                 .map(LivingEntity::getUUID)
                 .filter(subjectIds::contains)
-                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                .collect(Collectors.toUnmodifiableSet());
         MentaloutControlContext.releaseInterventionSubjects(controller, controlled);
         return controlled.size();
     }

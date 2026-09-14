@@ -1,6 +1,7 @@
 package org.academy.internal.common.world.item;
 
 import com.mojang.serialization.Codec;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -9,6 +10,8 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import org.academy.api.common.ability.darkmatter.DarkmatterBlockProfile;
 import org.academy.api.common.ability.darkmatter.DarkmatterIntegrity;
 import org.academy.api.common.ability.darkmatter.DarkmatterShapingProfile;
+
+import java.util.UUID;
 
 import static org.academy.AcademyCraft.MOD_ID;
 
@@ -45,10 +48,10 @@ public final class ItemDataComponents {
                     .persistent(DarkmatterBlockProfile.CODEC)
                     .networkSynchronized(DarkmatterBlockProfile.STREAM_CODEC));
 
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<java.util.UUID>> SPATIAL_STORAGE_ID =
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<UUID>> SPATIAL_STORAGE_ID =
             DATA_COMPONENTS.registerComponentType("spatial_storage_id", builder -> builder
-                    .persistent(net.minecraft.core.UUIDUtil.CODEC)
-                    .networkSynchronized(net.minecraft.core.UUIDUtil.STREAM_CODEC));
+                    .persistent(UUIDUtil.CODEC)
+                    .networkSynchronized(UUIDUtil.STREAM_CODEC));
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Boolean>> SPATIAL_STORAGE_ENABLED =
             DATA_COMPONENTS.registerComponentType("spatial_storage_enabled", builder -> builder
                     .persistent(Codec.BOOL).networkSynchronized(ByteBufCodecs.BOOL));

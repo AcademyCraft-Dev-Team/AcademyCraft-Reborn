@@ -15,6 +15,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -47,8 +49,8 @@ public interface MixinEntityGetter {
         var shapes = new ArrayList<VoxelShape>(entities.size() + indexedStructures.size());
         var emittedStructures = indexedStructures.isEmpty()
                 ? null
-                : java.util.Collections.newSetFromMap(
-                new java.util.IdentityHashMap<Entity, Boolean>());
+                : Collections.newSetFromMap(
+                new IdentityHashMap<Entity, Boolean>());
         for (var entity : entities) {
             if (entity instanceof BlockStructureCollision structureCollision) {
                 if (emittedStructures != null) emittedStructures.add(entity);

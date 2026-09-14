@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.mentalout;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -16,7 +17,7 @@ class MentalResistanceTrackerTest {
             assertTrue(tracker.tick(tick, _ -> true).isEmpty());
         }
         tracker.mark(subject, 501);
-        assertEquals(java.util.List.of(subject), tracker.tick(501, _ -> true));
+        assertEquals(List.of(subject), tracker.tick(501, _ -> true));
         assertEquals(100, tracker.remainingTicks(subject, 501));
         assertEquals(1, tracker.remainingTicks(subject, 600));
         assertEquals(0, tracker.remainingTicks(subject, 601));

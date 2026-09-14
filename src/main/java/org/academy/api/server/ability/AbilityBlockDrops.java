@@ -20,7 +20,7 @@ import java.util.function.BooleanSupplier;
  * Block movement and the teleport program's block-teleport node must not enter this scope.
  */
 public final class AbilityBlockDrops {
-    private static final ThreadLocal<ServerPlayer> BREAKER = new ThreadLocal<>();
+    private static final ThreadLocal<@Nullable ServerPlayer> BREAKER = new ThreadLocal<>();
 
     private AbilityBlockDrops() {
     }

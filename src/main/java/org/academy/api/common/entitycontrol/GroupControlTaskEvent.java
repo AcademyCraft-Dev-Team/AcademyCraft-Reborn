@@ -11,7 +11,7 @@ public record GroupControlTaskEvent(
 ) {
     public GroupControlTaskEvent {
         Objects.requireNonNull(subjectId, "subjectId");
-        subjectName = subjectName == null || subjectName.isBlank() ? subjectId.toString() : subjectName;
+        subjectName = subjectName.isBlank() ? subjectId.toString() : subjectName;
         Objects.requireNonNull(status, "status");
     }
 

@@ -38,6 +38,7 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.event.SkillExecutionFinishEvent;
 import org.academy.api.common.ability.event.SkillExecutionStartEvent;
+import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.team.TeamRelations;
@@ -161,7 +162,7 @@ public final class SpacialExcision extends Skill {
         }
 
         public static class Config extends KeyBindingConfig {
-            public static final class Action implements org.academy.api.common.gson.TypeHandler<Config> {
+            public static final class Action implements TypeHandler<Config> {
                 public static final Action INSTANCE = new Action();
 
                 private Action() {

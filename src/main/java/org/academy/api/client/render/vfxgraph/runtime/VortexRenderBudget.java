@@ -1,5 +1,7 @@
 package org.academy.api.client.render.vfxgraph.runtime;
 
+import java.util.List;
+
 /** Conservative pre-simulation bounds; counts both wings and all fourfold branches. */
 public final class VortexRenderBudget {
     public static final int MAX_VERTICES = 120_000;
@@ -11,7 +13,7 @@ public final class VortexRenderBudget {
         }
         public long maxBytes(boolean fourfold) { return (long) maxVertices(fourfold) * 72; }
     }
-    public static final java.util.List<Detail> DETAILS = java.util.List.of(
+    public static final List<Detail> DETAILS = List.of(
             new Detail(18, 100, 8, 24), new Detail(12, 64, 6, 12), new Detail(8, 40, 4, 6),
             new Detail(4, 24, 3, 0), new Detail(3, 24, 3, 0)
     );

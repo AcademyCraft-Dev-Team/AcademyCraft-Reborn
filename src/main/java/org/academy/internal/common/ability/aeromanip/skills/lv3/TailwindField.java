@@ -8,6 +8,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -276,7 +277,7 @@ public final class TailwindField extends Skill {
                         field.durationTicks(), field.proficiencyMilestone());
                 AeromanipFieldSyncPacket.sendToTracking(owner, updated, true);
             }
-            var box = new net.minecraft.world.phys.AABB(center, center).inflate(field.radius());
+            var box = new AABB(center, center).inflate(field.radius());
             var cap = ProficiencyPolicy.server(owner).maxBonusEntitiesPerTick();
             EntityMotionGuard.runWithMotionSource(owner, () -> {
                 var localHandled = 0;

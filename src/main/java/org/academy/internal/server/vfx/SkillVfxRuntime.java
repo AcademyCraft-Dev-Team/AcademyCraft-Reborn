@@ -15,8 +15,10 @@ import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
+import org.academy.api.common.vfx.EffectUpdateQueue;
 import org.academy.api.common.vfx.EffectVisibility;
 import org.academy.api.common.vfx.SkillVfxState;
+import org.academy.internal.common.ability.accelerator.skills.lv5.PlasmaGeneration;
 import org.academy.internal.common.network.SkillVfxPacket;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
 import org.academy.internal.common.world.entity.skill.Plasma;
@@ -26,7 +28,7 @@ import org.misaka.MisakaNetworkServer;
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class SkillVfxRuntime {
     private static final Map<Entity, Entry> ACTIVE = new IdentityHashMap<>();
-    private static final Map<ServerPlayer, org.academy.api.common.vfx.EffectUpdateQueue<SkillVfxPacket>> UPDATES = new IdentityHashMap<>();
+    private static final Map<ServerPlayer, EffectUpdateQueue<SkillVfxPacket>> UPDATES = new IdentityHashMap<>();
     private static long nextId;
     private static long physicalTick;
     private static long sentPackets;
@@ -95,7 +97,7 @@ public final class SkillVfxRuntime {
                         entry.observers.put(observer.getUUID(), observer);
                         if (!wasWatching || transition) send(observer, packet);
                         else if (changed || heartbeat) {
-                            UPDATES.computeIfAbsent(observer, ignored -> new org.academy.api.common.vfx.EffectUpdateQueue<>(256))
+                            UPDATES.computeIfAbsent(observer, ignored -> new EffectUpdateQueue<>(256))
                                     .offer(entry.id, packet, physicalTick);
                         }
                     } else if (wasWatching) {
@@ -145,7 +147,7 @@ public final class SkillVfxRuntime {
         var p = (Plasma) entity;
         float chargeRate = entry.last instanceof SkillVfxState.Plasma old
                 ? Math.clamp((p.getGatherProgress() - old.progress()) / elapsed, 0f, 1f)
-                : 1f / org.academy.internal.common.ability.accelerator.skills.lv5.PlasmaGeneration.MAX_CHARGE_TICKS;
+                : 1f / PlasmaGeneration.MAX_CHARGE_TICKS;
         return new SkillVfxState.Plasma(p.position(), entry.chargeOrigin, p.visualTarget(),
                 p.getGatherProgress(), p.visualSpeed(), p.visualLaunchDelay(), p.isLaunched(), rate, chargeRate);
     }

@@ -9,8 +9,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
+import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.api.common.profiler.AcademyProfiler;
 import org.academy.api.common.profiler.ProfileDump;
+import org.academy.internal.client.render.vfx.SkillVfxClient;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,9 +38,9 @@ public final class ClientProfileCommand {
                 .then(Commands.literal("reset").executes(ClientProfileCommand::reset))
                 .then(Commands.literal("status").executes(ClientProfileCommand::status))
                 .then(Commands.literal("vfx").executes(ctx -> {
-                    var stats = org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager.INSTANCE.frameStatistics();
+                    var stats = VfxGraphManager.INSTANCE.frameStatistics();
                     ctx.getSource().sendSuccess(() -> Component.literal(stats + ", receivedVfxPackets="
-                            + org.academy.internal.client.render.vfx.SkillVfxClient.receivedPackets()), false);
+                            + SkillVfxClient.receivedPackets()), false);
                     return 1;
                 }))
                 .then(zonesCommand())

@@ -11,6 +11,7 @@ import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.level.block.Rotation;
@@ -228,7 +229,7 @@ public final class TemporalTickEventCompatibilityGameTests {
 
     private static final class TickEventProbe {
         private final UUID targetId;
-        private final net.minecraft.server.level.ServerLevel targetLevel;
+        private final ServerLevel targetLevel;
         private int serverPreTicks;
         private int levelPreTicks;
         private int entityPreTicks;
@@ -237,7 +238,7 @@ public final class TemporalTickEventCompatibilityGameTests {
 
         private TickEventProbe(Entity target) {
             targetId = target.getUUID();
-            targetLevel = (net.minecraft.server.level.ServerLevel) target.level();
+            targetLevel = (ServerLevel) target.level();
         }
 
         @SubscribeEvent

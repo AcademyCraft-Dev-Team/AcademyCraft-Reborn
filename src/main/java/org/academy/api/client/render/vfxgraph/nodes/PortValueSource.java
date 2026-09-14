@@ -3,6 +3,7 @@ package org.academy.api.client.render.vfxgraph.nodes;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
 import org.academy.api.client.render.vfxgraph.sim.SimContext;
+import org.jspecify.annotations.Nullable;
 
 /**
  * 块输入端口值源（M25）：数据流绑定经此向块提供端口值。
@@ -19,7 +20,7 @@ public interface PortValueSource {
      * @param buffer        粒子缓冲
      * @param ctx           模拟帧上下文
      */
-    Value eval(String portId, int particleIndex, ParticleBuffer buffer, SimContext ctx);
+    @Nullable Value eval(String portId, int particleIndex, ParticleBuffer buffer, SimContext ctx);
 
     /**
      * 无绑定的空实现：所有端口恒返回 null（块用属性默认值）。

@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
@@ -45,8 +46,8 @@ public final class ProgramNodeEditorOptions {
      */
     public static List<Option> options(
             Identifier nodeType,
-            String field,
-            JsonElement currentValue
+            @Nullable String field,
+            @Nullable JsonElement currentValue
     ) {
         Objects.requireNonNull(nodeType, "nodeType");
         if (field == null || field.isBlank()) return List.of();
@@ -54,7 +55,7 @@ public final class ProgramNodeEditorOptions {
         if (provider == null) return List.of();
         var supplied = provider.options(field,
                 currentValue == null ? null : currentValue.deepCopy());
-        if (supplied == null || supplied.isEmpty()) return List.of();
+        if (supplied.isEmpty()) return List.of();
         if (supplied.size() > MAX_OPTIONS) {
             throw new IllegalArgumentException(
                     "Dynamic program editor options exceed the " + MAX_OPTIONS + " entry limit");
@@ -69,7 +70,7 @@ public final class ProgramNodeEditorOptions {
 
     @FunctionalInterface
     public interface Provider {
-        List<Option> options(String field, JsonElement currentValue);
+        List<Option> options(String field, @Nullable JsonElement currentValue);
     }
 
     @FunctionalInterface

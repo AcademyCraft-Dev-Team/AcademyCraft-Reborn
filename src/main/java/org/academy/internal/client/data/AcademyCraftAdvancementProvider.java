@@ -9,6 +9,8 @@ import net.minecraft.advancements.triggers.PlayerTrigger;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.advancements.AdvancementSubProvider;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.ItemLike;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.advancement.AbilityAdvancements;
 import org.academy.internal.common.world.item.Items;
@@ -45,8 +47,8 @@ public final class AcademyCraftAdvancementProvider implements AdvancementSubProv
     private static void branch(
             Consumer<AdvancementHolder> output,
             AdvancementHolder parent,
-            net.minecraft.resources.Identifier id,
-            net.minecraft.world.level.ItemLike icon,
+            Identifier id,
+            ItemLike icon,
             String name
     ) {
         output.accept(Advancement.Builder.advancement()

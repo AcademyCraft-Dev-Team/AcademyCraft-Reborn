@@ -1,23 +1,30 @@
 package org.academy.internal.common.ability.aeromanip;
 
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
+import org.academy.api.common.damage.AbilityHitEffects;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.WeakHashMap;
 
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class AeromanipDisplacementTracker {
@@ -28,7 +35,7 @@ public final class AeromanipDisplacementTracker {
     static final float INITIAL_DAMAGE = 2.0f;
     static final float MAX_SETTLEMENT_DAMAGE = 20.0f;
     static final int INITIAL_HIT_INTERVAL_TICKS = 20;
-    private static final Map<LivingEntity, Long> INITIAL_HITS = new java.util.WeakHashMap<>();
+    private static final Map<LivingEntity, Long> INITIAL_HITS = new WeakHashMap<>();
     private static final double MOTION_EPSILON_SQUARED = 1.0e-8;
     private static final Map<UUID, Ticket> TICKETS = new HashMap<>();
     private static final EquipmentSlot[] ARMOR_SLOTS = {
@@ -180,13 +187,13 @@ public final class AeromanipDisplacementTracker {
         var center = target.position().add(0.0, target.getBbHeight() * 0.5, 0.0);
         AeromanipVfx.burst(owner.level(), center, collision ? 1.2 : 0.65);
         if (collision) AeromanipVfx.ring(owner.level(), center, 1.4);
-        owner.level().playSound(null, target.blockPosition(), net.minecraft.sounds.SoundEvents.BUBBLE_COLUMN_BUBBLE_POP,
-                net.minecraft.sounds.SoundSource.PLAYERS, collision ? 0.9f : 0.65f, collision ? 0.65f : 1.15f);
+        owner.level().playSound(null, target.blockPosition(), SoundEvents.BUBBLE_COLUMN_BUBBLE_POP,
+                SoundSource.PLAYERS, collision ? 0.9f : 0.65f, collision ? 0.65f : 1.15f);
         return true;
     }
 
     private static void damageArmor(LivingEntity target, int amount) {
-        org.academy.api.common.damage.AbilityHitEffects.damageEquipment(target, amount, false);
+        AbilityHitEffects.damageEquipment(target, amount, false);
     }
 
     @SubscribeEvent
@@ -204,7 +211,7 @@ public final class AeromanipDisplacementTracker {
 
     private static final class Ticket {
         private final UUID ownerId;
-        private final net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dimension;
+        private final ResourceKey<Level> dimension;
         private Vec3 lastPosition;
         private long expiresAt;
         private long nextSettlementAt;
@@ -215,7 +222,7 @@ public final class AeromanipDisplacementTracker {
 
         private Ticket(
                 UUID ownerId,
-                net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dimension,
+                ResourceKey<Level> dimension,
                 Vec3 lastPosition,
                 long expiresAt,
                 long nextSettlementAt

@@ -3,8 +3,11 @@ package org.academy.api.common.entitycontrol;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.Vec3;
+import org.jspecify.annotations.Nullable;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -33,7 +36,7 @@ public final class GroupControlNavigation {
             LivingEntity subject,
             Vec3 preferred
     ) {
-        if (subject == null || preferred == null || !isFinite(preferred)) return Optional.empty();
+        if (!isFinite(preferred)) return Optional.empty();
         for (var offset : SEARCH_OFFSETS) {
             var candidate = preferred.add(offset[0], offset[1], offset[2]);
             if (canOccupy(subject, candidate)) return Optional.of(candidate);
@@ -49,8 +52,8 @@ public final class GroupControlNavigation {
             LivingEntity subject,
             Vec3 preferred
     ) {
-        if (subject == null || preferred == null || !isFinite(preferred)) return Optional.empty();
-        var candidates = java.util.Arrays.stream(SEARCH_OFFSETS)
+        if (!isFinite(preferred)) return Optional.empty();
+        var candidates = Arrays.stream(SEARCH_OFFSETS)
                 .map(offset -> preferred.add(offset[0], offset[1], offset[2]))
                 .filter(candidate -> canOccupy(subject, candidate))
                 .toList();
@@ -62,7 +65,7 @@ public final class GroupControlNavigation {
                 ))
                 .filter(candidate -> candidate.path() != null && candidate.path().canReach())
                 .min(Comparator
-                        .comparingInt((ReachableCandidate candidate) -> candidate.path().getNodeCount())
+                        .comparingInt(GroupControlNavigation::pathNodeCount)
                         .thenComparingDouble(candidate -> subject.distanceToSqr(candidate.position())))
                 .map(ReachableCandidate::position);
     }
@@ -72,7 +75,6 @@ public final class GroupControlNavigation {
             LivingEntity subject,
             BlockPos workBlock
     ) {
-        if (subject == null || workBlock == null) return Optional.empty();
         var candidates = Stream.of(
                         workBlock.above(),
                         workBlock.north(), workBlock.south(), workBlock.west(), workBlock.east(),
@@ -96,14 +98,14 @@ public final class GroupControlNavigation {
                 ))
                 .filter(candidate -> candidate.path() != null && candidate.path().canReach())
                 .min(Comparator
-                        .comparingInt((ReachableCandidate candidate) -> candidate.path().getNodeCount())
+                        .comparingInt(GroupControlNavigation::pathNodeCount)
                         .thenComparingDouble(candidate -> subject.distanceToSqr(candidate.position())))
                 .map(ReachableCandidate::position);
     }
 
     /** Checks the loaded world, border, and the subject's full collision box. */
     public static boolean canOccupy(LivingEntity subject, Vec3 candidate) {
-        if (subject == null || candidate == null || !isFinite(candidate)) return false;
+        if (!isFinite(candidate)) return false;
         var level = subject.level();
         var block = BlockPos.containing(candidate);
         if (block.getY() < level.getMinY() || block.getY() >= level.getMaxY()
@@ -117,6 +119,11 @@ public final class GroupControlNavigation {
         return Double.isFinite(value.x) && Double.isFinite(value.y) && Double.isFinite(value.z);
     }
 
-    private record ReachableCandidate(Vec3 position, net.minecraft.world.level.pathfinder.Path path) {
+    private static int pathNodeCount(ReachableCandidate candidate) {
+        var path = candidate.path();
+        return path == null ? Integer.MAX_VALUE : path.getNodeCount();
+    }
+
+    private record ReachableCandidate(Vec3 position, @Nullable Path path) {
     }
 }

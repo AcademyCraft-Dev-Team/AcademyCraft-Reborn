@@ -1,8 +1,13 @@
 package org.academy.api.common.entitycontrol;
 
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.internal.common.ability.mentalout.control.GroupControlRuntime;
+
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 /** Public entry point for reusable, adapter-backed group orders. */
 public final class GroupControlApi {
@@ -17,17 +22,17 @@ public final class GroupControlApi {
         return GroupControlRuntime.dispatch(request);
     }
 
-    public static void pauseWork(net.minecraft.server.MinecraftServer server, java.util.UUID controller,
-                                 java.util.Set<java.util.UUID> subjects, boolean paused) {
+    public static void pauseWork(MinecraftServer server, UUID controller,
+                                 Set<UUID> subjects, boolean paused) {
         GroupControlRuntime.setWorkPaused(server, controller, subjects, paused);
     }
 
-    public static void cancelWork(net.minecraft.server.MinecraftServer server, java.util.UUID controller,
-                                  java.util.Set<java.util.UUID> subjects) {
+    public static void cancelWork(MinecraftServer server, UUID controller,
+                                  Set<UUID> subjects) {
         GroupControlRuntime.cancelWork(server, controller, subjects);
     }
 
-    public static java.util.Optional<GroupControlInspection> inspect(LivingEntity subject) {
+    public static Optional<GroupControlInspection> inspect(LivingEntity subject) {
         return GroupControlRuntime.inspect(subject);
     }
 
@@ -38,16 +43,16 @@ public final class GroupControlApi {
     }
 
     public static void cancelByControllerAndSource(
-            java.util.UUID controllerId,
+            UUID controllerId,
             Identifier source
     ) {
         GroupControlRuntime.cancelByControllerAndSource(controllerId, source);
     }
 
     public static void cancelSubjects(
-            java.util.UUID controllerId,
+            UUID controllerId,
             Identifier source,
-            java.util.Set<java.util.UUID> subjectIds
+            Set<UUID> subjectIds
     ) {
         GroupControlRuntime.cancelSubjects(controllerId, source, subjectIds);
     }
