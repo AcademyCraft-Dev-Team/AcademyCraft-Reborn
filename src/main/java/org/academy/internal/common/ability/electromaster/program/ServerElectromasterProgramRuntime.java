@@ -153,7 +153,7 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
                 if (targetType == ElectromasterProgramNodeCatalog.EnergyTargetType.ENTITY) {
                     target = requireEntityTarget(targetReference);
                     targetKey = entityKey(target);
-                    if (!MagnetManipulation.isMagnetic(target)) {
+                    if (!org.academy.api.common.ability.electromaster.MagneticTargets.isMagnetic(target)) {
                         throw new IllegalArgumentException("Entity target is not magnetic");
                     }
                     requireEntityInRange(target, MAX_ACTION_RANGE);
@@ -171,7 +171,7 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
                                 || !isEditableBlock(sourceBlock, sourceState)) {
                             throw new IllegalArgumentException("Block target is not magnetically movable");
                         }
-                        forcedMagnetizationApplied = !MagnetManipulation.isMagnetic(sourceState);
+                        forcedMagnetizationApplied = !org.academy.api.common.ability.electromaster.MagneticTargets.isMagnetic(sourceState);
                         if (forcedMagnetizationApplied && !forceMagnetize) {
                             throw new IllegalArgumentException(
                                     "Block target requires forced magnetization");
@@ -577,7 +577,7 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
             }
             var origin = controlledTarget.getBoundingBox().getCenter();
             var difference = destination.subtract(origin);
-            var velocity = MagnetManipulation.calculateControlledBlockVelocity(
+            var velocity = org.academy.api.common.ability.electromaster.MagneticMovement.calculatePullVelocity(
                     controlledTarget.getDeltaMovement(), origin, destination,
                     difference, magneticMoveSpeed(power), 0.65);
             if (finiteNonZero(velocity)) {

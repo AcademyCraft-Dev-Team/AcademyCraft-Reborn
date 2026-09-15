@@ -830,6 +830,9 @@ public final class PacketTypes {
     /**
      * Phase 5 - Ultimate and Signature Skills
      */
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, IronSandArsenal.ActionPacket>>
+            IRON_SAND_ACTION = PACKET_TYPES.register("iron_sand_action",
+            () -> new PacketType<>(IronSandArsenal.ActionPacket.class, IronSandArsenal.ActionPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, IronSandArsenal.TogglePacket>>
             IRON_SAND_ARSENAL_TOGGLE = PACKET_TYPES.register("iron_sand_arsenal_toggle",
             () -> new PacketType<>(IronSandArsenal.TogglePacket.class, IronSandArsenal.TogglePacket.CODEC));

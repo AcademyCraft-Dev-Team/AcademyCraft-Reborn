@@ -43,14 +43,13 @@ final class MentalControlProtection {
     private static @Nullable Kind kind(LivingEntity subject, boolean intervention) {
         if (subject == null) return Kind.IMMUNE_TAG;
         if (subject instanceof DarkmatterBeetle) return Kind.DARKMATTER_NETWORK;
-        if (subject.getType().builtInRegistryHolder().is(IMMUNE_ENTITY_TYPES)) return Kind.IMMUNE_TAG;
+        if (org.academy.api.common.entitycontrol.MentalImmunity.isImmune(subject)) return Kind.IMMUNE_TAG;
         if (!intervention && MentalResistanceManager.isAutomaticallyResistant(subject)) return Kind.MENTAL_RESISTANCE;
         if (!(subject instanceof ServerPlayer player)) return null;
         if (MentalResistanceManager.isManuallyResistant(player)) return Kind.MENTAL_RESISTANCE;
         if (VectorReflection.Server.isActive(player) || VectorDeviation.Server.isActive(player)) {
             return Kind.VECTOR_FILTER;
         }
-        if (ElectromagneticShield.Server.isActive(player)) return Kind.ELECTROMAGNETIC_FIELD;
         if (DarkmatterSixWings.Server.isActive(player)) return Kind.DARKMATTER_UNKNOWN;
         return null;
     }

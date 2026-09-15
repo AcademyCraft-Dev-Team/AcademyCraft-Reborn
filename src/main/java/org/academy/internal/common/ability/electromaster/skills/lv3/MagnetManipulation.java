@@ -88,31 +88,6 @@ public class MagnetManipulation extends Skill {
     static final double TARGET_FRONT_DISTANCE = 2.5;
     static final float MOVE_CP_COST = 10.0f;
     static final int MOVE_CP_INTERVAL_TICKS = 20;
-    private static final TagKey<Block> MAGNETIC_BLOCKS = TagKey.create(
-            Registries.BLOCK,
-            Identifier.fromNamespaceAndPath(AcademyCraft.MOD_ID, "magnetic_blocks")
-    );
-    private static final TagKey<Item> MAGNETIC_ITEMS = TagKey.create(
-            Registries.ITEM,
-            Identifier.fromNamespaceAndPath(AcademyCraft.MOD_ID, "magnetic_items")
-    );
-    private static final TagKey<EntityType<?>> MAGNETIC_ENTITY_TYPES = TagKey.create(
-            Registries.ENTITY_TYPE,
-            Identifier.fromNamespaceAndPath(AcademyCraft.MOD_ID, "magnetic_entities")
-    );
-    private static final EquipmentSlot[] CHECKED_EQUIPMENT_SLOTS = {
-            EquipmentSlot.MAINHAND,
-            EquipmentSlot.OFFHAND,
-            EquipmentSlot.HEAD,
-            EquipmentSlot.CHEST,
-            EquipmentSlot.LEGS,
-            EquipmentSlot.FEET,
-            EquipmentSlot.BODY
-    };
-    private static final List<String> MAGNETIC_KEYWORDS = List.of(
-            "iron", "steel", "ferrous", "ferric", "magnetic", "magnetite", "hematite"
-    );
-
     public MagnetManipulation() {
         super(Builder
                 .of(AbilityCategories.ELECTROMASTER.get())
@@ -132,22 +107,9 @@ public class MagnetManipulation extends Skill {
         return direction.normalize().scale(MOVE_SPEED_PER_TICK);
     }
 
-    static Vec3 calculatePullVelocity(Vec3 currentVelocity, Vec3 origin, Vec3 target,
-                                      Vec3 fallbackDirection, double maxSpeed, double stopDistance) {
-        if (!isFinite(currentVelocity) || !isFinite(origin) || !isFinite(target) || !isFinite(fallbackDirection)) {
-            return Vec3.ZERO;
-        }
-        var direction = target.subtract(origin);
-        var distance = direction.length();
-        if (!Double.isFinite(distance)) return Vec3.ZERO;
-        if (distance <= stopDistance) return currentVelocity.scale(0.25);
-        if (distance <= 1.0e-6) direction = fallbackDirection;
-        if (direction.lengthSqr() <= 1.0e-6) return Vec3.ZERO;
-        var speed = Math.clamp((distance - stopDistance) * 0.22, 0.12, maxSpeed);
-        var desired = direction.normalize().scale(speed);
-        var velocity = currentVelocity.scale(0.2).add(desired.scale(0.8));
-        var length = velocity.length();
-        return length > maxSpeed ? velocity.scale(maxSpeed / length) : velocity;
+    static Vec3 calculatePullVelocity(Vec3 current, Vec3 origin, Vec3 target,
+                                      Vec3 fallback, double maxSpeed, double stopDistance) {
+        return MagneticMovement.calculatePullVelocity(current, origin, target, fallback, maxSpeed, stopDistance);
     }
 
     /**
@@ -175,110 +137,48 @@ public class MagnetManipulation extends Skill {
         return Double.isFinite(value.x) && Double.isFinite(value.y) && Double.isFinite(value.z);
     }
 
-    static boolean isIronRelatedPath(String path) {
-        return hasMagneticKeyword(path);
-    }
-
-    static boolean hasMagneticKeyword(String path) {
-        if (path == null || path.isBlank()) return false;
-        var normalized = path.toLowerCase(Locale.ROOT).replace('-', '_');
-        var tokens = normalized.split("[/_.]");
-        for (var token : tokens) {
-            if (MAGNETIC_KEYWORDS.contains(token)) return true;
-        }
-        return false;
-    }
-
-    static boolean isMagneticTagPath(String path) {
-        if (path == null) return false;
-        var normalized = path.toLowerCase(Locale.ROOT);
-        if (normalized.startsWith("incorrect_for_")
-                || normalized.startsWith("needs_")
-                || normalized.startsWith("mineable/")
-                || normalized.startsWith("enchantable/")) return false;
-        return hasMagneticKeyword(normalized);
-    }
-
-    public static boolean isMagnetic(BlockState state) {
-        var block = state.getBlock();
-        var blockPath = BuiltInRegistries.BLOCK.getKey(block).getPath();
-        if (blockPath.equals("obsidian") || blockPath.equals("crying_obsidian")) return false;
-        var sound = state.getSoundType();
-        if (state.is(MAGNETIC_BLOCKS)
-                || sound == SoundType.IRON
-                || sound == SoundType.ANVIL
-                || sound == SoundType.CHAIN) {
-            return true;
-        }
-        if (hasMagneticKeyword(blockPath)) return true;
-        return block.builtInRegistryHolder().tags()
-                .anyMatch(tag -> isMagneticTagPath(tag.location().getPath()));
-    }
-
-    static boolean isMagnetic(ItemStack stack) {
-        if (stack.isEmpty()) return false;
-        if (stack.is(MAGNETIC_ITEMS)) return true;
-        var item = stack.getItem();
-        if (hasMagneticKeyword(BuiltInRegistries.ITEM.getKey(item).getPath())) return true;
-        return item.builtInRegistryHolder().tags()
-                .anyMatch(tag -> isMagneticTagPath(tag.location().getPath()));
-    }
-
-    public static boolean isMagnetic(Entity entity) {
-        if (entity instanceof MagneticallyManipulable magneticTarget
-                && magneticTarget.canBeMagneticallyManipulated()) return true;
-        if (entity instanceof FallingBlockEntity fallingBlock && isMagnetic(fallingBlock.getBlockState())) return true;
-        if (entity instanceof ItemEntity itemEntity && isMagnetic(itemEntity.getItem())) return true;
-
-        var type = entity.getType();
-        if (type.builtInRegistryHolder().is(MAGNETIC_ENTITY_TYPES)
-                || hasMagneticKeyword(BuiltInRegistries.ENTITY_TYPE.getKey(type).getPath())
-                || type.builtInRegistryHolder().tags()
-                .anyMatch(tag -> isMagneticTagPath(tag.location().getPath()))) {
-            return true;
-        }
-        if (!(entity instanceof LivingEntity living)) return false;
-        for (var slot : CHECKED_EQUIPMENT_SLOTS) {
-            if (isMagnetic(living.getItemBySlot(slot))) return true;
-        }
-        return false;
-    }
+    public static boolean isIronRelatedPath(String path) { return org.academy.api.common.ability.electromaster.MagneticTargets.isIronRelatedPath(path); }
+    public static boolean hasMagneticKeyword(String path) { return org.academy.api.common.ability.electromaster.MagneticTargets.hasMagneticKeyword(path); }
+    public static boolean isMagneticTagPath(String path) { return org.academy.api.common.ability.electromaster.MagneticTargets.isMagneticTagPath(path); }
+    public static boolean isMagnetic(BlockState state) { return org.academy.api.common.ability.electromaster.MagneticTargets.isMagnetic(state); }
+    public static boolean isMagnetic(ItemStack stack) { return org.academy.api.common.ability.electromaster.MagneticTargets.isMagnetic(stack); }
+    public static boolean isMagnetic(Entity entity) { return org.academy.api.common.ability.electromaster.MagneticTargets.isMagnetic(entity); }
 
     @Override
     public void initClient() {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        if (!Client.CONFIG.containsKeyBinding(Client.KEY_NAME_START)
-                && Client.CONFIG.containsKeyBinding(Client.OLD_KEY_NAME_MOVE_START)) {
-            Client.CONFIG.setKeyBinding(Client.KEY_NAME_START,
-                    Client.CONFIG.getKeyBinding(Client.OLD_KEY_NAME_MOVE_START));
+        var oldSelf = Client.CONFIG.getKeyBinding(Client.KEY_NAME_START);
+        if (oldSelf == null) oldSelf = Client.CONFIG.getKeyBinding(Client.OLD_KEY_NAME_MOVE_START);
+        var oldSelfDefault = InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.PRESS, 0);
+        if (!Client.CONFIG.containsKeyBinding(Client.KEY_NAME_LEVITATION) && oldSelf != null && !oldSelf.equals(oldSelfDefault)) {
+            Client.CONFIG.setKeyBinding(Client.KEY_NAME_LEVITATION, InputSystem.withAction(oldSelf, InputConstants.PRESS));
         }
-        if (!Client.CONFIG.containsKeyBinding(Client.KEY_NAME_STOP)
-                && Client.CONFIG.containsKeyBinding(Client.OLD_KEY_NAME_MOVE_STOP)) {
-            Client.CONFIG.setKeyBinding(Client.KEY_NAME_STOP,
-                    Client.CONFIG.getKeyBinding(Client.OLD_KEY_NAME_MOVE_STOP));
-        }
-        InputSystem.addKeyBinding(Client.KEY_NAME_START, Client.CONFIG.getKeyBinding(Client.KEY_NAME_START,
-                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.PRESS, 0))
-                , _ -> Client.onMoveStart(PullMode.PLAYER_TO_TARGET));
-        InputSystem.addKeyBinding(Client.KEY_NAME_STOP, Client.CONFIG.getKeyBinding(Client.KEY_NAME_STOP,
-                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.RELEASE, 0))
-                , _ -> Client.onMoveStop(PullMode.PLAYER_TO_TARGET));
-        InputSystem.addKeyBinding(Client.KEY_NAME_TARGET_START,
+        for (var obsolete : List.of(Client.KEY_NAME_START, Client.KEY_NAME_STOP,
+                Client.OLD_KEY_NAME_MOVE_START, Client.OLD_KEY_NAME_MOVE_STOP, Client.KEY_NAME_TARGET_STOP)) Client.CONFIG.removeKeyBinding(obsolete);
+        InputSystem.addMaintainedKeyBinding(Client.KEY_NAME_TARGET_START,
                 Client.CONFIG.getKeyBindingMigratingDefaults(Client.KEY_NAME_TARGET_START,
-                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_N,
-                                InputConstants.PRESS, 0),
-                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X,
-                                InputConstants.PRESS, 0))
-                , _ -> Client.onMoveStart(PullMode.TARGET_TO_PLAYER));
-        InputSystem.addKeyBinding(Client.KEY_NAME_TARGET_STOP,
-                Client.CONFIG.getKeyBindingMigratingDefaults(Client.KEY_NAME_TARGET_STOP,
-                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_N,
-                                InputConstants.RELEASE, 0),
-                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X,
-                                InputConstants.RELEASE, 0))
-                , _ -> Client.onMoveStop(PullMode.TARGET_TO_PLAYER));
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.PRESS, 0),
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_N, InputConstants.PRESS, 0),
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X, InputConstants.PRESS, 0)),
+                _ -> Client.onMoveStart(PullMode.TARGET_TO_PLAYER),
+                _ -> Client.onMoveStop(PullMode.TARGET_TO_PLAYER),
+                _ -> { if (Client.activeMode != null && ++Client.heartbeatTicks % 10 == 0) MisakaNetworkClient.send(MoveStartPacket.TARGET_TO_PLAYER); },
+                () -> AbilitySystemClient.canUseSkill(this) && Minecraft.getInstance().player != null
+                        && Minecraft.getInstance().player.isAlive() && Minecraft.getInstance().gui.screen() == null);
+        InputSystem.addKeyBinding(Client.KEY_NAME_LEVITATION,
+                Client.CONFIG.getKeyBinding(Client.KEY_NAME_LEVITATION,
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.PRESS, InputConstants.MOD_SHIFT)),
+                _ -> { if (AbilitySystemClient.canUseSkill(this)) MisakaNetworkClient.send(MoveStartPacket.PLAYER_TO_TARGET); });
+        org.academy.api.client.hud.ability.ToggleStatusHud.Companion.registerStateProvider(this,
+                () -> Minecraft.getInstance().player != null && Minecraft.getInstance().player.getData(AttachmentTypes.MAGNETIC_LEVITATION_REQUESTED));
+        org.academy.api.client.hud.ability.ToggleStatusHud.Companion.registerDetailProvider(this, () -> {
+            var player = Minecraft.getInstance().player;
+            return player != null && player.getData(AttachmentTypes.MAGNETIC_LEVITATION_ACTIVE)
+                    ? net.minecraft.network.chat.Component.translatable("hud.academy.magnetic_field.hovering").getString()
+                    : net.minecraft.network.chat.Component.translatable("hud.academy.magnetic_field.no_support").getString();
+        });
     }
 
     @Override
@@ -302,6 +202,7 @@ public class MagnetManipulation extends Skill {
                         46
                 )
         );
+        public static final String KEY_NAME_LEVITATION = SkillNames.MAGNET_MANIPULATION + "_levitation";
         public static final String KEY_NAME_START = SkillNames.MAGNET_MANIPULATION + "_start";
         public static final String KEY_NAME_STOP = SkillNames.MAGNET_MANIPULATION + "_stop";
         public static final String KEY_NAME_TARGET_START = SkillNames.MAGNET_MANIPULATION + "_target_start";
@@ -312,6 +213,7 @@ public class MagnetManipulation extends Skill {
         private static SoundInstance loopSound;
         private static @Nullable PullMode activeMode;
         private static int activeTicks;
+        private static int heartbeatTicks;
 
         public static void onMoveStart(PullMode mode) {
             if (!AbilitySystemClient.canUseSkill(Skills.MAGNET_MANIPULATION.get())) return;
@@ -322,6 +224,7 @@ public class MagnetManipulation extends Skill {
             }
             activeMode = mode;
             activeTicks = 0;
+            heartbeatTicks = 0;
             stopLoopSound();
             loopSound = new LoopingPlayerSoundInstance(
                     player, SoundEvents.MAGNET_MOVE_LOOP.get(), 1.0f, 1.0f,
@@ -369,9 +272,7 @@ public class MagnetManipulation extends Skill {
         private static final Map<Player, MoveContext> ACTIVE_MOVEMENT = createContextMap();
 
         public static boolean isControllingSelfMovement(ServerPlayer player) {
-            var context = ACTIVE_MOVEMENT.get(player);
-            return context != null && !context.ended && context.controlsGravity
-                    && context.mode == PullMode.PLAYER_TO_TARGET;
+            return org.academy.internal.common.ability.electromaster.MagneticFieldRuntime.isHovering(player);
         }
 
         @SubscribePacket
@@ -381,8 +282,16 @@ public class MagnetManipulation extends Skill {
                 return;
             }
 
+            if (packet.getMode() == PullMode.PLAYER_TO_TARGET) {
+                org.academy.internal.common.ability.electromaster.MagneticFieldRuntime.toggle(player);
+                return;
+            }
             var previous = ACTIVE_MOVEMENT.get(player);
-            if (previous != null) previous.end();
+            if (previous != null) {
+                previous.heartbeat = player.level().getServer().getTickCount();
+                return;
+            }
+            if (!org.academy.api.server.ability.SkillAvailability.requestExecution(player, Skills.MAGNET_MANIPULATION.get(), false)) return;
 
             var context = new MoveContext(player, packet.getMode());
             ACTIVE_MOVEMENT.put(player, context);
@@ -404,34 +313,32 @@ public class MagnetManipulation extends Skill {
 
     public static final class MoveContext extends ServerContext {
         private final ResourceKey<Level> dimension;
+        private long heartbeat;
         private final PullMode mode;
         private @Nullable Entity controlledTarget;
         private boolean controlsFallingBlock;
-        private @Nullable MagneticTarget selfAnchor;
-        private boolean arrived;
-        private boolean hovering;
-        private boolean controlsGravity;
-        private final boolean previousNoGravity;
-        private double hoverHeight = MagneticMovement.DEFAULT_HOVER_HEIGHT;
         private int movingTicks;
         private boolean ended;
 
         private MoveContext(ServerPlayer player, PullMode mode) {
             super(player);
             dimension = player.level().dimension();
+            heartbeat = player.level().getServer().getTickCount();
             this.mode = mode;
-            previousNoGravity = player.isNoGravity();
         }
 
         @SubscribeEvent
         public void onTick(ServerTickEvent.Pre event) {
+            if (ended) return;
+            if (player.level().getServer().getTickCount() - heartbeat > 40) { end(); return; }
             var skill = Skills.MAGNET_MANIPULATION.get();
             if (player.hasDisconnected()
                     || !player.isAlive()
                     || player.isSpectator()
                     || player.isPassenger()
                     || !player.level().dimension().equals(dimension)
-                    || !skill.isEnabled(player)) {
+                    || !skill.isEnabled(player)
+                    || !org.academy.api.server.ability.SkillAvailability.requestExecution(player, skill, true)) {
                 end();
                 return;
             }
@@ -444,9 +351,7 @@ public class MagnetManipulation extends Skill {
                 end();
                 return;
             }
-            var moved = mode == PullMode.TARGET_TO_PLAYER
-                    ? pullTargetToPlayer()
-                    : pullPlayerToTarget();
+            var moved = pullTargetToPlayer();
             if (!moved) {
                 end();
                 return;
@@ -454,73 +359,6 @@ public class MagnetManipulation extends Skill {
             if (movingTicks == 0) skill.reportTrigger(player);
             skill.reportActivity(player, true);
             movingTicks++;
-        }
-
-        private boolean pullPlayerToTarget() {
-            if (selfAnchor == null && !hovering) {
-                selfAnchor = findCrosshairTarget();
-                if (selfAnchor == null) {
-                    if (findGround(Vec3.ZERO).getType() == HitResult.Type.MISS) return false;
-                    hovering = true;
-                }
-            }
-            var input = player.getLastClientInput();
-            if (input == null) input = Input.EMPTY;
-            var forward = (input.forward() ? 1.0 : 0.0) - (input.backward() ? 1.0 : 0.0);
-            var strafe = (input.left() ? 1.0 : 0.0) - (input.right() ? 1.0 : 0.0);
-            var horizontal = MagneticMovement.flightDirection(
-                    player.getYRot(), forward, strafe, MOVE_SPEED_PER_TICK);
-            Vec3 velocity;
-            if (hovering) {
-                var ground = findGround(horizontal);
-                if (ground.getType() == HitResult.Type.MISS) return false;
-                hoverHeight = MagneticMovement.adjustHoverHeight(hoverHeight, input.jump(), input.shift());
-                velocity = MagneticMovement.hoverVelocity(player.getDeltaMovement(), horizontal,
-                        player.getY(), ground.getLocation().y, hoverHeight);
-            } else {
-                var anchor = selfAnchor;
-                if (anchor == null) return false;
-                Vec3 destination;
-                if (anchor.entity() != null) {
-                    var maxAnchorRange = Skills.MAGNET_MANIPULATION.get()
-                            .scaledRange(player, MOVE_RANGE * 1.25);
-                    if (!anchor.entity().isAlive() || anchor.entity().level() != level()
-                            || player.distanceToSqr(anchor.entity()) > maxAnchorRange * maxAnchorRange) {
-                        return false;
-                    }
-                    destination = anchor.entity().getBoundingBox().getCenter();
-                    velocity = calculatePullVelocity(player.getDeltaMovement(),
-                            player.getBoundingBox().getCenter(), destination, player.getLookAngle(),
-                            MOVE_SPEED_PER_TICK, PLAYER_STOP_DISTANCE);
-                } else {
-                    var pos = anchor.blockPos();
-                    if (pos == null || !level().hasChunkAt(pos)
-                            || level().getBlockState(pos).getCollisionShape(level(), pos).isEmpty()) return false;
-                    destination = MagneticMovement.anchorPosition(anchor.location(), anchor.face(),
-                            player.getBbWidth(), player.getBbHeight(), hoverHeight);
-                    arrived |= player.position().distanceToSqr(destination) <= 0.25;
-                    if (arrived && (anchor.face() == Direction.UP || horizontal.lengthSqr() > 0.0)
-                            && findGround(horizontal).getType() != HitResult.Type.MISS) {
-                        hovering = true;
-                        return pullPlayerToTarget();
-                    }
-                    velocity = MagneticMovement.approachVelocity(
-                            player.getDeltaMovement(), player.position(), destination, MOVE_SPEED_PER_TICK);
-                }
-            }
-            controlsGravity = true;
-            player.setNoGravity(true);
-            player.setDeltaMovement(velocity);
-            player.connection.send(new ClientboundSetEntityMotionPacket(player));
-            player.resetFallDistance();
-            return true;
-        }
-
-        private BlockHitResult findGround(Vec3 horizontal) {
-            // Probe ahead to follow stairs and slopes while retaining normal collision handling.
-            var start = player.position().add(horizontal).add(0.0, 1.0, 0.0);
-            return level().clip(new ClipContext(start, start.add(0.0, -MagneticMovement.GROUND_REACH, 0.0),
-                    ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
         }
 
         private boolean pullTargetToPlayer() {
@@ -537,16 +375,20 @@ public class MagnetManipulation extends Skill {
             var look = player.getLookAngle();
             var destination = player.getEyePosition().add(look.scale(TARGET_FRONT_DISTANCE));
             var targetOrigin = controlledTarget.getBoundingBox().getCenter();
-            var speedScale = skillMilestone() >= 2 ? 1.15 : 1.0;
+            var range = Skills.MAGNET_MANIPULATION.get().scaledRange(player,
+                    org.academy.api.common.ability.electromaster.MagneticFieldTuning.targetPullRange(skillMilestone()));
+            if (controlledTarget.level() != level() || player.distanceToSqr(controlledTarget) > range * range
+                    || !org.academy.internal.common.entitycontrol.EntityMotionGuard.canApplyMotionFrom(player, controlledTarget)) return false;
             var velocity = calculatePullVelocity(
                     controlledTarget.getDeltaMovement(),
                     targetOrigin,
                     destination,
                     look,
-                    TARGET_PULL_SPEED_PER_TICK * speedScale,
+                    org.academy.api.common.ability.electromaster.MagneticFieldTuning.targetPullSpeed(skillMilestone()),
                     TARGET_STOP_DISTANCE
             );
-            controlledTarget.setDeltaMovement(velocity);
+            org.academy.internal.common.entitycontrol.EntityMotionGuard.runWithMotionSource(player,
+                    () -> controlledTarget.setDeltaMovement(velocity));
             controlledTarget.hurtMarked = true;
             controlledTarget.resetFallDistance();
             if (controlledTarget instanceof ServerPlayer targetPlayer) {
@@ -556,7 +398,9 @@ public class MagnetManipulation extends Skill {
         }
 
         private @Nullable FallingBlockEntity createFallingBlockTarget(@Nullable BlockPos pos) {
-            if (pos == null || !level().hasChunkAt(pos) || !level().mayInteract(player, pos)) return null;
+            if (org.academy.api.server.ability.AbilityEffectPolicy.blockDestruction(level()) == org.academy.api.server.ability.AbilityEffectPolicy.Decision.DENY
+                    || pos == null || !level().hasChunkAt(pos) || !level().mayInteract(player, pos)
+                    || !org.academy.api.server.ability.SkillTuning.allowBlockDestruction(player, Skills.MAGNET_MANIPULATION.get())) return null;
             var state = level().getBlockState(pos);
             if (!isMagnetic(state)
                     || state.hasBlockEntity()
@@ -564,7 +408,7 @@ public class MagnetManipulation extends Skill {
                 return null;
             }
             var fallingBlock = FallingBlockEntity.fall(level(), pos, state);
-            fallingBlock.setNoGravity(true);
+            org.academy.api.server.ability.GravityControl.set(fallingBlock, Skills.MAGNET_MANIPULATION.get().getKey(), true);
             controlsFallingBlock = true;
             return fallingBlock;
         }
@@ -575,7 +419,7 @@ public class MagnetManipulation extends Skill {
             if (look.lengthSqr() <= 1.0e-6) return null;
             look = look.normalize();
             var range = Skills.MAGNET_MANIPULATION.get().scaledRange(player,
-                    skillMilestone() >= 2 ? MOVE_RANGE * 1.25 : MOVE_RANGE);
+                    org.academy.api.common.ability.electromaster.MagneticFieldTuning.targetPullRange(skillMilestone()));
             var end = eye.add(look.scale(range));
             var blockHit = level().clip(new ClipContext(
                     eye,
@@ -613,7 +457,7 @@ public class MagnetManipulation extends Skill {
 
         private void releaseControlledTarget() {
             if (controlledTarget != null && controlsFallingBlock && controlledTarget.isAlive()) {
-                controlledTarget.setNoGravity(false);
+                org.academy.api.server.ability.GravityControl.set(controlledTarget, Skills.MAGNET_MANIPULATION.get().getKey(), false);
             }
             controlledTarget = null;
             controlsFallingBlock = false;
@@ -633,10 +477,6 @@ public class MagnetManipulation extends Skill {
         protected void onUnregistered() {
             ended = true;
             releaseControlledTarget();
-            if (controlsGravity) {
-                player.setNoGravity(previousNoGravity);
-                player.resetFallDistance();
-            }
             Server.ACTIVE_MOVEMENT.remove(player, this);
             Server.setVisualState(player, false);
         }

@@ -98,22 +98,25 @@ public final class EntityControlApi {
                 target = VectorDeviation.Server.limitHealthWrite(
                         player, getAuthoritativeHealth(entity), target);
             }
-            var writeTarget = target;
-            var accessor = HEALTH_ACCESSORS.get(entity.getClass());
-            var wrote = VectorDeviation.Server.runWithHealthWriteLimitBypassed(
-                    () -> accessor.write(entity, writeTarget));
-            if (!wrote || Math.abs(accessor.read(entity, Float.NaN) - writeTarget) > EPSILON) {
-                try {
-                    VectorDeviation.Server.runWithHealthWriteLimitBypassed(() -> {
-                        entity.setHealth(writeTarget);
-                        return true;
-                    });
-                    wrote = true;
-                } catch (Throwable ignored) {
+            return org.academy.api.server.damage.HealthLossGuards.commit(
+                    entity, getAuthoritativeHealth(entity), target, protectedHealth -> {
+                var writeTarget = (float) protectedHealth;
+                var accessor = HEALTH_ACCESSORS.get(entity.getClass());
+                var wrote = VectorDeviation.Server.runWithHealthWriteLimitBypassed(
+                        () -> accessor.write(entity, writeTarget));
+                if (!wrote || Math.abs(accessor.read(entity, Float.NaN) - writeTarget) > EPSILON) {
+                    try {
+                        VectorDeviation.Server.runWithHealthWriteLimitBypassed(() -> {
+                            entity.setHealth(writeTarget);
+                            return true;
+                        });
+                        wrote = true;
+                    } catch (Throwable ignored) {
+                    }
                 }
-            }
-            var observed = HEALTH_ACCESSORS.get(entity.getClass()).read(entity, safeVisibleHealth(entity));
-            return wrote && Float.isFinite(observed) && Math.abs(observed - writeTarget) <= EPSILON;
+                var observed = HEALTH_ACCESSORS.get(entity.getClass()).read(entity, safeVisibleHealth(entity));
+                return wrote && Float.isFinite(observed) && Math.abs(observed - writeTarget) <= EPSILON;
+            });
         } finally {
             if (force) BYPASS_GUARDS.set(previous);
         }

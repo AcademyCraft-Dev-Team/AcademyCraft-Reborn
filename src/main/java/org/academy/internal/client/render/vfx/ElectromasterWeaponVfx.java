@@ -80,21 +80,18 @@ public final class ElectromasterWeaponVfx implements Vfx {
     public void sample(VfxFrameContext ctx, VfxSink sink) {
         var level = Minecraft.getInstance().level;
         if (level == null) return;
-        var roots = WingAvatarRegistry.entries();
-        if (roots.isEmpty()) return;
-
-        for (var entry : roots.entrySet()) {
-            var entity = level.getEntity(entry.getKey());
-            if (!(entity instanceof Player player)) continue;
+        // World-space positions work in both camera modes and do not depend on avatar render order.
+        for (var player : level.players()) {
             var ironSand = player.getData(AttachmentTypes.IRON_SAND_DATA.get());
             if (!ironSand.active()) continue;
-
+            var position = player.getPosition(ctx.partialTick());
+            if (position.distanceToSqr(ctx.camera().pos().x, ctx.camera().pos().y, ctx.camera().pos().z) > 160 * 160) continue;
             var effectTime = player.tickCount + ctx.partialTick();
             var currentTick = (double) level.getGameTime() + ctx.partialTick();
-            var root = new Matrix4f(entry.getValue());
-            var camera = ctx.camera().pos();
-            root.translate(camera.x, camera.y, camera.z);
-            renderIronSand(sink, root, effectTime, currentTick,
+            var yaw = Mth.rotLerp(ctx.partialTick(), player.yRotO, player.getYRot());
+            var root = new Matrix4f().translation((float) position.x, (float) position.y, (float) position.z)
+                    .rotateY(-yaw * Mth.DEG_TO_RAD).scale(1, -1, -1);
+            renderIronSand(sink, root, ironSand, effectTime, currentTick,
                     IRON_SAND_SWEEPS.entries(player.getId()));
         }
     }
@@ -107,11 +104,12 @@ public final class ElectromasterWeaponVfx implements Vfx {
     private static void renderIronSand(
             VfxSink sink,
             Matrix4f root,
+            IronSandArsenal.Data state,
             float effectTime,
             double currentTick,
             List<SweepAnimationTimeline.Entry<SweepMarker>> animations
     ) {
-        for (var i = 0; i < 12; i++) {
+        for (var i = 0; state.defense() && i < 12; i++) {
             var angle = effectTime * 0.075f + i * (float) (Mth.TWO_PI / 12.0);
             var radius = 0.72f + (i % 3) * 0.13f;
             var y = -0.25f - (i % 4) * 0.43f;
@@ -122,20 +120,22 @@ public final class ElectromasterWeaponVfx implements Vfx {
             pushQuad(sink, root, local, 0.72f);
         }
 
+        if (state.cloudRadius() > 0) renderCloud(sink, root, effectTime, state.cloudRadius());
+
         for (var entry : animations) {
             var progress = SweepAnimationTimeline.progress(entry, currentTick, SWEEP_DURATION_TICKS);
             if (progress < 0.0f || progress >= 1.0f) continue;
-            renderThirdPersonSweep(sink, root, progress);
+            renderThirdPersonSweep(sink, root, progress, state.whipRange());
         }
     }
 
-    private static void renderThirdPersonSweep(VfxSink sink, Matrix4f root, float progress) {
+    private static void renderThirdPersonSweep(VfxSink sink, Matrix4f root, float progress, float range) {
         var eased = progress * progress * (3.0f - 2.0f * progress);
         var sweepAngle = -60.0f + eased * 120.0f;
         var segments = 24;
         for (var i = 0; i < segments; i++) {
             var radialProgress = i / (float) (segments - 1);
-            var radius = 0.8f + radialProgress * 11.2f;
+            var radius = 0.8f + radialProgress * (range - 0.8f);
             var trailingAngle = (1.0f - radialProgress) * 24.0f;
             var angle = (sweepAngle - trailingAngle) * Mth.DEG_TO_RAD;
             var local = new Matrix4f()
@@ -147,6 +147,22 @@ public final class ElectromasterWeaponVfx implements Vfx {
             var scale = 0.24f + radialProgress * 0.34f;
             local.scale(scale, scale, scale);
             pushQuad(sink, root, local, (0.9f - radialProgress * 0.18f) * (1.0f - progress * 0.22f));
+        }
+    }
+
+    private static void renderCloud(VfxSink sink, Matrix4f root, float time, float radius) {
+        // Several revolving chains make the occupied volume readable while leaving sight gaps.
+        for (var band = 0; band < 6; band++) {
+            var ringRadius = radius * (0.28f + band * 0.14f);
+            for (var segment = 0; segment < 24; segment++) {
+                var angle = segment * Mth.TWO_PI / 24 + time * (band % 2 == 0 ? 0.055f : -0.07f);
+                var height = -1.0f + Mth.sin(angle * 2 + band) * ringRadius * 0.32f;
+                var local = new Matrix4f().translate(Mth.sin(angle) * ringRadius, height,
+                                Mth.cos(angle) * ringRadius)
+                        .rotateY(angle).rotateZ(time * 0.3f + segment)
+                        .scale(0.2f + band * 0.045f);
+                pushQuad(sink, root, local, 0.52f);
+            }
         }
     }
 

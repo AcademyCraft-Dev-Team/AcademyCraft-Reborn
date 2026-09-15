@@ -61,9 +61,7 @@ public final class CTAEntityActuallyHurt {
         if (entity instanceof Player player && DamageTypes.isImmunePlayer(player)) return false;
         if (shouldPreventFriendlyFire(source)) return false;
 
-        var reducedAmount = entity instanceof Player player
-                ? PlayerAttributeRuntime.reduceDamage(player, amount, 0.08)
-                : amount;
+        var reducedAmount = PlayerAttributeRuntime.reduceDamage(entity, amount, 0.08);
         var adjustedAmount = OutputControl.adjustDamage(source, reducedAmount);
         if (adjustedAmount > reducedAmount) {
             var percentage = Math.min(amount,
@@ -92,12 +90,20 @@ public final class CTAEntityActuallyHurt {
         if (!Float.isFinite(before) || before <= 0.0f) return false;
         var expected = Math.max(0.0f, before - amount);
         if (!TrueHealthOffsetRuntime.permits(entity, expected)) return false;
-        var wrote = EntityControlApi.forceSetTrueHealth(entity, expected);
-        var projected = expected < before && TrueHealthOffsetRuntime.install(entity, expected);
+        var settledHealth = new float[]{expected};
+        var accepted = org.academy.api.server.damage.HealthLossGuards.commit(entity, before, expected, protectedHealth -> {
+            var resolved = (float) protectedHealth;
+            settledHealth[0] = resolved;
+            var wrote = EntityControlApi.forceSetTrueHealth(entity, resolved);
+            var projected = resolved < before && TrueHealthOffsetRuntime.install(entity, resolved);
+            var observedHealth = readTrueHealth(entity);
+            return (wrote || projected) && Float.isFinite(observedHealth)
+                    && Math.abs(observedHealth - resolved) <= EPSILON;
+        });
+        if (!accepted) return false;
+        expected = settledHealth[0];
+        if (expected >= before) return false;
         var observed = readTrueHealth(entity);
-        if ((!wrote && !projected) || !Float.isFinite(observed) || Math.abs(observed - expected) > EPSILON) {
-            return false;
-        }
 
         // Unsupported custom pools retain their legacy best-effort cap; never stack it with projection.
         if (!TrueHealthOffsetRuntime.supports(entity) && expected > 0) EntityControlApi.capTrueHealthTemporarily(entity, expected, 2L);

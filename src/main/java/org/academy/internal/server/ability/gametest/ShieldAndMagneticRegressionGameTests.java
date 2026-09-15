@@ -140,14 +140,23 @@ public final class ShieldAndMagneticRegressionGameTests {
     private static void resistanceDamage(GameTestHelper helper, ServerPlayer attacker, ServerPlayer defender) {
         var resistance = defender.getAttribute(PlayerAttributes.TRUE_RESISTANCE);
         check(helper, resistance != null, "Player true resistance attribute must be registered");
-        var source = SkillDamageSource.of(attacker, Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get());
+        resistance.setBaseValue(2);
+        var melt = SkillDamageSource.of(attacker, Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get());
+        var meltBefore = defender.getHealth();
+        defender.hurtServer(helper.getLevel(), melt, 2);
+        check(helper, Math.abs(defender.getHealth() - (meltBefore - 2)) < 0.01,
+                "Melt damage explicitly bypasses true resistance");
+        defender.setHealth(defender.getMaxHealth());
+        var source = SkillDamageSource.of(attacker, Skills.ARC_GENERATE.get());
         for (var points : new double[]{2, 6, 8}) {
             resistance.setBaseValue(points);
+            defender.invulnerableTime = 0;
             var before = defender.getHealth();
             defender.hurtServer(helper.getLevel(), source, 2);
             check(helper, Math.abs(defender.getHealth() - (before - 2 * (1 - points * 0.1))) < 0.01,
                     "Server damage must apply true resistance exactly once: resistance=" + points + ", before=" + before + ", after=" + defender.getHealth());
         }
+        defender.invulnerableTime = 0;
         defender.hurtServer(helper.getLevel(), source, 1000);
         check(helper, defender.getHealth() == 0 && defender.isDeadOrDying(),
                 "Lethal damage must leave zero health and complete the death flow");
@@ -157,36 +166,21 @@ public final class ShieldAndMagneticRegressionGameTests {
             throws ReflectiveOperationException {
         for (var pos : BlockPos.betweenClosed(1, 2, 1, 14, 2, 14)) helper.setBlock(pos, Blocks.STONE);
         var feet = helper.absoluteVec(new Vec3(4.5, 6, 4.5));
-        subject.snapTo(feet.x, feet.y, feet.z, 0, 90);
-        subject.setNoGravity(false);
-        var mode = Class.forName(MagnetManipulation.class.getName() + "$PullMode");
-        var constructor = MagnetManipulation.MoveContext.class.getDeclaredConstructor(ServerPlayer.class, mode);
-        constructor.setAccessible(true);
-        var context = constructor.newInstance(subject, mode.getEnumConstants()[0]);
-        var move = context.getClass().getDeclaredMethod("pullPlayerToTarget");
-        move.setAccessible(true);
-        var release = context.getClass().getDeclaredMethod("onUnregistered");
-        release.setAccessible(true);
-        try {
-            for (var tick = 0; tick < 100; tick++) {
-                check(helper, (boolean) move.invoke(context), "Stone must be a valid self-pull anchor");
-                subject.move(MoverType.SELF, subject.getDeltaMovement());
-            }
-            var groundY = helper.absoluteVec(new Vec3(0, 3, 0)).y;
-            check(helper, Math.abs(subject.getY() - groundY - 1.5) < 0.05,
-                    "Holding must settle at the default hover height");
-            var initialZ = subject.getZ();
-            subject.setLastClientInput(new Input(true, false, false, false, true, false, false));
-            for (var tick = 0; tick < 10; tick++) {
-                check(helper, (boolean) move.invoke(context), "Movement input must sustain terrain flight");
-                subject.move(MoverType.SELF, subject.getDeltaMovement());
-            }
-            check(helper, subject.getZ() > initialZ + 1, "Forward input must move along the current yaw");
-            check(helper, subject.getY() > groundY + 1.5, "Jump input must increase hover height");
-        } finally {
-            release.invoke(context);
+        subject.snapTo(feet.x, feet.y, feet.z, 0, 0);
+        var movement = new org.academy.api.server.ability.electromaster.MagneticLevitation();
+        check(helper, movement.supported(subject, 4), "Stone must support levitation without magnetism");
+        var initialZ = subject.getZ();
+        for (var tick = 0; tick < 5; tick++) {
+            var velocity = movement.velocity(subject, 1, 0, 0, 1.8, 4);
+            subject.setDeltaMovement(velocity);
+            subject.move(MoverType.SELF, velocity);
         }
-        check(helper, !subject.isNoGravity(), "Release must restore the original gravity state");
+        check(helper, subject.getZ() > initialZ + 1, "Forward input moves along yaw while hovering");
+        subject.setNoGravity(false);
+        org.academy.api.server.ability.GravityControl.set(subject, AcademyCraft.academy("flight_test"), true);
+        check(helper, subject.isNoGravity(), "Flight acquires gravity");
+        org.academy.api.server.ability.GravityControl.set(subject, AcademyCraft.academy("flight_test"), false);
+        check(helper, !subject.isNoGravity(), "Release restores original gravity");
     }
 
     private static final class Instance extends GameTestInstance {

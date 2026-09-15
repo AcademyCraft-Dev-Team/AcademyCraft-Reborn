@@ -145,7 +145,8 @@ public final class TrueHealthOffsetRuntime {
         if (!state.dead && offset <= 0) { clear(entity); return; }
         float ceiling = (float) Math.max(0, state.maximum - offset);
         if (EntityControlApi.getAuthoritativeHealth(entity) > ceiling) {
-            EntityControlApi.forceSetTrueHealth(entity, ceiling);
+            org.academy.api.server.damage.HealthLossGuards.maintenance(entity,
+                    () -> EntityControlApi.forceSetTrueHealth(entity, ceiling));
         }
         persistAndSync(entity);
     }

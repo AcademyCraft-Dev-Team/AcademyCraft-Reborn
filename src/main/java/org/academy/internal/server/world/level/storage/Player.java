@@ -80,6 +80,16 @@ public final class Player {
     private AbilityData cpData = new AbilityData();
     @SerializedName("darkmatterState")
     private DarkmatterStateData darkmatterState = new DarkmatterStateData();
+    @SerializedName("electromasterMigrated")
+    private boolean electromasterMigrated;
+    @SerializedName("ironSandInitialized")
+    private boolean ironSandInitialized;
+
+    public boolean isElectromasterMigrated() { return electromasterMigrated; }
+    public void setElectromasterMigrated(boolean value) { electromasterMigrated = value; markDirty(); }
+    public boolean isIronSandInitialized() { return ironSandInitialized; }
+    public void setIronSandInitialized(boolean value) { ironSandInitialized = value; markDirty(); }
+
     @SerializedName("appliedCommonSkillMaxCpBonus")
     private float appliedCommonSkillMaxCpBonus;
     @SerializedName("maxCpInitialized")

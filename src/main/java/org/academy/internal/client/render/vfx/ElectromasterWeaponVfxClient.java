@@ -9,7 +9,11 @@ public final class ElectromasterWeaponVfxClient {
     private ElectromasterWeaponVfxClient() {
     }
 
+    private static boolean registered;
+
     public static void register() {
+        if (registered) return;
+        registered = true;
         VfxRegistry.register(
                 ElectromasterWeaponData.class,
                 VfxPhase.WORLD_TRANSLUCENT,

@@ -86,6 +86,13 @@ public class SkillDamageSource extends DamageSource {
         return new SkillDamageSource(typeHolder, player, player, skill);
     }
 
+    /** Creates a skill source with non-player attribution. */
+    public static SkillDamageSource of(net.minecraft.world.entity.LivingEntity actor, Skill skill,
+                                       ResourceKey<DamageType> typeKey) {
+        var type = actor.level().registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(typeKey);
+        return new SkillDamageSource(type, actor, actor, skill);
+    }
+
     /**
      * 从原始伤害源创建技能伤害源
      *

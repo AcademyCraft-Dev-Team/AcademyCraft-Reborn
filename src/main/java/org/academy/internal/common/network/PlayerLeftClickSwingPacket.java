@@ -55,7 +55,6 @@ public final class PlayerLeftClickSwingPacket
             BlackWing.Server.onLeftClickSwing(player);
             WhiteWing.Server.onLeftClickSwing(player);
             PlatinumWing.Server.onLeftClickSwing(player);
-            IronSandArsenal.Server.onLeftClickSwing(player);
         }
     }
 }

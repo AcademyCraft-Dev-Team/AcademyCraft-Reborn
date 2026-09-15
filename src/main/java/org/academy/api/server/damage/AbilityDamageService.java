@@ -44,6 +44,24 @@ public final class AbilityDamageService {
     public record Result(boolean applied, float healthLost, float absorptionLost) {
     }
 
+    public static Result apply(LivingEntity controller, LivingEntity target, Skill skill, Request request) {
+        if (controller instanceof ServerPlayer player) return apply(player, target, skill, request);
+        if (!(controller.level() instanceof net.minecraft.server.level.ServerLevel level)
+                || target.level() != level || controller == target
+                || org.academy.api.server.team.TeamRelations.areAllied(controller, target)) return new Result(false, 0, 0);
+        if (!level.getServer().isSameThread()) throw new IllegalStateException("Ability damage requires the server thread");
+        var type = request.damageType() != null ? request.damageType()
+                : request.damageProfile() != null ? AbilityDamageProfiles.require(request.damageProfile()).damageType()
+                : SkillDamageTypeResolver.resolve(skill);
+        if (type == null) type = DamageTypes.MOB_ATTACK;
+        var source = org.academy.api.common.damage.SkillDamageSource.of(controller, skill, type);
+        var health = target.getHealth();
+        var absorption = target.getAbsorptionAmount();
+        var applied = org.academy.api.common.damage.DamageComposition.withMaximumHealthPart(target, source,
+                request.maximumHealthPart(), () -> target.hurtServer(level, source, request.amount()));
+        return new Result(applied, Math.max(0, health - target.getHealth()), Math.max(0, absorption - target.getAbsorptionAmount()));
+    }
+
     public static Result apply(ServerPlayer controller, LivingEntity target, Skill skill, Request request) {
         Objects.requireNonNull(controller);
         Objects.requireNonNull(target);

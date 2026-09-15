@@ -340,7 +340,9 @@ class AbilityInfoHud private constructor() {
                         text = if (shouldShow) {
                             val current = AbilitySystemClient.getCurrMP().roundToInt()
                             val maxValue = maximum.roundToInt()
-                            "MP $current/$maxValue"
+                            val label = if (category == AbilityCategories.ELECTROMASTER.get())
+                                net.minecraft.network.chat.Component.translatable("hud.academy.iron_sand.mass").string else "MP"
+                            "$label $current/$maxValue"
                         } else {
                             ""
                         }

@@ -180,7 +180,6 @@ public class MagneticWeapon extends Skill {
             var weaponSlot = findFirstHotbarWeaponSlot(player);
             if (weaponSlot < 0) return;
 
-            IronSandArsenal.Server.forceDisable(player);
             var skill = Skills.MAGNETIC_WEAPON.get();
             if (!skill.isEnabled(player)) skill.toggle(player);
             if (!skill.isEnabled(player)) return;

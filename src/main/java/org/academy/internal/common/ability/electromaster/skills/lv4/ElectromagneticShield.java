@@ -65,7 +65,8 @@ public final class ElectromagneticShield extends Skill {
                 .energyCost(60_000)
                 .passive()
                 .initiallyDisabled()
-                .maintenanceCost(40)
+                .maintenanceCost(0)
+                .hidden()
                 .iterationTicks(15)
                 .maxStacks(NO_STACK_LIMIT)
                 .withCustomData(
@@ -95,24 +96,7 @@ public final class ElectromagneticShield extends Skill {
 
     @Override
     public void initClient() {
-        var key = getKey();
-        AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
-        Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
-        InputSystem.addKeyBinding(
-                Client.KEY_NAME_TOGGLE,
-                Client.CONFIG.getKeyBinding(
-                        Client.KEY_NAME_TOGGLE,
-                        InputSystem.combo(
-                                InputSystem.InputType.KEYBOARD,
-                                InputConstants.KEY_G,
-                                InputConstants.RELEASE,
-                                InputConstants.MOD_SHIFT
-                        )
-                ),
-                _ -> Client.toggle()
-        );
-        ToggleStatusHud.Companion.registerDetailProvider(
-                Skills.ELECTROMAGNETIC_SHIELD.get(), Client::statusText);
+        // Retired registration retained for old saves and packet decoding.
     }
 
     @Override

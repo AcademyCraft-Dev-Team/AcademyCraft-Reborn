@@ -182,7 +182,9 @@ public final class AcademyCraftRegister {
         event.add(net.minecraft.world.entity.EntityTypes.PLAYER, PlayerAttributes.DEXTERITY);
         event.add(net.minecraft.world.entity.EntityTypes.PLAYER, PlayerAttributes.PERCEPTION);
         event.add(net.minecraft.world.entity.EntityTypes.PLAYER, PlayerAttributes.NEURAL_ACTIVITY);
-        event.add(net.minecraft.world.entity.EntityTypes.PLAYER, PlayerAttributes.TRUE_RESISTANCE);
+        for (var type : event.getTypes()) {
+            if (!event.has(type, PlayerAttributes.TRUE_RESISTANCE)) event.add(type, PlayerAttributes.TRUE_RESISTANCE);
+        }
     }
 
     private static void onRegisterCapabilities(RegisterCapabilitiesEvent event) {

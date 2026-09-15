@@ -6,6 +6,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -90,7 +91,10 @@ public final class PlayerAttributeRuntime {
                 healthBeforeEnduranceSync, player.getMaxHealth()
         );
         if (healthAfterEnduranceSync < healthBeforeEnduranceSync) {
-            player.setHealth(healthAfterEnduranceSync);
+            org.academy.api.server.damage.HealthLossGuards.maintenance(player, () -> {
+                player.setHealth(healthAfterEnduranceSync);
+                return null;
+            });
         }
         syncModifier(
                 player.getAttribute(Attributes.MOVEMENT_SPEED),
@@ -175,8 +179,9 @@ public final class PlayerAttributeRuntime {
         return Mth.floor(PropsMath.perceptionEnchantmentBonus(value));
     }
 
-    public static double trueResistance(Player player) {
-        return Mth.clamp(value(player, PlayerAttributes.TRUE_RESISTANCE), 0.0, 8.0);
+    public static double trueResistance(LivingEntity player) {
+        var attribute = player.getAttribute(PlayerAttributes.TRUE_RESISTANCE);
+        return attribute == null ? 0 : Mth.clamp(attribute.getValue(), 0.0, 8.0);
     }
 
     public static void syncTrueResistanceModifier(Player player, Identifier id,
@@ -190,13 +195,13 @@ public final class PlayerAttributeRuntime {
         );
     }
 
-    public static float reduceDamage(Player player, float damage, double reductionPerPoint) {
+    public static float reduceDamage(LivingEntity player, float damage, double reductionPerPoint) {
         if (!(damage > 0.0f) || !Float.isFinite(damage)) return damage;
         var multiplier = Math.max(0.0, 1.0 - trueResistance(player) * reductionPerPoint);
         return (float) (damage * multiplier);
     }
 
-    public static float modifyHealthWrite(Player player, float requestedHealth) {
+    public static float modifyHealthWrite(LivingEntity player, float requestedHealth) {
         if (RESISTANCE_BYPASS_DEPTH.get() > 0 || !Float.isFinite(requestedHealth)) return requestedHealth;
         var source = DAMAGE_CONTEXT.get().peek();
         if (source != null && source.is(DamageTypes.MELT_DAMAGE)) return requestedHealth;

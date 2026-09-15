@@ -11,15 +11,7 @@ public final class MentaloutDefenseEffects {
 
     /** Owns only the supplied transient modifier; entities without the attribute are left unchanged. */
     public static void setTrueResistance(LivingEntity subject, Identifier source, double points, boolean enabled) {
-        if (subject.level().isClientSide()) return;
-        var attribute = subject.getAttribute(PlayerAttributes.TRUE_RESISTANCE);
-        if (attribute == null) return;
-        var amount = enabled && Double.isFinite(points) ? Math.max(0.0, points) : 0.0;
-        var current = attribute.getModifier(source);
-        if (current != null && current.amount() == amount && amount > 0.0) return;
-        if (current != null) attribute.removeModifier(source);
-        if (amount > 0.0) attribute.addTransientModifier(new AttributeModifier(
-                source, amount, AttributeModifier.Operation.ADD_VALUE));
+        org.academy.api.common.ability.AbilityDefenseEffects.setTrueResistance(subject, source, points, enabled);
     }
 
     /** Uses final damage after defenses; the threshold is exclusive and the cap applies per hit. */

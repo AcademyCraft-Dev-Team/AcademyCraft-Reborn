@@ -61,6 +61,7 @@ public final class AbilitySystemServer {
     private final PlayerCPManager playerCPManager;
     private final DarkmatterResourceManager darkmatterResourceManager;
     private final AeromanipResourceManager aeromanipResourceManager;
+    private final IronSandResourceManager ironSandResourceManager;
     private final PropsManager propsManager;
     private final SyncManager syncManager;
     private final MinecraftServer minecraftServer;
@@ -92,6 +93,8 @@ public final class AbilitySystemServer {
 
         skillDataManager = new SkillDataManager(playerDataManager, syncManager);
         SubsystemRegistry.registerSubsystem(skillDataManager, SyncTypes.SKILL_DATA);
+        ironSandResourceManager = new IronSandResourceManager(playerDataManager, playerCPManager, syncManager);
+        SubsystemRegistry.registerSubsystem(ironSandResourceManager, SyncTypes.IRON_SAND_RESOURCE);
         skillDataManager.setOnSkillLevelUp((uuid, levelsGained) ->
                 playerCPManager.refreshCommonSkillBonuses(uuid));
         skillDataManager.setOnSkillSetChanged(playerCPManager::refreshCommonSkillBonuses);
@@ -605,6 +608,12 @@ public final class AbilitySystemServer {
         return aeromanipResourceManager;
     }
 
+    public IronSandResourceManager getIronSandResourceManager() { return ironSandResourceManager; }
+
+    public org.academy.api.server.ability.electromaster.IronSandResourceService getIronSandResourceService() {
+        return ironSandResourceManager;
+    }
+
     public Player getPlayerData(UUID uuid) {
         return Objects.requireNonNull(playerDataManager.getData(uuid));
     }
@@ -989,19 +998,21 @@ public final class AbilitySystemServer {
         var compressedAirCost = mpCalculator.calculate(ctx);
         if (!Float.isFinite(baseCpCost) || baseCpCost < 0.0f
                 || !Float.isFinite(compressedAirCost) || compressedAirCost < 0.0f) return false;
-        compressedAirCost = OutputControl.adjustResourceCost(this, uuid, skill, compressedAirCost);
+        var ironSand = getPlayerAbilityCategory(uuid) == AbilityCategories.ELECTROMASTER.get();
+        if (!ironSand) compressedAirCost = OutputControl.adjustResourceCost(this, uuid, skill, compressedAirCost);
         var actualCpCost = Math.max(0.0f,
                 OutputControl.adjustCpCost(this, uuid, skill, baseCpCost)
                         * playerCPManager.getCalculationIntensity(uuid));
         var iterationPoints = resolveIterationPoints(skill.getIterationTicks(player), baseCpCost);
-        if (!aeromanipResourceManager.tryCast(
-                player, skill, actualCpCost, compressedAirCost, iterationPoints,
-                stackGroup, stackLimit)) {
+        var paid = ironSand
+                ? ironSandResourceManager.tryCast(player, skill, actualCpCost, compressedAirCost, iterationPoints, stackGroup, stackLimit)
+                : aeromanipResourceManager.tryCast(player, skill, actualCpCost, compressedAirCost, iterationPoints, stackGroup, stackLimit);
+        if (!paid) {
             if (discreteTrigger) {
                 var availableAir = aeromanipResourceManager.getCurrent(player);
                 var availableCp = playerCPManager.getAvailableCP(uuid);
                 var message = availableAir + 1.0e-4f < compressedAirCost
-                        ? Component.translatable("message.academy.aeromanip.insufficient_air", compressedAirCost, availableAir)
+                        ? Component.translatable(ironSand ? "message.academy.iron_sand.insufficient_mass" : "message.academy.aeromanip.insufficient_air", compressedAirCost, availableAir)
                         : availableCp + 1.0e-4f < actualCpCost
                         ? Component.translatable("message.academy.aeromanip.insufficient_cp", actualCpCost, availableCp)
                         : Component.translatable("message.academy.aeromanip.cast_restricted");

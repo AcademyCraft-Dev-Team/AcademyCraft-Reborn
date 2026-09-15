@@ -56,11 +56,30 @@ public final class MagneticMovement {
         return approach(current, new Vec3(horizontal.x, vertical, horizontal.z));
     }
 
-    private static Vec3 approach(Vec3 current, Vec3 desired) {
+    public static Vec3 approach(Vec3 current, Vec3 desired) {
         var change = desired.subtract(current);
         return change.length() <= ACCELERATION ? desired
                 : current.add(change.normalize().scale(ACCELERATION));
     }
+
+    public static Vec3 calculatePullVelocity(Vec3 currentVelocity, Vec3 origin, Vec3 target,
+                                      Vec3 fallbackDirection, double maxSpeed, double stopDistance) {
+        if (!finite(currentVelocity) || !finite(origin) || !finite(target) || !finite(fallbackDirection)) {
+            return Vec3.ZERO;
+        }
+        var direction = target.subtract(origin);
+        var distance = direction.length();
+        if (!Double.isFinite(distance)) return Vec3.ZERO;
+        if (distance <= stopDistance) return currentVelocity.scale(0.25);
+        if (distance <= 1.0e-6) direction = fallbackDirection;
+        if (direction.lengthSqr() <= 1.0e-6) return Vec3.ZERO;
+        var speed = Math.clamp((distance - stopDistance) * 0.22, 0.12, maxSpeed);
+        var desired = direction.normalize().scale(speed);
+        var velocity = currentVelocity.scale(0.2).add(desired.scale(0.8));
+        var length = velocity.length();
+        return length > maxSpeed ? velocity.scale(maxSpeed / length) : velocity;
+    }
+
 
     private static boolean finite(Vec3 value) {
         return Double.isFinite(value.x)

@@ -99,9 +99,10 @@ public final class SkillProficiencyProfiles {
         put(profiles, maintenance(0.9f),
                 "kinetic_energy_applied", "black_wing", "white_wing", "platinum_wing",
                 "crossing_the_abyss", "storm_wing", "mine_detect", "magnetic_weapon",
-                "current_symbiosis", "bioelectric_operation", "iron_sand_arsenal", "electrical_contact",
+                "current_symbiosis", "bioelectric_operation", "electrical_contact",
                 "cloudroom", "spatial_synergy", "mental_intrusion",
                 "mental_takeover", "sensory_distortion");
+        put(profiles, costs(Map.of(MAINTENANCE, 0.9f, DYNAMIC, 0.9f)), "iron_sand_arsenal");
         put(profiles, continuous(0.9f), "adiabatic_compression");
         put(profiles, cast(0.9f), "laminar_cutter", "vortex_pull",
                 "vector_blast", "vector_accel", "kinetic_throw", "dir_strike", "bloodflow_reverse", "plasma_generation",

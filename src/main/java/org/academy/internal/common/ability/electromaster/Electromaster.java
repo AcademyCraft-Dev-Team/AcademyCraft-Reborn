@@ -13,6 +13,11 @@ public final class Electromaster extends AbilityCategory {
     }
 
     @Override
+    public java.util.Optional<org.academy.api.common.ability.AbilityResourceSpec> getResourceSpec() {
+        return java.util.Optional.of(org.academy.api.common.ability.AbilityResourceSpec.fixed(100));
+    }
+
+    @Override
     public Identifier getDeveloperIcon() {
         return R.textures.ability.electromaster.icon;
     }

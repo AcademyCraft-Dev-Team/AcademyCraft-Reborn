@@ -32,6 +32,8 @@ public final class MentalControlFeedbackRegistry {
         Objects.requireNonNull(controller, "controller");
         Objects.requireNonNull(subject, "subject");
         Objects.requireNonNull(fallback, "fallback");
+        var instanceFeedback = org.academy.api.common.entitycontrol.MentalImmunity.feedback(subject);
+        if (instanceFeedback.isPresent()) return instanceFeedback.get();
         if (!subject.getType().builtInRegistryHolder().is(MentalControlTags.IMMUNE)) return fallback.copy();
         var id = BuiltInRegistries.ENTITY_TYPE.getKey(subject.getType());
         var provider = PROVIDERS.get(id);

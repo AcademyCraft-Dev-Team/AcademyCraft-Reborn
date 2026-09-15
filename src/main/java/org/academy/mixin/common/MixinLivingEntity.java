@@ -145,9 +145,7 @@ public abstract class MixinLivingEntity {
     @ModifyVariable(method = "setHealth", at = @At("HEAD"), argsOnly = true)
     private float academy$protectVectorReflectionHealth(float health) {
         var entity = (LivingEntity) (Object) this;
-        if ((Object) this instanceof Player player) {
-            health = PlayerAttributeRuntime.modifyHealthWrite(player, health);
-        }
+        health = PlayerAttributeRuntime.modifyHealthWrite(entity, health);
         health = OutputControl.modifyHealthWrite(entity, health);
         if ((Object) this instanceof ServerPlayer player
                 && VectorReflection.Server.usesFullInstanceProtection(player)

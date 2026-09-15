@@ -103,6 +103,10 @@ public final class AttachmentTypes {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> CROSSING_THE_ABYSS_ACTIVE = REGISTER.register("crossing_the_abyss_active",
             () -> AttachmentType.builder(DEFAULT_FALSE).sync(ByteBufCodecs.BOOL).build()
     );
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> MAGNETIC_LEVITATION_REQUESTED = REGISTER.register(
+            "magnetic_levitation_requested", () -> AttachmentType.builder(DEFAULT_FALSE).sync(ByteBufCodecs.BOOL).build());
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> MAGNETIC_LEVITATION_ACTIVE = REGISTER.register(
+            "magnetic_levitation_active", () -> AttachmentType.builder(DEFAULT_FALSE).sync(ByteBufCodecs.BOOL).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> MAGNET_MANIPULATION_ACTIVE = REGISTER.register(
             "magnet_manipulation_active",
             () -> AttachmentType.builder(DEFAULT_FALSE).sync(ByteBufCodecs.BOOL).build()

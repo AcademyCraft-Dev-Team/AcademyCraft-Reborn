@@ -13,6 +13,8 @@ public final class SyncTypes {
     /** Tick-only subsystem route; compressed air itself is synchronized through CP_DATA. */
     public static final Identifier AEROMANIP_RESOURCE = academy("aeromanip_resource");
 
+    public static final Identifier IRON_SAND_RESOURCE = academy("iron_sand_resource");
+
     private SyncTypes() {
     }
 }

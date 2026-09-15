@@ -70,7 +70,7 @@ public final class TrueDamageCompatibility {
         var probe = new HurtProbe(target, source);
         HURT_PROBE.set(probe);
         try {
-            target.hurtServer(level, source, amount);
+            org.academy.api.server.damage.HealthLossGuards.maintenance(target, () -> target.hurtServer(level, source, amount));
         } catch (Throwable error) {
             LOGGER.warn(
                     "Custom true-damage hurt notification failed for {}",
@@ -81,7 +81,7 @@ public final class TrueDamageCompatibility {
             HURT_PROBE.remove();
             if (Float.isFinite(healthBefore)
                     && Math.abs(EntityControlApi.getAuthoritativeHealth(target) - healthBefore) > 0.0001f) {
-                EntityControlApi.forceSetTrueHealth(target, healthBefore);
+                org.academy.api.server.damage.HealthLossGuards.maintenance(target, () -> EntityControlApi.forceSetTrueHealth(target, healthBefore));
             }
             if (Float.isFinite(absorptionBefore)
                     && Math.abs(target.getAbsorptionAmount() - absorptionBefore) > 0.0001f) {
@@ -233,7 +233,7 @@ public final class TrueDamageCompatibility {
 
     private static void enforceDepletedHealth(LivingEntity target) {
         TrueHealthOffsetRuntime.commitDeath(target);
-        EntityControlApi.forceSetTrueHealth(target, 0.0f);
+        org.academy.api.server.damage.HealthLossGuards.maintenance(target, () -> EntityControlApi.forceSetTrueHealth(target, 0.0f));
     }
 
     private static void restoreCanceledDeathHealth(LivingEntity target) {

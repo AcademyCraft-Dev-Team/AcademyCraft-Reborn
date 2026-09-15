@@ -47,6 +47,10 @@ public final class AbilityHitEffects {
     }
 
     /** Equipment-only wear; repeated hits share the target's short wear budget. */
+    public static int equipmentWear(float fixedDamage) {
+        return CategoryDamageRuntime.equipmentWear(fixedDamage);
+    }
+
     public static void damageEquipment(LivingEntity target, int amount, boolean includeHands) {
         CategoryDamageRuntime.damageEquipment(target, amount, includeHands);
     }
