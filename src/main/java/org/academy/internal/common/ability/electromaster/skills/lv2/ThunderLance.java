@@ -6,6 +6,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
@@ -29,14 +30,13 @@ import org.academy.internal.common.ability.accelerator.reflection.LinearAttackEx
 import org.academy.internal.common.ability.accelerator.reflection.LinearAttackPayload;
 import org.academy.internal.common.ability.accelerator.reflection.LinearReflectionResolver;
 import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
-import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
+import org.academy.api.server.ability.ElectromasterGraphEffects;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcActions;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcTargeting;
 import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.sounds.SoundEvents;
-import org.academy.internal.common.world.entity.skill.ArcEffect;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -45,7 +45,6 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -188,16 +187,11 @@ public class ThunderLance extends Skill {
                     payload
             );
 
-            var arcs = new ArrayList<>(ElectromasterArcEffects.spearBundle(
-                    resolved.outbound().start(), resolved.outbound().end(), 7, 0.20f));
-            resolved.returnSegment().ifPresent(segment -> arcs.addAll(
-                    ElectromasterArcEffects.spearBundle(
-                            segment.start(), segment.end(), 7, 0.20f)));
-            var arc = new ArcEffect(level, 10);
-            arc.setPos(handPos);
-            arc.setArcPaths(arcs);
-            level.addFreshEntity(arc);
-            arc.playSound(SoundEvents.ARC_WEAK.get());
+            ElectromasterGraphEffects.spawnBolt(level, resolved.outbound().start(), resolved.outbound().end(),
+                    ElectromasterGraphEffects.BoltStyle.LANCE);
+            resolved.returnSegment().ifPresent(segment -> ElectromasterGraphEffects.spawnBolt(
+                    level, segment.start(), segment.end(), ElectromasterGraphEffects.BoltStyle.LANCE));
+            level.playSound(null, handPos.x, handPos.y, handPos.z, SoundEvents.ARC_WEAK.get(), SoundSource.PLAYERS, 1, 1);
 
             var result = LinearAttackExecutor.execute(level, resolved, payload);
             if (milestone >= 3) branchDoubleHit(player, level, result, source, damage);

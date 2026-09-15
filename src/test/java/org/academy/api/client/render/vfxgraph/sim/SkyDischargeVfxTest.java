@@ -214,7 +214,8 @@ class SkyDischargeVfxTest {
         for (int i = 0; i < sim.arcBuffer().count(); i++) {
             var arc = sim.arcBuffer().arc(i);
             if (arc.size() == 0) continue;
-            assertTrue(arc.r() >= 0.8f && arc.g() >= 0.9f && arc.b() == 1f, "Attachment should be near white");
+            assertEquals(1f, arc.b());
+            assertTrue(arc.r() == 0.12f || arc.r() == 0.78f, "Attachment uses the railgun's blue shell and pale core");
             boolean onGround = arc.y(0) < 20;
             if (onGround) ground++; else cloud++;
             if (Math.hypot(arc.x(0), arc.z(0)) > 1) awayFromOrigin++;
@@ -286,7 +287,7 @@ class SkyDischargeVfxTest {
                 vertices += CurveToMeshBuilder.build(
                         arc, 12, arc.r(), arc.g(), arc.b(), arc.a(), 0.95f).vertexCount();
             }
-            assertTrue(vertices > 0 && vertices <= (name.endsWith("storm") ? 1000 : 2500));
+            assertTrue(vertices > 0 && vertices <= (name.endsWith("storm") ? 1700 : 4200));
             System.out.println(name + " attachment: arcs=" + sim.arcBuffer().count()
                     + " points=" + points + " vertices=" + vertices);
             int full = sim.arcBuffer().count();

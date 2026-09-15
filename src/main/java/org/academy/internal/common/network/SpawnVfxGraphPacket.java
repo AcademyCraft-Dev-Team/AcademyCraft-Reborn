@@ -160,10 +160,20 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
         var broadcastRange = BROADCAST_RANGE + Math.clamp(scale, 0.0, 128.0);
         var rangeSquared = broadcastRange * broadcastRange;
         for (var observer : level.players()) {
-            if (observer.distanceToSqr(position) <= rangeSquared) {
+            if (packet.distanceToEffectSquared(observer.position()) <= rangeSquared) {
                 MisakaNetworkServer.send(observer, packet);
             }
         }
+    }
+
+    /** Axial effects are visible to observers near any point on the scaled +Y path. */
+    double distanceToEffectSquared(Vec3 observer) {
+        double length = floatParams.getOrDefault("length", 0f) * (double) scale;
+        if (!Double.isFinite(length) || length <= 0 || direction.lengthSqr() < 1.0e-8)
+            return observer.distanceToSqr(position);
+        var axis = direction.normalize();
+        double along = Math.clamp(observer.subtract(position).dot(axis), 0, length);
+        return observer.distanceToSqr(position.add(axis.scale(along)));
     }
 
     public static void send(ServerPlayer observer, Identifier assetId, Vec3 position,
@@ -241,7 +251,14 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
                 effect.setScale(packet.scale);
                 if (packet.scale >= 8f) effect.setAlwaysVisible(true);
                 effect.setRotation(orientedRotation(packet.direction, packet.localXDirection));
-                effect.setLifetimeSeconds(packet.lifetimeSeconds);
+                effect.setGameTimeLifetimeSeconds(packet.lifetimeSeconds);
+                if (!packet.floatParams.containsKey("time")) effect.bindGameTime("time");
+                float length = packet.floatParams.getOrDefault("length", 0f) * packet.scale;
+                if (length > 0 && packet.direction.lengthSqr() > 1.0e-8) {
+                    var center = packet.position.add(packet.direction.normalize().scale(length * 0.5f));
+                    effect.setCullingSphere(center.toVector3f(), length * 0.5f + 8 * packet.scale);
+                    effect.setMinimumFarPlane(Math.max(256, length + 64));
+                }
                 for (var entry : packet.floatParams.entrySet()) {
                     var value = entry.getValue();
                     effect.bind(entry.getKey(), () -> Value.of(value));

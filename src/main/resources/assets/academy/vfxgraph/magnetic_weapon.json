@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "magnetic_weapon",
+  "parameters": [
+    {
+      "id": "time",
+      "name": "time",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": -1
+      }
+    },
+    {
+      "id": "seed",
+      "name": "seed",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 42
+      }
+    },
+    {
+      "id": "opacity",
+      "name": "opacity",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "detail",
+      "name": "detail",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "flicker_rate",
+      "name": "flicker rate",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 18
+      }
+    },
+    {
+      "id": "width",
+      "name": "width",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.035
+      }
+    },
+    {
+      "id": "max_paths",
+      "name": "max paths",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 16
+      }
+    },
+    {
+      "id": "max_points",
+      "name": "max points",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 128
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "discharge",
+      "type": "SPAWN",
+      "name": "01 / 刀刃路径输入 · 唤出电流 · 运动拖尾 · 命中放电",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "current",
+          "type": "vfx.block.electric_paths",
+          "properties": {
+            "width": "0.035",
+            "max_paths": "16",
+            "max_points": "128"
+          }
+        }
+      ]
+    },
+    {
+      "id": "render",
+      "type": "OUTPUT",
+      "name": "02 / 与超电磁炮共用电弧材质",
+      "x": 650,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "electric_out",
+          "type": "vfx.block.output_arc",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_arc",
+            "shader": "academy:core/vfxgraph_axial_burst",
+            "blend": "glow",
+            "layer": "electricity",
+            "thickness": "1",
+            "emission": "1.15",
+            "sparks": "0",
+            "segments": "12",
+            "overall_scale": "1",
+            "branch_depth": "0",
+            "branch_count": "0",
+            "noise_strength": "0",
+            "drift_speed": "0",
+            "branch_brightness_scale": "1"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "discharge",
+      "to": "render"
+    }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "electric_out"
+  ]
+}

@@ -133,7 +133,8 @@
             "branch_count": "0",
             "noise_strength": "0",
             "drift_speed": "0",
-            "branch_brightness_scale": "0.95"
+            "branch_brightness_scale": "0.95",
+            "layer": "sky_current"
           }
         },
         {
@@ -145,13 +146,33 @@
             "blend": "glow",
             "layer": "sky_halo"
           }
+        },
+        {
+          "id": "attachment_out",
+          "type": "vfx.block.output_arc",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_arc",
+            "shader": "academy:core/vfxgraph_axial_burst",
+            "blend": "glow",
+            "layer": "electrical_attachment",
+            "thickness": "1",
+            "emission": "1.15",
+            "sparks": "0",
+            "segments": "12",
+            "overall_scale": "1",
+            "branch_depth": "0",
+            "branch_count": "0",
+            "noise_strength": "0",
+            "drift_speed": "0",
+            "branch_brightness_scale": "1"
+          }
         }
       ]
     },
     {
       "id": "attachment",
       "type": "SPAWN",
-      "name": "04 / surface attachment · 1.5 s",
+      "name": "04 / 蓝白双层表面电弧 · 贴合地形与云底",
       "x": 0,
       "y": 850,
       "blocks": [
@@ -194,6 +215,7 @@
   "outputs": [
     "cloud_out",
     "current_out",
-    "impact_out"
+    "impact_out",
+    "attachment_out"
   ]
 }

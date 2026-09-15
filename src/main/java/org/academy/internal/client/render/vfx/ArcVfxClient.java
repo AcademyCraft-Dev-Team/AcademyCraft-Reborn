@@ -28,7 +28,7 @@ public final class ArcVfxClient {
         if (entity instanceof ArcEffect arcEffect) {
             VfxManager.INSTANCE.spawn(new ArcEffectVfx(arcEffect));
         } else if (entity instanceof MagneticWeaponBlade blade) {
-            VfxManager.INSTANCE.spawn(new MagneticWeaponBladeArcVfx(blade));
+            MagneticWeaponBladeArcVfx.spawn(blade);
         }
     }
 }

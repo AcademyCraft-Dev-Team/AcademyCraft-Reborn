@@ -7,8 +7,6 @@ import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import org.academy.api.client.render.vfx.VfxManager;
-import org.academy.api.client.render.vfx.VfxPhase;
-import org.academy.api.client.render.vfx.VfxRegistry;
 import org.academy.internal.common.world.entity.skill.RailgunRay;
 
 import java.util.IdentityHashMap;
@@ -22,8 +20,7 @@ public final class RailgunVfxClient {
     }
 
     public static void register() {
-        VfxRegistry.register(RailgunRingData.class, VfxPhase.WORLD_TRANSLUCENT, new TexturedQuadRenderer(false));
-        VfxManager.INSTANCE.spawn(new RailgunVfx());
+        RailgunChargeVfxClient.register();
     }
 
     @SubscribeEvent

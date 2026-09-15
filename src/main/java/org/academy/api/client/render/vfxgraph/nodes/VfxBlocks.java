@@ -148,6 +148,19 @@ public final class VfxBlocks {
     );
 
     public static void registerAll(NodeRegistry metadata, VfxBlockRegistry blocks) {
+        metadata.register(type("vfx.block.electric_shield", "spawn", "Blue-White Shield Surface / Interception",
+                ElectricAttachmentEmitter.shieldProperties()));
+        blocks.register("vfx.block.electric_shield", ElectricAttachmentEmitter::shield);
+        metadata.register(type("vfx.block.electric_paths", "spawn", "Blue-White Bound Paths / Trails",
+                ElectricAttachmentEmitter.pathProperties()));
+        blocks.register("vfx.block.electric_paths", ElectricAttachmentEmitter::paths);
+        metadata.register(type("vfx.block.electric_bolt", "spawn", "Blue-White Endpoint Discharge",
+                ElectricArcEmitter.boltProperties()));
+        blocks.register("vfx.block.electric_bolt", ElectricArcEmitter::bolt);
+        metadata.register(type("vfx.block.electric_orbit", "spawn", "Charge Ring / Hot Arcs / Filaments",
+                ElectricArcEmitter.orbitProperties()));
+        blocks.register("vfx.block.electric_orbit", ElectricArcEmitter::orbit);
+
         metadata.register(type("vfx.block.axial_beam", "spawn", "Axial Burst / Beam Layer",
                 AxialBurstEmitter.beamProperties()));
         blocks.register("vfx.block.axial_beam", AxialBurstEmitter::beam);

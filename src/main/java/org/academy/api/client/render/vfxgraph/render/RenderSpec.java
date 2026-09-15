@@ -191,6 +191,11 @@ public record RenderSpec(
         return layer.isEmpty() || ParticleBuffer.layerByte(layer) == particleLayer;
     }
 
+    /** Arc layers are arbitrary graph-authored names, independent of the legacy particle layer table. */
+    public boolean matchesArcLayer(String arcLayer) {
+        return layer.isEmpty() || layer.equals(arcLayer);
+    }
+
     /**
      * 是否 GLOW 规格（参与 bloom 输入，供 bloomPass 过滤）。
      */

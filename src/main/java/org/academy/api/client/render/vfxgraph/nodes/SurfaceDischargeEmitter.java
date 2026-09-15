@@ -4,6 +4,7 @@ import org.academy.api.client.render.graph.registry.PropertySpec;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.type.ValueType;
 import org.academy.api.client.render.vfxgraph.arc.ArcCurve;
+import org.academy.api.client.render.vfxgraph.arc.BlueWhiteArcStyle;
 import org.academy.api.client.render.vfxgraph.model.VfxBlock;
 import org.academy.api.client.render.vfxgraph.shape.StormCloudShape;
 import org.academy.api.client.render.vfxgraph.shape.SurfaceProjector;
@@ -98,21 +99,16 @@ public final class SurfaceDischargeEmitter {
                 var trace = traces.get(i);
                 float opacity = alpha * trace.brightness * (trace.sky ? cloudAlpha : 1f);
                 if (opacity < 0.002f) continue;
-                var arc = context.arcs().add(group);
-                arc.setColor(0.82f, 0.93f, 1f, opacity);
-                arc.setSeed(trace.seed);
-                arc.setLifetime(1);
-                arc.setNoiseStrength(0);
-                arc.setDriftSpeed(0);
-                arc.setMaxTubeSegments(surfaceDetail < 0.55f ? 4 : 6);
-                var path = trace.path;
-                if (!trace.sky) {
-                    path.copyRange(arc, 0, path.size());
-                } else {
+                float flicker = 0.78f + unit(trace.seed + (long) (t * 18) * 911, 55) * 0.22f;
+                for (int shell = 0; shell < 2; shell++) {
+                    var arc = BlueWhiteArcStyle.shell(context.arcs(), group, trace.seed,
+                            opacity * flicker, shell, "electrical_attachment");
+                    arc.setMaxTubeSegments(surfaceDetail < 0.55f || shell == 0 ? 4 : 6);
+                    var path = trace.path;
                     for (int p = 0; p < path.size(); p++) {
-                        arc.addPoint(path.x(p) * cos - path.z(p) * sin, path.y(p),
-                                path.x(p) * sin + path.z(p) * cos,
-                                path.width(p), path.generation(p), path.segment(p));
+                        arc.addPoint(trace.sky ? path.x(p) * cos - path.z(p) * sin : path.x(p), path.y(p),
+                                trace.sky ? path.x(p) * sin + path.z(p) * cos : path.z(p),
+                                path.width(p) * BlueWhiteArcStyle.widthScale(shell), path.generation(p), path.segment(p));
                     }
                 }
             }

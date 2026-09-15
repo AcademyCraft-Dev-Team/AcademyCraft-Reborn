@@ -15,6 +15,7 @@ import org.academy.api.common.arc.path.LinePath;
 import org.academy.api.common.arc.path.PolylinePath;
 import org.academy.api.common.arc.property.AttributeCurve;
 import org.academy.api.common.arc.property.Knot;
+import org.academy.api.server.ability.ElectromasterGraphEffects;
 import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
 import org.academy.internal.common.world.entity.skill.ArcEffect;
 import org.joml.Vector3f;
@@ -179,7 +180,7 @@ public final class ElectromasterArcEffects {
     }
 
     public static void spawnChainArc(ServerLevel level, Vec3 start, Vec3 end) {
-        spawnArc(level, chainBundle(start, end, randomSeed()), 8, start);
+        ElectromasterGraphEffects.spawnBolt(level, start, end, ElectromasterGraphEffects.BoltStyle.CHAIN);
     }
 
     public static void spawnBeamCoils(ServerLevel level, LinearSegment segment) {
@@ -202,48 +203,14 @@ public final class ElectromasterArcEffects {
     }
 
     public static void spawnShieldArcs(ServerLevel level, Vec3 center, long age) {
-        var paths = new ArrayList<ArcPath>();
-        for (var i = 0; i < 6; i++) {
-            var angle0 = age * 0.17 + i * Mth.PI / 3.0;
-            var angle1 = angle0 + 0.82;
-            var y0 = 0.25 + (i % 3) * 0.62;
-            var y1 = 0.25 + ((i + 1) % 3) * 0.62;
-            var start = center.add(Mth.cos(angle0) * 0.78, y0, Mth.sin(angle0) * 0.78);
-            var end = center.add(Mth.cos(angle1) * 0.78, y1, Mth.sin(angle1) * 0.78);
-            paths.add(arc(start, end, randomSeed()));
-        }
-        spawnArc(level, paths, 5, center);
+        ElectromasterGraphEffects.spawnShield(level, center, -1, age);
     }
 
     /**
      * Emits a short-lived electric ring on the shield face struck by a remote effect.
      */
     public static void spawnShieldInterceptRing(ServerLevel level, Vec3 center, Vec3 direction) {
-        if (level == null || center == null || direction == null
-                || !Double.isFinite(direction.lengthSqr()) || direction.lengthSqr() < 1.0E-8) {
-            return;
-        }
-        var normal = direction.normalize();
-        var paths = new ArrayList<ArcPath>(2);
-        paths.add(new ArcPath(
-                new CirclePath(center.toVector3f(), normal.toVector3f(), 0.72f),
-                List.of(
-                        new JaggedModifier(0.13f, 3, randomSeed()),
-                        new TaperModifier(FULL_THICKNESS, 0.86f)
-                ),
-                5.0f,
-                List.of()
-        ));
-        paths.add(new ArcPath(
-                new CirclePath(center.toVector3f(), normal.toVector3f(), 0.48f),
-                List.of(
-                        new JaggedModifier(0.10f, 2, randomSeed()),
-                        new TaperModifier(FULL_THICKNESS, 0.58f)
-                ),
-                4.0f,
-                List.of()
-        ));
-        spawnArc(level, paths, 6, center);
+        ElectromasterGraphEffects.spawnShieldIntercept(level, center, direction);
     }
 
     public static void spawnNovaRing(ServerLevel level, Vec3 center, double radius, long age) {

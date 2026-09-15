@@ -76,6 +76,16 @@ class SpawnVfxGraphPacketTest {
     }
 
     @Test
+    void longBoltsReachObserversNearTheMiddleAndEndWithoutBroadcastingBeyondTheSegment() {
+        var packet = new SpawnVfxGraphPacket(Identifier.fromNamespaceAndPath("academy", "vfxgraph/arc_generate"),
+                new Vec3(0, 80, 0), new Vec3(0, 0, 1), -1, 2, 1.25f, Map.of("length", 256f));
+        assertEquals(9, packet.distanceToEffectSquared(new Vec3(3, 80, 256)), 0.0001);
+        assertEquals(25, packet.distanceToEffectSquared(new Vec3(0, 85, 512)), 0.0001);
+        assertEquals(10000, packet.distanceToEffectSquared(new Vec3(0, 80, 612)), 0.0001);
+        assertEquals(100, packet.distanceToEffectSquared(new Vec3(0, 80, -10)), 0.0001);
+    }
+
+    @Test
     void clientHandlerInitializationIsIdempotent() throws ReflectiveOperationException {
         SpawnVfxGraphPacket.initClient();
         SpawnVfxGraphPacket.initClient();

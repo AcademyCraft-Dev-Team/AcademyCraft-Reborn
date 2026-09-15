@@ -30,6 +30,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.ability.ElectromasterGraphEffects;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.*;
@@ -258,7 +259,7 @@ public final class ElectromagneticShield extends Skill {
             if (!active) return;
 
             if (player.tickCount % 5 == 0 && player.level() instanceof ServerLevel level) {
-                ElectromasterArcEffects.spawnShieldArcs(level, player.position(), player.tickCount);
+                ElectromasterGraphEffects.spawnShield(level, player.position(), player.getId(), player.tickCount);
             }
 
             var system = AbilitySystemServer.getSystem(player);

@@ -43,6 +43,7 @@ public final class ArcCurve {
     private int maxTubeSegments;
     /** Close the last cross-section of each continuous run with a flat disk. */
     private boolean endCap;
+    private String layer = "";
 
     /**
      * 可选的端点吸附表面（三角形 xyz*3/三角形；null = 自由弧不做表面吸附）。
@@ -156,6 +157,7 @@ public final class ArcCurve {
         this.replacementGroup = 0L;
         this.maxTubeSegments = 0;
         this.endCap = false;
+        this.layer = "";
         this.archRandom = 1f;
         this.archHeight = 1f;
         this.archHalf = 0.5f;
@@ -171,6 +173,12 @@ public final class ArcCurve {
 
     public boolean endCap() {
         return endCap;
+    }
+
+    public String layer() { return layer; }
+
+    public void setLayer(String name) {
+        layer = java.util.Objects.requireNonNull(name);
     }
 
     public void setEndCap(boolean endCap) {

@@ -1,0 +1,11 @@
+allprojects {
+    afterEvaluate {
+        neoForge.runs.named('clientDev') {
+            sourceSet.set(sourceSets.editor)
+            gameDirectory.set(file('run/electromaster-arcs'))
+            systemProperty 'academy.electromasterExtensionSmoke', 'true'
+            systemProperty 'academy.electromasterExtensionOutput', file('docs/vfx/electromaster_arcs').absolutePath
+            programArguments.addAll('--width', '1280', '--height', '720')
+        }
+    }
+}

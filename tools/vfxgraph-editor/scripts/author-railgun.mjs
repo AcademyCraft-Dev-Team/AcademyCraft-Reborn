@@ -13,7 +13,7 @@ const context = (id, name, y, blocks) => ({ id, name, type: 'SPAWN', x: 0, y, bl
 const graph = {
   version: 1, kind: 'vfx', id: 'railgun_shot',
   parameters: [
-    number('time', -1), number('seed', 42), number('length', 50), number('width_scale', 1), number('radius', 0.832),
+    number('time', -1), number('seed', 42), number('length', 48), number('width_scale', 1), number('radius', 0.832),
     number('duration', duration), number('opacity', 1), number('detail', 1), number('muzzle', 1), number('view_near_origin', 0),
     // Keep the original ignition/expansion timing; add 10 ticks to the body hold and subsequent fade.
     curve('radius_envelope', '半径 / 小 → 大 → 中', [[0, 0.18], [0.077, 1], [0.242, 0.56], [1.325, 0.56], [duration, 0.45]].map(([t, v]) => [t / duration, v])),

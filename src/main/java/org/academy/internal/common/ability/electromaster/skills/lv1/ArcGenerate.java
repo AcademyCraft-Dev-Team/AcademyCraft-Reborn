@@ -3,7 +3,6 @@ package org.academy.internal.common.ability.electromaster.skills.lv1;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -11,7 +10,6 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -37,8 +35,8 @@ import org.academy.internal.common.ability.accelerator.reflection.LinearSegment;
 import org.academy.internal.common.ability.accelerator.reflection.ResolvedLinearAttack;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcActions;
 import org.academy.internal.common.ability.electromaster.ElectromasterArcTargeting;
+import org.academy.api.server.ability.ElectromasterGraphEffects;
 import org.academy.internal.common.network.PacketTypes;
-import org.academy.internal.common.network.SpawnVfxGraphPacket;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.joml.Quaternionf;
@@ -54,7 +52,6 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 
 public final class ArcGenerate extends Skill {
     public static final String KEY_NAME_GENERATE = SkillNames.ARC_GENERATE + ".generate";
@@ -72,6 +69,10 @@ public final class ArcGenerate extends Skill {
                         .maxStacks(20)
                         .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL1))
         );
+    }
+
+    static double rangeForMilestone(int milestone) {
+        return milestone >= 2 ? 20.0 : 16.0;
     }
 
     static float getDamage(float abilityPower, float playerDamageMultiplier) {
@@ -157,7 +158,7 @@ public final class ArcGenerate extends Skill {
                         .add(new Vec3(look).scale(0.35));
 
                 var length = LevelUtil.getValidViewDistance(player,
-                        Skills.ARC_GENERATE.get().scaledRange(player, context.milestone() >= 2 ? 12.0 : 10.0));
+                        Skills.ARC_GENERATE.get().scaledRange(player, rangeForMilestone(context.milestone())));
                 var targetPos = eyePos.add(player.getLookAngle().scale(length));
 
                 var radius = context.milestone() >= 2 ? 0.15f : 0.125f;
@@ -191,8 +192,6 @@ public final class ArcGenerate extends Skill {
             });
         }
 
-        private static final Identifier ARC_GENERATE_VFX = AcademyCraft.academy("vfxgraph/arc_generate");
-
         private static void spawnArcVfx(ServerLevel level, Vec3 handPos, Vec3 targetPos,
                                         ResolvedLinearAttack resolved) {
             if (resolved.isReflected()) {
@@ -216,18 +215,7 @@ public final class ArcGenerate extends Skill {
         }
 
         private static void broadcastArc(ServerLevel level, Vec3 from, Vec3 to) {
-            var length = (float) from.distanceTo(to);
-            System.out.println(length);
-            SpawnVfxGraphPacket.broadcast(
-                    level,
-                    ARC_GENERATE_VFX,
-                    from,
-                    to.subtract(from),
-                    -1,
-                    1f,
-                    1.0f,
-                    Map.of("branch_length_scale", length * 0.275f)
-            );
+            ElectromasterGraphEffects.spawnBolt(level, from, to, ElectromasterGraphEffects.BoltStyle.ARC);
         }
 
         private static void chainArc(ServerPlayer player,

@@ -17,6 +17,7 @@ import org.academy.api.client.render.vfxgraph.operator.OperatorContext;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperator;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
 import org.academy.api.client.render.vfxgraph.shape.SurfaceProjector;
+import org.academy.api.client.render.vfxgraph.arc.EffectArcSource;
 
 import java.util.*;
 
@@ -70,6 +71,11 @@ public final class VfxSystemSimulator {
     private final Random random;
     private float time;
     private final Map<String, SurfaceProjector> surfaces = new HashMap<>();
+    private final Map<String, EffectArcSource> arcSources = new HashMap<>();
+
+    public void setArcSource(String name, EffectArcSource source) {
+        arcSources.put(name, Objects.requireNonNull(source));
+    }
 
     public void setSurfaceProjector(String name, SurfaceProjector surface) {
         surfaces.put(name, Objects.requireNonNull(surface));
@@ -112,6 +118,7 @@ public final class VfxSystemSimulator {
     public void step(float dt) {
         var ctx = new SimContext(dt, time, random, curves, gradients, liveParams, arcBuffer);
         ctx.setSurfaces(surfaces);
+        ctx.setArcSources(arcSources);
 
         // Phase 1: SPAWN（按块收集本帧批次 + 按 context 汇总）
         var spawnBatchesByBlock = new HashMap<String, List<SpawnBatch>>();

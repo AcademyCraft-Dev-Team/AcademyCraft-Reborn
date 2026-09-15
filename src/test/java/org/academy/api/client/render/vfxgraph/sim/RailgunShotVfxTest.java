@@ -153,7 +153,7 @@ class RailgunShotVfxTest {
                     beam, 24, beam.r(), beam.g(), beam.b(), beam.a(), 1);
             var vertices = mesh.vertexBuffer();
             for (int p = beam.size() * 24; p < mesh.vertexCount(); p++) {
-                assertEquals(50, vertices.getFloat(p * 48 + 8), 0.0001f);
+                assertEquals(48, vertices.getFloat(p * 48 + 8), 0.0001f);
                 assertEquals(1, vertices.getFloat(p * 48 + 20), 0.0001f);
             }
         }
@@ -162,7 +162,7 @@ class RailgunShotVfxTest {
     @Test
     void allAmmoDimensionsAndExtendedRangesStayIndependentAndBounded() throws Exception {
         var sim = simulator();
-        float[] lengths = {50, 58, 66, 74, 512};
+        float[] lengths = {48, 56, 64, 72, 512};
         float[] widths = {1, 1.5f, 2, 2.5f, 12};
         for (float length : lengths) {
             for (float width : widths) {

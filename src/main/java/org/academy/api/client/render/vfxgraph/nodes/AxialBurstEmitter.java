@@ -6,6 +6,7 @@ import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.type.ValueType;
 import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
 import org.academy.api.client.render.vfxgraph.arc.ArcCurve;
+import org.academy.api.client.render.vfxgraph.arc.BlueWhiteArcStyle;
 import org.academy.api.client.render.vfxgraph.model.VfxBlock;
 import org.academy.api.client.render.vfxgraph.sim.SimContext;
 import org.academy.api.client.render.vfxgraph.sim.SimNode;
@@ -139,9 +140,7 @@ public final class AxialBurstEmitter {
                 }
                 int segments = Math.clamp((int) Math.ceil(span / 0.8f), 28, 96);
                 for (int shell = 0; shell < 2; shell++) {
-                    var arc = arc(ctx.arcs(), group, random, shell == 0 ? 0.12f : 0.78f,
-                            shell == 0 ? 0.48f : 0.94f, 1, alpha * (shell == 0 ? 0.48f : 0.92f));
-                    arc.setMaxTubeSegments(6);
+                    var arc = BlueWhiteArcStyle.shell(ctx.arcs(), group, random, alpha, shell, "");
                     for (int i = 0; i <= segments; i++) {
                         float u = (float) i / segments;
                         float bend = (float) Math.sin(u * Math.PI);
@@ -150,7 +149,7 @@ public final class AxialBurstEmitter {
                         float jitter = (unit(random, i + 70) - 0.5f) * spread * 0.22f * bend;
                         arc.addPoint((float) Math.cos(phase) * radius + jitter,
                                 (float) Math.sin(phase) * radius - jitter * 0.6f, start + u * span,
-                                width * (shell == 0 ? 2.5f : 0.7f) * (0.2f + 0.8f * bend)
+                                width * BlueWhiteArcStyle.widthScale(shell) * (0.2f + 0.8f * bend)
                                         * (1 - nearView + nearView * smooth((start + u * span - 1.2f) / 4)), 0);
                     }
                 }

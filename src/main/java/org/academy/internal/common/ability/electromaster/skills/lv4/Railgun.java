@@ -211,6 +211,14 @@ public final class Railgun extends Skill {
             return RailgunRay.DEFAULT_LENGTH + rangeBonus;
         }
 
+        float damageRadius() {
+            return 2.0f * beamWidthMultiplier;
+        }
+
+        float destructionRadius() {
+            return 1.0f * beamWidthMultiplier;
+        }
+
         float damageMultiplier() {
             return damageMultiplier;
         }
@@ -510,7 +518,8 @@ public final class Railgun extends Skill {
                 skill.reportActivity(player, true);
 
                 var profile = ammo.kind();
-                var beamRadius = 0.125f * profile.beamWidthMultiplier();
+                var damageRadius = profile.damageRadius();
+                var destructionRadius = profile.destructionRadius();
                 var railgunRay = new RailgunRay(EntityTypes.RAILGUN_RAY.get(), player.level());
                 var beamLength = skill.scaledRange(player,
                         profile.beamLength() * (proficiencyMilestone >= 2 ? 1.2f : 1.0f));
@@ -535,7 +544,7 @@ public final class Railgun extends Skill {
                                 player,
                                 skill,
                                 damageSource,
-                                beamRadius
+                                damageRadius
                         )
                         .damage(_ -> damage * (proficiencyMilestone >= 2 && hitIndex.getAndIncrement() > 0
                                 ? 0.6f : 1.0f))
@@ -563,7 +572,7 @@ public final class Railgun extends Skill {
                 player.level().addFreshEntity(railgunRay);
 
                 if (DestroyBlocksSetting.canDestroyBlocks(player, skill)) {
-                    destroyBlocksAlongSegment(resolved.outbound(), player, beamRadius);
+                    destroyBlocksAlongSegment(resolved.outbound(), player, destructionRadius);
                 }
                 var outboundResult = LinearAttackExecutor.executeOutbound(
                         player.level(),
@@ -575,7 +584,7 @@ public final class Railgun extends Skill {
                             .ifPresent(candidate -> destroyBlocksAlongSegment(
                                     returnSegment,
                                     candidate.reflector(),
-                                    beamRadius
+                                    destructionRadius
                             )));
                 }
                 LinearAttackExecutor.executeReturn(

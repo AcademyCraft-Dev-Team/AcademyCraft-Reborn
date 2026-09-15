@@ -10,7 +10,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
 
 public class RailgunRay extends RenderOnlyEntity {
-    public static final float DEFAULT_LENGTH = 50.0f;
+    public static final float DEFAULT_LENGTH = 48.0f;
     public static final int LIFETIME_TICKS = 40;
     private static final EntityDataAccessor<Float> BEAM_LENGTH = SynchedEntityData.defineId(
             RailgunRay.class,

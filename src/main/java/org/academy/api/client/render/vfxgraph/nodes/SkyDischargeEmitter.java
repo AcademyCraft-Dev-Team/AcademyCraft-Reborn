@@ -194,6 +194,7 @@ public final class SkyDischargeEmitter {
     private static ArcCurve arc(ArcBuffer buffer, long group, long seed, float r, float g, float b, float alpha) {
         var arc = buffer.add(group);
         arc.setColor(r, g, b, alpha);
+        arc.setLayer("sky_current");
         arc.setSeed(seed);
         arc.setLifetime(1f);
         arc.setNoiseStrength(0);

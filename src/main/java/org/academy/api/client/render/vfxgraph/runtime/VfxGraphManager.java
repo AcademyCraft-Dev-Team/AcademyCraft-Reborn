@@ -139,7 +139,7 @@ public final class VfxGraphManager {
         var iterator = effects.iterator();
         while (iterator.hasNext()) {
             var effect = iterator.next();
-            if (effect.updateState()) { iterator.remove(); continue; }
+            if (effect.updateFrame(dt, lastCamera, 0)) { iterator.remove(); continue; }
             if (budget.canSpawnMore(effect.effect().buffer().count())) effect.simulate(dt);
         }
     }
@@ -159,12 +159,13 @@ public final class VfxGraphManager {
         float dt = paused ? 0f : lastRenderNanos <= 0 ? 1f / 60f
                 : Math.min((now - lastRenderNanos) / 1e9f, 0.1f);
         lastRenderNanos = now;
+        float partialTick = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
         int visible = 0, culled = 0, simulated = 0;
         var iterator = effects.iterator();
         while (iterator.hasNext()) {
             var effect = iterator.next();
             effect.setRenderVisible(false);
-            if (effect.updateState()) { iterator.remove(); continue; }
+            if (effect.updateFrame(dt, camera, partialTick)) { iterator.remove(); continue; }
             var effectCamera = frameCameras.computeIfAbsent(effect.minimumFarPlane(),
                     far -> camera.withMinimumFarPlane(far));
             float radius = effect.cullingRadius(budget.effectRadius());
@@ -332,6 +333,9 @@ public final class VfxGraphManager {
     public int effectCount() {
         return effects.size();
     }
+
+    /** Stable diagnostic snapshot for runtime previews and integration checks. */
+    public List<ActiveEffect> activeEffects() { return List.copyOf(effects); }
 
     /**
      * 从磁盘文件加载/重载单个资产（dev 热重载，M15-05）。

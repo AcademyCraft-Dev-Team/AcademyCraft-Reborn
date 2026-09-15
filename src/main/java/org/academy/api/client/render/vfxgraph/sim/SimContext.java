@@ -5,6 +5,7 @@ import org.academy.api.client.render.graph.type.Gradient;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.type.ValueType;
 import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
+import org.academy.api.client.render.vfxgraph.arc.EffectArcSource;
 import org.academy.api.client.render.vfxgraph.shape.SurfaceProjector;
 import org.jspecify.annotations.Nullable;
 
@@ -26,6 +27,15 @@ public final class SimContext {
     private final Map<String, Value> liveParams;
     private final ArcBuffer arcs;
     private Map<String, SurfaceProjector> surfaces = Map.of();
+    private Map<String, EffectArcSource> arcSources = Map.of();
+
+    public void setArcSources(Map<String, EffectArcSource> sources) {
+        arcSources = sources;
+    }
+
+    public @Nullable EffectArcSource arcSource(String name) {
+        return arcSources.get(name);
+    }
     public int spawnStart;
 
     public void setSurfaces(Map<String, SurfaceProjector> surfaces) {

@@ -1,85 +1,165 @@
 {
   "version": 1,
   "kind": "vfx",
-  "id": "editor",
+  "id": "arc_generate",
   "parameters": [
     {
-      "id": "branch_length_scale",
-      "name": "Branch Length Scale",
+      "id": "time",
+      "name": "time",
       "type": "FLOAT",
       "default": {
         "type": "FLOAT",
-        "value": 1.0
+        "value": -1
+      }
+    },
+    {
+      "id": "seed",
+      "name": "seed",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 42
+      }
+    },
+    {
+      "id": "opacity",
+      "name": "opacity",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "detail",
+      "name": "detail",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "flicker_rate",
+      "name": "flicker rate",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 18
+      }
+    },
+    {
+      "id": "length",
+      "name": "length",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 16
+      }
+    },
+    {
+      "id": "width",
+      "name": "width",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.065
+      }
+    },
+    {
+      "id": "spread",
+      "name": "spread",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1.1
+      }
+    },
+    {
+      "id": "strands",
+      "name": "strands",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 4
+      }
+    },
+    {
+      "id": "forks",
+      "name": "forks",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 3
+      }
+    },
+    {
+      "id": "duration",
+      "name": "duration",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1.25
+      }
+    },
+    {
+      "id": "density",
+      "name": "density",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1.45
       }
     }
   ],
   "contexts": [
     {
-      "id": "ctx_spawn",
+      "id": "discharge",
       "type": "SPAWN",
-      "name": "Spawn",
-      "x": 0.0,
-      "y": 0.0,
+      "name": "01 / 蓝色外晕 · 白色细芯 · 空间折返",
+      "x": 0,
+      "y": 0,
       "blocks": [
         {
-          "id": "bolt",
-          "type": "vfx.block.arc_bolt",
+          "id": "current",
+          "type": "vfx.block.electric_bolt",
           "properties": {
-            "branch_angle": "0.25",
-            "reshuffle": "0.075",
-            "origin_x": "0",
-            "branch_width_scale": "1.0",
-            "origin_y": "0",
-            "branch_depth": "2",
-            "origin_z": "0",
-            "to_z": "0",
-            "to_y": "1",
-            "to_x": "0",
-            "density": "1.0",
-            "segments": "16",
-            "branch_brightness_scale": "1.0",
-            "color": "1,1,1,1",
-            "interval": "0.0",
-            "branch_length_scale_param": "branch_length_scale",
-            "from_y": "0",
-            "probability": "0.07",
-            "branch_length_scale": "2.13",
-            "from_z": "0",
-            "branch_count": "3",
-            "from_x": "0",
-            "lifetime": "1.0",
-            "emission": "1.0",
-            "width": "0.005"
+            "length": "16",
+            "width": "0.065",
+            "spread": "1.1",
+            "strands": "4",
+            "forks": "3",
+            "duration": "1.25",
+            "density": "1.45"
           }
         }
       ]
     },
     {
-      "id": "ctx_out",
+      "id": "render",
       "type": "OUTPUT",
-      "name": "Output",
-      "x": 440.0,
-      "y": 0.0,
+      "name": "02 / 与超电磁炮共用电弧材质",
+      "x": 650,
+      "y": 0,
       "blocks": [
         {
-          "id": "out_glow",
+          "id": "electric_out",
           "type": "vfx.block.output_arc",
           "properties": {
-            "spark_radius": "0.005",
-            "spark_size": "0.02",
-            "spark_lifetime": "1.0",
             "vertex": "academy:core/vfxgraph_arc",
-            "overall_scale": "1.0",
-            "segments": "12",
-            "emission": "8.0",
-            "shader": "academy:core/vfxgraph_arc",
-            "spark_speed": "2.2",
-            "sparks": "3",
-            "lifetime": "1.0",
-            "spark_gravity": "-9.8",
+            "shader": "academy:core/vfxgraph_axial_burst",
             "blend": "glow",
-            "noise_strength": "0.3",
-            "drift_speed": "1.5"
+            "layer": "electricity",
+            "thickness": "1",
+            "emission": "1.15",
+            "sparks": "0",
+            "segments": "12",
+            "overall_scale": "1",
+            "branch_depth": "0",
+            "branch_count": "0",
+            "noise_strength": "0",
+            "drift_speed": "0",
+            "branch_brightness_scale": "1"
           }
         }
       ]
@@ -88,13 +168,13 @@
   "operators": [],
   "flow": [
     {
-      "from": "ctx_spawn",
-      "to": "ctx_out"
+      "from": "discharge",
+      "to": "render"
     }
   ],
   "blockFlows": [],
   "dataEdges": [],
   "outputs": [
-    "out_glow"
+    "electric_out"
   ]
 }

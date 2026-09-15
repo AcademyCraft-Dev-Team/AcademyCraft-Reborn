@@ -6,10 +6,12 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.client.render.vfx.Vfx;
-import org.academy.api.client.render.vfx.VfxFrameContext;
-import org.academy.api.client.render.vfx.VfxSink;
 import org.academy.api.common.arc.ArcPath;
+import org.academy.AcademyCraft;
+import org.academy.api.client.render.graph.type.Value;
+import org.academy.api.client.render.vfxgraph.render.GraphCamera;
+import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
+import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.internal.common.world.entity.skill.MagneticWeaponBlade;
 import org.academy.internal.common.world.entity.skill.MagneticWeaponBladeMotion;
 
@@ -18,15 +20,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-public final class MagneticWeaponBladeArcVfx implements Vfx {
-    private static final long REMOVAL_FADE_NANOS = 150_000_000L;
+/** Supplies blade motion to VFXGraph; all tubes, palette and glow come from the graph. */
+public final class MagneticWeaponBladeArcVfx {
     private static final double FULL_EFFECT_DISTANCE_SQR = 32.0 * 32.0;
     private static final double MAX_EFFECT_DISTANCE_SQR = 48.0 * 48.0;
 
     private final MagneticWeaponBlade blade;
     private final ArrayDeque<Vec3> history = new ArrayDeque<>();
-    private final List<ArcTube> tubePool = new ArrayList<>();
-    private int tubeCursor;
+    private final List<ArcPath> paths = new ArrayList<>();
+    private Vec3 origin = Vec3.ZERO;
     private int lastEntityTick = Integer.MIN_VALUE;
     private int lastAttackTick;
     private int lastAttackSequence = Integer.MIN_VALUE;
@@ -34,10 +36,19 @@ public final class MagneticWeaponBladeArcVfx implements Vfx {
     private int impactTicks;
     private Vec3 impactCenter = Vec3.ZERO;
     private Vec3 impactHalfSize = new Vec3(0.4, 0.7, 0.4);
-    private long removedAt;
-    private boolean expired;
+    private float removedAt = Float.NaN;
 
-    public MagneticWeaponBladeArcVfx(MagneticWeaponBlade blade) {
+    public static void spawn(MagneticWeaponBlade blade) {
+        var adapter = new MagneticWeaponBladeArcVfx(blade);
+        var effect = VfxGraphManager.INSTANCE.spawn(AcademyCraft.academy("vfxgraph/magnetic_weapon"),
+                blade.position().toVector3f());
+        effect.bindArcs("paths", _ -> adapter.paths);
+        effect.bindGameTime("time");
+        effect.bindFrame(adapter::sample);
+        effect.setRenderDistance(48);
+    }
+
+    private MagneticWeaponBladeArcVfx(MagneticWeaponBlade blade) {
         this.blade = blade;
     }
 
@@ -45,41 +56,45 @@ public final class MagneticWeaponBladeArcVfx implements Vfx {
         return vector.lengthSqr() > 1.0E-8 ? vector.normalize() : fallback.normalize();
     }
 
-    @Override
-    public void sample(VfxFrameContext ctx, VfxSink sink) {
-        updateRemovalState();
-        if (expired) return;
-
-        tubeCursor = 0;
-        var camera = ctx.camera().pos();
-        var cameraPosition = new Vec3(camera.x(), camera.y(), camera.z());
+    private boolean sample(ActiveEffect effect, GraphCamera camera, float partialTick) {
+        paths.clear();
+        if (blade.level() != Minecraft.getInstance().level) return false;
+        boolean removed = blade.isRemoved() || !blade.isAlive();
+        if (removed && !Float.isFinite(removedAt)) removedAt = effect.gameAgeSeconds();
+        float fade = removed ? Math.max(0, 1 - (effect.gameAgeSeconds() - removedAt) / 0.15f) : 1;
+        if (fade <= 0) return false;
+        var cameraPosition = new Vec3(camera.position().x(), camera.position().y(), camera.position().z());
         var bladePosition = blade.isRemoved() || !blade.isAlive()
                 ? history.isEmpty() ? blade.position() : history.getFirst()
-                : blade.getPosition(ctx.partialTick());
+                : blade.getPosition(partialTick);
+        origin = bladePosition;
+        effect.setPosition(origin.toVector3f());
+        effect.setCullingSphere(origin.toVector3f(), 10);
         var distanceSqr = bladePosition.distanceToSqr(cameraPosition);
         if (distanceSqr > MAX_EFFECT_DISTANCE_SQR) {
             history.clear();
             lastEntityTick = blade.tickCount;
             lastAttackTick = blade.getAttackTick();
             lastAttackSequence = blade.getAttackSequence();
-            return;
+            return true;
         }
 
         var status = Minecraft.getInstance().options.particles().get();
         var quality = Quality.from(status, distanceSqr <= FULL_EFFECT_DISTANCE_SQR);
         updateTickState(quality.maxHistory());
+        effect.effect().setLiveParam("opacity", Value.of(fade * (quality.glow() ? 1f : 0.7f)));
 
-        var time = blade.tickCount * 0.5f;
         var seed = seed();
         if (blade.tickCount <= 4 && !blade.isRemoved()) {
-            emitActivation(ctx, sink, quality, bladePosition, seed, time);
+            emitActivation(quality, bladePosition, seed);
         }
         if (blade.getAttackTick() == 0 && !blade.isRemoved()) {
-            emitIdleSpark(ctx, sink, quality, bladePosition, seed, time);
+            emitIdleSpark(quality, bladePosition, seed);
         }
 
-        emitTrail(ctx, sink, quality, bladePosition, seed, time);
-        emitImpact(ctx, sink, quality, seed, time);
+        emitTrail(quality, bladePosition, seed);
+        emitImpact(quality, seed);
+        return true;
     }
 
     private void updateTickState(int maxHistory) {
@@ -129,13 +144,13 @@ public final class MagneticWeaponBladeArcVfx implements Vfx {
         );
     }
 
-    private void emitTrail(VfxFrameContext ctx, VfxSink sink, Quality quality,
-                           Vec3 bladePosition, long seed, float time) {
+    private void emitTrail(Quality quality,
+                           Vec3 bladePosition, long seed) {
         if (history.size() < 2) return;
         var points = new ArrayList<>(history);
         if (!blade.isRemoved()) points.set(0, bladePosition);
         while (points.size() > quality.maxHistory()) points.removeLast();
-        emit(sink, MagneticWeaponTrailBuilder.trail(points, seed, 0.7f), time, quality.glow());
+        emit(MagneticWeaponTrailBuilder.trail(points.stream().map(p -> p.subtract(origin)).toList(), seed, 0.7f));
 
         if (quality.maxForks() <= 0 || points.size() < 3) return;
         var random = new Random(seed ^ 0x6A09E667F3BCC909L);
@@ -152,14 +167,14 @@ public final class MagneticWeaponBladeArcVfx implements Vfx {
             var perpendicular = normalizedOr(tangent.cross(randomDirection), new Vec3(1.0, 0.0, 0.0));
             var length = 0.2 + random.nextDouble() * 0.4;
             var end = start.add(perpendicular.scale(length)).add(tangent.scale(0.12));
-            emit(sink, MagneticWeaponTrailBuilder.line(
+            emit(line(
                     start, end, seed + i * 31L + 7L, 0.32f
-            ), time, quality.glow());
+            ));
         }
     }
 
-    private void emitActivation(VfxFrameContext ctx, VfxSink sink, Quality quality,
-                                Vec3 bladePosition, long seed, float time) {
+    private void emitActivation(Quality quality,
+                                Vec3 bladePosition, long seed) {
         var owner = blade.level().getEntity(blade.getOwnerId());
         if (!(owner instanceof Avatar avatar)) return;
         var forward = Vec3.directionFromRotation(0.0f, avatar.getYRot()).normalize();
@@ -172,24 +187,24 @@ public final class MagneticWeaponBladeArcVfx implements Vfx {
         var count = quality.maxForks() > 0 ? 2 : 1;
         for (var i = 0; i < count; i++) {
             var end = bladePosition.add(0.0, (i - 0.5) * 0.18, 0.0);
-            emit(sink, MagneticWeaponTrailBuilder.line(
+            emit(line(
                     hand, end, seed + 101L * i, 0.45f
-            ), time, quality.glow());
+            ));
         }
     }
 
-    private void emitIdleSpark(VfxFrameContext ctx, VfxSink sink, Quality quality,
-                               Vec3 bladePosition, long seed, float time) {
+    private void emitIdleSpark(Quality quality,
+                               Vec3 bladePosition, long seed) {
         var interval = 12 + Mth.positiveModulo(blade.getId(), 8);
         if (Mth.positiveModulo(blade.tickCount, interval) >= 2) return;
         var direction = Vec3.directionFromRotation(blade.getXRot(), blade.getYRot()).normalize();
         var side = normalizedOr(direction.cross(new Vec3(0.0, 1.0, 0.0)), new Vec3(1.0, 0.0, 0.0));
         var start = bladePosition.subtract(direction.scale(0.25)).add(side.scale(0.12));
         var end = bladePosition.add(direction.scale(0.35)).subtract(side.scale(0.15));
-        emit(sink, MagneticWeaponTrailBuilder.line(start, end, seed, 0.28f), time, quality.glow());
+        emit(line(start, end, seed, 0.28f));
     }
 
-    private void emitImpact(VfxFrameContext ctx, VfxSink sink, Quality quality, long seed, float time) {
+    private void emitImpact(Quality quality, long seed) {
         if (impactTicks <= 0) return;
         var count = switch (quality.status()) {
             case ALL -> 6;
@@ -208,42 +223,25 @@ public final class MagneticWeaponBladeArcVfx implements Vfx {
                     (random.nextDouble() - 0.5) * 0.2,
                     (random.nextDouble() - 0.5) * 0.2
             );
-            emit(sink, MagneticWeaponTrailBuilder.line(
+            emit(line(
                     start, end, seed + 211L * i, 0.5f
-            ), time, quality.glow());
+            ));
         }
     }
 
-    private void emit(VfxSink sink, ArcPath path, float time, boolean glow) {
-        var tube = acquireTube();
-        tube.build(path, time);
-        if (tube.mesh().isEmpty()) return;
-        sink.push(new LightningCoreData(tube));
-        if (glow) sink.push(new LightningRenderData(tube));
+    private void emit(ArcPath path) {
+        paths.add(path);
     }
 
-    private ArcTube acquireTube() {
-        if (tubeCursor >= tubePool.size()) {
-            tubePool.add(new ArcTube());
-        }
-        return tubePool.get(tubeCursor++);
+    private ArcPath line(Vec3 start, Vec3 end, long seed, float thickness) {
+        // Subtract in double precision before conversion to the graph's local float coordinates.
+        return MagneticWeaponTrailBuilder.line(start.subtract(origin), end.subtract(origin), seed, thickness);
     }
 
     private long seed() {
         return ((long) blade.getId() << 32)
                 ^ (blade.getAttackSequence() * 0x9E3779B9L)
                 ^ (blade.tickCount / 2L);
-    }
-
-    private void updateRemovalState() {
-        if (!blade.isRemoved() && blade.isAlive()) return;
-        if (removedAt == 0L) removedAt = System.nanoTime();
-        expired = System.nanoTime() - removedAt >= REMOVAL_FADE_NANOS;
-    }
-
-    @Override
-    public boolean isAlive() {
-        return !expired;
     }
 
     private record Quality(ParticleStatus status, int maxHistory, int maxForks, boolean glow) {

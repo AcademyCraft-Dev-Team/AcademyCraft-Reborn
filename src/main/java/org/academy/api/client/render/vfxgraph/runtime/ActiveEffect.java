@@ -5,6 +5,7 @@ import net.minecraft.world.entity.Entity;
 import org.academy.api.client.render.graph.model.Graph;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.vfxgraph.GraphEffect;
+import org.academy.api.client.render.vfxgraph.arc.EffectArcSource;
 import org.academy.api.client.render.vfxgraph.model.VfxSystem;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxNodeRegistry;
@@ -15,6 +16,7 @@ import org.academy.api.client.render.vfxgraph.render.VfxGraphRenderer;
 import org.academy.api.client.render.vfxgraph.render.WorldTransform;
 import org.academy.api.client.render.vfxgraph.shape.SurfaceProjector;
 import org.joml.Quaternionf;
+import org.joml.Matrix4fc;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 
@@ -40,7 +42,50 @@ public final class ActiveEffect {
     private final Quaternionf rotation = new Quaternionf();
     private final Map<String, Supplier<Value>> bindings = new LinkedHashMap<>();
     private final Map<String, SurfaceProjector> surfaces = new LinkedHashMap<>();
+    private final Map<String, EffectArcSource> arcSources = new LinkedHashMap<>();
+
+    /** Bind procedural local paths without rebuilding the graph or allocating an effect per stroke. */
+    public void bindArcs(String name, EffectArcSource source) {
+        arcSources.put(name, Objects.requireNonNull(source));
+        effect.setArcSource(name, source);
+    }
     private GraphEffect effect;
+    private @Nullable EffectFrameBinding frameBinding;
+    private float gameAgeSeconds;
+    private float gameLifetimeSeconds = Float.POSITIVE_INFINITY;
+
+    public void bindFrame(EffectFrameBinding binding) {
+        frameBinding = Objects.requireNonNull(binding);
+    }
+
+    /** A uniformly scaled attachment matrix, e.g. a hand, bone, camera, or non-player emitter. */
+    public void setTransform(Matrix4fc transform) {
+        transform.getTranslation(position);
+        transform.getUnnormalizedRotation(rotation).normalize();
+        scale = transform.getScale(new Vector3f()).x;
+    }
+
+    public void setGameTimeLifetimeSeconds(float seconds) {
+        gameLifetimeSeconds = Float.isFinite(seconds) && seconds > 0 ? seconds : Float.POSITIVE_INFINITY;
+    }
+
+    public float gameAgeSeconds() { return gameAgeSeconds; }
+
+    /** The presentation clock advances even when the effect is offscreen, and freezes on pause. */
+    public void bindGameTime(String parameter) {
+        bind(parameter, () -> Value.of(gameAgeSeconds));
+    }
+
+    boolean updateFrame(float dt, @Nullable GraphCamera camera, float partialTick) {
+        if (Float.isFinite(dt) && dt > 0) gameAgeSeconds += dt;
+        if (updateState()) return true;
+        if (followEntity != null && camera != null) position.set(followEntity.getPosition(partialTick).toVector3f());
+        if (frameBinding != null && camera != null && !frameBinding.update(this, camera, partialTick)) {
+            stop();
+            return true;
+        }
+        return false;
+    }
 
     /** Bind a local projection surface; preserved through asset reloads, independent of player entities. */
     public void bindSurface(String name, SurfaceProjector surface) {
@@ -173,7 +218,9 @@ public final class ActiveEffect {
     /** External analytic effects may cull before simulation without freezing their presentation clock. */
     public void setFrameVisible(boolean visible) { frameVisible = visible; }
     public boolean frameVisible() { return frameVisible; }
-    public boolean isExpired() { return stopped || System.nanoTime() >= expiresAtNanos; }
+    public boolean isExpired() {
+        return stopped || System.nanoTime() >= expiresAtNanos || gameAgeSeconds >= gameLifetimeSeconds;
+    }
 
     public boolean alwaysVisible() {
         return alwaysVisible;
@@ -219,7 +266,7 @@ public final class ActiveEffect {
      * tick 并返回是否应移除（显式 stop 或跟随实体已移除）。
      */
     public boolean tick(float dt) {
-        if (updateState()) return true;
+        if (updateFrame(dt, null, 0)) return true;
         simulate(dt);
         return false;
     }
@@ -230,7 +277,7 @@ public final class ActiveEffect {
 
     /** Lifecycle and bindings must run even when simulation or drawing is budgeted out. */
     boolean updateState() {
-        if (stopped || System.nanoTime() >= expiresAtNanos) {
+        if (isExpired()) {
             stopped = true;
             return true;
         }
@@ -246,6 +293,7 @@ public final class ActiveEffect {
             effect.setLiveParam(entry.getKey(), value);
         }
         surfaces.forEach(effect::setSurfaceProjector);
+        arcSources.forEach(effect::setArcSource);
         return false;
     }
 
@@ -268,6 +316,8 @@ public final class ActiveEffect {
      */
     void reload(Graph graph) {
         effect = new GraphEffect(graph, registry);
+        surfaces.forEach(effect::setSurfaceProjector);
+        arcSources.forEach(effect::setArcSource);
         for (var entry : bindings.entrySet()) {
             effect.setLiveParam(entry.getKey(), entry.getValue().get());
         }
@@ -279,6 +329,8 @@ public final class ActiveEffect {
     void reload(VfxSystem system) {
         effect = GraphEffect.container(system, Objects.requireNonNull(blockRegistry),
                 Objects.requireNonNull(operatorRegistry), system.parameters());
+        surfaces.forEach(effect::setSurfaceProjector);
+        arcSources.forEach(effect::setArcSource);
         for (var entry : bindings.entrySet()) {
             effect.setLiveParam(entry.getKey(), entry.getValue().get());
         }

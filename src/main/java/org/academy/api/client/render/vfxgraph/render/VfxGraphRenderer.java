@@ -333,7 +333,6 @@ public final class VfxGraphRenderer {
             if (hasSurfaces) {
                 drawSurfaces(renderPass, surfaces, camera);
             }
-            var arcsDrawn = false;
             for (var spec : specs) {
                 if (bloomPass && !spec.feedsBloom()) continue;
                 switch (spec.geometry()) {
@@ -341,9 +340,8 @@ public final class VfxGraphRenderer {
                     case LINE -> drawTrail(renderPass, buffer, camera, spec, PrimitiveTopology.LINES, transform);
                     case RIBBON -> drawTrail(renderPass, buffer, camera, spec, PrimitiveTopology.QUADS, transform);
                     case ARC -> {
-                        if (!arcsDrawn && arcBuffer != null && arcBuffer.count() > 0) {
+                        if (arcBuffer != null && arcBuffer.count() > 0) {
                             drawArcTubes(renderPass, arcBuffer, camera, transform, bloomPass, spec);
-                            arcsDrawn = true;
                         }
                     }
                     default -> drawInstanced(renderPass, buffer, camera, quadBuffer, transform, spec);
@@ -389,6 +387,7 @@ public final class VfxGraphRenderer {
         int totalVerts = 0, totalIndices = 0;
         int segRes = Math.clamp(arcRender.segments(), 3, 16);
         for (int a = 0; a < arcBuffer.count(); a++) {
+            if (!spec.matchesArcLayer(arcBuffer.arc(a).layer())) continue;
             var size = CurveToMeshBuilder.measure(arcBuffer.arc(a), segRes);
             totalVerts += size.vertices();
             totalIndices += size.indices();
@@ -405,6 +404,7 @@ public final class VfxGraphRenderer {
         int vertexOffset = 0;
         for (int a = 0; a < arcBuffer.count(); a++) {
             var arc = arcBuffer.arc(a);
+            if (!spec.matchesArcLayer(arc.layer())) continue;
             var light = arcLight(arc);
             vertexOffset += CurveToMeshBuilder.append(arc, segRes,
                     arc.r() * light[0], arc.g() * light[0], arc.b() * light[0], arc.a() * light[1],
