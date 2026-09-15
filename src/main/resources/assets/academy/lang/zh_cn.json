@@ -521,6 +521,7 @@
   "hud.academy.layout.reset": "全部重置",
   "hud.academy.layout.title": "HUD 布局编辑器",
   "hud.academy.magnetic_field.hovering": "磁悬浮",
+  "hud.academy.magnetic_field.losing_support": "正在失去支撑",
   "hud.academy.magnetic_field.no_support": "等待附近方块",
   "hud.academy.mental_control.cp": "%s呆然 %d CP | 印象 %d CP",
   "hud.academy.mental_control.effect.impression": "印",

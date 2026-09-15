@@ -107,6 +107,9 @@ public final class AttachmentTypes {
             "magnetic_levitation_requested", () -> AttachmentType.builder(DEFAULT_FALSE).sync(ByteBufCodecs.BOOL).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> MAGNETIC_LEVITATION_ACTIVE = REGISTER.register(
             "magnetic_levitation_active", () -> AttachmentType.builder(DEFAULT_FALSE).sync(ByteBufCodecs.BOOL).build());
+    /** Requested but currently without a field: still steerable and sinking, not yet released. */
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> MAGNETIC_LEVITATION_DEGRADED = REGISTER.register(
+            "magnetic_levitation_degraded", () -> AttachmentType.builder(DEFAULT_FALSE).sync(ByteBufCodecs.BOOL).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> MAGNET_MANIPULATION_ACTIVE = REGISTER.register(
             "magnet_manipulation_active",
             () -> AttachmentType.builder(DEFAULT_FALSE).sync(ByteBufCodecs.BOOL).build()

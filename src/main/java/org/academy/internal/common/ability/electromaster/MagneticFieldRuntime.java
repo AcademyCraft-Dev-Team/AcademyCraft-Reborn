@@ -4,6 +4,7 @@ import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -46,6 +47,10 @@ public final class MagneticFieldRuntime {
     }
 
     private static void state(ServerPlayer player, boolean requested, boolean hovering) {
+        state(player, requested, hovering, false);
+    }
+
+    private static void state(ServerPlayer player, boolean requested, boolean hovering, boolean degraded) {
         if (player.getData(AttachmentTypes.MAGNETIC_LEVITATION_REQUESTED) != requested) {
             player.setData(AttachmentTypes.MAGNETIC_LEVITATION_REQUESTED, requested);
             player.syncData(AttachmentTypes.MAGNETIC_LEVITATION_REQUESTED);
@@ -53,6 +58,10 @@ public final class MagneticFieldRuntime {
         if (player.getData(AttachmentTypes.MAGNETIC_LEVITATION_ACTIVE) != hovering) {
             player.setData(AttachmentTypes.MAGNETIC_LEVITATION_ACTIVE, hovering);
             player.syncData(AttachmentTypes.MAGNETIC_LEVITATION_ACTIVE);
+        }
+        if (player.getData(AttachmentTypes.MAGNETIC_LEVITATION_DEGRADED) != degraded) {
+            player.setData(AttachmentTypes.MAGNETIC_LEVITATION_DEGRADED, degraded);
+            player.syncData(AttachmentTypes.MAGNETIC_LEVITATION_DEGRADED);
         }
     }
 
@@ -73,7 +82,7 @@ public final class MagneticFieldRuntime {
         private final MagneticLevitation movement = new MagneticLevitation();
         private final net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dimension;
         private int activeTicks;
-        private int unsupportedTicks;
+        private int graceTicks;
         private boolean hovering;
         private boolean ended;
 
@@ -87,36 +96,64 @@ public final class MagneticFieldRuntime {
                     || !SkillAvailability.requestExecution(player, skill, true)) {
                 unregister(); return;
             }
+            var tuning = MagneticFieldEffects.levitationTuning(player);
             var radius = MagneticFieldTuning.supportRadius(skill.getEffectiveProficiencyMilestone(player));
-            if (unsupportedTicks > 0) { unsupportedTicks--; return; }
-            if (!movement.supported(player, radius) || !EntityMotionGuard.canApplyMotionFrom(player, player)) {
+            var canMove = EntityMotionGuard.canApplyMotionFrom(player, player);
+            var input = player.getLastClientInput();
+            if (input == null) input = Input.EMPTY;
+            var forward = (input.forward() ? 1 : 0) - (input.backward() ? 1 : 0);
+            var strafe = (input.left() ? 1 : 0) - (input.right() ? 1 : 0);
+            var vertical = (input.jump() ? 1 : 0) - (input.shift() ? 1 : 0);
+            // One solved tick carries field presence and ground clearance together, so the support probe
+            // runs once per tick rather than once for admission and again for motion.
+            var step = canMove
+                    ? movement.step(player, forward, strafe, vertical,
+                            MagneticFieldTuning.FLIGHT_SPEED_PER_TICK, radius, tuning)
+                    : null;
+
+            if (step == null || !step.supported()) {
+                // Losing the field degrades into a bounded, steerable sink instead of dropping the gravity
+                // lease at once, so a mover that grazes the boundary can still climb back inside.
+                if (graceTicks >= tuning.graceTicks()) { releaseField(); return; }
+                graceTicks++;
+                GravityControl.set(player, MagneticFieldEffects.SOURCE, true);
+                applyMotion(movement.degradedVelocity(player, forward, strafe, vertical,
+                        MagneticFieldTuning.FLIGHT_SPEED_PER_TICK, tuning));
                 hovering = false;
-                GravityControl.set(player, MagneticFieldEffects.SOURCE, false);
-                state(player, true, false);
-                unsupportedTicks = 4;
+                state(player, true, false, true);
+                skill.reportActivity(player, true);
                 return;
             }
+            graceTicks = 0;
+
             if (activeTicks % 20 == 0 && !AbilitySystemServer.getSystem(player).tryTimedOccupation(player.getUUID(),
                     skill.adjustProficiencyCost(player, SkillProficiencyProfile.CostKind.CONTINUOUS, 10), skill, 10)) {
                 unregister(); return;
             }
-            var input = player.getLastClientInput();
-            if (input == null) input = Input.EMPTY;
-            var velocity = movement.velocity(player, (input.forward() ? 1 : 0) - (input.backward() ? 1 : 0),
-                    (input.left() ? 1 : 0) - (input.right() ? 1 : 0),
-                    (input.jump() ? 1 : 0) - (input.shift() ? 1 : 0), MagneticFieldTuning.FLIGHT_SPEED_PER_TICK, radius);
             GravityControl.set(player, MagneticFieldEffects.SOURCE, true);
-            EntityMotionGuard.runWithMotionSource(player, () -> player.setDeltaMovement(velocity));
-            player.connection.send(new ClientboundSetEntityMotionPacket(player));
-            player.resetFallDistance();
+            applyMotion(step.velocity());
             hovering = true;
             state(player, true, true);
             if (activeTicks++ == 0) skill.reportTrigger(player);
-            skill.reportActivity(player, velocity.lengthSqr() > 1.0e-8);
+            skill.reportActivity(player, step.velocity().lengthSqr() > 1.0e-8);
+        }
+
+        private void applyMotion(Vec3 velocity) {
+            EntityMotionGuard.runWithMotionSource(player, () -> player.setDeltaMovement(velocity));
+            player.connection.send(new ClientboundSetEntityMotionPacket(player));
+            player.resetFallDistance();
+        }
+
+        private void releaseField() {
+            graceTicks = 0;
+            hovering = false;
+            GravityControl.set(player, MagneticFieldEffects.SOURCE, false);
+            state(player, true, false);
         }
 
         @Override protected void onUnregistered() {
             ended = true;
+            graceTicks = 0;
             FLIGHTS.remove(player, this);
             GravityControl.set(player, MagneticFieldEffects.SOURCE, false);
             state(player, false, false);

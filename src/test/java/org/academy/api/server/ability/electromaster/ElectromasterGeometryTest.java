@@ -1,5 +1,7 @@
 package org.academy.api.server.ability.electromaster;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.server.ability.HostileProjectiles;
@@ -27,4 +29,19 @@ class ElectromasterGeometryTest {
         assertEquals(0, MagneticSupportQuery.distanceSquared(actor, new AABB(0, 2, 0, 1, 3, 1)));
     }
     private static AABB box(double x, double y, double z) { return new AABB(x, y, z, x, y, z); }
+
+    /**
+     * Height control reads only ground references. A wall or ceiling contact is a valid field anchor but
+     * must never be mistaken for the floor, which is what made altitude depend on an arbitrary neighbour.
+     */
+    @Test void onlyUpwardFacingContactsCountAsGround() {
+        var pos = new BlockPos(1, 2, 3);
+        var ground = new SupportReference(pos, new Vec3(1.5, 3.0, 3.5), Direction.UP, 0.5);
+        var ceiling = new SupportReference(pos, new Vec3(1.5, 5.0, 3.5), Direction.DOWN, 0.5);
+        var wall = new SupportReference(pos, new Vec3(2.0, 4.0, 3.5), Direction.WEST, 0.5);
+        assertTrue(ground.isGround());
+        assertFalse(ceiling.isGround());
+        assertFalse(wall.isGround());
+        assertEquals(3.0, ground.surfaceY(), 1.0e-9);
+    }
 }

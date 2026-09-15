@@ -31,4 +31,56 @@ class ElectromasterReworkTuningTest {
         assertEquals(60, MagneticFieldTuning.targetPullRange(2));
         assertEquals(2.645, MagneticFieldTuning.targetPullSpeed(2), 1e-9);
     }
+
+    @Test void levitationDefaultsKeepRestHeightAboveTheSafetyFloor() {
+        var tuning = LevitationTuning.DEFAULT;
+        assertTrue(tuning.restClearance() >= MagneticMovement.MIN_CLEARANCE);
+        assertTrue(tuning.maxClimbSpeed() > tuning.maxDescentSpeed(),
+                "rising must stay more responsive than falling");
+        assertEquals(1.5, tuning.restClearance(), 1e-9);
+        assertEquals(6, tuning.graceTicks());
+        assertEquals(1152, tuning.maxSupportSamples());
+    }
+
+    @Test void levitationTuningRejectsOutOfRangeAndNonFiniteEntries() {
+        var fallback = LevitationTuning.DEFAULT;
+        var broken = new LevitationTuning(
+                Double.NaN, Double.NEGATIVE_INFINITY, Double.NaN, -1.0, Double.NaN, -0.5,
+                Double.NaN, 4.0, 1, -9);
+        assertEquals(fallback.restClearance(), broken.restClearance(), 1e-9);
+        assertEquals(fallback.inputClearanceOffset(), broken.inputClearanceOffset(), 1e-9);
+        assertEquals(fallback.followGain(), broken.followGain(), 1e-9);
+        assertEquals(fallback.maxClimbSpeed(), broken.maxClimbSpeed(), 1e-9);
+        assertEquals(fallback.maxDescentSpeed(), broken.maxDescentSpeed(), 1e-9);
+        assertEquals(fallback.inputVerticalSpeed(), broken.inputVerticalSpeed(), 1e-9);
+        assertEquals(fallback.sinkSpeed(), broken.sinkSpeed(), 1e-9);
+        assertEquals(1.0, broken.graceSpeedFactor(), 1e-9);
+        assertEquals(16, broken.maxSupportSamples());
+        assertEquals(0, broken.graceTicks());
+    }
+
+    /**
+     * A zero gain or speed would leave the mover with no altitude correction at all, which is precisely the
+     * failure this tuning exists to prevent, so those are rejected rather than accepted from config.
+     */
+    @Test void zeroWouldMakeTheSolverInertSoItFallsBackToDefaults() {
+        var fallback = LevitationTuning.DEFAULT;
+        var inert = new LevitationTuning(1.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.25, 0.6, 1152, 6);
+        assertEquals(fallback.inputClearanceOffset(), inert.inputClearanceOffset(), 1e-9);
+        assertEquals(fallback.followGain(), inert.followGain(), 1e-9);
+        assertEquals(fallback.maxClimbSpeed(), inert.maxClimbSpeed(), 1e-9);
+        assertEquals(fallback.maxDescentSpeed(), inert.maxDescentSpeed(), 1e-9);
+        assertEquals(fallback.inputVerticalSpeed(), inert.inputVerticalSpeed(), 1e-9);
+    }
+
+    @Test void zeroSinkSpeedIsAllowedBecauseHoldingAltitudeIsMeaningful() {
+        var hovering = new LevitationTuning(1.5, 4.0, 0.4, 0.5, 0.3, 0.3, 0.0, 0.6, 1152, 6);
+        assertEquals(0.0, hovering.sinkSpeed(), 1e-9);
+        assertEquals(0.0, MagneticMovement.degradedVertical(0, hovering), 1e-9);
+    }
+
+    @Test void restClearanceIsNeverBelowTheClearanceFloor() {
+        var tuning = new LevitationTuning(0.0, 4.0, 0.4, 0.5, 0.3, 0.3, 0.25, 0.6, 1152, 6);
+        assertEquals(MagneticMovement.MIN_CLEARANCE, tuning.restClearance(), 1e-9);
+    }
 }

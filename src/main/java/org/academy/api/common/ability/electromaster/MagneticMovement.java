@@ -5,10 +5,8 @@ import net.minecraft.world.phys.Vec3;
 
 /** Entity-independent motion profiles for magnetic anchoring and terrain-following flight. */
 public final class MagneticMovement {
-    public static final double DEFAULT_HOVER_HEIGHT = 1.5;
-    public static final double MIN_HOVER_HEIGHT = 0.5;
-    public static final double MAX_HOVER_HEIGHT = 4.0;
-    public static final double GROUND_REACH = 8.0;
+    /** Hard floor for the feet-to-ground gap, so terrain can never push into the mover. */
+    public static final double MIN_CLEARANCE = 0.3;
     public static final double ACCELERATION = 0.08;
 
     private MagneticMovement() {
@@ -25,11 +23,6 @@ public final class MagneticMovement {
         };
     }
 
-    public static double adjustHoverHeight(double current, boolean up, boolean down) {
-        return Math.clamp(current + ((up ? 1 : 0) - (down ? 1 : 0)) * 0.12,
-                MIN_HOVER_HEIGHT, MAX_HOVER_HEIGHT);
-    }
-
     public static Vec3 flightDirection(float yaw, double forward, double strafe, double speed) {
         if (!Float.isFinite(yaw) || !Double.isFinite(forward) || !Double.isFinite(strafe)
                 || !Double.isFinite(speed) || speed <= 0.0) return Vec3.ZERO;
@@ -37,6 +30,49 @@ public final class MagneticMovement {
         var direction = new Vec3(strafe * Math.cos(radians) - forward * Math.sin(radians),
                 0.0, forward * Math.cos(radians) + strafe * Math.sin(radians));
         return direction.lengthSqr() > 1.0 ? direction.normalize().scale(speed) : direction.scale(speed);
+    }
+
+    /**
+     * Vertical speed that holds or restores a feet-to-ground clearance.
+     *
+     * <p>Vertical input moves the target clearance away from {@code tuning.restClearance()} rather than
+     * setting a speed directly, so altitude is always defined relative to whatever surface is underfoot.
+     * Rising is clamped more generously than falling: ground coming up into the mover is what must not be
+     * clipped through, while an unsupported drop is allowed to be slow.</p>
+     */
+    public static double hoverVertical(double input, double clearance, LevitationTuning tuning) {
+        return hoverVertical(input, clearance, Double.POSITIVE_INFINITY, tuning);
+    }
+
+    /**
+     * Variant whose target clearance cannot exceed {@code maxClearance}.
+     *
+     * <p>Levitation is bounded by how far the field reaches, so an unbounded target would leave the mover
+     * asking for altitude the field can never provide — climbing into a clamp forever instead of settling
+     * at a steady ceiling. Pass the field reach so the model only requests what is reachable.</p>
+     */
+    public static double hoverVertical(double input, double clearance, double maxClearance,
+                                       LevitationTuning tuning) {
+        if (!Double.isFinite(input) || !Double.isFinite(clearance) || tuning == null) return 0.0;
+        var ceiling = Double.isFinite(maxClearance) && maxClearance >= MIN_CLEARANCE
+                ? maxClearance : Double.POSITIVE_INFINITY;
+        var target = Math.min(ceiling, Math.max(MIN_CLEARANCE,
+                tuning.restClearance() + Math.clamp(input, -1.0, 1.0) * tuning.inputClearanceOffset()));
+        var error = target - clearance;
+        return Math.clamp(error * tuning.followGain(), -tuning.maxDescentSpeed(), tuning.maxClimbSpeed());
+    }
+
+    /**
+     * Vertical speed while a lost field is still recoverable. Vertical input keeps full climb authority so
+     * a mover can lift itself back into range, while no input sinks into the grace window and downward
+     * input is capped at the ordinary descent speed.
+     */
+    public static double degradedVertical(double input, LevitationTuning tuning) {
+        if (tuning == null) return 0.0;
+        var intent = Double.isFinite(input) ? Math.clamp(input, -1.0, 1.0) : 0.0;
+        if (intent > 0.0) return intent * tuning.maxClimbSpeed();
+        return Math.clamp(intent * tuning.inputVerticalSpeed() - tuning.sinkSpeed(),
+                -tuning.maxDescentSpeed(), 0.0);
     }
 
     public static Vec3 approachVelocity(Vec3 current, Vec3 feet, Vec3 destination, double maxSpeed) {
@@ -48,18 +84,21 @@ public final class MagneticMovement {
         return approach(current, desired);
     }
 
-    public static Vec3 hoverVelocity(Vec3 current, Vec3 horizontal, double feetY,
-                                     double groundY, double hoverHeight) {
-        if (!finite(current) || !finite(horizontal) || !Double.isFinite(feetY)
-                || !Double.isFinite(groundY) || !Double.isFinite(hoverHeight)) return Vec3.ZERO;
-        var vertical = Math.clamp((groundY + hoverHeight - feetY) * 0.4, -0.45, 0.45);
-        return approach(current, new Vec3(horizontal.x, vertical, horizontal.z));
-    }
-
     public static Vec3 approach(Vec3 current, Vec3 desired) {
+        if (!finite(current) || !finite(desired)) return Vec3.ZERO;
         var change = desired.subtract(current);
         return change.length() <= ACCELERATION ? desired
                 : current.add(change.normalize().scale(ACCELERATION));
+    }
+
+    /**
+     * Smooths only the horizontal components. Vertical motion comes from the clearance solver, which is
+     * already rate-limited, so it must not be slowed down again by horizontal acceleration limits.
+     */
+    public static Vec3 approachHorizontal(Vec3 current, Vec3 desired) {
+        if (!finite(current) || !finite(desired)) return Vec3.ZERO;
+        var smoothed = approach(new Vec3(current.x, 0.0, current.z), new Vec3(desired.x, 0.0, desired.z));
+        return new Vec3(smoothed.x, 0.0, smoothed.z);
     }
 
     public static Vec3 calculatePullVelocity(Vec3 currentVelocity, Vec3 origin, Vec3 target,

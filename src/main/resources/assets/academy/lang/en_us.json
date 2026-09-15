@@ -521,6 +521,7 @@
   "hud.academy.layout.reset": "Reset All",
   "hud.academy.layout.title": "HUD Layout Editor",
   "hud.academy.magnetic_field.hovering": "Levitating",
+  "hud.academy.magnetic_field.losing_support": "Losing support",
   "hud.academy.magnetic_field.no_support": "Waiting for nearby blocks",
   "hud.academy.mental_control.cp": "%sStupor %d CP | Impression %d CP",
   "hud.academy.mental_control.effect.impression": "I",

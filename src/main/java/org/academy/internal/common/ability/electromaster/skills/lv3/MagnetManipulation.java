@@ -175,9 +175,14 @@ public class MagnetManipulation extends Skill {
                 () -> Minecraft.getInstance().player != null && Minecraft.getInstance().player.getData(AttachmentTypes.MAGNETIC_LEVITATION_REQUESTED));
         org.academy.api.client.hud.ability.ToggleStatusHud.Companion.registerDetailProvider(this, () -> {
             var player = Minecraft.getInstance().player;
-            return player != null && player.getData(AttachmentTypes.MAGNETIC_LEVITATION_ACTIVE)
-                    ? net.minecraft.network.chat.Component.translatable("hud.academy.magnetic_field.hovering").getString()
-                    : net.minecraft.network.chat.Component.translatable("hud.academy.magnetic_field.no_support").getString();
+            if (player == null) return "";
+            if (player.getData(AttachmentTypes.MAGNETIC_LEVITATION_ACTIVE)) {
+                return net.minecraft.network.chat.Component.translatable("hud.academy.magnetic_field.hovering").getString();
+            }
+            if (player.getData(AttachmentTypes.MAGNETIC_LEVITATION_DEGRADED)) {
+                return net.minecraft.network.chat.Component.translatable("hud.academy.magnetic_field.losing_support").getString();
+            }
+            return net.minecraft.network.chat.Component.translatable("hud.academy.magnetic_field.no_support").getString();
         });
     }
 

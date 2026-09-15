@@ -267,6 +267,37 @@ public class AbilityConfig {
         @SerializedName("paralysisMaxHealthFraction")
         public float paralysisMaxHealthFraction = 0.01f;
 
+        /** 悬浮时脚底到地面参照的目标间隙。 */
+        @SerializedName("levitationRestClearance")
+        public float levitationRestClearance = 1.5f;
+        /** 垂直输入可把目标间隙推高的最大幅度。 */
+        @SerializedName("levitationInputClearanceOffset")
+        public float levitationInputClearanceOffset = 4.0f;
+        /** 间隙误差转换为垂直速度的比例。 */
+        @SerializedName("levitationFollowGain")
+        public float levitationFollowGain = 0.40f;
+        /** 地形抬升时允许的最大上行速度。 */
+        @SerializedName("levitationMaxClimbSpeed")
+        public float levitationMaxClimbSpeed = 0.50f;
+        /** 地形下降时允许的最大下行速度。 */
+        @SerializedName("levitationMaxDescentSpeed")
+        public float levitationMaxDescentSpeed = 0.30f;
+        /** 缺少地面参照时垂直输入直给的最大速度。 */
+        @SerializedName("levitationInputVerticalSpeed")
+        public float levitationInputVerticalSpeed = 0.30f;
+        /** 失去支撑后的受控下沉速度。 */
+        @SerializedName("levitationSinkSpeed")
+        public float levitationSinkSpeed = 0.25f;
+        /** 失去支撑期间保留的水平操控比例。 */
+        @SerializedName("levitationGraceSpeedFactor")
+        public float levitationGraceSpeedFactor = 0.60f;
+        /** 单次支撑查询的碰撞形状读取上限；低于 1152 时最大支撑距离可能误判为无支撑。 */
+        @SerializedName("levitationMaxSupportSamples")
+        public int levitationMaxSupportSamples = 1152;
+        /** 失去支撑后仍保留重力租约并尝试恢复的 tick 数。 */
+        @SerializedName("levitationGraceTicks")
+        public int levitationGraceTicks = 6;
+
         public float paralysisDamage(float maximumHealth) {
             if (!paralysisDamageEnabled) return 0.0f;
             var minimum = Float.isFinite(paralysisMinimumDamage)
@@ -275,6 +306,15 @@ public class AbilityConfig {
                     ? Math.clamp(paralysisMaxHealthFraction, 0.0f, 1.0f) : 0.01f;
             return Math.max(minimum, Float.isFinite(maximumHealth)
                     ? Math.max(0.0f, maximumHealth) * fraction : 0.0f);
+        }
+
+        /** Resolved levitation tuning; out-of-range or non-finite entries fall back per field. */
+        public org.academy.api.common.ability.electromaster.LevitationTuning levitation() {
+            return new org.academy.api.common.ability.electromaster.LevitationTuning(
+                    levitationRestClearance, levitationInputClearanceOffset, levitationFollowGain,
+                    levitationMaxClimbSpeed, levitationMaxDescentSpeed, levitationInputVerticalSpeed,
+                    levitationSinkSpeed, levitationGraceSpeedFactor,
+                    levitationMaxSupportSamples, levitationGraceTicks);
         }
     }
 
