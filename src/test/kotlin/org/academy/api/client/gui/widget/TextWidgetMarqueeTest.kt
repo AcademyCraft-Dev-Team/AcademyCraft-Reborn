@@ -1,15 +1,12 @@
 package org.academy.api.client.gui.widget
 
-import org.academy.api.client.gui.text.MarqueeState
+import org.academy.api.client.gui.text.device.FadeMask
+import org.academy.api.client.gui.text.fx.MarqueeState
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
-/**
- * 跑马灯几何/时序核心（AOSP `TextView.Marquee`）与 [TextWidget] 属性委托。
- * 这些用例不触发字体度量，纯数学。
- */
 class TextWidgetMarqueeTest {
     private fun state(textWidth: Float = 300f, viewportWidth: Float = 100f): MarqueeState =
         MarqueeState().apply {
@@ -58,7 +55,7 @@ class TextWidgetMarqueeTest {
         s.speed = 1000f
         val max = s.maxScroll
         s.advance(0L)
-        s.advance(100L) // +100 -> clamp to max, schedule pause
+        s.advance(100L)
         assertEquals(max, s.scroll, 1e-4f)
         assertFalse(s.advance(500L), "停顿期间不推进")
         assertEquals(max, s.scroll, 1e-4f)
@@ -87,7 +84,7 @@ class TextWidgetMarqueeTest {
 
         s.fadeLength = 10f
         s.advance(0L)
-        s.advance(1000L) // scroll = 30
+        s.advance(1000L)
         assertEquals(1f, s.leftStrength(), 1e-4f)
         assertTrue(s.rightStrength() in 0f..1f)
     }
@@ -95,24 +92,23 @@ class TextWidgetMarqueeTest {
     @Test
     fun `fadeFactor ramps at both edges and is 1 when disabled`() {
         val viewport = 100f
-        assertEquals(0f, MarqueeState.fadeFactor(0f, 0f, viewport, 10f, 1f, 1f), 1e-4f)
-        assertEquals(0.5f, MarqueeState.fadeFactor(5f, 0f, viewport, 10f, 1f, 1f), 1e-4f)
-        assertEquals(1f, MarqueeState.fadeFactor(50f, 0f, viewport, 10f, 1f, 1f), 1e-4f)
-        assertEquals(0f, MarqueeState.fadeFactor(100f, 0f, viewport, 10f, 1f, 1f), 1e-4f)
-        assertEquals(1f, MarqueeState.fadeFactor(0f, 0f, viewport, 0f, 1f, 1f), 1e-4f)
-        assertEquals(1f, MarqueeState.fadeFactor(0f, 0f, 0f, 10f, 1f, 1f), 1e-4f)
+        assertEquals(0f, FadeMask.fadeFactor(0f, 0f, viewport, 10f, 1f, 1f), 1e-4f)
+        assertEquals(0.5f, FadeMask.fadeFactor(5f, 0f, viewport, 10f, 1f, 1f), 1e-4f)
+        assertEquals(1f, FadeMask.fadeFactor(50f, 0f, viewport, 10f, 1f, 1f), 1e-4f)
+        assertEquals(0f, FadeMask.fadeFactor(100f, 0f, viewport, 10f, 1f, 1f), 1e-4f)
+        assertEquals(1f, FadeMask.fadeFactor(0f, 0f, viewport, 0f, 1f, 1f), 1e-4f)
+        assertEquals(1f, FadeMask.fadeFactor(0f, 0f, 0f, 10f, 1f, 1f), 1e-4f)
     }
 
     @Test
     fun `viewport shift follows scroll for the ghost copy`() {
-        // 幽灵副本的淡出窗口整体左移 ghostOffset：窗口内某点仍应保持满 alpha。
         val viewport = 100f
         val ghostOffset = 53.333f
         val scroll = 153.333f
-        val u = 153.333f - ghostOffset + 50f // 窗口中央
+        val u = 153.333f - ghostOffset + 50f
         assertEquals(
             1f,
-            MarqueeState.fadeFactor(u, scroll - ghostOffset, viewport, 10f, 1f, 1f),
+            FadeMask.fadeFactor(u, scroll - ghostOffset, viewport, 10f, 1f, 1f),
             1e-3f
         )
     }

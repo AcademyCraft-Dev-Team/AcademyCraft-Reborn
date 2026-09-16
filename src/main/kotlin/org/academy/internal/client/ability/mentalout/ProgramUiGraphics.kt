@@ -4,14 +4,16 @@ import org.academy.api.client.gui.command.FillRectDrawCommand
 import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.render.ScissorRect
-import org.academy.api.client.gui.text.TextLayoutManager
-import org.academy.api.client.gui.text.subrun.SubRunContainer
+import org.academy.api.client.gui.text.model.TextShapingOptions
+import org.academy.api.client.gui.text.record.TextPainter
+import org.academy.api.client.gui.text.shape.TextMeasurer
 import org.academy.api.client.gui.widget.TextWidget
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-/** Small immediate-style adapter backed by the Academy UI command renderer. */
 class ProgramUiGraphics(private val context: Canvas) {
+    private val textPainter = TextPainter()
+
     fun pose(): Canvas.PoseStack2D = context.pose()
 
     fun fill(left: Int, top: Int, right: Int, bottom: Int, color: Int) {
@@ -49,24 +51,13 @@ class ProgramUiGraphics(private val context: Canvas) {
     fun text(value: String, x: Float, y: Float, color: Int, fontSize: Float, maxWidth: Float) {
         val clipped = fit(value, maxWidth, fontSize)
         if (clipped.isEmpty()) return
-        // 记录顺序即画家顺序: 文本在调用处按序提交, 天然位于此前内容之上.
         context.pose().pushPose()
         context.pose().translate(x, y)
-        val matrix = context.pose().last().pose()
-        val commands = SubRunContainer.make(
-            clipped,
-            fontSize,
-            0f,
-            red(color),
-            green(color),
-            blue(color),
-            alpha(color) * context.accumulatedAlpha,
-            deviceScale = Canvas.maxScale(matrix),
-            guiScale = UiEnvironment.get().guiScale,
-            originXGui = matrix.m30(),
-            originYGui = matrix.m31()
+        textPainter.draw(
+            context, clipped, fontSize,
+            red(color), green(color), blue(color), TextShapingOptions.DEFAULT,
+            0f, 0f, 1f, alpha(color)
         )
-        for (command in commands) context.submit(command)
         context.pose().popPose()
     }
 
@@ -85,13 +76,13 @@ class ProgramUiGraphics(private val context: Canvas) {
         @JvmStatic
         fun fit(value: String?, maxWidth: Float, fontSize: Float): String {
             if (value == null) return ""
-            return TextLayoutManager.ellipsize(value, fontSize, maxWidth, ELLIPSIS)
+            return TextMeasurer.ellipsize(value, fontSize, maxWidth, ELLIPSIS)
         }
 
         @JvmStatic
         fun wrap(value: String?, maxWidth: Float, fontSize: Float): List<String> {
             if (value.isNullOrEmpty()) return listOf("")
-            return TextLayoutManager.wrapLines(value, fontSize, maxWidth)
+            return TextMeasurer.wrapLines(value, fontSize, maxWidth)
         }
 
         @JvmStatic

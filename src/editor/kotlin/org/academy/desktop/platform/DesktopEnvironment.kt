@@ -28,6 +28,9 @@ class DesktopEnvironment(
     override var guiScale: Float = initialGuiScale
 
     private val mainThreadTasks = ConcurrentLinkedQueue<Runnable>()
+    private val renderThreadTasks = ConcurrentLinkedQueue<Runnable>()
+
+    private val loopThread: Thread = Thread.currentThread()
 
     override val guiScaledWidth: Int get() = (physicalWidth / guiScale).toInt()
     override val guiScaledHeight: Int get() = (physicalHeight / guiScale).toInt()
@@ -36,6 +39,13 @@ class DesktopEnvironment(
     override fun runOnMainThread(task: Runnable) {
         mainThreadTasks.add(task)
     }
+
+    override fun runOnRenderThread(task: Runnable) {
+        renderThreadTasks.add(task)
+    }
+
+    override fun isOnMainThread(): Boolean = Thread.currentThread() === loopThread
+    override fun isOnRenderThread(): Boolean = Thread.currentThread() === loopThread
 
     @Volatile
     var frameDeltaTicks: Float = 1f
@@ -57,6 +67,13 @@ class DesktopEnvironment(
     fun drainMainThreadTasks() {
         while (true) {
             val task = mainThreadTasks.poll() ?: return
+            task.run()
+        }
+    }
+
+    fun drainRenderThreadTasks() {
+        while (true) {
+            val task = renderThreadTasks.poll() ?: return
             task.run()
         }
     }

@@ -5,7 +5,7 @@ import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.player.Inventory
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator
-import org.academy.api.client.gui.layout.SizeMode
+import org.academy.api.client.gui.dsl.*
 import org.academy.api.client.gui.screen.ContainerUiScreen
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.resources.R
@@ -28,17 +28,17 @@ class OmniCraftingTableScreen(
     ) {
         val duration = 600L
 
-        val fluidFill = FillWidget(0xFF88D8FF.toInt())
+        val fluidFill = invPage.fill(0xFF88D8FF.toInt(), "imag_phase_fluid") {
+            lp {
+                size(FLUID_WIDTH, FLUID_HEIGHT)
+                margin(FLUID_X, FLUID_Y, 0f, 0f)
+            }
+        }
         this.fluidFill = fluidFill
-        fluidFill.layoutParams = FrameLayoutWidget.LayoutParams()
-            .size(FLUID_WIDTH, FLUID_HEIGHT)
-            .margin(FLUID_X, FLUID_Y, 0f, 0f)
-        invPage.addChild("imag_phase_fluid", fluidFill)
 
-        val workArea = ImageWidget(R.textures.gui.omni_crafting.ui_omni_crafting)
-        workArea.layoutParams = FrameLayoutWidget.LayoutParams()
-            .sizeMode(SizeMode.MATCH_PARENT)
-        invPage.addChild("omni_crafting_work_area", workArea)
+        invPage.image(R.textures.gui.omni_crafting.ui_omni_crafting, "omni_crafting_work_area") {
+            matchParent()
+        }
 
         setupWirelessPage(pageButtons, invButton, content, invPage, mainPos, createButton(R.textures.gui.icon.icon_wireless))
         pageButtons.startAnimation(

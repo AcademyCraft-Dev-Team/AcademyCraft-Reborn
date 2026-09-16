@@ -21,7 +21,7 @@ import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.screen.UiScreen
-import org.academy.api.client.gui.util.WirelessPanelUtil
+import org.academy.api.client.gui.util.wirelessPanel
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.resources.R
 import org.academy.api.client.resources.R.textures.gui.developer.*
@@ -304,12 +304,11 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                 size(100f, 16f)
                 onClick {
                     val cover = createCover()
-                    val wirelessPage = WirelessPanelUtil.create(developer.blockPos, true).apply {
+                    cover.wirelessPanel(developer.blockPos, true, "wireless_page") {
                         lp {
                             gravity(Gravity.CENTER)
                         }
                     }
-                    cover.addChild("wireless_page", wirelessPage)
                     addCover(cover)
                 }
                 image(

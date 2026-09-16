@@ -1,6 +1,7 @@
 package org.academy.agent;
 
 import org.academy.AcademyCraft;
+import org.slf4j.Logger;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -11,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class AcademyAgentBootstrap {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final String HANDLER_CLASS = "org.academy.internal.coremod.AcademyAgentEntrypoint";
     private static final AtomicBoolean STARTED = new AtomicBoolean(false);
 
@@ -38,16 +40,16 @@ public final class AcademyAgentBootstrap {
             var process = new ProcessBuilder(command).redirectErrorStream(true).start();
             if (!process.waitFor(15L, TimeUnit.SECONDS)) {
                 process.destroyForcibly();
-                AcademyCraft.getLogger().warn("Academy agent self-attach timed out");
+                LOGGER.warn("Academy agent self-attach timed out");
                 return;
             }
             var output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
             if (process.exitValue() != 0) {
-                AcademyCraft.getLogger().warn("Academy agent self-attach failed ({}): {}",
+                LOGGER.warn("Academy agent self-attach failed ({}): {}",
                         process.exitValue(), output);
             }
         } catch (Throwable error) {
-            AcademyCraft.getLogger().warn("Academy agent self-attach failed", error);
+            LOGGER.warn("Academy agent self-attach failed", error);
         }
     }
 
@@ -55,7 +57,7 @@ public final class AcademyAgentBootstrap {
         try {
             Class.forName(HANDLER_CLASS, true, AcademyAgentBootstrap.class.getClassLoader());
         } catch (Throwable error) {
-            AcademyCraft.getLogger().warn("Unable to preload Academy agent handler", error);
+            LOGGER.warn("Unable to preload Academy agent handler", error);
         }
     }
 

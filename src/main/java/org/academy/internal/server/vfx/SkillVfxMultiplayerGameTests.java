@@ -43,10 +43,12 @@ import org.academy.internal.common.world.entity.skill.DarkmatterCutSlash;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
 import org.academy.internal.common.world.entity.skill.Plasma;
 import org.misaka.api.common.network.packet.S2CPacket;
+import org.slf4j.Logger;
 
 /** Real server dispatch to simulated connections; does not claim client rendering or TCP measurements. */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class SkillVfxMultiplayerGameTests {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final Identifier TYPE = AcademyCraft.academy("skill_vfx_multiplayer_function");
     private SkillVfxMultiplayerGameTests() {}
 
@@ -293,7 +295,7 @@ public final class SkillVfxMultiplayerGameTests {
                 check(packets.size() <= count * 16, "Stable visual updates must remain below per-tick entity traffic");
                 packetsTotal += packets.size(); bytesTotal += observer.encodedBytes;
             }
-            AcademyCraft.getLogger().info("VFX_MULTIPLAYER_RESULT observers={} simultaneousEffects={} windowTicks=101 packets={} encodedBytes={} stats={}",
+            LOGGER.info("VFX_MULTIPLAYER_RESULT observers={} simultaneousEffects={} windowTicks=101 packets={} encodedBytes={} stats={}",
                     count, count * 2, packetsTotal, bytesTotal, SkillVfxRuntime.statistics());
             close(); helper.succeed();
         }

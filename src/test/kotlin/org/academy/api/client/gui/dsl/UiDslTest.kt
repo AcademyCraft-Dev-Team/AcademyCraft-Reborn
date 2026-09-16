@@ -1,5 +1,6 @@
 package org.academy.api.client.gui.dsl
 
+import net.minecraft.resources.Identifier
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.layout.Orientation
@@ -219,5 +220,39 @@ class UiDslTest {
             MeasureSpec(MeasureSpec.Mode.EXACTLY, 300f)
         )
         textArea.layout(0f, 0f, 400f, 300f)
+    }
+
+    @Test
+    fun `sprite sheet builder attaches a configured frame widget`() {
+        val root = FrameLayoutWidget()
+        val sheet = root.spriteSheet(
+            Identifier.parse("academy:test_sheet"),
+            Orientation.VERTICAL,
+            20, 40,
+            20, 20,
+            2,
+            "effect"
+        ) {
+            size(10f, 10f)
+        }
+
+        assertEquals("effect", sheet.name)
+        assertTrue(root.children["effect"] === sheet)
+        assertEquals(0, sheet.frameIndex)
+        assertEquals(Orientation.VERTICAL, sheet.getSpriteSheetOrientation())
+        assertEquals(2, sheet.getSpriteSheetFrameCount())
+
+        root.measure(
+            MeasureSpec(MeasureSpec.Mode.EXACTLY, 50f),
+            MeasureSpec(MeasureSpec.Mode.EXACTLY, 50f)
+        )
+        root.layout(0f, 0f, 50f, 50f)
+        assertEquals(10f, sheet.width)
+        assertEquals(10f, sheet.height)
+
+        sheet.nextFrame()
+        assertEquals(1, sheet.frameIndex)
+        sheet.nextFrame()
+        assertEquals(0, sheet.frameIndex)
     }
 }

@@ -18,9 +18,11 @@ import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.joml.Vector3f;
+import org.slf4j.Logger;
 
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class PlatinumExecutionVfxClient {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     public static final int DURATION_TICKS = 40;
     private static final Identifier EXECUTION_ASSET = AcademyCraft.academy("vfxgraph/platinum_execution");
     private static final Map<UUID, ExecutionEffect> ACTIVE = new LinkedHashMap<>();
@@ -65,7 +67,7 @@ public final class PlatinumExecutionVfxClient {
             effect.bind("yaw", () -> Value.of(state.yaw));
             ACTIVE.put(executionId, state);
         } catch (RuntimeException exception) {
-            AcademyCraft.getLogger().warn("Unable to spawn platinum execution VFX graph", exception);
+            LOGGER.warn("Unable to spawn platinum execution VFX graph", exception);
         }
     }
 

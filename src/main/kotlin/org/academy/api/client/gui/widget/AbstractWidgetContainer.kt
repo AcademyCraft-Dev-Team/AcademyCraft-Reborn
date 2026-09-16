@@ -13,7 +13,8 @@ import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.render.SubtreeCache
-import org.academy.api.client.gui.text.subrun.SubRunContainer
+import org.academy.api.client.gui.text.model.TextShapingOptions
+import org.academy.api.client.gui.text.record.TextPainter
 import org.joml.Matrix4f
 import java.util.*
 import kotlin.math.max
@@ -26,6 +27,8 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
     override val dirtyChildren: Set<Widget> get() = dirtyChildrenSet
 
     private var ownRenderCache: SubtreeCache? = null
+
+    private val debugTextPainter = TextPainter()
 
     override var isLayoutDirty: Boolean = true
         protected set
@@ -139,17 +142,11 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
 
         context.pose().pushPose()
         context.pose().translate(padding, padding)
-        val matrix = context.pose().last().pose()
-        val commands = SubRunContainer.make(
-            infoText, fontSize, 0f, textRed, textGreen, textBlue, textAlpha,
-            deviceScale = Canvas.maxScale(matrix),
-            guiScale = UiEnvironment.get().guiScale,
-            originXGui = matrix.m30(),
-            originYGui = matrix.m31()
+        debugTextPainter.draw(
+            context, infoText, fontSize,
+            textRed, textGreen, textBlue, TextShapingOptions.DEFAULT,
+            0f, 0f, 1f, textAlpha
         )
-        for (command in commands) {
-            context.submit(command)
-        }
         context.pose().popPose()
 
         context.pose().popPose()

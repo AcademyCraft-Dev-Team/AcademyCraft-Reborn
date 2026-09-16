@@ -37,7 +37,7 @@ import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.render.UiContext
-import org.academy.api.client.gui.text.Ellipsize
+import org.academy.api.client.gui.text.model.Ellipsize
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.input.*
 import org.academy.api.client.render.Render

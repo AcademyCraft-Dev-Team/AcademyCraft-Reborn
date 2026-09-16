@@ -20,7 +20,7 @@ import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.state.UiState
 import org.academy.api.client.gui.state.bindState
-import org.academy.api.client.gui.text.Ellipsize
+import org.academy.api.client.gui.text.model.Ellipsize
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.gui.widget.SeekBarWidget.OnSeekBarChangeListener
 import org.academy.api.client.hud.terminal.TerminalHud
@@ -69,6 +69,8 @@ object MusicApp : App {
         private var showingSearchResults = false
         private var viewMode = ViewMode.NORMAL
         private val listRevisionState = UiState(0)
+        private var playlistBuildContainer: LinearLayoutWidget? = null
+        private var playlistBuildKey: String? = null
         private lateinit var searchBox: TextInputWidget
         private lateinit var searchButton: ButtonWidget
         private var settingsTitle: TextWidget? = null
@@ -79,7 +81,6 @@ object MusicApp : App {
         private var roomShowingSearch = false
         private val roomRevisionState = UiState(0)
 
-        /** 房间结构标识（大厅/入房+房主），仅当它变化时才整体重建音乐室布局喵。 */
         private var roomStructureKey: String? = null
         private var jukeboxShowingPlaylist = false
         private var sharedAccountHint = ""
@@ -646,6 +647,18 @@ object MusicApp : App {
         }
 
         private fun rebuildSearchAndPlaylist(container: LinearLayoutWidget) {
+            val backend = MusicPlayerBackend.getInstance()
+            val key = buildString {
+                append(showingSearchResults).append('|')
+                append(backend.currentTrackIndex).append('|')
+                append(backend.playlistRevision).append('|')
+                append(OnlineMusicManager.revisionState.value).append('|')
+                append(JukeboxSessionController.state?.enabled).append('|')
+            }
+            if (container === playlistBuildContainer && key == playlistBuildKey) return
+            playlistBuildContainer = container
+            playlistBuildKey = key
+
             container.apply {
                 clearChildren()
 
@@ -1169,9 +1182,6 @@ object MusicApp : App {
                 matchParent()
                 add("room_content", FrameLayoutWidget().apply {
                     sizeMode(SizeMode.MATCH_PARENT)
-                    // 只在结构变化（进出房间/房主变更）时重建整体布局；
-                    // 成员、正在播放与队列由各自的 bindState 增量刷新，
-                    // 避免每次同步（含心跳与播放操作）把列表滚动位置刷回顶部喵。
                     bindState(RoomSessionController.roomStateUi) {
                         val key = currentRoomStructureKey()
                         if (key != roomStructureKey) {
@@ -1187,7 +1197,6 @@ object MusicApp : App {
 
         private fun currentRoomStructureKey(): String {
             val state = RoomSessionController.roomState ?: return "lobby"
-            // 房间名与房主名一并纳入: 改名或房主转移时结构键变化，顶部信息才会刷新喵.
             return "inside:${state.roomCode}:${state.roomName}:${state.isHost}:${state.hostName}"
         }
 
@@ -1249,9 +1258,6 @@ object MusicApp : App {
             }
         }
 
-        /**
-         * 待处理申请/邀请卡片面板：被邀者在音乐室大厅确认邀请，房主在房内确认申请喵。
-         */
         private fun createPendingPanel(onlyApply: Boolean): LinearLayoutWidget {
             return LinearLayoutWidget().apply {
                 orientation = Orientation.VERTICAL
@@ -1508,7 +1514,6 @@ object MusicApp : App {
             }
         }
 
-        /** 成员数标题：跟随房间同步增量刷新喵。 */
         private fun createRoomMembersTitle(): TextWidget {
             return TextWidget("").apply {
                 bindState(RoomSessionController.roomStateUi) {
@@ -1520,7 +1525,6 @@ object MusicApp : App {
             }
         }
 
-        /** 队列/搜索结果标题：跟随房间同步与管理器修订增量刷新喵。 */
         private fun createRoomQueueTitle(): TextWidget {
             return TextWidget("").apply {
                 bindState(RoomSessionController.roomStateUi) { text = roomQueueTitle() }
@@ -1568,10 +1572,6 @@ object MusicApp : App {
             }
         }
 
-        /**
-         * 正在播放区：整体占位固定，内容跟随房间同步增量重建，
-         * 避免聊天空闲时同步把控制区结构刷掉喵。
-         */
         private fun createRoomNowPlaying(): FrameLayoutWidget {
             return FrameLayoutWidget().apply {
                 widthMode(SizeMode.MATCH_PARENT)
@@ -1659,8 +1659,6 @@ object MusicApp : App {
                     }
                 }
 
-                // 控制区始终可见并居中于进度条下方: 用两侧 weight 占位实现水平居中，
-                // 房间空闲时播放键用于开播队列中的下一首喵.
                 row("controls") {
                     widthMode(SizeMode.MATCH_PARENT)
                     height(14f)
@@ -1904,7 +1902,6 @@ object MusicApp : App {
                     artworkUrl
                 )
             }
-            // 资源包曲目：资源定位符即曲目ID，装有同一资源包的客户端都能解析；本机绝对路径不可共享喵.
             val location = source.path as? Identifier ?: return null
             return SharedTrackEntry(
                 "local",
@@ -1917,10 +1914,6 @@ object MusicApp : App {
             )
         }
 
-        /**
-         * 把曲目送进音乐室队列；未入房时暂存曲目并切换到音乐室页签，
-         * 入住（成为房主）后自动入队喵。
-         */
         private fun sendToRoomOrOpenView(entry: SharedTrackEntry) {
             val roomState = RoomSessionController.roomState
             if (roomState == null) {
@@ -2125,11 +2118,6 @@ object MusicApp : App {
             }
         }
 
-        /**
-         * 共享播放（音乐室正在放曲/全服点播未静音在播）进行时，本地传输控制不得抢占播放通道，
-         * 否则会造成进度不同步与重播；此处提示用户到对应页面操作喵。
-         * 房间空闲或无点播在播时，本地播放正常可用喵。
-         */
         private fun runLocalTransport(action: () -> Unit) {
             if (RoomSessionController.roomState?.timeline != null || JukeboxSessionController.isActivelyPlaying()) {
                 OnlineMusicManager.notifyStatus(L10n["app.academy.music_player.transport.shared_hint"])
@@ -2138,10 +2126,6 @@ object MusicApp : App {
             action()
         }
 
-        /**
-         * 试听：未静音且点播正在播放时，点播优先级更高，给出提示而不抢占；
-         * 其余情况临时切回本地播放（下一次点播同步会自动重新接管共享时间线）喵。
-         */
         private fun previewTrack(entry: SharedTrackEntry) {
             if (JukeboxSessionController.isActivelyPlaying()) {
                 OnlineMusicManager.notifyStatus(
@@ -2264,7 +2248,6 @@ object MusicApp : App {
 
         private fun createJukeboxProgressBar(durationSeconds: Float): SeekBarWidget {
             val progressBar = object : SeekBarWidget() {
-                // 全服点播进度仅展示，不接受本地拖动（进度由服务器权威控制）喵
                 override fun onMousePressed(event: org.academy.api.client.gui.event.MouseEvent) {}
                 override fun onMouseDragged(event: org.academy.api.client.gui.event.MouseEvent) {}
                 override fun onMouseReleased(event: org.academy.api.client.gui.event.MouseEvent) {}

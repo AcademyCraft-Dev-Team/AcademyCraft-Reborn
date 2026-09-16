@@ -24,6 +24,12 @@ interface UiEnvironment {
 
     fun runOnMainThread(task: Runnable)
 
+    fun runOnRenderThread(task: Runnable)
+
+    fun isOnMainThread(): Boolean
+
+    fun isOnRenderThread(): Boolean
+
     fun frameDeltaTicks(): Float
 
     fun openResource(namespace: String, path: String): InputStream?

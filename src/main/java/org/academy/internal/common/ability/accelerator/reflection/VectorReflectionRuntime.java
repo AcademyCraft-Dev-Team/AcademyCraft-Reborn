@@ -14,6 +14,7 @@ import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflecti
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.coremod.ClassPointerProtectionManager;
+import org.slf4j.Logger;
 
 import java.lang.ref.WeakReference;
 import java.security.CodeSource;
@@ -26,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Server-side class-pointer integrity, removal recovery, and observer reconstruction.
  */
 public final class VectorReflectionRuntime {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final StackWalker STATE_STACK_WALKER = StackWalker.getInstance(
             StackWalker.Option.RETAIN_CLASS_REFERENCE
     );
@@ -231,10 +233,10 @@ public final class VectorReflectionRuntime {
         if (now - anchor.lastFailureLogNanos < 5_000_000_000L) return;
         anchor.lastFailureLogNanos = now;
         if (error == null) {
-            AcademyCraft.getLogger().warn("Vector Reflection could not repair {} for {}",
+            LOGGER.warn("Vector Reflection could not repair {} for {}",
                     operation, player.getGameProfile().name());
         } else {
-            AcademyCraft.getLogger().warn("Vector Reflection failed to repair {} for {}",
+            LOGGER.warn("Vector Reflection failed to repair {} for {}",
                     operation, player.getGameProfile().name(), error);
         }
     }

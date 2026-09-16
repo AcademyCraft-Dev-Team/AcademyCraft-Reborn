@@ -13,6 +13,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.client.render.MatrixStack;
 import org.academy.api.client.render.Render;
 import org.joml.Matrix4fc;
+import org.slf4j.Logger;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
@@ -23,6 +24,7 @@ import java.util.function.BiConsumer;
  * custom render types while preserving the same path without shaders.
  */
 public final class WorldLineOverlayPass {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final PerFrameRenderQueue<OverlayInstance> WORLD_QUEUE = new PerFrameRenderQueue<>();
     private static final SubmitNodeStorage WORLD_STORAGE = new SubmitNodeStorage();
     private static final AtomicBoolean FAILURE_LOGGED = new AtomicBoolean();
@@ -77,7 +79,7 @@ public final class WorldLineOverlayPass {
         } catch (Throwable throwable) {
             worldPassAvailable = false;
             if (FAILURE_LOGGED.compareAndSet(false, true)) {
-                AcademyCraft.getLogger().warn(
+                LOGGER.warn(
                         "World overlay pass failed and has been disabled for this session.",
                         throwable
                 );

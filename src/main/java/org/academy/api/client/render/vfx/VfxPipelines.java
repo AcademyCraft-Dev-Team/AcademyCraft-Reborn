@@ -16,6 +16,7 @@ import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.client.resources.R;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 
 import java.lang.reflect.Modifier;
 import java.util.Optional;
@@ -25,6 +26,7 @@ import static org.academy.AcademyCraft.academy;
 
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class VfxPipelines {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final VertexFormat SPATIAL_CUT_MASK_FORMAT = VertexFormat.builder(0)
             .addAttribute("Position", GpuFormat.RGB32_FLOAT)
             .addAttribute("WorldDisplacement", GpuFormat.RGB32_FLOAT)
@@ -458,7 +460,7 @@ public final class VfxPipelines {
             try {
                 event.registerPipeline((RenderPipeline) field.get(null));
             } catch (IllegalAccessException e) {
-                AcademyCraft.getLogger().warn(e.getMessage());
+                LOGGER.warn(e.getMessage());
             }
         }
     }

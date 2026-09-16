@@ -3,6 +3,7 @@ package org.academy.internal.common.ability;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.*;
 import org.academy.api.common.registries.Registries;
+import org.slf4j.Logger;
 
 import java.util.*;
 import java.util.function.Function;
@@ -11,6 +12,7 @@ import java.util.function.Function;
  * Verifies the ability registry after deferred skill dependencies have been resolved.
  */
 public final class AbilityRegistrationValidator {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private AbilityRegistrationValidator() {
     }
 
@@ -109,7 +111,7 @@ public final class AbilityRegistrationValidator {
                 Skill::getKeyString
         );
 
-        AcademyCraft.getLogger().info("Validated {} ability categories and {} skills.",
+        LOGGER.info("Validated {} ability categories and {} skills.",
                 registeredCategories.size(), registeredSkills.size());
     }
 

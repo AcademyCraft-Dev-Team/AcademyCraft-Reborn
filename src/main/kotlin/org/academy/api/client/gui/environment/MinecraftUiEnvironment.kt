@@ -1,6 +1,7 @@
 package org.academy.api.client.gui.environment
 
 import com.mojang.blaze3d.platform.NativeImage
+import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.textures.GpuTextureView
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.texture.DynamicTexture
@@ -21,6 +22,12 @@ class MinecraftUiEnvironment : UiEnvironment {
     override val physicalHeight: Int get() = mc.window.height
     override val gameDirectory: Path get() = mc.gameDirectory.toPath()
     override fun runOnMainThread(task: Runnable) = mc.execute(task)
+
+    override fun runOnRenderThread(task: Runnable) = mc.execute(task)
+
+    override fun isOnMainThread(): Boolean = mc.isSameThread
+    override fun isOnRenderThread(): Boolean = RenderSystem.isOnRenderThread()
+
     override fun frameDeltaTicks(): Float = mc.deltaTracker.gameTimeDeltaTicks
     override fun openResource(namespace: String, path: String): InputStream? =
         mc.resourceManager.getResource(Identifier.fromNamespaceAndPath(namespace, path)).map { it.open() }.orElse(null)

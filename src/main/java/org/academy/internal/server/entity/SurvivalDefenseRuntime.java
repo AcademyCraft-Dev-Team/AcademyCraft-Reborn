@@ -13,6 +13,7 @@ import org.academy.api.server.entity.SurvivalDefenseProfile;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.mixin.common.EntityStateAccessor;
 import org.academy.mixin.common.LivingEntityDamageInvoker;
+import org.slf4j.Logger;
 
 import java.lang.ref.WeakReference;
 import java.security.CodeSource;
@@ -27,6 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * Owner-scoped survival-state ledger and server-side repair loop.
  */
 public final class SurvivalDefenseRuntime {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final StackWalker STATE_STACK_WALKER = StackWalker.getInstance(
             StackWalker.Option.RETAIN_CLASS_REFERENCE
     );
@@ -343,7 +345,7 @@ public final class SurvivalDefenseRuntime {
         var now = System.nanoTime();
         if (now - entry.lastFailureLogNanos < 5_000_000_000L) return;
         entry.lastFailureLogNanos = now;
-        AcademyCraft.getLogger().warn(
+        LOGGER.warn(
                 "Unable to restore protected entity {} to its server level",
                 entity.getUUID(),
                 error

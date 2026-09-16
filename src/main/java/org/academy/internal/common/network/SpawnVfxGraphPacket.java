@@ -23,6 +23,7 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+import org.slf4j.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -36,6 +37,7 @@ import java.util.function.IntFunction;
  */
 @PacketTarget(ThreadType.CLIENT)
 public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, SpawnVfxGraphPacket> {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final StreamCodec<ByteBuf, Map<String, Float>> PARAM_CODEC =
             ByteBufCodecs.map((IntFunction<Map<String, Float>>) HashMap::new,
                     ByteBufCodecs.STRING_UTF8, ByteBufCodecs.FLOAT, 16);
@@ -246,7 +248,7 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
                 }
             } catch (Exception e) {
                 // 图资产缺失或参数非法时静默兜底，不影响既有技能表现
-                AcademyCraft.getLogger().debug("Unable to spawn vfx graph {}", packet.assetId, e);
+                LOGGER.debug("Unable to spawn vfx graph {}", packet.assetId, e);
             }
         }
     }

@@ -6,17 +6,17 @@ import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.player.Inventory
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator
+import org.academy.api.client.gui.dsl.*
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.screen.ContainerUiScreen
-import org.academy.api.client.gui.util.InfoAreaUtil.create
-import org.academy.api.client.gui.util.InfoAreaUtil.createAttributeRow
-import org.academy.api.client.gui.util.InfoAreaUtil.createInfoRow
+import org.academy.api.client.gui.util.attributeRow
+import org.academy.api.client.gui.util.infoArea
+import org.academy.api.client.gui.util.infoRow
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.resources.R
 import org.academy.internal.common.world.inventory.WindGenMenu
 import org.academy.internal.common.world.level.block.entity.WindGenBaseBlockEntity
-import java.util.function.Consumer
 
 class WindGenScreen(
     menu: WindGenMenu,
@@ -25,10 +25,10 @@ class WindGenScreen(
     val blockEntity: WindGenBaseBlockEntity
 ) : ContainerUiScreen<WindGenMenu>(menu, playerInventory, title) {
     private val mainPos: BlockPos = blockEntity.blockPos
-    private var topAlphaSetter = Consumer { `_`: Float -> }
-    private var pillarAlphaSetter = Consumer { `_`: Float -> }
-    private var baseAlphaSetter = Consumer { `_`: Float -> }
-    private var bufferValueSetter = Consumer { `_`: String -> }
+    private var topAlphaSetter: (Float) -> Unit = {}
+    private var pillarAlphaSetter: (Float) -> Unit = {}
+    private var baseAlphaSetter: (Float) -> Unit = {}
+    private var bufferValueSetter: (String) -> Unit = {}
 
     override fun onInit(
         pageButtons: RadioGroupWidget,
@@ -39,74 +39,64 @@ class WindGenScreen(
         val duration = 600L
         val childDuration = duration - 100
 
-        val ui = ImageWidget(R.textures.gui.element.ui_gen)
-        ui.layoutParams = FrameLayoutWidget.LayoutParams()
-            .sizeMode(SizeMode.MATCH_PARENT)
-
-        invPage.addChild("ui", ui)
-
-        val effect = FrameLayoutWidget()
-        effect.layoutParams = FrameLayoutWidget.LayoutParams()
-            .heightMode(SizeMode.MATCH_PARENT)
-            .width(24f)
-            .gravity(Gravity.CENTER_HORIZONTAL)
-            .padding(0f, 12f, 0f, 103f)
-
-        invPage.addChild("effect", effect)
-        run {
-            val topIcon = ImageWidget(R.textures.gui.wind_gen.icon_wind_top)
-            topAlphaSetter = { topIcon.alpha = it }
-            topIcon.layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-                .padding(0f, 0f, 0f, 48f)
-
-            effect.addChild("icon_top", topIcon)
-
-            val pillarIcon = ImageWidget(R.textures.gui.wind_gen.icon_wind_pillar)
-            pillarAlphaSetter = { pillarIcon.alpha = it }
-            pillarIcon.layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-                .padding(0f, 18f, 0f, 30f)
-
-            effect.addChild("icon_pillar", pillarIcon)
-
-            val baseIcon = ImageWidget(R.textures.gui.wind_gen.icon_wind_base)
-            baseAlphaSetter = { baseIcon.alpha = it }
-            baseIcon.layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-                .padding(0f, 36f, 0f, 12f)
-            effect.addChild("icon_base", baseIcon)
+        invPage.image(R.textures.gui.element.ui_gen, "ui") {
+            matchParent()
         }
+
+        val effect = invPage.frame("effect") {
+            lp {
+                heightMode(SizeMode.MATCH_PARENT)
+                width(24f)
+                gravity(Gravity.CENTER_HORIZONTAL)
+                padding(0f, 12f, 0f, 103f)
+            }
+        }
+
+        val topIcon = effect.image(R.textures.gui.wind_gen.icon_wind_top, "icon_top") {
+            lp {
+                sizeMode(SizeMode.MATCH_PARENT)
+                padding(0f, 0f, 0f, 48f)
+            }
+        }
+        topAlphaSetter = { topIcon.alpha = it }
+
+        val pillarIcon = effect.image(R.textures.gui.wind_gen.icon_wind_pillar, "icon_pillar") {
+            lp {
+                sizeMode(SizeMode.MATCH_PARENT)
+                padding(0f, 18f, 0f, 30f)
+            }
+        }
+        pillarAlphaSetter = { pillarIcon.alpha = it }
+
+        val baseIcon = effect.image(R.textures.gui.wind_gen.icon_wind_base, "icon_base") {
+            lp {
+                sizeMode(SizeMode.MATCH_PARENT)
+                padding(0f, 36f, 0f, 12f)
+            }
+        }
+        baseAlphaSetter = { baseIcon.alpha = it }
 
         setupWirelessPage(pageButtons, invButton, content, invPage, mainPos, createButton(R.textures.gui.icon.icon_wireless))
 
-        val info = create(this, (leftPos + imageWidth).toFloat(), (topPos - 22).toFloat())
-        run {
-            val p = WidgetContainer.LayoutParams()
-                .gravity(Gravity.CENTER_RIGHT)
-            val bufferValueLabel = TextWidget("0 AF")
-            bufferValueLabel.layoutParams = p
+        root.infoArea((leftPos + imageWidth).toFloat(), (topPos - 22).toFloat()) {
+            val bufferValueLabel = infoRow("BUFFER", "icon_buffer", -0xda3b01, "0 AF")
             bufferValueSetter = { bufferValueLabel.text = it }
-            val bufferLayout = createInfoRow("BUFFER", "icon_buffer", -0xda3b01, bufferValueLabel)
-            info.addChild("energy_layout", bufferLayout)
 
-            val infoLabel = TextWidget("Information")
-            infoLabel.layoutParams = LinearLayoutWidget.LayoutParams()
-                .padding(6.5f, 0f, 0f, 0f)
+            text("Information", "label_info") {
+                lp {
+                    paddingLeft(8f)
+                }
+            }
 
-            infoLabel.scaleX = 0.75f
-            infoLabel.scaleY = 0.75f
-            info.addChild("label_info", infoLabel)
-
-            val altitudeValue = blockEntity.altitude.toString() + ""
-            val altitudeValueLabel = TextWidget(altitudeValue)
-            altitudeValueLabel.layoutParams = WidgetContainer.LayoutParams()
-                .gravity(Gravity.CENTER_RIGHT)
-                .size(12f, 12f)
-            altitudeValueLabel.gravity = Gravity.CENTER_RIGHT
-
-            val altitudeLayout = createAttributeRow("Altitude", altitudeValueLabel)
-            info.addChild("altitude_layout", altitudeLayout)
+            attributeRow("Altitude") {
+                text(blockEntity.altitude.toString(), "altitude_value") {
+                    lp {
+                        gravity(Gravity.CENTER_RIGHT)
+                        size(12f, 12f)
+                    }
+                    gravity = Gravity.CENTER_RIGHT
+                }
+            }
         }
 
         pageButtons.startAnimation(
@@ -122,31 +112,31 @@ class WindGenScreen(
     }
 
     private fun updateInfo() {
-        bufferValueSetter.accept(String.format(AF, blockEntity.energyStored))
+        bufferValueSetter(AF.format(blockEntity.energyStored))
 
         when (blockEntity.completeness) {
             WindGenBaseBlockEntity.Completeness.NO_TOP -> {
-                baseAlphaSetter.accept(1f)
-                pillarAlphaSetter.accept(1f)
-                topAlphaSetter.accept(0.2f)
+                baseAlphaSetter(1f)
+                pillarAlphaSetter(1f)
+                topAlphaSetter(0.2f)
             }
 
             WindGenBaseBlockEntity.Completeness.BASE_ONLY -> {
-                baseAlphaSetter.accept(1f)
-                pillarAlphaSetter.accept(0.2f)
-                topAlphaSetter.accept(0.2f)
+                baseAlphaSetter(1f)
+                pillarAlphaSetter(0.2f)
+                topAlphaSetter(0.2f)
             }
 
             WindGenBaseBlockEntity.Completeness.COMPLETE -> {
-                baseAlphaSetter.accept(1f)
-                pillarAlphaSetter.accept(1f)
-                topAlphaSetter.accept(1f)
+                baseAlphaSetter(1f)
+                pillarAlphaSetter(1f)
+                topAlphaSetter(1f)
             }
 
             WindGenBaseBlockEntity.Completeness.COMPLETE_NOT_WORKING -> {
-                baseAlphaSetter.accept(1f)
-                pillarAlphaSetter.accept(1f)
-                topAlphaSetter.accept(0.6f)
+                baseAlphaSetter(1f)
+                pillarAlphaSetter(1f)
+                topAlphaSetter(0.6f)
             }
         }
     }

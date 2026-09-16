@@ -25,6 +25,7 @@ import org.academy.api.client.render.vfxgraph.serialize.JsonVfxGraphCodec;
 import org.academy.api.client.render.vfxgraph.serialize.VfxGraphSchemaVersion;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -42,6 +43,7 @@ import java.util.*;
  * 生命周期由 {@code AcademyCraftClient} 接入（init/tick/close）。</p>
  */
 public final class VfxGraphManager {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     public static final VfxGraphManager INSTANCE = new VfxGraphManager();
 
     private final SimpleNodeRegistry metadata = new SimpleNodeRegistry();
@@ -117,7 +119,7 @@ public final class VfxGraphManager {
             watcher.startLoop();
             fileWatcher = watcher;
         } catch (IOException exception) {
-            AcademyCraft.getLogger().warn("Unable to start vfx graph file watcher at {}", root, exception);
+            LOGGER.warn("Unable to start vfx graph file watcher at {}", root, exception);
         }
     }
 
@@ -279,7 +281,7 @@ public final class VfxGraphManager {
                 return decodeAsset(key, new Gson().fromJson(reader, JsonObject.class));
             }
         } catch (Exception exception) {
-            AcademyCraft.getLogger().debug("Unable to lazily load vfx graph asset {}", assetId, exception);
+            LOGGER.debug("Unable to lazily load vfx graph asset {}", assetId, exception);
             return null;
         }
     }
@@ -294,7 +296,7 @@ public final class VfxGraphManager {
                 containerAssets.put(key, system);
                 return null;
             } catch (Exception exception) {
-                AcademyCraft.getLogger().error("Unable to decode container vfx graph asset: " + key, exception);
+                LOGGER.error("Unable to decode container vfx graph asset: " + key, exception);
                 return null;
             }
         }
@@ -367,7 +369,7 @@ public final class VfxGraphManager {
                 containerAssets.put(key, system);
                 reloadEffects(key, system);
             } catch (Exception exception) {
-                AcademyCraft.getLogger().error("Unable to decode container vfx graph asset: " + key, exception);
+                LOGGER.error("Unable to decode container vfx graph asset: " + key, exception);
             }
             return;
         }

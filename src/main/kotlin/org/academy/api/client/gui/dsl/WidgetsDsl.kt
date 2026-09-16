@@ -57,6 +57,25 @@ fun WidgetContainer.monochromeImage(
     return widget
 }
 
+fun WidgetContainer.spriteSheet(
+    texture: Identifier,
+    orientation: Orientation,
+    sheetWidth: Int,
+    sheetHeight: Int,
+    frameWidth: Int,
+    frameHeight: Int,
+    frameCount: Int,
+    name: String = nextChildName("sprite_sheet"),
+    init: SpriteSheetWidget.() -> Unit = {}
+): SpriteSheetWidget {
+    val widget = SpriteSheetWidget(
+        texture, orientation, sheetWidth, sheetHeight, frameWidth, frameHeight, frameCount
+    )
+    addChild(name, widget)
+    widget.init()
+    return widget
+}
+
 fun WidgetContainer.fill(
     color: Int,
     name: String = nextChildName("fill"),
@@ -321,6 +340,18 @@ fun WidgetContainer.scrollPanel(
     val widget = ScrollPanelWidget(orientation)
     addChild(name, widget)
     if (content != null) widget.setContent(content)
+    widget.init()
+    return widget
+}
+
+fun WidgetContainer.scrollBar(
+    panel: ScrollPanelWidget,
+    orientation: Orientation = Orientation.VERTICAL,
+    name: String = nextChildName("scroll_bar"),
+    init: ScrollBarWidget.() -> Unit = {}
+): ScrollBarWidget {
+    val widget = ScrollBarWidget(panel, orientation)
+    addChild(name, widget)
     widget.init()
     return widget
 }

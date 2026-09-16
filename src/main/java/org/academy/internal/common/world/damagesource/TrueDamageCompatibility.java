@@ -10,6 +10,7 @@ import org.academy.AcademyCraft;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.entitycontrol.TrueHealthOffsetRuntime;
 import org.academy.mixin.common.LivingEntityDamageInvoker;
+import org.slf4j.Logger;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -24,6 +25,7 @@ import java.lang.invoke.MethodType;
  * short-circuits it. This avoids javaagents and raw memory access.</p>
  */
 public final class TrueDamageCompatibility {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final ThreadLocal<HurtProbe> HURT_PROBE = new ThreadLocal<>();
     private static final ThreadLocal<DeathAttempt> DEATH_ATTEMPT = new ThreadLocal<>();
     private static final MethodHandle VANILLA_DIE = resolveVanillaDie();
@@ -70,7 +72,7 @@ public final class TrueDamageCompatibility {
         try {
             target.hurtServer(level, source, amount);
         } catch (Throwable error) {
-            AcademyCraft.getLogger().warn(
+            LOGGER.warn(
                     "Custom true-damage hurt notification failed for {}",
                     target.getStringUUID(),
                     error
@@ -136,7 +138,7 @@ public final class TrueDamageCompatibility {
             try {
                 target.die(source);
             } catch (Throwable error) {
-                AcademyCraft.getLogger().warn(
+                LOGGER.warn(
                         "Custom true-damage death callback failed for {}",
                         target.getStringUUID(),
                         error
@@ -182,7 +184,7 @@ public final class TrueDamageCompatibility {
             VANILLA_DIE.invoke(target, source);
             return true;
         } catch (Throwable error) {
-            AcademyCraft.getLogger().warn(
+            LOGGER.warn(
                     "Direct LivingEntity death dispatch failed for {}",
                     target.getStringUUID(),
                     error
@@ -216,7 +218,7 @@ public final class TrueDamageCompatibility {
             target.setPose(Pose.DYING);
             return isDeathCommitted(target);
         } catch (Throwable error) {
-            AcademyCraft.getLogger().warn(
+            LOGGER.warn(
                     "Fallback true-damage death completion failed for {}",
                     target.getStringUUID(),
                     error
@@ -251,7 +253,7 @@ public final class TrueDamageCompatibility {
                     LivingEntity.class
             );
         } catch (Throwable error) {
-            AcademyCraft.getLogger().warn(
+            LOGGER.warn(
                     "Direct LivingEntity death dispatch is unavailable; using the accessor fallback",
                     error
             );

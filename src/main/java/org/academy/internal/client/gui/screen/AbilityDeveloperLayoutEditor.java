@@ -6,6 +6,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.registries.Registries;
+import org.slf4j.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -15,11 +16,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
-/**
- * Session-local editor state for the ability developer skill tree. The built-in resource is
- * deliberately read-only; edited coordinates are written only when the export command is used.
- */
 public final class AbilityDeveloperLayoutEditor {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final String RESOURCE_PATH = "/assets/academy/gui/ability_developer_gui_layout.txt";
     private static final Path EXPORT_PATH = FMLPaths.CONFIGDIR.get()
             .resolve("academy")
@@ -111,7 +109,7 @@ public final class AbilityDeveloperLayoutEditor {
         var result = new LinkedHashMap<String, Map<String, Position>>();
         try (var input = AbilityDeveloperLayoutEditor.class.getResourceAsStream(RESOURCE_PATH)) {
             if (input == null) {
-                AcademyCraft.getLogger().warn("Missing built-in ability developer layout {}", RESOURCE_PATH);
+                LOGGER.warn("Missing built-in ability developer layout {}", RESOURCE_PATH);
                 return result;
             }
             try (var reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
@@ -139,7 +137,7 @@ public final class AbilityDeveloperLayoutEditor {
                 }
             }
         } catch (RuntimeException | IOException exception) {
-            AcademyCraft.getLogger().error("Unable to load built-in ability developer layout", exception);
+            LOGGER.error("Unable to load built-in ability developer layout", exception);
         }
         return result;
     }

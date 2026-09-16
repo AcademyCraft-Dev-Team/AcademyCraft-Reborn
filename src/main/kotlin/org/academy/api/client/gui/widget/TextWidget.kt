@@ -7,17 +7,16 @@ import org.academy.api.client.gui.frame.UiFrame
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.render.Canvas
-import org.academy.api.client.gui.text.Ellipsize
-import org.academy.api.client.gui.text.MarqueeState
-import org.academy.api.client.gui.text.Spanned
-import org.academy.api.client.gui.text.TextLayoutManager
-import org.academy.api.client.gui.text.TextPainter
-import org.academy.api.client.gui.text.TextShapingOptions
-import org.academy.api.client.gui.text.TextStyle
+import org.academy.api.client.gui.text.model.Ellipsize
+import org.academy.api.client.gui.text.fx.MarqueeState
+import org.academy.api.client.gui.text.shape.TextMeasurer
+import org.academy.api.client.gui.text.record.TextPainter
+import org.academy.api.client.gui.text.model.TextShapingOptions
+import org.academy.api.client.gui.text.model.FontStyle
 import kotlin.math.min
 
 open class TextWidget(text: String) : AbstractWidget(), TextHolder {
-    override var textSize: Float = DEFAULT_TEXT_SIZE
+    override var textSize: Float = TextShapingOptions.DEFAULT_SIZE
         set(value) {
             if (field != value) {
                 field = value
@@ -43,7 +42,7 @@ open class TextWidget(text: String) : AbstractWidget(), TextHolder {
             }
         }
 
-    var textStyle: TextStyle = TextStyle.NORMAL
+    var fontStyle: FontStyle = FontStyle.NORMAL
         set(value) {
             if (field != value) {
                 field = value
@@ -191,9 +190,9 @@ open class TextWidget(text: String) : AbstractWidget(), TextHolder {
 
     protected var layoutScale: Float = 1.0f
 
-    private var baseText: Spanned = Spanned.of(text)
+    private var baseText: String = text
 
-    private var displayText: Spanned = baseText
+    private var displayText: String = baseText
     private var measuredText: CharSequence? = null
     private var measuredFontSize = 0f
     private var measuredOptions: TextShapingOptions? = null
@@ -212,20 +211,12 @@ open class TextWidget(text: String) : AbstractWidget(), TextHolder {
     internal val isMarqueeActive: Boolean get() = marqueeOverflow
 
     override var text: String
-        get() = baseText.text
-        set(value) {
-            if (baseText.text != value) {
-                spannedText = Spanned.of(value)
-            }
-        }
-
-    open var spannedText: Spanned
         get() = baseText
         set(value) {
             if (baseText != value) {
                 baseText = value
                 displayText = value
-                marqueeState.reset()
+                if (ellipsize == Ellipsize.MARQUEE) marqueeState.reset()
                 requestLayout()
                 invalidate()
             }
@@ -244,11 +235,11 @@ open class TextWidget(text: String) : AbstractWidget(), TextHolder {
         lineSpacingExtra = lineSpacingExtra,
         includeFontPadding = includeFontPadding,
         preferredFont = typeface,
-        textStyle = textStyle
+        fontStyle = fontStyle
     )
 
-    private fun effectiveText(spanned: Spanned): Spanned =
-        if (allCaps) Spanned.of(spanned.text.uppercase()) else spanned
+    private fun effectiveText(text: String): String =
+        if (allCaps) text.uppercase() else text
 
     protected open fun calculateLayoutScale(
         baseTextWidth: Float,
@@ -280,8 +271,8 @@ open class TextWidget(text: String) : AbstractWidget(), TextHolder {
             measuredText = text
             measuredFontSize = textSize
             measuredOptions = options
-            measuredTextWidth = TextLayoutManager.measureWidth(text, textSize, options)
-            measuredTextHeight = TextLayoutManager.measureHeight(text, textSize, options)
+            measuredTextWidth = TextMeasurer.measureWidth(text, textSize, options)
+            measuredTextHeight = TextMeasurer.measureHeight(text, textSize, options)
         }
     }
 
@@ -295,15 +286,15 @@ open class TextWidget(text: String) : AbstractWidget(), TextHolder {
         return measuredTextHeight
     }
 
-    private fun prepareDisplayText(constraintWidth: Float): Spanned {
+    private fun prepareDisplayText(constraintWidth: Float): String {
         val effective = effectiveText(baseText)
         if (singleLine) {
             if (ellipsize != Ellipsize.NONE && ellipsize != Ellipsize.MARQUEE &&
                 constraintWidth > 0f && constraintWidth < Float.MAX_VALUE &&
-                TextLayoutManager.measureWidth(effective.text, textSize, shapingOptions()) > constraintWidth
+                TextMeasurer.measureWidth(effective, textSize, shapingOptions()) > constraintWidth
             ) {
                 layoutScale = 1f
-                return Spanned.of(ellipsizeText(effective.text, constraintWidth))
+                return ellipsizeText(effective, constraintWidth)
             }
             return effective
         }
@@ -311,7 +302,7 @@ open class TextWidget(text: String) : AbstractWidget(), TextHolder {
             layoutScale = 1f
             return effective
         }
-        val wrapped = TextLayoutManager.wrap(effective.text, textSize, constraintWidth, shapingOptions())
+        val wrapped = TextMeasurer.wrap(effective, textSize, constraintWidth, shapingOptions())
         val lines = wrapped.split('\n')
         val capped = if (maxLines > 0 && lines.size > maxLines) {
             val keep = lines.take(maxLines).toMutableList()
@@ -322,12 +313,12 @@ open class TextWidget(text: String) : AbstractWidget(), TextHolder {
             keep.joinToString("\n")
         } else wrapped
         layoutScale = 1f
-        return Spanned.of(capped)
+        return capped
     }
 
     private fun ellipsizeText(text: String, maxWidth: Float): String {
         val options = shapingOptions()
-        if (TextLayoutManager.measureWidth(text, textSize, options) <= maxWidth) return text
+        if (TextMeasurer.measureWidth(text, textSize, options) <= maxWidth) return text
         return when (ellipsize) {
             Ellipsize.START -> {
                 var low = 0
@@ -335,7 +326,7 @@ open class TextWidget(text: String) : AbstractWidget(), TextHolder {
                 while (low < high) {
                     val mid = (low + high) ushr 1
                     val suffix = text.substring(text.offsetByCodePoints(0, mid))
-                    if (TextLayoutManager.measureWidth("…$suffix", textSize, options) <= maxWidth) high = mid
+                    if (TextMeasurer.measureWidth("…$suffix", textSize, options) <= maxWidth) high = mid
                     else low = mid + 1
                 }
                 "…" + text.substring(text.offsetByCodePoints(0, low))
@@ -349,7 +340,7 @@ open class TextWidget(text: String) : AbstractWidget(), TextHolder {
                     val head = text.substring(0, text.offsetByCodePoints(0, mid))
                     val tailLen = text.codePointCount(0, text.length) - mid
                     val tail = text.substring(text.offsetByCodePoints(mid, tailLen))
-                    if (TextLayoutManager.measureWidth("$head…$tail", textSize, options) <= maxWidth) low = mid
+                    if (TextMeasurer.measureWidth("$head…$tail", textSize, options) <= maxWidth) low = mid
                     else high = mid - 1
                 }
                 val head = text.substring(0, text.offsetByCodePoints(0, low))
@@ -358,14 +349,14 @@ open class TextWidget(text: String) : AbstractWidget(), TextHolder {
                 "$head…$tail"
             }
 
-            else -> TextLayoutManager.ellipsize(text, textSize, maxWidth, "…", options)
+            else -> TextMeasurer.ellipsize(text, textSize, maxWidth, "…", options)
         }
     }
 
     override fun onMeasure(widthMeasureSpec: MeasureSpec, heightMeasureSpec: MeasureSpec) {
         val lp = layoutParams
-        if (baseText.text.isEmpty()) {
-            displayText = Spanned.EMPTY
+        if (baseText.isEmpty()) {
+            displayText = ""
             layoutScale = 1f
             setMeasuredDimension(
                 resolveSize(lp.paddingLeft + lp.paddingRight, widthMeasureSpec),
@@ -411,19 +402,12 @@ open class TextWidget(text: String) : AbstractWidget(), TextHolder {
         )
     }
 
-    private fun minLinesHeight(): Float {
-        val metrics = TextLayoutManager.lineMetrics(textSize)
-        val asc = metrics?.ascent ?: textSize
-        val desc = metrics?.descent ?: 0f
-        val lead = metrics?.leading ?: 0f
-        val base = asc + desc + (if (includeFontPadding) lead else 0f)
-        return base * lineSpacingMultiplier + lineSpacingExtra
-    }
+    private fun minLinesHeight(): Float = TextMeasurer.lineHeight(textSize, shapingOptions())
 
     override fun renderInternal(context: Canvas) {
         super.renderInternal(context)
         val renderText = displayText
-        if (renderText.text.isEmpty()) return
+        if (renderText.isEmpty()) return
 
         val lp = layoutParams
         val baseTextWidth = getTextWidth(renderText)
@@ -455,7 +439,7 @@ open class TextWidget(text: String) : AbstractWidget(), TextHolder {
 
     private fun renderMarquee(
         context: Canvas,
-        renderText: Spanned,
+        renderText: String,
         baseTextWidth: Float,
         baseTextHeight: Float,
         contentScale: Float,
@@ -529,16 +513,14 @@ open class TextWidget(text: String) : AbstractWidget(), TextHolder {
     }
 
     companion object {
-        const val DEFAULT_TEXT_SIZE: Float = 8f
-
         @JvmOverloads
         fun getTextWidth(text: String, textSize: Float, options: TextShapingOptions = TextShapingOptions.DEFAULT): Float {
-            return TextLayoutManager.measureWidth(text, textSize, options)
+            return TextMeasurer.measureWidth(text, textSize, options)
         }
 
         @JvmOverloads
         fun getTextHeight(text: String, textSize: Float, options: TextShapingOptions = TextShapingOptions.DEFAULT): Float {
-            return TextLayoutManager.measureHeight(text, textSize, options)
+            return TextMeasurer.measureHeight(text, textSize, options)
         }
     }
 }

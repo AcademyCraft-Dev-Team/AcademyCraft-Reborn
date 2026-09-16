@@ -1,14 +1,14 @@
 package org.academy.internal.client.gui.screen
 
 import net.minecraft.core.BlockPos
-import org.academy.api.client.gui.layout.SizeMode
+import org.academy.api.client.gui.dsl.height
+import org.academy.api.client.gui.dsl.matchWidth
 import org.academy.api.client.gui.screen.ContainerUiScreen
-import org.academy.api.client.gui.util.WirelessPanelUtil.create
+import org.academy.api.client.gui.util.wirelessPanel
 import org.academy.api.client.gui.widget.FrameLayoutWidget
 import org.academy.api.client.gui.widget.RadioButtonWidget
 import org.academy.api.client.gui.widget.RadioGroupWidget
 import org.academy.api.client.gui.widget.Widget
-import org.academy.api.client.gui.widget.WidgetContainer
 import org.academy.api.client.util.AnimationUtil
 
 internal fun ContainerUiScreen<*>.setupWirelessPage(
@@ -19,14 +19,13 @@ internal fun ContainerUiScreen<*>.setupWirelessPage(
     mainPos: BlockPos,
     wirelessButton: RadioButtonWidget
 ) {
-    val wirelessPage = create(mainPos, true)
-    wirelessPage.visibility = Widget.Visibility.GONE
-    wirelessPage.isEnabled = false
-    content.addChild("page_wireless", wirelessPage)
+    val wirelessPage = content.wirelessPanel(mainPos, true, "page_wireless") {
+        visibility = Widget.Visibility.GONE
+        isEnabled = false
+    }
 
-    wirelessButton.layoutParams = WidgetContainer.LayoutParams()
-        .widthMode(SizeMode.MATCH_PARENT)
-        .height(16f)
+    wirelessButton.matchWidth()
+    wirelessButton.height(16f)
 
     pageButtons.addChild("wireless", wirelessButton)
     pageButtons.onSelectionChanged = {
