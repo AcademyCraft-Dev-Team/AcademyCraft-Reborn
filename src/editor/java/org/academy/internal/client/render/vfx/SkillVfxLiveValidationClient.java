@@ -17,10 +17,12 @@ import net.neoforged.neoforge.client.event.RenderFrameEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
+import org.slf4j.Logger;
 
 /** Records actual game frames and GPU timestamp queries; never active in ordinary runs. */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class SkillVfxLiveValidationClient {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final String ROLE = System.getProperty("academy.vfxValidation.role", "");
     private static final List<String> SAMPLES = new ArrayList<>();
     private static String phase = "loading", sampledPhase = "loading";
@@ -37,7 +39,7 @@ public final class SkillVfxLiveValidationClient {
 
     @SubscribeEvent
     public static void screen(ScreenEvent.Init.Post event) {
-        if (!ROLE.isEmpty()) AcademyCraft.getLogger().info("VFX_LIVE_SCREEN {} {}", ROLE, event.getScreen().getClass().getName());
+        if (!ROLE.isEmpty()) LOGGER.info("VFX_LIVE_SCREEN {} {}", ROLE, event.getScreen().getClass().getName());
     }
     @SubscribeEvent
     public static void tick(ClientTickEvent.Post event) {
@@ -62,7 +64,7 @@ public final class SkillVfxLiveValidationClient {
                 // The writer may be between truncate and write during this diagnostic poll.
                 if (!current.isEmpty()) phase = current;
             }
-        } catch (IOException e) { AcademyCraft.getLogger().warn("Unable to read validation phase", e); }
+        } catch (IOException e) { LOGGER.warn("Unable to read validation phase", e); }
     }
 
     @SubscribeEvent
@@ -82,7 +84,7 @@ public final class SkillVfxLiveValidationClient {
         if (profiling) { gpu.endProfile(); profiling = false; }
         if (!phase.equals(sampledPhase)) {
             sampledPhase = phase; phaseBegan = now; screenshots = 0;
-            AcademyCraft.getLogger().info("VFX_LIVE_CLIENT {} phase={}", ROLE, phase);
+            LOGGER.info("VFX_LIVE_CLIENT {} phase={}", ROLE, phase);
         }
         var stats = VfxGraphManager.INSTANCE.frameStatistics();
         SAMPLES.add(sampledPhase + "," + (now - phaseBegan) / 1e9 + "," + (now - began) / 1e6
@@ -94,7 +96,7 @@ public final class SkillVfxLiveValidationClient {
             screenshots++;
             var mc = Minecraft.getInstance();
             Screenshot.grab(output().toFile(), ROLE + "-" + sampledPhase + "-" + screenshots + ".png",
-                    mc.gameRenderer.mainRenderTarget(), 1, message -> AcademyCraft.getLogger().info("VFX_CAPTURE {}", message.getString()));
+                    mc.gameRenderer.mainRenderTarget(), 1, message -> LOGGER.info("VFX_CAPTURE {}", message.getString()));
         }
         if (phase.equals("done")) {
             finished = true;

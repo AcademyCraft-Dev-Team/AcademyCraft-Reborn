@@ -39,11 +39,12 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.gui.environment.UiEnvironment;
 import org.academy.api.client.gui.imgui.ImGuiUIDebugger;
 import org.academy.api.client.gui.imgui.ImGuiUtilApi;
-import org.academy.api.client.gui.glyph.AtlasManager;
-import org.academy.api.client.gui.glyph.MsdfAtlasDebugger;
-import org.academy.api.client.gui.glyph.bitmap.BitmapAtlasDebugger;
-import org.academy.api.client.gui.glyph.bitmap.BitmapGlyphDebug;
-import org.academy.api.client.gui.text.font.MsdfFontService;
+import org.academy.api.client.gui.text.atlas.AtlasManager;
+import org.academy.api.client.gui.text.debug.MsdfAtlasDebugger;
+import org.academy.api.client.gui.text.debug.BitmapAtlasDebugger;
+import org.academy.api.client.gui.text.debug.BitmapGlyphDebug;
+import org.academy.api.client.gui.text.font.FontRepository;
+import org.academy.api.client.gui.text.glyph.GlyphPrewarm;
 import org.academy.api.client.gui.screen.ScreenDispatcher;
 import org.academy.api.client.hud.HudManager;
 import org.academy.api.client.hud.terminal.TerminalHud;
@@ -102,6 +103,7 @@ import org.academy.internal.common.world.level.block.MultiBlock;
 import org.academy.internal.common.world.level.material.Fluids;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -116,6 +118,7 @@ import static org.academy.AcademyCraft.vanilla;
 @EventBusSubscriber(Dist.CLIENT)
 @Mod(value = AcademyCraft.MOD_ID, dist = Dist.CLIENT)
 public final class AcademyCraftClient {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static boolean renderInitialized = false;
 
     public static boolean isUiDebugEnvironment() {
@@ -175,7 +178,16 @@ public final class AcademyCraftClient {
         ScreenDispatcher.Companion.init();
         HudManager.INSTANCE.initRender();
 
-        MsdfFontService.INSTANCE.genDefaultGlyph();
+        // 预热必须在字体 face 全部加载完成之后进行，否则会在字体未就绪时解析码点，
+        // 污染 charToFontCache 导致文字变豆腐块/不显示。正常情况下由 TextReloadListener
+        // 在 markFontsReady() 之后触发；这里只作为兜底。
+        if (FontRepository.INSTANCE.isFontsReady()) {
+            GlyphPrewarm.INSTANCE.onFontsReady();
+        } else {
+            LOGGER.info(
+                    "Text fonts not ready at initRender ({}); prewarm will be triggered by TextReloadListener",
+                    FontRepository.INSTANCE.snapshot());
+        }
         renderInitialized = true;
     }
 
@@ -250,7 +262,7 @@ public final class AcademyCraftClient {
                                                         notifyClient("Skill GUI layout exported to " + path.toAbsolutePath());
                                                         return 1;
                                                     } catch (Exception exception) {
-                                                        AcademyCraft.getLogger().error("Unable to export skill GUI layout", exception);
+                                                        LOGGER.error("Unable to export skill GUI layout", exception);
                                                         notifyClient("Unable to export Skill GUI layout: " + exception.getMessage());
                                                         return 0;
                                                     }
@@ -270,6 +282,10 @@ public final class AcademyCraftClient {
                                                         .executes(_ -> atlasDump("bitmap")))
                                                 .then(Commands.literal("msdf")
                                                         .executes(_ -> atlasDump("msdf"))))
+                                        .then(Commands.literal("font")
+                                                .executes(_ -> fontDump(""))
+                                                .then(Commands.argument("text", StringArgumentType.greedyString())
+                                                        .executes(ctx -> fontDump(ctx.getArgument("text", String.class)))))
                                         .then(Commands.literal("imgui")
                                                 .executes(_ -> setImGuiDebug(ImGuiUIDebugger.INSTANCE.toggle()))
                                                 .then(Commands.literal("on")
@@ -342,14 +358,14 @@ public final class AcademyCraftClient {
             var codepoint = text.codePointAt(i);
             i += Character.charCount(codepoint);
             dumped++;
-            var font = MsdfFontService.INSTANCE.getFont(codepoint);
+            var font = FontRepository.INSTANCE.getFont(codepoint);
             var summary = BitmapGlyphDebug.INSTANCE.dump(font, codepoint, px, outputDir);
             summaries.append('\n').append(summary == null
                     ? String.format("U+%06X no outline", codepoint)
                     : summary);
         }
         notifyClient("Dumped " + dumped + " glyph(s) at " + px + "px to " + outputDir + summaries);
-        AcademyCraft.getLogger().info(
+        LOGGER.info(
                 "Bitmap glyph dump ({}, {}px):\n{}{}", text, px, outputDir, summaries
         );
         return 1;
@@ -391,7 +407,36 @@ public final class AcademyCraftClient {
         }
 
         notifyClient("Dumped " + dumped.size() + " atlas page(s) to " + outputDir + summary);
-        AcademyCraft.getLogger().info("Atlas dump ({}): {}{}", filter, outputDir, summary);
+        LOGGER.info("Atlas dump ({}): {}{}", filter, outputDir, summary);
+        return 1;
+    }
+
+    /**
+     * 字体诊断：输出注册表状态，并按当前解析结果列出给定文本每个码点所属字体。
+     * 用于排查“文字变豆腐块/不显示”这类按码点回退到错误字体的问题。
+     */
+    private static int fontDump(String text) {
+        var repository = FontRepository.INSTANCE;
+        var summary = new StringBuilder(repository.snapshot());
+        var cached = repository.cachedResolutions(32);
+        if (!cached.isEmpty()) {
+            summary.append("\ncachedResolutions(sample)=").append(cached);
+        }
+        if (!text.isEmpty()) {
+            for (var i = 0; i < text.length(); ) {
+                var codepoint = text.codePointAt(i);
+                i += Character.charCount(codepoint);
+                var font = repository.getFont(codepoint);
+                summary.append(String.format(
+                        "%nU+%04X -> %s (glyphIndex=%d)",
+                        codepoint,
+                        font.getDescriptor().getIdentifier(),
+                        font.glyphIndex(codepoint)
+                ));
+            }
+        }
+        LOGGER.info("Font dump: {}", summary);
+        notifyClient(summary.toString());
         return 1;
     }
 
@@ -416,7 +461,7 @@ public final class AcademyCraftClient {
         TemporalClientRuntime.reset();
         MentaloutRosterClientState.clearLocal();
         ImGuiUtilApi.INSTANCE.close();
-        MsdfFontService.INSTANCE.close();
+        FontRepository.INSTANCE.close();
 
         AtlasManager.INSTANCE.closeAll();
         SpacialExcisionVfxClient.close();

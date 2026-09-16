@@ -21,10 +21,12 @@ import org.academy.api.server.vfx.SkillVfxService;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
 import org.academy.internal.common.world.entity.skill.Plasma;
+import org.slf4j.Logger;
 
 /** Opt-in local test scene. Only enabled by the dedicated validation Gradle runs. */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class SkillVfxLiveValidation {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final boolean ENABLED = Boolean.getBoolean("academy.vfxValidation.server");
     private static final List<Entity> EFFECTS = new ArrayList<>();
     private static int tick = -1;
@@ -38,7 +40,7 @@ public final class SkillVfxLiveValidation {
     }
     private static void phase(String phase) {
         write("phase.txt", phase);
-        AcademyCraft.getLogger().info("VFX_LIVE_PHASE {} tick={} {}", phase, tick, SkillVfxRuntime.statistics());
+        LOGGER.info("VFX_LIVE_PHASE {} tick={} {}", phase, tick, SkillVfxRuntime.statistics());
     }
     private static void clearEffects() { EFFECTS.forEach(Entity::discard); EFFECTS.clear(); }
     private static void pose(ServerPlayer caster, ServerPlayer observer, float pitch, boolean backwards) {

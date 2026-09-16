@@ -27,10 +27,12 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.slf4j.Logger;
 
 /** Test-only sample driver. Never compiled into ordinary development/release artifacts. */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class TemporalAddonRegression {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static volatile int phase;
     private static volatile String failure;
     private static int ticks;
@@ -167,13 +169,13 @@ public final class TemporalAddonRegression {
             } else if (phase == 5 && !sampleActive() && !TemporalClientRuntime.isExternallyImmune(mc.player)) {
                 if (++phaseTicks < 5) return;
                 checkInput(mc, true);
-                AcademyCraft.getLogger().info("TEMPORAL_ADDON_REGRESSION_PASSED input keyboard mouse bindings position rotation tick immunity-expiry reacquire cleanup");
+                LOGGER.info("TEMPORAL_ADDON_REGRESSION_PASSED input keyboard mouse bindings position rotation tick immunity-expiry reacquire cleanup");
                 mc.stop();
                 phase = 6;
             }
         } catch (Throwable error) {
             failure = error.toString();
-            AcademyCraft.getLogger().error("TEMPORAL_REGRESSION_ERROR phase=" + phase, error);
+            LOGGER.error("TEMPORAL_REGRESSION_ERROR phase=" + phase, error);
             throw new IllegalStateException("TEMPORAL_REGRESSION_FAILED", error);
         }
     }
@@ -273,7 +275,7 @@ public final class TemporalAddonRegression {
             try { action.run(mc.getSingleplayerServer().getPlayerList().getPlayer(id)); }
             catch (Throwable error) {
                 failure = error.toString();
-                AcademyCraft.getLogger().error("TEMPORAL_REGRESSION_SERVER_ERROR phase=" + phase, error);
+                LOGGER.error("TEMPORAL_REGRESSION_SERVER_ERROR phase=" + phase, error);
             }
         });
     }

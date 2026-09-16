@@ -17,11 +17,13 @@ import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.mixin.common.LivingEntityDamageInvoker;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 
 /**
  * Central entry point for AcademyCraft category damage.
  */
 public final class SkillDamageUtil {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final float EPSILON = 0.0001f;
 
     private SkillDamageUtil() {
@@ -176,7 +178,7 @@ public final class SkillDamageUtil {
         try {
             invoker.academy$actuallyHurt(level, source, amount);
         } catch (Throwable error) {
-            AcademyCraft.getLogger().warn(
+            LOGGER.warn(
                     "Direct actuallyHurt failed for {}; preserving any damage already committed",
                     target.getStringUUID(),
                     error
@@ -251,7 +253,7 @@ public final class SkillDamageUtil {
             try {
                 effect.onMobHurt(level, target, source, inflictedAmount);
             } catch (Throwable error) {
-                AcademyCraft.getLogger().warn(
+                LOGGER.warn(
                         "A direct-damage effect callback failed for {}",
                         target.getStringUUID(),
                         error
@@ -268,7 +270,7 @@ public final class SkillDamageUtil {
         try {
             target.onDamageTaken(completion);
         } catch (Throwable error) {
-            AcademyCraft.getLogger().warn(
+            LOGGER.warn(
                     "A direct-damage completion callback failed for {}",
                     target.getStringUUID(),
                     error

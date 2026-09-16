@@ -6,6 +6,7 @@ import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.player.Inventory
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator
+import org.academy.api.client.gui.dsl.*
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
@@ -14,7 +15,6 @@ import org.academy.api.client.gui.widget.*
 import org.academy.api.client.resources.R
 import org.academy.internal.common.world.inventory.SolarGenMenu
 import org.academy.internal.common.world.level.block.entity.SolarGenBlockEntity
-import java.util.function.Consumer
 
 class SolarGenScreen private constructor(
     menu: SolarGenMenu,
@@ -23,7 +23,7 @@ class SolarGenScreen private constructor(
     private val blockEntity: SolarGenBlockEntity
 ) : ContainerUiScreen<SolarGenMenu>(menu, playerInventory, title) {
     private val mainPos: BlockPos = blockEntity.blockPos
-    private var stateConsumer = Consumer { `_`: SolarGenBlockEntity.State -> }
+    private var stateConsumer: (SolarGenBlockEntity.State) -> Unit = {}
 
     override fun onInit(
         pageButtons: RadioGroupWidget,
@@ -34,19 +34,24 @@ class SolarGenScreen private constructor(
         val duration = 600L
         val childDuration = duration - 100
 
-        val ui = ImageWidget(R.textures.gui.element.ui_gen)
-        ui.layoutParams = FrameLayoutWidget.LayoutParams()
-            .sizeMode(SizeMode.MATCH_PARENT)
+        invPage.image(R.textures.gui.element.ui_gen, "ui") {
+            matchParent()
+        }
 
-        invPage.addChild("ui", ui)
-
-        val effect: SpriteSheetWidget = SpriteSheetWidget(
+        val effect = invPage.spriteSheet(
             R.textures.gui.solar_gen.icon_solar_gen_sunny,
             Orientation.VERTICAL,
             48, 96,
             48, 48,
-            2
-        ).apply {
+            2,
+            "effect"
+        ) {
+            lp {
+                heightMode(SizeMode.MATCH_PARENT)
+                width(48f)
+                gravity(Gravity.CENTER_HORIZONTAL)
+                padding(0f, 21f, 0f, 118f)
+            }
             var lastTime = System.currentTimeMillis()
             setFrameUpdate {
                 val time = System.currentTimeMillis()
@@ -66,13 +71,6 @@ class SolarGenScreen private constructor(
                 }
             )
         }
-        effect.layoutParams = FrameLayoutWidget.LayoutParams()
-            .heightMode(SizeMode.MATCH_PARENT)
-            .width(48f)
-            .gravity(Gravity.CENTER_HORIZONTAL)
-            .padding(0f, 21f, 0f, 118f)
-
-        invPage.addChild("effect", effect)
 
         setupWirelessPage(pageButtons, invButton, content, invPage, mainPos, createButton(R.textures.gui.icon.icon_wireless))
 
@@ -89,7 +87,7 @@ class SolarGenScreen private constructor(
 
     override fun containerTick() {
         super.containerTick()
-        stateConsumer.accept(blockEntity.state)
+        stateConsumer(blockEntity.state)
     }
 
     companion object {

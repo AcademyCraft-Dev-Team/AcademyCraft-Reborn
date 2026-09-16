@@ -9,6 +9,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 import org.academy.AcademyCraft;
+import org.slf4j.Logger;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -26,6 +27,7 @@ import java.util.concurrent.Executor;
  */
 @EventBusSubscriber(Dist.CLIENT)
 public final class VfxGraphAssetLoader implements PreparableReloadListener {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     public static final VfxGraphAssetLoader INSTANCE = new VfxGraphAssetLoader();
 
     private static final String DIRECTORY = "vfxgraph";
@@ -55,7 +57,7 @@ public final class VfxGraphAssetLoader implements PreparableReloadListener {
                         try (var reader = entry.getValue().openAsReader()) {
                             parsed.put(entry.getKey(), GSON.fromJson(reader, JsonObject.class));
                         } catch (Exception exception) {
-                            AcademyCraft.getLogger().error("Unable to parse vfx graph asset: " + entry.getKey(), exception);
+                            LOGGER.error("Unable to parse vfx graph asset: " + entry.getKey(), exception);
                         }
                     }
                     return parsed;

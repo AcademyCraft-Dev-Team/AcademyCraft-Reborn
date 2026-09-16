@@ -5,6 +5,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.neoforge.common.CommonHooks;
 import net.neoforged.neoforge.common.damagesource.DamageContainer;
 import org.academy.AcademyCraft;
+import org.slf4j.Logger;
 
 /**
  * Publishes the immutable completion signal for damage resolved outside vanilla's damage pipeline.
@@ -12,6 +13,7 @@ import org.academy.AcademyCraft;
  * result is never fed back into the already completed health mutation.
  */
 public final class DamageCompletionDeclaration {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private DamageCompletionDeclaration() {
     }
 
@@ -35,7 +37,7 @@ public final class DamageCompletionDeclaration {
         try {
             CommonHooks.onLivingDamagePost(target, snapshot);
         } catch (Throwable error) {
-            AcademyCraft.getLogger().warn(
+            LOGGER.warn(
                     "A completed direct damage declaration failed for {}",
                     target.getStringUUID(),
                     error

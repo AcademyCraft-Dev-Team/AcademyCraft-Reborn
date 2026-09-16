@@ -16,9 +16,11 @@ import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.internal.common.world.entity.skill.Smoke;
 import net.minecraft.resources.Identifier;
+import org.slf4j.Logger;
 
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class SmokeVfxClient {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final Identifier SMOKE_ASSET = AcademyCraft.academy("vfxgraph/entity_smoke");
 
     private static final Map<ActiveEffect, Playback> LOCAL =
@@ -84,7 +86,7 @@ public final class SmokeVfxClient {
                 effect.bind("smoke_alpha", () -> Value.of(smoke.getAlpha()));
                 effect.bind("smoke_frame", () -> Value.of((float) smoke.frame));
             } catch (RuntimeException exception) {
-                AcademyCraft.getLogger().warn("Unable to spawn smoke VFX graph", exception);
+                LOGGER.warn("Unable to spawn smoke VFX graph", exception);
             }
         }
     }

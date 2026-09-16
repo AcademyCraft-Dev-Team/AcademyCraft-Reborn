@@ -11,15 +11,15 @@ import org.academy.api.client.gui.event.KeyEvent
 import org.academy.api.client.gui.event.MouseEvent
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.render.Canvas
-import org.academy.api.client.gui.text.TextBlob
-import org.academy.api.client.gui.text.TextEditCommand
-import org.academy.api.client.gui.text.TextEditingState
-import org.academy.api.client.gui.text.TextInputKeymap
-import org.academy.api.client.gui.text.TextLayoutManager
-import org.academy.api.client.gui.text.TextLine
-import org.academy.api.client.gui.text.TextPainter
-import org.academy.api.client.gui.text.TextShaper
-import org.academy.api.client.gui.text.TextShapingOptions
+import org.academy.api.client.gui.text.model.TextBlob
+import org.academy.api.client.gui.text.edit.TextEditCommand
+import org.academy.api.client.gui.text.edit.TextEditingState
+import org.academy.api.client.gui.text.edit.TextInputKeymap
+import org.academy.api.client.gui.text.shape.TextMeasurer
+import org.academy.api.client.gui.text.record.TextPainter
+import org.academy.api.client.gui.text.shape.CaretGeometry
+import org.academy.api.client.gui.text.shape.ShapingCache
+import org.academy.api.client.gui.text.model.TextShapingOptions
 import java.util.function.Consumer
 import java.util.function.Predicate
 import kotlin.math.max
@@ -30,7 +30,7 @@ open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), Tex
     private val painter = TextPainter()
     private val hintPainter = TextPainter()
 
-    override var textSize: Float = TextWidget.DEFAULT_TEXT_SIZE
+    override var textSize: Float = TextShapingOptions.DEFAULT_SIZE
         set(value) {
             if (field != value) {
                 field = value
@@ -94,9 +94,6 @@ open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), Tex
     private var lastBlinkTime = 0L
     private var mouseDragging = false
     private var dragStartPos = 0
-    private var cachedLayout: TextBlob? = null
-    private var cachedLayoutText: String? = null
-    private var cachedLayoutFontSize = -1f
 
     init {
         isClickable = true
@@ -152,8 +149,8 @@ open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), Tex
     private fun renderHint(context: Canvas) {
         val finalScale = 1f
         val (originX, originY) = textOrigin(
-            TextLayoutManager.measureWidth(hint, textSize),
-            TextLayoutManager.measureHeight(hint, textSize)
+            TextMeasurer.measureWidth(hint, textSize),
+            TextMeasurer.measureHeight(hint, textSize)
         )
         hintPainter.draw(
             context, hint, textSize,
@@ -168,16 +165,16 @@ open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), Tex
         val finalScale = 1f
 
         val empty = blob.lines.isEmpty()
-        val metrics = if (empty) TextLayoutManager.lineMetrics(textSize) else null
+        val metrics = if (empty) TextMeasurer.lineMetrics(textSize) else null
         val caretUnit = editing.caretUnit + editing.preeditText.length
-        val line = blob.lines.firstOrNull { caretUnit < it.charEnd } ?: blob.lines.lastOrNull()
+        val line = CaretGeometry.lineFor(blob, caretUnit)
 
         val ascent = line?.ascent ?: metrics?.ascent ?: textSize
         val descent = line?.descent ?: metrics?.descent ?: 0f
         val blockHeight = if (empty) ascent + descent + (metrics?.leading ?: 0f) else blob.height
         val (originX, originY) = textOrigin(blob.width, blockHeight)
 
-        val x = originX + (if (line != null) caretX(blob, line, caretUnit) else 0f) * finalScale
+        val x = originX + (if (line != null) CaretGeometry.caretX(blob, line, caretUnit) else 0f) * finalScale
         val y = originY + (if (line != null) (line.baselineY - line.ascent) else 0f) * finalScale
 
         context.pose().pushPose()
@@ -212,8 +209,8 @@ open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), Tex
             val overlapStart = max(startUnit, line.charStart)
             val overlapEnd = min(endUnit, line.charEnd)
             if (overlapStart >= overlapEnd) continue
-            val x0 = caretX(blob, line, overlapStart)
-            val x1 = caretX(blob, line, overlapEnd)
+            val x0 = CaretGeometry.caretX(blob, line, overlapStart)
+            val x1 = CaretGeometry.caretX(blob, line, overlapEnd)
             context.pose().pushPose()
             context.pose().translate(
                 originX + x0 * finalScale,
@@ -337,7 +334,7 @@ open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), Tex
         }
 
         val textX = ((mouseX - getAbsoluteX()).toFloat() - originX) / finalScale
-        val unitOffset = hitTestLine(blob, target, textX)
+        val unitOffset = CaretGeometry.hitTest(blob, target, textX)
         val composedCp = blob.text.codePointCount(0, unitOffset)
         return mapComposedToCommitted(composedCp)
     }
@@ -354,17 +351,7 @@ open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), Tex
         }
     }
 
-    private fun textLayout(): TextBlob {
-        val current = text
-        var cached = cachedLayout
-        if (cached == null || current != cachedLayoutText || textSize != cachedLayoutFontSize) {
-            cached = TextShaper.shape(current, textSize)
-            cachedLayoutText = current
-            cachedLayoutFontSize = textSize
-            cachedLayout = cached
-        }
-        return cached
-    }
+    private fun textLayout(): TextBlob = ShapingCache.blob(text, textSize)
 
     private fun textOrigin(blockWidth: Float, blockHeight: Float): Pair<Float, Float> {
         val lp = layoutParams
@@ -375,49 +362,6 @@ open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), Tex
             availableWidth, availableHeight, blockWidth * finalScale, blockHeight * finalScale,
             gravity, lp.paddingLeft, lp.paddingTop
         )
-    }
-
-    private fun caretX(blob: TextBlob, line: TextLine, unit: Int): Float {
-        var prevEnd = 0f
-        var nextPos = -1f
-        var have = false
-        for (run in blob.runs) {
-            for (g in run.charIndices.indices) {
-                val ci = run.charIndices[g]
-                if (ci < line.charStart || ci >= line.charEnd) continue
-                if (ci == unit) return run.positionsX[g]
-                if (ci > unit && nextPos < 0f) nextPos = run.positionsX[g]
-                prevEnd = run.positionsX[g] + run.advances[g]
-                have = true
-            }
-        }
-        return if (nextPos >= 0f) nextPos else if (have) prevEnd else 0f
-    }
-
-    private fun hitTestLine(blob: TextBlob, line: TextLine, localX: Float): Int {
-        var best = line.charStart
-        var bestDist = Float.MAX_VALUE
-        var prevEnd = 0f
-        var have = false
-        for (run in blob.runs) {
-            for (g in run.charIndices.indices) {
-                val ci = run.charIndices[g]
-                if (ci < line.charStart || ci >= line.charEnd) continue
-                val pos = run.positionsX[g]
-                val gapMid = if (have) (prevEnd + pos) / 2f else pos
-                val dist = kotlin.math.abs(localX - gapMid)
-                if (dist < bestDist) {
-                    bestDist = dist
-                    best = ci
-                }
-                prevEnd = pos + run.advances[g]
-                have = true
-            }
-        }
-        if (have && kotlin.math.abs(localX - prevEnd) < bestDist) {
-            best = line.charEnd
-        }
-        return best
     }
 
     private fun codeUnitIndex(codePointIndex: Int): Int {

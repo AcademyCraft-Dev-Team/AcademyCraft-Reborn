@@ -15,6 +15,7 @@ import imgui.extension.implot.ImPlot
 import imgui.flag.ImGuiConfigFlags
 import imgui.glfw.ImGuiImplGlfw
 import imgui.type.ImInt
+import org.academy.AcademyCraft
 import org.academy.api.client.render.Render
 import org.jetbrains.annotations.ApiStatus
 import java.io.IOException
@@ -26,12 +27,8 @@ import java.nio.file.StandardCopyOption
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * 可复用的 ImGui 后端，绑定任意 GLFW 窗口句柄（游戏内或独立桌面编辑器）。
- * 仅使用 Blaze3D 抽象层渲染（PROGRAM.md R1），不含任何 GL/VK 直调。
- *
- * @param windowHandle GLFW 窗口句柄
- */
+private val LOGGER = AcademyCraft.getLogger()
+
 @ApiStatus.Internal
 class ImGuiBackend(
     private val windowHandle: Long,
@@ -55,7 +52,6 @@ class ImGuiBackend(
     private val projMatrixBuffer = ByteBuffer.allocateDirect(64).order(ByteOrder.nativeOrder())
     private val reusableClipRect = ImVec4()
 
-    /** ImGui 纹理 ID → (view, sampler) 注册表（M11-02）：字体图集固定 ID 1，其余自 2 起。 */
     private val textures = ConcurrentHashMap<Long, Pair<GpuTextureView, GpuSampler>>()
     private val nextTextureId = java.util.concurrent.atomic.AtomicLong(2L)
 
@@ -63,7 +59,6 @@ class ImGuiBackend(
         const val FONT_TEX_ID = 1L
     }
 
-    /** 注册任意纹理供 ImGui 显示，返回 ImGui 纹理 ID（> 1）。 */
     fun registerTexture(view: GpuTextureView, sampler: GpuSampler): Long {
         val id = nextTextureId.getAndIncrement()
         textures[id] = Pair(view, sampler)
@@ -89,12 +84,11 @@ class ImGuiBackend(
     }
 
     private fun loadLocalizedFont() {
-        val logger = org.academy.AcademyCraft.getLogger()
         val fonts = ImGui.getIO().fonts
         val fontResource = ImGuiBackend::class.java
             .getResourceAsStream("/assets/academy/fonts/wqy-microhei-modified.ttf")
         if (fontResource == null) {
-            logger.warn("[ImGui] Localized font resource is missing; using the built-in font")
+            LOGGER.warn("[ImGui] Localized font resource is missing; using the built-in font")
             fonts.addFontDefault()
             cacheFontAtlas()
             return
@@ -104,7 +98,7 @@ class ImGuiBackend(
             Files.createTempFile("academy-imgui-font-", ".ttf")
         } catch (exception: IOException) {
             fontResource.close()
-            logger.error("[ImGui] Failed to create a temporary localized font; using the built-in font", exception)
+            LOGGER.error("[ImGui] Failed to create a temporary localized font; using the built-in font", exception)
             fonts.addFontDefault()
             cacheFontAtlas()
             return
@@ -115,13 +109,12 @@ class ImGuiBackend(
                     Files.copy(it, temporaryFont, StandardCopyOption.REPLACE_EXISTING)
                 }
             } catch (exception: IOException) {
-                logger.error("[ImGui] Failed to stage the localized font; using the built-in font", exception)
+                LOGGER.error("[ImGui] Failed to stage the localized font; using the built-in font", exception)
                 fonts.addFontDefault()
                 cacheFontAtlas()
                 return
             }
 
-            // 见 ImGuiUtilInternal 原实现：文件字体避免 JNI 数组地址失效问题。
             val glyphRanges = fonts.glyphRangesChineseSimplifiedCommon
             fonts.addFontFromFileTTF(temporaryFont.toString(), 14f, glyphRanges)
             cacheFontAtlas()
@@ -130,7 +123,7 @@ class ImGuiBackend(
             try {
                 Files.deleteIfExists(temporaryFont)
             } catch (exception: IOException) {
-                logger.warn("[ImGui] Failed to delete temporary font {}", temporaryFont, exception)
+                LOGGER.warn("[ImGui] Failed to delete temporary font {}", temporaryFont, exception)
             }
         }
     }
@@ -153,7 +146,7 @@ class ImGuiBackend(
         fontAtlasHeight = atlasHeight
 
         fonts.clearInputData()
-        org.academy.AcademyCraft.getLogger().info(
+        LOGGER.info(
             "[ImGui] Prepared font atlas {}x{}",
             atlasWidth,
             atlasHeight
@@ -342,8 +335,6 @@ class ImGuiBackend(
         var vertexOffset = 0L
         var indexOffset = 0L
 
-        // 用实际渲染区（离屏 target）作为 scissor 上界，而非常规的 surfaceWidth/Height
-        // （window framebuffer）：保证任何尺寸不同步都不会越出渲染区抛异常。
         val physicalWidth = areaWidth
         val physicalHeight = areaHeight
 
@@ -385,7 +376,6 @@ class ImGuiBackend(
                     }
                 }
 
-                // 逐命令绑定纹理（M11-02）：字体图集 ID 1，其余查注册表
                 val texId = drawData.getCmdListCmdBufferTextureId(n, cmdI)
                 val binding = if (texId == FONT_TEX_ID) Pair(fontView, fontSampler) else textures[texId]
                 if (binding == null) continue

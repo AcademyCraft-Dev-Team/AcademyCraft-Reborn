@@ -13,10 +13,12 @@ import org.academy.AcademyCraft;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
+import org.slf4j.Logger;
 
 /** Opt-in integrated-client test; only use with an isolated quick-play world. */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class TrueHealthOffsetClientSmoke {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static boolean started;
     private static boolean sawProjection;
     private static volatile int entityId = -1;
@@ -72,12 +74,12 @@ public final class TrueHealthOffsetClientSmoke {
             if (Math.abs(cow.getHealth() - 70) > 0.01f) {
                 throw new IllegalStateException("Client getHealth did not apply the synchronized ceiling");
             }
-            if (!sawProjection) AcademyCraft.getLogger().info("TRUE_HEALTH_CLIENT_PROJECTION_OK");
+            if (!sawProjection) LOGGER.info("TRUE_HEALTH_CLIENT_PROJECTION_OK");
             sawProjection = true;
         }
         if (sawProjection && minecraft.level.getGameTime() >= startedAt + 420
                 && !cow.hasData(AttachmentTypes.TRUE_HEALTH_CEILING) && cow.getHealth() >= 99.9f) {
-            AcademyCraft.getLogger().info("TRUE_HEALTH_CLIENT_SMOKE_PASSED");
+            LOGGER.info("TRUE_HEALTH_CLIENT_SMOKE_PASSED");
             var server = minecraft.getSingleplayerServer();
             if (server != null) server.execute(() -> {
                 for (var level : server.getAllLevels()) {

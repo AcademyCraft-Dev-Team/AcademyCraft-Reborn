@@ -22,6 +22,7 @@ import org.academy.api.client.gui.widget.WidgetContainer
 import org.academy.api.client.render.UniformPayload
 import org.academy.api.client.thread.MainThread
 import org.academy.api.client.thread.RenderThread
+import org.academy.api.client.thread.runOnRenderThread
 import org.academy.api.common.util.UncheckedUtil
 import org.joml.Matrix4f
 import org.joml.Vector4f
@@ -33,11 +34,9 @@ import kotlin.math.ceil
 open class UiContext {
     private val commandList = AtomicReference<MutableList<SubmittedCommand>?>()
 
-    /** 主线程 [perform] 写入, 渲染线程 [blurRegions] 读取喵. */
     @Volatile
     private var lastBlurRegions: List<BlurRegion> = emptyList()
 
-    /** 上次 [perform] 的根控件; 换 screen 时作废全部缓存喵. */
     private var performedRoot: WidgetContainer? = null
 
     private val closed = AtomicBoolean(false)
@@ -54,7 +53,7 @@ open class UiContext {
     private var dynamicTransformsUbo: GpuBuffer? = null
 
     init {
-        UiEnvironment.get().runOnMainThread { this.initOnRenderThread() }
+        runOnRenderThread { initOnRenderThread() }
     }
 
     @MainThread
@@ -69,8 +68,8 @@ open class UiContext {
         mouseX: Double,
         mouseY: Double,
         partialTick: Float,
-        logicalW: Float,
-        logicalH: Float
+        width: Float,
+        height: Float
     ) {
         if (closed.get() || closing.get()) return
 
@@ -79,9 +78,6 @@ open class UiContext {
             lastBlurRegions = emptyList()
             performedRoot = rootWidget
         }
-
-        val width = logicalW
-        val height = logicalH
 
         val widthSpec = MeasureSpec(MeasureSpec.Mode.EXACTLY, width)
         val heightSpec = MeasureSpec(MeasureSpec.Mode.EXACTLY, height)
@@ -97,13 +93,8 @@ open class UiContext {
         lastBlurRegions = context.blurRegions
     }
 
-    /** 本帧收集到的模糊区域，供宿主交给 [UiCompositor]（需要世界/下方两个 target）。 */
     fun blurRegions(): List<BlurRegion> = lastBlurRegions
 
-    /**
-     * 将缓存的命令+模糊区域切分为多个段, 供外部逐层合成喵.
-     * 返回 null 表示无命令.
-     */
     @RenderThread
     fun splitSegments(
         blurRegions: List<BlurRegion>
@@ -117,9 +108,6 @@ open class UiContext {
         return preparedCommands to segments
     }
 
-    /**
-     * 将命令渲染到 [target] 喵.
-     */
     @RenderThread
     fun drawCommands(
         target: RenderTarget,
@@ -144,11 +132,6 @@ open class UiContext {
         uploadSplit(target, clear, guiScaledW, guiScaledH, aboveTarget = null, blurRegions = emptyList())
     }
 
-    /**
-     * 上传命令到 [target]. 当 [blurRegions] 非空且提供 [aboveTarget] 时, 以模糊区域的
-     * [BlurRegion.commandIndex] 为界把命令列表切为多个段, 逐层渲染→模糊→合成喵.
-     * 否则单 pass.
-     */
     @RenderThread
     fun uploadSplit(
         target: RenderTarget,
@@ -213,11 +196,11 @@ open class UiContext {
 
             if (segmentRegions.isNotEmpty()) {
                 backdropBlur.capture(targetView, segmentRegions.maxOf { it.radius })
-                for (region in segmentRegions) {
+                for ((x, y, width, height, radius) in segmentRegions) {
                     backdropBlur.fillRegion(
                         targetView,
-                        region.x, region.y, region.width, region.height,
-                        region.radius,
+                        x, y, width, height,
+                        radius,
                         UiCompositor.NEUTRAL_TINT
                     )
                 }
@@ -410,7 +393,7 @@ open class UiContext {
     fun close() {
         if (closing.get() || closed.get()) return
         closing.set(true)
-        UiEnvironment.get().runOnMainThread { this.closeOnRenderThread() }
+        runOnRenderThread { this.closeOnRenderThread() }
     }
 
     fun closeOnRenderThread() {

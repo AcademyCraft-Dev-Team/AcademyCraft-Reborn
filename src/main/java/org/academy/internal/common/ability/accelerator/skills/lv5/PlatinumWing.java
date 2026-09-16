@@ -64,6 +64,7 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+import org.slf4j.Logger;
 
 import java.util.HashMap;
 import java.util.List;
@@ -74,6 +75,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import static org.lwjgl.glfw.GLFW.*;
 
 public final class PlatinumWing extends Skill {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final double EXECUTION_REACH = 128.0;
 
     public PlatinumWing() {
@@ -235,7 +237,7 @@ public final class PlatinumWing extends Skill {
                 if (player.isShiftKeyDown()) executeCrosshairTarget(player);
                 else WingFlightSupport.fanAttack(player, Skills.PLATINUM_WING.get());
             } catch (Throwable throwable) {
-                AcademyCraft.getLogger().error(
+                LOGGER.error(
                         "[PlatinumWing] execution attack failed for {}",
                         player.getName().getString(),
                         throwable

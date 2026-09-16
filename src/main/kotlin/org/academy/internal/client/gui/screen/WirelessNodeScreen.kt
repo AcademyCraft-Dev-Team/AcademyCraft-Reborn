@@ -7,14 +7,15 @@ import net.minecraft.util.Mth
 import net.minecraft.world.entity.player.Inventory
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator
+import org.academy.api.client.gui.dsl.*
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
-import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.screen.ContainerUiScreen
-import org.academy.api.client.gui.util.InfoAreaUtil.create
-import org.academy.api.client.gui.util.InfoAreaUtil.createAttributeRow
-import org.academy.api.client.gui.util.InfoAreaUtil.createInfoRow
-import org.academy.api.client.gui.util.InfoAreaUtil.createInputRow
+import org.academy.api.client.gui.text.model.TextShapingOptions
+import org.academy.api.client.gui.util.attributeRow
+import org.academy.api.client.gui.util.infoArea
+import org.academy.api.client.gui.util.infoRow
+import org.academy.api.client.gui.util.inputRow
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.resources.R
 import org.academy.api.common.wireless.SetNodeNamePacket
@@ -22,10 +23,6 @@ import org.academy.api.common.wireless.SetNodePassPacket
 import org.academy.internal.common.world.inventory.WirelessNodeMenu
 import org.academy.internal.common.world.level.block.entity.WirelessNodeBlockEntity
 import org.misaka.MisakaNetworkClient
-import java.lang.Float
-import kotlin.Int
-import kotlin.String
-import kotlin.run
 
 class WirelessNodeScreen(
     menu: WirelessNodeMenu,
@@ -48,100 +45,79 @@ class WirelessNodeScreen(
         val duration = 600L
         val childDuration = duration - 100
 
-        val ui = ImageWidget(R.textures.gui.node.ui_node)
-        ui.layoutParams = FrameLayoutWidget.LayoutParams()
-            .sizeMode(SizeMode.MATCH_PARENT)
+        invPage.image(R.textures.gui.node.ui_node, "ui") {
+            matchParent()
+        }
 
-        invPage.addChild("ui", ui)
-
-        val effect: SpriteSheetWidget = SpriteSheetWidget(
+        invPage.spriteSheet(
             R.textures.gui.node.state_node,
             Orientation.VERTICAL,
             186, 750,
             186, 75,
-            10
-        ).apply {
+            10,
+            "effect"
+        ) {
+            lp {
+                matchHeight()
+                width(186 / 2f)
+                gravity(Gravity.CENTER_HORIZONTAL)
+                padding(0f, 33.5f, 0f, 116f)
+            }
             setFrameUpdate {
                 var progressCapacity =
                     wirelessNodeBlockEntity.connectedUsersCount.toFloat() / wirelessNodeBlockEntity.maxConnectedUsers
 
-                if (Float.isNaN(progressCapacity)) progressCapacity = 0f
-                val index: Int = if (wirelessNodeBlockEntity.connectedUsersCount == 0) {
+                if (progressCapacity.isNaN()) progressCapacity = 0f
+                frameIndex = if (wirelessNodeBlockEntity.connectedUsersCount == 0) {
                     if ((ticks / 20) % 2 == 0) 8 else 9
                 } else {
                     Mth.clamp((progressCapacity * 8 - 1).toInt(), 0, 7)
                 }
 
-                frameIndex = index
                 true
             }
         }
-        effect.layoutParams = FrameLayoutWidget.LayoutParams()
-            .heightMode(SizeMode.MATCH_PARENT)
-            .width(186 / 2f)
-            .gravity(Gravity.CENTER_HORIZONTAL)
-            .padding(0f, 33.5f, 0f, 116f)
-
-        invPage.addChild("effect", effect)
 
         setupWirelessPage(pageButtons, invButton, content, invPage, mainPos, createButton(R.textures.gui.icon.icon_wireless))
 
-        val info = create(this, (leftPos + imageWidth).toFloat(), (topPos - 22).toFloat())
-        run {
-            val p = WidgetContainer.LayoutParams()
-                .gravity(Gravity.CENTER_RIGHT)
-            val energyValueLabel = TextWidget("0 AF")
-            energyValueLabel.layoutParams = p
+        root.infoArea((leftPos + imageWidth).toFloat(), (topPos - 22).toFloat()) {
+            val energyValueLabel = infoRow("ENERGY", "icon_energy", -0xda3b01, "0 AF")
             energyValueSetter = { energyValueLabel.text = it }
-            val energyLayout = createInfoRow("ENERGY", "icon_energy", -0xda3b01, energyValueLabel)
-            info.addChild("energy_layout", energyLayout)
 
-            val capacityValueLabel = TextWidget("0 / 0")
-            capacityValueLabel.layoutParams = p
+            val capacityValueLabel = infoRow("CAPACITY", "icon_capacity", -0x9400, "0 / 0")
             capacityValueSetter = { capacityValueLabel.text = it }
-            val capacityLayout = createInfoRow("CAPACITY", "icon_capacity", -0x9400, capacityValueLabel)
-            info.addChild("capacity_layout", capacityLayout)
 
-            val infoLabel = TextWidget("Information")
-            infoLabel.layoutParams = LinearLayoutWidget.LayoutParams()
-                .padding(6.5f, 0f, 0f, 0f)
-
-            infoLabel.scaleX = 0.75f
-            infoLabel.scaleY = 0.75f
-            info.addChild("label_info", infoLabel)
-
-            val rangeValueLabel = TextWidget("0")
-            rangeValueSetter = { rangeValueLabel.text = it }
-            rangeValueLabel.layoutParams = WidgetContainer.LayoutParams()
-                .height(TextWidget.DEFAULT_TEXT_SIZE)
-                .gravity(Gravity.CENTER)
-            rangeValueLabel.gravity = Gravity.CENTER
-
-            val range = "Trans. Range"
-            val rangeLayout = createAttributeRow(range, rangeValueLabel)
-            info.addChild("range_layout", rangeLayout)
-
-            val nameTextBox = TextInputWidget(12)
-            nameTextBox.background = null
-            nameTextBox.setWhenEnter { s ->
-                MisakaNetworkClient.send(
-                    SetNodeNamePacket(wirelessNodeBlockEntity.blockPos, s)
-                )
+            text("Information", "label_info") {
+                lp { padding(8f, 0f, 0f, 0f) }
             }
-            val name = "Node Name"
-            val nameLayout = createAttributeRow(name, createInputRow(nameTextBox))
-            info.addChild("name_layout", nameLayout)
 
-            val passTextBox = TextInputWidget(12)
-            passTextBox.background = null
-            passTextBox.setWhenEnter { s ->
-                MisakaNetworkClient.send(
-                    SetNodePassPacket(wirelessNodeBlockEntity.blockPos, s)
-                )
+            attributeRow("Trans. Range") {
+                val rangeValueLabel = text("0", "range_value") {
+                    lp {
+                        gravity(Gravity.CENTER)
+                    }
+                    gravity = Gravity.CENTER
+                }
+                rangeValueSetter = { rangeValueLabel.text = it }
             }
-            val pass = "Password"
-            val passLayout = createAttributeRow(pass, createInputRow(passTextBox))
-            info.addChild("pass_layout", passLayout)
+
+            attributeRow("Node Name") {
+                inputRow(12, "name_text_box") {
+                    background = null
+                    enter { value ->
+                        MisakaNetworkClient.send(SetNodeNamePacket(wirelessNodeBlockEntity.blockPos, value))
+                    }
+                }
+            }
+
+            attributeRow("Password") {
+                inputRow(12, "pass_text_box") {
+                    background = null
+                    enter { value ->
+                        MisakaNetworkClient.send(SetNodePassPacket(wirelessNodeBlockEntity.blockPos, value))
+                    }
+                }
+            }
         }
 
         pageButtons.startAnimation(

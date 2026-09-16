@@ -35,6 +35,7 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -42,6 +43,7 @@ import java.util.List;
 import java.util.Set;
 
 public final class AreaTeleportStart {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     /**
      * Area Teleport writes a complete snapshot transactionally. Per-cell side effects would drop container
      * contents and detach supported blocks while their neighbours are only partially written.
@@ -198,7 +200,7 @@ public final class AreaTeleportStart {
                 committed = true;
                 return true;
             } catch (Throwable error) {
-                AcademyCraft.getLogger().error("Area Teleport transaction rolled back", error);
+                LOGGER.error("Area Teleport transaction rolled back", error);
                 write(level, destination, destinationCells);
                 write(level, source, sourceCells);
                 sourceEntities.forEach(FrozenEntity::restorePosition);

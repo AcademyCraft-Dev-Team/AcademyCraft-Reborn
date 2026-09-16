@@ -78,6 +78,7 @@ class DesktopUiHost(
     fun frame(partialTick: Float) {
         environment.frameDeltaTicks = partialTick
         environment.drainMainThreadTasks()
+        environment.drainRenderThreadTasks()
         UiFrame.onFrame()
         app.onFrame(partialTick)
         uiContext.perform(root, mouseX, mouseY, partialTick)

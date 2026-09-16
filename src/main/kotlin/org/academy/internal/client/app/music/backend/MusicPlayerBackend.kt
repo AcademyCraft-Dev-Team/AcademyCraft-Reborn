@@ -8,8 +8,6 @@ import net.neoforged.neoforge.client.event.ClientPauseChangeEvent
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent
 import net.neoforged.neoforge.common.NeoForge
 import org.academy.AcademyCraft
-import org.academy.api.client.gui.text.font.MsdfFont
-import org.academy.api.client.gui.text.font.MsdfFontService
 import org.academy.api.client.gui.state.UiState
 import org.academy.api.client.vanilla.MainLoopEvent
 import org.academy.internal.client.app.music.common.PlaybackController
@@ -81,7 +79,7 @@ class MusicPlayerBackend private constructor() {
     }
 
     @SubscribeEvent
-    fun onMainLoop(event: MainLoopEvent) {
+    fun onMainLoop(@Suppress("unused") event: MainLoopEvent) {
         runOnSoundEngine { update() }
     }
 
@@ -118,16 +116,6 @@ class MusicPlayerBackend private constructor() {
             .filter { obj -> obj.isPresent }
             .map { obj -> obj.get() }
             .collect(Collectors.toList())
-
-        // 初始化以缓解 MusicApp 第一次打开时卡顿喵
-        for ((icon, _, name) in newPlaylist) {
-            val codePoints = name.codePoints().toArray()
-            for (cp in codePoints) {
-                val font: MsdfFont = MsdfFontService.getFont(cp)
-                font.getGlyph(cp)
-            }
-            Minecraft.getInstance().textureManager.getTexture(icon)
-        }
 
         runOnSoundEngine {
             performStop()
@@ -181,7 +169,6 @@ class MusicPlayerBackend private constructor() {
         try {
             val iconLocation = Identifier.parse(data.icon)
             val source = createMusicSource(data.sourceType, data.source)
-            // 资源包曲目用资源定位符作稳定曲目ID，供共享播放与本地列表去重对齐喵.
             val externalId = (source.path as? Identifier)?.toString() ?: ""
             return Optional.of(
                 MusicInfo(
@@ -222,17 +209,11 @@ class MusicPlayerBackend private constructor() {
         if (index != -1) play(index)
     }
 
-    /**
-     * 从曲内指定秒起播（共享播放同步接入用），曲目不在列表时忽略喵。
-     */
     fun playAt(info: MusicInfo, startSeconds: Float) {
         val index = playlistManager.getPlaylist().indexOf(info)
         if (index != -1) playAt(index, startSeconds)
     }
 
-    /**
-     * 按提供者与曲目ID定位播放（在线曲目 Supplier 源的 MusicInfo 不具备稳定 equals）喵。
-     */
     fun playAt(provider: String, externalId: String, startSeconds: Float, startPaused: Boolean = false) {
         runOnSoundEngine {
             val index = playlistManager.getPlaylist()
@@ -290,7 +271,13 @@ class MusicPlayerBackend private constructor() {
                         performStop()
                         return@runOnSoundEngine
                     }
-                    if (data != null) performImmediatePlay(trackIndex, mediaInfo, data.duplicate(), startSeconds, startPaused)
+                    if (data != null) performImmediatePlay(
+                        trackIndex,
+                        mediaInfo,
+                        data.duplicate(),
+                        startSeconds,
+                        startPaused
+                    )
                     else performStop()
                 }
             }
@@ -335,9 +322,6 @@ class MusicPlayerBackend private constructor() {
         runOnSoundEngine { this.performTogglePlayPause() }
     }
 
-    /**
-     * 共享播放同步专用：直接暂停/恢复，不触发本地"从头播放"回退逻辑喵。
-     */
     fun pause() {
         runOnSoundEngine {
             if (audioPlayer.state == PlaybackState.PLAYING) {
@@ -390,9 +374,6 @@ class MusicPlayerBackend private constructor() {
         runOnSoundEngine { performSeek(timeRatio) }
     }
 
-    /**
-     * 跳到曲内指定秒，不触发本地“跳到下一首”逻辑，供共享播放对齐进度用喵。
-     */
     fun seekToSeconds(seconds: Float) {
         runOnSoundEngine {
             val data = currentTrackData ?: return@runOnSoundEngine

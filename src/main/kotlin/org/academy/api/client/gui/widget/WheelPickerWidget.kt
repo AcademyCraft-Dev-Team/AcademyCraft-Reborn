@@ -290,14 +290,15 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
         val childHeight = child.height
 
         val alignX = computeItemAlignX(child, childWidth)
+        val pivotX = computeItemPivotX()
 
         context.pose().pushPose()
         run {
             context.pose().translate(alignX, centerY - childHeight / 2f)
             if (scale != 1f) {
-                context.pose().translate(childWidth / 2f, childHeight / 2f)
+                context.pose().translate(pivotX, childHeight / 2f)
                 context.pose().scale(scale, scale)
-                context.pose().translate(-childWidth / 2f, -childHeight / 2f)
+                context.pose().translate(-pivotX, -childHeight / 2f)
             }
             context.alpha().push(alpha)
             run {
@@ -313,22 +314,24 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
         context.pose().popPose()
     }
 
-    protected open fun computeItemAlignX(child: Widget, childWidth: Float): Float {
+    protected open fun resolveItemAlign(child: Widget): ItemAlign {
         val horizontalGravity = child.layoutParams.gravity and Gravity.HORIZONTAL_GRAVITY_MASK
-        if (horizontalGravity == Gravity.CENTER_HORIZONTAL) {
-            return (width - childWidth) / 2f
-        }
-        if ((horizontalGravity and Gravity.AXIS_PULL_AFTER) != 0) {
-            return width - childWidth
-        }
-        if ((horizontalGravity and Gravity.AXIS_PULL_BEFORE) != 0) {
-            return 0f
-        }
-        return when (itemAlign) {
+        if (horizontalGravity == Gravity.CENTER_HORIZONTAL) return ItemAlign.CENTER
+        if ((horizontalGravity and Gravity.AXIS_PULL_AFTER) != 0) return ItemAlign.RIGHT
+        if ((horizontalGravity and Gravity.AXIS_PULL_BEFORE) != 0) return ItemAlign.LEFT
+        return itemAlign
+    }
+
+    protected open fun computeItemAlignX(child: Widget, childWidth: Float): Float {
+        return when (resolveItemAlign(child)) {
             ItemAlign.LEFT -> 0f
             ItemAlign.RIGHT -> width - childWidth
             ItemAlign.CENTER -> (width - childWidth) / 2f
         }
+    }
+
+    protected open fun computeItemPivotX(): Float {
+        return width / 2f
     }
 
     protected open fun computeItemAlpha(distanceRatio: Float): Float {
@@ -695,7 +698,7 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
     }
 
     private fun applyPosition(position: Int) {
-        val target = if (isCyclic) normalizePosition(position) else position.coerceIn(0, itemCount - 1)
+        val target = if (isCyclic) normalizePosition(position) else position.coerceIn(0, max(0, itemCount - 1))
         if (_selectedPosition != target || scrollOffset != 0f || targetPosition != 0) {
             _selectedPosition = target
             _currentPosition = target

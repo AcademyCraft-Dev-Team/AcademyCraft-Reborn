@@ -22,9 +22,11 @@ import org.academy.internal.common.ability.accelerator.skills.lv5.PlasmaGenerati
 import org.academy.internal.common.world.entity.skill.Plasma;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class PlasmaVfxClient {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final Identifier CHARGE_ASSET = Identifier.fromNamespaceAndPath(
             AcademyCraft.MOD_ID, "vfxgraph/plasma_cannon_charge"
     );
@@ -131,7 +133,7 @@ public final class PlasmaVfxClient {
             EFFECTS.put(plasma, new PlasmaEffects(gather, fixedFocus, fixedOrigin));
         } catch (RuntimeException exception) {
             stop(manager, gather);
-            AcademyCraft.getLogger().error("Unable to spawn graph-authored plasma charge VFX", exception);
+            LOGGER.error("Unable to spawn graph-authored plasma charge VFX", exception);
         }
     }
 
@@ -152,7 +154,7 @@ public final class PlasmaVfxClient {
             effect.bind("formation_progress", () -> Value.of(formationProgress(plasma)));
             return effect;
         } catch (RuntimeException exception) {
-            AcademyCraft.getLogger().error("Unable to spawn graph-authored plasma focus VFX", exception);
+            LOGGER.error("Unable to spawn graph-authored plasma focus VFX", exception);
             return null;
         }
     }
@@ -173,7 +175,7 @@ public final class PlasmaVfxClient {
             effect.bind("projectile_direction", () -> Value.of(new Vector3f(effects.projectileDirection)));
             return effect;
         } catch (RuntimeException exception) {
-            AcademyCraft.getLogger().error("Unable to spawn graph-authored plasma projectile VFX", exception);
+            LOGGER.error("Unable to spawn graph-authored plasma projectile VFX", exception);
             return null;
         }
     }
@@ -184,7 +186,7 @@ public final class PlasmaVfxClient {
             configureVisibility(effect, position, 96f);
             IMPACTS.add(new TimedEffect(effect));
         } catch (RuntimeException exception) {
-            AcademyCraft.getLogger().error("Unable to spawn graph-authored plasma impact VFX", exception);
+            LOGGER.error("Unable to spawn graph-authored plasma impact VFX", exception);
         }
     }
 

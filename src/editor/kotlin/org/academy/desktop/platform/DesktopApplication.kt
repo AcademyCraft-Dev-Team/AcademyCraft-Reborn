@@ -11,7 +11,7 @@ import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.systems.SurfaceException
 import net.minecraft.util.Util
 import org.academy.api.client.gui.environment.UiEnvironment
-import org.academy.api.client.gui.text.font.MsdfFontService
+import org.academy.api.client.gui.text.font.FontRepository
 import org.academy.api.client.render.Render
 import org.lwjgl.glfw.GLFW
 import org.slf4j.Logger
@@ -151,10 +151,10 @@ object DesktopApplication {
 
     private fun initFonts() {
         try {
-            MsdfFontService.loadFont(MsdfFontService.DEFAULT_FONT_ID)
-            val cjkFont = MsdfFontService.DEFAULT_FONT_ID.withPath("fonts/wqy-microhei-modified.ttf")
-            MsdfFontService.loadFont(cjkFont)
-            MsdfFontService.setFontSearchOrder(listOf(MsdfFontService.DEFAULT_FONT_ID, cjkFont))
+            FontRepository.loadFont(FontRepository.DEFAULT_FONT_ID)
+            val cjkFont = FontRepository.DEFAULT_FONT_ID.withPath("fonts/wqy-microhei-modified.ttf")
+            FontRepository.loadFont(cjkFont)
+            FontRepository.setFontSearchOrder(listOf(FontRepository.DEFAULT_FONT_ID, cjkFont))
         } catch (e: Exception) {
             LOGGER.warn("Failed to initialize fonts", e)
         }

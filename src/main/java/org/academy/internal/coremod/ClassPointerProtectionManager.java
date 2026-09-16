@@ -3,6 +3,7 @@ package org.academy.internal.coremod;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import org.academy.AcademyCraft;
+import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -10,6 +11,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public final class ClassPointerProtectionManager {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final Object LOCK = new Object();
     private static final Map<Object, ProtectionState> STATES = new IdentityHashMap<>();
 
@@ -116,7 +118,7 @@ public final class ClassPointerProtectionManager {
             var now = System.nanoTime();
             if (now - state.lastRepairLogNanos > 5_000_000_000L) {
                 state.lastRepairLogNanos = now;
-                AcademyCraft.getLogger().warn(
+                LOGGER.warn(
                         "Vector Reflection repaired a displaced class pointer for {} ({})",
                         describe(player, state), state.originalType.getName());
             }
@@ -155,7 +157,7 @@ public final class ClassPointerProtectionManager {
     private static void logFailure(Object player, ProtectionState state, String message) {
         if (state.failureLogged) return;
         state.failureLogged = true;
-        AcademyCraft.getLogger().warn("Vector Reflection {} for {}; original type={}, backend={}",
+        LOGGER.warn("Vector Reflection {} for {}; original type={}, backend={}",
                 message, describe(player, state), state.originalType.getName(), state.backend);
     }
 
