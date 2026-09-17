@@ -188,6 +188,46 @@ open class TextWidget(text: String) : AbstractWidget(), TextHolder {
             }
         }
 
+    var fadeViewportLeft: Float = 0f
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
+
+    var fadeViewportWidth: Float = 0f
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
+
+    var fadeLength: Float = 0f
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
+
+    var fadeLeftStrength: Float = 0f
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
+
+    var fadeRightStrength: Float = 0f
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
+
     protected var layoutScale: Float = 1.0f
 
     private var baseText: String = text
@@ -433,7 +473,9 @@ open class TextWidget(text: String) : AbstractWidget(), TextHolder {
         painter.draw(
             context, renderText, textSize, redF, greenF, blueF,
             shapingOptions(), originX, originY, contentScale,
-            alpha * context.accumulatedAlpha, revealCodeUnits
+            alpha * context.accumulatedAlpha, revealCodeUnits,
+            fadeViewportLeft, fadeViewportWidth, fadeLength,
+            fadeLeftStrength, fadeRightStrength
         )
     }
 

@@ -81,6 +81,8 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
     private val skillLineBindings = mutableListOf<SkillLineBinding>()
     private var coursePage = CoursePage.ABILITY
     private var viewedSkillInfo: AbilitySystemClient.SkillInfo? = null
+    private val consoleSteps = ArrayDeque<ConsoleStep>()
+    private var consoleStepActive = false
 
     private val maxDuSkills = 10f
 
@@ -124,6 +126,8 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         pendingPropsRecommendation = null
         skillLineBindings.clear()
         viewedSkillInfo = null
+        consoleSteps.clear()
+        consoleStepActive = false
 
         mainWidget = root.frame("main") {
             gravity(Gravity.CENTER)
@@ -454,27 +458,41 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
     private fun addOutput(outputs: LinearLayoutWidget, text: String, onEnd: () -> Unit = {}) {
         val label = outputs.add(
             "label_${text.hashCode()}_${RandomStringUtils.insecure().nextAlphabetic(4)}",
-            object : TextWidget(text) {
-                fun setRevealProgress(value: Float) {
-                    val progress = value.coerceIn(0f, 1f)
-                    revealCodeUnits = (text.length * progress).toInt()
-                }
-            }
+            TextWidget(text)
         ) {
             gravity(Gravity.BOTTOM_LEFT)
         }
 
-        label.startAnimation(
-            ObjectAnimator.ofFloat(label::setRevealProgress, 0f, 1f)
-                .setDuration(text.length * CONSOLE_CHAR_DELAY_MS)
-                .addListener(object : AnimatorListener {
-                    override fun onAnimationEnd(animation: Animator) {
-                        label.setRevealProgress(1f)
-                        scrollConsoleToEndAfterLayout()
-                        onEnd()
-                    }
-                })
+        label.startConsoleReveal {
+            scrollConsoleToEndAfterLayout()
+            onEnd()
+        }
+    }
+
+    private fun TextWidget.startConsoleReveal(onEnd: () -> Unit = {}) {
+        val len = CONSOLE_REVEAL_FADE_LEN
+        val textWidth = TextWidget.getTextWidth(text, textSize)
+        val viewportWidth = textWidth + len * 2f
+
+        fadeLength = len
+        fadeLeftStrength = 0f
+        fadeRightStrength = 1f
+        fadeViewportWidth = viewportWidth
+        fadeViewportLeft = -viewportWidth
+
+        val anim = ObjectAnimator.ofFloat(
+            { p -> fadeViewportLeft = p }, -viewportWidth, 0f
         )
+            .setDuration(text.length * CONSOLE_CHAR_DELAY_MS)
+            .addListener(object : AnimatorListener {
+                override fun onAnimationEnd(animation: Animator) {
+                    fadeLength = 0f
+                    fadeViewportWidth = 0f
+                    fadeViewportLeft = 0f
+                    onEnd()
+                }
+            })
+        startAnimation(anim)
     }
 
     private fun createCommandInputArea(outputs: LinearLayoutWidget): LinearLayoutWidget {
@@ -496,9 +514,9 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                 background = null
                 enter { input ->
                     outputs.removeChild("input_area")
-                    addOutputLine(
+                    addConsoleLineInstant(
                         outputs,
-                        "${L10n["academy.ability_developer.console.prompt"]} $input"
+                        "${L10n["academy.ability_developer.console.prompt"]}$input"
                     )
                     val normalizedInput = input.trim().lowercase()
                     if (pendingPropsRecommendation != null) {
@@ -514,7 +532,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                             }
 
                             PropsConfirmationAnswer.INVALID -> {
-                                addOutputLine(
+                                enqueueConsoleLine(
                                     outputs,
                                     L10n["academy.ability_developer.console.props_invalid_answer"]
                                 )
@@ -526,7 +544,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
 
                     when (normalizedInput) {
                         "learn" -> {
-                            addOutputLine(outputs, L10n["academy.ability_developer.console.dev_begin"])
+                            enqueueConsoleLine(outputs, L10n["academy.ability_developer.console.dev_begin"])
                             AbilitySystemClient.resetDevState()
                             requestInitialDevelopment(outputs, StartLevelDevPacket.Mode.DIRECT)
                         }
@@ -536,7 +554,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                         }
 
                         else -> {
-                            addOutputLine(outputs, L10n["academy.ability_developer.console.invalid_command"])
+                            enqueueConsoleLine(outputs, L10n["academy.ability_developer.console.invalid_command"])
                             attachCommandInput(outputs)
                         }
                     }
@@ -552,39 +570,39 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         MisakaNetworkClient.FUTURE_MANAGER.send(StartLevelDevPacket(developmentSource, mode)) { response ->
             when {
                 response == null -> {
-                    addOutputLine(outputs, "Unknown error")
+                    enqueueConsoleLine(outputs, "Unknown error")
                     attachCommandInput(outputs)
                 }
 
-                response.isSuccess -> startInitialDevelopmentProgress(outputs)
+                response.isSuccess -> enqueueConsoleAction { startInitialDevelopmentProgress(outputs) }
 
                 response.requiresConfirmation() -> {
                     val recommendation = response.recommendedCategory
                     if (recommendation == null) {
-                        addOutputLine(outputs, response.message)
+                        enqueueConsoleLine(outputs, response.message)
                         attachCommandInput(outputs)
                         return@send
                     }
                     pendingPropsRecommendation = recommendation
-                    addOutputLine(
+                    enqueueConsoleLine(
                         outputs,
                         L10n["academy.ability_developer.console.props_expected"].format(
                             localizedAbilityCategoryName(recommendation)
                         )
                     )
-                    addOutputLine(outputs, L10n["academy.ability_developer.console.props_confirm"])
+                    enqueueConsoleLine(outputs, L10n["academy.ability_developer.console.props_confirm"])
                     attachCommandInput(outputs)
                 }
 
                 response.message == "P.R.O.P.S recommendation expired" -> {
                     pendingPropsRecommendation = null
-                    addOutputLine(outputs, L10n["academy.ability_developer.console.props_expired"])
+                    enqueueConsoleLine(outputs, L10n["academy.ability_developer.console.props_expired"])
                     attachCommandInput(outputs)
                 }
 
                 else -> {
                     pendingPropsRecommendation = null
-                    addOutputLine(outputs, response.message)
+                    enqueueConsoleLine(outputs, response.message)
                     attachCommandInput(outputs)
                 }
             }
@@ -633,17 +651,61 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
 
     private fun attachCommandInput(outputs: LinearLayoutWidget) {
         outputs.removeChild("input_area")
+        enqueueConsoleAction { attachCommandInputNow(outputs) }
+    }
+
+    private fun attachCommandInputNow(outputs: LinearLayoutWidget) {
+        outputs.removeChild("input_area")
         val inputArea = outputs.add("input_area", createCommandInputArea(outputs))
         inputArea.children["text_box"]?.let { inputArea.focusedChild = it }
         scrollConsoleToEndAfterLayout()
     }
 
-    private fun addOutputLine(outputs: LinearLayoutWidget, text: String) {
+    private fun addConsoleLineInstant(outputs: LinearLayoutWidget, text: String) {
         outputs.text(text) {
             gravity(Gravity.BOTTOM_LEFT)
             this.gravity = Gravity.BOTTOM_LEFT
         }
         scrollConsoleToEndAfterLayout()
+    }
+
+    private fun enqueueConsoleLine(outputs: LinearLayoutWidget, text: String) {
+        consoleSteps.addLast(ConsoleStep.Line(outputs, text))
+        drainConsoleSteps()
+    }
+
+    private fun enqueueConsoleAction(block: () -> Unit) {
+        consoleSteps.addLast(ConsoleStep.Action(block))
+        drainConsoleSteps()
+    }
+
+    private fun drainConsoleSteps() {
+        if (consoleStepActive) return
+        val step = consoleSteps.removeFirstOrNull() ?: return
+        when (step) {
+            is ConsoleStep.Line -> {
+                consoleStepActive = true
+                val label = step.outputs.text(step.text) {
+                    gravity(Gravity.BOTTOM_LEFT)
+                    this.gravity = Gravity.BOTTOM_LEFT
+                }
+                label.startConsoleReveal {
+                    consoleStepActive = false
+                    drainConsoleSteps()
+                }
+                scrollConsoleToEndAfterLayout()
+            }
+
+            is ConsoleStep.Action -> {
+                step.block()
+                drainConsoleSteps()
+            }
+        }
+    }
+
+    private sealed interface ConsoleStep {
+        class Line(val outputs: LinearLayoutWidget, val text: String) : ConsoleStep
+        class Action(val block: () -> Unit) : ConsoleStep
     }
 
     private fun scrollConsoleToEndAfterLayout() {
@@ -1221,12 +1283,8 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
 
             onClick { onClick() }
 
-            image(R.textures.gui.icon.arrow_back) {
+            image(if (direction < 0) R.textures.gui.icon.arrow_back else R.textures.gui.icon.arrow_foward) {
                 matchParent()
-                if (direction > 0) {
-                    rotateUv()
-                    rotateUv()
-                }
                 isEnabled = false
             }
         }
@@ -1782,5 +1840,6 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         private const val COVER_ANIM_MS = 300L
         private const val BLUR_MAX_RADIUS = 8f
         private const val CONSOLE_CHAR_DELAY_MS: Long = 10L
+        private const val CONSOLE_REVEAL_FADE_LEN: Float = 12f
     }
 }

@@ -5,10 +5,11 @@ import net.minecraft.world.level.ItemLike
 import org.academy.api.client.gui.drawable.ColorDrawable
 import org.academy.api.client.gui.drawable.StateListDrawable
 import org.academy.api.client.gui.drawable.TextureDrawable
+import org.academy.api.client.gui.dsl.lp
+import org.academy.api.client.gui.dsl.matchParent
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
-import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.resources.R
 import org.academy.api.common.util.L10n
@@ -180,15 +181,10 @@ object TutorialUi {
     fun create(onBack: () -> Unit): Widget = Context(onBack).root
 
     private class Context(private val onBack: () -> Unit) {
-        val root = object : LinearLayoutWidget() {
-            override fun render(context: Canvas) {
-                if (width < WIDTH) return
-                super.render(context)
-            }
-        }.apply {
+        val root = LinearLayoutWidget().apply {
             orientation = Orientation.VERTICAL
             spacing = 1f
-            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+            matchParent()
         }
 
         private val articleContainer = FrameLayoutWidget()
@@ -265,7 +261,7 @@ object TutorialUi {
                     .widthMode(SizeMode.MATCH_PARENT)
                     .height(10f)
                     .gravity(Gravity.CENTER_LEFT)
-                    gravity = Gravity.CENTER_LEFT
+                gravity = Gravity.CENTER_LEFT
                 gravity = Gravity.CENTER_LEFT
             })
             addChild("rule", FillWidget(0x60FFFFFF).apply {
@@ -321,7 +317,7 @@ object TutorialUi {
                     .sizeMode(SizeMode.MATCH_PARENT)
                     .padding(3f, 1f)
                     .gravity(Gravity.CENTER_LEFT)
-                    gravity = Gravity.CENTER_LEFT
+                gravity = Gravity.CENTER_LEFT
                 gravity = Gravity.CENTER_LEFT
             })
         }
@@ -508,7 +504,7 @@ object TutorialUi {
                     layoutParams = LinearLayoutWidget.LayoutParams()
                         .size(RECIPE_SLOT_SIZE, RECIPE_SLOT_SIZE)
                         .gravity(Gravity.CENTER)
-                        gravity = Gravity.CENTER
+                    gravity = Gravity.CENTER
                 })
                 addChild("item", ItemStackWidget(recipe.result.asItem().defaultInstance).apply {
                     tooltipText = L10n[recipe.result.asItem().descriptionId]
@@ -529,7 +525,9 @@ object TutorialUi {
                 .widthMode(SizeMode.MATCH_PARENT)
                 .height(14f)
             addChild("previous", ButtonWidget().apply {
-                layoutParams = LinearLayoutWidget.LayoutParams().size(14f, 14f)
+                lp {
+                    size(16f, 14f)
+                }
                 background = iconDrawable(R.textures.gui.icon.arrow_back)
                 tooltipText = L10n["app.academy.tutorial.previous"]
                 onClickListener = {
@@ -544,11 +542,13 @@ object TutorialUi {
                     .weight(1f)
                     .heightMode(SizeMode.MATCH_PARENT)
                     .gravity(Gravity.CENTER)
-                    gravity = Gravity.CENTER
+                gravity = Gravity.CENTER
                 gravity = Gravity.CENTER
             })
             addChild("next", ButtonWidget().apply {
-                layoutParams = LinearLayoutWidget.LayoutParams().size(14f, 14f)
+                lp {
+                    size(16f, 14f)
+                }
                 background = iconDrawable(R.textures.gui.icon.arrow_foward)
                 tooltipText = L10n["app.academy.tutorial.next"]
                 onClickListener = {
