@@ -50,7 +50,6 @@ abstract class PosColorRectDrawCommand protected constructor(
     }
 
     companion object {
-        /** 抗锯齿/边缘外扩的保守余量 (本地像素). */
         const val AA: Float = 1f
     }
 }

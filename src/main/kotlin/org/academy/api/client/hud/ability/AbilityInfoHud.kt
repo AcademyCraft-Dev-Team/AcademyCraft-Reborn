@@ -194,7 +194,10 @@ class AbilityInfoHud private constructor() {
         }
     }
 
-    private class SpBarWidget(private val sampler: GpuSampler) : AbstractWidget() {
+    private class SpBarWidget(
+        private val sampler: GpuSampler,
+        private val hudAlpha: () -> Float,
+    ) : AbstractWidget() {
         private var textureView: GpuTextureView? = null
 
         override fun renderInternal(context: Canvas) {
@@ -204,6 +207,7 @@ class AbilityInfoHud private constructor() {
             val progress = (AbilitySystemClient.getCurrSP().toFloat() / maximum).coerceIn(0f, 1f)
             if (progress <= 0f) return
             val view = resolveTexture() ?: return
+            val tint = autoLerpColor(hudAlpha())
 
             val destLeft = SP_SOURCE_LEFT * SP_SOURCE_SCALE
             val destTop = SP_SOURCE_TOP * SP_SOURCE_SCALE
@@ -234,25 +238,25 @@ class AbilityInfoHud private constructor() {
                     matrix.transformPosition(0f, 0f, 0f, dest)
                     writer.putVec3f(dest.x, dest.y, dest.z)
                     writer.putVec2f(u0, v0)
-                    writer.putColor(255, 255, 255, a)
+                    writer.putColor(tint.r, tint.g, tint.b, a)
 
                     writer.beginVertex()
                     matrix.transformPosition(0f, destHeight, 0f, dest)
                     writer.putVec3f(dest.x, dest.y, dest.z)
                     writer.putVec2f(u0, v1)
-                    writer.putColor(255, 255, 255, a)
+                    writer.putColor(tint.r, tint.g, tint.b, a)
 
                     writer.beginVertex()
                     matrix.transformPosition(fillWidth, destHeight, 0f, dest)
                     writer.putVec3f(dest.x, dest.y, dest.z)
                     writer.putVec2f(u1, v1)
-                    writer.putColor(255, 255, 255, a)
+                    writer.putColor(tint.r, tint.g, tint.b, a)
 
                     writer.beginVertex()
                     matrix.transformPosition(fillWidth, 0f, 0f, dest)
                     writer.putVec3f(dest.x, dest.y, dest.z)
                     writer.putVec2f(u1, v0)
-                    writer.putColor(255, 255, 255, a)
+                    writer.putColor(tint.r, tint.g, tint.b, a)
                 }
             })
             context.pose().popPose()
@@ -321,7 +325,7 @@ class AbilityInfoHud private constructor() {
                 }
 
                 add("content", CpBarWidget(background, sampler) { root.alpha })
-                add("sp", SpBarWidget(sampler))
+                add("sp", SpBarWidget(sampler) { root.alpha })
 
                 text("") {
                     setFrameUpdate {

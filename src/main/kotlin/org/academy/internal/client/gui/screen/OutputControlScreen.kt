@@ -6,16 +6,20 @@ import net.minecraft.network.chat.Component
 import net.minecraft.util.Mth
 import org.academy.api.client.gui.command.FillRectDrawCommand
 import org.academy.api.client.gui.drawable.ColorDrawable
+import org.academy.api.client.gui.dsl.*
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.screen.UiScreen
-import org.academy.api.client.gui.widget.*
+import org.academy.api.client.gui.widget.FrameLayoutWidget
+import org.academy.api.client.gui.widget.LinearLayoutWidget
+import org.academy.api.client.gui.widget.SeekBarWidget
+import org.academy.api.client.gui.widget.TextWidget
 import org.academy.api.client.input.InputSystem
 import org.academy.internal.common.ability.level0.skills.OutputControl
 import org.academy.internal.common.ability.program.ProgramPowerScale
-import java.util.Locale
+import java.util.*
 
 class OutputControlScreen(
     initialAbilityOutput: Float,
@@ -42,100 +46,81 @@ class OutputControlScreen(
         }
         root.addChild("panel", panel)
 
-        panel.addChild("background", FillWidget(ROOT_PLANE).apply {
-            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-        })
-        panel.addChild("top_rule", FillWidget(PRIMARY_FOREGROUND).apply {
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .gravity(Gravity.TOP)
-                .height(1f)
-                .widthMode(SizeMode.MATCH_PARENT)
-                .marginHorizontal(4f)
-        })
+        panel.apply {
+            blendQuad {
+                matchParent()
 
-        val content = LinearLayoutWidget().apply {
-            orientation = Orientation.VERTICAL
-            spacing = 3f
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-                .padding(10f, 7f)
+                alpha = 0.5f
+            }
+
+            column {
+                lp {
+                    matchParent()
+                    padding(10f, 7f)
+                }
+
+                orientation = Orientation.VERTICAL
+                spacing = 3f
+
+                text(title.string) {
+                    lp {
+                        gravity(Gravity.CENTER)
+                    }
+                    textSize = 12f
+                    gravity = Gravity.CENTER
+                }
+
+                text(
+                    Component.translatable(
+                        "screen.academy.output_control.hint",
+                        InputSystem.formatKeyBinding(OutputControl.Client.KEY_NAME_OPEN)
+                    ).string
+                ) {
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        gravity(Gravity.CENTER)
+                    }
+                    gravity = Gravity.CENTER
+                    alpha = 0.7f
+                }
+                addChild(
+                    "ability_output", createParameterRow(
+                        "screen.academy.output_control.ability_output",
+                        ProgramPowerScale.MIN,
+                        ProgramPowerScale.MAX,
+                        abilityOutput,
+                        { value -> abilityValue(value) },
+                        { value ->
+                            abilityOutput = value
+                            sendSettings(false)
+                        }
+                    ))
+                addChild(
+                    "movement_speed", createParameterRow(
+                        "screen.academy.output_control.movement_speed",
+                        0f,
+                        1f,
+                        movementSpeed,
+                        ::multiplierValue,
+                        { value ->
+                            movementSpeed = value
+                            sendSettings(false)
+                        }
+                    ))
+                addChild(
+                    "jump_height", createParameterRow(
+                        "screen.academy.output_control.jump_height",
+                        0f,
+                        1f,
+                        jumpHeight,
+                        ::multiplierValue,
+                        { value ->
+                            jumpHeight = value
+                            sendSettings(false)
+                        }
+                    ))
+            }
         }
-        panel.addChild("content", content)
-
-        content.addChild("title", TextWidget(title.string).apply {
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(10f)
-                .gravity(Gravity.CENTER)
-                gravity = Gravity.CENTER
-        })
-        content.addChild(
-            "hint", TextWidget(
-                Component.translatable(
-                    "screen.academy.output_control.hint",
-                    InputSystem.formatKeyBinding(OutputControl.Client.KEY_NAME_OPEN)
-                ).string
-            ).apply {
-                scaleX = 0.7f
-                scaleY = 0.7f
-                alpha = 0.7f
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .widthMode(SizeMode.MATCH_PARENT)
-                    .height(8f)
-                    .gravity(Gravity.CENTER)
-            })
-        content.addChild("separator", FillWidget(PRIMARY_FOREGROUND).apply {
-            alpha = 0.8f
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(1f)
-        })
-
-        content.addChild(
-            "ability_output", createParameterRow(
-            "screen.academy.output_control.ability_output",
-            ProgramPowerScale.MIN,
-            ProgramPowerScale.MAX,
-            abilityOutput,
-            { value -> abilityValue(value) },
-            { value ->
-                abilityOutput = value
-                sendSettings(false)
-            }
-        ))
-        content.addChild(
-            "movement_speed", createParameterRow(
-            "screen.academy.output_control.movement_speed",
-            0f,
-            1f,
-            movementSpeed,
-            ::multiplierValue,
-            { value ->
-                movementSpeed = value
-                sendSettings(false)
-            }
-        ))
-        content.addChild(
-            "jump_height", createParameterRow(
-            "screen.academy.output_control.jump_height",
-            0f,
-            1f,
-            jumpHeight,
-            ::multiplierValue,
-            { value ->
-                jumpHeight = value
-                sendSettings(false)
-            }
-        ))
-
-        panel.addChild("bottom_rule", FillWidget(PRIMARY_FOREGROUND).apply {
-            alpha = 0.7f
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .gravity(Gravity.BOTTOM)
-                .height(1f)
-                .widthMode(SizeMode.MATCH_PARENT)
-                .marginHorizontal(4f)
-        })
     }
 
     override fun tick() {
@@ -202,14 +187,14 @@ class OutputControlScreen(
                 .weight(1f)
                 .height(10f)
                 .gravity(Gravity.CENTER_LEFT)
-                gravity = Gravity.CENTER_LEFT
+            gravity = Gravity.CENTER_LEFT
         })
         val valueLabel = TextWidget(formatter(initialValue)).apply {
             layoutParams = LinearLayoutWidget.LayoutParams()
                 .width(88f)
                 .height(10f)
                 .gravity(Gravity.CENTER_RIGHT)
-                gravity = Gravity.CENTER_RIGHT
+            gravity = Gravity.CENTER_RIGHT
             gravity = Gravity.CENTER_RIGHT
         }
         heading.addChild("value", valueLabel)
@@ -271,28 +256,6 @@ class OutputControlScreen(
     private fun decimal(value: Float): String = String.format(Locale.ROOT, "%.2f", value)
 
     private class OutputSeekBar : SeekBarWidget() {
-        override fun canFocus(): Boolean = true
-
-        override fun renderInternal(context: Canvas) {
-            super.renderInternal(context)
-            val range = max - min
-            if (width <= 0f || height <= 0f || range <= 0f) return
-            val ratio = Mth.clamp((progress - min) / range, 0f, 1f)
-            val markerX = Mth.clamp(width * ratio - MARKER_WIDTH * 0.5f, 0f, width - MARKER_WIDTH)
-            context.pose().pushPose()
-            context.pose().translate(markerX, -2f)
-            context.submit(
-                FillRectDrawCommand(
-                    MARKER_WIDTH,
-                    height + 4f,
-                    1f,
-                    1f,
-                    1f,
-                    context.accumulatedAlpha
-                )
-            )
-            context.pose().popPose()
-        }
     }
 
     companion object {
