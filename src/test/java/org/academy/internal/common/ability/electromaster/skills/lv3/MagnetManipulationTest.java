@@ -60,6 +60,24 @@ class MagnetManipulationTest {
     }
 
     @Test
+    void wheelScrollAdjustsAndClampsTheControlledHoldDistance() {
+        assertTrue(MagnetManipulation.HOLD_DISTANCE_STEP > MagnetManipulation.TARGET_STOP_DISTANCE,
+                "A notch must clear the pull stop tolerance");
+        assertEquals(MagnetManipulation.TARGET_FRONT_DISTANCE + MagnetManipulation.HOLD_DISTANCE_STEP,
+                MagnetManipulation.resolveHoldDistance(MagnetManipulation.TARGET_FRONT_DISTANCE, 1), 1.0e-9);
+        assertEquals(MagnetManipulation.TARGET_FRONT_DISTANCE - MagnetManipulation.HOLD_DISTANCE_STEP,
+                MagnetManipulation.resolveHoldDistance(MagnetManipulation.TARGET_FRONT_DISTANCE, -1), 1.0e-9);
+        assertEquals(MagnetManipulation.HOLD_DISTANCE_MAX,
+                MagnetManipulation.resolveHoldDistance(MagnetManipulation.HOLD_DISTANCE_MAX, 1), 1.0e-9);
+        assertEquals(MagnetManipulation.HOLD_DISTANCE_MIN,
+                MagnetManipulation.resolveHoldDistance(MagnetManipulation.HOLD_DISTANCE_MIN, -1), 1.0e-9);
+        assertEquals(MagnetManipulation.TARGET_FRONT_DISTANCE,
+                MagnetManipulation.resolveHoldDistance(Double.NaN, 1), 1.0e-9);
+        assertEquals(MagnetManipulation.TARGET_FRONT_DISTANCE,
+                MagnetManipulation.resolveHoldDistance(MagnetManipulation.TARGET_FRONT_DISTANCE, Double.NaN), 1.0e-9);
+    }
+
+    @Test
     void ironPathDetectionDoesNotTreatEveryMetalAsIron() {
         assertTrue(MagnetManipulation.isIronRelatedPath("iron_ore"));
         assertTrue(MagnetManipulation.isIronRelatedPath("raw_iron_block"));

@@ -380,6 +380,10 @@ public final class PacketTypes {
             MAGNET_MANIPULATION_MOVE_STOP = PACKET_TYPES.register("magnet_manipulation_move_stop",
             () -> new PacketType<>(MagnetManipulation.MoveStopPacket.class, MagnetManipulation.MoveStopPacket.CODEC));
 
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MagnetManipulation.MoveDistancePacket>>
+            MAGNET_MANIPULATION_MOVE_DISTANCE = PACKET_TYPES.register("magnet_manipulation_move_distance",
+            () -> new PacketType<>(MagnetManipulation.MoveDistancePacket.class, MagnetManipulation.MoveDistancePacket.CODEC));
+
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MineDetect.TogglePacket>>
             MINE_DETECT_TOGGLE = PACKET_TYPES.register("mine_detect_toggle",
             () -> new PacketType<>(MineDetect.TogglePacket.class, MineDetect.TogglePacket.CODEC));

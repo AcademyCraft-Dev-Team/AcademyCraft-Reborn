@@ -32,8 +32,10 @@ public final class ElectromasterReworkClientSmoke {
     private static boolean opened, configured;
     private static volatile boolean ready;
     private static int total, ticks;
-    private static LivingEntity target;
+    private static volatile LivingEntity target;
     private static volatile float before;
+    private static double holdDistanceBefore;
+    private static double pushedDistance;
 
     @SubscribeEvent public static void tick(ClientTickEvent.Post event) {
         if (!Boolean.getBoolean("academy.electromasterReworkSmoke")) return;
@@ -145,10 +147,57 @@ public final class ElectromasterReworkClientSmoke {
             server(p -> require(!p.isNoGravity(), "Server gravity is restored"));
             capture("cleared");
         }
-        if (ticks == 180) {
-            System.out.println("[electromaster-rework] PASSED: network tap/hold/cancel, defense, levitation coexistence, MP HUD and cleanup");
+        // R-key target control: sustained hold past the old heartbeat timeout, then wheel distance.
+        if (ticks == 167) server(p -> {
+            // A dedicated iron-clad target keeps the magnet phase independent of the melee dummy.
+            var magnetic = new net.minecraft.world.entity.animal.pig.Pig(net.minecraft.world.entity.EntityTypes.PIG, p.level());
+            // NoAi would make Mob.isEffectiveAi() false and stop LivingEntity.travel from applying the pull.
+            magnetic.setNoGravity(true);
+            magnetic.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST,
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_CHESTPLATE));
+            // Keep it centered on the eye ray so crosshair acquisition succeeds.
+            magnetic.setPos(p.getX(), p.getEyeY() - 0.45, p.getZ() + 6);
+            p.level().addFreshEntity(magnetic);
+            target = magnetic;
+            p.setYRot(0); p.yRotO = 0; p.setXRot(0); p.xRotO = 0;
+        });
+        if (ticks == 170) MisakaNetworkClient.send(MagnetManipulation.MoveStartPacket.TARGET_TO_PLAYER);
+        if (ticks > 170 && ticks < 266 && ticks % 10 == 0) {
+            MisakaNetworkClient.send(MagnetManipulation.MoveStartPacket.TARGET_TO_PLAYER);
+        }
+        if (ticks == 215) {
+            require(mc.player.getData(AttachmentTypes.MAGNET_MANIPULATION_ACTIVE), "Hold survives past the old heartbeat timeout");
+            holdDistanceBefore = mc.player.distanceTo(clientTarget());
+        }
+        // Wheel-up (negative yOffset) must push the target away; wheel-down must draw it back.
+        if (ticks == 220 || ticks == 230) {
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
+                    new org.academy.api.client.input.MouseScrollEvent(0, -1));
+        }
+        if (ticks == 245) {
+            pushedDistance = mc.player.distanceTo(clientTarget());
+            require(pushedDistance > holdDistanceBefore + 0.5, "Wheel-up pushes the controlled target farther");
+        }
+        if (ticks == 250 || ticks == 256) {
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
+                    new org.academy.api.client.input.MouseScrollEvent(0, 1));
+        }
+        if (ticks == 264) {
+            require(mc.player.distanceTo(clientTarget()) < pushedDistance - 0.2, "Wheel-down pulls the controlled target closer");
+            MisakaNetworkClient.send(MagnetManipulation.MoveStopPacket.INSTANCE);
+        }
+        if (ticks == 270) require(!mc.player.getData(AttachmentTypes.MAGNET_MANIPULATION_ACTIVE),
+                "Release clears the magnetic hold");
+        if (ticks == 276) {
+            System.out.println("[electromaster-rework] PASSED: network tap/hold/cancel, defense, levitation, magnet hold/scroll, MP HUD and cleanup");
             mc.stop();
         }
+    }
+
+    private static net.minecraft.world.entity.Entity clientTarget() {
+        var entity = Minecraft.getInstance().level == null ? null : Minecraft.getInstance().level.getEntity(target.getId());
+        require(entity != null, "Controlled target is present on the client");
+        return entity;
     }
 
     private static void require(boolean condition, String message) {

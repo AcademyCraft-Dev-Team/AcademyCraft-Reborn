@@ -46,6 +46,7 @@ import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.input.MouseScrollEvent;
 import org.academy.api.client.resources.R;
 import org.academy.api.client.resources.sounds.LoopingPlayerSoundInstance;
 import org.academy.api.common.ability.AbilityLevel;
@@ -86,6 +87,10 @@ public class MagnetManipulation extends Skill {
     static final double PLAYER_STOP_DISTANCE = 1.35;
     static final double TARGET_STOP_DISTANCE = 0.65;
     static final double TARGET_FRONT_DISTANCE = 2.5;
+    static final double HOLD_DISTANCE_MIN = 1.2;
+    static final double HOLD_DISTANCE_MAX = 6.0;
+    /** One notch must exceed the pull stop tolerance, or the target would never leave its rest spot. */
+    static final double HOLD_DISTANCE_STEP = 1.0;
     static final float MOVE_CP_COST = 10.0f;
     static final int MOVE_CP_INTERVAL_TICKS = 20;
     public MagnetManipulation() {
@@ -110,6 +115,13 @@ public class MagnetManipulation extends Skill {
     static Vec3 calculatePullVelocity(Vec3 current, Vec3 origin, Vec3 target,
                                       Vec3 fallback, double maxSpeed, double stopDistance) {
         return MagneticMovement.calculatePullVelocity(current, origin, target, fallback, maxSpeed, stopDistance);
+    }
+
+    /** One wheel notch moves the controlled target one block, clamped to the hold envelope. */
+    static double resolveHoldDistance(double current, double scrollOffset) {
+        if (!Double.isFinite(current) || !Double.isFinite(scrollOffset)) return TARGET_FRONT_DISTANCE;
+        return Math.clamp(current + Math.clamp(scrollOffset, -1, 1) * HOLD_DISTANCE_STEP,
+                HOLD_DISTANCE_MIN, HOLD_DISTANCE_MAX);
     }
 
     /**
@@ -164,7 +176,9 @@ public class MagnetManipulation extends Skill {
                         InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X, InputConstants.PRESS, 0)),
                 _ -> Client.onMoveStart(PullMode.TARGET_TO_PLAYER),
                 _ -> Client.onMoveStop(PullMode.TARGET_TO_PLAYER),
-                _ -> { if (Client.activeMode != null && ++Client.heartbeatTicks % 10 == 0) MisakaNetworkClient.send(MoveStartPacket.TARGET_TO_PLAYER); },
+                // The maintained-binding heartbeat fires every 20 client ticks; the server drops the
+                // context after 40 silent ticks, so every callback must refresh it.
+                _ -> { if (Client.activeMode != null) MisakaNetworkClient.send(MoveStartPacket.TARGET_TO_PLAYER); },
                 () -> AbilitySystemClient.canUseSkill(this) && Minecraft.getInstance().player != null
                         && Minecraft.getInstance().player.isAlive() && Minecraft.getInstance().gui.screen() == null);
         InputSystem.addKeyBinding(Client.KEY_NAME_LEVITATION,
@@ -218,7 +232,6 @@ public class MagnetManipulation extends Skill {
         private static SoundInstance loopSound;
         private static @Nullable PullMode activeMode;
         private static int activeTicks;
-        private static int heartbeatTicks;
 
         public static void onMoveStart(PullMode mode) {
             if (!AbilitySystemClient.canUseSkill(Skills.MAGNET_MANIPULATION.get())) return;
@@ -229,7 +242,6 @@ public class MagnetManipulation extends Skill {
             }
             activeMode = mode;
             activeTicks = 0;
-            heartbeatTicks = 0;
             stopLoopSound();
             loopSound = new LoopingPlayerSoundInstance(
                     player, SoundEvents.MAGNET_MOVE_LOOP.get(), 1.0f, 1.0f,
@@ -310,6 +322,12 @@ public class MagnetManipulation extends Skill {
             if (context != null) context.end();
         }
 
+        @SubscribePacket
+        public static void handleMoveDistance(MoveDistancePacket packet) {
+            var context = ACTIVE_MOVEMENT.get(packet.getPacketListener().getPlayer());
+            if (context != null) context.adjustHoldDistance(packet.getScrollOffset());
+        }
+
         private static void setVisualState(ServerPlayer player, boolean active) {
             player.setData(AttachmentTypes.MAGNET_MANIPULATION_ACTIVE.get(), active);
             player.syncData(AttachmentTypes.MAGNET_MANIPULATION_ACTIVE.get());
@@ -323,6 +341,7 @@ public class MagnetManipulation extends Skill {
         private @Nullable Entity controlledTarget;
         private boolean controlsFallingBlock;
         private int movingTicks;
+        private double holdDistance = TARGET_FRONT_DISTANCE;
         private boolean ended;
 
         private MoveContext(ServerPlayer player, PullMode mode) {
@@ -378,7 +397,7 @@ public class MagnetManipulation extends Skill {
             }
 
             var look = player.getLookAngle();
-            var destination = player.getEyePosition().add(look.scale(TARGET_FRONT_DISTANCE));
+            var destination = player.getEyePosition().add(look.scale(holdDistance));
             var targetOrigin = controlledTarget.getBoundingBox().getCenter();
             var range = Skills.MAGNET_MANIPULATION.get().scaledRange(player,
                     org.academy.api.common.ability.electromaster.MagneticFieldTuning.targetPullRange(skillMilestone()));
@@ -472,6 +491,10 @@ public class MagnetManipulation extends Skill {
             return Skills.MAGNET_MANIPULATION.get().getEffectiveProficiencyMilestone(player);
         }
 
+        private void adjustHoldDistance(double scrollOffset) {
+            holdDistance = resolveHoldDistance(holdDistance, scrollOffset);
+        }
+
         private void end() {
             if (ended) return;
             ended = true;
@@ -507,6 +530,21 @@ public class MagnetManipulation extends Skill {
                 Client.onMoveStop(Client.activeMode);
             }
         }
+
+        /** While a magnetic target is held, the wheel moves it closer or farther instead of switching slots. */
+        @SubscribeEvent
+        public static void onScroll(MouseScrollEvent event) {
+            if (event.yOffset == 0) return;
+            var minecraft = Minecraft.getInstance();
+            var player = minecraft.player;
+            if (player == null || !player.isAlive() || minecraft.gui.screen() != null
+                    || !player.getData(AttachmentTypes.MAGNET_MANIPULATION_ACTIVE)
+                    || !AbilitySystemClient.canUseSkill(Skills.MAGNET_MANIPULATION.get())) return;
+            // Wheel-down pulls the target closer and wheel-up pushes it farther, so the raw scroll
+            // offset is inverted into the packet's "positive = farther" convention.
+            MisakaNetworkClient.send(new MoveDistancePacket(-event.yOffset));
+            event.setCanceled(true);
+        }
     }
 
     @PacketTarget(ThreadType.SERVER)
@@ -531,6 +569,26 @@ public class MagnetManipulation extends Skill {
         @Override
         public PacketType<ServerGamePacketListenerImpl, MoveStartPacket> getPacketType() {
             return PacketTypes.MAGNET_MANIPULATION_MOVE_START.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class MoveDistancePacket extends Packet<ServerGamePacketListenerImpl, MoveDistancePacket> {
+        public static final StreamCodec<ByteBuf, MoveDistancePacket> CODEC = StreamCodec.composite(
+                ByteBufCodecs.DOUBLE, packet -> packet.scrollOffset, MoveDistancePacket::new);
+        private final double scrollOffset;
+
+        public MoveDistancePacket(double scrollOffset) {
+            this.scrollOffset = scrollOffset;
+        }
+
+        public double getScrollOffset() {
+            return scrollOffset;
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, MoveDistancePacket> getPacketType() {
+            return PacketTypes.MAGNET_MANIPULATION_MOVE_DISTANCE.get();
         }
     }
 
