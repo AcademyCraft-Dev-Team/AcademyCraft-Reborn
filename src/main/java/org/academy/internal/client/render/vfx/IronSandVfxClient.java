@@ -56,7 +56,8 @@ public final class IronSandVfxClient {
         effect.follow(entity);
         effect.bindFrame((active, camera, partialTick) -> {
             if (entity.level() != Minecraft.getInstance().level || !entity.isAlive()) return false;
-            float radius = cloud ? entity.getData(AttachmentTypes.IRON_SAND_DATA.get()).cloudRadius() : 2;
+            float radius = cloud ? entity.getData(AttachmentTypes.IRON_SAND_DATA.get()).cloudRadius()
+                    : "defense".equals(name) ? 1.2f : 1.4f;
             active.effect().setLiveParam("radius", Value.of(radius));
             active.setCullingSphere(active.position(), radius + 3);
             active.effect().setLiveParam("detail", Value.of(detail(entity)));

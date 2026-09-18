@@ -14,7 +14,7 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.jupiter.api.Assertions.*;
 
 class IronSandVfxTest {
-    @Test void denseDefenseRemainsAtTheFeetOnATwoBlockRingWithoutAccumulation() throws Exception {
+    @Test void denseDefenseRemainsAtTheFeetOnACompactRingWithoutAccumulation() throws Exception {
         var sim = load("defense");
         for (int frame = 0; frame < 150; frame++) {
             at(sim, frame / 30f);
@@ -22,7 +22,7 @@ class IronSandVfxTest {
             assertEquals(16, sim.arcBuffer().count());
             for (int i = 0; i < sim.buffer().count(); i++) {
                 var b = sim.buffer();
-                assertEquals(2, Math.hypot(b.positionX(i), b.positionZ(i)), 0.21);
+                assertEquals(1.2, Math.hypot(b.positionX(i), b.positionZ(i)), 0.21);
                 assertTrue(b.positionY(i) >= 0.05 && b.positionY(i) <= 0.37);
             }
         }
@@ -41,7 +41,7 @@ class IronSandVfxTest {
         assertTrue(maxHeight(sim) < 0.4);
         at(sim, 0.12f);
         assertTrue(maxHeight(sim) > 2);
-        for (int i = 0; i < sim.buffer().count(); i++) assertTrue(sim.buffer().positionZ(i) > 1);
+        for (int i = 0; i < sim.buffer().count(); i++) assertTrue(sim.buffer().positionZ(i) > 0.5);
         at(sim, 0.60f);
         assertTrue(maxHeight(sim) < 0.5);
         at(sim, 0.66f);
@@ -82,7 +82,7 @@ class IronSandVfxTest {
         sim.setLiveParam("source_elevation", Value.of(1f));
         at(sim, 0.12f);
         for (int i = 0; i < sim.buffer().count(); i++) {
-            assertTrue(sim.buffer().positionY(i) > 2);
+            assertTrue(sim.buffer().positionY(i) > 1.6);
             assertTrue(Math.abs(sim.buffer().positionZ(i)) < 1.4);
         }
         at(sim, 0);

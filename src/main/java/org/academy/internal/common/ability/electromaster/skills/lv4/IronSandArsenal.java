@@ -99,7 +99,6 @@ public class IronSandArsenal extends Skill {
         private static boolean initialized;
         private static int sequence;
         private static int activeSequence;
-        private static int heartbeatTicks;
 
         private static void init(IronSandArsenal skill) {
             if (initialized) return;
@@ -128,10 +127,11 @@ public class IronSandArsenal extends Skill {
                     _ -> {
                         if (!AbilitySystemClient.canUseSkill(skill) || Minecraft.getInstance().gui.screen() != null) return;
                         activeSequence = ++sequence;
-                        heartbeatTicks = 0;
                         MisakaNetworkClient.send(new ActionPacket(activeSequence, 0));
                     }, _ -> stop(false), _ -> {
-                        if (activeSequence != 0 && ++heartbeatTicks % 10 == 0) MisakaNetworkClient.send(new ActionPacket(activeSequence, 3));
+                        // The maintained-binding heartbeat fires every 20 client ticks; the server
+                        // drops the context after 40 silent ticks, so every callback must refresh it.
+                        if (activeSequence != 0) MisakaNetworkClient.send(new ActionPacket(activeSequence, 3));
                     }, () -> Minecraft.getInstance().player != null && Minecraft.getInstance().player.isAlive()
                             && Minecraft.getInstance().gui.screen() == null && AbilitySystemClient.canUseSkill(skill));
             ToggleStatusHud.Companion.registerStateProvider(skill, () -> Minecraft.getInstance().player != null

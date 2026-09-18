@@ -54,7 +54,7 @@
       "type": "FLOAT",
       "default": {
         "type": "FLOAT",
-        "value": 2
+        "value": 1.2
       }
     },
     {
@@ -107,7 +107,7 @@
           "type": "vfx.block.iron_sand",
           "properties": {
             "form": "0",
-            "radius": "2",
+            "radius": "1.2",
             "count": "2800",
             "grain_size": "0.085",
             "band_width": "0.34",

@@ -4,8 +4,8 @@ import { VfxGraphRepository } from "./vfxgraph.mjs";
 const repo = new VfxGraphRepository(process.cwd());
 const param = (id, value) => ({ id, name: id, type: "FLOAT", default: { type: "FLOAT", value } });
 const sand = {
-  defense: { form: 0, radius: 2, count: 2800, grain_size: 0.085, band_width: 0.34, arc_count: 8 },
-  guard: { form: 1, radius: 2, count: 3200, grain_size: 0.078, band_width: 0.23, height: 2.1, duration: 0.65, arc_count: 8, source_elevation: 0 },
+  defense: { form: 0, radius: 1.2, count: 2800, grain_size: 0.085, band_width: 0.34, arc_count: 8 },
+  guard: { form: 1, radius: 1.4, count: 3200, grain_size: 0.078, band_width: 0.23, height: 2.1, duration: 0.65, arc_count: 8, source_elevation: 0 },
   whip: { form: 2, radius: 12, count: 3000, grain_size: 0.14, band_width: 0.48, duration: 0.5, arc_count: 10, arc_width: 0.022 },
   cloud: { form: 3, radius: 16, count: 5600, grain_size: 0.28, band_width: 0.55, height: 4, speed: 1.9, arc_count: 18, arc_width: 0.028 },
 };
