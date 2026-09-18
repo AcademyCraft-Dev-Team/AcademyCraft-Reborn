@@ -148,6 +148,9 @@ public final class VfxBlocks {
     );
 
     public static void registerAll(NodeRegistry metadata, VfxBlockRegistry blocks) {
+        metadata.register(type("vfx.block.iron_sand", "spawn", "Iron Sand / Granular Field and Embedded Currents",
+                IronSandEmitter.properties()));
+        blocks.register("vfx.block.iron_sand", IronSandEmitter::create);
         metadata.register(type("vfx.block.electric_shield", "spawn", "Blue-White Shield Surface / Interception",
                 ElectricAttachmentEmitter.shieldProperties()));
         blocks.register("vfx.block.electric_shield", ElectricAttachmentEmitter::shield);

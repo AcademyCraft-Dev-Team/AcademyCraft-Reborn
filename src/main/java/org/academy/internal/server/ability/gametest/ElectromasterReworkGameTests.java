@@ -120,10 +120,15 @@ public final class ElectromasterReworkGameTests {
         npc.setHealth(100);
         var account = new TestAccount(100);
         var key = AcademyCraft.academy("test_sand");
-        HealthLossGuards.set(npc, key, account, 0.9, true);
+        var absorbed = new java.util.ArrayList<HealthLossGuards.Resolution>();
+        HealthLossGuards.set(npc, key, account, 0.9, true, absorbed::add);
+        HealthLossGuards.preview(npc, 100, 90);
+        check(helper, absorbed.isEmpty(), "Preview cannot emit a shield event");
         npc.setHealth(90);
         close(helper, 100, npc.getHealth(), "setHealth is protected");
         close(helper, 91, account.current(), "setHealth pays once");
+        check(helper, absorbed.size() == 1, "Successful absorption emits once");
+        close(helper, 10, absorbed.getFirst().absorbed(), "Event reports protected health");
         var accessor = org.academy.mixin.common.LivingHealthDataAccessor.academy$healthAccessor();
         npc.getEntityData().set(accessor, 90f);
         close(helper, 82, account.current(), "Direct synchronized health write pays once");
@@ -143,8 +148,10 @@ public final class ElectromasterReworkGameTests {
         close(helper, 46, account.current(), "CTA nested submission pays once");
         close(helper, 100, npc.getHealth(), "CTA fully absorbed does not install a lower projection");
         var before = account.current();
+        var eventsBefore = absorbed.size();
         check(helper, !HealthLossGuards.commit(npc, 100, 90, _ -> false), "Rejected writer reports failure");
         close(helper, before, account.current(), "Rejected writer refunds");
+        check(helper, absorbed.size() == eventsBefore, "Refunded absorption cannot emit a shield event");
         HealthLossGuards.maintenance(npc, () -> { npc.setHealth(99); return null; });
         close(helper, before, account.current(), "Maintenance does not charge");
         npc.setHealth(100);

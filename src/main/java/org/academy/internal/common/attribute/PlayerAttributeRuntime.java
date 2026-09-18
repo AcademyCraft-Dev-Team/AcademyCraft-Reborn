@@ -223,6 +223,10 @@ public final class PlayerAttributeRuntime {
         if (source != null) DAMAGE_CONTEXT.get().push(source);
     }
 
+    public static @org.jspecify.annotations.Nullable DamageSource currentDamageSource() {
+        return DAMAGE_CONTEXT.get().peek();
+    }
+
     public static void popDamageContext() {
         var stack = DAMAGE_CONTEXT.get();
         if (!stack.isEmpty()) stack.pop();

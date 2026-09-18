@@ -11,6 +11,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
@@ -32,8 +34,8 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.*;
 import org.academy.api.server.ability.electromaster.IronSandActions;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.render.vfx.ElectromasterWeaponVfx;
 import org.academy.internal.client.render.vfx.ElectromasterWeaponVfxClient;
+import org.academy.internal.client.render.vfx.IronSandVfxClient;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -147,15 +149,18 @@ public class IronSandArsenal extends Skill {
             activeSequence = 0;
         }
 
-        @SubscribePacket public static void handleSweepVisual(SweepVisualPacket packet) { ElectromasterWeaponVfx.enqueueIronSandSweep(packet.entityId()); }
+        @SubscribePacket public static void handleSweepVisual(SweepVisualPacket packet) { IronSandVfxClient.whip(packet.entityId()); }
+        @SubscribePacket public static void handleDefenseVisual(DefenseVisualPacket packet) {
+            IronSandVfxClient.defenseEvent(packet.entityId, packet.intercept, packet.vector);
+        }
         @SubscribeEvent public static void onClientTick(ClientTickEvent.Post event) {
-            ElectromasterWeaponVfx.clientTick();
+            IronSandVfxClient.tick();
             if (activeSequence != 0 && (Minecraft.getInstance().player == null || Minecraft.getInstance().gui.screen() != null)) stop(true);
         }
         @SubscribeEvent public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
             activeSequence = 0;
             sequence = 0;
-            ElectromasterWeaponVfx.clearSweeps();
+            IronSandVfxClient.clear();
         }
 
         public static class Config extends KeyBindingConfig {
@@ -238,9 +243,30 @@ public class IronSandArsenal extends Skill {
             var service = AbilitySystemServer.getSystem(player).getIronSandResourceService();
             if (!service.isDefenseActive(player) || !player.isAlive()) return false;
             var cost = IronSandTuning.massCost(10, Skills.IRON_SAND_ARSENAL.get().getEffectiveProficiencyMilestone(player));
+            var impact = HostileProjectiles.sphereEntry(projectile.position(), projectile.position().add(projectile.getDeltaMovement()),
+                    player.getBoundingBox().getCenter(), IronSandTuning.INTERCEPTION_RADIUS);
             var destroyed = HostileProjectiles.tryDestroy(player, projectile, service.account(player), IronSandTuning.INTERCEPTION_RADIUS, cost);
-            if (destroyed) Skills.IRON_SAND_ARSENAL.get().reportActivity(player, true);
+            if (destroyed) {
+                Skills.IRON_SAND_ARSENAL.get().reportActivity(player, true);
+                if (impact != null) broadcast(player, new DefenseVisualPacket(player.getId(), true, impact));
+            }
             return destroyed;
+        }
+
+        public static void absorbed(ServerPlayer player, @org.jspecify.annotations.Nullable DamageSource source) {
+            // Read this health-write transaction, not the previous hurt animation's source.
+            var origin = source == null ? null : source.getDirectEntity() != null
+                    ? source.getDirectEntity().getBoundingBox().getCenter() : source.getSourcePosition();
+            if (origin == null && source != null && source.getEntity() != null) origin = source.getEntity().getBoundingBox().getCenter();
+            var direction = origin == null ? player.getLookAngle() : origin.subtract(player.getBoundingBox().getCenter());
+            if (direction.lengthSqr() < 1.0e-8) direction = player.getLookAngle();
+            broadcast(player, new DefenseVisualPacket(player.getId(), false, direction.normalize()));
+        }
+
+        private static void broadcast(ServerPlayer player, DefenseVisualPacket packet) {
+            for (var observer : player.level().players()) {
+                if (observer.distanceToSqr(player) <= 64 * 64) MisakaNetworkServer.send(observer, packet);
+            }
         }
 
         public static void interceptNearby(ServerPlayer player) {
@@ -316,6 +342,24 @@ public class IronSandArsenal extends Skill {
         private final int action;
         public ActionPacket(int sequence, int action) { this.sequence = sequence; this.action = action; }
         @Override public PacketType<ServerGamePacketListenerImpl, ActionPacket> getPacketType() { return PacketTypes.IRON_SAND_ACTION.get(); }
+    }
+
+    @PacketTarget(ThreadType.CLIENT)
+    public static final class DefenseVisualPacket extends Packet<ClientPacketListener, DefenseVisualPacket> {
+        public static final StreamCodec<ByteBuf, DefenseVisualPacket> CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_INT, p -> p.entityId, ByteBufCodecs.BOOL, p -> p.intercept,
+                ByteBufCodecs.DOUBLE, p -> p.vector.x, ByteBufCodecs.DOUBLE, p -> p.vector.y,
+                ByteBufCodecs.DOUBLE, p -> p.vector.z,
+                (id, intercept, x, y, z) -> new DefenseVisualPacket(id, intercept, new Vec3(x, y, z)));
+        public final int entityId;
+        public final boolean intercept;
+        public final Vec3 vector;
+        public DefenseVisualPacket(int entityId, boolean intercept, Vec3 vector) {
+            this.entityId = entityId;
+            this.intercept = intercept;
+            this.vector = vector;
+        }
+        @Override public PacketType<ClientPacketListener, DefenseVisualPacket> getPacketType() { return PacketTypes.IRON_SAND_DEFENSE_VISUAL.get(); }
     }
 
     @PacketTarget(ThreadType.CLIENT)

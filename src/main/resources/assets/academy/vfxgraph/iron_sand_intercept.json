@@ -1,0 +1,201 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "iron_sand_intercept",
+  "parameters": [
+    {
+      "id": "time",
+      "name": "time",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": -1
+      }
+    },
+    {
+      "id": "seed",
+      "name": "seed",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 42
+      }
+    },
+    {
+      "id": "opacity",
+      "name": "opacity",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "detail",
+      "name": "detail",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "length",
+      "name": "length",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 3
+      }
+    },
+    {
+      "id": "width",
+      "name": "width",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.032
+      }
+    },
+    {
+      "id": "spread",
+      "name": "spread",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.2
+      }
+    },
+    {
+      "id": "strands",
+      "name": "strands",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 2
+      }
+    },
+    {
+      "id": "forks",
+      "name": "forks",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 2
+      }
+    },
+    {
+      "id": "duration",
+      "name": "duration",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.24
+      }
+    },
+    {
+      "id": "density",
+      "name": "density",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "downward",
+      "name": "downward",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "origin_y",
+      "name": "origin_y",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1.8
+      }
+    },
+    {
+      "id": "growth_time",
+      "name": "growth_time",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.055
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "motion",
+      "type": "SPAWN",
+      "name": "01 / 复用电弧激发 · 由上向下切断",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "sand_motion",
+          "type": "vfx.block.electric_bolt",
+          "properties": {
+            "length": "3",
+            "width": "0.032",
+            "spread": "0.2",
+            "strands": "2",
+            "forks": "2",
+            "duration": "0.24",
+            "density": "1",
+            "downward": "1",
+            "origin_y": "1.8",
+            "growth_time": "0.055"
+          }
+        }
+      ]
+    },
+    {
+      "id": "render",
+      "type": "OUTPUT",
+      "name": "02 / 暗色铁屑 · 电弧激发蓝白双层材质",
+      "x": 650,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "electric_out",
+          "type": "vfx.block.output_arc",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_arc",
+            "shader": "academy:core/vfxgraph_axial_burst",
+            "blend": "glow",
+            "layer": "electricity",
+            "thickness": "1",
+            "emission": "1.15",
+            "sparks": "0",
+            "segments": "12",
+            "overall_scale": "1",
+            "branch_depth": "0",
+            "branch_count": "0",
+            "noise_strength": "0",
+            "drift_speed": "0",
+            "branch_brightness_scale": "1"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "motion",
+      "to": "render"
+    }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "electric_out"
+  ]
+}

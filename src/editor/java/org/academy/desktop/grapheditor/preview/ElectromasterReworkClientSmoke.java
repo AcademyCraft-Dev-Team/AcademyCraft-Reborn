@@ -116,6 +116,7 @@ public final class ElectromasterReworkClientSmoke {
             capture("levitation_defense");
         }
         if (ticks == 50) { server(p -> before = target.getHealth()); MisakaNetworkClient.send(new IronSandArsenal.ActionPacket(1, 0)); }
+        if (Boolean.getBoolean("academy.ironSandVisualSmoke")) ironSandVisuals();
         if (ticks == 52) MisakaNetworkClient.send(new IronSandArsenal.ActionPacket(1, 1));
         if (ticks == 54) capture("whip");
         if (ticks == 65) server(p -> {
@@ -152,6 +153,52 @@ public final class ElectromasterReworkClientSmoke {
 
     private static void require(boolean condition, String message) {
         if (!condition) throw new IllegalStateException(message);
+    }
+
+    private static void ironSandVisuals() {
+        if (ticks == 43 || ticks == 66) server(p -> {
+            var origin = target.position();
+            target.setPos(p.position().add(ticks == 43 ? -4 : 4, 0, 0));
+            var hp = p.getHealth();
+            var resource = AbilitySystemServer.getSystem(p).getIronSandResourceService().account(p);
+            var mass = resource.current();
+            p.invulnerableTime = 0;
+            p.hurtServer(p.level(), p.damageSources().mobAttack(target), 4);
+            require(p.getHealth() == hp, "Iron sand absorbs actual health loss");
+            require(resource.current() < mass, "Shield only reports paid absorption");
+            target.setPos(origin);
+        });
+        if (ticks == 46 || ticks == 69) {
+            requireGraph("guard");
+            capture(ticks == 46 ? "guard_left" : "guard_right");
+        }
+        if (ticks == 70) server(p -> {
+            var arrow = new net.minecraft.world.entity.projectile.arrow.Arrow(net.minecraft.world.entity.EntityTypes.ARROW, p.level());
+            arrow.setPos(p.position().add(-3, 1, 0));
+            arrow.setDeltaMovement(2, 0, 0);
+            p.level().addFreshEntity(arrow);
+            require(IronSandArsenal.Server.intercept(p, arrow), "Fast hostile projectile intercepted on swept entry");
+            require(arrow.isRemoved(), "Intercepted projectile is destroyed");
+        });
+        if (ticks == 72) { requireGraph("intercept"); capture("projectile_cut"); }
+        if (ticks == 73) {
+            requireGraph("intercept");
+            var bolt = org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager.INSTANCE.activeEffects().stream()
+                    .filter(e -> e.assetKey().endsWith("iron_sand_intercept")).findFirst().orElseThrow();
+            var arcs = bolt.effect().arcBuffer();
+            require(arcs != null && arcs.count() > 0, "Intercept renders electric arc geometry");
+            var arc = arcs.arc(0);
+            System.out.println("[iron-sand-smoke] bolt age=" + bolt.gameAgeSeconds() + " start=" + arc.y(0)
+                    + " tip=" + arc.y(arc.size() - 1));
+            capture("projectile_cut_extended");
+        }
+        if (ticks == 165) require(org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager.INSTANCE.activeEffects().stream()
+                .noneMatch(e -> !e.isExpired() && e.assetKey().contains("iron_sand_")), "All iron sand graphs clean up");
+    }
+
+    private static void requireGraph(String name) {
+        require(org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager.INSTANCE.activeEffects().stream()
+                .anyMatch(e -> !e.isExpired() && e.assetKey().endsWith("iron_sand_" + name)), "Client received " + name + " graph");
     }
     private static void server(Consumer<ServerPlayer> task) {
         var mc = Minecraft.getInstance();

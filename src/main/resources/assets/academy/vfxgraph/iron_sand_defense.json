@@ -1,0 +1,174 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "iron_sand_defense",
+  "parameters": [
+    {
+      "id": "time",
+      "name": "time",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": -1
+      }
+    },
+    {
+      "id": "seed",
+      "name": "seed",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 42
+      }
+    },
+    {
+      "id": "opacity",
+      "name": "opacity",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "detail",
+      "name": "detail",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "form",
+      "name": "form",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    },
+    {
+      "id": "radius",
+      "name": "radius",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 2
+      }
+    },
+    {
+      "id": "count",
+      "name": "count",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 2800
+      }
+    },
+    {
+      "id": "grain_size",
+      "name": "grain_size",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.085
+      }
+    },
+    {
+      "id": "band_width",
+      "name": "band_width",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.34
+      }
+    },
+    {
+      "id": "arc_count",
+      "name": "arc_count",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 8
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "motion",
+      "type": "SPAWN",
+      "name": "01 / 密集铁砂 · 连续砂流与内部电弧",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "sand_motion",
+          "type": "vfx.block.iron_sand",
+          "properties": {
+            "form": "0",
+            "radius": "2",
+            "count": "2800",
+            "grain_size": "0.085",
+            "band_width": "0.34",
+            "arc_count": "8"
+          }
+        }
+      ]
+    },
+    {
+      "id": "render",
+      "type": "OUTPUT",
+      "name": "02 / 暗色铁屑 · 电弧激发蓝白双层材质",
+      "x": 650,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "sand_out",
+          "type": "vfx.block.output_quad",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_particle",
+            "shader": "academy:core/vfxgraph_iron_sand",
+            "texture": "academy:textures/ability/electromaster/skill/iron_sand_arsenal/effect/iron_sand.png",
+            "blend": "translucent",
+            "layer": "iron_sand",
+            "bounds_scale": "1.5"
+          }
+        },
+        {
+          "id": "electric_out",
+          "type": "vfx.block.output_arc",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_arc",
+            "shader": "academy:core/vfxgraph_axial_burst",
+            "blend": "glow",
+            "layer": "electricity",
+            "thickness": "1",
+            "emission": "1.15",
+            "sparks": "0",
+            "segments": "12",
+            "overall_scale": "1",
+            "branch_depth": "0",
+            "branch_count": "0",
+            "noise_strength": "0",
+            "drift_speed": "0",
+            "branch_brightness_scale": "1"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "motion",
+      "to": "render"
+    }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "sand_out",
+    "electric_out"
+  ]
+}

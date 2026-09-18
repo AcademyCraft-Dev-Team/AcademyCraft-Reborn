@@ -23,6 +23,7 @@ import java.util.OptionalDouble;
 import java.util.Random;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
+import java.util.function.Function;
 import org.academy.api.client.compatibility.IrisIntegration;
 import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
 import org.academy.api.client.render.vfxgraph.arc.ArcCurve;
@@ -129,8 +130,16 @@ public final class VfxGraphRenderer {
     private int arcTubeVertexCapacity;
     private int arcTubeIndexCapacity;
     private @Nullable ArcBuffer arcBuffer;
+    private final @Nullable Function<Identifier, GpuTextureView> textureLoader;
+    private final Map<Identifier, GpuTextureView> loadedTextures = new java.util.HashMap<>();
 
     public VfxGraphRenderer() {
+        this(null);
+    }
+
+    /** Standalone hosts supply their texture cache; returned views remain owned by the host. */
+    public VfxGraphRenderer(@Nullable Function<Identifier, GpuTextureView> textureLoader) {
+        this.textureLoader = textureLoader;
         var device = RenderSystem.getDevice();
 
         quadBuffer = device.createBuffer(() -> "VfxGraph Quad", GpuBuffer.USAGE_VERTEX, buildQuad());
@@ -551,6 +560,9 @@ public final class VfxGraphRenderer {
             var textureId = spec.texture();
             if (textureId == null) {
                 pass.bindTexture("Sampler0", noiseView, noiseSampler);
+            } else if (textureLoader != null) {
+                pass.bindTexture("Sampler0", loadedTextures.computeIfAbsent(textureId, textureLoader),
+                        RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
             } else {
                 var texture = Minecraft.getInstance().getTextureManager().getTexture(textureId);
                 pass.bindTexture("Sampler0", texture.getTextureView(), texture.getSampler());

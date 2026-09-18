@@ -1,0 +1,11 @@
+allprojects {
+    afterEvaluate {
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(file('run/electromaster-rework'))
+            systemProperty('academy.electromasterReworkSmoke', 'true')
+            systemProperty('academy.ironSandVisualSmoke', 'true')
+            systemProperty('academy.electromasterReworkOutput', file('build/iron-sand-client').absolutePath)
+            programArguments.addAll('--width', '1280', '--height', '720')
+        }
+    }
+}

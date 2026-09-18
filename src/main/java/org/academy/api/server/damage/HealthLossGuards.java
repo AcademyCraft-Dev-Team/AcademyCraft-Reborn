@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.function.DoublePredicate;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /** Resource-backed protection at health submission, shared by normal and true-health writers. */
@@ -36,6 +37,12 @@ public final class HealthLossGuards {
 
     public static void set(LivingEntity subject, Identifier source, AbilityResourceAccount account,
                            double costPerHealth, boolean enabled) {
+        set(subject, source, account, costPerHealth, enabled, _ -> {});
+    }
+
+    /** Reports only successfully committed protection, never previews or refunded health writes. */
+    public static void set(LivingEntity subject, Identifier source, AbilityResourceAccount account,
+                           double costPerHealth, boolean enabled, Consumer<Resolution> onAbsorbed) {
         if (subject.level().isClientSide()) return;
         if (!enabled) {
             var protections = PROTECTIONS.get(subject);
@@ -47,7 +54,7 @@ public final class HealthLossGuards {
         }
         if (!Double.isFinite(costPerHealth) || costPerHealth <= 0) throw new IllegalArgumentException("Invalid health cost");
         PROTECTIONS.computeIfAbsent(subject, _ -> new LinkedHashMap<>())
-                .put(source, new Protection(account, costPerHealth));
+                .put(source, new Protection(account, costPerHealth, onAbsorbed));
     }
 
     /** Side-effect-free; suitable for admission checks. */
@@ -81,16 +88,17 @@ public final class HealthLossGuards {
             for (var protection : java.util.List.copyOf(protections.values())) {
                 var resolution = resolve(current, result, protection.account.current(), protection.costPerHealth);
                 if (resolution.cost() > 0 && protection.account.tryConsume(resolution.cost())) {
-                    paid.add(new Payment(protection.account, resolution.cost()));
+                    paid.add(new Payment(protection, resolution));
                     result = (float) resolution.health();
                 }
             }
             success = writer.test(result);
             return success;
         } finally {
-            if (!success) for (var payment : paid) payment.account.recover(payment.amount);
+            if (!success) for (var payment : paid) payment.protection.account.recover(payment.resolution.cost());
             WRITING.get().remove(subject);
             if (WRITING.get().isEmpty()) WRITING.remove();
+            if (success) for (var payment : paid) payment.protection.onAbsorbed.accept(payment.resolution);
         }
     }
 
@@ -110,6 +118,6 @@ public final class HealthLossGuards {
         return Math.min(rawCurrent, org.academy.internal.common.entitycontrol.TrueHealthOffsetRuntime.effectiveHealth(subject));
     }
 
-    private record Protection(AbilityResourceAccount account, double costPerHealth) {}
-    private record Payment(AbilityResourceAccount account, double amount) {}
+    private record Protection(AbilityResourceAccount account, double costPerHealth, Consumer<Resolution> onAbsorbed) {}
+    private record Payment(Protection protection, Resolution resolution) {}
 }

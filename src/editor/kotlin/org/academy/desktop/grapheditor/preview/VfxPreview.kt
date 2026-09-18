@@ -30,6 +30,7 @@ class VfxPreview(
     private val containerRef: VfxContainerModelRef,
     private val blockRegistry: VfxBlockRegistry,
     private val operatorRegistry: VfxOperatorRegistry,
+    private val textureLoader: ((net.minecraft.resources.Identifier) -> com.mojang.blaze3d.textures.GpuTextureView)? = null,
 ) {
     private val model: GraphEditorModel get() = modelRef.model
     private val containerModel: VfxContainerModel get() = containerRef.model
@@ -164,7 +165,7 @@ class VfxPreview(
         val depth = target.getDepthTextureView()
 
         if (renderer == null) {
-            renderer = VfxGraphRenderer()
+            renderer = VfxGraphRenderer(textureLoader?.let { loader -> java.util.function.Function { loader(it) } })
             glow = EditorGlow(renderer!!)
         }
 

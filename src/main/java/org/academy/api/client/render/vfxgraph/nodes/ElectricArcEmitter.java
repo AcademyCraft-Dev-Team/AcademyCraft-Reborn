@@ -23,7 +23,8 @@ public final class ElectricArcEmitter {
     public static List<PropertySpec> boltProperties() {
         return List.of(number("length", 10), number("width", 0.065f), number("spread", 0.65f),
                 number("strands", 3), number("forks", 2), number("duration", 1),
-                number("flicker_rate", 18), number("opacity", 1), number("density", 1), number("detail", 1));
+                number("flicker_rate", 18), number("opacity", 1), number("density", 1), number("detail", 1),
+                number("growth_time", 0), number("downward", 0), number("origin_y", 0));
     }
 
     public static List<PropertySpec> orbitProperties() {
@@ -43,7 +44,11 @@ public final class ElectricArcEmitter {
             float time = time(ctx, epoch);
             float duration = value(block, ctx, "duration", 1, 0.05f, 20);
             float length = value(block, ctx, "length", 10, 0, 4096);
+            float growth = value(block, ctx, "growth_time", 0, 0, 2);
+            if (growth > 0) length *= smooth(time / growth);
             if (time >= duration || length <= 0) return;
+            float direction = value(block, ctx, "downward", 0, 0, 1) > 0.5f ? -1 : 1;
+            float originY = value(block, ctx, "origin_y", 0, -4096, 4096);
             float opacity = value(block, ctx, "opacity", 1, 0, 1)
                     * value(block, ctx, "density", 1, 0, 2)
                     * (1 - smooth((time / duration - 0.35f) / 0.65f));
@@ -67,7 +72,7 @@ public final class ElectricArcEmitter {
                     float x = spread * envelope * ((float) Math.cos(angle) * bow + noise(random, u, 13) * 0.42f);
                     float z = spread * envelope * ((float) Math.sin(angle) * bow + noise(random + 53, u, 11) * 0.42f);
                     float taper = (0.18f + 0.82f * smooth(u * 12)) * (0.08f + 0.92f * smooth((1 - u) * 10));
-                    path.addPoint(x, u * length, z, width * (strand == 0 ? 1 : 0.6f) * taper, 0);
+                    path.addPoint(x, originY + direction * u * length, z, width * (strand == 0 ? 1 : 0.6f) * taper, 0);
                 }
                 float flicker = 0.82f + unit(random, 51) * 0.18f;
                 emit(ctx, path, group, random, opacity * flicker, "electricity");
@@ -76,12 +81,12 @@ public final class ElectricArcEmitter {
                     int at = Math.clamp(Math.round(segments * (0.2f + unit(random, branch + 70) * 0.55f)), 1, segments - 1);
                     fork.clearPoints();
                     float branchAngle = angle + branch * 2.399963f + unit(random, branch + 90) * 3;
-                    float reach = Math.min(length - path.y(at), Math.max(0.2f, spread * 2.5f));
+                    float reach = Math.min(length * (1 - (float) at / segments), Math.max(0.2f, spread * 2.5f));
                     for (int p = 0; p <= 12; p++) {
                         float u = p / 12f;
                         float lateral = spread * u * (0.75f + 0.20f * noise(random + branch, u, 7));
                         fork.addPoint(path.x(at) + (float) Math.cos(branchAngle) * lateral,
-                                path.y(at) + u * reach, path.z(at) + (float) Math.sin(branchAngle) * lateral,
+                                path.y(at) + direction * u * reach, path.z(at) + (float) Math.sin(branchAngle) * lateral,
                                 width * 0.42f * (1 - u), 1);
                     }
                     emit(ctx, fork, group, random + branch + 100, opacity * 0.72f, "electricity");

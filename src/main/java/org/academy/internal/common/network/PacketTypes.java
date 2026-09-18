@@ -842,6 +842,9 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, IronSandArsenal.SweepVisualPacket>>
             IRON_SAND_ARSENAL_SWEEP_VISUAL = PACKET_TYPES.register("iron_sand_arsenal_sweep_visual",
             () -> new PacketType<>(IronSandArsenal.SweepVisualPacket.class, IronSandArsenal.SweepVisualPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, IronSandArsenal.DefenseVisualPacket>>
+            IRON_SAND_DEFENSE_VISUAL = PACKET_TYPES.register("iron_sand_defense_visual",
+            () -> new PacketType<>(IronSandArsenal.DefenseVisualPacket.class, IronSandArsenal.DefenseVisualPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MagneticWeapon.TogglePacket>>
             MAGNETIC_WEAPON_TOGGLE = PACKET_TYPES.register("magnetic_weapon_toggle",
             () -> new PacketType<>(MagneticWeapon.TogglePacket.class, MagneticWeapon.TogglePacket.CODEC));

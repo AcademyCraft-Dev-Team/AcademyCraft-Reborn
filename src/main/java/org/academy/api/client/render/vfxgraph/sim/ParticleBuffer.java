@@ -221,6 +221,7 @@ public final class ParticleBuffer {
             case "impact_mono" -> 11;
             case "sky_cloud" -> 12;
             case "sky_halo" -> 13;
+            case "iron_sand" -> 14;
             default -> 0;
         };
     }

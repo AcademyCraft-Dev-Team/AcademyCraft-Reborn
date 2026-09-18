@@ -93,7 +93,8 @@ public final class IronSandResourceManager implements AbilitySubsystem, IronSand
             if (!maintainDefense(player)) setDefense(player, false);
             else {
                 HealthLossGuards.set(player, DEFENSE_SOURCE, account(player),
-                        IronSandTuning.massCostMultiplier(Skills.IRON_SAND_ARSENAL.get().getEffectiveProficiencyMilestone(player)), true);
+                        IronSandTuning.massCostMultiplier(Skills.IRON_SAND_ARSENAL.get().getEffectiveProficiencyMilestone(player)), true,
+                        _ -> IronSandArsenal.Server.absorbed(player, PlayerAttributeRuntime.currentDamageSource()));
                 IronSandArsenal.Server.interceptNearby(player);
             }
         }
@@ -176,7 +177,8 @@ public final class IronSandResourceManager implements AbilitySubsystem, IronSand
             cpManager.releaseMaintenanceOccupation(player.getUUID(), ElectromasterSkillMigration.IRON_SAND);
         }
         HealthLossGuards.set(player, DEFENSE_SOURCE, account(player), IronSandTuning.massCostMultiplier(
-                Skills.IRON_SAND_ARSENAL.get().getEffectiveProficiencyMilestone(player)), enabled);
+                Skills.IRON_SAND_ARSENAL.get().getEffectiveProficiencyMilestone(player)), enabled,
+                _ -> IronSandArsenal.Server.absorbed(player, PlayerAttributeRuntime.currentDamageSource()));
         IronSandArsenal.Server.syncData(player);
         return true;
     }

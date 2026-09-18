@@ -10,12 +10,24 @@ public final class HostileProjectiles {
     private HostileProjectiles() {}
 
     public static boolean sweptIntersectsSphere(Vec3 start, Vec3 end, Vec3 center, double radius) {
-        if (!Double.isFinite(radius) || radius < 0) return false;
+        return sphereEntry(start, end, center, radius) != null;
+    }
+
+    /** Earliest impact along this tick's swept path, for authoritative interception and its VFX. */
+    public static @org.jspecify.annotations.Nullable Vec3 sphereEntry(Vec3 start, Vec3 end, Vec3 center, double radius) {
+        if (!Double.isFinite(radius) || radius < 0) return null;
         var segment = end.subtract(start);
         var lengthSquared = segment.lengthSqr();
-        if (!Double.isFinite(lengthSquared)) return false;
-        var t = lengthSquared <= 1.0e-12 ? 0 : Math.clamp(center.subtract(start).dot(segment) / lengthSquared, 0, 1);
-        return start.add(segment.scale(t)).distanceToSqr(center) <= radius * radius;
+        var offset = start.subtract(center);
+        var c = offset.lengthSqr() - radius * radius;
+        if (!Double.isFinite(lengthSquared) || !Double.isFinite(c)) return null;
+        if (c <= 0) return start;
+        if (lengthSquared <= 1.0e-12) return null;
+        var b = offset.dot(segment);
+        var discriminant = b * b - lengthSquared * c;
+        if (discriminant < 0) return null;
+        var t = (-b - Math.sqrt(discriminant)) / lengthSquared;
+        return t >= 0 && t <= 1 ? start.add(segment.scale(t)) : null;
     }
 
     public static boolean isThreatTo(LivingEntity actor, Projectile projectile) {
