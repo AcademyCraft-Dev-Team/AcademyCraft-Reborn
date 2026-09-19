@@ -540,9 +540,9 @@ public class MagnetManipulation extends Skill {
             if (player == null || !player.isAlive() || minecraft.gui.screen() != null
                     || !player.getData(AttachmentTypes.MAGNET_MANIPULATION_ACTIVE)
                     || !AbilitySystemClient.canUseSkill(Skills.MAGNET_MANIPULATION.get())) return;
-            // Wheel-down pulls the target closer and wheel-up pushes it farther, so the raw scroll
-            // offset is inverted into the packet's "positive = farther" convention.
-            MisakaNetworkClient.send(new MoveDistancePacket(-event.yOffset));
+            // Same wheel convention as PneumaticGrasp: positive yOffset (wheel up) pushes farther,
+            // negative (wheel down) draws the target closer.
+            MisakaNetworkClient.send(new MoveDistancePacket(event.yOffset));
             event.setCanceled(true);
         }
     }

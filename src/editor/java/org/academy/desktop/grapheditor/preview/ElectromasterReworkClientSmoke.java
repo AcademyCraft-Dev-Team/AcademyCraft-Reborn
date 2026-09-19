@@ -33,6 +33,7 @@ public final class ElectromasterReworkClientSmoke {
     private static volatile boolean ready;
     private static int total, ticks;
     private static volatile LivingEntity target;
+    private static volatile net.minecraft.world.entity.Entity magnetTarget;
     private static volatile float before;
     private static double holdDistanceBefore;
     private static double pushedDistance;
@@ -149,16 +150,15 @@ public final class ElectromasterReworkClientSmoke {
         }
         // R-key target control: sustained hold past the old heartbeat timeout, then wheel distance.
         if (ticks == 167) server(p -> {
-            // A dedicated iron-clad target keeps the magnet phase independent of the melee dummy.
-            var magnetic = new net.minecraft.world.entity.animal.pig.Pig(net.minecraft.world.entity.EntityTypes.PIG, p.level());
-            // NoAi would make Mob.isEffectiveAi() false and stop LivingEntity.travel from applying the pull.
+            // An iron ingot entity is magnetic and has no AI input, so the pull stays deterministic.
+            var magnetic = new net.minecraft.world.entity.item.ItemEntity(p.level(),
+                    p.getX(), p.getEyeY() - 0.125, p.getZ() + 6,
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_INGOT));
             magnetic.setNoGravity(true);
-            magnetic.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST,
-                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_CHESTPLATE));
-            // Keep it centered on the eye ray so crosshair acquisition succeeds.
-            magnetic.setPos(p.getX(), p.getEyeY() - 0.45, p.getZ() + 6);
+            magnetic.setNeverPickUp();
+            magnetic.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
             p.level().addFreshEntity(magnetic);
-            target = magnetic;
+            magnetTarget = magnetic;
             p.setYRot(0); p.yRotO = 0; p.setXRot(0); p.xRotO = 0;
         });
         if (ticks == 170) MisakaNetworkClient.send(MagnetManipulation.MoveStartPacket.TARGET_TO_PLAYER);
@@ -169,10 +169,10 @@ public final class ElectromasterReworkClientSmoke {
             require(mc.player.getData(AttachmentTypes.MAGNET_MANIPULATION_ACTIVE), "Hold survives past the old heartbeat timeout");
             holdDistanceBefore = mc.player.distanceTo(clientTarget());
         }
-        // Wheel-up (negative yOffset) must push the target away; wheel-down must draw it back.
+        // Wheel-up (positive yOffset) must push the target away; wheel-down must draw it back.
         if (ticks == 220 || ticks == 230) {
             net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
-                    new org.academy.api.client.input.MouseScrollEvent(0, -1));
+                    new org.academy.api.client.input.MouseScrollEvent(0, 1));
         }
         if (ticks == 245) {
             pushedDistance = mc.player.distanceTo(clientTarget());
@@ -180,7 +180,7 @@ public final class ElectromasterReworkClientSmoke {
         }
         if (ticks == 250 || ticks == 256) {
             net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
-                    new org.academy.api.client.input.MouseScrollEvent(0, 1));
+                    new org.academy.api.client.input.MouseScrollEvent(0, -1));
         }
         if (ticks == 264) {
             require(mc.player.distanceTo(clientTarget()) < pushedDistance - 0.2, "Wheel-down pulls the controlled target closer");
@@ -195,7 +195,8 @@ public final class ElectromasterReworkClientSmoke {
     }
 
     private static net.minecraft.world.entity.Entity clientTarget() {
-        var entity = Minecraft.getInstance().level == null ? null : Minecraft.getInstance().level.getEntity(target.getId());
+        var entity = Minecraft.getInstance().level == null || magnetTarget == null ? null
+                : Minecraft.getInstance().level.getEntity(magnetTarget.getId());
         require(entity != null, "Controlled target is present on the client");
         return entity;
     }
