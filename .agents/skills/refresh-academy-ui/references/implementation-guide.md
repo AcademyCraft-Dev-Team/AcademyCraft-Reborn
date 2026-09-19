@@ -26,7 +26,7 @@ Use the host already selected by the target's nearest current implementation. Ch
 
 ## Inspect before editing
 
-Read the target and at least one adjacent implementation of the same archetype. Trace:
+Read the target. Consult an adjacent implementation of the same archetype when a convention is unclear. Trace only the dependencies touched by the requested change or a concrete risk:
 
 - the screen or HUD registration point;
 - its menu and slot coordinates;
@@ -198,17 +198,16 @@ Use `AnimationUtil` or the local animation system. During a hide transition, sto
 
 ## Validate the result
 
-Before reporting completion:
+This is the single implementation acceptance checklist. The repository `AGENTS.md` owns required tests, both build variants, and in-game verification; this guide does not relax them. Reuse successful results for the same revision and configuration across references. Select the visual checks below by the changed behavior and its risks; a full redesign needs all applicable checks. Read-only reviews use these as evidence criteria, not instructions to modify files or launch validation workflows.
 
-1. Review `git status --short` and isolate files changed for the task.
-2. Run focused unit tests where UI state or layout math is testable.
-3. For production GUI code, run `./gradlew test -DisDev=true`, then both development and release build variants when practical.
-4. Run `./gradlew runClientDev` for a visual smoke test when the change affects layout, rendering, focus, scrolling, shader interaction, or resources.
-5. Use the UI debugger/F12 support where available to inspect bounds and hit targets.
-6. Exercise representative GUI scales, bright and dark backgrounds, long localized strings, empty/full lists, fast page changes, and all control states.
-7. Capture a grayscale view and confirm geometry/brightness alone carries hierarchy.
-8. For terminal work, compare blur radius 0 and 20; confirm the outside world stays sharp, the inside world loses detail, and the foreground stays crisp.
-9. For machine work, confirm screen-host blur/dimming occurs once and 2x authored line textures remain sharp at half size.
+1. Review the task's diff and preserve unrelated changes. Run the repository-required tests and builds; add focused state/layout tests when they provide meaningful coverage beyond those checks.
+2. Perform the required in-game smoke check on the affected content. Use the UI debugger/F12 support where available when bounds or hit targets need inspection.
+3. For layout, typography, or texture changes, check representative GUI scales, English/Chinese and long localized strings, clipping, alignment, crisp 1 px rules, and the archetype's spacing, alpha, and icon conventions. Reuse existing `R` identifiers where available.
+4. For hierarchy, color, or background changes, check bright and dark worlds and a grayscale view. Neutralize semantic accents temporarily when needed to verify that geometry/brightness carries hierarchy; preserve sparse outlines and consistent accent meanings without unnecessary gradients, rounded cards, broad bloom, or opaque planes.
+5. For blur or composition changes, verify that the world remains recognizable without detail competing with text and that foreground lines, text, icons, and cursor edges remain crisp. For terminal work, check radius 0 and 20, readability at both limits, and sharp pixels outside the projected stencil without rectangular leakage. For machine work, check that host blur/dimming occurs once and authored 2x textures remain sharp at half size.
+6. For interaction, pages, or animation changes, exercise the exposed control states with keyboard/mouse focus; verify hidden pages cannot receive input and transitions can reverse or restart without stale alpha, scale, or enabled state.
+7. For lists, scrolling, or live data changes, check empty/full content, clipping and scroll bounds, invalidation, and updates. For moved inventory slots, verify menu coordinates and hit handling.
+8. Report the checks performed and any required check still pending, with its blocker. Once applicable checks pass, stop validation unless a new change, failure, or unresolved concern warrants more work; do not claim full verification while required checks remain pending.
 
 Current menu slot coordinates are the sole implementation authority. Legacy slot measurements are useful only for understanding the texture's visual rhythm.
 

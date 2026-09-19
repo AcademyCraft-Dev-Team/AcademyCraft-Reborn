@@ -9,22 +9,29 @@ Preserve the legacy AcademyCraft identity while implementing with the current Ko
 
 ## Load the right guidance
 
-- Read [references/visual-language.md](references/visual-language.md) for every styling or layout task.
-- Read [references/sample-derived-compositions.md](references/sample-derived-compositions.md) for every machine-screen or data-terminal task; it turns the supplied in-game examples into exact composition profiles and acceptance tests.
-- Read [references/implementation-guide.md](references/implementation-guide.md) before changing Kotlin widgets, screens, HUD layouts, or GUI resources.
-- Read [references/source-evidence.md](references/source-evidence.md) when exact legacy dimensions, colors, asset lineage, or behavior need verification.
+- Keep the non-negotiable rules below as the shared baseline. Read reference sections only when the target, change, or unresolved risk needs them; a local adjustment does not require every reference or archetype.
+- Use [references/visual-language.md](references/visual-language.md) for the relevant design tokens, screen archetype, control, or motion guidance when styling or layout decisions need it.
+- Use the matching machine, terminal, P.R.O.P.S, or Settings sections of [references/sample-derived-compositions.md](references/sample-derived-compositions.md) when matching those supplied examples.
+- Use the relevant host, layout, state, blur, or resource sections of [references/implementation-guide.md](references/implementation-guide.md) for implementation questions. Its validation section is the single implementation acceptance checklist.
+- Use [references/source-evidence.md](references/source-evidence.md) only when exact legacy dimensions, colors, asset lineage, or behavior need verification.
+- For a complete screen redesign, read the shared visual grammar and the full guidance for that archetype, then apply all relevant acceptance checks.
 
-## Workflow
+## Choose the task mode
+
+- **Read-only review:** Inspect the requested surface and only the dependencies needed to establish findings. Apply relevant style rules as review criteria; do not edit, redesign, build, or launch the client solely because this skill was selected. Finish with evidence, impact, minimal recommendations, and any unverified visual behavior; report when no actionable findings remain.
+- **Implementation:** Follow the workflow below within the requested scope. Pure documentation or skill-maintenance changes use document/package validation rather than the UI implementation workflow.
+
+## Implementation workflow
 
 1. Classify the target as a compact machine screen, developer/skill screen, terminal/app surface, or HUD/overlay.
-2. Inspect the target class, its nearest same-archetype implementation, referenced `R` entries, textures, menu slot coordinates, and layout DSL factories under `org.academy.internal.client.gui.layout`. Preserve unrelated worktree changes.
+2. Inspect the target class. Consult a nearest same-archetype implementation only when a convention is unclear. Trace referenced `R` entries, textures, slots, input, networking, animation, or layout DSL factories only when the change or a concrete risk touches them. Preserve unrelated worktree changes.
 3. Define a logical-coordinate layout before editing. Keep the archetype's canonical canvas, layer order, density, and alignment; do not size from raw texture pixels.
 4. Design the hierarchy in grayscale first. Establish separation with blur, neutral alpha planes, rules, and foreground brightness; add semantic color only after the interface reads clearly without it.
 5. Compose the surface in this order: world image, archetype-appropriate blur mask, neutral translucent structural plane, sparse white rule/texture overlay, content, then state/feedback layers. Keep blur out of foreground UI.
 6. Reuse existing widgets, drawables, textures, and utilities. Implement legacy intent with the current API; never introduce LambdaLib/CGUI classes from the reference project.
 7. Encode state through alpha, brightness, restrained color, and short motion. Keep normal, hover, selected, focused, disabled, empty, loading, and error states distinct where the backing behavior actually exposes those states. Do not invent protocol states.
 8. Keep input, networking, menu slot handling, localization, and accessibility behavior intact while changing presentation.
-9. Validate layout at representative GUI scales, long localized strings, empty and full lists, hover/focus/pressed states, transitions, live data updates, bright/dark worlds, and minimum/maximum blur. Run focused tests, then the repository build appropriate to the change.
+9. Apply the relevant checks in [Validate the result](references/implementation-guide.md#validate-the-result), including the repository's required tests and builds. Reuse the same validation evidence across references.
 
 ## Non-negotiable style rules
 
@@ -42,12 +49,6 @@ Preserve the legacy AcademyCraft identity while implementing with the current Ko
 - Do not move inventory slots visually without checking the menu's slot coordinates and container hit handling.
 - Do not hand-edit generated resources under `src/generated/resources`.
 
-## Completion checklist
+## Completion
 
-- Confirm the screen still belongs visibly to its archetype and shares spacing, alpha, icon, and motion rules with adjacent AcademyCraft UI.
-- Confirm the hierarchy remains clear in grayscale and still looks technological after temporarily removing semantic accents.
-- Confirm the world is recognizable but not readable beneath blurred areas, the world outside a terminal mask stays sharp, and every foreground line/text layer remains crisp.
-- Confirm all states remain usable with keyboard/mouse focus and that hidden pages are both invisible and disabled.
-- Confirm dynamic widgets invalidate or update correctly and that scroll panels clip and bound their content.
-- Confirm textures use existing `R` identifiers when available; add resource identifiers consistently when new assets are unavoidable.
-- Report files changed, behavior preserved, validation performed, and any in-game visual check still required.
+For implementation, finish when the requested change and applicable acceptance checks are complete. Report files changed, behavior preserved, and validation performed. If a required check cannot be performed, identify the blocker and mark it pending; do not claim full verification. Rerun successful checks only after relevant changes, failures, or unresolved concerns. Read-only reviews finish under their separate task-mode criteria above.

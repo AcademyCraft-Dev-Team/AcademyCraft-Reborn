@@ -181,15 +181,4 @@ Do not apply the terminal's frosted row dashboard to a machine inventory face. D
 
 ## Acceptance tests
 
-For every implementation based on these samples:
-
-1. Capture it against bright snow/sky and a dark interior.
-2. Desaturate or inspect the screenshot in grayscale; content hierarchy and selected state must remain clear.
-3. Remove or neutralize semantic accents temporarily; the result must still look technological.
-4. Verify background detail under the mask is softened enough that it cannot be mistaken for UI text or rules.
-5. Verify terminal pixels outside the stencil are sharp and no rectangular blur leaks beyond the projected quad.
-6. Verify all foreground lines, text, item icons, radar lines, and cursor edges remain crisp.
-7. Test terminal blur at 0 and 20; text must remain readable at both limits.
-8. Check 1 px rules and half-scale machine textures at representative GUI scales.
-9. Confirm bright outlines are scarce enough to preserve a clear focus hierarchy.
-10. Confirm the layout uses no unnecessary hue, gradient, rounded card, broad bloom, or opaque panel.
+Use [Validate the result](implementation-guide.md#validate-the-result) as the shared acceptance checklist. For sample-matching composition work, use bright snow/sky and a dark interior for its background checks, and compare against only the matching profile above. Reuse the same screenshots and results; these profiles do not require a second validation pass.

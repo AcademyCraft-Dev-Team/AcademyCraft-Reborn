@@ -261,13 +261,4 @@ Breathing opacity around 0.675-0.85 is acceptable only for meaningful active nod
 
 ## Review checklist
 
-- Inspect the surface at representative GUI scales and on bright and dark world backgrounds.
-- Inspect a desaturated screenshot: layout, state, and hierarchy must remain clear without semantic color.
-- Confirm blurred world detail cannot interfere with text while major world shapes remain recognizable.
-- For terminal apps, confirm pixels outside the stencil remain sharp and child content does not receive the blur.
-- Check normal, hover, focused, pressed, selected, disabled, empty, loading, and error states as applicable.
-- Verify that each saturated accent has one consistent meaning.
-- Confirm 1 px rules and authored textures remain crisp.
-- Test English and Chinese text for clipping or collision.
-- Verify hidden content is not focusable or clickable.
-- Confirm transitions can reverse or restart without leaving stale alpha, scale, or enabled state.
+Use the relevant visual checks in [Validate the result](implementation-guide.md#validate-the-result). That checklist covers the tokens and behavior described here; reuse its evidence rather than performing a second validation pass. In a read-only review, report findings and unverified behavior without invoking the implementation workflow.
