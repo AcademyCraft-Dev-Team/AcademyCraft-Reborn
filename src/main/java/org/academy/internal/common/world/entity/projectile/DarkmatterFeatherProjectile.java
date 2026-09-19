@@ -3,6 +3,10 @@ package org.academy.internal.common.world.entity.projectile;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.ItemSupplier;
 import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
@@ -26,16 +30,33 @@ import java.util.UUID;
  * Short-lived, server-owned feather blade used by Dark Matter Interference.
  */
 public final class DarkmatterFeatherProjectile extends AbstractArrow implements ItemSupplier {
+    private static final EntityDataAccessor<Boolean> PASSED_TARGET = SynchedEntityData.defineId(
+            DarkmatterFeatherProjectile.class, EntityDataSerializers.BOOLEAN);
     private UUID targetId;
     private float damage = 1.0f;
     private float exposureBurstDamage;
     private int maximumLifetime = 40;
     private boolean outputAdjustmentBypassed;
+    private int exitTicks;
 
     public DarkmatterFeatherProjectile(EntityType<? extends AbstractArrow> type, Level level) {
         super(type, level);
         pickup = Pickup.DISALLOWED;
         setNoGravity(true);
+    }
+
+    @Override
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(PASSED_TARGET, false);
+    }
+
+    public boolean hasPassedTarget() { return entityData.get(PASSED_TARGET); }
+
+    @Override
+    protected boolean canHitEntity(Entity entity) {
+        // The short exit is presentation only: no second hit or unrelated target damage.
+        return !hasPassedTarget() && super.canHitEntity(entity);
     }
 
     public void configure(
@@ -57,6 +78,8 @@ public final class DarkmatterFeatherProjectile extends AbstractArrow implements 
             boolean outputAdjustmentBypassed
     ) {
         setOwner(owner);
+        entityData.set(PASSED_TARGET, false);
+        exitTicks = 0;
         targetId = target == null ? null : target.getUUID();
         this.damage = Math.max(0.0f, Float.isFinite(damage) ? damage : 0.0f);
         this.exposureBurstDamage = Math.max(
@@ -76,7 +99,11 @@ public final class DarkmatterFeatherProjectile extends AbstractArrow implements 
 
     @Override
     public void tick() {
-        if (!level().isClientSide() && targetId != null) {
+        if (!level().isClientSide() && hasPassedTarget() && --exitTicks <= 0) {
+            discard();
+            return;
+        }
+        if (!level().isClientSide() && !hasPassedTarget() && targetId != null) {
             if (!(level().getEntity(targetId) instanceof LivingEntity target)
                     || !target.isAlive() || target.isRemoved()) {
                 // A targeted feather belongs to that attack. Letting it continue after its
@@ -100,6 +127,9 @@ public final class DarkmatterFeatherProjectile extends AbstractArrow implements 
 
     @Override
     protected void onHitEntity(EntityHitResult result) {
+        if (level().isClientSide()) return;
+        // A single arrow step can already contain several overlapping hit results.
+        if (hasPassedTarget()) return;
         if (!(level() instanceof ServerLevel level)
                 || !(getOwner() instanceof ServerPlayer owner)
                 || !(result.getEntity() instanceof LivingEntity target)
@@ -113,8 +143,19 @@ public final class DarkmatterFeatherProjectile extends AbstractArrow implements 
                 ? OutputControl.callWithoutOutputAdjustment(() -> hurtTarget(
                 level, target, source, damage, exposureBurstDamage))
                 : hurtTarget(level, target, source, damage, exposureBurstDamage);
-        if (hit) Skills.DARKMATTER_RADIATION.get().reportActivity(owner, true);
-        discard();
+        if (hit) {
+            Skills.DARKMATTER_RADIATION.get().reportActivity(owner, true);
+            org.academy.api.server.ability.DarkmatterGraphEffects.lightContact(target);
+        }
+        var velocity = getDeltaMovement();
+        if (!hit || velocity.lengthSqr() < 1.0e-8) { discard(); return; }
+        var forward = velocity.normalize();
+        var farSide = result.getLocation().add(forward.scale(target.getBbWidth() + target.getBbHeight() + 2));
+        var exit = target.getBoundingBox().inflate(0.1).clip(farSide, result.getLocation()).orElse(target.position());
+        exitTicks = Math.clamp(1 + (int) Math.ceil((result.getLocation().distanceTo(exit) + 1.5) / velocity.length()), 2, 16);
+        entityData.set(PASSED_TARGET, true);
+        targetId = null;
+        setDeltaMovement(forward.scale(1.65));
     }
 
     private static boolean hurtTarget(
@@ -163,6 +204,8 @@ public final class DarkmatterFeatherProjectile extends AbstractArrow implements 
         maximumLifetime = Math.max(5, input.getIntOr("academy_maximum_lifetime", 40));
         outputAdjustmentBypassed = input.getIntOr(
                 "academy_output_adjustment_bypassed", 0) != 0;
+        exitTicks = Math.clamp(input.getIntOr("academy_exit_ticks", 0), 0, 16);
+        entityData.set(PASSED_TARGET, exitTicks > 0);
     }
 
     @Override
@@ -175,5 +218,6 @@ public final class DarkmatterFeatherProjectile extends AbstractArrow implements 
         output.putInt("academy_maximum_lifetime", maximumLifetime);
         output.putInt("academy_output_adjustment_bypassed",
                 outputAdjustmentBypassed ? 1 : 0);
+        output.putInt("academy_exit_ticks", exitTicks);
     }
 }

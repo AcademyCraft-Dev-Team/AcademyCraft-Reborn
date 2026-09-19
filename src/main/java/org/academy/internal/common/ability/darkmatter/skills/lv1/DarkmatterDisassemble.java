@@ -5,7 +5,6 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -32,6 +31,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import org.academy.AcademyCraft;
+import org.academy.api.server.ability.DarkmatterGraphEffects;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -354,15 +354,7 @@ public final class DarkmatterDisassemble extends Skill {
                         target, level, source, damage,
                         penetration(phase.beta(), context.milestone()));
                 if (hurt) {
-                    level.sendParticles(
-                            ParticleTypes.CLOUD,
-                            target.getX(),
-                            target.getY() + target.getBbHeight() * 0.5,
-                            target.getZ(),
-                            16,
-                            0.45, 0.45, 0.45,
-                            0.03
-                    );
+                    DarkmatterGraphEffects.disassemble(target);
                 }
                 level.playSound(
                         null,
@@ -506,6 +498,7 @@ public final class DarkmatterDisassemble extends Skill {
                 var source = SkillDamageSource.of(player, skill);
                 for (var target : targets) {
                     var wasAlive = target.isAlive();
+                    float healthBefore = target.getHealth();
                     var detonation = DarkmatterLawMark.detonate(player, target);
                     if (detonation > 0.0f) {
                         target.invulnerableTime = 0;
@@ -528,9 +521,9 @@ public final class DarkmatterDisassemble extends Skill {
                         system.getDarkmatterResourceManager().creditEarnedMatter(
                                 player, target.getMaxHealth() / 10.0f);
                     }
-                    level.sendParticles(ParticleTypes.CLOUD,
-                            target.getX(), target.getY() + target.getBbHeight() * 0.5, target.getZ(),
-                            16, 0.45, 0.45, 0.45, 0.03);
+                    if (target.getHealth() < healthBefore || wasAlive && !target.isAlive()) {
+                        DarkmatterGraphEffects.disassemble(target);
+                    }
                 }
 
                 if (DestroyBlocksSetting.canDestroyBlocks(player, skill)) {
@@ -556,6 +549,7 @@ public final class DarkmatterDisassemble extends Skill {
                     }
                 }
                 if (!applied[0]) return;
+
                 moveNearbyDropsToPlayer(
                         level,
                         player,
@@ -736,6 +730,7 @@ public final class DarkmatterDisassemble extends Skill {
                     state, level, pos, level.getBlockEntity(pos), player, tool);
             if (!AbilityBlockDrops.run(
                     level, player, () -> level.destroyBlock(pos, false, player))) return false;
+            DarkmatterGraphEffects.disassembleBlock(level, pos);
             for (var drop : drops) {
                 if (drop.isEmpty()) continue;
                 if (SpatialStorageService.collect(player, drop)) continue;

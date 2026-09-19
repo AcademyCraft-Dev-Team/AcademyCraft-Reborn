@@ -1,0 +1,143 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "darkmatter_feather",
+  "parameters": [
+    {
+      "id": "time",
+      "name": "time",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": -1
+      }
+    },
+    {
+      "id": "seed",
+      "name": "seed",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 42
+      }
+    },
+    {
+      "id": "width",
+      "name": "width",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.6
+      }
+    },
+    {
+      "id": "height",
+      "name": "height",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1.8
+      }
+    },
+    {
+      "id": "range",
+      "name": "range",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 12
+      }
+    },
+    {
+      "id": "light",
+      "name": "light",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "strength",
+      "name": "strength",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "finished",
+      "name": "finished",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    },
+    {
+      "id": "view_first_person",
+      "name": "view_first_person",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "spawn",
+      "type": "SPAWN",
+      "name": "01 / Bounded sampled material",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "blade",
+          "type": "vfx.block.material_sheets",
+          "properties": {
+            "style": "5",
+            "count": "2",
+            "size": "0.72",
+            "opacity": "0.75",
+            "surface": "surface",
+            "lighting": "1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "output",
+      "type": "OUTPUT",
+      "name": "02 / Depth-tested pearl material",
+      "x": 620,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "blade_output",
+          "type": "vfx.block.output_quad",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_feather_blade",
+            "shader": "academy:core/vfxgraph_material_blade",
+            "blend": "translucent",
+            "layer": "smoke",
+            "bounds_scale": "1.21"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "spawn",
+      "to": "output"
+    }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "blade_output"
+  ]
+}

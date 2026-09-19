@@ -1,0 +1,1 @@
+Resolution 1920x1080; GPU frame time (ms), baseline n=120 median=0.559 p95=0.564; field n=120 median=1.095 p95=1.208

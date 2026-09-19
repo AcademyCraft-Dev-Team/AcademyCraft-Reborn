@@ -46,6 +46,32 @@ class ActiveEffectTest {
         }
     }
 
+    @Test
+    void sampledSurfaceSurvivesReloadAndMissingSurfaceHidesPatches() throws Exception {
+        var metadata = new SimpleNodeRegistry();
+        var blocks = new org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry();
+        org.academy.api.client.render.vfxgraph.nodes.VfxBlocks.registerAll(metadata, blocks);
+        try (var stream = getClass().getResourceAsStream("/assets/academy/vfxgraph/darkmatter_repair.json")) {
+            var system = new org.academy.api.client.render.vfxgraph.serialize.JsonVfxGraphCodec(metadata).decode(
+                    com.google.gson.JsonParser.parseReader(new java.io.InputStreamReader(stream,
+                            java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject());
+            var active = new ActiveEffect("surface", system, vfxRegistry, blocks,
+                    new org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry(), new Vector3f());
+            boolean[] available = {true};
+            active.bind("progress", () -> Value.of(0.5f));
+            active.bindSurfaceSampler("surface", (i, u, v, p, n) -> { p.set(3, 2, 1); n.set(1, 0, 0); return available[0]; });
+            active.tick(0.05f);
+            assertTrue(active.effect().buffer().positionX(0) > 3);
+            active.reload(system);
+            active.tick(0.05f);
+            assertTrue(active.effect().buffer().positionX(0) > 3);
+            assertTrue(active.effect().buffer().alpha(0) > 0);
+            available[0] = false;
+            active.tick(0.05f);
+            assertEquals(0, active.effect().buffer().alpha(0));
+        }
+    }
+
     private VfxNodeRegistry vfxRegistry;
 
     @BeforeEach

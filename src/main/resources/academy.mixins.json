@@ -85,6 +85,8 @@
     "common.item.MixinMaceItemAirflowMomentum"
   ],
   "client": [
+    "client.MixinRenderTypeSurfaceMask",
+    "client.MixinChunkSectionsSurfaceMask",
     "client.AbstractContainerScreenAccessor",
     "client.ClientInputAccessor",
     "client.ItemInHandRendererInvoker",

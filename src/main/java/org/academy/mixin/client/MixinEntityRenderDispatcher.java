@@ -12,6 +12,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(EntityRenderDispatcher.class)
 public abstract class MixinEntityRenderDispatcher {
+    @Inject(method = "submit", at = @At("HEAD"))
+    private void academy$captureSurfaceEntity(net.minecraft.client.renderer.entity.state.EntityRenderState state,
+            net.minecraft.client.renderer.state.level.CameraRenderState camera, double x, double y, double z,
+            com.mojang.blaze3d.vertex.PoseStack pose, net.minecraft.client.renderer.SubmitNodeCollector collector,
+            org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+        org.academy.api.client.render.post.WorldSurfaceMasks.capture(state, camera, x, y, z, pose);
+    }
     @Inject(method = "shouldRender", at = @At("HEAD"), cancellable = true)
     private <E extends Entity> void academy$hideMentalPerceptionTarget(
             E entity,

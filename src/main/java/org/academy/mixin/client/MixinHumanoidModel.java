@@ -42,7 +42,10 @@ public abstract class MixinHumanoidModel {
     ) {
         if (!(state instanceof AvatarRenderState avatarState)) return;
         var playback = WingFlightAnimationClient.playback(avatarState.id);
-        if (playback == null || playback.phase() == WingFlightAnimationTimeline.Phase.IDLE) return;
+        if (playback == null || playback.phase() == WingFlightAnimationTimeline.Phase.IDLE) {
+            org.academy.api.client.render.vfxgraph.shape.HumanoidSurfacePose.capture(avatarState.id, (HumanoidModel<?>) (Object) this);
+            return;
+        }
 
         var model = (HumanoidModel<?>) (Object) this;
         var mainArm = state.mainArm;
@@ -69,6 +72,7 @@ public abstract class MixinHumanoidModel {
                 model.getArm(mainArm.getOpposite()).loadPose(vanillaOffhandArmPose);
             }
         }
+        org.academy.api.client.render.vfxgraph.shape.HumanoidSurfacePose.capture(avatarState.id, model);
     }
 
     @Unique

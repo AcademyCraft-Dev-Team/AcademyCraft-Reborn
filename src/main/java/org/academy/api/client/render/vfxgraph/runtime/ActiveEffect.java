@@ -15,6 +15,7 @@ import org.academy.api.client.render.vfxgraph.render.RenderSpec;
 import org.academy.api.client.render.vfxgraph.render.VfxGraphRenderer;
 import org.academy.api.client.render.vfxgraph.render.WorldTransform;
 import org.academy.api.client.render.vfxgraph.shape.SurfaceProjector;
+import org.academy.api.client.render.vfxgraph.shape.SurfaceSampler;
 import org.joml.Quaternionf;
 import org.joml.Matrix4fc;
 import org.joml.Vector3f;
@@ -49,6 +50,14 @@ public final class ActiveEffect {
         arcSources.put(name, Objects.requireNonNull(source));
         effect.setArcSource(name, source);
     }
+    private final Map<String, SurfaceSampler> samplers = new LinkedHashMap<>();
+
+    /** A posed surface, including normals; retained through editor reload and simulation reset. */
+    public void bindSurfaceSampler(String name, SurfaceSampler sampler) {
+        samplers.put(name, Objects.requireNonNull(sampler));
+        effect.setSurfaceSampler(name, sampler);
+    }
+
     private GraphEffect effect;
     private @Nullable EffectFrameBinding frameBinding;
     private float gameAgeSeconds;
@@ -293,6 +302,7 @@ public final class ActiveEffect {
             effect.setLiveParam(entry.getKey(), value);
         }
         surfaces.forEach(effect::setSurfaceProjector);
+        samplers.forEach(effect::setSurfaceSampler);
         arcSources.forEach(effect::setArcSource);
         return false;
     }
@@ -317,6 +327,7 @@ public final class ActiveEffect {
     void reload(Graph graph) {
         effect = new GraphEffect(graph, registry);
         surfaces.forEach(effect::setSurfaceProjector);
+        samplers.forEach(effect::setSurfaceSampler);
         arcSources.forEach(effect::setArcSource);
         for (var entry : bindings.entrySet()) {
             effect.setLiveParam(entry.getKey(), entry.getValue().get());
@@ -330,6 +341,7 @@ public final class ActiveEffect {
         effect = GraphEffect.container(system, Objects.requireNonNull(blockRegistry),
                 Objects.requireNonNull(operatorRegistry), system.parameters());
         surfaces.forEach(effect::setSurfaceProjector);
+        samplers.forEach(effect::setSurfaceSampler);
         arcSources.forEach(effect::setArcSource);
         for (var entry : bindings.entrySet()) {
             effect.setLiveParam(entry.getKey(), entry.getValue().get());

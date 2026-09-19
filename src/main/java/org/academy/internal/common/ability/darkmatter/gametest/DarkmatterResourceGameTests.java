@@ -685,6 +685,37 @@ public final class DarkmatterResourceGameTests {
                 helper.succeed();
             }
         },
+        FEATHER_VISUALLY_EXITS_WITHOUT_SECOND_DAMAGE("feather_visually_exits_without_second_damage", 40) {
+            @Override
+            void run(GameTestHelper helper) {
+                var player = createPlayer(helper, 3);
+                var target = helper.spawn(EntityTypes.COW, 4, 3, 1);
+                var behind = helper.spawn(EntityTypes.COW, 6, 3, 1);
+                target.setNoAi(true); target.setNoGravity(true);
+                behind.setNoAi(true); behind.setNoGravity(true);
+                float before = target.getHealth(), behindBefore = behind.getHealth();
+                var feather = new DarkmatterFeatherProjectile(
+                        org.academy.internal.common.world.entity.EntityTypes.DARKMATTER_FEATHER_PROJECTILE.get(), helper.getLevel());
+                feather.configure(player, target, new Vec3(1, 0, 0), 1, 0, true);
+                feather.setPos(target.getBoundingBox().getCenter().add(-3, 0, 0));
+                feather.setDeltaMovement(new Vec3(1.65, 0, 0));
+                helper.getLevel().addFreshEntity(feather);
+                // Step every projectile tick explicitly: the headless test clock can advance
+                // faster than world entity ticks, while the visual exit lasts only a few ticks.
+                boolean observedExit = false;
+                for (int tick = 0; tick < 20 && !feather.isRemoved(); tick++) {
+                    feather.tick();
+                    observedExit |= feather.hasPassedTarget() && !feather.isRemoved()
+                            && feather.getX() > target.getBoundingBox().maxX;
+                }
+                helper.assertTrue(observedExit, "Feather did not visibly exit the far surface");
+                helper.assertTrue(feather.isRemoved(), "Exit effect did not expire");
+                assertClose(helper, before - 1, target.getHealth(), "Feather changed its single-hit damage");
+                assertClose(helper, behindBefore, behind.getHealth(), "Visual exit damaged a second target");
+                removePlayer(helper, player);
+                helper.succeed();
+            }
+        },
         INTERFERENCE_CHANNEL_FEATHERS_AND_EXPOSURE_ARE_OPERATIONAL(
                 "interference_channel_feathers_and_exposure_are_operational", 60) {
             @Override

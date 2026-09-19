@@ -13,6 +13,7 @@ public final class WingAvatarRegistry {
 
     public static void beginFrame() {
         ROOTS.clear();
+        org.academy.api.client.render.vfxgraph.shape.HumanoidSurfacePose.beginFrame();
     }
 
     public static void capture(int entityId, Matrix4f root) {

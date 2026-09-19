@@ -34,7 +34,7 @@ public final class EntityRenderers {
         event.registerEntityRenderer(EntityTypes.ARC_EFFECT.get(), ArcEffectRenderer::new);
         event.registerEntityRenderer(EntityTypes.DARKMATTER_CUT_SLASH.get(), DarkmatterCutSlashRenderer::new);
         event.registerEntityRenderer(EntityTypes.DARKMATTER_FEATHER_PROJECTILE.get(),
-                context -> new ThrownItemRenderer<>(context, 0.45f, true));
+                net.minecraft.client.renderer.entity.NoopRenderer::new);
         event.registerEntityRenderer(EntityTypes.DARKMATTER_CREATURE_PROJECTILE.get(),
                 context -> new ThrownItemRenderer<>(context, 0.35f, true));
         event.registerEntityRenderer(EntityTypes.DARKMATTER_SPEAR_PROJECTILE.get(),

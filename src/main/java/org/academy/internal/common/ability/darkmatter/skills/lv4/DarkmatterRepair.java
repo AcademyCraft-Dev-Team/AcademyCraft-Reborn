@@ -16,6 +16,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
+import org.academy.api.server.ability.DarkmatterGraphEffects;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -219,17 +220,23 @@ public final class DarkmatterRepair extends Skill {
                 }
                 var pulse = PRODUCTIVE_PULSES.getOrDefault(player.getUUID(), 0) + 1;
                 var changed = false;
+                int visualParts = 0;
                 if (missingHealth > 0.0f) {
-                    changed |= HealthRecovery.restore(player, healingAmount(
+                    boolean healed = HealthRecovery.restore(player, healingAmount(
                             snapshot.alphaRatio(), milestone, outputMultiplier, player.getMaxHealth())) > 0.0f;
+                    changed |= healed;
+                    if (healed) visualParts |= org.academy.api.common.vfx.RepairVisualParts.BODY;
                 }
                 var repaired = false;
                 if (hasAlphaWork) {
                     var fraction = repairFraction(phase.alpha(), milestone) * outputMultiplier;
                     var count = repairTargetCount(phase.gamma() > 0.0f, milestone);
                     for (var index = 0; index < Math.min(count, damagedEquipment.size()); index++) {
-                        repaired |= DarkmatterItemUtil.repairIntegrity(
-                                damagedEquipment.get(index), fraction);
+                        var stack = damagedEquipment.get(index);
+                        if (DarkmatterItemUtil.repairIntegrity(stack, fraction)) {
+                            repaired = true;
+                            visualParts |= org.academy.api.common.vfx.RepairVisualParts.visibleSlot(player, stack);
+                        }
                     }
                     changed |= repaired;
                 }
@@ -241,13 +248,11 @@ public final class DarkmatterRepair extends Skill {
                     changed |= player.getAbsorptionAmount() > before;
                 }
                 if (hasBetaWork && harmful != null) {
-                    if (removesHarmfulEffect(pulse, milestone)) {
-                        changed |= player.removeEffect(harmful.getEffect());
-                    } else {
-                        changed |= shortenEffect(
-                                player, harmful,
-                                effectReductionTicks(phase.beta(), milestone));
-                    }
+                    boolean cleansed = removesHarmfulEffect(pulse, milestone)
+                            ? player.removeEffect(harmful.getEffect())
+                            : shortenEffect(player, harmful, effectReductionTicks(phase.beta(), milestone));
+                    changed |= cleansed;
+                    if (cleansed) visualParts |= org.academy.api.common.vfx.RepairVisualParts.BODY;
                 }
                 if (!changed) {
                     productive[0] = false;
@@ -263,6 +268,7 @@ public final class DarkmatterRepair extends Skill {
                 }
                 PRODUCTIVE_PULSES.put(player.getUUID(), pulse);
                 productive[0] = true;
+                DarkmatterGraphEffects.repair(player, visualParts);
                 player.getInventory().setChanged();
             }, true);
             return executed && productive[0];

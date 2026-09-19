@@ -145,6 +145,7 @@ public final class AcademyCraftClient {
         TemporalImmunitySyncPacket.initClient();
         SpawnVfxGraphPacket.initClient();
         SkillVfxPacket.initClient();
+        org.academy.internal.common.network.DarkmatterVisualPacket.initClient();
         ShockwaveVfx.register();
         GlowCircleVfx.register();
         ProficiencyPolicy.initClient();
@@ -466,6 +467,7 @@ public final class AcademyCraftClient {
         AtlasManager.INSTANCE.closeAll();
         SpacialExcisionVfxClient.close();
         PostEffect.close();
+        org.academy.internal.client.render.vfx.InterferenceFieldClient.close();
         GlowEffect.getInstance().close();
         VfxManager.INSTANCE.close();
         VfxGraphManager.INSTANCE.close();

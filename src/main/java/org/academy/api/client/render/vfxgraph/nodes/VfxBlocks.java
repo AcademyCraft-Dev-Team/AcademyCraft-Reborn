@@ -148,6 +148,8 @@ public final class VfxBlocks {
     );
 
     public static void registerAll(NodeRegistry metadata, VfxBlockRegistry blocks) {
+        metadata.register(type("vfx.block.material_sheets", "spawn", "Material Sheets / Sampled Surface", MaterialSheetEmitter.properties()));
+        blocks.register("vfx.block.material_sheets", (block, ports) -> MaterialSheetEmitter.create(block));
         metadata.register(type("vfx.block.iron_sand", "spawn", "Iron Sand / Granular Field and Embedded Currents",
                 IronSandEmitter.properties()));
         blocks.register("vfx.block.iron_sand", IronSandEmitter::create);

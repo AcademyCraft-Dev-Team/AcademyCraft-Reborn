@@ -15,6 +15,7 @@ import org.academy.api.client.render.vfxgraph.render.RenderSpec;
 import org.academy.api.client.render.vfxgraph.render.VfxGraphRenderer;
 import org.academy.api.client.render.vfxgraph.render.WorldTransform;
 import org.academy.api.client.render.vfxgraph.shape.SurfaceProjector;
+import org.academy.api.client.render.vfxgraph.shape.SurfaceSampler;
 import org.academy.api.client.render.vfxgraph.arc.EffectArcSource;
 import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
 import org.academy.api.client.render.vfxgraph.sim.VfxSimulator;
@@ -134,6 +135,10 @@ public final class GraphEffect {
     /** Supplies an emitter-local projection surface to container simulation blocks. */
     public void setSurfaceProjector(String name, SurfaceProjector surface) {
         if (systemSimulator != null) systemSimulator.setSurfaceProjector(name, surface);
+    }
+
+    public void setSurfaceSampler(String name, SurfaceSampler sampler) {
+        if (systemSimulator != null) systemSimulator.setSurfaceSampler(name, sampler);
     }
 
     public void setArcSource(String name, EffectArcSource source) {

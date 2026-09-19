@@ -33,6 +33,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(LevelRenderer.class)
 public abstract class MixinLevelRenderer {
+    @Inject(method = "render", at = @At("HEAD"))
+    private void academy$beginDirectionalFields(CallbackInfo ci) {
+        org.academy.internal.client.render.vfx.InterferenceFieldClient.beginFrame();
+    }
     @Inject(
             // 在 iris$endLevelRender 之后调用以兼容 Iris 喵
             order = Integer.MAX_VALUE,
@@ -72,6 +76,10 @@ public abstract class MixinLevelRenderer {
         SpacialExcisionVfxClient.prepareSourceValidation();
         PostEffect.pre();
         SpacialExcisionVfxClient.renderPost();
+        org.academy.api.client.render.post.WorldSurfaceMasks.renderEntities();
+        org.academy.api.client.render.post.DirectionalFieldRenderer.render(cameraState.pos,
+                cameraState.viewRotationMatrix, cameraState.projectionMatrix,
+                org.academy.internal.client.render.vfx.InterferenceFieldClient.areas());
         GlowEffect.getInstance().process();
         PostEffect.post();
     }

@@ -1085,4 +1085,8 @@ public final class PacketTypes {
 
     private PacketTypes() {
     }
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, DarkmatterVisualPacket>>
+            DARKMATTER_VISUAL = PACKET_TYPES.register("darkmatter_visual",
+            () -> new PacketType<>(DarkmatterVisualPacket.class, DarkmatterVisualPacket.CODEC));
 }

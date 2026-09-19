@@ -1,0 +1,11 @@
+allprojects {
+    afterEvaluate {
+        neoForge.runs.named('clientDev') {
+            sourceSet.set(sourceSets.editor)
+            gameDirectory.set(file('run/ability-vfx'))
+            systemProperty 'academy.interferenceFieldSmoke', 'true'
+            systemProperty 'academy.interferenceFieldOutput', file('docs/vfx/darkmatter_interference_field').absolutePath
+            programArguments.addAll('--width', '1920', '--height', '1080')
+        }
+    }
+}
