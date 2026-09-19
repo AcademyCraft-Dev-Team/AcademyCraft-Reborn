@@ -100,6 +100,7 @@ public final class AcademyCraftServer {
         ResolveService.init(musicConfig);
         MusicAccountPackets.initServer();
         PlayerLeftClickSwingPacket.initServer();
+        org.academy.internal.common.world.item.CoinItem.initServer();
         MagneticHookActionPacket.initServer();
         AbilityProgramManager.initServer();
     }

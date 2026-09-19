@@ -9,6 +9,15 @@ class HealthLossGuardsTest {
         assertEquals(10, result.health(), 1e-8);
         assertEquals(5, result.absorbed(), 1e-8);
         assertEquals(4.5, result.cost(), 1e-8);
+        assertFalse(result.fullyAbsorbed());
+    }
+
+    @Test void fullBudgetAbsorbsTheWholeLoss() {
+        var result = HealthLossGuards.resolve(20, 5, 13.5, 0.9);
+        assertEquals(20, result.health(), 1e-8);
+        assertEquals(15, result.absorbed(), 1e-8);
+        assertEquals(13.5, result.cost(), 1e-8);
+        assertTrue(result.fullyAbsorbed());
     }
     @Test void lethalOverkillPaysOnlyForActualHealthLoss() {
         var result = HealthLossGuards.resolve(20, -200, 100, 0.9);

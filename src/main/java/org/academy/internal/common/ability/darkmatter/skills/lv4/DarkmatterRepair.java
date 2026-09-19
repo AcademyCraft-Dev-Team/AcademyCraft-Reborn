@@ -213,12 +213,11 @@ public final class DarkmatterRepair extends Skill {
             }
             var productive = new boolean[1];
             var executed = skill.executeContinuous(player, _ -> 0.0f, (context, _) -> {
-                if (!system.getDarkmatterResourceManager().consume(
-                        player, cost, skill, skill.getIterationTicks(player))) return;
                 var outputMultiplier = 1.0f;
                 if (phase.gamma() > 0.0f) {
                     outputMultiplier *= DarkmatterSixWings.Server.gammaMagnitudeMultiplier(player);
                 }
+                var pulse = PRODUCTIVE_PULSES.getOrDefault(player.getUUID(), 0) + 1;
                 var changed = false;
                 if (missingHealth > 0.0f) {
                     changed |= HealthRecovery.restore(player, healingAmount(
@@ -241,7 +240,6 @@ public final class DarkmatterRepair extends Skill {
                             absorptionCap, before + 0.5f + phase.alpha() * 0.5f));
                     changed |= player.getAbsorptionAmount() > before;
                 }
-                var pulse = PRODUCTIVE_PULSES.getOrDefault(player.getUUID(), 0) + 1;
                 if (hasBetaWork && harmful != null) {
                     if (removesHarmfulEffect(pulse, milestone)) {
                         changed |= player.removeEffect(harmful.getEffect());
@@ -251,9 +249,21 @@ public final class DarkmatterRepair extends Skill {
                                 effectReductionTicks(phase.beta(), milestone));
                     }
                 }
-                if (changed) PRODUCTIVE_PULSES.put(player.getUUID(), pulse);
-                productive[0] = changed;
-                if (changed) player.getInventory().setChanged();
+                if (!changed) {
+                    productive[0] = false;
+                    return;
+                }
+                // Charge once per productive pulse after the work actually landed: idle ticks and
+                // rejected heal/repair attempts must not drain MP, and repairing equipment while
+                // also restoring health still costs a single payment.
+                if (!system.getDarkmatterResourceManager().consume(
+                        player, cost, skill, skill.getIterationTicks(player))) {
+                    productive[0] = false;
+                    return;
+                }
+                PRODUCTIVE_PULSES.put(player.getUUID(), pulse);
+                productive[0] = true;
+                player.getInventory().setChanged();
             }, true);
             return executed && productive[0];
         }

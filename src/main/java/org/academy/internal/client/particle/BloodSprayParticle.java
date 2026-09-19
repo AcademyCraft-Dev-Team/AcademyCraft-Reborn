@@ -24,6 +24,9 @@ public final class BloodSprayParticle extends SingleQuadParticle {
                                double normalX, double normalY, double normalZ,
                                SpriteSet sprites, RandomSource random) {
         super(level, x, y, z, 0.0, 0.0, 0.0, sprites.get(random));
+        // Surface stains must stay pinned; clear the random initial velocity added by the base
+        // constructor or they drift away from the block face before fading out.
+        setParticleSpeed(0.0, 0.0, 0.0);
         surfaceRotation = surfaceRotation(normalX, normalY, normalZ);
         lifetime = MIN_LIFETIME + random.nextInt(RANDOM_LIFETIME);
         quadSize = 0.8f + random.nextFloat() * 0.6f;

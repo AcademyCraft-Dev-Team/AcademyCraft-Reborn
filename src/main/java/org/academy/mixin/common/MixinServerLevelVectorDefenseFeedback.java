@@ -4,6 +4,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
+import org.academy.api.server.damage.DefenseFeedbackSuppression;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorDefenseFeedbackTickets;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.spongepowered.asm.mixin.Mixin;
@@ -21,6 +22,7 @@ public abstract class MixinServerLevelVectorDefenseFeedback {
     ) {
         if (entity instanceof ServerPlayer player
                 && (VectorReflection.Server.usesFullInstanceProtection(player)
+                || DefenseFeedbackSuppression.isSuppressed(player)
                 || VectorDefenseFeedbackTickets.shouldSuppressDamage(player, source))) {
             ci.cancel();
         }
@@ -31,6 +33,7 @@ public abstract class MixinServerLevelVectorDefenseFeedback {
         if ((state == 2 || state == 3)
                 && entity instanceof ServerPlayer player
                 && (VectorReflection.Server.usesFullInstanceProtection(player)
+                || DefenseFeedbackSuppression.isSuppressed(player)
                 || VectorDefenseFeedbackTickets.shouldSuppressEntityEvent(player))) {
             ci.cancel();
         }

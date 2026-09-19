@@ -58,7 +58,7 @@ import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.*;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.server.ability.AbilityBlockDrops;
+import org.academy.api.common.util.LevelUtil;
 import org.academy.api.server.ability.AbilityEffectPolicy;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vfx.SkillVfxService;
@@ -959,7 +959,7 @@ public class KineticEnergyApplied extends Skill {
             if (state.getDestroySpeed(level, pos) < 0.0f) {
                 return clearFluid(level, player, pos, state);
             }
-            return AbilityBlockDrops.destroyBlock(level, pos, dropBlocks, player);
+            return LevelUtil.destroyBlockSilently(level, pos, dropBlocks, player);
         }
 
         private boolean clearFluid(ServerLevel level, ServerPlayer player, BlockPos pos, BlockState state) {

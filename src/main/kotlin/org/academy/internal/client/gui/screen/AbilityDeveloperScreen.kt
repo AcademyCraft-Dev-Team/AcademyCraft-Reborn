@@ -1413,7 +1413,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
         )
 
         cover.column("cover_center") {
-            gravity(Gravity.CENTER)
+            sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
             add("skill_wid", object : FrameLayoutWidget() {
                 override fun render(context: Canvas) {
                     val finalAlpha = alpha * context.accumulatedAlpha
@@ -1436,6 +1436,8 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
 
             column("text_area") {
                 gravity(Gravity.CENTER)
+                setGravity(Gravity.CENTER)
+                weight(1f)
                 if (isLearned) {
                     text(skill.translatedName, "name") {
                         textSize = 10f
@@ -1453,10 +1455,16 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                         textSize = 8f
                         rgb(0.63f, 0.88f, 1.0f)
                         gravity(Gravity.CENTER)
+                        this.gravity = Gravity.CENTER
+                        width(240f)
                     }
 
                     val details = standaloneColumn(spacing = 2f) {
                         sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                        lp {
+                            paddingLeft = 6f
+                            paddingRight = 6f
+                        }
                     }
 
                     details.text(skill.translatedDescription, "desc") {
@@ -1478,7 +1486,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                                 "$marker $threshold  ${Language.getInstance().getOrDefault(key)}",
                                 "proficiency_$threshold"
                             ) {
-                                textSize = 8f
+                                textSize = 7f
                                 singleLine = false
                                 gravity(Gravity.LEFT)
                                 width(228f)
@@ -1494,7 +1502,7 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                                 L10n["academy.ability_developer.proficiency_restricted"],
                                 "proficiency_restricted"
                             ) {
-                                textSize = 8f
+                                textSize = 7f
                                 singleLine = false
                                 rgb(1.0f, 0.38f, 0.3f)
                                 gravity(Gravity.LEFT)
@@ -1504,7 +1512,10 @@ class AbilityDeveloperScreen(val developmentSource: DevelopmentSource) : UiScree
                     }
                     scrollPanel(name = "details", content = details) {
                         gravity(Gravity.CENTER)
-                        size(240f, 104f)
+                        width(240f)
+                        height(0f)
+                        weight(1f)
+                        lp { marginBottom = 4f }
                     }
                 } else {
                     text("${skill.translatedName} (LV ${skill.recommendedLevel.levelCode})", "lvl_name") {

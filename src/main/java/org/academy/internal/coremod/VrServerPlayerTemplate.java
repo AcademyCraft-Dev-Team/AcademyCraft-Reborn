@@ -12,6 +12,7 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import org.academy.api.common.ability.ImagineBreakerHealthAccess;
+import org.academy.api.server.ability.VectorDefenseProtection;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 
@@ -45,7 +46,7 @@ public class VrServerPlayerTemplate extends ServerPlayer implements ImagineBreak
     }
 
     private boolean academy$reflects(MobEffectInstance effect) {
-        return VectorReflection.Server.isActive(this) && effect != null
+        return VectorDefenseProtection.usesFilterBackedProtection(this) && effect != null
                 && ReflectionFilter.shouldReflectEffect(this, effect);
     }
 
@@ -299,7 +300,7 @@ public class VrServerPlayerTemplate extends ServerPlayer implements ImagineBreak
     @Override
     public boolean hasEffect(Holder<MobEffect> effect) {
         var instance = super.getEffect(effect);
-        return !VectorReflection.Server.isActive(this)
+        return !VectorDefenseProtection.usesFilterBackedProtection(this)
                 ? super.hasEffect(effect)
                 : instance != null && !ReflectionFilter.shouldReflectEffect(this, instance);
     }
@@ -307,7 +308,7 @@ public class VrServerPlayerTemplate extends ServerPlayer implements ImagineBreak
     @Override
     public MobEffectInstance getEffect(Holder<MobEffect> effect) {
         var instance = super.getEffect(effect);
-        return VectorReflection.Server.isActive(this)
+        return VectorDefenseProtection.usesFilterBackedProtection(this)
                 && instance != null && ReflectionFilter.shouldReflectEffect(this, instance)
                 ? null : instance;
     }

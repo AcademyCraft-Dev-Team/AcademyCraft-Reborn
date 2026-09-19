@@ -18,6 +18,8 @@ import org.academy.api.client.util.QuantumUtil;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.entitycontrol.AttackDecision;
 import org.academy.api.common.entitycontrol.MentalPerceptionApi;
+import org.academy.api.server.ability.VectorDefenseProtection;
+import org.academy.api.server.damage.DefenseFeedbackSuppression;
 import org.academy.api.server.entity.SurvivalDefense;
 import org.academy.api.server.entity.SurvivalDefenseAspect;
 import org.academy.internal.common.ability.Skills;
@@ -342,7 +344,7 @@ public abstract class MixinLivingEntity {
             CallbackInfoReturnable<Boolean> cir
     ) {
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.isActive(player)
+                && VectorDefenseProtection.usesFilterBackedProtection(player)
                 && effect != null && ReflectionFilter.shouldReflectEffect(player, effect)) {
             cir.setReturnValue(false);
         }
@@ -359,7 +361,7 @@ public abstract class MixinLivingEntity {
             CallbackInfo ci
     ) {
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.isActive(player)
+                && VectorDefenseProtection.usesFilterBackedProtection(player)
                 && effect != null && ReflectionFilter.shouldReflectEffect(player, effect)) {
             ci.cancel();
         }
@@ -371,7 +373,7 @@ public abstract class MixinLivingEntity {
             CallbackInfoReturnable<Boolean> cir
     ) {
         if (!cir.getReturnValue() || !((Object) this instanceof ServerPlayer player)
-                || !VectorReflection.Server.isActive(player)) return;
+                || !VectorDefenseProtection.usesFilterBackedProtection(player)) return;
         if (ReflectionFilter.shouldReflectEffect(player, new MobEffectInstance(effect))) {
             cir.setReturnValue(false);
         }
@@ -384,7 +386,7 @@ public abstract class MixinLivingEntity {
     ) {
         var instance = cir.getReturnValue();
         if (instance != null && (Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.isActive(player)
+                && VectorDefenseProtection.usesFilterBackedProtection(player)
                 && ReflectionFilter.shouldReflectEffect(player, instance)) {
             cir.setReturnValue(null);
         }
@@ -401,7 +403,9 @@ public abstract class MixinLivingEntity {
             CallbackInfo ci
     ) {
         if ((Object) this instanceof ServerPlayer player
-                && (VectorReflection.Server.isActive(player) || AtmosphereShield.Server.isActive(player))) {
+                && (VectorDefenseProtection.usesFilterBackedProtection(player)
+                || AtmosphereShield.Server.isActive(player)
+                || DefenseFeedbackSuppression.isSuppressed(player))) {
             ci.cancel();
         }
     }
@@ -434,7 +438,8 @@ public abstract class MixinLivingEntity {
     @Inject(method = "animateHurt", at = @At("HEAD"), cancellable = true)
     private void academy$protectVectorHurtAnimation(float direction, CallbackInfo ci) {
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.usesFullInstanceProtection(player)) {
+                && (VectorReflection.Server.usesFullInstanceProtection(player)
+                || DefenseFeedbackSuppression.isSuppressed(player))) {
             player.hurtTime = 0;
             player.hurtDuration = 0;
             player.hurtMarked = false;
@@ -445,9 +450,35 @@ public abstract class MixinLivingEntity {
     @Inject(method = "handleDamageEvent", at = @At("HEAD"), cancellable = true)
     private void academy$protectVectorDamageEvent(DamageSource source, CallbackInfo ci) {
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.usesFullInstanceProtection(player)) {
+                && (VectorReflection.Server.usesFullInstanceProtection(player)
+                || DefenseFeedbackSuppression.isSuppressed(player))) {
             VectorReflection.Server.maintainProtection(player);
             ci.cancel();
+        }
+    }
+
+    @Inject(method = "playHurtSound", at = @At("HEAD"), cancellable = true)
+    private void academy$suppressDefenseHurtSound(DamageSource source, CallbackInfo ci) {
+        if (DefenseFeedbackSuppression.isSuppressed((LivingEntity) (Object) this)) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(
+            method = "hurtServer(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/damagesource/DamageSource;F)Z",
+            at = @At("TAIL")
+    )
+    private void academy$clearSuppressedHurtState(
+            ServerLevel level,
+            DamageSource source,
+            float damage,
+            CallbackInfoReturnable<Boolean> cir
+    ) {
+        var entity = (LivingEntity) (Object) this;
+        if (DefenseFeedbackSuppression.isSuppressed(entity)) {
+            entity.hurtTime = 0;
+            entity.hurtDuration = 0;
+            entity.hurtMarked = false;
         }
     }
 
@@ -489,7 +520,7 @@ public abstract class MixinLivingEntity {
             CallbackInfoReturnable<Boolean> cir
     ) {
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.isActive(player)
+                && VectorDefenseProtection.usesFilterBackedProtection(player)
                 && effect != null && ReflectionFilter.shouldReflectEffect(player, effect)) {
             cir.setReturnValue(false);
         }

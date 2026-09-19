@@ -14,6 +14,7 @@ import org.academy.api.server.ability.AbilityResourceAccount;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.SkillAvailability;
 import org.academy.api.server.ability.electromaster.IronSandResourceService;
+import org.academy.api.server.damage.DefenseFeedbackSuppression;
 import org.academy.api.server.damage.HealthLossGuards;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
@@ -94,7 +95,7 @@ public final class IronSandResourceManager implements AbilitySubsystem, IronSand
             else {
                 HealthLossGuards.set(player, DEFENSE_SOURCE, account(player),
                         IronSandTuning.massCostMultiplier(Skills.IRON_SAND_ARSENAL.get().getEffectiveProficiencyMilestone(player)), true,
-                        _ -> IronSandArsenal.Server.absorbed(player, PlayerAttributeRuntime.currentDamageSource()));
+                        resolution -> onAbsorbed(player, resolution));
                 IronSandArsenal.Server.interceptNearby(player);
             }
         }
@@ -178,9 +179,14 @@ public final class IronSandResourceManager implements AbilitySubsystem, IronSand
         }
         HealthLossGuards.set(player, DEFENSE_SOURCE, account(player), IronSandTuning.massCostMultiplier(
                 Skills.IRON_SAND_ARSENAL.get().getEffectiveProficiencyMilestone(player)), enabled,
-                _ -> IronSandArsenal.Server.absorbed(player, PlayerAttributeRuntime.currentDamageSource()));
+                resolution -> onAbsorbed(player, resolution));
         IronSandArsenal.Server.syncData(player);
         return true;
+    }
+
+    private static void onAbsorbed(ServerPlayer player, HealthLossGuards.Resolution resolution) {
+        if (resolution.fullyAbsorbed()) DefenseFeedbackSuppression.suppress(player);
+        IronSandArsenal.Server.absorbed(player, PlayerAttributeRuntime.currentDamageSource());
     }
 
     private boolean maintainDefense(ServerPlayer player) {

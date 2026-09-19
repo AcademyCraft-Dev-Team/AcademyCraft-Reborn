@@ -9,6 +9,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.portal.TeleportTransition;
 import org.academy.api.common.ability.ImagineBreakerHealthAccess;
+import org.academy.api.server.damage.DefenseFeedbackSuppression;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
@@ -80,6 +81,11 @@ public abstract class MixinServerPlayer extends Player implements ImagineBreaker
         if (EntityMotionGuard.shouldBlockTeleport((ServerPlayer) (Object) this)) {
             cir.setReturnValue(false);
         }
+    }
+
+    @Inject(method = "indicateDamage(DD)V", at = @At("HEAD"), cancellable = true)
+    private void academy$suppressDefenseHurtShake(double xd, double zd, CallbackInfo ci) {
+        if (DefenseFeedbackSuppression.isSuppressed((ServerPlayer) (Object) this)) ci.cancel();
     }
 
     @SuppressWarnings("UnnecessarySuperQualifier")

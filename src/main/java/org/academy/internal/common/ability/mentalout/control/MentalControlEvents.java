@@ -179,6 +179,7 @@ public final class MentalControlEvents {
         PlayerControlSessionManager.clear();
         MindDestruction.clear();
         MentalResistanceManager.clear();
+        org.academy.api.common.entitycontrol.MentalImmunity.clear();
         PrecisionOperationRuntime.clear(event.getServer());
     }
 }

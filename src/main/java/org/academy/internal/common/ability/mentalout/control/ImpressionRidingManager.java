@@ -49,11 +49,11 @@ public final class ImpressionRidingManager {
     public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
         if (event.isCanceled() || event.getHand() != InteractionHand.MAIN_HAND
                 || !(event.getEntity() instanceof ServerPlayer player)
-                || !player.isShiftKeyDown()
-                || !(event.getTarget() instanceof LivingEntity target)
-                || !hasControllerImpression(player, target)) {
+                || !player.isShiftKeyDown()) {
             return;
         }
+        var target = MultipartTargets.resolveLiving(event.getTarget());
+        if (target == null || !hasControllerImpression(player, target)) return;
         var result = requestMount(player, target);
         feedback(player, result.feedbackKey);
         event.setCanceled(true);

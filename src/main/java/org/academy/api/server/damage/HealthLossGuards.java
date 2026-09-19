@@ -23,16 +23,17 @@ public final class HealthLossGuards {
 
     private HealthLossGuards() {}
 
-    public record Resolution(double health, double absorbed, double cost) {}
+    public record Resolution(double health, double absorbed, double cost, boolean fullyAbsorbed) {}
 
     public static Resolution resolve(double current, double requested, double available, double costPerHealth) {
         if (!Double.isFinite(current) || !Double.isFinite(requested)
                 || !Double.isFinite(available) || !Double.isFinite(costPerHealth) || costPerHealth <= 0) {
-            return new Resolution(requested, 0, 0);
+            return new Resolution(requested, 0, 0, false);
         }
         var loss = Math.max(0, current - Math.max(0, requested));
         var absorbed = Math.min(loss, Math.max(0, available) / costPerHealth);
-        return new Resolution(Math.max(0, requested) + absorbed, absorbed, absorbed * costPerHealth);
+        return new Resolution(Math.max(0, requested) + absorbed, absorbed, absorbed * costPerHealth,
+                loss > 0 && absorbed + 1.0E-6 >= loss);
     }
 
     public static void set(LivingEntity subject, Identifier source, AbilityResourceAccount account,

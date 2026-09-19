@@ -174,6 +174,28 @@ public class LevelUtil {
         );
     }
 
+    /**
+     * Breaks a single block with ability attribution and drops, without the vanilla 2001
+     * destroy effect (block particles and break sound).
+     */
+    public static boolean destroyBlockSilently(
+            Level level,
+            BlockPos pos,
+            boolean dropBlock,
+            @Nullable ServerPlayer breaker
+    ) {
+        var state = level.getBlockState(pos);
+        if (state.isAir() || !canAbilityBreak(level, pos, state, breaker)) return false;
+        try (var ignored = AbilityBlockDrops.capture(breaker)) {
+            if (dropBlock || breaker != null && SpatialStorageService.hasEnabledUnit(breaker)) {
+                var blockEntity = state.hasBlockEntity() ? level.getBlockEntity(pos) : null;
+                Block.dropResources(state, level, pos, blockEntity, breaker, ItemStack.EMPTY);
+            }
+            removeBlockAndUnsupportedNeighbors(level, pos, state, Blocks.AIR.defaultBlockState(), breaker, dropBlock);
+        }
+        return true;
+    }
+
     private static Pair<Boolean, Double> destroyBlocksAlongPathInternal(
             Level level,
             Vec3 start,
@@ -377,7 +399,7 @@ public class LevelUtil {
                         if (!handled) Block.dropResources(blockState, level, pos, blockEntity, breaker, ItemStack.EMPTY);
                     }
                     if (removeUnsupportedBlocksSilently) {
-                        removeBlockAndUnsupportedNeighbors(level, pos, blockState, air, breaker);
+                        removeBlockAndUnsupportedNeighbors(level, pos, blockState, air, breaker, dropBlock);
                     } else {
                         level.setBlock(pos, air, Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
                         if (spawnParticles) {
@@ -394,7 +416,8 @@ public class LevelUtil {
             BlockPos pos,
             BlockState state,
             BlockState air,
-            @Nullable ServerPlayer breaker
+            @Nullable ServerPlayer breaker,
+            boolean dropNeighbors
     ) {
         var removedBlocks = new ArrayList<RemovedBlock>();
         var pending = new ArrayDeque<BlockPos>();
@@ -412,7 +435,7 @@ public class LevelUtil {
             var candidateState = level.getBlockState(candidate);
             if (candidateState.isAir() || candidateState.canSurvive(level, candidate)) continue;
             if (!canAbilityBreak(level, candidate, candidateState, breaker)) continue;
-            if (breaker != null && SpatialStorageService.hasEnabledUnit(breaker)) {
+            if (dropNeighbors || breaker != null && SpatialStorageService.hasEnabledUnit(breaker)) {
                 Block.dropResources(candidateState, level, candidate, level.getBlockEntity(candidate), breaker, ItemStack.EMPTY);
             }
             if (!level.setBlock(candidate, air, SILENT_BLOCK_UPDATE_FLAGS)) continue;

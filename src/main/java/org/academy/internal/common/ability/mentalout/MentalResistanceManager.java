@@ -118,7 +118,8 @@ public final class MentalResistanceManager {
     }
 
     public static boolean isAutomaticallyResistant(LivingEntity subject) {
-        return subject != null && AUTOMATIC.remainingTicks(subject.getUUID(), subject.level().getGameTime()) > 0;
+        return subject != null && !org.academy.api.common.entitycontrol.MentalImmunity.isSuppressed(subject)
+                && AUTOMATIC.remainingTicks(subject.getUUID(), subject.level().getGameTime()) > 0;
     }
 
     public static boolean isResistant(LivingEntity subject) {
@@ -127,7 +128,7 @@ public final class MentalResistanceManager {
     }
 
     public static boolean isManuallyResistant(ServerPlayer subject) {
-        if (subject == null) return false;
+        if (subject == null || org.academy.api.common.entitycontrol.MentalImmunity.isSuppressed(subject)) return false;
         var until = RESISTANCE_UNTIL.getOrDefault(subject.getUUID(), Long.MIN_VALUE);
         if (until <= subject.level().getGameTime()) {
             RESISTANCE_UNTIL.remove(subject.getUUID(), until);
@@ -142,7 +143,7 @@ public final class MentalResistanceManager {
     }
 
     public static long remainingTicks(LivingEntity subject) {
-        if (subject == null) return 0L;
+        if (subject == null || org.academy.api.common.entitycontrol.MentalImmunity.isSuppressed(subject)) return 0L;
         var now = subject.level().getGameTime();
         var manual = subject instanceof ServerPlayer
                 ? Math.max(0L, RESISTANCE_UNTIL.getOrDefault(subject.getUUID(), now) - now) : 0L;
@@ -178,6 +179,7 @@ public final class MentalResistanceManager {
         AUTOMATIC.remove(entityId);
         CHALLENGES.remove(entityId);
         RESISTANCE_UNTIL.remove(entityId);
+        org.academy.api.common.entitycontrol.MentalImmunity.restore(entityId);
         for (var challenge : CHALLENGES.values()) challenge.exposures.remove(entityId);
     }
 

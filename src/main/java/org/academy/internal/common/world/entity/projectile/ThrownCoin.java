@@ -8,15 +8,20 @@ import net.minecraft.world.entity.projectile.ItemSupplier;
 import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.world.entity.EntityTypes;
+import org.academy.internal.common.world.item.CoinItem;
 import org.academy.internal.common.world.item.Items;
 
 public class ThrownCoin extends AbstractArrow implements ItemSupplier {
+    private static final String HEADS_TAG = "Heads";
     public int angle;
     public int angleOld;
+    private boolean heads;
 
     public ThrownCoin(EntityType<? extends AbstractArrow> entityType, Level level) {
         super(entityType, level);
@@ -46,6 +51,26 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
         angle++;
     }
 
+    public boolean isHeads() {
+        return heads;
+    }
+
+    public void setHeads(boolean heads) {
+        this.heads = heads;
+    }
+
+    @Override
+    protected void addAdditionalSaveData(ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putBoolean(HEADS_TAG, heads);
+    }
+
+    @Override
+    protected void readAdditionalSaveData(ValueInput input) {
+        super.readAdditionalSaveData(input);
+        heads = input.getBooleanOr(HEADS_TAG, false);
+    }
+
     @Override
     public ItemStack getItem() {
         return new ItemStack(Items.COIN);
@@ -60,9 +85,12 @@ public class ThrownCoin extends AbstractArrow implements ItemSupplier {
         if (level() instanceof ServerLevel serverLevel) {
             var droppedCoin = spawnAtLocation(serverLevel, getPickupItem(), 0.1F);
             var owner = getOwner();
-            if (droppedCoin != null && owner != null) {
-                droppedCoin.setTarget(owner.getUUID());
-                droppedCoin.setThrower(owner);
+            if (droppedCoin != null) {
+                droppedCoin.getPersistentData().putBoolean(CoinItem.HEADS_TAG, heads);
+                if (owner != null) {
+                    droppedCoin.setTarget(owner.getUUID());
+                    droppedCoin.setThrower(owner);
+                }
             }
             discard();
         }

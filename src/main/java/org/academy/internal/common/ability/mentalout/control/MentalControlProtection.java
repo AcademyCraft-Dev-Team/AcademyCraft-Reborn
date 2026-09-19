@@ -42,6 +42,7 @@ final class MentalControlProtection {
 
     private static @Nullable Kind kind(LivingEntity subject, boolean intervention) {
         if (subject == null) return Kind.IMMUNE_TAG;
+        if (org.academy.api.common.entitycontrol.MentalImmunity.isSuppressed(subject)) return null;
         if (subject instanceof DarkmatterBeetle) return Kind.DARKMATTER_NETWORK;
         if (org.academy.api.common.entitycontrol.MentalImmunity.isImmune(subject)) return Kind.IMMUNE_TAG;
         if (!intervention && MentalResistanceManager.isAutomaticallyResistant(subject)) return Kind.MENTAL_RESISTANCE;

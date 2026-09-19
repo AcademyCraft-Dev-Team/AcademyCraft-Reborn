@@ -9,6 +9,7 @@ import net.minecraft.world.entity.*;
 import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.entitycontrol.AttackDecision;
+import org.academy.api.server.damage.DefenseFeedbackSuppression;
 import org.academy.api.server.entity.SurvivalDefense;
 import org.academy.api.server.entity.SurvivalDefenseAspect;
 import org.academy.api.server.team.TeamRelations;
@@ -315,7 +316,8 @@ public abstract class MixinEntity {
     @Inject(method = "markHurt", at = @At("HEAD"), cancellable = true)
     private void academy$protectVectorDamageMarker(CallbackInfo ci) {
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.usesFullInstanceProtection(player)) {
+                && (VectorReflection.Server.usesFullInstanceProtection(player)
+                || DefenseFeedbackSuppression.isSuppressed(player))) {
             player.hurtMarked = false;
             ci.cancel();
         }

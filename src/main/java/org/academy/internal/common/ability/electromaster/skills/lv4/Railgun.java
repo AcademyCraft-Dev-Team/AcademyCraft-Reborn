@@ -65,7 +65,6 @@ import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 import org.academy.internal.common.world.entity.skill.RailgunRay;
-import org.academy.internal.common.world.item.CoinItem;
 import org.academy.internal.common.world.item.Items;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
@@ -322,39 +321,6 @@ public final class Railgun extends Skill {
         public static void onEndCharge(EndPacket packet) {
             var context = CONTEXT_MAP.get(packet.getPacketListener().getPlayer());
             if (context != null) context.release();
-        }
-
-        @SubscribePacket
-        public static void onThrowCoin(CoinItem.ThrowCoinPacket packet) {
-            var player = packet.getPacketListener().getPlayer();
-            if (!Skills.RAILGUN.get().isEnabled(player)) return;
-
-            var hand = findHeldAmmoHand(player, true);
-            if (hand == null) return;
-            var stack = player.getItemInHand(hand);
-            if (player.getCooldowns().isOnCooldown(stack)) return;
-            player.getCooldowns().addCooldown(stack, 5);
-            if (!player.isCreative()) stack.shrink(1);
-
-            var thrownCoin = new ThrownCoin(player.level(), player);
-            thrownCoin.setPos(player.getX(), player.getEyeY() - 0.1, player.getZ());
-            var initialVelocity = player.onGround()
-                    ? player.getDeltaMovement().multiply(2.25, 0, 2.25)
-                    : player.getDeltaMovement().multiply(1.5, 0, 1.5);
-            thrownCoin.setDeltaMovement(initialVelocity.add(0, 0.5, 0));
-            thrownCoin.setYRot(player.getYRot());
-            thrownCoin.setXRot(player.getXRot());
-            thrownCoin.yRotO = player.getYRot();
-            thrownCoin.xRotO = player.getXRot();
-            player.level().addFreshEntity(thrownCoin);
-            player.level().playSound(
-                    null,
-                    player,
-                    SoundEvents.COIN.get(),
-                    SoundSource.PLAYERS,
-                    1.0f,
-                    1.0f
-            );
         }
 
         private static void onCoinReturned(ServerPlayer player) {
