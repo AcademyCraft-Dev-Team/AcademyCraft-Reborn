@@ -10,11 +10,41 @@
       "default": {
         "type": "CURVE",
         "curve": [
-          { "t": 0, "v": 0.04, "it": 0, "ot": 0, "i": "SMOOTH" },
-          { "t": 0.045, "v": 1, "it": 0, "ot": 0, "i": "SMOOTH" },
-          { "t": 0.38, "v": 0.82, "it": 0, "ot": 0, "i": "SMOOTH" },
-          { "t": 0.74, "v": 0.34, "it": 0, "ot": 0, "i": "SMOOTH" },
-          { "t": 1, "v": 0, "it": 0, "ot": 0, "i": "SMOOTH" }
+          {
+            "t": 0,
+            "v": 0.04,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.045,
+            "v": 1,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.38,
+            "v": 0.82,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.74,
+            "v": 0.34,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1,
+            "v": 0,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          }
         ]
       }
     },
@@ -25,10 +55,34 @@
       "default": {
         "type": "CURVE",
         "curve": [
-          { "t": 0, "v": 0.68, "it": 0, "ot": 0, "i": "SMOOTH" },
-          { "t": 0.14, "v": 1, "it": 0, "ot": 0, "i": "SMOOTH" },
-          { "t": 0.68, "v": 0.92, "it": 0, "ot": 0, "i": "SMOOTH" },
-          { "t": 1, "v": 0.46, "it": 0, "ot": 0, "i": "SMOOTH" }
+          {
+            "t": 0,
+            "v": 0.68,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.14,
+            "v": 1,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.68,
+            "v": 0.92,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1,
+            "v": 0.46,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          }
         ]
       }
     },
@@ -39,10 +93,34 @@
       "default": {
         "type": "CURVE",
         "curve": [
-          { "t": 0, "v": 0, "it": 0, "ot": 0, "i": "SMOOTH" },
-          { "t": 0.1, "v": 0.82, "it": 0, "ot": 0, "i": "SMOOTH" },
-          { "t": 0.42, "v": 0.58, "it": 0, "ot": 0, "i": "SMOOTH" },
-          { "t": 1, "v": 0, "it": 0, "ot": 0, "i": "SMOOTH" }
+          {
+            "t": 0,
+            "v": 0,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.1,
+            "v": 0.82,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.42,
+            "v": 0.58,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1,
+            "v": 0,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          }
         ]
       }
     },
@@ -53,10 +131,34 @@
       "default": {
         "type": "CURVE",
         "curve": [
-          { "t": 0, "v": 0.5, "it": 0, "ot": 0, "i": "SMOOTH" },
-          { "t": 0.24, "v": 0.88, "it": 0, "ot": 0, "i": "SMOOTH" },
-          { "t": 0.7, "v": 1.1, "it": 0, "ot": 0, "i": "SMOOTH" },
-          { "t": 1, "v": 1.26, "it": 0, "ot": 0, "i": "SMOOTH" }
+          {
+            "t": 0,
+            "v": 0.5,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.24,
+            "v": 0.88,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.7,
+            "v": 1.1,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1,
+            "v": 1.26,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          }
         ]
       }
     },
@@ -67,10 +169,34 @@
       "default": {
         "type": "CURVE",
         "curve": [
-          { "t": 0, "v": 0, "it": 0, "ot": 0, "i": "SMOOTH" },
-          { "t": 0.055, "v": 1, "it": 0, "ot": 0, "i": "SMOOTH" },
-          { "t": 0.56, "v": 0.62, "it": 0, "ot": 0, "i": "SMOOTH" },
-          { "t": 1, "v": 0, "it": 0, "ot": 0, "i": "SMOOTH" }
+          {
+            "t": 0,
+            "v": 0,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.055,
+            "v": 1,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.56,
+            "v": 0.62,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1,
+            "v": 0,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          }
         ]
       }
     },
@@ -81,10 +207,34 @@
       "default": {
         "type": "CURVE",
         "curve": [
-          { "t": 0, "v": 0.72, "it": 0, "ot": 0, "i": "SMOOTH" },
-          { "t": 0.2, "v": 1, "it": 0, "ot": 0, "i": "SMOOTH" },
-          { "t": 0.72, "v": 0.76, "it": 0, "ot": 0, "i": "SMOOTH" },
-          { "t": 1, "v": 0.34, "it": 0, "ot": 0, "i": "SMOOTH" }
+          {
+            "t": 0,
+            "v": 0.72,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.2,
+            "v": 1,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.72,
+            "v": 0.76,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1,
+            "v": 0.34,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          }
         ]
       }
     }
@@ -101,80 +251,152 @@
           "id": "blade_core_left",
           "type": "vfx.block.spawn_burst",
           "properties": {
-            "count": "43", "lifetime": "0.26", "size": "0.026",
-            "color": "0.9,0.91,0.92,0.76", "vx": "-0.62", "vy": "0.12", "vz": "0",
-            "layer": "blade", "shape": "box",
-            "half_x": "0.58", "half_y": "2.48", "half_z": "0.006", "origin_y": "2.5"
+            "count": "43",
+            "lifetime": "0.26",
+            "size": "0.026",
+            "color": "0.9,0.91,0.92,0.76",
+            "vx": "-0.899",
+            "vy": "0.174",
+            "vz": "0",
+            "layer": "blade",
+            "shape": "box",
+            "half_x": "0.58",
+            "half_y": "2.48",
+            "half_z": "0.006",
+            "origin_y": "2.5"
           }
         },
         {
           "id": "blade_core_right",
           "type": "vfx.block.spawn_burst",
           "properties": {
-            "count": "43", "lifetime": "0.26", "size": "0.026",
-            "color": "0.9,0.91,0.92,0.76", "vx": "0.62", "vy": "0.12", "vz": "0",
-            "layer": "blade", "shape": "box",
-            "half_x": "0.58", "half_y": "2.48", "half_z": "0.006", "origin_y": "2.5"
+            "count": "43",
+            "lifetime": "0.26",
+            "size": "0.026",
+            "color": "0.9,0.91,0.92,0.76",
+            "vx": "0.899",
+            "vy": "0.174",
+            "vz": "0",
+            "layer": "blade",
+            "shape": "box",
+            "half_x": "0.58",
+            "half_y": "2.48",
+            "half_z": "0.006",
+            "origin_y": "2.5"
           }
         },
         {
           "id": "blade_band_left",
           "type": "vfx.block.spawn_burst",
           "properties": {
-            "count": "43", "lifetime": "0.44", "size": "0.055",
-            "color": "0.78,0.79,0.8,0.28", "vx": "-0.46", "vy": "0.22", "vz": "0",
-            "layer": "blade", "shape": "box",
-            "half_x": "0.62", "half_y": "2.45", "half_z": "0.014", "origin_y": "2.5"
+            "count": "43",
+            "lifetime": "0.44",
+            "size": "0.055",
+            "color": "0.78,0.79,0.8,0.28",
+            "vx": "-0.667",
+            "vy": "0.319",
+            "vz": "0",
+            "layer": "blade",
+            "shape": "box",
+            "half_x": "0.62",
+            "half_y": "2.45",
+            "half_z": "0.014",
+            "origin_y": "2.5"
           }
         },
         {
           "id": "blade_band_right",
           "type": "vfx.block.spawn_burst",
           "properties": {
-            "count": "43", "lifetime": "0.44", "size": "0.055",
-            "color": "0.78,0.79,0.8,0.28", "vx": "0.46", "vy": "0.22", "vz": "0",
-            "layer": "blade", "shape": "box",
-            "half_x": "0.62", "half_y": "2.45", "half_z": "0.014", "origin_y": "2.5"
+            "count": "43",
+            "lifetime": "0.44",
+            "size": "0.055",
+            "color": "0.78,0.79,0.8,0.28",
+            "vx": "0.667",
+            "vy": "0.319",
+            "vz": "0",
+            "layer": "blade",
+            "shape": "box",
+            "half_x": "0.62",
+            "half_y": "2.45",
+            "half_z": "0.014",
+            "origin_y": "2.5"
           }
         },
         {
           "id": "fine_gas_left",
           "type": "vfx.block.spawn_burst",
           "properties": {
-            "count": "58", "lifetime": "0.68", "size": "0.075",
-            "color": "0.69,0.7,0.71,0.105", "vx": "-0.26", "vy": "0.46", "vz": "0",
-            "layer": "mist", "shape": "box",
-            "half_x": "0.66", "half_y": "2.36", "half_z": "0.038", "origin_y": "2.58"
+            "count": "58",
+            "lifetime": "0.68",
+            "size": "0.075",
+            "color": "0.69,0.7,0.71,0.105",
+            "vx": "-0.377",
+            "vy": "0.667",
+            "vz": "0",
+            "layer": "mist",
+            "shape": "box",
+            "half_x": "0.66",
+            "half_y": "2.36",
+            "half_z": "0.038",
+            "origin_y": "2.58"
           }
         },
         {
           "id": "fine_gas_right",
           "type": "vfx.block.spawn_burst",
           "properties": {
-            "count": "58", "lifetime": "0.68", "size": "0.075",
-            "color": "0.69,0.7,0.71,0.105", "vx": "0.26", "vy": "0.46", "vz": "0",
-            "layer": "mist", "shape": "box",
-            "half_x": "0.66", "half_y": "2.36", "half_z": "0.038", "origin_y": "2.58"
+            "count": "58",
+            "lifetime": "0.68",
+            "size": "0.075",
+            "color": "0.69,0.7,0.71,0.105",
+            "vx": "0.377",
+            "vy": "0.667",
+            "vz": "0",
+            "layer": "mist",
+            "shape": "box",
+            "half_x": "0.66",
+            "half_y": "2.36",
+            "half_z": "0.038",
+            "origin_y": "2.58"
           }
         },
         {
           "id": "suspended_grain_left",
           "type": "vfx.block.spawn_burst",
           "properties": {
-            "count": "58", "lifetime": "0.54", "size": "0.018",
-            "color": "0.82,0.83,0.84,0.38", "vx": "-0.34", "vy": "0.72", "vz": "0",
-            "layer": "grain", "shape": "box",
-            "half_x": "0.7", "half_y": "2.48", "half_z": "0.052", "origin_y": "2.5"
+            "count": "58",
+            "lifetime": "0.54",
+            "size": "0.018",
+            "color": "0.82,0.83,0.84,0.38",
+            "vx": "-0.493",
+            "vy": "1.044",
+            "vz": "0",
+            "layer": "grain",
+            "shape": "box",
+            "half_x": "0.7",
+            "half_y": "2.48",
+            "half_z": "0.052",
+            "origin_y": "2.5"
           }
         },
         {
           "id": "suspended_grain_right",
           "type": "vfx.block.spawn_burst",
           "properties": {
-            "count": "58", "lifetime": "0.54", "size": "0.018",
-            "color": "0.82,0.83,0.84,0.38", "vx": "0.34", "vy": "0.72", "vz": "0",
-            "layer": "grain", "shape": "box",
-            "half_x": "0.7", "half_y": "2.48", "half_z": "0.052", "origin_y": "2.5"
+            "count": "58",
+            "lifetime": "0.54",
+            "size": "0.018",
+            "color": "0.82,0.83,0.84,0.38",
+            "vx": "0.493",
+            "vy": "1.044",
+            "vz": "0",
+            "layer": "grain",
+            "shape": "box",
+            "half_x": "0.7",
+            "half_y": "2.48",
+            "half_z": "0.052",
+            "origin_y": "2.5"
           }
         }
       ]
@@ -189,7 +411,12 @@
         {
           "id": "randomize_fibers",
           "type": "vfx.block.init_randomize",
-          "properties": { "pos": "0.006", "vel": "0.12", "size": "0.2", "lifetime": "0.1" }
+          "properties": {
+            "pos": "0.006",
+            "vel": "0.12",
+            "size": "0.2",
+            "lifetime": "0.1"
+          }
         }
       ]
     },
@@ -203,43 +430,83 @@
         {
           "id": "fine_noise",
           "type": "vfx.block.update_noise",
-          "properties": { "amplitude": "0.018", "frequency": "5.6" }
+          "properties": {
+            "amplitude": "0.027",
+            "frequency": "9.8"
+          }
         },
         {
           "id": "edge_turbulence",
           "type": "vfx.block.update_turbulence",
-          "properties": { "amplitude": "0.028", "frequency": "2.4" }
+          "properties": {
+            "amplitude": "0.042",
+            "frequency": "4.2"
+          }
         },
         {
           "id": "drag",
           "type": "vfx.block.update_drag",
-          "properties": { "drag": "0.62" }
-        },
-        { "id": "velocity", "type": "vfx.block.update_velocity", "properties": {} },
-        { "id": "age", "type": "vfx.block.update_age", "properties": {} },
-        {
-          "id": "blade_alpha_over_life", "type": "vfx.block.life_alpha",
-          "properties": { "curve": "blade_alpha", "layer": "blade" }
+          "properties": {
+            "drag": "0.527"
+          }
         },
         {
-          "id": "blade_size_over_life", "type": "vfx.block.life_size",
-          "properties": { "curve": "blade_size", "layer": "blade" }
+          "id": "velocity",
+          "type": "vfx.block.update_velocity",
+          "properties": {}
         },
         {
-          "id": "mist_alpha_over_life", "type": "vfx.block.life_alpha",
-          "properties": { "curve": "mist_alpha", "layer": "mist" }
+          "id": "age",
+          "type": "vfx.block.update_age",
+          "properties": {}
         },
         {
-          "id": "mist_size_over_life", "type": "vfx.block.life_size",
-          "properties": { "curve": "mist_size", "layer": "mist" }
+          "id": "blade_alpha_over_life",
+          "type": "vfx.block.life_alpha",
+          "properties": {
+            "curve": "blade_alpha",
+            "layer": "blade"
+          }
         },
         {
-          "id": "grain_alpha_over_life", "type": "vfx.block.life_alpha",
-          "properties": { "curve": "grain_alpha", "layer": "grain" }
+          "id": "blade_size_over_life",
+          "type": "vfx.block.life_size",
+          "properties": {
+            "curve": "blade_size",
+            "layer": "blade"
+          }
         },
         {
-          "id": "grain_size_over_life", "type": "vfx.block.life_size",
-          "properties": { "curve": "grain_size", "layer": "grain" }
+          "id": "mist_alpha_over_life",
+          "type": "vfx.block.life_alpha",
+          "properties": {
+            "curve": "mist_alpha",
+            "layer": "mist"
+          }
+        },
+        {
+          "id": "mist_size_over_life",
+          "type": "vfx.block.life_size",
+          "properties": {
+            "curve": "mist_size",
+            "layer": "mist"
+          }
+        },
+        {
+          "id": "grain_alpha_over_life",
+          "type": "vfx.block.life_alpha",
+          "properties": {
+            "curve": "grain_alpha",
+            "layer": "grain"
+          }
+        },
+        {
+          "id": "grain_size_over_life",
+          "type": "vfx.block.life_size",
+          "properties": {
+            "curve": "grain_size",
+            "layer": "grain"
+          }
         }
       ]
     },
@@ -285,11 +552,24 @@
   ],
   "operators": [],
   "flow": [
-    { "from": "spawn", "to": "initialize" },
-    { "from": "initialize", "to": "update" },
-    { "from": "update", "to": "output" }
+    {
+      "from": "spawn",
+      "to": "initialize"
+    },
+    {
+      "from": "initialize",
+      "to": "update"
+    },
+    {
+      "from": "update",
+      "to": "output"
+    }
   ],
   "blockFlows": [],
   "dataEdges": [],
-  "outputs": ["out_blade", "out_mist", "out_grain"]
+  "outputs": [
+    "out_blade",
+    "out_mist",
+    "out_grain"
+  ]
 }

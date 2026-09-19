@@ -145,6 +145,7 @@ public final class AcademyCraftClient {
         TemporalImmunitySyncPacket.initClient();
         SpawnVfxGraphPacket.initClient();
         SkillVfxPacket.initClient();
+        org.academy.internal.common.network.MagneticSupportPacket.initClient();
         org.academy.internal.common.network.DarkmatterVisualPacket.initClient();
         ShockwaveVfx.register();
         GlowCircleVfx.register();

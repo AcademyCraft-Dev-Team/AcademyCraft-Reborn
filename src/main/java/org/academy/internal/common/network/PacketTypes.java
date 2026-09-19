@@ -1089,4 +1089,8 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, DarkmatterVisualPacket>>
             DARKMATTER_VISUAL = PACKET_TYPES.register("darkmatter_visual",
             () -> new PacketType<>(DarkmatterVisualPacket.class, DarkmatterVisualPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MagneticSupportPacket>>
+            MAGNETIC_SUPPORT = PACKET_TYPES.register("magnetic_support",
+            () -> new PacketType<>(MagneticSupportPacket.class, MagneticSupportPacket.CODEC));
 }

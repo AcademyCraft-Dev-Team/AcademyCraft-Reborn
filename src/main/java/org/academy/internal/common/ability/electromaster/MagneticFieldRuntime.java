@@ -20,6 +20,9 @@ import org.academy.api.server.ability.electromaster.MagneticLevitation;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+import org.academy.api.server.ability.electromaster.SupportReference;
+import org.academy.internal.common.network.MagneticSupportPacket;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
 
@@ -88,6 +91,15 @@ public final class MagneticFieldRuntime {
 
         Flight(ServerPlayer player) { super(player); dimension = player.level().dimension(); }
 
+        public @Nullable SupportReference support() {
+            if (!hovering) return null;
+            return movement.ground() != null ? movement.ground() : movement.envelope();
+        }
+
+        private void stopVisual() {
+            if (hovering) MagneticSupportPacket.broadcast(player, null);
+        }
+
         @SubscribeEvent public void tick(ServerTickEvent.Pre event) {
             if (ended) return;
             var skill = Skills.MAGNET_MANIPULATION.get();
@@ -112,6 +124,7 @@ public final class MagneticFieldRuntime {
                     : null;
 
             if (step == null || !step.supported()) {
+                stopVisual();
                 // Losing the field degrades into a bounded, steerable sink instead of dropping the gravity
                 // lease at once, so a mover that grazes the boundary can still climb back inside.
                 if (graceTicks >= tuning.graceTicks()) { releaseField(); return; }
@@ -134,6 +147,7 @@ public final class MagneticFieldRuntime {
             applyMotion(step.velocity());
             hovering = true;
             state(player, true, true);
+            if (activeTicks % 2 == 0) MagneticSupportPacket.broadcast(player, support());
             if (activeTicks++ == 0) skill.reportTrigger(player);
             skill.reportActivity(player, step.velocity().lengthSqr() > 1.0e-8);
         }
@@ -145,6 +159,7 @@ public final class MagneticFieldRuntime {
         }
 
         private void releaseField() {
+            stopVisual();
             graceTicks = 0;
             hovering = false;
             GravityControl.set(player, MagneticFieldEffects.SOURCE, false);
@@ -152,6 +167,7 @@ public final class MagneticFieldRuntime {
         }
 
         @Override protected void onUnregistered() {
+            stopVisual();
             ended = true;
             graceTicks = 0;
             FLIGHTS.remove(player, this);

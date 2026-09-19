@@ -227,14 +227,14 @@ public final class SkillVfxMultiplayerGameTests {
                 check(hidden.stream().filter(p -> p.state instanceof SkillVfxState.End e && e.hidden()).count() == 2,
                         "Leaving range must hide both subscriptions");
                 plasma.launch(observers.getFirst().player.getUUID(), center.add(200, 31, 6), 2.5,
-                        0, 0, 0, false, 0);
+                        0, 0, 0, false, 0, 0.62f);
                 remote().move(center.add(0, 0, 8));
                 after(6, this::flightReentry);
             });
         }
         void flightReentry() {
             check(remote().drain().stream().anyMatch(p -> p.id == plasmaId
-                    && p.state instanceof SkillVfxState.Plasma s && s.launched()),
+                    && p.state instanceof SkillVfxState.Plasma s && s.launched() && s.launchScale() == 0.62f),
                     "Flight reentry must carry a complete launched snapshot");
             clearPackets();
             // Exercise a real fire immediately followed by removal within one server tick.

@@ -149,7 +149,9 @@ public final class SkillVfxRuntime {
                 ? Math.clamp((p.getGatherProgress() - old.progress()) / elapsed, 0f, 1f)
                 : 1f / PlasmaGeneration.MAX_CHARGE_TICKS;
         return new SkillVfxState.Plasma(p.position(), entry.chargeOrigin, p.visualTarget(),
-                p.getGatherProgress(), p.visualSpeed(), p.visualLaunchDelay(), p.isLaunched(), rate, chargeRate);
+                p.getGatherProgress(), p.visualSpeed(), p.visualLaunchDelay(), p.isLaunched(), rate, chargeRate,
+                p.isLaunched() ? p.getLaunchScale()
+                        : org.academy.api.common.vfx.PlasmaChargeVisuals.formation(p.getGatherProgress()));
     }
 
     private static boolean meaningfulChange(SkillVfxState old, SkillVfxState next) {

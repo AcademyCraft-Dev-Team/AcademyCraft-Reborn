@@ -104,7 +104,7 @@
             "size": "0.24",
             "color": "1,1,1,0.11",
             "vx": "0",
-            "vy": "0.09",
+            "vy": "0.1305",
             "vz": "0",
             "layer": "mist",
             "shape": "torus",
@@ -121,7 +121,7 @@
             "size": "0.14",
             "color": "0.95,0.99,1,0.23",
             "vx": "0",
-            "vy": "0.16",
+            "vy": "0.232",
             "vz": "0",
             "layer": "mist",
             "shape": "torus",
@@ -138,7 +138,7 @@
             "size": "0.34",
             "color": "0.9,0.96,1,0.045",
             "vx": "0",
-            "vy": "0.05",
+            "vy": "0.0725",
             "vz": "0",
             "layer": "mist",
             "shape": "torus",
@@ -178,9 +178,9 @@
           "id": "vortex",
           "type": "vfx.block.update_vortex",
           "properties": {
-            "strength": "1.4",
-            "pull": "0.02",
-            "vertical_pull": "0.09",
+            "strength": "1.96",
+            "pull": "0.028",
+            "vertical_pull": "0.126",
             "layer": "mist"
           }
         },
@@ -188,23 +188,23 @@
           "id": "fine_noise",
           "type": "vfx.block.update_noise",
           "properties": {
-            "amplitude": "0.12",
-            "frequency": "2.1"
+            "amplitude": "0.18",
+            "frequency": "3.675"
           }
         },
         {
           "id": "turbulence",
           "type": "vfx.block.update_turbulence",
           "properties": {
-            "amplitude": "0.25",
-            "frequency": "1.15"
+            "amplitude": "0.375",
+            "frequency": "2.0125"
           }
         },
         {
           "id": "drag",
           "type": "vfx.block.update_drag",
           "properties": {
-            "drag": "0.55"
+            "drag": "0.4675"
           }
         },
         {

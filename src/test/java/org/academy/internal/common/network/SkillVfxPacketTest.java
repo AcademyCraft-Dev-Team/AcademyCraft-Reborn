@@ -78,6 +78,19 @@ class SkillVfxPacketTest {
         assertEquals(impact, roundTrip(impact));
     }
 
+    @Test void earlyLaunchAndLateSubscriptionsKeepTheReleaseSize() {
+        for (float scale : new float[]{0.4f, 0.62f, 1f}) {
+            var flight = new SkillVfxState.Plasma(Vec3.ZERO, Vec3.ZERO, new Vec3(80, 0, 0),
+                    1, 2.5f, 4, true, 1, 0, scale);
+            assertEquals(flight, roundTrip(flight));
+        }
+        for (float scale : new float[]{-1, 1.01f, Float.NaN}) {
+            var flight = new SkillVfxState.Plasma(Vec3.ZERO, Vec3.ZERO, Vec3.ZERO,
+                    1, 2.5f, 0, true, 1, 0, scale);
+            assertThrows(IllegalArgumentException.class, () -> roundTrip(flight));
+        }
+    }
+
     @Test void shortBurstFitsSmallApplicationPacket() {
         var buffer = Unpooled.buffer();
         try {

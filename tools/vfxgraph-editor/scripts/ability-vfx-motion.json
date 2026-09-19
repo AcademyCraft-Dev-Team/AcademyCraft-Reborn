@@ -1,0 +1,240 @@
+{
+  "aeromanip_mist_blade": {
+    "blade_core_left": {
+      "vx": "-0.899",
+      "vy": "0.174",
+      "vz": "0"
+    },
+    "blade_core_right": {
+      "vx": "0.899",
+      "vy": "0.174",
+      "vz": "0"
+    },
+    "blade_band_left": {
+      "vx": "-0.667",
+      "vy": "0.319",
+      "vz": "0"
+    },
+    "blade_band_right": {
+      "vx": "0.667",
+      "vy": "0.319",
+      "vz": "0"
+    },
+    "fine_gas_left": {
+      "vx": "-0.377",
+      "vy": "0.667",
+      "vz": "0"
+    },
+    "fine_gas_right": {
+      "vx": "0.377",
+      "vy": "0.667",
+      "vz": "0"
+    },
+    "suspended_grain_left": {
+      "vx": "-0.493",
+      "vy": "1.044",
+      "vz": "0"
+    },
+    "suspended_grain_right": {
+      "vx": "0.493",
+      "vy": "1.044",
+      "vz": "0"
+    },
+    "fine_noise": {
+      "frequency": "9.8",
+      "amplitude": "0.027"
+    },
+    "edge_turbulence": {
+      "frequency": "4.2",
+      "amplitude": "0.042"
+    },
+    "drag": {
+      "drag": "0.527"
+    }
+  },
+  "aeromanip_mist_burst": {
+    "pressure_ring": {
+      "vx": "0",
+      "vy": "0.174",
+      "vz": "0"
+    },
+    "expanding_shell": {
+      "vx": "0",
+      "vy": "0.319",
+      "vz": "0"
+    },
+    "wake_wisps": {
+      "vx": "0",
+      "vy": "0.522",
+      "vz": "0"
+    },
+    "condensation_core": {
+      "vx": "0",
+      "vy": "0.203",
+      "vz": "0"
+    },
+    "turbulence": {
+      "frequency": "1.61",
+      "amplitude": "0.93"
+    },
+    "broad_noise": {
+      "frequency": "0.9625",
+      "amplitude": "0.33"
+    },
+    "drag": {
+      "drag": "0.493"
+    }
+  },
+  "aeromanip_mist_field": {
+    "field_cage": {
+      "vx": "0",
+      "vy": "0.1305",
+      "vz": "0"
+    },
+    "equator_current": {
+      "vx": "0",
+      "vy": "0.058",
+      "vz": "0"
+    },
+    "upper_current": {
+      "vx": "0",
+      "vy": "-0.116",
+      "vz": "0"
+    },
+    "lower_current": {
+      "vx": "0",
+      "vy": "0.116",
+      "vz": "0"
+    },
+    "billow_pockets": {
+      "vx": "0",
+      "vy": "0.174",
+      "vz": "0"
+    },
+    "vortex": {
+      "strength": "2.1",
+      "pull": "0.084",
+      "vertical_pull": "0.224"
+    },
+    "noise": {
+      "frequency": "1.015",
+      "amplitude": "0.33"
+    },
+    "fine_turbulence": {
+      "frequency": "2.8",
+      "amplitude": "0.27"
+    },
+    "drag": {
+      "drag": "0.527"
+    }
+  },
+  "aeromanip_mist_ring": {
+    "outer_ring": {
+      "vx": "0",
+      "vy": "0.1305",
+      "vz": "0"
+    },
+    "inner_ring": {
+      "vx": "0",
+      "vy": "0.232",
+      "vz": "0"
+    },
+    "broken_halo": {
+      "vx": "0",
+      "vy": "0.0725",
+      "vz": "0"
+    },
+    "vortex": {
+      "strength": "1.96",
+      "pull": "0.028",
+      "vertical_pull": "0.126"
+    },
+    "fine_noise": {
+      "frequency": "3.675",
+      "amplitude": "0.18"
+    },
+    "turbulence": {
+      "frequency": "2.0125",
+      "amplitude": "0.375"
+    },
+    "drag": {
+      "drag": "0.4675"
+    }
+  },
+  "aeromanip_mist_stream": {
+    "stream_body": {
+      "vx": "0",
+      "vy": "3.625",
+      "vz": "0"
+    },
+    "fast_threads": {
+      "vx": "0",
+      "vy": "8.12",
+      "vz": "0"
+    },
+    "shear_skin": {
+      "vx": "0",
+      "vy": "5.075",
+      "vz": "0"
+    },
+    "rolling_wisps": {
+      "vx": "0",
+      "vy": "2.6825",
+      "vz": "0"
+    },
+    "turbulence": {
+      "frequency": "2.5375",
+      "amplitude": "0.3"
+    },
+    "fine_noise": {
+      "frequency": "4.9",
+      "amplitude": "0.18"
+    },
+    "drag": {
+      "drag": "0.408"
+    }
+  },
+  "aeromanip_mist_vortex": {
+    "outer_band": {
+      "vx": "0",
+      "vy": "-0.145",
+      "vz": "0"
+    },
+    "middle_band": {
+      "vx": "0",
+      "vy": "0.058",
+      "vz": "0"
+    },
+    "inner_band": {
+      "vx": "0",
+      "vy": "0.319",
+      "vz": "0"
+    },
+    "descending_streams": {
+      "vx": "0",
+      "vy": "-0.29",
+      "vz": "0"
+    },
+    "funnel_billows": {
+      "vx": "0",
+      "vy": "0.145",
+      "vz": "0"
+    },
+    "vortex": {
+      "strength": "5.32",
+      "pull": "0.868",
+      "vertical_pull": "0.532"
+    },
+    "turbulence": {
+      "frequency": "1.26",
+      "amplitude": "0.51"
+    },
+    "broad_noise": {
+      "frequency": "0.875",
+      "amplitude": "0.27"
+    },
+    "drag": {
+      "drag": "0.408"
+    }
+  }
+}

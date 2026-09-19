@@ -65,6 +65,7 @@ public final class SkillVfxPacket extends Packet<ClientPacketListener, SkillVfxP
                 if (s.launched()) {
                     Vec3.STREAM_CODEC.encode(b, s.target()); b.writeFloat(s.speed());
                     ByteBufCodecs.VAR_INT.encode(b, s.launchDelay());
+                    b.writeFloat(s.launchScale());
                 } else {
                     Vec3.STREAM_CODEC.encode(b, s.chargeOrigin());
                     b.writeFloat(s.progress()); b.writeFloat(s.chargeRate());
@@ -116,12 +117,16 @@ public final class SkillVfxPacket extends Packet<ClientPacketListener, SkillVfxP
             case 1 -> {
                 boolean launched = b.readBoolean();
                 Vec3 origin = pos, target = pos;
-                float speed = 0, progress = 1, chargeRate = 0;
+                float speed = 0, progress = 1, chargeRate = 0, launchScale = 0;
                 int delay = 0;
-                if (launched) { target = vector(b); speed = range(b, 0, 256); delay = ticks(b); }
+                if (launched) {
+                    target = vector(b); speed = range(b, 0, 256); delay = ticks(b);
+                    launchScale = range(b, 0, 1);
+                }
                 else { origin = vector(b); progress = range(b, 0, 1); chargeRate = range(b, 0, 1); }
                 yield new SkillVfxState.Plasma(pos, origin, target, progress, speed, delay,
-                        launched, range(b, 0, 64), chargeRate);
+                        launched, range(b, 0, 64), chargeRate, launched ? launchScale
+                                : org.academy.api.common.vfx.PlasmaChargeVisuals.formation(progress));
             }
             case 2 -> {
                 boolean impact = b.readBoolean();

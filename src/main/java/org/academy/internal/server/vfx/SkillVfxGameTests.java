@@ -93,6 +93,10 @@ public final class SkillVfxGameTests {
                                 "Both logic entities must have independent visual replicas");
                         check(helper, SkillVfxRuntime.statistics().sentPackets() > before + 1,
                                 "An observer must receive initial snapshots");
+                        plasma.setGatherProgress(0.25f);
+                        plasma.launch(observer.getUUID(), center.add(80, 31, 0), 2.5, 0, 0, 0, false, 0);
+                        check(helper, plasma.getLaunchScale() == 0.62f,
+                                "Launching just after convergence must retain its compact shape");
                         SkillVfxService.plasmaImpact(level, center, 12);
                     } finally {
                         beam.discard();

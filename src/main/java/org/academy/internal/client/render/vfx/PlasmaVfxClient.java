@@ -15,6 +15,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import org.academy.AcademyCraft;
+import org.academy.api.common.vfx.PlasmaChargeVisuals;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
@@ -39,10 +40,7 @@ public final class PlasmaVfxClient {
     private static final Identifier IMPACT_ASSET = Identifier.fromNamespaceAndPath(
             AcademyCraft.MOD_ID, "vfxgraph/plasma_cannon_impact"
     );
-    private static final int FOCUS_START_STAGE = 2;
-    private static final float FOCUS_START = (float) FOCUS_START_STAGE / PlasmaGeneration.MAX_STAGE;
-    private static final float FOCUS_CONVERGENCE_END = 0.78f;
-    private static final float FORMATION_AT_CONVERGENCE = 0.62f;
+    private static final float FOCUS_START = PlasmaChargeVisuals.FOCUS_START;
     private static final float TORNADO_EXPAND_MIN = 0.5f;
     private static final float TORNADO_EXPAND_MAX = 3.0f;
     private static final float PLASMA_MINIMUM_FAR_PLANE = 512.0f;
@@ -172,6 +170,7 @@ public final class PlasmaVfxClient {
                 effect.setCullingSphere(worldPosition(plasma), 128f);
                 return Value.of(new Vector3f(effects.projectilePosition));
             });
+            effect.bind("launch_scale", () -> Value.of(plasma.getLaunchScale()));
             effect.bind("projectile_direction", () -> Value.of(new Vector3f(effects.projectileDirection)));
             return effect;
         } catch (RuntimeException exception) {
@@ -254,41 +253,12 @@ public final class PlasmaVfxClient {
         return Mth.lerp(firstStage, TORNADO_EXPAND_MIN, TORNADO_EXPAND_MAX);
     }
 
-    private static float stagedFocusProgress(float gatherProgress) {
-        float chargeStages = Mth.clamp(gatherProgress, 0.0f, 1.0f)
-                * PlasmaGeneration.MAX_STAGE;
-        float activeStageProgress = chargeStages - FOCUS_START_STAGE;
-        if (activeStageProgress <= 0.0f) return 0.0f;
-
-        int completedStages = Mth.floor(activeStageProgress);
-        float withinStage = activeStageProgress - completedStages;
-        float stagedEase = (float) Mth.smoothstep(Mth.clamp(
-                (withinStage - 0.08f) / 0.82f,
-                0.0f,
-                1.0f
-        ));
-        float focusStages = PlasmaGeneration.MAX_STAGE - FOCUS_START_STAGE;
-        return Mth.clamp((completedStages + stagedEase) / focusStages, 0.0f, 1.0f);
-    }
-
-    /** 螺旋汇聚保留按蓄力层级推进，但在 78% 总蓄力时先于龙卷风收缩完成。 */
     private static float convergenceProgress(Plasma plasma) {
-        float endProgress = stagedFocusProgress(FOCUS_CONVERGENCE_END);
-        return Mth.clamp(stagedFocusProgress(plasma.getGatherProgress()) / endProgress, 0.0f, 1.0f);
+        return PlasmaChargeVisuals.convergence(plasma.getGatherProgress());
     }
 
-    /** 汇聚完成时先形成紧凑球体，剩余蓄力阶段再平滑膨胀到完整 projectile 尺寸。 */
     private static float formationProgress(Plasma plasma) {
-        float gatherProgress = Mth.clamp(plasma.getGatherProgress(), 0.0f, 1.0f);
-        if (gatherProgress <= FOCUS_CONVERGENCE_END) {
-            return convergenceProgress(plasma) * FORMATION_AT_CONVERGENCE;
-        }
-        float swell = (float) Mth.smoothstep(Mth.clamp(
-                (gatherProgress - FOCUS_CONVERGENCE_END) / (1.0f - FOCUS_CONVERGENCE_END),
-                0.0f,
-                1.0f
-        ));
-        return Mth.lerp(swell, FORMATION_AT_CONVERGENCE, 1.0f);
+        return PlasmaChargeVisuals.formation(plasma.getGatherProgress());
     }
 
     private static void configureVisibility(ActiveEffect effect, Vector3f center, float radius) {

@@ -150,6 +150,20 @@ public final class VfxBlocks {
     public static void registerAll(NodeRegistry metadata, VfxBlockRegistry blocks) {
         metadata.register(type("vfx.block.material_sheets", "spawn", "Material Sheets / Sampled Surface", MaterialSheetEmitter.properties()));
         blocks.register("vfx.block.material_sheets", (block, ports) -> MaterialSheetEmitter.create(block));
+        metadata.register(type("vfx.block.organic_strands", "spawn", "Translucent Organic Strands",
+                List.of(prop("mode", ValueType.INT, Value.of(0)),
+                        prop("count", ValueType.INT, Value.of(12)),
+                        prop("segments", ValueType.INT, Value.of(80)),
+                        prop("duration", ValueType.FLOAT, Value.of(0.65f)),
+                        prop("radius", ValueType.FLOAT, Value.of(0.65f)),
+                        prop("length", ValueType.FLOAT, Value.of(16f)),
+                        prop("speed", ValueType.FLOAT, Value.of(8f)),
+                        prop("thickness", ValueType.FLOAT, Value.of(0.04f)),
+                        prop("opacity", ValueType.FLOAT, Value.of(0.6f)))));
+        blocks.register("vfx.block.organic_strands", (block, ports) -> OrganicStrandEmitter.create(block));
+        metadata.register(type("vfx.block.cloud_vortex", "spawn", "Cloud Vortex / Hollow Turbulent Funnel",
+                CloudVortexEmitter.properties()));
+        blocks.register("vfx.block.cloud_vortex", CloudVortexEmitter::create);
         metadata.register(type("vfx.block.iron_sand", "spawn", "Iron Sand / Granular Field and Embedded Currents",
                 IronSandEmitter.properties()));
         blocks.register("vfx.block.iron_sand", IronSandEmitter::create);
@@ -573,6 +587,7 @@ public final class VfxBlocks {
         metadata.register(type("vfx.block.plasma_convergence", "spawn", "Plasma Convergence Motes",
                 List.of(
                         prop("progress_param", ValueType.STRING, Value.string("focus_progress")),
+                        prop("formation_param", ValueType.STRING, Value.string("")),
                         prop("count", ValueType.INT, Value.of(72)),
                         prop("arm_count", ValueType.INT, Value.of(4)),
                         prop("turns", ValueType.FLOAT, Value.of(5.5f)),
@@ -2105,6 +2120,7 @@ public final class VfxBlocks {
 
     private static SimNode plasmaConvergence(VfxBlock block, PortValueSource ports) {
         String progressParam = propString(block, "progress_param", "focus_progress");
+        String formationParam = propString(block, "formation_param", "");
         int count = Math.max(8, propInt(block, "count", 72));
         int armCount = Math.clamp(propInt(block, "arm_count", 4), 2, 8);
         float turns = Math.max(0.5f, propFloat(block, "turns", 5.5f));
@@ -2141,6 +2157,7 @@ public final class VfxBlocks {
             }
 
             float progress = clamp01(ctx.paramFloat(progressParam, 0f));
+            float formation = clamp01(ctx.paramFloat(formationParam, progress));
             float surfaceBlend = smoothstep(clamp01((progress - 0.60f) / 0.28f));
             int stepsPerArm = Math.max(1, (count + armCount - 1) / armCount);
             int moteIndex = 0;
@@ -2186,8 +2203,8 @@ public final class VfxBlocks {
                             ? (localIndex == 0 ? -0.32f : 0.32f)
                             : (localIndex - 1) * 0.39f;
                     float liveSurfaceRadius = lerp(0.18f, surfaceRadius,
-                            (float) Math.pow(progress, 2.3));
-                    float protrusion = surfacePulse * bulgeWave * (0.28f + progress * 0.72f);
+                            (float) Math.pow(formation, 2.3));
+                    float protrusion = surfacePulse * bulgeWave * (0.28f + formation * 0.72f);
                     float bulgeRadius = Math.max(0.08f, liveSurfaceRadius + protrusion);
                     float latitudeRadius = (float) Math.cos(latitude) * bulgeRadius;
                     float bulgeX = (float) Math.cos(bulgeOrbit) * latitudeRadius;
@@ -2203,7 +2220,7 @@ public final class VfxBlocks {
                 float sizeVariation = 0.68f + stableUnit(localIndex, 8.91f) * 0.54f;
                 float mergingSize = lerp(sizeMin, sizeMax, (float) Math.pow(convergence, 0.76f))
                         * sizeVariation * (1f - absorption * 0.78f);
-                float bulgeSize = lerp(sizeMin * 0.92f, sizeMax * 0.82f, progress)
+                float bulgeSize = lerp(sizeMin * 0.92f, sizeMax * 0.82f, formation)
                         * (1f + bulgeWave * 0.075f);
                 float liveSize = surfaceBulge
                         ? lerp(mergingSize, bulgeSize, surfaceBlend)
@@ -2332,17 +2349,21 @@ public final class VfxBlocks {
         float lifetime = propFloat(block, "lifetime", 0.075f);
         float[] color = propColor(block, "color");
         long[] seed = {0L};
+        long group = NEXT_TRANSIENT_ARC_GROUP.getAndIncrement();
         return (buf, ctx) -> {
-            if (ctx.time() > duration) return;
+            ctx.arcs().removeGroup(group);
+            float time = ctx.paramFloat("time", ctx.time());
+            if (time < 0) time = ctx.time();
+            if (time > duration) return;
             for (int ring = 0; ring < ringCount; ring++) {
                 float delay = ring * 0.075f;
-                float t = clamp01((ctx.time() / duration - delay) / Math.max(0.05f, 1f - delay));
+                float t = clamp01((time / duration - delay) / Math.max(0.05f, 1f - delay));
                 if (t <= 0f || t >= 0.999f) continue;
                 float eased = 1f - (float) Math.pow(1f - t, 3f);
                 float radius = lerp(baseRadius, maxRadius * (1f - ring * 0.055f), eased);
                 float alpha = (1f - smoothstep(t)) * (1f - ring * 0.08f);
                 float tilt = (ring - (ringCount - 1) * 0.5f) * 0.11f;
-                var arc = ctx.arcs().add();
+                var arc = ctx.arcs().add(group);
                 for (int point = 0; point <= segments; point++) {
                     float angle = (float) (Math.PI * 2.0 * point / segments) + ring * 0.41f;
                     float x = (float) Math.cos(angle) * radius;

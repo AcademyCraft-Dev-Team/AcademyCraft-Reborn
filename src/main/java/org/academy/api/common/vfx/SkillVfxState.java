@@ -39,8 +39,14 @@ public sealed interface SkillVfxState {
     }
 
     record Plasma(Vec3 position, Vec3 chargeOrigin, Vec3 target, float progress,
-                  float speed, int launchDelay, boolean launched, float tickRate, float chargeRate)
+                  float speed, int launchDelay, boolean launched, float tickRate, float chargeRate, float launchScale)
             implements SkillVfxState {
+        public Plasma(Vec3 position, Vec3 chargeOrigin, Vec3 target, float progress,
+                      float speed, int launchDelay, boolean launched, float tickRate, float chargeRate) {
+            this(position, chargeOrigin, target, progress, speed, launchDelay, launched, tickRate,
+                    chargeRate, PlasmaChargeVisuals.formation(progress));
+        }
+
         /** Samples from the authoritative snapshot, including before launch and during its delay. */
         public Vec3 positionAt(float elapsedTicks) {
             if (!launched) return position;

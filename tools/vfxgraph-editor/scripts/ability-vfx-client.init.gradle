@@ -1,0 +1,11 @@
+allprojects {
+    afterEvaluate {
+        neoForge.runs.named('clientDev') {
+            sourceSet.set(sourceSets.editor)
+            gameDirectory.set(file('run/ability-vfx'))
+            systemProperty 'academy.abilityVfxSmoke', 'true'
+            systemProperty 'academy.abilityVfxOutput', file('docs/vfx/ability_update').absolutePath
+            programArguments.addAll('--width', '1280', '--height', '720')
+        }
+    }
+}

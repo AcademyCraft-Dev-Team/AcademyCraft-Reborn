@@ -46,6 +46,7 @@ public class Plasma extends RenderOnlyEntity {
     private float damage;
     private float damageRadius;
     private float explosionPower;
+    private float launchScale = 1f;
     private boolean destroyBlocks;
     private int proficiencyMilestone;
     private int launchDelayTicks;
@@ -132,6 +133,14 @@ public class Plasma extends RenderOnlyEntity {
     public void launch(UUID ownerUUID, Vec3 targetPosition, double travelSpeed,
                        float damage, float damageRadius, float explosionPower,
                        boolean destroyBlocks, int proficiencyMilestone) {
+        launch(ownerUUID, targetPosition, travelSpeed, damage, damageRadius, explosionPower,
+                destroyBlocks, proficiencyMilestone,
+                org.academy.api.common.vfx.PlasmaChargeVisuals.formation(getGatherProgress()));
+    }
+
+    public void launch(UUID ownerUUID, Vec3 targetPosition, double travelSpeed,
+                       float damage, float damageRadius, float explosionPower,
+                       boolean destroyBlocks, int proficiencyMilestone, float launchScale) {
         this.ownerUUID = ownerUUID;
         this.targetPosition = targetPosition;
         this.travelSpeed = Math.max(0.05, travelSpeed);
@@ -141,7 +150,7 @@ public class Plasma extends RenderOnlyEntity {
         this.destroyBlocks = destroyBlocks;
         this.proficiencyMilestone = Math.clamp(proficiencyMilestone, 0, 3);
         this.launchDelayTicks = LAUNCH_DELAY_TICKS;
-        setGatherProgress(1.0f);
+        this.launchScale = Float.isFinite(launchScale) ? Math.clamp(launchScale, 0f, 1f) : 0f;
         entityData.set(LAUNCHED, true);
     }
 
@@ -201,11 +210,13 @@ public class Plasma extends RenderOnlyEntity {
     public Vec3 visualTarget() { return targetPosition == null ? position() : targetPosition; }
     public float visualSpeed() { return (float) travelSpeed; }
     public int visualLaunchDelay() { return launchDelayTicks; }
+    public float getLaunchScale() { return launchScale; }
     public Vec3 visualChargeOrigin() { return visualChargeOrigin; }
 
     public void applyVisualSnapshot(SkillVfxState.Plasma state, float elapsed) {
         if (!level().isClientSide()) throw new IllegalStateException("Visual snapshot on server");
         visualSnapshot = state;
+        launchScale = state.launchScale();
         visualReceivedAt = System.nanoTime() - (long) (elapsed * 50_000_000L);
         if (!state.launched()) visualChargeOrigin = state.chargeOrigin();
         entityData.set(LAUNCHED, state.launched());

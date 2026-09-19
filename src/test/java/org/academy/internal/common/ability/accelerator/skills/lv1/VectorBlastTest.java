@@ -7,6 +7,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VectorBlastTest {
+    @Test void blastImpulseFollowsTheRayAndDecaysWithoutLosingItsLift() {
+        var near = VectorBlast.blastImpulse(FORWARD, 0, 64);
+        var far = VectorBlast.blastImpulse(FORWARD, 64, 64);
+        assertTrue(near.z > 3 && far.z > 1 && near.z > far.z);
+        assertTrue(near.y > 0 && near.y == far.y);
+        assertTrue(VectorBlast.blastImpulse(new Vec3(1, 0, 0), 0, 64).x > 3);
+        assertTrue(VectorBlast.blastImpulse(Vec3.ZERO, 0, 64).lengthSqr() == 0);
+    }
     private static final Vec3 ORIGIN = Vec3.ZERO;
     private static final Vec3 FORWARD = new Vec3(0.0, 0.0, 1.0);
 

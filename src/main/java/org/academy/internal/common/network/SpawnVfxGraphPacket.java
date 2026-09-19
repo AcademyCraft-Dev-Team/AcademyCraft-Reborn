@@ -263,6 +263,9 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
                     var value = entry.getValue();
                     effect.bind(entry.getKey(), () -> Value.of(value));
                 }
+                // Local presentation input, sampled each frame so F5 changes an existing effect.
+                // Graphs that do not consume this parameter retain their original appearance.
+                effect.bind("view_first_person", () -> Value.of(minecraft.options.getCameraType().isFirstPerson() ? 1f : 0f));
             } catch (Exception e) {
                 // 图资产缺失或参数非法时静默兜底，不影响既有技能表现
                 LOGGER.debug("Unable to spawn vfx graph {}", packet.assetId, e);

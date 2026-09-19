@@ -213,10 +213,11 @@ public class PlasmaGeneration extends Skill {
                 plasma.discard();
                 return;
             }
-            launch(player, plasma, stage);
+            var progress = getChargeProgress(state.startTick(), level.getGameTime());
+            launch(player, plasma, stage, org.academy.api.common.vfx.PlasmaChargeVisuals.formation(progress));
         }
 
-        private static void launch(ServerPlayer player, Plasma plasma, int stage) {
+        private static void launch(ServerPlayer player, Plasma plasma, int stage, float launchScale) {
             var skill = Skills.PLASMA_GENERATION.get();
             var targetPos = findTarget(player);
             var damage = stage * DAMAGE_PER_STAGE
@@ -233,7 +234,8 @@ public class PlasmaGeneration extends Skill {
                     damageRadius,
                     destroyBlocks ? stage * BLOCK_BLAST_RADIUS_PER_STAGE : 0.0f,
                     destroyBlocks,
-                    skill.getEffectiveProficiencyMilestone(player)
+                    skill.getEffectiveProficiencyMilestone(player),
+                    launchScale
             );
         }
 
