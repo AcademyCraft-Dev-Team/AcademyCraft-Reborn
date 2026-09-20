@@ -31,7 +31,7 @@ public final class BlockEntityRenderers {
         event.registerBlockEntityRenderer(BlockEntityTypes.SOLAR_GEN.get(),
                 _ -> SolarGenRenderer.INSTANCE);
         event.registerBlockEntityRenderer(BlockEntityTypes.ENERGY_LASER_TOWER.get(),
-                _ -> EnergyLaserTowerRenderer.INSTANCE);
+                EnergyLaserTowerRenderer::new);
         event.registerBlockEntityRenderer(BlockEntityTypes.AEROSPACE_SIGNAL_CABIN.get(),
                 AerospaceSignalCabinRenderer::new);
         event.registerBlockEntityRenderer(BlockEntityTypes.SATELLITE_LAUNCH_PAD.get(),

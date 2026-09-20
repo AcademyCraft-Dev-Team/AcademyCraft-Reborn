@@ -171,9 +171,14 @@ public final class Items {
                             AcademyCraft.academy("aerospace_signal_cabin"),
                             0.72F
                     ));
-    public static final DeferredHolder<Item, MultiBlockItem> ENERGY_LASER_TOWER =
+    public static final DeferredHolder<Item, GeoMultiBlockItem> ENERGY_LASER_TOWER =
             ITEMS.registerItem("energy_laser_tower",
-                    properties -> new MultiBlockItem(Blocks.ENERGY_LASER_TOWER.get(), properties));
+                    properties -> new GeoMultiBlockItem(
+                            Blocks.ENERGY_LASER_TOWER.get(),
+                            properties,
+                            AcademyCraft.academy("energy_laser_tower"),
+                            0.9F
+                    ));
     public static final DeferredHolder<Item, GeoMultiBlockItem> HIBERNATION_POD =
             ITEMS.registerItem("hibernation_pod",
                     properties -> new GeoMultiBlockItem(

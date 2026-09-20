@@ -1,6 +1,9 @@
 {
   "model": {
-    "type": "minecraft:model",
-    "model": "academy:block/energy_laser_tower"
+    "type": "minecraft:special",
+    "base": "academy:item/energy_laser_tower",
+    "model": {
+      "type": "geckolib:geckolib"
+    }
   }
 }

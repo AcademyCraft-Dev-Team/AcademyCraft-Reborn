@@ -125,10 +125,6 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         blockModels.createTrivialBlock(Blocks.AEROSPACE_SIGNAL_CABIN.get(), providerW);
         blockModels.createTrivialBlock(Blocks.SATELLITE_LAUNCH_PAD.get(), providerW);
         blockModels.createTrivialBlock(Blocks.ENERGY_LASER_TOWER.get(), providerW);
-        blockModels.registerSimpleItemModel(
-                Blocks.ENERGY_LASER_TOWER.get(),
-                ModelLocationUtils.getModelLocation(Blocks.ENERGY_LASER_TOWER.get())
-        );
         blockModels.createTrivialBlock(Blocks.HIBERNATION_POD.get(), providerW);
         blockModels.createTrivialBlock(Blocks.ABILITY_DEVELOPER.get(), providerDB);
         blockModels.createTrivialBlock(Blocks.IMAG_PHASE.get(), providerBlack);
@@ -222,6 +218,13 @@ public final class AcademyCraftModelProvider extends ModelProvider {
                 Items.AEROSPACE_SIGNAL_CABIN.get(),
                 ItemModelUtils.specialModel(
                         academy("aerospace_signal_cabin").withPrefix("item/"),
+                        new GeckolibItemSpecialRenderer.Unbaked<>()
+                )
+        );
+        itemModels.itemModelOutput.accept(
+                Items.ENERGY_LASER_TOWER.get(),
+                ItemModelUtils.specialModel(
+                        academy("energy_laser_tower").withPrefix("item/"),
                         new GeckolibItemSpecialRenderer.Unbaked<>()
                 )
         );

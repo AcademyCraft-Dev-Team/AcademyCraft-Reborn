@@ -15,6 +15,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -36,20 +37,23 @@ import org.academy.internal.common.world.level.block.entity.OwnedDevice;
 import org.academy.internal.server.world.level.storage.MisakaRelayRegistry;
 import org.jspecify.annotations.Nullable;
 
-import java.util.Arrays;
 import java.util.List;
 
-/** 1×5 vertical multiblock; each segment uses the same block model until a real tower mesh exists. */
+/**
+ * Single-block laser tower. Mesh is 16×16.2×16 px (exactly one block wide;
+ * emitter apex may exceed the block by ~0.01).
+ */
 public final class EnergyLaserTowerBlock extends MultiBlock {
-    public static final int HEIGHT = 5;
+    public static final int HEIGHT = 1;
+    /**
+     * Emitter apex in block space. Bedrock tip ({@code laser_outline} top) is y=16.2 px,
+     * centered on X/Z. GeckoLib places model origin at the block center-bottom (16 px = 1 block).
+     */
+    public static final double BEAM_ORIGIN_Y = 16.2 / 16.0;
+    public static final double BEAM_ORIGIN_XZ = 0.5;
     public static final String SCREEN = "energy_laser_tower_screen";
     public static final MapCodec<EnergyLaserTowerBlock> CODEC = simpleCodec(EnergyLaserTowerBlock::new);
-    public static final List<Vec3i> SUBJECT_BLOCKS = Arrays.asList(
-            new Vec3i(0, 1, 0),
-            new Vec3i(0, 2, 0),
-            new Vec3i(0, 3, 0),
-            new Vec3i(0, 4, 0)
-    );
+    public static final List<Vec3i> SUBJECT_BLOCKS = List.of();
 
     public EnergyLaserTowerBlock(Properties properties) {
         super(properties.mapColor(MapColor.METAL).sound(SoundType.METAL).noOcclusion());
@@ -99,9 +103,13 @@ public final class EnergyLaserTowerBlock extends MultiBlock {
     }
 
     @Override
+    protected float getShadeBrightness(BlockState state, BlockGetter level, BlockPos pos) {
+        return 1.0F;
+    }
+
+    @Override
     protected RenderShape getRenderShape(BlockState state) {
-        // Placeholder: every segment of the 1×5 stack renders the same cube model.
-        return RenderShape.MODEL;
+        return RenderShape.INVISIBLE;
     }
 
     @Override

@@ -1,5 +1,9 @@
 package org.academy.internal.common.world.level.block.entity;
 
+import com.geckolib.animatable.GeoBlockEntity;
+import com.geckolib.animatable.instance.AnimatableInstanceCache;
+import com.geckolib.animatable.manager.AnimatableManager;
+import com.geckolib.util.GeckoLibUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
@@ -20,7 +24,9 @@ import org.jspecify.annotations.Nullable;
 import java.util.Objects;
 import java.util.UUID;
 
-public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implements WirelessUser, OwnedDevice {
+public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity
+        implements WirelessUser, GeoBlockEntity, OwnedDevice {
+    private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
     private static final int MAX_ENERGY = 500_000;
     /** Throttle client energy sync; per-tick updates made the beam flicker. */
     private static final int ENERGY_SYNC_INTERVAL = 20;
@@ -361,6 +367,15 @@ public final class EnergyLaserTowerBlockEntity extends MultiBlockEntity implemen
         if (level != null && level.isClientSide() && isMain()) {
             OrbitSkyHooks.sync(this);
         }
+    }
+
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+    }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return geoCache;
     }
 
     @Override
