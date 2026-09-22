@@ -10,6 +10,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.api.common.entitycontrol.MentalControlTags;
+import org.academy.api.common.entitycontrol.MentalImmunity;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.client.ability.mentalout.MentalResistanceClientState;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
@@ -64,7 +65,8 @@ public final class MentalResistanceManager {
     public static void markTaggedAffected(ServerPlayer controller, LivingEntity subject) {
         if (controller == null || subject == null || controller == subject
                 || !controller.isAlive() || !subject.isAlive() || subject.isRemoved()
-                || controller.level().getServer() != subject.level().getServer() || isResistant(subject)
+                || controller.level().getServer() != subject.level().getServer()
+                || MentalImmunity.isSuppressed(subject) || isResistant(subject)
                 || !subject.getType().builtInRegistryHolder().is(MentalControlTags.RESISTANCE)) return;
         AUTOMATIC.mark(subject.getUUID(), subject.level().getGameTime());
     }
@@ -73,7 +75,7 @@ public final class MentalResistanceManager {
         markTaggedAffected(controller, subject);
         if (controller == null || subject == null || controller == subject
                 || !controller.isAlive() || !subject.isAlive()
-                || controller.level() != subject.level() || isResistant(subject)) {
+                || controller.level() != subject.level() || MentalImmunity.isSuppressed(subject) || isResistant(subject)) {
             return;
         }
         var system = AbilitySystemServer.getSystem(controller);
@@ -93,6 +95,7 @@ public final class MentalResistanceManager {
         for (var subjectId : AUTOMATIC.tick(now, id -> {
             var subject = findSubject(server, id);
             return subject != null && subject.isAlive() && !subject.isRemoved()
+                    && !MentalImmunity.isSuppressed(subject)
                     && subject.getType().builtInRegistryHolder().is(MentalControlTags.RESISTANCE);
         })) {
             var subject = findSubject(server, subjectId);
@@ -102,7 +105,7 @@ public final class MentalResistanceManager {
             challenge.exposures.entrySet().removeIf(entry -> entry.getValue().lastSeenTick < now);
             var subject = server.getPlayerList().getPlayer(challenge.subjectId);
             if (subject == null || !subject.isAlive() || subject.hasDisconnected()
-                    || challenge.exposures.isEmpty() || isResistant(subject)) {
+                    || challenge.exposures.isEmpty() || MentalImmunity.isSuppressed(subject) || isResistant(subject)) {
                 CHALLENGES.remove(challenge.subjectId, challenge);
                 if (subject != null) sendInactive(subject);
                 continue;
@@ -174,6 +177,16 @@ public final class MentalResistanceManager {
         return challenge == null ? 1 : challenge.threshold;
     }
 
+    /** Removes received resistance state without restoring immunity or cancelling outgoing control. */
+    public static void clearProtection(LivingEntity subject) {
+        if (subject == null || subject.level().isClientSide()) return;
+        var id = subject.getUUID();
+        AUTOMATIC.remove(id);
+        CHALLENGES.remove(id);
+        RESISTANCE_UNTIL.remove(id);
+        if (subject instanceof ServerPlayer player) sendInactive(player);
+    }
+
     public static void releaseEntity(UUID entityId) {
         if (entityId == null) return;
         AUTOMATIC.remove(entityId);
@@ -191,7 +204,7 @@ public final class MentalResistanceManager {
 
     private static void acceptInput(ServerPlayer subject, long sequence, int edgeMask) {
         var challenge = CHALLENGES.get(subject.getUUID());
-        if (challenge == null || !challenge.eligible || isResistant(subject)
+        if (challenge == null || !challenge.eligible || MentalImmunity.isSuppressed(subject) || isResistant(subject)
                 || sequence < 0L || sequence <= challenge.lastInputSequence) return;
         var now = subject.level().getGameTime();
         if (challenge.lastInputTick == now) return;

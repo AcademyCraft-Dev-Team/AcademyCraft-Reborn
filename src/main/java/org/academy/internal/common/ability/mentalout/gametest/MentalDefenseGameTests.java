@@ -194,6 +194,8 @@ public final class MentalDefenseGameTests {
             helper.assertTrue(!plainHandle.isClosed(), "Untagged entity must retain control");
             helper.assertTrue(MentalControlApi.resistanceRemainingTicks(rosterOnly) == 0, "Intervention alone must not count");
             helper.assertTrue(MentaloutControlContext.subjects(controller).contains(rosterOnly), "Intervention must remain");
+            plainHandle.close();
+            MindDestructionRegression.verify(helper, controller, cow, sheep, plain, playerSubject);
             helper.succeed();
         } finally {
             MentalResistanceManager.clear();

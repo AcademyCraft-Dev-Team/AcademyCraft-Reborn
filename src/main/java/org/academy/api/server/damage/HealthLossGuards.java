@@ -20,10 +20,35 @@ public final class HealthLossGuards {
     private static final Map<LivingEntity, Map<Identifier, Protection>> PROTECTIONS = new WeakHashMap<>();
     private static final ThreadLocal<Set<LivingEntity>> WRITING = ThreadLocal.withInitial(
             () -> Collections.newSetFromMap(new IdentityHashMap<>()));
+    private static final ThreadLocal<Map<LivingEntity, java.util.List<DeathProtection>>> DEATH_PROTECTIONS =
+            ThreadLocal.withInitial(IdentityHashMap::new);
 
     private HealthLossGuards() {}
 
     public record Resolution(double health, double absorbed, double cost, boolean fullyAbsorbed) {}
+
+    public record ProtectedResult<T>(T value, boolean preventedDeath) {}
+
+    /**
+     * Protects only lethal health submissions made by this synchronous action, after resource
+     * absorption. Does not heal, affect nonlethal hits or leave invulnerability on the subject.
+     * A cancelled/rejected write never reports a prevented death. Server thread only.
+     */
+    public static <T> ProtectedResult<T> protectDeath(LivingEntity subject, float remainingHealth, Supplier<T> action) {
+        if (!Float.isFinite(remainingHealth) || remainingHealth <= 0) {
+            throw new IllegalArgumentException("Remaining health must be positive and finite");
+        }
+        var protection = new DeathProtection(remainingHealth);
+        var scopes = DEATH_PROTECTIONS.get().computeIfAbsent(subject, _ -> new ArrayList<>());
+        scopes.add(protection);
+        try {
+            return new ProtectedResult<>(action.get(), protection.prevented);
+        } finally {
+            scopes.remove(protection);
+            if (scopes.isEmpty()) DEATH_PROTECTIONS.get().remove(subject);
+            if (DEATH_PROTECTIONS.get().isEmpty()) DEATH_PROTECTIONS.remove();
+        }
+    }
 
     public static Resolution resolve(double current, double requested, double available, double costPerHealth) {
         if (!Double.isFinite(current) || !Double.isFinite(requested)
@@ -62,13 +87,12 @@ public final class HealthLossGuards {
     public static float preview(LivingEntity subject, float current, float requested) {
         if (WRITING.get().contains(subject) || subject.level().isClientSide()) return requested;
         var protections = PROTECTIONS.get(subject);
-        if (protections == null) return requested;
         current = effectiveCurrent(subject, current);
         var result = requested;
-        for (var protection : protections.values()) {
+        if (protections != null) for (var protection : protections.values()) {
             result = (float) resolve(current, result, protection.account.current(), protection.costPerHealth).health();
         }
-        return result;
+        return protectLethalSubmission(subject, current, result);
     }
 
     /** Writer returns true only when it accepted the protected value. Nested writers do not repay. */
@@ -78,7 +102,9 @@ public final class HealthLossGuards {
             return writer.test(requested);
         }
         var protections = PROTECTIONS.get(subject);
-        if (protections == null || protections.isEmpty()) return writer.test(requested);
+        if ((protections == null || protections.isEmpty()) && !DEATH_PROTECTIONS.get().containsKey(subject)) {
+            return writer.test(requested);
+        }
         current = effectiveCurrent(subject, current);
         if (requested >= current) return writer.test(requested);
         var paid = new ArrayList<Payment>();
@@ -86,14 +112,18 @@ public final class HealthLossGuards {
         var success = false;
         WRITING.get().add(subject);
         try {
-            for (var protection : java.util.List.copyOf(protections.values())) {
+            if (protections != null) for (var protection : java.util.List.copyOf(protections.values())) {
                 var resolution = resolve(current, result, protection.account.current(), protection.costPerHealth);
                 if (resolution.cost() > 0 && protection.account.tryConsume(resolution.cost())) {
                     paid.add(new Payment(protection, resolution));
                     result = (float) resolution.health();
                 }
             }
-            success = writer.test(result);
+            var protectedResult = protectLethalSubmission(subject, current, result);
+            success = writer.test(protectedResult);
+            if (success && protectedResult > result) {
+                for (var protection : DEATH_PROTECTIONS.get().get(subject)) protection.prevented = true;
+            }
             return success;
         } finally {
             if (!success) for (var payment : paid) payment.protection.account.recover(payment.resolution.cost());
@@ -117,6 +147,22 @@ public final class HealthLossGuards {
         if (((org.academy.internal.common.entitycontrol.HealthOffsetAccess) subject).academy$getHealthOffset() == null) return rawCurrent;
         // An existing projection is already committed damage, not a fresh bill for this resource.
         return Math.min(rawCurrent, org.academy.internal.common.entitycontrol.TrueHealthOffsetRuntime.effectiveHealth(subject));
+    }
+
+    private static float protectLethalSubmission(LivingEntity subject, float current, float requested) {
+        var protections = DEATH_PROTECTIONS.get().get(subject);
+        if (protections == null || !Float.isFinite(current) || !Float.isFinite(requested)
+                || current <= 0 || requested > 0) return requested;
+        var remaining = 0.0f;
+        for (var protection : protections) remaining = Math.max(remaining, protection.remainingHealth);
+        return Math.min(current, remaining);
+    }
+
+    private static final class DeathProtection {
+        private final float remainingHealth;
+        private boolean prevented;
+
+        private DeathProtection(float remainingHealth) { this.remainingHealth = remainingHealth; }
     }
 
     private record Protection(AbilityResourceAccount account, double costPerHealth, Consumer<Resolution> onAbsorbed) {}

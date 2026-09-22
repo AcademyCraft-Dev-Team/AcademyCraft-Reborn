@@ -134,6 +134,12 @@ public final class MentalControlEvents {
     }
 
     @SubscribeEvent
+    public static void onPlayerClone(PlayerEvent.Clone event) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || !event.isWasDeath()) return;
+        MentalResistanceManager.releaseEntity(player.getUUID());
+    }
+
+    @SubscribeEvent
     public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         ImpressionRidingManager.releaseEntity(player.getUUID());

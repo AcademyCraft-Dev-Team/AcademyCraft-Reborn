@@ -4,6 +4,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
+import org.academy.internal.common.ability.mentalout.MentalResistanceManager;
 
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -45,13 +46,14 @@ public final class MentalImmunity {
     }
 
     /**
-     * Permanently (for this life) strips every mental immunity and resistance source from the
-     * subject, including data-pack tags, instance sources and skill-provided protection.
+     * Strips mental immunity and resistance until explicit restoration or entity lifecycle cleanup,
+     * including data-pack tags, instance sources, skill protection and accumulated break-free state.
      */
     public static void suppress(LivingEntity subject) {
         if (subject == null || subject.level().isClientSide()) return;
         SOURCES.remove(subject);
         SUPPRESSED.add(subject.getUUID());
+        MentalResistanceManager.clearProtection(subject);
         MentalControlRuntime.releaseBySubject(subject.level().getServer(), subject.getUUID());
     }
 

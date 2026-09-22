@@ -28,6 +28,7 @@ import org.academy.api.common.entitycontrol.ControlHandle;
 import org.academy.api.common.entitycontrol.ControlRequest;
 import org.academy.api.common.entitycontrol.MentalControlApi;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.server.damage.HealthLossGuards;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -64,6 +65,7 @@ public final class MindDestruction extends Skill {
     public static final int DAMAGE_INTERVAL_TICKS = 20;
     public static final float MAX_HEALTH_DAMAGE_RATIO = 0.01f;
     public static final float BASE_DAMAGE = 10.0f;
+    public static final float PROTECTED_HEALTH = 1.0f;
     private static final int STUPOR_PRIORITY = 250;
     private static final Map<EffectKey, ActiveEffect> ACTIVE = new HashMap<>();
 
@@ -132,7 +134,7 @@ public final class MindDestruction extends Skill {
             effect.nextDamageTick += DAMAGE_INTERVAL_TICKS;
             effect.pulsesRemaining--;
             var healthBeforePulse = target.getHealth();
-            var damaged = SkillDamageUtil.apply(
+            java.util.function.Supplier<Boolean> pulse = () -> SkillDamageUtil.apply(
                     controller,
                     target,
                     Skills.MIND_DESTRUCTION.get(),
@@ -140,6 +142,17 @@ public final class MindDestruction extends Skill {
                     damagePerPulse(target.getMaxHealth()),
                     target.getMaxHealth() * MAX_HEALTH_DAMAGE_RATIO
             );
+            var result = MentalControlApi.hasMentalProtection(target)
+                    ? HealthLossGuards.protectDeath(target, PROTECTED_HEALTH, pulse)
+                    : new HealthLossGuards.ProtectedResult<>(pulse.get(), false);
+            if (result.preventedDeath()) {
+                MentalControlApi.suppressMentalProtection(target);
+                close(effect);
+                controller.sendOverlayMessage(Component.translatable(
+                        "message.academy.mentalout.protection_stripped", target.getDisplayName()));
+                continue;
+            }
+            var damaged = result.value();
             if (damaged && target.getHealth() < healthBeforePulse && target.isAlive() && effect.reaction == null) {
                 effect.reaction = ReactionSlowdown.acquire(target);
             }

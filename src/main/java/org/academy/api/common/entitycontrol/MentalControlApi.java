@@ -81,6 +81,27 @@ public final class MentalControlApi {
         return MentalResistanceManager.remainingTicks(subject);
     }
 
+    /** Includes tagged resistance before its automatic break-free timer has elapsed. */
+    public static boolean hasMentalProtection(LivingEntity subject) {
+        return subject != null && !MentalImmunity.isSuppressed(subject)
+                && (MentalControlRuntime.isProtectedTarget(subject)
+                || subject.getType().builtInRegistryHolder().is(MentalControlTags.RESISTANCE));
+    }
+
+    /** Clears all mental defenses and blocks their registration for this entity's current lifecycle. */
+    public static void suppressMentalProtection(LivingEntity subject) {
+        MentalImmunity.suppress(subject);
+    }
+
+    public static boolean isMentalProtectionSuppressed(LivingEntity subject) {
+        return MentalImmunity.isSuppressed(subject);
+    }
+
+    /** Allows sources to register again; removed instance sources and old resistance do not return. */
+    public static void restoreMentalProtection(LivingEntity subject) {
+        MentalImmunity.restore(subject);
+    }
+
     public static boolean hasActiveControl(LivingEntity subject) {
         return MentalControlRuntime.hasActiveControl(subject);
     }
