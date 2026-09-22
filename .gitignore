@@ -32,6 +32,7 @@ logs
 *.nar
 *.ear
 *.zip
+!/archives/tests/2026-09-22/test-sources.zip
 *.tar.gz
 *.rar
 

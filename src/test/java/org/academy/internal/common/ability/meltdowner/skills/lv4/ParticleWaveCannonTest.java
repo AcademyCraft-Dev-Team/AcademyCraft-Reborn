@@ -28,12 +28,4 @@ class ParticleWaveCannonTest {
         ));
     }
 
-    @Test
-    void chargeAndBeamBoundsMatchReference() {
-        assertEquals(25, ParticleWaveCannon.CHARGE_TICKS);
-        assertEquals(2, ParticleWaveCannon.CP_INTERVAL_TICKS);
-        assertEquals(10, ParticleWaveCannon.DAMAGE_INTERVAL_TICKS);
-        assertEquals(85.0f, ParticleWaveCannon.MAX_LENGTH);
-        assertEquals(4, ParticleWaveCannon.MINING_TIER);
-    }
 }

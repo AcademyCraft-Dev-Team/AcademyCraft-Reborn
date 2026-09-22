@@ -12,10 +12,4 @@ class LightShieldTest {
         assertEquals(0.0f, LightShield.calculateDamage(-1.0f, 1.0f));
     }
 
-    @Test
-    void heldIntervalsAndRadiusMatchReference() {
-        assertEquals(2, LightShield.CP_INTERVAL_TICKS);
-        assertEquals(4, LightShield.ATTACK_INTERVAL_TICKS);
-        assertEquals(3.5, LightShield.ATTACK_RADIUS);
-    }
 }

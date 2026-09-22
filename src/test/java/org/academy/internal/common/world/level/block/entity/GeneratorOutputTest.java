@@ -12,8 +12,4 @@ class GeneratorOutputTest {
         assertEquals(512, GeneratorOutput.solar(15));
     }
 
-    @Test
-    void windGeneratorProducesConfiguredEnergyPerTick() {
-        assertEquals(4_096, GeneratorOutput.WIND_PER_TICK);
-    }
 }

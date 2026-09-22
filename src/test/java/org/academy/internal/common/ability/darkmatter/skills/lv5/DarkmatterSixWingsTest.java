@@ -6,12 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class DarkmatterSixWingsTest {
     @Test
-    void reservationAndActivationMatchGammaContract() {
-        assertEquals(120.0f, DarkmatterSixWings.MIN_RESERVED_CP, 0.0001f);
-        assertEquals(10.0f, DarkmatterSixWings.ACTIVATION_MATTER_COST, 0.0001f);
-    }
-
-    @Test
     void secondMilestoneImprovesFlightAndAreaCombos() {
         assertEquals(0.05f, DarkmatterSixWings.Server.flightSpeed(1), 0.0001f);
         assertEquals(0.0575f, DarkmatterSixWings.Server.flightSpeed(2), 0.0001f);

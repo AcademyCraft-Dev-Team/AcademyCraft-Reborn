@@ -99,14 +99,6 @@ class PlayerCPManagerTest {
     }
 
     @Test
-    void cpBaselineCapsAndOverloadDurationMatchTheNewRules() {
-        assertEquals(100.0f, PlayerCPManager.BASE_MAX_CP);
-        assertEquals(300.0f, PlayerCPManager.MAX_SKILL_PROFICIENCY_CP_BONUS);
-        assertEquals(200.0f, PlayerCPManager.MAX_CHALLENGE_CP_BONUS);
-        assertEquals(200, PlayerCPManager.OVERLOAD_TICKS);
-    }
-
-    @Test
     void temporarilyDisablesStackLimitsForEverySkill() {
         assertFalse(Skill.STACK_LIMITS_ENABLED);
     }

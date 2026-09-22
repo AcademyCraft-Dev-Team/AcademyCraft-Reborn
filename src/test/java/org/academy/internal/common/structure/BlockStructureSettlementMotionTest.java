@@ -14,11 +14,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BlockStructureSettlementMotionTest {
     @Test
-    void gravitySettlementUsesFallingBlockGravity() {
-        assertEquals(0.04, BlockStructureSettlementMotion.FALLING_BLOCK_GRAVITY);
-    }
-
-    @Test
     void stoppedOrBlockedPropulsionTransitionsIntoGravitySettlement() {
         assertTrue(BlockStructureSettlementMotion.shouldBegin(
                 false, true, true, false, false, false));

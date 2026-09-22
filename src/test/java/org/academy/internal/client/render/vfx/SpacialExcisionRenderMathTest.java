@@ -15,11 +15,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SpacialExcisionRenderMathTest {
     @Test
-    void sourceValidationSupportsFiveOverlappingCuts() {
-        assertEquals(5, SpacialExcisionVfxClient.MAX_SOURCE_VALIDATION_CUTS);
-    }
-
-    @Test
     void sourceValidationPipelineAndShaderExposeFiveSlots() throws IOException {
         var pipeline = Files.readString(Path.of(
                 "src/main/java/org/academy/api/client/render/vfx/VfxPipelines.java"));
@@ -123,17 +118,4 @@ class SpacialExcisionRenderMathTest {
                 SpacialExcisionRenderMath.selectBackgroundIds(candidates, 3));
     }
 
-    @Test
-    void renderHotPathDoesNotRetainObsoleteShaderMirrorsOrStripArrays() throws IOException {
-        var math = Files.readString(Path.of(
-                "src/main/java/org/academy/internal/client/render/vfx/SpacialExcisionRenderMath.java"));
-        var client = Files.readString(Path.of(
-                "src/main/java/org/academy/internal/client/render/vfx/SpacialExcisionVfxClient.java"));
-
-        assertFalse(math.contains("safeTranslationWeight("));
-        assertFalse(math.contains("affineViewportAvailableSteps("));
-        assertFalse(math.contains("behindOnlyBilinearWeights("));
-        assertFalse(client.contains("new Vec3[crossSections]"));
-        assertFalse(client.contains("new float[crossSections]"));
-    }
 }

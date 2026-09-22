@@ -33,4 +33,10 @@ class GaussianSamplesTest {
         val last = Render.GaussianSamples.MAX_GAUSSIAN_SAMPLES - 1
         assertTrue(small.samples()[last].x() < large.samples()[last].x())
     }
+
+    @Test
+    fun `large radius is clamped to the sample slot capacity`() {
+        val samples = Render.GaussianSamples.getGaussianSamples(24f)
+        assertEquals(Render.GaussianSamples.MAX_GAUSSIAN_SAMPLES, samples.sampleCount())
+    }
 }

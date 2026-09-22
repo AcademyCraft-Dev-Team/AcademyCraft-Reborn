@@ -1,0 +1,4869 @@
+{
+  "date": "2026-09-22",
+  "baseCommit": "317712cad59d96cbc78172d388b272c3d4d38c76",
+  "archive": "test-sources.zip",
+  "archiveSha256": "408a174742090c7111a4ed37789a2fe56b9e22046b423365f6356cc57b1f1f53",
+  "sourceRoots": [
+    "src/test",
+    "src/editorTest"
+  ],
+  "fileCount": 603,
+  "files": [
+    {
+      "path": "src/editorTest/kotlin/org/academy/desktop/grapheditor/app/GraphEditorDocumentsTest.kt",
+      "bytes": 5382,
+      "sha256": "e1d855898369a0efd06f1924775db690e203c0058131ed07ad5509e0760a5d3c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/editorTest/kotlin/org/academy/desktop/grapheditor/bridge/VfxGraphMcpBridgeTest.kt",
+      "bytes": 2194,
+      "sha256": "fe437d05698f501aaf1a2f011671ffe00c08ca07f181411adbdf30342cfcd4ed",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/editorTest/kotlin/org/academy/desktop/grapheditor/canvas/AlignOpsTest.kt",
+      "bytes": 3577,
+      "sha256": "d287bcf1605c6e8098760680ac78027d24f8d8af354e0a2d16df9a2f8b42992a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/editorTest/kotlin/org/academy/desktop/grapheditor/canvas/Camera2DTest.kt",
+      "bytes": 1489,
+      "sha256": "b094c4d1d35dc2477d802ddc8235acc50b1f847496bd1d36289b802593a4c122",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/editorTest/kotlin/org/academy/desktop/grapheditor/canvas/GraphEditorModelFrameNoteTest.kt",
+      "bytes": 3728,
+      "sha256": "d01ede6e1d407221f993089badab20fa7bf7b2427bbcce59ddd47f1bb827abc4",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/editorTest/kotlin/org/academy/desktop/grapheditor/canvas/GraphEditorModelUndoTest.kt",
+      "bytes": 10668,
+      "sha256": "9a788bc5d6feee710ae2651919e34e74eccdd7b834fbadf2eeaf3a66bb5945c7",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/editorTest/kotlin/org/academy/desktop/grapheditor/canvas/SubGraphModelTest.kt",
+      "bytes": 2489,
+      "sha256": "421e8f0ffdb5e6abebaa032bcb96197feedb9cefd1696406de975e7ede861abf",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/editorTest/kotlin/org/academy/desktop/grapheditor/clipboard/GraphClipboardTest.kt",
+      "bytes": 4495,
+      "sha256": "573813429e7a4c99b021907c2eb692bb0a15c483d75aae29d2e1df4f2cb51f35",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/editorTest/kotlin/org/academy/desktop/grapheditor/command/GraphCommandsTest.kt",
+      "bytes": 3262,
+      "sha256": "ea4d909ff56e413ed84f199372afa6edac59824917f17886d66758e72066d636",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/editorTest/kotlin/org/academy/desktop/grapheditor/command/UndoManagerTest.kt",
+      "bytes": 4260,
+      "sha256": "ed6857fe444427a4d16248a2ad8fa02ba3095c36f173d8ef99fd5c7b7d45242a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/editorTest/kotlin/org/academy/desktop/grapheditor/container/VfxContainerModelTest.kt",
+      "bytes": 9827,
+      "sha256": "95d52c7836e5c6e712eef68125dba5970f6e51c9ab553fbb09f091ed7efedf7c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/editorTest/kotlin/org/academy/desktop/grapheditor/document/EditorMetadataCodecTest.kt",
+      "bytes": 2069,
+      "sha256": "dc47be9b7ec7dc60f749fa7d70b62e2378b383ddd35836006cae532e7554f6ee",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/editorTest/kotlin/org/academy/desktop/grapheditor/EditorTestFixtures.kt",
+      "bytes": 1490,
+      "sha256": "a61851f88f715a8352308d3d82c2c4fb7490c43b85be6fc4f9ece083bcd2468a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/editorTest/kotlin/org/academy/desktop/grapheditor/preview/VfxPreviewSyncRetentionTest.kt",
+      "bytes": 4673,
+      "sha256": "ffa9e0aa9f033afb5b833d725e14802acc1df8e6e4c8d5fef82e2d7e894750a0",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/editorTest/kotlin/org/academy/desktop/grapheditor/project/ProjectBrowserTest.kt",
+      "bytes": 1923,
+      "sha256": "69cce169122bcb9195b3711fc969bacd5f5ba77fc94d6bc904a9da545709a5e3",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/editorTest/kotlin/org/academy/desktop/grapheditor/project/RecentFilesTest.kt",
+      "bytes": 2392,
+      "sha256": "1b863eb726f3be9c23af874a4de4844a9d3397b59e48b36329358ef26afd3907",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/editorTest/kotlin/org/academy/desktop/grapheditor/viewport/OrbitCameraTest.kt",
+      "bytes": 2954,
+      "sha256": "0002161be2acdf8275931759dd06f7b3df344f2a633920ee64290861e72d4563",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/editorTest/kotlin/org/academy/desktop/platform/GraphHotReloadTest.kt",
+      "bytes": 1265,
+      "sha256": "53db7149a7b5cabf1bdb06afb6f2f49906e3a6403501ce01ba724e0e5da3b1c7",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/AcademyCraftConfigMutationSaveTest.java",
+      "bytes": 2012,
+      "sha256": "c0948e133df74da35ca75c760480bfc59d34ecc1389148a6c33fdfdce4e2b5cf",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/AcademyCraftWorldgenConfigTest.java",
+      "bytes": 3922,
+      "sha256": "a4be5659c46636cdce08746180dc76985185bd1646694c871a279612593138b0",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/ability/program/ProgramNodeEditorOptionsTest.java",
+      "bytes": 1382,
+      "sha256": "89b63ff5ad908da58093b0bb19bb7c90bd83e3126bba63f5f1d26880033f78d6",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/ability/program/ProgramNodePaletteTest.java",
+      "bytes": 1656,
+      "sha256": "3d9ad642ceac47825e1e7846d3d937d26044ecba9f6d944ca73a2e4e44d564af",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/config/KeyBindingConfigMigrationTest.java",
+      "bytes": 8036,
+      "sha256": "17d08dfa74a66a3281da29b793f7bd6b8c086c0ba89e3f07fc30765e1a5d2c80",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/config/package-info.java",
+      "bytes": 100,
+      "sha256": "b57f2f126abc59ae47bd32d4795032ba88e1899d30f9fe310cf3b850b1bee866",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/config/SkillSettingsFloatRangeTest.java",
+      "bytes": 1331,
+      "sha256": "7ae5dc190157e1c0bf7f84a1aa257185c72545df90ff48ad60c3649e064b52fb",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/config/WingFlightConfigTest.java",
+      "bytes": 1378,
+      "sha256": "a53bbc9b881191d7a71d54a021e1f635aa4997ec367dd3a1f81a419665f65d47",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/input/InputSystemExclusiveBindingTest.java",
+      "bytes": 1703,
+      "sha256": "a2125cbef7c37bd8360d82e3e8caa07df9e5247a2651a6b526088380787f9d0a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/input/InputSystemExternalBindingTest.java",
+      "bytes": 1185,
+      "sha256": "b819cec520fc4907fdffa7f42de3e37a6cd87c873adc08aca8918e965e93c73c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/input/InputSystemMaintainedBindingTest.java",
+      "bytes": 2464,
+      "sha256": "928d7f7b3de779c21d9ec434a842c640b815547fc70653f659d59bd848941dbe",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/input/InputSystemModifierSnapshotTest.java",
+      "bytes": 2188,
+      "sha256": "6ca927cee012827399170a794a9908e6a794b15edd6c86bc12d8c3323ab2f56d",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/input/InputSystemPairedBindingTest.java",
+      "bytes": 3000,
+      "sha256": "fc7e9c574c7d73e2c5d45d672900fc2af93756e371c3d8bc62134b10827f932e",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/input/InputSystemPrimaryBindingTest.java",
+      "bytes": 3658,
+      "sha256": "cfba1df64e2309f0dec06112ebbd42db5e9e01fef5fb540002108cf62ee17a93",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/input/package-info.java",
+      "bytes": 99,
+      "sha256": "b1412eef87cea05a15ed3080fea8047eabafd00d6bfbf9a9bf51b7cb95373ebc",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/ClientEventSubscriberDistTest.java",
+      "bytes": 732,
+      "sha256": "384d0d76680d788aaf0fd730586c4b6e4048dea3418e4d5258dc3c344ef63a80",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/graph/assets/GraphAssetsTest.java",
+      "bytes": 2113,
+      "sha256": "2d5c1a8208bfe71088174fd1be55504d1885d2cb3b53e6aef2b64f6c1d9ebb45",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/graph/assets/package-info.java",
+      "bytes": 113,
+      "sha256": "da3c83df396196cfe33fa872cb6f656deeaf049f41cbc60661dead2d79138a58",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/graph/compile/DefaultGraphCompilerTest.java",
+      "bytes": 6127,
+      "sha256": "273d98dc6582ba6e926527b0fd4b0d2c6d1b413d0eadfaa7f27425f0d454e247",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/graph/compile/package-info.java",
+      "bytes": 114,
+      "sha256": "8ded2c96e2930284201d11a891c3a5dc37b66d5609c0eedeb63a20b5f1ca4b85",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/graph/GraphFixtures.java",
+      "bytes": 3358,
+      "sha256": "e5ebc9a09a48470ab9aa171e09b22fbeafe18c1392e880320bbffc22befb2286",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/graph/model/package-info.java",
+      "bytes": 112,
+      "sha256": "fa55800a3a6b99b8c3a5e2c98571f440ea54b6ff548cd950a989c3b116b71fb7",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/graph/package-info.java",
+      "bytes": 106,
+      "sha256": "ea343086d66e571edd225b7e26904272879c8c41c8048f7bbe6a0754b8c498c7",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/graph/registry/NodeRegistryTest.java",
+      "bytes": 1043,
+      "sha256": "3c31940db1d179ad70fabe2e46255582b8b8681480b5378ba1babed9ea0fbf58",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/graph/registry/package-info.java",
+      "bytes": 115,
+      "sha256": "3752155ee0a9c5b12dd8ad295f26b85594f4677d80b8282354adf95b92d93d03",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/graph/serialize/GraphMigrationsTest.java",
+      "bytes": 2968,
+      "sha256": "91adb0583545bb439bbdb65059fd35b85bf92c1b08e16d5e30daf1912d0fbd23",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/graph/serialize/JsonGraphCodecTest.java",
+      "bytes": 5492,
+      "sha256": "ef25142e1bf45f746fea9d553ed8313144f3c202ba65ba5a0f5e12e79ed4bb49",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/graph/serialize/package-info.java",
+      "bytes": 116,
+      "sha256": "34acc571345758d254f7365ee3dd63071aa3806f6a30ba6923a1b2d45cace790",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/graph/subgraph/package-info.java",
+      "bytes": 115,
+      "sha256": "ede9d3de603dd0bcb48c1727cc6aef19e255b50ab185bcb7b12043ce44fb175a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/graph/subgraph/SubGraphFlattenerTest.java",
+      "bytes": 4815,
+      "sha256": "38b8f820d6eb36a36e700b3ef6a18b2b4e1f1a7294eec1ba048f65c719c21fb8",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/graph/subgraph/SubGraphRegistryTest.java",
+      "bytes": 1268,
+      "sha256": "0904abef8adc7b38b187668a6e080a28cc0ab7483759af18b04fe03e7ce479a4",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/graph/type/CurveSamplerTest.java",
+      "bytes": 2562,
+      "sha256": "9be5a66a83f3b86c973f5690269bb31946bc2095a6961abc5ce3a7ef800576c4",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/graph/type/GradientSamplerTest.java",
+      "bytes": 1581,
+      "sha256": "760358a97b9a36bf1df3fd15d8c99c6eefc93be96042aa12e8791fff138fe413",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/graph/type/package-info.java",
+      "bytes": 111,
+      "sha256": "dcff1ba5622f5e24083249d71cb55c2613066965ca1d457d2c159bdcdc133b8a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/graph/type/TypeConversionsTest.java",
+      "bytes": 1893,
+      "sha256": "ac475d57808c60e7822bf740cf2ccb6d0802dcd9208e30ff6bd946d1a93c3175",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/graph/type/ValueTest.java",
+      "bytes": 1264,
+      "sha256": "e3a90edc4ddacfdfab3de68942245fe91e9d938b519421890174fd8fc9005954",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/graph/validate/GraphValidatorTest.java",
+      "bytes": 3973,
+      "sha256": "944af2b052e4b7e60e1a9b00d3e5f456efcd890f93a1ecaf030ef5b6140c7c54",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/graph/validate/package-info.java",
+      "bytes": 115,
+      "sha256": "49d5ee40b9e4dc33dafd4b9286b62ee428ca7b30beb7814194ff166239e53bdb",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/shader/codegen/CurveGradientGlslTest.java",
+      "bytes": 1859,
+      "sha256": "be45a7874aef3cfb0e16970693e9ceab03eb4a1f15b0f7f750dec45c9b82894b",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/shader/codegen/GlslGenContextTest.java",
+      "bytes": 1763,
+      "sha256": "668678b7094e0b430820a2794fce637c0f2e4c730db44fa022add00e7c25aeeb",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/shader/codegen/GlslGeneratorTest.java",
+      "bytes": 8060,
+      "sha256": "f3072e25fd96f4660ca0b5beb46c68381ded73e0be637c5ee87675a77f2d6f74",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/shader/codegen/GlslGoldenTest.java",
+      "bytes": 8749,
+      "sha256": "82c56614cad6cb26723ea89f8fcb6f3cb61b01b1a3a24ff8670c674b52816cb4",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/shader/codegen/GlslLiteralsTest.java",
+      "bytes": 1476,
+      "sha256": "e5f1f7b8ebb90cd15cffbca7a86dd1018c3c3baa8ecb6dc7925cdb078f0ab8cc",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/shader/codegen/GlslNamesTest.java",
+      "bytes": 800,
+      "sha256": "15a92dceaf740d94c59a024bd2bbf4a4f9b40bc77400484b52cb6a8581956936",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/shader/codegen/GlslNodeRegistryTest.java",
+      "bytes": 2123,
+      "sha256": "255e0f74ffc3aaa119ab4c518ec001fb98f393faa03c5eae30a6eeadc881308f",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/shader/codegen/GlslTypeTest.java",
+      "bytes": 1544,
+      "sha256": "87df6d3cb5e7e6beb67de733b9debe1c0ff010d5cdcc4f1b7255a8434c3e4d47",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/shader/codegen/GlslWriterTest.java",
+      "bytes": 825,
+      "sha256": "ab575ece20a22d9bcb6d290b16b9ea257ed41da4891acb6bcc3b95cd2a77d6e4",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/shader/codegen/package-info.java",
+      "bytes": 115,
+      "sha256": "617d8d40fe3c3c0b2451b1f5dfe1666f7ccba3f616de4bbabe8a55b599b9b9c1",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/shader/codegen/SwizzleTest.java",
+      "bytes": 667,
+      "sha256": "7cf236120ec8c189e0b89c842b146a726ea64f95ececd6a54651d3f9af782ade",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/shader/nodes/package-info.java",
+      "bytes": 113,
+      "sha256": "77b833e50f0626caf28a29c1a5a3e17bf96bd73e662a5621d9a2bae3e94fc402",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/shader/nodes/ShaderNodesCatalogTest.java",
+      "bytes": 6318,
+      "sha256": "28e8c99c3b13ef8266bbeeea85ad5827008f3033949400aa9d6b73b105a96a76",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/shader/pipeline/DynamicShaderSourceTest.java",
+      "bytes": 1264,
+      "sha256": "23a44ed19c8949c589cdeb14605eb6bf16c599469bdd78ffacf5a6721a6876f7",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/shader/pipeline/GraphMaterialTest.java",
+      "bytes": 4837,
+      "sha256": "65006e7d16bc5416bdba4da916e2ef520f9eaf1f804d2999836ed6ada0ff4fa6",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/shader/pipeline/package-info.java",
+      "bytes": 116,
+      "sha256": "337bf8af2a859eaa3b2913442a1df4036866a3dae64184d208b5734041365862",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/shader/pipeline/ShaderGraphPipelineTest.java",
+      "bytes": 4454,
+      "sha256": "43e870248cfc5353d05ef5e13f8a4249fa830f90f29b01981359682353e074ca",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/shader/pipeline/UniformLayoutTest.java",
+      "bytes": 3350,
+      "sha256": "45a34b6877bd526f68fdcb0bc2563c1149369a8fc280c1ec5c8fb59636a11f7a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfx/BoundedAnimationTimelineTest.java",
+      "bytes": 4047,
+      "sha256": "8df1ed9605c16d59d6c9de5004fd52c75c0bdfacc6d25ff4a268e3830c3543d9",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/arc/ArcBoltReshuffleTest.java",
+      "bytes": 8470,
+      "sha256": "bc043fdf01f18eee9be1675327e7fdd4fc3da2e9f94e41b5461c6bd1ffcad74f",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/arc/ArcBufferTest.java",
+      "bytes": 3635,
+      "sha256": "bd33eff7d158da6d4e9aca3c38c97a54198d8564dba89dd32c8732d83d72541d",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/arc/ArcCurveTest.java",
+      "bytes": 1734,
+      "sha256": "9e8c96120675394e9571ad50dbd233ff20a84f4309bda3c4508b187f317fecda",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/arc/ArcSimulatorTest.java",
+      "bytes": 3400,
+      "sha256": "6f7e928acd4b699cdae2f4a95a5c56d8db4cc19b94f00cb76cbe0cafaffb3e19",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/arc/BlenderArcDemoSimulationTest.java",
+      "bytes": 2976,
+      "sha256": "6316d65bc28b7a056e8b4cd89035101ba6bba8055ab141ec801b1e204034ef9f",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/arc/BlenderArcGeometryTest.java",
+      "bytes": 7960,
+      "sha256": "26da4a55fd3775a125aca94353e54a40ee6d75e7dd95842ffa6f0126caf7bfa8",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/arc/BlenderArcReference.java",
+      "bytes": 9419,
+      "sha256": "d8f7d40646bc9b7e75bc7a69648dc7547b1155772296ea5815e2bdffdf2ddf73",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/arc/ContactArcBlockTest.java",
+      "bytes": 7299,
+      "sha256": "c93ba293db1878ac48e692cb0936b0f7e5dc2530f06b38d3ffaa99577cba99cd",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/arc/CurveGeneratorSurfaceArcTest.java",
+      "bytes": 3343,
+      "sha256": "4f9877aabdadc26c05a182b47fa51925ff8017f461dce6530073a8d6944a16ef",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/arc/CurveGeneratorTest.java",
+      "bytes": 8136,
+      "sha256": "394f71b5dce0403165b9486d813f2c8b2c0d0c54d840aedb59c1124100870e04",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/arc/CurveToMeshBuilderTest.java",
+      "bytes": 9493,
+      "sha256": "9e20fc9dfb2dd5ca296cff1fcd204b7a019619594abb809651469f560a59eb49",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/arc/M29bArcGatingTest.java",
+      "bytes": 7519,
+      "sha256": "8c34e491ec6ee58404240baa54acdb4146729f91c3327324b3ea2eadf9f2977e",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/arc/M30FaithfulReplicationTest.java",
+      "bytes": 12377,
+      "sha256": "050823631152a1dbe30e1d0ae6a46ee20d4f55cdf57c6038530690403b378948",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/arc/MeshAssetsBuiltinTest.java",
+      "bytes": 2642,
+      "sha256": "998c1e7e2e6cf7d7accaa1ce34afd204ccb1f582282327aaaee0aa812e38ac29",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/arc/MeshDistanceTest.java",
+      "bytes": 2133,
+      "sha256": "2d47f0c8aa742f884a69a9066874d9812e663c0b94832b6c1c86f72c901599ae",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/arc/NoiseAnimatorTest.java",
+      "bytes": 3596,
+      "sha256": "0c412f1c3707e9700578385d48ce908f16fe5b1521c938271be19658657c0434",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/arc/package-info.java",
+      "bytes": 170,
+      "sha256": "0ed1ed9e8956238824ddd99434606249313b8af184e6f732ed8caf96045011de",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/arc/SparkArcBlockTest.java",
+      "bytes": 4919,
+      "sha256": "c8a650e1809b85e954f3a53ada9ff69d75464d98f66c19b008a5869fc71fb586",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/arc/SparkGeneratorTest.java",
+      "bytes": 3502,
+      "sha256": "b3597838360031a495da295b0fb60d23aaa5f9fd30eb7cf58e6e18814890ff1e",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/arc/SurfaceArcBlockTest.java",
+      "bytes": 5943,
+      "sha256": "8424a9410f8baf439b841ff2b4087a9829cf2415e39cf50cd0e6072194523022",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/arc/SurfaceConstraintTest.java",
+      "bytes": 3962,
+      "sha256": "f9f0e196e0c9770e754ddb0c0048902e761bddaac6c4b1879eab0898e0cdd756",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/arc/SurfaceDistributorTest.java",
+      "bytes": 7131,
+      "sha256": "fa6d72e4090f9f66de69cdab5c3bbb95bc5d7e36c007bd303564efb750469a02",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/GraphEffectTest.java",
+      "bytes": 1991,
+      "sha256": "cc6fae5f71d3b94db7d5e76fbb302642f7a5ff254ab076104dd6518d18d6af8a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/model/package-info.java",
+      "bytes": 115,
+      "sha256": "6214f7ea798d0de7c9943511219e62907fee2eafd9076277f4d5292cada68849",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/model/VfxGraphSchemaTest.java",
+      "bytes": 655,
+      "sha256": "07f92fe9eae53770ce4d1f138db5b9a2ddf8448b73ec492f571ddbf4a4149f85",
+      "action": "delete",
+      "reason": "仅确认四个枚举成员存在；保留引用这些成员的图编解码、验证及模拟测试。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/model/VfxSystemModelTest.java",
+      "bytes": 2992,
+      "sha256": "53b051a2fdef1f46ecd56b474ba4a334427cde31296a270aaaf0515d162f4f9d",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/nodes/package-info.java",
+      "bytes": 115,
+      "sha256": "ca9555546bd4daa5c733b44f1d1eb09fa21580e8134d9a7e60179367d8bb770c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/nodes/VfxNodeRegistryTest.java",
+      "bytes": 1663,
+      "sha256": "dd04700e75c0ea927366ad590b88d0907efc119508d84d18a58a2745e441908c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/operator/package-info.java",
+      "bytes": 118,
+      "sha256": "d8dd230f492f4d40bd56bcc2a2ce56fde5c6b06577c91e1df4f6705f59114117",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/operator/VfxSystemSimulatorDataFlowTest.java",
+      "bytes": 11633,
+      "sha256": "8b64a471835be0a00fc93a7b7191cb3ee8b0b08ed4fafe4e4584177f43a39a2f",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/package-info.java",
+      "bytes": 109,
+      "sha256": "6344b9d5058f67829e74902c6721d2cb2499ab412b13a17d833cce1b12069196",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/render/ArcTubeTransformTest.java",
+      "bytes": 5409,
+      "sha256": "28f3c76307c9f4225e4c142b2146322399dcbd5415368a7ff16909ecbf39d862",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/render/GraphCameraTest.java",
+      "bytes": 1376,
+      "sha256": "b23660f9d090bad807eec4de4c493cc15e4cf71cb0febbe6f894ddd6ef7d3af4",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/render/package-info.java",
+      "bytes": 116,
+      "sha256": "33aa31caf4d40d086b06a43f92ed85d807414d1dc68f951a534ba98b1afdb1e0",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/render/VfxGraphRendererIrisCompatibilityTest.java",
+      "bytes": 895,
+      "sha256": "7583ce564d9feddad60545a31b671fa20160756b7a3993d449e1e137c30b1e2b",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/render/WorldTransformTest.java",
+      "bytes": 3125,
+      "sha256": "56783517e3840e64ef6bc47d0e5597120e2cdeb1865402c4ca67dd3cfe64e21a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/runtime/ActiveEffectTest.java",
+      "bytes": 8991,
+      "sha256": "72b71fe4f46e322dc74544b5552526da470169cfb1a4d6ee823fe3f42c55239a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/runtime/EffectBoundsTest.java",
+      "bytes": 1172,
+      "sha256": "405292180b8e2a9edcf352a2b79cdf7a7ad73ce74221e9f3dc9f39d6b6f5e781",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/runtime/EffectBudgetTest.java",
+      "bytes": 2752,
+      "sha256": "0c5a0681cb750931c3078726f2b8d0fb98a684bb0cbc3d686cf14e310efd9934",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/runtime/FirePauseTest.java",
+      "bytes": 2050,
+      "sha256": "04b546c1a2c1dd4ede58ca1385828cdbebfcc576db59bec287cd8b3217f9cc80",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/runtime/GraphFileWatcherTest.java",
+      "bytes": 3132,
+      "sha256": "4dfc0cd7aa8d35cc58a9812666050c6fc82928a40c787d3fccf420ad47eb9e2d",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/runtime/OffscreenSimulationTest.java",
+      "bytes": 1910,
+      "sha256": "c29cb7854329b081143ddbb1b37ad96c997bcb971f000781d1021e21385e19e4",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/runtime/package-info.java",
+      "bytes": 117,
+      "sha256": "849c579a2c04424c8c99b6440ba5dba41e38cdaa35748e4b9a5923f035870622",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/runtime/SampleAssetsTest.java",
+      "bytes": 2662,
+      "sha256": "cc8d168cac55fbfb83421595608dc0023992f2c5481a38194c7253d26a8471c4",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/runtime/VfxGraphManagerTest.java",
+      "bytes": 7990,
+      "sha256": "bf1bdc6f78c24b8afa71dafe71269fe39f2c134a521f632218aa9698a9222851",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/runtime/VortexRenderBudgetTest.java",
+      "bytes": 1318,
+      "sha256": "fbc9f948262065ab766963ec61ae431474b4130a0ddc6531fc277e654be6ea39",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/serialize/AeromanipBladeAssetTest.java",
+      "bytes": 4257,
+      "sha256": "d0b930e59ab65f08b2c90197605dfb5a974c73cc9e838b72def2db2d1b3c4b99",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/serialize/JsonVfxGraphCodecTest.java",
+      "bytes": 7640,
+      "sha256": "0025fdfb4cbf1d64ce4e74d41905f7748b058853ea2d07d262e05635c873fa8b",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/serialize/package-info.java",
+      "bytes": 119,
+      "sha256": "8442c8e5d4ed3dad5e9d9a281472d670d97221becc8b44997c2392711977fcac",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/serialize/VfxContainerAssetsTest.java",
+      "bytes": 2408,
+      "sha256": "16aa61531f71c19398824b854b437191b33d873411a5dbbf5231e3a18dc64476",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/serialize/VfxFireBlockFlowAssetsTest.java",
+      "bytes": 2519,
+      "sha256": "8b5d5b872985cbb50b9b756e534b9d8b3ac50038937630541ba31cfe4ad0036b",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/shape/EmitterShapeM13Test.java",
+      "bytes": 1746,
+      "sha256": "e82fef6574f87b91b7c7f298cdae1d0a07b82908d4e3e35a3ee00e5d9679f906",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/shape/EmitterShapeMeshTest.java",
+      "bytes": 3426,
+      "sha256": "60a6c0cbf1371aa36342a938f1579ecd6367f43441654507b934e40b151ea6d2",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/shape/EmitterShapeTest.java",
+      "bytes": 1824,
+      "sha256": "65cf470025fbcd00a34ba6490415ad88a362acbcba8c9f6b5a3e346c88016a7a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/shape/FirstPersonBodyOcclusionTest.java",
+      "bytes": 786,
+      "sha256": "c74d6e4802d7108492934f37a983d35bc007d6ef414aa629607a7f02ae5b3c74",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/shape/ObjMeshParserTest.java",
+      "bytes": 2008,
+      "sha256": "4e2cfff8fdd162a2a7fa325bcf18ad1b19633b0468675b513411b7a9828cd3e2",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/shape/package-info.java",
+      "bytes": 115,
+      "sha256": "c65b1c6dc36dbd8c5297db175b37fee300e0daf40d1760de06ca58f61508ca57",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/sim/AbilityVfxUpdateTest.java",
+      "bytes": 9828,
+      "sha256": "372df6b06c9e4d3a84e5ee97b7ebc07a82a48448e79aa09d583bab8f3ec4af3e",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/sim/BlackWingAttackVfxTest.java",
+      "bytes": 15364,
+      "sha256": "7938d4c452f2dfa96f4d648622eb761f5042a7c112075a5cbb2b208ad0878ccc",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/sim/BlackWingsVfxTest.java",
+      "bytes": 7793,
+      "sha256": "2888aaeb850edce1558d0a04f0067e24c7b14537ea5fe9fa8699b84ae9dac6b1",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/sim/ElectricArcVfxTest.java",
+      "bytes": 8740,
+      "sha256": "5deb372b235b8a20ab24bfb6cf1dbbe4397405f7011599e59e6c39ac32d15ee2",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/sim/IronSandVfxTest.java",
+      "bytes": 4874,
+      "sha256": "c399760a24c923ecfd0f25c99b1198d37202c75b81edfe5ea0c32414f6cd5a71",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/sim/package-info.java",
+      "bytes": 113,
+      "sha256": "ab851aa6a91f6f16cf2e08aed31d7597125310e735993c5074af85745f503bf4",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/sim/ParticleBufferPerfTest.java",
+      "bytes": 1831,
+      "sha256": "9c2d52f8b3cf4223fac1bc2009a3b527d62b95165d001f7b5afd47658fbcfc20",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/sim/ParticleBufferTest.java",
+      "bytes": 2068,
+      "sha256": "06600cc8405a65343e4b4fcd2ea66bb0dceef3ec2b16d8279d988a82a1375fc8",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/sim/ParticleBufferTrailTest.java",
+      "bytes": 2238,
+      "sha256": "be7f9430c3f16b965d459f816a6d4e9785bcdae749ed2a9c6ca44dcbb487f13c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/sim/RailgunShotVfxTest.java",
+      "bytes": 9901,
+      "sha256": "3383abdc6c85e88da0ab78dea4d7b5400eb7d45472ac8a9b812dde767c449ea1",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/sim/SkyDischargeVfxTest.java",
+      "bytes": 17471,
+      "sha256": "8817872a1bdc997d9feb8e375c71d30846e1d37b2571dc326bab01f50d6723bf",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/sim/VfxBlockFlowTest.java",
+      "bytes": 7432,
+      "sha256": "eb55007191937b10678b94e990dd06706ef15f10baa8ec9597cb209d30495200",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/sim/VfxContainerFullCatalogTest.java",
+      "bytes": 20208,
+      "sha256": "88023e8e764e8d48a4177c9e6d9c61ab319c763aebe85e8fce78d75c432e83b8",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/sim/VfxFireLayerTest.java",
+      "bytes": 2340,
+      "sha256": "71c2af8aaa7b534fed3b8acb67e2d3eb9e84f4739b7fa1681cf65e402e1696e2",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/sim/VfxNodesM13Test.java",
+      "bytes": 9036,
+      "sha256": "a4cfdc58fbfe3c70fa0e4f90e1c83d20a6428e46b338dbd4649100d548d73657",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/sim/VfxSimulatorLiveParamTest.java",
+      "bytes": 5136,
+      "sha256": "f90e8f0a5ff180bcfcba64aaaabf734bb489429b692f0f1d149db19fc8b7ce80",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/sim/VfxSimulatorPerfTest.java",
+      "bytes": 3428,
+      "sha256": "b54eae1b6a5007e620aba48ef5d29bab0ac8704078d1d6d7f2d2d101ab9dbe3a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/sim/VfxSimulatorTest.java",
+      "bytes": 5286,
+      "sha256": "30db5db3236d886ba523122cf66efaf1508cfce67dd2e5cfeabd8dade8066eda",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/sim/VfxSpawnLifetimeTest.java",
+      "bytes": 5109,
+      "sha256": "120a87cefa3fc42b71cfbf06808dd27578ed8c60b7bda677fa3c1ede743b9e04",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/sim/VfxSystemSimulatorPerfTest.java",
+      "bytes": 4893,
+      "sha256": "da147bfc3b02f334cb6c2af8f43fbf0165eb5b7a5c39a23dd2c0f12cfc72b401",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/sim/VfxSystemSimulatorSurfaceSnapTest.java",
+      "bytes": 4465,
+      "sha256": "6c14b0e772d7a14cdb1ffbaeeb23ba8f5531ed574b204f5dea9f150e3aa1de4e",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/sim/VfxSystemSimulatorTest.java",
+      "bytes": 14660,
+      "sha256": "92d1127c2b3d58378efdbdb7ae3550d9fcc75f553acc4c0234f68223ea0e97a2",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/validate/package-info.java",
+      "bytes": 118,
+      "sha256": "0f514b37d72b67d03176578f9b2d2ca0131e368c2fb446a10ef01cd01e482c89",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/client/render/vfxgraph/validate/VfxGraphValidatorTest.java",
+      "bytes": 7282,
+      "sha256": "88780ecc486aa8bea86cdbd25a5b2b798eb62cf15836c71af7eac6812b0180db",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/AbilityFactorProfileTest.java",
+      "bytes": 1628,
+      "sha256": "545490db971b12e82211e7eb513cd7b57fd11307b0243b494cd1979f514eadee",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/AbilityResourceSpecTest.java",
+      "bytes": 1290,
+      "sha256": "1dcf922e1157ec48c07dfe87086a17a3d4ab0c2c8245045c32b6cea51a2582ae",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/AirMobilityTest.java",
+      "bytes": 1039,
+      "sha256": "0986626850bceeb92b08cfe2f67f11fb5f4d20490fe3d2ae9a5e7cd3ea8bb914",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/darkmatter/DarkmatterBlockProfileTest.java",
+      "bytes": 1310,
+      "sha256": "24ea7cf291921932d1f51a6451eaa4d0e9ef6e800473ee9fde56867248f39371",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/darkmatter/DarkmatterShapingProfileTest.java",
+      "bytes": 1294,
+      "sha256": "11e7e4af28ce478dcce133e9e96697a2632fd46bdd69d1860135708eb38634e7",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/DevConditionTest.java",
+      "bytes": 860,
+      "sha256": "f6bd291e79df7d8068519916215ef6bfca265e339d7c669fd23154a5f8cf6fb2",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/DevSyncPacketTest.java",
+      "bytes": 850,
+      "sha256": "cc772144f54072bfc93fe5533c88ba45bfbb58bfee29de2aefe6ac8e3e75d941",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/electromaster/ElectromasterReworkTuningTest.java",
+      "bytes": 4710,
+      "sha256": "9a3699590d7b967794a82e8ce07749ac5961550091e907fde35c20ede5e164a3",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/electromaster/MagneticMovementTest.java",
+      "bytes": 9766,
+      "sha256": "f400a1eeef7850120fec8959e42fbf492e75e52d639cbcab36a3cfaf3add73ab",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/LearningHelperTest.java",
+      "bytes": 3615,
+      "sha256": "1ae81ab8bb4217add252c6078142d9cdfa6b002e51ba4f8d109f8f490dbc8b13",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/package-info.java",
+      "bytes": 101,
+      "sha256": "b1886e701d7a57ac4263301f654f0aac4b292fda8886770ce0d06404436c837e",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/pakcet/package-info.java",
+      "bytes": 108,
+      "sha256": "64b15fb038903c3608a29cae54f323693f938deef03885970b37a4fa169dda24",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/pakcet/SyncAbilityDataPacketTest.java",
+      "bytes": 2354,
+      "sha256": "58b916a37732960ff412c8566a822832eff3c7d0f747578980dc6b6dd577279d",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/program/ProgramNumericMathTest.java",
+      "bytes": 1804,
+      "sha256": "96276406aac0456ae46ebc6893f45e76ec0cc4b27b2bb52c1ccd0ab055a0e2db",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/program/ProgramVectorTest.java",
+      "bytes": 1474,
+      "sha256": "61df5c19e489684bf08e3d4bebd8f28da86b155a9639dd2df54cfca0a4e6b587",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/SkillInitialStateTest.java",
+      "bytes": 2850,
+      "sha256": "40aa237f526d009411ba21771323399154933eb707592cd5a2bfb8c415b8d321",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/SkillProficiencyCoverageTest.java",
+      "bytes": 8316,
+      "sha256": "eb75b1b512eff00714b83200c1efee72f7e8dfe56a55e123568b1b1fcb12f566",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/SkillProficiencyLevelTest.java",
+      "bytes": 1868,
+      "sha256": "3337bfa6ef8df1c097738395f75798542bccc3998c317237e9e53f903c3552d3",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/SkillProficiencyProfileTest.java",
+      "bytes": 1536,
+      "sha256": "999053a9f4e4aa9a67ac1edc9e657fde379a1597d48d014c3d02d274375b2dc2",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/SkillToggleTransactionTest.java",
+      "bytes": 842,
+      "sha256": "6033ffdd9257b1646e95355083a9b78da71345e6f993b044209cd6183846a4ba",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/StartLevelDevPacketTest.java",
+      "bytes": 2845,
+      "sha256": "7332172adc6183def5e2aa1369ebdfad8c7645e0e905e27f6362f15a7e2afa2d",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/WingControlIntentTest.java",
+      "bytes": 3751,
+      "sha256": "e64a4c5b9cb80b3a8fd189d9e428de23c8a29d70d49627c04cdd891a796995cd",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/ability/WingFlightMotionTest.java",
+      "bytes": 2137,
+      "sha256": "12bd8fc92e71a8ae3ec7e8d9fa7ac9dd3f0c4320e4c9668b42444623e9a5ab1f",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/damage/MaxHealthDamageTest.java",
+      "bytes": 2092,
+      "sha256": "1fee874fd0f355e4630b50bfdf45d5ae2a96f1e95f4c6fbcee838f6aceacb7be",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/data/AbilityDataMpTest.java",
+      "bytes": 1081,
+      "sha256": "0053a3d9b1162a005d84f8286e21ec86725e0f3473325f48242f08bfcb048c84",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/data/AbilityDataSpRecoveryTest.java",
+      "bytes": 1528,
+      "sha256": "a1ab5ecc75fec496d41271384087879c193b8b3f829da6bb86ea5593de91598f",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/data/AbilityDataStatusProtectionTest.java",
+      "bytes": 1486,
+      "sha256": "2c454b4ad2218ebbcab6b86763df083b753cd3f41ef8cd6d905f1885729a2275",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/data/package-info.java",
+      "bytes": 98,
+      "sha256": "cecaae13ce6c6145bf81c571b0b5b8c4694f10df296fe6613f5b0656592dd407",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/entitycontrol/BlockWorkRegionTest.java",
+      "bytes": 1922,
+      "sha256": "4f1f66f1c4091d03b9904b9e2b0359e7593712b98d79d5c464427a0d9070adf8",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/entitycontrol/MiningWorkPlanTest.java",
+      "bytes": 2733,
+      "sha256": "e23e904bda9bca14855a90eba5c0aeec8633414abdcdbe0db024fb8c76d8025a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/entitycontrol/WorkCommandPacketTest.java",
+      "bytes": 1800,
+      "sha256": "206a7b3680be3161657ffbd1c8113850ef048e8169253d9c99c955752409bbcf",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/entitycontrol/WorkSelectionTest.java",
+      "bytes": 2435,
+      "sha256": "2f3ce9d3330a9e676fd3a8a5151946e32f26e4db4aaf20d862c58866767add72",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/entitycontrol/WorkSettingsTest.java",
+      "bytes": 2113,
+      "sha256": "be5676e12f476866ef90b5d9178e6135028ca4c97c7dfb668732676643d99028",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/structure/BlockStructureApiTest.java",
+      "bytes": 1417,
+      "sha256": "0ac5753a5dd67e833cf8ab7c011889774665589a1cfe60076a413eb50e9ba712",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/structure/BlockStructureGridAlignmentTest.java",
+      "bytes": 1943,
+      "sha256": "4e9fb27e11f09a570bc0b78255b97ef06949e454dd7308d6b0a1d23bdc04f90d",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/structure/BlockStructureKineticsTest.java",
+      "bytes": 1863,
+      "sha256": "ce604823f60bbeada5936149d996977ae5c8257693474fe89761b97513028c93",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/util/LevelUtilTest.java",
+      "bytes": 1258,
+      "sha256": "2557b72d283df750a777ca47ead86a04f6281e72e6fbcd2c3765e14cbf0859a5",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/util/ViewTargetScannerTest.java",
+      "bytes": 6515,
+      "sha256": "92253b8e39ff44e01a7f457ea0a907db9eb904dd7b7abdb4a120c82f72349494",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/vfx/DirectionalAreaTest.java",
+      "bytes": 3127,
+      "sha256": "39638d044a2345fef0b06e0ebd0e8a88c51f1e720c03eba5d991703b0aa3a422",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/vfx/EffectReplicationTest.java",
+      "bytes": 2036,
+      "sha256": "a6279f156284612dfd7c1843eaa80e877c9cdc66683ed1661507c9ff8a35a89a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/vfx/EffectVisibilityTest.java",
+      "bytes": 595,
+      "sha256": "c4a449d7be4ccc1636f48aa0ccac2a71c230ef272fc2b2133a6a16f318f35ff4",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/vfx/PlasmaChargeVisualsTest.java",
+      "bytes": 822,
+      "sha256": "12a89f06131b3ef67ec3da2251441a06bcd8f464b8d46941a08456663bf2df50",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/vfx/PlasmaVisualPositionTest.java",
+      "bytes": 2265,
+      "sha256": "a6cc2027e6d0ee0cd9bb6a87d42aa5b3a6ed08aca77a68c00e7bb6b0714a24e5",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/common/vfx/SmokePlaybackTest.java",
+      "bytes": 1014,
+      "sha256": "2c995c57dd2e619ef36a254b793868154085db7a0d3d85e9b54c7ab192f94e0c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/server/ability/AbilityEffectPolicyTest.java",
+      "bytes": 5422,
+      "sha256": "66a203601691ca370d20b39a54172d334fbf9493a42227e377acdc6168e8d3d1",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/server/ability/electromaster/ElectromasterGeometryTest.java",
+      "bytes": 2757,
+      "sha256": "e2495811e9eb12460dd50c9da56a96b95964e7283bfcf2701945a01501c5fa36",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/server/ability/HostileProjectileImpactTest.java",
+      "bytes": 898,
+      "sha256": "52d5c301462aff2c6c5db901706de1b437028a28336938e5aeba663c7c1a3eb6",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/server/ability/SkillTuningDamageSplitTest.java",
+      "bytes": 1957,
+      "sha256": "e0a86a78d42d207e5479789add3cb04104391e2605952357c0b5a3962e646901",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/server/damage/HealthLossGuardsTest.java",
+      "bytes": 1377,
+      "sha256": "cfa0f6442823325ce4a7a2ac25994e772fc4b8eeb17d7d51ea857c9ff8432cf0",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/server/entity/SurvivalDefenseProfileTest.java",
+      "bytes": 1644,
+      "sha256": "bad05b646029e3c0798980a76fda4da80613b73a63c5d60b1aef938b82b7f0ae",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/server/time/TemporalAccumulatorTest.java",
+      "bytes": 2215,
+      "sha256": "5467184e49a1ae520fcd922564bbf2e465df534437853d2197eeb9145b31782f",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/server/time/TemporalFieldTest.java",
+      "bytes": 2432,
+      "sha256": "5b8518af486ca2111e83f880eb9f7f21da061ab437eb4dd0d05f649e9afe5d81",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/server/time/TemporalScaleTest.java",
+      "bytes": 1194,
+      "sha256": "ec894d4f62559c2e3536d04f393df58d14a5154dc8801883f9055247ca61f884",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/server/time/TemporalScopeTest.java",
+      "bytes": 2967,
+      "sha256": "78341a3dd644c419a6e2521c90522d69e7332b0f66880f09b75a25e7ec4c0a49",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/server/wireless/package-info.java",
+      "bytes": 102,
+      "sha256": "eb8fc341c84840f5057bb0b25c2335691e1f9e30c4bab2a43642fcc1fb220ae3",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/api/server/wireless/WirelessManagerTest.java",
+      "bytes": 5930,
+      "sha256": "01c7508fd75513e7bcf5338ad3304dd362261562140ef0610f304cd5196d2785",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/ability/aeromanip/HighSpeedJetHighlightClientTest.java",
+      "bytes": 695,
+      "sha256": "c24e0ab71971e560ef93a61ac99916382048468315cdc5055e572fc696946529",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/ability/mentalout/MentaloutRosterClientStateTest.java",
+      "bytes": 8237,
+      "sha256": "b9eaa9af818a812f3b339730fa4619484f678623cb7e690c523d7d517be892a8",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/ability/mentalout/ModularProgramScreenPaletteTest.java",
+      "bytes": 3002,
+      "sha256": "116765dc3e8b92ea77ad3cc995857489d02c8319fa774b362765a85a2e6b55a1",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/ability/mentalout/package-info.java",
+      "bytes": 116,
+      "sha256": "c6cc20ff896f5ebade3fe98b3784ff1b3495dc00bed13b5a2e0677e7a6b98f07",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/ability/mentalout/PlayerControlClientStateTest.java",
+      "bytes": 1093,
+      "sha256": "172c6849a5c6e7d268660c077b6d9fdd1cf478160ca836a51d3ece77223179ee",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/ability/mentalout/PrecisionEditorGeometryTest.java",
+      "bytes": 2648,
+      "sha256": "897504b866d731f6b61a516a10309491eed83a6250fb94bb9f43253c8bd10562",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/ability/mentalout/PrecisionOperationScreenTest.java",
+      "bytes": 7815,
+      "sha256": "420b3f559c307d32a438bdc86a29f8536b61092c04389dd26d3a8ec119078332",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/ability/mentalout/RtsOrbitGeometryTest.java",
+      "bytes": 1584,
+      "sha256": "0b8c9edd110048c0d0278a6e5e36cb9e93c530358a5a456008aaf5437ad21860",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/ability/program/AbilityProgramEditorClientTest.java",
+      "bytes": 5935,
+      "sha256": "bf90c604d670ff6f7700302c05cc5a6198dbc2c07d8f9a5216a7e013062929da",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/ability/program/ProgramClipboardCodecTest.java",
+      "bytes": 3069,
+      "sha256": "ef6079596f747d78586d69c953164dd751d68f0a688b090c4b5f3335b7581f13",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/ability/program/ProgramConfigurationOptionsTest.java",
+      "bytes": 13554,
+      "sha256": "246a28444dd5245a499bdfd0f92ed43d5e29ea844857d7856879cf45106be764",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/ability/program/ProgramConnectionDefaultsTest.java",
+      "bytes": 2087,
+      "sha256": "999b1cac5dbbbe24657092591a9b09e6475b2f4722ca005073643485075ad741",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/ability/teleport/ChunkLeapTransitionWindowTest.java",
+      "bytes": 1361,
+      "sha256": "22789f610b62868de77427230d0727777f8c6c010f414d7dc4594727478f71b7",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/ability/teleport/TeleportDistanceConfigTest.java",
+      "bytes": 1462,
+      "sha256": "c2620a94e4689fa585c2199a59e26e3b8fda4ea9bc347a032f35c3a46417891a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/ability/teleport/TeleportDistanceDisplayTest.java",
+      "bytes": 881,
+      "sha256": "3cda4d9634d31eed36b2453f2dd64c409f575c00025cefe06eebe5c48f8c7814",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/animation/GeckoPlayerModelAdapterTest.java",
+      "bytes": 982,
+      "sha256": "3fd3bc6a6b8df5d4350fd6889081f06be6636e01556911003b1aab333257df03",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/animation/WingFlightAnimationClientTest.java",
+      "bytes": 689,
+      "sha256": "a61fe1a18b1b8914bf049cebd9c9a1c0663344d5d3941881bf709a858ae327c9",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/animation/WingFlightAnimationTimelineTest.java",
+      "bytes": 3781,
+      "sha256": "7e2a0976190731d57db6256eaf8ec38d0c6ae9421faedba247d0964e8c2d24e3",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/app/music/data/MusicDataTest.java",
+      "bytes": 1154,
+      "sha256": "516dc6eda4c91ceae988ace1a34c42f77e3b1f25ea89f4b8d0ec34776f81e957",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/app/music/decoder/AudioFormatDetectorTest.java",
+      "bytes": 2017,
+      "sha256": "ab4b85460d3553d6a0b3bd3dfa10b1dca6728812b2c835b7520e124211ae301d",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/definitions/WingFlightAnimationsTest.java",
+      "bytes": 1118,
+      "sha256": "0da5cf981698989aac179fefbdba8f019821cfce60b4a73140e7503cb8dd7858",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/gui/screen/AbilityDeveloperLayoutResourceTest.java",
+      "bytes": 2366,
+      "sha256": "f12d19a990c5de1b681cd6364028749416eb01c9cb51c10498ab4333d74b608d",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/gui/screen/ChunkLeapScreenCoordinateTest.java",
+      "bytes": 965,
+      "sha256": "14a06d217f5b4ca5007265b16f48a33c2924d52bd3e83ded8d802e9dc3f92006",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/gui/screen/DarkmatterShapingScreenTest.java",
+      "bytes": 500,
+      "sha256": "e3df0cc1a11701ba8cb855a53bcf9c51fcad8a647dd27108badb0a0fad0ec2d4",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/gui/screen/SkillTreeVisibilityTest.java",
+      "bytes": 1029,
+      "sha256": "d85112e047040309fc7c6e78fd48f1afd2abb570defd4b3d3d5459365ba834a8",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/render/entity/package-info.java",
+      "bytes": 112,
+      "sha256": "70babc468ef9dcfb8570a5077758c1a58cacf21cbb26de6e32c7fa1f18c88ca1",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/render/entity/ReflectedBeamVisualGeometryTest.java",
+      "bytes": 3014,
+      "sha256": "4daaac2544ecc9e82f01894a0b5eab382c8e8a20002ad1b0469efb176e66f6c7",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/render/vfx/ArcTubeTest.java",
+      "bytes": 3145,
+      "sha256": "d707b475213a4c97ded83320fe4f44a55f9d95d46f01aebf25b1308b2f3f938f",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/render/vfx/FirstPersonSweepGeometryTest.java",
+      "bytes": 2407,
+      "sha256": "83aba5c7a185a796628b7c24716e46f68cce8073b9ca4f068efd944e043e2c8a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/render/vfx/GlowCircleVfxReplicationTest.java",
+      "bytes": 3052,
+      "sha256": "1264ab6fec3e438b01a2e334ce302464f6ff57850969a440e490ca936b6f8f62",
+      "action": "delete",
+      "reason": "历史迁移检查，仅搜索构造器与调用字符串；保留 EffectReplicationTest 等行为测试。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/render/vfx/MagneticWeaponTrailBuilderTest.java",
+      "bytes": 1357,
+      "sha256": "d513dd78d0cc6a8ce2ec6b9b02e5cdbc5c547f9ce34b3a0d3cbac8bbd7ff066a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/render/vfx/package-info.java",
+      "bytes": 109,
+      "sha256": "1ade7e6e8e45aa425399f5d1373ae4f3010de7c4e81310e0edabbf50db5fcca0",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/render/vfx/PerFrameRenderQueueTest.java",
+      "bytes": 1262,
+      "sha256": "af4cf67bd8a5cdc637c51762aff547bcd5d55a5120d3795c7e22bba21c1a7c4b",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/render/vfx/SkillVfxClientLifecycleTest.java",
+      "bytes": 844,
+      "sha256": "f6d260b4c5a022df9c86301e95269bd6a42578b6f67682856cbf1b9aecadd9b6",
+      "action": "delete",
+      "reason": "仅匹配释放方法的源码写法，未执行生命周期。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/render/vfx/SkyStrikeAssetTest.java",
+      "bytes": 1145,
+      "sha256": "9a93a64da822bd0a419ae43fd36dd6f2bf6c93d1f738dd6fb264f56954dcacae",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/render/vfx/SkyStrikeFeedbackTest.java",
+      "bytes": 1421,
+      "sha256": "f2183894b76b4b967399bb9c3a49b0ea3aa53c3e569bf89b3d808791a03ab4a3",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/render/vfx/SkyStrikeGeometryTest.java",
+      "bytes": 2522,
+      "sha256": "1a229ba525feece14683eab3a55da466b93a17abe328f1647ed53fa2313a4a3c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/render/vfx/SpacialExcisionRenderMathTest.java",
+      "bytes": 6195,
+      "sha256": "d50faa0d9caee590c12870e84c705391ec48c3bf502e1861604c4473d889c94e",
+      "action": "trim",
+      "reason": "移除纯固定常量快照或已退役实现的源码字符串检查，保留运行行为及边界测试。",
+      "removedMethods": [
+        "sourceValidationSupportsFiveOverlappingCuts",
+        "renderHotPathDoesNotRetainObsoleteShaderMirrorsOrStripArrays"
+      ]
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/render/vfx/SweepAnimationTimelineTest.java",
+      "bytes": 1347,
+      "sha256": "c9801b02d2d39313c031f424a7e928c26e3748486e7638ab9f0385832a12bba2",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/render/vfx/TeleportCursorRendererTest.java",
+      "bytes": 875,
+      "sha256": "33c6a7e15f0dd910d4f38bb36d6c5eb2522f81e7b9b5cc07a85a1974a650c145",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/render/vfx/VfxVisibilityTest.java",
+      "bytes": 2077,
+      "sha256": "38ea1710342f1cf7166d43fd8796323a4f1ac12d9e4ce855181badd337fdfa2e",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/render/vfx/WingTransitionAnimationTest.java",
+      "bytes": 1610,
+      "sha256": "438d7fecb19ff3eef12b53ce50f77ca38a62c27462995e09c0c5e0eefd64e501",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/time/TemporalBindingLifecycleTest.java",
+      "bytes": 1542,
+      "sha256": "0da0595d45b57bc6b2833e3f24090ee295c55be3cb58de48cfbee09928bc6ac4",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/time/TemporalBindingRestrictionsTest.java",
+      "bytes": 1608,
+      "sha256": "b42d9e6195c94207dbb363eb655452915d502dbe450c619febb77cd6465a4ba4",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/time/TemporalClientRuntimeTest.java",
+      "bytes": 1861,
+      "sha256": "6afbcb10277e4904caa9a343083b2b09cb4c703acbaae9c0d791bb11855aff45",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/AbilityCategoryIconAssetTest.java",
+      "bytes": 3825,
+      "sha256": "a25ffd6f1a9db5b55da50d8f577d80e19da0f9393ec5de6cfc65c99133a9b596",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/AbilityDevelopmentAccessTest.java",
+      "bytes": 1887,
+      "sha256": "f0dd549b935362aaeadcfb34ebf1652531c75970719416936d5dff67eb8d3975",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/AbilityDevelopmentProfilesTest.java",
+      "bytes": 3144,
+      "sha256": "eeec0dba3f31b4378802d53acb7f5dd4b6248ce095e87c7bf300f412cb1d6563",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/AbilityRegistrationValidatorTest.java",
+      "bytes": 3357,
+      "sha256": "241e6104a62974e6819a8c185336a8e8e1bb3e4c2b1fe72e4148d0ab8665b271",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/program/AcceleratorProgramExecutionBridgeTest.java",
+      "bytes": 26489,
+      "sha256": "86a6af4c46ed9554b947400b42a7d6f2db611c696cf9bb328ec53120aaf89453",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/program/ServerAcceleratorProgramRuntimeTest.java",
+      "bytes": 668,
+      "sha256": "ace2df38a109f0dccfb134d04511470841246e99285b31afd221be96f9c3dd78",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/reflection/compat/package-info.java",
+      "bytes": 136,
+      "sha256": "d6929e12a4f8da2308fabdfa37defff95f6b7b2b0c0f66e7740c66f63a6eda8b",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/reflection/compat/VectorCompatibilityModelTest.java",
+      "bytes": 12870,
+      "sha256": "8bfb733c4414fd53d8dd1ce931a65a4e29a37ca04ac42e83df33baf76e145715",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/reflection/compat/VectorCompatProfileTest.java",
+      "bytes": 3067,
+      "sha256": "171b8d65a6fbc5c4f18f67b6c6f90422bf8144e6aeffafdf4bfe10d2c87462e8",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/reflection/compat/VectorDefenseCpBudgetTest.java",
+      "bytes": 2892,
+      "sha256": "6a0978833e53818c53e2ceb5d686fbc365063404770f5b90ea93f0a94b7e066c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/reflection/compat/VectorProjectileCollisionPolicyTest.java",
+      "bytes": 996,
+      "sha256": "a79b42df74a0baa538b0a8a70016826ae36e94bc9807a3e640876b68eb2bc70b",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/reflection/compat/VectorProjectileCompatProfileTest.java",
+      "bytes": 1455,
+      "sha256": "c048277cba3c3634201eebe513173564ebad37630fabd7ded1f7ff14fe25f6ee",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/reflection/LinearReflectionResolverTest.java",
+      "bytes": 7019,
+      "sha256": "d21993c8addd37f99d70c3f5dffa92d9c01355afcdfdc25a1d26f3350f1e204a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/reflection/LinearSegmentTest.java",
+      "bytes": 2865,
+      "sha256": "03ddd3b90604b823364e79269e01e43b7e6be228f64dd8c2c151cea0403e808e",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/reflection/package-info.java",
+      "bytes": 129,
+      "sha256": "636eb4a2ca59364c563b85e8b2bbf5d73731a327ee80d19cb538e17d65fee8ac",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/reflection/ResolvedLinearAttackTest.java",
+      "bytes": 2251,
+      "sha256": "5fd07738b86104b7472f4005fd556044b8d9d5625ab607edaa7a4489e936f616",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/reflection/VectorDefenseProficiencyTest.java",
+      "bytes": 3886,
+      "sha256": "2c6670948abb4196b696538fe31bf5caa9a41f59da77b30728b3e653601836ce",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/reflection/VectorReflectionRuntimeTest.java",
+      "bytes": 1083,
+      "sha256": "26cf27641024fe72924e21f768a14952aad64cb9c888293049657e83f9abff8d",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/skills/lv1/package-info.java",
+      "bytes": 129,
+      "sha256": "5b97fec35ca6b3bda73969437e12735f68b2ccf080016d048b2676c669cc95d6",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/skills/lv1/VectorAccelTest.java",
+      "bytes": 1731,
+      "sha256": "9714c42d78e3bad5af4ab563fdba9d0c4f67181a0a1f3fb727f67301e23ec825",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/skills/lv1/VectorBlastTest.java",
+      "bytes": 1650,
+      "sha256": "fe43ef50d0e0181c8e2cf11b88f8181163ea9287e16940e93edadca593cde348",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/skills/lv2/DirStrikeTest.java",
+      "bytes": 637,
+      "sha256": "8e7b09e9eaf5d441e96ff07b6e2173dbf980f98e17095efd3381cc6eb84f7007",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/skills/lv2/KineticEnergyAppliedTest.java",
+      "bytes": 2758,
+      "sha256": "5277167806cc7e0fab313377e8523488826f5ed72b6dadfa29600fc364cc328c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/skills/lv2/package-info.java",
+      "bytes": 129,
+      "sha256": "16b41d9579aaaab7053cf83093f2a5b0719708579eaccbc3e72eecef1aa96604",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/skills/lv3/KineticThrowTest.java",
+      "bytes": 2209,
+      "sha256": "b67038f10f81205acbc0aae0cb1cecbae4b51388e1e36247d357ae2caea089ed",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/skills/lv3/package-info.java",
+      "bytes": 129,
+      "sha256": "4b07a0223162eb1cefc9065ef900774fc1d4b52c0326ec36f762afe7715627b2",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/skills/lv3/VectorDeviationTest.java",
+      "bytes": 3331,
+      "sha256": "cf847e513e16ee091c599d5b87b86cd70e13035fe398a954708e3611cd6a2563",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/skills/lv4/package-info.java",
+      "bytes": 129,
+      "sha256": "76279ee889d69b320633f93e1d9114a66fde20c1e5ba1f894c623fca817225a8",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/skills/lv4/ReflectionFilterTest.java",
+      "bytes": 3540,
+      "sha256": "275547c0eced96cf5401ac469cd17c76d55daf49a4f3bd85c655ad2956a1a5e8",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/skills/lv4/StormWingTest.java",
+      "bytes": 328,
+      "sha256": "5fed3788d257c70ca711fd1733b86deaead9047172ec5b0bb952f90d5662a64d",
+      "action": "delete",
+      "reason": "仅重复声明一个固定 CP 常量，没有执行预留或释放行为。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/skills/lv4/VectorReflectionTest.java",
+      "bytes": 3201,
+      "sha256": "4ddb2f4039f4b5b800f0031d84e063b31846186ae9277fe158d0adf0e74c865c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/skills/lv5/BlackWingAttackPacketTest.java",
+      "bytes": 4522,
+      "sha256": "a1128ea78db97acaef4b6a86e2485054f63b8cda3a93bd348c693ae836ba2233",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/skills/lv5/BloodflowReverseTest.java",
+      "bytes": 564,
+      "sha256": "7ad9b4c102036f498d3c303059394ab8ec80de930c19a1416899bf9b689135eb",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/skills/lv5/package-info.java",
+      "bytes": 129,
+      "sha256": "ab0932fd871fe3fa37279b8ae105fb3987ce7faaa2e4cced73d4a3b0a9a39fac",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/skills/lv5/PlasmaGenerationTest.java",
+      "bytes": 1481,
+      "sha256": "7cf6ce5e0f751491ef78ec10e1a33c5883b1b846e9ed2d406dc2c322b5408db5",
+      "action": "trim",
+      "reason": "移除纯固定常量快照或已退役实现的源码字符串检查，保留运行行为及边界测试。",
+      "removedMethods": [
+        "referenceRuntimeConstantsStayAligned"
+      ]
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/skills/lv5/PlatinumExecutionCleanupTest.java",
+      "bytes": 933,
+      "sha256": "ed914500f2f9df9741e0c7f53c50410dcc5b3bb092b716ca06e6694a89294786",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/skills/lv5/WingFlightSupportTest.java",
+      "bytes": 2621,
+      "sha256": "a5990c2e8bba323a012552be4c0ed53e0122e750c3720593efc13079ca93e013",
+      "action": "trim",
+      "reason": "移除纯固定常量快照或已退役实现的源码字符串检查，保留运行行为及边界测试。",
+      "removedMethods": [
+        "keepsReferenceCombatConstants"
+      ]
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/skills/WingFlightDirectionTest.java",
+      "bytes": 1183,
+      "sha256": "0640c50d338c69033f7609fb4315116f558a3c7177a38d3af65e4c3e19cf8d7e",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/accelerator/skills/WingFlightPoseTest.java",
+      "bytes": 1163,
+      "sha256": "c06632a368cc2e84d4498a00ac9b8994dbad9f068c39a3242f18e3cdc928c861",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/AeromanipChargeProgressTest.java",
+      "bytes": 1536,
+      "sha256": "b7e0e3ede82d88276dffead9370fc2ed348f1ff1a48e4682d4995b1a5b21dbe1",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/AeromanipChargeTierTest.java",
+      "bytes": 969,
+      "sha256": "f8ec14c0b0f9836b0893345e313ee85bde17089de542215b4edcd6c336c81fad",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/AeromanipDisplacementTrackerTest.java",
+      "bytes": 2866,
+      "sha256": "8e0b3ae52ed252aacfca567e513e11061b0d895db5692b38e9c568e5c81afdc7",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/AeromanipSkillMigrationTest.java",
+      "bytes": 793,
+      "sha256": "d11380af56d68e19f13eb370f18b1f16d8bbadc552875e1b21e629138daa269a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/AeromanipTargetingTest.java",
+      "bytes": 2753,
+      "sha256": "4f5bd96d7ad986450045686302f959c510aba96c3fc997b6567529e253105b1a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/AirAccessResolverTest.java",
+      "bytes": 1436,
+      "sha256": "650d856d2a2866c536520386f046adebd6fc96ab3f473ba02395074f9cb58d3c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/AirflowFieldTest.java",
+      "bytes": 2268,
+      "sha256": "fa2df60433e9de6176f88e4ca0125f2c3e48ccafed5475590f6a01e3fd1586d8",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/HighSpeedJetStructureServiceTest.java",
+      "bytes": 1302,
+      "sha256": "14d93f817dd125835700686d3604560e7d28210fdc8b363e03d4ed22631a6f7e",
+      "action": "trim",
+      "reason": "移除纯固定常量快照或已退役实现的源码字符串检查，保留运行行为及边界测试。",
+      "removedMethods": [
+        "directLaunchUsesTheFixedRadiusTwoVolume"
+      ]
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/package-info.java",
+      "bytes": 116,
+      "sha256": "72411302000e420538808c34c994a25dafe5a8633de5c646395d61280006f5bc",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/program/AeromanipProgramExecutionBridgeTest.java",
+      "bytes": 23875,
+      "sha256": "545a4ebb70bc941a63820cc76c547720e1457cfc8156f94d534f4e247e35a85d",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/skills/lv1/AirflowJetTest.java",
+      "bytes": 2318,
+      "sha256": "74746d751747984ceec7c79998a892de70920af802406a65a123ebebe14c8e85",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/skills/lv1/LaminarBufferTest.java",
+      "bytes": 1051,
+      "sha256": "2761baa6b181369292b0c52b2f385fc9af616b00cb7c32db6b828ac53ea0539a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/skills/lv2/BreathingBubbleTest.java",
+      "bytes": 713,
+      "sha256": "4bc09f037ccad16e9ef687ea3e5510f5f8c615108f7d6aed9ba55a9b1be8dd28",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/skills/lv2/FlowSenseTest.java",
+      "bytes": 868,
+      "sha256": "faaa60bca0ebc696f009747365f7d6e015a18d6bc016cf8bd01762950df73cd1",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/skills/lv3/AtmosphereShieldTest.java",
+      "bytes": 478,
+      "sha256": "c65769f2c1eb37ccf496b1515f41dc3b157aff36834260e08ddeabf46bd7385a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/skills/lv3/LaminarCutterChargeTest.java",
+      "bytes": 2112,
+      "sha256": "9d61c878534917f04c7f1fe41836757f8e7d76574145538e8ab1772937fc4d55",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/skills/lv3/RejectingWindTest.java",
+      "bytes": 941,
+      "sha256": "fccbc224c70ef7736512d2f8b0315b1bad5b35d7c6fef678a821d6853688b6ae",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/skills/lv3/TailwindFieldTest.java",
+      "bytes": 1292,
+      "sha256": "e40c9703b614a4f95105c95767eb10f824efc6f28f7b8508ff800b4505e4455c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/skills/lv4/FlightTest.java",
+      "bytes": 1009,
+      "sha256": "37f9a2120f4eeadfcd299a97587b36450ceb63da279c86e1637cc22363fb08b7",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/skills/lv4/HighSpeedJetTest.java",
+      "bytes": 3544,
+      "sha256": "db72da4bc7053e2791f3f715a9b5c11ee8aa016789808c49705396d1d4f55586",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/skills/lv4/VortexPullTest.java",
+      "bytes": 1002,
+      "sha256": "8497460aed427f9393b546c1f9c8be9d9d255715b045357025780b1aa9bbd44f",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/skills/lv5/AdiabaticCompressionTest.java",
+      "bytes": 1680,
+      "sha256": "3db785d6850292e5e12563debf8c8cc045b37f7e52f2b1e152eca20b98757d80",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/skills/lv5/VacuumDomainTest.java",
+      "bytes": 1805,
+      "sha256": "ce8dd4ab990ee243f60fcc8d60f967170c3e8ff5665518a7e485152345f3fe50",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/aeromanip/skills/package-info.java",
+      "bytes": 123,
+      "sha256": "9c340096184eee8fd30da068733801bf5c7aa9fcde562504a52272231b0978ac",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/darkmatter/creature/DarkmatterCreatureBlueprintTest.java",
+      "bytes": 2596,
+      "sha256": "83b4a3f5a0591002e2f9232a26bbd71beb1752b6c672044e51cdfd0cee63180e",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/darkmatter/creature/DarkmatterCreatureLocalizationTest.java",
+      "bytes": 4784,
+      "sha256": "de09c7d57c89c37feae39de67264e0512558193ba1b40c7041e6f451b9290215",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/darkmatter/DarkmatterStateDataTest.java",
+      "bytes": 1559,
+      "sha256": "ab547304b5b8b51afdc346258f424139f9c8e32d2ea3291b32c0f920040f3fcf",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/darkmatter/program/DarkmatterProgramExecutionBridgeTest.java",
+      "bytes": 14695,
+      "sha256": "349ec314ac3d300b661bbabb21e2a84da45a8ec49d4ca2b0a0b31f9ecf221fdc",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/darkmatter/skills/lv1/DarkmatterDisassembleTest.java",
+      "bytes": 4061,
+      "sha256": "f5932e19aecdf48b558aac88c9f0f4cb3a03189e80137000123b9902821abe50",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/darkmatter/skills/lv1/DarkmatterGenerationTest.java",
+      "bytes": 2268,
+      "sha256": "a9efce4a0962edbdc639ab7ba35cd5c536d274f61bdee4cc08ebcc2566ee637b",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/darkmatter/skills/lv1/DarkmatterShapingTest.java",
+      "bytes": 11341,
+      "sha256": "0545b9ca8165b2a3b81552abbc3f815537af3bf6f877af52ab9fe9602ac994f8",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/darkmatter/skills/lv2/DarkmatterCutTest.java",
+      "bytes": 2786,
+      "sha256": "e2ebca899e8a29b6f43fe5ac4e5fcc38adce6c9e422fbfb1e06f137e33302273",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/darkmatter/skills/lv2/DarkmatterPhaseTuningTest.java",
+      "bytes": 2510,
+      "sha256": "743ba2071fe2427566219ec903ee694f3112f728bedd53812df49b7adeac1f2b",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/darkmatter/skills/lv3/DarkmatterRadiationTest.java",
+      "bytes": 3136,
+      "sha256": "8e732eb18b3d34a7d2a74654cca4f6f1f38cd1e1705d079b4ed4ba0c9129e295",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/darkmatter/skills/lv4/DarkmatterCreationTest.java",
+      "bytes": 2988,
+      "sha256": "0ea664e4dcf56e71a087c6e2a1631c50932672f92a2c8732fa58aa9abd9be1c5",
+      "action": "trim",
+      "reason": "移除纯固定常量快照或已退役实现的源码字符串检查，保留运行行为及边界测试。",
+      "removedMethods": [
+        "contractLimitsAndReservationMatchAudit"
+      ]
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/darkmatter/skills/lv4/DarkmatterRepairTest.java",
+      "bytes": 2732,
+      "sha256": "66a2e030fdef5c76f19be41d2d2ecaea5b1528753ea7e688141b2d567eba84e6",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/darkmatter/skills/lv5/DarkmatterSixWingsTest.java",
+      "bytes": 1863,
+      "sha256": "f3d478c7ece8c0016e321b1b8852ad22d1868527eb9f698eb576ae7672a50478",
+      "action": "trim",
+      "reason": "移除纯固定常量快照或已退役实现的源码字符串检查，保留运行行为及边界测试。",
+      "removedMethods": [
+        "reservationAndActivationMatchGammaContract"
+      ]
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/darkmatter/skills/package-info.java",
+      "bytes": 124,
+      "sha256": "a2bed85aacbede345e20be46a14c274d5b134a87136e20678b2362983c06d112",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/DedicatedServerInitializerIsolationTest.java",
+      "bytes": 2251,
+      "sha256": "acf67ca5fc83d937e54a4885bfd71026d3add9047229703cb593957f61bb7e2d",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/ElectromasterArcTargetingTest.java",
+      "bytes": 1030,
+      "sha256": "7f9eeca0e1e2a7a02330c824ac4c7feee39b7cda93bf9e52abaf630b2f8a07ec",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/ElectromasterSkillMigrationTest.java",
+      "bytes": 1593,
+      "sha256": "a5eb719353bc424dce53b2382ab2b26697ed39c39c3558342f676f16966ea6a9",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/package-info.java",
+      "bytes": 120,
+      "sha256": "44bbff5c736497a990b4901d6dd53a2f12c16f2d9be9bed209d302d474b51263",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/program/ElectromasterProgramExecutionBridgeTest.java",
+      "bytes": 13270,
+      "sha256": "5d5a5e62fbb88b30123c41f482b4e0dbfed62337eb73f612efb6d9a90c01b2ac",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/skills/lv1/ArcGenerateTest.java",
+      "bytes": 767,
+      "sha256": "7c8cb6cac8c724293f01f2479b52011050d113bd4ef353f3e36984a244f70723",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/skills/lv1/ElectricalContactTest.java",
+      "bytes": 539,
+      "sha256": "ad35f49989e9e43b3e6532871903c229921148f4fb86f2cf72d07ee72924b69e",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/skills/lv1/package-info.java",
+      "bytes": 131,
+      "sha256": "c13f89738cedcb824560781534329f238ea54ba503d8c5d18d270eda1c6d45ed",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/skills/lv2/LightningNovaTest.java",
+      "bytes": 523,
+      "sha256": "31018e1573f095a223c23add71a9f8d538c46c7928bb8dd362a12bf85fde074a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/skills/lv2/package-info.java",
+      "bytes": 131,
+      "sha256": "02f7474cab0b9d826bacc7a678e7cae9a8a87a6a196ae1e3664f014ffaf27d75",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/skills/lv2/ThunderLanceTest.java",
+      "bytes": 4870,
+      "sha256": "bd8c204b36f5e887d2d6453bc28a99ae3e07f13e565d67e7a9936bd4b7e649ad",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/skills/lv3/MagneticWeaponTest.java",
+      "bytes": 3611,
+      "sha256": "f7cb38f3181c4bf47ed5115ffc2b026a0613cc6ba036ab0e4bc0429f32cce418",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/skills/lv3/MagnetManipulationMoveDistancePacketTest.java",
+      "bytes": 804,
+      "sha256": "f0328933b750e872e55e3730275be444819292355eec7e6fdc48344c4123e9d8",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/skills/lv3/MagnetManipulationTest.java",
+      "bytes": 4234,
+      "sha256": "d3d9828f36df97466771bce3e735c50069a6770acafa8a23f319f16a99af9baa",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/skills/lv3/MineDetectTest.java",
+      "bytes": 831,
+      "sha256": "05c56fd0232c493a978b6921932de6a011cf906a552e1bfa0235136c9c2401ef",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/skills/lv3/package-info.java",
+      "bytes": 131,
+      "sha256": "9290853e739a28cf6396bf12f8950ce7ae3de1a75b756637d2ca4df1624102d6",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/skills/lv4/BioelectricOperationTest.java",
+      "bytes": 511,
+      "sha256": "cc926265284148169a01d234f46107cd50ca7329501f112007d9d0cbb21e898f",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/skills/lv4/ElectromagneticShieldTest.java",
+      "bytes": 1099,
+      "sha256": "1c656a9cafe0e8d579e99c8971f9f848514944e36778c6ef739b0bf69074013c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/skills/lv4/IronSandArsenalTest.java",
+      "bytes": 556,
+      "sha256": "e445a92793f30d79a9b933999d1948034dd3a5fdf10b2e342089969ddfaa7e2f",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/skills/lv4/IronSandDefenseVisualPacketTest.java",
+      "bytes": 1029,
+      "sha256": "25a209a51a36465bffe17ebe1126b1dfa2d2ffdfa1a4fdf8858ec21525041cb1",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/skills/lv4/IronSandSweepVisualPacketTest.java",
+      "bytes": 621,
+      "sha256": "6b2e7fac32f56bb70f237d5394ceab7840b6051e06ba741ca9b7830ba70ff40c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/skills/lv4/package-info.java",
+      "bytes": 131,
+      "sha256": "5d83074bf0123f6fbfa6a0575bfc9de9d0da52e7b8cca4990abc022df21f3b64",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/skills/lv4/RailgunTest.java",
+      "bytes": 2753,
+      "sha256": "5154ad524ec606eb99d1472a7be4dc15dcb2c1ff6f87285499922c690ed30a98",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/skills/lv5/BallLightningTest.java",
+      "bytes": 696,
+      "sha256": "a372324256dbddf9697834e008c2217b3be293152fa43f49d1c3ec79869a802c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/skills/lv5/LightningStormTest.java",
+      "bytes": 550,
+      "sha256": "85c8998816c16856f714921045410cca6729c680c6c0fe4f87fa9b4a4eb6ac95",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/skills/lv5/package-info.java",
+      "bytes": 131,
+      "sha256": "68cf1819e1e10988eb6614f65ccfc2712ba92c91fad95fca6c0c837a285c9c41",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/skills/lv5/ThunderclapTest.java",
+      "bytes": 1044,
+      "sha256": "def50dcb676be999debe36648b10b7440017cbbafcaf7d531239e111d5aeee38",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/SkyStrikeClientConfigTest.java",
+      "bytes": 1736,
+      "sha256": "f72aa7197ebbb3d260ce19e71117d90405c35b45cfbb9fdb6a8288865998f5e6",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/SkyStrikeImpactRadiusTest.java",
+      "bytes": 2637,
+      "sha256": "9297c3258690303e50709d815ca5a38baa88cd5925a6d97c736e13d5838a91a5",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/SkyStrikeVisualPacketTest.java",
+      "bytes": 1338,
+      "sha256": "1bf19a7d116037bd1f3c7098b0443a1d83e64fcd43a9b401f00ff10a36206702",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/electromaster/VanillaLightningEffectsTest.java",
+      "bytes": 606,
+      "sha256": "0a5e0cc7e56dceb6af4b6069d7cb3949e3061f47a3671e6b789671ed88018451",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/level0/skills/OutputControlTest.java",
+      "bytes": 1881,
+      "sha256": "05fc6430015f12bb75bb130ce9fb5a03cabd4f5f241fb6ac64ff2128f8e360bb",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/meltdowner/ContinuousReflectionSessionTest.java",
+      "bytes": 5080,
+      "sha256": "6941d37f1e99129126574ee0288ccc55ccf7610de3492e6ec7d6ed9d2867c473",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/meltdowner/MeltdownerBeamDamageTest.java",
+      "bytes": 1727,
+      "sha256": "6b55bf4e8bbb93f6c37a24c2324a98a7ba30f4999b3564a32a56d642b5b424a0",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/meltdowner/MeltdownerTargetingTest.java",
+      "bytes": 886,
+      "sha256": "76cbfdb6b1e475acaa022cff629de290f2b356d6abc459b15550873bab00dac2",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/meltdowner/package-info.java",
+      "bytes": 117,
+      "sha256": "8f40e3e3ce28d181b558bae08dbf4baf777fcda9cffea83357c8b42f502ea6b5",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/meltdowner/program/MeltdownerProgramExecutionBridgeTest.java",
+      "bytes": 12261,
+      "sha256": "ead8291f4b23f6c2da2c712142a7661b1b3d09d7a250b0d27280f2f27abc8410",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/meltdowner/skills/lv1/RadiationIntensifyTest.java",
+      "bytes": 755,
+      "sha256": "e3733596f97bafc4b794d57f78378fee2b5e020c7dc16b9d254ea1cf0243cb5c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/meltdowner/skills/lv1/SingleHighSpeedElectronBeamTest.java",
+      "bytes": 4061,
+      "sha256": "f44ba97ed0950d294b741209fd8ffb57da6621de890045cb570a7c28f43c847f",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/meltdowner/skills/lv2/MiningBeamTest.java",
+      "bytes": 1239,
+      "sha256": "273c6e307b56333388dfeae300315db9b093bc1bb22761f80589eef8736bde30",
+      "action": "trim",
+      "reason": "移除纯固定常量快照或已退役实现的源码字符串检查，保留运行行为及边界测试。",
+      "removedMethods": [
+        "referenceIntervalsAndRangesRemainStable"
+      ]
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/meltdowner/skills/lv2/package-info.java",
+      "bytes": 128,
+      "sha256": "981d0f3ee62dad0968b5999567f1702a5fb1564b6ee60bf657be8b609c713e5f",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/meltdowner/skills/lv3/LightShieldTest.java",
+      "bytes": 721,
+      "sha256": "2c1b9af8d54037c3a26527c88081b3ea9a5b963920651072d00a435839f5bb3e",
+      "action": "trim",
+      "reason": "移除纯固定常量快照或已退役实现的源码字符串检查，保留运行行为及边界测试。",
+      "removedMethods": [
+        "heldIntervalsAndRadiusMatchReference"
+      ]
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/meltdowner/skills/lv3/package-info.java",
+      "bytes": 128,
+      "sha256": "fd7d9e1fa385e9c499829d2bdedf87b2e73562496379126751b3af06794b68f1",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/meltdowner/skills/lv4/JetStrikeTest.java",
+      "bytes": 1355,
+      "sha256": "2f84bafb65b7cad0c199f6222dbed71bfbc9493090d58c2d126af08570e71437",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/meltdowner/skills/lv4/package-info.java",
+      "bytes": 128,
+      "sha256": "25216fa7c3a55b85c858d3abef7d702720696f5a3362da64af1f570b113fd44f",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/meltdowner/skills/lv4/ParticleWaveCannonTest.java",
+      "bytes": 1365,
+      "sha256": "22aae5e74c5fbb421aab7a525b2e184dfb0c53338e8503a3f00c1920304f7c28",
+      "action": "trim",
+      "reason": "移除纯固定常量快照或已退役实现的源码字符串检查，保留运行行为及边界测试。",
+      "removedMethods": [
+        "chargeAndBeamBoundsMatchReference"
+      ]
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/meltdowner/skills/lv5/AutoCruiseBeamCannonTest.java",
+      "bytes": 1413,
+      "sha256": "68247d5ed027c45dff4dcb82f80b43a5b4dbf5f209c2733b4e9b799a9f823d5a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/meltdowner/skills/lv5/DisintegrateTest.java",
+      "bytes": 1301,
+      "sha256": "fa5df7c7e13b7e3f9691f00fef54d14ab096fb2a97eb76d83a1691de88a00770",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/meltdowner/skills/lv5/package-info.java",
+      "bytes": 128,
+      "sha256": "d577519fbfd822cf28108a4337b152ead13b13b6920173962f28f9b7a633a41b",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/meltdowner/skills/package-info.java",
+      "bytes": 124,
+      "sha256": "5f8a4bf7eb8f361531d7b9c239800a93cd58a7823cd96c7518756a47dcf2d4b4",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/control/MentalControlRuntimeTest.java",
+      "bytes": 26976,
+      "sha256": "33316fbc17149d6ad9873d7f9e62fc582ea2c4560e4a448fe323eb55fdb1c576",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/control/MobDirectControlBindingTest.java",
+      "bytes": 1945,
+      "sha256": "f82f4dcf6b835dc90acc85074e38cfa59eed520a07b85a96c29dbc37772f463b",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/control/package-info.java",
+      "bytes": 124,
+      "sha256": "71d101c859e45c772c8f1dd5aa2f54766cbaf255419051166fd356af03871d4b",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/control/PlayerNavigationRuntimeTest.java",
+      "bytes": 2621,
+      "sha256": "e47eb6251140a3eed3c17c87634b1bce2c272600bb2bdf821c41ea8bafb9fa8c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/MentalControlMemoryTest.java",
+      "bytes": 763,
+      "sha256": "fd05cf8ff2a78f9fdc1b457e6cea5de26002798991b6bb978131222e71311e48",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/MentalControlRecallTest.java",
+      "bytes": 1241,
+      "sha256": "50c5d9ee96590616b8f5e945a614ca8e336d1860892f88a7be8a646dcc662843",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/MentaloutControlCostTest.java",
+      "bytes": 1445,
+      "sha256": "eb70356233f5a6beb1c93993269fb99cb65846c05a678c11e4d99dbce7055bab",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/MentaloutRequestGuardTest.java",
+      "bytes": 3406,
+      "sha256": "1b2a00c4a059a968fac15f29f4137da20237ba4250df0218b941ab62f35dc3d8",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/MentaloutRosterPacketsTest.java",
+      "bytes": 1835,
+      "sha256": "804b7516cab4e6170f6c27166a61622b8a3880d6e252f42c6052f007eebcccec",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/MentalResistanceManagerTest.java",
+      "bytes": 2697,
+      "sha256": "88cc8f02b0dd73577a0110667647efb8192313054c2c9c2bf05537f0876f8115",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/MentalResistanceTrackerTest.java",
+      "bytes": 3764,
+      "sha256": "d6914331f4f78c8d006597f34e7c8ff2d0386a25a117292521bc677f495a3c76",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/package-info.java",
+      "bytes": 116,
+      "sha256": "8da2e1553982c35886f951cc10708680bc869413d6dfb0e3dcf9d2364f0e0c38",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/PlayerControlProtocolTest.java",
+      "bytes": 10555,
+      "sha256": "4f625a7f1062d19c0f6643a36c82604815372c02a6152f4c6eee360d7378d921",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/precision/package-info.java",
+      "bytes": 126,
+      "sha256": "3673f6857b3ee9fe945872d0914eb100c514c0bc7bb5ce66fe4dd33e1147964a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/precision/PrecisionGraphTest.java",
+      "bytes": 19150,
+      "sha256": "eb3628930f27f592d70fb7bd169bf2b93c49656caca1123b68a21b501d04c1bd",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/precision/PrecisionOccupationPolicyTest.java",
+      "bytes": 1975,
+      "sha256": "2228b9f10b1a6938b7dbfd8c18a1cf6eb1c3d20a1ddb11c7774716f13c2a75d5",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/precision/PrecisionOperationPolicyTest.java",
+      "bytes": 892,
+      "sha256": "1875c69654469eb5db5728532b45d704375d2881dcea1907b071ee3907e5e114",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/precision/PrecisionOperationResultPacketTest.java",
+      "bytes": 2223,
+      "sha256": "aaaf16d36b39793e4059101cd925cb4a131b05c62c656a46a7592cff89443243",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/precision/PrecisionProgramExecutionBridgeTest.java",
+      "bytes": 21831,
+      "sha256": "de5c24a700b39a0262001f2de836c6f9b446ea81f2aaa20442e7af48e66bfc6f",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/skills/lv4/PainSuppressionTest.java",
+      "bytes": 1931,
+      "sha256": "8f5d4accaace33ab67e10d3e2b07897bfd8a2f1003ea23e0a4c5da3af3e21504",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/skills/lv5/MindDestructionTest.java",
+      "bytes": 1092,
+      "sha256": "9df005cac7f15ffb8844447a4a4235a42f7be433fa4bcc4921091b5cd74fa638",
+      "action": "trim",
+      "reason": "移除纯固定常量快照或已退役实现的源码字符串检查，保留运行行为及边界测试。",
+      "removedMethods": [
+        "tenOneSecondPulsesFillTheTenSecondDuration"
+      ]
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/skills/lv5/PrecisionOperationDataTest.java",
+      "bytes": 5728,
+      "sha256": "98ad451b77fb88bdbe8b52f363dde848b0750d141828e589e5cca041465c7177",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/mentalout/skills/package-info.java",
+      "bytes": 123,
+      "sha256": "500fae1aa2717da13a4814dcef2f36d5ddb191df0046c27da245310a40b9f229",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/package-info.java",
+      "bytes": 106,
+      "sha256": "1788ed3a6f4ee8c4210dbd6f926d826b5d2b2b95572b621e1d1e5def9810e22c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/ProficiencySkillSettingsTest.java",
+      "bytes": 701,
+      "sha256": "18cbeeb56fe905a6b105452431361fd54f793bb6d13b1e9b00294d1e7be87443",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/AbilityProgramDefinitionTest.java",
+      "bytes": 7502,
+      "sha256": "26bfef688cb7dc56cef6eb188fc5d714cef98b450477eea612b1db1123726e37",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/AbilityProgramManagerTest.java",
+      "bytes": 12812,
+      "sha256": "753f4ba57e5fc34c69e940946de178c6690b34e54988e5cb346ded7ec29c8967",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/AbilityProgramSpatialRangesTest.java",
+      "bytes": 1981,
+      "sha256": "8d58a85e9a838b50807da0db2bad6ef5e1659d3335539f1e8a61e890dd28f3c9",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/AddonNodeContractTest.java",
+      "bytes": 2937,
+      "sha256": "8e46ef7879cb8b47eb5568c18a7c484767dc6edd0090095947bb147c3e3c1b11",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/CommonProgramNodesTest.java",
+      "bytes": 75127,
+      "sha256": "850afadd48f2800845333eee054c190f948849f1564678ff5c903d88c9e7bb4c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/package-info.java",
+      "bytes": 114,
+      "sha256": "1447807a0a43a6e61e764652636aa5679c9012c3dbbeafc0ac77999c7465fc07",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/PrecisionProgramImporterTest.java",
+      "bytes": 7909,
+      "sha256": "1e06114da5053aa6e819c4641fd827adb435469e1b12146a98239fd20f7bda32",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/ProgramActionTransactionTest.java",
+      "bytes": 4664,
+      "sha256": "d1222e851bc11aa3b65a753aa6f7fb444f3f9cae97b42c95f4dc9b3d56aad9cc",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/ProgramBookCodecTest.java",
+      "bytes": 5073,
+      "sha256": "e8ce995257d99f948b2c0d6af513fe6009570619fb2435c2de98d884df7cd8b2",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/ProgramBookTest.java",
+      "bytes": 4959,
+      "sha256": "f07c3211e2e143f792c2a3fe25ff0a37f33fa972c0ec4590f541cbfbbcffdd53",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/ProgramCompilerTest.java",
+      "bytes": 2514,
+      "sha256": "5fabe71ba99074b35772849389d46b65905da2fed9e70cd44bbbfcde24cd55ca",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/ProgramConfigurationPortsTest.java",
+      "bytes": 3995,
+      "sha256": "a207296a58670f9b21ebe27ab8eed09fe09f7fa0cc2cc02d7bed46edde0e313e",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/ProgramDebugFormatterTest.java",
+      "bytes": 1902,
+      "sha256": "317fbc91cde607ceeac41e00d098e63e5fc2f6f061ba6836809bb636d8105fab",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/ProgramEditorDocumentTest.java",
+      "bytes": 10794,
+      "sha256": "21db41007b8c816d6ccb2e7370addd9d95ce211e9cd43e4b1690082dbe54bdce",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/ProgramGraphValidatorTest.java",
+      "bytes": 9669,
+      "sha256": "964a959a864bd8445864d4430bfd226217f033104cf6b2337941e5f5198397ad",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/ProgramNodeExtensionIndexTest.java",
+      "bytes": 4853,
+      "sha256": "9c16164ecf2d8299db155a3cc054236ce414828ba631d8bed17ff5f3e3dae3a2",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/ProgramPowerScaleTest.java",
+      "bytes": 2028,
+      "sha256": "c8f55f9fcfd3e2d02045174478063e0438efb5bde1f1c90ef2d293868f4df9c3",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/ProgramSessionSchedulerTest.java",
+      "bytes": 9444,
+      "sha256": "514624e75cc42976901df8afa7bf8bae342764cdfec75ea534882640a071194c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/ProgramTriggersTest.java",
+      "bytes": 8692,
+      "sha256": "ff90e638d1276b1202b3192272451168dc6d4381272996c2e3eca0156a05e9f6",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/ProgramVmTest.java",
+      "bytes": 16568,
+      "sha256": "5f7e4291868b09ab6947e2e9be3835f3697ac7c7d274341f1a2a64970173993a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/ServerProgramTargetResolverTest.java",
+      "bytes": 863,
+      "sha256": "2389b17e28d939b4a6ec53faa8b9506e55769ff47dcb1b7e05627387326537ca",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/AreaTeleportStateTest.java",
+      "bytes": 2036,
+      "sha256": "878c0def215b6e6c1b388c819e7e9d6f0a5937a19d8e156e7ddae31a5978db73",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/ChunkLeapCostTest.java",
+      "bytes": 1268,
+      "sha256": "5a880cdc19f63f544481b1fc91e875197ae47dca90a1e96455453d34962361d3",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/ChunkLeapPacketsCodecTest.java",
+      "bytes": 8194,
+      "sha256": "4b3f207812fc00bbdfab894e5fb41f398680f1400f5735128e59b0e962921ac0",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/ChunkLeapRegionTest.java",
+      "bytes": 5159,
+      "sha256": "b4010a5408585536d64010547e173df69c9c965b92acc77db7858d465fa28db8",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/ChunkLeapSelectionTest.java",
+      "bytes": 4291,
+      "sha256": "bb72f858aedc630cb120ef79c0fa475a15531915e8dd9ba6a8e143a93f127fdc",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/ChunkMapViewServiceBoundTest.java",
+      "bytes": 3023,
+      "sha256": "410cf7855b8bce821dbc043249444280414a85332f8df489947def87be49e91c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/ChunkRegionSwapDeltaTest.java",
+      "bytes": 2188,
+      "sha256": "7bc5bb45afa266d18d3d4dcc40e8d19e22114bfaa90ec6e1e8526898a115a3bf",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/ChunkSwapServiceSyncTest.java",
+      "bytes": 1421,
+      "sha256": "082f5dd5bc393c76a08855007d8bade92479c14dd12073d05c736a50efa57ac7",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/ChunkSwapServiceValidationTest.java",
+      "bytes": 5741,
+      "sha256": "7202e78b4805e57cede1534486b1364ef3f847b9995501954d7a11855465a0b5",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/ChunkTicketLeaseManagerTest.java",
+      "bytes": 2611,
+      "sha256": "10b3fdce22fdc873a2dc6899c416b123c4a3d8ceec07f34bc376e461e9906151",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/ChunkVerticalBandTest.java",
+      "bytes": 3278,
+      "sha256": "2870ba0450bdccaf59056b3ae64ba388263039109c1842e831866c89c2d1a5fb",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/InstantTeleportSyncPacketTest.java",
+      "bytes": 1666,
+      "sha256": "02bc5acdbd662f2bbc9822af6c78e636106cdcc3edab89245073dbab5b83b21d",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/MapTileBuilderRoofTest.java",
+      "bytes": 4887,
+      "sha256": "9e31c7c091d0f57e04ace778df9a6c4377547f2d6af7df9ec64b5435e0d9ff60",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/package-info.java",
+      "bytes": 115,
+      "sha256": "444f3ba573b2d6d3062bef4c47622a26f6651c58efcb4e2206df5291af7febd4",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/program/ServerTeleportProgramRuntimeTest.java",
+      "bytes": 4308,
+      "sha256": "af67d0826e0e2ce0d92ecc108ec036d1fd2bca188d4c74738dfe2656315b3007",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/program/TeleportProgramExecutionBridgeTest.java",
+      "bytes": 13319,
+      "sha256": "23379d4fe976ed68cea7008b9748e4477fe38dc72d26d76b4060f1b6e5feff47",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/skills/lv1/ThreateningTeleportTest.java",
+      "bytes": 1170,
+      "sha256": "bbbcb730435b73ad8e503ebd2354e41b77bc9496e39a8361c930211363ca931a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/skills/lv2/PiercingTeleportationTest.java",
+      "bytes": 1829,
+      "sha256": "7f0c9b991de0be9c658cf5ba82fa022edecd950afd92245bf1bf90ec04cbff29",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/skills/lv3/LocationTeleportTest.java",
+      "bytes": 2003,
+      "sha256": "06944f74f0aa07f78e568e153bf638b87dfc70eadba73ddbd9fcc4fa9575ae3b",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/skills/lv3/package-info.java",
+      "bytes": 126,
+      "sha256": "5405afa7b668ec9080090e6b60d83fb3b134d580d03c5c727e24f3934e34ffe6",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/skills/lv5/DefensiveTeleportTest.java",
+      "bytes": 3312,
+      "sha256": "fd365a46ef5d18d32d776f40fee6374130bea2f3e8e61d0e8bb3590a07edbbb2",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/skills/lv5/FlashingTest.java",
+      "bytes": 4695,
+      "sha256": "c35f0eb14e4c745ccc455349f8f27601a75316d4b8d4e4f281949c5060ff3d18",
+      "action": "trim",
+      "reason": "移除纯固定常量快照或已退役实现的源码字符串检查，保留运行行为及边界测试。",
+      "removedMethods": [
+        "everyManualFlashIsCappedAtEightBlocks"
+      ]
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/skills/lv5/package-info.java",
+      "bytes": 126,
+      "sha256": "c9412b5681f61cdbbf7114b2290c7275261754a4a3ee9f578876beb7fb3a2574",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/skills/lv5/SpacialExcisionFieldTest.java",
+      "bytes": 4012,
+      "sha256": "523eb6d6c449e57c328d1b34b9e19d62f5f08fabd60c0aa026ef76f9ff0a80d2",
+      "action": "trim",
+      "reason": "移除纯固定常量快照或已退役实现的源码字符串检查，保留运行行为及边界测试。",
+      "removedMethods": [
+        "combatPolicyKeepsTheOriginalCrackRangeAndTiming",
+        "corridorIntersectionDoesNotAllocatePerCandidateScratchArrays"
+      ]
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/skills/lv5/SpacialExcisionTest.java",
+      "bytes": 5076,
+      "sha256": "0b9274a6533d6d4488a030eb21c130a9eafad0d691a276d64037ba457fb08425",
+      "action": "delete",
+      "reason": "源码结构及调参常量快照；保留 SpacialExcisionFieldTest 的几何、伤害时序及牵引行为检查。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/SpacialExcisionMathTest.java",
+      "bytes": 3133,
+      "sha256": "b735996cf26b4128d327a06c10dcf0c24d16fbb71baa96fdc87705206244dbca",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/SpacialExcisionPacketTest.java",
+      "bytes": 1791,
+      "sha256": "b794584ea5b54da742dc57f1acda0594b63eeae2c8e51855d9b83343754e57a6",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/TeleportDamageTest.java",
+      "bytes": 1661,
+      "sha256": "a2b5e610269b2fa3ee4919aed133a9913b323e59055bb8baca788ff7588cbfef",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/TeleportSafetyTest.java",
+      "bytes": 592,
+      "sha256": "c79bfd1eb83c24b7b236d5c3e9d0b6c2568242423349a42654481796b5808338",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/teleport/TeleportTargetingTest.java",
+      "bytes": 527,
+      "sha256": "0fc47bdc71df2a7c60419dc0a21290243c32256901caf56ed94c4bb5b378679e",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/attribute/package-info.java",
+      "bytes": 108,
+      "sha256": "0e6157bb3875dfae8871a0e9cb91274e08705c9c389240312bf93bbeb426e70f",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/attribute/PlayerAttributeRuntimeTest.java",
+      "bytes": 3127,
+      "sha256": "51791e3bae276082b656da8c65d5d277d7572bda57ee07525caaae83075a2763",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/attribute/PropsMathTest.java",
+      "bytes": 4684,
+      "sha256": "1b46be6a2451bd4c2a8ff6ffc1dba364c26ea50bcc326de202d99c9b7d09846e",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/attribute/PropsPacketsTest.java",
+      "bytes": 1251,
+      "sha256": "925d05c7e01e899ecf8c02cece54cb84f2f24a34ac138171d94259599463f574",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/compat/WorldWeaverConfigAccessTest.java",
+      "bytes": 3600,
+      "sha256": "79c444feb1502788f7821e132c120d09e1a6d3001f4f67432c82bbb7466ae0e2",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/entitycontrol/ControlDestinationTest.java",
+      "bytes": 1729,
+      "sha256": "67af0b0eb6e12aee697d815039c229702f03e6944d9f1f26eeac5d284b3b7313",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/entitycontrol/EntityControlApiTest.java",
+      "bytes": 2274,
+      "sha256": "7b357d18154def40a5626f4696dc071b3d2cf6f671dc0cc3cb19340ecf2991e8",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/entitycontrol/EntityMotionGuardTest.java",
+      "bytes": 1403,
+      "sha256": "8ec2529dd5ed71eeb23084e2add753380a88594d3dfab0562b60dda33a5a27b2",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/entitycontrol/EntityMotionPolicyTest.java",
+      "bytes": 1780,
+      "sha256": "bfe723d0758c6d0aec1a2c601b3ca73c92a9035655c0dd318f08c870b055ef87",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/entitycontrol/HealthOffsetStateTest.java",
+      "bytes": 2787,
+      "sha256": "4a690ee7cc953f26593dd62c0d3d60d39cdbe027e86eeaf0b1614343e929db61",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/entitycontrol/package-info.java",
+      "bytes": 112,
+      "sha256": "aca49414da75856819d16f55c72c53cd4defd7882c65bb291b8bc8f9352e6e0b",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/event/DarkmatterEquipmentEventsTest.java",
+      "bytes": 2156,
+      "sha256": "47a1f879ea322c9178f186fac334c3dae46b62855ccff7f45f7606b63ac72687",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/event/package-info.java",
+      "bytes": 104,
+      "sha256": "e5d89b4c15ab18872bdcd4a23b2c52cc4145fbaf2b877bb70c7208aa90923373",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/music/PlaybackTimelineTest.java",
+      "bytes": 4449,
+      "sha256": "3ee7835dcb853e8bc3290e2621ac7f5b4401ff519b266acc67f228cca2cb931a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/music/provider/QqProviderTest.java",
+      "bytes": 5214,
+      "sha256": "706f91c3636a06a04ef44b0346ea5661012fafdb0faa67d7cb5d03048bacb0a3",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/music/QueueSnapshotTest.java",
+      "bytes": 1774,
+      "sha256": "0e32e448c2a79e90cc138947cc4c3e1324f92b6837d79035e15b8a42657b0a51",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/music/SharedPlaybackChannelTest.java",
+      "bytes": 8418,
+      "sha256": "5a6cea84cb768fb29639fb5c9e8faddf65064b1519f1277eba48bab6a5437c43",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/music/SkipVoteSessionTest.java",
+      "bytes": 1603,
+      "sha256": "cccb240cebe9e64e9ccb8dd25eb78ba96458995aa83cab653f8570e011094be5",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/music/SlidingWindowRateLimiterTest.java",
+      "bytes": 1520,
+      "sha256": "73754abde4db0972cdf81d498b93b790c4b803bc19a69e822839b6af9e672655",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/network/DarkmatterVisualPacketTest.java",
+      "bytes": 3293,
+      "sha256": "066cc81c74faa4152ca7074af0ac756da18f1cdf72362481a8f53b3121748336",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/network/MagneticSupportPacketTest.java",
+      "bytes": 1243,
+      "sha256": "b89d71913c65b5a8f75f58e771f428b4cbaaa9b4d64749a547e7e6a401960406",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/network/NetworkRegistrationPolicyTest.java",
+      "bytes": 1322,
+      "sha256": "100245e52d79a8833fe1715a44634ed43738eb7ebb4ea000f1a92e6fa42b2ad4",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/network/PlayerLeftClickSwingPacketTest.java",
+      "bytes": 2018,
+      "sha256": "41a07bcae37ef341efdaeac05850a847004aa75ed34fb4ba8f4c04c3a1ed42fb",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/network/SkillVfxPacketTest.java",
+      "bytes": 5320,
+      "sha256": "77c89a56a75eff98e5ab83f861992239d7b68f1a6b15e7d0469853092fb81f9c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/network/SpawnVfxGraphPacketTest.java",
+      "bytes": 4251,
+      "sha256": "7d60b30fe49ef4858ecd9afc844d2b89db00f684fe52c20b44cc13c81feb15a8",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/network/TemporalImmunitySyncPacketTest.java",
+      "bytes": 1233,
+      "sha256": "23c9cca40cbf662e4964de3db8551188ea45d35aec584f9c986e4d510d77d612",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/skilldata/DarkmatterCreationDataTest.java",
+      "bytes": 2457,
+      "sha256": "092d876bb63b65a6ddc87d2862c79ee7756d9e42c5a498e7451329c361e7cd39",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/skilldata/LocationTeleportDataTest.java",
+      "bytes": 1477,
+      "sha256": "9a7306e73abdb4db69078e62901874cd0cacc4536c2166685e1ea5eb495c9680",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/skilldata/OutputControlDataTest.java",
+      "bytes": 608,
+      "sha256": "e22560091363520c5b4e5a05571b26cbb0eb2e4e4b84139ca8ea7facef7cd2e8",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/skilldata/package-info.java",
+      "bytes": 108,
+      "sha256": "d0e3b20a32282308bdb8228540394722cd0abfac65320f36f892ef0294f6902f",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/skilldata/SkillDataProficiencyTest.java",
+      "bytes": 2360,
+      "sha256": "d5cb1b235723bc336ba82160fa584a2b410604716af2e6bcfe9ce290d59f97e6",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/skilldata/SkillDataProtectionTest.java",
+      "bytes": 2147,
+      "sha256": "d8d479a22d19724994d9c9691afe274afca7e3cf50ada6c2045e18b5f2c7f7f7",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/structure/BlockStructureCollisionGeometryTest.java",
+      "bytes": 5316,
+      "sha256": "f16006a520572587bf7354f7d300b80c230253bb348631ac185d06eec4aec346",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/structure/BlockStructureCollisionRuntimeTest.java",
+      "bytes": 1177,
+      "sha256": "4be5809c39e536318439e0f806dfe4e6175c21da91c9a81cfbc5f2bc3f85c2be",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/structure/BlockStructureSelectionTest.java",
+      "bytes": 6391,
+      "sha256": "5af58449845fcd73982b1b7e817a20e9e6a815fec04800f59dea8c9936a1d9c5",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/structure/BlockStructureSettlementMotionTest.java",
+      "bytes": 2586,
+      "sha256": "98cbb06d3b9c8e6e8c74023826b67e67be1dcf5b1b192cc2b0e35f1aa86db9e6",
+      "action": "trim",
+      "reason": "移除纯固定常量快照或已退役实现的源码字符串检查，保留运行行为及边界测试。",
+      "removedMethods": [
+        "gravitySettlementUsesFallingBlockGravity"
+      ]
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/structure/BlockStructureSpatialIndexTest.java",
+      "bytes": 1610,
+      "sha256": "aa745f96831f78a45f321594f45f0306bac687cd46477dc648a15dea153ab749",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/util/EnergyChargeHelperTest.java",
+      "bytes": 4004,
+      "sha256": "f00629f2036dc6833e251435a0f34a8bb48e9f6bb219b7be0dfbcdc0c680720a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/util/package-info.java",
+      "bytes": 103,
+      "sha256": "8408b2814d987b4a485e9f162f78da0909bc86cc9399cd59753de5bec9b3e184",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/world/damagesource/DamageCompletionDeclarationTest.java",
+      "bytes": 2046,
+      "sha256": "6d7fdc9b6abe68bbe0d072b2064de65fdc85f9688dcf0b0fc50c7d82f4c06ad6",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/world/damagesource/DamageRecursionGuardTest.java",
+      "bytes": 1637,
+      "sha256": "0b5f391d9281adbd0bdac59b4ebdcfa6c0b82029e6177477c23fb5fbfbdfed36",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/world/damagesource/DamageTypesTest.java",
+      "bytes": 1283,
+      "sha256": "d1f9ad2e3fb39be970cc430fb8e7f96341b18e623792f491f538f4b40ba782ee",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/world/damagesource/DestroyBlocksSettingTest.java",
+      "bytes": 679,
+      "sha256": "28697cce56a9ee8a6cce5ab33d05570d29828f1b979179430ac59f7e9574bdda",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/world/damagesource/PvpSettingTest.java",
+      "bytes": 2352,
+      "sha256": "dcdb2f2fa1c8bafb9cd67539bb93ce37b2bac9a9039b030b696f4c47b69299c8",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/world/damagesource/TrueDamageCompatibilityTest.java",
+      "bytes": 1779,
+      "sha256": "d7580136c360dddeaf4132d863d85d81e4ddf453d6456c73fb521dfd0f55b49d",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/world/damagesource/VerifiedTrueDamageRouteTest.java",
+      "bytes": 2664,
+      "sha256": "5f2115768939def163914a02ece1c8406d9eef5e5b9fdd347ad9f55f0a688647",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/world/item/DarkmatterItemUtilTest.java",
+      "bytes": 738,
+      "sha256": "37a12ad56b1f493974b124892e9d7f5d3184374bda619afe8bc7f4556aa744c6",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/world/item/DarkmatterToolLootTagTest.java",
+      "bytes": 1041,
+      "sha256": "152900ba0d2ac701daa36f22e4de006d1df717f4c63c292965254bc62f122d24",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/world/level/block/entity/EnergyUpdateThrottleTest.java",
+      "bytes": 1658,
+      "sha256": "61ec2fbf1c835a35ef312068b7960b5d7abf1cac42122d2d67738e9ba422b731",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/world/level/block/entity/GeneratorOutputTest.java",
+      "bytes": 558,
+      "sha256": "b72791b5223eb04eb1cf7e8f04ef650d944f9a4034a587df461675341f10a0f3",
+      "action": "trim",
+      "reason": "移除纯固定常量快照或已退役实现的源码字符串检查，保留运行行为及边界测试。",
+      "removedMethods": [
+        "windGeneratorProducesConfiguredEnergyPerTick"
+      ]
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/world/level/block/MachineBlockMiningPropertiesTest.java",
+      "bytes": 1881,
+      "sha256": "7e59f2acfb56688edc7240e3df6017013140c1c1c93008bfbe89963804863c6f",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/coremod/DispatchSubclassFactoryTest.java",
+      "bytes": 8379,
+      "sha256": "6a62b3d157aea3c6a20ec1af5db54f84b3f7911119ed55249aa04a46e3003dd6",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/coremod/HealthReadInlinerTest.java",
+      "bytes": 2460,
+      "sha256": "5050a0e0e3ed685aa260e93d4cc1fa03734e775037683eecc5be084102d0c7de",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/coremod/HotSpotClassPointerAccessTest.java",
+      "bytes": 3256,
+      "sha256": "051c771c7beb508d680fd670ec5ca8ca1a39d9be4bb3c528ecd1688ac8192ce6",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/coremod/package-info.java",
+      "bytes": 99,
+      "sha256": "4079cae9e553e92563c71b3fda67a62a57d6eb62758aeebb577d9118b8f256ab",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/coremod/ProtectedHealthCacheTest.java",
+      "bytes": 2128,
+      "sha256": "df13e8e1085b1fff50206b3732699ec5c83b5efe7253afb50340247a344eccfd",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/coremod/TemporalBoundaryTransformerTest.java",
+      "bytes": 4134,
+      "sha256": "251a083d66270d8988ba2063bce200ac4122e0f08664fd238db2ed4bedb76406",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/coremod/WorldWeaverConfigTransformerTest.java",
+      "bytes": 4759,
+      "sha256": "c0154aa4b813240b1742149bb494d7877c9e7abd8cebf483372fe72b16eed31e",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/gui/map/ChunkMapProjectionTest.java",
+      "bytes": 4811,
+      "sha256": "2f46aecd5390e3bbb2dbeeb06477256267a3faae308629f9955ae192d7aeded1",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/gui/map/ChunkMapRendererGeometryTest.java",
+      "bytes": 1851,
+      "sha256": "7890ad691185209fca27488bbed9fa1ed99599959c51ab90c0172c3e96356682",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/gui/map/EntityRadarThumbnailRendererTest.java",
+      "bytes": 1733,
+      "sha256": "9f7b53775bb9dc4abf3d223f479a3bcbe15debabf9bfb2d4d3ed514ee8bbb170",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/ability/AeromanipResourceManagerTest.java",
+      "bytes": 930,
+      "sha256": "4a4cf007716978c455be5c797332aa6c53fb0a0dde98c9086696ed81af9f2e8d",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/ability/DarkmatterResourceManagerTest.java",
+      "bytes": 4025,
+      "sha256": "8559c198d1ee48fb3109cd5139f5edd778738052c9e6320a61229780c395f939",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/ability/DevelopDataTest.java",
+      "bytes": 1396,
+      "sha256": "6227f06c13d8efaba17418f0f8c40060e817b413edc449b662a40e6ea85f8365",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/ability/InitialAbilityRecommendationCacheTest.java",
+      "bytes": 3479,
+      "sha256": "9641eb2eb218b1334590d6d9ea97774f7042be3445b22b37ddb5ee1ffc4be782",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/ability/InitialAbilitySelectorTest.java",
+      "bytes": 2716,
+      "sha256": "3869ff7d1a02b00c8c7a2c3e7c6866e1a1c376105d78a4e09dd2a3f1ac2dba63",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/ability/LevelDevelopmentPlanTest.java",
+      "bytes": 1333,
+      "sha256": "68f43a498e8ef591fbb79cb1e6704c0ee19f36cf18806f1d49d618ce3e5af17d",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/ability/NativeCpRecoveryTest.java",
+      "bytes": 6399,
+      "sha256": "401a05c51653fd6280086fe36c9f5a0236df2493a29905a61a6b392ed908cd3e",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/ability/package-info.java",
+      "bytes": 106,
+      "sha256": "c8965ae39d5f7b1fd52b984ac0a6de4b5fcfe5021c8f6764568de9a5ced4d455",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/ability/PlayerCPManagerTest.java",
+      "bytes": 8894,
+      "sha256": "3a5a863073ada0d25569007914474c7f7ac00672cc5927dfc200e6d7d07a8f21",
+      "action": "trim",
+      "reason": "移除纯固定常量快照或已退役实现的源码字符串检查，保留运行行为及边界测试。",
+      "removedMethods": [
+        "cpBaselineCapsAndOverloadDurationMatchTheNewRules"
+      ]
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/ability/PropsAcquisitionTest.java",
+      "bytes": 3047,
+      "sha256": "6581431706b578e7c546f865f184769c2adee0ac539ef09f8bc106a6ad836b68",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/ability/PropsStructureCheckStateTest.java",
+      "bytes": 1994,
+      "sha256": "25a8317bdc8a1c25683606b4f566127b8b3045fcb81c8a973f8baa0418db7845",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/ability/SkillDataManagerTest.java",
+      "bytes": 2482,
+      "sha256": "f2a3c6c7ddfe8dba07c488231188aae07bb889bbbee2b206c83a1e0267acec9f",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/ability/SyncManagerTest.java",
+      "bytes": 1174,
+      "sha256": "d6acfa663babbf045c8785e781b8d4dc53807be45a9ef518aa0bdda5c4633b3e",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/commands/AcademyCraftCommandTest.java",
+      "bytes": 1887,
+      "sha256": "a82656a01cee2890d26b1dd820adeeb2a2d1e985615041954354d9644fef83ba",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/commands/AcademyTeamsCommandTest.java",
+      "bytes": 313,
+      "sha256": "418d79f4d6db3589b754240f5d893263e6ccfc09d114f1d88bcd2287f2a3d40e",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/commands/package-info.java",
+      "bytes": 107,
+      "sha256": "0a23b992932c12df1b4eefa569db040376f8d0ea572c8db86fc6ee9861fd8c43",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/commands/TemporalTickDebugCommandsTest.java",
+      "bytes": 5678,
+      "sha256": "997e2c3687083b1e4f9f752da82362f2e45b804f32da72c074dbde8b6eae19f7",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/config/AbilityConfigTest.java",
+      "bytes": 11853,
+      "sha256": "a40ea25ed82d182eee8f8e03008b6a178dbd95ffff5ceed4f0b912db7ef3e2f8",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/config/DimensionEffectsConfigTest.java",
+      "bytes": 5142,
+      "sha256": "7592d7b188a5292faadd2367554395dc6105892ec4c70fe566b92172c5447984",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/config/GenericConfigTest.java",
+      "bytes": 2863,
+      "sha256": "0598453ab6827f826294a87ea474051e22bec4c0a8e7ea90f4e2807778d5b822",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/config/package-info.java",
+      "bytes": 105,
+      "sha256": "0e70c6d7652c455c5e842482a9fc5b923573a77a08c7c0c25ebb1e6b4435891a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/entity/SurvivalDefenseRuntimeTest.java",
+      "bytes": 1536,
+      "sha256": "306df2e8fd4f2adbe50c2305faecf5aa3df9a211a4df3b58e69daf7277b5d77c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/music/MusicRoomStoreTest.java",
+      "bytes": 3330,
+      "sha256": "281cbc0a2ad25a169e1bbda835d59b74ae04e7fbc55b38a0fa40fa995559569f",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/pvp/PvpCooldownDataTest.java",
+      "bytes": 1704,
+      "sha256": "adbc93b2e8b1d40218b5fb3b0cb1cb8dfd2a7276a78a46f62442b00190586f62",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/team/AcademyTeamDataTest.java",
+      "bytes": 1915,
+      "sha256": "0e251896669cb7697004cee7eeee1afeb8116baaacca005b7314bbf6cf972064",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/time/TemporalFieldResolverTest.java",
+      "bytes": 5231,
+      "sha256": "461848df9fdf0b0f5bd199366c83cd96641e2cfbd743ede71d922594a583a843",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/time/TemporalImmunityStateTest.java",
+      "bytes": 1502,
+      "sha256": "87f6b8c505de33a01ba53246b091706a203e5e02004f1ba00587df69ba048995",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/time/TemporalSavedDataTest.java",
+      "bytes": 2613,
+      "sha256": "b62fdb3e4fda66bdc9e0266ddb2ac2414bc3aed68644ee4da43d26b21d18a7bb",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/time/TemporalScheduledTickMathTest.java",
+      "bytes": 2768,
+      "sha256": "d9727656214bd4a7945b8d8a869e4063cd94b8ebb72762d12ca709ceb85e8450",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/time/TemporalStochasticTickMathTest.java",
+      "bytes": 2375,
+      "sha256": "e321e25d521e583b384a266b3a84a45e9e0891245d818a138bf0dcd47ba75ca7",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/time/TemporalTickDebtTest.java",
+      "bytes": 959,
+      "sha256": "919b5c821741754cdec2f066a56e4850249d082b11ed8a5241c26d3b6a19b3b2",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/time/TemporalUiCancellationTest.java",
+      "bytes": 908,
+      "sha256": "4b6704a9d1eef2d3828262b2411dd27344217dc3208887b4a04e642064f496ac",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/world/level/storage/AddonSkillStateTest.java",
+      "bytes": 5736,
+      "sha256": "73927ebbe3e2184d3e246e81b6fe393ade93b455410743f8f7e0c5886386b0b9",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/world/level/storage/package-info.java",
+      "bytes": 118,
+      "sha256": "8a8b15d16e413ab7e0d939c52fd9eadf54a462ff07dd6af01e55635d27fc62ec",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/world/level/storage/PlayerAbilityStateProtectionTest.java",
+      "bytes": 2075,
+      "sha256": "9f5ef6392ccf27f132b4053688ba86a6b912035c6f26da09025b859bb94a0c5c",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/world/level/storage/PlayerSkillRetentionTest.java",
+      "bytes": 1605,
+      "sha256": "c75364a1e4b6b0d1c77b447248b4262b321f32cc649f31f6cf378c0ffc76acb9",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/world/level/storage/PropsDataTest.java",
+      "bytes": 2752,
+      "sha256": "89e301d8723af41b82fe66adb65d02f8842b57bc9a58ff0fe260870e84cedef2",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/internal/server/world/level/storage/WorldDataMigrationTest.java",
+      "bytes": 14729,
+      "sha256": "ce32c282278b6574e33e8e7509884bb2ee6756a5626a7bee2432f553badf1c6f",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/mixin/client/MixinLevelRendererTest.java",
+      "bytes": 3337,
+      "sha256": "18ec225c75a4c29e95de412b6851fb38a5ff3afdfef8fb2f9179f64c9037ffc9",
+      "action": "delete",
+      "reason": "仅匹配源码字符串与调用位置，不能验证 Mixin 注入和实际渲染结果。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/java/org/academy/mixin/common/MixinFoodDataTest.java",
+      "bytes": 1004,
+      "sha256": "62712467fe197b88cbfef9dd71d71c226b0947e38f7426df76f9464fa5ea89c4",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/dsl/UiDslTest.kt",
+      "bytes": 9898,
+      "sha256": "ac5c9b204ddcd51f49d94f412ce4dd8e9d2d68ee66e276f0fce2b107574ac16b",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/imgui/UiDebugLocalizationTest.kt",
+      "bytes": 1680,
+      "sha256": "d4d1ca4fba933ebd83eb7ffa933b89dc7e39a0ce738fb52fb57c1a1ba55fd636",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/render/BatchProcessorCullTest.kt",
+      "bytes": 1209,
+      "sha256": "5212cd71be249e074408705342365fadf4045de6295dbda1364db72703d2ff33",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/render/GaussianSamplesTest.kt",
+      "bytes": 1208,
+      "sha256": "9861dd9de9c5aa65930821320a1f4cb319c6fe9dbd179c880466d1793cd27761",
+      "action": "delete",
+      "reason": "合并到 api/client/render/GaussianSamplesTest.kt；重复归一化及容量检查移除，独有的大半径容量检查迁移保留。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/render/NestedBlurTest.kt",
+      "bytes": 4585,
+      "sha256": "663f1838e971e2ece1903dc68ff1e3f778c597e3f2ded04e16cd10bb4c752ad7",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/render/ScissorRecomposeTest.kt",
+      "bytes": 5174,
+      "sha256": "faa2703f2ca2781c948a734466ace7a89f39062c621cd72857902cc4ef214e28",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/render/ScissorRectTest.kt",
+      "bytes": 1285,
+      "sha256": "9d3e2319c275d20839887e6876fee63040a414a5827ed804daee9ea94eaf4992",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/render/SubtreeCacheReplayTest.kt",
+      "bytes": 7895,
+      "sha256": "4f8b10adeace2b46a941ab88f6f2cafd3ff52611f5c478c727599a2fa0a776f3",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/render/UiContextSplitTest.kt",
+      "bytes": 3806,
+      "sha256": "3546a36878adc1469f973d013966023743199d512f643507656bc37925b13d75",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/state/UiStateTest.kt",
+      "bytes": 1183,
+      "sha256": "c45a2ae9206d66d4330fa3dfe1b2f2bfc1cb7ea2c3c652cbe11d8783fcccdc4f",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/text/device/FadeMaskRevealTest.kt",
+      "bytes": 1231,
+      "sha256": "0aecec0a37dcb1a1b401a33c222a0b753489c9a22a20a70e903c68e41366f6ba",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/text/shape/CaretGeometryTest.kt",
+      "bytes": 2184,
+      "sha256": "806904052e5ce9091e61284b5a8054567f8739059934a366d4288954328cea84",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/widget/BlurDrawOrderTest.kt",
+      "bytes": 3807,
+      "sha256": "dff3bfa4c4a8bd007aae0787749f6e05544f46fc90d8d913b0439bf34e58de8a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/widget/BlurPanelWidgetTest.kt",
+      "bytes": 3558,
+      "sha256": "c7454c2e3620217572d50ceacacabeb68375723d19e09639f408943d69cbf3cd",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/widget/ButtonWidgetHitTest.kt",
+      "bytes": 582,
+      "sha256": "5a1ab48726f8ddbdd0951a1170c95a22e8231f123f8f3f936cf5c2772243e40b",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/widget/FrameUpdateTest.kt",
+      "bytes": 2348,
+      "sha256": "df742b9b13bab1076b4bbc6373e26efec475176a03a559febdc8915bce75bc2a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/widget/LayoutCacheTest.kt",
+      "bytes": 5162,
+      "sha256": "652cee06b859da4b632656a94698d707e027cdb3c2e6e6c40b16ce998df8d467",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/widget/LayoutV2Test.kt",
+      "bytes": 10356,
+      "sha256": "a5f26b879e5b969eea5864e473715f9d0e7b5e80db57a4db68cbfb8f84853cfb",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/widget/PainterOrderTest.kt",
+      "bytes": 4923,
+      "sha256": "335488ce6ef8c8b804bdbb72fbf15aadb98007606a6f2cd83a9b7eb0dbe9298b",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/widget/ProgressBarPropertyTest.kt",
+      "bytes": 2198,
+      "sha256": "9e95941e3a3865e050a2c527f0bd67b303d88821687a8b1d4ddead993c3cd308",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/widget/RoundedRectWidgetTest.kt",
+      "bytes": 2701,
+      "sha256": "53e234322697562f6cc2530b49e4866c4deb94f0222ca5f1f5f94016eeb7c313",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/widget/ScissorTransformTest.kt",
+      "bytes": 2730,
+      "sha256": "c024ac128bfb0c836d65a3f82d6b7d802883d8ba8ef8a956969493109592e148",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/widget/ScrollPanelWidgetTest.kt",
+      "bytes": 4129,
+      "sha256": "50855be2456bd17d0948b9ca4857861a2f997dd161d7a3641485e800106f8e99",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/widget/TargetedInvalidationTest.kt",
+      "bytes": 3636,
+      "sha256": "732bd5e202df1ab084bba49535fee29fbb55068429ab1bf0531e26b17e667f7e",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/widget/TextBoxWidgetTest.kt",
+      "bytes": 527,
+      "sha256": "4e16821b2aa64e0d2f872bc179dc0ee75e4f3e802ed58b473938b45ac0630247",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/widget/TextWidgetMarqueeTest.kt",
+      "bytes": 4926,
+      "sha256": "400489eb433d1b6c5fb5cb01e1319e6b7ed900aba24a516823fb6b63f404d830",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/gui/widget/WheelPickerWidgetTest.kt",
+      "bytes": 2241,
+      "sha256": "41d787e38a47718b519df09c4d3e1f5a5f06c09c5a725583f181758d2805ca94",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/hud/ability/AbilityInfoHudTest.kt",
+      "bytes": 3429,
+      "sha256": "71478680ef7261d7c6a4e4943c472abdd0fa804f3168b077b23ad1d82a2bc0da",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/hud/ability/CpDisplayControllerTest.kt",
+      "bytes": 6819,
+      "sha256": "7b2d18d4652651f6af56220826ee161972d098844cacc0304bc35679e383dbc4",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/render/GaussianSamplesTest.kt",
+      "bytes": 1472,
+      "sha256": "845dd027d52c25cd8263af384f383e77ee07fd93dac3a694288c4027efebd221",
+      "action": "merge",
+      "reason": "接收重复测试文件独有的大半径容量检查。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/render/post/BackdropBlurMappingTest.kt",
+      "bytes": 2586,
+      "sha256": "cb42cdad68d7516f3a30d9a65b93108da8d399a63ee184adfbed443f678bc41a",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/client/util/ChaseTest.kt",
+      "bytes": 1990,
+      "sha256": "e0759ed824cccc085b3030f105a85cdf60b89ef2e9499064e3d4d5fb03bb3067",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/api/common/profiler/ProfilerTest.kt",
+      "bytes": 3078,
+      "sha256": "02a6ff5a6a0719c29cc3ce44c790a3d73b09651210c6b06f359fe2c49786c073",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/internal/client/app/music/engine/StreamDrainPolicyTest.kt",
+      "bytes": 1447,
+      "sha256": "2df35ffa54df7709b8597ac76a143286e8176e8f296524e861d52502f1940123",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/internal/client/gui/layout/UiLayoutsTest.kt",
+      "bytes": 5067,
+      "sha256": "ae69f386735a6db82e563501fbd72e5e6e74969c7c12f4dbfa89a04371c93b43",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/kotlin/org/academy/internal/client/gui/screen/PropsConfirmationInputTest.kt",
+      "bytes": 909,
+      "sha256": "cd17bf2c9a8fa2252020cc78135603b3f928ccd9d4563eccc86175ffd718dee3",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/resources/shader/golden/curve_gradient.glsl",
+      "bytes": 734,
+      "sha256": "8a78ad5b028c82c43847abcadadc53bb4e50e24f0c6940c30d7b496bb7d9a5ca",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/resources/shader/golden/custom.glsl",
+      "bytes": 205,
+      "sha256": "6518263075b91fa2bae798dd3c2e2f0358bce7efe5cb8bba87af3fa2bd9d3e97",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/resources/shader/golden/math_chain.glsl",
+      "bytes": 322,
+      "sha256": "1386ed2999602359061e61a2028fb3e33d224aaa54896ca72090695ed572ad60",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/resources/shader/golden/noise.glsl",
+      "bytes": 1069,
+      "sha256": "c39e06517bd7becb2b40be4c60b6c8fdab7afa5faca54b7faa23365408ca4cee",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/resources/shader/golden/parameter.glsl",
+      "bytes": 272,
+      "sha256": "185949c1b79a1b4b5cb1c4f1493951513df7d63a0a0c1a84de408a85c478d4c0",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    },
+    {
+      "path": "src/test/resources/shader/golden/texture_sample.glsl",
+      "bytes": 320,
+      "sha256": "4466f314f3ff66bd59e07c25bbeaf88e28183cf384c5b85ac0f114442a9e26d1",
+      "action": "retain",
+      "reason": "保留现有测试、测试支持文件或资源。",
+      "removedMethods": []
+    }
+  ]
+}

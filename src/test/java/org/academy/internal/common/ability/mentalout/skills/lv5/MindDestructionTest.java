@@ -15,13 +15,6 @@ class MindDestructionTest {
     }
 
     @Test
-    void tenOneSecondPulsesFillTheTenSecondDuration() {
-        assertEquals(200, MindDestruction.DURATION_TICKS);
-        assertEquals(20, MindDestruction.DAMAGE_INTERVAL_TICKS);
-        assertEquals(10, MindDestruction.DURATION_TICKS / MindDestruction.DAMAGE_INTERVAL_TICKS);
-    }
-
-    @Test
     void onlyMentalInterventionRosterTargetsReceiveStupor() {
         assertFalse(MindDestruction.shouldApplyStupor(false));
         assertTrue(MindDestruction.shouldApplyStupor(true));

@@ -6,12 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class HighSpeedJetStructureServiceTest {
     @Test
-    void directLaunchUsesTheFixedRadiusTwoVolume() {
-        assertEquals(2.0, HighSpeedJetStructureService.DEFAULT_STRUCTURE_RADIUS);
-        assertEquals(8.0, HighSpeedJetStructureService.MAXIMUM_STRUCTURE_RADIUS);
-    }
-
-    @Test
     void impactRequiresClosingSpeedAndUsesBoundedDamage() {
         assertEquals(0.0f,
                 HighSpeedJetStructureService.impactDamage(4, 0.34, 1.0f));

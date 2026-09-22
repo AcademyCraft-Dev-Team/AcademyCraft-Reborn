@@ -24,11 +24,4 @@ class PlasmaGenerationTest {
         assertEquals(30.0f, PlasmaGeneration.calculateExplosionRadius(240), 0.0001f);
     }
 
-    @Test
-    void referenceRuntimeConstantsStayAligned() {
-        assertEquals(240, PlasmaGeneration.MAX_CHARGE_TICKS);
-        assertEquals(40, PlasmaGeneration.CP_PER_SECOND);
-        assertEquals(2.5, PlasmaGeneration.TRAVEL_SPEED, 0.0001);
-        assertEquals(6, PlasmaGeneration.MAX_STAGE);
-    }
 }

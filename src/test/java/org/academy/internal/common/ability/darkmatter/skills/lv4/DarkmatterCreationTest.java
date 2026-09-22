@@ -9,14 +9,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class DarkmatterCreationTest {
     @Test
-    void contractLimitsAndReservationMatchAudit() {
-        assertEquals(16, DarkmatterCreation.MAX_CREATURES);
-        assertEquals(16, DarkmatterCreation.MAX_BEETLES);
-        assertEquals(5.0f, DarkmatterCreation.MIN_INVESTMENT, 0.0001f);
-        assertEquals(40.0f, DarkmatterCreation.RESERVED_CP_PER_BEETLE, 0.0001f);
-    }
-
-    @Test
     void secondMilestoneImprovesPursuitWithoutRaisingCountCap() {
         assertEquals(1.0, DarkmatterCreation.followSpeed(1), 0.0001);
         assertEquals(1.2, DarkmatterCreation.followSpeed(2), 0.0001);

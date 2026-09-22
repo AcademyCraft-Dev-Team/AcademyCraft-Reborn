@@ -13,15 +13,6 @@ class MiningBeamTest {
     }
 
     @Test
-    void referenceIntervalsAndRangesRemainStable() {
-        assertEquals(20, MiningBeam.CP_INTERVAL_TICKS);
-        assertEquals(3, MiningBeam.BREAK_INTERVAL_TICKS);
-        assertEquals(20, MiningBeam.DAMAGE_INTERVAL_TICKS);
-        assertEquals(48.0f, MiningBeam.MAX_LENGTH);
-        assertEquals(4, MiningBeam.MINING_TIER);
-    }
-
-    @Test
     void harvestModeIndexIsClampedToTheThreeSupportedModes() {
         assertEquals(MiningBeam.HarvestMode.AUTO_SMELT,
                 MiningBeam.HarvestMode.fromIndex(-1));
