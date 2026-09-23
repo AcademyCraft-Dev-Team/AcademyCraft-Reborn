@@ -5,7 +5,7 @@ import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.text.model.TextShapingOptions
 
 class TextPainter {
-    private val blobCommand = TextBlobRecord()
+    private var blobCommand: TextBlobRecord? = null
 
     fun draw(
         context: Canvas,
@@ -26,24 +26,35 @@ class TextPainter {
         fadeLeftStrength: Float = 0f,
         fadeRightStrength: Float = 0f
     ) {
+        val content = text.toString()
+        // Canvas retains command references until expansion and may cache them across frames.
+        // Reuse an unchanged record, but never overwrite a record already submitted for drawing.
+        val command = blobCommand?.takeIf {
+            it.text == content && it.fontSize == textSize && it.shapingOptions == shaping &&
+                    it.red == red && it.green == green && it.blue == blue && it.alpha == alpha &&
+                    it.contentScale == contentScale && it.revealCodeUnits == revealCodeUnits &&
+                    it.fadeViewportLeft == fadeViewportLeft && it.fadeViewportWidth == fadeViewportWidth &&
+                    it.fadeLength == fadeLength && it.fadeLeftStrength == fadeLeftStrength &&
+                    it.fadeRightStrength == fadeRightStrength
+        } ?: TextBlobRecord().apply {
+            this.text = content
+            fontSize = textSize
+            shapingOptions = shaping
+            this.red = red
+            this.green = green
+            this.blue = blue
+            this.alpha = alpha
+            this.contentScale = contentScale
+            this.revealCodeUnits = revealCodeUnits
+            this.fadeViewportLeft = fadeViewportLeft
+            this.fadeViewportWidth = fadeViewportWidth
+            this.fadeLength = fadeLength
+            this.fadeLeftStrength = fadeLeftStrength
+            this.fadeRightStrength = fadeRightStrength
+        }.also { blobCommand = it }
         context.pose().pushPose()
         context.pose().translate(originX, originY)
-        blobCommand.text = text.toString()
-        blobCommand.fontSize = textSize
-        blobCommand.shapingOptions = shaping
-        blobCommand.thickness = 0f
-        blobCommand.red = red
-        blobCommand.green = green
-        blobCommand.blue = blue
-        blobCommand.alpha = alpha
-        blobCommand.contentScale = contentScale
-        blobCommand.revealCodeUnits = revealCodeUnits
-        blobCommand.fadeViewportLeft = fadeViewportLeft
-        blobCommand.fadeViewportWidth = fadeViewportWidth
-        blobCommand.fadeLength = fadeLength
-        blobCommand.fadeLeftStrength = fadeLeftStrength
-        blobCommand.fadeRightStrength = fadeRightStrength
-        context.submit(blobCommand)
+        context.submit(command)
         context.pose().popPose()
     }
 
