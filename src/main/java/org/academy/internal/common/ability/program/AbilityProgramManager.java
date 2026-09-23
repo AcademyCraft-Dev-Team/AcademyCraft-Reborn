@@ -1,5 +1,12 @@
 package org.academy.internal.common.ability.program;
 
+import org.academy.internal.common.ability.program.compile.CompiledProgram;
+import org.academy.internal.common.ability.program.compile.ProgramBookCodec;
+import org.academy.internal.common.ability.program.registry.AbilityProgramDefinitions;
+import org.academy.internal.common.ability.program.registry.CommonProgramNodeCatalog;
+import org.academy.internal.common.ability.program.registry.PrecisionProgramNodeCatalog;
+
+
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.EncoderException;

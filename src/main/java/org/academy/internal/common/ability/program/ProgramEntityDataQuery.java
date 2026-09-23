@@ -1,5 +1,8 @@
 package org.academy.internal.common.ability.program;
 
+import org.academy.internal.common.ability.program.registry.CommonProgramNodeCatalog;
+
+
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.api.server.ability.AbilitySystemServer;

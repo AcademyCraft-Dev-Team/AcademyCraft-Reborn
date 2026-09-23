@@ -27,7 +27,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.common.IShearable;
 import net.minecraft.world.phys.AABB;
 import org.academy.api.server.ability.AbilityBlockDrops;
-import org.academy.internal.common.ability.mentalout.MentalControlMemory;
+import org.academy.internal.common.ability.mentalout.control.MentalControlMemory;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.GameMasterBlock;

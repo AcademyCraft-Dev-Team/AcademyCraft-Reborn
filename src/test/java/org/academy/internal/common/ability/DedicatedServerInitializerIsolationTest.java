@@ -1,5 +1,8 @@
 package org.academy.internal.common.ability;
 
+import org.academy.internal.common.ability.proficiency.ProficiencySkillSettings;
+
+
 import org.academy.AcademyCraftServer;
 import org.academy.api.server.wireless.WirelessManager;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;

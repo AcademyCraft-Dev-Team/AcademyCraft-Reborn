@@ -35,10 +35,10 @@ import org.academy.api.common.ability.electromaster.MagneticFieldTuning;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.reflection.*;
-import org.academy.internal.common.ability.electromaster.ElectromasterArcActions;
+import org.academy.internal.common.ability.electromaster.arc.ElectromasterArcActions;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagnetManipulation;
-import org.academy.internal.common.ability.meltdowner.ContinuousBeamReflection;
-import org.academy.internal.common.ability.meltdowner.ContinuousReflectionSession;
+import org.academy.internal.common.ability.meltdowner.beam.ContinuousBeamReflection;
+import org.academy.internal.common.ability.meltdowner.beam.ContinuousReflectionSession;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
 

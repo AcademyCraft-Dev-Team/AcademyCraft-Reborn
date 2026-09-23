@@ -11,7 +11,7 @@ import org.academy.api.common.arc.property.AttributeCurve;
 import org.academy.api.common.arc.property.ColorKnot;
 import org.academy.api.common.arc.property.Gradient;
 import org.academy.api.common.arc.property.Knot;
-import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
+import org.academy.internal.common.ability.electromaster.skystrike.SkyStrikeProfile;
 import org.joml.Vector3f;
 
 import java.util.ArrayList;

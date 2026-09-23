@@ -12,8 +12,8 @@ import org.academy.internal.common.ability.aeromanip.program.AeromanipProgramNod
 import org.academy.internal.common.ability.electromaster.program.ElectromasterProgramNodeIds;
 import org.academy.internal.common.ability.meltdowner.program.MeltdownerProgramNodeIds;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
-import org.academy.internal.common.ability.program.CommonProgramNodeIds;
-import org.academy.internal.common.ability.program.ProgramEditorNodeCatalog;
+import org.academy.internal.common.ability.program.registry.CommonProgramNodeIds;
+import org.academy.internal.common.ability.program.editor.ProgramEditorNodeCatalog;
 import org.academy.internal.common.ability.teleport.program.TeleportProgramNodeIds;
 
 import java.util.Arrays;

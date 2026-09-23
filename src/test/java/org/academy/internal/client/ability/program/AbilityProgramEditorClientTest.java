@@ -8,7 +8,7 @@ import org.academy.api.common.ability.program.ProgramBook;
 import org.academy.api.common.ability.program.ProgramEditorLayout;
 import org.academy.api.common.ability.program.ProgramGraph;
 import org.academy.internal.common.ability.AbilityCategoryNames;
-import org.academy.internal.common.ability.program.ProgramBookCodec;
+import org.academy.internal.common.ability.program.compile.ProgramBookCodec;
 import org.junit.jupiter.api.Test;
 import org.lwjgl.glfw.GLFW;
 

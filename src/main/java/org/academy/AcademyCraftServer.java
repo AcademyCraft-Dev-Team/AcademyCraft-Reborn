@@ -14,7 +14,7 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.time.TemporalService;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.api.server.wireless.WirelessManager;
-import org.academy.internal.common.ability.ProficiencySkillSettings;
+import org.academy.internal.common.ability.proficiency.ProficiencySkillSettings;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationRuntime;
 import org.academy.internal.common.ability.program.AbilityProgramManager;
 import org.academy.internal.common.ability.program.ServerProgramScheduler;

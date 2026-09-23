@@ -1,5 +1,11 @@
 package org.academy.internal.common.ability.program;
 
+import org.academy.internal.common.ability.program.compile.CompiledProgram;
+import org.academy.internal.common.ability.program.compile.ProgramCompiler;
+import org.academy.internal.common.ability.program.registry.ProgramExecutorLookup;
+import org.academy.internal.common.ability.program.registry.ProgramNodeExecutor;
+
+
 import com.google.gson.JsonObject;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;

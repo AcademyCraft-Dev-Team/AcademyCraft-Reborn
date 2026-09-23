@@ -12,7 +12,7 @@ import org.academy.api.common.data.AbilityData;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.Darkmatter;
-import org.academy.internal.common.ability.darkmatter.SyncDarkmatterStatePacket;
+import org.academy.internal.common.ability.darkmatter.network.SyncDarkmatterStatePacket;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.server.world.level.storage.Player;
 import org.misaka.MisakaNetworkServer;

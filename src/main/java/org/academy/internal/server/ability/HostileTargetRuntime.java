@@ -19,7 +19,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.HostileTargets;
 import org.academy.api.server.team.TeamRelations;
-import org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeaponAttackContext;
+import org.academy.internal.common.ability.electromaster.skills.lv3.magneticweapon.MagneticWeaponAttackContext;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.world.damagesource.VectorRedirectedDamageSourceInfo;
 

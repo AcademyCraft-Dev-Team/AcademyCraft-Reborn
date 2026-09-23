@@ -28,7 +28,7 @@ import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.aeromanip.AeromanipChargeTier;
+import org.academy.internal.common.ability.aeromanip.charge.AeromanipChargeTier;
 import org.academy.internal.common.ability.aeromanip.program.AeromanipProgramNodeCatalog;
 import org.academy.internal.common.ability.aeromanip.program.ServerAeromanipProgramRuntime;
 import org.academy.internal.common.ability.aeromanip.skills.lv3.LaminarCutter;

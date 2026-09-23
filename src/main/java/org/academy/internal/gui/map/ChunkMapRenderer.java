@@ -6,10 +6,10 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 import org.academy.internal.client.ability.teleport.ChunkMapTexture;
-import org.academy.internal.common.ability.teleport.ChunkLeapPackets;
-import org.academy.internal.common.ability.teleport.ChunkLeapRegion;
-import org.academy.internal.common.ability.teleport.ChunkMapClientState;
-import org.academy.internal.common.ability.teleport.MapTileBuilder;
+import org.academy.internal.common.ability.teleport.chunk.ChunkLeapPackets;
+import org.academy.internal.common.ability.teleport.chunk.ChunkLeapRegion;
+import org.academy.internal.common.ability.teleport.map.ChunkMapClientState;
+import org.academy.internal.common.ability.teleport.map.MapTileBuilder;
 
 import java.util.List;
 

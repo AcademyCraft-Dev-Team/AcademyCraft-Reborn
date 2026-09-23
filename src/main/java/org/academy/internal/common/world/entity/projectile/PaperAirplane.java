@@ -19,8 +19,8 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
-import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
+import org.academy.internal.common.ability.aeromanip.targeting.AeromanipTargeting;
+import org.academy.internal.common.ability.aeromanip.vfx.AeromanipVfx;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.item.Items;
 

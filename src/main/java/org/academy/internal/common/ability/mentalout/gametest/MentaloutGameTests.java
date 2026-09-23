@@ -41,14 +41,14 @@ import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.entitycontrol.*;
-import org.academy.internal.common.ability.mentalout.MentalControlMemory;
+import org.academy.internal.common.ability.mentalout.control.MentalControlMemory;
 import org.academy.internal.common.ability.mentalout.control.CubeMobMoveControlAccess;
 import org.academy.internal.common.ability.mentalout.control.GroupControlRuntime;
 import org.academy.internal.common.ability.mentalout.control.ImpressionRidingManager;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.ability.mentalout.control.MentalPerceptionRuntime;
 import org.academy.internal.common.ability.mentalout.control.WorkOrderData;
-import org.academy.internal.common.ability.mentalout.skills.MentaloutTargeting;
+import org.academy.internal.common.ability.mentalout.targeting.MentaloutTargeting;
 
 import java.util.ArrayList;
 import java.util.List;

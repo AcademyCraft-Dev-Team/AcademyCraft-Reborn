@@ -2,7 +2,7 @@ package org.academy.mixin.common;
 
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.player.Player;
-import org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeaponAttackContext;
+import org.academy.internal.common.ability.electromaster.skills.lv3.magneticweapon.MagneticWeaponAttackContext;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

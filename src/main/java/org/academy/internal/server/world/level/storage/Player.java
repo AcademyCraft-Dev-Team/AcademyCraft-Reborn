@@ -7,7 +7,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
-import org.academy.internal.common.ability.darkmatter.DarkmatterStateData;
+import org.academy.internal.common.ability.darkmatter.resource.DarkmatterStateData;
 import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.common.skilldata.SkillData;
 

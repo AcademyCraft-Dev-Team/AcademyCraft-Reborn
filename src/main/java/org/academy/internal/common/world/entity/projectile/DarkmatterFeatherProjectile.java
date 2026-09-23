@@ -20,7 +20,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.damage.AbilityHitEffects;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
+import org.academy.internal.common.ability.darkmatter.targeting.DarkmatterTargeting;
 import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.world.item.Items;
 

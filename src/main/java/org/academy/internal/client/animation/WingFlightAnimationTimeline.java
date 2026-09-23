@@ -1,6 +1,6 @@
 package org.academy.internal.client.animation;
 
-import org.academy.internal.common.ability.accelerator.skills.WingFlightPose;
+import org.academy.internal.common.ability.accelerator.flight.WingFlightPose;
 
 public final class WingFlightAnimationTimeline {
     private Phase phase = Phase.IDLE;

@@ -9,7 +9,7 @@ import org.academy.api.client.render.vfx.Vfx;
 import org.academy.api.client.render.vfx.VfxFrameContext;
 import org.academy.api.client.render.vfx.VfxSink;
 import org.academy.api.client.resources.R;
-import org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeapon;
+import org.academy.internal.common.ability.electromaster.skills.lv3.magneticweapon.MagneticWeapon;
 import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.joml.Matrix4f;

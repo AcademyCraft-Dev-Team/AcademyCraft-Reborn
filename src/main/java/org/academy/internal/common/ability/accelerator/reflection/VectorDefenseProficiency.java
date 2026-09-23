@@ -2,7 +2,7 @@ package org.academy.internal.common.ability.accelerator.reflection;
 
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.Skill;
-import org.academy.internal.common.ability.ProficiencyPolicy;
+import org.academy.internal.common.ability.proficiency.ProficiencyPolicy;
 
 /**
  * Shared finite-damage CP calculation for vector reflection and vector reduction.

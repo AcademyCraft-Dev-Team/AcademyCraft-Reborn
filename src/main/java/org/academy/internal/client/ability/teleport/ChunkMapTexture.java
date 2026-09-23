@@ -5,7 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
-import org.academy.internal.common.ability.teleport.MapTileBuilder;
+import org.academy.internal.common.ability.teleport.map.MapTileBuilder;
 
 import java.util.function.Supplier;
 

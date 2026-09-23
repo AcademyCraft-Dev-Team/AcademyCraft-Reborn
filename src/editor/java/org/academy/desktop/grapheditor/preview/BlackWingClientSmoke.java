@@ -28,7 +28,7 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.client.render.vfx.WingVfx;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.accelerator.skills.lv5.BlackWing;
+import org.academy.internal.common.ability.accelerator.skills.lv5.wing.BlackWing;
 import org.academy.internal.common.attachment.AttachmentTypes;
 
 import java.nio.file.Files;

@@ -17,6 +17,10 @@ import org.academy.internal.client.gui.layout.buildProgramEditorLayout
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager
 import org.academy.internal.common.ability.program.*
+import org.academy.internal.common.ability.program.editor.PrecisionProgramExporter
+import org.academy.internal.common.ability.program.editor.PrecisionProgramImporter
+import org.academy.internal.common.ability.program.editor.ProgramEditorDocument
+import org.academy.internal.common.ability.program.registry.AbilityProgramDefinitions
 import java.util.ArrayDeque
 import java.util.Locale
 import java.util.OptionalInt

@@ -25,7 +25,7 @@ import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.SkillTuning;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
-import org.academy.internal.common.ability.darkmatter.SyncDarkmatterStatePacket;
+import org.academy.internal.common.ability.darkmatter.network.SyncDarkmatterStatePacket;
 import org.academy.internal.common.skilldata.SkillData;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;

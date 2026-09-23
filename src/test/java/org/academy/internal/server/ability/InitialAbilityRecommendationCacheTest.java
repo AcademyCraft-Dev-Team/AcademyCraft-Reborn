@@ -3,7 +3,7 @@ package org.academy.internal.server.ability;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import org.academy.api.common.ability.AbilityCategory;
-import org.academy.internal.common.ability.AbilityDevelopmentProfiles;
+import org.academy.internal.common.ability.development.AbilityDevelopmentProfiles;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;

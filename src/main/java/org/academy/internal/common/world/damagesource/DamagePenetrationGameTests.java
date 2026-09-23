@@ -45,7 +45,7 @@ import org.academy.api.common.damage.DamageComposition;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
-import org.academy.internal.common.ability.aeromanip.AeromanipTargeting;
+import org.academy.internal.common.ability.aeromanip.targeting.AeromanipTargeting;
 import org.academy.mixin.common.LivingEntityDamageInvoker;
 
 import java.util.List;

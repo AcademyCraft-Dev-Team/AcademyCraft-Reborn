@@ -4,7 +4,7 @@ import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
-import org.academy.internal.common.ability.aeromanip.AeromanipChargeTier;
+import org.academy.internal.common.ability.aeromanip.charge.AeromanipChargeTier;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
 import org.jspecify.annotations.Nullable;
 

@@ -1,6 +1,6 @@
 package org.academy.internal.client.animation;
 
-import org.academy.internal.common.ability.accelerator.skills.WingFlightPose;
+import org.academy.internal.common.ability.accelerator.flight.WingFlightPose;
 import org.junit.jupiter.api.Test;
 
 import static org.academy.internal.client.animation.WingFlightAnimationTimeline.Phase.*;

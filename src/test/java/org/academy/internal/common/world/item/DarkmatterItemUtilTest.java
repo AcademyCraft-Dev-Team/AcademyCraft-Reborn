@@ -1,6 +1,6 @@
 package org.academy.internal.common.world.item;
 
-import org.academy.internal.common.ability.darkmatter.DarkmatterIntegrityCurve;
+import org.academy.internal.common.ability.darkmatter.resource.DarkmatterIntegrityCurve;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

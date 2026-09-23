@@ -24,7 +24,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.teleport.TeleportSync;
+import org.academy.internal.common.ability.teleport.targeting.TeleportSync;
 import org.academy.internal.common.ability.teleport.skills.lv3.LocationTeleport;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.entitycontrol.MultipartEntityTargeting;

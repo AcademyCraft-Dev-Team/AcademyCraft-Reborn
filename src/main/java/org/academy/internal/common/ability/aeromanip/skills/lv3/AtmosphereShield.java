@@ -1,5 +1,8 @@
 package org.academy.internal.common.ability.aeromanip.skills.lv3;
 
+import org.academy.internal.common.ability.proficiency.ProficiencyPolicy;
+import org.academy.internal.common.ability.effect.TimedSkillEffectRuntime;
+
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -37,8 +40,8 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.*;
-import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
-import org.academy.internal.common.ability.aeromanip.AeromanipVfx;
+import org.academy.internal.common.ability.aeromanip.config.AeromanipConfig;
+import org.academy.internal.common.ability.aeromanip.vfx.AeromanipVfx;
 import org.academy.internal.common.ability.aeromanip.skills.lv2.BreathingBubble;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.network.PacketTypes;

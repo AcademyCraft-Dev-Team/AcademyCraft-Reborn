@@ -22,7 +22,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterPictureInPictureRenderersEvent;
 import org.academy.AcademyCraft;
-import org.academy.internal.common.ability.teleport.ChunkLeapPackets;
+import org.academy.internal.common.ability.teleport.chunk.ChunkLeapPackets;
 import org.joml.Quaternionf;
 import org.jspecify.annotations.Nullable;
 

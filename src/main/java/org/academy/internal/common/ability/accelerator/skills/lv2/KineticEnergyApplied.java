@@ -68,7 +68,7 @@ import org.academy.api.server.vfx.SkillVfxService;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.TimedSkillEffectRuntime;
+import org.academy.internal.common.ability.effect.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.accelerator.skills.lv1.VectorAccel;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.attachment.AttachmentTypes;

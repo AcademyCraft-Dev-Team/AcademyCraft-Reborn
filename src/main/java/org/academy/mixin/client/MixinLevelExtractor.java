@@ -7,7 +7,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
 import org.academy.internal.client.renderer.entity.layers.CloudroomLayer;
-import org.academy.internal.common.ability.accelerator.skills.WingFlightPose;
+import org.academy.internal.common.ability.accelerator.flight.WingFlightPose;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

@@ -5,6 +5,10 @@ import com.mojang.serialization.JsonOps;
 import net.minecraft.resources.Identifier;
 import org.academy.api.common.ability.program.*;
 import org.academy.internal.common.ability.program.*;
+import org.academy.internal.common.ability.program.editor.ProgramEditorDocument;
+import org.academy.internal.common.ability.program.registry.AbilityProgramDefinitions;
+import org.academy.internal.common.ability.program.registry.BaseAbilityProgramDefinition;
+import org.academy.internal.common.ability.program.registry.CommonProgramNodeIds;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;

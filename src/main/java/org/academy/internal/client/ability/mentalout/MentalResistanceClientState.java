@@ -3,7 +3,7 @@ package org.academy.internal.client.ability.mentalout;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import org.academy.api.client.input.InputSystem;
-import org.academy.internal.common.ability.mentalout.MentalResistanceManager;
+import org.academy.internal.common.ability.mentalout.resistance.MentalResistanceManager;
 import org.misaka.MisakaNetworkClient;
 
 /** Captures physical break-free input only while the server reports an eligible mental effect. */

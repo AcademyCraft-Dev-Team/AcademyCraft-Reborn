@@ -1,5 +1,20 @@
 package org.academy.internal.common.ability.program;
 
+import org.academy.internal.common.ability.program.registry.CommonProgramNodeCatalog;
+import org.academy.internal.common.ability.program.registry.CommonProgramNodeIds;
+import org.academy.internal.common.ability.program.registry.ProgramExecutorLookup;
+import org.academy.internal.common.ability.program.registry.ProgramNodeExecutor;
+
+
+import org.academy.internal.common.ability.program.AbilityProgramTriggerRuntime;
+import org.academy.internal.common.ability.program.ProgramActionTransaction;
+import org.academy.internal.common.ability.program.ProgramDebugFormatter;
+import org.academy.internal.common.ability.program.ProgramEntityDataQuery;
+import org.academy.internal.common.ability.program.ProgramExecutionFrame;
+import org.academy.internal.common.ability.program.ProgramInvocationContext;
+import org.academy.internal.common.ability.program.ProgramVmContext;
+
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -27,7 +42,7 @@ import org.academy.api.common.ability.program.ProgramValueTypes;
 import org.academy.api.common.ability.program.ProgramVector;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.academy.api.server.ability.HostileTargets;
-import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
+import org.academy.internal.common.ability.darkmatter.targeting.DarkmatterTargeting;
 import org.jspecify.annotations.Nullable;
 
 import java.math.BigInteger;

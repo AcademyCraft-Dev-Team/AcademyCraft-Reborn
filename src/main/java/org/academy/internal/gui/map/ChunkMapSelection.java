@@ -3,8 +3,8 @@ package org.academy.internal.gui.map;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
-import org.academy.internal.common.ability.teleport.ChunkLeapRegion;
-import org.academy.internal.common.ability.teleport.ChunkLeapSelection;
+import org.academy.internal.common.ability.teleport.chunk.ChunkLeapRegion;
+import org.academy.internal.common.ability.teleport.chunk.ChunkLeapSelection;
 
 import java.util.Collections;
 import java.util.LinkedHashSet;

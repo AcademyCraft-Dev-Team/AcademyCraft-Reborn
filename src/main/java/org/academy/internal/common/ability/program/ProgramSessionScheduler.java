@@ -1,5 +1,9 @@
 package org.academy.internal.common.ability.program;
 
+import org.academy.internal.common.ability.program.compile.CompiledProgram;
+import org.academy.internal.common.ability.program.registry.ProgramExecutorLookup;
+
+
 import org.jspecify.annotations.Nullable;
 
 import java.util.LinkedHashMap;

@@ -11,7 +11,7 @@ import net.minecraft.world.level.portal.TeleportTransition;
 import org.academy.api.common.ability.ImagineBreakerHealthAccess;
 import org.academy.api.server.damage.DefenseFeedbackSuppression;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
-import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
+import org.academy.internal.common.ability.darkmatter.targeting.DarkmatterTargeting;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

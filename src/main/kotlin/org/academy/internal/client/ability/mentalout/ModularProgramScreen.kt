@@ -28,6 +28,13 @@ import org.academy.internal.common.ability.AbilityCategoryNames
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager
 import org.academy.internal.common.ability.program.*
+import org.academy.internal.common.ability.program.editor.ProgramEditorDocument
+import org.academy.internal.common.ability.program.editor.ProgramEditorNodeCatalog
+import org.academy.internal.common.ability.program.registry.AbilityProgramDefinition
+import org.academy.internal.common.ability.program.registry.AbilityProgramDefinitions
+import org.academy.internal.common.ability.program.registry.CommonProgramNodeCatalog
+import org.academy.internal.common.ability.program.registry.CommonProgramNodeIds
+import org.academy.internal.common.ability.program.registry.PrecisionProgramNodeIds
 import java.math.BigDecimal
 import java.util.*
 import kotlin.math.ceil

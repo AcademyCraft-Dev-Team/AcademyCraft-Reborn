@@ -1,6 +1,6 @@
 package org.academy.internal.common.ability.meltdowner.skills.lv4;
 
-import org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage;
+import org.academy.internal.common.ability.meltdowner.beam.MeltdownerBeamDamage;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

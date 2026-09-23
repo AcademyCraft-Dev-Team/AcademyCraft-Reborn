@@ -18,7 +18,7 @@ import org.academy.api.server.damage.DefenseFeedbackSuppression;
 import org.academy.api.server.damage.HealthLossGuards;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.electromaster.ElectromasterSkillMigration;
+import org.academy.internal.common.ability.electromaster.migration.ElectromasterSkillMigration;
 import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 

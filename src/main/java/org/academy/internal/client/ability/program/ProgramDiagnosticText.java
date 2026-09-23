@@ -3,7 +3,7 @@ package org.academy.internal.client.ability.program;
 import net.minecraft.network.chat.Component;
 import org.academy.api.common.ability.program.AbilityProgram;
 import org.academy.api.common.ability.program.ProgramDiagnostic;
-import org.academy.internal.common.ability.program.ProgramEditorNodeCatalog;
+import org.academy.internal.common.ability.program.editor.ProgramEditorNodeCatalog;
 
 import java.util.Locale;
 

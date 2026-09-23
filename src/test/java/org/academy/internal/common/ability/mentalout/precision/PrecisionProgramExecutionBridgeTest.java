@@ -4,6 +4,9 @@ import com.google.gson.JsonObject;
 import net.minecraft.resources.Identifier;
 import org.academy.api.common.ability.program.*;
 import org.academy.internal.common.ability.program.*;
+import org.academy.internal.common.ability.program.compile.PrecisionProgramCompilation;
+import org.academy.internal.common.ability.program.registry.CommonProgramNodeIds;
+import org.academy.internal.common.ability.program.registry.PrecisionProgramNodeIds;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;

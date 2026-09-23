@@ -1,6 +1,6 @@
 package org.academy.internal.gui.map;
 
-import org.academy.internal.common.ability.teleport.ChunkLeapPackets;
+import org.academy.internal.common.ability.teleport.chunk.ChunkLeapPackets;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

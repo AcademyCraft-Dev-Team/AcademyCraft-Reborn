@@ -4,6 +4,11 @@ import com.google.gson.JsonObject;
 import net.minecraft.resources.Identifier;
 import org.academy.api.common.ability.program.ProgramLimits;
 import org.academy.internal.common.ability.program.*;
+import org.academy.internal.common.ability.program.editor.ProgramEditorNodeCatalog;
+import org.academy.internal.common.ability.program.migration.PrecisionProgramAliases;
+import org.academy.internal.common.ability.program.registry.AbilityProgramDefinition;
+import org.academy.internal.common.ability.program.registry.PrecisionProgramNodeCatalog;
+import org.academy.internal.common.ability.program.registry.PrecisionProgramNodeIds;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Locale;

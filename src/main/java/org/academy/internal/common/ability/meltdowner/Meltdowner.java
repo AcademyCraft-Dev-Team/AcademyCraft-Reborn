@@ -3,7 +3,7 @@ package org.academy.internal.common.ability.meltdowner;
 import net.minecraft.resources.Identifier;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityCategory;
-import org.academy.internal.common.ability.AbilityDevelopmentProfiles;
+import org.academy.internal.common.ability.development.AbilityDevelopmentProfiles;
 
 public final class Meltdowner extends AbilityCategory {
     public Meltdowner() {

@@ -1,5 +1,10 @@
 package org.academy.internal.common.ability.program;
 
+import org.academy.internal.common.ability.program.compile.CompiledProgram;
+import org.academy.internal.common.ability.program.registry.ProgramExecutorLookup;
+import org.academy.internal.common.ability.program.registry.ProgramNodeExecutor;
+
+
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.program.ProgramNodeRole;
 import org.academy.api.common.ability.program.ProgramInputView;

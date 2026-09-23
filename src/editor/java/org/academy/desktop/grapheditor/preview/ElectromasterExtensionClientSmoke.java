@@ -15,9 +15,9 @@ import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
+import org.academy.internal.common.ability.electromaster.arc.ElectromasterArcEffects;
 import org.academy.api.server.ability.ElectromasterGraphEffects;
-import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
+import org.academy.internal.common.ability.electromaster.skystrike.SkyStrikeProfile;
 import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
 import org.academy.internal.common.ability.electromaster.skills.lv2.ThunderLance;
 import org.academy.internal.common.ability.electromaster.skills.lv4.Railgun;
@@ -94,7 +94,7 @@ public final class ElectromasterExtensionClientSmoke {
                     system.setPlayerSkillProficiency(id, skill, 0);
                 }
                 var data = system.getPlayerData(id);
-                org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeapon.Server.forceDisable(player);
+                org.academy.internal.common.ability.electromaster.skills.lv3.magneticweapon.MagneticWeapon.Server.forceDisable(player);
                 if (Skills.ELECTROMAGNETIC_SHIELD.get().isEnabled(player)) Skills.ELECTROMAGNETIC_SHIELD.get().toggle(player);
                 for (var old : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class,
                         player.getBoundingBox().inflate(100))) old.discard();
@@ -188,12 +188,12 @@ public final class ElectromasterExtensionClientSmoke {
         });
         if (ticks == 715) {
             mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
-            org.misaka.MisakaNetworkClient.send(org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeapon.TogglePacket.INSTANCE);
+            org.misaka.MisakaNetworkClient.send(org.academy.internal.common.ability.electromaster.skills.lv3.magneticweapon.MagneticWeapon.TogglePacket.INSTANCE);
         }
         if (ticks == 805) mc.options.setCameraType(CameraType.FIRST_PERSON);
         if (ticks >= 740 && ticks < 850 && ticks % 20 == 0) {
             server(p -> System.out.println("[electric-extension] weapon state active="
-                    + org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeapon.Server.isActive(p)
+                    + org.academy.internal.common.ability.electromaster.skills.lv3.magneticweapon.MagneticWeapon.Server.isActive(p)
                     + " enabled=" + Skills.MAGNETIC_WEAPON.get().isEnabled(p)
                     + " target=" + weaponTarget.isAlive() + " sight=" + p.hasLineOfSight(weaponTarget)
                     + " marked=" + org.academy.api.server.ability.HostileTargets.isMarked(p, weaponTarget)));
@@ -206,7 +206,7 @@ public final class ElectromasterExtensionClientSmoke {
         if (ticks == 855) {
             if (!bladeTrail || !bladeImpact || !bladeFirstPerson || !shieldObserved) throw new IllegalStateException("Incomplete attachment scenarios trail=" + bladeTrail + " impact=" + bladeImpact + " firstPerson=" + bladeFirstPerson + " intercept=" + shieldObserved);
             server(p -> {
-                org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeapon.Server.forceDisable(p);
+                org.academy.internal.common.ability.electromaster.skills.lv3.magneticweapon.MagneticWeapon.Server.forceDisable(p);
                 weaponTarget.discard();
             });
         }

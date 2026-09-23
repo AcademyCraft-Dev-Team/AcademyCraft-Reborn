@@ -1,7 +1,7 @@
 package org.academy.internal.client.render.vfx;
 
 import net.minecraft.util.Mth;
-import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
+import org.academy.internal.common.ability.electromaster.skystrike.SkyStrikeProfile;
 
 import java.util.ArrayList;
 import java.util.List;

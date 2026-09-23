@@ -1,5 +1,7 @@
 package org.academy.internal.common.ability.mentalout.control;
 
+import org.academy.internal.common.ability.mentalout.resistance.MentalResistanceManager;
+
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;

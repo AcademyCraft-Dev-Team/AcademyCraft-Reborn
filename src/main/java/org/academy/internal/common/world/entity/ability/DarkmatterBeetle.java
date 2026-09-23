@@ -48,7 +48,7 @@ import org.academy.api.server.ability.AbilityBlockDrops;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
+import org.academy.internal.common.ability.darkmatter.targeting.DarkmatterTargeting;
 import org.academy.internal.common.ability.darkmatter.creature.DarkmatterCreatureBlueprint;
 import org.academy.internal.common.ability.darkmatter.skills.lv4.DarkmatterCreation;
 import org.academy.internal.common.ability.level0.skills.OutputControl;

@@ -8,6 +8,13 @@ import org.academy.api.common.ability.program.ProgramEditorLayout;
 import org.academy.api.common.ability.program.ProgramGraph;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.common.ability.program.*;
+import org.academy.internal.common.ability.program.compile.ProgramBookCodec;
+import org.academy.internal.common.ability.program.editor.ProgramEditorDocument;
+import org.academy.internal.common.ability.program.migration.PrecisionProgramBookMigrator;
+import org.academy.internal.common.ability.program.registry.AbilityProgramDefinitions;
+import org.academy.internal.common.ability.program.registry.CommonProgramNodeIds;
+import org.academy.internal.common.ability.program.registry.PrecisionProgramNodeCatalog;
+import org.academy.internal.common.ability.program.registry.PrecisionProgramNodeIds;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 

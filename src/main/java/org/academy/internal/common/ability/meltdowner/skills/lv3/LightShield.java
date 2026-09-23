@@ -45,7 +45,7 @@ import org.academy.internal.client.renderer.effect.LightShieldEffectRenderer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.meltdowner.MeltdownerBeamDamage;
+import org.academy.internal.common.ability.meltdowner.beam.MeltdownerBeamDamage;
 import org.academy.internal.common.ability.meltdowner.skills.lv1.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;

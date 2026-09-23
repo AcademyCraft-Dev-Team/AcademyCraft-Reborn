@@ -4,7 +4,7 @@ import net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket;
 import net.minecraft.network.protocol.game.VecDeltaCodec;
 import net.minecraft.server.level.ServerEntity;
 import net.minecraft.world.entity.Entity;
-import org.academy.internal.common.ability.teleport.TeleportSync;
+import org.academy.internal.common.ability.teleport.targeting.TeleportSync;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;

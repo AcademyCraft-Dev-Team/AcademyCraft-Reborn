@@ -2,7 +2,7 @@ package org.academy.api.common.damage;
 
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
-import org.academy.internal.common.ability.darkmatter.DarkmatterLawMark;
+import org.academy.internal.common.ability.darkmatter.damage.DarkmatterLawMark;
 import org.academy.internal.common.world.damagesource.CategoryDamageRuntime;
 
 /**

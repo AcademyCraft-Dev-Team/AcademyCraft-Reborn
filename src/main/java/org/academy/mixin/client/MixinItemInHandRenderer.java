@@ -14,7 +14,7 @@ import org.academy.internal.client.ability.mentalout.ControlledItemInHandRendere
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
 import org.academy.internal.client.renderer.special.AbilityControlTabletSpecialRenderer;
 import org.academy.internal.client.renderer.special.ImagPhaseDowsingRodSpecialRenderer;
-import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
+import org.academy.internal.common.ability.mentalout.control.PlayerControlSessionManager;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;

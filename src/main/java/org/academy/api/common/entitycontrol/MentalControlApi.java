@@ -5,7 +5,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import org.academy.internal.common.ability.mentalout.MentalResistanceManager;
+import org.academy.internal.common.ability.mentalout.resistance.MentalResistanceManager;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 
 import java.util.Optional;

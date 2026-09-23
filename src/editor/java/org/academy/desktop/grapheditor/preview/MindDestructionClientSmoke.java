@@ -23,7 +23,7 @@ import org.academy.api.server.time.TemporalApi;
 import org.academy.api.server.time.TemporalChannel;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
+import org.academy.internal.common.ability.mentalout.control.MentaloutRequestGuard;
 import org.academy.internal.common.ability.mentalout.skills.lv5.MindDestruction;
 import org.misaka.MisakaNetworkClient;
 

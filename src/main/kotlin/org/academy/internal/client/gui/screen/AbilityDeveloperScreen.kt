@@ -28,8 +28,8 @@ import org.academy.api.client.resources.R.textures.gui.developer.*
 import org.academy.api.common.ability.*
 import org.academy.api.common.util.L10n
 import org.academy.api.common.wireless.GetCurrentNodePacket
-import org.academy.internal.common.ability.AbilityDevelopmentAccess
-import org.academy.internal.common.ability.ProficiencyPolicy
+import org.academy.internal.common.ability.development.AbilityDevelopmentAccess
+import org.academy.internal.common.ability.proficiency.ProficiencyPolicy
 import org.academy.internal.common.ability.level0.Level0
 import org.academy.internal.common.world.item.AbilityControlTabletItem
 import org.academy.internal.common.world.item.Items

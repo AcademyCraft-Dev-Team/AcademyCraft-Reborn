@@ -22,7 +22,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.entitycontrol.AttackDecision;
 import org.academy.api.common.entitycontrol.ControlBinding;
 import org.academy.api.common.entitycontrol.PlayerControlFrame;
-import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
+import org.academy.internal.common.ability.mentalout.control.PlayerControlSessionManager;
 
 /**
  * Applies controller input to a Mob without trusting a client-provided attack target.

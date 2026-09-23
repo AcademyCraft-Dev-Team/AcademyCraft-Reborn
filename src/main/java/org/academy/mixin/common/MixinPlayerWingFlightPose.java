@@ -2,7 +2,7 @@ package org.academy.mixin.common;
 
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
-import org.academy.internal.common.ability.accelerator.skills.WingFlightPose;
+import org.academy.internal.common.ability.accelerator.flight.WingFlightPose;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

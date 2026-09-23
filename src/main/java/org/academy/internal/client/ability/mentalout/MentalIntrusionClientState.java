@@ -7,7 +7,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.BlockHitResult;
-import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
+import org.academy.internal.common.ability.mentalout.control.MentalIntrusionManager;
 import org.misaka.MisakaNetworkClient;
 
 import java.util.HashMap;

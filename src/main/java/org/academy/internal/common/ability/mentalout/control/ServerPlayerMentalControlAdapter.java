@@ -4,7 +4,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.api.common.entitycontrol.*;
-import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
+import org.academy.internal.common.ability.mentalout.control.PlayerControlSessionManager;
 
 import java.util.Optional;
 import java.util.UUID;

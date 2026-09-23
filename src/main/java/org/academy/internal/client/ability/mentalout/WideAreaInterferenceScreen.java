@@ -28,7 +28,7 @@ import org.academy.api.client.gui.widget.AbstractWidget;
 import org.academy.api.client.gui.widget.FrameLayoutWidget;
 import org.academy.api.client.gui.widget.TextWidget;
 import org.academy.api.client.render.Render;
-import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
+import org.academy.internal.common.ability.mentalout.control.MentaloutRequestGuard;
 import org.academy.internal.common.ability.mentalout.skills.lv5.WideAreaInterference;
 import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;

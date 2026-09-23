@@ -4,7 +4,7 @@ import net.minecraft.resources.Identifier;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilityResourceSpec;
-import org.academy.internal.common.ability.AbilityDevelopmentProfiles;
+import org.academy.internal.common.ability.development.AbilityDevelopmentProfiles;
 
 import java.util.Optional;
 

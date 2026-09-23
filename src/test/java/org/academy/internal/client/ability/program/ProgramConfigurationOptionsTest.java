@@ -10,10 +10,10 @@ import org.academy.internal.common.ability.electromaster.program.ElectromasterPr
 import org.academy.internal.common.ability.meltdowner.program.MeltdownerProgramNodeCatalog;
 import org.academy.internal.common.ability.meltdowner.program.MeltdownerProgramNodeIds;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
-import org.academy.internal.common.ability.program.AbilityProgramDefinitions;
-import org.academy.internal.common.ability.program.CommonProgramNodeIds;
-import org.academy.internal.common.ability.program.PrecisionProgramNodeIds;
-import org.academy.internal.common.ability.program.ProgramEditorNodeCatalog;
+import org.academy.internal.common.ability.program.registry.AbilityProgramDefinitions;
+import org.academy.internal.common.ability.program.registry.CommonProgramNodeIds;
+import org.academy.internal.common.ability.program.registry.PrecisionProgramNodeIds;
+import org.academy.internal.common.ability.program.editor.ProgramEditorNodeCatalog;
 import org.academy.internal.common.ability.teleport.program.TeleportProgramNodeCatalog;
 import org.academy.internal.common.ability.teleport.program.TeleportProgramNodeIds;
 import org.junit.jupiter.api.Test;

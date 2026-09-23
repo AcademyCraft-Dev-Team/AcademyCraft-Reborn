@@ -6,8 +6,8 @@ import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.server.world.WaterSuppression;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.aeromanip.Aeromanip;
-import org.academy.internal.common.ability.aeromanip.AeromanipConfig;
-import org.academy.internal.common.ability.aeromanip.AirAccessResolver;
+import org.academy.internal.common.ability.aeromanip.config.AeromanipConfig;
+import org.academy.internal.common.ability.aeromanip.targeting.AirAccessResolver;
 import org.academy.internal.server.world.level.storage.Player;
 
 import java.util.HashMap;

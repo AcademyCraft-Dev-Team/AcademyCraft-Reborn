@@ -12,8 +12,8 @@ import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.academy.internal.common.world.damagesource.PvpSetting;
-import org.academy.internal.common.ability.program.AbilityProgramSpatialRanges;
-import org.academy.internal.common.ability.program.PrecisionProgramNodeCatalog;
+import org.academy.internal.common.ability.program.registry.AbilityProgramSpatialRanges;
+import org.academy.internal.common.ability.program.registry.PrecisionProgramNodeCatalog;
 
 import java.util.Comparator;
 import java.util.List;

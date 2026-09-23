@@ -9,7 +9,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.*;
 import org.academy.api.common.entitycontrol.*;
-import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
+import org.academy.internal.common.ability.mentalout.control.PlayerControlSessionManager;
 
 import java.util.Optional;
 import java.util.UUID;

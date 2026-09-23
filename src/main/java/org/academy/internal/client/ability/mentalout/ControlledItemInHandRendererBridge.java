@@ -3,7 +3,7 @@ package org.academy.internal.client.ability.mentalout;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
+import org.academy.internal.common.ability.mentalout.control.PlayerControlSessionManager;
 
 public interface ControlledItemInHandRendererBridge {
     void academy$submitControlledHands(

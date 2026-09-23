@@ -89,8 +89,8 @@ import org.academy.internal.client.renderer.entity.layers.quantum.QuantumInterfe
 import org.academy.internal.client.renderer.special.*;
 import org.academy.internal.client.time.TemporalClientRuntime;
 import org.academy.internal.client.world.item.ImagPhaseDowsingRodClient;
-import org.academy.internal.common.ability.ProficiencyPolicy;
-import org.academy.internal.common.ability.teleport.InstantTeleportSyncPacket;
+import org.academy.internal.common.ability.proficiency.ProficiencyPolicy;
+import org.academy.internal.common.ability.teleport.network.InstantTeleportSyncPacket;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.network.SkillVfxPacket;

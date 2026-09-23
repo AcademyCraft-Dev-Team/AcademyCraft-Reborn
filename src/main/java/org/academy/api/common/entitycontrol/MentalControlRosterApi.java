@@ -2,7 +2,7 @@ package org.academy.api.common.entitycontrol;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
-import org.academy.internal.common.ability.mentalout.MentaloutControlContext;
+import org.academy.internal.common.ability.mentalout.control.MentaloutControlContext;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -23,6 +23,9 @@ import org.academy.internal.client.ability.mentalout.ModularProgramEditorSession
 import org.academy.internal.client.ability.mentalout.ModularProgramScreen;
 import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.program.*;
+import org.academy.internal.common.ability.program.compile.ProgramBookCodec;
+import org.academy.internal.common.ability.program.editor.ProgramEditorDocument;
+import org.academy.internal.common.ability.program.registry.AbilityProgramDefinitions;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 import org.misaka.MisakaNetworkClient;

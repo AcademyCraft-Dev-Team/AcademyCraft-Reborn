@@ -49,7 +49,7 @@ import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.TimedSkillEffectRuntime;
+import org.academy.internal.common.ability.effect.TimedSkillEffectRuntime;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;

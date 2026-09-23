@@ -11,9 +11,9 @@ import org.academy.api.common.entitycontrol.ControlRejectionReason;
 import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
-import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
+import org.academy.internal.common.ability.electromaster.arc.ElectromasterArcEffects;
 import org.academy.internal.common.ability.electromaster.skills.lv4.ElectromagneticShield;
-import org.academy.internal.common.ability.mentalout.MentalResistanceManager;
+import org.academy.internal.common.ability.mentalout.resistance.MentalResistanceManager;
 import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 import org.jspecify.annotations.Nullable;
 

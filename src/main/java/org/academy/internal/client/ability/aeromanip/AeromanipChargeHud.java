@@ -8,9 +8,9 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.Skill;
-import org.academy.internal.common.ability.aeromanip.AeromanipChargeTier;
-import org.academy.internal.common.ability.aeromanip.AeromanipChargeSync;
-import org.academy.internal.common.ability.aeromanip.AeromanipChargeProgress;
+import org.academy.internal.common.ability.aeromanip.charge.AeromanipChargeTier;
+import org.academy.internal.common.ability.aeromanip.charge.AeromanipChargeSync;
+import org.academy.internal.common.ability.aeromanip.charge.AeromanipChargeProgress;
 import org.academy.api.common.ability.AirMobility;
 import org.misaka.MisakaNetworkClient;
 

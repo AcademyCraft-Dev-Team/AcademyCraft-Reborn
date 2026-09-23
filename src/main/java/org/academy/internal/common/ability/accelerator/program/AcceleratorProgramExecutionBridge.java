@@ -6,6 +6,11 @@ import org.academy.api.common.ability.program.*;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.program.*;
+import org.academy.internal.common.ability.program.compile.CompiledProgram;
+import org.academy.internal.common.ability.program.compile.ProgramCompileResult;
+import org.academy.internal.common.ability.program.registry.AbilityProgramDefinitions;
+import org.academy.internal.common.ability.program.registry.ProgramExecutorLookup;
+import org.academy.internal.common.ability.program.registry.ProgramNodeExecutor;
 import org.academy.internal.server.world.level.storage.Player;
 
 import java.util.*;

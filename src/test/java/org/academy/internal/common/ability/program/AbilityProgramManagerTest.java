@@ -1,5 +1,9 @@
 package org.academy.internal.common.ability.program;
 
+import org.academy.internal.common.ability.program.compile.ProgramBookCodec;
+import org.academy.internal.common.ability.program.registry.AbilityProgramDefinitions;
+
+
 import io.netty.buffer.Unpooled;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;

@@ -20,7 +20,7 @@ import net.minecraft.world.phys.EntityHitResult;
 import org.academy.AcademyCraft;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.darkmatter.DarkmatterTargeting;
+import org.academy.internal.common.ability.darkmatter.targeting.DarkmatterTargeting;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterShaping;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.common.world.item.Items;

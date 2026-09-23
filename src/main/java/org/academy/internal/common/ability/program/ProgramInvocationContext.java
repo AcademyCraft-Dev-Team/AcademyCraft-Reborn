@@ -1,5 +1,8 @@
 package org.academy.internal.common.ability.program;
 
+import org.academy.internal.common.ability.program.registry.CommonProgramNodeCatalog;
+
+
 import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;

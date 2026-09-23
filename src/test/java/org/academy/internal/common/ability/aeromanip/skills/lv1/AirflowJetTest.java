@@ -1,7 +1,7 @@
 package org.academy.internal.common.ability.aeromanip.skills.lv1;
 
 import net.minecraft.world.phys.Vec3;
-import org.academy.internal.common.ability.aeromanip.AeromanipChargeTier;
+import org.academy.internal.common.ability.aeromanip.charge.AeromanipChargeTier;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

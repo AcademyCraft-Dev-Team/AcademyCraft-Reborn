@@ -1,8 +1,8 @@
 package org.academy.internal.common.ability.mentalout.precision;
 
 import org.academy.api.common.entitycontrol.ControlCapability;
-import org.academy.internal.common.ability.program.AbilityProgramSpatialRanges;
-import org.academy.internal.common.ability.program.PrecisionProgramNodeCatalog;
+import org.academy.internal.common.ability.program.registry.AbilityProgramSpatialRanges;
+import org.academy.internal.common.ability.program.registry.PrecisionProgramNodeCatalog;
 
 import java.util.*;
 

@@ -1,5 +1,8 @@
 package org.academy.internal.common.ability.accelerator.skills.lv5;
 
+import org.academy.internal.common.ability.accelerator.skills.lv5.wing.WhiteWing;
+
+
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.StreamCodec;
@@ -33,7 +36,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.TimedSkillEffectRuntime;
+import org.academy.internal.common.ability.effect.TimedSkillEffectRuntime;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.network.PacketTypes;

@@ -1,5 +1,10 @@
 package org.academy.internal.common.ability.program;
 
+import org.academy.internal.common.ability.program.migration.PrecisionProgramBookMigrator;
+import org.academy.internal.common.ability.program.registry.PrecisionProgramNodeCatalog;
+import org.academy.internal.common.ability.program.registry.PrecisionProgramNodeIds;
+
+
 import org.academy.api.common.ability.program.AbilityProgram;
 import org.academy.api.common.ability.program.ProgramBook;
 import org.academy.api.common.ability.program.ProgramEditorLayout;

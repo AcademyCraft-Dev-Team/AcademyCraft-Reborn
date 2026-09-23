@@ -18,7 +18,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.entitycontrol.*;
-import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
+import org.academy.internal.common.ability.mentalout.control.PlayerControlSessionManager;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 
 import java.util.HashMap;

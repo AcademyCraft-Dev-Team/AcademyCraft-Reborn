@@ -11,7 +11,7 @@ import org.academy.internal.common.ability.accelerator.reflection.compat.VectorE
 import org.academy.internal.common.ability.accelerator.skills.lv2.KineticEnergyApplied;
 import org.academy.internal.common.ability.accelerator.skills.lv5.CrossingTheAbyss;
 import org.academy.internal.common.ability.aeromanip.skills.lv3.AtmosphereShield;
-import org.academy.internal.common.ability.darkmatter.DarkmatterModifierRuntime;
+import org.academy.internal.common.ability.darkmatter.modifier.DarkmatterModifierRuntime;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.common.ability.electromaster.skills.lv1.ElectricalContact;
 import org.academy.internal.common.ability.electromaster.skills.lv4.ElectromagneticShield;

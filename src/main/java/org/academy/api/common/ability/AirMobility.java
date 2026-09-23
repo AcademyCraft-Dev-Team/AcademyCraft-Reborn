@@ -4,7 +4,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import org.academy.internal.common.ability.aeromanip.AirMobilitySyncPacket;
+import org.academy.internal.common.ability.aeromanip.network.AirMobilitySyncPacket;
 
 import java.util.Collections;
 import java.util.Map;

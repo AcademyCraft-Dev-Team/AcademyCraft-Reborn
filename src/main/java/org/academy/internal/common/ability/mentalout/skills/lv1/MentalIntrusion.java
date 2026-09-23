@@ -16,8 +16,8 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
-import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
+import org.academy.internal.common.ability.mentalout.control.MentalIntrusionManager;
+import org.academy.internal.common.ability.mentalout.control.MentaloutRequestGuard;
 import org.misaka.MisakaNetworkClient;
 
 import java.util.List;

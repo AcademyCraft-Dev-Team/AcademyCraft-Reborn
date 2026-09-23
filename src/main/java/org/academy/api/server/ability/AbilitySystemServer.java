@@ -25,7 +25,7 @@ import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
-import org.academy.internal.common.ability.AbilityDevelopmentAccess;
+import org.academy.internal.common.ability.development.AbilityDevelopmentAccess;
 import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.advancement.AbilityAdvancements;
 import org.academy.internal.common.attachment.AttachmentTypes;

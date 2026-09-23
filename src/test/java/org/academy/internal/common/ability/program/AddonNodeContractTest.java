@@ -1,5 +1,8 @@
 package org.academy.internal.common.ability.program;
 
+import org.academy.internal.common.ability.program.ProgramNodeExtensionIndex;
+
+
 import com.google.gson.JsonObject;
 import com.mojang.serialization.Codec;
 import net.minecraft.resources.Identifier;

@@ -30,7 +30,7 @@ import org.academy.api.client.render.vfx.VfxRenderData;
 import org.academy.api.client.render.vfx.VfxRenderer;
 import org.academy.api.client.render.vfx.VfxRegistry;
 import org.academy.api.client.render.vfx.VfxSink;
-import org.academy.internal.common.ability.teleport.SpacialExcisionMath;
+import org.academy.internal.common.ability.teleport.effect.SpacialExcisionMath;
 import org.academy.internal.client.render.vfx.SpacialExcisionRenderMath.AffineCutMapping;
 import org.joml.Vector3f;
 import org.joml.Vector4f;

@@ -1,5 +1,8 @@
 package org.academy.internal.common.ability.program;
 
+import org.academy.internal.common.ability.program.registry.CommonProgramNodeCatalog;
+
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;

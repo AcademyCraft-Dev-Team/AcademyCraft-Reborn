@@ -4,7 +4,7 @@ import net.minecraft.resources.Identifier;
 import org.academy.api.common.ability.program.AbilityProgram;
 import org.academy.api.common.ability.program.ProgramEditorLayout;
 import org.academy.api.common.ability.program.ProgramGraph;
-import org.academy.internal.common.ability.program.ProgramBookCodec;
+import org.academy.internal.common.ability.program.compile.ProgramBookCodec;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Base64;

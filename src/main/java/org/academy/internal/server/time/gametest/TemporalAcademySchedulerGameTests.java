@@ -34,7 +34,7 @@ import org.academy.api.server.time.TemporalField;
 import org.academy.api.server.time.TemporalFieldLease;
 import org.academy.api.server.time.TemporalPauseSource;
 import org.academy.api.server.time.TemporalScope;
-import org.academy.internal.common.ability.program.CompiledProgram;
+import org.academy.internal.common.ability.program.compile.CompiledProgram;
 import org.academy.internal.common.ability.program.ProgramSessionScheduler;
 import org.academy.internal.common.ability.program.ServerProgramScheduler;
 

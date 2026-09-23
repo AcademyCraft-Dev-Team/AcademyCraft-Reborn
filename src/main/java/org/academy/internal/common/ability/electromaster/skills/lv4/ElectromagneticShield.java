@@ -1,5 +1,8 @@
 package org.academy.internal.common.ability.electromaster.skills.lv4;
 
+import org.academy.internal.common.ability.proficiency.ProficiencyPolicy;
+import org.academy.internal.common.ability.effect.TimedSkillEffectRuntime;
+
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -34,7 +37,7 @@ import org.academy.api.server.ability.ElectromasterGraphEffects;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.*;
-import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
+import org.academy.internal.common.ability.electromaster.arc.ElectromasterArcEffects;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagnetManipulation;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.network.PacketTypes;

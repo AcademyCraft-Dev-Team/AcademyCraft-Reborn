@@ -12,8 +12,8 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import org.academy.api.common.ability.darkmatter.DarkmatterIntegrity;
 import org.academy.api.common.ability.darkmatter.DarkmatterShape;
 import org.academy.api.common.ability.darkmatter.DarkmatterShapingProfile;
-import org.academy.internal.common.ability.darkmatter.DarkmatterEnchantments;
-import org.academy.internal.common.ability.darkmatter.DarkmatterIntegrityCurve;
+import org.academy.internal.common.ability.darkmatter.equipment.DarkmatterEnchantments;
+import org.academy.internal.common.ability.darkmatter.resource.DarkmatterIntegrityCurve;
 
 import java.util.Set;
 

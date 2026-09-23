@@ -21,7 +21,7 @@ import org.academy.api.server.ability.DarkmatterGraphEffects;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.skills.lv1.VectorBlast;
 import org.academy.internal.common.ability.accelerator.skills.lv5.PlasmaGeneration;
-import org.academy.internal.common.ability.electromaster.MagneticFieldRuntime;
+import org.academy.internal.common.ability.electromaster.field.MagneticFieldRuntime;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.SpawnVfxGraphPacket;
 import org.misaka.MisakaNetworkClient;

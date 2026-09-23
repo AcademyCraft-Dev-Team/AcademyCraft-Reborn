@@ -4,7 +4,7 @@ import net.minecraft.network.protocol.game.*;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.academy.api.common.damage.AbilityHitEffects;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
+import org.academy.internal.common.ability.mentalout.control.PlayerControlSessionManager;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagnetManipulation;
@@ -24,7 +24,7 @@ public abstract class MixinServerGamePacketListenerImpl {
     private void academy$allowActiveMagneticHover(CallbackInfo ci) {
         var player = ((ServerGamePacketListenerImpl) (Object) this).player;
         if (MagnetManipulation.Server.isControllingSelfMovement(player)
-                || org.academy.internal.common.ability.accelerator.skills.WingFlightPose.hasActiveWing(player)) clientIsFloating = false;
+                || org.academy.internal.common.ability.accelerator.flight.WingFlightPose.hasActiveWing(player)) clientIsFloating = false;
     }
 
     private static final String ENSURE_MAIN_THREAD =

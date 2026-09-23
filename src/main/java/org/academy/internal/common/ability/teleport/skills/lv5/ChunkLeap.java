@@ -16,9 +16,9 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.teleport.ChunkLeapCost;
-import org.academy.internal.common.ability.teleport.ChunkLeapPackets;
-import org.academy.internal.common.ability.teleport.ChunkMapClientState;
+import org.academy.internal.common.ability.teleport.chunk.ChunkLeapCost;
+import org.academy.internal.common.ability.teleport.chunk.ChunkLeapPackets;
+import org.academy.internal.common.ability.teleport.map.ChunkMapClientState;
 
 import java.util.List;
 
@@ -91,7 +91,7 @@ public final class ChunkLeap extends Skill {
                 AbilityCategories.TELEPORT.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.CHUNK_LEAP.get(),
-                        List.of(org.academy.internal.common.ability.teleport.skills.lv4.AreaTeleportSelect
+                        List.of(org.academy.internal.common.ability.teleport.skills.lv4.area.AreaTeleportSelect
                                 .Client.SKILL_INFO),
                         R.textures.chunk_leap_icon,
                         190,

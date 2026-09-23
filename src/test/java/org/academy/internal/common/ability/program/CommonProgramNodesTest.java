@@ -1,5 +1,15 @@
 package org.academy.internal.common.ability.program;
 
+import org.academy.internal.common.ability.program.compile.ProgramCompiler;
+import org.academy.internal.common.ability.program.editor.ProgramEditorNodeCatalog;
+import org.academy.internal.common.ability.program.registry.AbilityProgramDefinitions;
+import org.academy.internal.common.ability.program.CommonProgramExecutors;
+import org.academy.internal.common.ability.program.registry.CommonProgramNodeCatalog;
+import org.academy.internal.common.ability.program.registry.CommonProgramNodeIds;
+import org.academy.internal.common.ability.program.registry.PrecisionProgramNodeCatalog;
+import org.academy.internal.common.ability.program.registry.PrecisionProgramNodeIds;
+
+
 import com.google.gson.JsonObject;
 import net.minecraft.resources.Identifier;
 import org.academy.api.common.ability.program.ProgramBlockPosition;

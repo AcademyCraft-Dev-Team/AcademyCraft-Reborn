@@ -32,7 +32,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.meltdowner.MeltdownerTargeting;
+import org.academy.internal.common.ability.meltdowner.targeting.MeltdownerTargeting;
 import org.academy.internal.common.ability.meltdowner.skills.lv1.RadiationIntensify;
 import org.academy.internal.common.ability.meltdowner.skills.lv1.SingleHighSpeedElectronBeam;
 import org.academy.internal.common.network.PacketTypes;

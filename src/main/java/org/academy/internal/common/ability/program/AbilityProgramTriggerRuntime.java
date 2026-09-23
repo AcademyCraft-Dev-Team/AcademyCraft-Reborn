@@ -1,5 +1,8 @@
 package org.academy.internal.common.ability.program;
 
+import org.academy.internal.common.ability.program.registry.CommonProgramNodeCatalog;
+
+
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;

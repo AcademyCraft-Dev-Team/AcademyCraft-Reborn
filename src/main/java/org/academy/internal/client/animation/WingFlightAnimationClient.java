@@ -4,7 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.world.entity.Avatar;
 import org.academy.api.client.input.InputSystem;
-import org.academy.internal.common.ability.accelerator.skills.WingFlightPose;
+import org.academy.internal.common.ability.accelerator.flight.WingFlightPose;
 import org.academy.internal.common.attachment.AttachmentTypes;
 
 import java.util.HashMap;

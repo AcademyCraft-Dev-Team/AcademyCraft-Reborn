@@ -32,8 +32,8 @@ import org.academy.api.common.entitycontrol.*;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.mentalout.MentalResistanceManager;
-import org.academy.internal.common.ability.mentalout.MentaloutControlContext;
+import org.academy.internal.common.ability.mentalout.resistance.MentalResistanceManager;
+import org.academy.internal.common.ability.mentalout.control.MentaloutControlContext;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.academy.internal.common.ability.mentalout.control.MentalPerceptionRuntime;
 

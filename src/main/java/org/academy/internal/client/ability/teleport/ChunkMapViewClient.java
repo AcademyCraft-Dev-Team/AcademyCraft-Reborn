@@ -3,8 +3,8 @@ package org.academy.internal.client.ability.teleport;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
-import org.academy.internal.common.ability.teleport.ChunkLeapPackets;
-import org.academy.internal.common.ability.teleport.ChunkLeapRegion;
+import org.academy.internal.common.ability.teleport.chunk.ChunkLeapPackets;
+import org.academy.internal.common.ability.teleport.chunk.ChunkLeapRegion;
 import org.misaka.MisakaNetworkClient;
 
 /**

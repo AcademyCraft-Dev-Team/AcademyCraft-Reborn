@@ -1,6 +1,6 @@
 package org.academy.internal.client.render.vfx;
 
-import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
+import org.academy.internal.common.ability.electromaster.skystrike.SkyStrikeProfile;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 

@@ -15,7 +15,7 @@ import org.academy.api.common.entitycontrol.MentalImmunity;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.electromaster.MagneticFieldRuntime;
+import org.academy.internal.common.ability.electromaster.field.MagneticFieldRuntime;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagnetManipulation;
 import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
 import org.academy.internal.common.attachment.AttachmentTypes;
@@ -90,7 +90,7 @@ public final class ElectromasterReworkClientSmoke {
                 data.getCpData().setAvailableCP(10000);
                 system.getIronSandResourceService().reconcileCapacity(player);
                 system.getIronSandResourceService().account(player).recover(10000);
-                org.academy.internal.common.ability.electromaster.skills.lv3.MagneticWeapon.Server.forceDisable(player);
+                org.academy.internal.common.ability.electromaster.skills.lv3.magneticweapon.MagneticWeapon.Server.forceDisable(player);
                 for (var old : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class, player.getBoundingBox().inflate(64))) old.discard();
                 var pig = new net.minecraft.world.entity.animal.pig.Pig(net.minecraft.world.entity.EntityTypes.PIG, level);
                 pig.setPos(0, 83, 181); pig.setNoAi(true); pig.setNoGravity(true);

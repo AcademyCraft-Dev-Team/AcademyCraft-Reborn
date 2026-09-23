@@ -11,10 +11,15 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.common.ability.program.AbilityProgram;
 import org.academy.api.common.ability.program.ProgramEditorLayout;
 import org.academy.api.common.ability.program.ProgramGraph;
-import org.academy.internal.common.ability.mentalout.MentaloutRequestGuard;
+import org.academy.internal.common.ability.mentalout.control.MentaloutRequestGuard;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
 import org.academy.internal.common.ability.program.*;
+import org.academy.internal.common.ability.program.compile.ProgramBookCodec;
+import org.academy.internal.common.ability.program.editor.PrecisionProgramExporter;
+import org.academy.internal.common.ability.program.editor.ProgramEditorDocument;
+import org.academy.internal.common.ability.program.migration.PrecisionProgramAliases;
+import org.academy.internal.common.ability.program.registry.AbilityProgramDefinitions;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 

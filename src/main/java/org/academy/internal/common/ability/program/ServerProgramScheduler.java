@@ -1,5 +1,9 @@
 package org.academy.internal.common.ability.program;
 
+import org.academy.internal.common.ability.program.compile.CompiledProgram;
+import org.academy.internal.common.ability.program.registry.ProgramExecutorLookup;
+
+
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import org.academy.api.server.time.TemporalApi;

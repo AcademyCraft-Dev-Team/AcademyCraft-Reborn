@@ -18,7 +18,7 @@ import org.academy.api.common.util.LevelUtil;
 import org.academy.api.common.vfx.SkillVfxState;
 import org.academy.api.server.vfx.SkillVfxService;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.TimedSkillEffectRuntime;
+import org.academy.internal.common.ability.effect.TimedSkillEffectRuntime;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;

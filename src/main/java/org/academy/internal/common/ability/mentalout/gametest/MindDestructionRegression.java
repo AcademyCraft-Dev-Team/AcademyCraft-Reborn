@@ -19,7 +19,7 @@ import org.academy.api.server.time.TemporalApi;
 import org.academy.api.server.time.TemporalChannel;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.mentalout.MentalResistanceManager;
+import org.academy.internal.common.ability.mentalout.resistance.MentalResistanceManager;
 import org.academy.internal.common.ability.mentalout.skills.lv5.MindDestruction;
 import org.academy.internal.common.skilldata.OutputControlData;
 

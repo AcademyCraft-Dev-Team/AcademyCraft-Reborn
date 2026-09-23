@@ -2,7 +2,7 @@ package org.academy.internal.client.ability.teleport;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.level.ChunkPos;
-import org.academy.internal.common.ability.teleport.ChunkLeapPackets;
+import org.academy.internal.common.ability.teleport.chunk.ChunkLeapPackets;
 
 /**
  * Receives god-view status and drives the client side of it.

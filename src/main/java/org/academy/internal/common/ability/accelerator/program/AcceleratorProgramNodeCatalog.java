@@ -9,7 +9,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.program.*;
 import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.accelerator.skills.lv2.KineticEnergyApplied;
-import org.academy.internal.common.ability.program.ProgramNodeLookup;
+import org.academy.internal.common.ability.program.registry.ProgramNodeLookup;
 
 import java.util.HashMap;
 import java.util.List;

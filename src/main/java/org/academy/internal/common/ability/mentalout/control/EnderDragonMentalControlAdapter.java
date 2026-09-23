@@ -15,7 +15,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.entitycontrol.*;
 import org.academy.api.server.team.TeamRelations;
-import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
+import org.academy.internal.common.ability.mentalout.control.PlayerControlSessionManager;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 
 import java.util.Comparator;

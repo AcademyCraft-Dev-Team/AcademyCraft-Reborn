@@ -289,7 +289,7 @@ public class MagnetManipulation extends Skill {
         private static final Map<Player, MoveContext> ACTIVE_MOVEMENT = createContextMap();
 
         public static boolean isControllingSelfMovement(ServerPlayer player) {
-            return org.academy.internal.common.ability.electromaster.MagneticFieldRuntime.isHovering(player);
+            return org.academy.internal.common.ability.electromaster.field.MagneticFieldRuntime.isHovering(player);
         }
 
         @SubscribePacket
@@ -300,7 +300,7 @@ public class MagnetManipulation extends Skill {
             }
 
             if (packet.getMode() == PullMode.PLAYER_TO_TARGET) {
-                org.academy.internal.common.ability.electromaster.MagneticFieldRuntime.toggle(player);
+                org.academy.internal.common.ability.electromaster.field.MagneticFieldRuntime.toggle(player);
                 return;
             }
             var previous = ACTIVE_MOVEMENT.get(player);

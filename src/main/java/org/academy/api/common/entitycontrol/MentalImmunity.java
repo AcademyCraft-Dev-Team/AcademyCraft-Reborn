@@ -4,7 +4,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
-import org.academy.internal.common.ability.mentalout.MentalResistanceManager;
+import org.academy.internal.common.ability.mentalout.resistance.MentalResistanceManager;
 
 import java.util.HashSet;
 import java.util.LinkedHashMap;

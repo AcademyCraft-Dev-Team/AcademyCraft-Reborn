@@ -13,11 +13,11 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.WingControlIntent;
 import org.academy.api.common.ability.WingFlightMotion;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.accelerator.skills.WingFlightPose;
+import org.academy.internal.common.ability.accelerator.flight.WingFlightPose;
 import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
-import org.academy.internal.common.ability.accelerator.skills.lv5.BlackWing;
-import org.academy.internal.common.ability.accelerator.skills.lv5.WhiteWing;
-import org.academy.internal.common.ability.accelerator.skills.lv5.PlatinumWing;
+import org.academy.internal.common.ability.accelerator.skills.lv5.wing.BlackWing;
+import org.academy.internal.common.ability.accelerator.skills.lv5.wing.WhiteWing;
+import org.academy.internal.common.ability.accelerator.skills.lv5.wing.PlatinumWing;
 import org.academy.internal.common.attachment.AttachmentTypes;
 
 import static org.lwjgl.glfw.GLFW.*;

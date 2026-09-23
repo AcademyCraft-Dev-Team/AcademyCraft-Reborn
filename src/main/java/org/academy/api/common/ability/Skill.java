@@ -29,7 +29,7 @@ import org.academy.api.common.util.L10nUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.SkillTuning;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.common.ability.ProficiencyPolicy;
+import org.academy.internal.common.ability.proficiency.ProficiencyPolicy;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.common.ability.electromaster.skills.lv3.CurrentSymbiosis;
 import org.academy.internal.common.skilldata.CodecSkillData;

@@ -5,7 +5,7 @@ import org.academy.api.common.arc.modifier.JaggedModifier;
 import org.academy.api.common.arc.modifier.TaperModifier;
 import org.academy.api.common.arc.path.LinePath;
 import org.academy.api.common.arc.path.PolylinePath;
-import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
+import org.academy.internal.common.ability.electromaster.arc.ElectromasterArcEffects;
 import org.joml.Vector3fc;
 import org.junit.jupiter.api.Test;
 

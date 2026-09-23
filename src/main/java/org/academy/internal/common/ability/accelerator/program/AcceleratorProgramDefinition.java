@@ -3,9 +3,9 @@ package org.academy.internal.common.ability.accelerator.program;
 import com.google.gson.JsonObject;
 import org.academy.api.common.ability.program.ProgramLimits;
 import org.academy.internal.common.ability.accelerator.skills.lv2.KineticEnergyApplied;
-import org.academy.internal.common.ability.program.AbilityProgramDefinition;
-import org.academy.internal.common.ability.program.BaseAbilityProgramDefinition;
-import org.academy.internal.common.ability.program.ProgramEditorNodeCatalog;
+import org.academy.internal.common.ability.program.registry.AbilityProgramDefinition;
+import org.academy.internal.common.ability.program.registry.BaseAbilityProgramDefinition;
+import org.academy.internal.common.ability.program.editor.ProgramEditorNodeCatalog;
 
 import java.util.HashMap;
 
