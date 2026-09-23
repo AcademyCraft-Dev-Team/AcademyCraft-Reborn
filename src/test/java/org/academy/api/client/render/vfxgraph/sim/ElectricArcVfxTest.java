@@ -20,6 +20,59 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ElectricArcVfxTest {
     @Test
+    void novaRingSharesArcPaletteAndHasBoundedGeometryWithoutAccumulation() throws Exception {
+        var sim = simulator("lightning_nova");
+        for (int frame = 0; frame < 1000; frame++) {
+            at(sim, (frame % 50) / 100f);
+            assertEquals(8, sim.arcBuffer().count());
+            var rim = sim.arcBuffer().arc(0);
+            assertTrue(rim.size() <= 129);
+            assertEquals(rim.x(0), rim.x(rim.size() - 1));
+            assertEquals(rim.y(0), rim.y(rim.size() - 1));
+            assertEquals(rim.z(0), rim.z(rim.size() - 1));
+            assertEquals(0.12f, rim.r());
+            assertEquals(0.78f, sim.arcBuffer().arc(1).r());
+            float expected = 8 + (frame % 50) / 100f * 1.6f;
+            for (int i = 0; i < sim.arcBuffer().count(); i++) {
+                var arc = sim.arcBuffer().arc(i);
+                assertTrue(arc.size() <= 129);
+                for (int p = 0; p < arc.size(); p++) {
+                    assertEquals(expected, Math.hypot(arc.x(p), arc.z(p)), 0.18);
+                    assertTrue(Float.isFinite(arc.width(p)));
+                }
+            }
+        }
+        at(sim, 0.5f);
+        assertEquals(0, sim.arcBuffer().count());
+    }
+
+    @Test
+    void novaPulsesJoinContinuouslyAndEchoContracts() throws Exception {
+        var first = simulator("lightning_nova");
+        var second = simulator("lightning_nova");
+        first.setLiveParam("duration", Value.of(1f));
+        at(first, 0.5f);
+        second.setLiveParam("radius", Value.of(8.8f));
+        second.setLiveParam("phase", Value.of(0.5f));
+        at(second, 0);
+        var a = first.arcBuffer().arc(0);
+        var b = second.arcBuffer().arc(0);
+        assertEquals(a.size(), b.size());
+        for (int p = 0; p < a.size(); p++) {
+            assertEquals(a.x(p), b.x(p), 0.0001);
+            assertEquals(a.y(p), b.y(p), 0.0001);
+            assertEquals(a.z(p), b.z(p), 0.0001);
+        }
+        second.setLiveParam("radial_speed", Value.of(-1.6f));
+        at(second, 0.4f);
+        var echo = second.arcBuffer().arc(0);
+        assertEquals(8.16, Math.hypot(echo.x(0), echo.z(0)), 0.18);
+        second.setLiveParam("radius", Value.of(0.1f));
+        at(second, 0.4f);
+        assertEquals(0, second.arcBuffer().count());
+    }
+
+    @Test
     void shieldCurrentsStayOnTheBodyAndInterceptionExpires() throws Exception {
         var sim = simulator("electromagnetic_shield");
         at(sim, 0.12f);

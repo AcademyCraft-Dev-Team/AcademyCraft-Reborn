@@ -28,6 +28,26 @@ public final class ElectromasterGraphEffects {
 
     private ElectromasterGraphEffects() { }
 
+    /** A short analytic ring pulse, optionally following any entity at the supplied local height. */
+    public static void spawnNovaRing(ServerLevel level, Vec3 position, int entityId, float height,
+                                     float radius, float radialSpeed, float duration, float phase, long seed) {
+        spawnNovaRing(level, position, entityId, height, radius, radialSpeed, duration, phase, seed, -1);
+    }
+
+    /** Nonnegative instance IDs renew an existing pulse; use a distinct ID for each overlapping cast. */
+    public static void spawnNovaRing(ServerLevel level, Vec3 position, int entityId, float height,
+                                     float radius, float radialSpeed, float duration, float phase, long seed,
+                                     int instanceId) {
+        if (!Float.isFinite(radius) || radius < 0 || !Float.isFinite(radialSpeed)
+                || !Float.isFinite(duration) || duration <= 0) return;
+        var params = new java.util.HashMap<>(Map.of("radius", radius, "radial_speed", radialSpeed, "height", height,
+                "duration", duration, "phase", phase, "seed", (float) (seed & 0xFFFFFF),
+                "bounds_radius", Math.max(radius, radius + radialSpeed * duration) + Math.abs(height) + 1));
+        if (instanceId >= 0) params.put("instance_id", (float) (instanceId & 0xFFFFFF));
+        SpawnVfxGraphPacket.broadcast(level, AcademyCraft.academy("vfxgraph/lightning_nova"),
+                position, new Vec3(0, 1, 0), entityId, 1, duration + 0.1f, params);
+    }
+
     /** A five-tick pulse, following an optional entity; local +Y is the body's vertical axis. */
     public static void spawnShield(ServerLevel level, Vec3 position, int entityId, long ageTicks) {
         SpawnVfxGraphPacket.broadcast(level, AcademyCraft.academy("vfxgraph/electromagnetic_shield"),

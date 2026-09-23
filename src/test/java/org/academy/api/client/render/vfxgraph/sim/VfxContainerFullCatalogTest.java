@@ -73,6 +73,7 @@ class VfxContainerFullCatalogTest {
                 "vfx.block.sky_discharge", "vfx.block.storm_atmosphere", "vfx.block.surface_discharge",
                 "vfx.block.axial_beam", "vfx.block.axial_discharge", "vfx.block.axial_shock",
                 "vfx.block.electric_bolt", "vfx.block.electric_orbit", "vfx.block.electric_shield", "vfx.block.electric_paths",
+                "vfx.block.electric_ring",
                 "vfx.block.material_sheets", "vfx.block.iron_sand", "vfx.block.organic_strands", "vfx.block.cloud_vortex"
         };
         for (var id : expected) {

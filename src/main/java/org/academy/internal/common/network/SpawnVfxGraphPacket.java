@@ -242,7 +242,11 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
                 var manager = VfxGraphManager.INSTANCE;
                 var follow = packet.followEntityId >= 0 ? minecraft.level.getEntity(packet.followEntityId) : null;
                 ActiveEffect effect;
-                if (follow != null) {
+                if (packet.floatParams.containsKey("instance_id")) {
+                    var refreshKey = packet.followEntityId + ":" + packet.floatParams.get("instance_id");
+                    effect = manager.spawnOrRefresh(packet.assetId, packet.position.toVector3f(), refreshKey);
+                    effect.follow(follow);
+                } else if (follow != null) {
                     effect = manager.spawnFollow(packet.assetId, follow);
                 } else {
                     effect = manager.spawn(packet.assetId,
@@ -250,6 +254,14 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
                 }
                 effect.setScale(packet.scale);
                 if (packet.scale >= 8f) effect.setAlwaysVisible(true);
+                float boundsRadius = packet.floatParams.getOrDefault("bounds_radius", 0f) * packet.scale;
+                if (boundsRadius > 0) {
+                    // A following radial effect keeps its bounds centered on its moving origin.
+                    effect.bindFrame((active, camera, partialTick) -> {
+                        active.setCullingSphere(active.position(), boundsRadius);
+                        return follow == null || follow.isAlive();
+                    });
+                }
                 effect.setRotation(orientedRotation(packet.direction, packet.localXDirection));
                 effect.setGameTimeLifetimeSeconds(packet.lifetimeSeconds);
                 if (!packet.floatParams.containsKey("time")) effect.bindGameTime("time");

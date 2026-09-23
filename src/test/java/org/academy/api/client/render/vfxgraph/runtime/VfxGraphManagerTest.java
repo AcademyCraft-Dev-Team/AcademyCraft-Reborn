@@ -21,6 +21,38 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 class VfxGraphManagerTest {
+    @Test
+    void renewedNovaCastsReuseGraphsAndBuffersAndExpireAfterAStall() {
+        var manager = VfxGraphManager.INSTANCE;
+        var id = Identifier.fromNamespaceAndPath("academy", "vfxgraph/lightning_nova");
+        var casts = new ActiveEffect[20];
+        for (int pulse = 0; pulse < 50; pulse++) {
+            for (int cast = 0; cast < casts.length; cast++) {
+                var effect = manager.spawnOrRefresh(id, new Vector3f(cast, 0, 0), "caster:" + cast);
+                if (pulse == 0) casts[cast] = effect;
+                assertSame(casts[cast], effect);
+                effect.bindGameTime("time");
+                effect.setGameTimeLifetimeSeconds(0.6f);
+            }
+            manager.tick(0.49f);
+            assertEquals(20, manager.effectCount());
+            for (var effect : casts) assertEquals(8, effect.effect().arcBuffer().count());
+        }
+        manager.tick(2);
+        assertEquals(0, manager.effectCount(), "A slow frame must not retain expired pulse graphs");
+    }
+
+    @Test
+    void refreshingStoppedEffectReplacesItWithoutLeavingDuplicateInstances() {
+        registerAsset(burstGraph());
+        var manager = VfxGraphManager.INSTANCE;
+        var old = manager.spawnOrRefresh(ASSET, new Vector3f(), "caster:1");
+        old.stop();
+        var next = manager.spawnOrRefresh(ASSET, new Vector3f(), "caster:1");
+        assertNotSame(old, next);
+        assertEquals(1, manager.effectCount());
+    }
+
     private static final Identifier ASSET = Identifier.fromNamespaceAndPath("academy", "vfxgraph/test_burst");
 
     private JsonGraphCodec codec;

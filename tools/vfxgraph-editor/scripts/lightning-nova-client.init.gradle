@@ -1,0 +1,11 @@
+allprojects {
+    afterEvaluate {
+        neoForge.runs.named('clientDev') {
+            sourceSet.set(sourceSets.editor)
+            gameDirectory.set(file('run/lightning-nova-client'))
+            systemProperty 'academy.lightningNovaSmoke', 'true'
+            systemProperty 'academy.lightningNovaOutput', file('build/lightning-nova-validation').absolutePath
+            programArguments.addAll('--width', '1280', '--height', '720')
+        }
+    }
+}

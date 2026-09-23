@@ -218,18 +218,8 @@ public final class ElectromasterArcEffects {
     }
 
     public static void spawnNovaRing(ServerLevel level, Vec3 center, double radius, long age) {
-        var paths = new ArrayList<ArcPath>();
-        var segments = 16;
-        for (var i = 0; i < segments; i++) {
-            var angle0 = i * Mth.TWO_PI / segments + age * 0.08;
-            var angle1 = (i + 1) * Mth.TWO_PI / segments + age * 0.08;
-            var start = center.add(Mth.cos(angle0) * radius, Mth.sin(angle0 * 3.0) * 0.16,
-                    Mth.sin(angle0) * radius);
-            var end = center.add(Mth.cos(angle1) * radius, Mth.sin(angle1 * 3.0) * 0.16,
-                    Mth.sin(angle1) * radius);
-            paths.add(arc(start, end, randomSeed()));
-        }
-        spawnArc(level, paths, 4, center);
+        ElectromasterGraphEffects.spawnNovaRing(level, center, -1, 0, (float) radius,
+                0, 0.2f, age / 20f, age);
     }
 
     public static void spawnSkyStrike(ServerLevel level, Vec3 impact) {

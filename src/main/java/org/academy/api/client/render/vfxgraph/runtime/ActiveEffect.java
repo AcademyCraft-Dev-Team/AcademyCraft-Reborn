@@ -62,6 +62,15 @@ public final class ActiveEffect {
     private @Nullable EffectFrameBinding frameBinding;
     private float gameAgeSeconds;
     private float gameLifetimeSeconds = Float.POSITIVE_INFINITY;
+    private String refreshKey = "";
+
+    public String refreshKey() { return refreshKey; }
+
+    /** Renew an analytic pulse without rebuilding its simulator or pooled arc buffers. */
+    public void refresh(String key) {
+        refreshKey = Objects.requireNonNull(key);
+        gameAgeSeconds = 0;
+    }
 
     public void bindFrame(EffectFrameBinding binding) {
         frameBinding = Objects.requireNonNull(binding);

@@ -156,8 +156,9 @@ public final class VfxGraphManager {
         frameCameras.clear();
         boolean paused = Minecraft.getInstance().isPaused();
         long now = System.nanoTime();
-        float dt = paused ? 0f : lastRenderNanos <= 0 ? 1f / 60f
-                : Math.min((now - lastRenderNanos) / 1e9f, 0.1f);
+        float elapsed = paused ? 0f : lastRenderNanos <= 0 ? 1f / 60f
+                : (now - lastRenderNanos) / 1e9f;
+        float dt = Math.min(elapsed, 0.1f);
         lastRenderNanos = now;
         float partialTick = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
         int visible = 0, culled = 0, simulated = 0;
@@ -165,7 +166,8 @@ public final class VfxGraphManager {
         while (iterator.hasNext()) {
             var effect = iterator.next();
             effect.setRenderVisible(false);
-            if (effect.updateFrame(dt, camera, partialTick)) { iterator.remove(); continue; }
+            // Lifetime follows elapsed game presentation time even when simulation steps are capped.
+            if (effect.updateFrame(elapsed, camera, partialTick)) { iterator.remove(); continue; }
             var effectCamera = frameCameras.computeIfAbsent(effect.minimumFarPlane(),
                     far -> camera.withMinimumFarPlane(far));
             float radius = effect.cullingRadius(budget.effectRadius());
@@ -212,6 +214,28 @@ public final class VfxGraphManager {
         }
         return false;
     }
+    /** Refresh a uniquely identified analytic effect, retaining its compiled graph and buffers. */
+    public ActiveEffect spawnOrRefresh(Identifier assetId, Vector3f position, String refreshKey) {
+        if (refreshKey == null || refreshKey.isEmpty()) throw new IllegalArgumentException("Empty refresh key");
+        var key = normalizedKey(assetId);
+        var iterator = effects.iterator();
+        while (iterator.hasNext()) {
+            var effect = iterator.next();
+            if (effect.assetKey().equals(key) && effect.refreshKey().equals(refreshKey)) {
+                if (effect.isExpired()) {
+                    iterator.remove();
+                    break;
+                }
+                effect.refresh(refreshKey);
+                effect.setPosition(position);
+                return effect;
+            }
+        }
+        var effect = spawn(assetId, position);
+        effect.refresh(refreshKey);
+        return effect;
+    }
+
     public ActiveEffect spawn(Identifier assetId, Vector3f position) {
         var key = normalizedKey(assetId);
         var container = containerAssets.get(key);

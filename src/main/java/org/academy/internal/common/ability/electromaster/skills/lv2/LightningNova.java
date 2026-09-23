@@ -20,12 +20,12 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.ability.ElectromasterGraphEffects;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.electromaster.arc.ElectromasterArcEffects;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.misaka.MisakaNetworkClient;
@@ -44,6 +44,7 @@ public class LightningNova extends Skill {
     private static final int MAX_RADIUS = 16;
     private static final float DAMAGE = 4.0f;
     private static final int PULSE_DURATION = 200;
+    private static final int VISUAL_INTERVAL = 10;
 
     public LightningNova() {
         super(Builder
@@ -116,12 +117,18 @@ public class LightningNova extends Skill {
         @SubscribePacket
         public static void handle(ActivatePacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            Skills.LIGHTNING_NOVA.get().executeActive(player,
+            tryActivate(player);
+        }
+
+        public static boolean tryActivate(ServerPlayer player) {
+            return Skills.LIGHTNING_NOVA.get().executeActive(player,
                     (ctx, actualCost) -> AbilitySystemServer.registerContext(new Context(player, ctx.milestone())));
         }
     }
 
     public static final class Context extends ServerContext {
+        private static final java.util.concurrent.atomic.AtomicInteger NEXT_VISUAL_ID = new java.util.concurrent.atomic.AtomicInteger();
+        private final int visualId = NEXT_VISUAL_ID.getAndIncrement() & 0xFFFFFF;
         private int ticks;
         private int phaseTicks;
         private final int milestone;
@@ -131,10 +138,21 @@ public class LightningNova extends Skill {
         private final Set<UUID> outwardHits = new HashSet<>();
         private final Set<UUID> echoHits = new HashSet<>();
         private boolean ended;
+        private int nextVisualTick = 1;
+        private final long visualSeed;
+        private final ServerLevel castLevel;
+        private final SkillDamageSource outwardSource;
+        private final SkillDamageSource echoSource;
 
         private Context(ServerPlayer player, int milestone) {
             super(player);
             this.milestone = milestone;
+            castLevel = player.level();
+            visualSeed = castLevel.getRandom().nextLong();
+            outwardSource = SkillDamageSource.of(player, Skills.LIGHTNING_NOVA.get(),
+                    DamageTypes.ELECTRO_DAMAGE).withElectricalChargePoints(2);
+            echoSource = SkillDamageSource.of(player, Skills.LIGHTNING_NOVA.get(),
+                    DamageTypes.ELECTRO_DAMAGE).withElectricalChargePoints(1);
             maximumRadius = Math.round(Skills.LIGHTNING_NOVA.get().scaledRange(player,
                     milestone >= 2 ? Math.round(MAX_RADIUS * 1.25f) : MAX_RADIUS));
             outwardDuration = milestone >= 2
@@ -145,7 +163,8 @@ public class LightningNova extends Skill {
         @SubscribeEvent
         public void onTick(ServerTickEvent.Pre event) {
             ticks++;
-            if (player.hasDisconnected() || !player.isAlive()) {
+            if (ended) return;
+            if (player.hasDisconnected() || !player.isAlive() || level() != castLevel) {
                 end();
                 return;
             }
@@ -159,6 +178,7 @@ public class LightningNova extends Skill {
                 }
                 echo = true;
                 phaseTicks = 0;
+                nextVisualTick = ticks;
             } else if (echo && phaseTicks >= outwardDuration) {
                 end();
                 return;
@@ -170,27 +190,30 @@ public class LightningNova extends Skill {
             var innerRadius = Math.max(0, currentRadius - 1.5f);
             var outerRadius = echo ? currentRadius + 1.5f : currentRadius;
 
-            if (level() instanceof ServerLevel serverLevel) {
-                if ((ticks & 1) == 0) {
-                    ElectromasterArcEffects.spawnNovaRing(
-                            serverLevel, player.position().add(0, 1.0, 0), currentRadius, ticks);
-                }
-                var targets = level().getEntitiesOfClass(LivingEntity.class,
-                        player.getBoundingBox().inflate(currentRadius + 1),
-                        e -> e != player && e.isAlive());
+            if (ticks >= nextVisualTick) {
+                int visualTicks = Math.min(VISUAL_INTERVAL, outwardDuration - phaseTicks);
+                ElectromasterGraphEffects.spawnNovaRing(castLevel, player.position(), player.getId(), 1,
+                        currentRadius, (echo ? -1 : 1) * maximumRadius * 20f / outwardDuration,
+                        visualTicks / 20f, ticks / 20f, visualSeed, visualId);
+                nextVisualTick = ticks + visualTicks;
+            }
+            var phaseHits = echo ? echoHits : outwardHits;
+            double innerSquared = innerRadius * innerRadius;
+            double outerSquared = outerRadius * outerRadius;
+            var targets = castLevel.getEntitiesOfClass(LivingEntity.class,
+                    player.getBoundingBox().inflate(outerRadius),
+                    target -> target != player && target.isAlive() && !phaseHits.contains(target.getUUID())
+                            && withinWavefront(target.distanceToSqr(player), innerSquared, outerSquared));
+            if (!targets.isEmpty()) {
                 var system = AbilitySystemServer.getSystem(player);
                 var damage = Server.calculateDamage(
                         system.getPlayerAbilityPowerMultiplier(player.getUUID()),
                         system.getPlayerDamageMultiplier(player.getUUID())
                 );
-                var source = SkillDamageSource.of(player, Skills.LIGHTNING_NOVA.get(),
-                        DamageTypes.ELECTRO_DAMAGE).withElectricalChargePoints(echo ? 1 : 2);
+                var source = echo ? echoSource : outwardSource;
                 for (var target : targets) {
-                    var dist = target.distanceTo(player);
-                    var phaseHits = echo ? echoHits : outwardHits;
-                    if (dist <= outerRadius && dist >= innerRadius && phaseHits.add(target.getUUID())) {
-                        target.hurtServer(serverLevel, source, damage * (echo ? 0.5f : 1.0f));
-                    }
+                    phaseHits.add(target.getUUID());
+                    target.hurtServer(castLevel, source, damage * (echo ? 0.5f : 1.0f));
                 }
             }
         }
@@ -200,6 +223,17 @@ public class LightningNova extends Skill {
             ended = true;
             unregister();
         }
+
+        @Override
+        protected void onUnregistered() {
+            ended = true;
+            outwardHits.clear();
+            echoHits.clear();
+        }
+    }
+
+    static boolean withinWavefront(double distanceSquared, double innerSquared, double outerSquared) {
+        return distanceSquared >= innerSquared && distanceSquared <= outerSquared;
     }
 
     @PacketTarget(ThreadType.SERVER)
