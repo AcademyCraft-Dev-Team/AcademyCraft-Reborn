@@ -15,7 +15,6 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -32,6 +31,7 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.server.ability.AreaEffectTargets;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
@@ -284,14 +284,8 @@ public final class AdiabaticCompression extends Skill {
                 var radius = radiusForMilestone(milestone)
                         * AeromanipConfig.rangeMultiplier(
                         player, SkillNames.ADIABATIC_COMPRESSION);
-                var box = new AABB(
-                        center.subtract(radius, radius, radius),
-                        center.add(radius, radius, radius));
-                var targets = level.getEntitiesOfClass(
-                        LivingEntity.class,
-                        box,
-                        target -> canAffect(target) && contains(
-                                center, target.getBoundingBox().getCenter(), radius));
+                var targets = AreaEffectTargets.inSphereByBoundsCenter(
+                        level, center, radius, this::canAffect);
                 var handled = 0;
                 var cap = ProficiencyPolicy.server(player).maxBonusEntitiesPerTick();
                 for (var target : targets) {

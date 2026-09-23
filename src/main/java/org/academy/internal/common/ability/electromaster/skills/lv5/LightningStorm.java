@@ -1,6 +1,5 @@
 package org.academy.internal.common.ability.electromaster.skills.lv5;
 
-import org.academy.api.common.damage.DamageComposition;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
@@ -28,6 +27,7 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.AreaEffectTargets;
+import org.academy.api.server.damage.AbilityDamageService;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -270,8 +270,8 @@ public class LightningStorm extends Skill {
                 for (var target : targets) {
                     if (PvpSetting.shouldPrevent(player, target)) continue;
                     var damage = Server.calculateDamage(target.getMaxHealth(), abilityPower, damageMultiplier);
-                    if (DamageComposition.hurt(
-                            target, serverLevel, source, damage, target.getMaxHealth() * 0.02f)) {
+                    if (AbilityDamageService.applySource(
+                            serverLevel, target, source, damage, target.getMaxHealth() * 0.02f).applied()) {
                         struckTargets.add(target.getUUID());
                     }
                 }

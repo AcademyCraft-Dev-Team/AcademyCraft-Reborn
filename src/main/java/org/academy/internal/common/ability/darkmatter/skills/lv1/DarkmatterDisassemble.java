@@ -723,21 +723,16 @@ public final class DarkmatterDisassemble extends Skill {
                 int fortune,
                 boolean directToInventory
         ) {
-            var state = level.getBlockState(pos);
-            if (state.isAir()) return false;
             var tool = createLootTool(level.registryAccess(), fortune);
-            var drops = AbilityBlockDrops.getDrops(player,
-                    state, level, pos, level.getBlockEntity(pos), player, tool);
-            if (!AbilityBlockDrops.run(
-                    level, player, () -> level.destroyBlock(pos, false, player))) return false;
-            DarkmatterGraphEffects.disassembleBlock(level, pos);
-            for (var drop : drops) {
-                if (drop.isEmpty()) continue;
-                if (SpatialStorageService.collect(player, drop)) continue;
-                if (directToInventory) player.getInventory().add(drop);
-                if (!drop.isEmpty()) Block.popResource(level, pos, drop);
-            }
-            return true;
+            return AbilityBlockDrops.harvestBlock(level, pos, player, player, tool, drops -> {
+                DarkmatterGraphEffects.disassembleBlock(level, pos);
+                for (var drop : drops) {
+                    if (drop.isEmpty()) continue;
+                    if (SpatialStorageService.collect(player, drop)) continue;
+                    if (directToInventory) player.getInventory().add(drop);
+                    if (!drop.isEmpty()) Block.popResource(level, pos, drop);
+                }
+            });
         }
 
         private static void moveNearbyDropsToPlayer(

@@ -584,13 +584,11 @@ public final class GroupControlRuntime {
             if (miningProgressTicks % 5 == 1) subject.swing(InteractionHand.MAIN_HAND);
             if (miningProgressTicks < miningTicks(state, tool, level, currentBlock)) return;
             if (canBreak(controller, level, currentBlock)) {
-                var drops = AbilityBlockDrops.getDrops(controller,
-                        state, level, currentBlock, level.getBlockEntity(currentBlock), subject, tool);
-                if (AbilityBlockDrops.run(
-                        level, controller, () -> level.destroyBlock(currentBlock, false, subject))) {
+                if (AbilityBlockDrops.harvestBlock(level, currentBlock, controller, subject, tool, drops -> {
                     drops.stream().filter(stack -> !stack.isEmpty())
                             .filter(stack -> !SpatialStorageService.collect(controller, stack))
                             .map(ItemStack::copy).forEach(bufferedDrops::add);
+                })) {
                     if (settings != null) ControlledEquipment.damageRealTool(subject, tool, 1);
                 }
             } else if (settings != null) {
@@ -679,17 +677,15 @@ public final class GroupControlRuntime {
             if (miningProgressTicks % 5 == 1) subject.swing(InteractionHand.MAIN_HAND);
             if (miningProgressTicks < miningTicks(state, tool, level, currentBlock)) return;
             if (!canBreak(controller, level, currentBlock)) { blockMiningTarget("permission", 100); return; }
-            var drops = AbilityBlockDrops.getDrops(controller,
-                    state, level, currentBlock, level.getBlockEntity(currentBlock), subject, tool);
-            if (!AbilityBlockDrops.run(
-                    level, controller, () -> level.destroyBlock(currentBlock, false, subject))) {
+            if (!AbilityBlockDrops.harvestBlock(level, currentBlock, controller, subject, tool, drops -> {
+                for (var drop : drops) {
+                    if (!drop.isEmpty() && !SpatialStorageService.collect(controller, drop)) {
+                        bufferMiningDrop(drop);
+                    }
+                }
+            })) {
                 blockMiningTarget("permission", 100);
                 return;
-            }
-            for (var drop : drops) {
-                if (!drop.isEmpty() && !SpatialStorageService.collect(controller, drop)) {
-                    bufferMiningDrop(drop);
-                }
             }
             ControlledEquipment.damageRealTool(subject, tool, 1);
             plan.resolve(currentBlock);
@@ -922,22 +918,20 @@ public final class GroupControlRuntime {
                     || settings != null && (!settings.harvest() || !settings.matches(state))
                     || !canBreak(controller, level, pos)) return;
             subject.swing(InteractionHand.MAIN_HAND);
-            var drops = AbilityBlockDrops.getDrops(controller,
-                    state, level, pos, level.getBlockEntity(pos), subject, subject.getMainHandItem());
-            if (!AbilityBlockDrops.run(
-                    level, controller, () -> level.destroyBlock(pos, false, subject))) return;
-            if (settings == null) level.setBlock(pos, crop.getStateForAge(0), Block.UPDATE_ALL);
-            else if (settings.replant()) {
-                var seed = drops.stream().filter(stack -> stack.getItem() instanceof BlockItem item
-                        && item.getBlock() == crop && !stack.isEmpty()).findFirst();
-                if (seed.isPresent() && crop.getStateForAge(0).canSurvive(level, pos)) {
-                    seed.get().shrink(1);
-                    level.setBlock(pos, crop.getStateForAge(0), Block.UPDATE_ALL);
+            AbilityBlockDrops.harvestBlock(level, pos, controller, subject, subject.getMainHandItem(), drops -> {
+                if (settings == null) level.setBlock(pos, crop.getStateForAge(0), Block.UPDATE_ALL);
+                else if (settings.replant()) {
+                    var seed = drops.stream().filter(stack -> stack.getItem() instanceof BlockItem item
+                            && item.getBlock() == crop && !stack.isEmpty()).findFirst();
+                    if (seed.isPresent() && crop.getStateForAge(0).canSurvive(level, pos)) {
+                        seed.get().shrink(1);
+                        level.setBlock(pos, crop.getStateForAge(0), Block.UPDATE_ALL);
+                    }
                 }
-            }
-            drops.stream().filter(stack -> !stack.isEmpty())
-                    .filter(stack -> !SpatialStorageService.collect(controller, stack))
-                    .map(ItemStack::copy).forEach(bufferedDrops::add);
+                drops.stream().filter(stack -> !stack.isEmpty())
+                        .filter(stack -> !SpatialStorageService.collect(controller, stack))
+                        .map(ItemStack::copy).forEach(bufferedDrops::add);
+            });
         }
 
         private boolean canBreak(ServerPlayer controller, ServerLevel level, BlockPos pos) {

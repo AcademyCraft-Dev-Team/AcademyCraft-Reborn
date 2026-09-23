@@ -3,11 +3,14 @@ package org.academy.api.server.damage;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.AbilityDamageProfile;
+import org.academy.api.common.damage.DamageComposition;
+import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.world.damagesource.AbilityDamageProfiles;
 import org.academy.internal.common.world.damagesource.SkillDamageTypeResolver;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
@@ -42,6 +45,24 @@ public final class AbilityDamageService {
     }
 
     public record Result(boolean applied, float healthLost, float absorptionLost) {
+    }
+
+    /**
+     * Settles a hit whose source is already configured, preserving direct-entity attribution,
+     * electrical charge points and other source metadata. Cast costs are owned by the caller.
+     */
+    public static Result applySource(ServerLevel level, LivingEntity target, SkillDamageSource source,
+                                     float amount, float maximumHealthPart) {
+        Objects.requireNonNull(level);
+        Objects.requireNonNull(target);
+        Objects.requireNonNull(source);
+        if (!level.getServer().isSameThread()) throw new IllegalStateException("Ability damage requires the server thread");
+        if (target.level() != level || !target.isAlive()) return new Result(false, 0, 0);
+        var health = target.getHealth();
+        var absorption = target.getAbsorptionAmount();
+        var applied = DamageComposition.hurt(target, level, source, amount, maximumHealthPart);
+        return new Result(applied, Math.max(0, health - target.getHealth()),
+                Math.max(0, absorption - target.getAbsorptionAmount()));
     }
 
     public static Result apply(LivingEntity controller, LivingEntity target, Skill skill, Request request) {

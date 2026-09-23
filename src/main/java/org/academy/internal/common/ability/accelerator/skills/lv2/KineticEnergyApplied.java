@@ -57,6 +57,7 @@ import org.academy.api.client.resources.R;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.*;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.server.ability.AreaEffectTargets;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.api.server.ability.AbilityEffectPolicy;
@@ -606,18 +607,15 @@ public class KineticEnergyApplied extends Skill {
 
         private static void applyAreaDamage(ServerLevel level, ServerPlayer player, Vec3 center,
                                             Vec3 direction, float radius, float damage, int impactLevel) {
-            var radiusSquared = radius * radius;
             var source = SkillDamageSource.of(
                     player,
                     Skills.KINETIC_ENERGY_APPLIED.get(),
                     DamageTypes.CTA
             );
-            var targets = level.getEntitiesOfClass(LivingEntity.class, new AABB(center, center).inflate(radius),
+            var targets = AreaEffectTargets.inSphereByBoundsCenter(level, center, radius,
                     target -> target != player
-                            && target.isAlive()
                             && !target.isSpectator()
-                            && !CtaFriendlyFireWhitelist.shouldProtect(player, target)
-                            && target.getBoundingBox().getCenter().distanceToSqr(center) <= radiusSquared);
+                            && !CtaFriendlyFireWhitelist.shouldProtect(player, target));
 
             for (var target : targets) {
                 CTADamageUtil.applyCompositeDamage(target, player, source, damage);

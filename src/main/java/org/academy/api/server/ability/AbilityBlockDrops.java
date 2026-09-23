@@ -14,6 +14,7 @@ import org.academy.internal.server.storage.SpatialStorageService;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.BooleanSupplier;
 
 /** Explicit attribution for ability block destruction, including secondary container/neighbor drops.
@@ -62,6 +63,21 @@ public final class AbilityBlockDrops {
     public static boolean destroyBlock(Level level, BlockPos pos, boolean drops, ServerPlayer player) {
         return run(level, player, () -> level.destroyBlock(pos,
                 drops || SpatialStorageService.hasEnabledUnit(player), player));
+    }
+
+    /**
+     * Captures loot with the controller's perception and the supplied breaker/tool, then
+     * destroys the block without vanilla drops. Loot is delivered only after a successful break.
+     * Callers remain responsible for skill permissions and distributing the captured stacks.
+     */
+    public static boolean harvestBlock(ServerLevel level, BlockPos pos, ServerPlayer controller,
+                                       Entity breaker, ItemInstance tool, Consumer<List<ItemStack>> onDrops) {
+        var state = level.getBlockState(pos);
+        if (state.isAir()) return false;
+        var drops = getDrops(controller, state, level, pos, level.getBlockEntity(pos), breaker, tool);
+        if (!run(level, controller, () -> level.destroyBlock(pos, false, breaker))) return false;
+        onDrops.accept(drops);
+        return true;
     }
 
     public static final class Scope implements AutoCloseable {

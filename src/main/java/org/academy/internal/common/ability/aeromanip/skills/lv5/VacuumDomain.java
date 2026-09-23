@@ -1,6 +1,5 @@
 package org.academy.internal.common.ability.aeromanip.skills.lv5;
 
-import org.academy.api.common.damage.DamageComposition;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -9,7 +8,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.TamableAnimal;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -26,6 +24,8 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.server.ability.AreaEffectTargets;
+import org.academy.api.server.damage.AbilityDamageService;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -220,14 +220,8 @@ public final class VacuumDomain extends Skill {
             var radius = radiusForMilestone(milestone)
                     * AeromanipConfig.rangeMultiplier(owner, SkillNames.VACUUM_DOMAIN);
             var center = owner.getBoundingBox().getCenter();
-            var bounds = new AABB(
-                    center.subtract(radius, radius, radius),
-                    center.add(radius, radius, radius));
-            var targets = level.getEntitiesOfClass(
-                    LivingEntity.class,
-                    bounds,
-                    target -> canAffectTarget(owner, target)
-                            && isInsideDomain(center, target.getBoundingBox().getCenter(), radius));
+            var targets = AreaEffectTargets.inSphereByBoundsCenter(
+                    level, center, radius, target -> canAffectTarget(owner, target));
             var cap = ProficiencyPolicy.server(owner).maxBonusEntitiesPerTick();
             var damageSource = SkillDamageSource.of(
                     owner, skill, DamageTypes.VACUUM_SUFFOCATION);
@@ -244,8 +238,7 @@ public final class VacuumDomain extends Skill {
                 if (!protectedByBubble && shouldDealDamage(owner.tickCount, air)) {
                     // The damage pipeline applies the skill's configured damage multiplier centrally.
                     var damage = baseDamage(target.getMaxHealth());
-                    DamageComposition.hurt(
-                            target, level, damageSource, damage, damage);
+                    AbilityDamageService.applySource(level, target, damageSource, damage, damage);
                 }
             }
             spawnVisual(level, center, radius, owner.tickCount);
