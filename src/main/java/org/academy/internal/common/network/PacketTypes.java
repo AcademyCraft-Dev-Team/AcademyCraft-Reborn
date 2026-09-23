@@ -983,6 +983,10 @@ public final class PacketTypes {
             ABILITY_PROGRAM_REQUEST = PACKET_TYPES.register("ability_program_request",
             () -> new PacketType<>(AbilityProgramManager.RequestPacket.class,
                     AbilityProgramManager.RequestPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AbilityProgramManager.DismissStarterPacket>>
+            ABILITY_PROGRAM_DISMISS_STARTER = PACKET_TYPES.register("ability_program_dismiss_starter",
+            () -> new PacketType<>(AbilityProgramManager.DismissStarterPacket.class,
+                    AbilityProgramManager.DismissStarterPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AbilityProgramManager.ImportPacket>>
             ABILITY_PROGRAM_IMPORT = PACKET_TYPES.register("ability_program_import",
             () -> new PacketType<>(AbilityProgramManager.ImportPacket.class,

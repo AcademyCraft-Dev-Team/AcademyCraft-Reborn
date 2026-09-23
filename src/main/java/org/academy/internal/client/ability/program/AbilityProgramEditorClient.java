@@ -49,6 +49,8 @@ public final class AbilityProgramEditorClient {
     private static ModularProgramScreen screen;
     private static long executionSequence;
     private static boolean networkHandlersInitialized;
+    // Connection-scoped cache; the preference itself belongs to the world's player data.
+    private static @Nullable Boolean starterDismissed;
 
     private AbilityProgramEditorClient() {
     }
@@ -274,12 +276,14 @@ public final class AbilityProgramEditorClient {
         AcademyCraftClient.Config.INSTANCE.save();
     }
 
-    public static void handleSync(Identifier category, byte[] encoded) {
+    public static void handleSync(Identifier category, byte[] encoded, boolean dismissedStarter) {
         if (!isSupportedCategoryId(category)) return;
         var decoded = ProgramBookCodec.decode(encoded);
         if (!decoded.valid() || !validBook(category, decoded.book())) return;
         var player = Minecraft.getInstance().player;
         if (player == null) return;
+        // A reply sent before the dismiss click must not restore the prompt.
+        starterDismissed = Boolean.TRUE.equals(starterDismissed) || dismissedStarter;
         var state = state(player.getUUID(), category);
         state.extensionCompatible = true;
         if (!state.serverSynchronized
@@ -339,12 +343,41 @@ public final class AbilityProgramEditorClient {
             @Nullable ProgramDiagnosticCode diagnostic,
             int nodeId,
             ProgramVmDiagnostic vmDiagnostic,
-            String diagnosticPort
+            String diagnosticPort,
+            List<ProgramRunTrace.Step> trace,
+            boolean traceTruncated
     ) {
         if (!isSupportedCategoryId(category)) return;
         slot = Math.clamp(slot, 0, SLOT_COUNT - 1);
         var player = Minecraft.getInstance().player;
         var state = player == null ? null : STATES.get(storageKey(player.getUUID(), category));
+        if (state != null && (type == AbilityProgramManager.FeedbackType.TRACE || !trace.isEmpty())) {
+            state.runTraces.put(slot, List.copyOf(trace));
+            state.truncatedTraces.put(slot, traceTruncated);
+        }
+        if (type == AbilityProgramManager.FeedbackType.TRACE) {
+            if (state != null) {
+                if (code == AbilityProgramManager.ResultCode.EXECUTION_FAILED) {
+                    state.failures.put(slot, new FailureFeedback(null, nodeId, vmDiagnostic, diagnosticPort));
+                } else {
+                    state.failures.remove(slot);
+                }
+            }
+            var currentCategory = AbilitySystemClient.category;
+            if (screen != null && Minecraft.getInstance().gui.screen() == screen
+                    && currentCategory != null && currentCategory.getKey().equals(category)) {
+                screen.applyRunTrace(slot, trace, traceTruncated);
+                screen.applyProgramResult(slot, revision, null, nodeId,
+                        code == AbilityProgramManager.ResultCode.EXECUTION_FAILED
+                                ? vmDiagnostic : ProgramVmDiagnostic.NONE,
+                        code != AbilityProgramManager.ResultCode.EXECUTION_FAILED, diagnosticPort);
+            }
+            return;
+        }
+        if (state != null && type == AbilityProgramManager.FeedbackType.SAVE) {
+            state.runTraces.remove(slot);
+            state.truncatedTraces.remove(slot);
+        }
         if (state != null) {
             if (type == AbilityProgramManager.FeedbackType.ERROR) {
                 state.failures.put(slot, new FailureFeedback(diagnostic, nodeId, vmDiagnostic, diagnosticPort));
@@ -411,6 +444,10 @@ public final class AbilityProgramEditorClient {
                             ? vmDiagnostic : ProgramVmDiagnostic.NONE,
                     type != AbilityProgramManager.FeedbackType.ERROR, diagnosticPort
             );
+            if (type == AbilityProgramManager.FeedbackType.SAVE) {
+                screen.applyRunTrace(slot, List.of(), false);
+            }
+            if (!trace.isEmpty()) screen.applyRunTrace(slot, trace, traceTruncated);
         }
     }
 
@@ -428,6 +465,7 @@ public final class AbilityProgramEditorClient {
     @SubscribeEvent
     public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
         STATES.clear();
+        starterDismissed = null;
         screen = null;
         executionSequence = 0L;
     }
@@ -460,6 +498,18 @@ public final class AbilityProgramEditorClient {
         }
 
         @Override
+        public boolean showStarter() {
+            // Wait for the current world's preference to avoid a prompt flashing on join.
+            return Boolean.FALSE.equals(starterDismissed);
+        }
+
+        @Override
+        public void dismissStarterForWorld() {
+            starterDismissed = true;
+            MisakaNetworkClient.send(new AbilityProgramManager.DismissStarterPacket());
+        }
+
+        @Override
         public void clearDiagnostic(int slot) {
             state.failures.remove(slot);
         }
@@ -469,6 +519,16 @@ public final class AbilityProgramEditorClient {
             var failure = state.failures.get(slot);
             if (failure != null) screen.applyProgramResult(slot, revision(), failure.diagnostic(),
                     failure.nodeId(), failure.vmDiagnostic(), false, failure.port());
+        }
+
+        @Override
+        public List<ProgramRunTrace.Step> lastRunTrace(int slot) {
+            return state.runTraces.getOrDefault(slot, List.of());
+        }
+
+        @Override
+        public boolean lastRunTraceTruncated(int slot) {
+            return state.truncatedTraces.getOrDefault(slot, false);
         }
 
         @Override
@@ -578,6 +638,8 @@ public final class AbilityProgramEditorClient {
 
     private static final class State {
         private final Map<Integer, FailureFeedback> failures = new HashMap<>();
+        private final Map<Integer, List<ProgramRunTrace.Step>> runTraces = new HashMap<>();
+        private final Map<Integer, Boolean> truncatedTraces = new HashMap<>();
         private final String storageKey;
         private final AbilityProgram[] drafts;
         private ProgramBook saved;

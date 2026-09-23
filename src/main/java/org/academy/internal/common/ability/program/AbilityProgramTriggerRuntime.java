@@ -11,6 +11,7 @@ import net.neoforged.neoforge.event.entity.living.LivingEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.ServerChatEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
 
@@ -27,6 +28,8 @@ public final class AbilityProgramTriggerRuntime {
     private static final Map<UUID, Object> DAMAGE_ATTACKERS = new HashMap<>();
     private static final Map<UUID, Float> DAMAGE_AMOUNTS = new HashMap<>();
     private static final Map<UUID, Object> MELEE_TARGETS = new HashMap<>();
+    private static final Map<UUID, String> CHAT_MESSAGES = new HashMap<>();
+    private static final Map<UUID, UUID> CHAT_SENDERS = new HashMap<>();
 
     private AbilityProgramTriggerRuntime() {
     }
@@ -35,6 +38,28 @@ public final class AbilityProgramTriggerRuntime {
     public static void onAttack(AttackEntityEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             PENDING_MELEE.put(player.getUUID(), event.getTarget());
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onChat(ServerChatEvent event) {
+        var player = event.getPlayer();
+        var message = ProgramChatHistory.slice(event.getRawText(), 0,
+                ProgramChatHistory.MAX_CODE_POINTS);
+        var recipients = List.copyOf(player.level().getServer().getPlayerList().getPlayers());
+        recipients.forEach(recipient -> ProgramChatHistory.record(recipient, message));
+        for (var recipient : recipients) {
+            var id = recipient.getUUID();
+            var previous = CHAT_MESSAGES.put(id, message);
+            var previousSender = CHAT_SENDERS.put(id, player.getUUID());
+            try {
+                dispatch(recipient, ProgramTriggers.Type.CHAT, null);
+            } finally {
+                if (previous == null) CHAT_MESSAGES.remove(id);
+                else CHAT_MESSAGES.put(id, previous);
+                if (previousSender == null) CHAT_SENDERS.remove(id);
+                else CHAT_SENDERS.put(id, previousSender);
+            }
         }
     }
 
@@ -72,6 +97,14 @@ public final class AbilityProgramTriggerRuntime {
         return Optional.ofNullable(DAMAGE_ATTACKERS.get(player.getUUID()));
     }
 
+    static String currentChatMessage(UUID playerId) {
+        return CHAT_MESSAGES.get(playerId);
+    }
+
+    static UUID currentChatSender(UUID playerId) {
+        return CHAT_SENDERS.get(playerId);
+    }
+
     static OptionalDouble currentDamageAmount(Object entity) {
         if (!(entity instanceof ServerPlayer player)) return OptionalDouble.empty();
         var amount = DAMAGE_AMOUNTS.get(player.getUUID());
@@ -100,7 +133,8 @@ public final class AbilityProgramTriggerRuntime {
                 loopIndex,
                 DAMAGE_ATTACKERS.get(id),
                 DAMAGE_AMOUNTS.get(id),
-                MELEE_TARGETS.get(id)
+                MELEE_TARGETS.get(id),
+                CHAT_MESSAGES.get(id)
         );
     }
 
@@ -151,6 +185,9 @@ public final class AbilityProgramTriggerRuntime {
         DAMAGE_ATTACKERS.remove(id);
         DAMAGE_AMOUNTS.remove(id);
         MELEE_TARGETS.remove(id);
+        CHAT_MESSAGES.remove(id);
+        CHAT_SENDERS.remove(id);
+        ProgramChatHistory.clear(id);
         ProgramTriggers.clear(id);
     }
 

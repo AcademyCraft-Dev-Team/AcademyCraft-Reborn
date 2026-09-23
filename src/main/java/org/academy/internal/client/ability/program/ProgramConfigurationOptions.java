@@ -140,7 +140,7 @@ public final class ProgramConfigurationOptions {
         if (id.equals(CommonProgramNodeIds.RANDOM_NUMBER) && field.equals("type")) {
             return scalarTypes(false);
         }
-        if (id.equals(CommonProgramNodeIds.VEC3_OPERATION)) {
+        if (id.equals(CommonProgramNodeIds.VEC3_OPERATION) || id.equals(CommonProgramNodeIds.TEXT_TO_VEC3)) {
             if (field.equals("type")) {
                 return stringOptions(
                         "screen.academy.program.configuration.vec3_type.",
@@ -311,6 +311,32 @@ public final class ProgramConfigurationOptions {
                     AcademyCraft.academy("program_type/" + path).toString(),
                     "screen.academy.program.configuration.value_type." + path
             )).toList();
+        }
+        if ((id.equals(CommonProgramNodeIds.SHARED_VARIABLE_GET)
+                || id.equals(CommonProgramNodeIds.SHARED_VARIABLE_SET)) && field.equals("type")) {
+            return VARIABLE_TYPE_PATHS.subList(0, 5).stream().map(path -> option(
+                    AcademyCraft.academy("program_type/" + path).toString(),
+                    "screen.academy.program.configuration.value_type." + path
+            )).toList();
+        }
+        if (id.equals(CommonProgramNodeIds.TEXT_COMPARE) && field.equals("mode")) {
+            return stringOptions("screen.academy.program.configuration.text_mode.",
+                    "equals", "contains", "starts_with", "ends_with");
+        }
+        if (id.equals(CommonProgramNodeIds.TEXT_TO_VEC3) && field.equals("mode")) {
+            return stringOptions("screen.academy.program.configuration.text_parse_mode.", "exact", "extract");
+        }
+        if (id.equals(CommonProgramNodeIds.TEXT_SPLIT) && field.equals("mode")) {
+            return stringOptions("screen.academy.program.configuration.text_split_mode.",
+                    "whitespace", "line", "sentence", "delimiter");
+        }
+        if (id.equals(CommonProgramNodeIds.TRIGGER_CHAT) && field.equals("mode")) {
+            return stringOptions("screen.academy.program.configuration.text_mode.",
+                    "any", "equals", "contains", "starts_with", "ends_with");
+        }
+        if (id.equals(CommonProgramNodeIds.TRIGGER_CHAT) && field.equals("sender")) {
+            return stringOptions("screen.academy.program.configuration.chat_sender.",
+                    "all", "self", "others");
         }
         if (field.equals("strength")
                 && currentValue != null && currentValue.isJsonPrimitive()

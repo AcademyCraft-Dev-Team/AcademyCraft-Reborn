@@ -165,6 +165,31 @@ class ProgramTriggersTest {
         assertEquals(1.0f, ProgramTriggers.loopCostMultiplier(80));
     }
 
+    @Test
+    void chatTriggerFiltersByMessageAndSenderWhileOldGraphsStillMatch() {
+        var legacy = program(CommonProgramNodeIds.TRIGGER_CHAT, new JsonObject());
+        assertTrue(ProgramTriggers.matchesChat(legacy, "任何消息", false));
+
+        var configuration = new JsonObject();
+        configuration.addProperty("mode", "starts_with");
+        configuration.addProperty("keyword", "开始");
+        configuration.addProperty("ignore_case", false);
+        configuration.addProperty("sender", "self");
+        var trigger = program(CommonProgramNodeIds.TRIGGER_CHAT, configuration);
+        assertTrue(ProgramTriggers.matchesChat(trigger, "开始采集", true));
+        assertFalse(ProgramTriggers.matchesChat(trigger, "停止采集", true));
+        assertFalse(ProgramTriggers.matchesChat(trigger, "开始采集", false));
+        assertFalse(ProgramTriggers.matchesChat(trigger, null, true));
+
+        configuration.addProperty("mode", "contains");
+        configuration.addProperty("keyword", "START");
+        configuration.addProperty("ignore_case", true);
+        configuration.addProperty("sender", "others");
+        trigger = program(CommonProgramNodeIds.TRIGGER_CHAT, configuration);
+        assertTrue(ProgramTriggers.matchesChat(trigger, "please start now", false));
+        assertFalse(ProgramTriggers.matchesChat(trigger, "please start now", true));
+    }
+
     private static CompiledProgram compiled(
             Identifier type,
             JsonObject configuration

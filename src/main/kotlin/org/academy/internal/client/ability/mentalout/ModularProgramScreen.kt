@@ -21,6 +21,7 @@ import org.academy.api.common.ability.program.*
 import org.academy.internal.client.ability.program.ProgramClipboardCodec
 import org.academy.internal.client.ability.program.ProgramConfigurationOptions
 import org.academy.internal.client.ability.program.ProgramDiagnosticText
+import org.academy.internal.client.ability.program.ProgramStarterTemplates
 import org.academy.internal.client.gui.layout.ProgramEditorLayout
 import org.academy.internal.client.gui.layout.ProgramEditorVariant
 import org.academy.internal.client.gui.layout.buildProgramEditorLayout
@@ -71,6 +72,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     private var compactRight = false
     private var leftDrawerOpen = false
     private var rightDrawerOpen = false
+    private var starterDismissed = false
     private var search: TextInputWidget? = null
     private val configurationInputs = HashMap<String, TextInputWidget>()
     private val configurationInputValidity = HashMap<String, Boolean>()
@@ -81,6 +83,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     private var selectedGroup: ProgramEditorNodeCatalog.Group = ProgramEditorNodeCatalog.Group.TARGET
     private var paletteScroll = 0
     private var selectedNode = -1
+    private var inspectorPortScroll = 0
     private val selectedNodes = LinkedHashSet<Int>()
     private var draggingNode: Int? = null
     private var selectionDrag: SelectionDrag? = null
@@ -97,6 +100,10 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     private var transientDetail: Component? = null
     private var serverVmDiagnostic: ProgramVmDiagnostic = ProgramVmDiagnostic.NONE
     private var serverDiagnosticNode = -1
+    private var runTrace: List<ProgramRunTrace.Step> = emptyList()
+    private var runTraceTruncated = false
+    private var showRunTrace = false
+    private var runTraceScroll = 0
     private var transientDiagnostic: PrecisionGraph.Diagnostic = PrecisionGraph.Diagnostic.OK
     private var transientUntil = 0L
     private lateinit var layout: ProgramEditorLayout
@@ -114,6 +121,8 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         capabilities = session.capabilities().toSet()
         document = document(program)
         revision = session.revision()
+        runTrace = session.lastRunTrace(slot)
+        runTraceTruncated = session.lastRunTraceTruncated(slot)
     }
 
     override fun onInit() {
@@ -225,6 +234,13 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
             serverVmDiagnostic = ProgramVmDiagnostic.NONE
             serverDiagnosticNode = -1
         }
+    }
+
+    fun applyRunTrace(resultSlot: Int, steps: List<ProgramRunTrace.Step>, truncated: Boolean) {
+        if (slot != resultSlot) return
+        runTrace = steps.toList()
+        runTraceTruncated = truncated
+        runTraceScroll = 0
     }
 
     fun applyResult(
@@ -429,6 +445,9 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         for (edge in document.program().graph().edges()) renderEdge(graphics, edge)
         for (node in nodes()) renderNode(graphics, node)
         pose.popPose()
+        if (showStarter()) {
+            renderStarterChoices(graphics, mouseX, mouseY)
+        }
         renderSelectionDrag(graphics)
         renderConnectionPreview(graphics, mouseX, mouseY)
         graphics.disableScissor()
@@ -436,6 +455,81 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
             graphics, (zoom * 100.0).roundToLong().toString() + "%",
             canvasX + 3, canvasY + canvasH - 10, DIM, 40
         )
+    }
+
+    private fun starterBounds(): Rect {
+        val width = minOf(220, canvasW - 24)
+        return Rect(canvasX + (canvasW - width) / 2, canvasY + (canvasH - 110) / 2,
+            width, 110)
+    }
+
+    private fun showStarter(): Boolean = !starterDismissed && session.showStarter()
+        && !session.precisionRules() && document.program().graph().nodes().isEmpty()
+
+    private fun starterDismissBounds(permanent: Boolean): Rect {
+        val bounds = starterBounds()
+        val closeWidth = minOf(56, (bounds.width - 20) / 3)
+        return if (permanent) Rect(bounds.x + 13 + closeWidth, bounds.y + 87,
+            bounds.width - closeWidth - 20, 16)
+        else Rect(bounds.x + 7, bounds.y + 87, closeWidth, 16)
+    }
+
+    private fun renderStarterChoices(graphics: ProgramUiGraphics, mouseX: Int, mouseY: Int) {
+        val bounds = starterBounds()
+        graphics.fill(bounds.x, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height, POPUP_BACKGROUND)
+        border(graphics, bounds.x, bounds.y, bounds.width, bounds.height, BORDER)
+        smallText(graphics, Component.translatable("screen.academy.program.starter.title").string,
+            bounds.x + 8, bounds.y + 7, TEXT, bounds.width - 16)
+        for (index in 0..1) {
+            val rowY = bounds.y + 25 + index * 19
+            val hovered = inside(mouseX.toDouble(), mouseY.toDouble(),
+                (bounds.x + 7).toDouble(), rowY.toDouble(),
+                (bounds.width - 14).toDouble(), 16.0)
+            graphics.fill(bounds.x + 7, rowY, bounds.x + bounds.width - 7, rowY + 16,
+                if (hovered) HOVER_BACKGROUND else NODE_BACKGROUND)
+            graphics.fill(bounds.x + 7, rowY, bounds.x + 9, rowY + 16,
+                if (hovered) accentColor else BORDER_MUTED)
+            val key = if (index == 0) "manual" else "chat"
+            smallText(graphics, Component.translatable("screen.academy.program.starter.$key").string,
+                bounds.x + 15, rowY + 4, if (hovered) TEXT else DIM, bounds.width - 30)
+        }
+        smallText(graphics, Component.translatable("screen.academy.program.starter.hint").string,
+            bounds.x + 8, bounds.y + 69, DIM, bounds.width - 16)
+        for (permanent in listOf(false, true)) {
+            val control = starterDismissBounds(permanent)
+            val key = if (permanent) "dismiss_world" else "close"
+            button(graphics, control.x, control.y, control.width, control.height,
+                Component.translatable("screen.academy.program.starter.$key"),
+                mouseX, mouseY, false, false)
+        }
+    }
+
+    private fun handleStarterClick(mouseX: Double, mouseY: Double): Boolean {
+        if (!showStarter()) return false
+        for (permanent in listOf(false, true)) {
+            val control = starterDismissBounds(permanent)
+            if (!inside(mouseX, mouseY, control.x.toDouble(), control.y.toDouble(),
+                    control.width.toDouble(), control.height.toDouble())) continue
+            starterDismissed = true
+            if (permanent) session.dismissStarterForWorld()
+            return true
+        }
+        val bounds = starterBounds()
+        for (index in 0..1) {
+            val rowY = bounds.y + 25 + index * 19
+            if (!inside(mouseX, mouseY, (bounds.x + 7).toDouble(), rowY.toDouble(),
+                    (bounds.width - 14).toDouble(), 16.0)) continue
+            val kind = if (index == 0) ProgramStarterTemplates.Kind.MANUAL
+                else ProgramStarterTemplates.Kind.CHAT
+            val program = ProgramStarterTemplates.create(document.program(), definition, capabilities,
+                kind,
+                Component.translatable("screen.academy.program.starter.chat_keyword").string,
+                Component.translatable("screen.academy.program.starter.output").string)
+            setProgram(program, true)
+            fitCanvas(false)
+            return true
+        }
+        return false
     }
 
     private fun renderEdge(graphics: ProgramUiGraphics, edge: ProgramGraph.Edge) {
@@ -558,6 +652,16 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
             graphics, Component.translatable("screen.academy.precision_operation.inspector").string,
             x + 5, canvasY + 4, DIM, width - 10
         )
+        if (!session.precisionRules()) {
+            val label = Component.translatable("screen.academy.program.run_trace.title").string
+            val buttonWidth = minOf(70, width / 2)
+            button(graphics, x + width - buttonWidth - 4, canvasY + 2, buttonWidth, 15,
+                Component.literal(label), mouseX, mouseY, showRunTrace, true)
+            if (showRunTrace) {
+                renderRunTrace(graphics, x, width, mouseX, mouseY)
+                return
+            }
+        }
         val selected = node(selectedNode)
         if (selected == null) {
             val status = if (selectedNodes.size > 1) Component.translatable(
@@ -582,29 +686,71 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
             graphics, Component.translatable("screen.academy.precision_operation.ports").string,
             x + 5, portsY - 1, DIM, width - 10
         )
-        var y = portsY + 11
-        for (port in selected.schema.inputs()) {
-            smallText(
-                graphics,
-                "< " + portLabel(selected.entry, port.name()).string,
-                x + 7,
-                y,
-                portColor(port.type()),
-                width - 12
-            )
-            y += 9
+        val ports = selected.schema.inputs().map { "< " to it } + selected.schema.outputs().map { "> " to it }
+        val listY = portsY + 11
+        val rows = maxOf(0, (canvasY + canvasH - listY - 2) / 9)
+        inspectorPortScroll = inspectorPortScroll.coerceIn(0, maxOf(0, ports.size - rows))
+        for ((index, entry) in ports.drop(inspectorPortScroll).take(rows).withIndex()) {
+            val (prefix, port) = entry
+            smallText(graphics, prefix + portLabel(selected.entry, port.name()).string,
+                x + 7, listY + index * 9, portColor(port.type()), width - 14)
         }
-        for (port in selected.schema.outputs()) {
-            smallText(
-                graphics,
-                "> " + portLabel(selected.entry, port.name()).string,
-                x + 7,
-                y,
-                portColor(port.type()),
-                width - 12
-            )
-            y += 9
+        if (rows > 0 && ports.size > rows) {
+            val trackHeight = rows * 9
+            val thumbHeight = maxOf(4, trackHeight * rows / ports.size)
+            val thumbY = listY + (trackHeight - thumbHeight) * inspectorPortScroll / (ports.size - rows)
+            graphics.fill(x + width - 3, listY, x + width - 1, listY + trackHeight, CONTROL_BACKGROUND)
+            graphics.fill(x + width - 3, thumbY, x + width - 1, thumbY + thumbHeight, DIM)
         }
+    }
+
+    private fun inspectorPortRows(node: NodeView): Int {
+        val width = inspectorWidth() - 10
+        val descriptionHeight = ProgramUiGraphics.wrappedHeight(
+            nodeDescription(node.entry).string, width.toFloat(), ProgramUiGraphics.BODY_FONT_SIZE, 9.0f)
+        val listY = canvasY + inspectorConfigurationOffset(node.entry, descriptionHeight) +
+            configurationEditorHeight(node, width) + 11
+        return maxOf(0, (canvasY + canvasH - listY - 2) / 9)
+    }
+
+    private fun traceVisibleRows(): Int = maxOf(1, (canvasH - 42) / 25)
+
+    private fun renderRunTrace(graphics: ProgramUiGraphics, x: Int, width: Int,
+                               mouseX: Int, mouseY: Int) {
+        if (runTrace.isEmpty()) {
+            smallText(graphics, Component.translatable("screen.academy.program.run_trace.empty").string,
+                x + 5, canvasY + 25, DIM, width - 10)
+            return
+        }
+        val rows = traceVisibleRows()
+        runTraceScroll = runTraceScroll.coerceIn(0, maxOf(0, runTrace.size - rows))
+        for (row in 0 until rows) {
+            val index = runTraceScroll + row
+            if (index >= runTrace.size) break
+            val step = runTrace[index]
+            val y = canvasY + 23 + row * 25
+            val hovered = inside(mouseX.toDouble(), mouseY.toDouble(),
+                (x + 3).toDouble(), y.toDouble(), (width - 6).toDouble(), 23.0)
+            graphics.fill(x + 3, y, x + width - 3, y + 23,
+                if (hovered) HOVER_BACKGROUND else ROW_BACKGROUND)
+            val traceNode = node(step.nodeId())
+            val title = if (traceNode == null) "#${step.nodeId()}"
+                else "#${step.nodeId()} ${nodeLabel(traceNode.entry).string}"
+            val branchLabel = when {
+                step.flowOutput().isBlank() -> ""
+                step.flowOutput() == "error" -> Component.translatable(
+                    "screen.academy.program.run_trace.error").string
+                traceNode != null -> portLabel(traceNode.entry, step.flowOutput()).string
+                else -> step.flowOutput()
+            }
+            val branch = if (branchLabel.isBlank()) "" else " → $branchLabel"
+            smallText(graphics, title + branch, x + 7, y + 2, TEXT, width - 14)
+            if (step.detail().isNotBlank())
+                smallText(graphics, step.detail(), x + 7, y + 12, DIM, width - 14)
+        }
+        if (runTraceTruncated) smallText(graphics,
+            Component.translatable("screen.academy.program.run_trace.truncated").string,
+            x + 5, canvasY + canvasH - 12, DIM, width - 10)
     }
 
     private fun renderConfigurationEditor(
@@ -753,29 +899,64 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
 
     private fun renderQuickInsert(graphics: ProgramUiGraphics, mouseX: Int, mouseY: Int) {
         val current = quickInsert ?: return
-        val rows = minOf(12, current.entries.size)
-        val width = 122
-        val height = rows * ROW_H + 4
-        val x = current.x.coerceIn(panelX + 2, panelX + panelW - width - 2)
-        val y = current.y.coerceIn(canvasY + 2, canvasY + canvasH - height - 2)
-        graphics.fill(x, y, x + width, y + height, POPUP_BACKGROUND)
-        border(graphics, x, y, width, height, BORDER)
+        val entries = quickInsertEntries(current)
+        val bounds = quickInsertBounds(current, entries.size)
+        val rows = minOf(8, entries.size)
+        graphics.fill(bounds.x, bounds.y, bounds.x + bounds.width,
+            bounds.y + bounds.height, POPUP_BACKGROUND)
+        border(graphics, bounds.x, bounds.y, bounds.width, bounds.height, BORDER)
+        smallText(graphics,
+            Component.translatable("screen.academy.program.quick_insert.search").string + ": "
+                    + current.query + "_",
+            bounds.x + 5, bounds.y + 5, TEXT, bounds.width - 10)
+        graphics.fill(bounds.x + 4, bounds.y + 17,
+            bounds.x + bounds.width - 4, bounds.y + 18, DIVIDER)
         for (row in 0 until rows) {
-            val entry = current.entries[row]
-            val rowY = y + 2 + row * ROW_H
+            val index = current.scroll + row
+            if (index !in entries.indices) break
+            val entry = entries[index]
+            val rowY = bounds.y + 20 + row * ROW_H
             if (inside(
                     mouseX.toDouble(),
                     mouseY.toDouble(),
-                    (x + 2).toDouble(),
+                    (bounds.x + 2).toDouble(),
                     rowY.toDouble(),
-                    (width - 4).toDouble(),
+                    (bounds.width - 4).toDouble(),
                     (ROW_H - 1).toDouble()
-                )
+                ) || index == current.selected
             ) {
-                graphics.fill(x + 2, rowY, x + width - 2, rowY + ROW_H - 1, HOVER_BACKGROUND)
+                graphics.fill(bounds.x + 2, rowY,
+                    bounds.x + bounds.width - 2, rowY + ROW_H - 1, HOVER_BACKGROUND)
             }
-            smallText(graphics, nodeLabel(entry).string, x + 5, rowY + 3, TEXT, width - 10)
+            smallText(graphics, nodeLabel(entry).string,
+                bounds.x + 5, rowY + 3, TEXT, bounds.width - 10)
         }
+        if (entries.isEmpty()) smallText(graphics,
+            Component.translatable("screen.academy.program.quick_insert.empty").string,
+            bounds.x + 5, bounds.y + 23, DIM, bounds.width - 10)
+        else if (entries.size > rows) smallText(graphics,
+            "${current.selected + 1}/${entries.size}",
+            bounds.x + bounds.width - 36, bounds.y + 5, DIM, 31)
+    }
+
+    private fun quickInsertEntries(current: QuickInsert): List<ProgramEditorNodeCatalog.Entry> {
+        val query = current.query.trim().lowercase(Locale.ROOT)
+        if (query.isEmpty()) return current.entries
+        return current.entries.filter { entry ->
+            nodeLabel(entry).string.lowercase(Locale.ROOT).contains(query)
+                    || nodeDescription(entry).string.lowercase(Locale.ROOT).contains(query)
+                    || entry.id().toString().lowercase(Locale.ROOT).contains(query)
+        }
+    }
+
+    private fun quickInsertBounds(current: QuickInsert, count: Int): Rect {
+        val width = minOf(162, canvasW - 8)
+        val height = 24 + minOf(8, maxOf(1, count)) * ROW_H
+        return Rect(
+            current.x.coerceIn(panelX + 2, panelX + panelW - width - 2),
+            current.y.coerceIn(canvasY + 2, canvasY + canvasH - height - 2),
+            width, height
+        )
     }
 
     private fun renderTooltip(graphics: ProgramUiGraphics, mouseX: Int, mouseY: Int) {
@@ -1076,7 +1257,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
                 panning = true
                 return true
             }
-            if (handleCanvasClick(x, y)) return true
+            if (handleStarterClick(x, y) || handleCanvasClick(x, y)) return true
         }
         if ((e.button() == 1 || e.button() == 2)
             && inside(x, y, canvasX.toDouble(), canvasY.toDouble(), canvasW.toDouble(), canvasH.toDouble())
@@ -1142,6 +1323,35 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         scrollX: Double,
         scrollY: Double
     ): Boolean {
+        if (showRunTrace && inspectorVisible() && inside(mouseX, mouseY,
+                inspectorX().toDouble(), canvasY.toDouble(), inspectorWidth().toDouble(), canvasH.toDouble())) {
+            runTraceScroll = (runTraceScroll - sign(scrollY).toInt())
+                .coerceIn(0, maxOf(0, runTrace.size - traceVisibleRows()))
+            return true
+        }
+        val quick = quickInsert
+        if (quick != null) {
+            val entries = quickInsertEntries(quick)
+            val bounds = quickInsertBounds(quick, entries.size)
+            if (inside(mouseX, mouseY, bounds.x.toDouble(), bounds.y.toDouble(),
+                    bounds.width.toDouble(), bounds.height.toDouble())) {
+                quick.scroll = (quick.scroll - sign(scrollY).toInt())
+                    .coerceIn(0, maxOf(0, entries.size - 8))
+                quick.selected = quick.selected.coerceIn(quick.scroll,
+                    minOf(entries.size - 1, quick.scroll + 7).coerceAtLeast(quick.scroll))
+                return true
+            }
+        }
+        if (inspectorVisible() && inside(mouseX, mouseY, inspectorX().toDouble(),
+                canvasY.toDouble(), inspectorWidth().toDouble(), canvasH.toDouble())) {
+            val selected = node(selectedNode)
+            if (selected != null) {
+                val count = selected.schema.inputs().size + selected.schema.outputs().size
+                inspectorPortScroll = (inspectorPortScroll - sign(scrollY).toInt())
+                    .coerceIn(0, maxOf(0, count - inspectorPortRows(selected)))
+            }
+            return true
+        }
         if (paletteVisible()
             && inside(
                 mouseX,
@@ -1163,6 +1373,39 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     }
 
     override fun keyPressed(e: KeyEvent): Boolean {
+        val quick = quickInsert
+        if (quick != null) {
+            val entries = quickInsertEntries(quick)
+            when (e.key()) {
+                InputConstants.KEY_ESCAPE -> quickInsert = null
+                InputConstants.KEY_BACKSPACE -> {
+                    if (quick.query.isNotEmpty()) quick.query = quick.query.dropLast(1)
+                    quick.selected = 0
+                    quick.scroll = 0
+                }
+                InputConstants.KEY_UP -> {
+                    quick.selected = (quick.selected - 1).coerceAtLeast(0)
+                    if (quick.selected < quick.scroll) quick.scroll = quick.selected
+                }
+                InputConstants.KEY_DOWN -> {
+                    quick.selected = (quick.selected + 1).coerceAtMost(entries.size - 1)
+                        .coerceAtLeast(0)
+                    if (quick.selected >= quick.scroll + 8) quick.scroll = quick.selected - 7
+                }
+                InputConstants.KEY_RETURN, InputConstants.KEY_NUMPADENTER -> {
+                    if (quick.selected in entries.indices) insertQuickEntry(quick, entries[quick.selected])
+                }
+                InputConstants.KEY_V -> {
+                    if ((e.modifiers() and InputConstants.MOD_CONTROL) != 0) {
+                        quick.query = (quick.query + UiEnvironment.get().clipboard())
+                            .filter { !Character.isISOControl(it) }.take(64)
+                        quick.selected = 0
+                        quick.scroll = 0
+                    }
+                }
+            }
+            return true
+        }
         if (search != null && search!!.isFocused) {
             dispatchTextInputKey(e)
             return true
@@ -1216,6 +1459,15 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     }
 
     override fun charTyped(e: CharacterEvent): Boolean {
+        val quick = quickInsert
+        if (quick != null) {
+            if (quick.query.length < 64 && !Character.isISOControl(e.codepoint())) {
+                quick.query += String(Character.toChars(e.codepoint()))
+                quick.selected = 0
+                quick.scroll = 0
+            }
+            return true
+        }
         if (search != null && search!!.isFocused) {
             root.dispatchEvent(org.academy.api.client.gui.event.CharTypedEvent(e.codepoint()))
             return true
@@ -1260,6 +1512,9 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
                 session.updateLocalProgram(slot, document.program())
                 slot = index
                 session.selectSlot(slot)
+                runTrace = session.lastRunTrace(slot)
+                runTraceTruncated = session.lastRunTraceTruncated(slot)
+                runTraceScroll = 0
                 setProgram(session.editableProgram(slot), false)
                 revision = session.revision()
                 fitCanvas(true)
@@ -1367,6 +1622,27 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
 
     private fun handleInspectorClick(mouseX: Double, mouseY: Double): Boolean {
         if (!inspectorVisible()) return false
+        if (!inside(mouseX, mouseY, inspectorX().toDouble(), canvasY.toDouble(),
+                inspectorWidth().toDouble(), canvasH.toDouble())) return false
+        val traceWidth = minOf(70, inspectorWidth() / 2)
+        if (!session.precisionRules() && inside(mouseX, mouseY,
+                (inspectorX() + inspectorWidth() - traceWidth - 4).toDouble(),
+                (canvasY + 2).toDouble(), traceWidth.toDouble(), 15.0)) {
+            showRunTrace = !showRunTrace
+            return true
+        }
+        if (showRunTrace) {
+            val row = ((mouseY - canvasY - 23) / 25).toInt()
+            val index = runTraceScroll + row
+            if (mouseY >= canvasY + 23 && row < traceVisibleRows() && index in runTrace.indices) {
+                val traceNode = node(runTrace[index].nodeId())
+                if (traceNode != null) {
+                    selectNode(traceNode.id())
+                    showRunTrace = false
+                }
+            }
+            return true
+        }
         val selected = node(selectedNode) ?: return false
         val fields = configurationFields(selected)
         if (fields.isEmpty()) return false
@@ -1577,7 +1853,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
             return
         }
         if (moved) {
-            val entries = compatibleEntries(current.endpoint).take(12)
+            val entries = compatibleEntries(current.endpoint)
             if (entries.isNotEmpty()) {
                 quickInsert = QuickInsert(mouseX.toInt(), mouseY.toInt(), entries, current.endpoint)
             }
@@ -1587,31 +1863,33 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
 
     private fun handleQuickInsertClick(mouseX: Double, mouseY: Double): Boolean {
         val current = quickInsert ?: return false
-        val rows = minOf(12, current.entries.size)
-        val width = 122
-        val height = rows * ROW_H + 4
-        val x = current.x.coerceIn(panelX + 2, panelX + panelW - width - 2)
-        val y = current.y.coerceIn(canvasY + 2, canvasY + canvasH - height - 2)
-        if (!inside(mouseX, mouseY, x.toDouble(), y.toDouble(), width.toDouble(), height.toDouble())) {
+        val entries = quickInsertEntries(current)
+        val bounds = quickInsertBounds(current, entries.size)
+        if (!inside(mouseX, mouseY, bounds.x.toDouble(), bounds.y.toDouble(),
+                bounds.width.toDouble(), bounds.height.toDouble())) {
             quickInsert = null
             return false
         }
-        val row = ((mouseY - y - 2) / ROW_H).toInt()
-        if (row in 0 until rows) {
-            val entry = current.entries[row]
-            val anchor = current.anchor
-            val added = addNode(
-                entry,
-                screenToGraphX(current.x.toDouble()), screenToGraphY(current.y.toDouble()),
-                ProgramConfigurationOptions.defaultsForConnection(catalog, entry, anchor.type, anchor.input)
-            )
-            if (added != null) {
-                val endpoint = firstCompatibleEndpoint(added, anchor)
-                if (endpoint != null) connect(anchor, endpoint)
-            }
-            quickInsert = null
+        val row = ((mouseY - bounds.y - 20) / ROW_H).toInt()
+        val index = current.scroll + row
+        if (mouseY >= bounds.y + 20 && row in 0 until 8 && index in entries.indices) {
+            insertQuickEntry(current, entries[index])
         }
         return true
+    }
+
+    private fun insertQuickEntry(current: QuickInsert, entry: ProgramEditorNodeCatalog.Entry) {
+        val anchor = current.anchor
+        val added = addNode(
+            entry,
+            screenToGraphX(current.x.toDouble()), screenToGraphY(current.y.toDouble()),
+            ProgramConfigurationOptions.defaultsForConnection(catalog, entry, anchor.type, anchor.input)
+        )
+        if (added != null) {
+            val endpoint = firstCompatibleEndpoint(added, anchor)
+            if (endpoint != null) connect(anchor, endpoint)
+        }
+        quickInsert = null
     }
 
     private fun connect(first: Endpoint, second: Endpoint) {
@@ -2287,6 +2565,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     }
 
     private fun selectNodes(nodeIds: Set<Int>) {
+        inspectorPortScroll = 0
         selectedNodes.clear()
         document.program().graph().nodes().map { it.id() }.filter { it in nodeIds }.forEach { selectedNodes.add(it) }
         selectedNode = if (selectedNodes.size == 1) selectedNodes.iterator().next() else -1
@@ -2367,7 +2646,10 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         val x: Int,
         val y: Int,
         val entries: List<ProgramEditorNodeCatalog.Entry>,
-        val anchor: Endpoint
+        val anchor: Endpoint,
+        var query: String = "",
+        var selected: Int = 0,
+        var scroll: Int = 0
     )
 
     private data class ScreenPoint(val x: Int, val y: Int)

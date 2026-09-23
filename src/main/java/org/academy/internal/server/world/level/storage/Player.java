@@ -8,6 +8,7 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
 import org.academy.internal.common.ability.darkmatter.resource.DarkmatterStateData;
+import org.academy.internal.common.ability.program.ProgramSharedVariables;
 import org.academy.internal.common.skilldata.CommonSkillData;
 import org.academy.internal.common.skilldata.SkillData;
 
@@ -66,6 +67,10 @@ public final class Player {
     private final Map<String, Float> retainedSkillProficiencies = new HashMap<>();
     @SerializedName("abilityProgramBooks")
     private Map<String, String> abilityProgramBooks = new HashMap<>();
+    @SerializedName("programStarterDismissed")
+    private boolean programStarterDismissed;
+    @SerializedName("programSharedVariables")
+    private Map<String, Map<String, ProgramSharedVariables.SavedValue>> programSharedVariables = new HashMap<>();
     @SerializedName("skills")
     private Set<String> legacySkills;
     @SerializedName("abilityCategory")
@@ -230,6 +235,16 @@ public final class Player {
         return abilityProgramBooks().get(category);
     }
 
+    public boolean isProgramStarterDismissed() {
+        return programStarterDismissed;
+    }
+
+    public void dismissProgramStarter() {
+        if (programStarterDismissed) return;
+        programStarterDismissed = true;
+        markDirty();
+    }
+
     public Map<String, String> getAbilityProgramBooks() {
         return Map.copyOf(abilityProgramBooks());
     }
@@ -243,6 +258,39 @@ public final class Player {
 
     public void removeAbilityProgramBook(String category) {
         if (category != null && abilityProgramBooks().remove(category) != null) markDirty();
+    }
+
+    public Map<String, ProgramSharedVariables.SavedValue> getProgramSharedVariables(String category) {
+        var values = sharedVariables().get(category);
+        if (values == null) return Map.of();
+        var valid = new HashMap<String, ProgramSharedVariables.SavedValue>();
+        values.forEach((name, value) -> {
+            if (name != null && value != null) valid.put(name, value);
+        });
+        return Map.copyOf(valid);
+    }
+
+    public void setProgramSharedVariable(
+            String category, String name, ProgramSharedVariables.SavedValue value
+    ) {
+        sharedVariables().computeIfAbsent(category, _ -> new HashMap<>()).put(name, value);
+        markDirty();
+    }
+
+    public void removeProgramSharedVariable(String category, String name) {
+        var values = sharedVariables().get(category);
+        if (values == null || values.remove(name) == null) return;
+        if (values.isEmpty()) sharedVariables().remove(category);
+        markDirty();
+    }
+
+    public void clearProgramSharedVariables(String category) {
+        if (sharedVariables().remove(category) != null) markDirty();
+    }
+
+    private Map<String, Map<String, ProgramSharedVariables.SavedValue>> sharedVariables() {
+        if (programSharedVariables == null) programSharedVariables = new HashMap<>();
+        return programSharedVariables;
     }
 
     public AbilityData getCpData() {

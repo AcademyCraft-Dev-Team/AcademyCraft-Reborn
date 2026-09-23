@@ -4,9 +4,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import org.academy.api.common.ability.program.AbilityProgram;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
+import org.academy.internal.common.ability.program.ProgramRunTrace;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Set;
+import java.util.List;
 
 /**
  * Category-specific storage and policy adapter for the shared modular program editor.
@@ -36,6 +38,13 @@ public interface ModularProgramEditorSession {
 
     void closed(ModularProgramScreen screen);
 
+    default boolean showStarter() {
+        return true;
+    }
+
+    default void dismissStarterForWorld() {
+    }
+
     default boolean precisionRules() {
         return false;
     }
@@ -52,5 +61,13 @@ public interface ModularProgramEditorSession {
     }
 
     default void clearDiagnostic(int slot) {
+    }
+
+    default List<ProgramRunTrace.Step> lastRunTrace(int slot) {
+        return List.of();
+    }
+
+    default boolean lastRunTraceTruncated(int slot) {
+        return false;
     }
 }

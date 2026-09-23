@@ -45,6 +45,19 @@ public final class ProgramVm {
                 ProgramExecutorLookup executors,
                 @Nullable Object attachment
         ) {
+            var result = runSlice(gameTime, fuel, executors, attachment);
+            if (attachment instanceof ProgramExecutionFrame frame) {
+                frame.invocation().ifPresent(invocation -> invocation.reportRunResult(result));
+            }
+            return result;
+        }
+
+        private ProgramVmResult runSlice(
+                long gameTime,
+                int fuel,
+                ProgramExecutorLookup executors,
+                @Nullable Object attachment
+        ) {
             if (fuel <= 0) throw new IllegalArgumentException("Program VM fuel must be positive");
             if (failed) {
                 return new ProgramVmResult(
@@ -71,6 +84,9 @@ public final class ProgramVm {
 
             var budget = new Fuel(fuel);
             var context = new ProgramVmContext(gameTime, variables, executorState, attachment);
+            var trace = context.attachment(ProgramExecutionFrame.class)
+                    .flatMap(ProgramExecutionFrame::invocation)
+                    .map(ProgramInvocationContext::runTrace).orElse(null);
             while (true) {
                 // Existing graphs sometimes wire the end of a foreach body back explicitly.
                 // Treat that edge as the structured return instead of retaining a stale frame.
@@ -87,6 +103,7 @@ public final class ProgramVm {
                     );
                 }
                 if (node.role() == ProgramNodeRole.ENTRY) {
+                    if (trace != null) trace.record(node.id(), "", "");
                     var target = soleFlowTarget(node);
                     if (target == null) return complete();
                     currentNodeId = target;
@@ -109,6 +126,7 @@ public final class ProgramVm {
                     context.enterNode(node.id(), node.typeId());
                     var step = execute(executor, node, context, inputs);
                     validateStep(node, step);
+                    if (trace != null) trace.record(node, step.flowOutput(), inputs);
                     step.outputs().forEach((port, value) ->
                             latchedOutputs.put(new CompiledProgram.OutputKey(node.id(), port), value));
                     switch (step.directive()) {
@@ -184,10 +202,13 @@ public final class ProgramVm {
                             ProgramVmDiagnostic.NONE
                     );
                 } catch (ExecutionFailure exception) {
+                    if (trace != null) trace.record(exception.nodeId < 0 ? currentNodeId : exception.nodeId,
+                            "error", "");
                     failed = true;
                     return new ProgramVmResult(ProgramVmResult.Status.FAILED,
                             exception.nodeId < 0 ? currentNodeId : exception.nodeId, exception.diagnostic);
                 } catch (RuntimeException exception) {
+                    if (trace != null) trace.record(currentNodeId, "error", "");
                     return fail(ProgramVmDiagnostic.EXECUTOR_ERROR);
                 }
             }

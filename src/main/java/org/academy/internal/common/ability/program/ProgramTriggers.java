@@ -94,7 +94,7 @@ public final class ProgramTriggers {
                     yield false;
                 }
             }
-            case MELEE, HURT -> true;
+            case MELEE, HURT, CHAT -> true;
             case HEALTH -> false;
         };
     }
@@ -107,6 +107,16 @@ public final class ProgramTriggers {
                 .result()
                 .orElse(null);
         return decoded == null ? 1.0f : loopCostMultiplier(decoded.interval());
+    }
+
+    public static boolean matchesChat(AbilityProgram program, String message, boolean ownMessage) {
+        var entry = triggerEntry(program);
+        if (entry == null || type(entry.type()) != Type.CHAT) return false;
+        return CommonProgramNodeCatalog.ChatTriggerConfiguration.CODEC
+                .parse(JsonOps.INSTANCE, entry.configuration())
+                .result()
+                .map(configuration -> configuration.matches(message, ownMessage))
+                .orElse(false);
     }
 
     public static float loopCostMultiplier(int interval) {
@@ -162,6 +172,7 @@ public final class ProgramTriggers {
         if (id.equals(CommonProgramNodeIds.TRIGGER_MELEE)) return Type.MELEE;
         if (id.equals(CommonProgramNodeIds.TRIGGER_MOVEMENT)) return Type.MOVEMENT;
         if (id.equals(CommonProgramNodeIds.TRIGGER_HEALTH_THRESHOLD)) return Type.HEALTH;
+        if (id.equals(CommonProgramNodeIds.TRIGGER_CHAT)) return Type.CHAT;
         return null;
     }
 
@@ -170,7 +181,8 @@ public final class ProgramTriggers {
         LOOP,
         MOVEMENT,
         HURT,
-        HEALTH
+        HEALTH,
+        CHAT
     }
 
     public record LoopToggle(AbilityProgram program, boolean enabled) {

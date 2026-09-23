@@ -9,12 +9,14 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 /**
- * Immutable trigger snapshot retained for the complete lifetime of one program invocation.
+ * Trigger snapshot retained for the complete lifetime of one program invocation.
  *
  * <p>Event-local values must live here instead of in event-handler thread state so a program can
- * still query them after yielding and resuming on a later server tick.</p>
+ * still query them after yielding and resuming on a later server tick. The trace and its
+ * completion listener are bounded diagnostics for that same invocation.</p>
  */
 public final class ProgramInvocationContext {
     private final UUID programId;
@@ -25,6 +27,9 @@ public final class ProgramInvocationContext {
     private final @Nullable Object damageAttacker;
     private final @Nullable Float damageAmount;
     private final @Nullable Object meleeTarget;
+    private final @Nullable String chatMessage;
+    private final ProgramRunTrace runTrace = new ProgramRunTrace();
+    private @Nullable Consumer<ProgramVmResult> runCompletionListener;
 
     public ProgramInvocationContext(
             UUID programId,
@@ -35,6 +40,21 @@ public final class ProgramInvocationContext {
             @Nullable Object damageAttacker,
             @Nullable Float damageAmount,
             @Nullable Object meleeTarget
+    ) {
+        this(programId, slot, trigger, movement, loopIndex,
+                damageAttacker, damageAmount, meleeTarget, null);
+    }
+
+    public ProgramInvocationContext(
+            UUID programId,
+            int slot,
+            ProgramTriggers.Type trigger,
+            CommonProgramNodeCatalog.MovementCondition movement,
+            long loopIndex,
+            @Nullable Object damageAttacker,
+            @Nullable Float damageAmount,
+            @Nullable Object meleeTarget,
+            @Nullable String chatMessage
     ) {
         this.programId = Objects.requireNonNull(programId, "programId");
         if (slot < 0 || slot >= AbilityProgramManager.SLOT_COUNT) {
@@ -48,6 +68,7 @@ public final class ProgramInvocationContext {
         this.damageAttacker = damageAttacker;
         this.damageAmount = damageAmount;
         this.meleeTarget = meleeTarget;
+        this.chatMessage = chatMessage;
     }
 
     public UUID programId() {
@@ -83,5 +104,26 @@ public final class ProgramInvocationContext {
 
     public Optional<Object> meleeTarget() {
         return Optional.ofNullable(meleeTarget);
+    }
+
+    public Optional<String> chatMessage() {
+        return Optional.ofNullable(chatMessage);
+    }
+
+    public ProgramRunTrace runTrace() {
+        return runTrace;
+    }
+
+    void onRunComplete(Consumer<ProgramVmResult> listener) {
+        runCompletionListener = Objects.requireNonNull(listener);
+    }
+
+    void reportRunResult(ProgramVmResult result) {
+        if (runCompletionListener == null) return;
+        if (result.status() != ProgramVmResult.Status.COMPLETED
+                && result.status() != ProgramVmResult.Status.FAILED) return;
+        var listener = runCompletionListener;
+        runCompletionListener = null;
+        listener.accept(result);
     }
 }

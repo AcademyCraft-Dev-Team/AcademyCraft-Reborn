@@ -51,6 +51,25 @@ class AbilityProgramManagerTest {
     }
 
     @Test
+    void resultPacketPreservesBoundedRunTrace() {
+        var buffer = Unpooled.buffer();
+        try {
+            var trace = List.of(new ProgramRunTrace.Step(1, "", ""),
+                    new ProgramRunTrace.Step(2, "true", "condition=true"));
+            var packet = new AbilityProgramManager.ResultPacket("academy:mentalout", 0,
+                    AbilityProgramManager.FeedbackType.TRACE, 8,
+                    AbilityProgramManager.ResultCode.OK, null, -1,
+                    ProgramVmDiagnostic.NONE, null, trace, true);
+            AbilityProgramManager.ResultPacket.CODEC.encode(buffer, packet);
+            var decoded = AbilityProgramManager.ResultPacket.CODEC.decode(buffer);
+            assertEquals(trace, decoded.trace());
+            assertTrue(decoded.traceTruncated());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
     void storedBooksAreBoundedAndBoundToTheirCategory() {
         var accelerator = AcademyCraft.academy(AbilityCategoryNames.ACCELERATOR);
         var program = program(accelerator);
@@ -153,6 +172,14 @@ class AbilityProgramManagerTest {
         assertFalse(AbilityProgramManager.compatibleExtensionFingerprint(
                 Identifier.parse(category), "0".repeat(64)));
         assertArrayEquals(book, sync.book());
+        assertFalse(sync.starterDismissed());
+
+        syncBuffer.clear();
+        AbilityProgramManager.SyncPacket.CODEC.encode(syncBuffer,
+                new AbilityProgramManager.SyncPacket(category, book, true));
+        var dismissed = AbilityProgramManager.SyncPacket.CODEC.decode(syncBuffer);
+        assertTrue(dismissed.starterDismissed());
+        assertArrayEquals(book, dismissed.book());
 
         var resultBuffer = Unpooled.buffer();
         AbilityProgramManager.ResultPacket.CODEC.encode(resultBuffer,

@@ -184,6 +184,34 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
                 || id.equals(CommonProgramNodeIds.VARIABLE_SET)) {
             configuration.addProperty("name", "value");
             configuration.addProperty("type", ProgramValueTypes.BOOLEAN.id().toString());
+        } else if (id.equals(CommonProgramNodeIds.SHARED_VARIABLE_GET)
+                || id.equals(CommonProgramNodeIds.SHARED_VARIABLE_SET)) {
+            configuration.addProperty("name", "value");
+            configuration.addProperty("type", ProgramValueTypes.TEXT.id().toString());
+        } else if (id.equals(CommonProgramNodeIds.SHARED_VARIABLE_CLEAR)) {
+            configuration.addProperty("name", "value");
+        } else if (id.equals(CommonProgramNodeIds.CHAT_READ)) {
+            configuration.addProperty("distance", 0);
+            configuration.addProperty("start", 0);
+            configuration.addProperty("length", 256);
+        } else if (id.equals(CommonProgramNodeIds.TRIGGER_CHAT)) {
+            configuration.addProperty("mode", "any");
+            configuration.addProperty("keyword", "");
+            configuration.addProperty("ignore_case", false);
+            configuration.addProperty("sender", "all");
+        } else if (id.equals(CommonProgramNodeIds.TEXT_COMPARE)) {
+            configuration.addProperty("mode", "equals");
+            configuration.addProperty("ignore_case", false);
+        } else if (id.equals(CommonProgramNodeIds.TEXT_SPLIT)) {
+            configuration.addProperty("mode", "sentence");
+            configuration.addProperty("delimiter", ",");
+            configuration.addProperty("fragment_index", 0);
+            configuration.addProperty("trim", true);
+            configuration.addProperty("skip_empty", true);
+        } else if (id.equals(CommonProgramNodeIds.TEXT_TO_VEC3)) {
+            configuration.addProperty("type", "world_position");
+            configuration.addProperty("mode", "extract");
+            configuration.addProperty("match_index", 0);
         } else if (id.equals(CommonProgramNodeIds.SELECT_VALUE)) {
             configuration.addProperty("type", ProgramValueTypes.BOOLEAN.id().toString());
         } else if (id.equals(CommonProgramNodeIds.FILTER_ENTITY_TYPE)) {

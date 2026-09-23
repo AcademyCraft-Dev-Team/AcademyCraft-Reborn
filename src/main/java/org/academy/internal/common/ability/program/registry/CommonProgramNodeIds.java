@@ -12,6 +12,9 @@ public final class CommonProgramNodeIds {
     public static final Identifier INTEGER_CONSTANT = id("value/integer");
     public static final Identifier FLOAT_CONSTANT = id("value/float");
     public static final Identifier TEXT_CONSTANT = id("value/text");
+    public static final Identifier TEXT_COMPARE = id("logic/text/compare");
+    public static final Identifier TEXT_SPLIT = id("logic/text/split");
+    public static final Identifier TEXT_TO_VEC3 = id("spatial/text_to_vec3");
     public static final Identifier TAG_CONSTANT = id("value/tag");
 
     public static final Identifier INTEGER_ADD = id("logic/integer/add");
@@ -68,8 +71,15 @@ public final class CommonProgramNodeIds {
     public static final Identifier TRIGGER_MOVEMENT = id("flow/trigger/movement");
     public static final Identifier TRIGGER_HEALTH_THRESHOLD =
             id("flow/trigger/health_threshold");
+    public static final Identifier TRIGGER_CHAT = id("flow/trigger/chat");
     public static final Identifier VARIABLE_GET = id("state/variable_get");
     public static final Identifier VARIABLE_SET = id("state/variable_set");
+    public static final Identifier SHARED_VARIABLE_GET = id("state/shared_variable_get");
+    public static final Identifier SHARED_VARIABLE_SET = id("state/shared_variable_set");
+    public static final Identifier SHARED_VARIABLE_CLEAR = id("state/shared_variable_clear");
+    public static final Identifier SHARED_VARIABLE_CLEAR_ALL = id("state/shared_variable_clear_all");
+    public static final Identifier CHAT_READ = id("query/chat_read");
+    public static final Identifier CHAT_TRIGGER_MESSAGE = id("query/chat_trigger_message");
 
     public static final Identifier WORLD_POSITION_CONSTANT = id("spatial/world_position");
     public static final Identifier WORLD_POSITION_CONSTRUCT = id("spatial/world_position_construct");

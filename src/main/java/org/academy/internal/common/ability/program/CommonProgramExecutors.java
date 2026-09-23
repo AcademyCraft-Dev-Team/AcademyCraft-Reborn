@@ -36,6 +36,7 @@ import org.academy.api.common.ability.program.ProgramInputView;
 import org.academy.api.common.ability.program.ProgramNodeStep;
 import org.academy.api.common.ability.program.ProgramNumericMath;
 import org.academy.api.common.ability.program.ProgramTargetResolver;
+import org.academy.api.common.ability.program.ProgramTextOperations;
 import org.academy.api.common.ability.program.ProgramValue;
 import org.academy.api.common.ability.program.ProgramValueType;
 import org.academy.api.common.ability.program.ProgramValueTypes;
@@ -56,6 +57,7 @@ import java.util.Objects;
 import java.util.Comparator;
 import java.util.Optional;
 import java.util.OptionalDouble;
+import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiFunction;
 import java.util.function.DoubleBinaryOperator;
@@ -74,6 +76,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
         var result = new HashMap<Identifier, ProgramNodeExecutor<?>>();
         registerConstants(result);
         registerScalarLogic(result);
+        registerTextOperations(result);
         registerTriggerEntries(result);
         registerControlAndState(result);
         registerSpatial(result);
@@ -125,6 +128,78 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                  ProgramInputView _) -> data("value", ProgramValueTypes.TAG, configuration.value()));
     }
 
+    private static void registerTextOperations(Map<Identifier, ProgramNodeExecutor<?>> result) {
+        put(result, CommonProgramNodeIds.TEXT_SPLIT,
+                (ProgramVmContext _, CommonProgramNodeCatalog.TextSplitConfiguration configuration,
+                 ProgramInputView inputs) -> {
+                    var text = (String) raw(inputs, "text", ProgramValueTypes.TEXT);
+                    var index = optionalInteger(inputs, "fragment_index", configuration.fragmentIndex());
+                    var parts = text.length() > ProgramTextOperations.MAX_TEXT_LENGTH ? List.<String>of()
+                            : ProgramTextOperations.split(text, configuration.splitMode(), configuration.delimiter(),
+                            configuration.trim(), configuration.skipEmpty());
+                    var exists = index >= 0 && index < parts.size();
+                    return ProgramNodeStep.data(Map.of(
+                            "text", value(ProgramValueTypes.TEXT, exists ? parts.get(index) : ""),
+                            "count", value(ProgramValueTypes.INTEGER, parts.size()),
+                            "exists", value(ProgramValueTypes.BOOLEAN, exists)));
+                });
+        put(result, CommonProgramNodeIds.TEXT_TO_VEC3,
+                (ProgramVmContext context, CommonProgramNodeCatalog.TextToVec3Configuration configuration,
+                 ProgramInputView inputs) -> textToVec3(context, configuration, inputs));
+    }
+
+    private static ProgramNodeStep textToVec3(ProgramVmContext context,
+                                             CommonProgramNodeCatalog.TextToVec3Configuration configuration,
+                                             ProgramInputView inputs) {
+        var failed = data("success", ProgramValueTypes.BOOLEAN, false);
+        var parsed = ProgramTextOperations.parseCoordinates((String) raw(inputs, "text", ProgramValueTypes.TEXT),
+                configuration.mode().equals("extract"), optionalInteger(inputs, "match_index", configuration.matchIndex()));
+        if (parsed.isEmpty()) return failed;
+        var coordinates = parsed.get();
+        var position = configuration.kind() == CommonProgramNodeCatalog.Vec3Kind.WORLD_POSITION;
+        var reference = position || !coordinates.absolute() ? textReference(context, inputs, coordinates) : null;
+        if (position && reference == null) return failed;
+        var resolved = coordinates.resolve(reference, position);
+        if (resolved.isEmpty()) return failed;
+        var vector = resolved.get();
+        Object result;
+        switch (configuration.kind()) {
+            case VECTOR -> result = vector;
+            case WORLD_POSITION -> result = new ProgramWorldPosition(reference.origin().dimension(),
+                    vector.x(), vector.y(), vector.z());
+            case DIRECTION -> {
+                var scale = Math.max(Math.abs(vector.x()), Math.max(Math.abs(vector.y()), Math.abs(vector.z())));
+                if (scale == 0) return failed;
+                result = new ProgramDirection(vector.x() / scale, vector.y() / scale, vector.z() / scale);
+            }
+            default -> throw new IllegalStateException("Unknown text Vec3 type");
+        }
+        return ProgramNodeStep.data(Map.of(
+                "result", value(configuration.kind().type(), result),
+                "success", value(ProgramValueTypes.BOOLEAN, true)));
+    }
+
+    private static ProgramTextOperations.@Nullable Reference textReference(
+            @Nullable ProgramVmContext context, ProgramInputView inputs, ProgramTextOperations.Coordinates coordinates
+    ) {
+        var resolver = context == null ? null : context.targetResolver().orElse(null);
+        if (resolver == null) return null;
+        var entity = inputs.first("reference").isPresent()
+                ? raw(inputs, "reference", ProgramValueTypes.ENTITY_REFERENCE) : resolver.caster();
+        var origin = resolver.positionOf(entity).orElse(null);
+        if (origin == null) return null;
+        var local = coordinates.x().kind() == ProgramTextOperations.AxisKind.LOCAL;
+        if (!local) return new ProgramTextOperations.Reference(origin, 0, 0);
+        if (entity instanceof Entity livingReference) {
+            return new ProgramTextOperations.Reference(origin, livingReference.getYRot(), livingReference.getXRot());
+        }
+        var direction = resolver.lookDirectionOf(entity).orElse(null);
+        if (direction == null) return null;
+        return new ProgramTextOperations.Reference(origin,
+                Math.toDegrees(Math.atan2(-direction.x(), direction.z())),
+                Math.toDegrees(Math.atan2(-direction.y(), Math.hypot(direction.x(), direction.z()))));
+    }
+
     private static void registerScalarLogic(Map<Identifier, ProgramNodeExecutor<?>> result) {
         put(result, CommonProgramNodeIds.NUMERIC_ARITHMETIC,
                 (ProgramVmContext _,
@@ -144,6 +219,24 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                         ProgramValueTypes.BOOLEAN,
                         configuration.operator().test(compareNumeric(inputs, configuration.kind()))
                 ));
+        put(result, CommonProgramNodeIds.TEXT_COMPARE,
+                (ProgramVmContext _, CommonProgramNodeCatalog.TextComparisonConfiguration configuration,
+                 ProgramInputView inputs) -> {
+                    var left = (String) raw(inputs, "left", ProgramValueTypes.TEXT);
+                    var right = (String) raw(inputs, "right", ProgramValueTypes.TEXT);
+                    if (configuration.ignoreCase()) {
+                        left = left.toLowerCase(Locale.ROOT);
+                        right = right.toLowerCase(Locale.ROOT);
+                    }
+                    var matches = switch (configuration.mode()) {
+                        case "equals" -> left.equals(right);
+                        case "contains" -> left.contains(right);
+                        case "starts_with" -> left.startsWith(right);
+                        case "ends_with" -> left.endsWith(right);
+                        default -> throw new IllegalArgumentException("Unknown text comparison mode");
+                    };
+                    return data("result", ProgramValueTypes.BOOLEAN, matches);
+                });
         integerBinary(result, CommonProgramNodeIds.INTEGER_ADD, Math::addExact);
         integerBinary(result, CommonProgramNodeIds.INTEGER_SUBTRACT, Math::subtractExact);
         integerBinary(result, CommonProgramNodeIds.INTEGER_MULTIPLY, Math::multiplyExact);
@@ -237,6 +330,97 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                     );
                     return ProgramNodeStep.next("flow");
                 });
+        put(result, CommonProgramNodeIds.SHARED_VARIABLE_GET,
+                (ProgramVmContext context,
+                 CommonProgramNodeCatalog.SharedVariableConfiguration configuration,
+                 ProgramInputView _) -> {
+                    var player = serverPlayer(context);
+                    var category = ProgramSharedVariables.category(player);
+                    var overlay = sharedOverlay(context, category);
+                    var value = overlay.read(configuration.name()).orElseGet(() ->
+                            overlay.hidden(configuration.name()) ? Optional.empty()
+                                    : ProgramSharedVariables.read(player, category, configuration.name()));
+                    var found = value.filter(candidate -> candidate.type().equals(configuration.type()));
+                    return ProgramNodeStep.data(Map.of(
+                            "value", found.orElseGet(() -> ProgramSharedVariables.defaultValue(configuration.type())),
+                            "exists", new ProgramValue<>(ProgramValueTypes.BOOLEAN, found.isPresent())
+                    ));
+                });
+        put(result, CommonProgramNodeIds.SHARED_VARIABLE_SET,
+                (ProgramVmContext context,
+                 CommonProgramNodeCatalog.SharedVariableConfiguration configuration,
+                 ProgramInputView inputs) -> {
+                    var player = serverPlayer(context);
+                    var category = ProgramSharedVariables.category(player);
+                    var value = coerce(inputs.requireCompatible("value", configuration.type()), configuration.type());
+                    ProgramSharedVariables.validateValue(value);
+                    var frame = context.attachment(ProgramExecutionFrame.class).orElseThrow();
+                    frame.stage(context, () -> {
+                        var before = ProgramSharedVariables.snapshot(player, category).get(configuration.name());
+                        ProgramSharedVariables.write(player, category, configuration.name(), value);
+                        return () -> {
+                            if (before == null) ProgramSharedVariables.remove(player, category, configuration.name());
+                            else ProgramSharedVariables.restore(player, category, configuration.name(), before);
+                        };
+                    });
+                    sharedOverlay(context, category).put(configuration.name(), value);
+                    return ProgramNodeStep.next("flow");
+                });
+        put(result, CommonProgramNodeIds.SHARED_VARIABLE_CLEAR,
+                (ProgramVmContext context,
+                 CommonProgramNodeCatalog.SharedVariableNameConfiguration configuration,
+                 ProgramInputView _) -> {
+                    var player = serverPlayer(context);
+                    var category = ProgramSharedVariables.category(player);
+                    var frame = context.attachment(ProgramExecutionFrame.class).orElseThrow();
+                    frame.stage(context, () -> {
+                        var before = ProgramSharedVariables.snapshot(player, category).get(configuration.name());
+                        ProgramSharedVariables.remove(player, category, configuration.name());
+                        return () -> {
+                            if (before != null) ProgramSharedVariables.restore(player, category, configuration.name(), before);
+                        };
+                    });
+                    sharedOverlay(context, category).remove(configuration.name());
+                    return ProgramNodeStep.next("flow");
+                });
+        put(result, CommonProgramNodeIds.SHARED_VARIABLE_CLEAR_ALL,
+                (ProgramVmContext context, Object _, ProgramInputView _) -> {
+                    var player = serverPlayer(context);
+                    var category = ProgramSharedVariables.category(player);
+                    var frame = context.attachment(ProgramExecutionFrame.class).orElseThrow();
+                    frame.stage(context, () -> {
+                        var before = ProgramSharedVariables.snapshot(player, category);
+                        ProgramSharedVariables.clear(player, category);
+                        return () -> before.forEach((name, value) ->
+                                ProgramSharedVariables.restore(player, category, name, value));
+                    });
+                    sharedOverlay(context, category).clear();
+                    return ProgramNodeStep.next("flow");
+                });
+        put(result, CommonProgramNodeIds.CHAT_READ,
+                (ProgramVmContext context,
+                 CommonProgramNodeCatalog.ChatReadConfiguration configuration,
+                 ProgramInputView inputs) -> {
+                    var player = serverPlayer(context);
+                    var distance = optionalInteger(inputs, "distance", configuration.distance());
+                    var start = optionalInteger(inputs, "start", configuration.start());
+                    var length = optionalInteger(inputs, "length", configuration.length());
+                    if (distance < 0 || distance >= ProgramChatHistory.MAX_MESSAGES
+                            || start < 0 || start > ProgramChatHistory.MAX_CODE_POINTS
+                            || length < 1 || length > ProgramChatHistory.MAX_CODE_POINTS) {
+                        throw new IllegalArgumentException("Chat read position is out of range");
+                    }
+                    var message = ProgramChatHistory.read(player.getUUID(), distance);
+                    return chatData(message == null ? "" : ProgramChatHistory.slice(message, start, length),
+                            message != null);
+                });
+        put(result, CommonProgramNodeIds.CHAT_TRIGGER_MESSAGE,
+                (ProgramVmContext context, Object _, ProgramInputView _) -> {
+                    var message = context.attachment(ProgramExecutionFrame.class)
+                            .flatMap(ProgramExecutionFrame::invocation)
+                            .flatMap(ProgramInvocationContext::chatMessage);
+                    return chatData(message.orElse(""), message.isPresent());
+                });
         put(result, CommonProgramNodeIds.DEBUG_OUTPUT,
                 (ProgramVmContext context,
                  CommonProgramNodeCatalog.DebugOutputConfiguration configuration,
@@ -255,8 +439,11 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                                 == CommonProgramNodeCatalog.DebugAudience.ALL) {
                             player.level().getServer().getPlayerList()
                                     .broadcastSystemMessage(message, false);
+                            player.level().getServer().getPlayerList().getPlayers().forEach(
+                                    recipient -> ProgramChatHistory.record(recipient, message.getString()));
                         } else {
                             player.sendSystemMessage(message);
+                            ProgramChatHistory.record(player, message.getString());
                         }
                         return ProgramActionTransaction.Undo.NONE;
                     });
@@ -272,7 +459,8 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                 CommonProgramNodeIds.TRIGGER_LOOP,
                 CommonProgramNodeIds.TRIGGER_MELEE,
                 CommonProgramNodeIds.TRIGGER_MOVEMENT,
-                CommonProgramNodeIds.TRIGGER_HEALTH_THRESHOLD
+                CommonProgramNodeIds.TRIGGER_HEALTH_THRESHOLD,
+                CommonProgramNodeIds.TRIGGER_CHAT
         )) {
             put(result, id, (_, _, _) -> ProgramNodeStep.next("flow"));
         }
@@ -1264,6 +1452,71 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
         return context.attachment(ProgramExecutionFrame.class)
                 .flatMap(frame -> frame.environment(ProgramTargetResolver.class))
                 .orElseThrow(() -> new IllegalStateException("No program target resolver is available"));
+    }
+
+    private static ServerPlayer serverPlayer(ProgramVmContext context) {
+        if (resolver(context).caster() instanceof ServerPlayer player) return player;
+        throw new IllegalStateException("Program chat and shared state require a server player");
+    }
+
+    private static SharedOverlay sharedOverlay(ProgramVmContext context, Identifier category) {
+        var existing = context.executorState("shared_variables").orElse(null);
+        if (existing instanceof SharedOverlay overlay) {
+            if (!overlay.category.equals(category)) {
+                throw new IllegalStateException("Program category changed during execution");
+            }
+            return overlay;
+        }
+        var overlay = new SharedOverlay(category);
+        context.setExecutorState("shared_variables", overlay);
+        return overlay;
+    }
+
+    private static int optionalInteger(ProgramInputView inputs, String port, int fallback) {
+        var value = inputs.first(port).orElse(null);
+        if (value == null) return fallback;
+        if (!value.type().equals(ProgramValueTypes.INTEGER)) {
+            throw new IllegalArgumentException("Input " + port + " must be an integer");
+        }
+        return (Integer) value.value();
+    }
+
+    private static ProgramNodeStep chatData(String message, boolean exists) {
+        return ProgramNodeStep.data(Map.of(
+                "text", new ProgramValue<>(ProgramValueTypes.TEXT, message),
+                "exists", new ProgramValue<>(ProgramValueTypes.BOOLEAN, exists)
+        ));
+    }
+
+    private static final class SharedOverlay {
+        private final Identifier category;
+        private final Map<String, Optional<ProgramValue<?>>> values = new HashMap<>();
+        private boolean cleared;
+
+        private SharedOverlay(Identifier category) {
+            this.category = category;
+        }
+
+        private Optional<Optional<ProgramValue<?>>> read(String name) {
+            return Optional.ofNullable(values.get(name));
+        }
+
+        private boolean hidden(String name) {
+            return cleared || values.containsKey(name);
+        }
+
+        private void put(String name, ProgramValue<?> value) {
+            values.put(name, Optional.of(value));
+        }
+
+        private void remove(String name) {
+            values.put(name, Optional.empty());
+        }
+
+        private void clear() {
+            values.clear();
+            cleared = true;
+        }
     }
 
     private static Optional<Object> damageAttacker(ProgramVmContext context) {

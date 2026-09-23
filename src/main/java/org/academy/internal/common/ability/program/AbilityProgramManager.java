@@ -69,6 +69,7 @@ public final class AbilityProgramManager {
             (ProgramBookCodec.MAX_BOOK_ENCODED_BYTES + 2) / 3 * 4;
     private static final Map<UUID, Long> LAST_EXECUTION_SEQUENCE = new HashMap<>();
     private static final Map<LoopExecutionKey, Long> LOOP_EXECUTION_COUNTS = new HashMap<>();
+    private static final Map<LoopExecutionKey, Long> LAST_TRACE_TICK = new HashMap<>();
     private static final Map<Identifier, CategoryExecutionAdapter> EXECUTION_ADAPTERS = Map.of(
             AcceleratorProgramNodeCatalog.ACCELERATOR,
             AbilityProgramManager::executeAccelerator,
@@ -183,6 +184,12 @@ public final class AbilityProgramManager {
             var matches = trigger == ProgramTriggers.Type.HEALTH
                     ? ProgramTriggers.matchesHealth(program, player, category, slot)
                     : ProgramTriggers.matches(program, trigger, movement, gameTime);
+            if (matches && trigger == ProgramTriggers.Type.CHAT) {
+                var playerId = player.getUUID();
+                matches = ProgramTriggers.matchesChat(program,
+                        AbilityProgramTriggerRuntime.currentChatMessage(playerId),
+                        playerId.equals(AbilityProgramTriggerRuntime.currentChatSender(playerId)));
+            }
             if (!matches) continue;
             var sessionKey = new ServerProgramScheduler.SessionKey(
                     player.getUUID(), category, program.id(), slot);
@@ -203,6 +210,25 @@ public final class AbilityProgramManager {
                     executionSlot,
                     invocation
             ));
+            if (outcome.deferred()) {
+                var finalSlot = slot;
+                invocation.onRunComplete(result -> sendRunTrace(player, category, finalSlot,
+                        current.revision(), invocation, result));
+            }
+            if (!invocation.runTrace().steps().isEmpty()) {
+                var previousTraceTick = LAST_TRACE_TICK.getOrDefault(loopKey, Long.MIN_VALUE);
+                var traceInterval = trigger == ProgramTriggers.Type.LOOP
+                        || trigger == ProgramTriggers.Type.HEALTH ? 100 : 20;
+                if (!outcome.successful() || previousTraceTick == Long.MIN_VALUE
+                        || gameTime - previousTraceTick >= traceInterval || previousTraceTick > gameTime) {
+                    LAST_TRACE_TICK.put(loopKey, gameTime);
+                    MisakaNetworkServer.send(player, new ResultPacket(category.toString(), slot,
+                            FeedbackType.TRACE, current.revision(),
+                            outcome.successful() ? ResultCode.OK : ResultCode.EXECUTION_FAILED,
+                            null, outcome.nodeId(), outcome.vmDiagnostic(), null,
+                            invocation.runTrace().steps(), invocation.runTrace().truncated()));
+                }
+            }
             if (trigger == ProgramTriggers.Type.LOOP && outcome.successful()) {
                 LOOP_EXECUTION_COUNTS.put(
                         loopKey,
@@ -212,15 +238,31 @@ public final class AbilityProgramManager {
         }
     }
 
+    private static void sendRunTrace(
+            ServerPlayer player, Identifier category, int slot, long revision,
+            ProgramInvocationContext invocation, ProgramVmResult result
+    ) {
+        MisakaNetworkServer.send(player, new ResultPacket(category.toString(), slot,
+                FeedbackType.TRACE, revision,
+                result.status() == ProgramVmResult.Status.FAILED
+                        ? ResultCode.EXECUTION_FAILED : ResultCode.OK,
+                null, result.nodeId(), result.diagnostic(), null,
+                invocation.runTrace().steps(), invocation.runTrace().truncated()));
+    }
+
     public static void clear() {
         LAST_EXECUTION_SEQUENCE.clear();
         LOOP_EXECUTION_COUNTS.clear();
+        LAST_TRACE_TICK.clear();
+        ProgramChatHistory.clear();
     }
 
     @SubscribeEvent
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         LAST_EXECUTION_SEQUENCE.remove(event.getEntity().getUUID());
         LOOP_EXECUTION_COUNTS.keySet().removeIf(
+                key -> key.ownerId().equals(event.getEntity().getUUID()));
+        LAST_TRACE_TICK.keySet().removeIf(
                 key -> key.ownerId().equals(event.getEntity().getUUID()));
         if (event.getEntity() instanceof ServerPlayer player) {
             ServerProgramScheduler.cancelOwner(player.level().getServer(), player.getUUID());
@@ -371,7 +413,8 @@ public final class AbilityProgramManager {
         MisakaNetworkServer.send(player, new SyncPacket(
                 category.toString(),
                 AbilityProgramDefinitions.require(category).extensionFingerprint(),
-                ProgramBookCodec.encode(book)
+                ProgramBookCodec.encode(book),
+                AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID()).isProgramStarterDismissed()
         ));
     }
 
@@ -758,7 +801,8 @@ public final class AbilityProgramManager {
         ERROR,
         LOOP_ENABLED,
         LOOP_DISABLED,
-        DEFERRED
+        DEFERRED,
+        TRACE
     }
 
     public enum ResultCode {
@@ -774,6 +818,13 @@ public final class AbilityProgramManager {
 
     public static final class Server {
         private Server() {
+        }
+
+        @SubscribePacket
+        public static void dismissStarter(DismissStarterPacket packet) {
+            var player = packet.getPacketListener().getPlayer();
+            if (!unlocked(player)) return;
+            AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID()).dismissProgramStarter();
         }
 
         @SubscribePacket
@@ -906,6 +957,7 @@ public final class AbilityProgramManager {
                 var key = new LoopExecutionKey(
                         player.getUUID(), category, packet.slot, previousProgram.id());
                 LOOP_EXECUTION_COUNTS.remove(key);
+                LAST_TRACE_TICK.remove(key);
                 ServerProgramScheduler.cancel(
                         player.level().getServer(),
                         new ServerProgramScheduler.SessionKey(
@@ -914,6 +966,8 @@ public final class AbilityProgramManager {
             }
             if (program != null) {
                 LOOP_EXECUTION_COUNTS.remove(new LoopExecutionKey(
+                        player.getUUID(), category, packet.slot, program.id()));
+                LAST_TRACE_TICK.remove(new LoopExecutionKey(
                         player.getUUID(), category, packet.slot, program.id()));
             }
             var changed = current.replaceSlot(packet.slot, program).select(packet.slot);
@@ -999,30 +1053,29 @@ public final class AbilityProgramManager {
                         null, -1, ProgramVmDiagnostic.NONE);
                 return;
             }
+            var invocation = new ProgramInvocationContext(
+                    program.id(), packet.slot, null, null, 0L,
+                    null, null, null);
             var outcome = OutputControl.callWithoutOutputAdjustment(
                     () -> adapter.execute(
                             compiled.program(),
                             player,
                             1.0f,
                             packet.slot,
-                            new ProgramInvocationContext(
-                                    program.id(),
-                                    packet.slot,
-                                    null,
-                                    null,
-                                    0L,
-                                    null,
-                                    null,
-                                    null
-                            )
+                            invocation
                     ));
+            if (outcome.deferred()) {
+                invocation.onRunComplete(result -> sendRunTrace(player, category, packet.slot,
+                        current.revision(), invocation, result));
+            }
             result(player, packet.category, packet.slot,
                     outcome.successful
                             ? outcome.deferred ? FeedbackType.DEFERRED : FeedbackType.COMPLETED
                             : FeedbackType.ERROR,
                     current.revision(),
                     outcome.successful ? ResultCode.OK : ResultCode.EXECUTION_FAILED,
-                    null, outcome.nodeId, outcome.vmDiagnostic);
+                    null, outcome.nodeId, outcome.vmDiagnostic, null,
+                    invocation.runTrace().steps(), invocation.runTrace().truncated());
         }
 
         private static void result(
@@ -1044,6 +1097,16 @@ public final class AbilityProgramManager {
                 long revision, ResultCode code, @Nullable ProgramDiagnosticCode diagnostic,
                 int nodeId, ProgramVmDiagnostic vmDiagnostic, @Nullable String port
         ) {
+            result(player, category, slot, type, revision, code, diagnostic, nodeId,
+                    vmDiagnostic, port, List.of(), false);
+        }
+
+        private static void result(
+                ServerPlayer player, String category, int slot, FeedbackType type,
+                long revision, ResultCode code, @Nullable ProgramDiagnosticCode diagnostic,
+                int nodeId, ProgramVmDiagnostic vmDiagnostic, @Nullable String port,
+                List<ProgramRunTrace.Step> trace, boolean traceTruncated
+        ) {
             MisakaNetworkServer.send(player, new ResultPacket(
                     category,
                     Mth.clamp(slot, 0, SLOT_COUNT - 1),
@@ -1052,7 +1115,7 @@ public final class AbilityProgramManager {
                     code,
                     diagnostic,
                     nodeId,
-                    vmDiagnostic, port
+                    vmDiagnostic, port, trace, traceTruncated
             ));
         }
     }
@@ -1069,7 +1132,7 @@ public final class AbilityProgramManager {
                 AbilityProgramEditorClient.handleExtensionMismatch(category);
                 return;
             }
-            AbilityProgramEditorClient.handleSync(category, packet.book);
+            AbilityProgramEditorClient.handleSync(category, packet.book, packet.starterDismissed);
         }
 
         @SubscribePacket
@@ -1084,8 +1147,19 @@ public final class AbilityProgramManager {
                     packet.code,
                     packet.diagnostic,
                     packet.nodeId,
-                    packet.vmDiagnostic, packet.port
+                    packet.vmDiagnostic, packet.port, packet.trace, packet.traceTruncated
             );
+        }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class DismissStarterPacket extends Packet<ServerGamePacketListenerImpl, DismissStarterPacket> {
+        public static final StreamCodec<ByteBuf, DismissStarterPacket> CODEC = StreamCodec.of(
+                (buf, packet) -> {}, buf -> new DismissStarterPacket());
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, DismissStarterPacket> getPacketType() {
+            return PacketTypes.ABILITY_PROGRAM_DISMISS_STARTER.get();
         }
     }
 
@@ -1272,26 +1346,38 @@ public final class AbilityProgramManager {
                     ByteBufCodecs.STRING_UTF8.encode(buf, packet.category);
                     ByteBufCodecs.STRING_UTF8.encode(buf, packet.extensionFingerprint);
                     writeBytes(buf, packet.book, ProgramBookCodec.MAX_BOOK_ENCODED_BYTES);
+                    buf.writeBoolean(packet.starterDismissed);
                 },
                 buf -> new SyncPacket(
                         ByteBufCodecs.STRING_UTF8.decode(buf),
                         ByteBufCodecs.STRING_UTF8.decode(buf),
-                        readBytes(buf, ProgramBookCodec.MAX_BOOK_ENCODED_BYTES)
+                        readBytes(buf, ProgramBookCodec.MAX_BOOK_ENCODED_BYTES),
+                        buf.readBoolean()
                 )
         );
         private final String category;
         private final String extensionFingerprint;
         private final byte[] book;
+        private final boolean starterDismissed;
 
         public SyncPacket(String category, byte[] book) {
-            this(category, fingerprintFor(category), book);
+            this(category, book, false);
         }
 
-        private SyncPacket(String category, String extensionFingerprint, byte[] book) {
+        public SyncPacket(String category, byte[] book, boolean starterDismissed) {
+            this(category, fingerprintFor(category), book, starterDismissed);
+        }
+
+        private SyncPacket(String category, String extensionFingerprint, byte[] book, boolean starterDismissed) {
             this.category = category == null ? "" : category;
             this.extensionFingerprint = extensionFingerprint == null
                     ? "" : extensionFingerprint;
             this.book = book == null ? new byte[0] : book.clone();
+            this.starterDismissed = starterDismissed;
+        }
+
+        boolean starterDismissed() {
+            return starterDismissed;
         }
 
         String category() {
@@ -1332,18 +1418,36 @@ public final class AbilityProgramManager {
                     ByteBufCodecs.VAR_INT.encode(buf, packet.nodeId);
                     ByteBufCodecs.VAR_INT.encode(buf, packet.vmDiagnostic.ordinal());
                     ByteBufCodecs.STRING_UTF8.encode(buf, packet.port);
+                    ByteBufCodecs.VAR_INT.encode(buf, packet.trace.size());
+                    for (var step : packet.trace) {
+                        ByteBufCodecs.VAR_INT.encode(buf, step.nodeId());
+                        ByteBufCodecs.STRING_UTF8.encode(buf, step.flowOutput());
+                        ByteBufCodecs.STRING_UTF8.encode(buf, step.detail());
+                    }
+                    buf.writeBoolean(packet.traceTruncated);
                 },
-                buf -> new ResultPacket(
-                        ByteBufCodecs.STRING_UTF8.decode(buf),
-                        ByteBufCodecs.VAR_INT.decode(buf),
-                        feedbackType(ByteBufCodecs.VAR_INT.decode(buf)),
-                        buf.readLong(),
-                        resultCode(ByteBufCodecs.VAR_INT.decode(buf)),
-                        programDiagnostic(ByteBufCodecs.VAR_INT.decode(buf)),
-                        ByteBufCodecs.VAR_INT.decode(buf),
-                        AbilityProgramManager.vmDiagnostic(ByteBufCodecs.VAR_INT.decode(buf)),
-                        ByteBufCodecs.STRING_UTF8.decode(buf)
-                )
+                buf -> {
+                    var category = ByteBufCodecs.STRING_UTF8.decode(buf);
+                    var slot = ByteBufCodecs.VAR_INT.decode(buf);
+                    var type = feedbackType(ByteBufCodecs.VAR_INT.decode(buf));
+                    var revision = buf.readLong();
+                    var code = resultCode(ByteBufCodecs.VAR_INT.decode(buf));
+                    var diagnostic = programDiagnostic(ByteBufCodecs.VAR_INT.decode(buf));
+                    var nodeId = ByteBufCodecs.VAR_INT.decode(buf);
+                    var vmDiagnostic = AbilityProgramManager.vmDiagnostic(ByteBufCodecs.VAR_INT.decode(buf));
+                    var port = ByteBufCodecs.STRING_UTF8.decode(buf);
+                    var count = ByteBufCodecs.VAR_INT.decode(buf);
+                    if (count < 0 || count > ProgramRunTrace.MAX_STEPS) {
+                        throw new DecoderException("Invalid program trace length");
+                    }
+                    var trace = new ArrayList<ProgramRunTrace.Step>(count);
+                    for (var index = 0; index < count; index++) {
+                        trace.add(new ProgramRunTrace.Step(ByteBufCodecs.VAR_INT.decode(buf),
+                                ByteBufCodecs.STRING_UTF8.decode(buf), ByteBufCodecs.STRING_UTF8.decode(buf)));
+                    }
+                    return new ResultPacket(category, slot, type, revision, code,
+                            diagnostic, nodeId, vmDiagnostic, port, trace, buf.readBoolean());
+                }
         );
         private final String category;
         private final int slot;
@@ -1354,6 +1458,8 @@ public final class AbilityProgramManager {
         private final int nodeId;
         private final ProgramVmDiagnostic vmDiagnostic;
         private final String port;
+        private final List<ProgramRunTrace.Step> trace;
+        private final boolean traceTruncated;
 
         public ResultPacket(
                 String category,
@@ -1373,6 +1479,16 @@ public final class AbilityProgramManager {
                 @Nullable ProgramDiagnosticCode diagnostic, int nodeId,
                 ProgramVmDiagnostic vmDiagnostic, @Nullable String port
         ) {
+            this(category, slot, type, revision, code, diagnostic, nodeId,
+                    vmDiagnostic, port, List.of(), false);
+        }
+
+        public ResultPacket(
+                String category, int slot, FeedbackType type, long revision, ResultCode code,
+                @Nullable ProgramDiagnosticCode diagnostic, int nodeId,
+                ProgramVmDiagnostic vmDiagnostic, @Nullable String port,
+                List<ProgramRunTrace.Step> trace, boolean traceTruncated
+        ) {
             this.port = port == null ? "" : port;
             this.category = category == null ? "" : category;
             this.slot = slot;
@@ -1383,6 +1499,8 @@ public final class AbilityProgramManager {
             this.nodeId = nodeId;
             this.vmDiagnostic = vmDiagnostic == null
                     ? ProgramVmDiagnostic.NONE : vmDiagnostic;
+            this.trace = List.copyOf(trace.subList(0, Math.min(trace.size(), ProgramRunTrace.MAX_STEPS)));
+            this.traceTruncated = traceTruncated || trace.size() > ProgramRunTrace.MAX_STEPS;
         }
 
         String category() {
@@ -1419,6 +1537,14 @@ public final class AbilityProgramManager {
 
         ProgramVmDiagnostic vmDiagnostic() {
             return vmDiagnostic;
+        }
+
+        List<ProgramRunTrace.Step> trace() {
+            return trace;
+        }
+
+        boolean traceTruncated() {
+            return traceTruncated;
         }
 
         @Override

@@ -81,6 +81,29 @@ class ProgramEditorDocumentTest {
     }
 
     @Test
+    void chatMessageCanBranchAndWriteAChatStringToSharedState() {
+        var document = emptyDocument();
+        for (var id : List.of(
+                CommonProgramNodeIds.TRIGGER_CHAT,
+                CommonProgramNodeIds.CHAT_TRIGGER_MESSAGE,
+                CommonProgramNodeIds.TEXT_CONSTANT,
+                CommonProgramNodeIds.TEXT_COMPARE,
+                CommonProgramNodeIds.BRANCH,
+                CommonProgramNodeIds.SHARED_VARIABLE_SET
+        )) {
+            document = document.addNode(id, 0, 0).orElseThrow();
+        }
+        document = document.connect(endpoint(0, "flow"), endpoint(4, "flow")).orElseThrow();
+        document = document.connect(endpoint(1, "text"), endpoint(3, "left")).orElseThrow();
+        document = document.connect(endpoint(2, "value"), endpoint(3, "right")).orElseThrow();
+        document = document.connect(endpoint(3, "result"), endpoint(4, "condition")).orElseThrow();
+        document = document.connect(endpoint(4, "true"), endpoint(5, "flow")).orElseThrow();
+        document = document.connect(endpoint(1, "text"), endpoint(5, "value")).orElseThrow();
+
+        assertTrue(document.validation().valid(), document.validation().diagnostics().toString());
+    }
+
+    @Test
     void configurationAndLayoutEditsPreserveSemanticIdentity() {
         var document = emptyDocument()
                 .addNode(CommonProgramNodeIds.BOOLEAN_CONSTANT, 2, 3).orElseThrow();

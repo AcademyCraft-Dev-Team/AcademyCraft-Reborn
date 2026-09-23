@@ -12,13 +12,17 @@ import org.academy.api.common.ability.program.ProgramNodeScope;
 import org.academy.api.common.ability.program.ProgramNodeType;
 import org.academy.api.common.ability.program.ProgramPortDefinition;
 import org.academy.api.common.ability.program.ProgramTag;
+import org.academy.api.common.ability.program.ProgramTextOperations;
 import org.academy.api.common.ability.program.ProgramValueType;
 import org.academy.api.common.ability.program.ProgramValueTypes;
+import org.academy.internal.common.ability.program.ProgramChatHistory;
+import org.academy.internal.common.ability.program.ProgramSharedVariables;
 
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.IntStream;
@@ -44,6 +48,7 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         var result = new HashMap<Identifier, ProgramNodeType<?>>();
         registerConstants(result);
         registerScalarLogic(result);
+        registerTextOperations(result);
         registerControlAndState(result);
         registerSpatial(result);
         registerQueries(result);
@@ -217,6 +222,41 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 ProgramNodeRole.VALUE,
                 ProgramNodePurity.PURE
         ));
+        put(result, CommonProgramNodeIds.TEXT_COMPARE, type(
+                TextComparisonConfiguration.CODEC,
+                _ -> new ProgramNodeSchema(
+                        List.of(
+                                ProgramPortDefinition.requiredInput("left", ProgramValueTypes.TEXT),
+                                ProgramPortDefinition.requiredInput("right", ProgramValueTypes.TEXT)
+                        ),
+                        List.of(ProgramPortDefinition.output("result", ProgramValueTypes.BOOLEAN))
+                ),
+                ProgramNodeRole.VALUE,
+                ProgramNodePurity.PURE
+        ));
+    }
+
+    private static void registerTextOperations(Map<Identifier, ProgramNodeType<?>> result) {
+        put(result, CommonProgramNodeIds.TEXT_SPLIT, type(
+                TextSplitConfiguration.CODEC,
+                _ -> new ProgramNodeSchema(List.of(
+                        ProgramPortDefinition.requiredInput("text", ProgramValueTypes.TEXT),
+                        ProgramPortDefinition.optionalInput("fragment_index", ProgramValueTypes.INTEGER)
+                ), List.of(
+                        ProgramPortDefinition.output("text", ProgramValueTypes.TEXT),
+                        ProgramPortDefinition.output("count", ProgramValueTypes.INTEGER),
+                        ProgramPortDefinition.output("exists", ProgramValueTypes.BOOLEAN)
+                )), ProgramNodeRole.VALUE, ProgramNodePurity.PURE));
+        put(result, CommonProgramNodeIds.TEXT_TO_VEC3, type(
+                TextToVec3Configuration.CODEC,
+                configuration -> new ProgramNodeSchema(List.of(
+                        ProgramPortDefinition.requiredInput("text", ProgramValueTypes.TEXT),
+                        ProgramPortDefinition.optionalInput("match_index", ProgramValueTypes.INTEGER),
+                        ProgramPortDefinition.optionalInput("reference", ProgramValueTypes.ENTITY_REFERENCE)
+                ), List.of(
+                        ProgramPortDefinition.output("result", configuration.kind().type()),
+                        ProgramPortDefinition.output("success", ProgramValueTypes.BOOLEAN)
+                )), ProgramNodeRole.VALUE, ProgramNodePurity.STATE));
     }
 
     private static void registerControlAndState(Map<Identifier, ProgramNodeType<?>> result) {
@@ -249,6 +289,10 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 _ -> entrySchema(),
                 ProgramNodeRole.ENTRY,
                 ProgramNodePurity.STATE
+        ));
+        put(result, CommonProgramNodeIds.TRIGGER_CHAT, type(
+                ChatTriggerConfiguration.CODEC, _ -> entrySchema(),
+                ProgramNodeRole.ENTRY, ProgramNodePurity.PURE
         ));
         put(result, CommonProgramNodeIds.BRANCH, type(
                 unitCodec(),
@@ -307,6 +351,51 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 ),
                 ProgramNodeRole.CONTROL,
                 ProgramNodePurity.STATE
+        ));
+        put(result, CommonProgramNodeIds.SHARED_VARIABLE_GET, type(
+                SharedVariableConfiguration.CODEC,
+                configuration -> new ProgramNodeSchema(List.of(), List.of(
+                        ProgramPortDefinition.output("value", configuration.type()),
+                        ProgramPortDefinition.output("exists", ProgramValueTypes.BOOLEAN)
+                )),
+                ProgramNodeRole.VALUE, ProgramNodePurity.STATE
+        ));
+        put(result, CommonProgramNodeIds.SHARED_VARIABLE_SET, type(
+                SharedVariableConfiguration.CODEC,
+                configuration -> new ProgramNodeSchema(List.of(
+                        flowInput(), ProgramPortDefinition.requiredInput("value", configuration.type())
+                ), List.of(flowOutput("flow"))),
+                ProgramNodeRole.CONTROL, ProgramNodePurity.STATE
+        ));
+        put(result, CommonProgramNodeIds.SHARED_VARIABLE_CLEAR, type(
+                SharedVariableNameConfiguration.CODEC,
+                _ -> new ProgramNodeSchema(List.of(flowInput()), List.of(flowOutput("flow"))),
+                ProgramNodeRole.CONTROL, ProgramNodePurity.STATE
+        ));
+        put(result, CommonProgramNodeIds.SHARED_VARIABLE_CLEAR_ALL, type(
+                unitCodec(),
+                _ -> new ProgramNodeSchema(List.of(flowInput()), List.of(flowOutput("flow"))),
+                ProgramNodeRole.CONTROL, ProgramNodePurity.STATE
+        ));
+        put(result, CommonProgramNodeIds.CHAT_READ, type(
+                ChatReadConfiguration.CODEC,
+                _ -> new ProgramNodeSchema(List.of(
+                        ProgramPortDefinition.optionalInput("distance", ProgramValueTypes.INTEGER),
+                        ProgramPortDefinition.optionalInput("start", ProgramValueTypes.INTEGER),
+                        ProgramPortDefinition.optionalInput("length", ProgramValueTypes.INTEGER)
+                ), List.of(
+                        ProgramPortDefinition.output("text", ProgramValueTypes.TEXT),
+                        ProgramPortDefinition.output("exists", ProgramValueTypes.BOOLEAN)
+                )),
+                ProgramNodeRole.VALUE, ProgramNodePurity.STATE
+        ));
+        put(result, CommonProgramNodeIds.CHAT_TRIGGER_MESSAGE, type(
+                unitCodec(),
+                _ -> new ProgramNodeSchema(List.of(), List.of(
+                        ProgramPortDefinition.output("text", ProgramValueTypes.TEXT),
+                        ProgramPortDefinition.output("exists", ProgramValueTypes.BOOLEAN)
+                )),
+                ProgramNodeRole.VALUE, ProgramNodePurity.STATE
         ));
         put(result, CommonProgramNodeIds.DEBUG_OUTPUT, type(
                 DebugOutputConfiguration.CODEC,
@@ -1854,6 +1943,143 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
 
         public ProgramValueType type() {
             return variableType(typeId);
+        }
+    }
+
+    public record SharedVariableConfiguration(String name, Identifier typeId) {
+        public static final Codec<SharedVariableConfiguration> CODEC = RecordCodecBuilder.create(instance ->
+                instance.group(
+                        Codec.STRING.fieldOf("name").forGetter(SharedVariableConfiguration::name),
+                        IDENTIFIER_CODEC.fieldOf("type").forGetter(SharedVariableConfiguration::typeId)
+                ).apply(instance, SharedVariableConfiguration::new));
+
+        public SharedVariableConfiguration {
+            ProgramSharedVariables.validateName(name);
+            if (!ProgramSharedVariables.supported(new ProgramValueType(typeId))) {
+                throw new IllegalArgumentException("Unsupported shared variable type");
+            }
+        }
+
+        public ProgramValueType type() {
+            return new ProgramValueType(typeId);
+        }
+    }
+
+    public record SharedVariableNameConfiguration(String name) {
+        public static final Codec<SharedVariableNameConfiguration> CODEC = Codec.STRING.fieldOf("name")
+                .xmap(SharedVariableNameConfiguration::new, SharedVariableNameConfiguration::name)
+                .codec();
+
+        public SharedVariableNameConfiguration {
+            ProgramSharedVariables.validateName(name);
+        }
+    }
+
+    public record ChatReadConfiguration(int distance, int start, int length) {
+        public static final Codec<ChatReadConfiguration> CODEC = RecordCodecBuilder.create(instance ->
+                instance.group(
+                        Codec.intRange(0, ProgramChatHistory.MAX_MESSAGES - 1)
+                                .fieldOf("distance").forGetter(ChatReadConfiguration::distance),
+                        Codec.intRange(0, ProgramChatHistory.MAX_CODE_POINTS)
+                                .fieldOf("start").forGetter(ChatReadConfiguration::start),
+                        Codec.intRange(1, ProgramChatHistory.MAX_CODE_POINTS)
+                                .fieldOf("length").forGetter(ChatReadConfiguration::length)
+                ).apply(instance, ChatReadConfiguration::new));
+    }
+
+    public record ChatTriggerConfiguration(
+            String mode, String keyword, boolean ignoreCase, String sender
+    ) {
+        public static final Codec<ChatTriggerConfiguration> CODEC = RecordCodecBuilder.create(instance ->
+                instance.group(
+                        Codec.STRING.optionalFieldOf("mode", "any")
+                                .forGetter(ChatTriggerConfiguration::mode),
+                        Codec.STRING.optionalFieldOf("keyword", "")
+                                .forGetter(ChatTriggerConfiguration::keyword),
+                        Codec.BOOL.optionalFieldOf("ignore_case", false)
+                                .forGetter(ChatTriggerConfiguration::ignoreCase),
+                        Codec.STRING.optionalFieldOf("sender", "all")
+                                .forGetter(ChatTriggerConfiguration::sender)
+                ).apply(instance, ChatTriggerConfiguration::new));
+
+        public ChatTriggerConfiguration {
+            if (!List.of("any", "equals", "contains", "starts_with", "ends_with").contains(mode)
+                    || !List.of("all", "self", "others").contains(sender)
+                    || keyword == null || keyword.codePointCount(0, keyword.length()) > ProgramChatHistory.MAX_CODE_POINTS) {
+                throw new IllegalArgumentException("Invalid chat trigger configuration");
+            }
+        }
+
+        public boolean matches(String message, boolean ownMessage) {
+            if (message == null || (sender.equals("self") && !ownMessage)
+                    || (sender.equals("others") && ownMessage)) return false;
+            if (mode.equals("any")) return true;
+            if (keyword.isEmpty()) return false;
+            var haystack = ignoreCase ? message.toLowerCase(Locale.ROOT) : message;
+            var needle = ignoreCase ? keyword.toLowerCase(Locale.ROOT) : keyword;
+            return switch (mode) {
+                case "equals" -> haystack.equals(needle);
+                case "contains" -> haystack.contains(needle);
+                case "starts_with" -> haystack.startsWith(needle);
+                case "ends_with" -> haystack.endsWith(needle);
+                default -> false;
+            };
+        }
+    }
+
+    public record TextSplitConfiguration(String mode, String delimiter, int fragmentIndex,
+                                         boolean trim, boolean skipEmpty) {
+        public static final Codec<TextSplitConfiguration> CODEC = RecordCodecBuilder.create(instance ->
+                instance.group(
+                        Codec.STRING.fieldOf("mode").forGetter(TextSplitConfiguration::mode),
+                        Codec.STRING.fieldOf("delimiter").forGetter(TextSplitConfiguration::delimiter),
+                        Codec.INT.fieldOf("fragment_index")
+                                .forGetter(TextSplitConfiguration::fragmentIndex),
+                        Codec.BOOL.fieldOf("trim").forGetter(TextSplitConfiguration::trim),
+                        Codec.BOOL.fieldOf("skip_empty").forGetter(TextSplitConfiguration::skipEmpty)
+                ).apply(instance, TextSplitConfiguration::new));
+
+        public TextSplitConfiguration {
+            if (!List.of("whitespace", "line", "sentence", "delimiter").contains(mode)
+                    || delimiter == null || delimiter.length() > ProgramTextOperations.MAX_DELIMITER_LENGTH
+                    || (mode.equals("delimiter") && delimiter.isEmpty())) {
+                throw new IllegalArgumentException("Invalid text split configuration");
+            }
+        }
+
+        public ProgramTextOperations.SplitMode splitMode() {
+            return ProgramTextOperations.SplitMode.valueOf(mode.toUpperCase(Locale.ROOT));
+        }
+    }
+
+    public record TextToVec3Configuration(Vec3Kind kind, String mode, int matchIndex) {
+        public static final Codec<TextToVec3Configuration> CODEC = RecordCodecBuilder.create(instance ->
+                instance.group(
+                        Vec3Kind.CODEC.fieldOf("type").forGetter(TextToVec3Configuration::kind),
+                        Codec.STRING.fieldOf("mode").forGetter(TextToVec3Configuration::mode),
+                        Codec.INT.fieldOf("match_index")
+                                .forGetter(TextToVec3Configuration::matchIndex)
+                ).apply(instance, TextToVec3Configuration::new));
+
+        public TextToVec3Configuration {
+            if (kind == null || !List.of("exact", "extract").contains(mode)) {
+                throw new IllegalArgumentException("Invalid text-to-Vec3 configuration");
+            }
+        }
+    }
+
+    public record TextComparisonConfiguration(String mode, boolean ignoreCase) {
+        public static final Codec<TextComparisonConfiguration> CODEC = RecordCodecBuilder.create(instance ->
+                instance.group(
+                        Codec.STRING.fieldOf("mode").forGetter(TextComparisonConfiguration::mode),
+                        Codec.BOOL.optionalFieldOf("ignore_case", false)
+                                .forGetter(TextComparisonConfiguration::ignoreCase)
+                ).apply(instance, TextComparisonConfiguration::new));
+
+        public TextComparisonConfiguration {
+            if (!List.of("equals", "contains", "starts_with", "ends_with").contains(mode)) {
+                throw new IllegalArgumentException("Unknown text comparison mode");
+            }
         }
     }
 

@@ -17,6 +17,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -31,6 +33,52 @@ class ProgramVmTest {
     private static final Identifier INCREMENT = AcademyCraft.academy("test/increment");
     private static final Identifier YIELD = AcademyCraft.academy("test/yield");
     private static final Identifier STOP = AcademyCraft.academy("test/stop");
+
+    @Test
+    void recordsExecutedBranchPathForInvocation() {
+        var graph = new ProgramGraph(
+                List.of(node(1, ENTRY), node(2, LOOP), node(3, INCREMENT), node(4, STOP)),
+                List.of(edge(1, "flow", 2, "flow"), edge(2, "body", 3, "flow"),
+                        edge(3, "flow", 2, "flow"), edge(2, "done", 4, "flow")));
+        var invocation = new ProgramInvocationContext(UUID.randomUUID(), 0,
+                null, null, 0L, null, null, null);
+        var frame = new ProgramExecutionFrame(ProgramActionTransaction.sequential(), null, invocation, null);
+        var result = new ProgramVm.Session(compile(graph)).run(0, 30, executors()::get, frame);
+
+        assertEquals(ProgramVmResult.Status.COMPLETED, result.status());
+        assertEquals(1, invocation.runTrace().steps().getFirst().nodeId());
+        assertTrue(invocation.runTrace().steps().stream()
+                .anyMatch(step -> step.nodeId() == 2 && step.flowOutput().equals("body")));
+        assertTrue(invocation.runTrace().steps().stream()
+                .anyMatch(step -> step.nodeId() == 2 && step.flowOutput().equals("done")));
+        assertEquals(4, invocation.runTrace().steps().getLast().nodeId());
+    }
+
+    @Test
+    void deferredInvocationReportsItsFinalTraceOnce() {
+        var graph = new ProgramGraph(
+                List.of(node(1, ENTRY), node(2, YIELD), node(3, STOP)),
+                List.of(edge(1, "flow", 2, "flow"), edge(2, "flow", 3, "flow")));
+        var invocation = new ProgramInvocationContext(UUID.randomUUID(), 0,
+                null, null, 0L, null, null, null);
+        var frame = new ProgramExecutionFrame(ProgramActionTransaction.sequential(), null, invocation, null);
+        var session = new ProgramVm.Session(compile(graph));
+        var callbacks = new AtomicInteger();
+
+        assertEquals(ProgramVmResult.Status.SUSPENDED,
+                session.run(100, 10, executors()::get, frame).status());
+        invocation.onRunComplete(result -> {
+            assertEquals(ProgramVmResult.Status.COMPLETED, result.status());
+            assertEquals(3, invocation.runTrace().steps().getLast().nodeId());
+            callbacks.incrementAndGet();
+        });
+        assertEquals(ProgramVmResult.Status.SUSPENDED,
+                session.run(102, 10, executors()::get, frame).status());
+        assertEquals(ProgramVmResult.Status.COMPLETED,
+                session.run(103, 10, executors()::get, frame).status());
+        session.run(104, 10, executors()::get, frame);
+        assertEquals(1, callbacks.get());
+    }
 
     @Test
     void dataNodeFailuresIdentifyTheSourceInsteadOfTheConsumingAction() {
