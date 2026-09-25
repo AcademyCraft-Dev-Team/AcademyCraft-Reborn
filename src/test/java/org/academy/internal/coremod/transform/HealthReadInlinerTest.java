@@ -1,4 +1,4 @@
-package org.academy.internal.coremod;
+package org.academy.internal.coremod.transform;
 
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.ClassReader;

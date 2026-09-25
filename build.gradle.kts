@@ -151,9 +151,25 @@ sourceSets.named("main") {
     }
 }
 
+val coremodSourceSet = sourceSets.create("coremod") {
+    compileClasspath += sourceSets.main.get().compileClasspath
+    runtimeClasspath += compileClasspath
+}
+
+val coremodJar = tasks.register<Jar>("coremodJar") {
+    archiveClassifier.set("coremod")
+    from(coremodSourceSet.output)
+    manifest {
+        attributes(
+            "FMLModType" to "LIBRARY",
+            "Automatic-Module-Name" to "academy.coremod"
+        )
+    }
+}
+
 sourceSets.named("test") {
-    compileClasspath += sourceSets.named("main").get().compileClasspath
-    runtimeClasspath += sourceSets.named("main").get().compileClasspath
+    compileClasspath += sourceSets.named("main").get().compileClasspath + coremodSourceSet.output
+    runtimeClasspath += sourceSets.named("main").get().compileClasspath + coremodSourceSet.output
 }
 
 val apiExampleSourceSet = sourceSets.create("apiExample") {
@@ -440,6 +456,8 @@ fun DependencyHandler.dev(
 }
 
 dependencies {
+    jarJar(files(coremodJar))
+    runtimeOnly(files(coremodJar))
     implementation(libs.kotlinforforge)
 
     compileOnly(libs.jei.api)

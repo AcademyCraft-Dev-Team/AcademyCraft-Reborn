@@ -1,4 +1,4 @@
-package org.academy.internal.coremod;
+package org.academy.internal.coremod.transform;
 
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;

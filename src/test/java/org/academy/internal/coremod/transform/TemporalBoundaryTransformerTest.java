@@ -1,4 +1,4 @@
-package org.academy.internal.coremod;
+package org.academy.internal.coremod.transform;
 
 import org.academy.internal.server.time.TemporalBoundaryProtection;
 import org.junit.jupiter.api.Test;
