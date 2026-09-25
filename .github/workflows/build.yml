@@ -39,11 +39,12 @@ jobs:
 
       - name: Build Dev and Release
         run: |
-          ./gradlew build -DisDev=true
-          ./gradlew build -DisDev=false
+          ./gradlew :mod:build -DisDev=true
+          ./gradlew :mod:build -DisDev=false
+          ./gradlew :editor:build -DisDev=true
 
       - name: Upload
         uses: actions/upload-artifact@v7
         with:
           name: AcademyCraft
-          path: 'build/libs/*.jar'
+          path: 'mod/build/libs/*.jar'

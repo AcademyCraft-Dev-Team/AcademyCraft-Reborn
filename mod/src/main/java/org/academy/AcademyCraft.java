@@ -1,0 +1,45 @@
+package org.academy;
+
+import net.minecraft.resources.Identifier;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.common.Mod;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+@Mod(AcademyCraft.MOD_ID)
+public final class AcademyCraft {
+    public static final String MOD_ID = "academy";
+    public static final String MOD_NAME = "AcademyCraft";
+    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+    public static final ExecutorService executorService = Executors.newFixedThreadPool(2, runnable -> {
+        var thread = new Thread(runnable, "academy-async");
+        thread.setDaemon(true);
+        return thread;
+    });
+    private static final StackWalker STACK_WALKER =
+            StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
+    public static boolean DEBUG_UI = false;
+
+    public AcademyCraft(IEventBus modEventBus) {
+        AcademyCraftRegister.register(modEventBus);
+    }
+
+    public static Identifier custom(String namespace, String path) {
+        return Identifier.fromNamespaceAndPath(namespace, path);
+    }
+
+    public static Identifier vanilla(String name) {
+        return Identifier.withDefaultNamespace(name);
+    }
+
+    public static Identifier academy(String name) {
+        return Identifier.fromNamespaceAndPath(MOD_ID, name);
+    }
+
+    public static Logger getLogger() {
+        return LoggerFactory.getLogger("academy/" + STACK_WALKER.getCallerClass().getSimpleName());
+    }
+}

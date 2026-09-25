@@ -1,0 +1,1043 @@
+package org.academy.api.common.ability;
+
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
+import io.netty.buffer.ByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
+import net.minecraft.util.Util;
+import net.minecraft.world.damagesource.DamageType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.registries.DeferredHolder;
+import org.academy.AcademyCraft;
+import org.academy.api.client.resources.R;
+import org.academy.api.common.ability.data.*;
+import org.academy.api.common.ability.event.SkillExecutionCostEvent;
+import org.academy.api.common.ability.event.SkillExecutionFinishEvent;
+import org.academy.api.common.ability.event.SkillExecutionPreEvent;
+import org.academy.api.common.ability.event.SkillExecutionStartEvent;
+import org.academy.api.common.damage.AbilityDamageProfile;
+import org.academy.api.common.data.AbilityData;
+import org.academy.api.common.registries.AcademyKeys;
+import org.academy.api.common.registries.Registries;
+import org.academy.api.common.util.L10nUtil;
+import org.academy.api.server.ability.AbilityServerAccess;
+import org.academy.api.server.ability.SkillTuning;
+import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.jetbrains.annotations.ApiStatus;
+import org.jspecify.annotations.Nullable;
+
+import java.net.URL;
+import java.security.ProtectionDomain;
+import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+public abstract class Skill {
+    public static final int NO_STACK_LIMIT = -1;
+    public static final String NO_STACK_GROUP = "";
+    public static final int MAX_CP_ITERATION_TICKS = 20;
+    private static final StackWalker STATE_STACK_WALKER = StackWalker.getInstance(
+            StackWalker.Option.RETAIN_CLASS_REFERENCE
+    );
+    /**
+     * Keep disabled until the skill stack system is redesigned and verified.
+     */
+    public static final boolean STACK_LIMITS_ENABLED = false;
+    public static final Codec<Skill> CODEC =
+            Codec.INT.xmap(Registries.SKILLS::byIdOrThrow, Registries.SKILLS::getId);
+    public static final Codec<Skill> ID_CODEC = Identifier.CODEC.flatXmap(
+            id -> Registries.SKILLS.get(id)
+                    .map(holder -> DataResult.success(holder.value()))
+                    .orElseGet(() -> DataResult.error(() -> "Unknown skill " + id)),
+            skill -> DataResult.success(skill.getKey()));
+    public static final StreamCodec<ByteBuf, Skill> STREAM_CODEC = ByteBufCodecs.idMapper(Registries.SKILLS);
+    public static final StreamCodec<ByteBuf, Set<Skill>> STREAM_CODEC_SET = STREAM_CODEC.apply(
+            codec -> ByteBufCodecs.collection(HashSet::new, codec)
+    );
+    private static final float TOGGLE_CP_EPSILON = 1.0E-4f;
+    private final AbilityLevel recommendedLevel;
+    private final int energyCostToLearn;
+    private final @Nullable AbilityCategory category;
+    private final @Nullable ResourceKey<AbilityCategory> categoryKey;
+    private final Set<ResourceKey<Skill>> dependencyKeys;
+    private final Set<ResourceKey<Skill>> optionalDependencyKeys;
+    private final Identifier dataTypeId;
+    private final Class<? extends SkillData> dataClass;
+    private final int displayOrder;
+    private final @Nullable ResourceKey<DamageType> damageType;
+    private final @Nullable ResourceKey<AbilityDamageProfile> damageProfile;
+    private boolean resolved;
+    private final SkillScope scope;
+    private final DataFactory dataFactory;
+    private final SkillStateType<?> stateType;
+    private final int maxSkillLevel;
+    /**
+     * 技能迭代时间间隔，单位为tick
+     */
+    private final int iterationTicks;
+    /**
+     * 技能堆栈数量
+     */
+    private final int maxStacks;
+    /**
+     * 持续性技能所占用的cp
+     */
+    private final float maintenanceCost;
+    private final boolean isPassive;
+    private final boolean outputAdjustableDamage;
+    private final boolean initiallyEnabled;
+    /**
+     * Unfinished skills are excluded from every learning path and skill UI. Their registry entries
+     * stay intact so existing player data still loads and the skill can ship later unchanged.
+     */
+    private final boolean hidden;
+    private final float cpCost;
+    private final SkillProficiencyProfile proficiencyProfile;
+    private final boolean explicitProficiencyProfile;
+    private final Identifier icon;
+    private final List<DevCondition> devConditions;
+    @Nullable
+    private String cachedKeyString;
+    private Set<Skill> dependencies = new HashSet<>();
+
+    protected Skill(Builder builder) {
+        recommendedLevel = builder.recommendedLevel;
+        energyCostToLearn = builder.energyCostToLearn;
+        maxSkillLevel = builder.maxSkillLevel;
+        category = builder.category;
+        categoryKey = builder.categoryKey;
+        scope = builder.scope;
+        dependencyKeys = Set.copyOf(builder.dependencyKeys);
+        optionalDependencyKeys = Set.copyOf(builder.optionalDependencyKeys);
+        displayOrder = builder.displayOrder;
+        damageType = builder.damageType;
+        damageProfile = builder.damageProfile;
+        iterationTicks = builder.cpCost > 0.0f || builder.maintenanceCost > 0.0f
+                ? Math.min(builder.iterationTicks, MAX_CP_ITERATION_TICKS)
+                : builder.iterationTicks;
+        maxStacks = builder.maxStacks;
+        maintenanceCost = builder.maintenanceCost;
+        isPassive = builder.isPassive;
+        outputAdjustableDamage = builder.outputAdjustableDamage;
+        initiallyEnabled = builder.initiallyEnabled;
+        hidden = builder.hidden;
+        cpCost = builder.cpCost;
+        proficiencyProfile = builder.proficiencyProfile;
+        explicitProficiencyProfile = builder.explicitProficiencyProfile;
+
+        dataFactory = builder.dataFactory;
+        stateType = builder.stateType;
+        dataClass = builder.dataClass;
+        dataTypeId = builder.dataTypeId;
+        icon = builder.icon;
+        devConditions = List.copyOf(builder.devConditions);
+
+        dependencies = Set.of();
+    }
+
+    public static <T extends Context> Map<Player, T> createContextMap() {
+        return new WeakHashMap<>();
+    }
+
+    static boolean hasSufficientCpToEnable(float availableCp, float maintenanceCost,
+                                           float calculationIntensity) {
+        if (!Float.isFinite(availableCp) || !Float.isFinite(maintenanceCost)
+                || !Float.isFinite(calculationIntensity)
+                || maintenanceCost < 0.0f || calculationIntensity < 0.0f) return false;
+        var actualCost = maintenanceCost * calculationIntensity;
+        return Float.isFinite(actualCost) && availableCp - actualCost > TOGGLE_CP_EPSILON;
+    }
+
+    /**
+     * 技能击中目标时触发，默认行为为增加经验。
+     * 伤害类型需要设置为 SkillDamageSource 才能自动触发此事件
+     * 重写时建议调用super.onHurt()
+     */
+    public void onHurt(ServerPlayer attacker, LivingEntity target, float amount) {
+        reportActivity(attacker, true);
+    }
+
+    /**
+     * 技能击杀目标时触发，默认行为为增加经验。
+     * 伤害类型需要设置为 SkillDamageSource 才能自动触发此事件
+     * 重写时建议调用super.onKill()
+     */
+    public void onKill(ServerPlayer killer, LivingEntity target) {
+        AbilityServerAccess.of(killer)
+                .addPlayerSkillProficiency(killer.getUUID(), this, ProficiencyEvent.KILL_ENTITY);
+    }
+
+    /**
+     * 技能逻辑执行，CostCalculator 用于动态计算技能消耗的CP
+     */
+    protected final boolean executeActive(ServerPlayer player, CostCalculator calculator, SkillAction action) {
+        return executeActiveInternal(
+                player, calculator, null, action, NO_STACK_GROUP, NO_STACK_LIMIT);
+    }
+
+    protected final boolean executeActive(ServerPlayer player, SkillAction action) {
+        return executeActive(player, ctx -> cpCost, action);
+    }
+
+    protected final boolean executeActive(ServerPlayer player, String stackGroup, int stackLimit,
+                                          SkillAction action) {
+        return executeActiveInternal(
+                player, ctx -> cpCost, null, action, stackGroup, stackLimit);
+    }
+
+    /**
+     * Executes one active cast while atomically paying CP and category MP.
+     */
+    protected final boolean executeActiveWithResource(
+            ServerPlayer player,
+            CostCalculator cpCalculator,
+            CostCalculator resourceCalculator,
+            SkillAction action
+    ) {
+        return executeActiveInternal(
+                player, cpCalculator, resourceCalculator, action, NO_STACK_GROUP, NO_STACK_LIMIT);
+    }
+
+    protected final boolean executeActiveWithResource(
+            ServerPlayer player,
+            CostCalculator cpCalculator,
+            CostCalculator resourceCalculator,
+            String stackGroup,
+            int stackLimit,
+            SkillAction action
+    ) {
+        return executeActiveInternal(
+                player, cpCalculator, resourceCalculator, action, stackGroup, stackLimit);
+    }
+
+    private boolean executeActiveInternal(
+            ServerPlayer player,
+            CostCalculator calculator,
+            @Nullable CostCalculator resourceCalculator,
+            SkillAction action,
+            String stackGroup,
+            int stackLimit
+    ) {
+        if (!isEnabled(player)) return false;
+
+        var preEvent = new SkillExecutionPreEvent(this, player, false);
+        NeoForge.EVENT_BUS.post(preEvent);
+        if (preEvent.isCanceled()) return false;
+
+        CostCalculator eventCost = ctx -> {
+            var baseCost = calculator.calculate(ctx);
+            var proficiencyCost = resolvedProficiencyProfile().adjustCost(
+                    SkillProficiencyProfile.CostKind.CAST, ctx.milestone(), baseCost);
+            var resolvedCost = applyCastCostModifiers(
+                    player, this, baseCost, proficiencyCost, true);
+            var costEvent = new SkillExecutionCostEvent(
+                    new ActiveCostContext(this, player, ctx, baseCost), false, resolvedCost);
+            NeoForge.EVENT_BUS.post(costEvent);
+            return costEvent.isCanceled() ? Float.NaN : costEvent.cost();
+        };
+
+        SkillAction eventAction = (ctx, actualCost) -> {
+            var execution = new ActiveExecutionContext(this, player, ctx, actualCost);
+            NeoForge.EVENT_BUS.post(new SkillExecutionStartEvent(execution, false));
+            var successful = false;
+            Throwable failure = null;
+            try {
+                action.execute(ctx, actualCost);
+                successful = true;
+            } catch (Throwable throwable) {
+                failure = throwable;
+                throw throwable;
+            } finally {
+                NeoForge.EVENT_BUS.post(
+                        new SkillExecutionFinishEvent(execution, false, successful, failure));
+            }
+        };
+
+        var system = AbilityServerAccess.of(player);
+        if (resourceCalculator != null) {
+            if (stackGroup.isBlank()) {
+                return system.castCpAndMpIfPossible(
+                        player, this, eventCost, resourceCalculator, eventAction);
+            }
+            return system.castCpAndMpIfPossible(
+                    player, this, eventCost, resourceCalculator, eventAction, stackGroup, stackLimit);
+        }
+        if (stackGroup.isBlank()) {
+            return system.castCpIfPossible(player, this, eventCost, eventAction);
+        }
+        return system.castCpIfPossible(
+                player, this, eventCost, eventAction, stackGroup, stackLimit);
+    }
+
+    /**
+     * Pays CP for one tick of an already-running skill without treating the payment as a new cast.
+     */
+    protected final boolean executeContinuous(
+            ServerPlayer player,
+            CostCalculator calculator,
+            SkillAction action,
+            boolean effective
+    ) {
+        if (!isEnabled(player)) return false;
+
+        var preEvent = new SkillExecutionPreEvent(this, player, true);
+        NeoForge.EVENT_BUS.post(preEvent);
+        if (preEvent.isCanceled()) return false;
+
+        return AbilityServerAccess.of(player)
+                .castContinuousCpIfPossible(player, this, ctx -> {
+                    var baseCost = calculator.calculate(ctx);
+                    var proficiencyCost = resolvedProficiencyProfile().adjustCost(
+                            SkillProficiencyProfile.CostKind.CONTINUOUS, ctx.milestone(), baseCost);
+                    var resolvedCost = applyCastCostModifiers(
+                            player, this, baseCost, proficiencyCost, false);
+                    var costEvent = new SkillExecutionCostEvent(
+                            new ActiveCostContext(this, player, ctx, baseCost), true, resolvedCost);
+                    NeoForge.EVENT_BUS.post(costEvent);
+                    return costEvent.isCanceled() ? Float.NaN : costEvent.cost();
+                }, (ctx, actualCost) -> {
+                    var execution = new ActiveExecutionContext(this, player, ctx, actualCost);
+                    NeoForge.EVENT_BUS.post(new SkillExecutionStartEvent(execution, true));
+                    var successful = false;
+                    Throwable failure = null;
+                    try {
+                        action.execute(ctx, actualCost);
+                        successful = true;
+                    } catch (Throwable throwable) {
+                        failure = throwable;
+                        throw throwable;
+                    } finally {
+                        NeoForge.EVENT_BUS.post(
+                                new SkillExecutionFinishEvent(execution, true, successful, failure));
+                    }
+                }, effective);
+    }
+
+    protected final boolean executeContinuous(ServerPlayer player, SkillAction action, boolean effective) {
+        return executeContinuous(player, ctx -> cpCost, action, effective);
+    }
+
+    /**
+     * Pays CP and category MP for one tick of an already-running skill.
+     */
+    protected final boolean executeContinuousWithResource(
+            ServerPlayer player,
+            CostCalculator cpCalculator,
+            CostCalculator resourceCalculator,
+            SkillAction action,
+            boolean effective
+    ) {
+        if (!isEnabled(player)) return false;
+
+        var preEvent = new SkillExecutionPreEvent(this, player, true);
+        NeoForge.EVENT_BUS.post(preEvent);
+        if (preEvent.isCanceled()) return false;
+
+        return AbilityServerAccess.of(player)
+                .castContinuousCpAndMpIfPossible(player, this, ctx -> {
+                    var baseCost = cpCalculator.calculate(ctx);
+                    var proficiencyCost = resolvedProficiencyProfile().adjustCost(
+                            SkillProficiencyProfile.CostKind.CONTINUOUS, ctx.milestone(), baseCost);
+                    var resolvedCost = applyCastCostModifiers(
+                            player, this, baseCost, proficiencyCost, false);
+                    var costEvent = new SkillExecutionCostEvent(
+                            new ActiveCostContext(this, player, ctx, baseCost), true, resolvedCost);
+                    NeoForge.EVENT_BUS.post(costEvent);
+                    return costEvent.isCanceled() ? Float.NaN : costEvent.cost();
+                }, resourceCalculator, (ctx, actualCost) -> {
+                    var execution = new ActiveExecutionContext(this, player, ctx, actualCost);
+                    NeoForge.EVENT_BUS.post(new SkillExecutionStartEvent(execution, true));
+                    var successful = false;
+                    Throwable failure = null;
+                    try {
+                        action.execute(ctx, actualCost);
+                        successful = true;
+                    } catch (Throwable throwable) {
+                        failure = throwable;
+                        throw throwable;
+                    } finally {
+                        NeoForge.EVENT_BUS.post(
+                                new SkillExecutionFinishEvent(execution, true, successful, failure));
+                    }
+                }, effective);
+    }
+
+    public final void reportActivity(ServerPlayer player, boolean effective) {
+        AbilityServerAccess.of(player).reportSkillActivity(
+                player.getUUID(),
+                this,
+                effective ? SkillActivity.EFFECTIVE : SkillActivity.ACTIVE
+        );
+    }
+
+    /**
+     * Records one server-confirmed successful activation.
+     */
+    public final void reportTrigger(ServerPlayer player) {
+        AbilityServerAccess.of(player)
+                .addPlayerSkillProficiency(player.getUUID(), this, ProficiencyEvent.TRIGGER);
+    }
+
+    @SuppressWarnings("unchecked")
+    public final <T extends SkillData> Optional<T> getRuntimeData(ServerPlayer player) {
+        var data = AbilityServerAccess.of(player)
+                .skillData(player.getUUID(), getKeyString()).orElse(null);
+        return Optional.ofNullable((T) data);
+    }
+
+    public final void toggle(ServerPlayer player) {
+        if (!isStateMutationCallerAllowed("toggle", getClass())) return;
+        var uuid = player.getUUID();
+        var system = AbilityServerAccess.of(player);
+        var runtimeData = getRuntimeData(player);
+        if (runtimeData.isEmpty()) return;
+        var goingToEnable = !runtimeData.get().isEnabled();
+
+        if (!goingToEnable) {
+            system.toggleSkill(uuid, getKeyString());
+            return;
+        }
+
+        if (system.getPlayerStatus(uuid) == AbilityData.Status.OVERLOAD) return;
+        if (!LearningHelper.isSkillAvailableForCategory(system.getPlayerAbilityCategory(uuid), this)) return;
+        var cost = getMaintenanceCost(player);
+        if (cost <= 0) {
+            system.toggleSkill(uuid, getKeyString());
+            return;
+        }
+        // Affordability uses the same scaled value the charge path will apply.
+        var scaledCost = cost * SkillTuning.costMultiplier(player, this);
+        if (!Float.isFinite(scaledCost) || !hasSufficientCpToEnable(
+                system.getPlayerAvailableCP(uuid),
+                scaledCost,
+                system.getPlayerCalculationIntensity(uuid)
+        )) return;
+
+        if (system.tryPermanentOccupation(uuid, cost, this)) {
+            if (system.getPlayerStatus(uuid) == AbilityData.Status.OVERLOAD) {
+                system.releaseMaintenanceOccupation(uuid, getKeyString());
+                return;
+            }
+            system.toggleSkill(uuid, getKeyString());
+            if (!runtimeData.get().isEnabled()) {
+                system.releaseMaintenanceOccupation(uuid, getKeyString());
+            }
+        }
+    }
+
+    public final boolean isEnabled(ServerPlayer player) {
+        var system = AbilityServerAccess.of(player);
+        return SkillTuning.isSkillEnabled(player, this)
+                && LearningHelper.isSkillAvailableForCategory(
+                system.getPlayerAbilityCategory(player.getUUID()), this
+        ) && getRuntimeData(player).map(SkillData::isEnabled).orElse(false);
+    }
+
+    private static boolean isStateMutationCallerAllowed(String entryMethod, Class<?> owner) {
+        var caller = STATE_STACK_WALKER.walk(frames -> frames
+                .dropWhile(frame -> frame.getDeclaringClass() != Skill.class
+                        || !frame.getMethodName().equals(entryMethod))
+                .skip(1)
+                .map(StackWalker.StackFrame::getDeclaringClass)
+                .findFirst()
+                .orElse(null));
+        return sameStateCodeSource(caller, AcademyCraft.class)
+                || sameStateCodeSource(caller, owner);
+    }
+
+    private static boolean sameStateCodeSource(@Nullable Class<?> left, @Nullable Class<?> right) {
+        if (left == null || right == null) return false;
+        var leftDomain = stateProtectionDomain(left);
+        var rightDomain = stateProtectionDomain(right);
+        if (leftDomain != null && leftDomain == rightDomain) return true;
+        var leftLocation = stateCodeSourceLocation(leftDomain);
+        var rightLocation = stateCodeSourceLocation(rightDomain);
+        return leftLocation != null && leftLocation.equals(rightLocation);
+    }
+
+    private static @Nullable ProtectionDomain stateProtectionDomain(Class<?> type) {
+        try {
+            return type.getProtectionDomain();
+        } catch (SecurityException ignored) {
+            return null;
+        }
+    }
+
+    private static @Nullable URL stateCodeSourceLocation(@Nullable ProtectionDomain domain) {
+        return domain == null || domain.getCodeSource() == null
+                ? null : domain.getCodeSource().getLocation();
+    }
+
+    public SkillData createData() {
+        var data = dataFactory.create();
+        data.setEnabled(initiallyEnabled);
+        return data;
+    }
+
+    public final Set<Skill> getDependencies() {
+        return dependencies;
+    }
+
+    public List<DevCondition> getDevConditions() {
+        return devConditions;
+    }
+
+    public void init() {
+    }
+
+    public void initClient() {
+    }
+
+    /**
+     * 要注意服务器不一定只初始化一次喵
+     */
+    public void initServer(MinecraftServerContext context) {
+    }
+
+    public AbilityLevel getRecommendedLevel() {
+        return recommendedLevel;
+    }
+
+    public AbilityCategory getCategory() {
+        if (category != null) return category;
+        return Registries.ABILITY_CATEGORIES.get(Objects.requireNonNull(categoryKey))
+                .orElseThrow(() -> new IllegalStateException("Missing category " + categoryKey.identifier()))
+                .value();
+    }
+
+    /**
+     * Returns this skill's addon state, separate from enabled/proficiency. Use immutable values.
+     */
+    @SuppressWarnings("unchecked")
+    public final <T> Optional<T> state(ServerPlayer player, SkillStateType<T> type) {
+        if (stateType != type) throw new IllegalArgumentException("State type does not belong to this skill");
+        return getRuntimeData(player).filter(data -> data instanceof CodecSkillData<?>)
+                .map(data -> ((CodecSkillData<T>) data).value());
+    }
+
+    /**
+     * Validates and persists an addon value on the server thread; false if no supported state exists.
+     */
+    @SuppressWarnings("unchecked")
+    public final <T> boolean updateState(ServerPlayer player,
+                                         SkillStateType<T> type, T value) {
+        if (stateType != type) throw new IllegalArgumentException("State type does not belong to this skill");
+        if (!player.level().getServer().isSameThread()) {
+            throw new IllegalStateException("Skill state must be updated on the server thread");
+        }
+        var data = getRuntimeData(player).orElse(null);
+        if (!(data instanceof CodecSkillData<?>)) return false;
+        ((CodecSkillData<T>) data).value(value);
+        AbilityServerAccess.of(player).markPlayerDirty(player.getUUID());
+        return true;
+    }
+
+    public int getDisplayOrder() {
+        return displayOrder;
+    }
+
+    public Optional<ResourceKey<DamageType>> getDamageType() {
+        return Optional.ofNullable(damageType);
+    }
+
+    public Optional<ResourceKey<AbilityDamageProfile>> getDamageProfile() {
+        return Optional.ofNullable(damageProfile);
+    }
+
+    /**
+     * Common skills retain the Level 0 backing category for compatibility, without joining its skill list.
+     */
+    public static Builder common() {
+        return Builder.of(AcademyKeys.category("level0")).common();
+    }
+
+    /**
+     * Called by Academy after static registry construction; not an addon mutation hook.
+     */
+    @ApiStatus.Internal
+    public final void resolveRegistration() {
+        if (resolved) return;
+        var owner = getCategory();
+        var linked = new LinkedHashSet<Skill>();
+        for (var key : dependencyKeys) {
+            linked.add(Registries.SKILLS.get(key)
+                    .orElseThrow(() -> new IllegalStateException(getKey() + " missing dependency " + key.identifier())).value());
+        }
+        for (var key : optionalDependencyKeys) Registries.SKILLS.get(key).ifPresent(value -> linked.add(value.value()));
+        if (stateType == null) SkillDataSerializer.registerType(dataTypeId, dataClass);
+        else SkillDataSerializer.registerStateType(stateType);
+        dependencies = Collections.unmodifiableSet(linked);
+        if (scope == SkillScope.CATEGORY) owner.addSkill(this);
+        resolved = true;
+    }
+
+    public SkillScope getScope() {
+        return scope;
+    }
+
+    /**
+     * Hidden skills are unfinished content: never learnable, never shown in skill UIs.
+     */
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    public int getEnergyCostToLearn() {
+        return energyCostToLearn;
+    }
+
+    public Identifier getIcon() {
+        return icon;
+    }
+
+    public Identifier getKey() {
+        var key = Registries.SKILLS.getKey(this);
+        if (key == null) {
+            throw new IllegalStateException("This skill has not been registered: " + this);
+        }
+        return key;
+    }
+
+    public int getMaxSkillLevel() {
+        return maxSkillLevel;
+    }
+
+    public int getLevelForProficiency(float proficiency) {
+        if (maxSkillLevel <= 0) return 0;
+        var clamped = Mth.clamp(proficiency, SkillData.MIN_PROFICIENCY, SkillData.MAX_PROFICIENCY);
+        var level = Mth.floor(clamped / SkillData.MAX_PROFICIENCY * (maxSkillLevel + 1));
+        return Math.min(maxSkillLevel, level);
+    }
+
+    public final int getLevel(ServerPlayer player) {
+        return AbilityServerAccess.of(player).getPlayerSkillLevel(player.getUUID(), getKeyString());
+    }
+
+    public final float getProficiency(ServerPlayer player) {
+        return getRuntimeData(player).map(SkillData::getProficiency).orElse(0.0f);
+    }
+
+    public final int getProficiencyMilestone(ServerPlayer player) {
+        return SkillData.getReachedProficiencyThresholds(getProficiency(player));
+    }
+
+    public final int getEffectiveProficiencyMilestone(ServerPlayer player) {
+        return AbilityServerAccess.of(player).proficiencyEnabled(player)
+                ? getProficiencyMilestone(player) : 0;
+    }
+
+    public final boolean hasProficiencyMilestone(ServerPlayer player, int milestone) {
+        return milestone >= 1 && milestone <= 3
+                && getEffectiveProficiencyMilestone(player) >= milestone;
+    }
+
+    public float getCpCost(int skillLevel) {
+        return cpCost;
+    }
+
+    /**
+     * Base cast cost before the server's per-skill cost multiplier is applied at the cast choke point.
+     */
+    public final float getCpCost(ServerPlayer player) {
+        return adjustProficiencyCost(
+                player,
+                SkillProficiencyProfile.CostKind.CAST,
+                getCpCost(getLevel(player))
+        );
+    }
+
+    public float getMaintenanceCost(int skillLevel) {
+        return maintenanceCost;
+    }
+
+    public float getMaintenanceCost(ServerPlayer player) {
+        return adjustProficiencyCost(
+                player,
+                SkillProficiencyProfile.CostKind.MAINTENANCE,
+                getMaintenanceCost(getLevel(player))
+        );
+    }
+
+    public final float adjustProficiencyCost(
+            ServerPlayer player,
+            SkillProficiencyProfile.CostKind kind,
+            float amount
+    ) {
+        return resolvedProficiencyProfile().adjustCost(kind, getEffectiveProficiencyMilestone(player), amount);
+    }
+
+    public boolean isPassive(int skillLevel) {
+        return isPassive;
+    }
+
+    /**
+     * Whether an active damage payment may be regulated by Output Control.
+     */
+    public final boolean isOutputAdjustableDamage() {
+        return outputAdjustableDamage;
+    }
+
+    public int getIterationTicks(int skillLevel) {
+        return iterationTicks;
+    }
+
+    public final int getIterationTicks(ServerPlayer player) {
+        var resolved = resolvedProficiencyProfile().resolveIterationTicks(
+                getEffectiveProficiencyMilestone(player),
+                getIterationTicks(getLevel(player))
+        );
+        return SkillTuning.iterationTicks(player, this, resolved);
+    }
+
+    /**
+     * Server-configured range scale for this skill (1.0 = the skill's own geometry). Skills apply it
+     * to their targeting range and area radius so range changes stay consistent with each other.
+     */
+    public final float getRangeMultiplier(ServerPlayer player) {
+        return SkillTuning.rangeMultiplier(player, this);
+    }
+
+    /**
+     * Scales one of this skill's own geometry values, e.g. {@code scaledRange(player, RANGE)}.
+     */
+    public final double scaledRange(ServerPlayer player, double baseRange) {
+        var multiplier = getRangeMultiplier(player);
+        return Double.isFinite(baseRange) && Float.isFinite(multiplier)
+                ? baseRange * multiplier
+                : baseRange;
+    }
+
+    /**
+     * Float variant of {@link #scaledRange(ServerPlayer, double)}.
+     */
+    public final float scaledRange(ServerPlayer player, float baseRange) {
+        var multiplier = getRangeMultiplier(player);
+        return Float.isFinite(baseRange) && Float.isFinite(multiplier)
+                ? baseRange * multiplier
+                : baseRange;
+    }
+
+    public final SkillProficiencyProfile getProficiencyProfile() {
+        return resolvedProficiencyProfile();
+    }
+
+    /**
+     * Returns whether this skill declared its proficiency behavior through its builder.
+     * External category skills must do so because the built-in profile catalog only
+     * covers skills owned by AcademyCraft itself.
+     */
+    public final boolean hasExplicitProficiencyProfile() {
+        return explicitProficiencyProfile;
+    }
+
+    private SkillProficiencyProfile resolvedProficiencyProfile() {
+        return explicitProficiencyProfile ? proficiencyProfile : SkillProficiencyProfiles.forSkill(getKeyString());
+    }
+
+    public int getMaxStacks(int skillLevel) {
+        return STACK_LIMITS_ENABLED ? maxStacks : NO_STACK_LIMIT;
+    }
+
+    public final String getKeyString() {
+        if (cachedKeyString == null) {
+            cachedKeyString = getKey().toString();
+        }
+        return cachedKeyString;
+    }
+
+    public String getDescriptionId() {
+        return Util.makeDescriptionId("skill", getKey());
+    }
+
+    public String getTranslatedName() {
+        return L10nUtil.get(getDescriptionId());
+    }
+
+    public String getTranslatedDescription() {
+        return L10nUtil.get(getDescriptionId() + ".desc");
+    }
+
+    public String getKeyBindingKeyName(String name) {
+        var key = getKey();
+        var skillName = Util.makeDescriptionId("key", key);
+        return skillName + "." + name;
+    }
+
+    /**
+     * Hook that adjusts a skill's cast cost before CP/MP reservation.
+     */
+    @FunctionalInterface
+    public interface CastCostModifier {
+        float adjust(ServerPlayer player, Skill skill, float baseCost, float currentCost, boolean discreteCast);
+    }
+
+    private static final List<CastCostModifier> CAST_COST_MODIFIERS = new CopyOnWriteArrayList<>();
+
+    /**
+     * Registered once during setup; modifiers run in registration order.
+     */
+    public static void registerCastCostModifier(CastCostModifier modifier) {
+        CAST_COST_MODIFIERS.add(Objects.requireNonNull(modifier));
+    }
+
+    static float applyCastCostModifiers(ServerPlayer player, Skill skill,
+                                        float baseCost, float currentCost, boolean discreteCast) {
+        var result = currentCost;
+        for (var modifier : CAST_COST_MODIFIERS) {
+            result = modifier.adjust(player, skill, baseCost, result, discreteCast);
+        }
+        return result;
+    }
+
+    @FunctionalInterface
+    public interface DataFactory {
+        SkillData create();
+    }
+
+    @FunctionalInterface
+    public interface CostCalculator {
+        float calculate(SkillContext ctx);
+    }
+
+    public record ActiveCostContext(
+            Skill skill,
+            ServerPlayer player,
+            SkillContext skillContext,
+            float baseCost
+    ) {
+    }
+
+    public record ActiveExecutionContext(
+            Skill skill,
+            ServerPlayer player,
+            SkillContext skillContext,
+            float actualCost
+    ) {
+    }
+
+    @FunctionalInterface
+    public interface SkillAction {
+        void execute(SkillContext ctx, float actualCost);
+    }
+
+    public record SkillContext(
+            int level,
+            float proficiency,
+            int milestone,
+            float availableCP,
+            AbilityServerAccess.Backend system
+    ) {
+    }
+
+    public static final class Builder {
+        private final @Nullable AbilityCategory category;
+        private final @Nullable ResourceKey<AbilityCategory> categoryKey;
+        private final Set<ResourceKey<Skill>> dependencyKeys = new LinkedHashSet<>();
+        private final Set<ResourceKey<Skill>> optionalDependencyKeys = new LinkedHashSet<>();
+        private int displayOrder;
+        private @Nullable ResourceKey<DamageType> damageType;
+        private @Nullable ResourceKey<AbilityDamageProfile> damageProfile;
+        private final List<DevCondition> devConditions = new ArrayList<>();
+        private AbilityLevel recommendedLevel = AbilityLevel.LEVEL0;
+        private int energyCostToLearn = 5000;
+        private int maxSkillLevel = 3;
+        // CP iteration points; zero lets the server derive half of the CP cost.
+        private int iterationTicks = 0;
+        private int maxStacks = 2;
+        private float maintenanceCost = 0f;
+        private boolean isPassive = false;
+        private boolean outputAdjustableDamage = false;
+        private boolean initiallyEnabled = true;
+        private boolean hidden = false;
+        private float cpCost = 0;
+        private SkillProficiencyProfile proficiencyProfile = SkillProficiencyProfile.NONE;
+        private boolean explicitProficiencyProfile = false;
+        private SkillScope scope = SkillScope.CATEGORY;
+
+        private @Nullable SkillStateType<?> stateType;
+        private DataFactory dataFactory = CommonSkillData::new;
+        private Class<? extends SkillData> dataClass = CommonSkillData.class;
+        private Identifier dataTypeId = CommonSkillData.ID;
+        private Identifier icon = R.textures.gui.icon.close;
+
+        private Builder(AbilityCategory category) {
+            this.category = Objects.requireNonNull(category);
+            this.categoryKey = null;
+        }
+
+        private Builder(ResourceKey<AbilityCategory> categoryKey) {
+            this.category = null;
+            this.categoryKey = Objects.requireNonNull(categoryKey);
+        }
+
+        public static Builder of(ResourceKey<AbilityCategory> categoryKey) {
+            return new Builder(categoryKey);
+        }
+
+        public static Builder of(DeferredHolder<AbilityCategory, ? extends AbilityCategory> category) {
+            return of(category.getKey());
+        }
+
+        public static Builder of(AbilityCategory category) {
+            return new Builder(category);
+        }
+
+        public Builder level(AbilityLevel level) {
+            recommendedLevel = level;
+            return this;
+        }
+
+        public Builder passive() {
+            isPassive = true;
+            return this;
+        }
+
+        /**
+         * Marks active attack payments and damage from this skill as output-adjustable.
+         */
+        public Builder damage() {
+            outputAdjustableDamage = true;
+            return this;
+        }
+
+        public Builder initiallyDisabled() {
+            initiallyEnabled = false;
+            return this;
+        }
+
+        /**
+         * Marks unfinished content: removes the skill from all skill UIs and rejects development
+         * requests, while leaving the registry entry available for later completion.
+         */
+        public Builder hidden() {
+            hidden = true;
+            return this;
+        }
+
+        public Builder common() {
+            scope = SkillScope.COMMON;
+            return this;
+        }
+
+        public Builder cpCost(int cpCost) {
+            this.cpCost = cpCost;
+            return this;
+        }
+
+        public Builder proficiencyProfile(SkillProficiencyProfile proficiencyProfile) {
+            this.proficiencyProfile = Objects.requireNonNull(proficiencyProfile);
+            explicitProficiencyProfile = true;
+            return this;
+        }
+
+        public Builder energyCost(int cost) {
+            energyCostToLearn = cost;
+            return this;
+        }
+
+        public Builder maxSkillLevel(int maxSkillLevel) {
+            this.maxSkillLevel = maxSkillLevel;
+            return this;
+        }
+
+        /**
+         * 技能迭代tick
+         */
+        public Builder iterationTicks(int iterationTicks) {
+            this.iterationTicks = iterationTicks;
+            return this;
+        }
+
+        /**
+         * 技能最大叠加层数，可传入Skill.NO_STACK_LIMIT 表示不限制
+         */
+        public Builder maxStacks(int maxStacks) {
+            this.maxStacks = maxStacks;
+            return this;
+        }
+
+        /**
+         * 被动类技能开启时的持续占用CP值
+         */
+        public Builder maintenanceCost(float maintenanceCost) {
+            this.maintenanceCost = maintenanceCost;
+            return this;
+        }
+
+        public <T> Builder stateType(SkillStateType<T> type) {
+            stateType = Objects.requireNonNull(type);
+            dataTypeId = type.id();
+            dataClass = CodecSkillData.class;
+            dataFactory = () -> new CodecSkillData<>(type);
+            return this;
+        }
+
+        public <T extends SkillData> Builder withCustomData(
+                Identifier typeId,
+                Class<T> clazz,
+                DataFactory factory
+        ) {
+            stateType = null;
+            dataTypeId = typeId;
+            dataClass = clazz;
+            dataFactory = factory;
+            return this;
+        }
+
+        public void setIcon(Identifier icon) {
+            this.icon = Objects.requireNonNull(icon);
+        }
+
+        public Builder icon(Identifier icon) {
+            setIcon(icon);
+            return this;
+        }
+
+        public Builder displayOrder(int value) {
+            displayOrder = value;
+            return this;
+        }
+
+        public Builder damageType(ResourceKey<DamageType> value) {
+            if (damageProfile != null)
+                throw new IllegalStateException("Damage type and profile are mutually exclusive");
+            damageType = Objects.requireNonNull(value);
+            return this;
+        }
+
+        public Builder damageProfile(ResourceKey<AbilityDamageProfile> value) {
+            if (damageType != null) throw new IllegalStateException("Damage type and profile are mutually exclusive");
+            damageProfile = Objects.requireNonNull(value);
+            return this;
+        }
+
+        @SafeVarargs
+        public final Builder dependsOn(ResourceKey<Skill>... dependencies) {
+            Collections.addAll(dependencyKeys, dependencies);
+            return this;
+        }
+
+        @SafeVarargs
+        public final Builder optionallyDependsOn(ResourceKey<Skill>... dependencies) {
+            Collections.addAll(optionalDependencyKeys, dependencies);
+            return this;
+        }
+
+        @SafeVarargs
+        public final Builder dependsOn(DeferredHolder<Skill, ? extends Skill>... dependencies) {
+            for (var dependency : dependencies) dependencyKeys.add(dependency.getKey());
+            return this;
+        }
+
+        public Builder devCondition(DevCondition condition) {
+            devConditions.add(condition);
+            return this;
+        }
+    }
+}

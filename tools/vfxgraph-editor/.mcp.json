@@ -4,7 +4,7 @@
       "command": "node",
       "args": [
         "./scripts/server.mjs",
-        "--project-root=D:/mcmodtest/AcademyCraft-Reborn-26.2"
+        "--project-root=/home/cane/Projs/Java/Minecraft/AcademyCraft-Reborn"
       ],
       "cwd": ".",
       "startup_timeout_sec": 10,

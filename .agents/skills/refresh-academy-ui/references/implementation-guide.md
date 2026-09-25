@@ -46,7 +46,7 @@ Useful current implementations include:
 - `PropsApp.kt`, `RadarChartWidget.kt`, and `SettingsApp.kt` for the supplied expanded-terminal target compositions;
 - `AnimationUtil.kt`, `BlendQuadWidget.kt`, `TextBoxWidget.kt`, `ProgressBarWidget.kt`, `ScrollBarWidget.kt`, and `ScrollPanelWidget.kt` for reusable behavior.
 
-Use `rg --files src/main | rg '<name>'` when paths have moved. Follow repository code style and preserve unrelated dirty-worktree changes.
+Use `rg --files mod/src/main | rg '<name>'` when paths have moved. Follow repository code style and preserve unrelated dirty-worktree changes.
 
 ## Map legacy concepts to current widgets
 
@@ -187,10 +187,10 @@ Use `AnimationUtil` or the local animation system. During a hide transition, sto
 
 ## Manage resources
 
-- Reuse resource identifiers in `src/main/java/org/academy/api/client/resources/R.java` when available.
+- Reuse resource identifiers in `mod/src/main/java/org/academy/api/client/resources/R.java` when available.
 - Keep new GUI identifiers and filenames lowercase `snake_case`.
-- Put hand-authored textures under `src/main/resources/assets/academy/textures/gui` or the established subsystem folder.
-- Do not edit `src/generated/resources` by hand.
+- Put hand-authored textures under `mod/src/main/resources/assets/academy/textures/gui` or the established subsystem folder.
+- Do not edit `mod/src/generated/resources` by hand.
 - Prefer an existing AcademyCraft icon over inventing a new glyph.
 - If a new identifier is unavoidable, add it consistently with surrounding `R` entries and use the repository's `AcademyCraft.academy(...)` convention when appropriate.
 - Preserve third-party license metadata for imported assets. Do not copy an asset from the reference project until its existing license and current-project lineage are understood.
@@ -202,8 +202,8 @@ Before reporting completion:
 
 1. Review `git status --short` and isolate files changed for the task.
 2. Run focused unit tests where UI state or layout math is testable.
-3. For production GUI code, run `./gradlew test -DisDev=true`, then both development and release build variants when practical.
-4. Run `./gradlew runClientDev` for a visual smoke test when the change affects layout, rendering, focus, scrolling, shader interaction, or resources.
+3. For production GUI code, run `./gradlew :mod:test -DisDev=true`, then both development and release build variants when practical.
+4. Run `./gradlew :mod:runClientDev` for a visual smoke test when the change affects layout, rendering, focus, scrolling, shader interaction, or resources.
 5. Use the UI debugger/F12 support where available to inspect bounds and hit targets.
 6. Exercise representative GUI scales, bright and dark backgrounds, long localized strings, empty/full lists, fast page changes, and all control states.
 7. Capture a grayscale view and confirm geometry/brightness alone carries hierarchy.

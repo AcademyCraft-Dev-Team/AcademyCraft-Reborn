@@ -1,0 +1,838 @@
+package org.academy.internal.common.ability.mentalout;
+
+import io.netty.buffer.ByteBuf;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.phys.Vec3;
+import org.academy.api.common.ability.SkillProficiencyProfile;
+import org.academy.api.common.entitycontrol.*;
+import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
+import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
+import org.academy.internal.common.ability.mentalout.control.MentalPerceptionRuntime;
+import org.academy.internal.common.ability.mentalout.skills.MentaloutTargeting;
+import org.academy.internal.common.ability.mentalout.skills.lv1.MentalIntervention;
+import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.sounds.SoundEvents;
+import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
+import org.academy.internal.common.world.damagesource.PvpSetting;
+import org.academy.internal.server.ability.AbilitySystemServer;
+import org.jspecify.annotations.Nullable;
+import org.misaka.MisakaNetworkClient;
+import org.misaka.MisakaNetworkServer;
+import org.misaka.api.common.network.ThreadType;
+import org.misaka.api.common.network.annotation.PacketTarget;
+import org.misaka.api.common.network.annotation.SubscribePacket;
+import org.misaka.api.common.network.packet.Packet;
+import org.misaka.api.common.network.packet.PacketType;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+public final class MentalIntrusionManager {
+    private static final int READY_TIMEOUT_TICKS = 20;
+    private static final int PERCEPTION_PRIORITY = 105;
+    private static final Map<UUID, Session> SESSIONS = new HashMap<>();
+    private static final Map<UUID, DistortionSession> DISTORTIONS = new HashMap<>();
+    private static final Map<CooldownKey, Long> PLAYER_COOLDOWNS = new HashMap<>();
+    private static final Map<UUID, Long> SESSION_REVISIONS = new HashMap<>();
+    private static final Map<UUID, Long> FILTER_REVISIONS = new HashMap<>();
+    private static boolean clientInitialized;
+    private static boolean serverInitialized;
+
+    private MentalIntrusionManager() {
+    }
+
+    public static void initClient() {
+        if (clientInitialized) return;
+        clientInitialized = true;
+        MisakaNetworkClient.NETWORK_MANAGER.register(Client.class);
+    }
+
+    public static void initServer() {
+        if (serverInitialized) return;
+        serverInitialized = true;
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
+    }
+
+    public static StartResult toggle(ServerPlayer player) {
+        if (SESSIONS.containsKey(player.getUUID())) {
+            stop(player.getUUID(), true);
+            return StartResult.STOPPED;
+        }
+        var skill = Skills.MENTAL_INTRUSION.get();
+        if (!skill.isEnabled(player)) return StartResult.UNAVAILABLE;
+        var level = Mth.clamp(skill.getLevel(player), 0, 2);
+        var target = MentaloutTargeting.findLookedAtLiving(
+                player,
+                MentaloutConfig.mentalIntrusionRange(player, level)
+        );
+        if (target == null) return StartResult.INVALID_TARGET;
+        if (PvpSetting.shouldPrevent(player, target)) return StartResult.PVP_NOTIFIED;
+        if (MentalControlRuntime.isProtectedTarget(target)) {
+            MentalControlRuntime.notifyProtectionBlocked(player, target);
+            return StartResult.PROTECTED_NOTIFIED;
+        }
+        if (target instanceof ServerPlayer targetPlayer && targetPlayer.isSpectator()
+                || target instanceof ServerPlayer && FriendlyFireSetting.shouldPrevent(player, target)) {
+            return StartResult.PROTECTED;
+        }
+        var now = player.level().getGameTime();
+        var cooldownKey = new CooldownKey(player.getUUID(), target.getUUID());
+        if (target instanceof ServerPlayer
+                && PLAYER_COOLDOWNS.getOrDefault(cooldownKey, Long.MIN_VALUE) > now) {
+            return StartResult.COOLDOWN;
+        }
+        if (!AbilitySystemServer.getSystem(player).replacePermanentOccupation(
+                player.getUUID(),
+                skill.adjustProficiencyCost(player, SkillProficiencyProfile.CostKind.MAINTENANCE,
+                        MentaloutConfig.mentalIntrusionCost(player, level)),
+                skill
+        )) {
+            return StartResult.INSUFFICIENT_CP;
+        }
+
+        var revision = nextRevision(SESSION_REVISIONS, player.getUUID());
+        var sessionId = UUID.randomUUID();
+        var maximumEnd = Long.MAX_VALUE;
+        var session = new Session(
+                sessionId,
+                revision,
+                player,
+                target,
+                now + READY_TIMEOUT_TICKS,
+                maximumEnd,
+                true
+        );
+        SESSIONS.put(player.getUUID(), session);
+        if (target instanceof ServerPlayer) {
+            PLAYER_COOLDOWNS.put(cooldownKey, now + MentaloutConfig.playerIntrusionCooldown(player));
+        }
+        MisakaNetworkServer.send(player, new BeginPacket(
+                sessionId,
+                revision,
+                target.getId(),
+                target.getUUID()
+        ));
+        player.level().playSound(null, player.blockPosition(),
+                SoundEvents.MENTAL_INTRUSION.get(),
+                SoundSource.PLAYERS, 0.7f, 1.0f);
+        return StartResult.STARTED;
+    }
+
+    public static @Nullable UUID startPrecision(ServerPlayer player, LivingEntity target, long expiresAt) {
+        if (SESSIONS.containsKey(player.getUUID())) return null;
+        var intrusion = Skills.MENTAL_INTRUSION.get();
+        if (!intrusion.isEnabled(player)) return null;
+        var level = Mth.clamp(intrusion.getLevel(player), 0, 2);
+        var range = MentaloutConfig.mentalIntrusionRange(player, level);
+        if (PvpSetting.shouldPrevent(player, target)) return null;
+        if (MentalControlRuntime.isProtectedTarget(target)) {
+            MentalControlRuntime.notifyProtectionBlocked(player, target);
+            return null;
+        }
+        if (!MentaloutTargeting.isValidTarget(player, target, range)
+                || target instanceof ServerPlayer targetPlayer && targetPlayer.isSpectator()
+                || target instanceof ServerPlayer && FriendlyFireSetting.shouldPrevent(player, target)) {
+            return null;
+        }
+        var now = player.level().getGameTime();
+        var maximumEnd = Math.max(now + 1L, expiresAt);
+        if (target instanceof ServerPlayer) {
+            var cooldownKey = new CooldownKey(player.getUUID(), target.getUUID());
+            if (PLAYER_COOLDOWNS.getOrDefault(cooldownKey, Long.MIN_VALUE) > now) return null;
+            PLAYER_COOLDOWNS.put(cooldownKey, now + MentaloutConfig.playerIntrusionCooldown(player));
+        }
+        var revision = nextRevision(SESSION_REVISIONS, player.getUUID());
+        var sessionId = UUID.randomUUID();
+        SESSIONS.put(player.getUUID(), new Session(
+                sessionId,
+                revision,
+                player,
+                target,
+                now + READY_TIMEOUT_TICKS,
+                maximumEnd,
+                false
+        ));
+        MisakaNetworkServer.send(player, new BeginPacket(
+                sessionId,
+                revision,
+                target.getId(),
+                target.getUUID()
+        ));
+        return sessionId;
+    }
+
+    static int scalePlayerIntrusionDuration(int baseTicks, int milestone) {
+        var base = Math.max(1, baseTicks);
+        return milestone >= 3 ? Math.max(base, Math.round(base * 1.5f)) : base;
+    }
+
+    public static void stopPrecision(ServerPlayer player, UUID sessionId) {
+        var session = SESSIONS.get(player.getUUID());
+        if (session != null && !session.ownsOccupation && session.id.equals(sessionId)) {
+            stop(player.getUUID(), true);
+        }
+    }
+
+    public static boolean isPrecisionActive(ServerPlayer player, UUID sessionId) {
+        var session = SESSIONS.get(player.getUUID());
+        return session != null && !session.ownsOccupation && session.id.equals(sessionId);
+    }
+
+    public static void stopAny(ServerPlayer player) {
+        stop(player.getUUID(), true);
+    }
+
+    public static DistortionResult toggleDistortion(ServerPlayer player) {
+        var skill = Skills.SENSORY_DISTORTION.get();
+        if (!skill.isEnabled(player)) return DistortionResult.UNAVAILABLE;
+        var active = DISTORTIONS.get(player.getUUID());
+        if (active != null) {
+            stopDistortion(player.getUUID());
+            return DistortionResult.STOPPED;
+        }
+        var target = MentaloutTargeting.findLookedAtLivingExtended(
+                player,
+                MentalIntervention.selectionRange(player)
+        );
+        if (target == null) return DistortionResult.INVALID_TARGET;
+        if (PvpSetting.shouldPrevent(player, target)) return DistortionResult.PVP_NOTIFIED;
+        if (FriendlyFireSetting.shouldPrevent(player, target)) return DistortionResult.PROTECTED;
+        if (MentalControlRuntime.isProtectedTarget(target)) {
+            MentalControlRuntime.notifyProtectionBlocked(player, target);
+            return DistortionResult.PROTECTED_NOTIFIED;
+        }
+        var level = Math.clamp(skill.getLevel(player), 0, 2);
+        var cost = skill.adjustProficiencyCost(
+                player,
+                SkillProficiencyProfile.CostKind.MAINTENANCE,
+                MentaloutConfig.sensoryDistortionCost(player, level)
+        );
+        cost *= MentaloutControlCost.multiplier(player, target);
+        if (!AbilitySystemServer.getSystem(player).replacePermanentOccupation(
+                player.getUUID(),
+                cost,
+                skill
+        )) {
+            return DistortionResult.INSUFFICIENT_CP;
+        }
+        try {
+            var wasVisible = target.hasLineOfSight(player);
+            var handle = MentalPerceptionRuntime.apply(
+                    player,
+                    target,
+                    player,
+                    skill.getKey(),
+                    PERCEPTION_PRIORITY,
+                    Long.MAX_VALUE
+            );
+            var session = new DistortionSession(player, target, handle);
+            if (wasVisible && skill.hasProficiencyMilestone(player, 3)
+                    && target instanceof Mob) {
+                session.afterimagePosition = player.position();
+                session.afterimageUntil = player.level().getGameTime() + 60L;
+            }
+            DISTORTIONS.put(player.getUUID(), session);
+            player.level().playSound(null, player.blockPosition(),
+                    SoundEvents.SENSORY_DISTORTION.get(),
+                    SoundSource.PLAYERS, 0.65f, 1.0f);
+            return DistortionResult.STARTED;
+        } catch (RuntimeException exception) {
+            AbilitySystemServer.getSystem(player).releaseMaintenanceOccupation(
+                    player.getUUID(),
+                    skill.getKeyString()
+            );
+            if (MentalControlRuntime.isProtectedTarget(target)) {
+                MentalControlRuntime.notifyProtectionBlocked(player, target);
+                return DistortionResult.PROTECTED_NOTIFIED;
+            }
+            return DistortionResult.PROTECTED;
+        }
+    }
+
+    public static @Nullable LivingEntity target(ServerPlayer player) {
+        var session = SESSIONS.get(player.getUUID());
+        return session == null ? null : session.target;
+    }
+
+    public static void tick(MinecraftServer server) {
+        MentalPerceptionRuntime.tick(server);
+        var now = server.overworld().getGameTime();
+        for (var session : List.copyOf(SESSIONS.values())) {
+            var player = session.player;
+            var target = session.target;
+            var maxDistance = Skills.MENTAL_INTRUSION.get().hasProficiencyMilestone(player, 2)
+                    ? Math.max(128.0, MentaloutConfig.intrusionMaximumDistance(player))
+                    : MentaloutConfig.intrusionMaximumDistance(player);
+            var protectedTarget = MentalControlRuntime.isProtectedTarget(target);
+            var pvpProtected = PvpSetting.shouldPrevent(player, target);
+            if (!player.isAlive()
+                    || !Skills.MENTAL_INTRUSION.get().isEnabled(player)
+                    || target.isRemoved()
+                    || !target.isAlive()
+                    || target.level() != player.level()
+                    || target.distanceToSqr(player) > maxDistance * maxDistance
+                    || pvpProtected
+                    || protectedTarget
+                    || !session.confirmed && now >= session.readyDeadline
+                    || now >= session.maximumEnd) {
+                if (protectedTarget) MentalControlRuntime.notifyProtectionBlocked(player, target);
+                stop(player.getUUID(), true);
+            } else {
+                if (session.confirmed) {
+                    MentalResistanceManager.markAffected(player, target, false);
+                }
+                Skills.MENTAL_INTRUSION.get().reportActivity(player, session.confirmed);
+            }
+        }
+        for (var session : List.copyOf(DISTORTIONS.values())) {
+            var player = session.player;
+            var target = session.target;
+            var maxDistance = Skills.MENTAL_INTRUSION.get().hasProficiencyMilestone(player, 2)
+                    ? Math.max(128.0, MentaloutConfig.intrusionMaximumDistance(player))
+                    : MentaloutConfig.intrusionMaximumDistance(player);
+            var protectedTarget = MentalControlRuntime.isProtectedTarget(target);
+            var pvpProtected = PvpSetting.shouldPrevent(player, target);
+            if (!player.isAlive()
+                    || !Skills.SENSORY_DISTORTION.get().isEnabled(player)
+                    || target.isRemoved()
+                    || !target.isAlive()
+                    || target.level() != player.level()
+                    || target.distanceToSqr(player) > maxDistance * maxDistance
+                    || pvpProtected
+                    || protectedTarget
+                    || session.handle.isClosed()) {
+                if (protectedTarget) MentalControlRuntime.notifyProtectionBlocked(player, target);
+                stopDistortion(player.getUUID());
+                continue;
+            }
+            Skills.SENSORY_DISTORTION.get().reportActivity(player, true);
+            applyAfterimage(session, now);
+        }
+        PLAYER_COOLDOWNS.entrySet().removeIf(entry -> entry.getValue() <= now);
+    }
+
+    private static void applyAfterimage(DistortionSession session, long now) {
+        if (session.afterimagePosition == null || now >= session.afterimageUntil) {
+            session.closeAfterimageMovement();
+            session.afterimagePosition = null;
+            session.afterimageUntil = 0L;
+            return;
+        }
+        if (!(session.target instanceof Mob mob)
+                || mob.getTarget() != null
+                || MentalControlRuntime.getForcedTarget(mob) != null
+                || mob.isNoAi()) {
+            session.closeAfterimageMovement();
+            return;
+        }
+        if (session.afterimageMovement != null
+                && !session.afterimageMovement.state().isTerminal()) return;
+        session.closeAfterimageMovement();
+        session.afterimageMovement = MentalControlApi.apply(new ControlRequest(
+                session.player,
+                session.target,
+                Skills.SENSORY_DISTORTION.get().getKey(),
+                session.afterimageScope,
+                PERCEPTION_PRIORITY,
+                session.afterimageUntil,
+                List.of(new ControlDirective.MoveTo(new ControlDestination.Position(
+                        session.target.level().dimension().identifier(),
+                        session.afterimagePosition
+                )))
+        ));
+    }
+
+    public static void releaseEntity(UUID entityId) {
+        MentalPerceptionRuntime.releaseEntity(entityId);
+        for (var session : List.copyOf(SESSIONS.values())) {
+            if (session.player.getUUID().equals(entityId) || session.target.getUUID().equals(entityId)) {
+                stop(session.player.getUUID(), true);
+            }
+        }
+        for (var session : List.copyOf(DISTORTIONS.values())) {
+            if (session.player.getUUID().equals(entityId) || session.target.getUUID().equals(entityId)) {
+                stopDistortion(session.player.getUUID());
+            }
+        }
+    }
+
+    public static void releaseTarget(UUID targetId) {
+        for (var session : List.copyOf(SESSIONS.values())) {
+            if (session.target.getUUID().equals(targetId)) stop(session.player.getUUID(), true);
+        }
+        for (var session : List.copyOf(DISTORTIONS.values())) {
+            if (session.target.getUUID().equals(targetId)) stopDistortion(session.player.getUUID());
+        }
+    }
+
+    public static void releaseController(UUID controllerId) {
+        stop(controllerId, true);
+        stopDistortion(controllerId);
+        MentalPerceptionRuntime.releaseController(controllerId);
+    }
+
+    public static void clear() {
+        List.copyOf(SESSIONS.keySet()).forEach(id -> stop(id, true));
+        List.copyOf(DISTORTIONS.keySet()).forEach(MentalIntrusionManager::stopDistortion);
+        SESSIONS.clear();
+        DISTORTIONS.clear();
+        PLAYER_COOLDOWNS.clear();
+        SESSION_REVISIONS.clear();
+        FILTER_REVISIONS.clear();
+        MentalPerceptionRuntime.clear();
+    }
+
+    public static void sendPerception(
+            ServerPlayer observer,
+            LivingEntity hidden,
+            boolean active,
+            boolean suppressAmbient
+    ) {
+        var revision = nextRevision(FILTER_REVISIONS, observer.getUUID());
+        MisakaNetworkServer.send(observer, new PerceptionPacket(
+                hidden.getUUID(),
+                hidden.getId(),
+                active,
+                suppressAmbient,
+                revision
+        ));
+    }
+
+    private static void ready(ServerPlayer player, UUID sessionId, long revision, boolean ready) {
+        var session = SESSIONS.get(player.getUUID());
+        if (session == null || !session.id.equals(sessionId) || session.revision != revision) return;
+        if (!ready) {
+            stop(player.getUUID(), true);
+            return;
+        }
+        session.confirmed = true;
+    }
+
+    private static void stopFromClient(ServerPlayer player, UUID sessionId, long revision) {
+        var session = SESSIONS.get(player.getUUID());
+        if (session == null || !session.id.equals(sessionId) || session.revision != revision) return;
+        stop(player.getUUID(), true);
+    }
+
+    private static void stop(UUID controllerId, boolean notifyClient) {
+        var session = SESSIONS.remove(controllerId);
+        if (session == null) return;
+        var system = AbilitySystemServer.getSystem(session.player);
+        if (session.ownsOccupation) {
+            system.releaseMaintenanceOccupation(controllerId, Skills.MENTAL_INTRUSION.get().getKeyString());
+        }
+        if (notifyClient) {
+            var revision = nextRevision(SESSION_REVISIONS, controllerId);
+            MisakaNetworkServer.send(session.player, new EndPacket(session.id, revision));
+        }
+    }
+
+    private static void stopDistortion(UUID controllerId) {
+        var session = DISTORTIONS.remove(controllerId);
+        if (session == null) return;
+        session.closeAfterimageMovement();
+        session.handle.close();
+        AbilitySystemServer.getSystem(session.player).releaseMaintenanceOccupation(
+                controllerId,
+                Skills.SENSORY_DISTORTION.get().getKeyString()
+        );
+    }
+
+    private static long nextRevision(Map<UUID, Long> revisions, UUID key) {
+        var next = revisions.getOrDefault(key, 0L) + 1L;
+        revisions.put(key, next);
+        return next;
+    }
+
+    private static void feedback(ServerPlayer player, String key) {
+        player.sendOverlayMessage(Component.translatable(key));
+    }
+
+    private static void writeUuid(ByteBuf buf, UUID uuid) {
+        buf.writeLong(uuid.getMostSignificantBits());
+        buf.writeLong(uuid.getLeastSignificantBits());
+    }
+
+    private static UUID readUuid(ByteBuf buf) {
+        return new UUID(buf.readLong(), buf.readLong());
+    }
+
+    public enum StartResult {
+        STARTED,
+        STOPPED,
+        INVALID_TARGET,
+        PROTECTED,
+        PROTECTED_NOTIFIED,
+        PVP_NOTIFIED,
+        COOLDOWN,
+        INSUFFICIENT_CP,
+        UNAVAILABLE
+    }
+
+    public enum DistortionResult {
+        STARTED,
+        STOPPED,
+        INVALID_TARGET,
+        PROTECTED,
+        PROTECTED_NOTIFIED,
+        PVP_NOTIFIED,
+        INSUFFICIENT_CP,
+        UNAVAILABLE
+    }
+
+    public static final class Server {
+        private Server() {
+        }
+
+        @SubscribePacket
+        public static void toggle(TogglePacket packet) {
+            if (!MentaloutRequestGuard.acceptSkillUse(
+                    packet.getPacketListener(),
+                    MentaloutRequestGuard.SkillUse.MENTAL_INTRUSION,
+                    packet.sequence
+            )) return;
+            var player = packet.getPacketListener().getPlayer();
+            switch (MentalIntrusionManager.toggle(player)) {
+                case INVALID_TARGET -> feedback(player, "message.academy.mentalout.invalid_target");
+                case PROTECTED -> feedback(player, "message.academy.mentalout.protected_target");
+                case PROTECTED_NOTIFIED -> {
+                }
+                case PVP_NOTIFIED -> {
+                }
+                case COOLDOWN -> feedback(player, "message.academy.mentalout.intrusion_cooldown");
+                case INSUFFICIENT_CP -> feedback(player, "message.academy.mentalout.insufficient_cp");
+                case UNAVAILABLE -> feedback(player, "message.academy.mentalout.skill_unavailable");
+                default -> {
+                }
+            }
+        }
+
+        @SubscribePacket
+        public static void distortion(DistortionPacket packet) {
+            if (!MentaloutRequestGuard.acceptSkillUse(
+                    packet.getPacketListener(),
+                    MentaloutRequestGuard.SkillUse.SENSORY_DISTORTION,
+                    packet.sequence
+            )) return;
+            var player = packet.getPacketListener().getPlayer();
+            switch (MentalIntrusionManager.toggleDistortion(player)) {
+                case INVALID_TARGET -> feedback(player, "message.academy.mentalout.invalid_target");
+                case PROTECTED -> feedback(player, "message.academy.mentalout.protected_target");
+                case PROTECTED_NOTIFIED -> {
+                }
+                case PVP_NOTIFIED -> {
+                }
+                case INSUFFICIENT_CP -> feedback(player, "message.academy.mentalout.insufficient_cp");
+                case UNAVAILABLE -> feedback(player, "message.academy.mentalout.skill_unavailable");
+                default -> {
+                }
+            }
+        }
+
+        @SubscribePacket
+        public static void ready(ReadyPacket packet) {
+            MentalIntrusionManager.ready(
+                    packet.getPacketListener().getPlayer(),
+                    packet.sessionId,
+                    packet.revision,
+                    packet.ready
+            );
+        }
+
+        @SubscribePacket
+        public static void clientStop(ClientStopPacket packet) {
+            MentalIntrusionManager.stopFromClient(
+                    packet.getPacketListener().getPlayer(),
+                    packet.sessionId,
+                    packet.revision
+            );
+        }
+    }
+
+    public static final class Client {
+        private Client() {
+        }
+
+        @SubscribePacket
+        public static void begin(BeginPacket packet) {
+            MentalIntrusionClientState.begin(
+                    packet.sessionId,
+                    packet.revision,
+                    packet.targetEntityId,
+                    packet.targetUuid
+            );
+        }
+
+        @SubscribePacket
+        public static void end(EndPacket packet) {
+            MentalIntrusionClientState.end(packet.sessionId, packet.revision);
+        }
+
+        @SubscribePacket
+        public static void perception(PerceptionPacket packet) {
+            MentalIntrusionClientState.applyFilter(
+                    packet.hiddenUuid,
+                    packet.hiddenEntityId,
+                    packet.active,
+                    packet.suppressAmbient,
+                    packet.revision
+            );
+        }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class TogglePacket extends Packet<ServerGamePacketListenerImpl, TogglePacket> {
+        public static final StreamCodec<ByteBuf, TogglePacket> CODEC = ByteBufCodecs.LONG.map(
+                TogglePacket::new,
+                packet -> packet.sequence
+        );
+        private final long sequence;
+
+        public TogglePacket(long sequence) {
+            this.sequence = sequence;
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, TogglePacket> getPacketType() {
+            return PacketTypes.MENTAL_INTRUSION_TOGGLE.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class DistortionPacket extends Packet<ServerGamePacketListenerImpl, DistortionPacket> {
+        public static final StreamCodec<ByteBuf, DistortionPacket> CODEC = ByteBufCodecs.LONG.map(
+                DistortionPacket::new,
+                packet -> packet.sequence
+        );
+        private final long sequence;
+
+        public DistortionPacket(long sequence) {
+            this.sequence = sequence;
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, DistortionPacket> getPacketType() {
+            return PacketTypes.SENSORY_DISTORTION_TOGGLE.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class ReadyPacket extends Packet<ServerGamePacketListenerImpl, ReadyPacket> {
+        public static final StreamCodec<ByteBuf, ReadyPacket> CODEC = StreamCodec.of(
+                (buf, packet) -> {
+                    writeUuid(buf, packet.sessionId);
+                    buf.writeLong(packet.revision);
+                    buf.writeBoolean(packet.ready);
+                },
+                buf -> new ReadyPacket(readUuid(buf), buf.readLong(), buf.readBoolean())
+        );
+        private final UUID sessionId;
+        private final long revision;
+        private final boolean ready;
+
+        public ReadyPacket(UUID sessionId, long revision, boolean ready) {
+            this.sessionId = sessionId;
+            this.revision = revision;
+            this.ready = ready;
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, ReadyPacket> getPacketType() {
+            return PacketTypes.MENTAL_INTRUSION_READY.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class ClientStopPacket extends Packet<ServerGamePacketListenerImpl, ClientStopPacket> {
+        public static final StreamCodec<ByteBuf, ClientStopPacket> CODEC = StreamCodec.of(
+                (buf, packet) -> {
+                    writeUuid(buf, packet.sessionId);
+                    buf.writeLong(packet.revision);
+                },
+                buf -> new ClientStopPacket(readUuid(buf), buf.readLong())
+        );
+        private final UUID sessionId;
+        private final long revision;
+
+        public ClientStopPacket(UUID sessionId, long revision) {
+            this.sessionId = sessionId;
+            this.revision = revision;
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, ClientStopPacket> getPacketType() {
+            return PacketTypes.MENTAL_INTRUSION_CLIENT_STOP.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.CLIENT)
+    public static final class BeginPacket extends Packet<ClientPacketListener, BeginPacket> {
+        public static final StreamCodec<ByteBuf, BeginPacket> CODEC = StreamCodec.of(
+                (buf, packet) -> {
+                    writeUuid(buf, packet.sessionId);
+                    buf.writeLong(packet.revision);
+                    ByteBufCodecs.VAR_INT.encode(buf, packet.targetEntityId);
+                    writeUuid(buf, packet.targetUuid);
+                },
+                buf -> new BeginPacket(
+                        readUuid(buf),
+                        buf.readLong(),
+                        ByteBufCodecs.VAR_INT.decode(buf),
+                        readUuid(buf)
+                )
+        );
+        private final UUID sessionId;
+        private final long revision;
+        private final int targetEntityId;
+        private final UUID targetUuid;
+
+        public BeginPacket(UUID sessionId, long revision, int targetEntityId, UUID targetUuid) {
+            this.sessionId = sessionId;
+            this.revision = revision;
+            this.targetEntityId = targetEntityId;
+            this.targetUuid = targetUuid;
+        }
+
+        @Override
+        public PacketType<ClientPacketListener, BeginPacket> getPacketType() {
+            return PacketTypes.MENTAL_INTRUSION_BEGIN.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.CLIENT)
+    public static final class EndPacket extends Packet<ClientPacketListener, EndPacket> {
+        public static final StreamCodec<ByteBuf, EndPacket> CODEC = StreamCodec.of(
+                (buf, packet) -> {
+                    writeUuid(buf, packet.sessionId);
+                    buf.writeLong(packet.revision);
+                },
+                buf -> new EndPacket(readUuid(buf), buf.readLong())
+        );
+        private final UUID sessionId;
+        private final long revision;
+
+        public EndPacket(UUID sessionId, long revision) {
+            this.sessionId = sessionId;
+            this.revision = revision;
+        }
+
+        @Override
+        public PacketType<ClientPacketListener, EndPacket> getPacketType() {
+            return PacketTypes.MENTAL_INTRUSION_END.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.CLIENT)
+    public static final class PerceptionPacket extends Packet<ClientPacketListener, PerceptionPacket> {
+        public static final StreamCodec<ByteBuf, PerceptionPacket> CODEC = StreamCodec.of(
+                (buf, packet) -> {
+                    writeUuid(buf, packet.hiddenUuid);
+                    ByteBufCodecs.VAR_INT.encode(buf, packet.hiddenEntityId);
+                    buf.writeBoolean(packet.active);
+                    buf.writeBoolean(packet.suppressAmbient);
+                    buf.writeLong(packet.revision);
+                },
+                buf -> new PerceptionPacket(
+                        readUuid(buf),
+                        ByteBufCodecs.VAR_INT.decode(buf),
+                        buf.readBoolean(),
+                        buf.readBoolean(),
+                        buf.readLong()
+                )
+        );
+        private final UUID hiddenUuid;
+        private final int hiddenEntityId;
+        private final boolean active;
+        private final boolean suppressAmbient;
+        private final long revision;
+
+        public PerceptionPacket(
+                UUID hiddenUuid,
+                int hiddenEntityId,
+                boolean active,
+                boolean suppressAmbient,
+                long revision
+        ) {
+            this.hiddenUuid = hiddenUuid;
+            this.hiddenEntityId = hiddenEntityId;
+            this.active = active;
+            this.suppressAmbient = suppressAmbient;
+            this.revision = revision;
+        }
+
+        @Override
+        public PacketType<ClientPacketListener, PerceptionPacket> getPacketType() {
+            return PacketTypes.MENTAL_PERCEPTION_UPDATE.get();
+        }
+    }
+
+    private record CooldownKey(UUID controllerId, UUID targetId) {
+    }
+
+    private static final class Session {
+        private final UUID id;
+        private final long revision;
+        private final ServerPlayer player;
+        private final LivingEntity target;
+        private final long readyDeadline;
+        private final long maximumEnd;
+        private final boolean ownsOccupation;
+        private boolean confirmed;
+
+        private Session(
+                UUID id,
+                long revision,
+                ServerPlayer player,
+                LivingEntity target,
+                long readyDeadline,
+                long maximumEnd,
+                boolean ownsOccupation
+        ) {
+            this.id = id;
+            this.revision = revision;
+            this.player = player;
+            this.target = target;
+            this.readyDeadline = readyDeadline;
+            this.maximumEnd = maximumEnd;
+            this.ownsOccupation = ownsOccupation;
+        }
+    }
+
+    private static final class DistortionSession {
+        private final ServerPlayer player;
+        private final LivingEntity target;
+        private final MentalPerceptionRuntime.Handle handle;
+        private final UUID afterimageScope = UUID.randomUUID();
+        private @Nullable ControlHandle afterimageMovement;
+        private @Nullable Vec3 afterimagePosition;
+        private long afterimageUntil;
+
+        private DistortionSession(
+                ServerPlayer player,
+                LivingEntity target,
+                MentalPerceptionRuntime.Handle handle
+        ) {
+            this.player = player;
+            this.target = target;
+            this.handle = handle;
+        }
+
+        private void closeAfterimageMovement() {
+            if (afterimageMovement != null) afterimageMovement.close();
+            afterimageMovement = null;
+        }
+    }
+}

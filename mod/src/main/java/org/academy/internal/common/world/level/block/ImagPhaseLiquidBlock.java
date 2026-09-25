@@ -1,0 +1,42 @@
+package org.academy.internal.common.world.level.block;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import org.academy.internal.common.world.item.Items;
+import org.academy.internal.common.world.level.material.Fluids;
+import org.jspecify.annotations.Nullable;
+
+/**
+ * Imag-phase liquid can only be collected by the dedicated empty unit item.
+ */
+public final class ImagPhaseLiquidBlock extends LiquidBlock {
+
+    public ImagPhaseLiquidBlock(BlockBehaviour.Properties properties) {
+        super(Fluids.IMAG_PHASE.get(), properties);
+    }
+
+
+    @Override
+    public ItemStack pickupBlock(
+            @Nullable LivingEntity user,
+            LevelAccessor level,
+            BlockPos pos,
+            BlockState state
+    ) {
+        return ItemStack.EMPTY;
+    }
+
+    public ItemStack pickupWithEmptyUnit(LevelAccessor level, BlockPos pos, BlockState state) {
+        if (state.getBlock() != this || state.getValue(LEVEL) != 0
+                || !state.getFluidState().isSourceOfType(Fluids.IMAG_PHASE.get())) {
+            return ItemStack.EMPTY;
+        }
+        level.setBlock(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 11);
+        return new ItemStack(Items.IMAG_PHASE_UNIT.get());
+    }
+}

@@ -1,0 +1,291 @@
+package org.academy.internal.common.ability.electromaster.skills.lv5;
+
+import com.mojang.blaze3d.platform.InputConstants;
+import io.netty.buffer.ByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.util.Mth;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
+import net.minecraft.world.entity.boss.wither.WitherBoss;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import org.academy.AcademyCraftClient;
+import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.config.KeyBindingConfig;
+import org.academy.api.client.config.SkillSettingsRegistry;
+import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.resources.R;
+import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.DevCondition;
+import org.academy.api.common.ability.Skill;
+import org.academy.api.common.damage.DamageComposition;
+import org.academy.api.common.damage.MaxHealthDamage;
+import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.server.ability.AreaEffectTargets;
+import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.SkillNames;
+import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
+import org.academy.internal.common.ability.electromaster.SkyStrikeProfile;
+import org.academy.internal.common.ability.electromaster.VanillaLightningEffects;
+import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.damagesource.PvpSetting;
+import org.academy.internal.server.ability.AbilitySystemServer;
+import org.jspecify.annotations.Nullable;
+import org.misaka.MisakaNetworkClient;
+import org.misaka.MisakaNetworkServer;
+import org.misaka.api.common.network.ThreadType;
+import org.misaka.api.common.network.annotation.PacketTarget;
+import org.misaka.api.common.network.annotation.SubscribePacket;
+import org.misaka.api.common.network.packet.Packet;
+import org.misaka.api.common.network.packet.PacketType;
+
+import java.util.List;
+
+public class Thunderclap extends Skill {
+    static final double RANGE = 64.0;
+    private static final MaxHealthDamage DAMAGE = MaxHealthDamage.rebalance(20.0f, 0.20f);
+
+    public Thunderclap() {
+        super(Builder
+                .of(AbilityCategories.ELECTROMASTER.get())
+                .damage()
+                .level(AbilityLevel.LEVEL5)
+                .energyCost(100_000)
+                .cpCost(100)
+                .iterationTicks(20)
+                .maxStacks(NO_STACK_LIMIT)
+                .dependsOn(Skills.BALL_LIGHTNING)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL5))
+                .devCondition(new DevCondition.DependencyCondition("Ball Lightning", "academy:ball_lightning"))
+        );
+    }
+
+    static @Nullable Vec3 selectNearestTarget(
+            Vec3 start,
+            @Nullable Vec3 blockTarget,
+            @Nullable Vec3 entityTarget
+    ) {
+        if (entityTarget == null) return blockTarget;
+        if (blockTarget == null) return entityTarget;
+        return start.distanceToSqr(entityTarget) <= start.distanceToSqr(blockTarget)
+                ? entityTarget
+                : blockTarget;
+    }
+
+    static float calculateDamage(float maxHealth, float abilityPower, float damageMultiplier) {
+        if (!Float.isFinite(maxHealth) || !Float.isFinite(abilityPower)
+                || !Float.isFinite(damageMultiplier)) return 0;
+        return Math.max(0, maxHealth) * DAMAGE.maxHealthRatio()
+                + DAMAGE.baseDamage() * Math.max(0, abilityPower) * Math.max(0, damageMultiplier);
+    }
+
+    @Override
+    public void initClient() {
+        var key = getKey();
+        AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
+        Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+        Client.registerSettings();
+        InputSystem.addKeyBinding(Client.KEY, Client.CONFIG.getKeyBinding(Client.KEY,
+                        InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_N,
+                                InputConstants.RELEASE, 0))
+                , ctx -> Client.onUse());
+    }
+
+    @Override
+    public void initServer(MinecraftServerContext c) {
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
+    }
+
+    public static final class Client {
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
+                AbilityCategories.ELECTROMASTER.get(),
+                new AbilitySystemClient.SkillInfo(
+                        Skills.THUNDERCLAP.get(), List.of(),
+                        R.textures.ability.electromaster.skill.thunderclap.icon, 204, 80)
+        );
+        public static final String KEY = SkillNames.THUNDERCLAP + "_clap";
+        public static Config CONFIG = new Config();
+        private static boolean settingsRegistered;
+
+        private static void registerSettings() {
+            if (settingsRegistered) return;
+            settingsRegistered = true;
+            SkillSettingsRegistry.register(
+                    Skills.THUNDERCLAP.get(),
+                    new SkillSettingsRegistry.Module(
+                            "sky_strike_feedback",
+                            "app.academy.skill_settings.advanced.sky_strike_feedback",
+                            List.of(
+                                    new SkillSettingsRegistry.FloatRange(
+                                            "flash_intensity",
+                                            "app.academy.skill_settings.advanced.sky_strike_flash",
+                                            0.0f,
+                                            1.0f,
+                                            0.05f,
+                                            CONFIG::getFlashIntensity,
+                                            CONFIG::setFlashIntensity,
+                                            Client::persistVisualSettings
+                                    ),
+                                    new SkillSettingsRegistry.FloatRange(
+                                            "shake_intensity",
+                                            "app.academy.skill_settings.advanced.sky_strike_shake",
+                                            0.0f,
+                                            1.0f,
+                                            0.05f,
+                                            CONFIG::getShakeIntensity,
+                                            CONFIG::setShakeIntensity,
+                                            Client::persistVisualSettings
+                                    )
+                            )
+                    )
+            );
+        }
+
+        private static void persistVisualSettings() {
+            AcademyCraftClient.Config.INSTANCE.setConfig(Skills.THUNDERCLAP.get().getKey(), CONFIG);
+            AcademyCraftClient.Config.INSTANCE.save();
+        }
+
+        public static void onUse() {
+            if (!AbilitySystemClient.canUseSkill(Skills.THUNDERCLAP.get())) return;
+            MisakaNetworkClient.send(UsePacket.INSTANCE);
+        }
+
+        public static class Config extends KeyBindingConfig {
+            private float flashIntensity = 1.0f;
+            private float shakeIntensity = 1.0f;
+
+            private static float sanitizeIntensity(float value) {
+                return Float.isFinite(value) ? Mth.clamp(value, 0.0f, 1.0f) : 1.0f;
+            }
+
+            public float getFlashIntensity() {
+                return sanitizeIntensity(flashIntensity);
+            }
+
+            public void setFlashIntensity(float flashIntensity) {
+                this.flashIntensity = sanitizeIntensity(flashIntensity);
+            }
+
+            public float getShakeIntensity() {
+                return sanitizeIntensity(shakeIntensity);
+            }
+
+            public void setShakeIntensity(float shakeIntensity) {
+                this.shakeIntensity = sanitizeIntensity(shakeIntensity);
+            }
+
+            public static final class Action implements TypeHandler<Config> {
+                public static final TypeHandler<Config> INSTANCE = new Action();
+
+                private Action() {
+                }
+
+                @Override
+                public Thunderclap.Client.Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
+            }
+        }
+    }
+
+    public static final class Server {
+        @SubscribePacket
+        public static void handle(UsePacket p) {
+            var player = p.getPacketListener().getPlayer();
+            if (!(player.level() instanceof ServerLevel level)) return;
+            var skill = Skills.THUNDERCLAP.get();
+            var milestone = skill.getEffectiveProficiencyMilestone(player);
+            var targetPos = resolveTarget(player, level, milestone);
+            if (targetPos == null) return;
+            skill.executeActive(player, (context, _) -> strike(player, level, targetPos, context.milestone()));
+        }
+
+        private static @Nullable Vec3 resolveTarget(ServerPlayer player, ServerLevel level, int milestone) {
+            var start = player.getEyePosition();
+            var range = Skills.THUNDERCLAP.get().scaledRange(player, milestone >= 2 ? 80.0 : RANGE);
+            var end = start.add(player.getLookAngle().scale(range));
+            var blockHit = level.clip(new ClipContext(
+                    start,
+                    end,
+                    ClipContext.Block.COLLIDER,
+                    ClipContext.Fluid.NONE,
+                    player
+            ));
+            var blockPos = blockHit.getType() == HitResult.Type.MISS ? null : blockHit.getLocation();
+            var entityHit = ProjectileUtil.getEntityHitResult(
+                    player,
+                    start,
+                    end,
+                    new AABB(start, end).inflate(1.0),
+                    entity -> entity instanceof LivingEntity
+                            && entity != player
+                            && entity.isAlive()
+                            && entity.isPickable()
+                            && !PvpSetting.shouldPrevent(player, entity),
+                    range * range
+            );
+            return selectNearestTarget(start, blockPos, entityHit == null ? null : entityHit.getLocation());
+        }
+
+        private static void strike(ServerPlayer player, ServerLevel level, Vec3 targetPos, int milestone) {
+            ElectromasterArcEffects.spawnSkyStrike(level, targetPos, SkyStrikeProfile.THUNDERCLAP);
+            VanillaLightningEffects.trigger(level, targetPos, player);
+
+            var system = AbilitySystemServer.getSystem(player);
+            var abilityPower = system.getPlayerAbilityPowerMultiplier(player.getUUID());
+            var damageMultiplier = system.getPlayerDamageMultiplier(player.getUUID());
+            var source = SkillDamageSource.of(player, Skills.THUNDERCLAP.get());
+            var targets = AreaEffectTargets.inSphere(level, targetPos,
+                    Skills.THUNDERCLAP.get()
+                            .scaledRange(player, SkyStrikeProfile.THUNDERCLAP.ringEndRadius()),
+                    entity -> entity != player);
+            for (var target : targets) {
+                if (PvpSetting.shouldPrevent(player, target)) continue;
+                DamageComposition.hurt(
+                        target, level, source,
+                        calculateDamage(target.getMaxHealth(), abilityPower, damageMultiplier),
+                        target.getMaxHealth() * DAMAGE.maxHealthRatio()
+                );
+                if (milestone >= 3) {
+                    var duration = target instanceof Player || target instanceof EnderDragon || target instanceof WitherBoss
+                            ? 30 : 60;
+                    target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, duration, 3));
+                    target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, duration, 1));
+                }
+            }
+        }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class UsePacket extends Packet<ServerGamePacketListenerImpl, UsePacket> {
+        public static final UsePacket INSTANCE = new UsePacket();
+        public static final StreamCodec<ByteBuf, UsePacket> CODEC = StreamCodec.unit(INSTANCE);
+
+        private UsePacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, UsePacket> getPacketType() {
+            return PacketTypes.THUNDERCLAP_USE.get();
+        }
+    }
+}

@@ -12,17 +12,17 @@ The project is currently in the early development stage and is not playable. Dev
 * **Community (QQ Group)**: `217327418`
 
 ## For Developers
-We recommend IntelliJ IDEA, and it requires JetBrains Runtime 25.
+We recommend IntelliJ IDEA. JetBrains Runtime 25 is required.
 
 ### If you need to use ClientDevWithRenderDoc to run the game:
 ```bash
-./gradlew setupRenderDoc
+./gradlew :mod:setupRenderDoc
 ```
 
 ### How to build?
 
 ```bash
-./gradlew build
+./gradlew :mod:build
 ```
 
 ## License

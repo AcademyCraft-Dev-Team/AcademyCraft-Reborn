@@ -57,14 +57,14 @@
 
 ## 编辑和复现
 
-1. 使用 JetBrains Runtime 25 运行 `./gradlew runGraphEditor -DisDev=true`，打开 `railgun_shot.json`。
+1. 使用 JetBrains Runtime 25 运行 `./gradlew :editor:runGraphEditor -DisDev=true`，打开 `railgun_shot.json`。
 2. 在参数面板调整 `length`、`width_scale`，或编辑 `radius_envelope` 曲线。`time=-1` 使用自动播放时间。
 3. 四个炮束层可分别调节 `radius_scale`、`intensity`、`end_cap` 和 RGB；电弧节点可调 `spread`、`arc_width`、`arcs`、`arc_reach`、`flicker_rate`。`arc_reach` 控制近手部电弧的参考长度；更长射程由远端电弧分段覆盖。
 4. `node tools/vfxgraph-editor/scripts/author-railgun.mjs` 可通过编辑器仓库 API 重建这份初稿；当前图会被备份到 `run/academy/vfxgraph-mcp/backups`。
 
-GPU 截图：`./gradlew runGraphEditor -DisDev=true -I tools/vfxgraph-editor/scripts/railgun-capture.init.gradle`。
+GPU 截图：`./gradlew :editor:runRailgunCapture -DisDev=true`。
 
-游戏验证：`./gradlew runClientDev -DisDev=true -I tools/vfxgraph-editor/scripts/railgun-client.init.gradle`。使用隔离目录 `run/railgun-client`，需先将开发测试存档复制为该目录下的 `saves/railgun`；此次复制自已有 `run/sky-strike-client/saves/sky_strike`。验证辅助代码仅属于 editor 源集，不进入模组包。
+游戏验证：`./gradlew :editor:runRailgunClient -DisDev=true`。使用隔离目录 `run/railgun-client`，需先将开发测试存档复制为该目录下的 `saves/railgun`；此次复制自已有 `run/sky-strike-client/saves/sky_strike`。验证辅助代码仅属于 editor 源集，不进入模组包。
 
 ## 验证结果
 

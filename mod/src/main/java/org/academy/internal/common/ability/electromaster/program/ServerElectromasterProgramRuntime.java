@@ -1,0 +1,653 @@
+package org.academy.internal.common.ability.electromaster.program;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.level.block.GameMasterBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import org.academy.AcademyCraft;
+import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.program.*;
+import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.common.util.ViewTargetScanner;
+import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.electromaster.ElectromasterArcEffects;
+import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
+import org.academy.internal.common.ability.electromaster.skills.lv3.CurrentRecharge;
+import org.academy.internal.common.ability.electromaster.skills.lv3.MagnetManipulation;
+import org.academy.internal.common.ability.program.AbilityProgramSpatialRanges;
+import org.academy.internal.common.ability.program.ProgramActionTransaction;
+import org.academy.internal.common.ability.program.ProgramPowerScale;
+import org.academy.internal.common.ability.program.ServerProgramTargetResolver;
+import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+import org.academy.internal.common.util.EnergyChargeHelper;
+import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
+import org.academy.internal.server.ability.AbilitySystemServer;
+import org.jspecify.annotations.Nullable;
+
+import java.util.*;
+
+/**
+ * Authoritative Minecraft-server adapter for Electromaster programs.
+ */
+@EventBusSubscriber(modid = AcademyCraft.MOD_ID)
+public final class ServerElectromasterProgramRuntime implements ElectromasterProgramRuntime, ForwardingProgramTargetResolver {
+    public static final double MAX_QUERY_RANGE = AbilityProgramSpatialRanges.forCategory(
+            ElectromasterProgramNodeCatalog.ELECTROMASTER).queryRange();
+    public static final double MAX_ACTION_RANGE = AbilityProgramSpatialRanges.forCategory(
+            ElectromasterProgramNodeCatalog.ELECTROMASTER).actionRange();
+    public static final int MAX_QUERY_RESULTS = 128;
+    static final float FORCED_MAGNETIZATION_COST = 24.0f;
+    private static final Map<UUID, Map<String, Entity>> CONTROLLED = new HashMap<>();
+    private static final Map<UUID, ControlDestination> CONTROL_DESTINATIONS = new HashMap<>();
+
+    private final ServerPlayer player;
+    private final float costMultiplier;
+    private final ServerProgramTargetResolver targets;
+
+    @Override
+    public ProgramTargetResolver targetResolver() {
+        return targets;
+    }
+
+    public ServerElectromasterProgramRuntime(ServerPlayer player) {
+        this(player, 1.0f);
+    }
+
+    public ServerElectromasterProgramRuntime(ServerPlayer player, float costMultiplier) {
+        this.player = Objects.requireNonNull(player, "player");
+        this.costMultiplier = requireCostMultiplier(costMultiplier);
+        targets = new ServerProgramTargetResolver(player, MAX_QUERY_RANGE, MAX_QUERY_RESULTS);
+    }
+
+    @Override
+    public Object caster() {
+        return targets.caster();
+    }
+
+    @Override
+    public Optional<Object> lookTarget() {
+        return targets.lookTarget();
+    }
+
+    @Override
+    public Optional<ProgramBlockPosition> lookBlockTarget() {
+        return targets.lookBlockTarget();
+    }
+
+    @Override
+    public ProgramActionTransaction.ProgramAction arcDischarge(
+            Object entityReference,
+            float power
+    ) {
+        return new ProgramActionTransaction.ProgramAction() {
+            private @Nullable LivingEntity target;
+
+            @Override
+            public void validate() {
+                requireCasterReady(Skills.ARC_GENERATE.get());
+                var resolved = requireLivingTarget(entityReference);
+                requireEntityInRange(resolved, arcRange(power));
+                requireHostileActionAllowed(resolved);
+                target = resolved;
+            }
+
+            @Override
+            public ProgramActionTransaction.Undo apply() {
+                var target = Objects.requireNonNull(this.target);
+                charge(Skills.ARC_GENERATE.get(), arcCost(power));
+                var system = AbilitySystemServer.getSystem(player);
+                var damage = ArcGenerate.programDamage(
+                        system.getPlayerAbilityPowerMultiplier(player.getUUID()),
+                        system.getPlayerDamageMultiplier(player.getUUID()))
+                        * arcDamageScale(power);
+                if (damage > 0.0f && !target.hurtServer(
+                        targets.level(),
+                        SkillDamageSource.of(player, Skills.ARC_GENERATE.get()),
+                        damage)) {
+                    throw new IllegalStateException("Arc discharge target rejected damage");
+                }
+                ElectromasterArcEffects.spawnChainArc(
+                        targets.level(),
+                        player.getBoundingBox().getCenter(),
+                        target.getBoundingBox().getCenter()
+                );
+                return ProgramActionTransaction.Undo.NONE;
+            }
+        };
+    }
+
+    @Override
+    public ProgramActionTransaction.ProgramAction magneticMove(
+            Object targetReference,
+            ProgramWorldPosition destination,
+            float power,
+            ElectromasterProgramNodeCatalog.EnergyTargetType targetType,
+            ElectromasterProgramNodeCatalog.MagneticMode mode,
+            boolean forceMagnetize
+    ) {
+        return new ProgramActionTransaction.ProgramAction() {
+            private @Nullable Entity target;
+            private @Nullable BlockPos sourceBlock;
+            private @Nullable BlockState sourceState;
+            private @Nullable String targetKey;
+            private @Nullable Vec3 targetPosition;
+            private boolean createdBlockEntity;
+            private boolean forcedMagnetizationApplied;
+            private boolean wasControlled;
+            private @Nullable ControlDestination previousControl;
+
+            @Override
+            public void validate() {
+                requireCasterReady(Skills.MAGNET_MANIPULATION.get());
+                forcedMagnetizationApplied = false;
+                var resolvedPosition = targets.requireLocalPosition(destination);
+                requirePositionInRange(resolvedPosition, MAX_ACTION_RANGE);
+                Entity resolvedTarget;
+                if (targetType == ElectromasterProgramNodeCatalog.EnergyTargetType.ENTITY) {
+                    resolvedTarget = requireEntityTarget(targetReference);
+                    targetKey = entityKey(resolvedTarget);
+                    if (!MagnetManipulation.isMagnetic(resolvedTarget)) {
+                        throw new IllegalArgumentException("Entity target is not magnetic");
+                    }
+                    requireEntityInRange(resolvedTarget, MAX_ACTION_RANGE);
+                    requireMovementAllowed(resolvedTarget);
+                } else {
+                    var resolvedBlock = requireLocalBlock(targetReference);
+                    sourceBlock = resolvedBlock;
+                    targetKey = blockKey(resolvedBlock);
+                    resolvedTarget = controlled().get(targetKey);
+                    if (resolvedTarget == null) {
+                        var resolvedState = targets.level().getBlockState(resolvedBlock);
+                        if (resolvedState.isAir()
+                                || !resolvedState.getFluidState().isEmpty()
+                                || resolvedState.hasBlockEntity()
+                                || resolvedState.getDestroySpeed(targets.level(), resolvedBlock) < 0.0f
+                                || !isEditableBlock(resolvedBlock, resolvedState)) {
+                            throw new IllegalArgumentException("Block target is not magnetically movable");
+                        }
+                        forcedMagnetizationApplied = !MagnetManipulation.isMagnetic(resolvedState);
+                        if (forcedMagnetizationApplied && !forceMagnetize) {
+                            throw new IllegalArgumentException(
+                                    "Block target requires forced magnetization");
+                        }
+                        sourceState = resolvedState;
+                    }
+                }
+                if (mode == ElectromasterProgramNodeCatalog.MagneticMode.LAUNCH
+                        && (resolvedTarget == null || !resolvedTarget.isAlive())) {
+                    throw new IllegalArgumentException("Magnetic launch target is not controlled");
+                }
+                var origin = resolvedTarget == null
+                        ? Vec3.atCenterOf(Objects.requireNonNull(sourceBlock))
+                        : resolvedTarget.getBoundingBox().getCenter();
+                if (origin.distanceTo(resolvedPosition) > magneticMoveRange(power)) {
+                    throw new IllegalArgumentException("Magnetic move exceeds its power limit");
+                }
+                target = resolvedTarget;
+                targetPosition = resolvedPosition;
+            }
+
+            @Override
+            public ProgramActionTransaction.Undo apply() {
+                var roster = controlled();
+                var resolvedKey = Objects.requireNonNull(targetKey);
+                wasControlled = roster.containsKey(resolvedKey);
+                previousControl = CONTROL_DESTINATIONS.get(player.getUUID());
+                charge(Skills.MAGNET_MANIPULATION.get(), magneticMoveCost(power)
+                        + (forcedMagnetizationApplied ? FORCED_MAGNETIZATION_COST : 0.0f));
+                final Entity activeTarget;
+                if (target == null) {
+                    var resolvedBlock = Objects.requireNonNull(sourceBlock);
+                    var resolvedState = Objects.requireNonNull(sourceState);
+                    if (!targets.level().getBlockState(resolvedBlock).equals(resolvedState)) {
+                        throw new IllegalStateException("Magnetic block changed before execution");
+                    }
+                    activeTarget = FallingBlockEntity.fall(targets.level(), resolvedBlock, resolvedState);
+                    activeTarget.setNoGravity(true);
+                    createdBlockEntity = true;
+                    roster.put(resolvedKey, activeTarget);
+                } else if (!EntityMotionGuard.canApplyMotionFrom(player, target)) {
+                    throw new IllegalStateException("Target rejected magnetic movement");
+                } else {
+                    activeTarget = target;
+                }
+                var previous = new HashMap<Entity, Vec3>();
+                var resolvedPosition = Objects.requireNonNull(targetPosition);
+                if (mode == ElectromasterProgramNodeCatalog.MagneticMode.PULL) {
+                    roster.put(resolvedKey, activeTarget);
+                    roster.entrySet().removeIf(entry -> !entry.getValue().isAlive()
+                            || entry.getValue().level() != targets.level());
+                    CONTROL_DESTINATIONS.put(player.getUUID(),
+                            new ControlDestination(player, resolvedPosition, power));
+                    moveControlledTargets(player, roster, resolvedPosition, power, previous);
+                } else {
+                    previous.put(activeTarget, activeTarget.getDeltaMovement());
+                    var origin = activeTarget.getBoundingBox().getCenter();
+                    var difference = resolvedPosition.subtract(origin);
+                    if (difference.lengthSqr() < 1.0E-12) {
+                        throw new IllegalStateException("Magnetic launch produced no velocity");
+                    }
+                    damageAlongTrajectory(activeTarget, origin, resolvedPosition, power);
+                    if (activeTarget instanceof FallingBlockEntity) activeTarget.setNoGravity(false);
+                    setVelocity(activeTarget, difference.normalize().scale(magneticLaunchSpeed(power)));
+                    roster.remove(resolvedKey);
+                    if (roster.isEmpty()) {
+                        CONTROLLED.remove(player.getUUID(), roster);
+                        CONTROL_DESTINATIONS.remove(player.getUUID());
+                    }
+                }
+                return () -> {
+                    for (var entry : previous.entrySet()) {
+                        if (targets.sameUsableLevel(entry.getKey())) {
+                            setVelocity(entry.getKey(), entry.getValue());
+                        }
+                    }
+                    if (mode == ElectromasterProgramNodeCatalog.MagneticMode.LAUNCH
+                            && targets.sameUsableLevel(activeTarget)) {
+                        activeTarget.setNoGravity(activeTarget instanceof FallingBlockEntity);
+                        controlled().put(resolvedKey, activeTarget);
+                    } else if (!wasControlled) {
+                        roster.remove(resolvedKey);
+                    }
+                    restoreControlDestination(player.getUUID(), previousControl);
+                    if (createdBlockEntity && activeTarget.isAlive()) {
+                        activeTarget.discard();
+                        var resolvedBlock = Objects.requireNonNull(sourceBlock);
+                        if (targets.level().getBlockState(resolvedBlock).isAir()) {
+                            targets.level().setBlock(resolvedBlock, Objects.requireNonNull(sourceState), 3);
+                        }
+                        controlled().remove(resolvedKey);
+                    }
+                };
+            }
+        };
+    }
+
+    @Override
+    public List<ProgramBlockPosition> chargeableBlocksAround(
+            ProgramWorldPosition center,
+            double radius
+    ) {
+        var origin = targets.requireLocalPosition(center);
+        var bounded = Math.clamp(radius, 0.0, MAX_QUERY_RANGE);
+        var minimum = BlockPos.containing(origin.add(-bounded, -bounded, -bounded));
+        var maximum = BlockPos.containing(origin.add(bounded, bounded, bounded));
+        var result = new ArrayList<ProgramBlockPosition>();
+        var dimension = targets.level().dimension().identifier();
+        for (var pos : BlockPos.betweenClosed(minimum, maximum)) {
+            if (result.size() >= MAX_QUERY_RESULTS) break;
+            if (Vec3.atCenterOf(pos).distanceToSqr(origin) > bounded * bounded
+                    || !targets.level().isLoaded(pos)
+                    || !EnergyChargeHelper.hasBlockEnergyStorage(targets.level(), pos)) continue;
+            result.add(new ProgramBlockPosition(dimension, pos.getX(), pos.getY(), pos.getZ()));
+        }
+        return List.copyOf(result);
+    }
+
+    @Override
+    public List<?> magneticEntitiesAround(ProgramWorldPosition center, double radius) {
+        return targets.entitiesAround(center, Math.clamp(radius, 0.0, MAX_QUERY_RANGE)).stream()
+                .filter(Entity.class::isInstance)
+                .map(Entity.class::cast)
+                .filter(MagnetManipulation::isMagnetic)
+                .limit(MAX_QUERY_RESULTS)
+                .toList();
+    }
+
+    @Override
+    public OptionalDouble entityEnergyFraction(Object entityReference) {
+        var entity = requireEntityTarget(entityReference);
+        return entity instanceof LivingEntity living
+                ? EnergyChargeHelper.entityEnergyFraction(living)
+                : OptionalDouble.empty();
+    }
+
+    @Override
+    public OptionalDouble blockEnergyFraction(ProgramBlockPosition block) {
+        return EnergyChargeHelper.blockEnergyFraction(targets.level(), requireLocalBlock(block));
+    }
+
+    @Override
+    public int redstonePower(ProgramBlockPosition block) {
+        return targets.level().getBestNeighborSignal(requireLocalBlock(block));
+    }
+
+    @Override
+    public ProgramActionTransaction.ProgramAction currentRecharge(
+            Object targetReference,
+            ElectromasterProgramNodeCatalog.EnergyTargetType targetType
+    ) {
+        return new ProgramActionTransaction.ProgramAction() {
+            private @Nullable LivingEntity entity;
+            private @Nullable BlockPos block;
+
+            @Override
+            public void validate() {
+                requireCasterReady(Skills.CURRENT_RECHARGE.get());
+                if (targetType == ElectromasterProgramNodeCatalog.EnergyTargetType.ENTITY) {
+                    var resolved = requireEntityTarget(targetReference);
+                    if (!(resolved instanceof LivingEntity living)) {
+                        throw new IllegalArgumentException("Current Recharge needs a living entity");
+                    }
+                    requireEntityInRange(living, MAX_ACTION_RANGE);
+                    entity = living;
+                } else {
+                    block = requireLocalBlock(targetReference);
+                }
+            }
+
+            @Override
+            public ProgramActionTransaction.Undo apply() {
+                validate();
+                charge(Skills.CURRENT_RECHARGE.get(), 15.0f);
+                var context = CurrentRecharge.Server.startProgramCharge(player, entity, block);
+                return context::unregister;
+            }
+        };
+    }
+
+    @Override
+    public Optional<ProgramWorldPosition> positionOf(Object entityReference) {
+        return targets.positionOf(entityReference);
+    }
+
+    @Override
+    public Optional<ProgramDirection> lookDirectionOf(Object entityReference) {
+        return targets.lookDirectionOf(entityReference);
+    }
+
+    @Override
+    public List<?> entitiesAround(ProgramWorldPosition center, double radius) {
+        return targets.entitiesAround(center, radius);
+    }
+
+    @Override
+    public Optional<ProgramBlockPosition> raycastBlock(
+            ProgramWorldPosition origin,
+            ProgramDirection direction,
+            double maximumDistance
+    ) {
+        return targets.raycastBlock(origin, direction, maximumDistance);
+    }
+
+    @Override
+    public Optional<Object> raycastEntity(
+            ProgramWorldPosition origin,
+            ProgramDirection direction,
+            double maximumDistance
+    ) {
+        return targets.raycastEntity(origin, direction, maximumDistance);
+    }
+
+    private void requireCasterReady(Skill skill) {
+        if (!player.isAlive()
+                || player.hasDisconnected()
+                || player.isSpectator()
+                || !skill.isEnabled(player)) {
+            throw new IllegalStateException("Required Electromaster skill is unavailable");
+        }
+    }
+
+    private Entity requireEntityTarget(Object value) {
+        if (!(value instanceof Entity entity) || !targets.sameUsableLevel(entity)) {
+            throw new IllegalArgumentException("Entity target is invalid");
+        }
+        return entity;
+    }
+
+    private LivingEntity requireLivingTarget(Object value) {
+        var entity = requireEntityTarget(value);
+        if (!(entity instanceof LivingEntity living) || living == player) {
+            throw new IllegalArgumentException("Arc discharge needs another living entity");
+        }
+        return living;
+    }
+
+    private BlockPos requireLocalBlock(Object value) {
+        if (!(value instanceof ProgramBlockPosition(var dimension, var x, var y, var z))
+                || !dimension.equals(targets.level().dimension().identifier())) {
+            throw new IllegalArgumentException("Block target is in another dimension");
+        }
+        var position = new BlockPos(x, y, z);
+        if (!targets.level().isLoaded(position)
+                || position.getY() < targets.level().getMinY()
+                || position.getY() >= targets.level().getMaxY()
+                || Vec3.atCenterOf(position).distanceToSqr(player.position())
+                > MAX_ACTION_RANGE * MAX_ACTION_RANGE) {
+            throw new IllegalArgumentException("Block target is outside program range");
+        }
+        return position;
+    }
+
+    private boolean isEditableBlock(BlockPos position, BlockState state) {
+        return targets.level().mayInteract(player, position)
+                && !player.blockActionRestricted(
+                targets.level(), position, player.gameMode.getGameModeForPlayer())
+                && (!(state.getBlock() instanceof GameMasterBlock)
+                || player.canUseGameMasterBlocks());
+    }
+
+    private Map<String, Entity> controlled() {
+        return CONTROLLED.computeIfAbsent(player.getUUID(), _ -> new HashMap<>());
+    }
+
+    private static String entityKey(Entity entity) {
+        return "entity:" + entity.getUUID();
+    }
+
+    private String blockKey(BlockPos position) {
+        return "block:" + targets.level().dimension().identifier() + ':'
+                + position.getX() + ':' + position.getY() + ':' + position.getZ();
+    }
+
+    private void damageAlongTrajectory(
+            Entity launched,
+            Vec3 origin,
+            Vec3 destination,
+            float power
+    ) {
+        var system = AbilitySystemServer.getSystem(player);
+        var damage = 8.0f
+                * system.getPlayerAbilityPowerMultiplier(player.getUUID())
+                * system.getPlayerDamageMultiplier(player.getUUID())
+                * ProgramPowerScale.damageMultiplier(power);
+        if (damage <= 0.0f) return;
+        var trajectory = destination.subtract(origin);
+        var trajectoryLength = trajectory.length();
+        var direction = trajectoryLength > 1.0E-12
+                ? trajectory.scale(1.0 / trajectoryLength)
+                : new Vec3(0.0, 1.0, 0.0);
+        var source = SkillDamageSource.of(player, Skills.MAGNET_MANIPULATION.get());
+        for (var living : ViewTargetScanner.scan(
+                targets.level(),
+                LivingEntity.class,
+                origin,
+                direction,
+                trajectoryLength,
+                ViewTargetScanner.centeredCylinder(1.0),
+                value -> value != player
+                        && value != launched
+                        && value.isAlive()
+                        && !CtaFriendlyFireWhitelist.shouldProtect(player, value)
+        )) {
+            living.hurtServer(targets.level(), source, damage);
+        }
+    }
+
+    public static void releaseControlled(ServerPlayer player) {
+        var controlled = CONTROLLED.remove(player.getUUID());
+        CONTROL_DESTINATIONS.remove(player.getUUID());
+        if (controlled == null) return;
+        for (var entity : controlled.values()) {
+            if (entity instanceof FallingBlockEntity && entity.isAlive()) entity.setNoGravity(false);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onServerTick(ServerTickEvent.Pre event) {
+        for (var entry : List.copyOf(CONTROL_DESTINATIONS.entrySet())) {
+            var playerId = entry.getKey();
+            var control = entry.getValue();
+            var controller = control.controller();
+            var roster = CONTROLLED.get(playerId);
+            if (roster == null || roster.isEmpty()
+                    || controller.hasDisconnected()
+                    || !controller.isAlive()
+                    || !Skills.MAGNET_MANIPULATION.get().isEnabled(controller)) {
+                releaseControlled(controller);
+                continue;
+            }
+            roster.entrySet().removeIf(targetEntry -> {
+                var target = targetEntry.getValue();
+                var invalid = !target.isAlive()
+                        || target.level() != controller.level()
+                        || !EntityMotionGuard.canApplyMotionFrom(controller, target);
+                if (invalid && target instanceof FallingBlockEntity && target.isAlive()) {
+                    target.setNoGravity(false);
+                }
+                return invalid;
+            });
+            if (roster.isEmpty()) {
+                releaseControlled(controller);
+                continue;
+            }
+            moveControlledTargets(
+                    controller, roster, control.destination(), control.power(), null);
+        }
+    }
+
+    private void requireHostileActionAllowed(LivingEntity target) {
+        if (CtaFriendlyFireWhitelist.shouldProtect(player, target)) {
+            throw new IllegalArgumentException("Friendly-fire policy protects the target");
+        }
+    }
+
+    private void requireMovementAllowed(Entity target) {
+        if (target != player
+                && target instanceof LivingEntity living
+                && CtaFriendlyFireWhitelist.shouldProtect(player, living)) {
+            throw new IllegalArgumentException("Friendly-fire policy protects the target");
+        }
+    }
+
+    private void requireEntityInRange(Entity entity, double range) {
+        if (entity.distanceToSqr(player) > range * range) {
+            throw new IllegalArgumentException("Entity target is outside program range");
+        }
+    }
+
+    private void requirePositionInRange(Vec3 position, double range) {
+        if (position.distanceToSqr(player.position()) > range * range) {
+            throw new IllegalArgumentException("Position is outside program range");
+        }
+    }
+
+    private void charge(Skill skill, float cost) {
+        if (!AbilitySystemServer.getSystem(player).tryTimedOccupation(
+                player, cost * costMultiplier, skill)) {
+            throw new IllegalStateException("Insufficient CP for Electromaster program action");
+        }
+    }
+
+    private static float requireCostMultiplier(float multiplier) {
+        if (!Float.isFinite(multiplier) || multiplier <= 0.0f) {
+            throw new IllegalArgumentException("Program cost multiplier must be positive");
+        }
+        return multiplier;
+    }
+
+    private void setVelocity(Entity entity, Vec3 velocity) {
+        setVelocity(player, entity, velocity);
+    }
+
+    private static void setVelocity(ServerPlayer controller, Entity entity, Vec3 velocity) {
+        EntityMotionGuard.runWithMotionSource(controller, () -> entity.setDeltaMovement(velocity));
+        entity.syncVelocity = true;
+        entity.resetFallDistance();
+        if (entity instanceof ServerPlayer targetPlayer) {
+            targetPlayer.connection.send(new ClientboundSetEntityMotionPacket(targetPlayer));
+        }
+    }
+
+    private static void moveControlledTargets(
+            ServerPlayer controller,
+            Map<String, Entity> roster,
+            Vec3 destination,
+            float power,
+            @Nullable Map<Entity, Vec3> previous
+    ) {
+        for (var controlledTarget : roster.values()) {
+            if (previous != null) {
+                previous.put(controlledTarget, controlledTarget.getDeltaMovement());
+            }
+            var origin = controlledTarget.getBoundingBox().getCenter();
+            var difference = destination.subtract(origin);
+            var velocity = MagnetManipulation.calculateControlledBlockVelocity(
+                    controlledTarget.getDeltaMovement(), origin, destination,
+                    difference, magneticMoveSpeed(power), 0.65);
+            if (finiteNonZero(velocity)) {
+                setVelocity(controller, controlledTarget, velocity);
+            }
+        }
+    }
+
+    private static void restoreControlDestination(
+            UUID playerId,
+            @Nullable ControlDestination previous
+    ) {
+        if (previous == null) CONTROL_DESTINATIONS.remove(playerId);
+        else CONTROL_DESTINATIONS.put(playerId, previous);
+    }
+
+    private static double arcRange(float power) {
+        ProgramPowerScale.require(power);
+        return 12.0;
+    }
+
+    private static float arcDamageScale(float power) {
+        return ProgramPowerScale.damageMultiplier(power);
+    }
+
+    private static float arcCost(float power) {
+        return ProgramPowerScale.cost(10.0f, power);
+    }
+
+    private static double magneticMoveRange(float power) {
+        return ProgramPowerScale.interpolate(power, 6.0, 12.0, 20.0);
+    }
+
+    private static double magneticMoveSpeed(float power) {
+        return ProgramPowerScale.interpolate(power, 0.45, 0.8, 1.15);
+    }
+
+    private static double magneticLaunchSpeed(float power) {
+        return ProgramPowerScale.interpolate(power, 0.8, 1.4, 2.1);
+    }
+
+    private static float magneticMoveCost(float power) {
+        return ProgramPowerScale.cost(16.0f, power);
+    }
+
+    private static boolean finiteNonZero(Vec3 value) {
+        return value != null
+                && Double.isFinite(value.x)
+                && Double.isFinite(value.y)
+                && Double.isFinite(value.z)
+                && value.lengthSqr() > 1.0E-12;
+    }
+
+    private record ControlDestination(
+            ServerPlayer controller,
+            Vec3 destination,
+            float power
+    ) {
+    }
+}

@@ -22,7 +22,7 @@ export function findProjectRoot(start) {
   while (true) {
     if (
       existsSync(path.join(current, "build.gradle.kts")) &&
-      existsSync(path.join(current, "src", "main", "resources", "assets", "academy", "vfxgraph"))
+      existsSync(path.join(current, "mod", "src", "main", "resources", "assets", "academy", "vfxgraph"))
     ) {
       return current;
     }
@@ -41,7 +41,7 @@ export class VfxGraphRepository {
   constructor(projectRoot) {
     this.projectRoot = findProjectRoot(projectRoot);
     this.roots = {
-      assets: path.join(this.projectRoot, "src", "main", "resources", "assets", "academy", "vfxgraph"),
+      assets: path.join(this.projectRoot, "mod", "src", "main", "resources", "assets", "academy", "vfxgraph"),
       runtime: path.join(this.projectRoot, "run", "academy", "graphs"),
     };
     this.bridgeRoot = path.join(this.projectRoot, "run", "academy", "vfxgraph-mcp", "bridge");
@@ -270,9 +270,9 @@ export class VfxGraphRepository {
 
   async knownNodeTypes() {
     const files = [
-      path.join(this.projectRoot, "src", "main", "java", "org", "academy", "api", "client", "render", "vfxgraph", "nodes", "VfxBlocks.java"),
-      path.join(this.projectRoot, "src", "main", "java", "org", "academy", "api", "client", "render", "vfxgraph", "nodes", "VfxNodes.java"),
-      path.join(this.projectRoot, "src", "main", "java", "org", "academy", "api", "client", "render", "vfxgraph", "operator", "VfxOperators.java"),
+      path.join(this.projectRoot, "mod", "src", "main", "java", "org", "academy", "api", "client", "render", "vfxgraph", "nodes", "VfxBlocks.java"),
+      path.join(this.projectRoot, "mod", "src", "main", "java", "org", "academy", "api", "client", "render", "vfxgraph", "nodes", "VfxNodes.java"),
+      path.join(this.projectRoot, "mod", "src", "main", "java", "org", "academy", "api", "client", "render", "vfxgraph", "operator", "VfxOperators.java"),
     ];
     const types = new Set();
     for (const file of files) {

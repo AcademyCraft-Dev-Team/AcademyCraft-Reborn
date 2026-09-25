@@ -40,7 +40,7 @@ Preserve the legacy AcademyCraft identity while implementing with the current Ko
 - Prefer `FrameLayoutWidget` for overlays and `LinearLayoutWidget` for rows/columns. Use absolute margins only for art-directed fixed canvases such as machine and developer screens.
 - Treat animation as feedback, not decoration. Preserve the timing families in the visual-language reference and avoid perpetual motion except for meaningful status/breathing effects.
 - Do not move inventory slots visually without checking the menu's slot coordinates and container hit handling.
-- Do not hand-edit generated resources under `src/generated/resources`.
+- Do not hand-edit generated resources under `mod/src/generated/resources`.
 
 ## Completion checklist
 

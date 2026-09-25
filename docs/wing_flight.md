@@ -14,7 +14,7 @@ Use JetBrains Runtime 25 and the checked-in wrapper:
 ./gradlew.bat test build -DisDev=true
 ./gradlew.bat build -DisDev=false
 ./gradlew.bat runGameTestServer -DisDev=true -PacademyGameTests=academy:wing_network_motion
-./gradlew.bat runClientDev -DisDev=true --init-script tools/vfxgraph-editor/scripts/wing-flight-client.init.gradle
+./gradlew.bat :editor:runWingFlightClient -DisDev=true
 ```
 
 The client smoke runner uses `run/wing-flight-client/saves/black_wing`; prepare an isolated test world at that location before running. It tests all four wings with actual input and travel, pauses the integrated server for 1500 ms, releases boost at 0% momentum, and checks zero velocity, unchanged position, idle pose and subsequent toggle acknowledgement. Screenshots are written to `run/wing-flight-client/screenshots/wing_flight_0.png` through `wing_flight_3.png`.

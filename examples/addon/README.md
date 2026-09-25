@@ -9,9 +9,9 @@
 在仓库根目录使用 JBR 25：
 
 ```powershell
-.\gradlew.bat verifyApiExample apiExampleJar -DisDev=true
-.\gradlew.bat runGameTestServer -DisDev=true -PacademyApiExample=true -PacademyGameTests=academy_api_example:registration_execution
-.\gradlew.bat runClientDev -DisDev=true -PacademyApiExample=true
+.\gradlew.bat :mod:verifyApiExample :mod:apiExampleJar -DisDev=true
+.\gradlew.bat :mod:runGameTestServer -DisDev=true -PacademyApiExample=true -PacademyGameTests=academy_api_example:registration_execution
+.\gradlew.bat :mod:runClientDev -DisDev=true -PacademyApiExample=true
 ```
 
 `verifyApiExample` 编译并检查示例没有内部导入和 Mixin 引用，随主项目 check 执行。示例仅在显式传入 `academyApiExample=true` 时加载，不会打入 Academy 主 JAR；`apiExampleJar` 输出独立附属 JAR。
@@ -33,10 +33,10 @@ GameTest 使用正式管理员命令准备模拟玩家，验证冻结、同类�
 本目录也可作为独立 Gradle 项目，只编译依赖主 MOD 制品，不读取其源码。先在仓库根目录生成开发 JAR，再运行：
 
 ```powershell
-.\gradlew.bat jar -DisDev=true
+.\gradlew.bat :mod:jar -DisDev=true
 .\gradlew.bat -p examples/addon build
 ```
 
-默认引用 `../../build/libs/academy-26.2.0-0.0.4-alpha-dev.jar`。复制到其他位置时，使用 Java 25 和 Gradle 9.7，传入 `-PacademyJar=绝对路径`。正式运行还需安装匹配版本的 Academy、NeoForge 及主 MOD 的运行依赖；独立构建不把主 MOD 或依赖嵌套进示例 JAR。
+默认引用 `../../mod/build/libs/academy-26.2.0-0.0.4-alpha-dev.jar`。复制到其他位置时，使用 Java 25 和 Gradle 9.7，传入 `-PacademyJar=绝对路径`。正式运行还需安装匹配版本的 Academy、NeoForge 及主 MOD 的运行依赖；独立构建不把主 MOD 或依赖嵌套进示例 JAR。
 
 测试阶段仅尽可能保持文档化公开 API 兼容；禁止破坏性注入，非必要禁止对 Academy 方法进行 Mixin。

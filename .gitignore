@@ -128,7 +128,7 @@ runs/
 # Local
 *.py
 *.txt
-!src/main/resources/assets/academy/gui/ability_developer_gui_layout.txt
+!mod/src/main/resources/assets/academy/gui/ability_developer_gui_layout.txt
 *.exe
 
 .vscode
@@ -139,6 +139,10 @@ node_modules/
 /output/
 /asset_backups/
 /.codegraph
+.commandcode
+
+# Local handoff notes (not part of the project)
+/handoff/
 
 # Local ability skill effect manual
 /docs/AcademyCraft_Reborn_能力技能效果手册.docx

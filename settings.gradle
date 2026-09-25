@@ -25,3 +25,6 @@ plugins {
 }
 
 rootProject.name = "AcademyCraft-Reborn"
+
+include(":mod")
+include(":editor")

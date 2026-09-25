@@ -1,0 +1,976 @@
+package org.academy.internal.common.network;
+
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.neoforged.neoforge.registries.DeferredHolder;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import org.academy.AcademyCraft;
+import org.academy.internal.common.ability.ProficiencyPolicy;
+import org.academy.internal.common.ability.ProficiencySkillSettings;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorDefenseFeedbackPacket;
+import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectEffectPacket;
+import org.academy.internal.common.ability.accelerator.skills.lv1.VectorAccel;
+import org.academy.internal.common.ability.accelerator.skills.lv1.VectorBlast;
+import org.academy.internal.common.ability.accelerator.skills.lv2.DirStrike;
+import org.academy.internal.common.ability.accelerator.skills.lv2.DirStrikeVisualPacket;
+import org.academy.internal.common.ability.accelerator.skills.lv2.KineticEnergyApplied;
+import org.academy.internal.common.ability.accelerator.skills.lv3.KineticThrow;
+import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
+import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
+import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
+import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
+import org.academy.internal.common.ability.accelerator.skills.lv5.*;
+import org.academy.internal.common.ability.aeromanip.AeromanipChargeSync;
+import org.academy.internal.common.ability.aeromanip.AeromanipFieldSyncPacket;
+import org.academy.internal.common.ability.aeromanip.FlowSensePacket;
+import org.academy.internal.common.ability.aeromanip.skills.lv1.AirflowJet;
+import org.academy.internal.common.ability.aeromanip.skills.lv1.LaminarBuffer;
+import org.academy.internal.common.ability.aeromanip.skills.lv2.BreathingBubble;
+import org.academy.internal.common.ability.aeromanip.skills.lv2.FlowSense;
+import org.academy.internal.common.ability.aeromanip.skills.lv2.PneumaticGrasp;
+import org.academy.internal.common.ability.aeromanip.skills.lv2.TurbulentCavitation;
+import org.academy.internal.common.ability.aeromanip.skills.lv3.AtmosphereShield;
+import org.academy.internal.common.ability.aeromanip.skills.lv3.LaminarCutter;
+import org.academy.internal.common.ability.aeromanip.skills.lv3.RejectingWind;
+import org.academy.internal.common.ability.aeromanip.skills.lv3.TailwindField;
+import org.academy.internal.common.ability.aeromanip.skills.lv4.Flight;
+import org.academy.internal.common.ability.aeromanip.skills.lv4.HighSpeedJet;
+import org.academy.internal.common.ability.aeromanip.skills.lv4.VortexPull;
+import org.academy.internal.common.ability.aeromanip.skills.lv5.AdiabaticCompression;
+import org.academy.internal.common.ability.aeromanip.skills.lv5.VacuumDomain;
+import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisassemble;
+import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterGeneration;
+import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterShaping;
+import org.academy.internal.common.ability.darkmatter.skills.lv2.DarkmatterCut;
+import org.academy.internal.common.ability.darkmatter.skills.lv2.DarkmatterPhaseTuning;
+import org.academy.internal.common.ability.darkmatter.skills.lv3.DarkmatterRadiation;
+import org.academy.internal.common.ability.darkmatter.skills.lv4.DarkmatterCreation;
+import org.academy.internal.common.ability.darkmatter.skills.lv4.DarkmatterRepair;
+import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
+import org.academy.internal.common.ability.electromaster.SkyStrikeVisualPacket;
+import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
+import org.academy.internal.common.ability.electromaster.skills.lv1.ElectricalContact;
+import org.academy.internal.common.ability.electromaster.skills.lv2.LightningNova;
+import org.academy.internal.common.ability.electromaster.skills.lv2.ThunderLance;
+import org.academy.internal.common.ability.electromaster.skills.lv3.*;
+import org.academy.internal.common.ability.electromaster.skills.lv4.BioelectricOperation;
+import org.academy.internal.common.ability.electromaster.skills.lv4.ElectromagneticShield;
+import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
+import org.academy.internal.common.ability.electromaster.skills.lv4.Railgun;
+import org.academy.internal.common.ability.electromaster.skills.lv5.BallLightning;
+import org.academy.internal.common.ability.electromaster.skills.lv5.LightningStorm;
+import org.academy.internal.common.ability.electromaster.skills.lv5.Thunderclap;
+import org.academy.internal.common.ability.level0.skills.OutputControl;
+import org.academy.internal.common.ability.meltdowner.skills.lv1.SingleHighSpeedElectronBeam;
+import org.academy.internal.common.ability.meltdowner.skills.lv2.MiningBeam;
+import org.academy.internal.common.ability.meltdowner.skills.lv2.ScatterBomb;
+import org.academy.internal.common.ability.meltdowner.skills.lv3.Cloudroom;
+import org.academy.internal.common.ability.meltdowner.skills.lv3.LightShield;
+import org.academy.internal.common.ability.meltdowner.skills.lv4.JetStrike;
+import org.academy.internal.common.ability.meltdowner.skills.lv4.ParticleWaveCannon;
+import org.academy.internal.common.ability.meltdowner.skills.lv5.AutoCruiseBeamCannon;
+import org.academy.internal.common.ability.meltdowner.skills.lv5.Disintegrate;
+import org.academy.internal.common.ability.mentalout.MentalIntrusionManager;
+import org.academy.internal.common.ability.mentalout.MentalResistanceManager;
+import org.academy.internal.common.ability.mentalout.MentaloutRosterPackets;
+import org.academy.internal.common.ability.mentalout.PlayerControlSessionManager;
+import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationManager;
+import org.academy.internal.common.ability.mentalout.skills.lv1.MentalIntervention;
+import org.academy.internal.common.ability.mentalout.skills.lv1.TargetMisidentification;
+import org.academy.internal.common.ability.mentalout.skills.lv2.MentalStupor;
+import org.academy.internal.common.ability.mentalout.skills.lv3.CommandPositioning;
+import org.academy.internal.common.ability.mentalout.skills.lv3.ImpressionManipulation;
+import org.academy.internal.common.ability.mentalout.skills.lv4.PainSuppression;
+import org.academy.internal.common.ability.mentalout.skills.lv5.MindDestruction;
+import org.academy.internal.common.ability.mentalout.skills.lv5.WideAreaInterference;
+import org.academy.internal.common.ability.program.AbilityProgramManager;
+import org.academy.internal.common.ability.teleport.ChunkLeapPackets;
+import org.academy.internal.common.ability.teleport.InstantTeleportSyncPacket;
+import org.academy.internal.common.ability.teleport.skills.lv1.ThreateningTeleport;
+import org.academy.internal.common.ability.teleport.skills.lv2.Disarm;
+import org.academy.internal.common.ability.teleport.skills.lv2.PiercingTeleportation;
+import org.academy.internal.common.ability.teleport.skills.lv2.SelfTeleport;
+import org.academy.internal.common.ability.teleport.skills.lv2.SpatialSynergy;
+import org.academy.internal.common.ability.teleport.skills.lv3.FleshRipping;
+import org.academy.internal.common.ability.teleport.skills.lv3.LocationTeleport;
+import org.academy.internal.common.ability.teleport.skills.lv3.Shackle;
+import org.academy.internal.common.ability.teleport.skills.lv4.AreaTeleportSelect;
+import org.academy.internal.common.ability.teleport.skills.lv4.AreaTeleportSetup;
+import org.academy.internal.common.ability.teleport.skills.lv4.AreaTeleportStart;
+import org.academy.internal.common.ability.teleport.skills.lv4.QuickLocationTeleport;
+import org.academy.internal.common.ability.teleport.skills.lv5.DefensiveTeleport;
+import org.academy.internal.common.ability.teleport.skills.lv5.Flashing;
+import org.academy.internal.common.ability.teleport.skills.lv5.SpacialExcision;
+import org.academy.internal.common.attribute.PropsPackets;
+import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
+import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
+import org.academy.internal.common.world.damagesource.PvpSetting;
+import org.academy.internal.common.world.item.CoinItem;
+import org.academy.internal.common.world.item.ImagPhaseDowsingRodItem;
+import org.misaka.api.common.network.packet.PacketType;
+import org.misaka.api.common.registries.MisakaNetworkRegistries;
+
+public final class PacketTypes {
+    public static final DeferredRegister<PacketType<?, ?>> PACKET_TYPES =
+            DeferredRegister.create(MisakaNetworkRegistries.Keys.PACKET_TYPES, AcademyCraft.MOD_ID);
+
+    /**
+     * Sync
+     */
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ProficiencyPolicy.SyncPacket>>
+            PROFICIENCY_POLICY_SYNC = PACKET_TYPES.register("proficiency_policy_sync",
+            () -> new PacketType<>(ProficiencyPolicy.SyncPacket.class, ProficiencyPolicy.SyncPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, TemporalImmunitySyncPacket>>
+            TEMPORAL_IMMUNITY_SYNC = PACKET_TYPES.register("temporal_immunity_sync",
+            () -> new PacketType<>(TemporalImmunitySyncPacket.class, TemporalImmunitySyncPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ProficiencySkillSettings.SetPacket>>
+            PROFICIENCY_SKILL_OPTION_SET = PACKET_TYPES.register("proficiency_skill_option_set",
+            () -> new PacketType<>(ProficiencySkillSettings.SetPacket.class, ProficiencySkillSettings.SetPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ProficiencySkillSettings.SetModePacket>>
+            PROFICIENCY_SKILL_MODE_SET = PACKET_TYPES.register("proficiency_skill_mode_set",
+            () -> new PacketType<>(ProficiencySkillSettings.SetModePacket.class,
+                    ProficiencySkillSettings.SetModePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PropsPackets.SyncPacket>>
+            PROPS_SYNC = PACKET_TYPES.register("props_sync",
+            () -> new PacketType<>(PropsPackets.SyncPacket.class, PropsPackets.SyncPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PropsPackets.SetLockPacket>>
+            PROPS_SET_LOCK = PACKET_TYPES.register("props_set_lock",
+            () -> new PacketType<>(PropsPackets.SetLockPacket.class, PropsPackets.SetLockPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PropsPackets.StartPacket>>
+            PROPS_START = PACKET_TYPES.register("props_start",
+            () -> new PacketType<>(PropsPackets.StartPacket.class, PropsPackets.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, OutputControl.SettingsPacket>>
+            OUTPUT_CONTROL_SETTINGS = PACKET_TYPES.register("output_control_settings",
+            () -> new PacketType<>(OutputControl.SettingsPacket.class, OutputControl.SettingsPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, InstantTeleportSyncPacket>>
+            INSTANT_TELEPORT_SYNC = PACKET_TYPES.register("instant_teleport_sync",
+            () -> new PacketType<>(InstantTeleportSyncPacket.class, InstantTeleportSyncPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MusicSyncPackets.SharePacket>>
+            MUSIC_SHARE = PACKET_TYPES.register("music_share",
+            () -> new PacketType<>(MusicSyncPackets.SharePacket.class, MusicSyncPackets.SharePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MusicSyncPackets.SyncPacket>>
+            MUSIC_SYNC = PACKET_TYPES.register("music_sync",
+            () -> new PacketType<>(MusicSyncPackets.SyncPacket.class, MusicSyncPackets.SyncPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MusicRoomPackets.ActionPacket>>
+            MUSIC_ROOM_ACTION = PACKET_TYPES.register("music_room_action",
+            () -> new PacketType<>(MusicRoomPackets.ActionPacket.class, MusicRoomPackets.ActionPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MusicRoomPackets.SyncPacket>>
+            MUSIC_ROOM_SYNC = PACKET_TYPES.register("music_room_sync",
+            () -> new PacketType<>(MusicRoomPackets.SyncPacket.class, MusicRoomPackets.SyncPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MusicRoomPackets.ListPacket>>
+            MUSIC_ROOM_LIST = PACKET_TYPES.register("music_room_list",
+            () -> new PacketType<>(MusicRoomPackets.ListPacket.class, MusicRoomPackets.ListPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MusicRoomPackets.PendingNoticePacket>>
+            MUSIC_ROOM_PENDING = PACKET_TYPES.register("music_room_pending",
+            () -> new PacketType<>(MusicRoomPackets.PendingNoticePacket.class, MusicRoomPackets.PendingNoticePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MusicJukeboxPackets.ActionPacket>>
+            MUSIC_JUKEBOX_ACTION = PACKET_TYPES.register("music_jukebox_action",
+            () -> new PacketType<>(MusicJukeboxPackets.ActionPacket.class, MusicJukeboxPackets.ActionPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MusicJukeboxPackets.SyncPacket>>
+            MUSIC_JUKEBOX_SYNC = PACKET_TYPES.register("music_jukebox_sync",
+            () -> new PacketType<>(MusicJukeboxPackets.SyncPacket.class, MusicJukeboxPackets.SyncPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MusicAccountPackets.ResolveRequestPacket>>
+            MUSIC_RESOLVE_REQUEST = PACKET_TYPES.register("music_resolve_request",
+            () -> new PacketType<>(MusicAccountPackets.ResolveRequestPacket.class, MusicAccountPackets.ResolveRequestPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MusicAccountPackets.ResolveResponsePacket>>
+            MUSIC_RESOLVE_RESPONSE = PACKET_TYPES.register("music_resolve_response",
+            () -> new PacketType<>(MusicAccountPackets.ResolveResponsePacket.class, MusicAccountPackets.ResolveResponsePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MusicAccountPackets.AccountActionPacket>>
+            MUSIC_ACCOUNT_ACTION = PACKET_TYPES.register("music_account_action",
+            () -> new PacketType<>(MusicAccountPackets.AccountActionPacket.class, MusicAccountPackets.AccountActionPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MusicAccountPackets.AccountStatusPacket>>
+            MUSIC_ACCOUNT_STATUS = PACKET_TYPES.register("music_account_status",
+            () -> new PacketType<>(MusicAccountPackets.AccountStatusPacket.class, MusicAccountPackets.AccountStatusPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MusicAccountPackets.ServerPlaylistPacket>>
+            MUSIC_SERVER_PLAYLIST = PACKET_TYPES.register("music_server_playlist",
+            () -> new PacketType<>(MusicAccountPackets.ServerPlaylistPacket.class, MusicAccountPackets.ServerPlaylistPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MusicAccountPackets.PlaylistRequestPacket>>
+            MUSIC_PLAYLIST_REQUEST = PACKET_TYPES.register("music_playlist_request",
+            () -> new PacketType<>(MusicAccountPackets.PlaylistRequestPacket.class, MusicAccountPackets.PlaylistRequestPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, CoinItem.ThrowCoinPacket>>
+            THROW_COIN_WITH_VELOCITY = PACKET_TYPES.register("throw_coin_with_velocity",
+            () -> new PacketType<>(CoinItem.ThrowCoinPacket.class, CoinItem.ThrowCoinPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ImagPhaseDowsingRodItem.SyncPacket>>
+            IMAG_PHASE_DOWSING_SYNC = PACKET_TYPES.register("imag_phase_dowsing_sync",
+            () -> new PacketType<>(ImagPhaseDowsingRodItem.SyncPacket.class,
+                    ImagPhaseDowsingRodItem.SyncPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AirflowJet.StartPacket>>
+            AIRFLOW_JET_START = PACKET_TYPES.register("airflow_jet_start",
+            () -> new PacketType<>(AirflowJet.StartPacket.class, AirflowJet.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AirflowJet.StopPacket>>
+            AIRFLOW_JET_STOP = PACKET_TYPES.register("airflow_jet_stop",
+            () -> new PacketType<>(AirflowJet.StopPacket.class, AirflowJet.StopPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, LaminarBuffer.StartPacket>>
+            LAMINAR_BUFFER_START = PACKET_TYPES.register("laminar_buffer_start",
+            () -> new PacketType<>(LaminarBuffer.StartPacket.class, LaminarBuffer.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, LaminarBuffer.StopPacket>>
+            LAMINAR_BUFFER_STOP = PACKET_TYPES.register("laminar_buffer_stop",
+            () -> new PacketType<>(LaminarBuffer.StopPacket.class, LaminarBuffer.StopPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, BreathingBubble.CastPacket>>
+            BREATHING_BUBBLE_CAST = PACKET_TYPES.register("breathing_bubble_cast",
+            () -> new PacketType<>(BreathingBubble.CastPacket.class, BreathingBubble.CastPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, FlowSensePacket>>
+            FLOW_SENSE_SYNC = PACKET_TYPES.register("flow_sense_sync",
+            () -> new PacketType<>(FlowSensePacket.class, FlowSensePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, FlowSense.TogglePacket>>
+            FLOW_SENSE_TOGGLE = PACKET_TYPES.register("flow_sense_toggle",
+            () -> new PacketType<>(FlowSense.TogglePacket.class, FlowSense.TogglePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AeromanipChargeSync.Request>>
+            AEROMANIP_CHARGE_REQUEST = PACKET_TYPES.register("aeromanip_charge_request",
+            () -> new PacketType<>(AeromanipChargeSync.Request.class, AeromanipChargeSync.Request.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AeromanipChargeSync.State>>
+            AEROMANIP_CHARGE_STATE = PACKET_TYPES.register("aeromanip_charge_state",
+            () -> new PacketType<>(AeromanipChargeSync.State.class, AeromanipChargeSync.State.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AeromanipFieldSyncPacket>>
+            AEROMANIP_FIELD_SYNC = PACKET_TYPES.register("aeromanip_field_sync",
+            () -> new PacketType<>(AeromanipFieldSyncPacket.class, AeromanipFieldSyncPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PneumaticGrasp.StartPacket>>
+            PNEUMATIC_GRASP_START = PACKET_TYPES.register("pneumatic_grasp_start",
+            () -> new PacketType<>(PneumaticGrasp.StartPacket.class, PneumaticGrasp.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PneumaticGrasp.StopPacket>>
+            PNEUMATIC_GRASP_STOP = PACKET_TYPES.register("pneumatic_grasp_stop",
+            () -> new PacketType<>(PneumaticGrasp.StopPacket.class, PneumaticGrasp.StopPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PneumaticGrasp.AdjustDistancePacket>>
+            PNEUMATIC_GRASP_ADJUST_DISTANCE = PACKET_TYPES.register("pneumatic_grasp_adjust_distance",
+            () -> new PacketType<>(PneumaticGrasp.AdjustDistancePacket.class, PneumaticGrasp.AdjustDistancePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, LaminarCutter.StartPacket>>
+            LAMINAR_CUTTER_START = PACKET_TYPES.register("laminar_cutter_start",
+            () -> new PacketType<>(LaminarCutter.StartPacket.class, LaminarCutter.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, LaminarCutter.StopPacket>>
+            LAMINAR_CUTTER_STOP = PACKET_TYPES.register("laminar_cutter_stop",
+            () -> new PacketType<>(LaminarCutter.StopPacket.class, LaminarCutter.StopPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, VortexPull.StartPacket>>
+            VORTEX_PULL_START = PACKET_TYPES.register("vortex_pull_start",
+            () -> new PacketType<>(VortexPull.StartPacket.class, VortexPull.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, VortexPull.StopPacket>>
+            VORTEX_PULL_STOP = PACKET_TYPES.register("vortex_pull_stop",
+            () -> new PacketType<>(VortexPull.StopPacket.class, VortexPull.StopPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, RejectingWind.StartPacket>>
+            REJECTING_WIND_START = PACKET_TYPES.register("rejecting_wind_start",
+            () -> new PacketType<>(RejectingWind.StartPacket.class, RejectingWind.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, RejectingWind.StopPacket>>
+            REJECTING_WIND_STOP = PACKET_TYPES.register("rejecting_wind_stop",
+            () -> new PacketType<>(RejectingWind.StopPacket.class, RejectingWind.StopPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, HighSpeedJet.PlacePacket>>
+            HIGH_SPEED_JET_PLACE = PACKET_TYPES.register("high_speed_jet_place",
+            () -> new PacketType<>(HighSpeedJet.PlacePacket.class, HighSpeedJet.PlacePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, HighSpeedJet.ActivatePacket>>
+            HIGH_SPEED_JET_ACTIVATE = PACKET_TYPES.register("high_speed_jet_activate",
+            () -> new PacketType<>(HighSpeedJet.ActivatePacket.class, HighSpeedJet.ActivatePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, TailwindField.StartPacket>>
+            TAILWIND_FIELD_START = PACKET_TYPES.register("tailwind_field_start",
+            () -> new PacketType<>(TailwindField.StartPacket.class, TailwindField.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, TailwindField.StopPacket>>
+            TAILWIND_FIELD_STOP = PACKET_TYPES.register("tailwind_field_stop",
+            () -> new PacketType<>(TailwindField.StopPacket.class, TailwindField.StopPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AdiabaticCompression.StartPacket>>
+            ADIABATIC_COMPRESSION_START = PACKET_TYPES.register("adiabatic_compression_start",
+            () -> new PacketType<>(AdiabaticCompression.StartPacket.class, AdiabaticCompression.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AdiabaticCompression.StopPacket>>
+            ADIABATIC_COMPRESSION_STOP = PACKET_TYPES.register("adiabatic_compression_stop",
+            () -> new PacketType<>(AdiabaticCompression.StopPacket.class, AdiabaticCompression.StopPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AtmosphereShield.TogglePacket>>
+            ATMOSPHERE_SHIELD_TOGGLE = PACKET_TYPES.register("atmosphere_shield_toggle",
+            () -> new PacketType<>(AtmosphereShield.TogglePacket.class, AtmosphereShield.TogglePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, TurbulentCavitation.TogglePacket>>
+            TURBULENT_CAVITATION_TOGGLE = PACKET_TYPES.register("turbulent_cavitation_toggle",
+            () -> new PacketType<>(TurbulentCavitation.TogglePacket.class, TurbulentCavitation.TogglePacket.CODEC));
+
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Flight.TogglePacket>>
+            FLIGHT_TOGGLE = PACKET_TYPES.register("flight_toggle",
+            () -> new PacketType<>(Flight.TogglePacket.class, Flight.TogglePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, VacuumDomain.TogglePacket>>
+            VACUUM_DOMAIN_TOGGLE = PACKET_TYPES.register("vacuum_domain_toggle",
+            () -> new PacketType<>(VacuumDomain.TogglePacket.class, VacuumDomain.TogglePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, StormWing.TogglePacket>>
+            STORM_WING_TOGGLE = PACKET_TYPES.register("storm_wing_toggle",
+            () -> new PacketType<>(StormWing.TogglePacket.class, StormWing.TogglePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, StormWing.ControlPacket>>
+            STORM_WING_CONTROL = PACKET_TYPES.register("storm_wing_control",
+            () -> new PacketType<>(StormWing.ControlPacket.class, StormWing.ControlPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, VectorAccel.StartPacket>>
+            VECTOR_ACCEL_START = PACKET_TYPES.register("vector_accel_start",
+            () -> new PacketType<>(VectorAccel.StartPacket.class, VectorAccel.StartPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, VectorAccel.DashPacket>>
+            VECTOR_ACCEL_DASH = PACKET_TYPES.register("vector_accel_dash",
+            () -> new PacketType<>(VectorAccel.DashPacket.class, VectorAccel.DashPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ArcGenerate.GeneratePacket>>
+            ARC_GENERATE_GENERATE = PACKET_TYPES.register("arc_generate_generate",
+            () -> new PacketType<>(ArcGenerate.GeneratePacket.class, ArcGenerate.GeneratePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MagnetManipulation.MoveStartPacket>>
+            MAGNET_MANIPULATION_MOVE_START = PACKET_TYPES.register("magnet_manipulation_move_start",
+            () -> new PacketType<>(MagnetManipulation.MoveStartPacket.class, MagnetManipulation.MoveStartPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MagnetManipulation.MoveStopPacket>>
+            MAGNET_MANIPULATION_MOVE_STOP = PACKET_TYPES.register("magnet_manipulation_move_stop",
+            () -> new PacketType<>(MagnetManipulation.MoveStopPacket.class, MagnetManipulation.MoveStopPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MineDetect.TogglePacket>>
+            MINE_DETECT_TOGGLE = PACKET_TYPES.register("mine_detect_toggle",
+            () -> new PacketType<>(MineDetect.TogglePacket.class, MineDetect.TogglePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PainSuppression.TogglePacket>>
+            PAIN_SUPPRESSION_TOGGLE = PACKET_TYPES.register("pain_suppression_toggle",
+            () -> new PacketType<>(PainSuppression.TogglePacket.class, PainSuppression.TogglePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ElectromagneticShield.TogglePacket>>
+            ELECTROMAGNETIC_SHIELD_TOGGLE = PACKET_TYPES.register("electromagnetic_shield_toggle",
+            () -> new PacketType<>(ElectromagneticShield.TogglePacket.class, ElectromagneticShield.TogglePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, CurrentSymbiosis.TogglePacket>>
+            CURRENT_SYMBIOSIS_TOGGLE = PACKET_TYPES.register("current_symbiosis_toggle",
+            () -> new PacketType<>(CurrentSymbiosis.TogglePacket.class, CurrentSymbiosis.TogglePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, BioelectricOperation.TogglePacket>>
+            BIOELECTRIC_OPERATION_TOGGLE = PACKET_TYPES.register("bioelectric_operation_toggle",
+            () -> new PacketType<>(BioelectricOperation.TogglePacket.class, BioelectricOperation.TogglePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, BallLightning.ActivatePacket>>
+            LIGHTNING_NOVA_ACTIVATE = PACKET_TYPES.register("ball_lightning_activate",
+            () -> new PacketType<>(BallLightning.ActivatePacket.class, BallLightning.ActivatePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Railgun.StartPacket>>
+            RAILGUN_START_CHARGE = PACKET_TYPES.register("railgun_start_charge",
+            () -> new PacketType<>(Railgun.StartPacket.class, Railgun.StartPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Railgun.EndPacket>>
+            RAILGUN_END_CHARGE = PACKET_TYPES.register("railgun_end_charge",
+            () -> new PacketType<>(Railgun.EndPacket.class, Railgun.EndPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, SingleHighSpeedElectronBeam.ShootPacket>>
+            SINGLE_HIGH_SPEED_ELECTRON_BEAM_SHOOT = PACKET_TYPES.register("single_high_speed_electron_beam_shoot",
+            () -> new PacketType<>(SingleHighSpeedElectronBeam.ShootPacket.class, SingleHighSpeedElectronBeam.ShootPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ScatterBomb.ShootPacket>>
+            SCATTER_BOMB_SHOOT = PACKET_TYPES.register("scatter_bomb_shoot",
+            () -> new PacketType<>(ScatterBomb.ShootPacket.class, ScatterBomb.ShootPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, SelfTeleport.SelfTeleportPacket>>
+            SELF_TELEPORT = PACKET_TYPES.register("self_teleport",
+            () -> new PacketType<>(SelfTeleport.SelfTeleportPacket.class, SelfTeleport.SelfTeleportPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ThreateningTeleport.CastPacket>>
+            THREATENING_TELEPORT_CAST = PACKET_TYPES.register("threatening_teleport_cast",
+            () -> new PacketType<>(ThreateningTeleport.CastPacket.class, ThreateningTeleport.CastPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, FleshRipping.CastPacket>>
+            FLESH_RIPPING_CAST = PACKET_TYPES.register("flesh_ripping_cast",
+            () -> new PacketType<>(FleshRipping.CastPacket.class, FleshRipping.CastPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, LocationTeleport.RequestMarksPacket>>
+            LOCATION_TELEPORT_REQUEST = PACKET_TYPES.register("location_teleport_request",
+            () -> new PacketType<>(LocationTeleport.RequestMarksPacket.class, LocationTeleport.RequestMarksPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, LocationTeleport.SaveMarkPacket>>
+            LOCATION_TELEPORT_SAVE = PACKET_TYPES.register("location_teleport_save",
+            () -> new PacketType<>(LocationTeleport.SaveMarkPacket.class, LocationTeleport.SaveMarkPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, LocationTeleport.RemoveMarkPacket>>
+            LOCATION_TELEPORT_REMOVE = PACKET_TYPES.register("location_teleport_remove",
+            () -> new PacketType<>(LocationTeleport.RemoveMarkPacket.class, LocationTeleport.RemoveMarkPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, LocationTeleport.SelectMarkPacket>>
+            LOCATION_TELEPORT_SELECT = PACKET_TYPES.register("location_teleport_select",
+            () -> new PacketType<>(LocationTeleport.SelectMarkPacket.class, LocationTeleport.SelectMarkPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, LocationTeleport.TeleportToMarkPacket>>
+            LOCATION_TELEPORT_RUN = PACKET_TYPES.register("location_teleport_run",
+            () -> new PacketType<>(LocationTeleport.TeleportToMarkPacket.class, LocationTeleport.TeleportToMarkPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, LocationTeleport.MarksSyncPacket>>
+            LOCATION_TELEPORT_SYNC = PACKET_TYPES.register("location_teleport_sync",
+            () -> new PacketType<>(LocationTeleport.MarksSyncPacket.class, LocationTeleport.MarksSyncPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, QuickLocationTeleport.RunPacket>>
+            QUICK_LOCATION_TELEPORT_RUN = PACKET_TYPES.register("quick_location_teleport_run",
+            () -> new PacketType<>(QuickLocationTeleport.RunPacket.class, QuickLocationTeleport.RunPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AreaTeleportSelect.MarkPacket>>
+            AREA_TELEPORT_SELECT_MARK = PACKET_TYPES.register("area_teleport_select_mark",
+            () -> new PacketType<>(AreaTeleportSelect.MarkPacket.class, AreaTeleportSelect.MarkPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AreaTeleportSelect.SyncPacket>>
+            AREA_TELEPORT_SYNC = PACKET_TYPES.register("area_teleport_sync",
+            () -> new PacketType<>(AreaTeleportSelect.SyncPacket.class, AreaTeleportSelect.SyncPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AreaTeleportSetup.MarkPacket>>
+            AREA_TELEPORT_SETUP_MARK = PACKET_TYPES.register("area_teleport_setup_mark",
+            () -> new PacketType<>(AreaTeleportSetup.MarkPacket.class, AreaTeleportSetup.MarkPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AreaTeleportStart.RunPacket>>
+            AREA_TELEPORT_START_RUN = PACKET_TYPES.register("area_teleport_start_run",
+            () -> new PacketType<>(AreaTeleportStart.RunPacket.class, AreaTeleportStart.RunPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Flashing.TogglePacket>>
+            FLASHING_TOGGLE = PACKET_TYPES.register("flashing_toggle",
+            () -> new PacketType<>(Flashing.TogglePacket.class, Flashing.TogglePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Flashing.DashPacket>>
+            FLASHING_DASH = PACKET_TYPES.register("flashing_dash",
+            () -> new PacketType<>(Flashing.DashPacket.class, Flashing.DashPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DefensiveTeleport.TogglePacket>>
+            DEFENSIVE_TELEPORT_TOGGLE = PACKET_TYPES.register("defensive_teleport_toggle",
+            () -> new PacketType<>(DefensiveTeleport.TogglePacket.class, DefensiveTeleport.TogglePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ChunkLeapPackets.ViewRequestPacket>>
+            CHUNK_LEAP_VIEW_REQUEST = PACKET_TYPES.register("chunk_leap_view_request",
+            () -> new PacketType<>(ChunkLeapPackets.ViewRequestPacket.class, ChunkLeapPackets.ViewRequestPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ChunkLeapPackets.ViewReleasePacket>>
+            CHUNK_LEAP_VIEW_RELEASE = PACKET_TYPES.register("chunk_leap_view_release",
+            () -> new PacketType<>(ChunkLeapPackets.ViewReleasePacket.class, ChunkLeapPackets.ViewReleasePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ChunkLeapPackets.SwapRequestPacket>>
+            CHUNK_LEAP_SWAP = PACKET_TYPES.register("chunk_leap_swap",
+            () -> new PacketType<>(ChunkLeapPackets.SwapRequestPacket.class, ChunkLeapPackets.SwapRequestPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ChunkLeapPackets.EntityTeleportPacket>>
+            CHUNK_LEAP_ENTITY_TELEPORT = PACKET_TYPES.register("chunk_leap_entity_teleport",
+            () -> new PacketType<>(ChunkLeapPackets.EntityTeleportPacket.class, ChunkLeapPackets.EntityTeleportPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ChunkLeapPackets.TilesPacket>>
+            CHUNK_LEAP_TILES = PACKET_TYPES.register("chunk_leap_tiles",
+            () -> new PacketType<>(ChunkLeapPackets.TilesPacket.class, ChunkLeapPackets.TilesPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ChunkLeapPackets.EntitiesPacket>>
+            CHUNK_LEAP_ENTITIES = PACKET_TYPES.register("chunk_leap_entities",
+            () -> new PacketType<>(ChunkLeapPackets.EntitiesPacket.class, ChunkLeapPackets.EntitiesPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ChunkLeapPackets.SwapResultPacket>>
+            CHUNK_LEAP_SWAP_RESULT = PACKET_TYPES.register("chunk_leap_swap_result",
+            () -> new PacketType<>(ChunkLeapPackets.SwapResultPacket.class, ChunkLeapPackets.SwapResultPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ChunkLeapPackets.TeleportResultPacket>>
+            CHUNK_LEAP_TELEPORT_RESULT = PACKET_TYPES.register("chunk_leap_teleport_result",
+            () -> new PacketType<>(ChunkLeapPackets.TeleportResultPacket.class, ChunkLeapPackets.TeleportResultPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ChunkLeapPackets.ViewStatusPacket>>
+            CHUNK_LEAP_VIEW_STATUS = PACKET_TYPES.register("chunk_leap_view_status",
+            () -> new PacketType<>(ChunkLeapPackets.ViewStatusPacket.class, ChunkLeapPackets.ViewStatusPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ChunkLeapPackets.PreloadStatusPacket>>
+            CHUNK_LEAP_PRELOAD_STATUS = PACKET_TYPES.register("chunk_leap_preload_status",
+            () -> new PacketType<>(ChunkLeapPackets.PreloadStatusPacket.class, ChunkLeapPackets.PreloadStatusPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ChunkLeapPackets.InspectRequestPacket>>
+            CHUNK_LEAP_INSPECT_REQUEST = PACKET_TYPES.register("chunk_leap_inspect_request",
+            () -> new PacketType<>(ChunkLeapPackets.InspectRequestPacket.class, ChunkLeapPackets.InspectRequestPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ChunkLeapPackets.InspectResultPacket>>
+            CHUNK_LEAP_INSPECT_RESULT = PACKET_TYPES.register("chunk_leap_inspect_result",
+            () -> new PacketType<>(ChunkLeapPackets.InspectResultPacket.class, ChunkLeapPackets.InspectResultPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ChunkLeapPackets.PlayerTeleportPacket>>
+            CHUNK_LEAP_PLAYER_TELEPORT = PACKET_TYPES.register("chunk_leap_player_teleport",
+            () -> new PacketType<>(ChunkLeapPackets.PlayerTeleportPacket.class, ChunkLeapPackets.PlayerTeleportPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ChunkLeapPackets.GodViewRequestPacket>>
+            CHUNK_LEAP_GOD_VIEW_REQUEST = PACKET_TYPES.register("chunk_leap_god_view_request",
+            () -> new PacketType<>(ChunkLeapPackets.GodViewRequestPacket.class, ChunkLeapPackets.GodViewRequestPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ChunkLeapPackets.GodViewStatusPacket>>
+            CHUNK_LEAP_GOD_VIEW_STATUS = PACKET_TYPES.register("chunk_leap_god_view_status",
+            () -> new PacketType<>(ChunkLeapPackets.GodViewStatusPacket.class, ChunkLeapPackets.GodViewStatusPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterShaping.CastPacket>>
+            DARKMATTER_SHAPING_CAST = PACKET_TYPES.register("darkmatter_shaping_cast",
+            () -> new PacketType<>(DarkmatterShaping.CastPacket.class, DarkmatterShaping.CastPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, DarkmatterShaping.ResultPacket>>
+            DARKMATTER_SHAPING_RESULT = PACKET_TYPES.register("darkmatter_shaping_result",
+            () -> new PacketType<>(DarkmatterShaping.ResultPacket.class, DarkmatterShaping.ResultPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterGeneration.ControlPacket>>
+            DARKMATTER_GENERATION_CONTROL = PACKET_TYPES.register("darkmatter_generation_control",
+            () -> new PacketType<>(DarkmatterGeneration.ControlPacket.class, DarkmatterGeneration.ControlPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterPhaseTuning.ControlPacket>>
+            DARKMATTER_PHASE_TUNING_CONTROL = PACKET_TYPES.register("darkmatter_phase_tuning_control",
+            () -> new PacketType<>(DarkmatterPhaseTuning.ControlPacket.class, DarkmatterPhaseTuning.ControlPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterDisassemble.CastPacket>>
+            DARKMATTER_DISASSEMBLE_CAST = PACKET_TYPES.register("darkmatter_disassemble_cast",
+            () -> new PacketType<>(DarkmatterDisassemble.CastPacket.class, DarkmatterDisassemble.CastPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterCut.CastPacket>>
+            DARKMATTER_CUT_CAST = PACKET_TYPES.register("darkmatter_cut_cast",
+            () -> new PacketType<>(DarkmatterCut.CastPacket.class, DarkmatterCut.CastPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterRadiation.StartPacket>>
+            DARKMATTER_RADIATION_START = PACKET_TYPES.register("darkmatter_radiation_start",
+            () -> new PacketType<>(DarkmatterRadiation.StartPacket.class, DarkmatterRadiation.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterRadiation.StopPacket>>
+            DARKMATTER_RADIATION_STOP = PACKET_TYPES.register("darkmatter_radiation_stop",
+            () -> new PacketType<>(DarkmatterRadiation.StopPacket.class, DarkmatterRadiation.StopPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterRepair.TogglePacket>>
+            DARKMATTER_REPAIR_TOGGLE = PACKET_TYPES.register("darkmatter_repair_toggle",
+            () -> new PacketType<>(DarkmatterRepair.TogglePacket.class, DarkmatterRepair.TogglePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterCreation.CastPacket>>
+            DARKMATTER_CREATION_CAST = PACKET_TYPES.register("darkmatter_creation_cast",
+            () -> new PacketType<>(DarkmatterCreation.CastPacket.class, DarkmatterCreation.CastPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterCreation.EditorRequestPacket>>
+            DARKMATTER_CREATION_EDITOR_REQUEST = PACKET_TYPES.register("darkmatter_creation_editor_request",
+            () -> new PacketType<>(DarkmatterCreation.EditorRequestPacket.class, DarkmatterCreation.EditorRequestPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterCreation.SaveBlueprintPacket>>
+            DARKMATTER_CREATION_SAVE = PACKET_TYPES.register("darkmatter_creation_save",
+            () -> new PacketType<>(DarkmatterCreation.SaveBlueprintPacket.class, DarkmatterCreation.SaveBlueprintPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterCreation.SummonPacket>>
+            DARKMATTER_CREATION_SUMMON = PACKET_TYPES.register("darkmatter_creation_summon",
+            () -> new PacketType<>(DarkmatterCreation.SummonPacket.class, DarkmatterCreation.SummonPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterCreation.DismantlePacket>>
+            DARKMATTER_CREATION_DISMANTLE = PACKET_TYPES.register("darkmatter_creation_dismantle",
+            () -> new PacketType<>(DarkmatterCreation.DismantlePacket.class, DarkmatterCreation.DismantlePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, DarkmatterCreation.EditorSnapshotPacket>>
+            DARKMATTER_CREATION_EDITOR_SNAPSHOT = PACKET_TYPES.register("darkmatter_creation_editor_snapshot",
+            () -> new PacketType<>(DarkmatterCreation.EditorSnapshotPacket.class, DarkmatterCreation.EditorSnapshotPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, DarkmatterCreation.RosterDeltaPacket>>
+            DARKMATTER_CREATION_ROSTER_DELTA = PACKET_TYPES.register("darkmatter_creation_roster_delta",
+            () -> new PacketType<>(DarkmatterCreation.RosterDeltaPacket.class, DarkmatterCreation.RosterDeltaPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, DarkmatterCreation.SummonResultPacket>>
+            DARKMATTER_CREATION_SUMMON_RESULT = PACKET_TYPES.register("darkmatter_creation_summon_result",
+            () -> new PacketType<>(DarkmatterCreation.SummonResultPacket.class, DarkmatterCreation.SummonResultPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterSixWings.TogglePacket>>
+            DARKMATTER_SIX_WINGS_TOGGLE = PACKET_TYPES.register("darkmatter_six_wings_toggle",
+            () -> new PacketType<>(DarkmatterSixWings.TogglePacket.class, DarkmatterSixWings.TogglePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DirStrike.ActionPacket>>
+            DIR_STRIKE = PACKET_TYPES.register("dir_strike",
+            () -> new PacketType<>(DirStrike.ActionPacket.class, DirStrike.ActionPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, DirStrikeVisualPacket>>
+            DIR_STRIKE_VISUAL = PACKET_TYPES.register("dir_strike_visual",
+            () -> new PacketType<>(DirStrikeVisualPacket.class, DirStrikeVisualPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SpawnVfxGraphPacket>>
+            SPAWN_VFX_GRAPH = PACKET_TYPES.register("spawn_vfx_graph",
+            () -> new PacketType<>(SpawnVfxGraphPacket.class, SpawnVfxGraphPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SkillVfxPacket>>
+            SKILL_VFX = PACKET_TYPES.register("skill_vfx",
+            () -> new PacketType<>(SkillVfxPacket.class, SkillVfxPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, VectorBlast.UsePacket>>
+            VECTOR_BLAST_USE = PACKET_TYPES.register("vector_blast_use",
+            () -> new PacketType<>(VectorBlast.UsePacket.class, VectorBlast.UsePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, KineticEnergyApplied.TogglePacket>>
+            KINETIC_ENERGY_APPLIED_TOGGLE = PACKET_TYPES.register("kinetic_energy_applied_toggle",
+            () -> new PacketType<>(KineticEnergyApplied.TogglePacket.class, KineticEnergyApplied.TogglePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, KineticEnergyApplied.ToggleShockwavePacket>>
+            KINETIC_ENERGY_APPLIED_SHOCKWAVE_TOGGLE = PACKET_TYPES.register("kinetic_energy_applied_shockwave_toggle",
+            () -> new PacketType<>(KineticEnergyApplied.ToggleShockwavePacket.class, KineticEnergyApplied.ToggleShockwavePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, KineticEnergyApplied.CycleImpactLevelPacket>>
+            KINETIC_ENERGY_APPLIED_IMPACT_LEVEL = PACKET_TYPES.register("kinetic_energy_applied_impact_level",
+            () -> new PacketType<>(KineticEnergyApplied.CycleImpactLevelPacket.class, KineticEnergyApplied.CycleImpactLevelPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, KineticEnergyApplied.SetBlockDropsPacket>>
+            KINETIC_ENERGY_APPLIED_BLOCK_DROPS_SET = PACKET_TYPES.register("kinetic_energy_applied_block_drops_set",
+            () -> new PacketType<>(KineticEnergyApplied.SetBlockDropsPacket.class, KineticEnergyApplied.SetBlockDropsPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, KineticEnergyApplied.AttackWavePacket>>
+            KINETIC_ENERGY_APPLIED_ATTACK_WAVE = PACKET_TYPES.register("kinetic_energy_applied_attack_wave",
+            () -> new PacketType<>(KineticEnergyApplied.AttackWavePacket.class, KineticEnergyApplied.AttackWavePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, KineticThrow.StartPacket>>
+            KINETIC_THROW_START = PACKET_TYPES.register("kinetic_throw_start",
+            () -> new PacketType<>(KineticThrow.StartPacket.class, KineticThrow.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, KineticThrow.ReleasePacket>>
+            KINETIC_THROW_RELEASE = PACKET_TYPES.register("kinetic_throw_release",
+            () -> new PacketType<>(KineticThrow.ReleasePacket.class, KineticThrow.ReleasePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, KineticThrow.ThrowPacket>>
+            KINETIC_THROW_THROW = PACKET_TYPES.register("kinetic_throw_throw",
+            () -> new PacketType<>(KineticThrow.ThrowPacket.class, KineticThrow.ThrowPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, VectorReflection.TogglePacket>>
+            VECTOR_REFLECTION_TOGGLE = PACKET_TYPES.register("vector_reflection_toggle",
+            () -> new PacketType<>(VectorReflection.TogglePacket.class, VectorReflection.TogglePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ReflectionFilter.RequestPacket>>
+            REFLECTION_FILTER_REQUEST = PACKET_TYPES.register("reflection_filter_request",
+            () -> new PacketType<>(ReflectionFilter.RequestPacket.class, ReflectionFilter.RequestPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ReflectionFilter.UpdatePacket>>
+            REFLECTION_FILTER_UPDATE = PACKET_TYPES.register("reflection_filter_update",
+            () -> new PacketType<>(ReflectionFilter.UpdatePacket.class, ReflectionFilter.UpdatePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, ReflectionFilter.SyncPacket>>
+            REFLECTION_FILTER_SYNC = PACKET_TYPES.register("reflection_filter_sync",
+            () -> new PacketType<>(ReflectionFilter.SyncPacket.class, ReflectionFilter.SyncPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, BlackWing.TogglePacket>>
+            BLACK_WING_TOGGLE = PACKET_TYPES.register("black_wing_toggle",
+            () -> new PacketType<>(BlackWing.TogglePacket.class, BlackWing.TogglePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, BlackWing.ControlPacket>>
+            BLACK_WING_CONTROL = PACKET_TYPES.register("black_wing_control_v2",
+            () -> new PacketType<>(BlackWing.ControlPacket.class, BlackWing.ControlPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, WhiteWing.TogglePacket>>
+            WHITE_WING_TOGGLE = PACKET_TYPES.register("white_wing_toggle",
+            () -> new PacketType<>(WhiteWing.TogglePacket.class, WhiteWing.TogglePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, WhiteWing.ControlPacket>>
+            WHITE_WING_CONTROL = PACKET_TYPES.register("white_wing_control",
+            () -> new PacketType<>(WhiteWing.ControlPacket.class, WhiteWing.ControlPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlatinumWing.TogglePacket>>
+            PLATINUM_WING_TOGGLE = PACKET_TYPES.register("platinum_wing_toggle",
+            () -> new PacketType<>(PlatinumWing.TogglePacket.class, PlatinumWing.TogglePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlatinumWing.ControlPacket>>
+            PLATINUM_WING_CONTROL = PACKET_TYPES.register("platinum_wing_control",
+            () -> new PacketType<>(PlatinumWing.ControlPacket.class, PlatinumWing.ControlPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlayerLeftClickSwingPacket>>
+            PLAYER_LEFT_CLICK_SWING = PACKET_TYPES.register("player_left_click_swing",
+            () -> new PacketType<>(PlayerLeftClickSwingPacket.class, PlayerLeftClickSwingPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MagneticHookActionPacket>>
+            MAGNETIC_HOOK_ACTION = PACKET_TYPES.register("magnetic_hook_action",
+            () -> new PacketType<>(MagneticHookActionPacket.class, MagneticHookActionPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AdvancedWingSweepPacket>>
+            ADVANCED_WING_SWEEP = PACKET_TYPES.register("advanced_wing_sweep",
+            () -> new PacketType<>(AdvancedWingSweepPacket.class, AdvancedWingSweepPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, BlackWingAttackPacket>>
+            BLACK_WING_ATTACK = PACKET_TYPES.register("black_wing_attack_v2",
+            () -> new PacketType<>(BlackWingAttackPacket.class, BlackWingAttackPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, BlackWingStatePacket>>
+            BLACK_WING_STATE = PACKET_TYPES.register("black_wing_state_v1",
+            () -> new PacketType<>(BlackWingStatePacket.class,
+                    BlackWingStatePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AdvancedWingTransitionPacket>>
+            ADVANCED_WING_TRANSITION = PACKET_TYPES.register("advanced_wing_transition",
+            () -> new PacketType<>(AdvancedWingTransitionPacket.class, AdvancedWingTransitionPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, VectorRedirectEffectPacket>>
+            VECTOR_REDIRECT_EFFECT = PACKET_TYPES.register("vector_redirect_effect",
+            () -> new PacketType<>(VectorRedirectEffectPacket.class, VectorRedirectEffectPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, VectorDefenseFeedbackPacket>>
+            VECTOR_DEFENSE_FEEDBACK = PACKET_TYPES.register("vector_defense_feedback",
+            () -> new PacketType<>(VectorDefenseFeedbackPacket.class, VectorDefenseFeedbackPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PlatinumWing.ExecutionVisualPacket>>
+            PLATINUM_WING_EXECUTION_VISUAL = PACKET_TYPES.register("platinum_wing_execution_visual",
+            () -> new PacketType<>(PlatinumWing.ExecutionVisualPacket.class, PlatinumWing.ExecutionVisualPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, CrossingTheAbyss.TogglePacket>>
+            CROSSING_THE_ABYSS_TOGGLE = PACKET_TYPES.register("crossing_the_abyss_toggle",
+            () -> new PacketType<>(CrossingTheAbyss.TogglePacket.class, CrossingTheAbyss.TogglePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, FriendlyFireSetting.SetPacket>>
+            FRIENDLY_FIRE_SET = PACKET_TYPES.register("friendly_fire_set",
+            () -> new PacketType<>(FriendlyFireSetting.SetPacket.class, FriendlyFireSetting.SetPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PvpSetting.SetPacket>>
+            PVP_SET = PACKET_TYPES.register("pvp_set",
+            () -> new PacketType<>(PvpSetting.SetPacket.class, PvpSetting.SetPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PvpSetting.StatePacket>>
+            PVP_STATE = PACKET_TYPES.register("pvp_state",
+            () -> new PacketType<>(PvpSetting.StatePacket.class, PvpSetting.StatePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DestroyBlocksSetting.SetPacket>>
+            DESTROY_BLOCKS_SET = PACKET_TYPES.register("destroy_blocks_set",
+            () -> new PacketType<>(DestroyBlocksSetting.SetPacket.class, DestroyBlocksSetting.SetPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DestroyBlocksSetting.SetSkillPacket>>
+            DESTROY_BLOCKS_SKILL_SET = PACKET_TYPES.register("destroy_blocks_skill_set",
+            () -> new PacketType<>(DestroyBlocksSetting.SetSkillPacket.class, DestroyBlocksSetting.SetSkillPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, BloodflowReverse.ReverseBloodflowPacket>>
+            REVERSE_BLOODFLOW = PACKET_TYPES.register("reverse_bloodflow",
+            () -> new PacketType<>(BloodflowReverse.ReverseBloodflowPacket.class, BloodflowReverse.ReverseBloodflowPacket.CODEC));
+
+    /**
+     * Phase 1 - New Skills
+     */
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, CurrentRecharge.StartPacket>>
+            CURRENT_RECHARGE_START = PACKET_TYPES.register("current_recharge_start",
+            () -> new PacketType<>(CurrentRecharge.StartPacket.class, CurrentRecharge.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, CurrentRecharge.StopPacket>>
+            CURRENT_RECHARGE_STOP = PACKET_TYPES.register("current_recharge_stop",
+            () -> new PacketType<>(CurrentRecharge.StopPacket.class, CurrentRecharge.StopPacket.CODEC));
+    /**
+     * Phase 2 - Aura and Toggle Skills
+     */
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ElectricalContact.TogglePacket>>
+            ELECTRICAL_CONTACT_TOGGLE = PACKET_TYPES.register("electrical_contact_toggle",
+            () -> new PacketType<>(ElectricalContact.TogglePacket.class, ElectricalContact.TogglePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, VectorDeviation.TogglePacket>>
+            VECTOR_DEVIATION_TOGGLE = PACKET_TYPES.register("vector_deviation_toggle",
+            () -> new PacketType<>(VectorDeviation.TogglePacket.class, VectorDeviation.TogglePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, SpatialSynergy.TogglePacket>>
+            SPATIAL_SYNERGY_TOGGLE = PACKET_TYPES.register("spatial_synergy_toggle",
+            () -> new PacketType<>(SpatialSynergy.TogglePacket.class, SpatialSynergy.TogglePacket.CODEC));
+    /**
+     * Phase 3 - Charged and Context Skills
+     */
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlasmaGeneration.StartPacket>>
+            PLASMA_GENERATION_START = PACKET_TYPES.register("plasma_generation_start",
+            () -> new PacketType<>(PlasmaGeneration.StartPacket.class, PlasmaGeneration.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlasmaGeneration.ReleasePacket>>
+            PLASMA_GENERATION_RELEASE = PACKET_TYPES.register("plasma_generation_release",
+            () -> new PacketType<>(PlasmaGeneration.ReleasePacket.class, PlasmaGeneration.ReleasePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ThunderLance.StartPacket>>
+            THUNDER_LANCE_START = PACKET_TYPES.register("thunder_lance_start",
+            () -> new PacketType<>(ThunderLance.StartPacket.class, ThunderLance.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ThunderLance.QuickPacket>>
+            THUNDER_LANCE_QUICK = PACKET_TYPES.register("thunder_lance_quick",
+            () -> new PacketType<>(ThunderLance.QuickPacket.class, ThunderLance.QuickPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MiningBeam.StartPacket>>
+            MINING_BEAM_START = PACKET_TYPES.register("mining_beam_start",
+            () -> new PacketType<>(MiningBeam.StartPacket.class, MiningBeam.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MiningBeam.StopPacket>>
+            MINING_BEAM_STOP = PACKET_TYPES.register("mining_beam_stop",
+            () -> new PacketType<>(MiningBeam.StopPacket.class, MiningBeam.StopPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, LightShield.StartPacket>>
+            LIGHT_SHIELD_START = PACKET_TYPES.register("light_shield_start",
+            () -> new PacketType<>(LightShield.StartPacket.class, LightShield.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, LightShield.StopPacket>>
+            LIGHT_SHIELD_STOP = PACKET_TYPES.register("light_shield_stop",
+            () -> new PacketType<>(LightShield.StopPacket.class, LightShield.StopPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ParticleWaveCannon.StartPacket>>
+            PARTICLE_WAVE_CANNON_START = PACKET_TYPES.register("particle_wave_cannon_start",
+            () -> new PacketType<>(ParticleWaveCannon.StartPacket.class, ParticleWaveCannon.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ParticleWaveCannon.StopPacket>>
+            PARTICLE_WAVE_CANNON_STOP = PACKET_TYPES.register("particle_wave_cannon_stop",
+            () -> new PacketType<>(ParticleWaveCannon.StopPacket.class, ParticleWaveCannon.StopPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AutoCruiseBeamCannon.TogglePacket>>
+            AUTO_CRUISE_BEAM_CANNON_TOGGLE = PACKET_TYPES.register("auto_cruise_beam_cannon_toggle",
+            () -> new PacketType<>(AutoCruiseBeamCannon.TogglePacket.class, AutoCruiseBeamCannon.TogglePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PiercingTeleportation.TeleportPacket>>
+            PIERCING_TELEPORTATION_TELEPORT = PACKET_TYPES.register("piercing_teleportation_teleport",
+            () -> new PacketType<>(PiercingTeleportation.TeleportPacket.class, PiercingTeleportation.TeleportPacket.CODEC));
+    /**
+     * Phase 4 - Complex Skills
+     */
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, LightningNova.ActivatePacket>>
+            LIGHTNING_NOVA_ACTIVATE_P4 = PACKET_TYPES.register("lightning_nova_activate_p4",
+            () -> new PacketType<>(LightningNova.ActivatePacket.class, LightningNova.ActivatePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Cloudroom.TogglePacket>>
+            CLOUDROOM_TOGGLE = PACKET_TYPES.register("cloudroom_toggle",
+            () -> new PacketType<>(Cloudroom.TogglePacket.class, Cloudroom.TogglePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, JetStrike.DashPacket>>
+            JET_STRIKE_DASH = PACKET_TYPES.register("jet_strike_dash",
+            () -> new PacketType<>(JetStrike.DashPacket.class, JetStrike.DashPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, LightningStorm.ActivatePacket>>
+            LIGHTNING_STORM_ACTIVATE = PACKET_TYPES.register("lightning_storm_activate",
+            () -> new PacketType<>(LightningStorm.ActivatePacket.class, LightningStorm.ActivatePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SkyStrikeVisualPacket>>
+            SKY_STRIKE_VISUAL = PACKET_TYPES.register("sky_strike_visual",
+            () -> new PacketType<>(SkyStrikeVisualPacket.class, SkyStrikeVisualPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Disarm.UsePacket>>
+            DISARM_USE = PACKET_TYPES.register("disarm_use",
+            () -> new PacketType<>(Disarm.UsePacket.class, Disarm.UsePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Shackle.UsePacket>>
+            SHACKLE_USE = PACKET_TYPES.register("shackle_use",
+            () -> new PacketType<>(Shackle.UsePacket.class, Shackle.UsePacket.CODEC));
+    /**
+     * Phase 5 - Ultimate and Signature Skills
+     */
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, IronSandArsenal.TogglePacket>>
+            IRON_SAND_ARSENAL_TOGGLE = PACKET_TYPES.register("iron_sand_arsenal_toggle",
+            () -> new PacketType<>(IronSandArsenal.TogglePacket.class, IronSandArsenal.TogglePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, IronSandArsenal.FormSelectPacket>>
+            IRON_SAND_ARSENAL_FORM_SELECT = PACKET_TYPES.register("iron_sand_arsenal_form_select",
+            () -> new PacketType<>(IronSandArsenal.FormSelectPacket.class, IronSandArsenal.FormSelectPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, IronSandArsenal.SweepVisualPacket>>
+            IRON_SAND_ARSENAL_SWEEP_VISUAL = PACKET_TYPES.register("iron_sand_arsenal_sweep_visual",
+            () -> new PacketType<>(IronSandArsenal.SweepVisualPacket.class, IronSandArsenal.SweepVisualPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MagneticWeapon.TogglePacket>>
+            MAGNETIC_WEAPON_TOGGLE = PACKET_TYPES.register("magnetic_weapon_toggle",
+            () -> new PacketType<>(MagneticWeapon.TogglePacket.class, MagneticWeapon.TogglePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Thunderclap.UsePacket>>
+            THUNDERCLAP_USE = PACKET_TYPES.register("thunderclap_use",
+            () -> new PacketType<>(Thunderclap.UsePacket.class, Thunderclap.UsePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, Disintegrate.UsePacket>>
+            DISINTEGRATE_USE = PACKET_TYPES.register("disintegrate_use",
+            () -> new PacketType<>(Disintegrate.UsePacket.class, Disintegrate.UsePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, SpacialExcision.ActivatePacket>>
+            SPACIAL_EXCISION_ACTIVATE = PACKET_TYPES.register("spacial_excision_activate",
+            () -> new PacketType<>(SpacialExcision.ActivatePacket.class, SpacialExcision.ActivatePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SpacialExcision.SegmentPacket>>
+            SPACIAL_EXCISION_SEGMENT = PACKET_TYPES.register("spacial_excision_segment",
+            () -> new PacketType<>(SpacialExcision.SegmentPacket.class, SpacialExcision.SegmentPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SpacialExcision.EndPacket>>
+            SPACIAL_EXCISION_END = PACKET_TYPES.register("spacial_excision_end",
+            () -> new PacketType<>(SpacialExcision.EndPacket.class, SpacialExcision.EndPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, TargetMisidentification.UsePacket>>
+            TARGET_MISIDENTIFICATION_USE = PACKET_TYPES.register("target_misidentification_use",
+            () -> new PacketType<>(TargetMisidentification.UsePacket.class, TargetMisidentification.UsePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MentalIntervention.UsePacket>>
+            MENTAL_INTERVENTION_USE = PACKET_TYPES.register("mental_intervention_use",
+            () -> new PacketType<>(MentalIntervention.UsePacket.class, MentalIntervention.UsePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MentalStupor.UsePacket>>
+            MENTAL_STUPOR_USE = PACKET_TYPES.register("mental_stupor_use",
+            () -> new PacketType<>(MentalStupor.UsePacket.class, MentalStupor.UsePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MindDestruction.UsePacket>>
+            MIND_DESTRUCTION_USE = PACKET_TYPES.register("mind_destruction_use",
+            () -> new PacketType<>(MindDestruction.UsePacket.class, MindDestruction.UsePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MentalResistanceManager.InputPacket>>
+            MENTAL_RESISTANCE_INPUT = PACKET_TYPES.register("mental_resistance_input",
+            () -> new PacketType<>(MentalResistanceManager.InputPacket.class,
+                    MentalResistanceManager.InputPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MentalResistanceManager.StatePacket>>
+            MENTAL_RESISTANCE_STATE = PACKET_TYPES.register("mental_resistance_state",
+            () -> new PacketType<>(MentalResistanceManager.StatePacket.class,
+                    MentalResistanceManager.StatePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, ImpressionManipulation.UsePacket>>
+            IMPRESSION_MANIPULATION_USE = PACKET_TYPES.register("impression_manipulation_use",
+            () -> new PacketType<>(ImpressionManipulation.UsePacket.class, ImpressionManipulation.UsePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, CommandPositioning.UsePacket>>
+            COMMAND_POSITIONING_USE = PACKET_TYPES.register("command_positioning_use",
+            () -> new PacketType<>(CommandPositioning.UsePacket.class, CommandPositioning.UsePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MentalIntrusionManager.TogglePacket>>
+            MENTAL_INTRUSION_TOGGLE = PACKET_TYPES.register("mental_intrusion_toggle",
+            () -> new PacketType<>(MentalIntrusionManager.TogglePacket.class,
+                    MentalIntrusionManager.TogglePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MentalIntrusionManager.DistortionPacket>>
+            SENSORY_DISTORTION_TOGGLE = PACKET_TYPES.register("sensory_distortion_toggle",
+            () -> new PacketType<>(MentalIntrusionManager.DistortionPacket.class,
+                    MentalIntrusionManager.DistortionPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MentalIntrusionManager.ReadyPacket>>
+            MENTAL_INTRUSION_READY = PACKET_TYPES.register("mental_intrusion_ready",
+            () -> new PacketType<>(MentalIntrusionManager.ReadyPacket.class,
+                    MentalIntrusionManager.ReadyPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MentalIntrusionManager.ClientStopPacket>>
+            MENTAL_INTRUSION_CLIENT_STOP = PACKET_TYPES.register("mental_intrusion_client_stop",
+            () -> new PacketType<>(MentalIntrusionManager.ClientStopPacket.class,
+                    MentalIntrusionManager.ClientStopPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MentalIntrusionManager.BeginPacket>>
+            MENTAL_INTRUSION_BEGIN = PACKET_TYPES.register("mental_intrusion_begin",
+            () -> new PacketType<>(MentalIntrusionManager.BeginPacket.class,
+                    MentalIntrusionManager.BeginPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MentalIntrusionManager.EndPacket>>
+            MENTAL_INTRUSION_END = PACKET_TYPES.register("mental_intrusion_end",
+            () -> new PacketType<>(MentalIntrusionManager.EndPacket.class,
+                    MentalIntrusionManager.EndPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MentalIntrusionManager.PerceptionPacket>>
+            MENTAL_PERCEPTION_UPDATE = PACKET_TYPES.register("mental_perception_update",
+            () -> new PacketType<>(MentalIntrusionManager.PerceptionPacket.class,
+                    MentalIntrusionManager.PerceptionPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlayerControlSessionManager.TogglePacket>>
+            MENTAL_TAKEOVER_TOGGLE = PACKET_TYPES.register("mental_takeover_toggle",
+            () -> new PacketType<>(PlayerControlSessionManager.TogglePacket.class,
+                    PlayerControlSessionManager.TogglePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlayerControlSessionManager.ReadyPacket>>
+            MENTAL_TAKEOVER_READY = PACKET_TYPES.register("mental_takeover_ready",
+            () -> new PacketType<>(PlayerControlSessionManager.ReadyPacket.class,
+                    PlayerControlSessionManager.ReadyPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlayerControlSessionManager.IntentPacket>>
+            MENTAL_TAKEOVER_INTENT = PACKET_TYPES.register("mental_takeover_intent",
+            () -> new PacketType<>(PlayerControlSessionManager.IntentPacket.class,
+                    PlayerControlSessionManager.IntentPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlayerControlSessionManager.InventoryActionPacket>>
+            MENTAL_TAKEOVER_INVENTORY_ACTION = PACKET_TYPES.register("mental_takeover_inventory_action",
+            () -> new PacketType<>(PlayerControlSessionManager.InventoryActionPacket.class,
+                    PlayerControlSessionManager.InventoryActionPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlayerControlSessionManager.StrugglePacket>>
+            MENTAL_TAKEOVER_STRUGGLE = PACKET_TYPES.register("mental_takeover_struggle",
+            () -> new PacketType<>(PlayerControlSessionManager.StrugglePacket.class,
+                    PlayerControlSessionManager.StrugglePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlayerControlSessionManager.AppliedFramePacket>>
+            MENTAL_TAKEOVER_APPLIED = PACKET_TYPES.register("mental_takeover_applied",
+            () -> new PacketType<>(PlayerControlSessionManager.AppliedFramePacket.class,
+                    PlayerControlSessionManager.AppliedFramePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PlayerControlSessionManager.StopRequestPacket>>
+            MENTAL_TAKEOVER_STOP = PACKET_TYPES.register("mental_takeover_stop",
+            () -> new PacketType<>(PlayerControlSessionManager.StopRequestPacket.class,
+                    PlayerControlSessionManager.StopRequestPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PlayerControlSessionManager.BeginPacket>>
+            MENTAL_TAKEOVER_BEGIN = PACKET_TYPES.register("mental_takeover_begin",
+            () -> new PacketType<>(PlayerControlSessionManager.BeginPacket.class,
+                    PlayerControlSessionManager.BeginPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PlayerControlSessionManager.AuthorizedFramePacket>>
+            MENTAL_TAKEOVER_FRAME = PACKET_TYPES.register("mental_takeover_frame",
+            () -> new PacketType<>(PlayerControlSessionManager.AuthorizedFramePacket.class,
+                    PlayerControlSessionManager.AuthorizedFramePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PlayerControlSessionManager.StatusPacket>>
+            MENTAL_TAKEOVER_STATUS = PACKET_TYPES.register("mental_takeover_status",
+            () -> new PacketType<>(PlayerControlSessionManager.StatusPacket.class,
+                    PlayerControlSessionManager.StatusPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PlayerControlSessionManager.TargetViewStatePacket>>
+            MENTAL_TAKEOVER_TARGET_VIEW = PACKET_TYPES.register("mental_takeover_target_view",
+            () -> new PacketType<>(PlayerControlSessionManager.TargetViewStatePacket.class,
+                    PlayerControlSessionManager.TargetViewStatePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PlayerControlSessionManager.EndPacket>>
+            MENTAL_TAKEOVER_END = PACKET_TYPES.register("mental_takeover_end",
+            () -> new PacketType<>(PlayerControlSessionManager.EndPacket.class,
+                    PlayerControlSessionManager.EndPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AbilityProgramManager.RequestPacket>>
+            ABILITY_PROGRAM_REQUEST = PACKET_TYPES.register("ability_program_request",
+            () -> new PacketType<>(AbilityProgramManager.RequestPacket.class,
+                    AbilityProgramManager.RequestPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AbilityProgramManager.ImportPacket>>
+            ABILITY_PROGRAM_IMPORT = PACKET_TYPES.register("ability_program_import",
+            () -> new PacketType<>(AbilityProgramManager.ImportPacket.class,
+                    AbilityProgramManager.ImportPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AbilityProgramManager.SavePacket>>
+            ABILITY_PROGRAM_SAVE = PACKET_TYPES.register("ability_program_save",
+            () -> new PacketType<>(AbilityProgramManager.SavePacket.class,
+                    AbilityProgramManager.SavePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AbilityProgramManager.ExecutePacket>>
+            ABILITY_PROGRAM_EXECUTE = PACKET_TYPES.register("ability_program_execute",
+            () -> new PacketType<>(AbilityProgramManager.ExecutePacket.class,
+                    AbilityProgramManager.ExecutePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AbilityProgramManager.SyncPacket>>
+            ABILITY_PROGRAM_SYNC = PACKET_TYPES.register("ability_program_sync",
+            () -> new PacketType<>(AbilityProgramManager.SyncPacket.class,
+                    AbilityProgramManager.SyncPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AbilityProgramManager.ResultPacket>>
+            ABILITY_PROGRAM_RESULT = PACKET_TYPES.register("ability_program_result",
+            () -> new PacketType<>(AbilityProgramManager.ResultPacket.class,
+                    AbilityProgramManager.ResultPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PrecisionOperationManager.RequestPacket>>
+            PRECISION_OPERATION_REQUEST = PACKET_TYPES.register("precision_operation_request",
+            () -> new PacketType<>(PrecisionOperationManager.RequestPacket.class,
+                    PrecisionOperationManager.RequestPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PrecisionOperationManager.SavePacket>>
+            PRECISION_OPERATION_SAVE = PACKET_TYPES.register("precision_operation_save",
+            () -> new PacketType<>(PrecisionOperationManager.SavePacket.class,
+                    PrecisionOperationManager.SavePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PrecisionOperationManager.ExecutePacket>>
+            PRECISION_OPERATION_EXECUTE = PACKET_TYPES.register("precision_operation_execute",
+            () -> new PacketType<>(PrecisionOperationManager.ExecutePacket.class,
+                    PrecisionOperationManager.ExecutePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PrecisionOperationManager.SyncPacket>>
+            PRECISION_OPERATION_SYNC = PACKET_TYPES.register("precision_operation_sync",
+            () -> new PacketType<>(PrecisionOperationManager.SyncPacket.class,
+                    PrecisionOperationManager.SyncPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, PrecisionOperationManager.ResultPacket>>
+            PRECISION_OPERATION_RESULT = PACKET_TYPES.register("precision_operation_result",
+            () -> new PacketType<>(PrecisionOperationManager.ResultPacket.class,
+                    PrecisionOperationManager.ResultPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MentaloutRosterPackets.FullStartPacket>>
+            MENTALOUT_ROSTER_FULL_START = PACKET_TYPES.register("mentalout_roster_full_start",
+            () -> new PacketType<>(MentaloutRosterPackets.FullStartPacket.class,
+                    MentaloutRosterPackets.FullStartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MentaloutRosterPackets.FullChunkPacket>>
+            MENTALOUT_ROSTER_FULL_CHUNK = PACKET_TYPES.register("mentalout_roster_full_chunk",
+            () -> new PacketType<>(MentaloutRosterPackets.FullChunkPacket.class,
+                    MentaloutRosterPackets.FullChunkPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MentaloutRosterPackets.DeltaPacket>>
+            MENTALOUT_ROSTER_DELTA = PACKET_TYPES.register("mentalout_roster_delta",
+            () -> new PacketType<>(MentaloutRosterPackets.DeltaPacket.class,
+                    MentaloutRosterPackets.DeltaPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, MentaloutRosterPackets.ClearPacket>>
+            MENTALOUT_ROSTER_CLEAR = PACKET_TYPES.register("mentalout_roster_clear",
+            () -> new PacketType<>(MentaloutRosterPackets.ClearPacket.class,
+                    MentaloutRosterPackets.ClearPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MentaloutRosterPackets.ResyncPacket>>
+            MENTALOUT_ROSTER_RESYNC = PACKET_TYPES.register("mentalout_roster_resync",
+            () -> new PacketType<>(MentaloutRosterPackets.ResyncPacket.class,
+                    MentaloutRosterPackets.ResyncPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, WideAreaInterference.EnrollPacket>>
+            WIDE_AREA_INTERFERENCE_ENROLL = PACKET_TYPES.register("wide_area_interference_enroll",
+            () -> new PacketType<>(WideAreaInterference.EnrollPacket.class,
+                    WideAreaInterference.EnrollPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, WideAreaInterference.CommandPacket>>
+            WIDE_AREA_INTERFERENCE_COMMAND = PACKET_TYPES.register("wide_area_interference_command",
+            () -> new PacketType<>(WideAreaInterference.CommandPacket.class,
+                    WideAreaInterference.CommandPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, WideAreaInterference.FeedbackPacket>>
+            WIDE_AREA_INTERFERENCE_FEEDBACK = PACKET_TYPES.register("wide_area_interference_feedback",
+            () -> new PacketType<>(WideAreaInterference.FeedbackPacket.class,
+                    WideAreaInterference.FeedbackPacket.CODEC));
+
+    /**
+     * Development packets
+     */
+    private PacketTypes() {
+    }
+}

@@ -8,7 +8,10 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.gametest.framework.*;
+import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.gametest.framework.GameTestInstance;
+import net.minecraft.gametest.framework.TestData;
+import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -20,15 +23,18 @@ import net.minecraft.server.permissions.PermissionSet;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Rotation;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.network.registration.NetworkRegistry;
 import net.neoforged.neoforge.registries.RegisterEvent;
-import org.academy.api.common.ability.program.*;
+import org.academy.api.common.ability.program.AbilityProgram;
+import org.academy.api.common.ability.program.ProgramEditorLayout;
+import org.academy.api.common.ability.program.ProgramGraph;
 import org.academy.api.common.damage.SkillDamageSource;
-import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.ability.AbilityServerAccess;
 import org.academy.api.server.ability.program.AbilityProgramService;
 import org.academy.api.server.damage.AbilityDamageService;
 
@@ -49,7 +55,8 @@ public final class ExampleGameTests {
     private static void registerTests(RegisterGameTestsEvent event) {
         var environment = event.registerEnvironment(TYPE, new TestEnvironmentDefinition.AllOf(List.of()));
         event.registerTest(ExampleAddon.id("registration_execution"), new Instance(new TestData<>(
-                environment, Identifier.withDefaultNamespace("empty"), 60, 0, true,
+                environment, Level.OVERWORLD,
+                Identifier.withDefaultNamespace("empty"), 60, 0, true,
                 Rotation.NONE, false, 1, 1, false, 16)));
     }
 
@@ -86,7 +93,8 @@ public final class ExampleGameTests {
         var profile = new GameProfile(UUID.randomUUID(), "api-test");
         var cookie = CommonListenerCookie.createInitial(profile, false);
         // NeoForge recognizes test-player subclasses as connections without a real config handshake.
-        var player = new ServerPlayer(server, level, profile, cookie.clientInformation()) { };
+        var player = new ServerPlayer(server, level, profile, cookie.clientInformation()) {
+        };
         var connection = new Connection(PacketFlow.SERVERBOUND);
         new EmbeddedChannel(connection);
         NetworkRegistry.configureMockConnection(connection);
@@ -107,9 +115,10 @@ public final class ExampleGameTests {
             try {
                 category.getSkills().clear();
                 throw new AssertionError("Frozen category view must be immutable");
-            } catch (UnsupportedOperationException expected) { }
+            } catch (UnsupportedOperationException expected) {
+            }
 
-            var system = AbilitySystemServer.getSystem(player);
+            var system = AbilityServerAccess.of(player);
             var id = player.getUUID();
             command(player, "set_category " + category.getKey());
             command(player, "level 5");
@@ -190,9 +199,24 @@ public final class ExampleGameTests {
 
     private static final class Instance extends GameTestInstance {
         private static final MapCodec<Instance> CODEC = TestData.CODEC.xmap(Instance::new, Instance::info);
-        private Instance(TestData<Holder<TestEnvironmentDefinition<?>>> info) { super(info); }
-        @Override public void run(GameTestHelper helper) { verify(helper); }
-        @Override public MapCodec<? extends GameTestInstance> codec() { return CODEC; }
-        @Override protected MutableComponent typeDescription() { return Component.literal("Public addon API integration"); }
+
+        private Instance(TestData<Holder<TestEnvironmentDefinition<?>>> info) {
+            super(info);
+        }
+
+        @Override
+        public void run(GameTestHelper helper) {
+            verify(helper);
+        }
+
+        @Override
+        public MapCodec<? extends GameTestInstance> codec() {
+            return CODEC;
+        }
+
+        @Override
+        protected MutableComponent typeDescription() {
+            return Component.literal("Public addon API integration");
+        }
     }
 }

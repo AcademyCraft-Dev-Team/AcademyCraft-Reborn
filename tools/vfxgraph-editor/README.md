@@ -1,7 +1,7 @@
 # Academy VFXGraph Editor MCP
 
 这是 AcademyCraft Reborn 的项目内 VFXGraph MCP。它让 Codex 直接读取、修改、校验并热重载
-`src/main/resources/assets/academy/vfxgraph` 与 `run/academy/graphs` 中的特效，不再依赖逐项点击编辑器。
+`mod/src/main/resources/assets/academy/vfxgraph` 与 `run/academy/graphs` 中的特效，不再依赖逐项点击编辑器。
 
 ## 结构
 
@@ -57,7 +57,7 @@ codex mcp add academy-vfxgraph-editor -- node D:\mcmodtest\AcademyCraft-Reborn-2
 启动可连接的编辑器：
 
 ```powershell
-.\gradlew.bat runGraphEditor
+.\gradlew.bat :editor:runGraphEditor
 ```
 
 编辑器未启动时，所有文件读取、更新、备份和校验工具仍可使用；只有 `editor_command` 和即时预览状态不可用。
@@ -79,7 +79,7 @@ codex mcp add academy-vfxgraph-editor -- node D:\mcmodtest\AcademyCraft-Reborn-2
 cd tools\vfxgraph-editor
 npm test
 cd ..\..
-.\gradlew.bat editorTest -DisDev=true
+.\gradlew.bat :editor:editorTest -DisDev=true
 ```
 
 MCP 不依赖 npm 第三方包，要求 Node.js 20 或更新版本。

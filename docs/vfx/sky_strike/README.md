@@ -49,12 +49,12 @@
 
 ## 编辑资源与 API
 
-- [sky_strike_thunderclap.json](../../../src/main/resources/assets/academy/vfxgraph/sky_strike_thunderclap.json)
-- [sky_strike_storm.json](../../../src/main/resources/assets/academy/vfxgraph/sky_strike_storm.json)
+- [sky_strike_thunderclap.json](../../../mod/src/main/resources/assets/academy/vfxgraph/sky_strike_thunderclap.json)
+- [sky_strike_storm.json](../../../mod/src/main/resources/assets/academy/vfxgraph/sky_strike_storm.json)
 
 运行：
 
-    .\gradlew.bat runGraphEditor -DisDev=true
+    .\gradlew.bat :editor:runGraphEditor -DisDev=true
 
 打开资源后缩远预览相机，将观察中心移到主干中段。两份图均通过 VFXGraph 编辑器 MCP 创建、修改和结构校验。
 
@@ -107,14 +107,14 @@
 
 GPU 捕获：
 
-    .\gradlew.bat runGraphEditor -I tools/vfxgraph-editor/scripts/sky-strike-capture.init.gradle -DisDev=true
+    .\gradlew.bat :editor:runSkyStrikeCapture -DisDev=true
     .\tools\vfxgraph-editor\scripts\encode-sky-strike.ps1 -Python python
 
 动画编码需要 Pillow。捕获十张静态图和 52 张连续帧，中间帧存于 build/；文档保留最终动图。
 
 游戏实测使用独立目录 run/sky-strike-client，以及复制的测试存档 run/sky-strike-client/saves/sky_strike。该测试目录的 config/neoforge-client.toml 设置 showLoadWarnings=false，避免第三方模组的过时图标字段警告停在确认页；警告仍会写入日志：
 
-    .\gradlew.bat runClientDev -I tools/vfxgraph-editor/scripts/sky-strike-client.init.gradle -DisDev=true
+    .\gradlew.bat :editor:runSkyStrikeClient -DisDev=true
 
 **该专用实测会移动复制存档中的玩家、切换旁观模式和夜间时间，并自动退出客户端。只用于上述独立存档。** 通过现有服务端接口生成一次雷击与 21 次风暴落雷，捕获主雷柱、附着残留、连续风暴及消散。验证网络到客户端的视觉链路及音效调用；另在区块就绪后生成临时实体，验证共享伤害范围查询的圈内、圈外、对角位置及施放者排除，并检查只有圈内目标受到测试伤害；实体随后移除。没有自动按键释放完整技能，不把通用伤害探针当作完整技能伤害公式的实测。辅助入口属于 editor 源集，不进入发布 jar。
 

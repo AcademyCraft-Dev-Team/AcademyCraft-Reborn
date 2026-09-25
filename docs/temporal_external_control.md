@@ -55,7 +55,7 @@ UiInputContext.run(() -> {
 .\gradlew.bat build -DisDev=true
 .\gradlew.bat build -DisDev=false
 .\gradlew.bat runGameTestServer -DisDev=true '-PacademyGameTests=academy:time*'
-.\gradlew.bat runClientDev -DisDev=true -I validation/temporal/run.init.gradle
+.\gradlew.bat :mod:runClientDev -DisDev=true -I validation/temporal/run.init.gradle
 ```
 
 客户端测试目录为 `run/temporal-client-regression`，需要一份名为

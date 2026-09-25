@@ -1,0 +1,102 @@
+package org.academy.internal.common.ability.accelerator.skills.lv5;
+
+import io.netty.buffer.Unpooled;
+import net.minecraft.world.phys.Vec3;
+import org.academy.api.common.ability.VortexAttackPattern;
+import org.academy.api.common.ability.VortexAttackSequence;
+import org.academy.api.common.ability.VortexAttackTargets;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class BlackWingAttackPacketTest {
+    @Test
+    void serverPatternTimeAndWorldTargetSurviveNetworkRoundTrip() {
+        var pattern = VortexAttackPattern.RISE_SLAM;
+        int[] order = {1, 4, 5, 2, 3};
+        for (int i = 0; i < 10; i++) {
+            assertEquals(order[i % order.length], pattern.id());
+            assertEquals(16, pattern.durationTicks());
+            assertEquals(0.8f, pattern.durationSeconds(), 0.00001f);
+            var targets = pattern == VortexAttackPattern.FOURFOLD_SLAM
+                    ? List.of(new Vec3(-23.25, 87.5, 15.75), new Vec3(-23.25, 77.5, -15.75),
+                    new Vec3(23.25, 80.5, 15.75), new Vec3(23.25, 81.5, -15.75))
+                    : List.of(new Vec3(-23.25, 87.5, 15.75));
+            var packet = new BlackWingAttackPacket(345, pattern, 123456L, targets, 77, i + 1, .25f);
+            var buffer = Unpooled.buffer();
+            try {
+                BlackWingAttackPacket.CODEC.encode(buffer, packet);
+                var decoded = BlackWingAttackPacket.CODEC.decode(buffer);
+                assertEquals(packet.entityId(), decoded.entityId());
+                assertEquals(77, decoded.epoch());
+                assertEquals(i + 1, decoded.sequence());
+                assertEquals(.25f, decoded.initialProgress());
+                assertEquals(pattern, decoded.pattern());
+                assertEquals(packet.startTick(), decoded.startTick());
+                assertEquals(packet.targets(), decoded.targets());
+                assertFalse(buffer.isReadable());
+            } finally {
+                buffer.release();
+            }
+            pattern = pattern.next();
+        }
+    }
+
+    @Test
+    void quadrilateralSurroundsTheCasterAtEveryHeading() {
+        var center = new Vec3(103, 72, -245);
+        for (int yaw = 0; yaw < 360; yaw += 30) {
+            var heading = Vec3.directionFromRotation(0f, yaw);
+            var corners = VortexAttackTargets.quadrilateral(center, heading, 6, 6);
+            var average = corners.stream().reduce(Vec3.ZERO, Vec3::add).scale(0.25);
+            assertEquals(0, average.distanceTo(center), 1.0E-8);
+            for (int i = 0; i < 4; i++) {
+                var offset = corners.get(i).subtract(center);
+                assertEquals(72, offset.lengthSqr(), 1.0E-5);
+                assertEquals(i % 2 == 0 ? 6 : -6, offset.dot(heading), 1.0E-5);
+                assertEquals(0, offset.y, 1.0E-8);
+            }
+        }
+    }
+
+    @Test
+    void rapidClicksCannotInterruptTheAnimationOrChargeExtraCp() {
+        var sequence = new VortexAttackSequence();
+        var charged = new AtomicInteger();
+        assertEquals(VortexAttackPattern.RISE_SLAM, sequence.tryBegin(100, () -> {
+            charged.incrementAndGet();
+            return true;
+        }));
+        for (int tick = 101; tick < 116; tick++) {
+            assertNull(sequence.tryBegin(tick, () -> {
+                charged.incrementAndGet();
+                return true;
+            }));
+        }
+        assertEquals(1, charged.get());
+        assertNull(sequence.tryBegin(116, () -> false));
+        assertEquals(VortexAttackPattern.LEFT_WHIP, sequence.tryBegin(117, () -> true));
+        assertNull(sequence.tryBegin(132, () -> true));
+        assertEquals(VortexAttackPattern.RIGHT_WHIP, sequence.tryBegin(133, () -> true));
+    }
+
+    @Test
+    void oldWorldsRetainSubTickAttackMotion() {
+        long start = 1L << 36;
+        for (var pattern : VortexAttackPattern.values()) {
+            float previous = -1f;
+            for (int frame = 0; frame <= 192; frame++) {
+                float elapsed = frame / 12f;
+                long wholeTicks = (long) elapsed;
+                float progress = pattern.progress(start, start + wholeTicks, elapsed - wholeTicks);
+                assertEquals(elapsed / 16f, progress, 0.000001f);
+                assertTrue(progress > previous, "each rendered frame must advance even in old worlds");
+                previous = progress;
+            }
+            assertEquals(1f, previous);
+        }
+    }
+}

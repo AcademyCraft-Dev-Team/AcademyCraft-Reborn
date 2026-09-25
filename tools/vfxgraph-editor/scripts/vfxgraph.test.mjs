@@ -11,7 +11,7 @@ import {
 
 async function fixtureProject() {
   const root = await mkdtemp(path.join(os.tmpdir(), "academy-vfxgraph-mcp-"));
-  const graphRoot = path.join(root, "src", "main", "resources", "assets", "academy", "vfxgraph");
+  const graphRoot = path.join(root, "mod", "src", "main", "resources", "assets", "academy", "vfxgraph");
   await mkdir(graphRoot, { recursive: true });
   await writeFile(path.join(root, "build.gradle.kts"), "// fixture\n");
   const graph = {

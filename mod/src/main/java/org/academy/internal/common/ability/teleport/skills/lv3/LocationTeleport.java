@@ -1,0 +1,544 @@
+package org.academy.internal.common.ability.teleport.skills.lv3;
+
+import com.mojang.blaze3d.platform.InputConstants;
+import io.netty.buffer.ByteBuf;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import org.academy.AcademyCraft;
+import org.academy.AcademyCraftClient;
+import org.academy.AcademyCraftConfig;
+import org.academy.api.client.ability.AbilitySystemClient;
+import org.academy.api.client.config.KeyBindingConfig;
+import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.resources.R;
+import org.academy.api.client.util.ClientUtil;
+import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.DevCondition;
+import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.SyncTypes;
+import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.client.gui.screen.LocationTeleportScreen;
+import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.SkillNames;
+import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.teleport.TeleportChunkForceManager;
+import org.academy.internal.common.ability.teleport.TeleportSafety;
+import org.academy.internal.common.ability.teleport.TeleportSync;
+import org.academy.internal.common.ability.teleport.skills.lv2.PiercingTeleportation;
+import org.academy.internal.common.ability.teleport.skills.lv2.SpatialSynergy;
+import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.skilldata.LocationTeleportData;
+import org.academy.internal.common.skilldata.LocationTeleportData.Mark;
+import org.academy.internal.server.ability.AbilitySystemServer;
+import org.jspecify.annotations.Nullable;
+import org.misaka.MisakaNetworkClient;
+import org.misaka.MisakaNetworkServer;
+import org.misaka.api.common.network.ThreadType;
+import org.misaka.api.common.network.annotation.PacketTarget;
+import org.misaka.api.common.network.annotation.SubscribePacket;
+import org.misaka.api.common.network.packet.Packet;
+import org.misaka.api.common.network.packet.PacketType;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+
+public final class LocationTeleport extends Skill {
+    public static final int MAX_MARKS = 32;
+    public static final int MILESTONE_MAX_MARKS = 48;
+    static final String DEATH_MARK_PREFIX = "死亡地点 ";
+    private static final DateTimeFormatter DEATH_MARK_TIME =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    public LocationTeleport() {
+        super(Builder
+                .of(AbilityCategories.TELEPORT.get())
+                .level(AbilityLevel.LEVEL3)
+                .energyCost(30_000)
+                .cpCost(40)
+                .iterationTicks(10)
+                .maxStacks(NO_STACK_LIMIT)
+                .dependsOn(Skills.PIERCING_TELEPORTATION)
+                .withCustomData(LocationTeleportData.ID, LocationTeleportData.class, LocationTeleportData::new)
+                .devCondition(new DevCondition.LevelCondition(AbilityLevel.LEVEL3))
+                .devCondition(new DevCondition.DependencyCondition("Cut Through", "academy:piercing_teleportation"))
+        );
+    }
+
+    static String deathMarkName(LocalDateTime deathTime) {
+        return DEATH_MARK_PREFIX + DEATH_MARK_TIME.format(deathTime);
+    }
+
+    static boolean addDeathMark(
+            LocationTeleportData data,
+            String dimension,
+            BlockPos position,
+            LocalDateTime deathTime
+    ) {
+        if (data == null || dimension == null || position == null || deathTime == null) return false;
+        while (data.getMarks().size() >= MAX_MARKS) {
+            var oldestDeathMark = -1;
+            for (var index = 0; index < data.getMarks().size(); index++) {
+                var name = data.getMarks().get(index).name();
+                if (name != null && name.startsWith(DEATH_MARK_PREFIX)) {
+                    oldestDeathMark = index;
+                    break;
+                }
+            }
+            if (oldestDeathMark < 0) return false;
+            data.getMarks().remove(oldestDeathMark);
+            data.adjustSelectionsAfterRemoval(oldestDeathMark);
+        }
+        data.getMarks().add(new Mark(
+                deathMarkName(deathTime),
+                dimension,
+                position.getX(),
+                position.getY(),
+                position.getZ()
+        ));
+        return true;
+    }
+
+    @Override
+    public void initClient() {
+        var key = getKey();
+        AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
+        Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+        MisakaNetworkClient.NETWORK_MANAGER.register(Client.class);
+        InputSystem.addKeyBinding(Client.KEY_NAME_OPEN, Client.CONFIG.getKeyBinding(
+                Client.KEY_NAME_OPEN,
+                InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_L, InputConstants.PRESS, 0)
+        ), ctx -> Client.open());
+    }
+
+    @Override
+    public void initServer(MinecraftServerContext context) {
+        MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
+    }
+
+    public static final class Client {
+        public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
+                AbilityCategories.TELEPORT.get(),
+                new AbilitySystemClient.SkillInfo(
+                        Skills.LOCATION_TELEPORT.get(),
+                        List.of(PiercingTeleportation.Client.SKILL_INFO),
+                        R.textures.location_teleport_icon,
+                        118,
+                        50
+                )
+        );
+        public static final String KEY_NAME_OPEN = SkillNames.LOCATION_TELEPORT + "_open";
+        public static Config CONFIG = new Config();
+        private static @Nullable LocationTeleportScreen lastScreen;
+
+        private static void open() {
+            if (ClientUtil.hasScreen() || !AbilitySystemClient.canUseSkill(Skills.LOCATION_TELEPORT.get())) return;
+            lastScreen = new LocationTeleportScreen();
+            Minecraft.getInstance().gui.setScreen(lastScreen);
+        }
+
+        @SubscribePacket
+        public static void handleSync(MarksSyncPacket packet) {
+            if (lastScreen != null && Minecraft.getInstance().gui.screen() == lastScreen) {
+                lastScreen.setMarks(
+                        packet.getMarks(),
+                        packet.getQuickMarkIndex(),
+                        packet.getDefensiveMarkIndex()
+                );
+            }
+        }
+
+        public static class Config extends KeyBindingConfig {
+            public static final class Action implements TypeHandler<Config> {
+                public static final TypeHandler<Config> INSTANCE = new Action();
+
+                private Action() {
+                }
+
+                @Override
+                public Config getDefault() {
+                    return new Config();
+                }
+
+                @Override
+                public Class<Config> getTypeClass() {
+                    return Config.class;
+                }
+            }
+        }
+    }
+
+    @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
+    public static final class Events {
+        private Events() {
+        }
+
+        @SubscribeEvent(priority = EventPriority.LOWEST)
+        public static void onPlayerDeath(LivingDeathEvent event) {
+            if (event.isCanceled() || !(event.getEntity() instanceof ServerPlayer player)) return;
+            if (!Skills.LOCATION_TELEPORT.get().isEnabled(player)) return;
+            var data = Server.getData(player);
+            if (!addDeathMark(
+                    data,
+                    player.level().dimension().identifier().toString(),
+                    player.blockPosition(),
+                    LocalDateTime.now()
+            )) return;
+            Server.dirtyAndSync(player, data);
+        }
+    }
+
+    public static final class Server {
+        private static final Map<UUID, ReturnAnchor> RETURN_ANCHORS = new WeakHashMap<>();
+
+        @SubscribePacket
+        public static void handleRequest(RequestMarksPacket packet) {
+            var player = packet.getPacketListener().getPlayer();
+            var data = getData(player);
+            if (data != null && Skills.LOCATION_TELEPORT.get().isEnabled(player)) sync(player, data);
+        }
+
+        @SubscribePacket
+        public static void handleSave(SaveMarkPacket packet) {
+            var player = packet.getPacketListener().getPlayer();
+            var data = getData(player);
+            var maximumMarks = Skills.LOCATION_TELEPORT.get().hasProficiencyMilestone(player, 2)
+                    ? MILESTONE_MAX_MARKS : MAX_MARKS;
+            if (data == null || !Skills.LOCATION_TELEPORT.get().isEnabled(player)
+                    || data.getMarks().size() >= maximumMarks) return;
+
+            var name = packet.getName().strip();
+            if (name.isEmpty()) name = "Mark " + (data.getMarks().size() + 1);
+            if (name.length() > 64) name = name.substring(0, 64);
+            var pos = packet.useCurrent ? player.blockPosition()
+                    : new BlockPos(packet.x, packet.y, packet.z);
+            data.getMarks().add(new Mark(name, player.level().dimension().identifier().toString(),
+                    pos.getX(), pos.getY(), pos.getZ()));
+            dirtyAndSync(player, data);
+        }
+
+        @SubscribePacket
+        public static void handleRemove(RemoveMarkPacket packet) {
+            var player = packet.getPacketListener().getPlayer();
+            var data = getData(player);
+            if (data == null || !Skills.LOCATION_TELEPORT.get().isEnabled(player)) return;
+            var index = packet.getIndex();
+            if (index < 0 || index >= data.getMarks().size()) return;
+            data.getMarks().remove(index);
+            data.adjustSelectionsAfterRemoval(index);
+            dirtyAndSync(player, data);
+        }
+
+        @SubscribePacket
+        public static void handleSelect(SelectMarkPacket packet) {
+            var player = packet.getPacketListener().getPlayer();
+            var data = getData(player);
+            if (data == null || !Skills.LOCATION_TELEPORT.get().isEnabled(player)) return;
+            if (packet.index < -1 || packet.index >= data.getMarks().size()) return;
+            if (packet.defensive) data.setDefensiveMarkIndex(packet.index);
+            else data.setQuickMarkIndex(packet.index);
+            dirtyAndSync(player, data);
+        }
+
+        @SubscribePacket
+        public static void handleTeleport(TeleportToMarkPacket packet) {
+            var player = packet.getPacketListener().getPlayer();
+            var data = getData(player);
+            if (data == null || packet.index < 0 || packet.index >= data.getMarks().size()) return;
+            var skill = Skills.LOCATION_TELEPORT.get();
+            var now = player.level().getGameTime();
+            var anchor = skill.hasProficiencyMilestone(player, 3) ? RETURN_ANCHORS.get(player.getUUID()) : null;
+            var returning = anchor != null && anchor.markIndex == packet.index && anchor.expiresAt >= now;
+            var mark = data.getMarks().get(packet.index);
+            var level = returning
+                    ? player.level().getServer().getLevel(anchor.dimension)
+                    : resolveLevel(player, mark);
+            if (level == null) return;
+            if (returning) {
+                forceDestinationChunk(level, (int) Math.floor(anchor.position.x),
+                        (int) Math.floor(anchor.position.z), "location_return_" + player.getStringUUID());
+            }
+            var destination = returning
+                    ? TeleportSafety.findSafe(player, level, anchor.position)
+                    : safeDestination(player, level, mark);
+            if (destination == null) return;
+
+            var originDimension = player.level().dimension();
+            var originPosition = player.position();
+            skill.executeActive(player, ctx -> returning ? 20.0f : 40.0f, (ctx, actualCost) -> {
+                if (!returning) {
+                    forceDestinationChunk(level, mark.x(), mark.z(), "location_" + player.getStringUUID());
+                    level.getChunk(mark.x() >> 4, mark.z() >> 4);
+                }
+                SpatialSynergy.Server.teleportNearbyTeam(player, level, destination);
+                TeleportSync.teleportInstantly(player, level, destination);
+                player.resetFallDistance();
+                if (returning) {
+                    RETURN_ANCHORS.remove(player.getUUID());
+                } else if (ctx.milestone() >= 3) {
+                    RETURN_ANCHORS.put(player.getUUID(), new ReturnAnchor(
+                            originDimension, originPosition, player.level().getGameTime() + 100, packet.index));
+                }
+                dirtyAndSync(player, data);
+            });
+        }
+
+        public static @Nullable LocationTeleportData getData(ServerPlayer player) {
+            return Skills.LOCATION_TELEPORT.get().<LocationTeleportData>getRuntimeData(player).orElse(null);
+        }
+
+        @Deprecated(forRemoval = false)
+        public static Mark getSelectedMark(ServerPlayer player) {
+            return getQuickMark(player);
+        }
+
+        public static @Nullable Mark getQuickMark(ServerPlayer player) {
+            var data = getData(player);
+            if (data == null) return null;
+            var index = data.getQuickMarkIndex();
+            return index < 0 || index >= data.getMarks().size() ? null : data.getMarks().get(index);
+        }
+
+        public static @Nullable Mark getDefensiveMark(ServerPlayer player) {
+            var data = getData(player);
+            if (data == null) return null;
+            var index = data.getDefensiveMarkIndex();
+            return index < 0 || index >= data.getMarks().size() ? null : data.getMarks().get(index);
+        }
+
+        public static @Nullable ServerLevel resolveLevel(ServerPlayer player, Mark mark) {
+            var id = Identifier.tryParse(mark.dimension());
+            if (id == null) return null;
+            return player.level().getServer().getLevel(ResourceKey.create(Registries.DIMENSION, id));
+        }
+
+        public static @Nullable Vec3 safeDestination(ServerPlayer player, ServerLevel level, Mark mark) {
+            forceDestinationChunk(level, mark.x(), mark.z(), "location_check_" + player.getStringUUID());
+            level.getChunk(mark.x() >> 4, mark.z() >> 4);
+            var center = new Vec3(mark.x() + 0.5, mark.y() + 0.5, mark.z() + 0.5);
+            var dimensions = player.getDimensions(Pose.STANDING);
+            var halfWidth = dimensions.width() / 2.0;
+            var box = new AABB(center.x - halfWidth, center.y, center.z - halfWidth,
+                    center.x + halfWidth, center.y + dimensions.height(), center.z + halfWidth);
+            return level.noCollision(player, box)
+                    ? center
+                    : null;
+        }
+
+        public static void forceDestinationChunk(ServerLevel level, int x, int z, String operation) {
+            TeleportChunkForceManager.forceChunk(level, operation, x, z,
+                    TeleportChunkForceManager.DEFAULT_TIMEOUT_TICKS);
+        }
+
+        private static void dirtyAndSync(ServerPlayer player, LocationTeleportData data) {
+            var system = AbilitySystemServer.getSystem(player);
+            var playerData = system.getPlayerData(player.getUUID());
+            if (playerData != null) playerData.markDirty();
+            system.schedulePlayerSync(player.getUUID(), SyncTypes.SKILL_DATA);
+            sync(player, data);
+        }
+
+        private static void sync(ServerPlayer player, LocationTeleportData data) {
+            MisakaNetworkServer.send(player,
+                    new MarksSyncPacket(
+                            new ArrayList<>(data.getMarks()),
+                            data.getQuickMarkIndex(),
+                            data.getDefensiveMarkIndex()
+                    ));
+        }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class RequestMarksPacket extends Packet<ServerGamePacketListenerImpl, RequestMarksPacket> {
+        public static final RequestMarksPacket INSTANCE = new RequestMarksPacket();
+        public static final StreamCodec<ByteBuf, RequestMarksPacket> CODEC = StreamCodec.unit(INSTANCE);
+
+        private RequestMarksPacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, RequestMarksPacket> getPacketType() {
+            return PacketTypes.LOCATION_TELEPORT_REQUEST.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class SaveMarkPacket extends Packet<ServerGamePacketListenerImpl, SaveMarkPacket> {
+        public static final StreamCodec<ByteBuf, SaveMarkPacket> CODEC = StreamCodec.of(
+                (buf, packet) -> {
+                    ByteBufCodecs.BOOL.encode(buf, packet.useCurrent);
+                    ByteBufCodecs.STRING_UTF8.encode(buf, packet.name);
+                    ByteBufCodecs.INT.encode(buf, packet.x);
+                    ByteBufCodecs.INT.encode(buf, packet.y);
+                    ByteBufCodecs.INT.encode(buf, packet.z);
+                },
+                buf -> new SaveMarkPacket(ByteBufCodecs.BOOL.decode(buf), ByteBufCodecs.STRING_UTF8.decode(buf),
+                        ByteBufCodecs.INT.decode(buf), ByteBufCodecs.INT.decode(buf), ByteBufCodecs.INT.decode(buf))
+        );
+        private final boolean useCurrent;
+        private final String name;
+        private final int x;
+        private final int y;
+        private final int z;
+
+        public SaveMarkPacket(boolean useCurrent, String name, int x, int y, int z) {
+            this.useCurrent = useCurrent;
+            this.name = name == null ? "" : name;
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, SaveMarkPacket> getPacketType() {
+            return PacketTypes.LOCATION_TELEPORT_SAVE.get();
+        }
+    }
+
+    public abstract static class IndexPacket<T extends IndexPacket<T>> extends Packet<ServerGamePacketListenerImpl, T> {
+        protected final int index;
+
+        protected IndexPacket(int index) {
+            this.index = index;
+        }
+
+        public int getIndex() {
+            return index;
+        }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class RemoveMarkPacket extends IndexPacket<RemoveMarkPacket> {
+        public static final StreamCodec<ByteBuf, RemoveMarkPacket> CODEC = ByteBufCodecs.VAR_INT.map(RemoveMarkPacket::new, RemoveMarkPacket::getIndex);
+
+        public RemoveMarkPacket(int index) {
+            super(index);
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, RemoveMarkPacket> getPacketType() {
+            return PacketTypes.LOCATION_TELEPORT_REMOVE.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class SelectMarkPacket extends IndexPacket<SelectMarkPacket> {
+        public static final StreamCodec<ByteBuf, SelectMarkPacket> CODEC = StreamCodec.of(
+                (buf, packet) -> {
+                    ByteBufCodecs.INT.encode(buf, packet.index);
+                    ByteBufCodecs.BOOL.encode(buf, packet.defensive);
+                },
+                buf -> new SelectMarkPacket(
+                        ByteBufCodecs.INT.decode(buf),
+                        ByteBufCodecs.BOOL.decode(buf)
+                )
+        );
+        private final boolean defensive;
+
+        public SelectMarkPacket(int index, boolean defensive) {
+            super(index);
+            this.defensive = defensive;
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, SelectMarkPacket> getPacketType() {
+            return PacketTypes.LOCATION_TELEPORT_SELECT.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class TeleportToMarkPacket extends IndexPacket<TeleportToMarkPacket> {
+        public static final StreamCodec<ByteBuf, TeleportToMarkPacket> CODEC = ByteBufCodecs.VAR_INT.map(TeleportToMarkPacket::new, TeleportToMarkPacket::getIndex);
+
+        public TeleportToMarkPacket(int index) {
+            super(index);
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, TeleportToMarkPacket> getPacketType() {
+            return PacketTypes.LOCATION_TELEPORT_RUN.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.CLIENT)
+    public static final class MarksSyncPacket extends Packet<ClientPacketListener, MarksSyncPacket> {
+        public static final StreamCodec<ByteBuf, MarksSyncPacket> CODEC = StreamCodec.of(
+                (buf, packet) -> {
+                    ByteBufCodecs.VAR_INT.encode(buf, packet.marks.size());
+                    for (var mark : packet.marks) {
+                        ByteBufCodecs.STRING_UTF8.encode(buf, mark.name());
+                        ByteBufCodecs.STRING_UTF8.encode(buf, mark.dimension());
+                        ByteBufCodecs.INT.encode(buf, mark.x());
+                        ByteBufCodecs.INT.encode(buf, mark.y());
+                        ByteBufCodecs.INT.encode(buf, mark.z());
+                    }
+                    ByteBufCodecs.INT.encode(buf, packet.quickMarkIndex);
+                    ByteBufCodecs.INT.encode(buf, packet.defensiveMarkIndex);
+                },
+                buf -> {
+                    var count = Math.clamp(ByteBufCodecs.VAR_INT.decode(buf), 0, MILESTONE_MAX_MARKS);
+                    var marks = new ArrayList<Mark>(count);
+                    for (var i = 0; i < count; i++) {
+                        marks.add(new Mark(ByteBufCodecs.STRING_UTF8.decode(buf), ByteBufCodecs.STRING_UTF8.decode(buf),
+                                ByteBufCodecs.INT.decode(buf), ByteBufCodecs.INT.decode(buf), ByteBufCodecs.INT.decode(buf)));
+                    }
+                    return new MarksSyncPacket(
+                            marks,
+                            ByteBufCodecs.INT.decode(buf),
+                            ByteBufCodecs.INT.decode(buf)
+                    );
+                }
+        );
+        private final List<Mark> marks;
+        private final int quickMarkIndex;
+        private final int defensiveMarkIndex;
+
+        public MarksSyncPacket(List<Mark> marks, int quickMarkIndex, int defensiveMarkIndex) {
+            this.marks = List.copyOf(marks);
+            this.quickMarkIndex = quickMarkIndex;
+            this.defensiveMarkIndex = defensiveMarkIndex;
+        }
+
+        public List<Mark> getMarks() {
+            return marks;
+        }
+
+        public int getQuickMarkIndex() {
+            return quickMarkIndex;
+        }
+
+        public int getDefensiveMarkIndex() {
+            return defensiveMarkIndex;
+        }
+
+        @Override
+        public PacketType<ClientPacketListener, MarksSyncPacket> getPacketType() {
+            return PacketTypes.LOCATION_TELEPORT_SYNC.get();
+        }
+    }
+
+    private record ReturnAnchor(ResourceKey<Level> dimension, Vec3 position, long expiresAt, int markIndex) {
+    }
+}

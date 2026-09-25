@@ -1,0 +1,75 @@
+package org.academy.api.common.entitycontrol;
+
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+
+public record ControlRequest(
+        ServerPlayer controller,
+        LivingEntity subject,
+        Identifier source,
+        UUID scopeId,
+        int priority,
+        long expiresAt,
+        List<ControlDirective> directives
+) {
+    public static final UUID DEFAULT_SCOPE = new UUID(0L, 0L);
+
+    public ControlRequest {
+        directives = List.copyOf(Objects.requireNonNull(directives, "directives"));
+        if (expiresAt < 0L) {
+            throw new IllegalArgumentException("expiresAt must not be negative");
+        }
+        if (directives.isEmpty()) {
+            throw new IllegalArgumentException("At least one control directive is required");
+        }
+    }
+
+    public ControlRequest(
+            ServerPlayer controller,
+            LivingEntity subject,
+            Identifier source,
+            int priority,
+            long expiresAt,
+            List<ControlDirective> directives
+    ) {
+        this(controller, subject, source, DEFAULT_SCOPE, priority, expiresAt, directives);
+    }
+
+    public static ControlRequest permanent(
+            ServerPlayer controller,
+            LivingEntity subject,
+            Identifier source,
+            int priority,
+            List<ControlDirective> directives
+    ) {
+        return new ControlRequest(
+                controller, subject, source, DEFAULT_SCOPE, priority, Long.MAX_VALUE, directives);
+    }
+
+    public static ControlRequest scopedPermanent(
+            ServerPlayer controller,
+            LivingEntity subject,
+            Identifier source,
+            UUID scopeId,
+            int priority,
+            List<ControlDirective> directives
+    ) {
+        return new ControlRequest(
+                controller, subject, source, scopeId, priority, Long.MAX_VALUE, directives);
+    }
+
+    public static ControlRequest permanent(
+            ServerPlayer controller,
+            LivingEntity subject,
+            Identifier source,
+            int priority,
+            ControlDirective... directives
+    ) {
+        return permanent(controller, subject, source, priority, List.of(directives));
+    }
+}

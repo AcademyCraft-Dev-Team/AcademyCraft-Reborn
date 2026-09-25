@@ -1,0 +1,454 @@
+package org.academy.api.client.gui.widget
+
+import com.mojang.blaze3d.platform.InputConstants
+import net.minecraft.client.input.PreeditEvent
+import net.minecraft.util.ARGB
+import org.academy.api.client.gui.command.FillRectDrawCommand
+import org.academy.api.client.gui.drawable.ColorDrawable
+import org.academy.api.client.gui.drawable.StateListDrawable
+import org.academy.api.client.gui.environment.UiEnvironment
+import org.academy.api.client.gui.event.CharTypedEvent
+import org.academy.api.client.gui.event.KeyEvent
+import org.academy.api.client.gui.event.MouseEvent
+import org.academy.api.client.gui.layout.Gravity
+import org.academy.api.client.gui.render.Canvas
+import org.academy.api.client.gui.text.edit.TextEditCommand
+import org.academy.api.client.gui.text.edit.TextEditingState
+import org.academy.api.client.gui.text.edit.TextInputKeymap
+import org.academy.api.client.gui.text.model.TextBlob
+import org.academy.api.client.gui.text.model.TextShapingOptions
+import org.academy.api.client.gui.text.record.TextPainter
+import org.academy.api.client.gui.text.shape.CaretGeometry
+import org.academy.api.client.gui.text.shape.ShapingCache
+import org.academy.api.client.gui.text.shape.TextMeasurer
+import java.util.function.Consumer
+import java.util.function.Predicate
+import kotlin.math.max
+import kotlin.math.min
+
+open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), TextHolder {
+    private val editing = TextEditingState(maxLength)
+    private val painter = TextPainter()
+    private val hintPainter = TextPainter()
+
+    override var textSize: Float = TextShapingOptions.DEFAULT_SIZE
+        set(value) {
+            if (field != value) {
+                field = value
+                requestLayout()
+                invalidate()
+            }
+        }
+
+    override var textColor: Int = 0xFFFFFFFF.toInt()
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
+
+    var hintTextColor: Int = 0xFF808080.toInt()
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
+
+    var gravity: Int = Gravity.TOP_LEFT
+        set(value) {
+            if (field != value) {
+                field = value
+                requestLayout()
+                invalidate()
+            }
+        }
+
+    override var text: String
+        get() = editing.composedText
+        set(value) {
+            editing.setText(value)
+            afterTextChanged()
+        }
+
+    var hint: String = ""
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
+
+    var allowLineBreak: Boolean
+        get() = editing.allowLineBreak
+        set(value) {
+            editing.allowLineBreak = value
+        }
+
+    protected var whenEnter: Consumer<String>? = null
+    protected var onTextChanged: Consumer<String>? = null
+    protected var onFocusLostCallback: Runnable? = null
+    protected var clearWhenEnter: Boolean = true
+
+    private var showCaret = true
+    private var lastBlinkTime = 0L
+    private var mouseDragging = false
+    private var dragStartPos = 0
+
+    init {
+        isClickable = true
+
+        editing.onCommittedTextChanged = { committed -> onTextChanged?.accept(committed) }
+
+        val sld = StateListDrawable()
+        sld.setDefault(ColorDrawable(0x5F1F1F1F))
+        sld.addState(Widget.FOCUSED, ColorDrawable(0x5F5A5A5A))
+        background = sld
+
+        setFrameUpdate {
+            if (isFocused) {
+                val now = System.currentTimeMillis()
+                if (now - lastBlinkTime >= 500) {
+                    showCaret = !showCaret
+                    invalidate()
+                    lastBlinkTime = now
+                }
+            }
+            true
+        }
+    }
+
+    override fun renderInternal(context: Canvas) {
+        super.renderInternal(context)
+        renderText(context)
+        if (text.isEmpty() && hint.isNotEmpty() && !isFocused) {
+            renderHint(context)
+        }
+        if (editing.hasSelection) {
+            renderSelection(context)
+        }
+        if (isFocused && showCaret) {
+            renderCaret(context)
+        }
+    }
+
+    private fun renderText(context: Canvas) {
+        if (text.isEmpty()) return
+        val blob = textLayout()
+        val finalScale = 1f
+        val (originX, originY) = textOrigin(blob.width, blob.height)
+        painter.draw(
+            context, text, textSize,
+            ARGB.red(textColor) / 255.0f, ARGB.green(textColor) / 255.0f, ARGB.blue(textColor) / 255.0f,
+            TextShapingOptions.DEFAULT,
+            originX, originY, finalScale,
+            alpha * context.accumulatedAlpha
+        )
+    }
+
+    private fun renderHint(context: Canvas) {
+        val finalScale = 1f
+        val (originX, originY) = textOrigin(
+            TextMeasurer.measureWidth(hint, textSize),
+            TextMeasurer.measureHeight(hint, textSize)
+        )
+        hintPainter.draw(
+            context, hint, textSize,
+            ARGB.red(hintTextColor) / 255.0f, ARGB.green(hintTextColor) / 255.0f, ARGB.blue(hintTextColor) / 255.0f,
+            TextShapingOptions.DEFAULT,
+            originX, originY, finalScale, alpha * context.accumulatedAlpha
+        )
+    }
+
+    private fun renderCaret(context: Canvas) {
+        val blob = textLayout()
+        val finalScale = 1f
+
+        val empty = blob.lines.isEmpty()
+        val metrics = if (empty) TextMeasurer.lineMetrics(textSize) else null
+        val caretUnit = editing.caretUnit + editing.preeditText.length
+        val line = CaretGeometry.lineFor(blob, caretUnit)
+
+        val ascent = line?.ascent ?: metrics?.ascent ?: textSize
+        val descent = line?.descent ?: metrics?.descent ?: 0f
+        val blockHeight = if (empty) ascent + descent + (metrics?.leading ?: 0f) else blob.height
+        val (originX, originY) = textOrigin(blob.width, blockHeight)
+
+        val x = originX + (if (line != null) CaretGeometry.caretX(blob, line, caretUnit) else 0f) * finalScale
+        val y = originY + (if (line != null) (line.baselineY - line.ascent) else 0f) * finalScale
+
+        context.pose().pushPose()
+        context.pose().translate(x, y)
+        context.submit(
+            FillRectDrawCommand(
+                0.5f,
+                (ascent + descent) * finalScale,
+                1f,
+                1f,
+                1f,
+                alpha * context.accumulatedAlpha
+            )
+        )
+        context.pose().popPose()
+    }
+
+    private fun renderSelection(context: Canvas) {
+        val start = min(editing.selectionStart, editing.selectionEnd)
+        val end = max(editing.selectionStart, editing.selectionEnd)
+        if (start >= end) return
+
+        val blob = textLayout()
+        if (blob.runs.isEmpty()) return
+
+        val startUnit = codeUnitIndex(start)
+        val endUnit = codeUnitIndex(end)
+        val finalScale = 1f
+        val (originX, originY) = textOrigin(blob.width, blob.height)
+
+        for (line in blob.lines) {
+            val overlapStart = max(startUnit, line.charStart)
+            val overlapEnd = min(endUnit, line.charEnd)
+            if (overlapStart >= overlapEnd) continue
+            val x0 = CaretGeometry.caretX(blob, line, overlapStart)
+            val x1 = CaretGeometry.caretX(blob, line, overlapEnd)
+            context.pose().pushPose()
+            context.pose().translate(
+                originX + x0 * finalScale,
+                originY + (line.baselineY - line.ascent) * finalScale
+            )
+            context.submit(
+                FillRectDrawCommand(
+                    (x1 - x0).coerceAtLeast(0f),
+                    (line.ascent + line.descent) * finalScale,
+                    0.3f, 0.5f, 0.8f,
+                    alpha * context.accumulatedAlpha * 0.5f
+                )
+            )
+            context.pose().popPose()
+        }
+    }
+
+    override fun onCharTyped(event: CharTypedEvent) {
+        editing.clearPreedit()
+        if (!isFocused) return
+        if (!editing.insertCodePoint(event.codePoint)) return
+        afterTextChanged()
+        event.consume()
+    }
+
+    override fun onKeyPressed(event: KeyEvent) {
+        if (!isFocused) return
+
+        val command = TextInputKeymap.resolve(event.keyCode, event.hasControlDownWithQuirk()) ?: return
+        val extend = event.hasShiftDown()
+        var textChanged = false
+
+        when (command) {
+            TextEditCommand.BACKSPACE -> textChanged = editing.backspace()
+            TextEditCommand.DELETE -> textChanged = editing.delete()
+            TextEditCommand.MOVE_LEFT -> editing.moveLeft(extend)
+            TextEditCommand.MOVE_RIGHT -> editing.moveRight(extend)
+            TextEditCommand.MOVE_HOME -> editing.moveHome(extend)
+            TextEditCommand.MOVE_END -> editing.moveEnd(extend)
+
+            TextEditCommand.NEWLINE -> {
+                if (allowLineBreak) {
+                    textChanged = editing.insertNewline()
+                } else {
+                    whenEnter?.accept(text)
+                    if (clearWhenEnter) text = ""
+                }
+            }
+
+            TextEditCommand.SELECT_ALL -> editing.selectAll()
+
+            TextEditCommand.COPY -> {
+                if (!editing.hasSelection) return
+                copyToClipboard()
+            }
+
+            TextEditCommand.CUT -> {
+                if (!editing.hasSelection) return
+                copyToClipboard()
+                editing.deleteSelectedText()
+                textChanged = true
+            }
+
+            TextEditCommand.PASTE -> textChanged = pasteFromClipboard()
+        }
+
+        event.consume()
+        if (textChanged) afterTextChanged() else invalidate()
+    }
+
+    override fun onMousePressed(event: MouseEvent) {
+        if (event.button == InputConstants.MOUSE_BUTTON_LEFT && isMouseOver(event.x, event.y)) {
+            mouseDragging = true
+            dragStartPos = getCaretPosAtMouse(event.x, event.y)
+            editing.beginSelection(dragStartPos)
+
+            showCaret = true
+            lastBlinkTime = System.currentTimeMillis()
+            event.consume()
+            invalidate()
+        }
+    }
+
+    override fun onMouseReleased(event: MouseEvent) {
+        if (event.button == InputConstants.MOUSE_BUTTON_LEFT) {
+            mouseDragging = false
+            invalidate()
+        }
+    }
+
+    override fun onMouseDragged(event: MouseEvent) {
+        if (mouseDragging && event.button == InputConstants.MOUSE_BUTTON_LEFT) {
+            val newCaretPos = getCaretPosAtMouse(event.x, event.y)
+            editing.dragSelection(dragStartPos, newCaretPos)
+            event.consume()
+            invalidate()
+        }
+    }
+
+    private fun getCaretPosAtMouse(mouseX: Double, mouseY: Double): Int {
+        val blob = textLayout()
+        if (blob.lines.isEmpty()) return 0
+        val finalScale = 1f
+        val (originX, originY) = textOrigin(blob.width, blob.height)
+
+        val textY = ((mouseY - getAbsoluteY()).toFloat() - originY) / finalScale
+        var target = blob.lines.first()
+        var bestDist = Float.MAX_VALUE
+        for (line in blob.lines) {
+            val top = line.baselineY - line.ascent
+            val bottom = line.baselineY + line.descent
+            val dist = when {
+                textY < top -> top - textY
+                textY > bottom -> textY - bottom
+                else -> 0f
+            }
+            if (dist < bestDist) {
+                bestDist = dist
+                target = line
+            }
+        }
+
+        val textX = ((mouseX - getAbsoluteX()).toFloat() - originX) / finalScale
+        val unitOffset = CaretGeometry.hitTest(blob, target, textX)
+        val composedCp = blob.text.codePointCount(0, unitOffset)
+        return mapComposedToCommitted(composedCp)
+    }
+
+    private fun mapComposedToCommitted(composedCp: Int): Int {
+        val preedit = editing.preeditText
+        if (preedit.isEmpty()) return composedCp
+        val caret = editing.caretPos
+        val preeditLen = preedit.codePointCount(0, preedit.length)
+        return when {
+            composedCp <= caret -> composedCp
+            composedCp >= caret + preeditLen -> composedCp - preeditLen
+            else -> caret
+        }
+    }
+
+    private fun textLayout(): TextBlob = ShapingCache.blob(text, textSize)
+
+    private fun textOrigin(blockWidth: Float, blockHeight: Float): Pair<Float, Float> {
+        val lp = layoutParams
+        val finalScale = 1f
+        val availableWidth = width - lp.paddingLeft - lp.paddingRight
+        val availableHeight = height - lp.paddingTop - lp.paddingBottom
+        return TextPainter.blockOrigin(
+            availableWidth, availableHeight, blockWidth * finalScale, blockHeight * finalScale,
+            gravity, lp.paddingLeft, lp.paddingTop
+        )
+    }
+
+    private fun codeUnitIndex(codePointIndex: Int): Int {
+        val committed = editing.committedText
+        if (codePointIndex <= 0) return 0
+        return committed.offsetByCodePoints(
+            0, min(codePointIndex, committed.codePointCount(0, committed.length))
+        )
+    }
+
+    private fun copyToClipboard() {
+        val selectedText = editing.selectedText
+        if (selectedText.isNotEmpty()) {
+            UiEnvironment.get().setClipboard(selectedText)
+        }
+    }
+
+    private fun pasteFromClipboard(): Boolean {
+        val clipboardText = UiEnvironment.get().clipboard()
+        return clipboardText.isNotEmpty() && editing.insertString(clipboardText)
+    }
+
+    private fun afterTextChanged() {
+        requestLayout()
+        invalidate()
+    }
+
+    override fun canFocus(): Boolean = true
+
+    override fun onFocusGained() {
+        TextInputFocus.acquire(this)
+        UiEnvironment.get().textInputFocusChanged(true)
+        showCaret = true
+        lastBlinkTime = System.currentTimeMillis()
+    }
+
+    override fun onFocusLost() {
+        editing.clearPreedit()
+        TextInputFocus.release(this)
+        UiEnvironment.get().textInputFocusChanged(false)
+        showCaret = false
+        onFocusLostCallback?.run()
+        afterTextChanged()
+    }
+
+    override fun onDetached() {
+        super.onDetached()
+        if (isFocused) isFocused = false
+    }
+
+    fun setWhenEnter(callback: Consumer<String>?): TextInputWidget {
+        whenEnter = callback
+        return this
+    }
+
+    fun setOnTextChanged(callback: Consumer<String>?): TextInputWidget {
+        onTextChanged = callback
+        return this
+    }
+
+    fun setOnFocusLost(callback: Runnable?): TextInputWidget {
+        onFocusLostCallback = callback
+        return this
+    }
+
+    fun setClearWhenEnter(clear: Boolean): TextInputWidget {
+        clearWhenEnter = clear
+        return this
+    }
+
+    fun setInputValidator(validator: Predicate<String>?): TextInputWidget {
+        editing.inputValidator = validator
+        return this
+    }
+
+    fun setAllowLineBreak(allowLineBreak: Boolean): TextInputWidget {
+        this.allowLineBreak = allowLineBreak
+        return this
+    }
+
+    fun getTextMaxLength(): Int = maxLength
+
+    internal fun updatePreedit(event: PreeditEvent?): Boolean {
+        if (!isFocused) return false
+        editing.updatePreedit(event?.fullText())
+        afterTextChanged()
+        return true
+    }
+}

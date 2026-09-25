@@ -20,7 +20,7 @@
 ## 编辑与实现
 
 用项目 VFXGraph Editor MCP 创建、编辑并验证 `academy:vfxgraph/black_wings`。
-运行 `./gradlew runGraphEditor -DisDev=true`，打开 `black_wings` 即可继续编辑。
+运行 `./gradlew :editor:runGraphEditor -DisDev=true`，打开 `black_wings` 即可继续编辑。
 
 - `left_vortex`、`right_vortex`：两个独立的 `vfx.block.vortex_jet`。
 - `length`、`rise`、`back`、`radius`：长度、抬升、后掠和漏斗粗细。

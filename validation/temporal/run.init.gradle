@@ -1,9 +1,11 @@
 allprojects {
     afterEvaluate {
-        sourceSets.main.java.srcDir(file('validation/temporal/java'))
-        neoForge.runs.named('clientDev') {
-            gameDirectory.set(file('run/temporal-client-regression'))
-            programArguments.addAll('--quickPlaySingleplayer', 'verification', '--width', '960', '--height', '540')
+        if (path == ':mod') {
+            sourceSets.main.java.srcDir(gradle.rootProject.file('validation/temporal/java'))
+            neoForge.runs.named('clientDev') {
+                gameDirectory.set(gradle.rootProject.file('run/temporal-client-regression'))
+                programArguments.addAll('--quickPlaySingleplayer', 'verification', '--width', '960', '--height', '540')
+            }
         }
     }
 }

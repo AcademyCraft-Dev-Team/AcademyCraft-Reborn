@@ -15,7 +15,7 @@ java {
 neoForge { version = "26.2.0.70" }
 repositories { mavenCentral() }
 val academyJar = providers.gradleProperty("academyJar")
-    .orElse("../../build/libs/academy-26.2.0-0.0.4-alpha-dev.jar")
+    .orElse("../../mod/build/libs/academy-26.2.0-0.0.4-alpha-dev.jar")
 val academyArtifact = file(academyJar.get())
 dependencies {
     compileOnly(files(academyArtifact))
