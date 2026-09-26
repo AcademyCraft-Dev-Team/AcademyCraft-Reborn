@@ -13,8 +13,7 @@ import org.academy.internal.common.ability.proficiency.ProficiencyPolicy;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
-import org.academy.internal.coremod.ClassPointerProtectionManager;
-import org.academy.internal.coremod.ProtectionBackend;
+import org.academy.internal.common.ability.accelerator.reflection.VectorHealthLedger;
 import org.academy.mixin.common.LivingEntityDamageInvoker;
 
 import java.lang.ref.WeakReference;
@@ -22,7 +21,6 @@ import java.util.*;
 
 public final class VectorReflectionClientRuntime {
     private static final Map<Integer, Long> PENDING_HURT_CLEARS = new HashMap<>();
-    private static final Set<UUID> IMAGINE_BREAKER_MUTATIONS = new HashSet<>();
     private static final Set<UUID> FORCED_DEACTIVATIONS = new HashSet<>();
     private static WeakReference<LocalPlayer> currentPlayer = new WeakReference<>(null);
 
@@ -34,24 +32,19 @@ public final class VectorReflectionClientRuntime {
         var player = minecraft.player;
         var previous = currentPlayer.get();
         if (previous != null && previous != player) {
-            ClassPointerProtectionManager.restore(previous);
+            VectorHealthLedger.disarm(previous);
         }
         currentPlayer = new WeakReference<>(player);
         if (player == null) return;
 
-        // Reflection retains its existing learned-skill arming behavior. Vector Deviation only
-        // receives the dispatch subclass after its final proficiency milestone.
-        if (shouldKeepClassPointerArmed(player)) {
-            ClassPointerProtectionManager.ensureClientPlayer(player);
-        } else if (ClassPointerProtectionManager.backend(player)
-                == ProtectionBackend.CLASS_POINTER) {
-            ClassPointerProtectionManager.restore(player);
-        }
         if (!isProtected(player)) {
+            VectorHealthLedger.disarm(player);
             return;
         }
 
+        VectorHealthLedger.arm(player);
         player.getHealth();
+        VectorHealthLedger.repair(player);
         sanitize(player);
         var level = minecraft.level;
         if (level != null && level.getEntity(player.getId()) != player) {
@@ -63,9 +56,9 @@ public final class VectorReflectionClientRuntime {
     public static void shutdown() {
         var player = currentPlayer.get();
         currentPlayer = new WeakReference<>(null);
-        ClassPointerProtectionManager.restoreAllClient();
+        if (player != null) VectorHealthLedger.disarm(player);
+        VectorHealthLedger.disarmSide(true);
         PENDING_HURT_CLEARS.clear();
-        IMAGINE_BREAKER_MUTATIONS.clear();
         FORCED_DEACTIVATIONS.clear();
     }
 
@@ -122,31 +115,15 @@ public final class VectorReflectionClientRuntime {
                 Skills.VECTOR_DEVIATION.get()) >= 3;
     }
 
-    private static boolean shouldKeepClassPointerArmed(LocalPlayer player) {
-        if (player == null) return false;
-        return AbilitySystemClient.isSkillLearned(Skills.VECTOR_REFLECTION.get())
-                || AbilitySystemClient.isSkillLearned(Skills.VECTOR_DEVIATION.get())
-                && ProficiencyPolicy.client().enabled()
-                && AbilitySystemClient.getSkillProficiencyMilestone(
-                Skills.VECTOR_DEVIATION.get()) >= 3;
-    }
-
     public static void imaginebreaker(LocalPlayer player, float amount) {
         if (player == null || !Float.isFinite(amount) || !(amount > 0.0f)) return;
         if (!isProtected(player)) return;
 
-        var uuid = player.getUUID();
-        IMAGINE_BREAKER_MUTATIONS.add(uuid);
-        var depleted = false;
-        try {
-            var original = player.getHealth();
-            var remaining = Math.max(0.0f, original - amount);
-            setOriginalHealth(player, remaining);
-            depleted = remaining <= 0.0f;
-        } finally {
-            IMAGINE_BREAKER_MUTATIONS.remove(uuid);
-        }
-        if (depleted) markImagineBreakerDepleted(player);
+        VectorHealthLedger.arm(player);
+        var remaining = Math.max(0.0f, player.getHealth() - amount);
+        var accepted = VectorHealthLedger.writeAuthorized(player, remaining,
+                () -> setOriginalHealth(player, remaining));
+        if (accepted && remaining <= 0.0f) markImagineBreakerDepleted(player);
     }
 
     public static void markImagineBreakerDepleted(LocalPlayer player) {
@@ -211,9 +188,10 @@ public final class VectorReflectionClientRuntime {
         return true;
     }
 
-    private static void setOriginalHealth(LocalPlayer player, float health) {
+    private static boolean setOriginalHealth(LocalPlayer player, float health) {
+        var accepted = new boolean[1];
         PlayerAttributeRuntime.runWithoutResistance(
-                () -> EntityControlApi.forceSetTrueHealth(player, health)
-        );
+                () -> accepted[0] = EntityControlApi.forceSetTrueHealth(player, health));
+        return accepted[0];
     }
 }

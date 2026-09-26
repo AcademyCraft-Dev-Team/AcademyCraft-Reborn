@@ -3,8 +3,11 @@ package org.academy.mixin.common;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.api.server.damage.HealthLossGuards;
+import org.academy.internal.common.ability.accelerator.reflection.VectorHealthLedger;
+import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.entitycontrol.HealthDataOwner;
 import org.jspecify.annotations.Nullable;
 import org.objectweb.asm.Opcodes;
@@ -26,10 +29,17 @@ public abstract class MixinHealthDataItem implements HealthDataOwner {
             original.call(item, requested);
             return;
         }
-        HealthLossGuards.commit(academy$healthOwner, current, value, protectedValue -> {
+        if (academy$healthOwner instanceof ServerPlayer player
+                && VectorReflection.Server.usesFullInstanceProtection(player)) {
+            VectorHealthLedger.arm(player);
+        }
+        var guarded = VectorHealthLedger.guardWrite(academy$healthOwner, value);
+        HealthLossGuards.commit(academy$healthOwner, current, guarded, protectedValue -> {
             var settled = (float) protectedValue;
             original.call(item, Float.valueOf(settled));
-            return item.getValue() instanceof Float actual && Float.compare(actual, settled) == 0;
+            var accepted = item.getValue() instanceof Float actual && Float.compare(actual, settled) == 0;
+            if (accepted) VectorHealthLedger.recordWrite(academy$healthOwner, settled);
+            return accepted;
         });
     }
 }

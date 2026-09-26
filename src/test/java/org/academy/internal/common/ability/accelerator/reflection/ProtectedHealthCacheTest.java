@@ -1,4 +1,4 @@
-package org.academy.internal.coremod;
+package org.academy.internal.common.ability.accelerator.reflection;
 
 import org.junit.jupiter.api.Test;
 

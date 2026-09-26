@@ -95,6 +95,7 @@ public final class AcademyCoremodProvider implements ClassProcessorProvider {
         @Override
         public void transform(ClassNode input, SimpleTransformationContext context) {
             HealthReadInliner.apply(input);
+            VectorHealthReadTransformer.apply(input);
             LOGGER.debug("Applied health read processor to {}", input.name);
         }
     }

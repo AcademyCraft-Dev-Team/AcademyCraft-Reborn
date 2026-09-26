@@ -32,6 +32,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.reflection.VectorDefenseProficiency;
+import org.academy.internal.common.ability.accelerator.reflection.VectorHealthLedger;
 import org.academy.internal.common.ability.accelerator.reflection.compat.*;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.network.PacketTypes;
@@ -248,14 +249,14 @@ public class VectorDeviation extends Skill {
                     && Skills.VECTOR_DEVIATION.get().isEnabled(player);
         }
 
-        public static boolean usesClassPointerProtection(ServerPlayer player) {
+        public static boolean usesFullHealthProtection(ServerPlayer player) {
             return isActive(player)
                     && VectorDefenseProficiency.effectiveMilestone(
                     player, Skills.VECTOR_DEVIATION.get()) >= 3;
         }
 
         public static boolean usesPartialHealthProtection(ServerPlayer player) {
-            return isActive(player) && !usesClassPointerProtection(player);
+            return isActive(player) && !usesFullHealthProtection(player);
         }
 
         static float damageReductionForMilestone(int milestone) {
@@ -280,7 +281,7 @@ public class VectorDeviation extends Skill {
                                              float requestedHealth) {
             if (HEALTH_WRITE_LIMIT_BYPASS.get() > 0
                     || !usesPartialHealthProtection(player)
-                    || VectorReflection.Server.isImagineBreakerMutation(player)) {
+                    || VectorHealthLedger.isAuthorizedWrite(player)) {
                 return requestedHealth;
             }
             var limitedHealth = limitNegativeHealthChange(
@@ -419,7 +420,7 @@ public class VectorDeviation extends Skill {
                     || !Float.isFinite(incomingDamage)) {
                 return VectorIncomingDamageResult.passThrough(incomingDamage);
             }
-            var fullProtection = usesClassPointerProtection(player);
+            var fullProtection = usesFullHealthProtection(player);
             if (!fullProtection && !passesLowProficiencyRefractionRoll(
                     player.getRandom().nextFloat())) {
                 return VectorIncomingDamageResult.passThrough(incomingDamage);
@@ -485,7 +486,7 @@ public class VectorDeviation extends Skill {
         ) {
             if (!VectorIncomingDamageCoordinator.isAnomalousDamage(incomingDamage)
                     || !isActive(player)
-                    || !usesClassPointerProtection(player)
+                    || !usesFullHealthProtection(player)
                     || VectorReflection.Server.canMaintainLinearReflectionLease(player)
                     || !canRefractSource(player, source)) {
                 return false;
@@ -526,7 +527,7 @@ public class VectorDeviation extends Skill {
                 boolean emitFeedback
         ) {
             if (!isActive(player)
-                    || !usesClassPointerProtection(player)
+                    || !usesFullHealthProtection(player)
                     || VectorReflection.Server.canMaintainLinearReflectionLease(player)
                     || !(incomingDamage > 0.0f)
                     || !Float.isFinite(incomingDamage)

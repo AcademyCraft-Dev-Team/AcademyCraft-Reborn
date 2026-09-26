@@ -9,8 +9,6 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.internal.client.ability.VectorReflectionClientRuntime;
-import org.academy.internal.coremod.ClassPointerProtectionManager;
-import org.academy.internal.coremod.ProtectionBackend;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -82,16 +80,6 @@ public abstract class MixinClientLivingEntity {
         if ((Object) this instanceof LocalPlayer player
                 && VectorReflectionClientRuntime.shouldReflectEffect(player, instance)) {
             cir.setReturnValue(null);
-        }
-    }
-
-    @Inject(method = "getHealth", at = @At("RETURN"), cancellable = true)
-    private void academy$protectVectorReflectionHealth(CallbackInfoReturnable<Float> cir) {
-        if ((Object) this instanceof LocalPlayer player
-                && VectorReflectionClientRuntime.isProtected(player)
-                && ClassPointerProtectionManager.backend(player)
-                != ProtectionBackend.CLASS_POINTER) {
-            cir.setReturnValue(Math.max(1.0f, cir.getReturnValue()));
         }
     }
 

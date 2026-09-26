@@ -18,7 +18,7 @@ public final class VectorDefenseProtection {
     public static boolean usesFilterBackedProtection(ServerPlayer player) {
         if (player == null) return false;
         return VectorReflection.Server.isActive(player)
-                || VectorDeviation.Server.usesClassPointerProtection(player)
+                || VectorDeviation.Server.usesFullHealthProtection(player)
                 && Skills.REFLECTION_FILTER.get().isEnabled(player);
     }
 }

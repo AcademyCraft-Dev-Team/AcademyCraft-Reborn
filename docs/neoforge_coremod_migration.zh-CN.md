@@ -5,7 +5,9 @@
 `TemporalBoundaryTransformer`、`WorldWeaverConfigTransformer` 和 `HealthReadInliner`
 现在随独立的 `FMLModType: LIBRARY` JAR 加载。`ClassProcessorProvider` 使用
 `META-INF/services/net.neoforged.neoforgespi.transformation.ClassProcessorProvider`
-注册三个定向处理器，显式安排在 Mixin 后执行。主模组的 `MixinPlugin` 仍负责
+注册三个定向处理器，显式安排在 Mixin 后执行。生命读取处理器先内联真实生命
+偏移，再于 `LivingEntity#getHealth` 的每个返回点调用按玩家实例判断的生命钳制。
+主模组的 `MixinPlugin` 仍负责
 `IrisIntegration.init()`，不再在 `postApply` 中改写目标类。
 
 coremod JAR 只引用 FML SPI、ASM 和日志接口；它在字节码中写入的游戏侧方法引用，
@@ -17,24 +19,24 @@ coremod JAR 只引用 FML SPI、ASM 和日志接口；它在字节码中写入�
 未安装 BetterEnd 时，WorldWeaver 处理器的重写计数为零，这是预期结果；
 安装该兼容模组后的实际 NBT 路径仍需单独验证。
 
-## 玩家保护迁移判定
+## 玩家保护现状
 
 `PlayerProtectionLoadTimeProbeTest` 验证了：类加载时注入的方法守卫可以按玩家
 实例切换；只处理基类时，第三方玩家子类的覆写会绕过守卫。测试还用
 `MethodHandles.Lookup#defineClass` 定义运行时子类，复现了不经过既有加载时
 处理器的路径。
 
-当前 `DispatchSubclassFactory` 会以玩家的实际运行时类型为父类生成派发子类，
-所以它能覆盖符合其约束的第三方玩家子类方法。仅靠 NeoForge 的加载时
-`ClassProcessor` 无法保证相同覆盖范围：它需要识别并改写所有可能的玩家
-子类，且不能追溯已定义的类。未完成等价兼容证明前，保留
-`ClassPointerProtectionManager`、`HotSpotClassPointerAccess`、派发模板及
-Mixin 后备逻辑，不删除现有 JVM 配置专项测试。
+主模组不再改写 HotSpot 对象头，也不生成或切换玩家派发子类。`VectorHealthLedger`
+以玩家实例为键维护生命值状态；Mixin 在 `SynchedEntityData.DataItem#setValue` 处
+限制普通写入，并在玩家维护循环中修复不一致的同步值。技能自身的合法扣血使用
+限定作用域的写入许可。服务端的 `SurvivalDefense` 租约与现有伤害、死亡、效果和
+移除守卫继续生效。
 
-若后续要继续替换，需要先定义可接受的第三方动态子类兼容范围，再验证服务端与
-客户端的生命读取、真实生命写入、同步数据、伤害、死亡、药水效果、移除及技能
-停用恢复流程。每个已知入口都需在启用和停用两种状态下与现实现比对，
-最后在实际客户端和服务端验证。
+父类的读取钳制无法覆盖不调用 `super.getHealth()` 的第三方覆写，运行时定义的
+玩家子类也不一定经过 FML 的类处理器。旧实现可从提交 `639dd484` 提取；如需
+恢复这部分更强的兼容范围，后续应以 `academy_hack` 为独立 modid 构建附属包，
+不再让主模组依赖 HotSpot 对象头布局。主模组的保护范围以原版玩家及调用父类
+实现的兼容子类为准。
 
 ## 参考
 

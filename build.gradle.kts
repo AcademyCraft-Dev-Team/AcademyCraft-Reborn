@@ -577,40 +577,6 @@ tasks.withType<Test>().configureEach {
     }
 }
 
-fun registerClassPointerJvmTest(
-    name: String,
-    jvmArguments: List<String> = emptyList(),
-    properties: Map<String, String> = emptyMap()
-) = tasks.register<Test>(name) {
-    description = "Runs Vector Reflection class-pointer tests in an isolated JVM"
-    group = "verification"
-    testClassesDirs = sourceSets.test.get().output.classesDirs
-    classpath = sourceSets.test.get().runtimeClasspath
-    filter {
-        includeTestsMatching("org.academy.internal.coremod.HotSpotClassPointerAccessTest")
-    }
-    jvmArgs(jvmArguments)
-    properties.forEach(::systemProperty)
-    shouldRunAfter(tasks.test)
-}
-
-val testUncompressedClassPointers = registerClassPointerJvmTest(
-    "testUncompressedClassPointers",
-    listOf("-XX:-UseCompressedClassPointers")
-)
-val testCompactObjectHeaders = registerClassPointerJvmTest(
-    "testCompactObjectHeaders",
-    listOf("-XX:+UseCompactObjectHeaders"),
-    mapOf("academy.test.expect_class_pointer_unsupported" to "true")
-)
-val testClassPointerFallback = registerClassPointerJvmTest(
-    "testClassPointerFallback",
-    properties = mapOf(
-        "academy.vector_reflection.class_pointer.disable" to "true",
-        "academy.test.expect_class_pointer_unsupported" to "true"
-    )
-)
-
 val editorTest = tasks.register<Test>("editorTest") {
     description = "Runs unit tests for the standalone editor tooling"
     group = "verification"
@@ -620,8 +586,4 @@ val editorTest = tasks.register<Test>("editorTest") {
 
 tasks.check {
     dependsOn(editorTest)
-}
-
-tasks.check {
-    dependsOn(testUncompressedClassPointers, testCompactObjectHeaders, testClassPointerFallback)
 }

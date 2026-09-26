@@ -13,7 +13,6 @@ import org.academy.api.server.time.TemporalImmunityLease;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
-import org.academy.internal.coremod.ClassPointerProtectionManager;
 import org.slf4j.Logger;
 
 import java.lang.ref.WeakReference;
@@ -24,7 +23,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Server-side class-pointer integrity, removal recovery, and observer reconstruction.
+ * Server-side health-state maintenance, removal recovery, and observer reconstruction.
  */
 public final class VectorReflectionRuntime {
     private static final Logger LOGGER = AcademyCraft.getLogger();
@@ -44,15 +43,15 @@ public final class VectorReflectionRuntime {
         if (previous != null && previous != player) {
             closeSurvivalDefense(anchor);
             EntityControlApi.allowExternalRemoval(previous);
-            ClassPointerProtectionManager.restore(previous);
+            VectorHealthLedger.disarm(previous);
         }
-        ClassPointerProtectionManager.ensureServerPlayer(player);
-        // Initialize the generated ledger before any foreign synced-data write can become its seed.
+        VectorHealthLedger.arm(player);
         player.getHealth();
         anchor.player = new WeakReference<>(player);
 
         EntityControlApi.protectFromExternalRemoval(player);
         maintainSurvivalDefense(player, anchor);
+        VectorHealthLedger.repair(player);
         maintainTemporalImmunity(player, anchor);
         sanitize(player, anchor);
         recoverLevelRegistration(player, anchor);
@@ -78,10 +77,10 @@ public final class VectorReflectionRuntime {
         var previous = anchor == null ? null : anchor.player.get();
         if (previous != null && previous != player) {
             EntityControlApi.allowExternalRemoval(previous);
-            ClassPointerProtectionManager.restore(previous);
+            VectorHealthLedger.disarm(previous);
         }
         EntityControlApi.allowExternalRemoval(player);
-        ClassPointerProtectionManager.restore(player);
+        VectorHealthLedger.disarm(player);
     }
 
     public static void onServerTick() {
@@ -108,10 +107,10 @@ public final class VectorReflectionRuntime {
             closeTemporalImmunity(anchor);
             if (player == null) continue;
             EntityControlApi.allowExternalRemoval(player);
-            ClassPointerProtectionManager.restore(player);
+            VectorHealthLedger.disarm(player);
         }
         ANCHORS.clear();
-        ClassPointerProtectionManager.restoreAllServer();
+        VectorHealthLedger.disarmSide(false);
     }
 
     private static void maintainSurvivalDefense(ServerPlayer player, Anchor anchor) {

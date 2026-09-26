@@ -41,8 +41,7 @@ import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.academy.internal.common.world.damagesource.TrueDamageCompatibility;
-import org.academy.internal.coremod.ClassPointerProtectionManager;
-import org.academy.internal.coremod.ProtectionBackend;
+import org.academy.internal.common.ability.accelerator.reflection.VectorHealthLedger;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -150,16 +149,12 @@ public abstract class MixinLivingEntity {
         health = PlayerAttributeRuntime.modifyHealthWrite(entity, health);
         health = OutputControl.modifyHealthWrite(entity, health);
         if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.usesFullInstanceProtection(player)
-                && !VectorReflection.Server.isImagineBreakerMutation(player)) {
-            var current = player.getHealth();
-            var maximum = player.getMaxHealth();
-            return Float.isFinite(health)
-                    && Float.isFinite(maximum)
-                    && health > current
-                    && health <= maximum
-                    ? health
-                    : current;
+                && VectorReflection.Server.usesFullInstanceProtection(player)) {
+            VectorHealthLedger.arm(player);
+            return VectorHealthLedger.guardWrite(player, health);
+        }
+        if (entity.level().isClientSide() && VectorHealthLedger.isArmed(entity)) {
+            return VectorHealthLedger.guardWrite(entity, health);
         }
         health = SurvivalDefense.clampHealthWrite(entity, health);
         return EntityControlApi.clampHealthWrite(entity, health);
@@ -237,22 +232,12 @@ public abstract class MixinLivingEntity {
 
     @Inject(method = "getHealth", at = @At("RETURN"), cancellable = true)
     private void academy$protectVectorReflectionHealthRead(CallbackInfoReturnable<Float> cir) {
-        if ((Object) this instanceof ServerPlayer player
-                && VectorReflection.Server.usesFullInstanceProtection(player)
-                && ClassPointerProtectionManager.backend(player)
-                != ProtectionBackend.CLASS_POINTER) {
-            cir.setReturnValue(Math.max(1.0f, cir.getReturnValue()));
-            return;
-        }
         var entity = (LivingEntity) (Object) this;
         var guarded = EntityControlApi.applyHealthReadGuards(
                 entity,
                 cir.getReturnValue()
         );
-        cir.setReturnValue(SurvivalDefense.applyHealthReadGuard(
-                entity,
-                guarded
-        ));
+        cir.setReturnValue(SurvivalDefense.applyHealthReadGuard(entity, guarded));
     }
 
     @Inject(method = "getMaxHealth", at = @At("RETURN"), cancellable = true)

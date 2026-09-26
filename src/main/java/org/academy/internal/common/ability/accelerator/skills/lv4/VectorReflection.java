@@ -43,6 +43,7 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.reflection.VectorDefenseProficiency;
 import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
+import org.academy.internal.common.ability.accelerator.reflection.VectorHealthLedger;
 import org.academy.internal.common.ability.accelerator.reflection.compat.*;
 import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
@@ -175,8 +176,6 @@ public class VectorReflection extends Skill {
         private static final long REFLECTION_SOUND_COOLDOWN_TICKS = 10;
         private static final float CP_DEPLETION_EPSILON = 1.0E-4f;
         private static final Map<UUID, Long> LAST_SOUND_TICK = new HashMap<>();
-        private static final ThreadLocal<Set<UUID>> IMAGINE_BREAKER_MUTATIONS =
-                ThreadLocal.withInitial(HashSet::new);
         private static final StackWalker STATE_STACK_WALKER = StackWalker.getInstance(
                 StackWalker.Option.RETAIN_CLASS_REFERENCE
         );
@@ -464,7 +463,7 @@ public class VectorReflection extends Skill {
         }
 
         public static boolean usesFullInstanceProtection(ServerPlayer player) {
-            return isActive(player) || VectorDeviation.Server.usesClassPointerProtection(player);
+            return isActive(player) || VectorDeviation.Server.usesFullHealthProtection(player);
         }
 
         static ReflectionResult calculateReflection(float damage, float availableCP, float maximumCP,
@@ -616,29 +615,18 @@ public class VectorReflection extends Skill {
             if (player == null || !Float.isFinite(amount) || !(amount > 0.0f)) return;
             if (!isVectorDefenseActive(player)) return;
 
-            var uuid = player.getUUID();
-            var mutations = IMAGINE_BREAKER_MUTATIONS.get();
-            mutations.add(uuid);
-            var depleted = false;
-            try {
-                var original = player.getHealth();
-                var remaining = Math.max(0.0f, original - amount);
-                depleted = remaining <= 0.0f;
-                if (!depleted) setOriginalHealth(player, remaining);
-            } finally {
-                mutations.remove(uuid);
-                if (mutations.isEmpty()) IMAGINE_BREAKER_MUTATIONS.remove();
+            VectorHealthLedger.arm(player);
+            var remaining = Math.max(0.0f, player.getHealth() - amount);
+            if (remaining <= 0.0f) {
+                killAfterImagineBreakerDepletion(player);
+            } else {
+                VectorHealthLedger.writeAuthorized(player, remaining,
+                        () -> setOriginalHealth(player, remaining));
             }
-
-            if (depleted) killAfterImagineBreakerDepletion(player);
         }
 
         public static boolean shouldForceAlive(ServerPlayer player) {
             return usesFullInstanceProtection(player);
-        }
-
-        public static boolean isImagineBreakerMutation(ServerPlayer player) {
-            return player != null && IMAGINE_BREAKER_MUTATIONS.get().contains(player.getUUID());
         }
 
         public static void clearProtection(ServerPlayer player) {
@@ -687,10 +675,11 @@ public class VectorReflection extends Skill {
             VectorCompatibilityEffectLimiter.clear(player);
         }
 
-        private static void setOriginalHealth(ServerPlayer player, float health) {
+        private static boolean setOriginalHealth(ServerPlayer player, float health) {
+            var accepted = new boolean[1];
             PlayerAttributeRuntime.runWithoutResistance(
-                    () -> EntityControlApi.forceSetTrueHealth(player, health)
-            );
+                    () -> accepted[0] = EntityControlApi.forceSetTrueHealth(player, health));
+            return accepted[0];
         }
 
         private static boolean isTrustedLifecycleCaller(String entryMethod) {

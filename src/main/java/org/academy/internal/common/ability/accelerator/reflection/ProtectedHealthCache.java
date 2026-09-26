@@ -1,4 +1,4 @@
-package org.academy.internal.coremod;
+package org.academy.internal.common.ability.accelerator.reflection;
 
 /**
  * Packs the protected health value together with the maximum health it was validated against.
