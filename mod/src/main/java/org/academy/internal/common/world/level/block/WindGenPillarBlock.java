@@ -1,0 +1,39 @@
+package org.academy.internal.common.world.level.block;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import org.academy.internal.common.world.level.block.entity.WindGenPillarBlockEntity;
+
+public final class WindGenPillarBlock extends BaseEntityBlock {
+
+    public WindGenPillarBlock(Properties properties) {
+        super(properties.noOcclusion());
+    }
+
+    @Override
+    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return cube(8.8692435136, 16, 8.8692435136);
+    }
+
+    @Override
+    protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return getShape(state, level, pos, context);
+    }
+
+
+    @Override
+    public RenderShape getRenderShape(BlockState state) {
+        return RenderShape.INVISIBLE;
+    }
+
+    @Override
+    public BlockEntity newBlockEntity(BlockPos blockPos, BlockState blockState) {
+        return new WindGenPillarBlockEntity(blockPos, blockState);
+    }
+}

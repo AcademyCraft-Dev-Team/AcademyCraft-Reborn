@@ -1,0 +1,14 @@
+{
+  "model": {
+    "type": "minecraft:condition",
+    "on_false": {
+      "type": "minecraft:model",
+      "model": "academy:item/magnetic_hook"
+    },
+    "on_true": {
+      "type": "minecraft:model",
+      "model": "academy:item/magnetic_hook_open"
+    },
+    "property": "minecraft:custom_model_data"
+  }
+}

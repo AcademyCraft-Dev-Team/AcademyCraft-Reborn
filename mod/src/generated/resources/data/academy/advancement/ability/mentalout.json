@@ -1,0 +1,27 @@
+{
+  "parent": "academy:ability/root",
+  "criteria": {
+    "achieved": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.academy.ability.mentalout.description"
+    },
+    "frame": "goal",
+    "hidden": true,
+    "icon": {
+      "id": "minecraft:compass"
+    },
+    "title": {
+      "translate": "advancements.academy.ability.mentalout.title"
+    }
+  },
+  "requirements": [
+    [
+      "achieved"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

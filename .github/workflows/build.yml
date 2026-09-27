@@ -1,0 +1,51 @@
+name: Build
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Cache JBR
+        id: cache-jbr
+        uses: actions/cache@v6
+        with:
+          path: ./jbrsdk.tar.gz
+          key: jbrsdk-25.0.4-linux-x64-b508.27
+
+      - name: Download JBR
+        if: steps.cache-jbr.outputs.cache-hit != 'true'
+        run: |
+          wget -O jbrsdk.tar.gz "https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-25.0.4-linux-x64-b508.27.tar.gz"
+
+      - name: Install JBR
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'jdkfile'
+          jdkFile: ./jbrsdk.tar.gz
+          java-version: '25'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Dev and Release
+        run: |
+          ./gradlew :mod:build -DisDev=true
+          ./gradlew :mod:build -DisDev=false
+          ./gradlew :editor:build -DisDev=true
+          ./gradlew :hack:build -DisDev=true
+
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: AcademyCraft
+          path: 'mod/build/libs/*.jar'

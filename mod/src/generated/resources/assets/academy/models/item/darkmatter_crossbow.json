@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/crossbow",
+  "textures": {
+    "layer0": "academy:item/darkmatter_crossbow"
+  }
+}

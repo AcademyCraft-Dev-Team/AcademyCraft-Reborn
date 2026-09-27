@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "C": "minecraft:compass",
+    "I": "minecraft:iron_ingot",
+    "L": "minecraft:lightning_rod",
+    "Q": "minecraft:comparator"
+  },
+  "pattern": [
+    " Q ",
+    "LCI",
+    "  I"
+  ],
+  "result": {
+    "id": "academy:imag_phase_dowsing_rod"
+  }
+}

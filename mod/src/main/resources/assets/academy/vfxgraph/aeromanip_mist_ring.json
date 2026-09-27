@@ -1,0 +1,278 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "aeromanip_mist_ring",
+  "parameters": [
+    {
+      "id": "mist_alpha",
+      "name": "Ring Fade",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0,
+            "v": 0.06,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.06,
+            "v": 0.9,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.3,
+            "v": 1,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.68,
+            "v": 0.38,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1,
+            "v": 0,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          }
+        ]
+      }
+    },
+    {
+      "id": "mist_size",
+      "name": "Ring Spread",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0,
+            "v": 0.28,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.22,
+            "v": 0.78,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.6,
+            "v": 1.26,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1,
+            "v": 1.82,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          }
+        ]
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "spawn",
+      "type": "SPAWN",
+      "name": "Broken Layered Condensation Ring",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "outer_ring",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "38",
+            "lifetime": "1.16",
+            "size": "0.24",
+            "color": "1,1,1,0.11",
+            "vx": "0",
+            "vy": "0.1305",
+            "vz": "0",
+            "layer": "mist",
+            "shape": "torus",
+            "radius": "0.84",
+            "half_x": "0.09"
+          }
+        },
+        {
+          "id": "inner_ring",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "26",
+            "lifetime": "0.9",
+            "size": "0.14",
+            "color": "0.95,0.99,1,0.23",
+            "vx": "0",
+            "vy": "0.232",
+            "vz": "0",
+            "layer": "mist",
+            "shape": "torus",
+            "radius": "0.6",
+            "half_x": "0.055"
+          }
+        },
+        {
+          "id": "broken_halo",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "22",
+            "lifetime": "1.34",
+            "size": "0.34",
+            "color": "0.9,0.96,1,0.045",
+            "vx": "0",
+            "vy": "0.0725",
+            "vz": "0",
+            "layer": "mist",
+            "shape": "torus",
+            "radius": "1.0",
+            "half_x": "0.17"
+          }
+        }
+      ]
+    },
+    {
+      "id": "initialize",
+      "type": "INITIALIZE",
+      "name": "Randomize Ring Cells",
+      "x": 330,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "randomize_billows",
+          "type": "vfx.block.init_randomize",
+          "properties": {
+            "pos": "0.07",
+            "vel": "0.2",
+            "size": "0.42",
+            "lifetime": "0.24"
+          }
+        }
+      ]
+    },
+    {
+      "id": "update",
+      "type": "UPDATE",
+      "name": "Sheared Rolling Smoke Ring",
+      "x": 500,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "vortex",
+          "type": "vfx.block.update_vortex",
+          "properties": {
+            "strength": "1.96",
+            "pull": "0.028",
+            "vertical_pull": "0.126",
+            "layer": "mist"
+          }
+        },
+        {
+          "id": "fine_noise",
+          "type": "vfx.block.update_noise",
+          "properties": {
+            "amplitude": "0.18",
+            "frequency": "3.675"
+          }
+        },
+        {
+          "id": "turbulence",
+          "type": "vfx.block.update_turbulence",
+          "properties": {
+            "amplitude": "0.375",
+            "frequency": "2.0125"
+          }
+        },
+        {
+          "id": "drag",
+          "type": "vfx.block.update_drag",
+          "properties": {
+            "drag": "0.4675"
+          }
+        },
+        {
+          "id": "velocity",
+          "type": "vfx.block.update_velocity",
+          "properties": {}
+        },
+        {
+          "id": "age",
+          "type": "vfx.block.update_age",
+          "properties": {}
+        },
+        {
+          "id": "alpha",
+          "type": "vfx.block.life_alpha",
+          "properties": {
+            "curve": "mist_alpha",
+            "layer": "mist"
+          }
+        },
+        {
+          "id": "size",
+          "type": "vfx.block.life_size",
+          "properties": {
+            "curve": "mist_size",
+            "layer": "mist"
+          }
+        }
+      ]
+    },
+    {
+      "id": "output",
+      "type": "OUTPUT",
+      "name": "Visible White Flow Ring",
+      "x": 1000,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "out_mist",
+          "type": "vfx.block.output_quad",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_aeromanip_mist",
+            "shader": "academy:core/vfxgraph_aeromanip_mist",
+            "blend": "translucent",
+            "layer": "mist"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "spawn",
+      "to": "initialize"
+    },
+    {
+      "from": "initialize",
+      "to": "update"
+    },
+    {
+      "from": "update",
+      "to": "output"
+    }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "out_mist"
+  ]
+}

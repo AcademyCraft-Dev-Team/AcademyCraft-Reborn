@@ -1,0 +1,61 @@
+package org.academy.api.common.ability.data;
+
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class SkillDataProficiencyTest {
+    @Test
+    void proficiencyTiersUseThousandPointThresholds() {
+        assertEquals(1, SkillData.getProficiencyTier(0.0f));
+        assertEquals(1, SkillData.getProficiencyTier(999.99f));
+        assertEquals(2, SkillData.getProficiencyTier(1000.0f));
+        assertEquals(2, SkillData.getProficiencyTier(1999.99f));
+        assertEquals(3, SkillData.getProficiencyTier(2000.0f));
+        assertEquals(3, SkillData.getProficiencyTier(2999.99f));
+        assertEquals(4, SkillData.getProficiencyTier(3000.0f));
+        assertEquals(0, SkillData.getReachedProficiencyThresholds(999.99f));
+        assertEquals(1, SkillData.getReachedProficiencyThresholds(1000.0f));
+        assertEquals(1, SkillData.getReachedProficiencyThresholds(1999.99f));
+        assertEquals(2, SkillData.getReachedProficiencyThresholds(2000.0f));
+        assertEquals(2, SkillData.getReachedProficiencyThresholds(2999.99f));
+        assertEquals(3, SkillData.getReachedProficiencyThresholds(3000.0f));
+    }
+
+    @Test
+    void proficiencyIsClampedToCanonicalRange() {
+        var data = new CommonSkillData();
+
+        data.setProficiency(-1.0f);
+        assertEquals(0.0f, data.getProficiency());
+        data.setProficiency(3001.0f);
+        assertEquals(3000.0f, data.getProficiency());
+        assertTrue(data.isMaxProficiency());
+        data.setProficiency(Float.NaN);
+        assertEquals(0.0f, data.getProficiency());
+        assertFalse(data.isMaxProficiency());
+    }
+
+    @Test
+    void legacyProgressUsesTheExactProportionalMigrationAndIsIdempotent() {
+        var data = new CommonSkillData();
+        data.markLegacyProgress(500.0f, 1000, 2);
+
+        data.migrateLegacyProgress(3);
+        assertEquals(1875.0f, data.getProficiency());
+        assertFalse(data.hasLegacyProgress());
+
+        data.migrateLegacyProgress(3);
+        assertEquals(1875.0f, data.getProficiency());
+    }
+
+    @Test
+    void invalidLegacyMaxExpFallsBackToOneThousand() {
+        var data = new CommonSkillData();
+        data.markLegacyProgress(500.0f, 0, 0);
+
+        data.migrateLegacyProgress(3);
+
+        assertEquals(375.0f, data.getProficiency());
+    }
+}

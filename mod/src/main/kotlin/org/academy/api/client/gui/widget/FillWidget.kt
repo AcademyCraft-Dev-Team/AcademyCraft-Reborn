@@ -1,0 +1,43 @@
+package org.academy.api.client.gui.widget
+
+import org.academy.api.client.gui.drawable.ColorDrawable
+import org.academy.api.client.gui.drawable.Drawable
+import org.academy.api.client.gui.render.Canvas
+
+class FillWidget(color: Int) : AbstractWidget() {
+    override var background: Drawable? = null
+        set(background) {
+            if (background is ColorDrawable) field = background
+        }
+
+    init {
+        background = ColorDrawable(color)
+    }
+
+    override fun render(context: Canvas) {
+        if (!isVisible()) return
+        super.render(context)
+    }
+
+    val color: Int
+        get() {
+            val bg = background
+            if (bg is ColorDrawable) {
+                return bg.color
+            }
+            return 0
+        }
+
+    fun setColor(color: Int): FillWidget {
+        val bg = background
+        if (bg is ColorDrawable) {
+            if (bg.color != color) {
+                bg.color = color
+                invalidate()
+            }
+        } else {
+            background = ColorDrawable(color)
+        }
+        return this
+    }
+}

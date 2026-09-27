@@ -1,0 +1,176 @@
+package org.academy.api.client.gui.widget
+
+import org.academy.api.client.gui.layout.Gravity
+import org.academy.api.client.gui.layout.MeasureSpec
+import org.academy.api.client.gui.layout.SizeMode
+import kotlin.math.max
+
+open class FrameLayoutWidget : AbstractWidgetContainer() {
+    var measureAllChildren: Boolean = false
+    private val matchParentChildren: MutableList<Widget> = ArrayList(1)
+
+    override fun generateDefaultLayoutParams(): LayoutParams {
+        return LayoutParams()
+    }
+
+    override fun generateLayoutParams(p: WidgetContainer.LayoutParams): LayoutParams {
+        return LayoutParams(p)
+    }
+
+    override fun checkLayoutParams(p: WidgetContainer.LayoutParams): Boolean {
+        return p is LayoutParams
+    }
+
+    override fun onMeasure(widthMeasureSpec: MeasureSpec, heightMeasureSpec: MeasureSpec) {
+        val measureMatchParentChildren =
+            widthMeasureSpec.mode != MeasureSpec.Mode.EXACTLY ||
+                    heightMeasureSpec.mode != MeasureSpec.Mode.EXACTLY
+        matchParentChildren.clear()
+
+        var maxHeight = 0.0f
+        var maxWidth = 0.0f
+
+        for (child in children.values) {
+            if (measureAllChildren || child.isVisible()) {
+                measureChild(child, widthMeasureSpec, heightMeasureSpec)
+                val lp = child.layoutParams as LayoutParams
+                maxWidth = max(
+                    maxWidth,
+                    child.measuredWidth + lp.marginLeft + lp.marginRight
+                )
+                maxHeight = max(
+                    maxHeight,
+                    child.measuredHeight + lp.marginTop + lp.marginBottom
+                )
+                if (measureMatchParentChildren) {
+                    if (lp.widthMode == SizeMode.MATCH_PARENT ||
+                        lp.heightMode == SizeMode.MATCH_PARENT
+                    ) {
+                        matchParentChildren.add(child)
+                    }
+                }
+            }
+        }
+
+        val containerLp = layoutParams
+        maxWidth += containerLp.paddingLeft + containerLp.paddingRight
+        maxHeight += containerLp.paddingTop + containerLp.paddingBottom
+
+        maxHeight = max(maxHeight, 0f)
+        maxWidth = max(maxWidth, 0f)
+
+        setMeasuredDimension(
+            resolveSize(maxWidth, widthMeasureSpec),
+            resolveSize(maxHeight, heightMeasureSpec)
+        )
+
+        val matchParentCount = matchParentChildren.size
+        if (matchParentCount > 0) {
+            for (child in matchParentChildren) {
+                val lp = child.layoutParams as LayoutParams
+
+                val childWidthMeasureSpec = resolveMatchParentChildSpec(
+                    widthMeasureSpec, measuredWidth,
+                    containerLp.paddingLeft, containerLp.paddingRight,
+                    lp.width, lp.widthMode, lp.widthPercent,
+                    lp.marginLeft, lp.marginRight
+                )
+
+                val childHeightMeasureSpec = resolveMatchParentChildSpec(
+                    heightMeasureSpec, measuredHeight,
+                    containerLp.paddingTop, containerLp.paddingBottom,
+                    lp.height, lp.heightMode, lp.heightPercent,
+                    lp.marginTop, lp.marginBottom
+                )
+
+                child.measure(childWidthMeasureSpec, childHeightMeasureSpec)
+            }
+        }
+    }
+
+    private fun resolveMatchParentChildSpec(
+        parentSpec: MeasureSpec,
+        measuredSize: Float,
+        paddingBefore: Float,
+        paddingAfter: Float,
+        childDimension: Float,
+        childMode: SizeMode,
+        childPercent: Float,
+        marginBefore: Float,
+        marginAfter: Float
+    ): MeasureSpec {
+        if (childMode == SizeMode.MATCH_PARENT) {
+            val size = max(0f, measuredSize - paddingBefore - paddingAfter - marginBefore - marginAfter)
+            return MeasureSpec(MeasureSpec.Mode.EXACTLY, size)
+        }
+        return getChildMeasureSpec(
+            parentSpec,
+            paddingBefore + paddingAfter + marginBefore + marginAfter,
+            childDimension, childMode, childPercent
+        )
+    }
+
+    override fun onLayout() {
+        val containerLp = layoutParams
+        val parentLeft = containerLp.paddingLeft
+        val parentRight = width - containerLp.paddingRight
+        val availableWidth = parentRight - parentLeft
+
+        val parentTop = containerLp.paddingTop
+        val parentBottom = height - containerLp.paddingBottom
+        val availableHeight = parentBottom - parentTop
+
+        for (child in children.values) {
+            if (child.isVisible()) {
+                val lp = child.layoutParams as LayoutParams
+
+                val width = child.measuredWidth
+                val height = child.measuredHeight
+
+                var childLeft: Float
+                var childTop: Float
+
+                var gravity = lp.gravity
+                if (gravity == -1) {
+                    gravity = DEFAULT_CHILD_GRAVITY
+                }
+
+                val horizontalGravity = gravity and Gravity.HORIZONTAL_GRAVITY_MASK
+                val verticalGravity = gravity and Gravity.VERTICAL_GRAVITY_MASK
+
+                childLeft = parentLeft + lp.marginLeft
+                if (horizontalGravity == Gravity.CENTER_HORIZONTAL) {
+                    childLeft += (availableWidth - width - lp.marginLeft - lp.marginRight) / 2.0f
+                } else if (horizontalGravity == Gravity.RIGHT) {
+                    childLeft = parentRight - width - lp.marginRight
+                }
+
+                childTop = parentTop + lp.marginTop
+                if (verticalGravity == Gravity.CENTER_VERTICAL) {
+                    childTop += (availableHeight - height - lp.marginTop - lp.marginBottom) / 2.0f
+                } else if (verticalGravity == Gravity.BOTTOM) {
+                    childTop = parentBottom - height - lp.marginBottom
+                }
+
+                child.layout(childLeft, childTop, childLeft + width, childTop + height)
+            }
+        }
+    }
+
+    open class LayoutParams : WidgetContainer.LayoutParams {
+        constructor() {
+            gravity = UNSPECIFIED_GRAVITY
+            sizeMode(SizeMode.MATCH_PARENT)
+        }
+
+        constructor(source: WidgetContainer.LayoutParams) : super(source)
+
+        companion object {
+            const val UNSPECIFIED_GRAVITY: Int = -1
+        }
+    }
+
+    companion object {
+        private const val DEFAULT_CHILD_GRAVITY = Gravity.TOP or Gravity.START
+    }
+}

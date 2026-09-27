@@ -1,0 +1,61 @@
+package org.academy.internal.common.world.item;
+
+import com.mojang.serialization.Codec;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.neoforged.neoforge.registries.DeferredHolder;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import org.academy.api.common.ability.darkmatter.DarkmatterBlockProfile;
+import org.academy.api.common.ability.darkmatter.DarkmatterIntegrity;
+import org.academy.api.common.ability.darkmatter.DarkmatterShapingProfile;
+
+import java.util.UUID;
+
+import static org.academy.AcademyCraft.MOD_ID;
+
+public final class ItemDataComponents {
+    public static final DeferredRegister.DataComponents DATA_COMPONENTS =
+            DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, MOD_ID);
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> ENERGY =
+            DATA_COMPONENTS.registerComponentType("energy", builder -> builder
+                    .persistent(Codec.INT)
+                    .networkSynchronized(ByteBufCodecs.VAR_INT));
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<DarkmatterIntegrity>>
+            DARKMATTER_INTEGRITY = DATA_COMPONENTS.registerComponentType(
+            "darkmatter_integrity", builder -> builder
+                    .persistent(DarkmatterIntegrity.CODEC)
+                    .networkSynchronized(DarkmatterIntegrity.STREAM_CODEC));
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<DarkmatterShapingProfile>>
+            DARKMATTER_SHAPING_PROFILE = DATA_COMPONENTS.registerComponentType(
+            "darkmatter_shaping_profile", builder -> builder
+                    .persistent(DarkmatterShapingProfile.CODEC)
+                    .networkSynchronized(DarkmatterShapingProfile.STREAM_CODEC));
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<DarkmatterShapingProfile>>
+            DARKMATTER_COATING_PROFILE = DATA_COMPONENTS.registerComponentType(
+            "darkmatter_coating_profile", builder -> builder
+                    .persistent(DarkmatterShapingProfile.CODEC)
+                    .networkSynchronized(DarkmatterShapingProfile.STREAM_CODEC));
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<DarkmatterBlockProfile>>
+            DARKMATTER_BLOCK_PROFILE = DATA_COMPONENTS.registerComponentType(
+            "darkmatter_block_profile", builder -> builder
+                    .persistent(DarkmatterBlockProfile.CODEC)
+                    .networkSynchronized(DarkmatterBlockProfile.STREAM_CODEC));
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<UUID>> SPATIAL_STORAGE_ID =
+            DATA_COMPONENTS.registerComponentType("spatial_storage_id", builder -> builder
+                    .persistent(UUIDUtil.CODEC)
+                    .networkSynchronized(UUIDUtil.STREAM_CODEC));
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Boolean>> SPATIAL_STORAGE_ENABLED =
+            DATA_COMPONENTS.registerComponentType("spatial_storage_enabled", builder -> builder
+                    .persistent(Codec.BOOL).networkSynchronized(ByteBufCodecs.BOOL));
+
+    private ItemDataComponents() {
+    }
+}

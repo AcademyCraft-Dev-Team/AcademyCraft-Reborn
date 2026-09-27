@@ -1,0 +1,64 @@
+[versions]
+academy = "0.0.4-alpha"
+
+java = "25"
+minecraft = "26.3"
+neoforge = "26.3.0.39-beta"
+loader = "[6.3.0,)"
+
+renderdoc = "1.44"
+rendernurse = "0.0.26"
+
+kotlinforforge = "6.3.2"
+geckolib = "5.5.7"
+sodium = "mc26.3-0.9.2-neoforge"
+iris = "1.11.4+26.2-neoforge"
+jade = "26.3.1+neoforge"
+jei = "31.0.0.5"
+curios = "16.0.0+26.2"
+misaka = "26.3.0.0"
+jmsdfgen = "0.0.2"
+
+auto = "1.1.1"
+jflac = "1.5.2"
+jlayer = "1.0.3"
+imgui = "1.90.0"
+
+kotlin = "2.4.0"
+plugin-moddevgradle = "2.0.148"
+download = "5.7.0"
+junit = "6.1.3"
+[libraries]
+kotlinforforge = { group = "thedarkcolour", name = "kotlinforforge-neoforge", version.ref = "kotlinforforge" }
+geckolib = { group = "com.geckolib", name = "geckolib-neoforge-26.3", version.ref = "geckolib" }
+sodium = { group = "maven.modrinth", name = "sodium", version.ref = "sodium" }
+iris = { group = "maven.modrinth", name = "iris", version.ref = "iris" }
+jade = { group = "maven.modrinth", name = "jade", version.ref = "jade" }
+jei = { group = "mezz.jei", name = "jei-26.3-neoforge", version.ref = "jei" }
+jei-api = { group = "mezz.jei", name = "jei-26.3-neoforge-api", version.ref = "jei" }
+curios = { group = "top.theillusivec4.curios", name = "curios-neoforge", version.ref = "curios" }
+misaka = { group = "org.academy", name = "misaka-network", version.ref = "misaka" }
+jmsdfgen-core = { group = "lovely.cane.jmsdfgen", name = "jmsdfgen-core", version.ref = "jmsdfgen" }
+jmsdfgen-ext = { group = "lovely.cane.jmsdfgen", name = "jmsdfgen-ext", version.ref = "jmsdfgen" }
+
+auto = { group = "com.google.auto.service", name = "auto-service", version.ref = "auto" }
+
+jflac = { group = "org.jflac", name = "jflac-codec", version.ref = "jflac" }
+jlayer = { group = "com.github.umjammer", name = "jlayer", version.ref = "jlayer" }
+
+imgui-binding = { group = "io.github.spair", name = "imgui-java-binding", version.ref = "imgui" }
+imgui-linux = { group = "io.github.spair", name = "imgui-java-natives-linux", version.ref = "imgui" }
+imgui-lwjgl3 = { group = "io.github.spair", name = "imgui-java-lwjgl3", version.ref = "imgui" }
+imgui-macos = { group = "io.github.spair", name = "imgui-java-natives-macos", version.ref = "imgui" }
+imgui-windows = { group = "io.github.spair", name = "imgui-java-natives-windows", version.ref = "imgui" }
+
+junit-bom = { group = "org.junit", name = "junit-bom", version.ref = "junit" }
+junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter" }
+junit-platform-launcher = { group = "org.junit.platform", name = "junit-platform-launcher" }
+
+[plugins]
+idea = { id = "idea" }
+java-library = { id = "java-library" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+moddevgradle = { id = "net.neoforged.moddev", version.ref = "plugin-moddevgradle" }
+download = { id = "de.undercouch.download", version.ref = "download" }

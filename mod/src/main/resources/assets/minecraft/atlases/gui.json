@@ -1,0 +1,9 @@
+{
+  "sources": [
+    {
+      "type": "minecraft:single",
+      "resource": "academy:ability/aeromanip/skill/pressure_lock/icon",
+      "sprite": "academy:mob_effect/imprisoned"
+    }
+  ]
+}

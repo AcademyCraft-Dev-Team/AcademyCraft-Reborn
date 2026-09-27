@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "editor",
+  "parameters": [],
+  "contexts": [
+    {
+      "id": "ctx_spawn",
+      "type": "SPAWN",
+      "name": "Spawn",
+      "x": 0.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "surf",
+          "type": "vfx.block.arc_surface",
+          "properties": {
+            "mesh": "builtin:plane",
+            "density": "1.0",
+            "probability": "0.0204",
+            "frequency": "1.0",
+            "frame_period": "1",
+            "fps": "30",
+            "height": "1.0",
+            "curve": "0.78",
+            "width": "0.0035",
+            "segments": "12",
+            "lifetime": "0.67",
+            "color": "0.13,0.21,1.0,1",
+            "emission": "1.0",
+            "noise_strength": "0.5",
+            "drift_speed": "1.5",
+            "origin_x": "0",
+            "origin_y": "0",
+            "origin_z": "0"
+          }
+        },
+        {
+          "id": "spark",
+          "type": "vfx.block.arc_spark",
+          "properties": {
+            "probability": "0.48",
+            "max_sparks": "10",
+            "splash_speed": "1.23",
+            "gravity": "-0.9",
+            "lifetime": "1.0",
+            "scale": "0.83",
+            "radius": "0.003",
+            "color": "0.23,0.35,0.69,1",
+            "emission": "1.0"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ctx_out",
+      "type": "OUTPUT",
+      "name": "Output",
+      "x": 440.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "out_glow",
+          "type": "vfx.block.output_arc",
+          "properties": {
+            "blend": "glow",
+            "vertex": "academy:core/vfxgraph_arc",
+            "shader": "academy:core/vfxgraph_arc",
+            "sparks": "0",
+            "emission": "6.0",
+            "overall_scale": "1.0",
+            "segments": "12"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "ctx_spawn",
+      "to": "ctx_out"
+    }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "out_glow"
+  ]
+}

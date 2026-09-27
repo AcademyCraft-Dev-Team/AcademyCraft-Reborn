@@ -1,0 +1,234 @@
+package org.academy.internal.common.ability.program;
+
+import com.google.gson.JsonObject;
+import net.minecraft.resources.Identifier;
+import org.academy.api.common.ability.program.*;
+import org.academy.internal.common.ability.program.compile.CompiledProgram;
+import org.academy.internal.common.ability.program.editor.ProgramEditorDocument;
+import org.academy.internal.common.ability.program.registry.AbilityProgramDefinitions;
+import org.academy.internal.common.ability.program.registry.CommonProgramNodeCatalog;
+import org.academy.internal.common.ability.program.registry.CommonProgramNodeIds;
+import org.academy.internal.common.ability.program.registry.PrecisionProgramNodeCatalog;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class ProgramTriggersTest {
+    @Test
+    void triggerNodesHaveOneFlowOutputAndNoInputs() {
+        var catalog = AbilityProgramDefinitions.mentalout().editorCatalog();
+        for (var id : List.of(
+                CommonProgramNodeIds.TRIGGER_HURT,
+                CommonProgramNodeIds.TRIGGER_LOOP,
+                CommonProgramNodeIds.TRIGGER_MELEE,
+                CommonProgramNodeIds.TRIGGER_MOVEMENT
+        )) {
+            var entry = catalog.entry(id);
+            assertEquals(ProgramNodeRole.ENTRY, entry.type().role());
+            assertTrue(entry.defaultSchema().inputs().isEmpty());
+            assertEquals(1, entry.defaultSchema().outputs().size());
+            assertEquals("flow", entry.defaultSchema().outputs().getFirst().name());
+        }
+    }
+
+    @Test
+    void periodicAndMovementTriggersMatchTheirConfiguration() {
+        var loop = configuration("interval", 20);
+        var loopProgram = program(CommonProgramNodeIds.TRIGGER_LOOP, loop);
+        assertTrue(ProgramTriggers.matches(
+                loopProgram, ProgramTriggers.Type.LOOP, null, 20));
+        assertFalse(ProgramTriggers.matches(
+                loopProgram, ProgramTriggers.Type.LOOP, null, 19));
+        loop.addProperty("interval", 0);
+        assertTrue(ProgramTriggers.matches(
+                program(CommonProgramNodeIds.TRIGGER_LOOP, loop),
+                ProgramTriggers.Type.LOOP, null, 37));
+        loop.addProperty("enabled", false);
+        assertFalse(ProgramTriggers.matches(
+                program(CommonProgramNodeIds.TRIGGER_LOOP, loop),
+                ProgramTriggers.Type.LOOP, null, 37));
+
+        var movement = configuration("condition", "sprint");
+        var movementProgram = program(CommonProgramNodeIds.TRIGGER_MOVEMENT, movement);
+        assertTrue(ProgramTriggers.matches(
+                movementProgram,
+                ProgramTriggers.Type.MOVEMENT,
+                CommonProgramNodeCatalog.MovementCondition.SPRINT,
+                0));
+        assertFalse(ProgramTriggers.matches(
+                movementProgram,
+                ProgramTriggers.Type.MOVEMENT,
+                CommonProgramNodeCatalog.MovementCondition.SNEAK,
+                0));
+    }
+
+    @Test
+    void periodicTriggersToggleInsteadOfRunningAsManualPrograms() {
+        assertFalse(ProgramTriggers.acceptsManualExecution(compiled(
+                CommonProgramNodeIds.TRIGGER_LOOP, configuration("interval", 20))));
+        assertTrue(ProgramTriggers.acceptsManualExecution(compiled(
+                CommonProgramNodeIds.TRIGGER_MOVEMENT, configuration("condition", "jump"))));
+        assertFalse(ProgramTriggers.acceptsManualExecution(compiled(
+                CommonProgramNodeIds.TRIGGER_MELEE, new JsonObject())));
+        assertFalse(ProgramTriggers.acceptsManualExecution(compiled(
+                CommonProgramNodeIds.TRIGGER_HURT, new JsonObject())));
+    }
+
+    @Test
+    void togglingPeriodicTriggerPersistsEnabledStateWithoutMutatingOldSnapshot() {
+        var configuration = configuration("interval", 20);
+        configuration.addProperty("enabled", true);
+        var original = program(CommonProgramNodeIds.TRIGGER_LOOP, configuration);
+
+        var disabled = ProgramTriggers.toggleLoop(original).orElseThrow();
+
+        assertFalse(disabled.enabled());
+        assertFalse(ProgramTriggers.matches(
+                disabled.program(), ProgramTriggers.Type.LOOP, null, 20));
+        assertTrue(ProgramTriggers.matches(
+                original, ProgramTriggers.Type.LOOP, null, 20));
+        assertEquals(original.id(), disabled.program().id());
+        assertEquals(original.name(), disabled.program().name());
+        assertEquals(original.category(), disabled.program().category());
+        assertEquals(original.editorLayout(), disabled.program().editorLayout());
+        assertEquals(original.graph().edges(), disabled.program().graph().edges());
+        assertEquals(20, disabled.program().graph().nodes().getFirst()
+                .configuration().getAsJsonObject().get("interval").getAsInt());
+
+        var enabled = ProgramTriggers.toggleLoop(disabled.program()).orElseThrow();
+        assertTrue(enabled.enabled());
+        assertTrue(ProgramTriggers.matches(
+                enabled.program(), ProgramTriggers.Type.LOOP, null, 20));
+        assertTrue(ProgramTriggers.toggleLoop(program(
+                CommonProgramNodeIds.TRIGGER_MOVEMENT,
+                configuration("condition", "jump")
+        )).isEmpty());
+    }
+
+    @Test
+    void triggerConfigurationIsBoundedAndOnlyOneEntryIsAllowed() {
+        var catalog = AbilityProgramDefinitions.mentalout().editorCatalog();
+        var loopDefaults = catalog.entry(CommonProgramNodeIds.TRIGGER_LOOP)
+                .defaultConfiguration().getAsJsonObject();
+        assertTrue(loopDefaults.get("enabled").getAsBoolean());
+        assertEquals(40, loopDefaults.get("interval").getAsInt());
+        assertNull(catalog.schema(
+                CommonProgramNodeIds.TRIGGER_LOOP,
+                configuration("interval", -1)
+        ));
+        assertNull(catalog.schema(
+                CommonProgramNodeIds.TRIGGER_LOOP,
+                configuration("interval", 1201)
+        ));
+
+        var graph = new ProgramGraph(
+                List.of(
+                        node(1, CommonProgramNodeIds.TRIGGER_MELEE, new JsonObject()),
+                        node(2, CommonProgramNodeIds.TRIGGER_HURT, new JsonObject())
+                ),
+                List.of()
+        );
+        var result = AbilityProgramDefinitions.mentalout().compile(graph, Set.of());
+        assertFalse(result.valid());
+        assertEquals(ProgramDiagnosticCode.MULTIPLE_ENTRIES,
+                result.diagnostics().getFirst().code());
+
+        var empty = new AbilityProgram(
+                AbilityProgram.CURRENT_SCHEMA_VERSION,
+                UUID.randomUUID(),
+                "entry-editor-test",
+                PrecisionProgramNodeCatalog.MENTALOUT,
+                ProgramGraph.EMPTY,
+                ProgramEditorLayout.EMPTY
+        );
+        var document = new ProgramEditorDocument(empty, catalog, Set.of())
+                .addNode(CommonProgramNodeIds.TRIGGER_MELEE, 0, 0)
+                .orElseThrow();
+        var duplicate = document.addNode(CommonProgramNodeIds.TRIGGER_HURT, 80, 0);
+        assertFalse(duplicate.successful());
+        assertEquals(ProgramDiagnosticCode.MULTIPLE_ENTRIES, duplicate.diagnostic().code());
+    }
+
+    @Test
+    void loopCostMultiplierDoesNotSurchargeFastLoops() {
+        assertEquals(1.0f, ProgramTriggers.loopCostMultiplier(0));
+        assertEquals(1.0f, ProgramTriggers.loopCostMultiplier(1));
+        assertEquals(1.0f, ProgramTriggers.loopCostMultiplier(5));
+        assertEquals(1.0f, ProgramTriggers.loopCostMultiplier(39));
+        assertEquals(1.0f, ProgramTriggers.loopCostMultiplier(40));
+        assertEquals(1.0f, ProgramTriggers.loopCostMultiplier(80));
+    }
+
+    @Test
+    void chatTriggerFiltersByMessageAndSenderWhileOldGraphsStillMatch() {
+        var legacy = program(CommonProgramNodeIds.TRIGGER_CHAT, new JsonObject());
+        assertTrue(ProgramTriggers.matchesChat(legacy, "任何消息", false));
+
+        var configuration = new JsonObject();
+        configuration.addProperty("mode", "starts_with");
+        configuration.addProperty("keyword", "开始");
+        configuration.addProperty("ignore_case", false);
+        configuration.addProperty("sender", "self");
+        var trigger = program(CommonProgramNodeIds.TRIGGER_CHAT, configuration);
+        assertTrue(ProgramTriggers.matchesChat(trigger, "开始采集", true));
+        assertFalse(ProgramTriggers.matchesChat(trigger, "停止采集", true));
+        assertFalse(ProgramTriggers.matchesChat(trigger, "开始采集", false));
+        assertFalse(ProgramTriggers.matchesChat(trigger, null, true));
+
+        configuration.addProperty("mode", "contains");
+        configuration.addProperty("keyword", "START");
+        configuration.addProperty("ignore_case", true);
+        configuration.addProperty("sender", "others");
+        trigger = program(CommonProgramNodeIds.TRIGGER_CHAT, configuration);
+        assertTrue(ProgramTriggers.matchesChat(trigger, "please start now", false));
+        assertFalse(ProgramTriggers.matchesChat(trigger, "please start now", true));
+    }
+
+    private static CompiledProgram compiled(
+            Identifier type,
+            JsonObject configuration
+    ) {
+        var result = AbilityProgramDefinitions.mentalout()
+                .compile(program(type, configuration), Set.of());
+        if (!result.valid()) throw new AssertionError(result.diagnostics());
+        return result.program();
+    }
+
+    private static AbilityProgram program(
+            Identifier type,
+            JsonObject configuration
+    ) {
+        return new AbilityProgram(
+                AbilityProgram.CURRENT_SCHEMA_VERSION,
+                UUID.randomUUID(),
+                "trigger-test",
+                PrecisionProgramNodeCatalog.MENTALOUT,
+                new ProgramGraph(List.of(node(1, type, configuration)), List.of()),
+                ProgramEditorLayout.EMPTY
+        );
+    }
+
+    private static ProgramGraph.Node node(
+            int id,
+            Identifier type,
+            JsonObject configuration
+    ) {
+        return new ProgramGraph.Node(id, type, 1, configuration);
+    }
+
+    private static JsonObject configuration(String field, Number value) {
+        var configuration = new JsonObject();
+        configuration.addProperty(field, value);
+        return configuration;
+    }
+
+    private static JsonObject configuration(String field, String value) {
+        var configuration = new JsonObject();
+        configuration.addProperty(field, value);
+        return configuration;
+    }
+}

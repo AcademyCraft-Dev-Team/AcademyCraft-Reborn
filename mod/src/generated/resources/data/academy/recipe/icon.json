@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "A": "minecraft:amethyst_shard",
+    "P": "minecraft:paper",
+    "R": "minecraft:redstone"
+  },
+  "pattern": [
+    " A ",
+    "APA",
+    " R "
+  ],
+  "result": {
+    "id": "academy:icon"
+  }
+}

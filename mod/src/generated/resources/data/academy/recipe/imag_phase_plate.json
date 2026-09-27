@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "P": "academy:imag_phase_polymer"
+  },
+  "pattern": [
+    "PP",
+    "PP"
+  ],
+  "result": {
+    "id": "academy:imag_phase_plate"
+  }
+}

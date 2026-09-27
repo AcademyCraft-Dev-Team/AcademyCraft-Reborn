@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "C": "academy:imag_phase_circuit",
+    "I": "academy:imag_phase_ingot",
+    "P": "academy:imag_phase_plate",
+    "Q": "minecraft:comparator",
+    "S": "academy:wind_gen_base_screen"
+  },
+  "pattern": [
+    "PQS",
+    "PCQ",
+    "IPP"
+  ],
+  "result": {
+    "id": "academy:ability_control_tablet"
+  }
+}

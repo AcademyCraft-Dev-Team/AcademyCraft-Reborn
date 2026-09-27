@@ -1,0 +1,42 @@
+package org.academy.internal.common.ability.teleport.program;
+
+import org.academy.api.common.ability.program.ProgramBlockPosition;
+import org.academy.api.common.ability.program.ProgramDirection;
+import org.academy.api.common.ability.program.ProgramTargetResolver;
+import org.academy.api.common.ability.program.ProgramWorldPosition;
+import org.academy.internal.common.ability.program.ProgramActionTransaction;
+import org.jspecify.annotations.Nullable;
+
+import java.util.Optional;
+
+/**
+ * Restricted server-owned environment exposed to Teleport programs.
+ */
+public interface TeleportProgramRuntime extends ProgramTargetResolver {
+    Object caster();
+
+    Optional<Object> lookTarget();
+
+    ProgramActionTransaction.ProgramAction teleportSelf(
+            ProgramWorldPosition destination,
+            float power
+    );
+
+    ProgramActionTransaction.ProgramAction teleportEntity(
+            Object target,
+            Object destination,
+            @Nullable ProgramDirection direction,
+            float power,
+            TeleportProgramNodeCatalog.TargetType targetType
+    );
+
+    boolean isSpaceSafe(Object entity, ProgramWorldPosition position);
+
+    default ProgramActionTransaction.ProgramAction teleportBlockOrItem(
+            ProgramBlockPosition position,
+            int hotbarSlot,
+            TeleportProgramNodeCatalog.BlockItemTeleportMode mode
+    ) {
+        throw new UnsupportedOperationException("Block-item teleport is unavailable");
+    }
+}

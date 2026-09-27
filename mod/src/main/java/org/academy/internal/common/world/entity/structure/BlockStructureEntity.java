@@ -1,0 +1,587 @@
+package org.academy.internal.common.world.entity.structure;
+
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import org.academy.api.common.structure.*;
+import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+import org.academy.internal.common.structure.*;
+import org.academy.internal.common.world.damagesource.PvpSetting;
+import org.academy.internal.common.world.entity.EntityTypes;
+import org.academy.internal.server.team.TeamRelations;
+import org.jspecify.annotations.Nullable;
+
+import java.util.*;
+import java.util.function.Consumer;
+
+public final class BlockStructureEntity extends Entity
+        implements BlockStructure, BlockStructureCollision {
+    private static final EntityDataAccessor<BlockStructureSnapshot> STRUCTURE =
+            SynchedEntityData.defineId(
+                    BlockStructureEntity.class,
+                    org.academy.internal.common.network.syncher.EntityDataSerializers.BLOCK_STRUCTURE.get()
+            );
+    private static final EntityDataAccessor<Boolean> RESTORE_WHEN_SETTLED =
+            SynchedEntityData.defineId(
+                    BlockStructureEntity.class,
+                    EntityDataSerializers.BOOLEAN
+            );
+    private static final double LINEAR_DRAG = 0.98;
+    private static final double MAX_SPEED = 16.0;
+    private static final double REST_SPEED_SQUARED = 0.0004;
+    private static final double PLATFORM_EPSILON = 0.18;
+    private static final double PLATFORM_RECOVERY_EPSILON = 0.5;
+    private static final double PLATFORM_ALIGNMENT_EPSILON = 1.0e-5;
+    private static final int GENERIC_IMPACT_COOLDOWN_TICKS = 10;
+    private static final int MOTION_CONTROLLER_TICKS = 100;
+
+    private BlockStructureSnapshot structure = BlockStructureSnapshot.EMPTY;
+    private BlockStructureCollisionGeometry collisionGeometry =
+            BlockStructureCollisionGeometry.EMPTY;
+    private final Map<UUID, Long> genericImpactTicks = new HashMap<>();
+    private final Set<UUID> supportedEntityIds = new HashSet<>();
+    private UUID motionControllerId;
+    private long motionControllerExpiresAt;
+
+    public BlockStructureEntity(EntityType<? extends BlockStructureEntity> type, Level level) {
+        super(type, level);
+        blocksBuilding = true;
+        setRequiresPrecisePosition(true);
+    }
+
+    public BlockStructureEntity(ServerLevel level) {
+        this(EntityTypes.BLOCK_STRUCTURE.get(), level);
+    }
+
+    public void initialize(
+            BlockStructureSnapshot snapshot,
+            boolean gravityEnabled,
+            boolean restoreWhenSettled
+    ) {
+        if (snapshot == null || snapshot.isEmpty()) {
+            throw new IllegalArgumentException("A block structure entity requires a non-empty snapshot");
+        }
+        structure = snapshot;
+        collisionGeometry = BlockStructureCollisionGeometry.create(snapshot);
+        entityData.set(STRUCTURE, snapshot);
+        entityData.set(RESTORE_WHEN_SETTLED, restoreWhenSettled);
+        setGravityEnabled(gravityEnabled);
+        refreshStructureBounds();
+    }
+
+    @Override
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        builder.define(STRUCTURE, BlockStructureSnapshot.EMPTY);
+        builder.define(RESTORE_WHEN_SETTLED, false);
+    }
+
+    @Override
+    public void onAddedToLevel() {
+        super.onAddedToLevel();
+        BlockStructureCollisionRuntime.update(this);
+    }
+
+    @Override
+    public void onRemovedFromLevel() {
+        BlockStructureCollisionRuntime.unregister(this);
+        super.onRemovedFromLevel();
+    }
+
+    @Override
+    public void onSyncedDataUpdated(EntityDataAccessor<?> accessor) {
+        super.onSyncedDataUpdated(accessor);
+        if (STRUCTURE.equals(accessor)) {
+            structure = entityData.get(STRUCTURE);
+            collisionGeometry = BlockStructureCollisionGeometry.create(structure);
+            refreshStructureBounds();
+        }
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        BlockStructureCollisionRuntime.update(this);
+        if (structure.isEmpty()) {
+            if (!level().isClientSide()) discard();
+            return;
+        }
+        if (!level().isClientSide()) BlockStructureKineticRuntime.beginTick(this);
+        if (!isNoGravity()) applyGravity();
+        var oldPosition = position();
+        var oldBounds = getBoundingBox();
+        var requestedMovement = finiteVelocity(getDeltaMovement());
+        setDeltaMovement(requestedMovement);
+        var actualMovement = collisionGeometry.collideWithWorld(
+                this,
+                level(),
+                oldPosition,
+                getYRot(),
+                structure,
+                requestedMovement
+        );
+        List<Entity> movementCandidates = List.of();
+        List<Entity> standingEntities = List.of();
+        if (!level().isClientSide()) {
+            var searchBounds = oldBounds.expandTowards(actualMovement)
+                    .inflate(0.02, PLATFORM_EPSILON, 0.02);
+            movementCandidates = level().getEntities(
+                    this,
+                    searchBounds,
+                    entity -> entity.isAlive() && !entity.isSpectator()
+            );
+            var standing = new ArrayList<Entity>();
+            for (var candidate : movementCandidates) {
+                if (wasStandingOn(candidate, oldPosition)) standing.add(candidate);
+            }
+            standingEntities = List.copyOf(standing);
+        }
+        setPos(oldPosition.add(actualMovement));
+        BlockStructureCollisionRuntime.update(this);
+        horizontalCollision = !Mth.equal(requestedMovement.x, actualMovement.x)
+                || !Mth.equal(requestedMovement.z, actualMovement.z);
+        verticalCollision = !Mth.equal(requestedMovement.y, actualMovement.y);
+        setOnGroundWithMovement(
+                verticalCollision && requestedMovement.y < 0.0,
+                actualMovement
+        );
+        if (!level().isClientSide()) {
+            standingEntities = maintainStandingEntities(standingEntities, actualMovement);
+        }
+        if (!level().isClientSide() && actualMovement.lengthSqr() > 1.0e-12) {
+            handleEntityImpacts(
+                    movementCandidates,
+                    standingEntities,
+                    oldPosition,
+                    actualMovement
+            );
+        }
+
+        var postImpactVelocity = finiteVelocity(getDeltaMovement());
+        var externallyRedirected = postImpactVelocity.distanceToSqr(requestedMovement) > 1.0e-12;
+        var velocity = externallyRedirected ? postImpactVelocity : requestedMovement;
+        if (!externallyRedirected && horizontalCollision) {
+            velocity = new Vec3(
+                    Math.abs(actualMovement.x) + 1.0e-7 < Math.abs(requestedMovement.x)
+                            ? 0.0 : velocity.x,
+                    velocity.y,
+                    Math.abs(actualMovement.z) + 1.0e-7 < Math.abs(requestedMovement.z)
+                            ? 0.0 : velocity.z
+            );
+        }
+        if (!externallyRedirected && verticalCollision) {
+            velocity = new Vec3(velocity.x, 0.0, velocity.z);
+        }
+        setDeltaMovement(velocity.scale(LINEAR_DRAG));
+        if (!level().isClientSide()) BlockStructureKineticRuntime.endTick(this);
+
+        if (!level().isClientSide()) {
+            var stopped = getDeltaMovement().lengthSqr() <= REST_SPEED_SQUARED;
+            var fullyStopped = getDeltaMovement().lengthSqr() <= 1.0e-12;
+            var externallyControlled = recentMotionController((ServerLevel) level()) != null;
+            var propulsionFinished = BlockStructureKineticRuntime.controller(this) == null
+                    && !externallyControlled;
+            var settlementPrevented = BlockStructureKineticRuntime.preventsSettlement(this);
+            if (BlockStructureSettlementMotion.shouldBegin(
+                    settlementPrevented,
+                    stopped,
+                    fullyStopped,
+                    horizontalCollision,
+                    verticalCollision,
+                    propulsionFinished)) {
+                beginGravitySettlement();
+            }
+        }
+    }
+
+    private void handleEntityImpacts(
+            List<Entity> candidates,
+            List<Entity> standingEntities,
+            Vec3 oldPosition,
+            Vec3 movement
+    ) {
+        if (!(level() instanceof ServerLevel serverLevel)) return;
+        var kineticController = BlockStructureKineticRuntime.controller(this);
+        var controller = kineticController == null
+                ? recentMotionController(serverLevel)
+                : kineticController;
+        for (var target : candidates) {
+            if (target == controller || target.noPhysics || standingEntities.contains(target)) {
+                continue;
+            }
+            var hit = collisionGeometry.firstSweepHit(
+                    target.getBoundingBox(),
+                    oldPosition,
+                    getYRot(),
+                    structure,
+                    movement
+            );
+            if (hit == null) continue;
+            var relativeMovement = movement.subtract(target.getDeltaMovement());
+            var closingSpeed = Math.max(0.0, -relativeMovement.dot(hit.normal()));
+            if (closingSpeed <= 1.0e-7) continue;
+            var impact = new BlockStructureImpact(
+                    this,
+                    controller,
+                    target,
+                    hit.point(),
+                    hit.normal(),
+                    movement,
+                    closingSpeed
+            );
+            if (kineticController != null) {
+                BlockStructureKineticRuntime.handleImpact(impact);
+            } else {
+                handleGenericImpact(serverLevel, impact);
+            }
+        }
+    }
+
+    private void handleGenericImpact(
+            ServerLevel level,
+            BlockStructureImpact impact
+    ) {
+        var target = impact.target();
+        var now = level.getGameTime();
+        var previous = genericImpactTicks.get(target.getUUID());
+        if (previous != null && now - previous < GENERIC_IMPACT_COOLDOWN_TICKS) return;
+        if (genericImpactTicks.size() > 256) {
+            genericImpactTicks.entrySet().removeIf(entry -> now - entry.getValue() > 200L);
+        }
+
+        var controller = impact.controller();
+        if (controller instanceof ServerPlayer player
+                && (PvpSetting.shouldPrevent(player, target)
+                || TeamRelations.areAllied(player, target))) return;
+        genericImpactTicks.put(target.getUUID(), now);
+        var blockCount = structure.blockCount();
+        var damage = BlockStructureKinetics.collisionDamage(
+                blockCount, impact.closingSpeed());
+        if (target instanceof LivingEntity living && damage > 0.0f) {
+            var original = controller instanceof ServerPlayer player
+                    ? player.damageSources().playerAttack(player)
+                    : level.damageSources().generic();
+            var source = new DamageSource(
+                    original.typeHolder(), this, controller);
+            if (!living.hurtServer(level, source, damage)) return;
+        }
+
+        var knockback = BlockStructureKinetics.collisionKnockback(
+                blockCount, impact.closingSpeed());
+        if (knockback <= 0.0 || impact.movement().lengthSqr() <= 1.0e-8
+                || controller != null
+                && !EntityMotionGuard.canApplyMotionFrom(controller, target)) return;
+        var impulse = impact.movement().normalize().scale(knockback)
+                .add(0.0, 0.08, 0.0);
+        EntityMotionGuard.runWithMotionSource(controller, () -> {
+            target.setDeltaMovement(target.getDeltaMovement().add(impulse));
+            target.syncVelocity = true;
+        });
+    }
+
+    private @Nullable Entity recentMotionController(ServerLevel level) {
+        if (motionControllerId == null
+                || level.getGameTime() > motionControllerExpiresAt) {
+            motionControllerId = null;
+            return null;
+        }
+        var controller = level.getEntity(motionControllerId);
+        if (controller == null || controller.isRemoved()) {
+            motionControllerId = null;
+            return null;
+        }
+        return controller;
+    }
+
+    private List<Entity> maintainStandingEntities(
+            List<Entity> standingEntities,
+            Vec3 movement
+    ) {
+        var retained = new ArrayList<Entity>(standingEntities.size());
+        var retainedIds = new HashSet<UUID>();
+        for (var entity : standingEntities) {
+            if (!entity.isAlive() || entity.isPassenger() || entity.noPhysics) continue;
+            var previousPosition = entity.position();
+            if (movement.lengthSqr() > 1.0e-12) {
+                BlockStructureCollisionRuntime.runIgnoring(
+                        this,
+                        () -> entity.move(MoverType.SHULKER_BOX, movement)
+                );
+            }
+            var surface = collisionGeometry.supportSurfaceY(
+                    entity.getBoundingBox(),
+                    PLATFORM_RECOVERY_EPSILON,
+                    position(),
+                    getYRot(),
+                    structure
+            );
+            if (surface.isEmpty()) continue;
+            var correction = surface.getAsDouble() - entity.getBoundingBox().minY;
+            if (Math.abs(correction) > PLATFORM_ALIGNMENT_EPSILON) {
+                var correctionMovement = new Vec3(0.0, correction, 0.0);
+                BlockStructureCollisionRuntime.runIgnoring(
+                        this,
+                        () -> entity.move(MoverType.SHULKER_BOX, correctionMovement)
+                );
+            }
+            var alignmentError = surface.getAsDouble() - entity.getBoundingBox().minY;
+            if (Math.abs(alignmentError) > PLATFORM_ALIGNMENT_EPSILON) continue;
+            var carriedMovement = entity.position().subtract(previousPosition);
+            var velocity = entity.getDeltaMovement();
+            if (velocity.y < 0.0) {
+                entity.setDeltaMovement(velocity.x, 0.0, velocity.z);
+            }
+            entity.setOnGroundWithMovement(true, carriedMovement);
+            entity.resetFallDistance();
+            entity.syncVelocity = true;
+            retained.add(entity);
+            retainedIds.add(entity.getUUID());
+        }
+        supportedEntityIds.clear();
+        supportedEntityIds.addAll(retainedIds);
+        return List.copyOf(retained);
+    }
+
+    private boolean wasStandingOn(Entity entity, Vec3 structurePosition) {
+        if (!entity.isAlive() || entity.isPassenger() || entity.noPhysics) return false;
+        var tolerance = supportedEntityIds.contains(entity.getUUID())
+                ? PLATFORM_RECOVERY_EPSILON
+                : PLATFORM_EPSILON;
+        var surface = collisionGeometry.supportSurfaceY(
+                entity.getBoundingBox(),
+                tolerance,
+                structurePosition,
+                getYRot(),
+                structure
+        );
+        if (surface.isEmpty()) return false;
+        return entity.getDeltaMovement().y <= 0.0
+                || entity.getBoundingBox().minY
+                < surface.getAsDouble() - PLATFORM_ALIGNMENT_EPSILON;
+    }
+
+    @Override
+    protected double getDefaultGravity() {
+        return BlockStructureSettlementMotion.FALLING_BLOCK_GRAVITY;
+    }
+
+    @Override
+    protected AABB makeBoundingBox(Vec3 position) {
+        var snapshot = structure;
+        if (snapshot == null || snapshot.isEmpty()) {
+            return AABB.ofSize(position.add(0.0, 0.5, 0.0), 1.0, 1.0, 1.0);
+        }
+        var geometry = collisionGeometry;
+        return geometry == null
+                ? new AABB(
+                position.x,
+                position.y,
+                position.z,
+                position.x + snapshot.width(),
+                position.y + snapshot.height(),
+                position.z + snapshot.depth()
+        )
+                : geometry.worldBounds(position, getYRot(), snapshot);
+    }
+
+    private void refreshStructureBounds() {
+        setBoundingBox(makeBoundingBox(position()));
+        BlockStructureCollisionRuntime.update(this);
+    }
+
+    @Override
+    public boolean isPickable() {
+        return true;
+    }
+
+    @Override
+    public boolean isAttackable() {
+        return false;
+    }
+
+    @Override
+    public boolean isPushable() {
+        return false;
+    }
+
+    @Override
+    public boolean canBeCollidedWith(Entity other) {
+        return other != this && !isRemoved();
+    }
+
+    @Override
+    public void collectCollisionShapes(AABB bounds, Consumer<VoxelShape> output) {
+        if (bounds == null || output == null || collisionGeometry.isEmpty()) return;
+        collisionGeometry.collectCollisionShapes(
+                bounds,
+                position(),
+                getYRot(),
+                structure,
+                output
+        );
+    }
+
+    @Override
+    public boolean supports(AABB entityBounds, double tolerance) {
+        return entityBounds != null && collisionGeometry.supports(
+                entityBounds,
+                tolerance,
+                position(),
+                getYRot(),
+                structure
+        );
+    }
+
+    @Override
+    public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
+        return false;
+    }
+
+    @Override
+    public void setDeltaMovement(Vec3 velocity) {
+        super.setDeltaMovement(finiteVelocity(velocity));
+        if (level().isClientSide()) return;
+        var source = EntityMotionGuard.currentMotionSourceEntity();
+        if (source == null || source == this || source.isRemoved()
+                || source.level() != level()) return;
+        motionControllerId = source.getUUID();
+        motionControllerExpiresAt = level().getGameTime() + MOTION_CONTROLLER_TICKS;
+    }
+
+    @Override
+    public Entity asEntity() {
+        return this;
+    }
+
+    @Override
+    public BlockStructureSnapshot snapshot() {
+        return structure;
+    }
+
+    @Override
+    public double mass() {
+        return Math.max(1.0, structure.blockCount());
+    }
+
+    @Override
+    public void setPosition(Vec3 position) {
+        if (position == null
+                || !Double.isFinite(position.x)
+                || !Double.isFinite(position.y)
+                || !Double.isFinite(position.z)) return;
+        setPos(position);
+        BlockStructureCollisionRuntime.update(this);
+    }
+
+    @Override
+    public Vec3 velocity() {
+        return getDeltaMovement();
+    }
+
+    @Override
+    public boolean gravityEnabled() {
+        return !isNoGravity();
+    }
+
+    @Override
+    public void setGravityEnabled(boolean enabled) {
+        setNoGravity(!enabled);
+    }
+
+    @Override
+    public void setVelocity(Vec3 velocity) {
+        setDeltaMovement(finiteVelocity(velocity));
+        syncVelocity = true;
+    }
+
+    @Override
+    public void addImpulse(Vec3 impulse) {
+        if (impulse == null) return;
+        setVelocity(getDeltaMovement().add(impulse.scale(1.0 / mass())));
+    }
+
+    @Override
+    public float yawDegrees() {
+        return getYRot();
+    }
+
+    @Override
+    public void setYawDegrees(float yawDegrees) {
+        if (!Float.isFinite(yawDegrees)) return;
+        setYRot(Mth.wrapDegrees(yawDegrees));
+        refreshStructureBounds();
+    }
+
+    @Override
+    public void alignToGrid() {
+        if (structure.isEmpty()) return;
+        var alignment = BlockStructureGridAlignment.nearest(
+                structure, position(), getYRot());
+        setYawDegrees(alignment.yawDegrees());
+        setPos(alignment.entityPosition());
+        BlockStructureCollisionRuntime.update(this);
+        setDeltaMovement(Vec3.ZERO);
+    }
+
+    @Override
+    public void beginGravitySettlement() {
+        BlockStructureManager.beginGravitySettlement(this);
+    }
+
+    @Override
+    public BlockStructureRestoreResult restoreToGrid(
+            BlockStructurePlacementPolicy placementPolicy
+    ) {
+        return BlockStructureManager.restore(this, placementPolicy);
+    }
+
+    @Override
+    public BlockStructureSettlementResult settleToGrid(
+            BlockStructurePlacementPolicy placementPolicy
+    ) {
+        return BlockStructureManager.settle(this, placementPolicy);
+    }
+
+    @Override
+    protected void readAdditionalSaveData(ValueInput input) {
+        structure = BlockStructureSnapshot.load(input.childOrEmpty("academy_structure"));
+        collisionGeometry = BlockStructureCollisionGeometry.create(structure);
+        entityData.set(STRUCTURE, structure);
+        entityData.set(RESTORE_WHEN_SETTLED,
+                input.getBooleanOr("academy_restore_when_settled", false));
+        refreshStructureBounds();
+    }
+
+    @Override
+    protected void addAdditionalSaveData(ValueOutput output) {
+        structure.save(output.child("academy_structure"));
+        output.putBoolean("academy_restore_when_settled",
+                entityData.get(RESTORE_WHEN_SETTLED));
+    }
+
+    private static Vec3 finiteVelocity(Vec3 velocity) {
+        if (velocity == null
+                || !Double.isFinite(velocity.x)
+                || !Double.isFinite(velocity.y)
+                || !Double.isFinite(velocity.z)) {
+            return Vec3.ZERO;
+        }
+        var lengthSquared = velocity.lengthSqr();
+        return lengthSquared > MAX_SPEED * MAX_SPEED
+                ? velocity.normalize().scale(MAX_SPEED)
+                : velocity;
+    }
+}

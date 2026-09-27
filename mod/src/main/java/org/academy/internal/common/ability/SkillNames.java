@@ -1,0 +1,122 @@
+package org.academy.internal.common.ability;
+
+public final class SkillNames {
+    public static final String AIRFLOW_JET = "airflow_jet";
+    public static final String AIR_CUSHION = "air_cushion";
+    public static final String FLOW_SENSE = "flow_sense";
+    public static final String ATMOSPHERE_SHIELD = "atmosphere_shield";
+    public static final String BREATHING_FILM = "breathing_film";
+    public static final String PNEUMATIC_GRASP = "pneumatic_grasp";
+    public static final String TAILWIND_FIELD = "tailwind_field";
+    public static final String LAMINAR_CUTTER = "laminar_cutter";
+    public static final String VORTEX_PULL = "vortex_pull";
+    public static final String ATMOSPHERE_BLAST_GUN = "atmosphere_blast_gun";
+    public static final String WIND_CORRIDOR = "wind_corridor";
+    public static final String PRESSURE_LOCK = "pressure_lock";
+    public static final String FLIGHT = "flight";
+    public static final String VACUUM_DOMAIN = "vacuum_domain";
+    /**
+     * Compatibility source name; the registered replacement is adiabatic_compression.
+     */
+    @Deprecated
+    public static final String ATMOSPHERIC_DOMINION = "atmospheric_dominion";
+    public static final String LAMINAR_BUFFER = "laminar_buffer";
+    public static final String BREATHING_BUBBLE = "breathing_bubble";
+    public static final String TURBULENT_CAVITATION = "turbulent_cavitation";
+    public static final String REJECTING_WIND = "rejecting_wind";
+    public static final String HIGH_SPEED_JET = "high_speed_jet";
+    public static final String ADIABATIC_COMPRESSION = "adiabatic_compression";
+    public static final String RAILGUN = "railgun";
+    public static final String ARC_GENERATE = "arc_generate";
+    public static final String ELECTROMAGNETIC_SHIELD = "electromagnetic_shield";
+    public static final String CURRENT_SYMBIOSIS = "current_symbiosis";
+    public static final String BIOELECTRIC_OPERATION = "bioelectric_operation";
+    public static final String BALL_LIGHTNING = "ball_lightning";
+    public static final String SELF_TELEPORT = "self_teleport";
+    public static final String SINGLE_HIGH_SPEED_ELECTRON_BEAM = "single_high_speed_electron_beam";
+    public static final String SCATTER_BOMB = "scatter_bomb";
+    public static final String RADIATION_INTENSIFY = "radiation_intensify";
+    public static final String VECTOR_REFLECTION = "vector_reflection";
+    public static final String REFLECTION_FILTER = "reflection_filter";
+    public static final String VECTOR_BLAST = "vector_blast";
+    public static final String BLOODFLOW_REVERSE = "bloodflow_reverse";
+    public static final String STORM_WING = "storm_wing";
+    public static final String BLACK_WING = "black_wing";
+    public static final String WHITE_WING = "white_wing";
+    public static final String PLATINUM_WING = "platinum_wing";
+    public static final String CROSSING_THE_ABYSS = "crossing_the_abyss";
+    public static final String PLASMA_GENERATION = "plasma_generation";
+    public static final String KINETIC_ENERGY_APPLIED = "kinetic_energy_applied";
+    public static final String KINETIC_THROW = "kinetic_throw";
+    public static final String DIR_STRIKE = "dir_strike";
+    public static final String MAGNET_MANIPULATION = "magnet_manipulation";
+    public static final String MINE_DETECT = "mine_detect";
+    public static final String VECTOR_ACCEL = "vector_accel";
+    public static final String CURRENT_RECHARGE = "current_recharge";
+    public static final String THREATENING_TELEPORT = "threatening_teleport";
+    public static final String SPACE_FOLDING_THEOREM = "space_folding_theorem";
+    public static final String FLESH_RIPPING = "flesh_ripping";
+    public static final String LOCATION_TELEPORT = "location_teleport";
+    public static final String QUICK_LOCATION_TELEPORT = "quick_location_teleport";
+    public static final String AREA_TELEPORT_SELECT = "area_teleport_select";
+    public static final String FLASHING = "flashing";
+    public static final String DEFENSIVE_TELEPORT = "defensive_teleport";
+    public static final String CHUNK_LEAP = "chunk_leap";
+    public static final String DARKMATTER_GENERATION = "darkmatter_generation";
+    public static final String DARKMATTER_SHAPING = "darkmatter_shaping";
+    public static final String DARKMATTER_PHASE_TUNING = "darkmatter_phase_tuning";
+    public static final String DARKMATTER_DISASSEMBLE = "darkmatter_disassemble";
+    public static final String DARKMATTER_CUT = "darkmatter_cut";
+    public static final String DARKMATTER_INTERFERENCE = "darkmatter_interference";
+    /**
+     * Java compatibility name; the registered skill ID is the canonical interference ID.
+     */
+    @Deprecated
+    public static final String DARKMATTER_RADIATION = DARKMATTER_INTERFERENCE;
+    public static final String DARKMATTER_REPAIR = "darkmatter_repair";
+    public static final String DARKMATTER_CREATION = "darkmatter_creation";
+    public static final String DARKMATTER_SIX_WINGS = "darkmatter_six_wings";
+    public static final String ELECTRICAL_CONTACT = "electrical_contact";
+    public static final String VECTOR_DEVIATION = "vector_deviation";
+    public static final String SPATIAL_SYNERGY = "spatial_synergy";
+    public static final String THUNDER_LANCE = "thunder_lance";
+    public static final String MINING_BEAM = "mining_beam";
+    public static final String LIGHT_SHIELD = "light_shield";
+    public static final String PARTICLE_WAVE_CANNON = "particle_wave_cannon";
+    public static final String AUTO_CRUISE_BEAM_CANNON = "auto_cruise_beam_cannon";
+    public static final String PIERCING_TELEPORTATION = "piercing_teleportation";
+    public static final String LIGHTNING_NOVA = "lightning_nova";
+    public static final String CLOUDROOM = "cloudroom";
+    public static final String JET_STRIKE = "jet_strike";
+    public static final String LIGHTNING_STORM = "lightning_storm";
+    public static final String DISARM = "disarm";
+    public static final String SHACKLE = "shackle";
+    public static final String IRON_SAND_ARSENAL = "iron_sand_arsenal";
+    public static final String MAGNETIC_WEAPON = "magnetic_weapon";
+    public static final String THUNDERCLAP = "thunderclap";
+    public static final String DISINTEGRATE = "disintegrate";
+    public static final String SPACIAL_EXCISION = "spacial_excision";
+    public static final String MENTAL_INTRUSION = "mental_intrusion";
+    public static final String PAIN_SUPPRESSION = "pain_suppression";
+    public static final String MENTAL_TAKEOVER = "mental_takeover";
+    public static final String MENTAL_INTERVENTION = "mental_intervention";
+    public static final String SENSORY_DISTORTION = "sensory_distortion";
+    public static final String TARGET_MISIDENTIFICATION = "target_misidentification";
+    public static final String IMPRESSION_MANIPULATION = "impression_manipulation";
+    public static final String MENTAL_STUPOR = "mental_stupor";
+    public static final String COMMAND_POSITIONING = "command_positioning";
+    public static final String WIDE_AREA_INTERFERENCE = "wide_area_interference";
+    /**
+     * Legacy program-data identifier; Precision Operation is now a category-level system.
+     */
+    public static final String PRECISION_OPERATION = "precision_operation";
+    public static final String MIND_DESTRUCTION = "mind_destruction";
+    public static final String BRAIN_DOMAIN_DEVELOPMENT = "brain_domain_development";
+    public static final String MULTIPLE_BRAIN_DOMAIN_SEGMENTATION = "multiple_brain_domain_segmentation";
+    public static final String PARALLEL_THOUGHT_COMPUTATION = "parallel_thought_computation";
+    public static final String COMPLETE_CONSCIOUSNESS_ANALYSIS = "complete_consciousness_analysis";
+    public static final String ABSOLUTE_SELF_CONTROL = "absolute_self_control";
+    public static final String ENDURANCE_TRAINING = "endurance_training";
+    public static final String PHYSICAL_TRAINING = "physical_training";
+    public static final String OUTPUT_CONTROL = "output_control";
+}

@@ -1,0 +1,183 @@
+package org.academy.internal.server.ability;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
+import org.academy.AcademyCraft;
+import org.academy.api.common.ability.DevState;
+import org.academy.api.common.ability.DevelopAction;
+import org.academy.api.common.ability.DevelopmentSource;
+import org.academy.api.common.wireless.WirelessUser;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+
+import java.util.UUID;
+
+public class DevelopData {
+    private static final Logger LOGGER = AcademyCraft.getLogger();
+    private final UUID playerId;
+    private @Nullable DevelopAction action;
+    private @Nullable DevelopmentSource developerSource;
+    private @Nullable ResourceKey<Level> developerDimension;
+    private DevState state = DevState.IDLE;
+    private float progress;
+    private int elapsedTicks;
+    private int paidEnergy;
+    private String message = "";
+    private String targetId = "";
+
+    public DevelopData(UUID playerId) {
+        this.playerId = playerId;
+    }
+
+    public UUID getPlayerId() {
+        return playerId;
+    }
+
+    public DevState getState() {
+        return state;
+    }
+
+    public float getProgress() {
+        return progress;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public String getTargetId() {
+        return targetId;
+    }
+
+    public @Nullable BlockPos getDeveloperPos() {
+        return developerSource instanceof DevelopmentSource.BlockDevelopmentSource(var pos) ? pos : null;
+    }
+
+    public @Nullable DevelopmentSource getDeveloperSource() {
+        return developerSource;
+    }
+
+    public boolean isDeveloping() {
+        return state == DevState.DEVELOPING;
+    }
+
+    public boolean start(DevelopAction action, BlockPos developerPos, ResourceKey<Level> developerDimension) {
+        return start(action, DevelopmentSource.block(developerPos), developerDimension);
+    }
+
+    public boolean start(
+            DevelopAction action,
+            DevelopmentSource developerSource,
+            ResourceKey<Level> developerDimension
+    ) {
+        if (isDeveloping() || action == null || developerSource == null
+                || developerDimension == null
+                || action.getTotalTicks() <= 0 || action.getEnergyCost() < 0) {
+            return false;
+        }
+        this.action = action;
+        this.developerSource = developerSource;
+        this.developerDimension = developerDimension;
+        state = DevState.DEVELOPING;
+        progress = 0.0f;
+        elapsedTicks = 0;
+        paidEnergy = 0;
+        message = "Developing...";
+        targetId = targetIdOf(action);
+        return true;
+    }
+
+    public void tick(ServerPlayer player) {
+        if (!isDeveloping() || action == null || developerSource == null) return;
+        if (developerSource instanceof DevelopmentSource.BlockDevelopmentSource
+                && (developerDimension == null || !developerDimension.equals(player.level().dimension()))) {
+            fail("Wrong dimension");
+            return;
+        }
+        var developer = resolveDeveloper(player);
+        if (developer == null) {
+            fail("Developer unavailable");
+            return;
+        }
+        if (!action.validate(player, developer)) {
+            fail("Conditions changed");
+            return;
+        }
+
+        var nextElapsed = elapsedTicks + 1;
+        var totalTicks = action.getTotalTicks();
+        var targetPaid = targetEnergy(action.getEnergyCost(), totalTicks, nextElapsed);
+        var due = targetPaid - paidEnergy;
+        if (due > 0) {
+            if (developer.extractEnergy(due, true) < due) {
+                fail("Insufficient energy");
+                return;
+            }
+            var extracted = developer.extractEnergy(due, false);
+            if (extracted != due) {
+                fail("Energy extraction failed");
+                return;
+            }
+            paidEnergy += extracted;
+        }
+
+        elapsedTicks = nextElapsed;
+        progress = Math.clamp((float) elapsedTicks / totalTicks, 0.0f, 1.0f);
+        message = "Developing... " + (int) (progress * 100.0f) + "%";
+        if (elapsedTicks < totalTicks) return;
+
+        if (!action.validate(player, developer)) {
+            fail("Conditions changed");
+            return;
+        }
+        try {
+            action.onComplete(player, developer);
+            state = DevState.DONE;
+            progress = 1.0f;
+            message = "Success!";
+        } catch (RuntimeException exception) {
+            LOGGER.error("Failed to complete ability development for player {}", playerId, exception);
+            fail("Completion failed");
+        }
+    }
+
+    static int targetEnergy(int totalCost, int totalTicks, int elapsedTicks) {
+        if (totalCost <= 0 || totalTicks <= 0 || elapsedTicks <= 0) return 0;
+        return (int) ((long) totalCost * Math.min(elapsedTicks, totalTicks) / totalTicks);
+    }
+
+    static String targetIdOf(DevelopAction action) {
+        if (action == null) return "";
+        var targetId = action.getTargetId();
+        return targetId == null ? "" : targetId;
+    }
+
+    private @Nullable WirelessUser resolveDeveloper(ServerPlayer player) {
+        return developerSource == null ? null : AbilityDeveloperSources.resolve(player, developerSource);
+    }
+
+    public void reset() {
+        action = null;
+        developerSource = null;
+        developerDimension = null;
+        state = DevState.IDLE;
+        progress = 0.0f;
+        elapsedTicks = 0;
+        paidEnergy = 0;
+        message = "";
+        targetId = "";
+    }
+
+    public void abort() {
+        if (isDeveloping()) fail("Cancelled");
+    }
+
+    public void fail(String reason) {
+        if (!isDeveloping()) return;
+        action = null;
+        state = DevState.FAILED;
+        message = reason == null || reason.isBlank() ? "Failed" : reason;
+    }
+}

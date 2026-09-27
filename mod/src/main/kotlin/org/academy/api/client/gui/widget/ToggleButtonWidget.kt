@@ -1,0 +1,180 @@
+package org.academy.api.client.gui.widget
+
+import com.mojang.blaze3d.platform.InputConstants
+
+import net.minecraft.util.ARGB
+import org.academy.api.client.gui.animation.EasingFunctions
+import org.academy.api.client.gui.animation.ValueAnimator
+import org.academy.api.client.gui.command.FillRectDrawCommand
+import org.academy.api.client.gui.event.MouseEvent
+import org.academy.api.client.gui.layout.MeasureSpec
+import org.academy.api.client.gui.render.Canvas
+import org.academy.api.client.util.ClientUtil
+
+open class ToggleButtonWidget : AbstractWidget() {
+    var isChecked: Boolean = false
+        set(value) {
+            if (field != value) {
+                field = value
+                animateThumb()
+                invalidate()
+                onCheckedChangeListener?.onCheckedChanged(this, value)
+            }
+        }
+
+    var onCheckedChangeListener: OnCheckedChangeListener? = null
+
+    var trackColor: Int = -0x1
+    var checkedTrackColor: Int = -0x1
+    var thumbColor: Int = 0xFF000000.toInt()
+    var checkedThumbColor: Int = 0xFF000000.toInt()
+
+    private var animatedOffset: Float = 0f
+    private var thumbPadding: Float = 1f
+
+    init {
+        isClickable = true
+    }
+
+    override fun renderInternal(context: Canvas) {
+        val width = width
+        val height = height
+        if (width <= 0 || height <= 0) return
+
+        val track = if (isChecked) checkedTrackColor else trackColor
+        val thumb = if (isChecked) checkedThumbColor else thumbColor
+
+        val trackAlpha = ARGB.alpha(track) / 255.0f
+        context.submit(
+            FillRectDrawCommand(
+                width, height,
+                ARGB.red(track) / 255.0f,
+                ARGB.green(track) / 255.0f,
+                ARGB.blue(track) / 255.0f,
+                trackAlpha * context.accumulatedAlpha
+            )
+        )
+
+        val thumbSize = height - thumbPadding * 2
+        if (thumbSize <= 0) return
+
+        context.pose().pushPose()
+        run {
+            context.pose().translate(thumbPadding + animatedOffset, thumbPadding)
+            context.submit(
+                FillRectDrawCommand(
+                    thumbSize, thumbSize,
+                    ARGB.red(thumb) / 255.0f,
+                    ARGB.green(thumb) / 255.0f,
+                    ARGB.blue(thumb) / 255.0f,
+                    ARGB.alpha(thumb) / 255.0f * context.accumulatedAlpha
+                )
+            )
+        }
+        context.pose().popPose()
+    }
+
+    override fun onMousePressed(event: MouseEvent) {
+        if (event.button == InputConstants.MOUSE_BUTTON_LEFT && (isHovered || isMouseOver(event.x, event.y))) {
+            event.consume()
+            ClientUtil.playDownSound()
+            isChecked = !isChecked
+        }
+    }
+
+    override fun onMeasure(widthMeasureSpec: MeasureSpec, heightMeasureSpec: MeasureSpec) {
+        setMeasuredDimension(
+            resolveSize(layoutParams.paddingLeft + layoutParams.paddingRight, widthMeasureSpec),
+            resolveSize(layoutParams.paddingTop + layoutParams.paddingBottom, heightMeasureSpec)
+        )
+    }
+
+    override fun layout(left: Float, top: Float, right: Float, bottom: Float) {
+        val sizeChanged = width != right - left || height != bottom - top
+        super.layout(left, top, right, bottom)
+        if (sizeChanged) {
+            cancelAnimations()
+            animatedOffset = targetOffset()
+            invalidate()
+        }
+    }
+
+    private fun animateThumb() {
+        val target = targetOffset()
+        cancelAnimations()
+
+        val animator = ValueAnimator.ofFloat(animatedOffset, target)
+            .setDuration(150)
+            .setInterpolator(EasingFunctions.EASE_OUT_CUBIC)
+        animator.addUpdateListener { anim ->
+            animatedOffset = anim.animatedValue
+            invalidate()
+        }
+        startAnimation(animator)
+    }
+
+    private fun targetOffset(): Float {
+        val maxOffset = (width - (height - thumbPadding * 2) - thumbPadding * 2).coerceAtLeast(0f)
+        return if (isChecked) maxOffset else 0f
+    }
+
+    fun setChecked(checked: Boolean): ToggleButtonWidget {
+        isChecked = checked
+        return this
+    }
+
+    fun setOnCheckedChangeListener(listener: OnCheckedChangeListener?): ToggleButtonWidget {
+        onCheckedChangeListener = listener
+        return this
+    }
+
+    fun setTrackColor(color: Int): ToggleButtonWidget {
+        if (trackColor != color) {
+            trackColor = color
+            invalidate()
+        }
+        return this
+    }
+
+    fun setCheckedTrackColor(color: Int): ToggleButtonWidget {
+        if (checkedTrackColor != color) {
+            checkedTrackColor = color
+            invalidate()
+        }
+        return this
+    }
+
+    fun setThumbColor(color: Int): ToggleButtonWidget {
+        if (thumbColor != color) {
+            thumbColor = color
+            invalidate()
+        }
+        return this
+    }
+
+    fun setCheckedThumbColor(color: Int): ToggleButtonWidget {
+        if (checkedThumbColor != color) {
+            checkedThumbColor = color
+            invalidate()
+        }
+        return this
+    }
+
+    fun updateChecked(checked: Boolean): ToggleButtonWidget = apply {
+        isChecked = checked
+    }
+
+    fun updateTrackColors(normal: Int, checked: Int): ToggleButtonWidget = apply {
+        trackColor = normal
+        checkedTrackColor = checked
+        invalidate()
+    }
+
+    fun updateOnCheckedChangeListener(listener: OnCheckedChangeListener?): ToggleButtonWidget = apply {
+        onCheckedChangeListener = listener
+    }
+
+    interface OnCheckedChangeListener {
+        fun onCheckedChanged(toggle: ToggleButtonWidget, isChecked: Boolean)
+    }
+}

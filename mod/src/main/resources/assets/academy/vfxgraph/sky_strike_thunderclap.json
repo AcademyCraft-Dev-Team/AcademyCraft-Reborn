@@ -1,0 +1,221 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "sky_strike_thunderclap",
+  "parameters": [
+    {
+      "id": "time",
+      "name": "time",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": -1
+      }
+    },
+    {
+      "id": "seed",
+      "name": "seed",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 42
+      }
+    },
+    {
+      "id": "opacity",
+      "name": "opacity",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "detail",
+      "name": "detail",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "cloud_opacity",
+      "name": "cloud opacity",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "discharge",
+      "type": "SPAWN",
+      "name": "01 / cloud-to-ground current",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "channel",
+          "type": "vfx.block.sky_discharge",
+          "properties": {
+            "height": "72",
+            "radius": "1.55",
+            "spread": "7.2",
+            "sustain": "0.4",
+            "decay": "0.4",
+            "branches": "20",
+            "ground_radius": "14",
+            "segments": "96",
+            "corona": "0.18",
+            "twist_rate": "7",
+            "twist_strength": "1",
+            "twist_duration": "0.2"
+          }
+        }
+      ]
+    },
+    {
+      "id": "atmosphere",
+      "type": "SPAWN",
+      "name": "02 / storm cloud and impact",
+      "x": 0,
+      "y": 450,
+      "blocks": [
+        {
+          "id": "cloud",
+          "type": "vfx.block.storm_atmosphere",
+          "properties": {
+            "height": "72",
+            "cloud_radius": "20",
+            "cloud_count": "44",
+            "sustain": "0.4",
+            "decay": "0.4",
+            "afterglow": "2.6",
+            "impact_size": "5.2",
+            "dust_count": "16"
+          }
+        }
+      ]
+    },
+    {
+      "id": "output",
+      "type": "OUTPUT",
+      "name": "03 / cloud volume, white core, cyan glow",
+      "x": 650,
+      "y": 100,
+      "blocks": [
+        {
+          "id": "cloud_out",
+          "type": "vfx.block.output_quad",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_storm_cloud",
+            "shader": "academy:core/vfxgraph_storm_cloud",
+            "blend": "translucent",
+            "layer": "sky_cloud"
+          }
+        },
+        {
+          "id": "current_out",
+          "type": "vfx.block.output_arc",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_arc",
+            "shader": "academy:core/vfxgraph_sky_discharge",
+            "blend": "glow",
+            "thickness": "1",
+            "emission": "1.2",
+            "sparks": "0",
+            "segments": "12",
+            "overall_scale": "1",
+            "branch_depth": "0",
+            "branch_count": "0",
+            "noise_strength": "0",
+            "drift_speed": "0",
+            "branch_brightness_scale": "0.95",
+            "layer": "sky_current"
+          }
+        },
+        {
+          "id": "impact_out",
+          "type": "vfx.block.output_quad",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_storm_cloud",
+            "shader": "academy:core/vfxgraph_sky_halo",
+            "blend": "glow",
+            "layer": "sky_halo"
+          }
+        },
+        {
+          "id": "attachment_out",
+          "type": "vfx.block.output_arc",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_arc",
+            "shader": "academy:core/vfxgraph_axial_burst",
+            "blend": "glow",
+            "layer": "electrical_attachment",
+            "thickness": "1",
+            "emission": "1.15",
+            "sparks": "0",
+            "segments": "12",
+            "overall_scale": "1",
+            "branch_depth": "0",
+            "branch_count": "0",
+            "noise_strength": "0",
+            "drift_speed": "0",
+            "branch_brightness_scale": "1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "attachment",
+      "type": "SPAWN",
+      "name": "04 / 蓝白双层表面电弧 · 贴合地形与云底",
+      "x": 0,
+      "y": 850,
+      "blocks": [
+        {
+          "id": "surface",
+          "type": "vfx.block.surface_discharge",
+          "properties": {
+            "duration": "1.5",
+            "fade": "0.45",
+            "height": "72",
+            "ground_radius": "14",
+            "ground_arcs": "8",
+            "cloud_radius": "20",
+            "cloud_count": "44",
+            "cloud_arcs": "8",
+            "width": "0.08",
+            "crawl_rate": "5"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "discharge",
+      "to": "output"
+    },
+    {
+      "from": "atmosphere",
+      "to": "output"
+    },
+    {
+      "from": "attachment",
+      "to": "output"
+    }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "cloud_out",
+    "current_out",
+    "impact_out",
+    "attachment_out"
+  ]
+}

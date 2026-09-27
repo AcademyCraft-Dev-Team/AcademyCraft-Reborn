@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "condition": {
+        "type": "minecraft:survives_explosion"
+      },
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "academy:laboratory_gray_grate"
+        }
+      ],
+      "rolls": 1
+    }
+  ],
+  "random_sequence": "academy:blocks/laboratory_gray_grate"
+}

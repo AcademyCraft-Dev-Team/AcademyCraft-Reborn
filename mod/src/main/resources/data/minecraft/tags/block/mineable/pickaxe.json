@@ -1,0 +1,22 @@
+{
+  "replace": false,
+  "values": [
+    "academy:ability_developer",
+    "academy:cat_engine",
+    "academy:laboratory_dark_bricks",
+    "academy:laboratory_dark_grate",
+    "academy:laboratory_dark_wall_panel",
+    "academy:laboratory_gray_grate",
+    "academy:laboratory_gray_wall_panel",
+    "academy:laboratory_light_bricks",
+    "academy:laboratory_light_grate",
+    "academy:laboratory_light_wall_panel",
+    "academy:laboratory_metal_trapdoor",
+    "academy:omni_crafting_table",
+    "academy:solar_gen",
+    "academy:wind_gen_base",
+    "academy:wind_gen_pillar",
+    "academy:wind_gen_top",
+    "academy:wireless_node"
+  ]
+}

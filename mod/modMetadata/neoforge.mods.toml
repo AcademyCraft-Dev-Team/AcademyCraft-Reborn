@@ -1,0 +1,55 @@
+modLoader = "kotlinforforge"
+loaderVersion = "${loaderVersion}"
+license = "${license}"
+
+[[mods]]
+modId = "${modId}"
+version = "${version}"
+displayName = "${displayName}"
+authors = "${authors}"
+description = "${description}"
+
+[[mixins]]
+config = "${modId}.mixins.json"
+
+[[dependencies.${modId}]]
+modId = "neoforge"
+type = "required"
+versionRange = "[${neoVersion},)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.${modId}]]
+modId = "minecraft"
+type = "required"
+versionRange = "${minecraftVersion}"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.${modId}]]
+modId = "kotlinforforge"
+type = "required"
+versionRange = "${loaderVersion}"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.${modId}]]
+modId = "misaka_network"
+type = "required"
+versionRange = "${misakaVersion}"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.${modId}]]
+modId = "curios"
+type = "optional"
+versionRange = "[16.0.0,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.${modId}]]
+modId = "beyonddimensions"
+type = "optional"
+versionRange = "*"
+ordering = "NONE"
+side = "BOTH"

@@ -1,0 +1,27 @@
+{
+  "parent": "academy:ability/root",
+  "criteria": {
+    "achieved": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.academy.ability.meltdowner.description"
+    },
+    "frame": "goal",
+    "hidden": true,
+    "icon": {
+      "id": "minecraft:slime_ball"
+    },
+    "title": {
+      "translate": "advancements.academy.ability.meltdowner.title"
+    }
+  },
+  "requirements": [
+    [
+      "achieved"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

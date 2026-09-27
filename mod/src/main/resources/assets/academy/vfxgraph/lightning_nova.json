@@ -1,0 +1,170 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "lightning_nova",
+  "parameters": [
+    {
+      "id": "time",
+      "name": "time",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": -1
+      }
+    },
+    {
+      "id": "seed",
+      "name": "seed",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 42
+      }
+    },
+    {
+      "id": "opacity",
+      "name": "opacity",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "detail",
+      "name": "detail",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "flicker_rate",
+      "name": "flicker_rate",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 18
+      }
+    },
+    {
+      "id": "radius",
+      "name": "radius",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 8
+      }
+    },
+    {
+      "id": "radial_speed",
+      "name": "radial_speed",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1.6
+      }
+    },
+    {
+      "id": "height",
+      "name": "height",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "width",
+      "name": "width",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.065
+      }
+    },
+    {
+      "id": "duration",
+      "name": "duration",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.5
+      }
+    },
+    {
+      "id": "phase",
+      "name": "phase",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "discharge",
+      "type": "SPAWN",
+      "name": "01 / 扩张电环与收缩回波",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "current",
+          "type": "vfx.block.electric_ring",
+          "properties": {
+            "radius": "8",
+            "radial_speed": "1.6",
+            "height": "1",
+            "width": "0.065",
+            "duration": "0.5",
+            "phase": "0"
+          }
+        }
+      ]
+    },
+    {
+      "id": "render",
+      "type": "OUTPUT",
+      "name": "02 / 电弧激发蓝白双层材质",
+      "x": 650,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "electric_out",
+          "type": "vfx.block.output_arc",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_arc",
+            "shader": "academy:core/vfxgraph_axial_burst",
+            "blend": "glow",
+            "layer": "electricity",
+            "thickness": "1",
+            "emission": "1.15",
+            "sparks": "0",
+            "segments": "12",
+            "overall_scale": "1",
+            "branch_depth": "0",
+            "branch_count": "0",
+            "noise_strength": "0",
+            "drift_speed": "0",
+            "branch_brightness_scale": "1"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "discharge",
+      "to": "render"
+    }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "electric_out"
+  ]
+}

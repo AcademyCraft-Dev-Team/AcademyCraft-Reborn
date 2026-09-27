@@ -1,0 +1,200 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "railgun_charge",
+  "parameters": [
+    {
+      "id": "time",
+      "name": "time",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": -1
+      }
+    },
+    {
+      "id": "seed",
+      "name": "seed",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 42
+      }
+    },
+    {
+      "id": "opacity",
+      "name": "opacity",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "detail",
+      "name": "detail",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "flicker_rate",
+      "name": "flicker rate",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 18
+      }
+    },
+    {
+      "id": "radius",
+      "name": "radius",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.3
+      }
+    },
+    {
+      "id": "width",
+      "name": "width",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.014
+      }
+    },
+    {
+      "id": "rim_width",
+      "name": "rim width",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.0055
+      }
+    },
+    {
+      "id": "strength",
+      "name": "strength",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "hint",
+      "name": "hint",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    },
+    {
+      "id": "filaments",
+      "name": "filaments",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 4
+      }
+    },
+    {
+      "id": "filament_reach",
+      "name": "filament reach",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1.15
+      }
+    },
+    {
+      "id": "motion_speed",
+      "name": "motion speed",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "motion_strength",
+      "name": "motion strength",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "discharge",
+      "type": "SPAWN",
+      "name": "01 / 加粗不规则电流环 · 局部白亮电流 · 外散分叉细丝",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "current",
+          "type": "vfx.block.electric_orbit",
+          "properties": {
+            "radius": "0.3",
+            "width": "0.014",
+            "rim_width": "0.0055",
+            "strength": "1",
+            "hint": "0",
+            "filaments": "4",
+            "filament_reach": "1.15",
+            "motion_speed": "1",
+            "motion_strength": "1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "render",
+      "type": "OUTPUT",
+      "name": "02 / 与超电磁炮共用电弧材质",
+      "x": 650,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "electric_out",
+          "type": "vfx.block.output_arc",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_arc",
+            "shader": "academy:core/vfxgraph_axial_burst",
+            "blend": "glow",
+            "layer": "electricity",
+            "thickness": "1",
+            "emission": "1.15",
+            "sparks": "0",
+            "segments": "12",
+            "overall_scale": "1",
+            "branch_depth": "0",
+            "branch_count": "0",
+            "noise_strength": "0",
+            "drift_speed": "0",
+            "branch_brightness_scale": "1"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "discharge",
+      "to": "render"
+    }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "electric_out"
+  ]
+}

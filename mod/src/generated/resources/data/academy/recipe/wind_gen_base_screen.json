@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "G": "minecraft:gray_stained_glass_pane",
+    "I": "academy:imag_phase_ingot",
+    "P": "academy:imag_phase_polymer",
+    "R": "minecraft:redstone"
+  },
+  "pattern": [
+    "GGG",
+    "III",
+    "PRP"
+  ],
+  "result": {
+    "id": "academy:wind_gen_base_screen"
+  }
+}

@@ -1,0 +1,61 @@
+package org.academy.internal.common.ability.accelerator.skills.lv2;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import org.academy.api.client.input.MouseButtonEvent;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class KineticEnergyAppliedTest {
+    @Test
+    void attackWaveInputRunsAfterInteractiveOverlays() throws NoSuchMethodException {
+        var method = KineticEnergyApplied.ClientEvents.class.getDeclaredMethod(
+                "onMouseButton", MouseButtonEvent.class
+        );
+        var annotation = method.getAnnotation(SubscribeEvent.class);
+
+        assertNotNull(annotation);
+        assertEquals(EventPriority.LOWEST, annotation.priority());
+    }
+
+    @Test
+    void clampsAndCyclesImpactLevel() {
+        assertEquals(1, KineticEnergyApplied.clampImpactLevel(-5));
+        assertEquals(3, KineticEnergyApplied.clampImpactLevel(9));
+        assertEquals(2, KineticEnergyApplied.nextImpactLevel(1));
+        assertEquals(1, KineticEnergyApplied.nextImpactLevel(3));
+    }
+
+    @Test
+    void usesLinearShockwaveRadiusScaling() {
+        assertEquals(4.0f, KineticEnergyApplied.getImpactRadius(1));
+        assertEquals(6.0f, KineticEnergyApplied.getImpactRadius(2));
+        assertEquals(8.0f, KineticEnergyApplied.getImpactRadius(3));
+        assertEquals(8, KineticEnergyApplied.DEFAULT_PROGRAM_RADIUS);
+        assertEquals(5.0f, KineticEnergyApplied.getImpactDamage(1, 1.0f, 1.0f));
+        assertEquals(26.0f, KineticEnergyApplied.getImpactDamage(3, 2.0f, 1.0f));
+        assertEquals(26.0f, KineticEnergyApplied.getProgramImpactDamage(2.0f, 1.0f, 1.0f));
+        assertEquals(0.0f, KineticEnergyApplied.getProgramImpactDamage(1.0f, 0.0f, 0.0f));
+    }
+
+    @Test
+    void coalescesClientMissAndServerHitFromOneSwing() {
+        assertFalse(KineticEnergyApplied.isDistinctImpactTrigger(100, 100));
+        assertFalse(KineticEnergyApplied.isDistinctImpactTrigger(100, 101));
+        assertTrue(KineticEnergyApplied.isDistinctImpactTrigger(100, 102));
+    }
+
+    @Test
+    void zeroProgramRadiusSelectsOnlyTheCoordinateBlock() {
+        var center = new Vec3(4.1, 64.9, -2.2);
+        var origin = BlockPos.containing(center);
+
+        assertTrue(KineticEnergyApplied.isWithinProgramBreakRadius(
+                center, origin, 0.0, origin));
+        assertFalse(KineticEnergyApplied.isWithinProgramBreakRadius(
+                center, origin, 0.0, origin.offset(1, 0, 0)));
+    }
+}

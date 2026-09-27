@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "down": "minecraft:block/deepslate_top",
+    "east": "academy:block/imag_phase_vegetation_side",
+    "north": "academy:block/imag_phase_vegetation_side",
+    "particle": "academy:block/imag_phase_vegetation_side",
+    "south": "academy:block/imag_phase_vegetation_side",
+    "up": "academy:block/imag_phase_vegetation_top",
+    "west": "academy:block/imag_phase_vegetation_side"
+  }
+}

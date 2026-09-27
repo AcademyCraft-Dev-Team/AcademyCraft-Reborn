@@ -1,0 +1,167 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "darkmatter_light_contact",
+  "parameters": [
+    {
+      "id": "time",
+      "name": "time",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": -1
+      }
+    },
+    {
+      "id": "seed",
+      "name": "seed",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 42
+      }
+    },
+    {
+      "id": "width",
+      "name": "width",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.6
+      }
+    },
+    {
+      "id": "height",
+      "name": "height",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1.8
+      }
+    },
+    {
+      "id": "range",
+      "name": "range",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 12
+      }
+    },
+    {
+      "id": "light",
+      "name": "light",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "strength",
+      "name": "strength",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "finished",
+      "name": "finished",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    },
+    {
+      "id": "view_first_person",
+      "name": "view_first_person",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "spawn",
+      "type": "SPAWN",
+      "name": "01 / Bounded sampled material",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "contact",
+          "type": "vfx.block.material_sheets",
+          "properties": {
+            "style": "1",
+            "count": "12",
+            "size": "0.3",
+            "opacity": "0.75",
+            "surface": "surface",
+            "lighting": "0.2"
+          }
+        },
+        {
+          "id": "contact_fragments",
+          "type": "vfx.block.material_sheets",
+          "properties": {
+            "style": "6",
+            "count": "12",
+            "size": "0.035",
+            "opacity": "0.6",
+            "surface": "surface",
+            "lighting": "1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "output",
+      "type": "OUTPUT",
+      "name": "02 / Depth-tested pearl material",
+      "x": 620,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "contact_output",
+          "type": "vfx.block.output_quad",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_material_sheet",
+            "shader": "academy:core/vfxgraph_material_contact",
+            "blend": "glow",
+            "layer": "smoke",
+            "bounds_scale": "1.21"
+          }
+        },
+        {
+          "id": "contact_fragments_output",
+          "type": "vfx.block.output_quad",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_cloud_vortex",
+            "shader": "academy:core/vfxgraph_material_smoke",
+            "blend": "translucent",
+            "layer": "cloud",
+            "bounds_scale": "1.56"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "spawn",
+      "to": "output"
+    }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "contact_output",
+    "contact_fragments_output"
+  ]
+}

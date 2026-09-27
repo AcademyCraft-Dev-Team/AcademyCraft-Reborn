@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "vector_blast",
+  "parameters": [
+    {
+      "id": "time",
+      "name": "time",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": -1
+      }
+    },
+    {
+      "id": "seed",
+      "name": "seed",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 42
+      }
+    },
+    {
+      "id": "length",
+      "name": "length",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 64
+      }
+    },
+    {
+      "id": "width",
+      "name": "width",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "duration",
+      "name": "duration",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.65
+      }
+    },
+    {
+      "id": "view_first_person",
+      "name": "view first person",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "spawn",
+      "type": "SPAWN",
+      "name": "01 / Authored local geometry",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "cloud_funnel",
+          "type": "vfx.block.cloud_vortex",
+          "properties": {
+            "count": "1024",
+            "length": "64",
+            "width": "1",
+            "duration": "0.65",
+            "root_radius": "0.35",
+            "head_radius": "8.5",
+            "rotation_speed": "17",
+            "flow_speed": "14",
+            "turbulence": "0.24",
+            "size": "2",
+            "opacity": "0.5",
+            "eye_ratio": "0.38",
+            "first_person_opacity": "0.22"
+          }
+        }
+      ]
+    },
+    {
+      "id": "output",
+      "type": "OUTPUT",
+      "name": "02 / Translucent white glow",
+      "x": 600,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "cloud_output",
+          "type": "vfx.block.output_quad",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_cloud_vortex",
+            "shader": "academy:core/vfxgraph_cloud_vortex",
+            "blend": "translucent",
+            "layer": "wind_volume",
+            "bounds_scale": "1.56"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "spawn",
+      "to": "output"
+    }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "cloud_output"
+  ]
+}
