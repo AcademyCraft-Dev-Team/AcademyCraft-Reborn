@@ -82,6 +82,8 @@ public abstract class MixinLevelRenderer {
                 org.academy.internal.client.render.vfx.InterferenceFieldClient.areas());
         GlowEffect.getInstance().process();
         PostEffect.post();
+        org.academy.internal.client.ability.aeromanip.FlowSenseClient.render(
+                cameraState.pos, cameraState.viewRotationMatrix, cameraState.projectionMatrix);
     }
 
     @Inject(method = "submitEntities", at = @At("RETURN"))

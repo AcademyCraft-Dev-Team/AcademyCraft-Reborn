@@ -6,9 +6,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
@@ -30,7 +27,7 @@ import org.academy.internal.common.ability.proficiency.ProficiencyPolicy;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.config.AeromanipConfig;
-import org.academy.internal.common.ability.aeromanip.vfx.AeromanipVfx;
+import org.academy.internal.common.ability.aeromanip.FlowSenseRuntime;
 import org.academy.internal.common.ability.aeromanip.network.FlowSensePacket;
 import org.academy.internal.common.ability.aeromanip.skills.lv1.AirflowJet;
 import org.academy.internal.common.network.PacketTypes;
@@ -162,46 +159,18 @@ public final class FlowSense extends Skill {
         public static void onPlayerTick(PlayerTickEvent.Post event) {
             if (!(event.getEntity() instanceof ServerPlayer player)) return;
             var skill = Skills.FLOW_SENSE.get();
-            if (!skill.isEnabled(player)) return;
+            if (!skill.isEnabled(player) || !player.isAlive() || player.hasDisconnected()) {
+                FlowSenseRuntime.stop(player);
+                return;
+            }
             var milestone = skill.getEffectiveProficiencyMilestone(player);
-            if (player.level().getGameTime() % sensingInterval(milestone >= 2) != 0) return;
-
             var range = sensingRange(milestone >= 1)
                     * AeromanipConfig.rangeMultiplier(player, skill.getKey().getPath());
-            var center = player.getBoundingBox().getCenter();
-            var maximum = Math.min(
-                    milestone >= 2 ? 96 : 64,
-                    ProficiencyPolicy.server(player).maxBonusEntitiesPerTick());
-            var targets = player.level().getEntitiesOfClass(
-                    LivingEntity.class,
-                    new AABB(center, center).inflate(range),
-                    target -> target != player
-                            && target.isAlive()
-                            && !target.isSpectator()
-                            && target.distanceToSqr(player) <= range * range
-                            && (!(target instanceof Player targetPlayer)
-                            || canSensePlayer(targetPlayer.isShiftKeyDown(), milestone >= 3)));
-            var sent = 0;
-            for (var target : targets) {
-                if (sent++ >= maximum) break;
-                var relative = target.getBoundingBox().getCenter().subtract(center);
-                var direction = relative.lengthSqr() <= 1.0e-8
-                        ? target.getDeltaMovement()
-                        : relative.normalize();
-                new FlowSensePacket(target.getId(), direction, target.getDeltaMovement().length())
-                        .sendTo(player);
-                sendSenseMarker(player, target);
-            }
-            if (!targets.isEmpty()) skill.reportActivity(player, true);
-        }
-
-        private static void sendSenseMarker(ServerPlayer observer, LivingEntity target) {
-            var position = target.getBoundingBox().getCenter();
-            AeromanipVfx.marker(observer, position,
-                    Math.max(0.32, target.getBbWidth() * (target.isInvisible() ? 0.8 : 0.55)));
+            FlowSenseRuntime.tick(player, milestone, range,
+                    sensingInterval(milestone >= 2), Math.min(milestone >= 2 ? 96 : 64,
+                            ProficiencyPolicy.server(player).maxBonusEntitiesPerTick()));
         }
     }
-
     @PacketTarget(ThreadType.SERVER)
     public static final class TogglePacket extends Packet<ServerGamePacketListenerImpl, TogglePacket> {
         public static final TogglePacket INSTANCE = new TogglePacket();

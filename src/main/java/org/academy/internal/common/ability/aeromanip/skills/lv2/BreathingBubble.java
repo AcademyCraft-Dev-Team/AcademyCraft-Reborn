@@ -168,10 +168,24 @@ public final class BreathingBubble extends Skill {
         public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
             if (event.getEntity() instanceof ServerPlayer player) Server.stop(player);
         }
+        @SubscribeEvent public static void dimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+            if (event.getEntity() instanceof ServerPlayer player) Server.stop(player);
+        }
+        @SubscribeEvent public static void stopped(net.neoforged.neoforge.event.server.ServerStoppedEvent event) {
+            Server.ACTIVE.clear(); Server.PROTECTION.clear();
+        }
+        @SubscribeEvent public static void moved(net.neoforged.neoforge.event.entity.EntityEvent.EnteringSection event) {
+            if (event.getEntity() instanceof ServerPlayer player && Server.ACTIVE.get(player) == player.level()) {
+                var eye = player.getEyePosition();
+                Server.PROTECTION.computeIfAbsent(player.level(), _ -> new org.academy.api.server.ability.SectionEntityIndex<>())
+                        .update(player.getId(), eye.x, eye.y, eye.z, player);
+            }
+        }
     }
 
     public static final class Server {
         private static final Map<ServerPlayer, ServerLevel> ACTIVE = new WeakHashMap<>();
+        private static final Map<ServerLevel, org.academy.api.server.ability.SectionEntityIndex<ServerPlayer>> PROTECTION = new java.util.IdentityHashMap<>();
 
         private Server() {
         }
@@ -216,26 +230,35 @@ public final class BreathingBubble extends Skill {
         }
 
         public static boolean protects(LivingEntity target) {
-            for (var entry : ACTIVE.entrySet()) {
-                var owner = entry.getKey();
-                if (entry.getValue() != target.level()) continue;
+            if (target instanceof ServerPlayer self && ACTIVE.get(self) == self.level()) return true;
+            var index = PROTECTION.get(target.level());
+            if (index == null) return false;
+            var eye = target.getEyePosition();
+            return index.anyInBox(eye.x, eye.y, eye.z, 3, owner -> {
+                if (ACTIVE.get(owner) != target.level() || !owner.isAlive() || owner.hasDisconnected()) return false;
                 var skill = Skills.BREATHING_BUBBLE.get();
-                if (target == owner) return true;
-                var radius = activeRadius(skill.getEffectiveProficiencyMilestone(owner));
-                if (skill.hasProficiencyMilestone(owner, 2) && isSupportedTarget(owner, target)
-                        && target.getEyePosition().distanceToSqr(owner.getEyePosition()) <= radius * radius) return true;
-            }
-            return false;
+                int milestone = skill.getEffectiveProficiencyMilestone(owner);
+                double radius = activeRadius(milestone);
+                return milestone >= 2 && isSupportedTarget(owner, target)
+                        && eye.distanceToSqr(owner.getEyePosition()) <= radius * radius;
+            });
         }
 
         public static void stop(ServerPlayer player) {
             var level = ACTIVE.remove(player);
-            if (level != null) WaterSuppression.release(level, player.getUUID());
+            if (level != null) {
+                WaterSuppression.release(level, player.getUUID());
+                var index = PROTECTION.get(level);
+                if (index != null) { index.remove(player.getId()); if (index.size() == 0) PROTECTION.remove(level); }
+            }
             AbilitySystemServer.getSystem(player).releaseMaintenanceOccupation(
                     player.getUUID(), Skills.BREATHING_BUBBLE.get().getKeyString());
         }
 
         private static void refresh(ServerPlayer player, BreathingBubble skill) {
+            var eye = player.getEyePosition();
+            PROTECTION.computeIfAbsent(player.level(), _ -> new org.academy.api.server.ability.SectionEntityIndex<>())
+                    .update(player.getId(), eye.x, eye.y, eye.z, player);
             var radius = activeRadius(skill.getEffectiveProficiencyMilestone(player));
             WaterSuppression.refresh(player.level(), player.getUUID(), player.getEyePosition(), radius);
             player.setAirSupply(player.getMaxAirSupply());

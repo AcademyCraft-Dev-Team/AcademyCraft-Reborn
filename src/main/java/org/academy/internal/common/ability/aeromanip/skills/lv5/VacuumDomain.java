@@ -1,6 +1,7 @@
 package org.academy.internal.common.ability.aeromanip.skills.lv5;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
@@ -24,7 +25,7 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
-import org.academy.api.server.ability.AreaEffectTargets;
+import org.academy.api.server.ability.AreaQueryService;
 import org.academy.api.server.damage.AbilityDamageService;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -35,7 +36,7 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.config.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.targeting.AeromanipTargeting;
-import org.academy.internal.common.ability.aeromanip.vfx.AeromanipVfx;
+import org.academy.internal.common.ability.aeromanip.VacuumVisuals;
 import org.academy.internal.common.ability.aeromanip.skills.lv2.BreathingBubble;
 import org.academy.internal.common.ability.aeromanip.skills.lv4.VortexPull;
 import org.academy.internal.common.network.PacketTypes;
@@ -51,7 +52,7 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
 import java.util.Map;
-import java.util.WeakHashMap;
+import java.util.IdentityHashMap;
 
 /** Toggleable player-centred vacuum that rapidly exhausts the air of drowning-capable targets. */
 public final class VacuumDomain extends Skill {
@@ -62,7 +63,6 @@ public final class VacuumDomain extends Skill {
     static final int DROWNING_AIR_THRESHOLD = -20;
     private static final int EFFECT_INTERVAL_TICKS = 2;
     private static final int DAMAGE_INTERVAL_TICKS = 10;
-    private static final int VISUAL_INTERVAL_TICKS = 10;
     private static final float DAMAGE_FRACTION = 0.05f;
 
     public VacuumDomain() {
@@ -108,6 +108,7 @@ public final class VacuumDomain extends Skill {
 
     @Override
     public void initClient() {
+        VacuumVisuals.initClient();
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -175,8 +176,8 @@ public final class VacuumDomain extends Skill {
     }
 
     public static final class Server {
-        private static final Map<ServerPlayer, AeromanipResourceManager.UsageLease> ACTIVE =
-                new WeakHashMap<>();
+        private static final Map<ServerPlayer, Domain> ACTIVE =
+                new IdentityHashMap<>();
 
         private Server() {
         }
@@ -190,15 +191,15 @@ public final class VacuumDomain extends Skill {
         }
 
         private static void start(ServerPlayer player) {
-            ACTIVE.computeIfAbsent(player, current -> AbilitySystemServer.getSystem(current)
-                    .getAeromanipResourceManager().beginUse(current));
+            var current = ACTIVE.get(player);
+            if (current != null && (current.level != player.level() || current.query.isClosed())) stop(player);
+            ACTIVE.computeIfAbsent(player, Domain::new);
         }
 
-        private static void stop(ServerPlayer player) {
-            var lease = ACTIVE.remove(player);
-            if (lease != null) lease.close();
+        public static void stop(ServerPlayer player) {
+            var domain = ACTIVE.remove(player);
+            if (domain != null) domain.query.close();
         }
-
         private static void disable(ServerPlayer player, VacuumDomain skill) {
             stop(player);
             var system = AbilitySystemServer.getSystem(player);
@@ -215,41 +216,51 @@ public final class VacuumDomain extends Skill {
             return AeromanipTargeting.canAffectNegatively(owner, target);
         }
 
-        private static void applyDomain(ServerPlayer owner, VacuumDomain skill, int milestone) {
-            if (!(owner.level() instanceof ServerLevel level)) return;
-            var radius = radiusForMilestone(milestone)
-                    * AeromanipConfig.rangeMultiplier(owner, SkillNames.VACUUM_DOMAIN);
-            var center = owner.getBoundingBox().getCenter();
-            var targets = AreaEffectTargets.inSphereByBoundsCenter(
-                    level, center, radius, target -> canAffectTarget(owner, target));
-            var cap = ProficiencyPolicy.server(owner).maxBonusEntitiesPerTick();
-            var damageSource = SkillDamageSource.of(
-                    owner, skill, DamageTypes.VACUUM_SUFFOCATION);
-            var drain = milestone >= 2
-                    ? MILESTONE_TWO_AIR_DRAIN_PER_PULSE
-                    : BASE_AIR_DRAIN_PER_PULSE;
-            var handled = 0;
-            for (var target : targets) {
-                if (handled++ >= cap) break;
-                var protectedByBubble = BreathingBubble.Server.protects(target);
-                var air = airSupplyAfterPulse(
-                        target.getAirSupply(), target.getMaxAirSupply(), drain, protectedByBubble);
-                target.setAirSupply(air);
-                if (!protectedByBubble && shouldDealDamage(owner.tickCount, air)) {
-                    // The damage pipeline applies the skill's configured damage multiplier centrally.
-                    var damage = baseDamage(target.getMaxHealth());
-                    AbilityDamageService.applySource(level, target, damageSource, damage, damage);
-                }
-            }
-            spawnVisual(level, center, radius, owner.tickCount);
+        private static void applyDomain(ServerPlayer owner, int milestone) {
+            var domain = ACTIVE.get(owner);
+            if (domain == null) return;
+            domain.milestone = milestone;
+            var radius = radiusForMilestone(milestone) * AeromanipConfig.rangeMultiplier(owner, SkillNames.VACUUM_DOMAIN);
+            domain.query.update(owner.getBoundingBox().getCenter(), radius, EFFECT_INTERVAL_TICKS,
+                    ProficiencyPolicy.server(owner).maxBonusEntitiesPerTick());
+            domain.visual.update((float) Math.min(radius, 12));
         }
 
-        private static void spawnVisual(ServerLevel level, Vec3 center, double radius, int ticks) {
-            if (ticks % VISUAL_INTERVAL_TICKS != 0) return;
-            AeromanipVfx.vortex(level, center, Math.min(radius, 12.0));
+        private static final class Domain implements AreaQueryService.Effect {
+            final ServerPlayer owner;
+            final ServerLevel level;
+            final AeromanipResourceManager.UsageLease lease;
+            final AreaQueryService.Session query;
+            final VacuumVisuals.Lease visual;
+            final Int2LongOpenHashMap damageAt = new Int2LongOpenHashMap();
+            final SkillDamageSource damageSource;
+            int milestone;
+            Domain(ServerPlayer owner) {
+                this.owner = owner; level = owner.level();
+                lease = AbilitySystemServer.getSystem(owner).getAeromanipResourceManager().beginUse(owner);
+                damageSource = SkillDamageSource.of(owner, Skills.VACUUM_DOMAIN.get(), DamageTypes.VACUUM_SUFFOCATION);
+                visual = new VacuumVisuals.Lease(owner);
+                query = AreaQueryService.open(level, owner, AreaQueryService.Point.BOUNDS_CENTER, this);
+            }
+            @Override public boolean matches(LivingEntity target) { return canAffectTarget(owner, target); }
+            @Override public void apply(LivingEntity target, long tick) {
+                boolean protectedByBubble = BreathingBubble.Server.protects(target);
+                int drain = milestone >= 2 ? MILESTONE_TWO_AIR_DRAIN_PER_PULSE : BASE_AIR_DRAIN_PER_PULSE;
+                int air = airSupplyAfterPulse(target.getAirSupply(), target.getMaxAirSupply(), drain, protectedByBubble);
+                target.setAirSupply(air);
+                long due = damageAt.getOrDefault(target.getId(), tick + Math.floorMod(-owner.tickCount, DAMAGE_INTERVAL_TICKS));
+                if (tick >= due) {
+                    damageAt.put(target.getId(), tick + DAMAGE_INTERVAL_TICKS);
+                    if (!protectedByBubble && air <= DROWNING_AIR_THRESHOLD) {
+                        float damage = baseDamage(target.getMaxHealth());
+                        AbilityDamageService.applySource(level, target, damageSource, damage, damage);
+                    }
+                } else damageAt.put(target.getId(), due);
+            }
+            @Override public void removed(LivingEntity target) { damageAt.remove(target.getId()); }
+            @Override public void closed() { lease.close(); visual.close(); damageAt.clear(); }
         }
     }
-
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
     public static final class Events {
         private Events() {
@@ -286,10 +297,17 @@ public final class VacuumDomain extends Skill {
                 Server.disable(player, skill);
                 return;
             }
-            if (player.tickCount % EFFECT_INTERVAL_TICKS == 0) {
-                Server.applyDomain(
-                        player, skill, skill.getEffectiveProficiencyMilestone(player));
-            }
+            Server.applyDomain(player, skill.getEffectiveProficiencyMilestone(player));
+        }
+
+        @SubscribeEvent public static void logout(net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent event) {
+            if (event.getEntity() instanceof ServerPlayer player) Server.stop(player);
+        }
+        @SubscribeEvent public static void dimension(net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerChangedDimensionEvent event) {
+            if (event.getEntity() instanceof ServerPlayer player) Server.stop(player);
+        }
+        @SubscribeEvent public static void stopped(net.neoforged.neoforge.event.server.ServerStoppedEvent event) {
+            Server.ACTIVE.values().forEach(domain -> domain.query.close()); Server.ACTIVE.clear();
         }
     }
 

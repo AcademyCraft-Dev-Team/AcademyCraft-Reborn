@@ -273,8 +273,12 @@ public final class PacketTypes {
             BREATHING_BUBBLE_CAST = PACKET_TYPES.register("breathing_bubble_cast",
             () -> new PacketType<>(BreathingBubble.CastPacket.class, BreathingBubble.CastPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, FlowSensePacket>>
-            FLOW_SENSE_SYNC = PACKET_TYPES.register("flow_sense_sync",
+            FLOW_SENSE_SYNC = PACKET_TYPES.register("flow_sense_sync_v2",
             () -> new PacketType<>(FlowSensePacket.class, FlowSensePacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, org.academy.internal.common.ability.aeromanip.VacuumVisuals.Update>>
+            VACUUM_VISUAL = PACKET_TYPES.register("vacuum_visual",
+            () -> new PacketType<>(org.academy.internal.common.ability.aeromanip.VacuumVisuals.Update.class,
+                    org.academy.internal.common.ability.aeromanip.VacuumVisuals.Update.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, FlowSense.TogglePacket>>
             FLOW_SENSE_TOGGLE = PACKET_TYPES.register("flow_sense_toggle",
             () -> new PacketType<>(FlowSense.TogglePacket.class, FlowSense.TogglePacket.CODEC));

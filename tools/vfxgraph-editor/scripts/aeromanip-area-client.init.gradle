@@ -1,0 +1,12 @@
+allprojects {
+    afterEvaluate {
+        neoForge.runs.named('clientDev') {
+            sourceSet.set(sourceSets.editor)
+            gameDirectory.set(file('run/aeromanip-area-client'))
+            systemProperty 'academy.aeromanipAreaSmoke', 'true'
+            systemProperty 'academy.areaQueryProfile', 'true'
+            systemProperty 'academy.aeromanipAreaOutput', file('build/aeromanip-area-validation').absolutePath
+            programArguments.addAll('--width', '1920', '--height', '1080')
+        }
+    }
+}
