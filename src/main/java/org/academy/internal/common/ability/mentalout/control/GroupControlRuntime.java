@@ -10,6 +10,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -25,7 +26,6 @@ import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.animal.cow.Cow;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.common.IShearable;
-import net.minecraft.world.phys.AABB;
 import org.academy.api.server.ability.AbilityBlockDrops;
 import org.academy.internal.common.ability.mentalout.control.MentalControlMemory;
 import net.minecraft.world.level.block.Block;
@@ -47,7 +47,6 @@ import org.academy.internal.server.storage.SpatialStorageService;
 import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
-import java.util.stream.StreamSupport;
 
 public final class GroupControlRuntime {
     private static final int PATH_GRACE_TICKS = 40;
@@ -55,10 +54,37 @@ public final class GroupControlRuntime {
     private static final int FARM_RESCAN_TICKS = 20;
     private static final List<AdapterEntry> ADAPTERS = new ArrayList<>();
     private static final Map<TaskKey, DefaultTask> TASKS = new HashMap<>();
+    private static final FairWorkQueue<DefaultTask> READY = new FairWorkQueue<>();
+    private static final Map<UUID, DefaultTask> SCOPES = new HashMap<>();
+    private record WorkGroupKey(UUID controller, Identifier source, String orderId) {}
+    private static final Map<WorkGroupKey, SharedWorkPlan> WORK_GROUPS = new HashMap<>();
+    private static final Map<Identifier, Map<Long, Set<SharedWorkPlan>>> WORK_CHUNKS = new HashMap<>();
+    private static final class ReturnCursor { int slot, visited; }
+    private static final Map<String, ReturnCursor> RETURNS = new HashMap<>();
     private static boolean defaultRegistered;
 
     private GroupControlRuntime() {
     }
+
+    public static int activeWorkGroups() { return WORK_GROUPS.size(); }
+    public static int activeTasks() { return TASKS.size(); }
+
+    public static void blockChanged(ServerLevel level, BlockPos pos) {
+        var chunks = WORK_CHUNKS.get(level.dimension().identifier());
+        if (chunks == null) return;
+        try (var ignored = WorkScheduling.budget(level).measure()) {
+            changed(chunks, pos);
+            for (var direction : Direction.values()) changed(chunks, pos.relative(direction));
+        }
+    }
+
+    private static void changed(Map<Long, Set<SharedWorkPlan>> chunks, BlockPos pos) {
+        var groups = chunks.get(chunkKey(pos.getX() >> 4, pos.getZ() >> 4));
+        if (groups == null) return;
+        for (var group : groups) group.changed(pos);
+    }
+
+    private static long chunkKey(int x, int z) { return ((long) x << 32) ^ (z & 0xffffffffL); }
 
     public static synchronized void registerAdapter(
             Identifier id,
@@ -154,6 +180,11 @@ public final class GroupControlRuntime {
             task.closeInternal();
         }
         TASKS.clear();
+        READY.clear();
+        SCOPES.clear();
+        WORK_GROUPS.clear();
+        WORK_CHUNKS.clear();
+        RETURNS.clear();
     }
 
     private static void ensureDefaultAdapter() {
@@ -168,10 +199,20 @@ public final class GroupControlRuntime {
 
     private static void tick(MinecraftServer server) {
         ensureDefaultAdapter();
-        if (server.overworld().getGameTime() % 20 == 0) restoreOrders(server);
-        for (var task : List.copyOf(TASKS.values())) {
-            try {
+        restoreOrders(server);
+        var budget = WorkScheduling.budget(server);
+        READY.rotateStart();
+        var visited = Collections.newSetFromMap(new IdentityHashMap<DefaultTask, Boolean>());
+        int turns = Math.min(512, READY.size() * 2);
+        while (turns-- > 0 && budget.available(WorkBudget.Operation.WORKER)) {
+            var task = READY.next();
+            if (task == null) break;
+            if (!visited.add(task)) continue;
+            if (!budget.spend(WorkBudget.Operation.WORKER)) break;
+            try (var ignored = budget.measure()) {
                 task.tick(server);
+            } catch (DeferredWork deferred) {
+                task.workStatus = "queued_path";
             } catch (RuntimeException exception) {
                 AcademyCraft.LOGGER.error(
                         "Group-control task {} failed for {}",
@@ -179,69 +220,116 @@ public final class GroupControlRuntime {
                         task.subject.getUUID(),
                         exception
                 );
-                task.finish(GroupControlTaskEvent.Status.PATH_FAILED);
+                if (task.settings != null && !task.closed) {
+                    task.paused = task.faulted = true;
+                    task.workStatus = "error";
+                    task.closeMovement();
+                    task.releaseTarget();
+                    task.saveOrder();
+                } else task.finish(GroupControlTaskEvent.Status.PATH_FAILED);
             }
         }
     }
 
     public static boolean ownsWorkScope(UUID controller, UUID subject, UUID scope) {
-        return TASKS.values().stream().anyMatch(task -> task.settings != null && !task.closed
-                && task.controllerId.equals(controller) && task.subject.getUUID().equals(subject)
-                && task.scopeId.equals(scope));
+        var task = SCOPES.get(scope);
+        return task != null && task.settings != null && !task.closed
+                && task.controllerId.equals(controller) && task.subject.getUUID().equals(subject);
     }
 
-    private record RestoreGroup(UUID controller, Identifier source, BlockWorkRegion region,
-                                WorkSettings settings, int priority) {}
+    private static final class DeferredWork extends RuntimeException {
+        private static final DeferredWork INSTANCE = new DeferredWork();
+        private DeferredWork() { super(null, null, false, false); }
+    }
 
     private static void restoreOrders(MinecraftServer server) {
-        var groups = new LinkedHashMap<RestoreGroup, List<WorkOrderData.Entry>>();
-        for (var entry : WorkOrderData.get(server).entries()) {
-            var controller = UUID.fromString(entry.controller());
-            var key = new TaskKey(controller, entry.source(), UUID.fromString(entry.subject()));
-            if (TASKS.containsKey(key)) continue;
-            var group = new RestoreGroup(controller, entry.source(), entry.region(), entry.settings(), entry.priority());
-            groups.computeIfAbsent(group, ignored -> new ArrayList<>()).add(entry);
-        }
-        for (var groupEntry : groups.entrySet()) {
-            var group = groupEntry.getKey();
-            var controller = server.getPlayerList().getPlayer(group.controller());
+        try (var ignored = WorkScheduling.budget(server).measure()) { restoreBatch(server); }
+    }
+
+    private static void restoreBatch(MinecraftServer server) {
+        var data = WorkOrderData.get(server);
+        var budget = WorkScheduling.budget(server);
+        for (int remaining = Math.min(32, data.size()); remaining > 0; remaining--) {
+            if (!budget.available(WorkBudget.Operation.RESTORE)) break;
+            var entry = data.recoveryBatch(1).getFirst();
+            if (entry.faulted()) continue;
+            var controllerId = UUID.fromString(entry.controller());
+            var key = new TaskKey(controllerId, entry.source(), UUID.fromString(entry.subject()));
+            if (!entry.returning() && TASKS.containsKey(key)) continue;
+            var controller = server.getPlayerList().getPlayer(controllerId);
             if (controller == null || !controller.isAlive()) continue;
-            var level = StreamSupport.stream(server.getAllLevels().spliterator(), false)
-                    .filter(candidate -> candidate.dimension().identifier().equals(group.region().dimension())).findFirst().orElse(null);
-            if (level == null) continue;
-            var subjects = new ArrayList<LivingEntity>();
-            for (var entry : groupEntry.getValue()) {
-                var entity = level.getEntity(UUID.fromString(entry.subject()));
-                if (entity instanceof Mob mob && mob.isAlive()
-                        && MentalControlMemory.wasControlledBy(mob, group.controller())) subjects.add(mob);
+            if (entry.returning()) {
+                if (budget.spend(WorkBudget.Operation.RESTORE)) returnCargo(server, entry);
+                continue;
             }
-            if (subjects.isEmpty()) continue;
-            dispatch(new GroupControlRequest(controller, group.source(), subjects,
-                    new GroupControlCommand.Work(group.region(), group.settings()), group.priority()));
-            for (var entry : groupEntry.getValue()) {
-                var task = TASKS.get(new TaskKey(group.controller(), group.source(), UUID.fromString(entry.subject())));
-                if (task != null) {
-                    task.bufferedDrops.addAll(entry.cargo().stream().map(ItemStack::copy).toList());
-                    task.paused = entry.paused();
-                    task.saveOrder();
-                }
+            var level = server.getLevel(net.minecraft.resources.ResourceKey.create(
+                    net.minecraft.core.registries.Registries.DIMENSION, entry.dimension()));
+            if (level == null || !(level.getEntity(key.subjectId) instanceof Mob mob) || !mob.isAlive() || mob.isRemoved()
+                    || !MentalControlMemory.wasControlledBy(mob, controllerId)) continue;
+            if (!budget.spend(WorkBudget.Operation.RESTORE)) break;
+            try (var ignored = budget.measure()) {
+                var command = new GroupControlCommand.Work(entry.region(), entry.settings());
+                var groupKey = new WorkGroupKey(controllerId, entry.source(), entry.orderId());
+                var shared = WORK_GROUPS.computeIfAbsent(groupKey, unused -> {
+                    var plan = SharedWorkPlan.create(command);
+                    plan.orderId = entry.orderId();
+                    return plan;
+                });
+                var request = new GroupControlRequest(controller, entry.source(), List.of(mob), command, entry.priority());
+                DefaultAdapter.INSTANCE.start(request, mob, 0, shared, entry);
+            } catch (RuntimeException failure) {
+                data.put(entry.withFault());
+                AcademyCraft.LOGGER.error("Work assignment {} could not be restored; retained for manual retry", entry.key(), failure);
             }
         }
+    }
+
+    private static void returnCargo(MinecraftServer server, WorkOrderData.Entry entry) {
+        try (var ignored = WorkScheduling.budget(server).measure()) { returnCargoMeasured(server, entry); }
+    }
+
+    private static void returnCargoMeasured(MinecraftServer server, WorkOrderData.Entry entry) {
+        if (entry.cargo().isEmpty()) { WorkOrderData.get(server).remove(entry.key()); RETURNS.remove(entry.key()); return; }
+        var controller = server.getPlayerList().getPlayer(UUID.fromString(entry.controller()));
+        if (controller == null || !controller.isAlive()) return;
+        var data = WorkOrderData.get(server);
+        var cargo = new ArrayList<>(entry.cargo());
+        var budget = WorkScheduling.budget(server);
+        var cursor = RETURNS.computeIfAbsent(entry.key(), ignored -> new ReturnCursor());
+        var remainder = cargo.getFirst();
+        var inventory = controller.getInventory();
+        int count = inventory.getNonEquipmentItems().size();
+        try {
+            var result = WorkInventoryTransfer.insert(inventory, remainder, cursor.slot, 16, budget, count);
+            cursor.slot = result.nextSlot();
+            cursor.visited += result.visited();
+            if (!remainder.isEmpty() && cursor.visited >= count && budget.spend(WorkBudget.Operation.TRANSFER)) {
+                Block.popResource(controller.level(), controller.blockPosition(), remainder.copy());
+                remainder.setCount(0);
+            }
+        } catch (RuntimeException failure) {
+            data.put(entry.withCargo(cargo).withFault());
+            AcademyCraft.LOGGER.error("Cargo return {} failed; retained without automatic replay", entry.key(), failure);
+            return;
+        }
+        if (remainder.isEmpty()) { cargo.removeFirst(); cursor.slot = cursor.visited = 0; }
+        if (cargo.isEmpty()) { data.remove(entry.key()); RETURNS.remove(entry.key()); }
+        else data.put(entry.withCargo(cargo));
     }
 
     public static void setWorkPaused(MinecraftServer server, UUID controller, Set<UUID> subjects, boolean paused) {
         var data = WorkOrderData.get(server);
-        for (var entry : data.entries()) {
+        for (var entry : data.selected(controller, subjects)) {
+            if (entry.returning()) continue;
             if (entry.controller().equals(controller.toString()) && subjects.contains(UUID.fromString(entry.subject()))) {
                 data.put(entry.withPaused(paused));
                 var task = TASKS.get(new TaskKey(controller, entry.source(), UUID.fromString(entry.subject())));
                 if (task != null) {
                     task.paused = paused;
+                    if (!paused) task.faulted = false;
+                    task.revision = entry.revision() + 1;
                     task.closeMovement();
-                    if (paused && task.sharedWork != null && task.sharedWork.mining != null) {
-                        task.sharedWork.mining.release(task.subject.getUUID());
-                        task.clearMiningTarget();
-                    }
+                    if (paused) task.releaseTarget();
                 }
             }
         }
@@ -249,19 +337,22 @@ public final class GroupControlRuntime {
 
     public static void cancelWork(MinecraftServer server, UUID controller, Set<UUID> subjects) {
         var data = WorkOrderData.get(server);
-        for (var entry : data.entries()) {
+        for (var entry : data.selected(controller, subjects)) {
             if (!entry.controller().equals(controller.toString()) || !subjects.contains(UUID.fromString(entry.subject()))) continue;
             var task = TASKS.get(new TaskKey(controller, entry.source(), UUID.fromString(entry.subject())));
-            if (task != null) task.close();
+            if (task != null && !entry.returning()) task.close();
             else {
-                var player = server.getPlayerList().getPlayer(controller);
-                if (player != null) entry.cargo().forEach(stack -> DefaultTask.addToController(player, stack));
+                var returning = entry.asReturning();
+                data.put(returning);
+                if (!entry.returning()) data.remove(entry.key());
+                returnCargo(server, returning);
             }
-            data.remove(entry.key());
         }
     }
 
     public static String workStatus(WorkOrderData.Entry entry) {
+        if (entry.faulted()) return "error";
+        if (entry.returning()) return "returning";
         var task = TASKS.get(new TaskKey(UUID.fromString(entry.controller()), entry.source(), UUID.fromString(entry.subject())));
         return entry.paused() ? "paused" : task == null ? "suspended" : task.workStatus;
     }
@@ -300,11 +391,29 @@ public final class GroupControlRuntime {
                 int subjectIndex,
                 SharedWorkPlan sharedWork
         ) {
+            return start(request, subject, subjectIndex, sharedWork, null);
+        }
+
+        private GroupControlHandle start(GroupControlRequest request, LivingEntity subject, int subjectIndex,
+                                         SharedWorkPlan sharedWork, WorkOrderData.Entry restored) {
             var key = new TaskKey(request.controller().getUUID(), request.source(), subject.getUUID());
             var previous = TASKS.remove(key);
             if (previous != null) previous.close();
             var task = new DefaultTask(key, request, subject, subjectIndex, sharedWork);
+            if (restored != null) {
+                task.bufferedDrops.addAll(restored.cargo());
+                task.paused = restored.paused();
+                task.revision = restored.revision();
+                task.faulted = restored.faulted();
+            }
+            if (sharedWork != null) {
+                if (sharedWork.workers == 0) sharedWork.indexChunks(true);
+                sharedWork.workers++;
+                WORK_GROUPS.put(new WorkGroupKey(task.controllerId, task.source, sharedWork.orderId), sharedWork);
+            }
             TASKS.put(key, task);
+            READY.add(task.controllerId, sharedWork == null ? task.scopeId : sharedWork, task);
+            SCOPES.put(task.scopeId, task);
             try { task.retainExclusiveWorkOrder(request.controller()); }
             catch (RuntimeException exception) { task.closeInternal(); throw exception; }
             task.saveOrder();
@@ -321,10 +430,16 @@ public final class GroupControlRuntime {
         private final GroupControlCommand command;
         private final WorkSettings settings;
         private boolean paused;
+        private boolean faulted;
+        private long revision;
         private String workStatus = "working";
         private long nextWorkScan;
         private long nextAnimalAction;
         private long retryAfter;
+        private int supplySlot, seedSlot, depositSlot, depositVisited;
+        private long nextSupplyCheck, nextSeedCheck, nextDepositCheck;
+        private int blockedCargo;
+        private int farmOutputSlot;
         private final GroupControlObserver observer;
         private final int priority;
         private final int subjectIndex;
@@ -339,6 +454,12 @@ public final class GroupControlRuntime {
         private BlockPos currentBlock;
         private BlockPos workApproachBlock;
         private Vec3 workApproachPoint;
+        private Entity workEntity;
+        private UUID entityCandidateCursor;
+        private boolean entitySelectionDeferred;
+        private GroupControlNavigation.Search workSearch;
+        private GroupControlNavigation.Search moveSearch;
+        private long workApproachRetry;
         private Vec3 resolvedMovePoint;
         private ControlDestination resolvedMoveDestination;
         private long nextFarmScanTick;
@@ -454,7 +575,7 @@ public final class GroupControlRuntime {
                     closeMovement();
                 }
                 retainExclusiveWorkOrder(controller);
-                if (paused) { workStatus = "paused"; closeMovement(); return; }
+                if (paused) { workStatus = faulted ? "error" : "paused"; closeMovement(); return; }
             }
             if (isExclusiveWorkOrder() && aiControl != null
                     && aiControl.state() != ControlState.ACTIVE) {
@@ -462,6 +583,7 @@ public final class GroupControlRuntime {
                     finish(GroupControlTaskEvent.Status.CANCELLED);
                 } else {
                     closeMovement();
+                    releaseTarget();
                     workStatus = "preempted";
                 }
                 return;
@@ -517,8 +639,10 @@ public final class GroupControlRuntime {
             }
             if (resolvedMovePoint != null) return resolvedMovePoint;
             if (!dimension.equals(subject.level().dimension().identifier())) return null;
-            resolvedMovePoint = GroupControlNavigation.findNearestReachablePosition(subject, value)
-                    .orElse(null);
+            if (moveSearch == null) moveSearch = GroupControlNavigation.positionSearch(subject, value);
+            var result = moveSearch.poll();
+            if (result.status() == GroupControlNavigation.Status.DEFERRED) throw DeferredWork.INSTANCE;
+            resolvedMovePoint = result.position();
             if (resolvedMovePoint != null) {
                 resolvedMoveDestination = new ControlDestination.Position(dimension, resolvedMovePoint);
             }
@@ -532,6 +656,7 @@ public final class GroupControlRuntime {
             }
             if (currentBlock == null) currentBlock = nextMiningBlock();
             if (currentBlock == null) {
+                if (sharedWork != null && sharedWork.hasPending()) { workStatus = "scanning"; return; }
                 if (settings != null) {
                     if (!depositWorkCargo(controller, region)) return;
                     if (settings.repeat()) {
@@ -583,11 +708,12 @@ public final class GroupControlRuntime {
             miningProgressTicks++;
             if (miningProgressTicks % 5 == 1) subject.swing(InteractionHand.MAIN_HAND);
             if (miningProgressTicks < miningTicks(state, tool, level, currentBlock)) return;
+            if (!WorkScheduling.budget(level).spend(WorkBudget.Operation.ACTION)) return;
             if (canBreak(controller, level, currentBlock)) {
                 if (AbilityBlockDrops.harvestBlock(level, currentBlock, controller, subject, tool, drops -> {
                     drops.stream().filter(stack -> !stack.isEmpty())
                             .filter(stack -> !SpatialStorageService.collect(controller, stack))
-                            .map(ItemStack::copy).forEach(bufferedDrops::add);
+                            .forEach(this::bufferMiningDrop);
                 })) {
                     if (settings != null) ControlledEquipment.damageRealTool(subject, tool, 1);
                 }
@@ -604,7 +730,7 @@ public final class GroupControlRuntime {
                 if (!level.hasChunkAt(pos)) return MiningWorkPlan.Eligibility.UNLOADED;
                 return matchesWorkBlock(pos, level.getBlockState(pos))
                         ? MiningWorkPlan.Eligibility.ELIGIBLE : MiningWorkPlan.Eligibility.EXCLUDED;
-            });
+            }, 64, () -> WorkScheduling.budget(level).spend(WorkBudget.Operation.BLOCK));
         }
 
         private void clearMiningTarget() {
@@ -626,11 +752,12 @@ public final class GroupControlRuntime {
             var now = level.getGameTime();
             refreshMiningPlan(level, false);
             if (currentBlock == null) currentBlock = plan.claim(subject.getUUID(), subject.position(), now,
-                    pos -> sharedWork.exposed(level, pos));
+                    pos -> sharedWork.exposed(level, pos), 32,
+                    () -> WorkScheduling.budget(level).spend(WorkBudget.Operation.CLAIM));
             if (currentBlock == null) {
                 closeMovement();
                 if (plan.progress().remaining() == 0) refreshMiningPlan(level, true);
-                if (plan.progress().remaining() != 0) {
+                if (!plan.completionVerified()) {
                     workStatus = plan.blockedReason();
                     if (!bufferedDrops.isEmpty() && settings.output().isPresent()) depositWorkCargo(controller, region);
                     return;
@@ -640,6 +767,7 @@ public final class GroupControlRuntime {
                 finish(GroupControlTaskEvent.Status.COMPLETED);
                 return;
             }
+            if (!plan.owns(subject.getUUID(), currentBlock)) { clearMiningTarget(); return; }
             if (!level.hasChunkAt(currentBlock)) { blockMiningTarget("unloaded", 20); return; }
             var state = level.getBlockState(currentBlock);
             if (!matchesWorkBlock(currentBlock, state)) {
@@ -676,6 +804,7 @@ public final class GroupControlRuntime {
             miningProgressTicks++;
             if (miningProgressTicks % 5 == 1) subject.swing(InteractionHand.MAIN_HAND);
             if (miningProgressTicks < miningTicks(state, tool, level, currentBlock)) return;
+            if (!WorkScheduling.budget(level).spend(WorkBudget.Operation.ACTION)) return;
             if (!canBreak(controller, level, currentBlock)) { blockMiningTarget("permission", 100); return; }
             if (!AbilityBlockDrops.harvestBlock(level, currentBlock, controller, subject, tool, drops -> {
                 for (var drop : drops) {
@@ -712,13 +841,17 @@ public final class GroupControlRuntime {
         private void tickFarm(ServerPlayer controller, BlockWorkRegion region) {
             var now = subject.level().getGameTime();
             if (currentBlock == null) {
-                if (now >= nextFarmScanTick) {
+                if (sharedWork != null || now >= nextFarmScanTick) {
                     populateMatureCrops(region);
                     nextFarmScanTick = now + FARM_RESCAN_TICKS;
                 }
                 currentBlock = pollBlock();
             }
             if (currentBlock == null) {
+                if (sharedWork != null && (sharedWork.scanning() || sharedWork.hasPending() || !sharedWork.claimed.isEmpty())) {
+                    workStatus = "scanning";
+                    return;
+                }
                 if (settings != null) {
                     if (!depositWorkCargo(controller, region)) return;
                     workStatus = "waiting";
@@ -748,6 +881,8 @@ public final class GroupControlRuntime {
             }
             closeMovement();
             if (subject.level() instanceof ServerLevel level) {
+                if (!level.hasChunkAt(currentBlock)) { deferCurrentBlock(); return; }
+                if (!WorkScheduling.budget(level).spend(WorkBudget.Operation.ACTION)) return;
                 if (settings != null && level.getBlockState(currentBlock).isAir()) plantCrop(controller, level, currentBlock);
                 else harvestCrop(controller, level, currentBlock);
                 if (settings == null) depositFarmDrops(controller, region, false);
@@ -773,9 +908,11 @@ public final class GroupControlRuntime {
         }
 
         private BlockPos nextMiningBlock() {
-            while (sharedWork != null ? sharedWork.hasPending() : !pendingBlocks.isEmpty()) {
+            int checked = 0;
+            while (checked++ < 16 && (sharedWork != null ? sharedWork.hasPending() : !pendingBlocks.isEmpty())) {
                 var candidate = pollBlock();
                 if (candidate == null) return null;
+                if (!subject.level().hasChunkAt(candidate)) { enqueueBlock(candidate); return null; }
                 var state = subject.level().getBlockState(candidate);
                 if (!state.isAir() && (settings == null ? isHarvestable(state, miningTool(state))
                         : matchesWorkBlock(candidate, state))) return candidate;
@@ -804,15 +941,27 @@ public final class GroupControlRuntime {
         }
 
         private Vec3 workApproach(BlockPos block) {
-            if (block.equals(workApproachBlock)) return workApproachPoint;
-            closeMovement();
-            workApproachBlock = block.immutable();
-            workApproachPoint = GroupControlNavigation.findNearestWorkPosition(subject, block)
-                    .orElse(null);
+            var now = subject.level().getGameTime();
+            if (block.equals(workApproachBlock) && (workApproachPoint != null || now < workApproachRetry)) return workApproachPoint;
+            if (!block.equals(workApproachBlock)) {
+                closeMovement();
+                clearWorkApproach();
+                workApproachBlock = block.immutable();
+            }
+            if (workSearch == null) workSearch = GroupControlNavigation.workSearch(subject, block);
+            var result = workSearch.poll();
+            if (result.status() == GroupControlNavigation.Status.DEFERRED) throw DeferredWork.INSTANCE;
+            workApproachPoint = result.position();
+            workSearch.close();
+            workSearch = null;
+            workApproachRetry = now + 40;
             return workApproachPoint;
         }
 
         private void clearWorkApproach() {
+            if (workSearch != null) workSearch.close();
+            workSearch = null;
+            workApproachRetry = 0;
             workApproachBlock = null;
             workApproachPoint = null;
         }
@@ -893,6 +1042,10 @@ public final class GroupControlRuntime {
         }
 
         private boolean hasStalledPath(Vec3 target) {
+            if (GroupControlNavigation.waitingForPath(subject)) {
+                movementStartedTick = subject.level().getGameTime();
+                return false;
+            }
             if (movement != null && movement.state() == ControlState.PREEMPTED) {
                 movementStartedTick = subject.level().getGameTime();
                 stalledTicks = 0;
@@ -930,7 +1083,7 @@ public final class GroupControlRuntime {
                 }
                 drops.stream().filter(stack -> !stack.isEmpty())
                         .filter(stack -> !SpatialStorageService.collect(controller, stack))
-                        .map(ItemStack::copy).forEach(bufferedDrops::add);
+                        .forEach(this::bufferMiningDrop);
             });
         }
 
@@ -957,27 +1110,18 @@ public final class GroupControlRuntime {
                 boolean fallbackToController
         ) {
             if (bufferedDrops.isEmpty() || !(subject.level() instanceof ServerLevel level)) return;
-            var containers = new ArrayList<Container>();
-            var identities = Collections.newSetFromMap(new IdentityHashMap<Container, Boolean>());
-            var positions = sharedWork == null
-                    ? BlockPos.betweenClosed(region.minimum(), region.maximum())
-                    : sharedWork.containerPositions(level);
-            for (var pos : positions) {
-                var container = HopperBlockEntity.getContainerAt(level, pos);
-                if (container != null && identities.add(container)) containers.add(container);
-            }
-            var remaining = new ArrayList<ItemStack>();
-            for (var buffered : bufferedDrops) {
-                var remainder = buffered.copy();
-                for (var container : containers) {
-                    if (remainder.isEmpty()) break;
-                    remainder = HopperBlockEntity.addItem(null, container, remainder, null);
+            if (sharedWork != null) {
+                var pos = sharedWork.nextContainer(level);
+                if (pos != null && level.hasChunkAt(pos) && level.mayInteract(controller, pos)) {
+                    var container = HopperBlockEntity.getContainerAt(level, pos);
+                    if (container != null) {
+                        var result = WorkInventoryTransfer.insert(container, bufferedDrops.getFirst(), farmOutputSlot, 16, WorkScheduling.budget(level));
+                        farmOutputSlot = result.nextSlot();
+                    }
                 }
-                if (!remainder.isEmpty() && fallbackToController) addToController(controller, remainder);
-                else if (!remainder.isEmpty()) remaining.add(remainder);
             }
-            bufferedDrops.clear();
-            bufferedDrops.addAll(remaining);
+            bufferedDrops.removeIf(ItemStack::isEmpty);
+            if (fallbackToController) deliverToController(controller);
         }
 
         private void deliverToController(ServerPlayer controller) {
@@ -987,7 +1131,7 @@ public final class GroupControlRuntime {
 
         private static void addToController(ServerPlayer controller, ItemStack stack) {
             if (stack.isEmpty()) return;
-            var remainder = stack.copy();
+            var remainder = stack;
             var inventory = controller.getInventory();
             for (int pass = 0; pass < 2 && !remainder.isEmpty(); pass++) {
                 for (int slot = 0; slot < inventory.getNonEquipmentItems().size() && !remainder.isEmpty(); slot++) {
@@ -1003,7 +1147,8 @@ public final class GroupControlRuntime {
             }
             inventory.setChanged();
             if (!remainder.isEmpty() && controller.level() instanceof ServerLevel level) {
-                Block.popResource(level, controller.blockPosition(), remainder);
+                Block.popResource(level, controller.blockPosition(), remainder.copy());
+                remainder.setCount(0);
             }
         }
 
@@ -1029,10 +1174,27 @@ public final class GroupControlRuntime {
 
         private void saveOrder() {
             if (settings == null || closed || !(subject.level() instanceof ServerLevel level)) return;
+            WorkOrderData.get(level.getServer()).put(orderSnapshot());
+        }
+
+        private WorkOrderData.Entry orderSnapshot() {
             var region = workRegion();
-            WorkOrderData.get(level.getServer()).put(new WorkOrderData.Entry(controllerId.toString(),
+            return new WorkOrderData.Entry(controllerId.toString(),
                     subject.getUUID().toString(), source, region.dimension(), region.minimum(), region.maximum(),
-                    settings, priority, paused, bufferedDrops.stream().filter(stack -> !stack.isEmpty()).map(ItemStack::copy).toList()));
+                    settings, priority, paused, bufferedDrops, sharedWork.orderId, revision, false, faulted);
+        }
+
+        private void finishPersistent(GroupControlTaskEvent.Status status) {
+            var server = ((ServerLevel) subject.level()).getServer();
+            var data = WorkOrderData.get(server);
+            var returning = orderSnapshot().asReturning();
+            // Publish the cargo's new owner before deleting the active assignment.
+            data.put(returning);
+            removeOrder();
+            bufferedDrops.clear();
+            if (!terminalNotified) { terminalNotified = true; notifyObserver(status); }
+            closeInternal();
+            returnCargo(server, returning);
         }
 
         private void removeOrder() {
@@ -1069,13 +1231,10 @@ public final class GroupControlRuntime {
         private void tickCollection(ServerPlayer controller, BlockWorkRegion region) {
             var level = (ServerLevel) subject.level();
             if (level.getGameTime() < nextAnimalAction || !settings.harvest()) return;
-            var bounds = new AABB(region.minimum().getX(), region.minimum().getY(), region.minimum().getZ(),
-                    region.maximum().getX() + 1, region.maximum().getY() + 1, region.maximum().getZ() + 1);
-            var item = level.getEntitiesOfClass(ItemEntity.class, bounds,
-                    candidate -> candidate.isAlive() && !candidate.hasPickUpDelay()
-                            && settings.matches(candidate.getItem())).stream()
-                    .min(Comparator.comparingDouble(subject::distanceToSqr)).orElse(null);
+            var item = (ItemEntity) selectWorkEntity(candidate -> candidate instanceof ItemEntity drop
+                    && !drop.hasPickUpDelay() && !drop.getItem().isEmpty() && settings.matches(drop.getItem()));
             if (item == null) {
+                if (entitySelectionDeferred || sharedWork.entityScanPending() || !sharedWork.entityClaims.isEmpty()) { workStatus = "scanning"; return; }
                 workStatus = "waiting";
                 if (!depositWorkCargo(controller, region)) return;
                 closeMovement();
@@ -1094,8 +1253,10 @@ public final class GroupControlRuntime {
                 return;
             }
             closeMovement();
-            bufferedDrops.add(item.getItem().copy());
+            if (!WorkScheduling.budget(level).spend(WorkBudget.Operation.ACTION)) return;
+            bufferMiningDrop(item.getItem());
             item.discard();
+            releaseEntity();
             nextAnimalAction = level.getGameTime() + 5;
             saveOrder();
         }
@@ -1103,6 +1264,7 @@ public final class GroupControlRuntime {
         private boolean supplyTool(ServerPlayer controller, BlockWorkRegion region,
                                    Predicate<ItemStack> suitable) {
             workStatus = "tool";
+            if (subject.level().getGameTime() < nextSupplyCheck) return false;
             if (settings.input().isEmpty()) { closeMovement(); return false; }
             var pos = settings.input().get();
             var level = (ServerLevel) subject.level();
@@ -1117,20 +1279,29 @@ public final class GroupControlRuntime {
             closeMovement();
             clearWorkApproach();
             var container = HopperBlockEntity.getContainerAt(level, pos);
-            if (container == null) return false;
-            for (int slot = 0; slot < container.getContainerSize(); slot++) {
+            if (container == null || container.getContainerSize() == 0) { nextSupplyCheck = level.getGameTime() + 20; return false; }
+            var budget = WorkScheduling.budget(level);
+            for (int checked = 0; checked < Math.min(16, container.getContainerSize()) && budget.spend(WorkBudget.Operation.SLOT); checked++) {
+                int slot = Math.floorMod(supplySlot++, container.getContainerSize());
                 if (!suitable.test(container.getItem(slot))) continue;
+                if (!budget.spend(WorkBudget.Operation.TRANSFER)) return false;
                 var replacement = container.removeItem(slot, 1);
                 if (replacement.isEmpty()) continue;
                 var previous = subject.getMainHandItem();
                 subject.setItemSlot(EquipmentSlot.MAINHAND, replacement);
                 if (!previous.isEmpty()) {
-                    var remainder = HopperBlockEntity.addItem(null, container, previous.copy(), null);
-                    if (!remainder.isEmpty()) bufferedDrops.add(remainder);
+                    var returned = previous.copy();
+                    try { WorkInventoryTransfer.insert(container, returned, 0, 16, budget); }
+                    finally { bufferMiningDrop(returned); saveOrder(); }
                 }
                 container.setChanged();
                 saveOrder();
                 return true;
+            }
+            if (supplySlot >= container.getContainerSize()) {
+                supplySlot = 0;
+                nextSupplyCheck = level.getGameTime() + 20 + Math.floorMod(subject.getId(), 5);
+                releaseEntity();
             }
             return false;
         }
@@ -1139,11 +1310,27 @@ public final class GroupControlRuntime {
             var level = (ServerLevel) subject.level();
             if (level.getGameTime() < nextAnimalAction) return;
             if (!settings.harvest()) { workStatus = "waiting"; return; }
+            var target = (Animal) selectWorkEntity(candidate -> candidate instanceof Animal animal && animal != subject
+                    && !animal.isBaby() && settings.matches(animal) && switch (settings.mode()) {
+                case SHEARING -> animal instanceof IShearable shearable && shearable.isShearable(controller,
+                        ControlledEquipment.tool(subject, Items.SHEARS), level, animal.blockPosition());
+                case MILKING -> animal instanceof Cow;
+                case FEEDING -> animal.canFallInLove();
+                default -> false;
+            });
+            if (target == null) {
+                if (entitySelectionDeferred || sharedWork.entityScanPending() || !sharedWork.entityClaims.isEmpty()) { workStatus = "scanning"; return; }
+                workStatus = "waiting";
+                closeMovement();
+                if (!depositWorkCargo(controller, region)) return;
+                nextAnimalAction = level.getGameTime() + 20;
+                if (!settings.repeat()) finish(GroupControlTaskEvent.Status.COMPLETED);
+                return;
+            }
             Predicate<ItemStack> suitable = stack -> switch (settings.mode()) {
                 case SHEARING -> stack.is(Items.SHEARS);
                 case MILKING -> stack.is(Items.BUCKET);
-                case FEEDING -> !stack.isEmpty() && level.getEntitiesOfClass(Animal.class,
-                        new AABB(subject.blockPosition()).inflate(32), animal -> animal.isFood(stack)).size() > 0;
+                case FEEDING -> !stack.isEmpty() && target.isFood(stack);
                 default -> false;
             };
             if (!suitable.test(settings.mode() == WorkSettings.Mode.SHEARING
@@ -1151,39 +1338,25 @@ public final class GroupControlRuntime {
                     && !supplyTool(controller, region, suitable)) return;
             var held = settings.mode() == WorkSettings.Mode.SHEARING
                     ? ControlledEquipment.tool(subject, Items.SHEARS) : subject.getMainHandItem();
-            var bounds = new AABB(region.minimum().getX(), region.minimum().getY(), region.minimum().getZ(),
-                    region.maximum().getX() + 1, region.maximum().getY() + 1, region.maximum().getZ() + 1);
-            var target = level.getEntitiesOfClass(Animal.class, bounds, animal -> animal != subject
-                    && animal.isAlive() && !animal.isBaby() && settings.matches(animal) && switch (settings.mode()) {
-                case SHEARING -> animal instanceof IShearable shearable
-                        && shearable.isShearable(controller, held, level, animal.blockPosition());
-                case MILKING -> animal instanceof Cow;
-                case FEEDING -> animal.canFallInLove() && animal.isFood(held);
-                default -> false;
-            }).stream().min(Comparator.comparingDouble(subject::distanceToSqr)).orElse(null);
-            if (target == null) {
-                workStatus = "waiting";
-                closeMovement();
-                depositWorkCargo(controller, region);
-                nextAnimalAction = level.getGameTime() + 20;
-                if (!settings.repeat()) finish(GroupControlTaskEvent.Status.COMPLETED);
-                return;
-            }
             if (!level.mayInteract(controller, target.blockPosition())) { workStatus = "path"; return; }
             if (subject.distanceToSqr(target) > 9) {
                 var approach = workApproach(target.blockPosition());
                 if (approach == null || !ensureMovement(controller,
                         new ControlDestination.Position(region.dimension(), approach), 1.5)
-                        || hasStalledPath(approach)) { closeMovement(); clearWorkApproach(); workStatus = "path"; }
+                        || hasStalledPath(approach)) {
+                    closeMovement(); clearWorkApproach(); releaseEntity(); workStatus = "path";
+                    retryAfter = level.getGameTime() + 40;
+                }
                 return;
             }
             closeMovement();
+            if (!WorkScheduling.budget(level).spend(WorkBudget.Operation.ACTION)) return;
             subject.swing(InteractionHand.MAIN_HAND);
             switch (settings.mode()) {
                 case SHEARING -> {
                     var shearable = (IShearable) target;
                     shearable.onSheared(controller, held, level, target.blockPosition()).stream()
-                            .filter(stack -> !stack.isEmpty()).map(ItemStack::copy).forEach(bufferedDrops::add);
+                            .filter(stack -> !stack.isEmpty()).forEach(this::bufferMiningDrop);
                     ControlledEquipment.damageRealTool(subject, held, 1);
                 }
                 case MILKING -> { held.shrink(1); bufferedDrops.add(new ItemStack(Items.MILK_BUCKET)); }
@@ -1191,6 +1364,7 @@ public final class GroupControlRuntime {
                 default -> { }
             }
             nextAnimalAction = level.getGameTime() + 40;
+            releaseEntity();
             saveOrder();
             if (!settings.repeat()) finish(GroupControlTaskEvent.Status.COMPLETED);
         }
@@ -1202,6 +1376,7 @@ public final class GroupControlRuntime {
 
         private boolean collectSeeds(ServerPlayer controller, BlockWorkRegion region) {
             workStatus = "materials";
+            if (subject.level().getGameTime() < nextSeedCheck) return false;
             if (settings.input().isEmpty()) { closeMovement(); return false; }
             var pos = settings.input().get();
             var level = (ServerLevel) subject.level();
@@ -1216,14 +1391,18 @@ public final class GroupControlRuntime {
             closeMovement();
             clearWorkApproach();
             var container = HopperBlockEntity.getContainerAt(level, pos);
-            if (container == null) return false;
-            for (int slot = 0; slot < container.getContainerSize(); slot++) {
+            if (container == null || container.getContainerSize() == 0) { nextSeedCheck = level.getGameTime() + 20; return false; }
+            var budget = WorkScheduling.budget(level);
+            for (int checked = 0; checked < Math.min(16, container.getContainerSize()) && budget.spend(WorkBudget.Operation.SLOT); checked++) {
+                int slot = Math.floorMod(seedSlot++, container.getContainerSize());
                 if (!isSeed(container.getItem(slot))) continue;
-                bufferedDrops.add(container.removeItem(slot, 16));
+                if (!budget.spend(WorkBudget.Operation.TRANSFER)) return false;
+                bufferMiningDrop(container.removeItem(slot, 16));
                 container.setChanged();
                 saveOrder();
                 return true;
             }
+            if (seedSlot >= container.getContainerSize()) { seedSlot = 0; nextSeedCheck = level.getGameTime() + 20; }
             return false;
         }
 
@@ -1255,6 +1434,7 @@ public final class GroupControlRuntime {
         private boolean depositWorkCargo(ServerPlayer controller, BlockWorkRegion region) {
             bufferedDrops.removeIf(ItemStack::isEmpty);
             if (bufferedDrops.isEmpty()) return true;
+            if (subject.level().getGameTime() < nextDepositCheck) { workStatus = "output"; return false; }
             if (settings.output().isEmpty()) {
                 if (bufferedDrops.size() < 18) return true;
                 workStatus = "output";
@@ -1276,23 +1456,40 @@ public final class GroupControlRuntime {
             closeMovement();
             clearWorkApproach();
             var container = HopperBlockEntity.getContainerAt(level, pos);
-            if (container == null) { workStatus = "output"; return false; }
-            var remaining = new ArrayList<ItemStack>();
+            if (container == null) { workStatus = "output"; nextDepositCheck = level.getGameTime() + 20; return false; }
+            var budget = WorkScheduling.budget(level);
             var reservedSeeds = 0;
+            var visited = 0;
+            var transfers = 0;
+            var moved = 0;
             for (var stack : bufferedDrops) {
-                var deposit = stack.copy();
+                int reserved = 0;
                 if (settings.mode() == WorkSettings.Mode.FARMING && settings.replant() && isSeed(stack)
                         && reservedSeeds < 16) {
-                    var count = Math.min(16 - reservedSeeds, deposit.getCount());
-                    remaining.add(deposit.copyWithCount(count));
-                    deposit.shrink(count);
-                    reservedSeeds += count;
+                    reserved = Math.min(16 - reservedSeeds, stack.getCount());
+                    reservedSeeds += reserved;
                 }
-                var rest = deposit.isEmpty() ? ItemStack.EMPTY : HopperBlockEntity.addItem(null, container, deposit, null);
-                if (!rest.isEmpty()) remaining.add(rest);
+                if (stack.getCount() == reserved) continue;
+                var deposit = stack.copyWithCount(stack.getCount() - reserved);
+                WorkInventoryTransfer.Result result;
+                try { result = WorkInventoryTransfer.insert(container, deposit, depositSlot, 16 - visited, budget); }
+                finally { stack.setCount(reserved + deposit.getCount()); saveOrder(); }
+                visited += result.visited();
+                moved += result.moved();
+                depositSlot = result.nextSlot();
+                depositVisited += result.visited();
+                if (deposit.isEmpty()) { depositSlot = depositVisited = 0; }
+                if (visited >= 16 || ++transfers >= 4 || !budget.hasTime()) break;
             }
-            bufferedDrops.clear();
-            bufferedDrops.addAll(remaining);
+            bufferedDrops.removeIf(ItemStack::isEmpty);
+            if (moved == 0 && depositVisited >= container.getContainerSize()) {
+                depositVisited = 0;
+                Collections.rotate(bufferedDrops, -1);
+                if (++blockedCargo >= bufferedDrops.size()) {
+                    blockedCargo = 0;
+                    nextDepositCheck = level.getGameTime() + 20 + Math.floorMod(subject.getId(), 5);
+                }
+            } else if (moved > 0) blockedCargo = 0;
             saveOrder();
             var onlySeeds = bufferedDrops.stream().allMatch(this::isSeed)
                     && bufferedDrops.stream().mapToInt(ItemStack::getCount).sum() <= 16;
@@ -1302,6 +1499,7 @@ public final class GroupControlRuntime {
 
         private void finish(GroupControlTaskEvent.Status status) {
             if (closed) return;
+            if (settings != null) { finishPersistent(status); return; }
             removeOrder();
             var server = subject.level() instanceof ServerLevel level ? level.getServer() : null;
             ServerPlayer controller = server == null
@@ -1328,15 +1526,8 @@ public final class GroupControlRuntime {
         @Override
         public void close() {
             if (closed) return;
+            if (settings != null) { finishPersistent(GroupControlTaskEvent.Status.CANCELLED); return; }
             removeOrder();
-            if (settings != null && subject.level() instanceof ServerLevel level) {
-                var controller = level.getServer().getPlayerList().getPlayer(controllerId);
-                if (controller != null) deliverToController(controller);
-                else {
-                    for (var stack : bufferedDrops) Block.popResource(level, subject.blockPosition(), stack);
-                    bufferedDrops.clear();
-                }
-            }
             if (command instanceof GroupControlCommand.Farm(var region)) {
                 var server = subject.level() instanceof ServerLevel level ? level.getServer() : null;
                 ServerPlayer controller = server == null
@@ -1354,11 +1545,61 @@ public final class GroupControlRuntime {
             if (closed) return;
             closed = true;
             closeMovement();
+            releaseTarget();
+            if (moveSearch != null) moveSearch.close();
+            moveSearch = null;
+            GroupControlNavigation.cancel(subject);
+            releaseExclusiveWorkOrder();
+            TASKS.remove(key, this);
+            READY.remove(this);
+            SCOPES.remove(scopeId);
+            if (sharedWork != null && --sharedWork.workers == 0) {
+                sharedWork.indexChunks(false);
+                WORK_GROUPS.remove(new WorkGroupKey(controllerId, source, sharedWork.orderId), sharedWork);
+            }
+        }
+
+        private void releaseTarget() {
+            releaseEntity();
             if (sharedWork != null && sharedWork.mining != null) sharedWork.mining.release(subject.getUUID());
             else if (sharedWork != null && currentBlock != null) sharedWork.defer(currentBlock);
             currentBlock = null;
-            releaseExclusiveWorkOrder();
-            TASKS.remove(key, this);
+            miningProgressTicks = 0;
+            clearWorkApproach();
+        }
+
+        private Entity selectWorkEntity(Predicate<Entity> filter) {
+            if (workEntity != null && sharedWork.validEntity(workEntity)
+                    && subject.getUUID().equals(sharedWork.entityClaims.get(workEntity.getUUID())) && filter.test(workEntity)) return workEntity;
+            releaseEntity();
+            sharedWork.scanEntities((ServerLevel) subject.level());
+            Entity nearest = null;
+            double distance = Double.MAX_VALUE;
+            var budget = WorkScheduling.budget((ServerLevel) subject.level());
+            var next = entityCandidateCursor == null ? sharedWork.entities.firstEntry() : sharedWork.entities.higherEntry(entityCandidateCursor);
+            int count = 0;
+            while (next != null && count++ < 32 && budget.spend(WorkBudget.Operation.CLAIM)) {
+                entityCandidateCursor = next.getKey();
+                var candidate = next.getValue();
+                if (!sharedWork.validEntity(candidate)) {
+                    sharedWork.entities.remove(next.getKey());
+                    sharedWork.entityClaims.remove(next.getKey());
+                } else if (!sharedWork.entityClaims.containsKey(next.getKey()) && filter.test(candidate)) {
+                    double candidateDistance = subject.distanceToSqr(candidate);
+                    if (candidateDistance < distance) { nearest = candidate; distance = candidateDistance; }
+                }
+                next = sharedWork.entities.higherEntry(entityCandidateCursor);
+            }
+            entitySelectionDeferred = next != null;
+            if (next == null || nearest != null) entityCandidateCursor = null;
+            workEntity = nearest;
+            if (nearest != null) sharedWork.entityClaims.put(nearest.getUUID(), subject.getUUID());
+            return workEntity;
+        }
+
+        private void releaseEntity() {
+            if (workEntity != null && sharedWork != null) sharedWork.entityClaims.remove(workEntity.getUUID(), subject.getUUID());
+            workEntity = null;
         }
     }
 
@@ -1375,6 +1616,7 @@ public final class GroupControlRuntime {
         @SubscribeEvent
         public static void onServerStopped(ServerStoppedEvent event) {
             clear();
+            GroupControlNavigation.clear(event.getServer());
         }
     }
 
@@ -1385,26 +1627,60 @@ public final class GroupControlRuntime {
     }
 
     private static final class SharedWorkPlan {
+        private String orderId = UUID.randomUUID().toString();
+        private int workers;
         private static final int FARM_SCAN_INTERVAL_TICKS = 20;
         private final BlockWorkRegion region;
         private final boolean farming;
         private MiningWorkPlan mining;
         private long surfaceTick = Long.MIN_VALUE;
         private final Map<BlockPos, Boolean> surfaces = new HashMap<>();
-        private final ArrayDeque<BlockPos> pending = new ArrayDeque<>();
+        private final LinkedHashSet<BlockPos> pending = new LinkedHashSet<>();
         private final Set<BlockPos> queued = new HashSet<>();
         private final Set<BlockPos> claimed = new HashSet<>();
-        private List<BlockPos> containerPositions;
+        private final LinkedHashSet<BlockPos> containerPositions = new LinkedHashSet<>();
+        private Iterator<BlockPos> containerScan;
+        private long nextContainerScan, containerScanTick = Long.MIN_VALUE;
         private long nextFarmScanTick = Long.MIN_VALUE;
+        private Iterator<BlockPos> scan;
+        private long scanTick = Long.MIN_VALUE;
+        private boolean scanCompleted, scanUnloaded;
+        private final LinkedHashSet<BlockPos> changedBlocks = new LinkedHashSet<>();
+        private final TreeMap<UUID, Entity> entities = new TreeMap<>();
+        private final Map<UUID, UUID> entityClaims = new HashMap<>();
+        private org.academy.api.server.ability.SectionEntityIndex<Entity>.Cursor entityScan;
+        private long nextEntityScan, entityScanTick = Long.MIN_VALUE;
+        private boolean entitiesScanned;
 
         private SharedWorkPlan(BlockWorkRegion region, boolean farming) {
             this.region = region;
             this.farming = farming;
-            if (!farming) {
-                for (var pos : BlockPos.betweenClosed(region.minimum(), region.maximum())) {
-                    queue(pos);
+            if (!farming) scan = BlockPos.betweenClosed(region.minimum(), region.maximum()).iterator();
+        }
+
+        private void indexChunks(boolean add) {
+            var chunks = WORK_CHUNKS.computeIfAbsent(region.dimension(), unused -> new HashMap<>());
+            for (int x = region.minimum().getX() >> 4; x <= region.maximum().getX() >> 4; x++) {
+                for (int z = region.minimum().getZ() >> 4; z <= region.maximum().getZ() >> 4; z++) {
+                    long key = chunkKey(x, z);
+                    if (add) chunks.computeIfAbsent(key, unused -> new HashSet<>()).add(this);
+                    else {
+                        var groups = chunks.get(key);
+                        if (groups != null) { groups.remove(this); if (groups.isEmpty()) chunks.remove(key); }
+                    }
                 }
             }
+            if (chunks.isEmpty()) WORK_CHUNKS.remove(region.dimension());
+        }
+
+        private void changed(BlockPos pos) {
+            if (pos.getX() < region.minimum().getX() || pos.getX() > region.maximum().getX()
+                    || pos.getY() < region.minimum().getY() || pos.getY() > region.maximum().getY()
+                    || pos.getZ() < region.minimum().getZ() || pos.getZ() > region.maximum().getZ()) return;
+            surfaces.remove(pos);
+            if (mining != null) mining.changed(pos);
+            else changedBlocks.add(pos.immutable());
+            nextContainerScan = 0;
         }
 
         private static SharedWorkPlan create(GroupControlCommand command) {
@@ -1432,18 +1708,53 @@ public final class GroupControlRuntime {
             });
         }
 
+        private boolean validEntity(Entity entity) {
+            return !entity.isRemoved() && entity.isAlive() && entity.level().dimension().identifier().equals(region.dimension())
+                    && entity.getX() >= region.minimum().getX() && entity.getX() < region.maximum().getX() + 1.0
+                    && entity.getY() >= region.minimum().getY() && entity.getY() < region.maximum().getY() + 1.0
+                    && entity.getZ() >= region.minimum().getZ() && entity.getZ() < region.maximum().getZ() + 1.0;
+        }
+
+        private void scanEntities(ServerLevel level) {
+            long now = level.getGameTime();
+            if (entityScanTick == now || entityScan == null && now < nextEntityScan) return;
+            entityScanTick = now;
+            if (entityScan == null) {
+                var center = Vec3.atCenterOf(region.center());
+                entityScan = WorkEntityIndex.get(level).cursor(center.x, center.y, center.z, 32);
+            }
+            var budget = WorkScheduling.budget(level);
+            for (int i = 0; i < 32 && !entityScan.finished() && budget.spend(WorkBudget.Operation.ENTITY); i++) {
+                var entity = entityScan.next();
+                if (entity != null && validEntity(entity)) entities.put(entity.getUUID(), entity);
+            }
+            if (entityScan.finished()) { entityScan = null; entitiesScanned = true; nextEntityScan = now + 20; }
+        }
+
+        private boolean entityScanPending() { return !entitiesScanned || entityScan != null; }
+
+
         private synchronized void queue(BlockPos position) {
             var immutable = position.immutable();
             if (queued.contains(immutable) || claimed.contains(immutable)) return;
             queued.add(immutable);
-            pending.addLast(immutable);
+            pending.add(immutable);
         }
 
         private synchronized BlockPos claimNearest(LivingEntity subject) {
+            var budget = WorkScheduling.budget((ServerLevel) subject.level());
+            if (!farming && scan != null && scanTick != subject.level().getGameTime()) {
+                scanTick = subject.level().getGameTime();
+                for (int i = 0; i < 64 && scan.hasNext() && budget.spend(WorkBudget.Operation.BLOCK); i++) queue(scan.next());
+                if (!scan.hasNext()) { scan = null; scanCompleted = true; }
+            }
             if (pending.isEmpty()) return null;
             BlockPos nearest = null;
             var nearestDistance = Double.MAX_VALUE;
-            for (var candidate : pending) {
+            int candidates = Math.min(32, pending.size());
+            while (candidates-- > 0 && budget.spend(WorkBudget.Operation.CLAIM)) {
+                var candidate = pending.removeFirst();
+                pending.add(candidate);
                 var distance = subject.distanceToSqr(Vec3.atCenterOf(candidate));
                 if (distance < nearestDistance) {
                     nearest = candidate;
@@ -1468,7 +1779,7 @@ public final class GroupControlRuntime {
         }
 
         private synchronized boolean hasPending() {
-            return !pending.isEmpty();
+            return !pending.isEmpty() || !farming && scan != null;
         }
 
         private synchronized int pendingCount() {
@@ -1477,33 +1788,58 @@ public final class GroupControlRuntime {
 
         private synchronized void refreshFiltered(Level level, long now, int interval,
                                                   BiPredicate<BlockPos, BlockState> filter) {
-            if (now < nextFarmScanTick) return;
-            nextFarmScanTick = now + interval;
-            for (var pos : BlockPos.betweenClosed(region.minimum(), region.maximum())) {
-                if (level.hasChunkAt(pos) && filter.test(pos, level.getBlockState(pos))) queue(pos);
+            if (scanTick == now || scan == null && changedBlocks.isEmpty() && now < nextFarmScanTick) return;
+            if (scan == null) {
+                scan = BlockPos.betweenClosed(region.minimum(), region.maximum()).iterator();
+                scanUnloaded = false;
+            }
+            scanTick = now;
+            var budget = WorkScheduling.budget((ServerLevel) level);
+            int visited = 0;
+            while (!changedBlocks.isEmpty() && visited < 64 && budget.spend(WorkBudget.Operation.BLOCK)) {
+                var pos = changedBlocks.removeFirst();
+                if (!level.hasChunkAt(pos)) scanUnloaded = true;
+                else if (filter.test(pos, level.getBlockState(pos))) queue(pos);
+                else { pending.remove(pos); queued.remove(pos); }
+                visited++;
+            }
+            while (scan.hasNext() && visited++ < 64 && budget.spend(WorkBudget.Operation.BLOCK)) {
+                var pos = scan.next();
+                if (!level.hasChunkAt(pos)) { scanUnloaded = true; continue; }
+                if (filter.test(pos, level.getBlockState(pos))) queue(pos);
+                else { pending.remove(pos); queued.remove(pos); }
+            }
+            if (!scan.hasNext()) {
+                scan = null;
+                scanCompleted = true;
+                nextFarmScanTick = now + interval;
             }
         }
+
+        private boolean scanning() { return !scanCompleted || scan != null || scanUnloaded || !changedBlocks.isEmpty(); }
 
         private synchronized void refreshCrops(Level level, long now) {
-            if (!farming || now < nextFarmScanTick) return;
-            nextFarmScanTick = now + FARM_SCAN_INTERVAL_TICKS;
-            for (var pos : BlockPos.betweenClosed(region.minimum(), region.maximum())) {
-                var state = level.getBlockState(pos);
-                if (state.getBlock() instanceof CropBlock crop && crop.isMaxAge(state)) queue(pos);
-            }
+            if (farming) refreshFiltered(level, now, FARM_SCAN_INTERVAL_TICKS,
+                    (pos, state) -> state.getBlock() instanceof CropBlock crop && crop.isMaxAge(state));
         }
 
-        private synchronized List<BlockPos> containerPositions(ServerLevel level) {
-            if (containerPositions == null) {
-                var found = new ArrayList<BlockPos>();
-                for (var pos : BlockPos.betweenClosed(region.minimum(), region.maximum())) {
-                    if (HopperBlockEntity.getContainerAt(level, pos) != null) {
-                        found.add(pos.immutable());
-                    }
+        private synchronized BlockPos nextContainer(ServerLevel level) {
+            long now = level.getGameTime();
+            if (containerScanTick != now && (containerScan != null || now >= nextContainerScan)) {
+                containerScanTick = now;
+                if (containerScan == null) containerScan = BlockPos.betweenClosed(region.minimum(), region.maximum()).iterator();
+                var budget = WorkScheduling.budget(level);
+                for (int i = 0; i < 64 && containerScan.hasNext() && budget.spend(WorkBudget.Operation.BLOCK); i++) {
+                    var pos = containerScan.next();
+                    if (level.hasChunkAt(pos) && HopperBlockEntity.getContainerAt(level, pos) != null) containerPositions.add(pos.immutable());
+                    else containerPositions.remove(pos);
                 }
-                containerPositions = List.copyOf(found);
+                if (!containerScan.hasNext()) { containerScan = null; nextContainerScan = now + 100; }
             }
-            return containerPositions;
+            if (containerPositions.isEmpty()) return null;
+            var next = containerPositions.removeFirst();
+            containerPositions.add(next);
+            return next;
         }
     }
 }

@@ -240,6 +240,224 @@ public final class MentaloutGameTests {
     }
 
     private enum Scenario {
+        WORK_TICK_CLOCK("work_tick_clock", 20) {
+            @Override void run(GameTestHelper helper) {
+                var level = helper.getLevel();
+                var budget = WorkScheduling.budget(level);
+                var before = budget.metrics();
+                long gameTime = level.getGameTime();
+                var levelData = (net.minecraft.world.level.storage.ServerLevelData) level.getLevelData();
+                try {
+                    levelData.setGameTime(gameTime + 1);
+                    var after = WorkScheduling.budget(level).metrics();
+                    helper.assertTrue(before.tick() == after.tick() && java.util.Arrays.equals(before.used(), after.used()),
+                            "Advancing world time inside a server tick reset the shared budget");
+                    var nether = level.getServer().getLevel(net.minecraft.world.level.Level.NETHER);
+                    helper.assertTrue(nether != null && WorkScheduling.budget(nether) == budget,
+                            "Different dimensions obtained independent server budgets");
+                } finally { levelData.setGameTime(gameTime); }
+                helper.succeed();
+            }
+        },
+        WORK_RETURN_FAIRNESS("work_return_fairness", 100) {
+            @Override void run(GameTestHelper helper) {
+                var controller = createController(helper);
+                var server = helper.getLevel().getServer();
+                var data = WorkOrderData.get(server);
+                for (int slot = 0; slot < controller.getInventory().getNonEquipmentItems().size(); slot++) {
+                    controller.getInventory().setItem(slot, new ItemStack(Items.COBBLESTONE, 64));
+                }
+                var keys = new ArrayList<String>();
+                var pos = helper.absolutePos(BlockPos.ZERO);
+                for (int i = 0; i < 32; i++) {
+                    var cargo = new ArrayList<ItemStack>();
+                    if (i < 8) for (int stack = 0; stack < 64; stack++) cargo.add(new ItemStack(Items.DIAMOND, 64));
+                    var entry = new WorkOrderData.Entry(controller.getUUID().toString(), UUID.randomUUID().toString(), SOURCE,
+                            helper.getLevel().dimension().identifier(), pos, pos, WorkSettings.defaults(), 100, false, cargo).asReturning();
+                    data.put(entry); keys.add(entry.key());
+                }
+                helper.runAtTickTime(40, () -> {
+                    helper.assertTrue(data.entries().stream().noneMatch(entry -> entry.key().equals(keys.get(8))),
+                            "Slow cargo returns starved later entries in the recovery cursor");
+                    keys.forEach(data::remove);
+                    server.getPlayerList().remove(controller);
+                    helper.succeed();
+                });
+            }
+        },
+        WORK_SPLIT_RESTORE("work_split_restore", 160) {
+            @Override void run(GameTestHelper helper) {
+                var controller = createController(helper);
+                var first = helper.spawn(EntityTypes.VILLAGER, 2, 2, 1);
+                var second = helper.spawn(EntityTypes.VILLAGER, 3, 2, 1);
+                MentalControlMemory.remember(controller, first);
+                var region = new BlockWorkRegion(helper.getLevel().dimension().identifier(),
+                        helper.absolutePos(new BlockPos(2, 2, 1)), helper.absolutePos(new BlockPos(5, 2, 1)));
+                GroupControlApi.dispatch(new GroupControlRequest(controller, SOURCE, List.of(first, second),
+                        new GroupControlCommand.Work(region, WorkSettings.defaults()), 1000));
+                GroupControlRuntime.clear();
+                MentalControlMemory.forget(controller, second);
+                helper.runAtTickTime(20, () -> {
+                    helper.assertTrue(GroupControlApi.inspect(first).isPresent(), "First recovery wave did not start");
+                    helper.assertTrue(GroupControlApi.inspect(second).isEmpty(), "Uncontrolled worker must not resume");
+                    MentalControlMemory.remember(controller, second);
+                });
+                helper.runAtTickTime(50, () -> {
+                    helper.assertTrue(GroupControlApi.inspect(second).isPresent(), "Second recovery wave did not start");
+                    helper.assertValueEqual(GroupControlRuntime.activeWorkGroups(), 1, "Recovery waves created independent claim tables");
+                    GroupControlApi.cancelWork(helper.getLevel().getServer(), controller.getUUID(), Set.of(first.getUUID(), second.getUUID()));
+                    helper.getLevel().getServer().getPlayerList().remove(controller);
+                    helper.succeed();
+                });
+            }
+        },
+        WORK_FARM_PAUSE("work_farm_pause", 200) {
+            @Override void run(GameTestHelper helper) {
+                var controller = createController(helper);
+                var first = helper.spawn(EntityTypes.VILLAGER, 1, 2, 1);
+                var second = helper.spawn(EntityTypes.VILLAGER, 2, 2, 1);
+                var pos = helper.absolutePos(new BlockPos(10, 2, 1));
+                helper.getLevel().setBlock(pos.below(), Blocks.FARMLAND.defaultBlockState(), 3);
+                helper.getLevel().setBlock(pos, ((net.minecraft.world.level.block.CropBlock) Blocks.WHEAT).getStateForAge(7), 3);
+                var settings = new WorkSettings(WorkSettings.Mode.FARMING, true, true, false, false, List.of(), Optional.empty(), Optional.empty());
+                var region = new BlockWorkRegion(helper.getLevel().dimension().identifier(), pos, pos);
+                GroupControlApi.dispatch(new GroupControlRequest(controller, SOURCE, List.of(first, second),
+                        new GroupControlCommand.Work(region, settings), 1000));
+                var paused = new LivingEntity[1];
+                helper.runAtTickTime(5, () -> {
+                    paused[0] = GroupControlApi.inspect(first).orElseThrow().currentBlock().isPresent() ? first : second;
+                    GroupControlApi.pauseWork(helper.getLevel().getServer(), controller.getUUID(), Set.of(paused[0].getUUID()), true);
+                    helper.assertTrue(GroupControlApi.inspect(paused[0]).orElseThrow().currentBlock().isEmpty(), "Paused farm retained its claim");
+                });
+                helper.runAtTickTime(140, () -> {
+                    helper.assertTrue(helper.getLevel().getBlockState(pos).isAir(), "Other worker could not acquire the released crop");
+                    helper.assertTrue(MentalControlApi.hasAiTakeover(paused[0]), "Pause released exclusive AI control");
+                    GroupControlApi.cancelWork(helper.getLevel().getServer(), controller.getUUID(), Set.of(first.getUUID(), second.getUUID()));
+                    helper.getLevel().getServer().getPlayerList().remove(controller);
+                    helper.succeed();
+                });
+            }
+        },
+        WORK_DISK_SAVE("work_disk_save", 100) {
+            @Override void run(GameTestHelper helper) {
+                try {
+                    var folder = helper.getLevel().getServer().getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT)
+                            .resolve("mental-work-storage-test");
+                    java.nio.file.Files.createDirectories(folder);
+                    var owner = UUID.randomUUID(); var worker = UUID.randomUUID();
+                    var data = new WorkOrderData();
+                    var entry = new WorkOrderData.Entry(owner.toString(), worker.toString(), SOURCE,
+                            helper.getLevel().dimension().identifier(), BlockPos.ZERO, BlockPos.ZERO,
+                            WorkSettings.defaults(), 100, true, List.of(new ItemStack(Items.DIAMOND, 9))).asReturning();
+                    data.put(entry);
+                    try (var storage = new net.minecraft.world.level.storage.SavedDataStorage(folder,
+                            net.minecraft.util.datafix.DataFixers.getDataFixer(), helper.getLevel().registryAccess())) {
+                        storage.set(WorkOrderData.TYPE, data);
+                        storage.saveAndJoin();
+                    }
+                    try (var storage = new net.minecraft.world.level.storage.SavedDataStorage(folder,
+                            net.minecraft.util.datafix.DataFixers.getDataFixer(), helper.getLevel().registryAccess())) {
+                        var restored = storage.computeIfAbsent(WorkOrderData.TYPE).selected(owner, List.of(worker));
+                        helper.assertValueEqual(restored.size(), 1, "Disk reload lost the pending return");
+                        helper.assertValueEqual(restored.getFirst().cargo().getFirst().getCount(), 9, "Disk reload changed cargo");
+                        helper.assertTrue(restored.getFirst().paused() && restored.getFirst().returning(), "Disk reload resumed a cancelled order");
+                        helper.assertTrue(restored.getFirst().orderId().equals(entry.orderId()), "Order identity changed across disk reload");
+                    }
+                    helper.succeed();
+                } catch (java.io.IOException failure) { throw new IllegalStateException(failure); }
+            }
+        },
+        WORK_NAVIGATION_BUDGET("work_navigation_budget", 400) {
+            @Override void run(GameTestHelper helper) {
+                var controller = createController(helper);
+                for (int x = 0; x < 24; x++) for (int z = 0; z < 20; z++) helper.setBlock(x, 1, z, Blocks.STONE);
+                var searches = new ArrayList<GroupControlNavigation.Search>();
+                var workers = new ArrayList<Mob>();
+                var controls = new ArrayList<ControlHandle>();
+                for (int i = 0; i < 16; i++) {
+                    var worker = helper.spawn(EntityTypes.VILLAGER, 1 + i % 4, 2, 1 + i / 4);
+                    // GameTest can evaluate before the first physics tick; these feet are on the test floor.
+                    worker.setOnGround(true);
+                    controls.add(MentalControlApi.apply(ControlRequest.permanent(controller, worker, SOURCE, 1000,
+                            new ControlDirective.TakeoverAi())));
+                    workers.add(worker);
+                    searches.add(GroupControlNavigation.workSearch(worker, helper.absolutePos(new BlockPos(16, 1, 2 + i))));
+                }
+                var completed = new java.util.HashSet<Integer>();
+                var deferred = new AtomicInteger();
+                var warmup = new AtomicInteger();
+                helper.onEachTick(() -> {
+                    if (warmup.incrementAndGet() <= 5) return;
+                    for (int i = 0; i < searches.size(); i++) {
+                        if (completed.contains(i)) continue;
+                        var result = searches.get(i).poll();
+                        if (result.status() == GroupControlNavigation.Status.DEFERRED) { deferred.incrementAndGet(); continue; }
+                        helper.assertTrue(result.status() == GroupControlNavigation.Status.READY,
+                                "Reachable work position failed: " + result.status() + " worker=" + i
+                                        + " pos=" + workers.get(i).position() + " grounded=" + workers.get(i).onGround());
+                        helper.assertTrue(GroupControlNavigation.takePreparedPath(workers.get(i), result.position()) == result.path(),
+                                "Standing-position path must be reused by its worker");
+                        helper.assertTrue(GroupControlNavigation.takePreparedPath(workers.get(i), result.position()) == null,
+                                "Mutable path must be transferred exactly once");
+                        searches.get(i).close();
+                        completed.add(i);
+                    }
+                    var used = WorkScheduling.budget(helper.getLevel()).metrics().used();
+                    helper.assertTrue(used[WorkBudget.Operation.PATH.ordinal()] <= 4, "Per-level path budget exceeded");
+                    if (completed.size() == searches.size()) {
+                        helper.assertTrue(deferred.get() > 0, "Batch must exercise queued navigation");
+                        controls.forEach(ControlHandle::close);
+                        helper.getLevel().getServer().getPlayerList().remove(controller);
+                        helper.succeed();
+                    }
+                });
+            }
+        },
+        WORK_OFFLINE_CARGO("work_offline_cargo", 100) {
+            @Override void run(GameTestHelper helper) {
+                var server = helper.getLevel().getServer();
+                var controller = createController(helper);
+                var ownerId = controller.getUUID();
+                var worker = UUID.randomUUID();
+                var pos = helper.absolutePos(BlockPos.ZERO);
+                var cargo = new ItemStack(Items.DIAMOND, 7);
+                var entry = new WorkOrderData.Entry(ownerId.toString(), worker.toString(), SOURCE,
+                        helper.getLevel().dimension().identifier(), pos, pos, WorkSettings.defaults(), 100, false, List.of(cargo));
+                cargo.setCount(0);
+                var data = WorkOrderData.get(server);
+                data.put(entry);
+                server.getPlayerList().remove(controller);
+                GroupControlApi.cancelWork(server, ownerId, Set.of(worker));
+                var saved = data.selected(ownerId, List.of(worker));
+                helper.assertValueEqual(saved.size(), 1, "Offline cancellation discarded the cargo record");
+                helper.assertTrue(saved.getFirst().returning(), "Cancelled work must not resume production");
+                helper.assertValueEqual(saved.getFirst().cargo().getFirst().getCount(), 7, "Cargo snapshot aliased mutable input");
+                var ops = helper.getLevel().registryAccess().createSerializationContext(JsonOps.INSTANCE);
+                var restored = WorkOrderData.CODEC.parse(ops, WorkOrderData.CODEC.encodeStart(ops, data).getOrThrow()).getOrThrow();
+                helper.assertValueEqual(restored.selected(ownerId, List.of(worker)).getFirst().cargo().getFirst().getCount(), 7,
+                        "Pending return did not survive encoding");
+                data.remove(saved.getFirst().key());
+                helper.succeed();
+            }
+        },
+        WORK_LOGISTICS_BUDGET("work_logistics_budget", 100) {
+            @Override void run(GameTestHelper helper) {
+                var container = new net.minecraft.world.SimpleContainer(100);
+                for (int i = 0; i < 99; i++) container.setItem(i, new ItemStack(Items.STONE, 64));
+                var cargo = new ItemStack(Items.DIAMOND, 31);
+                var budget = new WorkBudget(() -> 0, 100);
+                int slot = 0;
+                for (int tick = 0; tick < 7; tick++) {
+                    budget.beginTick(tick);
+                    var result = WorkInventoryTransfer.insert(container, cargo, slot, 16, budget);
+                    helper.assertTrue(result.visited() <= 16, "A logistics slice exceeded its slot budget");
+                    slot = result.nextSlot();
+                }
+                helper.assertTrue(cargo.isEmpty(), "Cursor never reached the final empty slot");
+                helper.assertValueEqual(container.getItem(99).getCount(), 31, "Insertion duplicated or lost cargo");
+                helper.succeed();
+            }
+        },
         WORK_ENDURANCE("work_endurance", 72500) {
             @Override void run(GameTestHelper helper) {
                 var controller = createController(helper);

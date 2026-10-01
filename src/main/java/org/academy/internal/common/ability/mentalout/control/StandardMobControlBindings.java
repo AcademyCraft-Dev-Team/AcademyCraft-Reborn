@@ -613,6 +613,9 @@ final class StandardMobControlBindings {
         private BlockPos requestedTarget;
         private UUID requestedEntity;
         private Path activePath;
+        private GroupControlNavigation.Search pathSearch;
+        private long deferredAt = Long.MIN_VALUE;
+        private int pathFailures;
         private long nextPathAttemptTime;
         private long nextDynamicPathRefreshTime;
         private long nextDirectProgressCheckTime;
@@ -655,9 +658,11 @@ final class StandardMobControlBindings {
                     || targetEntity != null && positionChanged
                     && gameTime >= nextDynamicPathRefreshTime;
             if (changed) {
+                closeSearch();
                 requestedTarget = targetBlock;
                 requestedEntity = targetEntity;
-                activePath = null;
+                activePath = targetEntity == null ? GroupControlNavigation.takePreparedPath(mob, target.position()) : null;
+                pathFailures = 0;
                 directApproach = false;
                 lastProgressTime = gameTime;
                 bestDistanceSqr = mob.position().distanceToSqr(target.position());
@@ -727,10 +732,21 @@ final class StandardMobControlBindings {
                         : NavigationResult.MOVING;
             }
 
-            activePath = target.entity() != null
-                    ? navigation.createPath(target.entity(), reachRange)
-                    : navigation.createPath(targetBlock, reachRange);
-            nextPathAttemptTime = gameTime + REPATH_INTERVAL_TICKS;
+            if (pathSearch == null) pathSearch = GroupControlNavigation.pathSearch(mob, target.position(), reachRange);
+            var pathResult = pathSearch.poll();
+            if (pathResult.status() == GroupControlNavigation.Status.DEFERRED) {
+                if (deferredAt != Long.MIN_VALUE) lastProgressTime += Math.max(0, gameTime - deferredAt);
+                deferredAt = gameTime;
+                return NavigationResult.MOVING;
+            }
+            if (deferredAt != Long.MIN_VALUE) lastProgressTime += Math.max(0, gameTime - deferredAt);
+            closeSearch();
+            activePath = pathResult.path();
+            if (activePath == null) pathFailures = Math.min(4, pathFailures + 1);
+            else pathFailures = 0;
+            nextPathAttemptTime = gameTime + (activePath == null
+                    ? (10L << Math.max(0, pathFailures - 1)) + Math.floorMod(mob.getId(), 5)
+                    : REPATH_INTERVAL_TICKS);
             if (activePath == null) {
                 activePath = null;
                 if (isCubeMob()) return advanceDirect(target, speed);
@@ -921,10 +937,17 @@ final class StandardMobControlBindings {
         }
 
         private void stop() {
+            closeSearch();
             mob.getNavigation().stop();
             activePath = null;
             directApproach = false;
             stopSpecialMovement();
+        }
+
+        private void closeSearch() {
+            if (pathSearch != null) pathSearch.close();
+            pathSearch = null;
+            deferredAt = Long.MIN_VALUE;
         }
 
         private NavigationResult recordFailure() {

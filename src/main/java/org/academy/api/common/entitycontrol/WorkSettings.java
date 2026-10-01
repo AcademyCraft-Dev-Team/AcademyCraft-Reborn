@@ -14,11 +14,38 @@ import net.minecraft.world.level.block.state.BlockState;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Map;
+import java.util.WeakHashMap;
+import java.util.ArrayList;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.level.block.Block;
 
 /** Immutable, validated settings shared by RTS orders, adapters and precision programs. */
 public record WorkSettings(Mode mode, boolean repeat, boolean harvest, boolean replant,
                            boolean denyList, List<String> filters,
                            Optional<BlockPos> input, Optional<BlockPos> output, MiningReach miningReach) {
+    private static final Map<WorkSettings, CompiledFilters> COMPILED = new WeakHashMap<>();
+    private static final class CompiledFilters {
+        final List<Identifier> ids = new ArrayList<>();
+        final List<TagKey<Block>> blocks = new ArrayList<>();
+        final List<TagKey<Item>> items = new ArrayList<>();
+        final List<TagKey<EntityType<?>>> entities = new ArrayList<>();
+        CompiledFilters(List<String> filters) {
+            for (var filter : filters) {
+                if (filter.startsWith("#")) {
+                    var id = Identifier.parse(filter.substring(1));
+                    blocks.add(TagKey.create(Registries.BLOCK, id));
+                    items.add(TagKey.create(Registries.ITEM, id));
+                    entities.add(TagKey.create(Registries.ENTITY_TYPE, id));
+                } else ids.add(Identifier.parse(filter));
+            }
+        }
+    }
+    private CompiledFilters compiled() {
+        // Cache only identifiers and tag keys. Holder membership stays live across data reloads.
+        synchronized (COMPILED) { return COMPILED.computeIfAbsent(this, settings -> new CompiledFilters(settings.filters)); }
+    }
     public enum Mode {
         MINING, FARMING, LOGGING, SUGAR_CANE, CLEARING, SHEARING, MILKING, FEEDING, COLLECT;
         public boolean animals() { return this == SHEARING || this == MILKING || this == FEEDING; }
@@ -70,25 +97,25 @@ public record WorkSettings(Mode mode, boolean repeat, boolean harvest, boolean r
 
     public boolean matches(ItemStack stack) {
         if (filters.isEmpty()) return true;
-        var matched = filters.stream().anyMatch(filter -> filter.startsWith("#")
-                ? stack.is(TagKey.create(Registries.ITEM, Identifier.parse(filter.substring(1))))
-                : BuiltInRegistries.ITEM.getKey(stack.getItem()).equals(Identifier.parse(filter)));
+        var compiled = compiled();
+        var matched = compiled.ids.contains(BuiltInRegistries.ITEM.getKey(stack.getItem()))
+                || compiled.items.stream().anyMatch(stack::is);
         return denyList != matched;
     }
 
     public boolean matches(LivingEntity entity) {
         if (filters.isEmpty()) return true;
-        var matched = filters.stream().anyMatch(filter -> filter.startsWith("#")
-                ? entity.getType().builtInRegistryHolder().is(TagKey.create(Registries.ENTITY_TYPE, Identifier.parse(filter.substring(1))))
-                : BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).equals(Identifier.parse(filter)));
+        var compiled = compiled();
+        var matched = compiled.ids.contains(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()))
+                || compiled.entities.stream().anyMatch(tag -> entity.getType().builtInRegistryHolder().is(tag));
         return denyList != matched;
     }
 
     public boolean matches(BlockState state) {
         if (filters.isEmpty()) return true;
-        var matched = filters.stream().anyMatch(filter -> filter.startsWith("#")
-                ? state.is(TagKey.create(Registries.BLOCK, Identifier.parse(filter.substring(1))))
-                : BuiltInRegistries.BLOCK.getKey(state.getBlock()).equals(Identifier.parse(filter)));
+        var compiled = compiled();
+        var matched = compiled.ids.contains(BuiltInRegistries.BLOCK.getKey(state.getBlock()))
+                || compiled.blocks.stream().anyMatch(state::is);
         return denyList != matched;
     }
 }

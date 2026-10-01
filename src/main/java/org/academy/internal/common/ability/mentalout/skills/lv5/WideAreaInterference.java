@@ -210,8 +210,11 @@ public final class WideAreaInterference extends Skill {
             if (packet.action == Action.QUERY_WORK) {
                 var payload = new JsonObject();
                 var states = new JsonObject();
-                for (var entry : WorkOrderData.get(controller.level().getServer()).entries().stream()
-                        .sorted(Comparator.comparingInt(entry -> packet.targets.indexOf(UUID.fromString(entry.subject())))).toList()) {
+                var selectedOrders = WorkOrderData.get(controller.level().getServer()).selected(controller.getUUID(), packet.targets);
+                var activeSubjects = selectedOrders.stream().filter(entry -> !entry.returning())
+                        .map(WorkOrderData.Entry::subject).collect(java.util.stream.Collectors.toSet());
+                for (var entry : selectedOrders) {
+                    if (entry.returning() && activeSubjects.contains(entry.subject())) continue;
                     if (!entry.controller().equals(controller.getUUID().toString())
                             || !packet.targets.contains(UUID.fromString(entry.subject()))) continue;
                     states.addProperty(entry.subject(), GroupControlRuntime.workStatus(entry));

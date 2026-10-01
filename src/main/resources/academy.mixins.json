@@ -44,6 +44,7 @@
     "common.MixinLevelTicksTemporalScaling",
     "common.MixinLevelTemporalScaling",
     "common.MixinLevelTimeImmunity",
+    "common.MixinLevelWorkTargets",
     "common.MixinMentalControlCanAttackOverrides",
     "common.MixinMinecraftServer",
     "common.MixinMisakaNetworkManager",

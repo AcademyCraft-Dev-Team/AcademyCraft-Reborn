@@ -1,0 +1,13 @@
+allprojects {
+    afterEvaluate {
+        neoForge.runs.named('clientDev') {
+            sourceSet.set(sourceSets.editor)
+            gameDirectory.set(file('run/mental-work-client'))
+            systemProperty 'academy.mentalWorkSmoke', 'true'
+            systemProperty 'academy.mentalWorkRequireRecovery', providers.gradleProperty('mentalWorkRequireRecovery').getOrElse('false')
+            systemProperty 'academy.mentalWorkTicks', providers.gradleProperty('mentalWorkTicks').getOrElse('6400')
+            systemProperty 'academy.mentalWorkOutput', file(providers.gradleProperty('mentalWorkOutput').getOrElse('build/mental-work-client-validation-final')).absolutePath
+            programArguments.addAll('--width', '1280', '--height', '720')
+        }
+    }
+}
