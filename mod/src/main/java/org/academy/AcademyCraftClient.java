@@ -435,7 +435,7 @@ public final class AcademyCraftClient {
 
     @SubscribeEvent
     public static void onResizeDisplay(ResizeDisplayEvent event) {
-        resize(event.getWidth(), event.getHeight());
+        if (Minecraft.getInstance().isGameLoadFinished()) resize(event.getWidth(), event.getHeight());
     }
 
     public static void resize(int width, int height) {
