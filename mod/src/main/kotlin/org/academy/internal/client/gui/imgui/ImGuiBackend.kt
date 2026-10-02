@@ -34,6 +34,7 @@ class ImGuiBackend(
     private val inputBackend: ImGuiInputBackend,
 ) {
     private var initialized = false
+    private var frameOpen = false
 
     private lateinit var fontTexture: GpuTexture
     private lateinit var fontTextureView: GpuTextureView
@@ -152,16 +153,38 @@ class ImGuiBackend(
     }
 
     fun render(renderTarget: RenderTarget, renderCommand: () -> Unit) {
-        val colorTextureView = renderTarget.getColorTextureView() ?: return
-        val device = RenderSystem.getDevice()
+        if (!initialized) return
+        beginFrame()
+        submit(renderCommand)
+        endFrame(renderTarget)
+    }
 
+    fun beginFrame() {
+        if (!initialized || frameOpen) return
         newFrame()
-
         inputBackend.newFrame()
         ImGui.newFrame()
+        frameOpen = true
+    }
+
+    fun submit(renderCommand: () -> Unit) {
+        if (!initialized || !frameOpen) return
         renderCommand()
+    }
+
+    fun ensureFrame() {
+        if (!initialized || frameOpen) return
+        beginFrame()
+    }
+
+    fun endFrame(renderTarget: RenderTarget) {
+        if (!initialized || !frameOpen) return
+        frameOpen = false
+
         ImGui.render()
 
+        val colorTextureView = renderTarget.getColorTextureView() ?: return
+        val device = RenderSystem.getDevice()
         val drawData = ImGui.getDrawData()
         if (drawData.cmdListsCount <= 0) return
 
@@ -412,6 +435,7 @@ class ImGuiBackend(
         if (::projMatrixUniform.isInitialized) projMatrixUniform.close()
         disposeFontResources()
 
+        frameOpen = false
         vertexBufferSize = 0
         indexBufferSize = 0
         fontAtlasPixels = null

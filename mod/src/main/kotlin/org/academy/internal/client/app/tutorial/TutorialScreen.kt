@@ -2,7 +2,10 @@ package org.academy.internal.client.app.tutorial
 
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
-import org.academy.api.client.gui.dsl.*
+import org.academy.api.client.gui.dsl.add
+import org.academy.api.client.gui.dsl.blendQuad
+import org.academy.api.client.gui.dsl.frame
+import org.academy.api.client.gui.dsl.lp
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.screen.UiScreen
@@ -22,7 +25,7 @@ class TutorialScreen private constructor() : UiScreen(Component.translatable("sc
                         sizeMode(SizeMode.MATCH_PARENT)
                     }
 
-                    alpha = 0.78f
+                    alpha = 0.5f
                 }
 
                 add("content", TutorialUi.create { onClose() })

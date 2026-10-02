@@ -1,6 +1,5 @@
 package org.academy.api.client.gui.imgui
 
-import com.mojang.blaze3d.pipeline.RenderTarget
 import imgui.ImGui
 import imgui.flag.ImGuiCol
 import imgui.flag.ImGuiCond
@@ -28,17 +27,6 @@ object ImGuiUIDebugger {
 
     fun setEnabled(value: Boolean) {
         enabled = value
-    }
-
-    fun renderHud(renderTarget: RenderTarget, roots: List<Pair<String, WidgetContainer>>) {
-        ImGuiUtilApi.render(renderTarget) {
-            for ((name, root) in roots) {
-                renderContent(
-                    root,
-                    tr("screen.academy.ui_debug.inspector.hud_title", name)
-                )
-            }
-        }
     }
 
     fun renderContent(root: WidgetContainer, title: String? = null) {

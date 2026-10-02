@@ -9,9 +9,6 @@ import org.academy.api.client.vanilla.RenderLoopEvent
 import org.academy.api.common.profiler.AcademyProfiler
 import org.academy.api.common.profiler.FrameStats
 
-/**
- * 客户端剖析接入：注册渲染线程、记录帧时间、注册窗口开关键位。
- */
 object ProfilerClientHooks {
     const val KEY_PROFILER_WINDOW: String = "profiler_window_toggle"
 
@@ -43,6 +40,6 @@ object ProfilerClientHooks {
 
     @RenderThread
     fun renderOverlay() {
-        ImGuiProfilerWindow.renderToMainScreen()
+        ImGuiProfilerWindow.submitToMainScreen()
     }
 }

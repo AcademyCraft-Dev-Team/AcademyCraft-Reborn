@@ -665,6 +665,7 @@ object TutorialUi {
                 lp {
                     width(1f)
                     heightMode(SizeMode.MATCH_PARENT)
+                    paddingBottom(4f)
                 }
             }
 
@@ -680,6 +681,7 @@ object TutorialUi {
                 lp {
                     width(1f)
                     heightMode(SizeMode.MATCH_PARENT)
+                    paddingBottom(4f)
                 }
             }
 

@@ -775,6 +775,56 @@ public final class R {
             }
         }
 
+        public static final class location_teleport {
+            public static final float panel_width = 420f;
+            public static final float panel_height = 236f;
+            public static final float content_width = 396f;
+            public static final float content_margin = 12f;
+            public static final float control_height = 20f;
+            public static final float row_height = 18f;
+            public static final float marks_height = 94f;
+            public static final float title_margin_top = 8f;
+            public static final float divider_margin_top = 24f;
+            public static final float name_margin_top = 32f;
+            public static final float coordinates_margin_top = 58f;
+            public static final float mark_actions_margin_top = 84f;
+            public static final float marks_margin_top = 108f;
+            public static final float bottom_actions_margin_top = 208f;
+            public static final float action_gap = 8f;
+            public static final float coordinate_gap = 4f;
+            public static final float quick_action_width = 50f;
+            public static final float defensive_action_width = 50f;
+            public static final float teleport_action_width = 24f;
+            public static final float remove_action_width = 18f;
+            public static final float text_inset = 6f;
+            public static final float quick_rail_width = 2f;
+            public static final float defensive_bracket_width = 4f;
+            public static final float scrollbar_width = 5f;
+            public static final float scrollbar_gap = 2f;
+            public static final float scroll_speed = 18f;
+            public static final float panel_alpha = 0.12f;
+            public static final int name_max_length = 64;
+            public static final int coordinate_max_length = 12;
+            public static final int border_color = 0xFF7680DE;
+            public static final int section_color = 0x14000000;
+            public static final int control_color = 0x0C000000;
+            public static final int input_color = 0x201F1F1F;
+            public static final int input_focused_color = 0x305A5A5A;
+            public static final int row_color = 0x18FFFFFF;
+            public static final int row_alternate_color = 0x10FFFFFF;
+            public static final int row_hover_color = 0x28FFFFFF;
+            public static final int row_selected_color = 0x30FFFFFF;
+            public static final int border_dim_color = 0x60FFFFFF;
+            public static final int text_color = 0xFFFFFFFF;
+            public static final int dim_color = 0xBFFFFFFF;
+            public static final int teleport_color = 0xFF25C4FF;
+            public static final int danger_color = 0xFFFF6C00;
+            public static final int scroll_track_color = 0x28000000;
+
+            private location_teleport() {
+            }
+        }
+
         public static final class terminal_hud {
             public static final int background_color = 0x40000000;
             public static final int primary_color = 0xFFFFFFFF;

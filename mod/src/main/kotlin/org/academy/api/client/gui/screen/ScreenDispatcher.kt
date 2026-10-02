@@ -98,40 +98,44 @@ class ScreenDispatcher private constructor() {
     @SubscribeEvent
     fun onWorldComposite(@Suppress("unused") event: WorldCompositeEvent) {
         val mc = Minecraft.getInstance()
-        val screen = mc.gui.screen() as? RenderRoot ?: return
         val mainTarget = mc.gameRenderer.mainRenderTarget()
-        val layers = pendingLayers
-        if (layers.isNotEmpty()) {
-            val guiW = UiEnvironment.get().physicalWidth / UiEnvironment.get().guiScale
-            val guiH = UiEnvironment.get().physicalHeight / UiEnvironment.get().guiScale
-            for ((commands, regions) in layers) {
-                if (regions.isNotEmpty()) {
-                    val mainView = mainTarget.getColorTextureView() ?: continue
-                    backdropBlur.capture(mainView, regions.maxOf { it.radius })
-                    for ((x, y, width, height, radius) in regions) {
-                        backdropBlur.fillRegion(
-                            mainView,
-                            x, y, width, height,
-                            radius,
-                            UiCompositor.NEUTRAL_TINT
-                        )
+        val screen = mc.gui.screen() as? RenderRoot
+        if (screen != null) {
+            val layers = pendingLayers
+            if (layers.isNotEmpty()) {
+                val guiW = UiEnvironment.get().physicalWidth / UiEnvironment.get().guiScale
+                val guiH = UiEnvironment.get().physicalHeight / UiEnvironment.get().guiScale
+                for ((commands, regions) in layers) {
+                    if (regions.isNotEmpty()) {
+                        val mainView = mainTarget.getColorTextureView() ?: continue
+                        backdropBlur.capture(mainView, regions.maxOf { it.radius })
+                        for ((x, y, width, height, radius) in regions) {
+                            backdropBlur.fillRegion(
+                                mainView,
+                                x, y, width, height,
+                                radius,
+                                UiCompositor.NEUTRAL_TINT
+                            )
+                        }
+                    }
+                    if (commands.isNotEmpty()) {
+                        uiContext.drawCommands(aboveTarget, commands, true, guiW, guiH)
+                        val mainView = mainTarget.getColorTextureView() ?: continue
+                        val aboveView = aboveTarget.getColorTextureView() ?: continue
+                        UiCompositor.blitSource(mainView, aboveView)
                     }
                 }
-                if (commands.isNotEmpty()) {
-                    uiContext.drawCommands(aboveTarget, commands, true, guiW, guiH)
-                    val mainView = mainTarget.getColorTextureView() ?: continue
-                    val aboveView = aboveTarget.getColorTextureView() ?: continue
-                    UiCompositor.blitSource(mainView, aboveView)
-                }
+                pendingLayers = emptyList()
             }
-            pendingLayers = emptyList()
+            renderImGuiInspector(screen)
         }
-        renderImGuiOverlay(mainTarget, screen)
+        ImGuiUtilApi.endFrame(mainTarget)
     }
 
-    private fun renderImGuiOverlay(target: RenderTarget, screen: RenderRoot) {
+    private fun renderImGuiInspector(screen: RenderRoot) {
         if (!ImGuiUIDebugger.enabled) return
-        ImGuiUtilApi.render(target) {
+        ImGuiUtilApi.ensureFrame()
+        ImGuiUtilApi.submit {
             ImGuiUIDebugger.renderContent(
                 screen.root,
                 Component.translatable(

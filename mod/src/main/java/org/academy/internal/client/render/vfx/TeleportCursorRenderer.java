@@ -12,13 +12,6 @@ import org.joml.Quaternionf;
 import java.util.EnumMap;
 import java.util.Map;
 
-/**
- * Renders the supplied GeckoLib teleport-cursor model in world space.
- *
- * <p>The project does not ship GeckoLib at runtime, so the five model elements,
- * their per-face UVs, bone pivots, and the two-second animation are represented
- * directly here using GeckoLib/Blockbench coordinates.</p>
- */
 public final class TeleportCursorRenderer {
     private static final float MODEL_SCALE = 1.0f / 16.0f;
     private static final float TEXTURE_SIZE = 64.0f;
@@ -66,11 +59,8 @@ public final class TeleportCursorRenderer {
     private TeleportCursorRenderer() {
     }
 
-    /**
-     * Submits a cursor whose model origin is the target entity's feet.
-     */
     public static void render(LevelRenderEvent event, Vec3 feetPosition, boolean validDestination) {
-        if (feetPosition == null || !isFinite(feetPosition)) return;
+        if (!isFinite(feetPosition)) return;
         var minecraft = Minecraft.getInstance();
         var player = minecraft.player;
         if (player == null) return;
@@ -265,7 +255,6 @@ public final class TeleportCursorRenderer {
 
     static float playerFacingRotation(double toPlayerX, double toPlayerZ) {
         if (toPlayerX * toPlayerX + toPlayerZ * toPlayerZ < 1.0e-8) return 0.0f;
-        // The authored -45 degree element rotation puts the selected vertical edge on local +Z.
         return (float) Math.atan2(toPlayerX, toPlayerZ);
     }
 

@@ -5,12 +5,14 @@ import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.renderpearl.api.GpuFormat
 import com.mojang.renderpearl.api.textures.FilterMode
 import net.minecraft.client.Minecraft
+import net.minecraft.network.chat.Component
 import net.neoforged.api.distmarker.Dist
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import org.academy.AcademyCraft
 import org.academy.AcademyCraftClient
 import org.academy.api.client.gui.imgui.ImGuiUIDebugger
+import org.academy.api.client.gui.imgui.ImGuiUtilApi
 import org.academy.api.client.gui.widget.WidgetContainer
 import org.academy.api.client.hud.terminal.TerminalHud
 import org.academy.api.client.render.Render
@@ -82,6 +84,8 @@ object HudManager {
 
     fun render() {
         if (!AcademyCraftClient.isRenderInitialized()) return
+
+        ImGuiUtilApi.beginFrame()
 
         val mc = Minecraft.getInstance()
         val main = mc.gameRenderer.mainRenderTarget()
@@ -160,7 +164,16 @@ object HudManager {
 
             ProfilerClientHooks.renderOverlay()
             if (ImGuiUIDebugger.enabled) {
-                ImGuiUIDebugger.renderHud(main, inspectableRoots())
+                ImGuiUtilApi.submit {
+                    for ((name, root) in inspectableRoots()) {
+                        ImGuiUIDebugger.renderContent(
+                            root,
+                            Component.translatable(
+                                "screen.academy.ui_debug.inspector.hud_title", name
+                            ).string
+                        )
+                    }
+                }
             }
         } finally {
             pool.release(descTemp, ui)

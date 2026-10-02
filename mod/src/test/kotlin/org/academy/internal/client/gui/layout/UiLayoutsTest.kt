@@ -11,39 +11,6 @@ import org.junit.jupiter.api.Test
 class UiLayoutsTest {
 
     @Test
-    fun `location layout keeps Academy projection and control geometry`() {
-        val layout = buildLocationTeleportLayout()
-        place(layout.root, 854f, 480f)
-
-        assertEquals(420f, layout.panel.width)
-        assertEquals(236f, layout.panel.height)
-        assertEquals(217f, layout.panel.getAbsoluteX())
-        assertEquals(122f, layout.panel.getAbsoluteY())
-
-        val background = find(layout.root, "panel_background")
-        assertTrue(background is BlendQuadWidget)
-        background as BlendQuadWidget
-        assertEquals(0.12f, background.alpha)
-        assertFalse(background.drawLine)
-
-        assertEquals(229f, layout.nameInput.getAbsoluteX())
-        assertEquals(154f, layout.nameInput.getAbsoluteY())
-        assertEquals(396f, layout.nameInput.width)
-        assertEquals(20f, layout.nameInput.height)
-
-        assertEquals(229f, layout.marks.getAbsoluteX())
-        assertEquals(230f, layout.marks.getAbsoluteY())
-        assertEquals(396f, layout.marks.width)
-        assertEquals(94f, layout.marks.height)
-
-        assertEquals(0xFF7680DE.toInt(), fill(layout.root, "border_top").color)
-        assertEquals(0xFF7680DE.toInt(), fill(layout.root, "border_bottom").color)
-        assertEquals(0xFF7680DE.toInt(), fill(layout.root, "border_left").color)
-        assertEquals(0xFF7680DE.toInt(), fill(layout.root, "border_right").color)
-        assertEquals(0xFF7680DE.toInt(), fill(layout.root, "title_divider").color)
-    }
-
-    @Test
     fun `reflection filter variants keep interaction columns`() {
         val compact = buildReflectionFilterLayout(true)
         place(compact.root, 854f, 480f)

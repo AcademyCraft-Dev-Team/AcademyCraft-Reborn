@@ -7,15 +7,10 @@ import org.academy.api.client.gui.imgui.ImGuiUtilApi
 import org.jetbrains.annotations.ApiStatus
 import org.lwjgl.sdl.SDL_Event
 
-/**
- * 游戏内 ImGui 门面：把 [ImGuiBackend] 绑定到游戏窗口，保持原 [org.academy.api.client.gui.imgui.ImGuiUtilApi]
- * 行为不变。独立桌面编辑器直接使用 [ImGuiBackend]。
- */
 @ApiStatus.Internal
 object ImGuiUtilInternal {
     private var backend: ImGuiBackend? = null
 
-    /** Binds this implementation to [ImGuiUtilApi]; call once during client start. */
     fun bootstrap() {
         if (!Dev.HAS_IM_GUI) return
         ImGuiUtilApi.register(
@@ -25,6 +20,10 @@ object ImGuiUtilInternal {
             render = ::render,
             wantCaptureMouse = ::wantCaptureMouse,
             wantCaptureKeyboard = ::wantCaptureKeyboard,
+            beginFrame = ::beginFrame,
+            ensureFrame = ::ensureFrame,
+            submit = ::submit,
+            endFrame = ::endFrame,
         )
     }
 
@@ -38,6 +37,22 @@ object ImGuiUtilInternal {
 
     fun render(renderTarget: RenderTarget, renderCommand: () -> Unit) {
         backend?.render(renderTarget, renderCommand)
+    }
+
+    fun beginFrame() {
+        backend?.beginFrame()
+    }
+
+    fun ensureFrame() {
+        backend?.ensureFrame()
+    }
+
+    fun submit(renderCommand: () -> Unit) {
+        backend?.submit(renderCommand)
+    }
+
+    fun endFrame(renderTarget: RenderTarget) {
+        backend?.endFrame(renderTarget)
     }
 
     fun clearEventsQueue() {

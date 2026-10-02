@@ -950,7 +950,7 @@ public final class Render {
                 .withVertexShader(R.shaders.position_tex_color)
                 .withFragmentShader(R.shaders.position_tex_color)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
-                .withCull(true)
+                .withCull(false)
                 .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                 .withPrimitiveTopology(PrimitiveTopology.QUADS)
                 .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR)

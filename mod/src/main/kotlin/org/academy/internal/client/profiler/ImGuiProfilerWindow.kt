@@ -1,9 +1,5 @@
 package org.academy.internal.client.profiler
 
-import com.mojang.blaze3d.resource.RenderTargetDescriptor
-import com.mojang.blaze3d.systems.RenderSystem
-import com.mojang.renderpearl.api.GpuFormat
-import com.mojang.renderpearl.api.textures.FilterMode
 import imgui.ImGui
 import imgui.extension.implot.ImPlot
 import imgui.flag.ImGuiTableColumnFlags
@@ -11,16 +7,12 @@ import imgui.flag.ImGuiTableFlags
 import imgui.flag.ImGuiTreeNodeFlags
 import imgui.type.ImBoolean
 import imgui.type.ImInt
-import net.minecraft.client.Minecraft
 import org.academy.Dev
 import org.academy.api.client.gui.imgui.ImGuiUtilApi
-import org.academy.api.client.render.Render
-import org.academy.api.client.render.TextureBinding
 import org.academy.api.common.profiler.AcademyProfiler
 import org.academy.api.common.profiler.SampledNode
 import org.academy.api.common.profiler.SamplerSnapshot
 import org.academy.api.common.profiler.ZoneProfiler
-import org.joml.Vector4f
 
 object ImGuiProfilerWindow {
     @Volatile
@@ -46,37 +38,10 @@ object ImGuiProfilerWindow {
         visible = value
     }
 
-    fun renderToMainScreen() {
+    fun submitToMainScreen() {
         if (!visible || !Dev.HAS_IM_GUI) return
-        val mc = Minecraft.getInstance()
-        val main = mc.gameRenderer.mainRenderTarget()
-        val pool = Render.Buffers.getResourcePool()
-        val desc = RenderTargetDescriptor(
-            main.width, main.height,
-            RenderTargetDescriptor.TextureProperties(Vector4f(0f), GpuFormat.RGBA8_UNORM),
-            RenderTargetDescriptor.TextureProperties.DEFAULT_DEPTH
-        )
-        val target = pool.acquire(desc)
-        try {
-            val color = target.getColorTextureView() ?: return
-            ImGuiUtilApi.render(target) { draw() }
-            val mainColor = main.getColorTextureView() ?: return
-            Render.runBlitPass(
-                mainColor,
-                Render.RenderPipelines.BLIT_SCREEN_PREMULTIPLIED_ALPHA,
-                Render.Buffers.getInstance().fsQuadVBNDC,
-                listOf(
-                    TextureBinding(
-                        "Sampler0", color,
-                        RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
-                    )
-                ),
-                mutableListOf(),
-                false
-            )
-        } finally {
-            pool.release(desc, target)
-        }
+        ImGuiUtilApi.ensureFrame()
+        ImGuiUtilApi.submit { draw() }
     }
 
     private fun draw() {
