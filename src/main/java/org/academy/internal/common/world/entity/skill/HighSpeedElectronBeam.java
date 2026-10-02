@@ -349,7 +349,8 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
                 .builder(owner, sourceSkill, source, 0.125f)
                 .maximumHealthDamage(target -> hitIndex.get() == 0 && target instanceof LivingEntity living
                         ? living.getMaxHealth() * targetMaxHealthDamageRatio : 0.0f)
-                .targetFilter(target -> target.getType() != getType())
+                .targetFilter(target -> target.getType() != getType()
+                        && (sourceSkill != Skills.MINING_BEAM.get() || MiningBeam.canDamageEntity(target)))
                 .outboundTargetFilter(target -> !target.getUUID().equals(ignoredTargetId)
                         && MeltdownerTargeting.canAffectNegatively(owner, target))
                 .damage(target -> {

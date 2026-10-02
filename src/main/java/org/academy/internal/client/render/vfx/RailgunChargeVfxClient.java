@@ -89,13 +89,11 @@ public final class RailgunChargeVfxClient {
             transform.setTranslation(camera.position());
             transform.translate(right ? 0.30f : -0.30f, -0.22f, -0.46f).scale(0.90f);
         } else {
-            var root = WingAvatarRegistry.entries().get(player.getId());
-            if (root == null) { effect.setFrameVisible(false); return true; }
-            transform = new Matrix4f(root);
+            transform = WingAvatarRegistry.handTransform(player.getId(), right);
+            if (transform == null) { effect.setFrameVisible(false); return true; }
             transform.m30(transform.m30() + camera.position().x);
             transform.m31(transform.m31() + camera.position().y);
             transform.m32(transform.m32() + camera.position().z);
-            transform.translate(right ? -0.38f : 0.38f, 0.55f, -0.24f);
         }
         effect.setFrameVisible(true);
         effect.setTransform(transform);

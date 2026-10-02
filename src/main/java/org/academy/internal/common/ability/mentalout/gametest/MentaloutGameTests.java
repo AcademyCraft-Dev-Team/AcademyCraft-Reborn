@@ -240,6 +240,22 @@ public final class MentaloutGameTests {
     }
 
     private enum Scenario {
+        DIRECT_IDLE_VIEW("direct_idle_view", 20) {
+            @Override void run(GameTestHelper helper) {
+                var controller = createController(helper);
+                var cow = helper.spawn(EntityTypes.COW, 3, 2, 1);
+                cow.setYRot(123); cow.setYHeadRot(123); cow.setYBodyRot(123); cow.setXRot(-12);
+                var handle = MentalControlApi.apply(ControlRequest.permanent(
+                        controller, cow, SOURCE, 300, new ControlDirective.DirectControl()));
+                helper.runAtTickTime(5, () -> {
+                    helper.assertTrue(Math.abs(Mth.wrapDegrees(cow.getYRot() - 123)) < 0.01,
+                            "Waiting for controller input must preserve yaw: " + cow.getYRot());
+                    helper.assertTrue(Math.abs(cow.getXRot() + 12) < 0.01,
+                            "Waiting for controller input must preserve pitch: " + cow.getXRot());
+                    finish(helper, controller, handle);
+                });
+            }
+        },
         WORK_TICK_CLOCK("work_tick_clock", 20) {
             @Override void run(GameTestHelper helper) {
                 var level = helper.getLevel();

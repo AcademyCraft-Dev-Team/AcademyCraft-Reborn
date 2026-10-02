@@ -43,4 +43,10 @@ public record PlayerControlFrame(
                 false, false, mode
         );
     }
+
+    /** Stop motion and actions without resetting the controlled entity's view. */
+    public static PlayerControlFrame idle(float yaw, float pitch) {
+        return new PlayerControlFrame(0, 0, yaw, pitch,
+                false, false, false, false, false, PlayerMovementMode.WALK);
+    }
 }

@@ -1,0 +1,11 @@
+allprojects {
+    afterEvaluate {
+        neoForge.runs.named('clientDev') {
+            sourceSet.set(sourceSets.editor)
+            gameDirectory.set(file('run/skill-repair-client'))
+            systemProperty 'academy.skillRepairSmoke', 'true'
+            systemProperty 'academy.skillRepairOutput', file(providers.gradleProperty('skillRepairOutput').getOrElse('build/skill-repair-after')).absolutePath
+            programArguments.addAll('--width', '1280', '--height', '720')
+        }
+    }
+}

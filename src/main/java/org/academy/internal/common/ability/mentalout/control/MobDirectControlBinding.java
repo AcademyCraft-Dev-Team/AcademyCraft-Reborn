@@ -33,10 +33,11 @@ final class MobDirectControlBinding implements ControlBinding {
     private static final double HORSE_SPRINT_SPEED_BONUS = 0.30;
     private final Mob mob;
     private long lastActionSequence = Long.MIN_VALUE;
-    private PlayerControlFrame frame = PlayerControlFrame.NEUTRAL;
+    private PlayerControlFrame frame;
 
     MobDirectControlBinding(Mob mob) {
         this.mob = mob;
+        frame = PlayerControlFrame.idle(mob.getYRot(), mob.getXRot());
     }
 
     static double aquaticVerticalInput(boolean inWater, boolean jump, boolean sneak) {
@@ -50,7 +51,7 @@ final class MobDirectControlBinding implements ControlBinding {
                 .or(() -> ImpressionRidingManager.directInput(mob))
                 .orElse(null);
         if (input == null) {
-            frame = PlayerControlFrame.NEUTRAL;
+            frame = PlayerControlFrame.idle(frame.yaw(), frame.pitch());
             applyMovement();
             return;
         }
@@ -85,6 +86,9 @@ final class MobDirectControlBinding implements ControlBinding {
         mob.setYHeadRot(yaw);
         mob.setYBodyRot(yaw);
         mob.setXRot(frame.pitch());
+        // Vanilla LookControl resets pitch when it has no target, even with AI goals suspended.
+        var target = mob.getEyePosition().add(Vec3.directionFromRotation(frame.pitch(), yaw).scale(8));
+        mob.getLookControl().setLookAt(target.x, target.y, target.z, 180, 90);
     }
 
     private void applyMovement() {

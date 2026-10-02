@@ -69,7 +69,7 @@ public final class SkillRepairGameTests {
 
     @SubscribeEvent
     private static void registerTests(RegisterGameTestsEvent event) {
-        for (var scenario : List.of("mining_held", "mining_program", "teleport_air", "container_full", "container_collect", "block_normals")) {
+        for (var scenario : List.of("mining_held", "mining_program", "mining_silk", "teleport_air", "container_full", "container_collect", "block_normals")) {
             var environment = event.registerEnvironment(AcademyCraft.academy("skill_repair/" + scenario),
                     new TestEnvironmentDefinition.AllOf(List.of()));
             event.registerTest(AcademyCraft.academy("skill_repair_" + scenario), new Instance(new TestData<>(
@@ -95,6 +95,12 @@ public final class SkillRepairGameTests {
             for (var skill : category.getSkills()) system.addPlayerSkill(player, skill.getKeyString());
             var mining = Skills.MINING_BEAM.get();
             system.setPlayerSkillProficiency(player.getUUID(), mining, 3000);
+            if (scenario.equals("mining_silk")) {
+                org.academy.internal.common.ability.proficiency.ProficiencySkillSettings.setMode(player,
+                        org.academy.internal.common.ability.proficiency.ProficiencySkillSettings.MINING_BEAM_HARVEST_MODE,
+                        MiningBeam.HarvestMode.SILK_TOUCH.ordinal());
+                helper.assertTrue(mining.hasProficiencyMilestone(player, 3), "Silk Touch must be unlocked");
+            }
             var origin = helper.absoluteVec(new Vec3(2.5, 3.5, 5.5));
             player.snapTo(origin.x, origin.y, origin.z, -90, 0);
             if (scenario.startsWith("container_")) {
@@ -130,6 +136,23 @@ public final class SkillRepairGameTests {
                         beam.tick();
                         beam.discard();
                     }
+                } else if (scenario.equals("mining_silk")) {
+                    if (!mining.isEnabled(player)) mining.toggle(player);
+                    var data = system.getPlayerData(player.getUUID());
+                    data.setAcademyMaxCp(100_000);
+                    data.getCpData().setMaxCP(100_000);
+                    data.getCpData().setAvailableCP(100_000);
+                    player.snapTo(origin.x, origin.y - player.getEyeHeight(), origin.z, -90, 0);
+                    var constructor = MiningBeam.Context.class.getDeclaredConstructor(ServerPlayer.class);
+                    constructor.setAccessible(true);
+                    var context = constructor.newInstance(player);
+                    AbilitySystemServer.registerContext(context);
+                    try {
+                        for (int tick = 0; tick < 20; tick++) context.onTick(
+                                new net.neoforged.neoforge.event.tick.ServerTickEvent.Pre(() -> true, level.getServer()));
+                    } finally {
+                        context.unregister();
+                    }
                 } else {
                     MiningBeam.executeMiningSegment(
                             level, new LinearSegment(origin, origin.add(10, 0, 0)),
@@ -143,7 +166,8 @@ public final class SkillRepairGameTests {
                         new AABB(pos).inflate(4));
                 helper.assertTrue(drops.stream().anyMatch(item -> item.getItem().is(Items.OBSIDIAN)),
                         "Mining must drop obsidian");
-                helper.assertTrue(drops.stream().anyMatch(item -> item.getItem().is(Items.DIAMOND)),
+                var expectedOre = scenario.equals("mining_silk") ? Items.DIAMOND_ORE : Items.DIAMOND;
+                helper.assertTrue(drops.stream().anyMatch(item -> item.getItem().is(expectedOre)),
                         "Mining must drop diamonds");
             }
         } catch (Exception exception) {

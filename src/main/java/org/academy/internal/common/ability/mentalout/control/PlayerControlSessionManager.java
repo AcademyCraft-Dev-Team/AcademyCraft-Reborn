@@ -334,7 +334,7 @@ public final class PlayerControlSessionManager {
             }
             Skills.MENTAL_TAKEOVER.get().reportActivity(session.controller, true);
             if (now - session.lastIntentTick >= NEUTRAL_AFTER_TICKS) {
-                session.frame = PlayerControlFrame.NEUTRAL;
+                session.frame = PlayerControlFrame.idle(session.frame.yaw(), session.frame.pitch());
             }
             if (now % 5L == 0L) sendStatus(session);
         }
@@ -954,6 +954,7 @@ public final class PlayerControlSessionManager {
         if (notify) {
             MisakaNetworkServer.send(session.controller,
                     new EndPacket(session.id, session.revision, reason));
+            feedbackControlEnd(session.controller, reason);
         }
         if (wasActive) MentalIntrusionManager.stopAny(session.controller);
     }
@@ -2032,7 +2033,7 @@ public final class PlayerControlSessionManager {
         private long lastIntentAcceptedTick = Long.MIN_VALUE;
         private long lastControllerSequence = -1L;
         private long frameSequence;
-        private PlayerControlFrame frame = PlayerControlFrame.NEUTRAL;
+        private PlayerControlFrame frame;
 
         private MobSession(
                 UUID id,
@@ -2052,6 +2053,7 @@ public final class PlayerControlSessionManager {
             this.readyDeadline = readyDeadline;
             this.lastIntentTick = now;
             this.controllerAnchor = controllerAnchor;
+            this.frame = PlayerControlFrame.idle(subject.getYRot(), subject.getXRot());
         }
     }
 }

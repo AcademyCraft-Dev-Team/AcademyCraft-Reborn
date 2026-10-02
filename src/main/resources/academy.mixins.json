@@ -105,6 +105,7 @@
     "client.MixinGameRenderer",
     "client.MixinHud",
     "client.MixinHumanoidModel",
+    "client.MixinPlayerModel",
     "client.MixinItemInHandRenderer",
     "client.MixinKeyboardHandler",
     "client.MixinLevelExtractor",

@@ -9,6 +9,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.ExperienceOrb;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -276,6 +278,7 @@ public final class MiningBeam extends Skill {
                             skill.scaledRange(player,
                                     proficiencyMilestone >= 2 ? DAMAGE_RADIUS * 1.2f : DAMAGE_RADIUS)
                     )
+                    .targetFilter(MiningBeam::canDamageEntity)
                     .damage(_ -> damage)
                     .build();
             var attack = ContinuousBeamReflection.resolve(
@@ -341,6 +344,11 @@ public final class MiningBeam extends Skill {
                 playerMultiplier,
                 false
         );
+    }
+
+    /** Preserve harvested loot and XP in held, reflected and precision-program beams. */
+    public static boolean canDamageEntity(Entity entity) {
+        return !(entity instanceof ItemEntity) && !(entity instanceof ExperienceOrb);
     }
 
     /** Shared harvesting path for held, reflected and precision-program mining beams. */

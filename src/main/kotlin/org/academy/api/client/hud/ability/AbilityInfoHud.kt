@@ -65,7 +65,7 @@ private const val MP_LABEL_MARGIN_BOTTOM = 1f
 
 private const val DARKMATTER_LABEL_WIDTH = 92f
 private const val DARKMATTER_LABEL_HEIGHT = 8f
-private const val DARKMATTER_LABEL_OFFSET_Y = 100f
+private const val DARKMATTER_LABEL_OFFSET_Y = 18f
 
 internal fun shouldShowAbilityResource(category: AbilityCategory, maximum: Float): Boolean {
     return category.resourceSpec.isPresent && maximum.isFinite() && maximum > 0f
@@ -359,34 +359,34 @@ class AbilityInfoHud private constructor() {
                     }
                     gravity = Gravity.BOTTOM_RIGHT
                 }
+            }
 
-                text("") {
-                    setFrameUpdate {
-                        val isDarkmatter = AbilitySystemClient.getCategory() == AbilityCategories.DARKMATTER.get()
-                        visibility = if (isDarkmatter) {
-                            Widget.Visibility.VISIBLE
-                        } else {
-                            Widget.Visibility.GONE
-                        }
-                        text = if (isDarkmatter) {
-                            val alphaValue = (AbilitySystemClient.getDarkmatterAlpha() * 100f).roundToInt()
-                            val betaValue = (AbilitySystemClient.getDarkmatterBeta() * 100f).roundToInt()
-                            "α$alphaValue%  β$betaValue%"
-                        } else {
-                            ""
-                        }
-                        true
+            root.text("") {
+                setFrameUpdate {
+                    val isDarkmatter = AbilitySystemClient.getCategory() == AbilityCategories.DARKMATTER.get()
+                    visibility = if (isDarkmatter) {
+                        Widget.Visibility.VISIBLE
+                    } else {
+                        Widget.Visibility.GONE
                     }
-
-                    textSize = 7f
-                    rgb(0.84f, 0.80f, 1.0f)
-                    layoutParams = FrameLayoutWidget.LayoutParams().apply {
-                        size(DARKMATTER_LABEL_WIDTH, DARKMATTER_LABEL_HEIGHT)
-                        gravity(Gravity.CENTER)
+                    text = if (isDarkmatter) {
+                        val alphaValue = (AbilitySystemClient.getDarkmatterAlpha() * 100f).roundToInt()
+                        val betaValue = (AbilitySystemClient.getDarkmatterBeta() * 100f).roundToInt()
+                        "α$alphaValue%  β$betaValue%"
+                    } else {
+                        ""
                     }
-                    gravity = Gravity.CENTER
-                    translationY = DARKMATTER_LABEL_OFFSET_Y
+                    true
                 }
+
+                textSize = 7f
+                rgb(0.84f, 0.80f, 1.0f)
+                layoutParams = FrameLayoutWidget.LayoutParams().apply {
+                    size(DARKMATTER_LABEL_WIDTH, DARKMATTER_LABEL_HEIGHT)
+                    gravity(Gravity.CENTER)
+                }
+                gravity = Gravity.CENTER
+                translationY = DARKMATTER_LABEL_OFFSET_Y
             }
 
             val wheelBase = HudLayout.Region.SKILL_WHEEL.baseRect(minecraft)

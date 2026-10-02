@@ -26,6 +26,7 @@ public final class PlayerControlClientState {
     private static UUID subjectUuid;
     private static int subjectEntityId = -1;
     private static long revision;
+    private static net.minecraft.client.multiplayer.ClientLevel clientLevel;
     private static PlayerControlSessionManager.Role role;
     private static PlayerControlFrame authorizedFrame = PlayerControlFrame.NEUTRAL;
     private static long authorizedSequence = -1L;
@@ -65,6 +66,7 @@ public final class PlayerControlClientState {
             UUID requestedSubjectUuid
     ) {
         var minecraft = Minecraft.getInstance();
+        synchronizeLevel(minecraft);
         if (requestedRevision < revision || minecraft.level == null || minecraft.player == null) {
             acknowledge(requestedSession, requestedRevision, false);
             return;
@@ -164,8 +166,9 @@ public final class PlayerControlClientState {
     }
 
     public static void tick() {
-        if (sessionId == null) return;
         var minecraft = Minecraft.getInstance();
+        synchronizeLevel(minecraft);
+        if (sessionId == null) return;
         if (minecraft.level == null || minecraft.player == null) {
             requestStop();
             clearSession();
@@ -278,6 +281,13 @@ public final class PlayerControlClientState {
         clearSessionKeys();
         clearSession();
         revision = 0L;
+        clientLevel = null;
+    }
+
+    private static void synchronizeLevel(Minecraft minecraft) {
+        if (clientLevel == minecraft.level) return;
+        clearLocal();
+        clientLevel = minecraft.level;
     }
 
     public static void applyAuthorizedInput(LocalPlayer player) {
