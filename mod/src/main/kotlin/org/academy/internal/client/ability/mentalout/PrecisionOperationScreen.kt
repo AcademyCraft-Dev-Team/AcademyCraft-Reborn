@@ -78,7 +78,7 @@ class PrecisionOperationScreen(
     private lateinit var layout: ProgramEditorLayout
 
     init {
-        this.slot = slot.coerceIn(0, AbilityProgramManager.SLOT_COUNT - 1)
+        slot = slot.coerceIn(0, AbilityProgramManager.SLOT_COUNT - 1)
     }
 
     override fun onInit() {
@@ -123,7 +123,7 @@ class PrecisionOperationScreen(
         parameterInput!!.setMaxLength(4)
         parameterInput!!.isBordered = false
         parameterInput!!.setTextColor(TEXT)
-        parameterInput!!.setResponder { this.parameterInputChanged(it) }
+        parameterInput!!.setResponder { parameterInputChanged(it) }
         parameterInput!!.visible = false
         if (initialView) {
             initialView = false

@@ -196,7 +196,7 @@ class UiDslTest {
     @Test
     fun `standaloneColumn inside WidgetContainer lambda does not leak into parent`() {
         val textArea = LinearLayoutWidget()
-        textArea.orientation = org.academy.api.client.gui.layout.Orientation.VERTICAL
+        textArea.orientation = Orientation.VERTICAL
         textArea.lp { gravity(Gravity.CENTER) }
 
         textArea.column("probe") {

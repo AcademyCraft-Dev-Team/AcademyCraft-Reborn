@@ -253,8 +253,7 @@ class OutputControlScreen(
 
     private fun decimal(value: Float): String = String.format(Locale.ROOT, "%.2f", value)
 
-    private class OutputSeekBar : SeekBarWidget() {
-    }
+    private class OutputSeekBar : SeekBarWidget()
 
     companion object {
         private const val PANEL_WIDTH = 284f

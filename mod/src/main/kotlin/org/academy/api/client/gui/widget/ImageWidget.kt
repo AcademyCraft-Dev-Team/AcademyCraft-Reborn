@@ -70,7 +70,7 @@ open class ImageWidget : AbstractWidget {
             context.pose().translate(lp.paddingLeft, lp.paddingTop)
             val command = generateDrawCommand(
                 textureView, effectiveSampler(), paddedWidth, paddedHeight, u0, v0, u1, v1, u2, v2, u3, v3,
-                this.red, green, blue, finalAlpha
+                red, green, blue, finalAlpha
             )
             context.submit(command)
         }

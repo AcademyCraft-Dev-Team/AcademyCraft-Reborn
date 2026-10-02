@@ -34,7 +34,7 @@ class ImGuiImplSdl(
     override fun init(windowHandle: Long) {
         if (initialized) return
         this.windowHandle = windowHandle
-        this.lastFrameNanos = System.nanoTime()
+        lastFrameNanos = System.nanoTime()
         initialized = true
     }
 

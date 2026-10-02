@@ -14,11 +14,11 @@ open class SpriteSheetWidget(
     protected val frameCount: Int
 ) : ImageWidget(IdentifierTextureSource(texture)) {
     fun nextFrame() {
-        this.frameIndex = (frameIndex + 1) % frameCount
+        frameIndex = (frameIndex + 1) % frameCount
     }
 
     fun previousFrame() {
-        this.frameIndex = (frameIndex - 1 + frameCount) % frameCount
+        frameIndex = (frameIndex - 1 + frameCount) % frameCount
     }
 
     var frameIndex: Int = -1

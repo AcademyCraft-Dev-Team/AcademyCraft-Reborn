@@ -37,7 +37,7 @@ abstract class DragBarWidget(protected val orientation: Orientation) : AbstractW
     override fun onMousePressed(event: MouseEvent) {
         if (isMouseOver(event.x, event.y) && event.button == InputConstants.MOUSE_BUTTON_LEFT) {
             isDragging = true
-            dragOffset = this.thumbSize / 2f
+            dragOffset = thumbSize / 2f
             updateTargetFromMouse(getMouseRelative(event.x.toFloat(), event.y.toFloat()))
             event.consume()
         }
@@ -72,8 +72,8 @@ abstract class DragBarWidget(protected val orientation: Orientation) : AbstractW
     }
 
     fun setShowBackground(show: Boolean): DragBarWidget {
-        if (this.isShowBackground != show) {
-            this.isShowBackground = show
+        if (isShowBackground != show) {
+            isShowBackground = show
             invalidate()
         }
         return this

@@ -15,6 +15,7 @@
 | [tree_structure.md](./tree_structure.md) | `apply` 省略主语、代码块即树级、命名、代码块内顺序与空行分隔 |
 | [layout_params.md](./layout_params.md)   | `lp` 与 `LayoutParams` 的使用规则                            |
 | [declarations.md](./declarations.md)     | 声明区：局部常量、`R.ui` 常量、`lateinit` 跨块引用           |
+| [widget.md](./widget.md)                 | widget 归属：通用放 `api...widget`，界面专用作内部类        |
 
 ## 总则
 

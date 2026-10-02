@@ -194,7 +194,7 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
             0f, 1f, 1f, 0f, -1
         )
 
-        if (this.isRenderInventory) {
+        if (isRenderInventory) {
             val originHeight = 187f
             val currentHeight = invHeight()
             val scaleY = currentHeight / originHeight
@@ -265,7 +265,7 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
         val rootResult = event.isConsumed
 
         var superResult = false
-        if (this.isHandleContainer) superResult = super.mouseScrolled(mouseX, mouseY, scrollX, scrollY)
+        if (isHandleContainer) superResult = super.mouseScrolled(mouseX, mouseY, scrollX, scrollY)
 
         return rootResult || superResult
     }
@@ -278,7 +278,7 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
         val rootResult = event.isConsumed
 
         var superResult = false
-        if (this.isHandleContainer) superResult = super.mouseReleased(e)
+        if (isHandleContainer) superResult = super.mouseReleased(e)
 
         return rootResult || superResult
     }
@@ -293,7 +293,7 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
         val rootResult = event.isConsumed
 
         var superResult = false
-        if (this.isHandleContainer) superResult = super.mouseDragged(e, mouseX, mouseY)
+        if (isHandleContainer) superResult = super.mouseDragged(e, mouseX, mouseY)
 
         return rootResult || superResult
     }
@@ -306,7 +306,7 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
         val rootResult = event.isConsumed
 
         var superResult = false
-        if (this.isHandleContainer) superResult = super.mouseClicked(e, isDoubleClick)
+        if (isHandleContainer) superResult = super.mouseClicked(e, isDoubleClick)
 
         return rootResult || superResult
     }
@@ -328,7 +328,7 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
             onClose()
             return true
         }
-        return this.handleContainer && super.keyPressed(e)
+        return handleContainer && super.keyPressed(e)
     }
 
     override fun charTyped(e: CharacterEvent): Boolean {
@@ -336,7 +336,7 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
 
         val event = CharTypedEvent(e.codepoint())
         root.dispatchEvent(event)
-        return event.isConsumed || this.handleContainer && super.charTyped(e)
+        return event.isConsumed || handleContainer && super.charTyped(e)
     }
 
     override fun hasClickedOutside(mouseX: Double, mouseY: Double, guiLeft: Int, guiTop: Int): Boolean {

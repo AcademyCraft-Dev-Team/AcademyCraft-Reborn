@@ -183,7 +183,7 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
             invalidate()
         } else {
             pendingScrollToEnd = false
-            setScrollTarget(this.maxScroll)
+            setScrollTarget(maxScroll)
         }
     }
 
@@ -225,14 +225,14 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
     fun setScrollTarget(scrollTarget: Float): ScrollPanelWidget {
         if (orientation == Orientation.HORIZONTAL) {
             val clamped = Mth.clamp(scrollTarget, 0f, maxScrollX)
-            if (this.scrollTargetX != clamped) {
-                this.scrollTargetX = clamped
+            if (scrollTargetX != clamped) {
+                scrollTargetX = clamped
                 invalidate()
             }
         } else {
             val clamped = Mth.clamp(scrollTarget, 0f, maxScrollY)
-            if (this.scrollTargetY != clamped) {
-                this.scrollTargetY = clamped
+            if (scrollTargetY != clamped) {
+                scrollTargetY = clamped
                 invalidate()
             }
         }

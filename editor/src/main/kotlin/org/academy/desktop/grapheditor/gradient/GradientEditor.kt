@@ -24,9 +24,9 @@ class GradientEditor {
     private var barH = 0f
 
     fun open(gradient: Gradient, onApply: (Gradient) -> Unit) {
-        this.stops = gradient.stops().toMutableList()
+        stops = gradient.stops().toMutableList()
         this.onApply = onApply
-        this.selected = -1
+        selected = -1
     }
 
     fun render() {

@@ -42,11 +42,6 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 object MusicApp : App {
-    /**
-     * 0 ~ 1
-     */
-    private const val VOLUME_SCALE = 0.35f
-
     override fun createContext(): WidgetContext {
         return Context()
     }
@@ -103,7 +98,7 @@ object MusicApp : App {
                 },
                 360f
             )
-            .setDuration(5000)
+            .setDuration(R.ui.music_player.vinyl_rotation_ms)
             .setInterpolator(EasingFunctions.LINEAR)
             .apply {
                 repeatMode = ValueAnimator.RESTART
@@ -118,89 +113,137 @@ object MusicApp : App {
 
         fun createContent(): FrameLayoutWidget {
             return standaloneFrame {
-                matchParent()
-                paddingHorizontal(2f)
+                lp {
+                    matchParent()
+                    paddingHorizontal(2f)
+                }
 
-                column("root") {
-                    spacing = 1f
-                    sizeMode(SizeMode.MATCH_PARENT)
+                column("root", spacing = 1f) {
+                    lp {
+                        sizeMode(SizeMode.MATCH_PARENT)
+                    }
 
-                    row("top_bar") {
-                        sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
-                        spacing = 2f
+                    row("bar_top", spacing = 2f) {
+                        lp {
+                            sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                        }
 
-                        button("back_button") {
-                            margin(2f, 2f, 2f, 0f)
-                            size(16f, 16f)
+                        button("button_back") {
+                            lp {
+                                size(R.ui.music_player.button_size, R.ui.music_player.button_size)
+                                margin(2f, 2f, 2f, 0f)
+                            }
+
                             onClick { TerminalHud.INSTANCE.closeApp() }
-                            image(R.textures.gui.icon.arrow, "arrow") {
-                                sizeMode(SizeMode.MATCH_PARENT)
+
+                            image(R.textures.gui.icon.arrow, "icon") {
+                                lp {
+                                    sizeMode(SizeMode.MATCH_PARENT)
+                                }
                             }
                         }
-                        searchBox = textBox(64, "query") {
+
+                        searchBox = textBox(R.ui.music_player.search_max_length, "box_search") {
+                            lp {
+                                height(R.ui.music_player.row_height)
+                                gravity(Gravity.CENTER_VERTICAL)
+                                padding(2f, 0f)
+                            }
+
                             weight(1f)
-                            height(14f)
-                            gravity(Gravity.CENTER_VERTICAL)
-                            this.gravity = Gravity.CENTER_VERTICAL
-                            padding(2f, 0f)
+                            gravity = Gravity.CENTER_VERTICAL
+
                             enter { search(it) }
                             clearOnEnter(false)
                         }
+
                         searchButton = createTextButton(L10n["app.academy.music_player.search"], 24f) {
                             search(searchBox.text)
                         }
-                        add("search", searchButton)
-                        settingsTitle = text(L10n["app.academy.music_player.settings.title"], "settings_title") {
+
+                        add("button_search", searchButton)
+
+                        settingsTitle = text(L10n["app.academy.music_player.settings.title"], "title_settings") {
+                            lp {
+                                height(R.ui.music_player.row_height)
+                                gravity(Gravity.CENTER)
+                            }
+
                             weight(1f)
-                            height(14f)
-                            gravity(Gravity.CENTER)
-                            this.gravity = Gravity.CENTER
+                            gravity = Gravity.CENTER
                             visibility = Widget.Visibility.GONE
                         }
-                        button("room_button") {
-                            margin(2f, 2f, 2f, 0f)
-                            size(16f, 16f)
+
+                        button("button_room") {
+                            lp {
+                                size(R.ui.music_player.button_size, R.ui.music_player.button_size)
+                                margin(2f, 2f, 2f, 0f)
+                            }
+
                             tooltipText = L10n["app.academy.music_player.room.title"]
                             onClick {
                                 RoomSessionController.requestRoomList()
                                 setViewMode(ViewMode.ROOM)
                             }
+
                             image(R.textures.gui.icon.icon_connected, "icon") {
-                                sizeMode(SizeMode.MATCH_PARENT)
+                                lp {
+                                    sizeMode(SizeMode.MATCH_PARENT)
+                                }
                             }
                         }
-                        button("jukebox_button") {
-                            margin(2f, 2f, 2f, 0f)
-                            size(16f, 16f)
+
+                        button("button_jukebox") {
+                            lp {
+                                size(R.ui.music_player.button_size, R.ui.music_player.button_size)
+                                margin(2f, 2f, 2f, 0f)
+                            }
+
                             tooltipText = L10n["app.academy.music_player.jukebox.title"]
                             onClick {
                                 JukeboxSessionController.requestState()
                                 setViewMode(ViewMode.JUKEBOX)
                             }
+
                             image(R.textures.gui.icon.menu, "icon") {
-                                sizeMode(SizeMode.MATCH_PARENT)
+                                lp {
+                                    sizeMode(SizeMode.MATCH_PARENT)
+                                }
                             }
                         }
-                        button("more_button") {
-                            margin(2f, 2f, 2f, 0f)
-                            size(16f, 16f)
+
+                        button("button_more") {
+                            lp {
+                                size(R.ui.music_player.button_size, R.ui.music_player.button_size)
+                                margin(2f, 2f, 2f, 0f)
+                            }
+
                             onClick {
                                 setViewMode(if (viewMode == ViewMode.NORMAL) ViewMode.SETTINGS else ViewMode.NORMAL)
                             }
+
                             moreIcon = image(R.textures.gui.icon.more, "icon") {
-                                sizeMode(SizeMode.MATCH_PARENT)
+                                lp {
+                                    sizeMode(SizeMode.MATCH_PARENT)
+                                }
                             }
                         }
                     }
 
-                    fill(R.ui.terminal_hud.primary_color, "split_line") {
-                        height(1f)
-                        widthMode(SizeMode.MATCH_PARENT)
+                    fill(R.ui.terminal_hud.primary_color, "line_split") {
+                        lp {
+                            height(1f)
+                            widthMode(SizeMode.MATCH_PARENT)
+                        }
                     }
 
                     mainContainer = frame {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                        }
+
                         weight(1f)
-                        widthMode(SizeMode.MATCH_PARENT)
+
                         bindState(RoomSessionController.roomStateUi) { consumePendingRoomEntry() }
 
                         add("content", createNormalView())
@@ -244,136 +287,201 @@ object MusicApp : App {
         }
 
         fun createNormalView(): LinearLayoutWidget = standaloneRow {
-            sizeMode(SizeMode.MATCH_PARENT)
+            lp {
+                sizeMode(SizeMode.MATCH_PARENT)
+            }
 
             column {
-                text(L10n["app.academy.music_player.track_list"], "playlist_title")
+                text(L10n["app.academy.music_player.track_list"], "title_playlist")
 
-                scrollPanel(Orientation.VERTICAL, "music_list_area", createPlaylistPanel()) {
-                    width(100f)
+                scrollPanel(Orientation.VERTICAL, "area_list_music", createPlaylistPanel()) {
+                    lp {
+                        width(R.ui.music_player.list_width)
+                    }
+
                     weight(1f)
                 }
             }
 
             frame {
+                lp {
+                    heightMode(SizeMode.MATCH_PARENT)
+                }
+
                 weight(1f)
-                heightMode(SizeMode.MATCH_PARENT)
 
                 add("vinyl", vinyl) {
+                    lp {
+                        size(R.ui.music_player.vinyl_size, R.ui.music_player.vinyl_size)
+                        margin(0f, 0f, 0f, 32f)
+                        gravity(Gravity.CENTER)
+                    }
+
                     sampler(FilterMode.NEAREST, false)
-                    size(88f, 88f)
-                    margin(0f, 0f, 0f, 32f)
-                    gravity(Gravity.CENTER)
                 }
+
                 updateVinylIcon()
                 updateRot()
-                column("info_area") {
-                    gravity(Gravity.CENTER_BOTTOM)
-                    size(228f, 56f)
-                    margin(0f, 0f, 0f, 4f)
-                    add("meta", LinearLayoutWidget().apply {
+
+                column("area_info") {
+                    lp {
+                        size(R.ui.music_player.info_area_width, R.ui.music_player.info_area_height)
+                        margin(0f, 0f, 0f, 4f)
+                        gravity(Gravity.CENTER_BOTTOM)
+                    }
+
+                    add("meta", LinearLayoutWidget()) {
+                        lp {
+                            sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                        }
+
                         orientation = Orientation.VERTICAL
+
                         val titleText = text("", "title") {
+                            lp {
+                                widthMode(SizeMode.MATCH_PARENT)
+                                gravity(Gravity.CENTER)
+                            }
+
                             ellipsize = Ellipsize.MARQUEE
                             marqueeFadeSize = 6f
-                            widthMode(SizeMode.MATCH_PARENT)
-                            gravity(Gravity.CENTER)
-                            this.gravity = Gravity.CENTER
+                            gravity = Gravity.CENTER
                         }
+
                         val artistText = text("", "artist") {
+                            lp {
+                                widthMode(SizeMode.MATCH_PARENT)
+                                gravity(Gravity.CENTER)
+                            }
+
                             textSize = 6f
                             ellipsize = Ellipsize.MARQUEE
                             marqueeFadeSize = 6f
-                            widthMode(SizeMode.MATCH_PARENT)
-                            gravity(Gravity.CENTER)
-                            this.gravity = Gravity.CENTER
+                            gravity = Gravity.CENTER
                         }
+
                         bindState(MusicPlayerBackend.getInstance().uiState) {
                             val mi = MusicPlayerBackend.getInstance().currentMusicInfo
                             titleText.text = mi?.name ?: ""
                             artistText.text = mi?.subtitle ?: ""
                         }
-                    }) {
-                        widthMode(SizeMode.MATCH_PARENT)
-                        heightMode(SizeMode.WRAP_CONTENT)
                     }
-                    row("progress_info_area") {
-                        height(12f)
-                        widthMode(SizeMode.MATCH_PARENT)
-                        spacing = 4f
-                        add("current_time", TextWidget("00:00").apply {
+
+                    row("area_info_progress", spacing = 4f) {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(12f)
+                        }
+
+                        add("time_current", TextWidget("00:00").apply {
                             setFrameUpdate {
                                 text = formatTime(MusicPlayerBackend.getInstance().currentTime)
                                 true
                             }
                         }) {
+                            lp {
+                                width(0f)
+                                gravity(Gravity.CENTER)
+                            }
+
                             weight(1f)
-                            width(0f)
-                            gravity(Gravity.CENTER)
-                            this.gravity = Gravity.CENTER
+                            gravity = Gravity.CENTER
                         }
-                        add("play_progress_bar", createPlayProgressBar())
-                        add("music_duration", TextWidget("00:00").apply {
+
+                        add("bar_progress_play", createPlayProgressBar())
+
+                        add("duration_music", TextWidget("00:00").apply {
                             setFrameUpdate {
                                 text = formatTime(MusicPlayerBackend.getInstance().totalDuration)
                                 true
                             }
                         }) {
+                            lp {
+                                width(0f)
+                                gravity(Gravity.CENTER)
+                            }
+
                             weight(1f)
-                            width(0f)
-                            gravity(Gravity.CENTER)
-                            this.gravity = Gravity.CENTER
+                            gravity = Gravity.CENTER
                         }
                     }
-                    row("control_area") {
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(16f)
-                        spacing = 8f
+
+                    row("area_control", spacing = 8f) {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(16f)
+                        }
 
                         frame {
-                            weight(1f)
-                            width(0f)
-                            heightMode(SizeMode.MATCH_PARENT)
+                            lp {
+                                width(0f)
+                                heightMode(SizeMode.MATCH_PARENT)
+                            }
 
-                            button("playback_mode") {
-                                size(16f, 16f)
-                                gravity(Gravity.CENTER_RIGHT)
+                            weight(1f)
+
+                            button("mode_playback") {
+                                lp {
+                                    size(R.ui.music_player.button_size, R.ui.music_player.button_size)
+                                    gravity(Gravity.CENTER_RIGHT)
+                                }
+
                                 onClick { MusicPlayerBackend.getInstance().cyclePlaybackMode() }
+
                                 add("icon", playbackModeIcon) {
                                     sampler(FilterMode.LINEAR, false)
                                 }
                             }
                         }
+
                         button("previous") {
-                            size(16f, 16f)
-                            gravity(Gravity.CENTER)
+                            lp {
+                                size(R.ui.music_player.button_size, R.ui.music_player.button_size)
+                                gravity(Gravity.CENTER)
+                            }
+
                             onClick { runLocalTransport { MusicPlayerBackend.getInstance().playPrevious() } }
+
                             image(R.textures.gui.app.music.previous) {
                                 sampler(FilterMode.LINEAR, false)
                             }
                         }
+
                         button("play_pause") {
-                            size(16f, 16f)
-                            gravity(Gravity.CENTER)
+                            lp {
+                                size(R.ui.music_player.button_size, R.ui.music_player.button_size)
+                                gravity(Gravity.CENTER)
+                            }
+
                             onClick { runLocalTransport { MusicPlayerBackend.getInstance().togglePlayPause() } }
+
                             add("icon", playPauseIcon) {
                                 sampler(FilterMode.LINEAR, false)
                             }
                         }
+
                         button("next") {
-                            size(16f, 16f)
-                            gravity(Gravity.CENTER)
+                            lp {
+                                size(R.ui.music_player.button_size, R.ui.music_player.button_size)
+                                gravity(Gravity.CENTER)
+                            }
+
                             onClick { runLocalTransport { MusicPlayerBackend.getInstance().playNext() } }
+
                             image(R.textures.gui.app.music.next) {
                                 sampler(FilterMode.LINEAR, false)
                             }
                         }
-                        frame {
-                            weight(1f)
-                            width(0f)
-                            heightMode(SizeMode.MATCH_PARENT)
 
-                            add("volume_area", createVolumeArea())
+                        frame {
+                            lp {
+                                width(0f)
+                                heightMode(SizeMode.MATCH_PARENT)
+                            }
+
+                            weight(1f)
+
+                            add("area_volume", createVolumeArea())
                         }
                     }
                 }
@@ -390,15 +498,19 @@ object MusicApp : App {
 
         private fun createSettingsView(): ScrollPanelWidget {
             return ScrollPanelWidget(Orientation.VERTICAL).apply {
-                sizeMode(SizeMode.MATCH_PARENT)
-                setContent(standaloneColumn {
-                    spacing = 2f
-                    sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
-                    padding(2f, 2f)
+                lp {
+                    sizeMode(SizeMode.MATCH_PARENT)
+                }
+
+                setContent(standaloneColumn(spacing = 2f) {
+                    lp {
+                        sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                        padding(2f, 2f)
+                    }
 
                     add("provider", createProviderPanel())
                     add("account", createAccountPanel())
-                    add("shared_account", createSharedAccountPanel())
+                    add("account_shared", createSharedAccountPanel())
                     add("status", createStatusLine())
                 })
             }
@@ -406,15 +518,25 @@ object MusicApp : App {
 
         private fun createProviderPanel(): FrameLayoutWidget {
             return standaloneFrame {
-                sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                lp {
+                    sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                }
+
                 radioGroup("segments") {
+                    lp {
+                        sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                        padding(2f)
+                    }
+
                     orientation = Orientation.HORIZONTAL
                     spacing = 2f
-                    sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
-                    padding(2f)
 
-                    val qq = add("qq", createProviderSegment(OnlineMusicManager.Provider.QQ))
-                    val netease = add("netease", createProviderSegment(OnlineMusicManager.Provider.NETEASE))
+                    val qq = add("qq", createProviderSegment(OnlineMusicManager.Provider.QQ)) {
+                        weight(1f)
+                    }
+                    val netease = add("netease", createProviderSegment(OnlineMusicManager.Provider.NETEASE)) {
+                        weight(1f)
+                    }
 
                     selectButton(
                         if (OnlineMusicManager.selectedProvider == OnlineMusicManager.Provider.QQ)
@@ -426,7 +548,9 @@ object MusicApp : App {
 
         private fun createProviderSegment(provider: OnlineMusicManager.Provider): RadioButtonWidget {
             val radio = RadioButtonWidget()
-            radio.layoutParams = LinearLayoutWidget.LayoutParams().weight(1f).height(14f)
+            radio.lp {
+                height(R.ui.music_player.row_height)
+            }
             radio.onClickListener = org.academy.api.client.gui.event.OnClickListener {
                 OnlineMusicManager.selectProvider(provider)
             }
@@ -434,11 +558,12 @@ object MusicApp : App {
                 OnlineMusicManager.Provider.QQ -> L10n["app.academy.music_player.provider.qq"]
                 OnlineMusicManager.Provider.NETEASE -> L10n["app.academy.music_player.provider.netease"]
             }
-            val text = TextWidget(labelText)
-            text.layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-                .gravity(Gravity.CENTER)
-            radio.addChild("text", text)
+            radio.add("text", TextWidget(labelText)) {
+                lp {
+                    sizeMode(SizeMode.MATCH_PARENT)
+                    gravity(Gravity.CENTER)
+                }
+            }
             val bg = StateListDrawable()
             bg.addState(Widget.SELECTED, ColorDrawable(R.ui.terminal_hud.control_active_color))
             bg.addState(Widget.HOVERED, ColorDrawable(R.ui.terminal_hud.control_hover_color))
@@ -449,20 +574,27 @@ object MusicApp : App {
 
         private fun createAccountPanel(): FrameLayoutWidget {
             return standaloneFrame {
-                sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                lp {
+                    sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                }
 
-                add("content", FrameLayoutWidget().apply {
+                add("content", FrameLayoutWidget()) {
+                    lp {
+                        sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                    }
+
                     fun rebuild() {
                         clearChildren()
-                        add("card", buildAccountCard().apply {
-                            sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
-                            padding(4f, 4f)
-                        })
+                        add("card", buildAccountCard()) {
+                            lp {
+                                sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                                padding(4f, 4f)
+                            }
+                        }
                     }
 
                     bindState(OnlineMusicManager.revisionState) { rebuild() }
-                    sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
-                })
+                }
             }
         }
 
@@ -477,39 +609,60 @@ object MusicApp : App {
         }
 
         private fun buildLoggedOutCard(): LinearLayoutWidget {
-            return standaloneRow(6f) {
-                sizeMode(SizeMode.MATCH_PARENT)
+            return standaloneRow(spacing = 6f) {
+                lp {
+                    sizeMode(SizeMode.MATCH_PARENT)
+                }
+
                 image(R.textures.gui.app.music.icon, "icon") {
+                    lp {
+                        size(20f, 20f)
+                        gravity(Gravity.CENTER)
+                    }
+
                     sampler(FilterMode.LINEAR, false)
                     setColor(0.65f, 0.65f, 0.65f)
-                    size(20f, 20f)
-                    gravity(Gravity.CENTER)
                 }
+
                 column("text") {
-                    weight(1f)
-                    heightMode(SizeMode.MATCH_PARENT)
-                    text(L10n["app.academy.music_player.account.not_logged_in"], "title") {
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(10f)
-                        gravity(Gravity.CENTER_LEFT)
-                        this.gravity = Gravity.CENTER_LEFT
+                    lp {
+                        heightMode(SizeMode.MATCH_PARENT)
                     }
+
+                    weight(1f)
+
+                    text(L10n["app.academy.music_player.account.not_logged_in"], "title") {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(10f)
+                            gravity(Gravity.CENTER_LEFT)
+                        }
+
+                        gravity = Gravity.CENTER_LEFT
+                    }
+
                     text(L10n["app.academy.music_player.account.not_logged_in_hint"], "hint") {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(9f)
+                            gravity(Gravity.CENTER_LEFT)
+                        }
+
                         scaleX = 0.6f
                         scaleY = 0.6f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(9f)
-                        gravity(Gravity.CENTER_LEFT)
-                        this.gravity = Gravity.CENTER_LEFT
+                        gravity = Gravity.CENTER_LEFT
                     }
                 }
+
                 add(
                     "login", createStyledButton(
                         L10n["app.academy.music_player.login"], 60f, 14f
                     ) {
                         OnlineMusicManager.startLogin()
                     }) {
-                    gravity(Gravity.CENTER)
+                    lp {
+                        gravity(Gravity.CENTER)
+                    }
                 }
             }
         }
@@ -526,27 +679,40 @@ object MusicApp : App {
                 OnlineMusicManager.LoginState.FAILED -> L10n["app.academy.music_player.account.login_failed"]
                 else -> ""
             }
-            return standaloneColumn(3f) {
-                sizeMode(SizeMode.MATCH_PARENT)
+            return standaloneColumn(spacing = 3f) {
+                lp {
+                    sizeMode(SizeMode.MATCH_PARENT)
+                }
+
                 text(hint, "hint") {
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(10f)
+                        gravity(Gravity.CENTER)
+                    }
+
                     scaleX = 0.62f
                     scaleY = 0.62f
                     alpha = 0.85f
-                    widthMode(SizeMode.MATCH_PARENT)
-                    height(10f)
-                    gravity(Gravity.CENTER)
-                    this.gravity = Gravity.CENTER
+                    gravity = Gravity.CENTER
                 }
+
                 if (state == OnlineMusicManager.LoginState.WAITING) {
                     add("qr", LoginQrWidget()) {
-                        size(56f, 56f)
-                        gravity(Gravity.CENTER)
+                        lp {
+                            size(56f, 56f)
+                            gravity(Gravity.CENTER)
+                        }
                     }
                 }
+
                 row("actions") {
-                    widthMode(SizeMode.MATCH_PARENT)
-                    height(14f)
-                    gravity(Gravity.CENTER)
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(14f)
+                        gravity(Gravity.CENTER)
+                    }
+
                     if (state == OnlineMusicManager.LoginState.WAITING
                         || state == OnlineMusicManager.LoginState.EXPIRED
                         || state == OnlineMusicManager.LoginState.FAILED
@@ -557,18 +723,25 @@ object MusicApp : App {
                             ) {
                                 OnlineMusicManager.refreshLogin()
                             }) {
+                            lp {
+                                width(0f)
+                            }
+
                             weight(1f)
-                            width(0f)
                         }
                     }
+
                     add(
                         "cancel", createStyledButton(
                             L10n["app.academy.music_player.account.cancel_login"], 44f, 14f
                         ) {
                             OnlineMusicManager.cancelLogin()
                         }) {
+                        lp {
+                            width(0f)
+                        }
+
                         weight(1f)
-                        width(0f)
                     }
                 }
             }
@@ -578,30 +751,48 @@ object MusicApp : App {
             val provider = OnlineMusicManager.selectedProvider
             val name = OnlineMusicManager.accountDisplayName(provider)
             val sub = "${providerLabelText(provider)} · ${L10n["app.academy.music_player.account.logged_in"]}"
-            return standaloneRow(6f) {
-                sizeMode(SizeMode.MATCH_PARENT)
-                add("avatar", AvatarWidget(provider)) {
-                    size(22f, 22f)
-                    gravity(Gravity.CENTER)
+            return standaloneRow(spacing = 6f) {
+                lp {
+                    sizeMode(SizeMode.MATCH_PARENT)
                 }
-                column("text") {
-                    weight(1f)
-                    heightMode(SizeMode.MATCH_PARENT)
-                    text(name, "name") {
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(10f)
-                        gravity(Gravity.CENTER_LEFT)
-                        this.gravity = Gravity.CENTER_LEFT
+
+                add("avatar", AvatarWidget(provider)) {
+                    lp {
+                        size(22f, 22f)
+                        gravity(Gravity.CENTER)
                     }
+                }
+
+                column("text") {
+                    lp {
+                        heightMode(SizeMode.MATCH_PARENT)
+                    }
+
+                    weight(1f)
+
+                    text(name, "name") {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(10f)
+                            gravity(Gravity.CENTER_LEFT)
+                        }
+
+                        gravity = Gravity.CENTER_LEFT
+                    }
+
                     text(sub, "sub") {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(9f)
+                            gravity(Gravity.CENTER_LEFT)
+                        }
+
                         scaleX = 0.6f
                         scaleY = 0.6f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(9f)
-                        gravity(Gravity.CENTER_LEFT)
-                        this.gravity = Gravity.CENTER_LEFT
+                        gravity = Gravity.CENTER_LEFT
                     }
                 }
+
                 add(
                     "sync", createStyledButton(
                         L10n["app.academy.music_player.sync"], 54f, 14f,
@@ -609,32 +800,40 @@ object MusicApp : App {
                     ) {
                         OnlineMusicManager.shareCurrentTrack()
                     }) {
-                    gravity(Gravity.CENTER)
+                    lp {
+                        gravity(Gravity.CENTER)
+                    }
                 }
+
                 add(
                     "logout", createStyledButton(
                         L10n["app.academy.music_player.logout"], 54f, 14f
                     ) {
                         OnlineMusicManager.logout()
                     }) {
-                    gravity(Gravity.CENTER)
+                    lp {
+                        gravity(Gravity.CENTER)
+                    }
                 }
             }
         }
 
         private fun createStatusLine(): TextWidget {
             return TextWidget("").apply {
+                lp {
+                    sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                    padding(2f, 0f)
+                }
+
+                scaleX = 0.58f
+                scaleY = 0.58f
+                singleLine = false
+
                 bindState(OnlineMusicManager.revisionState) {
                     val s = OnlineMusicManager.status
                     if (text != s) text = s
                     visibility = if (s.isBlank()) Widget.Visibility.GONE else Widget.Visibility.VISIBLE
                 }
-                scaleX = 0.58f
-                scaleY = 0.58f
-                singleLine = false
-                layoutParams = WidgetContainer.LayoutParams()
-                    .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
-                    .padding(2f, 0f)
             }
         }
 
@@ -659,38 +858,53 @@ object MusicApp : App {
             container.apply {
                 clearChildren()
 
-                paddingLeft(1f)
+                lp {
+                    paddingLeft(1f)
+                }
+
                 if (showingSearchResults) {
                     add(
-                        "return_list", createTextButton(
+                        "list_return", createTextButton(
                             L10n["app.academy.music_player.back_to_list"], 24f, 0.65f
                         ) {
                             showingSearchResults = false
                             listRevisionState.value += 1
                         }) {
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(14f)
-                    }
-                    text(L10n["app.academy.music_player.search_results"], "search_title") {
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(10f)
-                    }
-                    OnlineMusicManager.searchResults.forEachIndexed { index, entry ->
-                        row("result_$index") {
-                            spacing = 2f
+                        lp {
                             widthMode(SizeMode.MATCH_PARENT)
-                            height(24f)
+                            height(14f)
+                        }
+                    }
+
+                    text(L10n["app.academy.music_player.search_results"], "title_search") {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(10f)
+                        }
+                    }
+
+                    OnlineMusicManager.searchResults.forEachIndexed { index, entry ->
+                        row("result_$index", spacing = 2f) {
+                            lp {
+                                widthMode(SizeMode.MATCH_PARENT)
+                                height(24f)
+                            }
+
                             text(
                                 (if (entry.vip) "[VIP] " else "") + entry.title + " - " + entry.artist,
                                 "name"
                             ) {
+                                lp {
+                                    height(0f)
+                                    gravity(Gravity.CENTER_LEFT)
+                                }
+
+                                weight(1f)
                                 ellipsize = Ellipsize.MARQUEE
                                 marqueeFadeSize = 6f
-                                weight(1f)
-                                height(0f)
-                                gravity(Gravity.CENTER_LEFT)
-                                this.gravity = Gravity.CENTER_LEFT
+                                gravity = Gravity.CENTER_LEFT
                             }
+
                             add(
                                 "add", createActionButton(
                                     R.textures.gui.icon.add,
@@ -698,6 +912,7 @@ object MusicApp : App {
                                 ) {
                                     OnlineMusicManager.add(entry)
                                 })
+
                             add(
                                 "play", createActionButton(
                                     R.textures.gui.app.music.play,
@@ -705,6 +920,7 @@ object MusicApp : App {
                                 ) {
                                     OnlineMusicManager.add(entry, true)
                                 })
+
                             add(
                                 "room", createActionButton(
                                     R.textures.gui.icon.icon_connected,
@@ -712,6 +928,7 @@ object MusicApp : App {
                                 ) {
                                     sendToRoomOrOpenView(entry.toSharedTrackEntry())
                                 })
+
                             if (JukeboxSessionController.state?.enabled == true) {
                                 add(
                                     "request", createActionButton(
@@ -727,58 +944,82 @@ object MusicApp : App {
                     MusicPlayerBackend.getInstance().playlist.forEachIndexed { index, mediaInfo ->
                         val isCurrent = index == MusicPlayerBackend.getInstance().currentTrackIndex
                         add("track_$index", ButtonWidget()) {
-                            widthMode(SizeMode.MATCH_PARENT)
-                            height(16f)
-                            onClick { runLocalTransport { MusicPlayerBackend.getInstance().play(index) } }
+                            lp {
+                                widthMode(SizeMode.MATCH_PARENT)
+                                height(16f)
+                            }
+
                             background = createTrackBackground(isCurrent)
                             isSelected = isCurrent
-                            add("content", standaloneRow(2f) {
-                                sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
-                                image(AlbumArtworkCache.textureFor(mediaInfo), "icon") {
-                                    sampler(FilterMode.LINEAR, false)
-                                    size(12f, 12f)
-                                    gravity(Gravity.CENTER)
+                            onClick { runLocalTransport { MusicPlayerBackend.getInstance().play(index) } }
+
+                            add("content", standaloneRow(spacing = 2f) {
+                                lp {
+                                    sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
                                 }
+
+                                image(AlbumArtworkCache.textureFor(mediaInfo), "icon") {
+                                    lp {
+                                        size(12f, 12f)
+                                        gravity(Gravity.CENTER)
+                                    }
+
+                                    sampler(FilterMode.LINEAR, false)
+                                }
+
                                 column("info") {
+                                    lp {
+                                        heightMode(SizeMode.MATCH_PARENT)
+                                        gravity(Gravity.CENTER)
+                                    }
+
                                     weight(1f)
-                                    heightMode(SizeMode.MATCH_PARENT)
-                                    gravity(Gravity.CENTER)
 
                                     add("top", EmptyWidget()) {
                                         weight(1f)
                                     }
 
                                     text(mediaInfo.name, "name") {
-                                        widthMode(SizeMode.MATCH_PARENT)
-                                        gravity(Gravity.CENTER_LEFT)
-                                        this.gravity = Gravity.CENTER_LEFT
+                                        lp {
+                                            widthMode(SizeMode.MATCH_PARENT)
+                                            gravity(Gravity.CENTER_LEFT)
+                                        }
 
                                         textSize = 6f
                                         ellipsize = Ellipsize.MARQUEE
                                         marqueeFadeSize = 6f
+                                        gravity = Gravity.CENTER_LEFT
                                     }
+
                                     text(mediaInfo.subtitle, "author") {
-                                        widthMode(SizeMode.MATCH_PARENT)
-                                        gravity(Gravity.CENTER_LEFT)
-                                        this.gravity = Gravity.CENTER_LEFT
+                                        lp {
+                                            widthMode(SizeMode.MATCH_PARENT)
+                                            gravity(Gravity.CENTER_LEFT)
+                                        }
 
                                         textSize = 4f
                                         ellipsize = Ellipsize.MARQUEE
                                         marqueeFadeSize = 6f
+                                        gravity = Gravity.CENTER_LEFT
                                     }
 
                                     add("bottom", EmptyWidget()) {
                                         weight(1f)
                                     }
                                 }
+
                                 text(formatTime(mediaInfo.durationSeconds.toFloat()), "duration") {
+                                    lp {
+                                        width(16f)
+                                        height(0f)
+                                        gravity(Gravity.CENTER)
+                                    }
+
                                     scaleX = 0.6f
                                     scaleY = 0.6f
-                                    width(16f)
-                                    height(0f)
-                                    gravity(Gravity.CENTER)
-                                    this.gravity = Gravity.CENTER
+                                    gravity = Gravity.CENTER
                                 }
+
                                 val sharedEntry = mediaInfo.toSharedTrackEntry()
                                 if (sharedEntry != null) {
                                     add(
@@ -831,19 +1072,26 @@ object MusicApp : App {
             text: String,
             width: Float,
             textScale: Float = 0.65f,
-            height: Float = 14f,
+            height: Float = R.ui.music_player.row_height,
             action: () -> Unit
         ): ButtonWidget {
             return ButtonWidget().apply {
-                size(width, height)
+                lp {
+                    size(width, height)
+                    gravity(Gravity.CENTER)
+                }
+
                 onClick { action() }
-                gravity(Gravity.CENTER)
+
                 text(text) {
+                    lp {
+                        sizeMode(SizeMode.MATCH_PARENT)
+                        gravity(Gravity.CENTER)
+                    }
+
                     scaleX = textScale
                     scaleY = textScale
-                    sizeMode(SizeMode.MATCH_PARENT)
-                    gravity(Gravity.CENTER)
-                    this.gravity = Gravity.CENTER
+                    gravity = Gravity.CENTER
                 }
             }
         }
@@ -857,7 +1105,9 @@ object MusicApp : App {
             action: () -> Unit
         ): ButtonWidget {
             val b = ButtonWidget()
-            b.size(width, height)
+            b.lp {
+                size(width, height)
+            }
             val bg = StateListDrawable()
             bg.addState(Widget.PRESSED, ColorDrawable(R.ui.terminal_hud.control_active_color))
             bg.addState(Widget.HOVERED, ColorDrawable(R.ui.terminal_hud.control_hover_color))
@@ -866,11 +1116,14 @@ object MusicApp : App {
             if (tooltip != null) b.tooltipText = tooltip
             b.onClick { action() }
             b.add("text", TextWidget(text)) {
+                lp {
+                    sizeMode(SizeMode.MATCH_PARENT)
+                    gravity(Gravity.CENTER)
+                }
+
                 scaleX = textScale
                 scaleY = textScale
-                sizeMode(SizeMode.MATCH_PARENT)
-                gravity(Gravity.CENTER)
-                this.gravity = Gravity.CENTER
+                gravity = Gravity.CENTER
             }
             return b
         }
@@ -883,18 +1136,23 @@ object MusicApp : App {
             action: () -> Unit
         ): ButtonWidget {
             val b = ButtonWidget()
-            b.size(size, size)
-            b.gravity(gravity)
+            b.lp {
+                size(size, size)
+                gravity(gravity)
+            }
             b.tooltipText = tooltip
             b.onClick { action() }
             b.add("icon", ImageWidget(IdentifierTextureSource(texture))) {
+                lp {
+                    size(size * 0.45f, size * 0.45f)
+                    gravity(Gravity.CENTER)
+                }
+
                 sampler(FilterMode.LINEAR, false)
                 if (texture == R.textures.gui.app.music.play) {
                     translationX = size * 1.25f / 22f
                     translationY = -size * 0.9f / 22f
                 }
-                size(size * 0.45f, size * 0.45f)
-                gravity(Gravity.CENTER)
             }
             return b
         }
@@ -990,6 +1248,22 @@ object MusicApp : App {
             }
         }
 
+        private class VolumeInfoWidget(private val iconWidget: ImageWidget) : FrameLayoutWidget() {
+            override var isHovered: Boolean
+                get() = super.isHovered
+                set(hovered) {
+                    if (visibility == Widget.Visibility.VISIBLE) super.isHovered = hovered
+                }
+
+            init {
+                setFrameUpdate {
+                    visibility = if (iconWidget.isHovered || isHovered) Widget.Visibility.VISIBLE
+                    else Widget.Visibility.INVISIBLE
+                    true
+                }
+            }
+        }
+
         fun createVinyl(): ImageWidget {
             return object : ImageWidget(IdentifierTextureSource(R.textures.gui.app.music.now_playing)) {
                 override fun generateDrawCommand(
@@ -1042,8 +1316,10 @@ object MusicApp : App {
                     }
                 }
             }
-            progressBar.size(128f, 6f)
-            progressBar.gravity(Gravity.CENTER)
+            progressBar.lp {
+                size(R.ui.music_player.progress_width, R.ui.music_player.progress_height)
+                gravity(Gravity.CENTER)
+            }
             progressBar.setBarColors(R.ui.terminal_hud.background_color, R.ui.terminal_hud.primary_color)
             progressBar.seekListener(object : OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBarWidget, progress: Float, fromUser: Boolean) {}
@@ -1059,37 +1335,37 @@ object MusicApp : App {
         }
 
         fun createVolumeArea(): LinearLayoutWidget = standaloneRow {
-            sizeMode(SizeMode.MATCH_PARENT)
-            val iconImg = image(R.textures.gui.app.music.volume, "icon") {
-                sampler(FilterMode.LINEAR, false)
-                size(16f, 16f)
-                gravity(Gravity.CENTER)
+            lp {
+                sizeMode(SizeMode.MATCH_PARENT)
             }
-            add("info", object : FrameLayoutWidget() {
-                init {
-                    setFrameUpdate {
-                        visibility = if (iconImg.isHovered || isHovered) Widget.Visibility.VISIBLE
-                        else Widget.Visibility.INVISIBLE
-                        true
-                    }
+
+            val iconImg = image(R.textures.gui.app.music.volume, "icon") {
+                lp {
+                    size(R.ui.music_player.button_size, R.ui.music_player.button_size)
+                    gravity(Gravity.CENTER)
                 }
 
-                override var isHovered: Boolean
-                    get() = super.isHovered
-                    set(hovered) {
-                        if (visibility == Widget.Visibility.VISIBLE) super.isHovered = hovered
-                    }
-            }) {
+                sampler(FilterMode.LINEAR, false)
+            }
+
+            add("info", VolumeInfoWidget(iconImg)) {
+                lp {
+                    width(0f)
+                    heightMode(SizeMode.MATCH_PARENT)
+                }
+
                 weight(1f)
-                width(0f)
-                heightMode(SizeMode.MATCH_PARENT)
-                val volume = { min(MusicPlayerBackend.getInstance().volume / VOLUME_SCALE, 1f) }
+
+                val volume = { min(MusicPlayerBackend.getInstance().volume / R.ui.music_player.volume_scale, 1f) }
                 val textLabel = text("${(volume() * 100).roundToInt()}%", "text") {
+                    lp {
+                        marginTop(8f)
+                        gravity(Gravity.CENTER)
+                    }
+
                     scaleX = 0.75f
                     scaleY = 0.75f
-                    marginTop(8f)
-                    gravity(Gravity.CENTER)
-                    this.gravity = Gravity.CENTER
+                    gravity = Gravity.CENTER
                 }
 
                 fun setText(progress: Float) {
@@ -1097,16 +1373,19 @@ object MusicApp : App {
                 }
 
                 seekBar("bar") {
-                    size(48f, 4f)
-                    marginBottom(2f)
-                    gravity(Gravity.CENTER)
+                    lp {
+                        size(R.ui.music_player.volume_bar_width, R.ui.music_player.volume_bar_height)
+                        marginBottom(2f)
+                        gravity(Gravity.CENTER)
+                    }
+
                     setBarColors(R.ui.terminal_hud.background_color, R.ui.terminal_hud.primary_color)
                     setProgress(volume() * max)
                     seekListener(object : OnSeekBarChangeListener {
                         override fun onProgressChanged(seekBar: SeekBarWidget, progress: Float, fromUser: Boolean) {
                             val musicPlayerBackend = MusicPlayerBackend.getInstance()
                             val p = progress / seekBar.max
-                            musicPlayerBackend.volume = p * VOLUME_SCALE
+                            musicPlayerBackend.volume = p * R.ui.music_player.volume_scale
                             setText(p)
                         }
 
@@ -1140,7 +1419,7 @@ object MusicApp : App {
         }
 
         fun updateRot() {
-            if (this.isPlaying) {
+            if (isPlaying) {
                 startRot()
                 return
             }
@@ -1176,19 +1455,26 @@ object MusicApp : App {
 
         private fun createRoomView(): FrameLayoutWidget {
             return standaloneFrame {
-                matchParent()
-                add("room_content", FrameLayoutWidget().apply {
-                    sizeMode(SizeMode.MATCH_PARENT)
+                lp {
+                    matchParent()
+                }
+
+                add("content_room", FrameLayoutWidget()) {
+                    lp {
+                        sizeMode(SizeMode.MATCH_PARENT)
+                    }
+
                     bindState(RoomSessionController.roomStateUi) {
                         val key = currentRoomStructureKey()
                         if (key != roomStructureKey) {
                             roomStructureKey = key
-                            replace("room", buildRoomContent())
+                            replace("body_room", buildRoomContent())
                         }
                     }
-                    bindState(roomRevisionState) { replace("room", buildRoomContent()) }
-                    add("room", buildRoomContent())
-                })
+                    bindState(roomRevisionState) { replace("body_room", buildRoomContent()) }
+
+                    add("body_room", buildRoomContent())
+                }
             }
         }
 
@@ -1202,47 +1488,64 @@ object MusicApp : App {
         }
 
         private fun buildRoomLobby(): LinearLayoutWidget {
-            return standaloneColumn {
-                spacing = 2f
-                sizeMode(SizeMode.MATCH_PARENT)
-                padding(2f, 2f)
+            return standaloneColumn(spacing = 2f) {
+                lp {
+                    sizeMode(SizeMode.MATCH_PARENT)
+                    padding(2f, 2f)
+                }
 
-                row("create_area") {
-                    spacing = 2f
-                    widthMode(SizeMode.MATCH_PARENT)
-                    height(14f)
-
-                    roomNameBox = textBox(64, "room_name") {
-                        weight(1f)
-                        width(0f)
+                row("area_create", spacing = 2f) {
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
                         height(14f)
-                        gravity(Gravity.CENTER_VERTICAL)
-                        this.gravity = Gravity.CENTER_VERTICAL
-                        padding(2f, 0f)
+                    }
+
+                    roomNameBox = textBox(R.ui.music_player.search_max_length, "box_name_room") {
+                        lp {
+                            width(0f)
+                            height(14f)
+                            gravity(Gravity.CENTER_VERTICAL)
+                            padding(2f, 0f)
+                        }
+
+                        weight(1f)
+                        gravity = Gravity.CENTER_VERTICAL
+
                         enter { createRoomFromInput(it) }
                         clearOnEnter(false)
                     }
+
                     add("create", createStyledButton(L10n["app.academy.music_player.room.create"], 38f, 14f) {
                         createRoomFromInput(roomNameBox?.text)
                     }) {
-                        gravity(Gravity.CENTER)
+                        lp {
+                            gravity(Gravity.CENTER)
+                        }
                     }
+
                     add("refresh", createStyledButton(L10n["app.academy.music_player.room.refresh"], 28f, 14f) {
                         RoomSessionController.requestRoomList()
                     }) {
-                        gravity(Gravity.CENTER)
+                        lp {
+                            gravity(Gravity.CENTER)
+                        }
                     }
                 }
 
-                add("pending_invites", createPendingPanel(onlyApply = false))
+                add("invites_pending", createPendingPanel(onlyApply = false))
 
-                text(L10n["app.academy.music_player.room.list.title"], "list_title") {
-                    widthMode(SizeMode.MATCH_PARENT)
-                    height(10f)
+                text(L10n["app.academy.music_player.room.list.title"], "title_list") {
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(10f)
+                    }
                 }
 
-                scrollPanel(Orientation.VERTICAL, "room_list", createRoomListPanel()) {
-                    widthMode(SizeMode.MATCH_PARENT)
+                scrollPanel(Orientation.VERTICAL, "list_room", createRoomListPanel()) {
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
+                    }
+
                     weight(1f)
                 }
             }
@@ -1257,10 +1560,14 @@ object MusicApp : App {
 
         private fun createPendingPanel(onlyApply: Boolean): LinearLayoutWidget {
             return LinearLayoutWidget().apply {
+                lp {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    heightMode(SizeMode.WRAP_CONTENT)
+                }
+
                 orientation = Orientation.VERTICAL
                 spacing = 2f
-                widthMode(SizeMode.MATCH_PARENT)
-                heightMode(SizeMode.WRAP_CONTENT)
+
                 bindState(RoomSessionController.roomStateUi) {
                     rebuildPendingPanel(
                         this as LinearLayoutWidget,
@@ -1275,9 +1582,12 @@ object MusicApp : App {
                 clearChildren()
                 val notices = RoomSessionController.pendingNotices.filter { it.apply() == onlyApply }
                 notices.forEachIndexed { index, notice ->
-                    add("pending_$index", standaloneRow(2f) {
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(12f)
+                    add("invite_pending_$index", standaloneRow(spacing = 2f) {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(12f)
+                        }
+
                         text(
                             String.format(
                                 L10n[
@@ -1289,29 +1599,38 @@ object MusicApp : App {
                             ),
                             "text"
                         ) {
+                            lp {
+                                width(0f)
+                                height(0f)
+                                gravity(Gravity.CENTER_LEFT)
+                            }
+
                             weight(1f)
-                            width(0f)
                             scaleX = 0.58f
                             scaleY = 0.58f
-                            height(0f)
-                            gravity(Gravity.CENTER_LEFT)
-                            this.gravity = Gravity.CENTER_LEFT
+                            gravity = Gravity.CENTER_LEFT
                         }
+
                         add(
                             "accept", createStyledButton(
                                 L10n["ui.academy.music_room.accept"], 30f, 11f, 0.58f
                             ) {
                                 RoomSessionController.respondToken(notice.token(), true)
                             }) {
-                            gravity(Gravity.CENTER)
+                            lp {
+                                gravity(Gravity.CENTER)
+                            }
                         }
+
                         add(
                             "reject", createStyledButton(
                                 L10n["ui.academy.music_room.reject"], 30f, 11f, 0.58f
                             ) {
                                 RoomSessionController.respondToken(notice.token(), false)
                             }) {
-                            gravity(Gravity.CENTER)
+                            lp {
+                                gravity(Gravity.CENTER)
+                            }
                         }
                     })
                 }
@@ -1324,59 +1643,87 @@ object MusicApp : App {
                 val rooms = RoomSessionController.roomList
                 if (rooms.isEmpty()) {
                     text(L10n["app.academy.music_player.room.list.empty"], "empty") {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(12f)
+                            gravity(Gravity.CENTER)
+                        }
+
                         scaleX = 0.62f
                         scaleY = 0.62f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(12f)
-                        gravity(Gravity.CENTER)
-                        this.gravity = Gravity.CENTER
+                        gravity = Gravity.CENTER
                     }
                     return
                 }
                 rooms.forEachIndexed { index, room ->
                     add("room_$index", ButtonWidget()) {
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(16f)
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(16f)
+                        }
+
                         background = createTrackBackground(false)
-                        add("content", standaloneRow(2f) {
-                            sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
+
+                        add("content", standaloneRow(spacing = 2f) {
+                            lp {
+                                sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
+                            }
+
                             text("[${room.code()}]", "code") {
+                                lp {
+                                    width(22f)
+                                    height(0f)
+                                    gravity(Gravity.CENTER)
+                                }
+
                                 scaleX = 0.62f
                                 scaleY = 0.62f
-                                width(22f)
-                                height(0f)
-                                gravity(Gravity.CENTER)
-                                this.gravity = Gravity.CENTER
+                                gravity = Gravity.CENTER
                             }
+
                             column("info") {
+                                lp {
+                                    heightMode(SizeMode.MATCH_PARENT)
+                                    gravity(Gravity.CENTER)
+                                }
+
                                 weight(1f)
-                                heightMode(SizeMode.MATCH_PARENT)
-                                gravity(Gravity.CENTER)
+
                                 add("name", createMarqueeText(room.name()).apply {
                                     textSize = 6f
                                 }) {
-                                    widthMode(SizeMode.MATCH_PARENT)
-                                    gravity(Gravity.CENTER_LEFT)
-                                    this.gravity = Gravity.CENTER_LEFT
+                                    lp {
+                                        widthMode(SizeMode.MATCH_PARENT)
+                                        gravity(Gravity.CENTER_LEFT)
+                                    }
+
+                                    gravity = Gravity.CENTER_LEFT
                                 }
+
                                 text(
                                     "${room.hostName()} · ${room.memberCount()}",
                                     "sub"
                                 ) {
-                                    widthMode(SizeMode.MATCH_PARENT)
+                                    lp {
+                                        widthMode(SizeMode.MATCH_PARENT)
+                                        gravity(Gravity.CENTER_LEFT)
+                                    }
+
                                     textSize = 4f
-                                    gravity(Gravity.CENTER_LEFT)
-                                    this.gravity = Gravity.CENTER_LEFT
+                                    gravity = Gravity.CENTER_LEFT
                                 }
                             }
+
                             add(
                                 "apply", createStyledButton(
                                     L10n["app.academy.music_player.room.apply"], 34f, 12f, 0.58f
                                 ) {
                                     RoomSessionController.applyRoom(room.code())
                                 }) {
-                                size(34f, 12f)
-                                gravity(Gravity.CENTER)
+                                lp {
+                                    size(34f, 12f)
+                                    gravity(Gravity.CENTER)
+                                }
                             }
                         })
                     }
@@ -1386,91 +1733,123 @@ object MusicApp : App {
 
         private fun buildRoomInside(): LinearLayoutWidget {
             val state = RoomSessionController.roomState ?: return buildRoomLobby()
-            return standaloneColumn {
-                spacing = 2f
-                sizeMode(SizeMode.MATCH_PARENT)
-                padding(2f, 2f)
+            return standaloneColumn(spacing = 2f) {
+                lp {
+                    sizeMode(SizeMode.MATCH_PARENT)
+                    padding(2f, 2f)
+                }
 
-                row("header") {
-                    spacing = 2f
-                    widthMode(SizeMode.MATCH_PARENT)
-                    height(14f)
+                row("header", spacing = 2f) {
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(14f)
+                    }
 
                     add("name", createMarqueeText("${state.roomName} [${state.roomCode}]")) {
+                        lp {
+                            width(0f)
+                            height(0f)
+                            gravity(Gravity.CENTER_LEFT)
+                        }
+
                         weight(1f)
-                        width(0f)
-                        height(0f)
-                        gravity(Gravity.CENTER_LEFT)
-                        this.gravity = Gravity.CENTER_LEFT
+                        gravity = Gravity.CENTER_LEFT
                     }
+
                     text(
                         "${L10n["app.academy.music_player.room.host_label"]}: ${state.hostName}",
                         "host"
                     ) {
+                        lp {
+                            height(0f)
+                            gravity(Gravity.CENTER)
+                        }
+
                         scaleX = 0.62f
                         scaleY = 0.62f
-                        height(0f)
-                        gravity(Gravity.CENTER)
-                        this.gravity = Gravity.CENTER
+                        gravity = Gravity.CENTER
                     }
+
                     add("leave", createStyledButton(L10n["app.academy.music_player.room.leave"], 42f, 14f) {
                         RoomSessionController.leaveRoom()
                     }) {
-                        gravity(Gravity.CENTER)
+                        lp {
+                            gravity(Gravity.CENTER)
+                        }
                     }
                 }
 
                 if (state.isHost) {
-                    add("pending_applies", createPendingPanel(onlyApply = true))
+                    add("applies_pending", createPendingPanel(onlyApply = true))
                 }
 
-                row("body") {
-                    spacing = 2f
-                    widthMode(SizeMode.MATCH_PARENT)
+                row("body", spacing = 2f) {
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(0f)
+                    }
+
                     weight(1f)
-                    height(0f)
 
                     column("members") {
-                        width(76f)
-                        heightMode(SizeMode.MATCH_PARENT)
+                        lp {
+                            width(R.ui.music_player.members_width)
+                            heightMode(SizeMode.MATCH_PARENT)
+                        }
 
-                        add("members_title", createRoomMembersTitle())
-                        scrollPanel(Orientation.VERTICAL, "member_list", createMemberPanel()) {
-                            widthMode(SizeMode.MATCH_PARENT)
+                        add("title_members", createRoomMembersTitle())
+
+                        scrollPanel(Orientation.VERTICAL, "list_member", createMemberPanel()) {
+                            lp {
+                                widthMode(SizeMode.MATCH_PARENT)
+                            }
+
                             weight(1f)
                         }
                     }
 
                     column("right") {
+                        lp {
+                            width(0f)
+                            heightMode(SizeMode.MATCH_PARENT)
+                        }
+
                         weight(1f)
-                        width(0f)
-                        heightMode(SizeMode.MATCH_PARENT)
 
                         add("now_playing", createRoomNowPlaying())
 
-                        row("room_search_area") {
-                            spacing = 2f
-                            widthMode(SizeMode.MATCH_PARENT)
-                            height(14f)
-
-                            roomSearchBox = textBox(64, "room_query") {
-                                weight(1f)
-                                width(0f)
+                        row("area_search_room", spacing = 2f) {
+                            lp {
+                                widthMode(SizeMode.MATCH_PARENT)
                                 height(14f)
-                                gravity(Gravity.CENTER_VERTICAL)
-                                this.gravity = Gravity.CENTER_VERTICAL
-                                padding(2f, 0f)
+                            }
+
+                            roomSearchBox = textBox(R.ui.music_player.search_max_length, "box_search_room") {
+                                lp {
+                                    width(0f)
+                                    height(14f)
+                                    gravity(Gravity.CENTER_VERTICAL)
+                                    padding(2f, 0f)
+                                }
+
+                                weight(1f)
+                                gravity = Gravity.CENTER_VERTICAL
+
                                 enter { roomSearch(it) }
                                 clearOnEnter(false)
                             }
+
                             add(
                                 "search", createStyledButton(
                                     L10n["app.academy.music_player.search"], 26f, 14f
                                 ) {
                                     roomSearch(roomSearchBox?.text)
                                 }) {
-                                gravity(Gravity.CENTER)
+                                lp {
+                                    gravity(Gravity.CENTER)
+                                }
                             }
+
                             if (roomShowingSearch) {
                                 add(
                                     "back", createActionButton(
@@ -1481,40 +1860,53 @@ object MusicApp : App {
                                         roomShowingSearch = false
                                         roomRevisionState.value += 1
                                     }) {
-                                    gravity(Gravity.CENTER)
+                                    lp {
+                                        gravity(Gravity.CENTER)
+                                    }
                                 }
                             }
                         }
 
-                        add("queue_title", createRoomQueueTitle())
+                        add("title_queue", createRoomQueueTitle())
 
-                        scrollPanel(Orientation.VERTICAL, "queue_area", createRoomQueuePanel()) {
-                            widthMode(SizeMode.MATCH_PARENT)
+                        scrollPanel(Orientation.VERTICAL, "area_queue", createRoomQueuePanel()) {
+                            lp {
+                                widthMode(SizeMode.MATCH_PARENT)
+                            }
+
                             weight(1f)
                         }
                     }
                 }
 
                 if (state.isHost) {
-                    row("host_actions") {
-                        spacing = 2f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(14f)
-
-                        inviteNameBox = textBox(64, "invite_name") {
-                            weight(1f)
-                            width(0f)
+                    row("actions_host", spacing = 2f) {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
                             height(14f)
-                            gravity(Gravity.CENTER_VERTICAL)
-                            this.gravity = Gravity.CENTER_VERTICAL
-                            padding(2f, 0f)
+                        }
+
+                        inviteNameBox = textBox(R.ui.music_player.search_max_length, "box_invite") {
+                            lp {
+                                width(0f)
+                                height(14f)
+                                gravity(Gravity.CENTER_VERTICAL)
+                                padding(2f, 0f)
+                            }
+
+                            weight(1f)
+                            gravity = Gravity.CENTER_VERTICAL
+
                             enter { inviteFromInput(it) }
                             clearOnEnter(false)
                         }
+
                         add("invite", createStyledButton(L10n["app.academy.music_player.room.invite"], 38f, 14f) {
                             inviteFromInput(inviteNameBox?.text)
                         }) {
-                            gravity(Gravity.CENTER)
+                            lp {
+                                gravity(Gravity.CENTER)
+                            }
                         }
                     }
                 }
@@ -1527,8 +1919,10 @@ object MusicApp : App {
                     val count = RoomSessionController.roomState?.members?.size ?: 0
                     text = "${L10n["app.academy.music_player.room.members"]} ($count)"
                 }
-                widthMode(SizeMode.MATCH_PARENT)
-                height(10f)
+                lp {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(10f)
+                }
             }
         }
 
@@ -1536,8 +1930,10 @@ object MusicApp : App {
             return TextWidget("").apply {
                 bindState(RoomSessionController.roomStateUi) { text = roomQueueTitle() }
                 bindState(OnlineMusicManager.revisionState) { text = roomQueueTitle() }
-                widthMode(SizeMode.MATCH_PARENT)
-                height(10f)
+                lp {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(10f)
+                }
             }
         }
 
@@ -1561,19 +1957,25 @@ object MusicApp : App {
             container.clearChildren()
             val state = RoomSessionController.roomState ?: return
             state.members.forEachIndexed { index, member ->
-                container.add("member_$index", standaloneRow(2f) {
-                    widthMode(SizeMode.MATCH_PARENT)
-                    height(12f)
+                container.add("member_$index", standaloneRow(spacing = 2f) {
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(12f)
+                    }
+
                     text(
                         if (member == state.hostName) "◆ $member" else member,
                         "name"
                     ) {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(0f)
+                            gravity(Gravity.CENTER_LEFT)
+                        }
+
                         scaleX = 0.62f
                         scaleY = 0.62f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(0f)
-                        gravity(Gravity.CENTER_LEFT)
-                        this.gravity = Gravity.CENTER_LEFT
+                        gravity = Gravity.CENTER_LEFT
                     }
                 })
             }
@@ -1581,105 +1983,154 @@ object MusicApp : App {
 
         private fun createRoomNowPlaying(): FrameLayoutWidget {
             return FrameLayoutWidget().apply {
-                widthMode(SizeMode.MATCH_PARENT)
-                heightMode(SizeMode.WRAP_CONTENT)
+                lp {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    heightMode(SizeMode.WRAP_CONTENT)
+                }
+
                 bindState(RoomSessionController.roomStateUi) {
                     replace("now_playing", buildRoomNowPlaying())
                 }
+
                 add("now_playing", buildRoomNowPlaying())
             }
         }
 
         private fun buildRoomNowPlaying(): LinearLayoutWidget {
             val timeline = RoomSessionController.roomState?.timeline
-            return standaloneColumn {
-                spacing = 1f
-                widthMode(SizeMode.MATCH_PARENT)
-                heightMode(SizeMode.WRAP_CONTENT)
+            return standaloneColumn(spacing = 1f) {
+                lp {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    heightMode(SizeMode.WRAP_CONTENT)
+                }
 
                 if (timeline == null) {
                     text(L10n["app.academy.music_player.room.idle"], "placeholder") {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(12f)
+                            gravity(Gravity.CENTER)
+                        }
+
                         scaleX = 0.62f
                         scaleY = 0.62f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(12f)
-                        gravity(Gravity.CENTER)
-                        this.gravity = Gravity.CENTER
+                        gravity = Gravity.CENTER
                     }
                 } else {
                     val entry = timeline.entry()
-                    row("meta") {
-                        spacing = 4f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(14f)
-                        image(AlbumArtworkCache.textureFor(entry), "icon") {
-                            sampler(FilterMode.LINEAR, false)
-                            size(12f, 12f)
-                            gravity(Gravity.CENTER)
+                    row("meta", spacing = 4f) {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(14f)
                         }
+
+                        image(AlbumArtworkCache.textureFor(entry), "icon") {
+                            lp {
+                                size(12f, 12f)
+                                gravity(Gravity.CENTER)
+                            }
+
+                            sampler(FilterMode.LINEAR, false)
+                        }
+
                         column("info") {
+                            lp {
+                                heightMode(SizeMode.MATCH_PARENT)
+                                gravity(Gravity.CENTER)
+                            }
+
                             weight(1f)
-                            heightMode(SizeMode.MATCH_PARENT)
-                            gravity(Gravity.CENTER)
+
                             add("title", createMarqueeText(entry.title()).apply {
                                 textSize = 6f
                             }) {
-                                widthMode(SizeMode.MATCH_PARENT)
-                                gravity(Gravity.CENTER_LEFT)
-                                this.gravity = Gravity.CENTER_LEFT
+                                lp {
+                                    widthMode(SizeMode.MATCH_PARENT)
+                                    gravity(Gravity.CENTER_LEFT)
+                                }
+
+                                gravity = Gravity.CENTER_LEFT
                             }
+
                             add("artist", createMarqueeText(entry.artist()).apply {
                                 textSize = 4f
                             }) {
-                                widthMode(SizeMode.MATCH_PARENT)
-                                gravity(Gravity.CENTER_LEFT)
-                                this.gravity = Gravity.CENTER_LEFT
+                                lp {
+                                    widthMode(SizeMode.MATCH_PARENT)
+                                    gravity(Gravity.CENTER_LEFT)
+                                }
+
+                                gravity = Gravity.CENTER_LEFT
                             }
                         }
                     }
 
-                    row("progress_area") {
-                        spacing = 4f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(12f)
+                    row("area_progress", spacing = 4f) {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(12f)
+                        }
 
-                        add("current_time", TextWidget("00:00").apply {
+                        add("time_current", TextWidget("00:00").apply {
                             setFrameUpdate {
                                 text = formatTime(RoomSessionController.expectedPositionSeconds())
                                 true
                             }
                         }) {
+                            lp {
+                                width(0f)
+                                gravity(Gravity.CENTER)
+                            }
+
                             weight(1f)
-                            width(0f)
-                            gravity(Gravity.CENTER)
-                            this.gravity = Gravity.CENTER
+                            gravity = Gravity.CENTER
                         }
+
                         add("progress", createRoomProgressBar(entry.durationSeconds().toFloat())) {
-                            gravity(Gravity.CENTER)
+                            lp {
+                                gravity(Gravity.CENTER)
+                            }
                         }
+
                         add("duration", TextWidget(formatTime(entry.durationSeconds().toFloat()))) {
+                            lp {
+                                width(0f)
+                                gravity(Gravity.CENTER)
+                            }
+
                             weight(1f)
-                            width(0f)
-                            gravity(Gravity.CENTER)
-                            this.gravity = Gravity.CENTER
+                            gravity = Gravity.CENTER
                         }
                     }
                 }
 
                 row("controls") {
-                    widthMode(SizeMode.MATCH_PARENT)
-                    height(14f)
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(14f)
+                    }
 
-                    add("controls_lead", EmptyWidget()) { weight(1f) }
+                    add("spacer_lead", EmptyWidget()) {
+                        weight(1f)
+                    }
+
                     button("previous") {
-                        size(14f, 14f)
+                        lp {
+                            size(14f, 14f)
+                        }
+
                         onClick { RoomSessionController.previousTrack() }
+
                         image(R.textures.gui.app.music.previous) {
                             sampler(FilterMode.LINEAR, false)
                         }
                     }
+
                     button("play_pause") {
-                        size(14f, 14f)
+                        lp {
+                            size(14f, 14f)
+                        }
+
                         onClick {
                             when {
                                 RoomSessionController.roomState?.timeline == null ->
@@ -1689,6 +2140,7 @@ object MusicApp : App {
                                 else -> RoomSessionController.resumePlayback()
                             }
                         }
+
                         image(
                             if (RoomSessionController.roomState?.timeline != null
                                 && RoomSessionController.expectedPlaying()
@@ -1701,14 +2153,22 @@ object MusicApp : App {
                             sampler(FilterMode.LINEAR, false)
                         }
                     }
+
                     button("next") {
-                        size(14f, 14f)
+                        lp {
+                            size(14f, 14f)
+                        }
+
                         onClick { RoomSessionController.nextTrack() }
+
                         image(R.textures.gui.app.music.next) {
                             sampler(FilterMode.LINEAR, false)
                         }
                     }
-                    add("controls_tail", EmptyWidget()) { weight(1f) }
+
+                    add("spacer_tail", EmptyWidget()) {
+                        weight(1f)
+                    }
                 }
             }
         }
@@ -1725,8 +2185,10 @@ object MusicApp : App {
                     }
                 }
             }
-            progressBar.size(96f, 6f)
-            progressBar.gravity(Gravity.CENTER)
+            progressBar.lp {
+                size(R.ui.music_player.room_progress_width, R.ui.music_player.progress_height)
+                gravity(Gravity.CENTER)
+            }
             progressBar.setBarColors(R.ui.terminal_hud.background_color, R.ui.terminal_hud.primary_color)
             progressBar.seekListener(object : OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBarWidget, progress: Float, fromUser: Boolean) {}
@@ -1760,21 +2222,27 @@ object MusicApp : App {
                 clearChildren()
                 if (roomShowingSearch) {
                     OnlineMusicManager.searchResults.forEachIndexed { index, result ->
-                        row("result_$index") {
-                            spacing = 2f
-                            widthMode(SizeMode.MATCH_PARENT)
-                            height(16f)
+                        row("result_$index", spacing = 2f) {
+                            lp {
+                                widthMode(SizeMode.MATCH_PARENT)
+                                height(16f)
+                            }
+
                             text(
                                 (if (result.vip) "[VIP] " else "") + result.title + " - " + result.artist,
                                 "name"
                             ) {
+                                lp {
+                                    height(0f)
+                                    gravity(Gravity.CENTER_LEFT)
+                                }
+
+                                weight(1f)
                                 scaleX = 0.6f
                                 scaleY = 0.6f
-                                weight(1f)
-                                height(0f)
-                                gravity(Gravity.CENTER_LEFT)
-                                this.gravity = Gravity.CENTER_LEFT
+                                gravity = Gravity.CENTER_LEFT
                             }
+
                             add(
                                 "play", createActionButton(
                                     R.textures.gui.app.music.play,
@@ -1782,6 +2250,7 @@ object MusicApp : App {
                                 ) {
                                     RoomSessionController.playTrack(result.toSharedTrackEntry())
                                 })
+
                             add(
                                 "queue", createActionButton(
                                     R.textures.gui.icon.add,
@@ -1796,60 +2265,90 @@ object MusicApp : App {
                 val queue = RoomSessionController.roomState?.queue
                 if (queue == null || queue.entries().isEmpty()) {
                     text(L10n["app.academy.music_player.room.queue.empty"], "empty") {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(12f)
+                            gravity(Gravity.CENTER)
+                        }
+
                         scaleX = 0.6f
                         scaleY = 0.6f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(12f)
-                        gravity(Gravity.CENTER)
-                        this.gravity = Gravity.CENTER
+                        gravity = Gravity.CENTER
                     }
                     return
                 }
                 queue.entries().forEachIndexed { index, queueEntry ->
                     val entry = queueEntry.entry()
                     add("queue_$index", ButtonWidget()) {
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(16f)
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(16f)
+                        }
+
                         background = createTrackBackground(false)
-                        add("content", standaloneRow(2f) {
-                            sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
-                            image(AlbumArtworkCache.textureFor(entry), "icon") {
-                                sampler(FilterMode.LINEAR, false)
-                                size(12f, 12f)
-                                gravity(Gravity.CENTER)
+
+                        add("content", standaloneRow(spacing = 2f) {
+                            lp {
+                                sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
                             }
+
+                            image(AlbumArtworkCache.textureFor(entry), "icon") {
+                                lp {
+                                    size(12f, 12f)
+                                    gravity(Gravity.CENTER)
+                                }
+
+                                sampler(FilterMode.LINEAR, false)
+                            }
+
                             column("info") {
+                                lp {
+                                    heightMode(SizeMode.MATCH_PARENT)
+                                    gravity(Gravity.CENTER)
+                                }
+
                                 weight(1f)
-                                heightMode(SizeMode.MATCH_PARENT)
-                                gravity(Gravity.CENTER)
+
                                 add("name", createMarqueeText(entry.title()).apply {
                                     textSize = 6f
                                 }) {
-                                    widthMode(SizeMode.MATCH_PARENT)
-                                    gravity(Gravity.CENTER_LEFT)
-                                    this.gravity = Gravity.CENTER_LEFT
+                                    lp {
+                                        widthMode(SizeMode.MATCH_PARENT)
+                                        gravity(Gravity.CENTER_LEFT)
+                                    }
+
+                                    gravity = Gravity.CENTER_LEFT
                                 }
+
                                 add("artist", createMarqueeText(entry.artist()).apply {
                                     textSize = 4f
                                 }) {
-                                    widthMode(SizeMode.MATCH_PARENT)
-                                    gravity(Gravity.CENTER_LEFT)
-                                    this.gravity = Gravity.CENTER_LEFT
+                                    lp {
+                                        widthMode(SizeMode.MATCH_PARENT)
+                                        gravity(Gravity.CENTER_LEFT)
+                                    }
+
+                                    gravity = Gravity.CENTER_LEFT
                                 }
                             }
+
                             text(
                                 queueEntry.requesterName(),
                                 "requester"
                             ) {
+                                lp {
+                                    width(26f)
+                                    height(0f)
+                                    gravity(Gravity.CENTER)
+                                }
+
                                 scaleX = 0.55f
                                 scaleY = 0.55f
-                                width(26f)
-                                height(0f)
-                                gravity(Gravity.CENTER)
-                                this.gravity = Gravity.CENTER
+                                gravity = Gravity.CENTER
                             }
+
                             add(
-                                "play_now", createActionButton(
+                                "now_play", createActionButton(
                                     R.textures.gui.app.music.play,
                                     L10n["app.academy.music_player.action.play"],
                                     10f,
@@ -1857,6 +2356,7 @@ object MusicApp : App {
                                 ) {
                                     RoomSessionController.playTrack(entry)
                                 })
+
                             add(
                                 "remove", createActionButton(
                                     R.textures.gui.icon.close,
@@ -1948,14 +2448,21 @@ object MusicApp : App {
 
         private fun createJukeboxView(): FrameLayoutWidget {
             return standaloneFrame {
-                matchParent()
-                add("jukebox_content", FrameLayoutWidget().apply {
-                    sizeMode(SizeMode.MATCH_PARENT)
-                    bindState(JukeboxSessionController.jukeboxStateUi) { replace("jukebox", buildJukeboxContent()) }
-                    bindState(SharedAccountClient.accountUi) { replace("jukebox", buildJukeboxContent()) }
-                    bindState(viewRevisionState) { replace("jukebox", buildJukeboxContent()) }
-                    add("jukebox", buildJukeboxContent())
-                })
+                lp {
+                    matchParent()
+                }
+
+                add("content_jukebox", FrameLayoutWidget()) {
+                    lp {
+                        sizeMode(SizeMode.MATCH_PARENT)
+                    }
+
+                    bindState(JukeboxSessionController.jukeboxStateUi) { replace("body_jukebox", buildJukeboxContent()) }
+                    bindState(SharedAccountClient.accountUi) { replace("body_jukebox", buildJukeboxContent()) }
+                    bindState(viewRevisionState) { replace("body_jukebox", buildJukeboxContent()) }
+
+                    add("body_jukebox", buildJukeboxContent())
+                }
             }
         }
 
@@ -1965,31 +2472,38 @@ object MusicApp : App {
         }
 
         private fun buildJukeboxDisabled(): LinearLayoutWidget {
-            return standaloneColumn {
-                spacing = 2f
-                sizeMode(SizeMode.MATCH_PARENT)
-                padding(2f, 2f)
-                text(L10n["app.academy.music_player.jukebox.disabled"], "disabled_hint") {
+            return standaloneColumn(spacing = 2f) {
+                lp {
+                    sizeMode(SizeMode.MATCH_PARENT)
+                    padding(2f, 2f)
+                }
+
+                text(L10n["app.academy.music_player.jukebox.disabled"], "hint_disabled") {
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        heightMode(SizeMode.WRAP_CONTENT)
+                        gravity(Gravity.CENTER)
+                    }
+
                     scaleX = 0.62f
                     scaleY = 0.62f
-                    widthMode(SizeMode.MATCH_PARENT)
-                    heightMode(SizeMode.WRAP_CONTENT)
-                    gravity(Gravity.CENTER)
-                    this.gravity = Gravity.CENTER
+                    gravity = Gravity.CENTER
                 }
             }
         }
 
         private fun buildJukeboxMain(state: JukeboxSessionController.JukeboxState): LinearLayoutWidget {
-            return standaloneColumn {
-                spacing = 2f
-                sizeMode(SizeMode.MATCH_PARENT)
-                padding(2f, 2f)
+            return standaloneColumn(spacing = 2f) {
+                lp {
+                    sizeMode(SizeMode.MATCH_PARENT)
+                    padding(2f, 2f)
+                }
 
-                row("header") {
-                    spacing = 2f
-                    widthMode(SizeMode.MATCH_PARENT)
-                    height(14f)
+                row("header", spacing = 2f) {
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(14f)
+                    }
 
                     val modeText = when (state.mode) {
                         MusicJukeboxPackets.MODE_PRESET -> L10n["app.academy.music_player.jukebox.mode_preset"]
@@ -1997,14 +2511,18 @@ object MusicApp : App {
                         else -> L10n["app.academy.music_player.jukebox.mode_idle"]
                     }
                     text(modeText, "mode") {
+                        lp {
+                            width(0f)
+                            height(0f)
+                            gravity(Gravity.CENTER_LEFT)
+                        }
+
+                        weight(1f)
                         scaleX = 0.62f
                         scaleY = 0.62f
-                        weight(1f)
-                        width(0f)
-                        height(0f)
-                        gravity(Gravity.CENTER_LEFT)
-                        this.gravity = Gravity.CENTER_LEFT
+                        gravity = Gravity.CENTER_LEFT
                     }
+
                     add(
                         "subscribe", createStyledButton(
                             if (JukeboxSessionController.subscribed) {
@@ -2016,10 +2534,13 @@ object MusicApp : App {
                         ) {
                             JukeboxSessionController.setSubscribed(!JukeboxSessionController.subscribed)
                         }) {
-                        gravity(Gravity.CENTER)
+                        lp {
+                            gravity(Gravity.CENTER)
+                        }
                     }
+
                     add(
-                        "playlist_toggle", createStyledButton(
+                        "toggle_playlist", createStyledButton(
                             if (jukeboxShowingPlaylist) L10n["app.academy.music_player.jukebox.playlist_back"]
                             else L10n["app.academy.music_player.jukebox.playlist"],
                             36f, 14f
@@ -2028,7 +2549,9 @@ object MusicApp : App {
                             if (jukeboxShowingPlaylist) SharedAccountClient.requestPlaylist()
                             viewRevisionState.value += 1
                         }) {
-                        gravity(Gravity.CENTER)
+                        lp {
+                            gravity(Gravity.CENTER)
+                        }
                     }
                 }
 
@@ -2037,25 +2560,37 @@ object MusicApp : App {
                 if (jukeboxShowingPlaylist) {
                     text(
                         "${L10n["app.academy.music_player.jukebox.playlist"]} (${SharedAccountClient.serverPlaylist?.tracks?.size ?: 0})",
-                        "playlist_title"
+                        "title_playlist"
                     ) {
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(10f)
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(10f)
+                        }
                     }
-                    scrollPanel(Orientation.VERTICAL, "server_playlist", createServerPlaylistPanel()) {
-                        widthMode(SizeMode.MATCH_PARENT)
+
+                    scrollPanel(Orientation.VERTICAL, "playlist_server", createServerPlaylistPanel()) {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                        }
+
                         weight(1f)
                     }
                 } else {
                     text(
                         "${L10n["app.academy.music_player.jukebox.queue"]} (${state.queue.entries().size})",
-                        "queue_title"
+                        "title_queue"
                     ) {
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(10f)
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(10f)
+                        }
                     }
-                    scrollPanel(Orientation.VERTICAL, "jukebox_queue", createJukeboxQueuePanel()) {
-                        widthMode(SizeMode.MATCH_PARENT)
+
+                    scrollPanel(Orientation.VERTICAL, "queue_jukebox", createJukeboxQueuePanel()) {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                        }
+
                         weight(1f)
                     }
                 }
@@ -2076,46 +2611,72 @@ object MusicApp : App {
                 val tracks = SharedAccountClient.serverPlaylist?.tracks
                 if (tracks.isNullOrEmpty()) {
                     text(L10n["app.academy.music_player.jukebox.playlist.empty"], "empty") {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(12f)
+                            gravity(Gravity.CENTER)
+                        }
+
                         scaleX = 0.6f
                         scaleY = 0.6f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(12f)
-                        gravity(Gravity.CENTER)
-                        this.gravity = Gravity.CENTER
+                        gravity = Gravity.CENTER
                     }
                     return
                 }
                 tracks.forEachIndexed { index, entry ->
                     add("preset_$index", ButtonWidget()) {
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(16f)
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(16f)
+                        }
+
                         background = createTrackBackground(false)
-                        add("content", standaloneRow(2f) {
-                            sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
-                            image(AlbumArtworkCache.textureFor(entry), "icon") {
-                                sampler(FilterMode.LINEAR, false)
-                                size(12f, 12f)
-                                gravity(Gravity.CENTER)
+
+                        add("content", standaloneRow(spacing = 2f) {
+                            lp {
+                                sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
                             }
+
+                            image(AlbumArtworkCache.textureFor(entry), "icon") {
+                                lp {
+                                    size(12f, 12f)
+                                    gravity(Gravity.CENTER)
+                                }
+
+                                sampler(FilterMode.LINEAR, false)
+                            }
+
                             column("info") {
+                                lp {
+                                    heightMode(SizeMode.MATCH_PARENT)
+                                    gravity(Gravity.CENTER)
+                                }
+
                                 weight(1f)
-                                heightMode(SizeMode.MATCH_PARENT)
-                                gravity(Gravity.CENTER)
+
                                 add("name", createMarqueeText(entry.title()).apply {
                                     textSize = 6f
                                 }) {
-                                    widthMode(SizeMode.MATCH_PARENT)
-                                    gravity(Gravity.CENTER_LEFT)
-                                    this.gravity = Gravity.CENTER_LEFT
+                                    lp {
+                                        widthMode(SizeMode.MATCH_PARENT)
+                                        gravity(Gravity.CENTER_LEFT)
+                                    }
+
+                                    gravity = Gravity.CENTER_LEFT
                                 }
+
                                 add("artist", createMarqueeText(entry.artist()).apply {
                                     textSize = 4f
                                 }) {
-                                    widthMode(SizeMode.MATCH_PARENT)
-                                    gravity(Gravity.CENTER_LEFT)
-                                    this.gravity = Gravity.CENTER_LEFT
+                                    lp {
+                                        widthMode(SizeMode.MATCH_PARENT)
+                                        gravity(Gravity.CENTER_LEFT)
+                                    }
+
+                                    gravity = Gravity.CENTER_LEFT
                                 }
                             }
+
                             add(
                                 "play", createActionButton(
                                     R.textures.gui.app.music.play,
@@ -2123,6 +2684,7 @@ object MusicApp : App {
                                 ) {
                                     previewTrack(entry)
                                 })
+
                             add(
                                 "favorite", createActionButton(
                                     R.textures.gui.icon.add,
@@ -2160,106 +2722,145 @@ object MusicApp : App {
 
         private fun buildJukeboxNowPlaying(state: JukeboxSessionController.JukeboxState): LinearLayoutWidget {
             val timeline = state.timeline
-            return standaloneColumn {
-                spacing = 1f
-                widthMode(SizeMode.MATCH_PARENT)
-                heightMode(SizeMode.WRAP_CONTENT)
+            return standaloneColumn(spacing = 1f) {
+                lp {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    heightMode(SizeMode.WRAP_CONTENT)
+                }
 
                 if (timeline == null) {
                     text(L10n["app.academy.music_player.jukebox.idle"], "placeholder") {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(12f)
+                            gravity(Gravity.CENTER)
+                        }
+
                         scaleX = 0.62f
                         scaleY = 0.62f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(12f)
-                        gravity(Gravity.CENTER)
-                        this.gravity = Gravity.CENTER
+                        gravity = Gravity.CENTER
                     }
                     return@standaloneColumn
                 }
 
                 val entry = timeline.entry()
-                row("meta") {
-                    spacing = 4f
-                    widthMode(SizeMode.MATCH_PARENT)
-                    height(14f)
-                    image(AlbumArtworkCache.textureFor(entry), "icon") {
-                        sampler(FilterMode.LINEAR, false)
-                        size(12f, 12f)
-                        gravity(Gravity.CENTER)
+                row("meta", spacing = 4f) {
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(14f)
                     }
+
+                    image(AlbumArtworkCache.textureFor(entry), "icon") {
+                        lp {
+                            size(12f, 12f)
+                            gravity(Gravity.CENTER)
+                        }
+
+                        sampler(FilterMode.LINEAR, false)
+                    }
+
                     column("info") {
+                        lp {
+                            heightMode(SizeMode.MATCH_PARENT)
+                            gravity(Gravity.CENTER)
+                        }
+
                         weight(1f)
-                        heightMode(SizeMode.MATCH_PARENT)
-                        gravity(Gravity.CENTER)
+
                         add("title", createMarqueeText(entry.title()).apply {
                             textSize = 6f
                         }) {
-                            widthMode(SizeMode.MATCH_PARENT)
-                            gravity(Gravity.CENTER_LEFT)
-                            this.gravity = Gravity.CENTER_LEFT
+                            lp {
+                                widthMode(SizeMode.MATCH_PARENT)
+                                gravity(Gravity.CENTER_LEFT)
+                            }
+
+                            gravity = Gravity.CENTER_LEFT
                         }
+
                         add("artist", createMarqueeText(entry.artist()).apply {
                             textSize = 4f
                         }) {
-                            widthMode(SizeMode.MATCH_PARENT)
-                            gravity(Gravity.CENTER_LEFT)
-                            this.gravity = Gravity.CENTER_LEFT
+                            lp {
+                                widthMode(SizeMode.MATCH_PARENT)
+                                gravity(Gravity.CENTER_LEFT)
+                            }
+
+                            gravity = Gravity.CENTER_LEFT
                         }
                     }
                 }
 
-                row("progress_area") {
-                    spacing = 4f
-                    widthMode(SizeMode.MATCH_PARENT)
-                    height(12f)
+                row("area_progress", spacing = 4f) {
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(12f)
+                    }
 
-                    add("current_time", TextWidget("00:00").apply {
+                    add("time_current", TextWidget("00:00").apply {
                         setFrameUpdate {
                             text = formatTime(JukeboxSessionController.expectedPositionSeconds())
                             true
                         }
                     }) {
+                        lp {
+                            width(0f)
+                            gravity(Gravity.CENTER)
+                        }
+
                         weight(1f)
-                        width(0f)
-                        gravity(Gravity.CENTER)
-                        this.gravity = Gravity.CENTER
+                        gravity = Gravity.CENTER
                     }
+
                     add("progress", createJukeboxProgressBar(entry.durationSeconds().toFloat())) {
-                        gravity(Gravity.CENTER)
+                        lp {
+                            gravity(Gravity.CENTER)
+                        }
                     }
+
                     add("duration", TextWidget(formatTime(entry.durationSeconds().toFloat()))) {
+                        lp {
+                            width(0f)
+                            gravity(Gravity.CENTER)
+                        }
+
                         weight(1f)
-                        width(0f)
-                        gravity(Gravity.CENTER)
-                        this.gravity = Gravity.CENTER
+                        gravity = Gravity.CENTER
                     }
                 }
 
-                row("vote_area") {
-                    spacing = 4f
-                    widthMode(SizeMode.MATCH_PARENT)
-                    height(14f)
-                    gravity(Gravity.CENTER)
+                row("area_vote", spacing = 4f) {
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(14f)
+                        gravity(Gravity.CENTER)
+                    }
 
                     if (state.voteActive) {
                         text(
                             "${L10n["app.academy.music_player.jukebox.vote_progress"]}: ${state.voteCount}/${state.voteThreshold}",
                             "vote_status"
                         ) {
+                            lp {
+                                height(0f)
+                                gravity(Gravity.CENTER)
+                            }
+
                             scaleX = 0.6f
                             scaleY = 0.6f
-                            height(0f)
-                            gravity(Gravity.CENTER)
-                            this.gravity = Gravity.CENTER
+                            gravity = Gravity.CENTER
                         }
                     }
+
                     add(
                         "vote", createStyledButton(
                             L10n["app.academy.music_player.jukebox.vote_skip"], 60f, 14f
                         ) {
                             JukeboxSessionController.voteSkip()
                         }) {
-                        gravity(Gravity.CENTER)
+                        lp {
+                            gravity(Gravity.CENTER)
+                        }
                     }
                 }
             }
@@ -2281,8 +2882,10 @@ object MusicApp : App {
                     }
                 }
             }
-            progressBar.size(128f, 6f)
-            progressBar.gravity(Gravity.CENTER)
+            progressBar.lp {
+                size(R.ui.music_player.progress_width, R.ui.music_player.progress_height)
+                gravity(Gravity.CENTER)
+            }
             progressBar.setBarColors(R.ui.terminal_hud.background_color, R.ui.terminal_hud.primary_color)
             return progressBar
         }
@@ -2303,59 +2906,88 @@ object MusicApp : App {
                 val queue = JukeboxSessionController.state?.queue
                 if (queue == null || queue.entries().isEmpty()) {
                     text(L10n["app.academy.music_player.jukebox.queue.empty"], "empty") {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(12f)
+                            gravity(Gravity.CENTER)
+                        }
+
                         scaleX = 0.6f
                         scaleY = 0.6f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(12f)
-                        gravity(Gravity.CENTER)
-                        this.gravity = Gravity.CENTER
+                        gravity = Gravity.CENTER
                     }
                     return
                 }
                 queue.entries().forEachIndexed { index, queueEntry ->
                     val entry = queueEntry.entry()
                     add("queue_$index", ButtonWidget()) {
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(16f)
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(16f)
+                        }
+
                         background = createTrackBackground(false)
-                        add("content", standaloneRow(2f) {
-                            sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
-                            image(AlbumArtworkCache.textureFor(entry), "icon") {
-                                sampler(FilterMode.LINEAR, false)
-                                size(12f, 12f)
-                                gravity(Gravity.CENTER)
+
+                        add("content", standaloneRow(spacing = 2f) {
+                            lp {
+                                sizeMode(SizeMode.MATCH_PARENT, SizeMode.MATCH_PARENT)
                             }
+
+                            image(AlbumArtworkCache.textureFor(entry), "icon") {
+                                lp {
+                                    size(12f, 12f)
+                                    gravity(Gravity.CENTER)
+                                }
+
+                                sampler(FilterMode.LINEAR, false)
+                            }
+
                             column("info") {
+                                lp {
+                                    heightMode(SizeMode.MATCH_PARENT)
+                                    gravity(Gravity.CENTER)
+                                }
+
                                 weight(1f)
-                                heightMode(SizeMode.MATCH_PARENT)
-                                gravity(Gravity.CENTER)
+
                                 add("name", createMarqueeText(entry.title()).apply {
                                     textSize = 6f
                                 }) {
-                                    widthMode(SizeMode.MATCH_PARENT)
-                                    gravity(Gravity.CENTER_LEFT)
-                                    this.gravity = Gravity.CENTER_LEFT
+                                    lp {
+                                        widthMode(SizeMode.MATCH_PARENT)
+                                        gravity(Gravity.CENTER_LEFT)
+                                    }
+
+                                    gravity = Gravity.CENTER_LEFT
                                 }
+
                                 add("artist", createMarqueeText(entry.artist()).apply {
                                     textSize = 4f
                                 }) {
-                                    widthMode(SizeMode.MATCH_PARENT)
-                                    gravity(Gravity.CENTER_LEFT)
-                                    this.gravity = Gravity.CENTER_LEFT
+                                    lp {
+                                        widthMode(SizeMode.MATCH_PARENT)
+                                        gravity(Gravity.CENTER_LEFT)
+                                    }
+
+                                    gravity = Gravity.CENTER_LEFT
                                 }
                             }
+
                             text(
                                 queueEntry.requesterName().ifBlank {
                                     L10n["app.academy.music_player.jukebox.preset_badge"]
                                 },
                                 "requester"
                             ) {
+                                lp {
+                                    width(30f)
+                                    height(0f)
+                                    gravity(Gravity.CENTER)
+                                }
+
                                 scaleX = 0.55f
                                 scaleY = 0.55f
-                                width(30f)
-                                height(0f)
-                                gravity(Gravity.CENTER)
-                                this.gravity = Gravity.CENTER
+                                gravity = Gravity.CENTER
                             }
                         })
                     }
@@ -2365,44 +2997,60 @@ object MusicApp : App {
 
         private fun createSharedAccountPanel(): FrameLayoutWidget {
             return standaloneFrame {
-                sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
-                add("content", FrameLayoutWidget().apply {
+                lp {
                     sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                }
+
+                add("content", FrameLayoutWidget()) {
+                    lp {
+                        sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                    }
+
                     bindState(SharedAccountClient.accountUi) { rebuildSharedAccountPanel(this as FrameLayoutWidget) }
                     rebuildSharedAccountPanel(this)
-                })
+                }
             }
         }
 
         private fun rebuildSharedAccountPanel(container: FrameLayoutWidget) {
             container.clearChildren()
-            container.add("card", standaloneColumn(2f) {
-                sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
-                padding(4f, 4f)
+            container.add("card", standaloneColumn(spacing = 2f) {
+                lp {
+                    sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+                    padding(4f, 4f)
+                }
 
                 text(L10n["app.academy.music_player.shared_account.title"], "title") {
-                    widthMode(SizeMode.MATCH_PARENT)
-                    height(10f)
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(10f)
+                    }
                 }
 
                 for (provider in listOf("qq", "netease")) {
-                    row("${provider}_row") {
-                        spacing = 2f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        height(14f)
+                    row("row_$provider", spacing = 2f) {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(14f)
+                        }
+
                         text(
                             if (provider == "qq") L10n["app.academy.music_player.provider.qq"]
                             else L10n["app.academy.music_player.provider.netease"],
                             "name"
                         ) {
+                            lp {
+                                width(0f)
+                                height(0f)
+                                gravity(Gravity.CENTER_LEFT)
+                            }
+
+                            weight(1f)
                             scaleX = 0.62f
                             scaleY = 0.62f
-                            weight(1f)
-                            width(0f)
-                            height(0f)
-                            gravity(Gravity.CENTER_LEFT)
-                            this.gravity = Gravity.CENTER_LEFT
+                            gravity = Gravity.CENTER_LEFT
                         }
+
                         add(
                             "upload", createStyledButton(
                                 L10n["app.academy.music_player.shared_account.upload"], 34f, 12f, 0.58f
@@ -2414,23 +3062,28 @@ object MusicApp : App {
                                 }
                                 viewRevisionState.value += 1
                             }) {
-                            size(34f, 12f)
-                            gravity(Gravity.CENTER)
+                            lp {
+                                size(34f, 12f)
+                                gravity(Gravity.CENTER)
+                            }
                         }
+
                         add(
                             "query", createStyledButton(
                                 L10n["app.academy.music_player.shared_account.query"], 34f, 12f, 0.58f
                             ) {
                                 SharedAccountClient.queryStatus(provider)
                             }) {
-                            size(34f, 12f)
-                            gravity(Gravity.CENTER)
+                            lp {
+                                size(34f, 12f)
+                                gravity(Gravity.CENTER)
+                            }
                         }
                     }
                 }
 
                 val status = SharedAccountClient.lastStatus
-                val text = buildString {
+                val statusText = buildString {
                     if (status != null) {
                         append(
                             if (status.sharedEnabled) L10n["app.academy.music_player.shared_account.enabled"]
@@ -2451,14 +3104,17 @@ object MusicApp : App {
                         append(sharedAccountHint)
                     }
                 }
-                if (text.isNotBlank()) {
-                    text(text, "status") {
+                if (statusText.isNotBlank()) {
+                    text(statusText, "status") {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            heightMode(SizeMode.WRAP_CONTENT)
+                            gravity(Gravity.CENTER_LEFT)
+                        }
+
                         scaleX = 0.58f
                         scaleY = 0.58f
-                        widthMode(SizeMode.MATCH_PARENT)
-                        heightMode(SizeMode.WRAP_CONTENT)
-                        gravity(Gravity.CENTER_LEFT)
-                        this.gravity = Gravity.CENTER_LEFT
+                        gravity = Gravity.CENTER_LEFT
                     }
                 }
             })

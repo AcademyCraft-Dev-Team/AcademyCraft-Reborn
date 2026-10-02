@@ -799,11 +799,11 @@ class TerminalHud private constructor() {
         lateinit var INSTANCE: TerminalHud
 
         fun handleCharacterInput(event: CharacterEvent): Boolean {
-            return this::INSTANCE.isInitialized && INSTANCE.onCharacterInput(event)
+            return ::INSTANCE.isInitialized && INSTANCE.onCharacterInput(event)
         }
 
         fun handlePreeditInput(event: PreeditEvent?): Boolean {
-            return this::INSTANCE.isInitialized && INSTANCE.onPreeditInput(event)
+            return ::INSTANCE.isInitialized && INSTANCE.onPreeditInput(event)
         }
 
         private val APPS: MutableList<App> = ArrayList<App>()

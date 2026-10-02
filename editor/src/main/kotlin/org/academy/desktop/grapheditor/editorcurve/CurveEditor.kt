@@ -29,7 +29,7 @@ class CurveEditor {
     fun open(curve: Curve, onApply: (Curve) -> Unit) {
         this.curve = curve.keyframes().toMutableList()
         this.onApply = onApply
-        this.selected = -1
+        selected = -1
     }
 
     fun render() {

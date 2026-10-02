@@ -318,7 +318,7 @@ class ImGuiBackend(
         val ib = indexBuffer
         val projMtx = projMatrixUniform
         val fontView = fontTextureView
-        val fontSampler = this.fontSampler
+        val fontSampler = fontSampler
 
         renderPass.setPipeline(RenderSystem.getCompiledPipeline(Render.RenderPipelines.IMGUI))
         renderPass.setUniform("Projection", projMtx)

@@ -8,18 +8,20 @@ import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
 import org.academy.api.client.gui.drawable.ColorDrawable
 import org.academy.api.client.gui.drawable.StateListDrawable
-import org.academy.api.client.gui.dsl.onClick
+import org.academy.api.client.gui.dsl.*
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.screen.UiScreen
 import org.academy.api.client.gui.widget.*
+import org.academy.api.client.resources.R
 import org.academy.api.common.ability.darkmatter.DarkmatterCreatureRegistries
 import org.academy.internal.common.ability.darkmatter.creature.DarkmatterCreatureBlueprint
 import org.academy.internal.common.ability.darkmatter.skills.lv4.DarkmatterCreation
 import org.academy.internal.common.world.entity.EntityTypes
 import org.academy.internal.common.world.entity.ability.DarkmatterBeetle
 import org.misaka.MisakaNetworkClient
+import kotlin.jvm.optionals.getOrDefault
 import kotlin.math.roundToInt
 
 class DarkmatterCreationScreen : UiScreen(Component.translatable("screen.academy.darkmatter_creation.title")) {
@@ -29,21 +31,15 @@ class DarkmatterCreationScreen : UiScreen(Component.translatable("screen.academy
     private var tab: Tab = Tab.BLUEPRINT
     private var dirty: Boolean = false
     private var rosterPage: Int = 0
-    private var widgetCounter: Int = 0
     private var nameBox: TextInputWidget? = null
-    private lateinit var panel: FrameLayoutWidget
     private var previewEntity: DarkmatterBeetle? = null
-    private var panelWidth: Int = PANEL_W
-    private var panelHeight: Int = PANEL_H
-    private var panelX: Int = 0
-    private var panelY: Int = 0
+    private var panelWidth: Int = 0
+    private var panelHeight: Int = 0
     private var compact: Boolean = false
     private var summonStatus: String? = null
-    private val moduleHoverTargets: MutableList<ModuleHoverTarget> = ArrayList()
-
-    private lateinit var moduleTooltip: FrameLayoutWidget
-    private lateinit var moduleTooltipLines: LinearLayoutWidget
-    private var tooltipModule: String? = null
+    private lateinit var previewArea: FrameLayoutWidget
+    private lateinit var tooltip: ModuleTooltipWidget
+    private val moduleButtons: MutableList<Pair<String, ButtonWidget>> = ArrayList()
 
     init {
         var current = latest
@@ -60,75 +56,197 @@ class DarkmatterCreationScreen : UiScreen(Component.translatable("screen.academy
     }
 
     override fun onInit() {
-        widgetCounter = 0
-        moduleHoverTargets.clear()
         nameBox = null
-        panelWidth = (width - 12).coerceIn(300, PANEL_W)
-        panelHeight = (height - 12).coerceIn(220, PANEL_H)
-        panelX = (width - panelWidth) / 2
-        panelY = (height - panelHeight) / 2
+        moduleButtons.clear()
+
+        panelWidth = (width - R.ui.darkmatter_creation.panel_margin)
+            .coerceIn(R.ui.darkmatter_creation.panel_min_width, R.ui.darkmatter_creation.panel_width).toInt()
+        panelHeight = (height - R.ui.darkmatter_creation.panel_margin)
+            .coerceIn(R.ui.darkmatter_creation.panel_min_height, R.ui.darkmatter_creation.panel_height).toInt()
         compact = panelWidth < 500 || panelHeight < 285
 
-        panel = FrameLayoutWidget()
-        panel.layoutParams = FrameLayoutWidget.LayoutParams()
-            .size(panelWidth.toFloat(), panelHeight.toFloat())
-            .gravity(Gravity.CENTER)
-        val background = BlendQuadWidget()
-        background.alpha = 0.43f
-        background.drawLine = false
-        background.layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-        panel.addChild("background", background)
-        addRule(8, 0, panelWidth - 16, 1, 0xE6FFFFFF.toInt())
-        addRule(12, 57, panelWidth - 24, 1, 0x60FFFFFF)
+        root.apply {
+            lateinit var slotGroup: RadioGroupWidget
+            lateinit var tabGroup: RadioGroupWidget
 
-        val title = label(Component.translatable("screen.academy.darkmatter_creation.title").string, 13, 9)
-        title.textColor = ACCENT
-        root.addChild("darkmatter_creation", panel)
+            frame("panel_darkmatter_creation") {
+                lp {
+                    gravity(Gravity.CENTER)
+                    size(panelWidth.toFloat(), panelHeight.toFloat())
+                }
 
-        for (slot in 0 until 4) {
-            val value = slot
-            addButton(
-                panelWidth - 182 + slot * 40, 8, 34, 18,
-                (slot + 1).toString(), { selectSlot(value) }, slot == selectedSlot, false
-            )
-        }
-        val tabs = Tab.entries
-        val tabGap = 3
-        val tabWidth = (panelWidth - 24 - tabGap * (tabs.size - 1)) / tabs.size
-        for (i in tabs.indices) {
-            val value = tabs[i]
-            addButton(
-                12 + i * (tabWidth + tabGap), 32, tabWidth, 19,
-                Component.translatable(value.key).string, {
-                    commitName()
-                    tab = value
-                    rebuild()
-                }, tab === value, false
-            )
-        }
+                blendQuad("back") {
+                    lp {
+                        matchParent()
+                    }
 
-        when (tab) {
-            Tab.BLUEPRINT -> buildBlueprintTab()
-            Tab.PARTS -> buildPartsTab()
-            Tab.PHASE -> buildPhaseTab()
-            Tab.MODULES -> buildModulesTab()
-            Tab.SUMMONED -> buildSummonedTab()
-        }
-        if (tab !== Tab.SUMMONED) {
-            addButton(
-                panelWidth - 210, panelHeight - 29, 92, 20,
-                tr("screen.academy.darkmatter_creation.save"), { save() }, false, false
-            )
-            addButton(
-                panelWidth - 112, panelHeight - 29, 100, 20,
-                tr("screen.academy.darkmatter_creation.summon"), { saveAndSummon() }, false, false
-            )
-        }
+                    alpha = R.ui.darkmatter_creation.panel_alpha
+                    drawLine = false
+                }
 
-        buildModuleTooltip()
-        root.setFrameUpdate {
-            updateModuleTooltip()
-            true
+                column("content_main") {
+                    lp {
+                        matchParent()
+                        padding(12f, 8f, 12f, 8f)
+                    }
+
+                    spacing = 4f
+
+                    row("bar_title") {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(R.ui.darkmatter_creation.title_height)
+                        }
+
+                        text(
+                            Component.translatable("screen.academy.darkmatter_creation.title").string,
+                            "title_darkmatter_creation"
+                        ) {
+                            lp {
+                                gravity(Gravity.CENTER_LEFT)
+                            }
+
+                            textSize = 8f
+                            textColor = R.ui.darkmatter_creation.accent
+                        }
+
+                        empty("spacer_title") {
+                            weight(1f)
+                        }
+
+                        slotGroup = radioGroup("bar_slot") {
+                            lp {
+                                height(R.ui.darkmatter_creation.slot_button_height)
+                                gravity(Gravity.CENTER_RIGHT)
+                            }
+
+                            orientation = Orientation.HORIZONTAL
+                            spacing = 6f
+
+                            for (slot in 0 until 4) {
+                                add("button_slot_$slot", createRadioButton((slot + 1).toString(), slot == selectedSlot)) {
+                                    lp {
+                                        size(R.ui.darkmatter_creation.slot_button_width, R.ui.darkmatter_creation.slot_button_height)
+                                    }
+
+                                    onClick {
+                                        selectSlot(slot)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    tabGroup = radioGroup("bar_tab") {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(R.ui.darkmatter_creation.tab_height)
+                        }
+
+                        orientation = Orientation.HORIZONTAL
+                        spacing = R.ui.darkmatter_creation.tab_gap
+
+                        for (value in Tab.entries) {
+                            add("button_tab_" + value.name.lowercase(), createRadioButton(tr(value.key), value === tab)) {
+                                lp {
+                                    width(0f)
+                                    heightMode(SizeMode.MATCH_PARENT)
+                                }
+
+                                weight(1f)
+
+                                onClick {
+                                    commitName()
+                                    tab = value
+                                    rebuild()
+                                }
+                            }
+                        }
+                    }
+
+                    fill(R.ui.darkmatter_creation.rule_soft, "rule_tab") {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(1f)
+                        }
+                    }
+
+                    row("area_content") {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(0f)
+                        }
+
+                        weight(1f)
+
+                        frame("area_page") {
+                            lp {
+                                width(0f)
+                                heightMode(SizeMode.MATCH_PARENT)
+                            }
+
+                            weight(1f)
+
+                            add("page_" + tab.name.lowercase(), buildTabContent())
+                        }
+
+                        previewArea = frame("area_preview") {
+                            lp {
+                                width(R.ui.darkmatter_creation.preview_width)
+                                heightMode(SizeMode.MATCH_PARENT)
+                            }
+
+                            visibility = if (showPreview()) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
+                        }
+                    }
+
+                    if (tab !== Tab.SUMMONED) {
+                        row("bar_action", spacing = 8f) {
+                            lp {
+                                widthMode(SizeMode.MATCH_PARENT)
+                                height(R.ui.darkmatter_creation.action_button_height)
+                            }
+
+                            empty("spacer_action") {
+                                weight(1f)
+                            }
+
+                            add(
+                                "button_save",
+                                createControlButton(tr("screen.academy.darkmatter_creation.save"), false,
+                                    danger = false
+                                ) { save() }
+                            ) {
+                                lp {
+                                    width(R.ui.darkmatter_creation.save_button_width)
+                                    heightMode(SizeMode.MATCH_PARENT)
+                                }
+                            }
+
+                            add(
+                                "button_summon",
+                                createControlButton(
+                                    tr("screen.academy.darkmatter_creation.summon"), selected = false, danger = false
+                                ) { saveAndSummon() }
+                            ) {
+                                lp {
+                                    width(R.ui.darkmatter_creation.summon_button_width)
+                                    heightMode(SizeMode.MATCH_PARENT)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            tooltip = add("tooltip_module", ModuleTooltipWidget()) {
+                lp {
+                    gravity(Gravity.TOP_LEFT)
+                }
+            }
+
+            slotGroup.selectButton(slotGroup.children["button_slot_$selectedSlot"] as RadioButtonWidget)
+            tabGroup.selectButton(tabGroup.children["button_tab_" + tab.name.lowercase()] as RadioButtonWidget)
         }
     }
 
@@ -141,335 +259,618 @@ class DarkmatterCreationScreen : UiScreen(Component.translatable("screen.academy
     }
 
     private fun extractCreaturePreview(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int) {
-        val minecraft = Minecraft.getInstance()
-        val level = minecraft.level
-        if (compact || tab === Tab.MODULES || tab === Tab.SUMMONED || level == null) return
+        if (!showPreview() || !::previewArea.isInitialized) return
+        val level = Minecraft.getInstance().level ?: return
         var entity = previewEntity
         if (entity == null || entity.level() !== level) {
             entity = DarkmatterBeetle(EntityTypes.DARKMATTER_BEETLE.get(), level)
-            entity.setId(Integer.MIN_VALUE + 1)
+            entity.id = Integer.MIN_VALUE + 1
             previewEntity = entity
         }
         entity.applyBlueprint(editing, selectedSlot, snapshot.abilityLevel, 0, false)
+        val left = previewArea.getAbsoluteX().toInt()
+        val top = previewArea.getAbsoluteY().toInt()
         InventoryScreen.extractEntityInInventoryFollowsMouse(
             graphics,
-            panelX + panelWidth - 184, panelY + 66,
-            panelX + panelWidth - 18, panelY + panelHeight - 42,
+            left, top,
+            left + previewArea.width.toInt(), top + previewArea.height.toInt(),
             62, 0.0f, mouseX.toFloat(), mouseY.toFloat(), entity
         )
     }
 
-    private fun buildModuleTooltip() {
-        moduleTooltip = FrameLayoutWidget()
-        moduleTooltip.layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.FIXED)
-        moduleTooltip.visibility = Widget.Visibility.INVISIBLE
+    private fun showPreview(): Boolean = !compact && tab !== Tab.MODULES && tab !== Tab.SUMMONED
 
-        val background = FillWidget(0xD9101010.toInt())
-        background.layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-        moduleTooltip.addChild("background", background)
+    private fun createRadioButton(text: String, selected: Boolean): RadioButtonWidget {
+        val button = RadioButtonWidget()
+        applyButtonStyle(button, selected, false)
+        button.add("label", TextWidget(text)) {
+            lp {
+                matchParent()
+                gravity(Gravity.CENTER)
+            }
 
-        moduleTooltipLines = LinearLayoutWidget()
-        moduleTooltipLines.orientation = Orientation.VERTICAL
-        moduleTooltipLines.spacing = 0f
-        moduleTooltipLines.layoutParams = FrameLayoutWidget.LayoutParams()
-            .sizeMode(SizeMode.MATCH_PARENT)
-            .padding(5f, 4f, 5f, 4f)
-        moduleTooltip.addChild("lines", moduleTooltipLines)
-
-        root.addChild("module_tooltip", moduleTooltip)
+            textSize = 7.5f
+            gravity = Gravity.CENTER
+        }
+        return button
     }
 
-    private fun updateModuleTooltip() {
-        if (!::moduleTooltip.isInitialized) return
-        if (tab !== Tab.MODULES) {
-            moduleTooltip.visibility = Widget.Visibility.INVISIBLE
-            tooltipModule = null
-            return
+    private fun createControlButton(
+        text: String,
+        selected: Boolean,
+        danger: Boolean,
+        onClick: () -> Unit
+    ): ButtonWidget {
+        val button = ButtonWidget()
+        applyButtonStyle(button, selected, danger)
+        button.onClick { onClick() }
+        button.add("label", TextWidget(text)) {
+            lp {
+                matchParent()
+                gravity(Gravity.CENTER)
+            }
+
+            textSize = 7.5f
+            gravity = Gravity.CENTER
         }
-        val minecraft = Minecraft.getInstance()
-        val window = minecraft.window
-        val mouseX = minecraft.mouseHandler.getScaledXPos(window)
-        val mouseY = minecraft.mouseHandler.getScaledYPos(window)
-        val target = moduleHoverTargets.firstOrNull {
-            mouseX >= panelX + it.x && mouseX < panelX + it.x + it.width &&
-                    mouseY >= panelY + it.y && mouseY < panelY + it.y + it.height
-        }
-        if (target == null) {
-            moduleTooltip.visibility = Widget.Visibility.INVISIBLE
-            tooltipModule = null
-            return
-        }
-        if (target.module != tooltipModule) {
-            tooltipModule = target.module
-            rebuildModuleTooltip(target.module)
-        }
-        val widest = moduleTooltipLines.children.values.maxOfOrNull { it.measuredWidth } ?: 0f
-        val boxWidth = (widest + 12f).coerceIn(60f, 240f)
-        val boxHeight = moduleTooltipLines.measuredHeight.coerceAtLeast(1f)
-        moduleTooltip.width = boxWidth
-        moduleTooltip.height = boxHeight
-        moduleTooltip.translationX = (mouseX + 8.0).toFloat().coerceIn(2f, maxOf(2f, width - boxWidth - 2f))
-        moduleTooltip.translationY = (mouseY + 10.0).toFloat().coerceIn(2f, maxOf(2f, height - boxHeight - 2f))
-        moduleTooltip.visibility = Widget.Visibility.VISIBLE
+        return button
     }
 
-    private fun rebuildModuleTooltip(module: String) {
-        moduleTooltipLines.clearChildren()
-        addTooltipLine(moduleName(module), 0xFFFFFFFF.toInt(), 230)
-        addTooltipLine(moduleDescription(module), 0xFF9AA4AA.toInt(), 230)
+    private fun applyButtonStyle(button: ButtonWidget, selected: Boolean, danger: Boolean) {
+        val background = StateListDrawable()
+        background.setDefault(ColorDrawable(if (danger) R.ui.darkmatter_creation.danger_base else R.ui.darkmatter_creation.control))
+        background.addState(Widget.SELECTED, ColorDrawable(R.ui.darkmatter_creation.control_active))
+        background.addState(Widget.HOVERED, ColorDrawable(if (danger) R.ui.darkmatter_creation.danger else R.ui.darkmatter_creation.control_hover))
+        background.addState(Widget.PRESSED, ColorDrawable(if (danger) R.ui.darkmatter_creation.danger_pressed else R.ui.darkmatter_creation.control_active))
+        button.background = background
+        button.isSelected = selected
+        button.add("rail", FillWidget(if (selected) R.ui.darkmatter_creation.accent else R.ui.darkmatter_creation.rail_idle)) {
+            lp {
+                width(if (selected) 2f else 1f)
+                heightMode(SizeMode.MATCH_PARENT)
+                gravity(Gravity.CENTER_LEFT)
+                margin(2f, 3f, 0f, 3f)
+            }
+        }
     }
 
-    private fun addTooltipLine(text: String, color: Int, maxWidth: Int) {
-        val widget = TextWidget(text)
-        widget.textSize = 7.5f
-        widget.textColor = color
-        widget.singleLine = false
-        widget.layoutParams = LinearLayoutWidget.LayoutParams()
-            .width(maxWidth.toFloat())
-            .heightMode(SizeMode.WRAP_CONTENT)
-        moduleTooltipLines.addChild("line_${moduleTooltipLines.children.size}", widget)
+    private fun buildTabContent(): Widget = when (tab) {
+        Tab.BLUEPRINT -> buildBlueprintTab()
+        Tab.PARTS -> buildPartsTab()
+        Tab.PHASE -> buildPhaseTab()
+        Tab.MODULES -> buildModulesTab()
+        Tab.SUMMONED -> buildSummonedTab()
     }
 
-    private fun buildBlueprintTab() {
-        val inputY = if (compact) 70 else 82
-        val box = TextInputWidget(32)
-        box.text = editing.name()
-        box.hint = tr("screen.academy.darkmatter_creation.name")
-        box.setClearWhenEnter(false)
-        box.setWhenEnter { commitName() }
-        box.setOnFocusLost { commitName() }
-        box.background = ColorDrawable(CONTROL)
-        box.layoutParams = FrameLayoutWidget.LayoutParams()
-            .size((if (compact) panelWidth - 52 else 238).toFloat(), 20f)
-            .gravity(Gravity.TOP_LEFT)
-            .margin(26f, inputY.toFloat(), 0f, 0f)
-            .paddingLeft(5f)
-        panel.addChild("name", box)
-        nameBox = box
+    private fun buildBlueprintTab(): Widget = standaloneColumn(spacing = 6f) {
+        lp {
+            widthMode(SizeMode.MATCH_PARENT)
+        }
 
-        val investmentY = if (compact) 104 else 124
-        addButton(26, investmentY, 76, 20, "− 5 MP", { changeInvestment(-5) }, false, false)
-        addButton(188, investmentY, 76, 20, "+ 5 MP", { changeInvestment(5) }, false, false)
-        addLabel(
-            "screen.academy.darkmatter_creation.investment",
-            114,
-            investmentY + 6,
-            "  " + editing.investment() + " MP"
-        )
+        row("row_name") {
+            lp {
+                widthMode(SizeMode.MATCH_PARENT)
+                height(20f)
+            }
+
+            nameBox = textBox(32, "box_name") {
+                lp {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    heightMode(SizeMode.MATCH_PARENT)
+                }
+
+                text = editing.name()
+                hint = tr("screen.academy.darkmatter_creation.name")
+                background = ColorDrawable(R.ui.darkmatter_creation.control)
+                clearOnEnter(false)
+                paddingLeft(5f)
+
+                enter { commitName() }
+                onLostFocus { commitName() }
+            }
+        }
+
+        row("row_investment", spacing = 8f) {
+            lp {
+                widthMode(SizeMode.MATCH_PARENT)
+                height(20f)
+            }
+
+            add(
+                "button_investment_decrease",
+                createControlButton("− 5 MP", selected = false, danger = false) { changeInvestment(-5) }
+            ) {
+                lp {
+                    width(76f)
+                    heightMode(SizeMode.MATCH_PARENT)
+                }
+            }
+
+            text("  " + editing.investment() + " MP", "text_investment") {
+                lp {
+                    width(0f)
+                    heightMode(SizeMode.MATCH_PARENT)
+                    gravity(Gravity.CENTER)
+                }
+
+                weight(1f)
+                gravity = Gravity.CENTER
+            }
+
+            add(
+                "button_investment_increase",
+                createControlButton("+ 5 MP", selected = false, danger = false) { changeInvestment(5) }
+            ) {
+                lp {
+                    width(76f)
+                    heightMode(SizeMode.MATCH_PARENT)
+                }
+            }
+        }
+
         val strength = editing.effectiveInvestment(0) / 5.0
-        addLabelLiteral(
-            tr(
-                "screen.academy.darkmatter_creation.stats",
-                String.format("%.0f", 8 + 2 * strength),
-                String.format("%.1f", 2 + 0.4 * strength),
-                String.format("%.1f", Math.min(20.0, 0.5 * strength)),
-                String.format("%.3f", 0.20 + 0.004 * strength)
-            ),
-            26, if (compact) 137 else 170
-        )
-        addLabelLiteral(
-            tr(
-                "screen.academy.darkmatter_creation.module_usage",
-                editing.moduleCost(), editing.moduleBudget()
-            ),
-            26, if (compact) 157 else 191
+        val stats = tr(
+            "screen.academy.darkmatter_creation.stats",
+            String.format("%.0f", 8 + 2 * strength),
+            String.format("%.1f", 2 + 0.4 * strength),
+            String.format("%.1f", 20.0.coerceAtMost(0.5 * strength)),
+            String.format("%.3f", 0.20 + 0.004 * strength)
         )
         val errors = editing.validate(snapshot.abilityLevel)
-        addLabelLiteral(
-            fit(
-                summonStatus ?: if (errors.isEmpty()) {
-                    tr("screen.academy.darkmatter_creation.valid")
-                } else {
-                    tr(
-                        "screen.academy.darkmatter_creation.invalid",
-                        errors.joinToString(", ") { validationError(it) }
-                    )
-                },
-                if (compact) panelWidth - 52 else 306
-            ),
-            26, if (compact) 177 else 220
-        )
-    }
+        val status = summonStatus ?: if (errors.isEmpty()) {
+            tr("screen.academy.darkmatter_creation.valid")
+        } else {
+            tr("screen.academy.darkmatter_creation.invalid", errors.joinToString(", ") { validationError(it) })
+        }
 
-    private fun buildPartsTab() {
-        val firstY = if (compact) 68 else 78
-        val gap = if (compact) 28 else 35
-        addCycleButton(24, firstY, "screen.academy.darkmatter_creation.part.head", editing.head(), HEADS) { value ->
-            replaceParts(value, editing.torso(), editing.limbs(), editing.additional())
-        }
-        addCycleButton(
-            24,
-            firstY + gap,
-            "screen.academy.darkmatter_creation.part.torso",
-            editing.torso(),
-            TORSOS
-        ) { value ->
-            replaceParts(editing.head(), value, editing.limbs(), editing.additional())
-        }
-        addCycleButton(
-            24,
-            firstY + gap * 2,
-            "screen.academy.darkmatter_creation.part.limbs",
-            editing.limbs(),
-            LIMBS
-        ) { value ->
-            replaceParts(editing.head(), editing.torso(), value, editing.additional())
-        }
-        addCycleButton(
-            24,
-            firstY + gap * 3,
-            "screen.academy.darkmatter_creation.part.additional",
-            editing.additional(),
-            ADDITIONAL
-        ) { value ->
-            replaceParts(editing.head(), editing.torso(), editing.limbs(), value)
-        }
-    }
-
-    private fun buildPhaseTab() {
-        val firstY = if (compact) 68 else 75
-        val gap = if (compact) 31 else 40
-        addPhaseSlider(24, firstY, tr("screen.academy.darkmatter_creation.part.head"), editing.headAlpha(), 0)
-        addPhaseSlider(24, firstY + gap, tr("screen.academy.darkmatter_creation.part.torso"), editing.torsoAlpha(), 1)
-        addPhaseSlider(
-            24,
-            firstY + gap * 2,
-            tr("screen.academy.darkmatter_creation.part.limbs"),
-            editing.limbsAlpha(),
-            2
-        )
-        addPhaseSlider(
-            24, firstY + gap * 3,
-            tr("screen.academy.darkmatter_creation.part.additional"), editing.additionalAlpha(), 3
-        )
-        addLabelLiteral(
-            tr("screen.academy.darkmatter_creation.phase_pool", snapshot.abilityLevel * 50),
-            24, if (compact) 192 else 238
-        )
-    }
-
-    private fun buildModulesTab() {
-        val columns = if (compact) 3 else 2
-        val columnWidth = (panelWidth - 48 - (columns - 1) * 8) / columns
-        val rowGap = if (compact) 28 else 35
-        for (i in MODULES.indices) {
-            val module = MODULES[i]
-            val enabled = editing.modules().contains(module)
-            val x = 24 + (i % columns) * (columnWidth + 8)
-            val y = 73 + (i / columns) * rowGap
-            addButton(
-                x, y, columnWidth, 21,
-                fit(
-                    tr("screen.academy.darkmatter_creation.module_entry", moduleName(module), moduleCost(module)),
-                    columnWidth - 8
-                ),
-                { toggleModule(module) }, enabled, false
-            )
-            moduleHoverTargets.add(ModuleHoverTarget(x, y, columnWidth, 21, module))
-        }
-        addLabelLiteral(
-            tr("screen.academy.darkmatter_creation.module_budget", editing.moduleCost(), editing.moduleBudget()),
-            24, if (compact) panelHeight - 58 else 222
-        )
-    }
-
-    private fun buildSummonedTab() {
-        val roster = snapshot.roster
-        val rowsPerPage = if (compact) ((panelHeight - 110) / 32).coerceIn(1, 4) else 6
-        val from = minOf(roster.size, rosterPage * rowsPerPage)
-        val to = minOf(roster.size, from + rowsPerPage)
-        if (roster.isEmpty()) addLabel("screen.academy.darkmatter_creation.empty", 24, 86, "")
-        for (i in from until to) {
-            val entry = roster[i]
-            val rowY = 69 + (i - from) * 32
-            addRule(20, rowY + 25, panelWidth - 40, 1, 0x28FFFFFF)
-            val dimension = dimensionName(entry.dimension())
-            val position = if (entry.loaded()) {
-                if (entry.distance() < 0) dimension
-                else tr(
-                    "screen.academy.darkmatter_creation.roster.distance",
-                    String.format("%.1f", entry.distance())
-                )
-            } else {
-                tr("screen.academy.darkmatter_creation.roster.unloaded", dimension)
+        text(stats, "text_stats") {
+            lp {
+                widthMode(SizeMode.MATCH_PARENT)
+                heightMode(SizeMode.WRAP_CONTENT)
             }
-            val rowText = tr(
-                "screen.academy.darkmatter_creation.roster.row",
-                entry.name(), Math.round(entry.health()), Math.round(entry.maxHealth()),
-                position, entry.investment(), entry.slot() + 1
-            )
-            addLabelLiteral(font.plainSubstrByWidth(rowText, panelWidth - 150), 24, rowY + 6)
-            addButton(
-                panelWidth - 108, rowY, 82, 20,
-                tr("screen.academy.darkmatter_creation.dismantle"),
-                { MisakaNetworkClient.send(DarkmatterCreation.DismantlePacket(false, entry.uuid())) }, false, true
-            )
+
+            singleLine = false
         }
-        val controlsY = panelHeight - 29
-        addButton(24, controlsY, 30, 18, "<", {
-            rosterPage = maxOf(0, rosterPage - 1)
-            rebuild()
-        }, false, false)
-        addButton(58, controlsY, 30, 18, ">", {
-            rosterPage = ((roster.size - 1) / rowsPerPage).coerceIn(0, rosterPage + 1)
-            rebuild()
-        }, false, false)
-        addButton(
-            panelWidth / 2 - 66, controlsY, 132, 18,
-            tr("screen.academy.darkmatter_creation.dismantle_all"),
-            { MisakaNetworkClient.send(DarkmatterCreation.DismantlePacket(true, null)) }, false, true
-        )
+
+        text(
+            tr("screen.academy.darkmatter_creation.module_usage", editing.moduleCost(), editing.moduleBudget()),
+            "text_module_usage"
+        ) {
+            lp {
+                widthMode(SizeMode.MATCH_PARENT)
+                heightMode(SizeMode.WRAP_CONTENT)
+            }
+
+            singleLine = false
+        }
+
+        text(fit(status, if (compact) panelWidth - 52 else 306), "text_status") {
+            lp {
+                widthMode(SizeMode.MATCH_PARENT)
+                heightMode(SizeMode.WRAP_CONTENT)
+            }
+
+            singleLine = false
+        }
     }
 
-    private fun addCycleButton(
-        x: Int,
-        y: Int,
+    private fun buildPartsTab(): Widget = standaloneColumn(spacing = 8f) {
+        lp {
+            widthMode(SizeMode.MATCH_PARENT)
+        }
+
+        addCycleRow("head", "screen.academy.darkmatter_creation.part.head", editing.head(), HEADS) {
+            replaceParts(it, editing.torso(), editing.limbs(), editing.additional())
+        }
+        addCycleRow("torso", "screen.academy.darkmatter_creation.part.torso", editing.torso(), TORSOS) {
+            replaceParts(editing.head(), it, editing.limbs(), editing.additional())
+        }
+        addCycleRow("limbs", "screen.academy.darkmatter_creation.part.limbs", editing.limbs(), LIMBS) {
+            replaceParts(editing.head(), editing.torso(), it, editing.additional())
+        }
+        addCycleRow("additional", "screen.academy.darkmatter_creation.part.additional", editing.additional(), ADDITIONAL) {
+            replaceParts(editing.head(), editing.torso(), editing.limbs(), it)
+        }
+    }
+
+    private fun WidgetContainer.addCycleRow(
+        key: String,
         labelKey: String,
         current: String,
         values: Array<String>,
         setter: (String) -> Unit
     ) {
-        addButton(
-            x, y, if (compact) panelWidth - 48 else 300, 24,
-            tr(labelKey) + "  ·  " + partName(current),
-            {
-                setter(values[(indexOf(values, current) + 1) % values.size])
-                dirty = true
-                rebuild()
-            }, false, false
-        )
-        if (!compact) {
-            addLabelLiteral(fit(partDescription(current), 292), x + 4, y + 25)
+        column("row_part_$key", spacing = 2f) {
+            lp {
+                widthMode(SizeMode.MATCH_PARENT)
+            }
+
+            add(
+                "button_part_$key",
+                createControlButton(tr(labelKey) + "  ·  " + partName(current), selected = false, danger = false) {
+                    setter(values[(indexOf(values, current) + 1) % values.size])
+                    dirty = true
+                    rebuild()
+                }
+            ) {
+                lp {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(24f)
+                }
+            }
+
+            if (!compact) {
+                text(fit(partDescription(current), 292), "text_part_$key") {
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        heightMode(SizeMode.WRAP_CONTENT)
+                    }
+
+                    singleLine = false
+                }
+            }
         }
     }
 
-    private fun addPhaseSlider(x: Int, y: Int, text: String, alpha: Int, part: Int) {
+    private fun buildPhaseTab(): Widget = standaloneColumn(spacing = 10f) {
+        lp {
+            widthMode(SizeMode.MATCH_PARENT)
+        }
+
+        addPhaseRow("head", tr("screen.academy.darkmatter_creation.part.head"), editing.headAlpha(), 0)
+        addPhaseRow("torso", tr("screen.academy.darkmatter_creation.part.torso"), editing.torsoAlpha(), 1)
+        addPhaseRow("limbs", tr("screen.academy.darkmatter_creation.part.limbs"), editing.limbsAlpha(), 2)
+        addPhaseRow("additional", tr("screen.academy.darkmatter_creation.part.additional"), editing.additionalAlpha(), 3)
+
+        text(tr("screen.academy.darkmatter_creation.phase_pool", snapshot.abilityLevel * 50), "text_phase_pool") {
+            lp {
+                widthMode(SizeMode.MATCH_PARENT)
+                heightMode(SizeMode.WRAP_CONTENT)
+            }
+        }
+    }
+
+    private fun WidgetContainer.addPhaseRow(key: String, label: String, alpha: Int, part: Int) {
         val total = maxOf(1, snapshot.abilityLevel * 50)
-        val label = addLabelLiteral(phaseLabel(text, alpha, total), x, y)
-        val slider = SeekBarWidget()
-        slider.setMin(0f)
-        slider.setMax(total.toFloat())
-        slider.setBarColors(0x50101820, ACCENT)
-        slider.layoutParams = FrameLayoutWidget.LayoutParams()
-            .size((if (compact) panelWidth - 48 else 300).toFloat(), 7f)
-            .gravity(Gravity.TOP_LEFT)
-            .margin(x.toFloat(), (y + 13).toFloat(), 0f, 0f)
-        slider.setOnSeekBarChangeListener(object : SeekBarWidget.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBarWidget, progress: Float, fromUser: Boolean) {
-                if (!fromUser) return
-                val points = progress.roundToInt()
-                label.text = phaseLabel(text, points, total)
-                updatePartPhase(part, points)
+        column("row_phase_$key", spacing = 2f) {
+            lp {
+                widthMode(SizeMode.MATCH_PARENT)
             }
 
-            override fun onStartTrackingTouch(seekBar: SeekBarWidget) {
+            val valueLabel = text(phaseLabel(label, alpha, total), "text_phase_$key") {
+                lp {
+                    widthMode(SizeMode.MATCH_PARENT)
+                }
             }
 
-            override fun onStopTrackingTouch(seekBar: SeekBarWidget) {
+            seekBar("bar_phase_$key") {
+                lp {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(7f)
+                }
+
+                setMin(0f)
+                setMax(total.toFloat())
+                setBarColors(R.ui.darkmatter_creation.seek_track, R.ui.darkmatter_creation.accent)
+                setProgress(alpha.toFloat())
+                seekListener(object : SeekBarWidget.OnSeekBarChangeListener {
+                    override fun onProgressChanged(seekBar: SeekBarWidget, progress: Float, fromUser: Boolean) {
+                        if (!fromUser) return
+                        val points = progress.roundToInt()
+                        valueLabel.text = phaseLabel(label, points, total)
+                        updatePartPhase(part, points)
+                    }
+
+                    override fun onStartTrackingTouch(seekBar: SeekBarWidget) {
+                    }
+
+                    override fun onStopTrackingTouch(seekBar: SeekBarWidget) {
+                    }
+                })
             }
-        })
-        slider.setProgress(alpha.toFloat())
-        panel.addChild("phase_" + widgetCounter++, slider)
+        }
+    }
+
+    private fun buildModulesTab(): Widget {
+        val columns = if (compact) 3 else 2
+        return standaloneColumn(spacing = 6f) {
+            lp {
+                widthMode(SizeMode.MATCH_PARENT)
+            }
+
+            var index = 0
+            while (index < MODULES.size) {
+                row("row_modules_${index / columns}", spacing = 6f) {
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
+                    }
+
+                    for (column in 0 until columns) {
+                        val position = index + column
+                        if (position >= MODULES.size) {
+                            empty("spacer_module_$position") {
+                                weight(1f)
+                            }
+                            continue
+                        }
+                        val module = MODULES[position]
+                        val enabled = editing.modules().contains(module)
+                        val button = add(
+                            "button_module_$position",
+                            createControlButton(
+                                tr(
+                                    "screen.academy.darkmatter_creation.module_entry",
+                                    moduleName(module), moduleCost(module)
+                                ),
+                                enabled, false
+                            ) { toggleModule(module) }
+                        ) {
+                            lp {
+                                width(0f)
+                                height(21f)
+                            }
+
+                            weight(1f)
+                        }
+                        moduleButtons.add(module to button)
+                    }
+                }
+                index += columns
+            }
+
+            text(
+                tr("screen.academy.darkmatter_creation.module_budget", editing.moduleCost(), editing.moduleBudget()),
+                "text_budget_module"
+            ) {
+                lp {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    heightMode(SizeMode.WRAP_CONTENT)
+                }
+
+                singleLine = false
+            }
+        }
+    }
+
+    private fun buildSummonedTab(): Widget {
+        val roster = snapshot.roster
+        val rowsPerPage = if (compact) ((panelHeight - 110) / 32).coerceIn(1, 4) else 6
+        val from = minOf(roster.size, rosterPage * rowsPerPage)
+        val to = minOf(roster.size, from + rowsPerPage)
+
+        return standaloneColumn(spacing = 4f) {
+            lp {
+                widthMode(SizeMode.MATCH_PARENT)
+                heightMode(SizeMode.MATCH_PARENT)
+            }
+
+            if (roster.isEmpty()) {
+                text(tr("screen.academy.darkmatter_creation.empty"), "text_empty") {
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
+                    }
+                }
+            }
+
+            val rosterContent = standaloneColumn(spacing = 0f) {
+                lp {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    heightMode(SizeMode.WRAP_CONTENT)
+                }
+
+                for (position in from until to) {
+                    addRosterRow(roster[position], position)
+                }
+            }
+
+            scrollPanel(Orientation.VERTICAL, "area_roster", rosterContent) {
+                lp {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(0f)
+                }
+
+                weight(1f)
+            }
+
+            row("bar_pager", spacing = 4f) {
+                lp {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(18f)
+                }
+
+                add(
+                    "button_page_previous",
+                    createControlButton("<", selected = false, danger = false) {
+                        rosterPage = maxOf(0, rosterPage - 1)
+                        rebuild()
+                    }
+                ) {
+                    lp {
+                        size(30f, 18f)
+                    }
+                }
+
+                add(
+                    "button_page_next",
+                    createControlButton(">", selected = false, danger = false) {
+                        rosterPage = ((roster.size - 1) / rowsPerPage).coerceIn(0, rosterPage + 1)
+                        rebuild()
+                    }
+                ) {
+                    lp {
+                        size(30f, 18f)
+                    }
+                }
+
+                empty("spacer_pager") {
+                    weight(1f)
+                }
+
+                add(
+                    "button_dismantle_all",
+                    createControlButton(
+                        tr("screen.academy.darkmatter_creation.dismantle_all"), selected = false, danger = true
+                    ) {
+                        MisakaNetworkClient.send(DarkmatterCreation.DismantlePacket(true, null))
+                    }
+                ) {
+                    lp {
+                        width(132f)
+                        heightMode(SizeMode.MATCH_PARENT)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun WidgetContainer.addRosterRow(entry: DarkmatterCreation.RosterEntry, position: Int) {
+        column("row_roster_$position", spacing = 0f) {
+            lp {
+                widthMode(SizeMode.MATCH_PARENT)
+            }
+
+            val dimension = dimensionName(entry.dimension())
+            val place = if (entry.loaded()) {
+                if (entry.distance() < 0) {
+                    dimension
+                } else {
+                    tr("screen.academy.darkmatter_creation.roster.distance", String.format("%.1f", entry.distance()))
+                }
+            } else {
+                tr("screen.academy.darkmatter_creation.roster.unloaded", dimension)
+            }
+            val rowText = tr(
+                "screen.academy.darkmatter_creation.roster.row",
+                entry.name(), entry.health().roundToInt(), entry.maxHealth().roundToInt(),
+                place, entry.investment(), entry.slot() + 1
+            )
+
+            row("content_roster_$position", spacing = 6f) {
+                lp {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(26f)
+                }
+
+                text(fit(rowText, panelWidth - 150), "text_roster_$position") {
+                    lp {
+                        width(0f)
+                        heightMode(SizeMode.MATCH_PARENT)
+                        gravity(Gravity.CENTER_LEFT)
+                    }
+
+                    weight(1f)
+                    gravity = Gravity.CENTER_LEFT
+                }
+
+                add(
+                    "button_dismantle_$position",
+                    createControlButton(tr("screen.academy.darkmatter_creation.dismantle"),
+                        selected = false,
+                        danger = true
+                    ) {
+                        MisakaNetworkClient.send(DarkmatterCreation.DismantlePacket(false, entry.uuid()))
+                    }
+                ) {
+                    lp {
+                        width(82f)
+                        heightMode(SizeMode.MATCH_PARENT)
+                    }
+                }
+            }
+
+            fill(R.ui.darkmatter_creation.divider, "rule_roster_$position") {
+                lp {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(1f)
+                }
+            }
+        }
+    }
+
+    /**
+     * 界面专用的模块悬浮提示: 跟随鼠标显示模块名称与描述.
+     */
+    private inner class ModuleTooltipWidget : FrameLayoutWidget() {
+        private val lines: LinearLayoutWidget
+        private var current: String? = null
+
+        init {
+            isClickable = false
+            background = ColorDrawable(R.ui.darkmatter_creation.tooltip_bg)
+            visibility = Widget.Visibility.INVISIBLE
+
+            lines = column("lines", spacing = 0f) {
+                lp {
+                    matchParent()
+                    padding(5f, 4f, 5f, 4f)
+                }
+            }
+
+            setFrameUpdate {
+                update()
+                true
+            }
+        }
+
+        private fun update() {
+            if (tab !== Tab.MODULES) {
+                hide()
+                return
+            }
+
+            val minecraft = Minecraft.getInstance()
+            val window = minecraft.window
+            val mouseX = minecraft.mouseHandler.getScaledXPos(window)
+            val mouseY = minecraft.mouseHandler.getScaledYPos(window)
+            val hovered = moduleButtons.firstOrNull { (_, button) ->
+                val x = button.getAbsoluteX()
+                val y = button.getAbsoluteY()
+                mouseX >= x && mouseX < x + button.width && mouseY >= y && mouseY < y + button.height
+            }
+            if (hovered == null) {
+                hide()
+                return
+            }
+
+            val module = hovered.first
+            if (module != current) {
+                current = module
+                lines.clearChildren()
+                lines.addTooltipLine(moduleName(module), R.ui.darkmatter_creation.tooltip_text, 230)
+                lines.addTooltipLine(moduleDescription(module), R.ui.darkmatter_creation.tooltip_description, 230)
+            }
+
+            val widest = lines.children.values.maxOfOrNull { it.measuredWidth } ?: 0f
+            val boxWidth = (widest + 12f).coerceIn(60f, 240f)
+            val boxHeight = lines.measuredHeight.coerceAtLeast(1f)
+            width = boxWidth
+            height = boxHeight
+            val screenWidth = this@DarkmatterCreationScreen.width
+            val screenHeight = this@DarkmatterCreationScreen.height
+            translationX = (mouseX + 8.0).toFloat().coerceIn(2f, maxOf(2f, screenWidth - boxWidth - 2f))
+            translationY = (mouseY + 10.0).toFloat().coerceIn(2f, maxOf(2f, screenHeight - boxHeight - 2f))
+            visibility = Widget.Visibility.VISIBLE
+        }
+
+        private fun hide() {
+            if (visibility !== Widget.Visibility.INVISIBLE) {
+                visibility = Widget.Visibility.INVISIBLE
+            }
+            current = null
+        }
+
+        private fun LinearLayoutWidget.addTooltipLine(text: String, color: Int, maxWidth: Int) {
+            add("line_${children.size}", TextWidget(text)) {
+                lp {
+                    width(maxWidth.toFloat())
+                    heightMode(SizeMode.WRAP_CONTENT)
+                }
+
+                textSize = 7.5f
+                textColor = color
+                singleLine = false
+            }
+        }
     }
 
     private fun updatePartPhase(part: Int, points: Int) {
@@ -495,72 +896,6 @@ class DarkmatterCreationScreen : UiScreen(Component.translatable("screen.academy
             )
         }
         dirty = true
-    }
-
-    private fun addButton(
-        x: Int,
-        y: Int,
-        width: Int,
-        height: Int,
-        text: String,
-        action: () -> Unit,
-        selected: Boolean,
-        danger: Boolean
-    ): ButtonWidget {
-        val button = ButtonWidget()
-        button.layoutParams = FrameLayoutWidget.LayoutParams()
-            .size(width.toFloat(), height.toFloat())
-            .gravity(Gravity.TOP_LEFT)
-            .margin(x.toFloat(), y.toFloat(), 0f, 0f)
-        val background = StateListDrawable()
-        background.setDefault(ColorDrawable(if (danger) 0x60402028 else CONTROL))
-        background.addState(Widget.SELECTED, ColorDrawable(CONTROL_ACTIVE))
-        background.addState(Widget.HOVERED, ColorDrawable(if (danger) DANGER else CONTROL_HOVER))
-        background.addState(Widget.PRESSED, ColorDrawable(if (danger) 0xD0783038.toInt() else CONTROL_ACTIVE))
-        button.background = background
-        button.isSelected = selected
-        button.onClick { action() }
-        val rail = FillWidget(if (selected) ACCENT else 0x55FFFFFF)
-        rail.layoutParams = FrameLayoutWidget.LayoutParams()
-            .size((if (selected) 2 else 1).toFloat(), maxOf(1, height - 6).toFloat())
-            .gravity(Gravity.CENTER_LEFT)
-            .marginLeft(2f)
-        button.addChild("rail", rail)
-        val label = TextWidget(text)
-        label.textSize = 7.5f
-        label.layoutParams = FrameLayoutWidget.LayoutParams()
-            .sizeMode(SizeMode.MATCH_PARENT)
-            .gravity(Gravity.CENTER)
-        button.addChild("label", label)
-        panel.addChild("button_" + widgetCounter++, button)
-        return button
-    }
-
-    private fun addRule(x: Int, y: Int, width: Int, height: Int, color: Int) {
-        val rule = FillWidget(color)
-        rule.layoutParams = FrameLayoutWidget.LayoutParams()
-            .size(width.toFloat(), height.toFloat())
-            .gravity(Gravity.TOP_LEFT)
-            .margin(x.toFloat(), y.toFloat(), 0f, 0f)
-        panel.addChild("rule_" + widgetCounter++, rule)
-    }
-
-    private fun label(value: String, x: Int, y: Int): TextWidget {
-        val label = TextWidget(value)
-        label.textSize = 8.0f
-        label.layoutParams = FrameLayoutWidget.LayoutParams()
-            .gravity(Gravity.TOP_LEFT)
-            .margin(x.toFloat(), y.toFloat(), 0f, 0f)
-        panel.addChild("label_" + widgetCounter++, label)
-        return label
-    }
-
-    private fun addLabel(key: String, x: Int, y: Int, suffix: String) {
-        addLabelLiteral(tr(key) + suffix, x, y)
-    }
-
-    private fun addLabelLiteral(value: String, x: Int, y: Int): TextWidget {
-        return label(value, x, y)
     }
 
     private fun fit(value: String, width: Int): String {
@@ -665,7 +1000,7 @@ class DarkmatterCreationScreen : UiScreen(Component.translatable("screen.academy
         if (error.startsWith("module:")) {
             return tr("screen.academy.darkmatter_creation.error.module", moduleName(error.substring("module:".length)))
         }
-        val key = "screen.academy.darkmatter_creation.error." + error
+        val key = "screen.academy.darkmatter_creation.error.$error"
         return localizedOrFallback(key, error)
     }
 
@@ -685,8 +1020,6 @@ class DarkmatterCreationScreen : UiScreen(Component.translatable("screen.academy
         init()
     }
 
-    private data class ModuleHoverTarget(val x: Int, val y: Int, val width: Int, val height: Int, val module: String)
-
     private enum class Tab(val key: String) {
         BLUEPRINT("screen.academy.darkmatter_creation.tab.blueprint"),
         PARTS("screen.academy.darkmatter_creation.tab.parts"),
@@ -696,14 +1029,6 @@ class DarkmatterCreationScreen : UiScreen(Component.translatable("screen.academy
     }
 
     companion object {
-        private const val PANEL_W = 540
-        private const val PANEL_H = 320
-        private const val ACCENT = 0xFF55C8E8.toInt()
-        private const val CONTROL = 0x45101820
-        private const val CONTROL_HOVER = 0x70465A64
-        private const val CONTROL_ACTIVE = 0x9855C8E8.toInt()
-        private const val DANGER = 0xA0502028.toInt()
-
         private val HEADS = arrayOf(
             DarkmatterCreatureRegistries.HEAD_JAW.toString(),
             DarkmatterCreatureRegistries.HEAD_CANNON.toString(),
@@ -841,7 +1166,7 @@ class DarkmatterCreationScreen : UiScreen(Component.translatable("screen.academy
 
         private fun moduleCost(raw: String): Int {
             val id = Identifier.tryParse(raw) ?: return 0
-            return DarkmatterCreatureRegistries.module(id).map { it.budgetCost() }.orElse(0)
+            return DarkmatterCreatureRegistries.module(id).map { it.budgetCost() }.getOrDefault(0)
         }
 
         private fun localizedOrFallback(key: String, fallback: String): String {

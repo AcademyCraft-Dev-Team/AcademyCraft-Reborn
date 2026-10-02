@@ -22,12 +22,14 @@ abstract class UiScreen protected constructor(title: Component) : Screen(title),
     override fun init() {
         ImGuiUtilApi.clearEventsQueue()
 
-        root.name = "root"
-        root.clearChildren()
+        root.apply {
+            name = "root"
+            clearChildren()
 
-        onInit()
+            onInit()
 
-        if (!root.isAttached()) root.dispatchAttached()
+            if (!isAttached()) dispatchAttached()
+        }
     }
 
     protected abstract fun onInit()
@@ -53,7 +55,9 @@ abstract class UiScreen protected constructor(title: Component) : Screen(title),
 
     override fun removed() {
         super.removed()
-        if (root.isAttached()) root.dispatchDetached()
+        root.apply {
+            if (isAttached()) dispatchDetached()
+        }
     }
 
     override fun mouseMoved(mouseX: Double, mouseY: Double) {
@@ -100,8 +104,9 @@ abstract class UiScreen protected constructor(title: Component) : Screen(title),
     override fun keyPressed(e: KeyEvent): Boolean {
         if (ImGuiUtilApi.wantCaptureKeyboard()) return true
 
-        val event =
-            org.academy.api.client.gui.event.KeyEvent(EventType.KEY_PRESSED, e.key(), e.keycode(), e.modifiers())
+        val event = org.academy.api.client.gui.event.KeyEvent(
+            EventType.KEY_PRESSED, e.key(), e.keycode(), e.modifiers()
+        )
         root.dispatchEvent(event)
         return event.isConsumed || super.keyPressed(e)
     }

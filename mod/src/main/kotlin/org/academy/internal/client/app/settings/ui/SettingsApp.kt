@@ -129,7 +129,7 @@ object SettingsApp : App {
                             weight(1f)
                             height(0f)
                             gravity(Gravity.CENTER)
-                            this.gravity = Gravity.CENTER
+                            gravity = Gravity.CENTER
                         }
                     }
 
@@ -208,7 +208,7 @@ object SettingsApp : App {
                 text(text, "text") {
                     sizeMode(SizeMode.MATCH_PARENT)
                     gravity(Gravity.CENTER)
-                    this.gravity = Gravity.CENTER
+                    gravity = Gravity.CENTER
                 }
 
                 val progressState = AtomicReference(0f)
@@ -285,7 +285,7 @@ object SettingsApp : App {
                     weight(1f)
                     height(0f)
                     gravity(Gravity.CENTER_LEFT)
-                    this.gravity = Gravity.CENTER_LEFT
+                    gravity = Gravity.CENTER_LEFT
                 }
                 button("open") {
                     size(72f, 14f)
@@ -299,7 +299,7 @@ object SettingsApp : App {
                         scaleY = 0.65f
                         sizeMode(SizeMode.MATCH_PARENT)
                         gravity(Gravity.CENTER)
-                        this.gravity = Gravity.CENTER
+                        gravity = Gravity.CENTER
                     }
                 }
             }
@@ -319,7 +319,7 @@ object SettingsApp : App {
                     weight(1f)
                     height(0f)
                     gravity(Gravity.CENTER_LEFT)
-                    this.gravity = Gravity.CENTER_LEFT
+                    gravity = Gravity.CENTER_LEFT
                 }
                 var applyingAuthoritativeState = false
                 toggle(checked, "toggle") {
@@ -464,7 +464,7 @@ object SettingsApp : App {
                         weight(1f)
                         height(0f)
                         gravity(Gravity.CENTER_LEFT)
-                        this.gravity = Gravity.CENTER_LEFT
+                        gravity = Gravity.CENTER_LEFT
                     }
                 }
 
@@ -498,7 +498,7 @@ object SettingsApp : App {
                     width(44f)
                     height(10f)
                     gravity(Gravity.CENTER)
-                    this.gravity = Gravity.CENTER
+                    gravity = Gravity.CENTER
                 }
 
                 toggle(section.config.isKeyBindingEnabled(bindingName), "toggle") {
@@ -561,7 +561,7 @@ object SettingsApp : App {
                 text(AcademyCraft.MOD_NAME, "title") {
                     height(12f)
                     gravity(Gravity.CENTER)
-                    this.gravity = Gravity.CENTER
+                    gravity = Gravity.CENTER
                 }
 
                 text("Version " + getModVersion(), "version") {
@@ -569,7 +569,7 @@ object SettingsApp : App {
                     scaleY = 0.7f
                     height(10f)
                     gravity(Gravity.CENTER)
-                    this.gravity = Gravity.CENTER
+                    gravity = Gravity.CENTER
                 }
             }
         }

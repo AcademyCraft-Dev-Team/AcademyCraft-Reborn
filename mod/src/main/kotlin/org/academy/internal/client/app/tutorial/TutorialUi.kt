@@ -4,13 +4,10 @@ import com.mojang.renderpearl.api.textures.FilterMode
 import net.minecraft.world.level.ItemLike
 import org.academy.api.client.gui.drawable.ColorDrawable
 import org.academy.api.client.gui.drawable.StateListDrawable
-import org.academy.api.client.gui.dsl.image
-import org.academy.api.client.gui.dsl.lp
-import org.academy.api.client.gui.dsl.matchParent
+import org.academy.api.client.gui.dsl.*
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
-import org.academy.api.client.gui.texture.IdentifierTextureSource
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.resources.R
 import org.academy.api.common.util.L10n
@@ -19,18 +16,6 @@ import net.minecraft.world.item.Items as VanillaItems
 import org.academy.internal.common.world.item.Items as AcademyItems
 
 object TutorialUi {
-    const val WIDTH = 384f
-    const val HEIGHT = 200f
-
-    private const val NAV_WIDTH = 80f
-    private const val PREVIEW_WIDTH = 122f
-    private const val PROGRESSION_BLUE = 0xFF1177D6.toInt()
-    private const val ROW_FILL = 0x28000000
-    private const val ARTICLE_BODY_FONT_SIZE = 6f
-    private const val ARTICLE_SUBTITLE_FONT_SIZE = 8f
-    private const val RECIPE_SLOT_SIZE = 18f
-    private const val RECIPE_SLOT_GAP = 2f
-
     private data class Recipe(
         val rows: List<List<ItemLike?>>,
         val result: ItemLike
@@ -38,14 +23,14 @@ object TutorialUi {
 
     private data class Page(
         val id: String,
-        val navKey: String,
-        val eyebrowKey: String,
-        val titleKey: String,
-        val briefKey: String,
-        val bodyKeys: List<String>,
+        val keyNav: String,
+        val keyEyebrow: String,
+        val keyTitle: String,
+        val keyBrief: String,
+        val keysBody: List<String>,
         val stage: Int? = null,
         val recipe: Recipe? = null,
-        val previewKey: String? = null
+        val keyPreview: String? = null
     )
 
     private val pages = listOf(
@@ -53,121 +38,121 @@ object TutorialUi {
             "project", "app.academy.tutorial.nav.project", "app.academy.tutorial.eyebrow.project",
             "app.academy.tutorial.page.project.title", "app.academy.tutorial.page.project.brief",
             listOf("app.academy.tutorial.page.project.body.1", "app.academy.tutorial.page.project.body.2"),
-            previewKey = "app.academy.tutorial.page.project.preview"
+            keyPreview = "app.academy.tutorial.page.project.preview"
         ),
         Page(
             "route", "app.academy.tutorial.nav.route", "app.academy.tutorial.eyebrow.route",
             "app.academy.tutorial.page.route.title", "app.academy.tutorial.page.route.brief",
             listOf("app.academy.tutorial.page.route.body.1", "app.academy.tutorial.page.route.body.2"),
-            stage = 0, previewKey = "app.academy.tutorial.page.route.preview"
+            stage = 0, keyPreview = "app.academy.tutorial.page.route.preview"
         ),
         Page(
             "step_1", "app.academy.tutorial.nav.step.1", "app.academy.tutorial.eyebrow.tutorial",
             "app.academy.tutorial.page.step.1.title", "app.academy.tutorial.page.step.1.brief",
             listOf("app.academy.tutorial.page.step.1.body.1", "app.academy.tutorial.page.step.1.body.2"),
-            stage = 1, previewKey = "app.academy.tutorial.page.step.1.preview"
+            stage = 1, keyPreview = "app.academy.tutorial.page.step.1.preview"
         ),
         Page(
             "step_2", "app.academy.tutorial.nav.step.2", "app.academy.tutorial.eyebrow.tutorial",
             "app.academy.tutorial.page.step.2.title", "app.academy.tutorial.page.step.2.brief",
             listOf("app.academy.tutorial.page.step.2.body.1", "app.academy.tutorial.page.step.2.body.2"),
-            stage = 2, previewKey = "app.academy.tutorial.page.step.2.preview"
+            stage = 2, keyPreview = "app.academy.tutorial.page.step.2.preview"
         ),
         Page(
             "step_3", "app.academy.tutorial.nav.step.3", "app.academy.tutorial.eyebrow.tutorial",
             "app.academy.tutorial.page.step.3.title", "app.academy.tutorial.page.step.3.brief",
             listOf("app.academy.tutorial.page.step.3.body.1", "app.academy.tutorial.page.step.3.body.2"),
-            stage = 3, previewKey = "app.academy.tutorial.page.step.3.preview"
+            stage = 3, keyPreview = "app.academy.tutorial.page.step.3.preview"
         ),
         Page(
             "step_4", "app.academy.tutorial.nav.step.4", "app.academy.tutorial.eyebrow.tutorial",
             "app.academy.tutorial.page.step.4.title", "app.academy.tutorial.page.step.4.brief",
             listOf("app.academy.tutorial.page.step.4.body.1", "app.academy.tutorial.page.step.4.body.2"),
-            stage = 4, previewKey = "app.academy.tutorial.page.step.4.preview"
+            stage = 4, keyPreview = "app.academy.tutorial.page.step.4.preview"
         ),
         Page(
             "step_5", "app.academy.tutorial.nav.step.5", "app.academy.tutorial.eyebrow.tutorial",
             "app.academy.tutorial.page.step.5.title", "app.academy.tutorial.page.step.5.brief",
             listOf("app.academy.tutorial.page.step.5.body.1", "app.academy.tutorial.page.step.5.body.2"),
-            stage = 5, previewKey = "app.academy.tutorial.page.step.5.preview"
+            stage = 5, keyPreview = "app.academy.tutorial.page.step.5.preview"
         ),
-        recipePage(
+        pageRecipe(
             "probe", AcademyItems.IMAG_PHASE_DOWSING_ROD.get(),
             listOf(
-                recipeRow(null, VanillaItems.COMPARATOR, null),
-                recipeRow(
+                rowRecipe(null, VanillaItems.COMPARATOR, null),
+                rowRecipe(
                     VanillaItems.LIGHTNING_ROD.weathering().unaffected(),
                     VanillaItems.COMPASS,
                     VanillaItems.IRON_INGOT
                 ),
-                recipeRow(null, null, VanillaItems.IRON_INGOT)
+                rowRecipe(null, null, VanillaItems.IRON_INGOT)
             )
         ),
-        recipePage(
+        pageRecipe(
             "solar", AcademyItems.SOLAR_GEN.get(),
             listOf(
-                recipeRow(
+                rowRecipe(
                     VanillaItems.STAINED_GLASS_PANE.gray(),
                     VanillaItems.STAINED_GLASS_PANE.gray(),
                     VanillaItems.STAINED_GLASS_PANE.gray()
                 ),
-                recipeRow(
+                rowRecipe(
                     AcademyItems.IMAG_PHASE_INGOT.get(),
                     VanillaItems.DAYLIGHT_DETECTOR,
                     AcademyItems.IMAG_PHASE_INGOT.get()
                 ),
-                recipeRow(
+                rowRecipe(
                     AcademyItems.IMAG_PHASE_POLYMER.get(),
                     VanillaItems.REDSTONE,
                     AcademyItems.IMAG_PHASE_POLYMER.get()
                 )
             )
         ),
-        recipePage(
+        pageRecipe(
             "tablet", AcademyItems.ABILITY_CONTROL_TABLET.get(),
             listOf(
-                recipeRow(
+                rowRecipe(
                     AcademyItems.IMAG_PHASE_PLATE.get(),
                     VanillaItems.COMPARATOR,
                     AcademyItems.WIND_GEN_BASE_SCREEN.get()
                 ),
-                recipeRow(
+                rowRecipe(
                     AcademyItems.IMAG_PHASE_PLATE.get(),
                     AcademyItems.IMAG_PHASE_CIRCUIT.get(),
                     VanillaItems.COMPARATOR
                 ),
-                recipeRow(
+                rowRecipe(
                     AcademyItems.IMAG_PHASE_INGOT.get(),
                     AcademyItems.IMAG_PHASE_PLATE.get(),
                     AcademyItems.IMAG_PHASE_PLATE.get()
                 )
             )
         ),
-        recipePage(
+        pageRecipe(
             "terminal", AcademyItems.DATA_TERMINAL.get(),
             listOf(
-                recipeRow(VanillaItems.IRON_INGOT, VanillaItems.REDSTONE, VanillaItems.IRON_INGOT),
-                recipeRow(VanillaItems.REDSTONE, VanillaItems.GLASS_PANE, VanillaItems.REDSTONE),
-                recipeRow(VanillaItems.IRON_INGOT, VanillaItems.IRON_INGOT, VanillaItems.IRON_INGOT)
+                rowRecipe(VanillaItems.IRON_INGOT, VanillaItems.REDSTONE, VanillaItems.IRON_INGOT),
+                rowRecipe(VanillaItems.REDSTONE, VanillaItems.GLASS_PANE, VanillaItems.REDSTONE),
+                rowRecipe(VanillaItems.IRON_INGOT, VanillaItems.IRON_INGOT, VanillaItems.IRON_INGOT)
             )
         ),
-        recipePage(
+        pageRecipe(
             "cloud", AcademyItems.TUTORIAL.get(),
             listOf(
-                recipeRow(null, VanillaItems.AMETHYST_SHARD, null),
-                recipeRow(VanillaItems.REDSTONE, VanillaItems.BOOK, VanillaItems.REDSTONE),
-                recipeRow(null, VanillaItems.IRON_INGOT, null)
+                rowRecipe(null, VanillaItems.AMETHYST_SHARD, null),
+                rowRecipe(VanillaItems.REDSTONE, VanillaItems.BOOK, VanillaItems.REDSTONE),
+                rowRecipe(null, VanillaItems.IRON_INGOT, null)
             )
         ),
         Page(
             "fusion", "app.academy.tutorial.nav.fusion", "app.academy.tutorial.eyebrow.recipe",
             "app.academy.tutorial.page.fusion.title", "app.academy.tutorial.page.fusion.brief",
             listOf("app.academy.tutorial.page.fusion.body.1", "app.academy.tutorial.page.fusion.body.2"),
-            previewKey = "app.academy.tutorial.page.fusion.preview"
+            keyPreview = "app.academy.tutorial.page.fusion.preview"
         )
     )
 
-    private fun recipePage(id: String, result: ItemLike, rows: List<List<ItemLike?>>) = Page(
+    private fun pageRecipe(id: String, result: ItemLike, rows: List<List<ItemLike?>>) = Page(
         "recipe_$id",
         "app.academy.tutorial.nav.recipe.$id",
         "app.academy.tutorial.eyebrow.recipe",
@@ -177,413 +162,539 @@ object TutorialUi {
         recipe = Recipe(rows, result)
     )
 
-    private fun recipeRow(vararg items: ItemLike?): List<ItemLike?> = items.toList()
+    private fun rowRecipe(vararg items: ItemLike?): List<ItemLike?> = items.toList()
 
-    fun create(onBack: () -> Unit): Widget = Context(onBack).root
-
-    private class Context(private val onBack: () -> Unit) {
-        val root = LinearLayoutWidget().apply {
-            orientation = Orientation.VERTICAL
-            spacing = 1f
+    fun create(onBack: () -> Unit): Widget = standaloneColumn(spacing = 1f) {
+        lp {
             matchParent()
         }
 
-        private val articleContainer = FrameLayoutWidget()
-        private val previewContainer = FrameLayoutWidget()
-        private val navGroup = RadioGroupWidget()
-        private val navButtons = mutableListOf<RadioButtonWidget>()
-        private var selectedPage = 0
+        lateinit var containerArticle: FrameLayoutWidget
+        lateinit var containerPreview: FrameLayoutWidget
+        lateinit var groupNav: RadioGroupWidget
 
-        init {
-            root.addChild("header", createHeader())
-            root.addChild("header_rule", FillWidget(0xBFFFFFFF.toInt()).apply {
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .widthMode(SizeMode.MATCH_PARENT)
-                    .height(1f)
-                    .padding(2f, 0f)
-            })
-            root.addChild("body", createBody())
-            navGroup.onSelectionChanged = Consumer { button -> showPage(button.id) }
-            navGroup.selectButton(navButtons.first())
-        }
+        val buttonsNav = mutableListOf<RadioButtonWidget>()
+        var pageSelected = 0
 
-        private fun createHeader(): LinearLayoutWidget = LinearLayoutWidget().apply {
-            orientation = Orientation.HORIZONTAL
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
-            addChild("back", ButtonWidget().apply {
-                layoutParams = LinearLayoutWidget.LayoutParams().margin(2f, 2f, 2f, 0f).size(16f, 16f)
-                onClickListener = { onBack() }
-                image(R.textures.gui.icon.arrow)
-            })
-            addChild("title", TextWidget(L10n["app.academy.tutorial.title"]).apply {
-                layoutParams = LinearLayoutWidget.LayoutParams().weight(1f).height(0f).gravity(Gravity.CENTER)
-                gravity = Gravity.CENTER
-                gravity = Gravity.CENTER
-            })
-        }
-
-        private fun createBody(): LinearLayoutWidget = LinearLayoutWidget().apply {
-            orientation = Orientation.HORIZONTAL
-            spacing = 1f
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .weight(1f)
-                .widthMode(SizeMode.MATCH_PARENT)
-            addChild("navigation", createNavigation())
-            addChild("navigation_rule", FillWidget(0x70FFFFFF).apply {
-                layoutParams = LinearLayoutWidget.LayoutParams().width(1f).heightMode(SizeMode.MATCH_PARENT)
-            })
-            articleContainer.layoutParams = LinearLayoutWidget.LayoutParams()
-                .weight(1f)
-                .heightMode(SizeMode.MATCH_PARENT)
-            addChild("article", articleContainer)
-            addChild("preview_rule", FillWidget(0x70FFFFFF).apply {
-                layoutParams = LinearLayoutWidget.LayoutParams().width(1f).heightMode(SizeMode.MATCH_PARENT)
-            })
-            previewContainer.background = ColorDrawable(0x18000000)
-            previewContainer.layoutParams = LinearLayoutWidget.LayoutParams()
-                .width(PREVIEW_WIDTH)
-                .heightMode(SizeMode.MATCH_PARENT)
-            addChild("preview", previewContainer)
-        }
-
-        private fun createNavigation(): LinearLayoutWidget = LinearLayoutWidget().apply {
-            orientation = Orientation.VERTICAL
-            spacing = 2f
-            background = ColorDrawable(ROW_FILL)
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .width(NAV_WIDTH)
-                .heightMode(SizeMode.MATCH_PARENT)
-                .padding(4f, 4f, 3f, 4f)
-            addChild("label", TextWidget(L10n["app.academy.tutorial.index"]).apply {
-                textSize = 7.5f
-                alpha = 0.65f
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .widthMode(SizeMode.MATCH_PARENT)
-                    .height(10f)
-                    .gravity(Gravity.CENTER_LEFT)
-                gravity = Gravity.CENTER_LEFT
-                gravity = Gravity.CENTER_LEFT
-            })
-            addChild("rule", FillWidget(0x60FFFFFF).apply {
-                layoutParams = LinearLayoutWidget.LayoutParams().widthMode(SizeMode.MATCH_PARENT).height(1f)
-            })
-            addChild("entries_area", FrameLayoutWidget().apply {
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .weight(1f)
-                    .widthMode(SizeMode.MATCH_PARENT)
-                val panel = ScrollPanelWidget().apply {
-                    layoutParams = FrameLayoutWidget.LayoutParams()
-                        .sizeMode(SizeMode.MATCH_PARENT)
-                        .paddingRight(5f)
-                    setScrollSpeed(15f)
-                }
-                addChild("scroll", panel)
-                navGroup.orientation = Orientation.VERTICAL
-                navGroup.spacing = 2f
-                navGroup.layoutParams = FrameLayoutWidget.LayoutParams()
-                    .widthMode(SizeMode.MATCH_PARENT)
-                    .heightMode(SizeMode.WRAP_CONTENT)
-                pages.forEachIndexed { index, page ->
-                    val button = createNavigationButton(index, page)
-                    navButtons.add(button)
-                    navGroup.addChild(page.id, button)
-                }
-                panel.addChild("entries", navGroup)
-                addChild("scrollbar", ScrollBarWidget(panel, Orientation.VERTICAL).apply {
-                    setTrackColor(0x20000000)
-                    setThumbColor(0x90FFFFFF.toInt())
-                    layoutParams = FrameLayoutWidget.LayoutParams()
-                        .width(3f)
-                        .heightMode(SizeMode.MATCH_PARENT)
-                        .gravity(Gravity.RIGHT)
-                })
-            })
-        }
-
-        private fun createNavigationButton(index: Int, page: Page): RadioButtonWidget = RadioButtonWidget().apply {
-            setId(index)
-            layoutParams = LinearLayoutWidget.LayoutParams().widthMode(SizeMode.MATCH_PARENT).height(13f)
-            background = StateListDrawable().apply {
-                addState(Widget.SELECTED, ColorDrawable(0x68FFFFFF))
-                addState(Widget.PRESSED, ColorDrawable(0x4FFFFFFF))
-                addState(Widget.FOCUSED, ColorDrawable(0x38FFFFFF))
-                addState(Widget.HOVERED, ColorDrawable(0x28FFFFFF))
-                setDefault(ColorDrawable(0x08000000))
-            }
-            addChild("text", TextWidget(L10n[page.navKey]).apply {
-                textSize = 7.5f
-                alpha = 0.82f
-                layoutParams = FrameLayoutWidget.LayoutParams()
-                    .sizeMode(SizeMode.MATCH_PARENT)
-                    .padding(3f, 1f)
-                    .gravity(Gravity.CENTER_LEFT)
-                gravity = Gravity.CENTER_LEFT
-                gravity = Gravity.CENTER_LEFT
-            })
-        }
-
-        private fun showPage(index: Int) {
-            if (index !in pages.indices) return
-            selectedPage = index
-            articleContainer.clearChildren()
-            previewContainer.clearChildren()
-            articleContainer.addChild("page", createArticle(pages[index]))
-            previewContainer.addChild("page", createPreview(pages[index]))
-        }
-
-        private fun createArticle(page: Page): FrameLayoutWidget = FrameLayoutWidget().apply {
-            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
-            val panel = ScrollPanelWidget().apply {
-                layoutParams = FrameLayoutWidget.LayoutParams()
-                    .sizeMode(SizeMode.MATCH_PARENT)
-                    .padding(7f, 6f, 10f, 6f)
-                setScrollSpeed(18f)
-            }
-            addChild("scroll", panel)
-            panel.addChild("content", LinearLayoutWidget().apply {
-                orientation = Orientation.VERTICAL
-                spacing = 4f
-                layoutParams = FrameLayoutWidget.LayoutParams()
-                    .widthMode(SizeMode.MATCH_PARENT)
-                    .heightMode(SizeMode.WRAP_CONTENT)
-                addChild(
-                    "eyebrow", articleLabel(
-                        L10n[page.eyebrowKey], ARTICLE_BODY_FONT_SIZE, 0.68f, 10f
-                    )
-                )
-                addChild(
-                    "title", articleLabel(
-                        L10n[page.titleKey], ARTICLE_SUBTITLE_FONT_SIZE, 1f, 14f
-                    )
-                )
-                addChild("rule", FillWidget(0xA0FFFFFF.toInt()).apply {
-                    layoutParams = LinearLayoutWidget.LayoutParams().widthMode(SizeMode.MATCH_PARENT).height(1f)
-                })
-                addChild("brief", TextWidget(L10n[page.briefKey]).apply {
-                    textSize = ARTICLE_BODY_FONT_SIZE
-                    singleLine = false
-                    alpha = 0.88f
-                    background = ColorDrawable(ROW_FILL)
-                    layoutParams = LinearLayoutWidget.LayoutParams()
-                        .widthMode(SizeMode.MATCH_PARENT)
-                        .heightMode(SizeMode.WRAP_CONTENT)
-                        .padding(4f, 3f)
-                })
-                page.bodyKeys.forEachIndexed { bodyIndex, key ->
-                    addChild("body_$bodyIndex", TextWidget(L10n[key]).apply {
-                        textSize = ARTICLE_BODY_FONT_SIZE
-                        singleLine = false
-                        alpha = 0.82f
-                        layoutParams = LinearLayoutWidget.LayoutParams()
-                            .widthMode(SizeMode.MATCH_PARENT)
-                            .heightMode(SizeMode.WRAP_CONTENT)
-                    })
-                }
-            })
-            addChild("scrollbar", ScrollBarWidget(panel, Orientation.VERTICAL).apply {
-                setTrackColor(0x20000000)
-                setThumbColor(0xA0FFFFFF.toInt())
-                layoutParams = FrameLayoutWidget.LayoutParams()
-                    .width(3f)
-                    .heightMode(SizeMode.MATCH_PARENT)
-                    .gravity(Gravity.RIGHT)
-                    .margin(0f, 6f, 3f, 6f)
-            })
-        }
-
-        private fun createPreview(page: Page): LinearLayoutWidget = LinearLayoutWidget().apply {
-            orientation = Orientation.VERTICAL
-            spacing = 3f
-            layoutParams = FrameLayoutWidget.LayoutParams()
-                .sizeMode(SizeMode.MATCH_PARENT)
-                .padding(8f, 6f)
-            addChild(
-                "preview_label", articleLabel(
-                    L10n[if (page.recipe == null) "app.academy.tutorial.preview" else "app.academy.tutorial.recipe"],
-                    ARTICLE_BODY_FONT_SIZE, 0.68f, 10f
-                )
-            )
-            when {
-                page.recipe != null -> addRecipePreview(page.recipe)
-                page.stage != null -> addStagePreview(page)
-                page.id == "project" -> addProjectPreview(page)
-                else -> addTextPreview(page)
-            }
-            addChild("spacer", EmptyWidget().apply {
-                layoutParams = LinearLayoutWidget.LayoutParams().weight(1f).widthMode(SizeMode.MATCH_PARENT)
-            })
-            addChild("navigation", createPreviewNavigation())
-        }
-
-        private fun LinearLayoutWidget.addProjectPreview(page: Page) {
-            addChild("icon", ImageWidget(IdentifierTextureSource(R.textures.gui.app.tutorial.icon)).apply {
-                setSampler(FilterMode.NEAREST, false)
-                layoutParams = LinearLayoutWidget.LayoutParams().size(32f, 32f).gravity(Gravity.CENTER)
-            })
-            addChild("brand", articleLabel("MISAKA CLOUD", 8f, 0.95f, 12f, Gravity.CENTER))
-            addChild("rule", FillWidget(PROGRESSION_BLUE).apply {
-                layoutParams = LinearLayoutWidget.LayoutParams().width(52f).height(1.5f).gravity(Gravity.CENTER)
-            })
-            addChild("description", previewText(page.previewKey))
-        }
-
-        private fun LinearLayoutWidget.addStagePreview(page: Page) {
-            val stage = page.stage ?: 0
-            addChild(
-                "stage", articleLabel(
-                    stage.toString().padStart(2, '0') + " / 05", 13f, 1f, 20f, Gravity.CENTER
-                )
-            )
-            addChild("progress", FrameLayoutWidget().apply {
-                background = ColorDrawable(0x30000000)
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .widthMode(SizeMode.MATCH_PARENT)
-                    .height(2f)
-                addChild("value", FillWidget(PROGRESSION_BLUE).apply {
-                    layoutParams = FrameLayoutWidget.LayoutParams()
-                        .width(((PREVIEW_WIDTH - 16f) * stage / 5f).coerceAtLeast(2f))
-                        .heightMode(SizeMode.MATCH_PARENT)
-                })
-            })
-            addChild("description", previewText(page.previewKey))
-        }
-
-        private fun LinearLayoutWidget.addTextPreview(page: Page) {
-            addChild("mark", articleLabel("DATA / NOTE", 10f, 0.95f, 16f, Gravity.CENTER))
-            addChild("rule", FillWidget(PROGRESSION_BLUE).apply {
-                layoutParams = LinearLayoutWidget.LayoutParams().width(52f).height(1.5f).gravity(Gravity.CENTER)
-            })
-            addChild("description", previewText(page.previewKey))
-        }
-
-        private fun LinearLayoutWidget.addRecipePreview(recipe: Recipe) {
-            addChild("grid", LinearLayoutWidget().apply {
-                orientation = Orientation.VERTICAL
-                spacing = RECIPE_SLOT_GAP
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .size(
-                        RECIPE_SLOT_SIZE * 3f + RECIPE_SLOT_GAP * 2f,
-                        RECIPE_SLOT_SIZE * 3f + RECIPE_SLOT_GAP * 2f
-                    )
-                    .gravity(Gravity.CENTER)
-                recipe.rows.forEachIndexed { rowIndex, rowValue ->
-                    addChild("row_$rowIndex", LinearLayoutWidget().apply {
-                        orientation = Orientation.HORIZONTAL
-                        spacing = RECIPE_SLOT_GAP
-                        layoutParams = LinearLayoutWidget.LayoutParams()
-                            .widthMode(SizeMode.MATCH_PARENT)
-                            .height(RECIPE_SLOT_SIZE)
-                        rowValue.forEachIndexed { columnIndex, item ->
-                            addChild("cell_$columnIndex", FrameLayoutWidget().apply {
-                                background = ColorDrawable(if (item == null) 0x10000000 else ROW_FILL)
-                                layoutParams = LinearLayoutWidget.LayoutParams()
-                                    .size(RECIPE_SLOT_SIZE, RECIPE_SLOT_SIZE)
-                                if (item != null) addChild(
-                                    "item",
-                                    ItemStackWidget(item.asItem().defaultInstance).apply {
-                                        tooltipText = L10n[item.asItem().descriptionId]
-                                        layoutParams = FrameLayoutWidget.LayoutParams()
-                                            .size(ItemStackWidget.ITEM_SIZE, ItemStackWidget.ITEM_SIZE)
-                                            .gravity(Gravity.CENTER)
-                                    })
-                            })
-                        }
-                    })
-                }
-            })
-            addChild("result", LinearLayoutWidget().apply {
-                orientation = Orientation.HORIZONTAL
-                spacing = 4f
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .width(38f)
-                    .height(RECIPE_SLOT_SIZE)
-                    .gravity(Gravity.CENTER)
-                addChild("arrow", TextWidget("→").apply {
-                    textSize = ARTICLE_BODY_FONT_SIZE
-                    alpha = 0.78f
-                    layoutParams = LinearLayoutWidget.LayoutParams()
-                        .size(RECIPE_SLOT_SIZE, RECIPE_SLOT_SIZE)
-                        .gravity(Gravity.CENTER)
-                    gravity = Gravity.CENTER
-                })
-                addChild("item", ItemStackWidget(recipe.result.asItem().defaultInstance).apply {
-                    tooltipText = L10n[recipe.result.asItem().descriptionId]
-                    layoutParams = LinearLayoutWidget.LayoutParams()
-                        .size(ItemStackWidget.ITEM_SIZE, ItemStackWidget.ITEM_SIZE)
-                        .gravity(Gravity.CENTER)
-                })
-            })
-            addChild("recipe_rule", FillWidget(0x60FFFFFF).apply {
-                layoutParams = LinearLayoutWidget.LayoutParams().widthMode(SizeMode.MATCH_PARENT).height(1f)
-            })
-        }
-
-        private fun createPreviewNavigation(): LinearLayoutWidget = LinearLayoutWidget().apply {
-            orientation = Orientation.HORIZONTAL
-            spacing = 4f
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(14f)
-            addChild("previous", ButtonWidget().apply {
-                lp {
-                    size(16f, 16f)
-                }
-                image(R.textures.gui.icon.arrow)
-                tooltipText = L10n["app.academy.tutorial.previous"]
-                onClickListener = {
-                    val nextIndex = if (selectedPage == 0) pages.lastIndex else selectedPage - 1
-                    navGroup.selectButton(navButtons[nextIndex])
-                }
-            })
-            addChild("position", TextWidget("${selectedPage + 1} / ${pages.size}").apply {
-                textSize = 7f
-                alpha = 0.6f
-                layoutParams = LinearLayoutWidget.LayoutParams()
-                    .weight(1f)
-                    .heightMode(SizeMode.MATCH_PARENT)
-                    .gravity(Gravity.CENTER)
-                gravity = Gravity.CENTER
-                gravity = Gravity.CENTER
-            })
-            addChild("next", ButtonWidget().apply {
-                lp {
-                    size(16f, 16f)
-                }
-                image(R.textures.gui.icon.arrow) {
-                    flipUvU()
-                }
-                tooltipText = L10n["app.academy.tutorial.next"]
-                onClickListener = {
-                    val nextIndex = if (selectedPage == pages.lastIndex) 0 else selectedPage + 1
-                    navGroup.selectButton(navButtons[nextIndex])
-                }
-            })
-        }
-
-        private fun previewText(key: String?): TextWidget = TextWidget(key?.let(L10n::get) ?: "").apply {
-            textSize = ARTICLE_BODY_FONT_SIZE
-            singleLine = false
-            alpha = 0.78f
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .heightMode(SizeMode.WRAP_CONTENT)
-        }
-
-        private fun articleLabel(
-            text: String,
+        fun WidgetContainer.labelArticle(
+            value: String,
+            name: String,
             fontSize: Float,
             alpha: Float,
             height: Float,
             gravity: Int = Gravity.CENTER_LEFT
-        ): TextWidget = TextWidget(text).apply {
+        ): TextWidget = text(value, name) {
+            lp {
+                widthMode(SizeMode.MATCH_PARENT)
+                height(height)
+                gravity(gravity)
+            }
+
             textSize = fontSize
             this.alpha = alpha
-            layoutParams = LinearLayoutWidget.LayoutParams()
-                .widthMode(SizeMode.MATCH_PARENT)
-                .height(height)
-                .gravity(gravity)
             this.gravity = gravity
         }
+
+        fun WidgetContainer.textPreview(key: String?, name: String): TextWidget =
+            text(key?.let(L10n::get) ?: "", name) {
+                lp {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    heightMode(SizeMode.WRAP_CONTENT)
+                }
+
+                textSize = R.ui.tutorial.font_body
+                singleLine = false
+                alpha = 0.78f
+            }
+
+        fun LinearLayoutWidget.addPreviewProject(page: Page) {
+            image(R.textures.gui.app.tutorial.icon, "icon") {
+                lp {
+                    size(32f, 32f)
+                    gravity(Gravity.CENTER)
+                }
+
+                sampler(FilterMode.NEAREST, false)
+            }
+
+            labelArticle("MISAKA CLOUD", "text_brand", 8f, 0.95f, 12f, Gravity.CENTER)
+
+            fill(R.ui.tutorial.progression_blue, "rule") {
+                lp {
+                    width(52f)
+                    height(1.5f)
+                    gravity(Gravity.CENTER)
+                }
+            }
+
+            textPreview(page.keyPreview, "text_description")
+        }
+
+        fun LinearLayoutWidget.addPreviewStage(page: Page) {
+            val stage = page.stage ?: 0
+
+            labelArticle("${stage.toString().padStart(2, '0')} / 05", "text_stage", 13f, 1f, 20f, Gravity.CENTER)
+
+            frame("progress") {
+                lp {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(2f)
+                }
+
+                background = ColorDrawable(0x30000000)
+
+                fill(R.ui.tutorial.progression_blue, "value") {
+                    lp {
+                        width((((R.ui.tutorial.preview_width - 16f) * stage) / 5f).coerceAtLeast(2f))
+                        heightMode(SizeMode.MATCH_PARENT)
+                    }
+                }
+            }
+
+            textPreview(page.keyPreview, "text_description")
+        }
+
+        fun LinearLayoutWidget.addPreviewText(page: Page) {
+            labelArticle("DATA / NOTE", "text_mark", 10f, 0.95f, 16f, Gravity.CENTER)
+
+            fill(R.ui.tutorial.progression_blue, "rule") {
+                lp {
+                    width(52f)
+                    height(1.5f)
+                    gravity(Gravity.CENTER)
+                }
+            }
+
+            textPreview(page.keyPreview, "text_description")
+        }
+
+        fun LinearLayoutWidget.addPreviewRecipe(recipe: Recipe) {
+            val slotSize = R.ui.tutorial.recipe_slot_size
+            val slotGap = R.ui.tutorial.recipe_slot_gap
+
+            row("row_recipe", spacing = 4f) {
+                lp {
+                    widthMode(SizeMode.WRAP_CONTENT)
+                    heightMode(SizeMode.WRAP_CONTENT)
+                    gravity(Gravity.CENTER)
+                }
+
+                column("grid", spacing = slotGap) {
+                    lp {
+                        size(slotSize * 3f + slotGap * 2f, slotSize * 3f + slotGap * 2f)
+                        gravity(Gravity.CENTER)
+                    }
+
+                    recipe.rows.forEachIndexed { rowIndex, rowValue ->
+                        row("row_$rowIndex", spacing = slotGap) {
+                            lp {
+                                widthMode(SizeMode.MATCH_PARENT)
+                                height(slotSize)
+                            }
+
+                            rowValue.forEachIndexed { columnIndex, item ->
+                                frame("cell_$columnIndex") {
+                                    lp {
+                                        size(slotSize, slotSize)
+                                    }
+
+                                    background =
+                                        ColorDrawable(if (item == null) 0x10000000 else R.ui.tutorial.row_fill)
+
+                                    if (item != null) {
+                                        add("item", ItemStackWidget(item.asItem().defaultInstance)) {
+                                            lp {
+                                                size(ItemStackWidget.ITEM_SIZE, ItemStackWidget.ITEM_SIZE)
+                                                gravity(Gravity.CENTER)
+                                            }
+
+                                            tooltipText = L10n[item.asItem().descriptionId]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                text("→", "text_arrow") {
+                    lp {
+                        size(slotSize, slotSize)
+                        gravity(Gravity.CENTER)
+                    }
+
+                    textSize = R.ui.tutorial.font_body
+                    alpha = 0.78f
+                    gravity = Gravity.CENTER
+                }
+
+                frame("cell_result") {
+                    lp {
+                        size(slotSize, slotSize)
+                        gravity(Gravity.CENTER)
+                    }
+
+                    background = ColorDrawable(R.ui.tutorial.row_fill)
+
+                    add("item", ItemStackWidget(recipe.result.asItem().defaultInstance)) {
+                        lp {
+                            size(ItemStackWidget.ITEM_SIZE, ItemStackWidget.ITEM_SIZE)
+                            gravity(Gravity.CENTER)
+                        }
+
+                        tooltipText = L10n[recipe.result.asItem().descriptionId]
+                    }
+                }
+            }
+
+            fill(R.ui.tutorial.rule_soft, "rule_recipe") {
+                lp {
+                    widthMode(SizeMode.MATCH_PARENT)
+                    height(1f)
+                }
+            }
+        }
+
+        fun createNavigationPreview(): LinearLayoutWidget = standaloneRow(spacing = 4f) {
+            lp {
+                widthMode(SizeMode.MATCH_PARENT)
+                height(16f)
+            }
+
+            button("button_previous") {
+                lp {
+                    size(16f, 16f)
+                }
+
+                tooltipText = L10n["app.academy.tutorial.previous"]
+
+                image(R.textures.gui.icon.arrow, "icon")
+
+                onClick {
+                    val indexNext = if (pageSelected == 0) pages.lastIndex else pageSelected - 1
+                    groupNav.selectButton(buttonsNav[indexNext])
+                }
+            }
+
+            text("${pageSelected + 1} / ${pages.size}", "text_position") {
+                lp {
+                    heightMode(SizeMode.MATCH_PARENT)
+                    gravity(Gravity.CENTER)
+                }
+
+                weight(1f)
+
+                textSize = 7f
+                alpha = 0.6f
+                gravity = Gravity.CENTER
+            }
+
+            button("button_next") {
+                lp {
+                    size(16f, 16f)
+                }
+
+                tooltipText = L10n["app.academy.tutorial.next"]
+
+                image(R.textures.gui.icon.arrow, "icon") {
+                    flipUvU()
+                }
+
+                onClick {
+                    val indexNext = if (pageSelected == pages.lastIndex) 0 else pageSelected + 1
+                    groupNav.selectButton(buttonsNav[indexNext])
+                }
+            }
+        }
+
+        fun createArticle(page: Page): FrameLayoutWidget = standaloneFrame {
+            lp {
+                sizeMode(SizeMode.MATCH_PARENT)
+            }
+
+            val panel = scrollPanel(name = "scroll") {
+                lp {
+                    matchParent()
+                    padding(7f, 6f, 10f, 6f)
+                }
+
+                scrollSpeed(18f)
+
+                column("content", spacing = 4f) {
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        heightMode(SizeMode.WRAP_CONTENT)
+                    }
+
+                    labelArticle(
+                        L10n[page.keyEyebrow], "label_eyebrow",
+                        R.ui.tutorial.font_body, 0.68f, 10f
+                    )
+
+                    labelArticle(
+                        L10n[page.keyTitle], "text_title",
+                        R.ui.tutorial.font_subtitle, 1f, 14f
+                    )
+
+                    fill(R.ui.tutorial.rule_medium, "rule") {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            height(1f)
+                        }
+                    }
+
+                    text(L10n[page.keyBrief], "text_brief") {
+                        lp {
+                            widthMode(SizeMode.MATCH_PARENT)
+                            heightMode(SizeMode.WRAP_CONTENT)
+                            padding(4f, 3f)
+                        }
+
+                        textSize = R.ui.tutorial.font_body
+                        singleLine = false
+                        alpha = 0.88f
+                        background = ColorDrawable(R.ui.tutorial.row_fill)
+                    }
+
+                    page.keysBody.forEachIndexed { bodyIndex, key ->
+                        text(L10n[key], "text_body_$bodyIndex") {
+                            lp {
+                                widthMode(SizeMode.MATCH_PARENT)
+                                heightMode(SizeMode.WRAP_CONTENT)
+                            }
+
+                            textSize = R.ui.tutorial.font_body
+                            singleLine = false
+                            alpha = 0.82f
+                        }
+                    }
+                }
+            }
+
+            scrollBar(panel, Orientation.VERTICAL, "scroll_bar") {
+                lp {
+                    width(3f)
+                    heightMode(SizeMode.MATCH_PARENT)
+                    gravity(Gravity.RIGHT)
+                    margin(0f, 6f, 3f, 6f)
+                }
+
+                trackColor(0x20000000)
+                thumbColor(0xA0FFFFFF.toInt())
+            }
+        }
+
+        fun createPreview(page: Page): LinearLayoutWidget = standaloneColumn(spacing = 3f) {
+            lp {
+                sizeMode(SizeMode.MATCH_PARENT)
+                padding(8f, 6f)
+            }
+
+            labelArticle(
+                L10n[if (page.recipe == null) "app.academy.tutorial.preview" else "app.academy.tutorial.recipe"],
+                "label_preview", R.ui.tutorial.font_body, 0.68f, 10f
+            )
+
+            when {
+                page.recipe != null -> addPreviewRecipe(page.recipe)
+                page.stage != null -> addPreviewStage(page)
+                page.id == "project" -> addPreviewProject(page)
+                else -> addPreviewText(page)
+            }
+
+            empty("spacer") {
+                lp {
+                    widthMode(SizeMode.MATCH_PARENT)
+                }
+
+                weight(1f)
+            }
+
+            add("navigation", createNavigationPreview())
+        }
+
+        fun showPage(index: Int) {
+            if (index !in pages.indices) return
+            pageSelected = index
+            containerArticle.clearChildren()
+            containerPreview.clearChildren()
+            containerArticle.addChild("page", createArticle(pages[index]))
+            containerPreview.addChild("page", createPreview(pages[index]))
+        }
+
+        row("header") {
+            lp {
+                sizeMode(SizeMode.MATCH_PARENT, SizeMode.WRAP_CONTENT)
+            }
+
+            button("button_back") {
+                lp {
+                    margin(2f, 2f, 2f, 0f)
+                    size(16f, 16f)
+                }
+
+                onClick { onBack() }
+
+                image(R.textures.gui.icon.arrow, "icon")
+            }
+
+            text(L10n["app.academy.tutorial.title"], "text_title") {
+                lp {
+                    height(0f)
+                    gravity(Gravity.CENTER)
+                }
+
+                weight(1f)
+
+                gravity = Gravity.CENTER
+            }
+        }
+
+        fill(R.ui.tutorial.rule_strong, "rule_header") {
+            lp {
+                widthMode(SizeMode.MATCH_PARENT)
+                height(1f)
+                padding(2f, 0f)
+            }
+        }
+
+        row("body", spacing = 1f) {
+            lp {
+                widthMode(SizeMode.MATCH_PARENT)
+            }
+
+            weight(1f)
+
+            column("navigation", spacing = 2f) {
+                lp {
+                    width(R.ui.tutorial.nav_width)
+                    heightMode(SizeMode.MATCH_PARENT)
+                    padding(4f, 4f, 3f, 4f)
+                }
+
+                background = ColorDrawable(R.ui.tutorial.row_fill)
+
+                text(L10n["app.academy.tutorial.index"], "label_index") {
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(10f)
+                        gravity(Gravity.CENTER_LEFT)
+                    }
+
+                    textSize = 7.5f
+                    alpha = 0.65f
+                    gravity = Gravity.CENTER_LEFT
+                }
+
+                fill(R.ui.tutorial.rule_soft, "rule") {
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
+                        height(1f)
+                    }
+                }
+
+                frame("area_entries") {
+                    lp {
+                        widthMode(SizeMode.MATCH_PARENT)
+                    }
+
+                    weight(1f)
+
+                    val panel = scrollPanel(name = "scroll") {
+                        lp {
+                            matchParent()
+                            paddingRight(5f)
+                        }
+
+                        scrollSpeed(15f)
+
+                        groupNav = radioGroup("group_nav") {
+                            lp {
+                                widthMode(SizeMode.MATCH_PARENT)
+                                heightMode(SizeMode.WRAP_CONTENT)
+                            }
+
+                            orientation = Orientation.VERTICAL
+                            spacing = 2f
+
+                            pages.forEach { page ->
+                                buttonsNav.add(radio(page.id) {
+                                    lp {
+                                        widthMode(SizeMode.MATCH_PARENT)
+                                        height(13f)
+                                    }
+
+                                    background = StateListDrawable().apply {
+                                        addState(Widget.SELECTED, ColorDrawable(0x68FFFFFF))
+                                        addState(Widget.PRESSED, ColorDrawable(0x4FFFFFFF))
+                                        addState(Widget.FOCUSED, ColorDrawable(0x38FFFFFF))
+                                        addState(Widget.HOVERED, ColorDrawable(0x28FFFFFF))
+                                        setDefault(ColorDrawable(0x08000000))
+                                    }
+
+                                    text(L10n[page.keyNav], "text") {
+                                        lp {
+                                            sizeMode(SizeMode.MATCH_PARENT)
+                                            padding(3f, 1f)
+                                            gravity(Gravity.CENTER_LEFT)
+                                        }
+
+                                        textSize = 7.5f
+                                        alpha = 0.82f
+                                        gravity = Gravity.CENTER_LEFT
+                                    }
+                                })
+                            }
+                        }
+                    }
+
+                    scrollBar(panel, Orientation.VERTICAL, "scroll_bar") {
+                        lp {
+                            width(3f)
+                            heightMode(SizeMode.MATCH_PARENT)
+                            gravity(Gravity.RIGHT)
+                        }
+
+                        trackColor(0x20000000)
+                        thumbColor(0x90FFFFFF.toInt())
+                    }
+                }
+            }
+
+            fill(R.ui.tutorial.rule_faint, "rule_navigation") {
+                lp {
+                    width(1f)
+                    heightMode(SizeMode.MATCH_PARENT)
+                }
+            }
+
+            containerArticle = frame("article") {
+                lp {
+                    heightMode(SizeMode.MATCH_PARENT)
+                }
+
+                weight(1f)
+            }
+
+            fill(R.ui.tutorial.rule_faint, "rule_preview") {
+                lp {
+                    width(1f)
+                    heightMode(SizeMode.MATCH_PARENT)
+                }
+            }
+
+            containerPreview = frame("preview") {
+                lp {
+                    width(R.ui.tutorial.preview_width)
+                    heightMode(SizeMode.MATCH_PARENT)
+                }
+
+                background = ColorDrawable(R.ui.tutorial.plane_preview)
+            }
+        }
+
+        groupNav.onSelectionChanged = Consumer { button -> showPage(button.id) }
+
+        groupNav.selectButton(buttonsNav.first())
     }
 }

@@ -115,7 +115,7 @@ fun WheelPickerWidget.curtain(enabled: Boolean): WheelPickerWidget {
 }
 
 fun WheelPickerWidget.curtainColor(color: Int): WheelPickerWidget {
-    this.curtainColor = color
+    curtainColor = color
     return this
 }
 
@@ -125,7 +125,7 @@ fun WheelPickerWidget.indicator(enabled: Boolean): WheelPickerWidget {
 }
 
 fun WheelPickerWidget.itemAlign(align: WheelPickerWidget.ItemAlign): WheelPickerWidget {
-    this.itemAlign = align
+    itemAlign = align
     return this
 }
 
@@ -181,7 +181,7 @@ fun DragBarWidget.trackColor(color: Int): DragBarWidget {
 }
 
 fun ScrollBarWidget.panel(p: ScrollPanelWidget?): ScrollBarWidget {
-    this.panel = p
+    panel = p
     return this
 }
 

@@ -33,8 +33,8 @@ open class RadioGroupWidget : LinearLayoutWidget() {
             selectedButton!!.isSelected = true
         }
 
-        if ((selectionChanged || allowReselect) && onSelectionChanged != null && this.selectedButton != null) {
-            onSelectionChanged!!.accept(this.selectedButton!!)
+        if ((selectionChanged || allowReselect) && onSelectionChanged != null && selectedButton != null) {
+            onSelectionChanged!!.accept(selectedButton!!)
         }
     }
 

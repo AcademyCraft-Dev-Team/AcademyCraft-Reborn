@@ -16,18 +16,18 @@ class KeyEvent(type: EventType, keyCode: Int, scanCode: Int, modifiers: Int) : I
     }
 
     fun hasAltDown(): Boolean {
-        return (this.modifiers and InputConstants.MOD_ALT) != 0
+        return (modifiers and InputConstants.MOD_ALT) != 0
     }
 
     fun hasShiftDown(): Boolean {
-        return (this.modifiers and InputConstants.MOD_SHIFT) != 0
+        return (modifiers and InputConstants.MOD_SHIFT) != 0
     }
 
     fun hasControlDown(): Boolean {
-        return (this.modifiers and InputConstants.MOD_CONTROL) != 0
+        return (modifiers and InputConstants.MOD_CONTROL) != 0
     }
 
     fun hasControlDownWithQuirk(): Boolean {
-        return (this.modifiers and InputQuirks.EDIT_SHORTCUT_KEY_MODIFIER) != 0
+        return (modifiers and InputQuirks.EDIT_SHORTCUT_KEY_MODIFIER) != 0
     }
 }

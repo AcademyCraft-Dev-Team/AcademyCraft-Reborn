@@ -10,45 +10,45 @@ abstract class Animator {
     private val listeners: MutableList<AnimatorListener> = ArrayList()
 
     open fun start() {
-        if (this.isRunning) return
-        this.isRunning = true
-        this.isPaused = false
+        if (isRunning) return
+        isRunning = true
+        isPaused = false
         pauseBeginTime = -1
         AnimationManager.startAnimation(this)
     }
 
     fun cancel() {
-        if (!this.isRunning) return
-        this.isRunning = false
-        this.isPaused = false
+        if (!isRunning) return
+        isRunning = false
+        isPaused = false
         AnimationManager.remove(this)
         val tempList = ArrayList<AnimatorListener?>(listeners)
         for (listener in tempList) listener!!.onAnimationCancel(this)
     }
 
     fun end() {
-        if (!this.isRunning) return
-        this.isRunning = false
-        this.isPaused = false
+        if (!isRunning) return
+        isRunning = false
+        isPaused = false
         AnimationManager.remove(this)
         val tempList = ArrayList<AnimatorListener?>(listeners)
         for (listener in tempList) listener!!.onAnimationEnd(this)
     }
 
     fun pause() {
-        if (this.isRunning && !this.isPaused) {
-            this.isPaused = true
+        if (isRunning && !isPaused) {
+            isPaused = true
             pauseBeginTime = -1
         }
     }
 
     fun resume() {
-        if (this.isRunning && this.isPaused) this.isPaused = false
+        if (isRunning && isPaused) isPaused = false
     }
 
     open fun onStartInternal() {
-        this.isRunning = true
-        this.isPaused = false
+        isRunning = true
+        isPaused = false
         val tempList = ArrayList<AnimatorListener?>(listeners)
         for (listener in tempList) listener!!.onAnimationStart(this)
     }

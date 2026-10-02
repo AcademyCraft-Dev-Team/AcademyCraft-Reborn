@@ -56,28 +56,28 @@ class ScissorRect(val position: Position2D, val width: Float, val height: Float)
     }
 
     fun intersection(pRectangle: ScissorRect): ScissorRect? {
-        val i = max(this.left, pRectangle.left)
-        val j = max(this.top, pRectangle.top)
-        val k = min(this.right, pRectangle.right)
-        val l = min(this.bottom, pRectangle.bottom)
+        val i = max(left, pRectangle.left)
+        val j = max(top, pRectangle.top)
+        val k = min(right, pRectangle.right)
+        val l = min(bottom, pRectangle.bottom)
         return if (i < k && j < l) ScissorRect(i, j, k - i, l - j) else null
     }
 
     /** 包围盒并集, 用于合并批次的 scissor (对标 AOSP `Rect::unionWith`). */
     fun union(pRectangle: ScissorRect): ScissorRect {
-        val i = min(this.left, pRectangle.left)
-        val j = min(this.top, pRectangle.top)
-        val k = max(this.right, pRectangle.right)
-        val l = max(this.bottom, pRectangle.bottom)
+        val i = min(left, pRectangle.left)
+        val j = min(top, pRectangle.top)
+        val k = max(right, pRectangle.right)
+        val l = max(bottom, pRectangle.bottom)
         return ScissorRect(i, j, k - i, l - j)
     }
 
     fun intersects(pRectangle: ScissorRect): Boolean {
-        return this.left < pRectangle.right && this.right > pRectangle.left && this.top < pRectangle.bottom && this.bottom > pRectangle.top
+        return left < pRectangle.right && right > pRectangle.left && top < pRectangle.bottom && bottom > pRectangle.top
     }
 
     fun encompasses(pRectangle: ScissorRect): Boolean {
-        return pRectangle.left >= this.left && pRectangle.top >= this.top && pRectangle.right <= this.right && pRectangle.bottom <= this.bottom
+        return pRectangle.left >= left && pRectangle.top >= top && pRectangle.right <= right && pRectangle.bottom <= bottom
     }
 
     val top: Float
@@ -97,12 +97,12 @@ class ScissorRect(val position: Position2D, val width: Float, val height: Float)
         get() = position.x + width
 
     fun containsPoint(pX: Int, pY: Int): Boolean {
-        return pX >= this.left && pX < this.right && pY >= this.top && pY < this.bottom
+        return pX >= left && pX < right && pY >= top && pY < bottom
     }
 
     fun transformAxisAligned(pPos: Matrix3x2f): ScissorRect {
-        val vector2f = pPos.transformPosition(this.left, this.top, Vector2f())
-        val vector2f1 = pPos.transformPosition(this.right, this.bottom, Vector2f())
+        val vector2f = pPos.transformPosition(left, top, Vector2f())
+        val vector2f1 = pPos.transformPosition(right, bottom, Vector2f())
         return ScissorRect(
             Mth.floor(vector2f.x).toFloat(),
             Mth.floor(vector2f.y).toFloat(),
@@ -112,10 +112,10 @@ class ScissorRect(val position: Position2D, val width: Float, val height: Float)
     }
 
     fun transformMaxBounds(pPos: Matrix3x2f): ScissorRect {
-        val vector2f = pPos.transformPosition(this.left, this.top, Vector2f())
-        val vector2f1 = pPos.transformPosition(this.right, this.top, Vector2f())
-        val vector2f2 = pPos.transformPosition(this.left, this.bottom, Vector2f())
-        val vector2f3 = pPos.transformPosition(this.right, this.bottom, Vector2f())
+        val vector2f = pPos.transformPosition(left, top, Vector2f())
+        val vector2f1 = pPos.transformPosition(right, top, Vector2f())
+        val vector2f2 = pPos.transformPosition(left, bottom, Vector2f())
+        val vector2f3 = pPos.transformPosition(right, bottom, Vector2f())
         val f = min(min(vector2f.x(), vector2f2.x()), min(vector2f1.x(), vector2f3.x()))
         val f1 = max(max(vector2f.x(), vector2f2.x()), max(vector2f1.x(), vector2f3.x()))
         val f2 = min(min(vector2f.y(), vector2f2.y()), min(vector2f1.y(), vector2f3.y()))

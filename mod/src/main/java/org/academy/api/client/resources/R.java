@@ -789,5 +789,99 @@ public final class R {
             private terminal_hud() {
             }
         }
+
+        public static final class ability_developer {
+            public static final float panel_main_width = 400f;
+            public static final float panel_main_height = 187f;
+            public static final float panel_left_width = 108.5f;
+            public static final float panel_right_width = 278f;
+            public static final float tree_area_width = 257f;
+            public static final float tree_area_height = 139f;
+            public static final long cover_anim_ms = 300L;
+            public static final float blur_max_radius = 8f;
+            public static final long console_char_delay_ms = 10L;
+            public static final float console_reveal_fade_len = 12f;
+            public static final float max_du_skills = 10f;
+
+            private ability_developer() {
+            }
+        }
+
+        public static final class music_player {
+            public static final float volume_scale = 0.35f;
+            public static final float vinyl_size = 88f;
+            public static final long vinyl_rotation_ms = 5000L;
+            public static final float info_area_width = 228f;
+            public static final float info_area_height = 56f;
+            public static final float list_width = 100f;
+            public static final float progress_width = 128f;
+            public static final float progress_height = 6f;
+            public static final float room_progress_width = 96f;
+            public static final float volume_bar_width = 48f;
+            public static final float volume_bar_height = 4f;
+            public static final float members_width = 76f;
+            public static final int search_max_length = 64;
+            public static final float button_size = 16f;
+            public static final float row_height = 14f;
+
+            private music_player() {
+            }
+        }
+
+        public static final class darkmatter_creation {
+            public static final float panel_width = 540f;
+            public static final float panel_height = 320f;
+            public static final float panel_min_width = 300f;
+            public static final float panel_min_height = 220f;
+            public static final float panel_margin = 12f;
+            public static final float panel_alpha = 0.43f;
+            public static final float title_height = 18f;
+            public static final float tab_height = 19f;
+            public static final float tab_gap = 3f;
+            public static final float slot_button_width = 34f;
+            public static final float slot_button_height = 18f;
+            public static final float action_button_height = 20f;
+            public static final float save_button_width = 92f;
+            public static final float summon_button_width = 100f;
+            public static final float preview_width = 166f;
+            public static final int accent = 0xFF55C8E8;
+            public static final int control = 0x45101820;
+            public static final int control_hover = 0x70465A64;
+            public static final int control_active = 0x9855C8E8;
+            public static final int rail_idle = 0x55FFFFFF;
+            public static final int danger = 0xA0502028;
+            public static final int danger_base = 0x60402028;
+            public static final int danger_pressed = 0xD0783038;
+            public static final int rule_soft = 0x60FFFFFF;
+            public static final int divider = 0x28FFFFFF;
+            public static final int seek_track = 0x50101820;
+            public static final int tooltip_bg = 0xD9101010;
+            public static final int tooltip_text = 0xFFFFFFFF;
+            public static final int tooltip_description = 0xFF9AA4AA;
+
+            private darkmatter_creation() {
+            }
+        }
+
+        public static final class tutorial {
+            public static final float width = 384f;
+            public static final float height = 200f;
+            public static final float nav_width = 80f;
+            public static final float preview_width = 122f;
+            public static final float font_body = 6f;
+            public static final float font_subtitle = 8f;
+            public static final float recipe_slot_size = 18f;
+            public static final float recipe_slot_gap = 2f;
+            public static final int progression_blue = 0xFF1177D6;
+            public static final int row_fill = 0x28000000;
+            public static final int rule_strong = 0xBFFFFFFF;
+            public static final int rule_medium = 0xA0FFFFFF;
+            public static final int rule_soft = 0x60FFFFFF;
+            public static final int rule_faint = 0x70FFFFFF;
+            public static final int plane_preview = 0x18000000;
+
+            private tutorial() {
+            }
+        }
     }
 }

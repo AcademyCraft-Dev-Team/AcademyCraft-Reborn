@@ -395,7 +395,7 @@ open class UiContext {
     fun close() {
         if (closing.get() || closed.get()) return
         closing.set(true)
-        runOnRenderThread { this.closeOnRenderThread() }
+        runOnRenderThread { closeOnRenderThread() }
     }
 
     fun closeOnRenderThread() {

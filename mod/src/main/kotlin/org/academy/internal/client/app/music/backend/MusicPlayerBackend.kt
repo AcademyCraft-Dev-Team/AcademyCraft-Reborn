@@ -305,7 +305,7 @@ class MusicPlayerBackend private constructor() {
     }
 
     fun stop() {
-        runOnSoundEngine { this.performStop() }
+        runOnSoundEngine { performStop() }
     }
 
     private fun performStop() {
@@ -319,7 +319,7 @@ class MusicPlayerBackend private constructor() {
     }
 
     fun togglePlayPause() {
-        runOnSoundEngine { this.performTogglePlayPause() }
+        runOnSoundEngine { performTogglePlayPause() }
     }
 
     fun pause() {
@@ -352,7 +352,7 @@ class MusicPlayerBackend private constructor() {
     }
 
     fun playNext() {
-        runOnSoundEngine { this.performPlayNext() }
+        runOnSoundEngine { performPlayNext() }
     }
 
     private fun performPlayNext() {
@@ -362,7 +362,7 @@ class MusicPlayerBackend private constructor() {
     }
 
     fun playPrevious() {
-        runOnSoundEngine { this.performPlayPrevious() }
+        runOnSoundEngine { performPlayPrevious() }
     }
 
     private fun performPlayPrevious() {
