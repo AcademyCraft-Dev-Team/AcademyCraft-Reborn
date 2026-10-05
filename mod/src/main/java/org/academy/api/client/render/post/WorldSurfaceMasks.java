@@ -5,53 +5,47 @@ import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.renderpearl.api.GpuFormat;
-import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
-import com.mojang.renderpearl.api.pipeline.RenderPipeline;
+import com.mojang.renderpearl.api.commands.RenderPassDescriptor;
+import com.mojang.renderpearl.api.textures.FilterMode;
 import com.mojang.renderpearl.api.textures.GpuSampler;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderBuffers;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.SubmitNodeStorage;
-import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+import net.minecraft.client.renderer.chunk.ChunkSectionLayerGroup;
 import net.minecraft.client.renderer.chunk.ChunkSectionsToRender;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.academy.api.common.vfx.DirectionalArea;
-import org.academy.mixin.client.ChunkSectionsToRenderInvoker;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
+import org.jspecify.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.OptionalDouble;
 
-/**
- * Actual material/geometry masks, isolated from vanilla entity outlines and the main scene.
- *
- * <p>26.3 note: the legacy {@code OutputTarget}/scoped {@code PreparedRenderType} redirect and
- * {@code ChunkSectionsToRender#drawGroupsPerLayer} primitives were removed from the renderer.
- * Masks are now captured by opening explicit render passes on dedicated targets and replaying
- * entity features through {@link FeatureRenderDispatcher#renderAllFeatures}. Mask pipelines reuse
- * the source pipelines because 26.3 no longer exposes a {@code RenderPipeline#toBuilder}.</p>
- */
-@EventBusSubscriber(Dist.CLIENT)
 public final class WorldSurfaceMasks {
     private record EntityDraw(EntityRenderState state, CameraRenderState camera, double x, double y, double z,
                               Matrix4f pose, Matrix3f normal, boolean selected) {
     }
 
+    private record TranslucentDraw(ChunkSectionsToRender chunks, GpuSampler sampler, GpuTextureView atlas) {
+    }
+
     private static final List<EntityDraw> ENTITIES = new ArrayList<>();
-    private static final Map<RenderPipeline, RenderPipeline> MASK_PIPELINES = new IdentityHashMap<>();
-    private static final int MASK_INDEX_COUNT = 6 * 65536;
     private static List<DirectionalArea> areas = List.of();
-    private static TextureTarget opaque, transparent, entities, selected;
+    private static TextureTarget transparent, entities, selected;
     private static FeatureRenderDispatcher dispatcher;
     private static RenderBuffers buffers;
+    private static @Nullable TranslucentDraw translucent;
     private static boolean ready;
+    private static boolean maskPassActive;
 
     private WorldSurfaceMasks() {
     }
@@ -64,8 +58,8 @@ public final class WorldSurfaceMasks {
         return ready;
     }
 
-    public static TextureTarget opaque() {
-        return opaque;
+    public static @Nullable GpuTextureView sceneDepth() {
+        return Minecraft.getInstance().gameRenderer.mainRenderTarget().getDepthTextureView();
     }
 
     public static TextureTarget transparent() {
@@ -83,12 +77,13 @@ public final class WorldSurfaceMasks {
     public static void beginFrame(List<DirectionalArea> regions) {
         areas = regions;
         ENTITIES.clear();
+        translucent = null;
         ready = false;
         if (regions.isEmpty()) releaseTargets();
     }
 
     public static void capture(EntityRenderState state, CameraRenderState camera, double x, double y, double z, PoseStack pose) {
-        if (!active() || state.isInvisible) return;
+        if (!active() || maskPassActive || state.isInvisible) return;
         var center = new Vec3(state.x, state.y + state.boundingBoxHeight / 2, state.z);
         double margin = Math.max(state.boundingBoxHeight, state.boundingBoxWidth);
         if (areas.stream().noneMatch(a -> center.distanceTo(a.origin()) <= a.radius() + margin)) return;
@@ -96,22 +91,56 @@ public final class WorldSurfaceMasks {
                 new Matrix3f(pose.last().normal()), areas.stream().anyMatch(a -> a.contains(center))));
     }
 
-    @SubscribeEvent
-    public static void afterOpaque(RenderLevelStageEvent.AfterOpaqueFeatures event) {
+    public static void recordTranslucent(ChunkSectionsToRender chunks, GpuSampler sampler, GpuTextureView atlas) {
+        if (active() && !maskPassActive) translucent = new TranslucentDraw(chunks, sampler, atlas);
+    }
+
+    public static void captureMasks() {
         if (!active()) return;
+        var sceneDepth = sceneDepth();
+        if (sceneDepth == null) return;
         ensureTargets();
-        var main = Minecraft.getInstance().gameRenderer.mainRenderTarget();
-        opaque.copyDepthFrom(main);
-        transparent.copyDepthFrom(main);
-        RenderSystem.getDevice().createCommandEncoder().clearColorTexture(transparent.getColorTexture(), new Vector4f(0));
+        ensureDispatcher();
+        maskPassActive = true;
+        try {
+            captureTranslucent(sceneDepth);
+            replay(entities, false, sceneDepth);
+            replay(selected, true, sceneDepth);
+        } finally {
+            maskPassActive = false;
+        }
+        buffers.endFrame();
         ready = true;
+    }
+
+    private static void captureTranslucent(GpuTextureView sceneDepth) {
+        var draw = translucent;
+        if (draw == null) return;
+        var color = transparent.getColorTextureView();
+        var depth = transparent.getDepthTextureView();
+        if (color == null || depth == null) return;
+        seedDepth(depth, sceneDepth);
+        try (var pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
+                () -> "Directional field transparent surfaces", color, Optional.of(new Vector4f(0)), depth, OptionalDouble.empty())) {
+            RenderSystem.bindDefaultUniforms(pass);
+            draw.chunks().renderGroup(ChunkSectionLayerGroup.TRANSLUCENT, pass, draw.sampler(), draw.atlas(), false);
+        }
+    }
+
+    private static void seedDepth(GpuTextureView depth, GpuTextureView sceneDepth) {
+        try (var pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
+                RenderPassDescriptor.builder(() -> "Directional field mask depth").withDepthAttachment(depth).build())) {
+            pass.setPipeline(RenderSystem.getCompiledPipeline(RenderPipelines.BLIT_DEPTH));
+            RenderSystem.bindDefaultUniforms(pass);
+            pass.setUniform("InSampler", sceneDepth, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+            pass.draw(3, 1, 0, 0);
+        }
     }
 
     private static void ensureTargets() {
         var main = Minecraft.getInstance().gameRenderer.mainRenderTarget();
-        if (opaque != null && opaque.width == main.width && opaque.height == main.height) return;
+        if (transparent != null && transparent.width == main.width && transparent.height == main.height) return;
         releaseTargets();
-        opaque = target("Opaque surface depth", main);
         transparent = target("Transparent material mask", main);
         entities = target("Visible entity mask", main);
         selected = target("Selected entity mask", main);
@@ -121,46 +150,19 @@ public final class WorldSurfaceMasks {
         return new TextureTarget(name, main.width, main.height, GpuFormat.RGBA8_UNORM, GpuFormat.D32_FLOAT);
     }
 
-    /**
-     * Replay the actual translucent chunk mesh into the transparent mask target.
-     */
-    public static void captureTransparent(ChunkSectionsToRender chunks, GpuSampler sampler) {
-        if (!active() || !ready) return;
-        var indices = RenderSystem.getSequentialBuffer(PrimitiveTopology.QUADS);
-        indices.requestIndexCount(MASK_INDEX_COUNT);
-        indices.resizeToRequestedIndexCount();
-        var indexBuffer = indices.getBuffer();
-        var pipeline = maskPipeline(ChunkSectionLayer.TRANSLUCENT.pipeline(true));
-        try (var pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
-                () -> "Directional field transparent surfaces", transparent.getColorTextureView(), Optional.empty(),
-                transparent.getDepthTextureView(), OptionalDouble.empty())) {
-            pass.setPipeline(RenderSystem.getCompiledPipeline(pipeline));
-            RenderSystem.bindDefaultUniforms(pass);
-            ((ChunkSectionsToRenderInvoker) chunks).academy$render(
-                    ChunkSectionLayer.TRANSLUCENT, pass, indexBuffer, indices.type(), pipeline, pipeline);
-        }
-    }
-
-    private static RenderPipeline maskPipeline(RenderPipeline source) {
-        // 26.3 removed RenderPipeline#toBuilder, so the source pipeline is reused as-is.
-        return MASK_PIPELINES.computeIfAbsent(source, key -> key);
-    }
-
-    public static void renderEntities() {
-        if (!active() || !ready) return;
+    private static void ensureDispatcher() {
+        if (dispatcher != null) return;
         var mc = Minecraft.getInstance();
-        if (dispatcher == null) {
-            buffers = new RenderBuffers(1);
-            dispatcher = new FeatureRenderDispatcher(buffers, mc.getModelManager(), mc.getAtlasManager(), mc.font,
-                    mc.gameRenderer.gameRenderState());
-        }
-        replay(entities, false);
-        replay(selected, true);
-        buffers.endFrame();
+        buffers = new RenderBuffers(1);
+        dispatcher = new FeatureRenderDispatcher(buffers, mc.getModelManager(), mc.getAtlasManager(), mc.font,
+                mc.gameRenderer.gameRenderState());
     }
 
-    private static void replay(TextureTarget output, boolean onlySelected) {
-        output.copyDepthFrom(opaque);
+    private static void replay(TextureTarget output, boolean onlySelected, GpuTextureView sceneDepth) {
+        var color = output.getColorTextureView();
+        var depth = output.getDepthTextureView();
+        if (color == null || depth == null) return;
+        seedDepth(depth, sceneDepth);
         var storage = new SubmitNodeStorage();
         for (var draw : ENTITIES) {
             if (onlySelected && !draw.selected) continue;
@@ -194,8 +196,8 @@ public final class WorldSurfaceMasks {
         }
         try (var frame = dispatcher.prepareFrame(storage);
              var pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
-                     () -> "Directional field entity mask", output.getColorTextureView(),
-                     Optional.of(new Vector4f(0)), output.getDepthTextureView(), OptionalDouble.empty())) {
+                     () -> "Directional field entity mask", color,
+                     Optional.of(new Vector4f(0)), depth, OptionalDouble.empty())) {
             RenderSystem.bindDefaultUniforms(pass);
             FeatureRenderDispatcher.renderAllFeatures(pass, frame);
         }
@@ -206,19 +208,19 @@ public final class WorldSurfaceMasks {
     public static void reset() {
         areas = List.of();
         ENTITIES.clear();
+        translucent = null;
         ready = false;
         releaseTargets();
     }
 
     private static void releaseTargets() {
-        for (var target : new TextureTarget[]{opaque, transparent, entities, selected})
+        for (var target : new TextureTarget[]{transparent, entities, selected})
             if (target != null) target.destroyBuffers();
-        opaque = transparent = entities = selected = null;
+        transparent = entities = selected = null;
     }
 
     public static void close() {
         reset();
-        MASK_PIPELINES.clear();
         if (dispatcher != null) dispatcher.close();
         if (buffers != null) buffers.close();
         dispatcher = null;

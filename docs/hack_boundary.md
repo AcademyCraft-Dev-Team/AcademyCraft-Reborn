@@ -26,11 +26,6 @@
 - `Instrumentation` + `ClassFileTransformer`；
 - 以 `-javaagent:` 加载的 agent jar（`Premain-Class` / `Agent-Class` 清单属性）。
 
-### 其它 JVM 层手段
-
-- 直接操纵 class / klass、`Unsafe`、原始内存等绕过常规类加载的手段；
-- 为放宽校验而修改 JVM 启动参数，例如 `-XX:+AllowEnhancedClassRedefinition`、`-Xverify:none`。这类参数属于 run 配置而非 mod 代码，无需迁移，但按本约定同样归入 hack 范畴。
-
 ## 3. 不属于 hack 的机制
 
 以下机制由 NeoForge / SpongePowered 的官方扩展点在受支持的加载阶段生效，属于普通 mod 能力，**不算 hack**：
@@ -84,7 +79,7 @@ package org.academy.hack.coremod.transform;
 
 ## 6. 与其它约定文档的关系
 
-`docs/api_internal_boundary.md` 中「hack」一词指**越过 `api` / `internal` 边界的包依赖违规**，即外部代码强行使用 `internal`。那是关于依赖方向与使用面合规性的约定，与本文的「JVM 层 hack」是两回事。
+`api_internal.md` 中「hack」一词指**越过 `api` / `internal` 边界的包依赖违规**，即外部代码强行使用 `internal`。那是关于依赖方向与使用面合规性的约定，与本文的「JVM 层 hack」是两回事。
 
 两者互不替代：一段代码可以是 JVM 层 hack（归本文管辖），同时在其包归属上完全合规；反之亦然。
 

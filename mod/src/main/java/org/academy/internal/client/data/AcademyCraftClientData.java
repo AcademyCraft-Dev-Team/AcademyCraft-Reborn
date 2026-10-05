@@ -35,6 +35,6 @@ public final class AcademyCraftClientData {
                 List.of(AcademyCraftAdvancementProvider::new)
         ));
         builder.add(RecipeProvider.asBootstrap(AcademyCraftRecipeProvider::new));
-        event.createReloadableRegistryObjects(builder);
+        event.getDefaultPackGenerator().createReloadableRegistryObjects(builder);
     }
 }

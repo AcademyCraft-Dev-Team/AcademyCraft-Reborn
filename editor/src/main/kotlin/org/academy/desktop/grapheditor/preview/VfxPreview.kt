@@ -16,21 +16,14 @@ import org.academy.desktop.grapheditor.canvas.GraphEditorModel
 import org.academy.desktop.grapheditor.canvas.GraphEditorModelRef
 import org.academy.desktop.grapheditor.container.VfxContainerModel
 import org.academy.desktop.grapheditor.container.VfxContainerModelRef
-import org.academy.desktop.grapheditor.preview.VfxPreview.Companion.LOOP_RESTART_INTERVAL_NS
 import org.academy.desktop.grapheditor.viewport.EditorGlow
 
-/**
- * VFX 实时预览：支持两种模型——扁平（[GraphEditorModel] → [VfxSimulator]，过渡期兼容）与
- * 容器（[VfxContainerModel] → [VfxSystemSimulator]，M26 容器编辑器主路径）。经 [VfxGraphRenderer]
- * 渲染到视口 target。
- */
 class VfxPreview(
     private val modelRef: GraphEditorModelRef,
     private val vfxRegistry: VfxNodeRegistry,
     private val containerRef: VfxContainerModelRef,
     private val blockRegistry: VfxBlockRegistry,
     private val operatorRegistry: VfxOperatorRegistry,
-    private val textureLoader: ((net.minecraft.resources.Identifier) -> com.mojang.renderpearl.api.textures.GpuTextureView)? = null,
 ) {
     private val model: GraphEditorModel get() = modelRef.model
     private val containerModel: VfxContainerModel get() = containerRef.model
@@ -52,17 +45,13 @@ class VfxPreview(
     var error: String? = null
         private set
 
-    /** 当前粒子数 + 电弧数（供统计 overlay）。 */
     val particleCount: Int
         get() = (systemSimulator?.buffer()?.count() ?: simulator?.buffer()?.count() ?: 0) +
                 (systemSimulator?.arcBuffer()?.count() ?: 0)
 
-    /** 模拟已运行时间（供时间轴显示）。 */
     val time: Float get() = systemSimulator?.time() ?: simulator?.time() ?: 0f
 
     fun sync() {
-        // 版本守卫必须在清空模拟器之前：版本未变则保留现有模拟器（否则每帧清空但不重建 → 画面冻结第一帧）。
-        // 容器路径用 simVersion（仅影响模拟的变更递增）：移动节点不重建，loop 播放不被打断。
         if (containerModel.contexts.isNotEmpty() || containerModel.operators.isNotEmpty()) {
             if (containerModel === lastContainerModel && containerModel.simVersion == lastContainerSimVersion) {
                 return
@@ -74,7 +63,6 @@ class VfxPreview(
         simulator = null
         systemSimulator = null
         try {
-            // 容器模型优先（M26）：有 context 则走容器执行器
             if (containerModel.contexts.isNotEmpty() || containerModel.operators.isNotEmpty()) {
                 systemSimulator = VfxSystemSimulator(
                     containerModel.toSystem(), blockRegistry, operatorRegistry, 42L, containerModel.parameters
@@ -97,7 +85,6 @@ class VfxPreview(
         }
     }
 
-    /** 容器系统全部输出块 → RenderSpec 列表（M26/M21n：几何由 output 块类型派生，着色器/混合/层由图数据，多输出分层）。 */
     private fun systemSpecs(containerModel: VfxContainerModel): List<RenderSpec> {
         val out = mutableListOf<RenderSpec>()
         for (ctx in containerModel.contexts.values) {
@@ -114,11 +101,6 @@ class VfxPreview(
         return out.ifEmpty { listOf(RenderSpec.DEFAULT) }
     }
 
-    /**
-     * 收集编辑器预览的场景表面网格（M29b-03，Blender 场景复刻）：扫描容器模型 SPAWN 块
-     * {@code arc_surface}/{@code arc_contact} 的 {@code mesh}/{@code contact_mesh} 属性 +
-     * origin 位移 → {@link MeshAssets} 解析三角面 → 半透明材质色。运行时无此可视化（空列表）。
-     */
     private fun collectSurfaces(containerModel: VfxContainerModel): List<SurfaceMesh> {
         val out = mutableListOf<SurfaceMesh>()
         for (ctx in containerModel.contexts.values) {
@@ -165,7 +147,7 @@ class VfxPreview(
         val depth = target.getDepthTextureView()
 
         if (renderer == null) {
-            renderer = VfxGraphRenderer(textureLoader?.let { loader -> java.util.function.Function { loader(it) } })
+            renderer = VfxGraphRenderer()
             glow = EditorGlow(renderer!!)
         }
 
@@ -179,8 +161,6 @@ class VfxPreview(
                 container.step(dt)
                 val arcsEmpty = container.arcBuffer().count() == 0
                 if (loop && container.buffer().count() == 0 && arcsEmpty && container.time() > 0f && canLoopRestart()) {
-                    // 重播但延续 time（避免编辑后粒子为 0 时每帧重建导致 time 归零、t 冻结）。
-                    // 节流：避免每次重建把 spawn 累加器归零导致永远 spawn 不出粒子（渲染不可见）
                     val continued = container.time()
                     reset()
                     sync()
@@ -203,7 +183,7 @@ class VfxPreview(
                 false,
                 surfaces
             )
-            if (specs.any { it.blend() == RenderSpec.Blend.GLOW }) {
+            if (specs.any { it.feedsBloom() }) {
                 glow!!.render(
                     color,
                     depth,
@@ -231,12 +211,11 @@ class VfxPreview(
             }
         }
         renderer!!.render(color, depth, sim.buffer(), camera, true, specs)
-        if (specs.any { it.blend() == RenderSpec.Blend.GLOW }) {
+        if (specs.any { it.feedsBloom() }) {
             glow!!.render(color, depth, sim.buffer(), null, camera, specs, target.width, target.height)
         }
     }
 
-    /** loop 重启节流：至少间隔 [LOOP_RESTART_INTERVAL_NS] 才允许再次重启，避免每帧重建。 */
     private fun canLoopRestart(): Boolean {
         val now = System.nanoTime()
         if (now - lastLoopRestartNanos < LOOP_RESTART_INTERVAL_NS) return false
@@ -244,7 +223,6 @@ class VfxPreview(
         return true
     }
 
-    /** 释放 GPU 资源（编辑器销毁时调用，防泄漏）。 */
     fun close() {
         glow?.destroy()
         glow = null

@@ -10,7 +10,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.server.ability.electromaster.SupportReference;
-import org.academy.internal.client.render.vfx.MagneticLevitationVfxClient;
+import org.academy.internal.common.ability.electromaster.skills.lv3.MagnetManipulation;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -19,6 +19,10 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+
+
+
 
 /**
  * The support used by the actual motion solver, refreshed every two ticks while hovering.
@@ -80,7 +84,7 @@ public final class MagneticSupportPacket extends Packet<ClientPacketListener, Ma
     public static final class Client {
         @SubscribePacket
         public static void handle(MagneticSupportPacket packet) {
-            MagneticLevitationVfxClient.accept(packet);
+            MagnetManipulation.Client.MagneticLevitationVfxClient.accept(packet);
         }
     }
 }

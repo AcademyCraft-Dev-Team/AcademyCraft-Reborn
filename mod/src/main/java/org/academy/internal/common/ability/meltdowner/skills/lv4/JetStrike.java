@@ -101,7 +101,7 @@ public final class JetStrike extends Skill {
         InputSystem.addKeyBinding(Client.KEY_NAME_USE, Client.CONFIG.getKeyBinding(
                 Client.KEY_NAME_USE,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.PRESS, 0)
-        ), ctx -> Client.onUse());
+        ), _ -> Client.onUse());
     }
 
     @Override

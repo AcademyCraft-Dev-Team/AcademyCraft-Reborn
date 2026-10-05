@@ -2,6 +2,11 @@ package org.academy.internal.common.ability.electromaster.skills.lv4;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -21,9 +26,14 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
 import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
+import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
@@ -31,6 +41,10 @@ import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.render.graph.type.Value;
+import org.academy.api.client.render.vfxgraph.render.GraphCamera;
+import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
+import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.api.client.resources.R;
 import org.academy.api.client.sync.ClientSyncManager;
 import org.academy.api.common.ability.AbilityLevel;
@@ -42,11 +56,13 @@ import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.sync.DataSyncManager;
 import org.academy.api.server.sync.ServerSyncManager;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.render.vfx.RailgunVfxClient;
+import org.academy.internal.client.renderer.entity.ReflectedBeamVisualGeometry;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.Accelerator;
 import org.academy.internal.common.ability.electromaster.skills.lv2.ThunderLance;
+import org.academy.internal.common.ability.electromaster.skills.lv4.Railgun;
 import org.academy.internal.common.ability.shared.linear.LinearAttackExecutor;
 import org.academy.internal.common.ability.shared.linear.LinearAttackPayload;
 import org.academy.internal.common.ability.shared.linear.LinearReflectionResolver;
@@ -65,6 +81,9 @@ import org.academy.internal.common.world.entity.skill.RailgunRay;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.server.ability.AbilitySystemServer;
 import org.academy.internal.server.team.TeamRelations;
+import org.joml.Matrix4f;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -73,12 +92,20 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import static org.misaka.MisakaNetworkClient.send;
+import org.academy.internal.client.render.vfxgraph.FrameContext;
+import org.academy.internal.client.render.vfxgraph.TickingVfx;
+import org.academy.internal.client.render.vfxgraph.VfxContexts;
+
+
+
+
+
+
+
+
+
+
 
 public final class Railgun extends Skill {
     public static final int CHARGE_TIME = 30;
@@ -134,7 +161,7 @@ public final class Railgun extends Skill {
 
     @Override
     public void initClient() {
-        RailgunVfxClient.register();
+        Railgun.Client.RailgunVfxClient.register();
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CLIENT_CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -223,6 +250,240 @@ public final class Railgun extends Skill {
     }
 
     public static final class Client {
+        @EventBusSubscriber(Dist.CLIENT)
+        public static final class RailgunVfxClient {
+            private static final Map<RailgunRay, RailgunShotVfx> SHOTS = new IdentityHashMap<>();
+
+            private RailgunVfxClient() {
+            }
+
+            public static void register() {
+                Railgun.Client.RailgunChargeVfxClient.register();
+            }
+
+            @SubscribeEvent
+            public static void onEntityJoin(EntityJoinLevelEvent event) {
+                if (!event.getLevel().isClientSide() || !(event.getEntity() instanceof RailgunRay ray)) return;
+                if (SHOTS.containsKey(ray)) return;
+                var shot = new RailgunShotVfx(ray);
+                SHOTS.put(ray, shot);
+                VfxContexts.register(shot);
+            }
+
+            @SubscribeEvent
+            public static void onEntityLeave(EntityLeaveLevelEvent event) {
+                if (!event.getLevel().isClientSide() || !(event.getEntity() instanceof RailgunRay ray)) return;
+                var shot = SHOTS.remove(ray);
+                if (shot != null) shot.stop();
+            }
+
+            @SubscribeEvent
+            public static void onLevelUnload(LevelEvent.Unload event) {
+                if (!event.getLevel().isClientSide()) return;
+                SHOTS.values().forEach(RailgunShotVfx::stop);
+                SHOTS.clear();
+            }
+        }
+
+        /**
+         * Charge and coin-return hand attachments. All geometry and materials are authored in VFXGraph.
+         */
+        @EventBusSubscriber(Dist.CLIENT)
+        public static final class RailgunChargeVfxClient {
+            private static final Map<Player, Hands> ACTIVE = new IdentityHashMap<>();
+            private static boolean registered;
+
+            private static final class Hands {
+                final ActiveEffect charge;
+                ActiveEffect hint;
+
+                Hands(Player player) {
+                    charge = create(player, false);
+                }
+
+                void stop() {
+                    charge.stop();
+                    if (hint != null) hint.stop();
+                }
+            }
+
+            private RailgunChargeVfxClient() {
+            }
+
+            public static void register() {
+                registered = true;
+            }
+
+            @SubscribeEvent
+            public static void tick(ClientTickEvent.Post event) {
+                if (!registered) return;
+                var mc = Minecraft.getInstance();
+                if (mc.level == null) {
+                    clear();
+                    return;
+                }
+                ACTIVE.entrySet().removeIf(entry -> {
+                    if (charging(entry.getKey())) return false;
+                    entry.getValue().stop();
+                    return true;
+                });
+                for (var player : mc.level.players()) {
+                    if (!charging(player)) continue;
+                    var hands = ACTIVE.computeIfAbsent(player, Hands::new);
+                    var data = player.getExistingDataOrNull(AttachmentTypes.RAILGUN_DATA);
+                    if (data != null && data.coinReturnHint()) {
+                        if (hands.hint == null || hands.hint.isStopped()) hands.hint = create(player, true);
+                    } else if (hands.hint != null) {
+                        hands.hint.stop();
+                        hands.hint = null;
+                    }
+                }
+            }
+
+            private static boolean charging(Player player) {
+                if (player.isRemoved() || player.level() != Minecraft.getInstance().level) return false;
+                var data = player.getExistingDataOrNull(AttachmentTypes.RAILGUN_DATA);
+                return data != null && !data.released();
+            }
+
+            private static ActiveEffect create(Player player, boolean hint) {
+                var effect = VfxGraphManager.INSTANCE.spawn(AcademyCraft.academy("vfxgraph/railgun_charge"), player.position().toVector3f());
+                effect.bind("seed", () -> Value.of((float) (player.getUUID().getLeastSignificantBits() & 0xFFFFFFL)));
+                effect.bind("hint", () -> Value.of(hint ? 1f : 0f));
+                effect.bindFrame((active, camera, partialTick) -> attach(active, player, hint, camera, partialTick));
+                effect.setRenderDistance(96);
+                return effect;
+            }
+
+            private static boolean attach(ActiveEffect effect, Player player, boolean hint, GraphCamera camera, float partialTick) {
+                if (!charging(player)) return false;
+                var data = player.getExistingDataOrNull(AttachmentTypes.RAILGUN_DATA);
+                if (data == null || hint && !data.coinReturnHint()) return false;
+                var mc = Minecraft.getInstance();
+                boolean firstPerson = player == mc.getCameraEntity() && mc.options.getCameraType().isFirstPerson();
+                boolean right = hint ? data.mainHandRight() : data.rightHand();
+                Matrix4f transform;
+                if (firstPerson) {
+                    transform = new Matrix4f(camera.viewRotation()).invert();
+                    transform.setTranslation(camera.position());
+                    transform.translate(right ? 0.30f : -0.30f, -0.22f, -0.46f).scale(0.90f);
+                } else {
+                    var root = Accelerator.Client.WingAvatarRegistry.entries().get(player.getId());
+                    if (root == null) {
+                        effect.setFrameVisible(false);
+                        return true;
+                    }
+                    transform = new Matrix4f(root);
+                    transform.m30(transform.m30() + camera.position().x);
+                    transform.m31(transform.m31() + camera.position().y);
+                    transform.m32(transform.m32() + camera.position().z);
+                    transform.translate(right ? -0.38f : 0.38f, 0.55f, -0.24f);
+                }
+                effect.setFrameVisible(true);
+                effect.setTransform(transform);
+                effect.setCullingSphere(effect.position(), 1);
+                effect.effect().setLiveParam("time", Value.of((player.tickCount + partialTick) / 20f));
+                effect.effect().setLiveParam("strength", Value.of(hint ? 0.55f
+                        : Math.clamp((data.ticks() + partialTick) / Math.max(1, Railgun.CHARGE_TIME), 0.15f, 1)));
+                return true;
+            }
+
+            @SubscribeEvent
+            public static void unload(LevelEvent.Unload event) {
+                if (event.getLevel().isClientSide()) clear();
+            }
+
+            private static void clear() {
+                ACTIVE.values().forEach(Hands::stop);
+                ACTIVE.clear();
+            }
+        }
+
+        /**
+         * Maps the server's resolved beam segments to editor-authored visuals on one game clock.
+         */
+        static final class RailgunShotVfx implements TickingVfx {
+            private static final Identifier ASSET = Identifier.fromNamespaceAndPath("academy", "vfxgraph/railgun_shot");
+            private final RailgunRay ray;
+            private ActiveEffect outgoing;
+            private ActiveEffect reflected;
+            private float ageSeconds;
+            private float detail = 1;
+            private boolean stopped;
+
+            RailgunShotVfx(RailgunRay ray) {
+                this.ray = ray;
+            }
+
+            @Override
+            public void tick(FrameContext ctx) {
+                if (ray.isRemoved() || ray.level() != Minecraft.getInstance().level) {
+                    stop();
+                    return;
+                }
+                ageSeconds = (ray.tickCount + ctx.partialTick()) / 20f;
+                var origin = ray.position();
+                var direction = Vec3.directionFromRotation(ray.getXRot(), ray.getYRot()).normalize();
+                float originalLength = ReflectedBeamVisualGeometry.safeLength(ray.getBeamLength());
+                float length = ray.isReflectionActive()
+                        ? Math.min(originalLength, ReflectedBeamVisualGeometry.safeLength(ray.getReflectionDistance()))
+                        : originalLength;
+                detail = ctx.cameraPos().distance(origin.toVector3f()) > 72 ? 0.35f : 1;
+                if (outgoing == null) outgoing = create(true);
+                segment(outgoing, origin, direction, length, ctx.cameraPos());
+                if (ray.isReflectionActive()) {
+                    if (reflected == null) reflected = create(false);
+                    segment(reflected, origin.add(direction.scale(length)), ray.getReflectionReturnDirection(),
+                            ReflectedBeamVisualGeometry.safeLength(ray.getReflectionReturnLength()), ctx.cameraPos());
+                } else if (reflected != null) {
+                    reflected.stop();
+                    reflected = null;
+                }
+            }
+
+            private ActiveEffect create(boolean muzzle) {
+                var effect = VfxGraphManager.INSTANCE.spawn(ASSET, ray.position().toVector3f());
+                effect.bind("time", () -> Value.of(ageSeconds));
+                effect.bind("width_scale", () -> Value.of(ray.getBeamWidthMultiplier()));
+                effect.bind("seed", () -> Value.of((float) (ray.getUUID().getLeastSignificantBits() & 0xFFFFFFL)));
+                effect.bind("detail", () -> Value.of(detail));
+                effect.bind("muzzle", () -> Value.of(muzzle ? 1f : 0f));
+                effect.setMinimumFarPlane(384);
+                effect.setRenderDistance(256);
+                return effect;
+            }
+
+            private void segment(ActiveEffect effect, Vec3 start, Vec3 direction, float length, Vector3f camera) {
+                var unit = direction.normalize().toVector3f();
+                boolean valid = unit.isFinite() && unit.lengthSquared() > 1.0e-12f && length > 0;
+                effect.setPosition(start.toVector3f());
+                if (valid) effect.setRotation(new Quaternionf().rotationTo(new Vector3f(0, 0, 1), unit));
+                effect.effect().setLiveParam("length", Value.of(valid ? length : 0));
+                float proximity = Math.clamp((3f - camera.distance(start.toVector3f())) / 1.5f, 0, 1);
+                effect.effect().setLiveParam("view_near_origin", Value.of(proximity));
+                // Include the entire segment, so a distant muzzle cannot cull a beam crossing the camera.
+                var center = start.toVector3f().fma(valid ? length * 0.5f : 0, unit);
+                effect.setCullingSphere(center, length * 0.5f + 14 * Math.max(1, ray.getBeamWidthMultiplier()));
+                effect.setMinimumFarPlane(Math.max(384, length + 256));
+            }
+
+            void stop() {
+                stopped = true;
+                if (outgoing != null) outgoing.stop();
+                if (reflected != null) reflected.stop();
+            }
+
+            @Override
+            public boolean isAlive() {
+                return !stopped;
+            }
+
+            @Override
+            public void onRemoved() {
+                stop();
+            }
+        }
+
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
                 AbilityCategories.ELECTROMASTER.get(),
                 new AbilitySystemClient.SkillInfo(

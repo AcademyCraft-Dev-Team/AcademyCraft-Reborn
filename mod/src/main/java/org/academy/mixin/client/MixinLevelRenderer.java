@@ -14,16 +14,13 @@ import org.academy.api.client.render.MatrixStack;
 import org.academy.api.client.render.post.DirectionalFieldRenderer;
 import org.academy.api.client.render.post.GlowEffect;
 import org.academy.api.client.render.post.PostEffect;
-import org.academy.api.client.render.post.WorldSurfaceMasks;
-import org.academy.api.client.render.vfx.VfxManager;
 import org.academy.api.client.render.vfxgraph.render.GraphCamera;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.internal.client.ability.aeromanip.HighSpeedJetHighlightClient;
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
 import org.academy.internal.client.ability.mentalout.WideAreaInterferenceClientState;
-import org.academy.internal.client.render.vfx.InterferenceFieldClient;
-import org.academy.internal.client.render.vfx.SpacialExcisionVfxClient;
-import org.academy.internal.client.render.vfx.VfxContexts;
+import org.academy.internal.client.render.vfxgraph.VfxContexts;
+import org.academy.internal.common.ability.darkmatter.Darkmatter;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
@@ -32,11 +29,15 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+
+
+
+
 @Mixin(LevelRenderer.class)
 public abstract class MixinLevelRenderer {
     @Inject(method = "render", at = @At("HEAD"))
     private void academy$beginDirectionalFields(CallbackInfo ci) {
-        InterferenceFieldClient.beginFrame();
+        Darkmatter.Client.InterferenceFieldClient.beginFrame();
     }
 
     @Inject(
@@ -58,31 +59,7 @@ public abstract class MixinLevelRenderer {
             boolean consistentDepthRequired,
             CallbackInfo ci
     ) {
-        WideAreaInterferenceClientState.captureRenderCamera(
-                cameraState.pos,
-                cameraState.viewRotationMatrix,
-                cameraState.projectionMatrix
-        );
-        VfxManager.INSTANCE.renderFrame();
-        var mainTarget = Minecraft.getInstance().gameRenderer.mainRenderTarget();
-        var target = mainTarget.getColorTextureView();
-        if (target != null) {
-            var graphCamera = GraphCamera.fromGameCamera(
-                    new Vector3f((float) cameraState.pos.x, (float) cameraState.pos.y, (float) cameraState.pos.z),
-                    new Matrix4f(cameraState.viewRotationMatrix),
-                    new Matrix4f(cameraState.projectionMatrix)
-            );
-            VfxGraphManager.INSTANCE.renderFrame(target, mainTarget.getDepthTextureView(), graphCamera);
-        }
-        SpacialExcisionVfxClient.prepareSourceValidation();
-        PostEffect.pre();
-        SpacialExcisionVfxClient.renderPost();
-        WorldSurfaceMasks.renderEntities();
-        DirectionalFieldRenderer.render(cameraState.pos,
-                cameraState.viewRotationMatrix, cameraState.projectionMatrix,
-                InterferenceFieldClient.areas());
-        GlowEffect.getInstance().process();
-        PostEffect.post();
+
     }
 
     @Inject(method = "submitEntities", at = @At("RETURN"))
@@ -101,7 +78,13 @@ public abstract class MixinLevelRenderer {
                 Minecraft.getInstance().getDeltaTracker(),
                 levelRenderState.cameraRenderState
         );
-        VfxManager.INSTANCE.submitWorldGeometry(poseStack, output);
+        VfxGraphManager.INSTANCE.submitWorldGeometry(
+                poseStack,
+                output,
+                new Vector3f((float) levelRenderState.cameraRenderState.pos.x,
+                        (float) levelRenderState.cameraRenderState.pos.y,
+                        (float) levelRenderState.cameraRenderState.pos.z)
+        );
         var event = new LevelRenderEvent(
                 Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false),
                 new MatrixStack().setFrom(poseStack.last()),

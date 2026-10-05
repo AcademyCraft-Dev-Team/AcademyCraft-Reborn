@@ -100,26 +100,16 @@ import org.academy.internal.common.ability.teleport.skills.lv5.SpacialExcision;
 
 public final class Skills {
     public static final DeferredRegister<Skill> SKILLS = DeferredRegister.create(Registries.Keys.SKILLS, AcademyCraft.MOD_ID);
-    /**
-     * Aeromanip
-     */
+
     public static final DeferredHolder<Skill, AirflowJet> AIRFLOW_JET = SKILLS.register(SkillNames.AIRFLOW_JET, AirflowJet::new);
     public static final DeferredHolder<Skill, LaminarBuffer> LAMINAR_BUFFER =
             SKILLS.register(SkillNames.LAMINAR_BUFFER, LaminarBuffer::new);
-    /**
-     * Compatibility source alias; the registered skill id is academy:laminar_buffer.
-     */
-    @Deprecated
-    public static final DeferredHolder<Skill, LaminarBuffer> AIR_CUSHION = LAMINAR_BUFFER;
+
     public static final DeferredHolder<Skill, FlowSense> FLOW_SENSE = SKILLS.register(SkillNames.FLOW_SENSE, FlowSense::new);
     public static final DeferredHolder<Skill, AtmosphereShield> ATMOSPHERE_SHIELD = SKILLS.register(SkillNames.ATMOSPHERE_SHIELD, AtmosphereShield::new);
     public static final DeferredHolder<Skill, BreathingBubble> BREATHING_BUBBLE =
             SKILLS.register(SkillNames.BREATHING_BUBBLE, BreathingBubble::new);
-    /**
-     * Compatibility source alias; the registered skill id is academy:breathing_bubble.
-     */
-    @Deprecated
-    public static final DeferredHolder<Skill, BreathingBubble> BREATHING_FILM = BREATHING_BUBBLE;
+
     public static final DeferredHolder<Skill, PneumaticGrasp> PNEUMATIC_GRASP = SKILLS.register(SkillNames.PNEUMATIC_GRASP, PneumaticGrasp::new);
     public static final DeferredHolder<Skill, TurbulentCavitation> TURBULENT_CAVITATION =
             SKILLS.register(SkillNames.TURBULENT_CAVITATION, TurbulentCavitation::new);
@@ -127,37 +117,16 @@ public final class Skills {
     public static final DeferredHolder<Skill, LaminarCutter> LAMINAR_CUTTER = SKILLS.register(SkillNames.LAMINAR_CUTTER, LaminarCutter::new);
     public static final DeferredHolder<Skill, RejectingWind> REJECTING_WIND =
             SKILLS.register(SkillNames.REJECTING_WIND, RejectingWind::new);
-    /**
-     * Compatibility source alias; the registered skill id is academy:rejecting_wind.
-     */
-    @Deprecated
-    public static final DeferredHolder<Skill, RejectingWind> ATMOSPHERE_BLAST_GUN = REJECTING_WIND;
+
     public static final DeferredHolder<Skill, VortexPull> VORTEX_PULL = SKILLS.register(SkillNames.VORTEX_PULL, VortexPull::new);
     public static final DeferredHolder<Skill, HighSpeedJet> HIGH_SPEED_JET =
             SKILLS.register(SkillNames.HIGH_SPEED_JET, HighSpeedJet::new);
-    /**
-     * Compatibility source alias; the registered skill id is academy:high_speed_jet.
-     */
-    @Deprecated
-    public static final DeferredHolder<Skill, HighSpeedJet> WIND_CORRIDOR = HIGH_SPEED_JET;
-    /**
-     * Compatibility source alias; the registered skill id is academy:turbulent_cavitation.
-     */
-    @Deprecated
-    public static final DeferredHolder<Skill, TurbulentCavitation> PRESSURE_LOCK = TURBULENT_CAVITATION;
+
     public static final DeferredHolder<Skill, Flight> FLIGHT = SKILLS.register(SkillNames.FLIGHT, Flight::new);
     public static final DeferredHolder<Skill, VacuumDomain> VACUUM_DOMAIN = SKILLS.register(SkillNames.VACUUM_DOMAIN, VacuumDomain::new);
     public static final DeferredHolder<Skill, AdiabaticCompression> ADIABATIC_COMPRESSION =
             SKILLS.register(SkillNames.ADIABATIC_COMPRESSION, AdiabaticCompression::new);
-    /**
-     * Compatibility source alias; the registered skill id is academy:adiabatic_compression.
-     */
-    @Deprecated
-    public static final DeferredHolder<Skill, AdiabaticCompression> ATMOSPHERIC_DOMINION =
-            ADIABATIC_COMPRESSION;
-    /**
-     * Accelerator
-     */
+
     public static final DeferredHolder<Skill, VectorReflection> VECTOR_REFLECTION = SKILLS.register(SkillNames.VECTOR_REFLECTION, VectorReflection::new);
     public static final DeferredHolder<Skill, ReflectionFilter> REFLECTION_FILTER = SKILLS.register(SkillNames.REFLECTION_FILTER, ReflectionFilter::new);
     public static final DeferredHolder<Skill, VectorBlast> VECTOR_BLAST = SKILLS.register(SkillNames.VECTOR_BLAST, VectorBlast::new);
@@ -172,9 +141,7 @@ public final class Skills {
     public static final DeferredHolder<Skill, WhiteWing> WHITE_WING = SKILLS.register(SkillNames.WHITE_WING, WhiteWing::new);
     public static final DeferredHolder<Skill, PlatinumWing> PLATINUM_WING = SKILLS.register(SkillNames.PLATINUM_WING, PlatinumWing::new);
     public static final DeferredHolder<Skill, CrossingTheAbyss> CROSSING_THE_ABYSS = SKILLS.register(SkillNames.CROSSING_THE_ABYSS, CrossingTheAbyss::new);
-    /**
-     * Electromaster
-     */
+
     public static final DeferredHolder<Skill, ArcGenerate> ARC_GENERATE = SKILLS.register(SkillNames.ARC_GENERATE, ArcGenerate::new);
     public static final DeferredHolder<Skill, MagnetManipulation> MAGNET_MANIPULATION = SKILLS.register(SkillNames.MAGNET_MANIPULATION, MagnetManipulation::new);
     public static final DeferredHolder<Skill, MineDetect> MINE_DETECT = SKILLS.register(SkillNames.MINE_DETECT, MineDetect::new);
@@ -182,9 +149,7 @@ public final class Skills {
     public static final DeferredHolder<Skill, CurrentSymbiosis> CURRENT_SYMBIOSIS = SKILLS.register(SkillNames.CURRENT_SYMBIOSIS, CurrentSymbiosis::new);
     public static final DeferredHolder<Skill, BioelectricOperation> BIOELECTRIC_OPERATION = SKILLS.register(SkillNames.BIOELECTRIC_OPERATION, BioelectricOperation::new);
     public static final DeferredHolder<Skill, ElectromagneticShield> ELECTROMAGNETIC_SHIELD = SKILLS.register(SkillNames.ELECTROMAGNETIC_SHIELD, ElectromagneticShield::new);
-    /**
-     * Phase 5 - Ultimate and Signature Skills
-     */
+
     public static final DeferredHolder<Skill, IronSandArsenal> IRON_SAND_ARSENAL = SKILLS.register(SkillNames.IRON_SAND_ARSENAL, IronSandArsenal::new);
     public static final DeferredHolder<Skill, ThunderLance> THUNDER_LANCE = SKILLS.register(SkillNames.THUNDER_LANCE, ThunderLance::new);
     public static final DeferredHolder<Skill, Railgun> RAILGUN = SKILLS.register(SkillNames.RAILGUN, Railgun::new);
@@ -251,15 +216,11 @@ public final class Skills {
             SKILLS.register(SkillNames.WIDE_AREA_INTERFERENCE, WideAreaInterference::new);
     public static final DeferredHolder<Skill, MindDestruction> MIND_DESTRUCTION =
             SKILLS.register(SkillNames.MIND_DESTRUCTION, MindDestruction::new);
-    /**
-     * Phase 2 - Aura and Toggle Skills
-     */
+
     public static final DeferredHolder<Skill, StormWing> STORM_WING = SKILLS.register(SkillNames.STORM_WING, StormWing::new);
     public static final DeferredHolder<Skill, PlasmaGeneration> PLASMA_GENERATION = SKILLS.register(SkillNames.PLASMA_GENERATION, PlasmaGeneration::new);
     public static final DeferredHolder<Skill, ElectricalContact> ELECTRICAL_CONTACT = SKILLS.register(SkillNames.ELECTRICAL_CONTACT, ElectricalContact::new);
-    /**
-     * Phase 4 - Complex Skills
-     */
+
     public static final DeferredHolder<Skill, LightningNova> LIGHTNING_NOVA = SKILLS.register(SkillNames.LIGHTNING_NOVA, LightningNova::new);
     public static final DeferredHolder<Skill, LightningStorm> LIGHTNING_STORM = SKILLS.register(SkillNames.LIGHTNING_STORM, LightningStorm::new);
     public static final DeferredHolder<Skill, Thunderclap> THUNDERCLAP = SKILLS.register(SkillNames.THUNDERCLAP, Thunderclap::new);

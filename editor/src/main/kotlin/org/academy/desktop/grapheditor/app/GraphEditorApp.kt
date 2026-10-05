@@ -124,7 +124,7 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
         containerCanvas.canvasPalette = ::renderContainerPalette
         shaderPreview = ShaderPreview(modelRef, registry, glslRegistry, environment::loadTexture)
         vfxPreview =
-            VfxPreview(modelRef, vfxRegistry, containerRef, blockRegistry, operatorRegistry, environment::loadTexture)
+            VfxPreview(modelRef, vfxRegistry, containerRef, blockRegistry, operatorRegistry)
         palette = NodePalette(registry, modelRef) { canvasCenterGraph() }
         inspector = PropertyInspector(modelRef)
         inspector.onEditCurve = { id -> openCurveEditor(id) }

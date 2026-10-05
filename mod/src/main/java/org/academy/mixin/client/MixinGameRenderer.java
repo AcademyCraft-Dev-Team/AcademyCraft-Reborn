@@ -22,14 +22,23 @@ import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.gui.animation.AnimationManager;
 import org.academy.api.client.gui.frame.UiFrame;
 import org.academy.api.client.render.Render;
+import org.academy.api.client.render.post.DirectionalFieldRenderer;
+import org.academy.api.client.render.post.GlowEffect;
+import org.academy.api.client.render.post.PostEffect;
+import org.academy.api.client.render.post.WorldSurfaceMasks;
+import org.academy.api.client.render.vfxgraph.render.GraphCamera;
+import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.api.client.vanilla.RenderLoopEvent;
 import org.academy.api.client.vanilla.WorldCompositeEvent;
 import org.academy.internal.client.ability.mentalout.WideAreaInterferenceClientState;
 import org.academy.internal.client.hud.HudManager;
-import org.academy.internal.client.render.vfx.SpatialCutFrameProjectionContext;
-import org.academy.internal.client.render.vfx.WingAvatarRegistry;
-import org.academy.internal.client.render.vfx.WorldLineOverlayPass;
+import org.academy.internal.client.render.vfxgraph.FrameProjectionContext;
+import org.academy.internal.client.render.vfxgraph.WorldLineOverlayPass;
+import org.academy.internal.common.ability.accelerator.Accelerator;
+import org.academy.internal.common.ability.darkmatter.Darkmatter;
+import org.academy.internal.common.ability.teleport.skills.lv5.SpacialExcision;
 import org.joml.Matrix4f;
+import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -37,6 +46,11 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+
+
+
+
 
 
 @Mixin(GameRenderer.class)
@@ -55,7 +69,7 @@ public abstract class MixinGameRenderer {
                     target = "Lnet/minecraft/client/renderer/LevelRenderer;render(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;ZLnet/minecraft/client/renderer/state/level/CameraRenderState;Lcom/mojang/renderpearl/api/buffers/GpuBufferSlice;Lorg/joml/Vector4f;ZZ)V"
             )
     )
-    private void academy$captureSpatialCutFrameProjection(
+    private void renderLevel(
             LevelRenderer renderer,
             GraphicsResourceAllocator resourceAllocator,
             boolean renderOutline,
@@ -67,7 +81,7 @@ public abstract class MixinGameRenderer {
             Operation<Void> original,
             @Local(name = "projectionMatrix") Matrix4f projectionMatrix
     ) {
-        try (var ignored = SpatialCutFrameProjectionContext.push(projectionMatrix)) {
+        try (var ignored = FrameProjectionContext.push(projectionMatrix)) {
             original.call(renderer, resourceAllocator, renderOutline, cameraState,
                     terrainFog, fogColor, shouldRenderSky, consistentDepthRequired);
             WorldLineOverlayPass.renderWorld(
@@ -79,7 +93,7 @@ public abstract class MixinGameRenderer {
 
     @WrapOperation(method = "extractCamera", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/renderer/fog/FogRenderer;setupFog(Lnet/minecraft/client/Camera;ILnet/minecraft/client/DeltaTracker;FLnet/minecraft/client/multiplayer/ClientLevel;)Lnet/minecraft/client/renderer/fog/FogData;"))
-    private FogData academy$extendRtsDistanceFog(
+    private FogData extractCamera(
             FogRenderer renderer, Camera camera,
             int renderDistanceInChunks, DeltaTracker deltaTracker, float darkenWorldAmount, ClientLevel level,
             Operation<FogData> original) {
@@ -102,32 +116,63 @@ public abstract class MixinGameRenderer {
     }
 
     @Inject(method = "render", at = @At("HEAD"))
-    private void onFrameUpdate(CallbackInfo ci) {
+    private void render(CallbackInfo ci) {
         AnimationManager.INSTANCE.onFrameUpdate();
         UiFrame.INSTANCE.onFrame();
         NeoForge.EVENT_BUS.post(new RenderLoopEvent());
     }
 
     @Inject(method = "renderLevel", at = @At("HEAD"))
-    private void academy$beginPlatinumCosmosFrame(CallbackInfo ci) {
+    private void renderLevelBefore(CallbackInfo ci) {
         assert minecraft.level != null;
         WorldLineOverlayPass.beginFrame(minecraft.level);
-        WingAvatarRegistry.beginFrame();
+        Accelerator.Client.WingAvatarRegistry.beginFrame();
+    }
+
+    @Inject(
+            method = "renderLevel",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/renderer/GameRenderer;render3dHud(Lnet/minecraft/client/renderer/state/level/CameraRenderState;Lnet/minecraft/client/renderer/state/level/PlayerRenderState;Lnet/minecraft/client/renderer/state/OptionsRenderState;Z)V"
+            )
+    )
+    private void renderLevelAfter(CallbackInfo ci, @Local(name = "cameraState") CameraRenderState cameraState) {
+        WideAreaInterferenceClientState.captureRenderCamera(
+                cameraState.pos,
+                cameraState.viewRotationMatrix,
+                cameraState.projectionMatrix
+        );
+        var mainTarget = Minecraft.getInstance().gameRenderer.mainRenderTarget();
+        var target = mainTarget.getColorTextureView();
+        if (target != null) {
+            var graphCamera = GraphCamera.fromGameCamera(
+                    new Vector3f((float) cameraState.pos.x, (float) cameraState.pos.y, (float) cameraState.pos.z),
+                    new Matrix4f(cameraState.viewRotationMatrix),
+                    new Matrix4f(cameraState.projectionMatrix)
+            );
+            VfxGraphManager.INSTANCE.renderFrame(target, mainTarget.getDepthTextureView(), graphCamera);
+            VfxGraphManager.INSTANCE.renderScreenFlashFrame(target);
+        }
+        SpacialExcision.Client.Vfx.prepareSourceValidation();
+        PostEffect.pre();
+        if (target != null) {
+            VfxGraphManager.INSTANCE.renderDistortionFrame(target);
+        }
+        SpacialExcision.Client.Vfx.renderPost();
+        WorldSurfaceMasks.captureMasks();
+        DirectionalFieldRenderer.render(cameraState.pos,
+                cameraState.viewRotationMatrix, cameraState.projectionMatrix,
+                Darkmatter.Client.InterferenceFieldClient.areas());
+        GlowEffect.getInstance().process();
+        PostEffect.post();
     }
 
     @Inject(
             method = "render",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/render/GuiRenderer;render()V")
     )
-    private void beforeGuiRender(CallbackInfo ci) {
+    private void endFrame(CallbackInfo ci) {
         if (minecraft.gameRenderer.gameRenderState().shouldRenderLevel) HudManager.INSTANCE.render();
-    }
-
-    @Inject(
-            method = "render",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/render/GuiRenderer;render()V", shift = At.Shift.AFTER)
-    )
-    private void afterGuiRender(CallbackInfo ci) {
         NeoForge.EVENT_BUS.post(new WorldCompositeEvent());
     }
 

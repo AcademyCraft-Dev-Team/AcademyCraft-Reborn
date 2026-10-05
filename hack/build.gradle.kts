@@ -18,13 +18,6 @@ base {
     archivesName.set("${modId}-${minecraftVersion}")
 }
 
-java {
-    toolchain {
-        @Suppress("UnstableApiUsage")
-        vendor.set(JvmVendorSpec.JETBRAINS)
-        languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get()))
-    }
-}
 
 val coremodSourceSet = sourceSets.create("coremod") {
     compileClasspath += sourceSets.main.get().compileClasspath

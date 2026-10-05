@@ -7,20 +7,12 @@ import org.jetbrains.annotations.ApiStatus
 import org.lwjgl.sdl.*
 import org.lwjgl.system.MemoryStack
 
-/**
- * 基于 SDL3 的 ImGui 平台输入后端，替代 26.3 已移除的 GLFW 后端。
- *
- * <p>事件由 [org.academy.mixin.client.MixinSDLEventHandler] 在 MC 消费 SDL 事件时转发到
- * [ImGuiUtilInternal.onSdlEvent]，保证只处理真正进入游戏循环的事件。窗口尺寸直接查询 SDL，
- * 因此独立桌面编辑器无需 Minecraft 实例也能复用本后端；鼠标抓取状态由
- * [mouseGrabbed] 提供，编辑器固定为 `false`。</p>
- */
 @ApiStatus.Internal
 class ImGuiImplSdl(
     private val mouseGrabbed: () -> Boolean = {
         runCatching { Minecraft.getInstance().mouseHandler.isMouseGrabbed }.getOrDefault(false)
     },
-) : ImGuiInputBackend {
+) {
     private var windowHandle = 0L
     private var initialized = false
     private var lastFrameNanos = 0L
@@ -31,14 +23,14 @@ class ImGuiImplSdl(
 
     private val io get() = ImGui.getIO()
 
-    override fun init(windowHandle: Long) {
+    fun init(windowHandle: Long) {
         if (initialized) return
         this.windowHandle = windowHandle
         lastFrameNanos = System.nanoTime()
         initialized = true
     }
 
-    override fun newFrame() {
+    fun newFrame() {
         if (!initialized) return
         var logicalWidth = 1
         var logicalHeight = 1
@@ -65,14 +57,14 @@ class ImGuiImplSdl(
         )
 
         val now = System.nanoTime()
-        io.setDeltaTime(((now - lastFrameNanos) / 1_000_000_000.0).toFloat().coerceIn(1f / 1000f, 0.25f))
+        io.deltaTime = ((now - lastFrameNanos) / 1_000_000_000.0).toFloat().coerceIn(1f / 1000f, 0.25f)
         lastFrameNanos = now
 
         val mod = SDLKeyboard.SDL_GetModState().toInt() and 0xFFFF
-        io.addKeyEvent(ImGuiKey.ModShift, mod and SDLKeycode.SDL_KMOD_SHIFT != 0)
-        io.addKeyEvent(ImGuiKey.ModCtrl, mod and SDLKeycode.SDL_KMOD_CTRL != 0)
-        io.addKeyEvent(ImGuiKey.ModAlt, mod and SDLKeycode.SDL_KMOD_ALT != 0)
-        io.addKeyEvent(ImGuiKey.ModSuper, mod and SDLKeycode.SDL_KMOD_GUI != 0)
+        io.addKeyEvent(ImGuiKey.ImGuiMod_Shift, mod and SDLKeycode.SDL_KMOD_SHIFT != 0)
+        io.addKeyEvent(ImGuiKey.ImGuiMod_Ctrl, mod and SDLKeycode.SDL_KMOD_CTRL != 0)
+        io.addKeyEvent(ImGuiKey.ImGuiMod_Alt, mod and SDLKeycode.SDL_KMOD_ALT != 0)
+        io.addKeyEvent(ImGuiKey.ImGuiMod_Super, mod and SDLKeycode.SDL_KMOD_GUI != 0)
 
         if (io.wantSetMousePos) {
             mouseX = io.mousePosX
@@ -80,14 +72,13 @@ class ImGuiImplSdl(
         }
     }
 
-    override fun shutdown() {
+    fun shutdown() {
         if (!initialized) return
         windowHandle = 0L
         initialized = false
     }
 
-    @Suppress("UNUSED_PARAMETER")
-    override fun processEvent(event: SDL_Event) {
+    fun processEvent(event: SDL_Event) {
         if (!initialized) return
         when (event.type()) {
             SDL_EVENT_KEY_DOWN, SDL_EVENT_KEY_UP -> onKey(event)

@@ -6,7 +6,6 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorDefenseFeedbackPacket;
-import org.academy.internal.common.ability.accelerator.reflection.compat.VectorRedirectEffectPacket;
 import org.academy.internal.common.ability.accelerator.skills.lv1.VectorAccel;
 import org.academy.internal.common.ability.accelerator.skills.lv1.VectorBlast;
 import org.academy.internal.common.ability.accelerator.skills.lv2.KineticEnergyApplied;
@@ -635,10 +634,6 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AdvancedWingTransitionPacket>>
             ADVANCED_WING_TRANSITION = PACKET_TYPES.register("advanced_wing_transition",
             () -> new PacketType<>(AdvancedWingTransitionPacket.class, AdvancedWingTransitionPacket.CODEC));
-
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, VectorRedirectEffectPacket>>
-            VECTOR_REDIRECT_EFFECT = PACKET_TYPES.register("vector_redirect_effect",
-            () -> new PacketType<>(VectorRedirectEffectPacket.class, VectorRedirectEffectPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, VectorDefenseFeedbackPacket>>
             VECTOR_DEFENSE_FEEDBACK = PACKET_TYPES.register("vector_defense_feedback",

@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "wing_tornado_platinum",
+  "parameters": [],
+  "contexts": [
+    {
+      "id": "out",
+      "type": "OUTPUT",
+      "name": "platinum cosmic tornado rings",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "tornado_out",
+          "type": "vfx.block.output_instanced_tex",
+          "properties": {
+            "blend": "translucent",
+            "layer": "platinum_cosmic",
+            "texture": "academy:textures/ability/accelerator/skill/white_wing/effect/tornado_ring.png",
+            "texture1": "academy:textures/ability/accelerator/skill/platinum_wing/effect/starfield.png",
+            "topology": "quads",
+            "vertex": "academy:core/vfxgraph_cosmic",
+            "shader": "academy:core/vfxgraph_cosmic"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "tornado_out"
+  ]
+}

@@ -38,11 +38,6 @@ base {
 }
 
 java {
-    toolchain {
-        @Suppress("UnstableApiUsage")
-        vendor.set(JvmVendorSpec.JETBRAINS)
-        languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get()))
-    }
     withSourcesJar()
     withJavadocJar()
 }
@@ -252,9 +247,10 @@ dependencies {
 
     compileOnly(libs.jei.api)
 
-    compat(libs.curios)
+    compileOnly(libs.curios)
     compat(libs.sodium)
-    compat(libs.iris)
+    compileOnly(libs.iris)
+    compat(libs.vitrail)
     compat(libs.jade)
     compat(libs.jei)
 

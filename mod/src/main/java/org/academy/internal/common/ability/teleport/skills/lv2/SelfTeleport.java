@@ -28,7 +28,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.ability.teleport.TeleportDistanceConfig;
-import org.academy.internal.client.render.vfx.TeleportCursorRenderer;
+import org.academy.internal.common.ability.teleport.Teleport;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -226,7 +226,7 @@ public final class SelfTeleport extends Skill {
                 currentRenderPos = logicalTargetPos;
                 visualRenderPos = visualRenderPos.lerp(currentRenderPos, factor);
                 var feetPosition = visualRenderPos.add(0, -playerDimensions.height() / 2.0, 0);
-                TeleportCursorRenderer.render(event, feetPosition, true);
+                Teleport.Client.TeleportCursorRenderer.render(event, feetPosition, true);
             }
 
             public void cleanup() {

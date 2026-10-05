@@ -50,7 +50,7 @@ public abstract class MultiBlock extends BaseEntityBlock {
 
     public static void setSubBlocks(Level level, BlockPos pos, BlockState state, List<BlockPos> subBlocks) {
         for (var subjectBlock : subBlocks) {
-            level.setBlock(subjectBlock, state.setValue(TYPE, MultiBlockType.SUBJECT), 2);
+            level.setBlock(subjectBlock, state.setValue(TYPE, MultiBlockType.SUBJECT), UPDATE_CLIENTS);
             var blockEntity = level.getBlockEntity(subjectBlock);
             if (blockEntity instanceof MultiBlockEntity multiBlockEntity) {
                 multiBlockEntity.setMainPos(pos);

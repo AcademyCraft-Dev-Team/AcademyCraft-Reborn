@@ -85,7 +85,6 @@
   ],
   "client": [
     "client.AbstractContainerScreenAccessor",
-    "client.ChunkSectionsToRenderInvoker",
     "client.ClientInputAccessor",
     "client.MixinArmedEntityRenderState",
     "client.MixinAvatarRenderer",

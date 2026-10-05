@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "wing_tornado_ascension",
+  "parameters": [],
+  "contexts": [
+    {
+      "id": "out",
+      "type": "OUTPUT",
+      "name": "ascension tornado rings",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "tornado_out",
+          "type": "vfx.block.output_instanced_tex",
+          "properties": {
+            "blend": "additive",
+            "texture": "academy:textures/ability/accelerator/skill/white_wing/effect/ascension_ring.png",
+            "topology": "quads"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "tornado_out"
+  ]
+}

@@ -151,12 +151,21 @@ public final class SkillVfxRuntime {
 
     private static SkillVfxState capture(Entity entity, Entry entry, float rate, long elapsed) {
         if (entity instanceof HighSpeedElectronBeam b) {
+            var attachment = b.getAttachment();
+            int ownerEntityId = -1, orbitIndex = 0, orbitCount = 0;
             int flags = (b.hasFired() ? 1 : 0) | (b.isContinuous() ? 2 : 0)
                     | (b.isHeldCharge() ? 4 : 0) | (b.isReflectionActive() ? 8 : 0);
+            if (attachment != null) {
+                flags |= 16;
+                ownerEntityId = attachment.ownerEntityId();
+                orbitIndex = attachment.index();
+                orbitCount = attachment.count();
+            }
             return new SkillVfxState.Beam(b.position(), b.getXRot(), b.getYRot(), b.getBeamLength(),
                     b.getBeamScale(), b.getVisualSideOffset(), Math.max(0, b.currentChargerTicks),
                     b.getAttackDelayTicks(), Math.max(0, b.currentRayLifeTicks), flags,
-                    b.getReflectionDistance(), b.getReflectionReturnLength(), b.getReflectionReturnDirection(), rate);
+                    b.getReflectionDistance(), b.getReflectionReturnLength(), b.getReflectionReturnDirection(), rate,
+                    ownerEntityId, orbitIndex, orbitCount);
         }
         var p = (Plasma) entity;
         float chargeRate = entry.last instanceof SkillVfxState.Plasma old

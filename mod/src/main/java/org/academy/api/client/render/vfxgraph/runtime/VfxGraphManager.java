@@ -2,15 +2,24 @@ package org.academy.api.client.render.vfxgraph.runtime;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.renderpearl.api.textures.GpuTextureView;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import org.academy.AcademyCraft;
+import org.academy.api.client.compatibility.IrisIntegration;
 import org.academy.api.client.render.graph.assets.GraphAssets;
 import org.academy.api.client.render.graph.model.Graph;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.graph.serialize.JsonGraphCodec;
+import org.academy.api.client.render.graph.type.ValueType;
+import org.academy.api.client.render.vfxgraph.block.BlockGeometryFrame;
 import org.academy.api.client.render.vfxgraph.model.VfxSystem;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
@@ -34,16 +43,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
-/**
- * 客户端 VFX 图效果管理器（M15-01）：tick/render 循环接入，spawn/停止，资产重载，池化/剔除。
- *
- * <p>单例（仿 {@code VfxManager.INSTANCE}）。持有共享 [VfxNodeRegistry]（游戏内首次接线
- * {@link VfxNodes#registerAll}）与 [GraphAssets]（复用 M7 缓存 + 迁移链）、按拓扑共享的渲染器池。
- * M27 支持容器资产（{@code kind:"vfx"} → [VfxSystem] + [VfxSystemSimulator]），扁平资产（旧 schema）仍可加载。
- * 生命周期由 {@code AcademyCraftClient} 接入（init/tick/close）。</p>
- */
 public final class VfxGraphManager {
     private static final Logger LOGGER = AcademyCraft.getLogger();
+    private static final int BLOCK_VERTEX_STRIDE = (3 + 2 + 4) * Float.BYTES + 2 * Short.BYTES + 4 * Byte.BYTES;
     public static final VfxGraphManager INSTANCE = new VfxGraphManager();
 
     private final SimpleNodeRegistry metadata = new SimpleNodeRegistry();
@@ -58,9 +60,6 @@ public final class VfxGraphManager {
     private @Nullable GraphFileWatcher fileWatcher;
     private boolean initialized;
     private long lastRenderNanos = -1;
-    /**
-     * 最近一帧的相机（供 glow pass 复用，与主渲染同帧）。
-     */
     private @Nullable GraphCamera lastCamera;
 
     private VfxGraphManager() {
@@ -86,16 +85,10 @@ public final class VfxGraphManager {
         return initialized;
     }
 
-    /**
-     * 由 {@code AcademyCraftClient.initRender()} 调用。
-     */
     public void init() {
         initialized = true;
     }
 
-    /**
-     * 由 {@code AcademyCraftClient.onClientStopped()} 调用。
-     */
     public void close() {
         stopFileWatcher();
         effects.clear();
@@ -106,9 +99,6 @@ public final class VfxGraphManager {
         initialized = false;
     }
 
-    /**
-     * dev 模式启动文件监听（M15-05）。
-     */
     public void startFileWatcher(Path root) {
         if (fileWatcher != null) {
             return;
@@ -130,12 +120,6 @@ public final class VfxGraphManager {
         }
     }
 
-    /**
-     * 逐 effect tick。移除已停止或跟随实体已移除的效果。
-     */
-    /**
-     * Explicit simulation for tools/tests. In-game frame simulation is owned by renderFrame.
-     */
     public void tick(float dt) {
         if (!initialized) return;
         var iterator = effects.iterator();
@@ -159,9 +143,6 @@ public final class VfxGraphManager {
         return frameStatistics;
     }
 
-    /**
-     * Cull before simulation, vertex building, staging and draw submission.
-     */
     public void renderFrame(GpuTextureView target, @Nullable GpuTextureView depth, GraphCamera camera) {
         if (!initialized) return;
         lastCamera = camera;
@@ -178,13 +159,12 @@ public final class VfxGraphManager {
         while (iterator.hasNext()) {
             var effect = iterator.next();
             effect.setRenderVisible(false);
-            // Lifetime follows elapsed game presentation time even when simulation steps are capped.
             if (effect.updateFrame(elapsed, camera, partialTick)) {
                 iterator.remove();
                 continue;
             }
             var effectCamera = frameCameras.computeIfAbsent(effect.minimumFarPlane(),
-                    far -> camera.withMinimumFarPlane(far));
+                    camera::withMinimumFarPlane);
             float radius = effect.cullingRadius(budget.effectRadius());
             boolean draw = effect.frameVisible() && (effect.alwaysVisible()
                     || (budget.shouldRender(effectCamera.position(), effect.cullingCenter(), radius,
@@ -205,7 +185,7 @@ public final class VfxGraphManager {
                 continue;
             }
             visible++;
-            var renderer = rendererPool.computeIfAbsent(effect.specs(), k -> new VfxGraphRenderer());
+            var renderer = rendererPool.computeIfAbsent(effect.specs(), _ -> new VfxGraphRenderer());
             effect.render(target, depth, effectCamera, renderer, false, false);
         }
         frameStatistics = new FrameStatistics(effects.size(), visible, culled, simulated);
@@ -217,9 +197,77 @@ public final class VfxGraphManager {
             if (!effect.renderVisible() || effect.isExpired() || !feedsBloom(effect)) continue;
             var camera = frameCameras.get(effect.minimumFarPlane());
             if (camera == null) continue;
-            var renderer = rendererPool.computeIfAbsent(effect.specs(), k -> new VfxGraphRenderer());
+            var renderer = rendererPool.computeIfAbsent(effect.specs(), _ -> new VfxGraphRenderer());
             effect.render(color, depth, camera, renderer, false, true);
         }
+    }
+
+    public void renderDistortionFrame(GpuTextureView target) {
+        if (!initialized || lastCamera == null) return;
+        for (var effect : effects) {
+            if (!effect.renderVisible() || effect.isExpired()) continue;
+            var camera = frameCameras.get(effect.minimumFarPlane());
+            if (camera == null) continue;
+            var specs = effect.specs();
+            if (specs.stream().noneMatch(s -> s.geometry() == RenderSpec.Geometry.DISTORTION_RING)) continue;
+            var renderer = rendererPool.computeIfAbsent(specs, _ -> new VfxGraphRenderer());
+            var buffer = effect.effect().buffer();
+            var transform = effect.worldTransform();
+            for (var spec : specs) {
+                if (spec.geometry() == RenderSpec.Geometry.DISTORTION_RING) {
+                    renderer.renderDistortionRings(target, buffer, spec, effectDistortionRing(effect, spec), transform, camera);
+                }
+            }
+        }
+    }
+
+    private static RenderSpec.DistortionRing effectDistortionRing(ActiveEffect effect, RenderSpec spec) {
+        var d = spec.distortionRing();
+        if (d == null) d = RenderSpec.DistortionRing.DEFAULT;
+        var bound = effect.effect().liveParam("distortion_strength");
+        float strength = d.strength();
+        if (bound != null && bound.type() == ValueType.FLOAT) strength = Math.max(0f, bound.asFloat());
+        bound = effect.effect().liveParam("distortion_ring_width");
+        float width = d.width();
+        if (bound != null && bound.type() == ValueType.FLOAT) width = Math.clamp(bound.asFloat(), 0.001f, 1f);
+        bound = effect.effect().liveParam("distortion_edge_blur");
+        float blur = d.edgeBlur();
+        if (bound != null && bound.type() == ValueType.FLOAT) blur = Math.clamp(bound.asFloat(), 0f, 1f);
+        return new RenderSpec.DistortionRing(strength, width, blur);
+    }
+
+    /**
+     * 屏幕闪光帧（E1）：跨效果聚合所有 SCREEN_FLASH 输出的粒子 alpha，
+     * 求和截断后由共享渲染器画单个全屏 quad（等同旧 SCREEN_SPACE_POST 求和语义）。
+     */
+    public void renderScreenFlashFrame(GpuTextureView target) {
+        if (!initialized) return;
+        List<VfxGraphRenderer.ScreenFlashSource> sources = null;
+        VfxGraphRenderer renderer = null;
+        for (var effect : effects) {
+            if (!effect.renderVisible() || effect.isExpired()) continue;
+            var specs = effect.specs();
+            if (specs.stream().noneMatch(s -> s.geometry() == RenderSpec.Geometry.SCREEN_FLASH)) continue;
+            if (sources == null) {
+                sources = new ArrayList<>();
+                renderer = rendererPool.computeIfAbsent(specs, _ -> new VfxGraphRenderer());
+            }
+            sources.add(new VfxGraphRenderer.ScreenFlashSource(
+                    effect.effect().buffer(), specs, effectFlashCap(effect, specs)));
+        }
+        if (renderer != null && sources != null) {
+            renderer.renderScreenFlash(target, sources);
+        }
+    }
+
+    private static float effectFlashCap(ActiveEffect effect, List<RenderSpec> specs) {
+        var bound = effect.effect().liveParam("flash_cap");
+        if (bound != null && bound.type() == ValueType.FLOAT) return Math.max(0f, bound.asFloat());
+        return specs.stream()
+                .filter(s -> s.geometry() == RenderSpec.Geometry.SCREEN_FLASH)
+                .map(RenderSpec::flashCap)
+                .max(Float::compareTo)
+                .orElse(1f);
     }
 
     private static boolean feedsBloom(ActiveEffect effect) {
@@ -227,9 +275,6 @@ public final class VfxGraphManager {
         return false;
     }
 
-    /**
-     * Offscreen glow no longer triggers a bloom pass by itself.
-     */
     public boolean hasGlowData() {
         if (!initialized) return false;
         for (var effect : effects) {
@@ -238,9 +283,81 @@ public final class VfxGraphManager {
         return false;
     }
 
-    /**
-     * Refresh a uniquely identified analytic effect, retaining its compiled graph and buffers.
-     */
+    public void submitWorldGeometry(PoseStack poseStack, SubmitNodeCollector output, Vector3f cameraPos) {
+        if (!initialized || !IrisIntegration.isShaderPackInUse()) return;
+        for (var effect : effects) {
+            if (effect.isExpired()) continue;
+            if (effect.specs().stream().noneMatch(s -> s.geometry() == RenderSpec.Geometry.BLOCK_QUADS)) continue;
+            var frame = effect.blockGeometryFrame();
+            if (frame == null || frame.isEmpty()) continue;
+            submitBlockGeometry(poseStack, output, cameraPos, frame);
+        }
+    }
+
+    private static void submitBlockGeometry(PoseStack poseStack, SubmitNodeCollector output,
+                                             Vector3f cameraPos, BlockGeometryFrame frame) {
+        var worldPose = new PoseStack();
+        worldPose.last().set(poseStack.last());
+        worldPose.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
+        var vertices = frame.layerVertices();
+        var counts = frame.layerVertexCounts();
+        for (var layer : ChunkSectionLayer.values()) {
+            var index = layer.ordinal();
+            if (counts[index] == 0) continue;
+            var layerVertices = vertices[index];
+            output.submitCustomGeometry(
+                    worldPose,
+                    shaderPackRenderType(layer),
+                    (pose, buffer) -> putShaderPackVertices(pose, buffer, layerVertices, counts[index])
+            );
+        }
+    }
+
+    private static RenderType shaderPackRenderType(ChunkSectionLayer layer) {
+        return switch (layer) {
+            case SOLID -> RenderTypes.solidMovingBlock();
+            case CUTOUT -> RenderTypes.cutoutMovingBlock();
+            case TRANSLUCENT -> RenderTypes.translucentMovingBlock();
+        };
+    }
+
+    private static void putShaderPackVertices(PoseStack.Pose pose, VertexConsumer output,
+                                               java.nio.ByteBuffer vertices, int vertexCount) {
+        var stream = vertices.duplicate().order(vertices.order());
+        stream.limit(stream.position() + vertexCount * BLOCK_VERTEX_STRIDE);
+        for (var index = 0; index < vertexCount; index++) {
+            var x = stream.getFloat();
+            var y = stream.getFloat();
+            var z = stream.getFloat();
+            var u = stream.getFloat();
+            var v = stream.getFloat();
+            var red = colorChannel(stream.getFloat());
+            var green = colorChannel(stream.getFloat());
+            var blue = colorChannel(stream.getFloat());
+            var alpha = colorChannel(stream.getFloat());
+            var blockLight = Short.toUnsignedInt(stream.getShort());
+            var skyLight = Short.toUnsignedInt(stream.getShort());
+            var normalX = unpackNormal(stream.get());
+            var normalY = unpackNormal(stream.get());
+            var normalZ = unpackNormal(stream.get());
+            stream.get();
+
+            output.addVertex(pose, x, y, z)
+                    .setColor(red, green, blue, alpha)
+                    .setUv(u, v)
+                    .setLight(blockLight | skyLight << 16)
+                    .setNormal(pose, normalX, normalY, normalZ);
+        }
+    }
+
+    private static int colorChannel(float value) {
+        return Math.clamp(Math.round(value * 255.0f), 0, 255);
+    }
+
+    private static float unpackNormal(byte component) {
+        return Math.max(-1.0f, component / 127.0f);
+    }
+
     public ActiveEffect spawnOrRefresh(Identifier assetId, Vector3f position, String refreshKey) {
         if (refreshKey == null || refreshKey.isEmpty()) throw new IllegalArgumentException("Empty refresh key");
         var key = normalizedKey(assetId);
@@ -272,11 +389,8 @@ public final class VfxGraphManager {
         }
         var graph = assets.get(key);
         if (graph == null) {
-            // 懒加载兜底：重载监听可能尚未装载（或未命中），直接从资源管理器/classpath 读取
             var loaded = loadFromResourceManager(assetId);
             graph = loaded;
-            // Container decoding populates its own cache and deliberately returns no flat graph.
-            // Recheck it on the very first spawn, before a resource reload has warmed the cache.
             container = containerAssets.get(key);
             if (container != null) {
                 var effect = new ActiveEffect(key, container, vfxRegistry, blockRegistry, operatorRegistry, position);
@@ -292,22 +406,11 @@ public final class VfxGraphManager {
         return effect;
     }
 
-    /**
-     * 资产键统一为不带 .json 的 identifier 字符串（与命令/API 入参一致）。
-     */
     private static String normalizedKey(Identifier assetId) {
         var s = assetId.toString();
         return s.endsWith(".json") ? s.substring(0, s.length() - 5) : s;
     }
 
-    /**
-     * 从游戏资源管理器或 classpath 按 identifier（如 {@code academy:vfxgraph/minimal_burst}）读取并缓存图资产。
-     * 容器 schema（{@code kind:"vfx"}）解码进 [VfxSystem] 缓存，否则进扁平 [GraphAssets]。
-     *
-     * <p>资源管理器/classpath 查找需带 .json 完整路径（getResource 不自动补扩展名），
-     * 缓存键仍用去掉 .json 的 id。dev 模式下资源管理器可能未挂载 {@code src/main/resources}，
-     * 故 classpath 兜底。</p>
-     */
     private @Nullable Graph loadFromResourceManager(Identifier assetId) {
         var key = normalizedKey(assetId);
         var path = assetId.getPath().endsWith(".json") ? assetId.getPath() : assetId.getPath() + ".json";
@@ -337,9 +440,6 @@ public final class VfxGraphManager {
         }
     }
 
-    /**
-     * 按 schema 解码并缓存：容器进 containerAssets，扁平进 GraphAssets。返回扁平 Graph（容器返回 null）。
-     */
     private @Nullable Graph decodeAsset(String key, JsonObject json) {
         if (isContainerJson(json)) {
             try {
@@ -347,7 +447,7 @@ public final class VfxGraphManager {
                 containerAssets.put(key, system);
                 return null;
             } catch (Exception exception) {
-                LOGGER.error("Unable to decode container vfx graph asset: " + key, exception);
+                LOGGER.error("Unable to decode container vfx graph asset: {}", key, exception);
                 return null;
             }
         }
@@ -363,9 +463,6 @@ public final class VfxGraphManager {
         }
     }
 
-    /**
-     * spawn 并跟随实体（每 tick 对齐实体位置，实体移除即停）。
-     */
     public ActiveEffect spawnFollow(Identifier assetId, Entity entity) {
         var effect = spawn(assetId, new Vector3f((float) entity.getX(), (float) entity.getY(), (float) entity.getZ()));
         effect.follow(entity);
@@ -384,23 +481,14 @@ public final class VfxGraphManager {
         return effects.size();
     }
 
-    /**
-     * Stable diagnostic snapshot for runtime previews and integration checks.
-     */
     public List<ActiveEffect> activeEffects() {
         return List.copyOf(effects);
     }
 
-    /**
-     * 从磁盘文件加载/重载单个资产（dev 热重载，M15-05）。
-     */
     public void reloadFromFile(Identifier assetId, Path file) throws IOException {
         reloadFromContent(assetId, Files.readString(file));
     }
 
-    /**
-     * 以已读取的 JSON 文本加载/重载单个资产（供主线程/后台线程调用）。
-     */
     public void reloadFromContent(Identifier assetId, String jsonText) {
         var key = assetId.toString();
         var json = new Gson().fromJson(jsonText, JsonObject.class);
@@ -416,9 +504,6 @@ public final class VfxGraphManager {
         }
     }
 
-    /**
-     * 注册（或重载）一个资产并刷新使用它的存活效果。解码失败则跳过（不中断重载）。
-     */
     public void registerAsset(Identifier assetId, JsonObject json) {
         var key = assetId.toString();
         if (isContainerJson(json)) {
@@ -427,7 +512,7 @@ public final class VfxGraphManager {
                 containerAssets.put(key, system);
                 reloadEffects(key, system);
             } catch (Exception exception) {
-                LOGGER.error("Unable to decode container vfx graph asset: " + key, exception);
+                LOGGER.error("Unable to decode container vfx graph asset: {}", key, exception);
             }
             return;
         }
@@ -437,9 +522,6 @@ public final class VfxGraphManager {
         }
     }
 
-    /**
-     * 全量失效（资源重载触发，F3+T）。
-     */
     public void invalidateAll() {
         assets.invalidateAll();
         containerAssets.clear();

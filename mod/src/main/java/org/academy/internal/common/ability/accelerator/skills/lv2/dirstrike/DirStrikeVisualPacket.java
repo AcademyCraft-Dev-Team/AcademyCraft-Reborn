@@ -8,8 +8,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
-import org.academy.internal.client.render.vfx.DirStrikeGroundEffect;
-import org.academy.internal.client.render.vfx.DirStrikeGroundVfxClient;
+import org.academy.internal.common.ability.accelerator.skills.lv2.dirstrike.DirStrike;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -18,6 +17,10 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+
+
+
 
 @PacketTarget(ThreadType.CLIENT)
 public final class DirStrikeVisualPacket extends Packet<ClientPacketListener, DirStrikeVisualPacket> {
@@ -68,7 +71,7 @@ public final class DirStrikeVisualPacket extends Packet<ClientPacketListener, Di
         if (clientInitialized) return;
         clientInitialized = true;
         MisakaNetworkClient.NETWORK_MANAGER.register(Client.class);
-        DirStrikeGroundVfxClient.register();
+        DirStrike.Client.DirStrikeGroundVfxClient.register();
     }
 
     public static void broadcast(ServerLevel level, Vec3 center, BlockPos origin, int radius,
@@ -98,7 +101,7 @@ public final class DirStrikeVisualPacket extends Packet<ClientPacketListener, Di
             if (!valid(packet)) return;
             var minecraft = Minecraft.getInstance();
             if (minecraft.level == null) return;
-            DirStrikeGroundEffect.spawn(
+            DirStrike.Client.DirStrikeGroundEffect.spawn(
                     packet.center,
                     packet.origin,
                     packet.radius,

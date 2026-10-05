@@ -94,7 +94,7 @@ private class AbilityVfxCaptureApp(private val root: Path, private val environme
         if (target == null) target =
             TextureTarget("Ability VFX capture", 1280, 720, GpuFormat.RGBA8_UNORM, GpuFormat.D32_FLOAT)
         if (renderer == null) {
-            renderer = VfxGraphRenderer(environment::loadTexture); glow = EditorGlow(renderer!!)
+            renderer = VfxGraphRenderer(); glow = EditorGlow(renderer!!)
         }
         val shot = shots[index]
         val assetPath = if (shot.baseline) "build/ability-vfx-baseline/${shot.asset}.json"

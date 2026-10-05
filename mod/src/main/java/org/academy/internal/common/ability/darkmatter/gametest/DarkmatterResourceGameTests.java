@@ -420,7 +420,7 @@ public final class DarkmatterResourceGameTests {
                     var enchantable = new ItemStack(item.value());
                     helper.assertTrue(enchantable.isEnchantable()
                                     && enchantable.supportsEnchantment(darkmatterEnchantment),
-                            "Dark-matter item is not enchantable: " + item.getKey());
+                            "Dark-matter item is not enchantable: " + item.key());
                 }
                 var sword = new ItemStack(
                         org.academy.internal.common.world.item.Items.DARKMATTER_SWORD.get());

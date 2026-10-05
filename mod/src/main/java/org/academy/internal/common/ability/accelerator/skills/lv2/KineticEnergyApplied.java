@@ -84,6 +84,13 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.*;
+import org.academy.api.client.render.graph.type.Value;
+import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
+import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
+import org.academy.api.common.vfx.SkillVfxState;
+import org.academy.internal.client.render.vfxgraph.SkillVfxStates;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 public class KineticEnergyApplied extends Skill {
     public static final int MIN_IMPACT_LEVEL = 1;
@@ -160,6 +167,7 @@ public class KineticEnergyApplied extends Skill {
 
     @Override
     public void initClient() {
+        Client.registerShockwaveVfx();
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -208,6 +216,73 @@ public class KineticEnergyApplied extends Skill {
 
         private Client() {
         }
+        private static final Identifier KINETIC_SHOCKWAVE_ASSET =
+                Identifier.fromNamespaceAndPath("academy", "vfxgraph/kinetic_shockwave");
+
+        private static void registerShockwaveVfx() {
+            SkillVfxStates.registerOneShot(new SkillVfxStates.OneShot() {
+                @Override
+                public void accept(SkillVfxState state, long tick) {
+                    if (state instanceof SkillVfxState.Burst burst && !burst.plasmaImpact()) {
+                        spawnShockwave(burst);
+                    }
+                }
+
+                @Override
+                public void reset() {
+                }
+            });
+        }
+
+        private static void spawnShockwave(SkillVfxState.Burst burst) {
+            float lifetimeSeconds = Math.max(1, burst.lifetimeTicks()) / 20f;
+            var direction = burst.direction().normalize();
+            float yRot = (float) Math.toDegrees(Math.atan2(direction.z(), direction.x())) - 90f;
+            float xRot = (float) -Math.toDegrees(Math.atan2(direction.y(),
+                    Math.sqrt(direction.x() * direction.x() + direction.z() * direction.z())));
+            long startedAt = System.nanoTime();
+            spawnShockwaveRing(burst, lifetimeSeconds, startedAt, 1f, 1f,
+                    new Quaternionf().rotateX((float) Math.toRadians(-90f)));
+            spawnShockwaveRing(burst, lifetimeSeconds, startedAt, 0.8f, 1f, new Quaternionf());
+            spawnShockwaveRing(burst, lifetimeSeconds, startedAt, 0.8f, 1f,
+                    new Quaternionf().rotateZ((float) Math.toRadians(90f))
+                            .rotateX((float) Math.toRadians(-90f)));
+            spawnShockwaveRing(burst, lifetimeSeconds, startedAt, 1f, 0.8f,
+                    new Quaternionf()
+                            .rotateY((float) Math.toRadians(90f - yRot))
+                            .rotateZ((float) Math.toRadians(90f + xRot))
+                            .rotateX((float) Math.toRadians(90f)));
+        }
+
+        private static void spawnShockwaveRing(SkillVfxState.Burst burst, float lifetimeSeconds,
+                                               long startedAt, float strengthScale, float widthScale,
+                                               Quaternionf rotation) {
+            var effect = VfxGraphManager.INSTANCE.spawn(KINETIC_SHOCKWAVE_ASSET, burst.position().toVector3f());
+            effect.setRotation(rotation);
+            effect.setLifetimeSeconds(lifetimeSeconds);
+            float baseStrength = Math.clamp(0.018f + burst.intensity() * 0.006f, 0.02f, 0.055f);
+            float baseWidth = Math.clamp(0.18f + burst.intensity() * 0.035f, 0.2f, 0.42f);
+            effect.bind("distortion_strength", () -> {
+                float progress = shockwaveProgress(startedAt, lifetimeSeconds);
+                return Value.of(baseStrength * strengthScale * (1f - progress));
+            });
+            effect.bind("distortion_ring_width", () -> Value.of(baseWidth * widthScale));
+            effect.bind("distortion_edge_blur", () -> {
+                float progress = shockwaveProgress(startedAt, lifetimeSeconds);
+                return Value.of(0.055f + progress * 0.04f);
+            });
+            effect.bind("radius", () -> {
+                float progress = shockwaveProgress(startedAt, lifetimeSeconds);
+                return Value.of(burst.radius() * progress);
+            });
+            effect.setCullingSphere(effect.position(), burst.radius() + 2f);
+            effect.setRenderDistance(64f);
+        }
+
+        private static float shockwaveProgress(long startedAt, float lifetimeSeconds) {
+            return Math.clamp((System.nanoTime() - startedAt) / (lifetimeSeconds * 1e9f), 0f, 1f);
+        }
+
 
         private static void registerSettings() {
             if (settingsRegistered) return;

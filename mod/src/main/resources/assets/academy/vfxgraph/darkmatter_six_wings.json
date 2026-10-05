@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "darkmatter_six_wings",
+  "parameters": [],
+  "contexts": [
+    {
+      "id": "out",
+      "type": "OUTPUT",
+      "name": "darkmatter six wings",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "wings_out",
+          "type": "vfx.block.output_instanced_tex",
+          "properties": {
+            "blend": "translucent",
+            "shader": "academy:core/vfxgraph_instanced_tex_model",
+            "texture": "academy:textures/ability/darkmatter/skill/darkmatter_six_wings/effect/darkmatter_six_wings.png",
+            "topology": "triangles",
+            "vertex": "academy:core/vfxgraph_instanced_tex_model"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "wings_out"
+  ]
+}

@@ -164,8 +164,8 @@ public final class ServerMeltdownerProgramRuntime implements MeltdownerProgramRu
             boolean destroyBlocks
     ) {
         return new ProgramActionTransaction.ProgramAction() {
-            private Entity target;
-            private Vec3 launchDirection;
+            private @Nullable Entity target;
+            private @Nullable Vec3 launchDirection;
 
             @Override
             public void validate() {

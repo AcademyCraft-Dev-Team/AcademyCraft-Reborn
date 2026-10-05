@@ -61,6 +61,7 @@ object HudManager {
 
     @RenderThread
     fun resize(width: Int, height: Int) {
+        rebuildHudLayouts()
     }
 
     /**
@@ -115,8 +116,6 @@ object HudManager {
             val uiDepth = ui.depthTextureView
             val blurColor = blur.colorTextureView
             if (mainColor == null || uiColor == null || uiDepth == null || blurColor == null) return
-            // wait NeoForge to fix it
-            RenderSystem.getDevice().createCommandEncoder().clearStencilTexture(uiDepth.texture(), 0)
 
             val drewStencil = AtomicBoolean()
 

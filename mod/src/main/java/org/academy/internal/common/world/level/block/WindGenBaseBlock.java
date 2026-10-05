@@ -66,7 +66,10 @@ public final class WindGenBaseBlock extends MultiBlock {
                 var aabb = new AABB(-0.5, -5.0 / 16.0, -0.05, 0.5, 5.0 / 16.0, 0.05);
 
                 var poseStack = new PoseStack();
-                var mainPos = getMainBlockEntity(level, pos).mainPos;
+                var be = getMainBlockEntity(level, pos);
+                if (be == null) return InteractionResult.FAIL;
+                var mainPos = be.mainPos;
+                if (mainPos == null) return InteractionResult.FAIL;
                 poseStack.translate(mainPos.getX(), mainPos.getY(), mainPos.getZ());
                 poseStack.translate(0.5f, 1.5f, 0.5f);
                 poseStack.rotate(Axis.XP.rotationDegrees(180));
@@ -106,6 +109,7 @@ public final class WindGenBaseBlock extends MultiBlock {
                 if (!serverPlayer.isShiftKeyDown() && level.getBlockEntity(pos) instanceof WindGenBaseBlockEntity windGenBaseBlockEntity) {
                     if (windGenBaseBlockEntity.getMain() instanceof WindGenBaseBlockEntity windGenBaseBlock) {
                         var menuProvider = getMenuProvider(state, level, pos);
+                        if (menuProvider == null) return InteractionResult.FAIL;
                         ServerPlayerUtil.openMenuScreen(serverPlayer, menuProvider, WIND_GEN_SCREEN,
                                 buf -> buf.writeBlockPos(windGenBaseBlock.getBlockPos()));
                     }
@@ -157,7 +161,7 @@ public final class WindGenBaseBlock extends MultiBlock {
     public @Nullable MenuProvider getMenuProvider(BlockState state, Level level, BlockPos pos) {
         if (level.getBlockEntity(pos) instanceof WindGenBaseBlockEntity windGenBaseBlockEntity) {
             if (windGenBaseBlockEntity.getMain() instanceof WindGenBaseBlockEntity windGenBaseBlock) {
-                return new SimpleMenuProvider((containerId, playerInventory, player) -> new WindGenMenu(containerId, playerInventory, ContainerLevelAccess.create(level, pos), windGenBaseBlock), Component.empty());
+                return new SimpleMenuProvider((containerId, playerInventory, _) -> new WindGenMenu(containerId, playerInventory, ContainerLevelAccess.create(level, pos), windGenBaseBlock), Component.empty());
             }
         }
         return null;

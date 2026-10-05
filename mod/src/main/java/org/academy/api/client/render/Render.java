@@ -147,7 +147,7 @@ public final class Render {
     }
 
     public record GaussianSamples(int sampleCount, Vector4f[] samples) {
-        public static final int MAX_GAUSSIAN_SAMPLES = 12;
+        public static final int MAX_GAUSSIAN_SAMPLES = 24;
         private static final float SIGMA_SCALE = 0.5f;
         private static final float MAX_SIGMA = 3.0f;
         private static final float[] BASE_OFFSET;
@@ -414,14 +414,13 @@ public final class Render {
         }
 
         public GpuBuffer getProjectionUB(Matrix4fc projection) {
-            if (projection.equals(lastProjection, 0)) return projectionUB;
+            if (lastProjection != null && projection.equals(lastProjection, 0)) return projectionUB;
             try (var memoryStack = MemoryStack.stackPush()) {
                 var builder = Std140Builder.onStack(memoryStack, PROJECTION_UBO_SIZE);
                 builder.putMat4f(projection);
                 var byteBuffer = builder.get();
                 RenderSystem.getDevice().createCommandEncoder().writeToBuffer(projectionUB.slice(), byteBuffer);
             }
-            // new 是因为 org/joml/Matrix4f.java:13732
             lastProjection = new Matrix4f(projection);
             return projectionUB;
         }
@@ -884,23 +883,6 @@ public final class Render {
                 .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX)
                 .build();
 
-        public static final RenderPipeline GLOW_CIRCLE = builder()
-                .withLocation(academy("pipeline/glow_circle"))
-                .withVertexShader(R.shaders.position_tex)
-                .withFragmentShader(R.shaders.core.glow_circle)
-                .withBindGroupLayout(
-                        BindGroupLayout.builder()
-                                .withUniform("Uniforms", UniformType.UNIFORM_BUFFER)
-                                .build()
-                )
-                .withCull(false)
-                .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
-                .withBindGroupLayout(BindGroupLayouts.PROJECTION)
-                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
-                .withPrimitiveTopology(PrimitiveTopology.QUADS)
-                .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX)
-                .build();
-
         public static final RenderPipeline SDF_CIRCLE_GLOW = builder()
                 .withLocation(academy("pipeline/sdf_circle_glow"))
                 .withVertexShader(R.shaders.position_tex)
@@ -1140,54 +1122,6 @@ public final class Render {
                         .createRenderSetup()
         );
 
-        public static final RenderType PLASMA_CLOUD = create(
-                "plasma_cloud",
-                RenderSetup.builder(Render.RenderPipelines.LEVEL_POS_TEX_COLOR)
-                        .withTexture(
-                                "Sampler0", R.textures.plasma_generation_cloud,
-                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
-                        )
-                        .sortOnUpload()
-                        .createRenderSetup()
-        );
-
-        public static final RenderType BLACK_WING = create(
-                "black_wing",
-                RenderSetup.builder(Render.RenderPipelines.LEVEL_POS_TEX_COLOR)
-                        .withTexture(
-                                "Sampler0", R.textures.black_wing,
-                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
-                        )
-                        .sortOnUpload()
-                        .createRenderSetup()
-        );
-
-        public static final RenderType WHITE_WING = create(
-                "white_wing",
-                RenderSetup.builder(Render.RenderPipelines.LEVEL_POS_TEX_COLOR)
-                        .withTexture(
-                                "Sampler0", R.textures.white_wing,
-                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
-                        )
-                        .sortOnUpload()
-                        .createRenderSetup()
-        );
-
-        public static final RenderType PLATINUM_WING = create(
-                "platinum_wing",
-                RenderSetup.builder(Render.RenderPipelines.PLATINUM_COSMIC_WING)
-                        .withTexture(
-                                "Sampler0", R.textures.white_wing,
-                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
-                        )
-                        .withTexture(
-                                "Sampler1", R.textures.platinum_wing_starfield,
-                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
-                        )
-                        .sortOnUpload()
-                        .createRenderSetup()
-        );
-
         public static final RenderType BLACK_WING_FIRST_PERSON = create(
                 "black_wing_first_person",
                 RenderSetup.builder(Render.RenderPipelines.LEVEL_POS_TEX_COLOR_NO_DEPTH_WRITE)
@@ -1240,18 +1174,6 @@ public final class Render {
                         .createRenderSetup()
         );
 
-        public static final RenderType IRON_SAND_FIRST_PERSON = create(
-                "iron_sand_first_person",
-                RenderSetup.builder(Render.RenderPipelines.LEVEL_POS_TEX_COLOR_NO_DEPTH_WRITE)
-                        .withTexture(
-                                "Sampler0", R.textures.iron_sand_arsenal_effect,
-                                () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
-                        )
-                        .sortOnUpload()
-                        .createRenderSetup()
-        );
-
-        // TextureAtlas location constants are deprecated in this snapshot without a replacement.
         @SuppressWarnings("deprecation")
         public static final RenderType IMAG_PHASE_PARTICLE_POST = create(
                 "imag_phase_particle_post",
@@ -1274,22 +1196,9 @@ public final class Render {
                         .createRenderSetup()
         );
 
-        public static final RenderType POS_COLOR_QUADS = create(
-                "pos_color_quads",
-                RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_QUADS)
-                        .createRenderSetup()
-        );
-
         public static final RenderType POS_COLOR_QUADS_NO_DEPTH_WRITE = create(
                 "pos_color_quads_no_depth_write",
                 RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_QUADS_NO_DEPTH_WRITE)
-                        .sortOnUpload()
-                        .createRenderSetup()
-        );
-
-        public static final RenderType POS_COLOR_QUADS_ADDITIVE = create(
-                "pos_color_quads_additive",
-                RenderSetup.builder(RenderPipelines.LEVEL_POS_COLOR_QUADS_ADDITIVE)
                         .sortOnUpload()
                         .createRenderSetup()
         );
@@ -1331,13 +1240,14 @@ public final class Render {
         );
 
         static {
-            glowOutputTarget(IMAG_PHASE_PARTICLE_POST, ARC, POS_COLOR_QUADS_GLOW_ADDITIVE,
-                    POS_COLOR_TRANGLES_GLOW_ADDITIVE, POS_COLOR_TRANGLES_GLOW, POS_COLOR_QUADS_GLOW_POST);
-        }
-
-        private static void glowOutputTarget(RenderType... types) {
-            for (var type : types) {
-                registerOutputTarget(type, () -> GlowEffect.glowTarget());
+            for (var type : new RenderType[]{
+                    IMAG_PHASE_PARTICLE_POST,
+                    ARC, POS_COLOR_QUADS_GLOW_ADDITIVE,
+                    POS_COLOR_TRANGLES_GLOW_ADDITIVE,
+                    POS_COLOR_TRANGLES_GLOW,
+                    POS_COLOR_QUADS_GLOW_POST
+            }) {
+                registerOutputTarget(type, GlowEffect::glowTarget);
             }
         }
 

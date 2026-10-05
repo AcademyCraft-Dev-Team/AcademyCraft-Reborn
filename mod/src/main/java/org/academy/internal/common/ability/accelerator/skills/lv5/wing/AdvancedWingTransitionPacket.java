@@ -4,7 +4,7 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import org.academy.internal.client.render.vfx.WingVfx;
+import org.academy.internal.common.ability.accelerator.Accelerator;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.api.common.network.ThreadType;
@@ -12,6 +12,8 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+
 
 @PacketTarget(ThreadType.CLIENT)
 public final class AdvancedWingTransitionPacket extends Packet<ClientPacketListener, AdvancedWingTransitionPacket> {
@@ -43,7 +45,7 @@ public final class AdvancedWingTransitionPacket extends Packet<ClientPacketListe
 
         @SubscribePacket
         public static void handleTransition(AdvancedWingTransitionPacket packet) {
-            WingVfx.enqueueBlackToWhiteTransition(packet.entityId);
+            Accelerator.Client.WingVfx.enqueueBlackToWhiteTransition(packet.entityId);
         }
     }
 }

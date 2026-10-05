@@ -53,6 +53,9 @@ class VfxContainerFullCatalogTest {
         // 电浆炮：live follow + line tornado + volumetric tornado + plasma convergence + plasma shell + shockwave = 54 块。
         // 旧 VFX 迁移：存活属性同步 + 径向涟漪 + 收缩线框盒 = 57 块。
         // arc_generate 单点向前三角洲树：electric_tree = 58 块。
+        // E1 屏幕空间输出：output_screen_flash = 59 块。
+        // E7 实例化自定义纹理几何：output_instanced_tex = 60 块。
+        // E2 方块几何提交：output_block_geometry = 61 块。
         String[] expected = {
                 "vfx.block.spawn_rate", "vfx.block.spawn_burst", "vfx.block.spawn_periodic", "vfx.block.spawn_distance",
                 "vfx.block.init_position", "vfx.block.init_velocity", "vfx.block.init_color", "vfx.block.init_size",
@@ -75,7 +78,9 @@ class VfxContainerFullCatalogTest {
                 "vfx.block.axial_beam", "vfx.block.axial_discharge", "vfx.block.axial_shock",
                 "vfx.block.electric_bolt", "vfx.block.electric_tree", "vfx.block.electric_orbit", "vfx.block.electric_shield", "vfx.block.electric_paths",
                 "vfx.block.electric_ring",
-                "vfx.block.material_sheets", "vfx.block.iron_sand", "vfx.block.organic_strands", "vfx.block.cloud_vortex"
+                "vfx.block.material_sheets", "vfx.block.iron_sand", "vfx.block.organic_strands", "vfx.block.cloud_vortex",
+                "vfx.block.output_distortion_ring", "vfx.block.output_screen_flash",
+                "vfx.block.output_instanced_tex", "vfx.block.output_block_geometry"
         };
         for (var id : expected) {
             assertNotNull(blocks.find(id), "block should be registered: " + id);

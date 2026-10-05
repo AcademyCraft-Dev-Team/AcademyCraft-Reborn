@@ -64,7 +64,7 @@ class SkillVfxPacketTest {
     @Test
     void reflectedBeamIsSelfContained() {
         var beam = new SkillVfxState.Beam(new Vec3(123456, 90, -54321), 25, 90,
-                50, 1.2f, 0.3f, 40, 40, 15, 9, 12, 38, new Vec3(-1, 0, 0), 1);
+                50, 1.2f, 0.3f, 40, 40, 15, 9, 12, 38, new Vec3(-1, 0, 0), 1, -1, 0, 0);
         assertEquals(beam, roundTrip(beam));
     }
 

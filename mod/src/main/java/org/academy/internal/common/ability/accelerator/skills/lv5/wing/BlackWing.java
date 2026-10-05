@@ -2,6 +2,8 @@ package org.academy.internal.common.ability.accelerator.skills.lv5.wing;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import java.util.*;
+import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -32,10 +34,10 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.ability.WingFlightClient;
 import org.academy.internal.client.hud.ability.ToggleStatusHud;
-import org.academy.internal.client.render.vfx.WingVfx;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.Accelerator;
 import org.academy.internal.common.ability.accelerator.flight.WingFlightRuntime;
 import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
 import org.academy.internal.common.attachment.AttachmentTypes;
@@ -48,8 +50,8 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.*;
-import java.util.function.Consumer;
+
+
 
 public final class BlackWing extends Skill {
     public BlackWing() {
@@ -114,7 +116,7 @@ public final class BlackWing extends Skill {
         @SubscribeEvent
         public static void tick(ClientTickEvent.Post event) {
             var player = Minecraft.getInstance().player;
-            long epoch = player == null ? -1 : WingVfx.blackActivationEpoch(player.getId());
+            long epoch = player == null ? -1 : Accelerator.Client.WingVfx.blackActivationEpoch(player.getId());
             if (Minecraft.getInstance().isPaused()) {
                 // Pausing keeps the server activation and sequence alive; do not restart at sequence zero.
                 CONTROL_SENDER.reset();

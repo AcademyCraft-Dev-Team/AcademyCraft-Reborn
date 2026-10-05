@@ -48,7 +48,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.render.vfx.TeleportCursorRenderer;
+import org.academy.internal.common.ability.teleport.Teleport;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -201,7 +201,7 @@ public final class Flashing extends Skill {
                 var dashDirection = Server.directionFromLook(look, player.getYRot(), direction);
                 if (dashDirection.lengthSqr() < 1.0e-6) continue;
                 var destination = findDashDestination(player, eyePosition, dashDirection);
-                if (destination != null) TeleportCursorRenderer.render(event, destination, true);
+                if (destination != null) Teleport.Client.TeleportCursorRenderer.render(event, destination, true);
             }
         }
 

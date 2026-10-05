@@ -56,6 +56,12 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.academy.api.client.render.graph.type.Value;
+import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
+import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
+import org.academy.api.common.vfx.SkillVfxState;
+import org.academy.internal.client.render.vfxgraph.SkillVfxStates;
+import org.joml.Vector3f;
 
 public final class DarkmatterCut extends Skill {
     static final double RADIUS = 5.0;
@@ -85,6 +91,7 @@ public final class DarkmatterCut extends Skill {
 
     @Override
     public void initClient() {
+        Client.registerSlashVfx();
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
@@ -116,6 +123,41 @@ public final class DarkmatterCut extends Skill {
 
         private Client() {
         }
+        private static final Identifier DARKMATTER_SLASH_ASSET =
+                Identifier.fromNamespaceAndPath("academy", "vfxgraph/darkmatter_slash");
+
+        private static void registerSlashVfx() {
+            SkillVfxStates.registerOneShot(new SkillVfxStates.OneShot() {
+                @Override
+                public void accept(SkillVfxState state, long tick) {
+                    if (state instanceof SkillVfxState.Slash slash) {
+                        spawnSlash(slash);
+                    }
+                }
+
+                @Override
+                public void reset() {
+                }
+            });
+        }
+
+        private static void spawnSlash(SkillVfxState.Slash state) {
+            var effect = VfxGraphManager.INSTANCE.spawn(DARKMATTER_SLASH_ASSET, state.position().toVector3f());
+            float lifetimeSeconds = Math.max(1, state.lifetimeTicks()) / 20f;
+            effect.setGameTimeLifetimeSeconds(lifetimeSeconds);
+            float mirrored = state.direction() < 0 ? 1f : 0f;
+            effect.bind("slash_scale", () -> Value.of(state.scale()));
+            effect.bind("slash_orientation", () -> Value.of(new Vector3f(state.yRot(), state.xRot(), 0f)));
+            effect.bind("slash_roll_outer", () -> Value.of(slashProgress(effect, lifetimeSeconds) + 4f * mirrored));
+            effect.bind("slash_roll_inner", () -> Value.of(slashProgress(effect, lifetimeSeconds) + 4f * (1f - mirrored)));
+            effect.setCullingSphere(effect.position(), 4f * state.scale());
+            effect.setRenderDistance(64f);
+        }
+
+        private static float slashProgress(ActiveEffect effect, float lifetimeSeconds) {
+            return Math.clamp(Math.max(0.1f, effect.gameAgeSeconds() / lifetimeSeconds), 0f, 1f);
+        }
+
 
         private static void cast() {
             if (ClientUtil.hasScreen() || !AbilitySystemClient.canUseSkill(Skills.DARKMATTER_CUT.get())) return;

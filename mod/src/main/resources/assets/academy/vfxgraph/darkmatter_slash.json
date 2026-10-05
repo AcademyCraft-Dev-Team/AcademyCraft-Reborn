@@ -1,0 +1,187 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "darkmatter_slash",
+  "parameters": [
+    {
+      "id": "slash_scale",
+      "name": "Slash Scale",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "slash_orientation",
+      "name": "Slash Orientation",
+      "type": "VEC3",
+      "default": {
+        "type": "VEC3",
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "slash_roll_outer",
+      "name": "Outer Roll",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    },
+    {
+      "id": "slash_roll_inner",
+      "name": "Inner Roll",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 4
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "ctx_spawn",
+      "type": "SPAWN",
+      "name": "Dual slash quads",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "spawn_outer",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "1",
+            "lifetime": "10",
+            "size": "1",
+            "color": "1,1,1,1",
+            "layer": "slash_outer",
+            "shape": "point"
+          }
+        },
+        {
+          "id": "spawn_inner",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "1",
+            "lifetime": "10",
+            "size": "1",
+            "color": "1,1,1,0.52",
+            "layer": "slash_inner",
+            "shape": "point"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ctx_init",
+      "type": "INITIALIZE",
+      "name": "Slash orientation",
+      "x": 250,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "init_orientation",
+          "type": "vfx.block.init_velocity",
+          "properties": {
+            "vx": "0",
+            "vy": "0",
+            "vz": "0",
+            "random": "0",
+            "param": "slash_orientation"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ctx_update",
+      "type": "UPDATE",
+      "name": "Live scale and roll",
+      "x": 500,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "live_outer",
+          "type": "vfx.block.update_live",
+          "properties": {
+            "layer": "slash_outer",
+            "size_param": "slash_scale",
+            "rotation_param": "slash_roll_outer"
+          }
+        },
+        {
+          "id": "live_inner",
+          "type": "vfx.block.update_live",
+          "properties": {
+            "layer": "slash_inner",
+            "size_param": "slash_scale",
+            "size_scale": "0.76",
+            "rotation_param": "slash_roll_inner"
+          }
+        },
+        {
+          "id": "age",
+          "type": "vfx.block.update_age",
+          "properties": {}
+        }
+      ]
+    },
+    {
+      "id": "ctx_output",
+      "type": "OUTPUT",
+      "name": "Textured slash quads",
+      "x": 750,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "out_outer",
+          "type": "vfx.block.output_quad",
+          "properties": {
+            "bounds_scale": "3",
+            "vertex": "academy:core/vfxgraph_slash",
+            "shader": "academy:core/vfxgraph_slash",
+            "texture": "academy:textures/ability/darkmatter/skill/darkmatter_cut/effect/darkmatter_cut_slash_atlas.png",
+            "blend": "translucent",
+            "layer": "slash_outer"
+          }
+        },
+        {
+          "id": "out_inner",
+          "type": "vfx.block.output_quad",
+          "properties": {
+            "bounds_scale": "3",
+            "vertex": "academy:core/vfxgraph_slash",
+            "shader": "academy:core/vfxgraph_slash",
+            "texture": "academy:textures/ability/darkmatter/skill/darkmatter_cut/effect/darkmatter_cut_slash_atlas.png",
+            "blend": "translucent",
+            "layer": "slash_inner"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "ctx_spawn",
+      "to": "ctx_init"
+    },
+    {
+      "from": "ctx_init",
+      "to": "ctx_update"
+    },
+    {
+      "from": "ctx_update",
+      "to": "ctx_output"
+    }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "out_outer",
+    "out_inner"
+  ]
+}

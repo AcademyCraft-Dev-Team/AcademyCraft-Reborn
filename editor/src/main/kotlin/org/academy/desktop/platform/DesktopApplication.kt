@@ -12,7 +12,6 @@ import org.academy.api.client.gui.text.font.FontRepository
 import org.academy.api.client.render.Render
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.util.function.BooleanSupplier
 
 object DesktopApplication {
     private val LOGGER: Logger = LoggerFactory.getLogger(DesktopApplication::class.java)
@@ -41,7 +40,7 @@ object DesktopApplication {
         val host = DesktopUiHost(app, environment)
         val window = DesktopWindow(backend, app.title, environment.physicalWidth, environment.physicalHeight)
 
-        val surface = device.createSurface(window.handle, BooleanSupplier { window.isIconified })
+        val surface = device.createSurface(window.handle) { window.isIconified }
         host.bind(window)
 
         configureSurface(surface, window)
@@ -110,10 +109,6 @@ object DesktopApplication {
         RenderSystem.unloadTrackedBackendLibrary()
     }
 
-    /**
-     * 依次尝试可用的图形后端（OpenGL / Vulkan），返回第一个成功创建 device 的后端，
-     * 与游戏客户端的后端选择一致：某个后端初始化失败时自动回退到下一个。
-     */
     private fun createGraphicsBackend(): Pair<GpuBackend, GpuDevice>? {
         for (candidate in preferredGraphicsApi().getBackendsToTry()) {
             var libraryLoaded = false
@@ -138,7 +133,6 @@ object DesktopApplication {
         return null
     }
 
-    /** 通过系统属性 `academy.desktop.graphicsBackend`（default/opengl/vulkan）选择首选后端。 */
     private fun preferredGraphicsApi(): PreferredGraphicsApi {
         val requested = System.getProperty("academy.desktop.graphicsBackend") ?: return PreferredGraphicsApi.DEFAULT
         return PreferredGraphicsApi.entries
@@ -146,10 +140,6 @@ object DesktopApplication {
             ?: PreferredGraphicsApi.DEFAULT
     }
 
-    /**
-     * 着色器热重载：换上一份全新的 [PipelineCache]（仍从 [ClasspathShaderSource] 读取），
-     * 使下一次 `RenderSystem.getCompiledPipeline` 重新编译源 shader。
-     */
     fun reloadShaderPipelines() {
         val device = RenderSystem.tryGetDevice() ?: return
         val cache = PipelineCache(device, ClasspathShaderSource)

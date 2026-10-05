@@ -9,7 +9,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.vfx.DirectionalArea;
 import org.academy.api.common.vfx.RepairVisualParts;
-import org.academy.internal.client.render.vfx.DarkmatterVfxClient;
+import org.academy.internal.common.ability.darkmatter.Darkmatter;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -18,6 +18,10 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+
+
+
 
 /**
  * Upserts bounded presentation state; camera and environmental lighting stay client-side.
@@ -136,7 +140,7 @@ public final class DarkmatterVisualPacket extends Packet<ClientPacketListener, D
     public static final class Client {
         @SubscribePacket
         public static void handle(DarkmatterVisualPacket packet) {
-            DarkmatterVfxClient.accept(packet);
+            Darkmatter.Client.DarkmatterVfxClient.accept(packet);
         }
     }
 }

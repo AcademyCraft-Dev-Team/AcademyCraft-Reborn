@@ -16,6 +16,8 @@ public final class EntityDataSerializers {
             DeferredRegister.create(NeoForgeRegistries.Keys.ENTITY_DATA_SERIALIZERS, AcademyCraft.MOD_ID);
     public static final DeferredHolder<EntityDataSerializer<?>, EntityDataSerializer<List<ArcPath>>> ARC_PATH =
             ENTITY_DATA_SERIALIZERS.register("arc_path", () -> EntityDataSerializer.forValueType(ArcPath.CODEC.apply(ByteBufCodecs.list())));
+    public static final DeferredHolder<EntityDataSerializer<?>, EntityDataSerializer<byte[]>> BYTE_ARRAY =
+            ENTITY_DATA_SERIALIZERS.register("byte_array", () -> EntityDataSerializer.forValueType(ByteBufCodecs.BYTE_ARRAY));
     public static final DeferredHolder<EntityDataSerializer<?>, EntityDataSerializer<BlockStructureSnapshot>> BLOCK_STRUCTURE =
             ENTITY_DATA_SERIALIZERS.register(
                     "block_structure",

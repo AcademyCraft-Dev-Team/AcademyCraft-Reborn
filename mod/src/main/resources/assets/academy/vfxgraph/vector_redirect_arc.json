@@ -1,0 +1,168 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "vector_redirect_arc",
+  "parameters": [
+    {
+      "id": "time",
+      "name": "time",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": -1
+      }
+    },
+    {
+      "id": "seed",
+      "name": "seed",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 42
+      }
+    },
+    {
+      "id": "length",
+      "name": "length",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 10
+      }
+    },
+    {
+      "id": "width",
+      "name": "width",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.006
+      }
+    },
+    {
+      "id": "spread",
+      "name": "spread",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.2
+      }
+    },
+    {
+      "id": "opacity",
+      "name": "opacity",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "detail",
+      "name": "detail",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "density",
+      "name": "density",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "flicker_rate",
+      "name": "flicker rate",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 20
+      }
+    },
+    {
+      "id": "duration",
+      "name": "duration",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "discharge",
+      "type": "SPAWN",
+      "name": "01 / 矢量折返电弧",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "bolt",
+          "type": "vfx.block.electric_bolt",
+          "properties": {
+            "length": "10",
+            "width": "0.006",
+            "spread": "0.2",
+            "strands": "1",
+            "forks": "0",
+            "duration": "1",
+            "flicker_rate": "20",
+            "opacity": "1",
+            "density": "1",
+            "detail": "1",
+            "growth_time": "0",
+            "downward": "0",
+            "origin_y": "0"
+          }
+        }
+      ]
+    },
+    {
+      "id": "render",
+      "type": "OUTPUT",
+      "name": "02 / 与超电磁炮共用电弧材质",
+      "x": 650,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "electric_out",
+          "type": "vfx.block.output_arc",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_arc",
+            "shader": "academy:core/vfxgraph_axial_burst",
+            "blend": "glow",
+            "layer": "electricity",
+            "thickness": "1",
+            "emission": "1.15",
+            "sparks": "0",
+            "segments": "12",
+            "overall_scale": "1",
+            "branch_depth": "0",
+            "branch_count": "0",
+            "noise_strength": "0",
+            "drift_speed": "0",
+            "branch_brightness_scale": "1"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "discharge",
+      "to": "render"
+    }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "electric_out"
+  ]
+}

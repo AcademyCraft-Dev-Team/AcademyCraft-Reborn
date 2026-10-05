@@ -17,7 +17,6 @@ subprojects {
                 includeGroup("org.academy")
                 includeGroup("net.neoforged")
                 includeGroup("lovely.cane.jmsdfgen")
-                includeGroup("thedarkcolour")
             }
         }
         maven {
@@ -32,6 +31,7 @@ subprojects {
             setUrl("https://maven.blamejared.com/")
             content {
                 includeGroup("mezz.jei")
+                includeGroup("net.mezzdev.config")
             }
         }
         maven {
@@ -76,6 +76,16 @@ subprojects {
             }
         }
         mavenCentral()
+    }
+
+    plugins.withType<JavaPlugin> {
+        extensions.configure<JavaPluginExtension> {
+            toolchain {
+                @Suppress("UnstableApiUsage")
+                vendor.set(JvmVendorSpec.JETBRAINS)
+                languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get()))
+            }
+        }
     }
 
     tasks.withType<JavaCompile>().configureEach {

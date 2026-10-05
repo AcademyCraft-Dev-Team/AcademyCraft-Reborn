@@ -57,7 +57,6 @@ class DesktopUiHost(
         }
     }
 
-    /** 由主循环每帧调用：泵出 SDL3 事件并分发给窗口/UI/ImGui。 */
     fun pollEvents() {
         while (SDLEvents.SDL_PollEvent(sdlEvent)) {
             if (window?.handleEvent(sdlEvent) == true) framebufferSizeChanged()
@@ -165,7 +164,6 @@ class DesktopUiHost(
             KEY_RELEASE -> EventType.KEY_RELEASED
             else -> return
         }
-        // 与游戏内 UiScreen 一致：widget KeyEvent 的 keyCode 存 SDL scancode，scanCode 存 SDL keycode。
         root.dispatchEvent(KeyEvent(type, key.scancode(), key.key(), modifiers))
     }
 
@@ -186,7 +184,6 @@ class DesktopUiHost(
         const val SDL_EVENT_MOUSE_BUTTON_UP = 0x402
         const val SDL_EVENT_MOUSE_WHEEL = 0x403
 
-        // SDL / InputConstants action values.
         const val KEY_RELEASE = 0
         const val KEY_PRESS = 1
         const val KEY_REPEAT = -1

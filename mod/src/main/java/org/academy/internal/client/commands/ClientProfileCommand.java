@@ -5,6 +5,10 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -12,13 +16,11 @@ import net.minecraft.network.chat.Component;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.api.common.profiler.AcademyProfiler;
 import org.academy.api.common.profiler.ProfileDump;
-import org.academy.internal.client.render.vfx.SkillVfxClient;
+import org.academy.internal.client.render.vfxgraph.SkillVfxStates;
 import org.jspecify.annotations.Nullable;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
+
+
 
 public final class ClientProfileCommand {
     private ClientProfileCommand() {
@@ -41,7 +43,7 @@ public final class ClientProfileCommand {
                 .then(Commands.literal("vfx").executes(ctx -> {
                     var stats = VfxGraphManager.INSTANCE.frameStatistics();
                     ctx.getSource().sendSuccess(() -> Component.literal(stats + ", receivedVfxPackets="
-                            + SkillVfxClient.receivedPackets()), false);
+                            + SkillVfxStates.receivedPackets()), false);
                     return 1;
                 }))
                 .then(zonesCommand())

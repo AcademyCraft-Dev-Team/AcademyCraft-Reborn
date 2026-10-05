@@ -60,6 +60,13 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.security.CodeSource;
 import java.util.*;
+import org.academy.api.client.render.graph.type.Value;
+import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
+import org.academy.api.common.vfx.SkillVfxState;
+import org.academy.internal.client.render.vfxgraph.SkillVfxStates;
+import org.joml.Quaternionf;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
 
 public class VectorReflection extends Skill {
     public VectorReflection() {
@@ -83,7 +90,7 @@ public class VectorReflection extends Skill {
 
     @Override
     public void initClient() {
-        VectorRedirectEffectPacket.initClient();
+        Client.registerDistortionRingVfx();
         VectorDefenseFeedbackPacket.initClient();
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
@@ -101,6 +108,54 @@ public class VectorReflection extends Skill {
     }
 
     public static final class Client {
+        private static final Identifier DISTORTION_RING_ASSET =
+                Identifier.fromNamespaceAndPath("academy", "vfxgraph/distortion_ring");
+        private static final float DISTORTION_RING_MAX_RADIUS = 1.5f * 2.2f;
+
+        private static void registerDistortionRingVfx() {
+            SkillVfxStates.registerOneShot(new SkillVfxStates.OneShot() {
+                @Override
+                public void accept(SkillVfxState state, long tick) {
+                    if (state instanceof SkillVfxState.DistortionRing ring) {
+                        spawnDistortionRing(ring);
+                    }
+                }
+
+                @Override
+                public void reset() {
+                }
+            });
+        }
+
+        private static void spawnDistortionRing(SkillVfxState.DistortionRing state) {
+            if (!distortionRingVisibleForCamera(state.ownerEntityId())) return;
+            float lifetimeSeconds = Math.max(1, state.lifetimeTicks()) / 20f;
+            var effect = VfxGraphManager.INSTANCE.spawn(DISTORTION_RING_ASSET, state.position().toVector3f());
+            effect.setRotation(new Quaternionf()
+                    .rotateY((float) Math.toRadians(180 - state.yRot()))
+                    .rotateZ((float) Math.toRadians(90 + state.xRot()))
+                    .rotateX((float) Math.toRadians(180)));
+            effect.setLifetimeSeconds(lifetimeSeconds);
+            long startedAt = System.nanoTime();
+            effect.bind("radius", () -> {
+                float progress = Math.clamp((System.nanoTime() - startedAt) / (lifetimeSeconds * 1e9f), 0f, 1f);
+                return Value.of(DISTORTION_RING_MAX_RADIUS * (float) Math.sin(progress * Math.PI));
+            });
+            effect.setCullingSphere(effect.position(), DISTORTION_RING_MAX_RADIUS);
+            effect.setRenderDistance(64f);
+        }
+
+        private static boolean distortionRingVisibleForCamera(int ownerEntityId) {
+            var minecraft = Minecraft.getInstance();
+            var player = minecraft.player;
+            if (player == null
+                    || !minecraft.options.getCameraType().isFirstPerson()
+                    || ownerEntityId != player.getId()) {
+                return true;
+            }
+            return CONFIG.isFirstPersonDistortionRingVisible();
+        }
+
         public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClient.addSkillInfo(
                 AbilityCategories.ACCELERATOR.get(),
                 new AbilitySystemClient.SkillInfo(

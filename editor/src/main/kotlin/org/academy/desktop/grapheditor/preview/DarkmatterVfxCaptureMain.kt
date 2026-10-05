@@ -68,7 +68,7 @@ private class DarkmatterVfxCaptureApp(private val root: Path, private val enviro
         if (target == null) target =
             TextureTarget("Darkmatter VFX capture", 1280, 720, GpuFormat.RGBA8_UNORM, GpuFormat.D32_FLOAT)
         if (renderer == null) {
-            renderer = VfxGraphRenderer(environment::loadTexture); glow = EditorGlow(renderer!!)
+            renderer = VfxGraphRenderer(); glow = EditorGlow(renderer!!)
         }
         val shot = shots[index]
         val assetPath = "src/main/resources/assets/academy/vfxgraph/${shot.asset}.json"

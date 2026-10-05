@@ -2,7 +2,6 @@ package org.academy.internal.common.ability.electromaster.skills.lv1;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -158,9 +157,6 @@ public class ElectricalContact extends Skill {
             );
             for (var target : targets) {
                 target.hurtServer(serverLevel, damageSource, damage);
-                serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK,
-                        target.getX(), target.getY(0.6), target.getZ(),
-                        8, 0.25, 0.45, 0.25, 0.04);
             }
         }
 

@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "dir_strike_ground",
+  "parameters": [],
+  "contexts": [
+    {
+      "id": "render",
+      "type": "OUTPUT",
+      "name": "地面方块网格输出",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "ground_out",
+          "type": "vfx.block.output_block_geometry",
+          "properties": {
+            "blend": "translucent"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "ground_out"
+  ]
+}

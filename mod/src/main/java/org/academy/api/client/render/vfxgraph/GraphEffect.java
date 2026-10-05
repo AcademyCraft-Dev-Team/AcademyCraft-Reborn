@@ -7,6 +7,11 @@ import org.academy.api.client.render.graph.model.GraphParameter;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
 import org.academy.api.client.render.vfxgraph.arc.EffectArcSource;
+import org.academy.api.client.render.vfxgraph.block.BlockGeometryBuffer;
+import org.academy.api.client.render.vfxgraph.block.BlockGeometryFrame;
+import org.academy.api.client.render.vfxgraph.block.EffectBlockGeometrySource;
+import org.academy.api.client.render.vfxgraph.instance.EffectInstanceGeometrySource;
+import org.academy.api.client.render.vfxgraph.instance.InstanceGeometryBuffer;
 import org.academy.api.client.render.vfxgraph.model.VfxSystem;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxNodeRegistry;
@@ -24,17 +29,6 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
-/**
- * 运行时 VFX 图效果（自持）：持有模拟器 + [VfxGraphRenderer]，
- * 支持按 (节点, 属性) 覆盖运行时参数，逐帧 tick 与渲染。
- *
- * <p>支持两种模型：扁平（{@link Graph} → [VfxSimulator]，M5–M7 路径）与
- * 容器（{@link VfxSystem} → [VfxSystemSimulator]，M23–M28 容器化路径，含批次 flow + 数据流算子）。
- * 容器构造经 {@link #container(VfxSystem, VfxBlockRegistry, VfxOperatorRegistry, List)}。</p>
- *
- * <p>注意：参数覆盖会在下次 tick 时重建模拟器，从而重置粒子状态（效果重启）。
- * 存活参数（[setLiveParam]，M15-04）不重建模拟器，供游戏值连续绑定。</p>
- */
 public final class GraphEffect {
     private final @Nullable VfxNodeRegistry registry;
     private final List<GraphNode> sourceNodes;
@@ -45,6 +39,11 @@ public final class GraphEffect {
     private @Nullable VfxSimulator simulator;
     private @Nullable VfxSystemSimulator systemSimulator;
     private @Nullable VfxGraphRenderer renderer;
+    private float simTimeSeconds;
+    private @Nullable InstanceGeometryBuffer instanceGeometry;
+    private @Nullable EffectInstanceGeometrySource instanceGeometrySource;
+    private @Nullable BlockGeometryBuffer blockGeometry;
+    private @Nullable EffectBlockGeometrySource blockGeometrySource;
     private boolean dirty;
 
     public GraphEffect(Graph graph, VfxNodeRegistry registry) {
@@ -129,6 +128,13 @@ public final class GraphEffect {
     }
 
     /**
+     * 当前存活参数值（渲染期读取，如 {@code flash_cap}）；未绑定返回 null。
+     */
+    public @Nullable Value liveParam(String parameterId) {
+        return liveParams.get(parameterId);
+    }
+
+    /**
      * Supplies an emitter-local projection surface to container simulation blocks.
      */
     public void setSurfaceProjector(String name, SurfaceProjector surface) {
@@ -143,6 +149,32 @@ public final class GraphEffect {
         if (systemSimulator != null) systemSimulator.setArcSource(name, source);
     }
 
+    public void setInstanceGeometrySource(EffectInstanceGeometrySource source) {
+        instanceGeometrySource = source;
+        if (instanceGeometry == null) {
+            instanceGeometry = new InstanceGeometryBuffer();
+        }
+    }
+
+    public @Nullable InstanceGeometryBuffer instanceGeometry() {
+        return instanceGeometry;
+    }
+
+    public void setBlockGeometrySource(EffectBlockGeometrySource source) {
+        blockGeometrySource = source;
+        if (blockGeometry == null) {
+            blockGeometry = new BlockGeometryBuffer();
+        }
+    }
+
+    public @Nullable BlockGeometryBuffer blockGeometry() {
+        return blockGeometry;
+    }
+
+    public @Nullable BlockGeometryFrame blockGeometryFrame() {
+        return blockGeometrySource != null ? blockGeometrySource.sample(simTimeSeconds) : null;
+    }
+
     public void tick(float dt) {
         if (dirty) {
             rebuild();
@@ -151,6 +183,13 @@ public final class GraphEffect {
             systemSimulator.step(dt);
         } else {
             Objects.requireNonNull(simulator).step(dt);
+        }
+        simTimeSeconds += dt;
+        if (instanceGeometry != null && instanceGeometrySource != null) {
+            instanceGeometry.setFrame(instanceGeometrySource.sample(simTimeSeconds));
+        }
+        if (blockGeometry != null && blockGeometrySource != null) {
+            blockGeometry.setFrame(blockGeometrySource.sample(simTimeSeconds));
         }
     }
 
@@ -199,6 +238,8 @@ public final class GraphEffect {
         }
         var buffer = systemSimulator != null ? systemSimulator.buffer() : Objects.requireNonNull(simulator).buffer();
         renderer.setArcBuffer(arcBuffer());
+        renderer.setInstanceGeometry(instanceGeometry);
+        renderer.setBlockGeometry(blockGeometry);
         renderer.render(target, depth, buffer, camera, clear, specs, transform, bloomPass);
     }
 

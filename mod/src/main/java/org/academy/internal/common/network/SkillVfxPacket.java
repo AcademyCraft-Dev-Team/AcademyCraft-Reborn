@@ -8,7 +8,8 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.vfx.PlasmaChargeVisuals;
 import org.academy.api.common.vfx.SkillVfxState;
-import org.academy.internal.client.render.vfx.SkillVfxClient;
+import org.academy.internal.client.render.vfxgraph.SkillVfxStates;
+import org.academy.api.client.render.vfxgraph.SmokeVolumes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.api.common.network.ThreadType;
 import org.misaka.api.common.network.annotation.PacketTarget;
@@ -60,6 +61,11 @@ public final class SkillVfxPacket extends Packet<ClientPacketListener, SkillVfxP
                 ByteBufCodecs.VAR_INT.encode(b, s.delayTicks());
                 ByteBufCodecs.VAR_INT.encode(b, s.remainingTicks());
                 b.writeByte(s.flags());
+                if (s.attached()) {
+                    ByteBufCodecs.VAR_INT.encode(b, s.ownerEntityId());
+                    ByteBufCodecs.VAR_INT.encode(b, s.orbitIndex());
+                    ByteBufCodecs.VAR_INT.encode(b, s.orbitCount());
+                }
                 if (s.reflected()) {
                     b.writeFloat(s.reflectionDistance());
                     b.writeFloat(s.returnLength());
@@ -121,7 +127,16 @@ public final class SkillVfxPacket extends Packet<ClientPacketListener, SkillVfxP
                 float xRot = finite(b), yRot = finite(b), length = range(b, 0, 4096);
                 float scale = range(b, 0, 128), side = range(b, -128, 128);
                 int charge = ticks(b), delay = ticks(b), remaining = ticks(b), flags = b.readUnsignedByte();
-                if (flags > 15) throw new IllegalArgumentException("Invalid beam flags");
+                if (flags > 31) throw new IllegalArgumentException("Invalid beam flags");
+                int ownerEntityId = -1, orbitIndex = 0, orbitCount = 0;
+                if ((flags & 16) != 0) {
+                    ownerEntityId = owner(b);
+                    orbitIndex = ByteBufCodecs.VAR_INT.decode(b);
+                    orbitCount = ByteBufCodecs.VAR_INT.decode(b);
+                    if (orbitCount < 1 || orbitCount > 64 || orbitIndex < 0 || orbitIndex >= orbitCount) {
+                        throw new IllegalArgumentException("Invalid beam orbit attachment");
+                    }
+                }
                 float distance = 0, returnLength = 0;
                 Vec3 direction = Vec3.ZERO;
                 if ((flags & 8) != 0) {
@@ -130,7 +145,8 @@ public final class SkillVfxPacket extends Packet<ClientPacketListener, SkillVfxP
                     direction = vector(b);
                 }
                 yield new SkillVfxState.Beam(pos, xRot, yRot, length, scale, side, charge, delay,
-                        remaining, flags, distance, returnLength, direction, range(b, 0, 64));
+                        remaining, flags, distance, returnLength, direction, range(b, 0, 64),
+                        ownerEntityId, orbitIndex, orbitCount);
             }
             case 1 -> {
                 boolean launched = b.readBoolean();
@@ -189,6 +205,12 @@ public final class SkillVfxPacket extends Packet<ClientPacketListener, SkillVfxP
         return value;
     }
 
+    private static int owner(ByteBuf b) {
+        int value = ByteBufCodecs.VAR_INT.decode(b);
+        if (value < 0) throw new IllegalArgumentException("Invalid VFX owner");
+        return value;
+    }
+
     private static float finite(ByteBuf b) {
         float value = b.readFloat();
         if (!Float.isFinite(value)) throw new IllegalArgumentException("Non-finite VFX parameter");
@@ -226,7 +248,7 @@ public final class SkillVfxPacket extends Packet<ClientPacketListener, SkillVfxP
 
         @SubscribePacket
         public static void handle(SkillVfxPacket packet) {
-            SkillVfxClient.accept(packet);
+            SkillVfxStates.accept(packet.dimension, packet.id, packet.revision, packet.state);
         }
     }
 }

@@ -384,7 +384,7 @@ public final class VectorExternalInterceptionService {
             return;
         }
         var execution = VectorRedirectExecutor.execute(plan);
-        VectorRedirectEffectPacket.broadcast(plan, execution.redirectedLength());
+        VectorRedirectGraphEffects.broadcast(plan, execution.redirectedLength());
         VectorCompatibilityDiagnostics.record(
                 attack,
                 damageOnly

@@ -37,7 +37,8 @@ public sealed interface SkillVfxState {
 
     record Beam(Vec3 position, float xRot, float yRot, float length, float scale, float sideOffset,
                 int chargeTicks, int delayTicks, int remainingTicks, int flags,
-                float reflectionDistance, float returnLength, Vec3 returnDirection, float tickRate)
+                float reflectionDistance, float returnLength, Vec3 returnDirection, float tickRate,
+                int ownerEntityId, int orbitIndex, int orbitCount)
             implements SkillVfxState {
         public boolean fired() {
             return (flags & 1) != 0;
@@ -53,6 +54,10 @@ public sealed interface SkillVfxState {
 
         public boolean reflected() {
             return (flags & 8) != 0;
+        }
+
+        public boolean attached() {
+            return (flags & 16) != 0;
         }
     }
 

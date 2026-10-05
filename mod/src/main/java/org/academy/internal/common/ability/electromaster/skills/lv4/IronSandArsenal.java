@@ -3,14 +3,18 @@ package org.academy.internal.common.ability.electromaster.skills.lv4;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ParticleStatus;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.level.Level;
@@ -29,6 +33,9 @@ import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.render.graph.type.Value;
+import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
+import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.electromaster.IronSandTuning;
@@ -39,14 +46,14 @@ import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.ability.electromaster.IronSandActions;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.hud.ability.ToggleStatusHud;
-import org.academy.internal.client.render.vfx.ElectromasterWeaponVfxClient;
-import org.academy.internal.client.render.vfx.IronSandVfxClient;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.Accelerator;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.server.ability.AbilitySystemServer;
+import org.joml.Quaternionf;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -56,13 +63,8 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.Locale;
-import java.util.Map;
-import java.util.WeakHashMap;
+import java.util.*;
 
-/**
- * Independent passive MP, toggled defense and a tap/hold active attack.
- */
 public class IronSandArsenal extends Skill {
     public static final float SWEEP_DAMAGE = 10;
     public static final double SWEEP_RADIUS = 12;
@@ -110,6 +112,170 @@ public class IronSandArsenal extends Skill {
     }
 
     public static final class Client {
+        public static final int IRON_SAND_PARTICLES = 24;
+
+        public static Accelerator.Client.FirstPersonSweepGeometry.Point ironSandPosition(
+                float handSide, float progress, int particleIndex
+        ) {
+            var clampedProgress = Mth.clamp(progress, 0.0f, 1.0f);
+            var radialProgress = particleIndex / (float) (IRON_SAND_PARTICLES - 1);
+            var eased = clampedProgress * clampedProgress * (3.0f - 2.0f * clampedProgress);
+            var sweepDegrees = handSide * (60.0f - eased * 120.0f);
+            var trailingDegrees = handSide * (1.0f - radialProgress) * 24.0f;
+            var angle = (sweepDegrees + trailingDegrees) * Mth.DEG_TO_RAD;
+            var radius = 0.55f + radialProgress * 2.20f;
+            var x = Mth.sin(angle) * radius;
+            var y = -0.48f + radialProgress * 0.45f
+                    + Mth.sin(particleIndex * 0.72f) * 0.05f
+                    + Mth.sin(Mth.PI * clampedProgress) * 0.12f;
+            var z = -0.55f - radialProgress * 3.45f;
+            return new Accelerator.Client.FirstPersonSweepGeometry.Point(x, y, z);
+        }
+
+        public static float ironSandScale(int particleIndex) {
+            var radialProgress = particleIndex / (float) (IRON_SAND_PARTICLES - 1);
+            return 0.08f + radialProgress * 0.18f;
+        }
+
+        public static float ironSandAlpha(float progress, int particleIndex) {
+            var clampedProgress = Mth.clamp(progress, 0.0f, 1.0f);
+            var radialProgress = particleIndex / (float) (IRON_SAND_PARTICLES - 1);
+            return (0.75f - radialProgress * 0.20f)
+                    * Mth.sin(Mth.PI * clampedProgress);
+        }
+
+        public static final class IronSandVfxClient {
+            private static final Map<Integer, ActiveEffect> RINGS = new HashMap<>();
+            private static final Map<Integer, ActiveEffect> CLOUDS = new HashMap<>();
+            private static final ArrayDeque<ActiveEffect> TRANSIENTS = new ArrayDeque<>();
+            private static ClientLevel level;
+
+            private IronSandVfxClient() {
+            }
+
+            public static void tick() {
+                var current = Minecraft.getInstance().level;
+                if (level != current) {
+                    clear();
+                    level = current;
+                }
+                if (level == null) return;
+                prune(RINGS, false);
+                prune(CLOUDS, true);
+                TRANSIENTS.removeIf(ActiveEffect::isExpired);
+                for (var player : level.players()) {
+                    if (!player.isAlive() || player.isRemoved()) continue;
+                    var state = player.getData(AttachmentTypes.IRON_SAND_DATA.get());
+                    if (state.defense()) RINGS.computeIfAbsent(player.getId(), _ -> attached("defense", player, false));
+                    if (state.cloudRadius() > 0) CLOUDS.computeIfAbsent(player.getId(), _ -> attached("cloud", player, true));
+                }
+            }
+
+            private static void prune(Map<Integer, ActiveEffect> effects, boolean cloud) {
+                effects.entrySet().removeIf(entry -> {
+                    var entity = level.getEntity(entry.getKey());
+                    var state = entity == null ? null : entity.getData(AttachmentTypes.IRON_SAND_DATA.get());
+                    boolean remove = entity == null || !entity.isAlive() || entity.isRemoved()
+                            || (cloud ? state.cloudRadius() <= 0 : !state.defense());
+                    if (remove) entry.getValue().stop();
+                    return remove;
+                });
+            }
+
+            private static ActiveEffect attached(String name, Entity entity, boolean cloud) {
+                var effect = spawn(name, entity.position());
+                effect.follow(entity);
+                effect.bindFrame((active, camera, partialTick) -> {
+                    if (entity.level() != Minecraft.getInstance().level || !entity.isAlive()) return false;
+                    float radius = cloud ? entity.getData(AttachmentTypes.IRON_SAND_DATA.get()).cloudRadius()
+                            : "defense".equals(name) ? 1.2f : 1.4f;
+                    active.effect().setLiveParam("radius", Value.of(radius));
+                    active.setCullingSphere(active.position(), radius + 3);
+                    active.effect().setLiveParam("detail", Value.of(detail(entity)));
+                    return true;
+                });
+                return effect;
+            }
+
+            public static void whip(int id) {
+                tick();
+                var entity = level == null ? null : level.getEntity(id);
+                if (entity == null) return;
+                var effect = attached("whip", entity, false);
+                effect.setRotation(new Quaternionf().rotationY((float) Math.toRadians(-entity.getYRot())));
+                effect.bindFrame((active, camera, partialTick) -> {
+                    float radius = entity.getData(AttachmentTypes.IRON_SAND_DATA.get()).whipRange();
+                    active.effect().setLiveParam("radius", Value.of(radius));
+                    active.effect().setLiveParam("detail", Value.of(detail(entity)));
+                    active.setCullingSphere(active.position(), radius + 2);
+                    return entity.isAlive() && entity.level() == Minecraft.getInstance().level;
+                });
+                transientEffect(effect, 0.5f);
+            }
+
+            public static void defenseEvent(int id, boolean intercept, Vec3 vector) {
+                tick();
+                var entity = level == null ? null : level.getEntity(id);
+                if (entity == null || !Double.isFinite(vector.lengthSqr())) return;
+                if (intercept) {
+                    var effect = spawn("intercept", vector);
+                    effect.bindFrame((active, camera, partialTick) -> entity.level() == Minecraft.getInstance().level);
+                    effect.setCullingSphere(vector.toVector3f(), 3);
+                    transientEffect(effect, 0.24f);
+                } else {
+                    var effect = attached("guard", entity, false);
+                    effect.setRotation(new Quaternionf().rotationY((float) Math.atan2(vector.x, vector.z)));
+                    effect.effect().setLiveParam("source_elevation", Value.of((float) Math.clamp(vector.y, -1, 1)));
+                    transientEffect(effect, 0.65f);
+                }
+            }
+
+            private static ActiveEffect spawn(String name, Vec3 position) {
+                var effect = VfxGraphManager.INSTANCE.spawn(AcademyCraft.academy("vfxgraph/iron_sand_" + name), position.toVector3f());
+                effect.bindGameTime("time");
+                effect.setRenderDistance(64);
+                effect.effect().setLiveParam("seed", Value.of((float) (level == null ? 42 : level.getGameTime() % 100000)));
+                return effect;
+            }
+
+            private static void transientEffect(ActiveEffect effect, float duration) {
+                effect.setGameTimeLifetimeSeconds(duration);
+                TRANSIENTS.removeIf(ActiveEffect::isExpired);
+                while (TRANSIENTS.size() >= 24) TRANSIENTS.removeFirst().stop();
+                TRANSIENTS.addLast(effect);
+            }
+
+            private static float detail(Entity entity) {
+                var mc = Minecraft.getInstance();
+                float quality = mc.options.particles().get() == ParticleStatus.MINIMAL ? 0.35f
+                        : mc.options.particles().get() == ParticleStatus.DECREASED ? 0.65f : 1;
+                return mc.player != null && mc.player.distanceToSqr(entity) > 32 * 32 ? quality * 0.5f : quality;
+            }
+
+            public static void clear() {
+                RINGS.values().forEach(ActiveEffect::stop);
+                CLOUDS.values().forEach(ActiveEffect::stop);
+                TRANSIENTS.forEach(ActiveEffect::stop);
+                RINGS.clear();
+                CLOUDS.clear();
+                TRANSIENTS.clear();
+                level = null;
+            }
+        }
+
+        public static final class ElectromasterWeaponVfxClient {
+            private ElectromasterWeaponVfxClient() {
+            }
+
+            private static boolean registered;
+
+            public static void register() {
+                if (registered) return;
+                registered = true;
+                IronSandArsenal.Client.IronSandVfxClient.clear();
+            }
+        }
+
         public static final String KEY_TOGGLE = SkillNames.IRON_SAND_ARSENAL + "_toggle";
         public static final String KEY_USE = SkillNames.IRON_SAND_ARSENAL + "_use";
         public static Config CONFIG = new Config();
@@ -158,7 +324,7 @@ public class IronSandArsenal extends Skill {
                     && Minecraft.getInstance().player.getData(AttachmentTypes.IRON_SAND_DATA.get()).defense());
             ToggleStatusHud.Companion.registerDetailProvider(skill, () -> String.format(Locale.ROOT, "%.1f / %.1f MP",
                     AbilitySystemClient.getCurrMP(), AbilitySystemClient.getMaxMP()));
-            ElectromasterWeaponVfxClient.register();
+            IronSandArsenal.Client.ElectromasterWeaponVfxClient.register();
         }
 
         private static void stop(boolean cancel) {
@@ -171,17 +337,17 @@ public class IronSandArsenal extends Skill {
 
         @SubscribePacket
         public static void handleSweepVisual(SweepVisualPacket packet) {
-            IronSandVfxClient.whip(packet.entityId());
+            IronSandArsenal.Client.IronSandVfxClient.whip(packet.entityId());
         }
 
         @SubscribePacket
         public static void handleDefenseVisual(DefenseVisualPacket packet) {
-            IronSandVfxClient.defenseEvent(packet.entityId, packet.intercept, packet.vector);
+            IronSandArsenal.Client.IronSandVfxClient.defenseEvent(packet.entityId, packet.intercept, packet.vector);
         }
 
         @SubscribeEvent
         public static void onClientTick(ClientTickEvent.Post event) {
-            IronSandVfxClient.tick();
+            IronSandArsenal.Client.IronSandVfxClient.tick();
             if (activeSequence != 0 && (Minecraft.getInstance().player == null || Minecraft.getInstance().gui.screen() != null))
                 stop(true);
         }
@@ -190,7 +356,7 @@ public class IronSandArsenal extends Skill {
         public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
             activeSequence = 0;
             sequence = 0;
-            IronSandVfxClient.clear();
+            IronSandArsenal.Client.IronSandVfxClient.clear();
         }
 
         public static class Config extends KeyBindingConfig {

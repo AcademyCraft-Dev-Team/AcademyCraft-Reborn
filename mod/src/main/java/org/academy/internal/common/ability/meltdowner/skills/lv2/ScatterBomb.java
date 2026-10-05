@@ -11,13 +11,11 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -40,6 +38,7 @@ import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -125,7 +124,7 @@ public final class ScatterBomb extends Skill {
         public static Config CONFIG = new Config();
         private static boolean charging;
         private static int chargeTicks;
-        private static InputSystem.InputType heldInputType;
+        private static InputSystem.@Nullable InputType heldInputType;
         private static int heldInput = -1;
 
         private Client() {
@@ -238,7 +237,7 @@ public final class ScatterBomb extends Skill {
             }
 
             var skill = Skills.SCATTER_BOMB.get();
-            skill.executeActive(player, (ctx, actualCost) -> {
+            skill.executeActive(player, (ctx, _) -> {
                 var level = player.level();
                 level.playSound(null, player, SoundEvents.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get(),
                         SoundSource.PLAYERS, 1.0f, 1.0f);
@@ -261,7 +260,6 @@ public final class ScatterBomb extends Skill {
                     if (ctx.milestone() >= 3) state.retargetMarked(player, beam);
                     beam.currentChargerTicks = beam.getAttackDelayTicks();
                     beam.setHeldCharge(false);
-                    beam.setBetaTrailOnFire(true);
                 }
             });
             if (state.beams.stream().allMatch(HighSpeedElectronBeam::isHeldCharge)) state.cleanup();
@@ -327,19 +325,10 @@ public final class ScatterBomb extends Skill {
             }
 
             private static void position(ServerPlayer player, HighSpeedElectronBeam beam, int index) {
-                var eyePos = player.getEyePosition().add(0.0, -0.5, 0.0);
-                var forward = player.getLookAngle().normalize();
-                var right = forward.cross(new Vec3(0.0, 1.0, 0.0));
-                if (right.lengthSqr() < 1.0e-6) right = new Vec3(1.0, 0.0, 0.0);
-                right = right.normalize();
-                var up = right.cross(forward).normalize();
                 var maximum = Skills.SCATTER_BOMB.get().hasProficiencyMilestone(player, 2) ? 8 : BEAM_COUNT;
-                var angle = index * Math.PI * 2.0 / maximum;
-                var offset = right.scale(Math.cos(angle) * 0.9)
-                        .add(up.scale(Math.sin(angle) * 0.405));
-                beam.setPos(eyePos.add(forward.scale(1.75)).add(offset));
-                beam.setYRot(player.getYRot());
-                beam.setXRot(player.getXRot());
+                var attachment = new HighSpeedElectronBeam.OrbitAttachment(player.getId(), index, maximum);
+                beam.setAttachment(attachment);
+                attachment.apply(player, beam);
             }
 
             private void retargetMarked(ServerPlayer player, HighSpeedElectronBeam beam) {

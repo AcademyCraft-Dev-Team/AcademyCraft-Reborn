@@ -6,7 +6,6 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
-import org.academy.api.common.vfx.SkillVfxState;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
 
 public class GlowCircle extends RenderOnlyEntity {
@@ -23,22 +22,6 @@ public class GlowCircle extends RenderOnlyEntity {
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         builder.define(OWNER_ENTITY_ID, -1);
-    }
-
-    public void setEffectOwner(int entityId) {
-        entityData.set(OWNER_ENTITY_ID, entityId);
-    }
-
-    public int getEffectOwnerId() {
-        return entityData.get(OWNER_ENTITY_ID);
-    }
-
-    public void applyVisualSnapshot(SkillVfxState.DistortionRing state) {
-        if (!level().isClientSide()) throw new IllegalStateException("Visual snapshot on server");
-        setPos(state.position());
-        setXRot(state.xRot());
-        setYRot(state.yRot());
-        setEffectOwner(state.ownerEntityId());
     }
 
     @Override

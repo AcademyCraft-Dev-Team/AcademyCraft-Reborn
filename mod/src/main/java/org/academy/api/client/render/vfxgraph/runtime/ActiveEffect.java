@@ -6,6 +6,9 @@ import org.academy.api.client.render.graph.model.Graph;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.vfxgraph.GraphEffect;
 import org.academy.api.client.render.vfxgraph.arc.EffectArcSource;
+import org.academy.api.client.render.vfxgraph.block.BlockGeometryFrame;
+import org.academy.api.client.render.vfxgraph.block.EffectBlockGeometrySource;
+import org.academy.api.client.render.vfxgraph.instance.EffectInstanceGeometrySource;
 import org.academy.api.client.render.vfxgraph.model.VfxSystem;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxNodeRegistry;
@@ -44,6 +47,8 @@ public final class ActiveEffect {
     private final Map<String, Supplier<Value>> bindings = new LinkedHashMap<>();
     private final Map<String, SurfaceProjector> surfaces = new LinkedHashMap<>();
     private final Map<String, EffectArcSource> arcSources = new LinkedHashMap<>();
+    private @Nullable EffectInstanceGeometrySource instanceGeometrySource;
+    private @Nullable EffectBlockGeometrySource blockGeometrySource;
 
     /**
      * Bind procedural local paths without rebuilding the graph or allocating an effect per stroke.
@@ -51,6 +56,28 @@ public final class ActiveEffect {
     public void bindArcs(String name, EffectArcSource source) {
         arcSources.put(name, Objects.requireNonNull(source));
         effect.setArcSource(name, source);
+    }
+
+    /**
+     * Bind custom textured instanced geometry (E7); the source rewrites its
+     * buffers every simulation tick in effect-local coordinates.
+     */
+    public void bindInstanceGeometry(EffectInstanceGeometrySource source) {
+        instanceGeometrySource = Objects.requireNonNull(source);
+        effect.setInstanceGeometrySource(source);
+    }
+
+    /**
+     * Bind baked block-model geometry (E2); the source rewrites its
+     * per-layer buffers every simulation tick in world coordinates.
+     */
+    public void bindBlockGeometry(EffectBlockGeometrySource source) {
+        blockGeometrySource = Objects.requireNonNull(source);
+        effect.setBlockGeometrySource(source);
+    }
+
+    public @Nullable BlockGeometryFrame blockGeometryFrame() {
+        return effect.blockGeometryFrame();
     }
 
     private final Map<String, SurfaceSampler> samplers = new LinkedHashMap<>();
@@ -367,6 +394,12 @@ public final class ActiveEffect {
         surfaces.forEach(effect::setSurfaceProjector);
         samplers.forEach(effect::setSurfaceSampler);
         arcSources.forEach(effect::setArcSource);
+        if (instanceGeometrySource != null) {
+            effect.setInstanceGeometrySource(instanceGeometrySource);
+        }
+        if (blockGeometrySource != null) {
+            effect.setBlockGeometrySource(blockGeometrySource);
+        }
         return false;
     }
 
@@ -392,6 +425,12 @@ public final class ActiveEffect {
         surfaces.forEach(effect::setSurfaceProjector);
         samplers.forEach(effect::setSurfaceSampler);
         arcSources.forEach(effect::setArcSource);
+        if (instanceGeometrySource != null) {
+            effect.setInstanceGeometrySource(instanceGeometrySource);
+        }
+        if (blockGeometrySource != null) {
+            effect.setBlockGeometrySource(blockGeometrySource);
+        }
         for (var entry : bindings.entrySet()) {
             effect.setLiveParam(entry.getKey(), entry.getValue().get());
         }
@@ -406,6 +445,12 @@ public final class ActiveEffect {
         surfaces.forEach(effect::setSurfaceProjector);
         samplers.forEach(effect::setSurfaceSampler);
         arcSources.forEach(effect::setArcSource);
+        if (instanceGeometrySource != null) {
+            effect.setInstanceGeometrySource(instanceGeometrySource);
+        }
+        if (blockGeometrySource != null) {
+            effect.setBlockGeometrySource(blockGeometrySource);
+        }
         for (var entry : bindings.entrySet()) {
             effect.setLiveParam(entry.getKey(), entry.getValue().get());
         }

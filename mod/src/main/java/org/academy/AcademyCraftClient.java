@@ -5,6 +5,12 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.math.Axis;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.function.BiConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.ClientAvatarEntity;
 import net.minecraft.client.model.EntityModel;
@@ -48,7 +54,6 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.render.Render;
 import org.academy.api.client.render.post.GlowEffect;
 import org.academy.api.client.render.post.PostEffect;
-import org.academy.api.client.render.vfx.VfxManager;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.api.client.renderer.CylinderRenderer;
 import org.academy.api.client.sync.ClientSyncManager;
@@ -81,15 +86,20 @@ import org.academy.internal.client.hud.HudManager;
 import org.academy.internal.client.particle.*;
 import org.academy.internal.client.profiler.ProfilerClientHooks;
 import org.academy.internal.client.render.fluid.ImagPhaseFluidRenderer;
-import org.academy.internal.client.render.vfx.*;
+import org.academy.internal.client.render.vfxgraph.VfxContexts;
 import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
 import org.academy.internal.client.renderer.entity.layers.CloudroomLayer;
 import org.academy.internal.client.renderer.entity.layers.quantum.QuantumInterferenceLayer;
 import org.academy.internal.client.renderer.special.*;
 import org.academy.internal.client.time.TemporalClientRuntime;
 import org.academy.internal.client.world.item.ImagPhaseDowsingRodClient;
+import org.academy.internal.common.ability.accelerator.Accelerator;
+import org.academy.internal.common.ability.accelerator.skills.lv5.PlasmaGeneration;
+import org.academy.internal.common.ability.darkmatter.Darkmatter;
+import org.academy.internal.common.ability.electromaster.Electromaster;
 import org.academy.internal.common.ability.proficiency.ProficiencyPolicy;
 import org.academy.internal.common.ability.teleport.network.InstantTeleportSyncPacket;
+import org.academy.internal.common.ability.teleport.skills.lv5.SpacialExcision;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.network.*;
@@ -102,15 +112,21 @@ import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.function.BiConsumer;
-
 import static org.academy.AcademyCraft.academy;
 import static org.academy.AcademyCraft.vanilla;
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 @EventBusSubscriber(Dist.CLIENT)
 @Mod(value = AcademyCraft.MOD_ID, dist = Dist.CLIENT)
@@ -144,26 +160,20 @@ public final class AcademyCraftClient {
         SkillVfxPacket.initClient();
         MagneticSupportPacket.initClient();
         DarkmatterVisualPacket.initClient();
-        ShockwaveVfx.register();
-        GlowCircleVfx.register();
         ProficiencyPolicy.initClient();
         SkillTuning.initClient();
         PvpSetting.initClient();
         ProficiencySkillSettingsClient.init();
         ClientSyncManager.init();
         ImagPhaseDowsingRodClient.init();
-        BeamVfxClient.register();
-        SmokeVfxClient.register();
-        DarkmatterSlashVfx.register();
-        ArcVfxClient.register();
-        WingVfxClient.register();
-        PlasmaVfxClient.register();
-        SkyStrikeVfxClient.register();
+        Accelerator.Client.registerWings();
+        PlasmaGeneration.Client.PlasmaVfxClient.register();
+        Electromaster.Client.registerSkyStrike();
     }
 
     public static void initRender() {
         Render.init();
-        VfxManager.INSTANCE.init();
+        SpacialExcision.Client.Vfx.init();
         VfxGraphManager.INSTANCE.init();
         if (isUiDebugEnvironment()) {
             var root = Minecraft.getInstance().gameDirectory.toPath().resolve("vfxgraph");
@@ -457,11 +467,11 @@ public final class AcademyCraftClient {
         FontRepository.INSTANCE.close();
 
         AtlasManager.INSTANCE.closeAll();
-        SpacialExcisionVfxClient.close();
+        SpacialExcision.Client.Vfx.close();
         PostEffect.close();
-        InterferenceFieldClient.close();
+        Darkmatter.Client.InterferenceFieldClient.close();
         GlowEffect.getInstance().close();
-        VfxManager.INSTANCE.close();
+        VfxContexts.close();
         VfxGraphManager.INSTANCE.close();
         Render.close();
     }
@@ -542,15 +552,6 @@ public final class AcademyCraftClient {
                 AbilityDeveloperSleepClient.extract(avatar, renderState);
                 renderState.setRenderData(CloudroomLayer.VISIBLE,
                         CloudroomLayer.shouldReveal(avatar));
-                renderState.setRenderData(ElectromasterWeaponVfx.ENTITY_ID_CONTEXT, avatar.getId());
-                renderState.setRenderData(
-                        ElectromasterWeaponVfx.MAGNETIC_CONTEXT,
-                        avatar.getData(AttachmentTypes.MAGNETIC_WEAPON_DATA)
-                );
-                renderState.setRenderData(
-                        ElectromasterWeaponVfx.IRON_SAND_CONTEXT,
-                        avatar.getData(AttachmentTypes.IRON_SAND_DATA)
-                );
             }
         });
         event.registerEntityModifier(

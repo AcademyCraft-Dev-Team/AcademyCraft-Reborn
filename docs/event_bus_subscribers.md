@@ -1,6 +1,6 @@
 # `@EventBusSubscriber` 不写 `modid`
 
-## 1. 结论
+## 要求
 
 本项目所有 `@EventBusSubscriber` 一律**不写 `modid`**。
 

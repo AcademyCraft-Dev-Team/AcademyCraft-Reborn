@@ -18,14 +18,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Public access to the per-server ability system. The implementation registers one backend per
- * running server; callers resolve it from the acting entity.
- */
 public final class AbilityServerAccess {
-    /**
-     * Implementation-provided backend; registered once per running server.
-     */
     public interface Backend {
         AbilityCategory getPlayerAbilityCategory(UUID uuid);
 

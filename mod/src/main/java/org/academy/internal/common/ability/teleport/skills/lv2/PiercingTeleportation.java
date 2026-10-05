@@ -27,7 +27,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.ability.teleport.TeleportDistanceConfig;
-import org.academy.internal.client.render.vfx.TeleportCursorRenderer;
+import org.academy.internal.common.ability.teleport.Teleport;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -171,7 +171,7 @@ public final class PiercingTeleportation extends Skill {
                 var dimensions = player.getDimensions(Pose.STANDING);
                 validDestination = candidate != null;
                 var feetPosition = center.add(0, -dimensions.height() / 2.0, 0);
-                TeleportCursorRenderer.render(
+                Teleport.Client.TeleportCursorRenderer.render(
                         event,
                         feetPosition,
                         validDestination && TeleportTargeting.isSafeCenter(player, center)

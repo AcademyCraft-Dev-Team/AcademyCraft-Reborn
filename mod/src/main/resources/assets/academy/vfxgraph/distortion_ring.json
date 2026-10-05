@@ -1,0 +1,109 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "distortion_ring",
+  "parameters": [],
+  "contexts": [
+    {
+      "id": "ctx_spawn",
+      "type": "SPAWN",
+      "name": "Spawn",
+      "x": 0.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "spawn_ring",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "1",
+            "shape": "point",
+            "radius": "0",
+            "size": "1",
+            "lifetime": "1",
+            "origin_x": "0",
+            "origin_y": "0",
+            "origin_z": "0"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ctx_init",
+      "type": "INITIALIZE",
+      "name": "Initialize",
+      "x": 440.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "life",
+          "type": "vfx.block.init_lifetime",
+          "properties": {
+            "lifetime": "1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ctx_update",
+      "type": "UPDATE",
+      "name": "Update",
+      "x": 880.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "live",
+          "type": "vfx.block.update_live",
+          "properties": {
+            "layer": "",
+            "size_param": "radius",
+            "size_scale": "1"
+          }
+        },
+        {
+          "id": "age",
+          "type": "vfx.block.update_age",
+          "properties": {}
+        }
+      ]
+    },
+    {
+      "id": "ctx_output",
+      "type": "OUTPUT",
+      "name": "Output",
+      "x": 1320.0,
+      "y": 0.0,
+      "blocks": [
+        {
+          "id": "ring_out",
+          "type": "vfx.block.output_distortion_ring",
+          "properties": {
+            "layer": "",
+            "distortion_strength": "0.025",
+            "distortion_ring_width": "0.5",
+            "distortion_edge_blur": "0.05"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "ctx_spawn",
+      "to": "ctx_init"
+    },
+    {
+      "from": "ctx_init",
+      "to": "ctx_update"
+    },
+    {
+      "from": "ctx_update",
+      "to": "ctx_output"
+    }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "ring_out"
+  ]
+}

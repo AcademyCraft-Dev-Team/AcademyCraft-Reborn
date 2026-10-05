@@ -31,7 +31,7 @@ private val LOGGER = AcademyCraft.getLogger()
 @ApiStatus.Internal
 class ImGuiBackend(
     private val windowHandle: Long,
-    private val inputBackend: ImGuiInputBackend,
+    private val inputBackend: ImGuiImplSdl,
 ) {
     private var initialized = false
     private var frameOpen = false
@@ -144,7 +144,6 @@ class ImGuiBackend(
         fontAtlasWidth = atlasWidth
         fontAtlasHeight = atlasHeight
 
-        fonts.clearInputData()
         LOGGER.info(
             "[ImGui] Prepared font atlas {}x{}",
             atlasWidth,

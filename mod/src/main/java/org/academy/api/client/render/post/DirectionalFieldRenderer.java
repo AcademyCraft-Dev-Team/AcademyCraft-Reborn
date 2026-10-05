@@ -196,7 +196,7 @@ public final class DirectionalFieldRenderer {
         if (bounds != null && (bounds.width == 0 || bounds.height == 0)) return;
         var nearest = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST);
         var bindings = List.of(
-                new TextureBinding("SceneDepth", WorldSurfaceMasks.opaque().getDepthTextureView(), nearest),
+                new TextureBinding("SceneDepth", WorldSurfaceMasks.sceneDepth(), nearest),
                 new TextureBinding("TransparentDepth", WorldSurfaceMasks.transparent().getDepthTextureView(), nearest),
                 new TextureBinding("TransparentMask", WorldSurfaceMasks.transparent().getColorTextureView(), nearest),
                 new TextureBinding("EntityMask", WorldSurfaceMasks.entities().getColorTextureView(), nearest),

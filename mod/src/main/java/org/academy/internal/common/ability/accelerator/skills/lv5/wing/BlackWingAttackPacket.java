@@ -1,12 +1,14 @@
 package org.academy.internal.common.ability.accelerator.skills.lv5.wing;
 
 import io.netty.buffer.ByteBuf;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.ability.VortexAttackPattern;
-import org.academy.internal.client.render.vfx.WingVfx;
+import org.academy.internal.common.ability.accelerator.Accelerator;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.api.common.network.ThreadType;
@@ -15,8 +17,8 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.ArrayList;
-import java.util.List;
+
+
 
 /**
  * Server-selected pattern and fixed world targets, shared by the attacker and observers.
@@ -127,7 +129,7 @@ public final class BlackWingAttackPacket extends Packet<ClientPacketListener, Bl
 
         @SubscribePacket
         public static void handle(BlackWingAttackPacket packet) {
-            WingVfx.enqueueBlackAttack(packet.entityId, packet.pattern, packet.targets,
+            Accelerator.Client.WingVfx.enqueueBlackAttack(packet.entityId, packet.pattern, packet.targets,
                     packet.epoch, packet.sequence, packet.initialProgress);
         }
     }

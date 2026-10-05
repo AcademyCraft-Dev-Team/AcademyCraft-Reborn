@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "sky_strike_flash",
+  "parameters": [
+    {
+      "id": "flash_alpha",
+      "name": "flash alpha",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    },
+    {
+      "id": "flash_cap",
+      "name": "flash cap",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "flash",
+      "type": "SPAWN",
+      "name": "01 / screen flash particle",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "burst",
+          "type": "vfx.block.spawn_burst",
+          "properties": {
+            "count": "1",
+            "lifetime": "100",
+            "size": "1",
+            "color": "0.8,0.93,1,0",
+            "layer": "flash"
+          }
+        },
+        {
+          "id": "live",
+          "type": "vfx.block.update_live",
+          "properties": {
+            "alpha_param": "flash_alpha",
+            "alpha_scale": "1",
+            "layer": "flash"
+          }
+        }
+      ]
+    },
+    {
+      "id": "output",
+      "type": "OUTPUT",
+      "name": "02 / screen flash",
+      "x": 650,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "flash_out",
+          "type": "vfx.block.output_screen_flash",
+          "properties": {
+            "vertex": "academy:core/vfx_screen_flash",
+            "shader": "academy:core/vfx_screen_flash",
+            "blend": "translucent",
+            "layer": "flash",
+            "cap": "1"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "flash",
+      "to": "output"
+    }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "flash_out"
+  ]
+}

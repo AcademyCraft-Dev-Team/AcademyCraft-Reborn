@@ -9,13 +9,6 @@ plugins {
 
 val neoVersion = libs.versions.neoforge.get()
 
-java {
-    toolchain {
-        @Suppress("UnstableApiUsage")
-        vendor.set(JvmVendorSpec.JETBRAINS)
-        languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get()))
-    }
-}
 
 sourceSets.named("test") {
     compileClasspath += sourceSets.named("main").get().compileClasspath

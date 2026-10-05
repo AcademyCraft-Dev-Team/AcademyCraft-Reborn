@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "vector_redirect_muzzle",
+  "parameters": [
+    {
+      "id": "time",
+      "name": "time",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": -1
+      }
+    },
+    {
+      "id": "seed",
+      "name": "seed",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 42
+      }
+    },
+    {
+      "id": "width_scale",
+      "name": "width scale",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "opacity",
+      "name": "opacity",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "shrink",
+      "name": "收缩包络",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0,
+            "v": 1,
+            "i": "SMOOTH",
+            "it": 0,
+            "ot": 0
+          },
+          {
+            "t": 1,
+            "v": 0,
+            "i": "SMOOTH",
+            "it": 0,
+            "ot": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "beam_opacity",
+      "name": "透明度包络",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0,
+            "v": 1,
+            "i": "SMOOTH",
+            "it": 0,
+            "ot": 0
+          },
+          {
+            "t": 1,
+            "v": 1,
+            "i": "SMOOTH",
+            "it": 0,
+            "ot": 0
+          }
+        ]
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "ball",
+      "type": "SPAWN",
+      "name": "01 / 折返点充能球",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "ball",
+          "type": "vfx.block.axial_beam",
+          "properties": {
+            "length": "0.37",
+            "radius": "0.185",
+            "duration": "0.35",
+            "end_cap": "1",
+            "segments": "16",
+            "travel_time": "0",
+            "radius_curve": "shrink",
+            "opacity_curve": "beam_opacity",
+            "red": "1",
+            "green": "1",
+            "blue": "1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "render",
+      "type": "OUTPUT",
+      "name": "02 / 电弧材质输出",
+      "x": 650,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "ball_out",
+          "type": "vfx.block.output_arc",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_arc",
+            "shader": "academy:core/vfxgraph_axial_burst",
+            "blend": "glow",
+            "layer": "electricity",
+            "thickness": "1",
+            "emission": "1.15",
+            "sparks": "0",
+            "segments": "16",
+            "overall_scale": "1",
+            "branch_depth": "0",
+            "branch_count": "0",
+            "noise_strength": "0",
+            "drift_speed": "0",
+            "branch_brightness_scale": "1"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "ball",
+      "to": "render"
+    }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "ball_out"
+  ]
+}

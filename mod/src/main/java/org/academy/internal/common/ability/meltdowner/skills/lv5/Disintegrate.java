@@ -228,7 +228,6 @@ public class Disintegrate extends Skill {
             beam.setAttackDelayTicks(0);
             beam.setBeamLength((float) delta.length() + 0.8f);
             beam.setBeamScale(stage == 0 ? 1.45f : 1.05f);
-            beam.setBetaTrailOnFire(true);
             if (stage == 0) {
                 beam.setVisualSideOffset(ContinuousBeam.mainHandVisualSideOffset(player));
             }

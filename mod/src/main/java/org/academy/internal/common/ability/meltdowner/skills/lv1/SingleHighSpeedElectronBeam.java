@@ -45,6 +45,7 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
+import org.academy.internal.common.ability.meltdowner.Meltdowner;
 
 public final class SingleHighSpeedElectronBeam extends Skill {
     public static final String CONFIG_ATTACK_DELAY_TICKS = "attackDelayTicks";
@@ -177,6 +178,7 @@ public final class SingleHighSpeedElectronBeam extends Skill {
 
     @Override
     public void initClient() {
+        Meltdowner.Client.registerBeamSession();
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Handler.INSTANCE);
         var skillKeyConfig = AcademyCraftClient.Config.INSTANCE.<Client.Config>getConfig(key);

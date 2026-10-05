@@ -91,7 +91,7 @@ public final class ElectricAttachmentEmitter {
             var source = ctx.arcSource(block.properties().getOrDefault("source", "paths"));
             // A real procedural input replaces the editor's animated example, including an empty input.
             var paths = source == null ? preview(time) : source.sample(time);
-            int[] remaining = {Math.round(value(block, ctx, "max_paths", 16, 1, 16))};
+            int[] remaining = {Math.round(value(block, ctx, "max_paths", 16, 1, 64))};
             int maxPoints = Math.round(value(block, ctx, "max_points", 128, 8, 128));
             float width = value(block, ctx, "width", 0.035f, 0.001f, 1);
             float shapeTime = time * value(block, ctx, "flicker_rate", 18, 1, 40);

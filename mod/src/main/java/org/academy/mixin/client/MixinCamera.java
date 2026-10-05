@@ -9,7 +9,7 @@ import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
 import org.academy.internal.client.ability.mentalout.WideAreaInterferenceClientState;
 import org.academy.internal.client.ability.teleport.ChunkLeapGodView;
 import org.academy.internal.client.animation.AbilityDeveloperSleepClient;
-import org.academy.internal.client.render.vfx.CameraShakeManager;
+import org.academy.internal.client.render.vfxgraph.CameraShakeManager;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.gen.Invoker;

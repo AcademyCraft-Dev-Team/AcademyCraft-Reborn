@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "wing_tornado_white",
+  "parameters": [],
+  "contexts": [
+    {
+      "id": "out",
+      "type": "OUTPUT",
+      "name": "white tornado rings",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "tornado_out",
+          "type": "vfx.block.output_instanced_tex",
+          "properties": {
+            "blend": "translucent",
+            "texture": "academy:textures/ability/accelerator/skill/white_wing/effect/tornado_ring.png",
+            "topology": "quads"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "tornado_out"
+  ]
+}

@@ -1,16 +1,12 @@
 package org.academy.internal.common.world.entity.skill;
 
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -24,7 +20,10 @@ import org.academy.internal.common.ability.meltdowner.beam.MeltdownerBeamDamage;
 import org.academy.internal.common.ability.meltdowner.skills.lv1.RadiationIntensify;
 import org.academy.internal.common.ability.meltdowner.skills.lv2.MiningBeam;
 import org.academy.internal.common.ability.meltdowner.targeting.MeltdownerTargeting;
-import org.academy.internal.common.ability.shared.linear.*;
+import org.academy.internal.common.ability.shared.linear.LinearAttackExecutor;
+import org.academy.internal.common.ability.shared.linear.LinearAttackPayload;
+import org.academy.internal.common.ability.shared.linear.LinearReflectionResolver;
+import org.academy.internal.common.ability.shared.linear.LinearSegment;
 import org.academy.internal.common.util.LevelUtil;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
 import org.jspecify.annotations.Nullable;
@@ -97,23 +96,31 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
     public boolean shouldStopRay = true;
     public float length = 50f;
     public boolean fired = false;
-    private UUID ownerId;
-    private UUID ignoredTargetId;
-    private Skill sourceSkill;
+    private @Nullable UUID ownerId;
+    private @Nullable UUID ignoredTargetId;
+    private @Nullable Skill sourceSkill;
     private float baseDamage;
     private float targetMaxHealthDamageRatio;
     private float abilityPower = 1.0f;
     private float playerDamageMultiplier;
     private boolean powerScaledBase;
     private boolean radiationEnabled;
-    private boolean betaTrailOnFire;
     private boolean outputAdjustmentBypassed;
     private boolean destroysProjectiles;
     private int proficiencyMilestone;
+    private @Nullable OrbitAttachment attachment;
 
     public HighSpeedElectronBeam(EntityType<?> entityType, Level level) {
         super(entityType, level);
         setNoGravity(false);
+    }
+
+    public @Nullable OrbitAttachment getAttachment() {
+        return attachment;
+    }
+
+    public void setAttachment(@Nullable OrbitAttachment attachment) {
+        this.attachment = attachment;
     }
 
     private void destroyBlocks(
@@ -141,26 +148,6 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
                 false,
                 breaker
         );
-    }
-
-    private static void spawnBetaTrail(ServerLevel level, ResolvedLinearAttack attack) {
-        for (var segment : attack.segments()) {
-            var delta = segment.delta();
-            for (var step = 0; step <= 12; step++) {
-                var point = segment.start().add(delta.scale(step / 12.0));
-                level.sendParticles(
-                        ParticleTypes.ELECTRIC_SPARK,
-                        point.x,
-                        point.y,
-                        point.z,
-                        1,
-                        0.02,
-                        0.02,
-                        0.02,
-                        0.01
-                );
-            }
-        }
     }
 
     public void configure(
@@ -231,6 +218,11 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
                 playerDamageMultiplier, radiationEnabled, destroysBlocks, proficiencyMilestone);
         this.abilityPower = Math.max(0.0f, abilityPower);
         powerScaledBase = true;
+    }
+
+    @Override
+    protected InterpolationHandler createInterpolationHandler() {
+        return LinearInterpolationHandler.create(this);
     }
 
     @Override
@@ -405,10 +397,6 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
             );
         } else clearReflection();
         LinearAttackExecutor.executeReturn(level, attack, payload, outboundResult);
-        if (betaTrailOnFire) {
-            spawnBetaTrail(level, attack);
-            betaTrailOnFire = false;
-        }
     }
 
     private @Nullable ServerPlayer resolveOwner(ServerLevel level) {
@@ -433,6 +421,9 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         setPos(state.position());
         setXRot(state.xRot());
         setYRot(state.yRot());
+        attachment = state.attached()
+                ? new OrbitAttachment(state.ownerEntityId(), state.orbitIndex(), state.orbitCount())
+                : null;
         setBeamLength(state.length());
         setBeamScale(state.scale());
         setVisualSideOffset(state.sideOffset());
@@ -452,7 +443,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         return currentChargerTicks < getAttackDelayTicks();
     }
 
-    public void setIgnoredTarget(Entity target) {
+    public void setIgnoredTarget(@Nullable Entity target) {
         ignoredTargetId = target == null ? null : target.getUUID();
     }
 
@@ -516,7 +507,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
 
     private static void destroyProjectiles(
             ServerLevel level,
-            ServerPlayer effectiveOwner,
+            @Nullable ServerPlayer effectiveOwner,
             LinearSegment segment
     ) {
         if (effectiveOwner == null || !segment.hasFiniteCoordinates()) return;
@@ -537,10 +528,6 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         )) {
             projectile.discard();
         }
-    }
-
-    public void setBetaTrailOnFire(boolean betaTrailOnFire) {
-        this.betaTrailOnFire = betaTrailOnFire;
     }
 
     public void setReflection(float distance) {
@@ -607,5 +594,44 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
     private void markFired() {
         fired = true;
         entityData.set(RAY_FIRED, true);
+    }
+
+    public record OrbitAttachment(int ownerEntityId, int index, int count) {
+        private static final Vec3 WORLD_UP = new Vec3(0.0, 1.0, 0.0);
+        private static final double AXIS_EPSILON_SQUARED = 1.0e-6;
+        private static final double EYE_DROP = 0.5;
+        private static final double FORWARD_DISTANCE = 1.75;
+        private static final double HORIZONTAL_RADIUS = 0.9;
+        private static final double VERTICAL_RADIUS = 0.405;
+
+        public void apply(Entity owner, Entity target) {
+            target.setXRot(owner.getXRot());
+            target.setYRot(owner.getYRot());
+            target.setPos(origin(owner.getEyePosition(), owner.getLookAngle()));
+        }
+
+        public Vec3 origin(Entity owner, float partialTick) {
+            return origin(owner.getEyePosition(partialTick), Vec3.directionFromRotation(
+                    xRot(owner, partialTick), yRot(owner, partialTick)));
+        }
+
+        public float xRot(Entity owner, float partialTick) {
+            return Mth.lerp(partialTick, owner.xRotO, owner.getXRot());
+        }
+
+        public float yRot(Entity owner, float partialTick) {
+            return Mth.rotLerp(partialTick, owner.yRotO, owner.getYRot());
+        }
+
+        private Vec3 origin(Vec3 eye, Vec3 forward) {
+            var right = forward.cross(WORLD_UP);
+            if (right.lengthSqr() < AXIS_EPSILON_SQUARED) right = new Vec3(1.0, 0.0, 0.0);
+            right = right.normalize();
+            var up = right.cross(forward).normalize();
+            var angle = index * Math.PI * 2.0 / count;
+            var offset = right.scale(Math.cos(angle) * HORIZONTAL_RADIUS)
+                    .add(up.scale(Math.sin(angle) * VERTICAL_RADIUS));
+            return eye.add(0.0, -EYE_DROP, 0.0).add(forward.scale(FORWARD_DISTANCE)).add(offset);
+        }
     }
 }

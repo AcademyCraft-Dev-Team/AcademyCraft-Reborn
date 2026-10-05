@@ -49,7 +49,6 @@ public final class R {
 
         public static final class core {
             public static final Identifier vfx_particle = academy("core/vfx_particle");
-            public static final Identifier vfx_beam = academy("core/vfx_beam");
             public static final Identifier vfx_ring = academy("core/vfx_ring");
             public static final Identifier vfx_tex_billboard = academy("core/vfx_tex_billboard");
             public static final Identifier vfx_sky_strike_quad = academy("core/vfx_sky_strike_quad");
@@ -95,6 +94,12 @@ public final class R {
             public static final Identifier vfxgraph_simple = academy("core/vfxgraph_simple");
             public static final Identifier vfxgraph_arc = academy("core/vfxgraph_arc");
             public static final Identifier vfxgraph_surface = academy("core/vfxgraph_surface");
+            public static final Identifier vfxgraph_distortion_ring = academy("core/vfxgraph_distortion_ring");
+            public static final Identifier vfxgraph_instanced_tex = academy("core/vfxgraph_instanced_tex");
+            public static final Identifier vfxgraph_instanced_tex_model = academy("core/vfxgraph_instanced_tex_model");
+            public static final Identifier vfxgraph_instanced_color = academy("core/vfxgraph_instanced_color");
+            public static final Identifier vfxgraph_cosmic = academy("core/vfxgraph_cosmic");
+            public static final Identifier vfxgraph_block_mesh = academy("core/vfxgraph_block_mesh");
 
             private core() {
             }
@@ -579,10 +584,10 @@ public final class R {
                 private app() {
                 }
 
-                public static final class abilitysettings {
+                public static final class ability_settings {
                     public static final Identifier ability_settings = academy("textures/gui/app/abilitysettings/ability_settings.png");
 
-                    private abilitysettings() {
+                    private ability_settings() {
                     }
                 }
 
@@ -635,16 +640,9 @@ public final class R {
             public static final class element {
                 public static final Identifier app_back = academy("textures/gui/element/app_back.png");
                 public static final Identifier element_background300x32 = academy("textures/gui/element/element_background300x32.png");
-                public static final Identifier element_background_light = academy("textures/gui/element/element_background_light.png");
-                public static final Identifier histogram = academy("textures/gui/element/histogram.png");
                 public static final Identifier line = academy("textures/gui/element/line.png");
-                public static final Identifier logo_tech = academy("textures/gui/element/logo_tech.png");
                 public static final Identifier ui_gen = academy("textures/gui/element/ui_gen.png");
                 public static final Identifier ui_inventory = academy("textures/gui/element/ui_inventory.png");
-                /**
-                 * White disc, tinted per entity category to draw map markers as small dots.
-                 */
-                public static final Identifier map_marker_dot = academy("textures/gui/map/marker_dot.png");
 
                 private element() {
                 }
@@ -655,15 +653,12 @@ public final class R {
                 public static final Identifier arrow = academy("textures/gui/icon/arrow.png");
                 public static final Identifier close = academy("textures/gui/icon/close.png");
                 public static final Identifier icon_accelerator = academy("textures/gui/icon/icon_accelerator.png");
-                public static final Identifier icon_box = academy("textures/gui/icon/icon_box.png");
                 public static final Identifier icon_connected = academy("textures/gui/icon/icon_connected.png");
-                public static final Identifier icon_cycle = academy("textures/gui/icon/icon_cycle.png");
                 public static final Identifier icon_electromaster = academy("textures/gui/icon/icon_electromaster.png");
                 public static final Identifier icon_inv = academy("textures/gui/icon/icon_inv.png");
                 public static final Identifier icon_meltdowner = academy("textures/gui/icon/icon_meltdowner.png");
                 public static final Identifier icon_nocategory = academy("textures/gui/icon/icon_nocategory.png");
                 public static final Identifier icon_node = academy("textures/gui/icon/icon_node.png");
-                public static final Identifier icon_random = academy("textures/gui/icon/icon_random.png");
                 public static final Identifier icon_settings = academy("textures/gui/icon/icon_settings.png");
                 public static final Identifier icon_teleporter = academy("textures/gui/icon/icon_teleporter.png");
                 public static final Identifier icon_tonode = academy("textures/gui/icon/icon_tonode.png");

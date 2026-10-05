@@ -144,7 +144,7 @@ public final class AxialBurstEmitter {
                 }
                 int segments = Math.clamp((int) Math.ceil(span / 0.8f), 28, 96);
                 for (int shell = 0; shell < 2; shell++) {
-                    var arc = BlueWhiteArcStyle.shell(ctx.arcs(), group, random, alpha, shell, "");
+                    var arc = BlueWhiteArcStyle.shell(ctx.arcs(), group, random, alpha, shell, "electricity");
                     for (int i = 0; i <= segments; i++) {
                         float u = (float) i / segments;
                         float bend = (float) Math.sin(u * Math.PI);
@@ -237,6 +237,7 @@ public final class AxialBurstEmitter {
         arc.setLifetime(1);
         arc.setNoiseStrength(0);
         arc.setDriftSpeed(0);
+        arc.setLayer("electricity");
         return arc;
     }
 

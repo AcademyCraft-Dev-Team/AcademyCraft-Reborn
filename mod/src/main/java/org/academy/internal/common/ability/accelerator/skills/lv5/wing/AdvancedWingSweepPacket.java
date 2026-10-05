@@ -8,7 +8,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import org.academy.internal.client.render.vfx.WingVfx;
+import org.academy.internal.common.ability.accelerator.Accelerator;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.api.common.network.ThreadType;
@@ -16,6 +16,8 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+
+
 
 @PacketTarget(ThreadType.CLIENT)
 public final class AdvancedWingSweepPacket extends Packet<ClientPacketListener, AdvancedWingSweepPacket> {
@@ -79,7 +81,7 @@ public final class AdvancedWingSweepPacket extends Packet<ClientPacketListener, 
 
         @SubscribePacket
         public static void handleSweep(AdvancedWingSweepPacket packet) {
-            WingVfx.enqueueSweep(
+            Accelerator.Client.WingVfx.enqueueSweep(
                     toVfxKind(packet.kind),
                     packet.entityId,
                     packet.leftWing,
@@ -90,19 +92,19 @@ public final class AdvancedWingSweepPacket extends Packet<ClientPacketListener, 
 
         @SubscribeEvent
         public static void onClientTick(ClientTickEvent.Post event) {
-            WingVfx.clientTick();
+            Accelerator.Client.WingVfx.clientTick();
         }
 
         @SubscribeEvent
         public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
-            WingVfx.clearSweeps();
+            Accelerator.Client.WingVfx.clearSweeps();
         }
 
-        private static org.academy.internal.client.render.vfx.WingKind toVfxKind(AdvancedWingSweepPacket.WingKind kind) {
+        private static Accelerator.Client.WingKind toVfxKind(AdvancedWingSweepPacket.WingKind kind) {
             return switch (kind) {
-                case BLACK -> org.academy.internal.client.render.vfx.WingKind.BLACK;
-                case WHITE -> org.academy.internal.client.render.vfx.WingKind.WHITE;
-                case PLATINUM -> org.academy.internal.client.render.vfx.WingKind.PLATINUM;
+                case BLACK -> Accelerator.Client.WingKind.BLACK;
+                case WHITE -> Accelerator.Client.WingKind.WHITE;
+                case PLATINUM -> Accelerator.Client.WingKind.PLATINUM;
             };
         }
     }

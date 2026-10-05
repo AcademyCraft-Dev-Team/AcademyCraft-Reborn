@@ -10,7 +10,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
-public class Phase {
+public final class Phase {
     private final StagedVertexBuffer stagedVertexBuffer;
     private final List<PhaseDraw> draws = new ArrayList<>();
     private @Nullable RenderType lastRenderType;

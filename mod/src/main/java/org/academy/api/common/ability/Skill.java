@@ -75,7 +75,7 @@ public abstract class Skill {
     private boolean resolved;
     private final SkillScope scope;
     private final DataFactory dataFactory;
-    private final SkillStateType<?> stateType;
+    private final @Nullable SkillStateType<?> stateType;
     private final int maxSkillLevel;
     /**
      * 技能迭代时间间隔，单位为tick
@@ -104,7 +104,7 @@ public abstract class Skill {
     private final List<DevCondition> devConditions;
     @Nullable
     private String cachedKeyString;
-    private Set<Skill> dependencies = new HashSet<>();
+    private Set<Skill> dependencies;
 
     protected Skill(Builder builder) {
         recommendedLevel = builder.recommendedLevel;
@@ -511,9 +511,6 @@ public abstract class Skill {
                 .value();
     }
 
-    /**
-     * Returns this skill's addon state, separate from enabled/proficiency. Use immutable values.
-     */
     @SuppressWarnings("unchecked")
     public final <T> Optional<T> state(ServerPlayer player, SkillStateType<T> type) {
         if (stateType != type) throw new IllegalArgumentException("State type does not belong to this skill");
@@ -521,9 +518,6 @@ public abstract class Skill {
                 .map(data -> ((CodecSkillData<T>) data).value());
     }
 
-    /**
-     * Validates and persists an addon value on the server thread; false if no supported state exists.
-     */
     @SuppressWarnings("unchecked")
     public final <T> boolean updateState(ServerPlayer player,
                                          SkillStateType<T> type, T value) {
@@ -581,9 +575,6 @@ public abstract class Skill {
         return scope;
     }
 
-    /**
-     * Hidden skills are unfinished content: never learnable, never shown in skill UIs.
-     */
     public boolean isHidden() {
         return hidden;
     }
@@ -641,9 +632,6 @@ public abstract class Skill {
         return cpCost;
     }
 
-    /**
-     * Base cast cost before the server's per-skill cost multiplier is applied at the cast choke point.
-     */
     public final float getCpCost(ServerPlayer player) {
         return adjustProficiencyCost(
                 player,
@@ -676,9 +664,6 @@ public abstract class Skill {
         return isPassive;
     }
 
-    /**
-     * Whether an active damage payment may be regulated by Output Control.
-     */
     public final boolean isOutputAdjustableDamage() {
         return outputAdjustableDamage;
     }
@@ -695,17 +680,10 @@ public abstract class Skill {
         return SkillTuning.iterationTicks(player, this, resolved);
     }
 
-    /**
-     * Server-configured range scale for this skill (1.0 = the skill's own geometry). Skills apply it
-     * to their targeting range and area radius so range changes stay consistent with each other.
-     */
     public final float getRangeMultiplier(ServerPlayer player) {
         return SkillTuning.rangeMultiplier(player, this);
     }
 
-    /**
-     * Scales one of this skill's own geometry values, e.g. {@code scaledRange(player, RANGE)}.
-     */
     public final double scaledRange(ServerPlayer player, double baseRange) {
         var multiplier = getRangeMultiplier(player);
         return Double.isFinite(baseRange) && Float.isFinite(multiplier)
@@ -713,9 +691,6 @@ public abstract class Skill {
                 : baseRange;
     }
 
-    /**
-     * Float variant of {@link #scaledRange(ServerPlayer, double)}.
-     */
     public final float scaledRange(ServerPlayer player, float baseRange) {
         var multiplier = getRangeMultiplier(player);
         return Float.isFinite(baseRange) && Float.isFinite(multiplier)
@@ -727,11 +702,6 @@ public abstract class Skill {
         return resolvedProficiencyProfile();
     }
 
-    /**
-     * Returns whether this skill declared its proficiency behavior through its builder.
-     * External category skills must do so because the built-in profile catalog only
-     * covers skills owned by AcademyCraft itself.
-     */
     public final boolean hasExplicitProficiencyProfile() {
         return explicitProficiencyProfile;
     }
@@ -769,9 +739,6 @@ public abstract class Skill {
         return skillName + "." + name;
     }
 
-    /**
-     * Hook that adjusts a skill's cast cost before CP/MP reservation.
-     */
     @FunctionalInterface
     public interface CastCostModifier {
         float adjust(ServerPlayer player, Skill skill, float baseCost, float currentCost, boolean discreteCast);
@@ -779,9 +746,6 @@ public abstract class Skill {
 
     private static final List<CastCostModifier> CAST_COST_MODIFIERS = new CopyOnWriteArrayList<>();
 
-    /**
-     * Registered once during setup; modifiers run in registration order.
-     */
     public static void registerCastCostModifier(CastCostModifier modifier) {
         CAST_COST_MODIFIERS.add(Objects.requireNonNull(modifier));
     }
@@ -847,7 +811,6 @@ public abstract class Skill {
         private AbilityLevel recommendedLevel = AbilityLevel.LEVEL0;
         private int energyCostToLearn = 5000;
         private int maxSkillLevel = 3;
-        // CP iteration points; zero lets the server derive half of the CP cost.
         private int iterationTicks = 0;
         private int maxStacks = 2;
         private float maintenanceCost = 0f;
@@ -881,7 +844,7 @@ public abstract class Skill {
         }
 
         public static Builder of(DeferredHolder<AbilityCategory, ? extends AbilityCategory> category) {
-            return of(category.getKey());
+            return of(category.key());
         }
 
         public static Builder of(AbilityCategory category) {
@@ -898,9 +861,6 @@ public abstract class Skill {
             return this;
         }
 
-        /**
-         * Marks active attack payments and damage from this skill as output-adjustable.
-         */
         public Builder damage() {
             outputAdjustableDamage = true;
             return this;
@@ -911,10 +871,6 @@ public abstract class Skill {
             return this;
         }
 
-        /**
-         * Marks unfinished content: removes the skill from all skill UIs and rejects development
-         * requests, while leaving the registry entry available for later completion.
-         */
         public Builder hidden() {
             hidden = true;
             return this;
@@ -946,25 +902,16 @@ public abstract class Skill {
             return this;
         }
 
-        /**
-         * 技能迭代tick
-         */
         public Builder iterationTicks(int iterationTicks) {
             this.iterationTicks = iterationTicks;
             return this;
         }
 
-        /**
-         * 技能最大叠加层数，可传入Skill.NO_STACK_LIMIT 表示不限制
-         */
         public Builder maxStacks(int maxStacks) {
             this.maxStacks = maxStacks;
             return this;
         }
 
-        /**
-         * 被动类技能开启时的持续占用CP值
-         */
         public Builder maintenanceCost(float maintenanceCost) {
             this.maintenanceCost = maintenanceCost;
             return this;
@@ -1031,7 +978,7 @@ public abstract class Skill {
 
         @SafeVarargs
         public final Builder dependsOn(DeferredHolder<Skill, ? extends Skill>... dependencies) {
-            for (var dependency : dependencies) dependencyKeys.add(dependency.getKey());
+            for (var dependency : dependencies) dependencyKeys.add(dependency.key());
             return this;
         }
 

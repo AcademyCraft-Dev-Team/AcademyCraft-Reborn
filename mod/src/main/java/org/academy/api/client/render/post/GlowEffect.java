@@ -13,7 +13,7 @@ import net.minecraft.client.Minecraft;
 import org.academy.api.client.render.Render;
 import org.academy.api.client.render.TextureBinding;
 import org.academy.api.client.render.UniformBinding;
-import org.academy.api.client.render.vfx.VfxManager;
+import org.academy.api.client.render.vfxgraph.render.VfxGlowHooks;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
@@ -26,10 +26,6 @@ import static org.academy.api.client.render.Render.BlurUniforms.getBlurUniformsB
 import static org.academy.api.client.render.Render.BlurUniforms.writeBlurUniforms;
 
 public final class GlowEffect {
-    /**
-     * 26.3 起 {@code OutputTarget} 已移除；渲染目标改由调用方在创建 RenderPass 时决定，
-     * 这里暴露 glow 输入目标供 {@link Render#registerOutputTarget} 注册。
-     */
     public static RenderTarget glowTarget() {
         return getInstance().getInput();
     }
@@ -112,7 +108,7 @@ public final class GlowEffect {
         return input;
     }
 
-    private static boolean hasSameDepthFormat(RenderTarget target, GpuFormat depthFormat) {
+    private static boolean hasSameDepthFormat(RenderTarget target,@Nullable GpuFormat depthFormat) {
         var depth = target.getDepthTexture();
         if (depth == null) {
             return depthFormat == null;
@@ -150,7 +146,8 @@ public final class GlowEffect {
     }
 
     public void process() {
-        if (!hasBeenUsed && !VfxManager.INSTANCE.hasGlowData() && !VfxGraphManager.INSTANCE.hasGlowData()) return;
+        if (!hasBeenUsed && !VfxGraphManager.INSTANCE.hasGlowData()
+                && !VfxGlowHooks.hasGlowLines()) return;
 
         var mc = Minecraft.getInstance();
         var mainRenderTarget = mc.gameRenderer.mainRenderTarget();
@@ -195,12 +192,10 @@ public final class GlowEffect {
             );
             AFTER.draw();
 
-            if (VfxManager.INSTANCE.hasGlowData()) {
-                VfxManager.INSTANCE.renderGlowFrame(inputView, input.getDepthTextureView());
-            }
             if (VfxGraphManager.INSTANCE.hasGlowData()) {
                 VfxGraphManager.INSTANCE.renderGlowFrame(inputView, input.getDepthTextureView());
             }
+            VfxGlowHooks.renderGlowLines(inputView, input.getDepthTextureView());
 
             {
                 ping = resourcePool.acquire(descHalf);

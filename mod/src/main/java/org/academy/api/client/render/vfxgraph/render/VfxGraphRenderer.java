@@ -4,6 +4,7 @@ import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.renderpearl.api.GpuFormat;
 import com.mojang.renderpearl.api.buffers.GpuBuffer;
 import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
@@ -12,13 +13,19 @@ import com.mojang.renderpearl.api.device.GpuDevice;
 import com.mojang.renderpearl.api.pipeline.*;
 import com.mojang.renderpearl.api.textures.*;
 import com.mojang.renderpearl.api.vertex.VertexFormat;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.resources.Identifier;
 import org.academy.api.client.gui.environment.ResolvedTexture;
 import org.academy.api.client.gui.environment.UiEnvironment;
+import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
 import org.academy.api.client.render.vfxgraph.arc.ArcCurve;
 import org.academy.api.client.render.vfxgraph.arc.BlenderArcCurves;
 import org.academy.api.client.render.vfxgraph.arc.CurveToMeshBuilder;
+import org.academy.api.client.render.vfxgraph.block.BlockGeometryBuffer;
+import org.academy.api.client.render.vfxgraph.block.BlockGeometryFrame;
+import org.academy.api.client.render.vfxgraph.instance.InstanceGeometryBuffer;
 import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
 import org.academy.api.client.resources.R;
 import org.joml.FrustumIntersection;
@@ -31,15 +38,20 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 
 public final class VfxGraphRenderer {
     private static final int INSTANCE_STRIDE = (3 + 3 + 1 + 4 + 1 + 1 + 1) * 4;
     private static final int CAMERA_UBO_SIZE = 2 * 64;
     private static final int NOISE_SIZE = 256;
     private static final int ARC_LIGHTNING_UBO_SIZE = 16;
+    private static final int DISTORTION_UBO_SIZE = 16;
+    private static final VertexFormat DISTORTION_FORMAT = VertexFormat.builder(0)
+            .addAttribute("Position", GpuFormat.RGB32_FLOAT)
+            .addAttribute("UV0", GpuFormat.RG32_FLOAT)
+            .build();
 
     private static final VertexFormat TRAIL_FORMAT = VertexFormat.builder(0)
             .addAttribute("Position", GpuFormat.RGB32_FLOAT)
@@ -61,12 +73,46 @@ public final class VfxGraphRenderer {
             .addAttribute("Position", GpuFormat.RGB32_FLOAT)
             .addAttribute("Color", GpuFormat.RGBA32_FLOAT)
             .build();
+    private static final VertexFormat SCREEN_FLASH_INSTANCE_FORMAT = VertexFormat.builder(1)
+            .addAttribute("InstanceColor", GpuFormat.RGBA32_FLOAT)
+            .build();
+    private static final VertexFormat TEX_VERTEX_FORMAT = VertexFormat.builder(0)
+            .addAttribute("Position", GpuFormat.RGB32_FLOAT)
+            .addAttribute("UV0", GpuFormat.RG32_FLOAT)
+            .build();
+    private static final VertexFormat INSTANCE_MAT_FORMAT = VertexFormat.builder(1)
+            .addAttribute("InstanceMat", GpuFormat.RGBA32_FLOAT, 4)
+            .build();
+    private static final VertexFormat BLOCK_MESH_FORMAT = VertexFormat.builder(0)
+            .addAttribute("Position", GpuFormat.RGB32_FLOAT)
+            .addAttribute("UV0", GpuFormat.RG32_FLOAT)
+            .addAttribute("Color", GpuFormat.RGBA32_FLOAT)
+            .addAttribute("UV2", DefaultVertexFormat.UV2_FORMAT)
+            .build();
+    private static final BindGroupLayout BLOCK_BIND_GROUP = BindGroupLayout.builder()
+            .withUniform("GraphCamera", UniformType.UNIFORM_BUFFER)
+            .withUniform("Sampler0", UniformType.COMBINED_IMAGE_SAMPLER)
+            .withUniform("Sampler2", UniformType.COMBINED_IMAGE_SAMPLER)
+            .withUniform("Globals", UniformType.UNIFORM_BUFFER)
+            .build();
+    private static final int BLOCK_MESH_VERTEX_CAPACITY = 16384;
+    private static final int INSTANCED_TEX_VERTEX_CAPACITY = 512;
+    private static final int INSTANCED_TEX_INSTANCE_CAPACITY = 1024;
+    private static final int INSTANCED_PARAMS_SIZE = 32;
+    private static final int INSTANCED_PARAMS_CAPACITY = 32;
     private static final BindGroupLayout CAMERA_BIND_GROUP = BindGroupLayout.builder()
             .withUniform("GraphCamera", UniformType.UNIFORM_BUFFER)
             .build();
     private static final BindGroupLayout ARC_BIND_GROUP = BindGroupLayout.builder()
             .withUniform("GraphCamera", UniformType.UNIFORM_BUFFER)
             .withUniform("ArcLightning", UniformType.UNIFORM_BUFFER)
+            .build();
+    private static final BindGroupLayout TEX_BIND_GROUP = BindGroupLayout.builder()
+            .withUniform("GraphCamera", UniformType.UNIFORM_BUFFER)
+            .withUniform("Sampler0", UniformType.COMBINED_IMAGE_SAMPLER)
+            .withUniform("Sampler1", UniformType.COMBINED_IMAGE_SAMPLER)
+            .withUniform("Globals", UniformType.UNIFORM_BUFFER)
+            .withUniform("InstancedParams", UniformType.UNIFORM_BUFFER)
             .build();
     private static final BindGroupLayout NOISE_BIND_GROUP = BindGroupLayout.builder()
             .withUniform("GraphCamera", UniformType.UNIFORM_BUFFER)
@@ -82,6 +128,9 @@ public final class VfxGraphRenderer {
     public record SurfaceMesh(float[] triangles, float r, float g, float b, float a) {
     }
 
+    public record ScreenFlashSource(ParticleBuffer buffer, List<RenderSpec> specs, float cap) {
+    }
+
     private record PreparedArc(RenderPipeline pipeline, long vertexBytes, long indexBytes, int indexCount) {
     }
 
@@ -89,6 +138,7 @@ public final class VfxGraphRenderer {
     private final GpuBuffer quadBuffer;
     private final GpuBuffer cubeBuffer;
     private final GpuBuffer cameraUbo;
+    private final GpuBuffer screenFlashColorBuffer;
     private final GpuTexture noiseTexture;
     private final GpuTextureView noiseView;
     private final GpuSampler noiseSampler;
@@ -98,6 +148,10 @@ public final class VfxGraphRenderer {
     private final GpuSampler depthSampler;
     private @Nullable ByteBuffer instanceData;
     private @Nullable ByteBuffer lineData;
+    private ByteBuffer distortionStaging = ByteBuffer.allocateDirect(4096).order(ByteOrder.nativeOrder());
+    private final GpuBuffer distortionUbo;
+    private GpuBuffer distortionVertexBuffer;
+    private final GpuSampler distortionSampler;
     private final GpuBuffer arcLightningUbo;
     private static final VertexFormat ARC_TUBE_FORMAT = VertexFormat.builder(0)
             .addAttribute("Position", GpuFormat.RGB32_FLOAT)
@@ -106,6 +160,7 @@ public final class VfxGraphRenderer {
             .addAttribute("Color", GpuFormat.RGBA32_FLOAT)
             .build();
     private final ConcurrentHashMap<String, RenderPipeline> arcTubePipelines = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<RenderSpec, RenderPipeline> screenFlashPipelines = new ConcurrentHashMap<>();
     private @Nullable RenderPipeline surfacePipeline;
     private @Nullable ByteBuffer surfaceData;
     private @Nullable GpuBuffer arcTubeVertexBuffer;
@@ -115,18 +170,21 @@ public final class VfxGraphRenderer {
     private int arcTubeVertexCapacity;
     private int arcTubeIndexCapacity;
     private @Nullable ArcBuffer arcBuffer;
-    private final @Nullable Function<Identifier, GpuTextureView> textureLoader;
-    private final Map<Identifier, GpuTextureView> loadedTextures = new HashMap<>();
+    private @Nullable InstanceGeometryBuffer instanceGeometry;
+    private @Nullable BlockGeometryBuffer blockGeometry;
+    private @Nullable GpuBuffer blockMeshVertexBuffer;
+    private int blockMeshVertexCapacity;
+    private @Nullable ByteBuffer blockMeshStaging;
+    private final ConcurrentHashMap<RenderSpec, RenderPipeline> blockMeshPipelines = new ConcurrentHashMap<>();
+    private @Nullable GpuBuffer instancedTexVertexBuffer;
+    private @Nullable GpuBuffer instancedTexInstanceBuffer;
+    private int instancedTexVertexCapacity;
+    private int instancedTexInstanceCapacity;
+    private @Nullable ByteBuffer instancedTexInstanceStaging;
+    private @Nullable GpuBuffer instancedParamsUbo;
+    private @Nullable ByteBuffer instancedParamsStaging;
 
     public VfxGraphRenderer() {
-        this(null);
-    }
-
-    /**
-     * Standalone hosts supply their texture cache; returned views remain owned by the host.
-     */
-    public VfxGraphRenderer(@Nullable Function<Identifier, GpuTextureView> textureLoader) {
-        this.textureLoader = textureLoader;
         var device = RenderSystem.getDevice();
 
         quadBuffer = device.createBuffer(() -> "VfxGraph Quad", GpuBuffer.USAGE_VERTEX, buildQuad());
@@ -153,6 +211,14 @@ public final class VfxGraphRenderer {
         arcLightningUbo = device.createBuffer(
                 () -> "VfxGraph Arc Lightning", GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, ARC_LIGHTNING_UBO_SIZE);
         writeArcLightning(device, RenderSpec.ArcRender.DEFAULT.emission(), false);
+        distortionUbo = device.createBuffer(
+                () -> "VfxGraph Distortion", GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, DISTORTION_UBO_SIZE);
+        distortionVertexBuffer = device.createBuffer(
+                () -> "VfxGraph Distortion Vertices",
+                GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST,
+                (long) DISTORTION_FORMAT.getVertexSize() * 256);
+        distortionSampler = device.createSampler(
+                AddressMode.CLAMP_TO_EDGE, AddressMode.CLAMP_TO_EDGE, FilterMode.LINEAR, FilterMode.LINEAR, 1, OptionalDouble.empty());
         arcTubeVertexBuffer = device.createBuffer(
                 () -> "VfxGraph Arc Tube Vertices",
                 GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST,
@@ -163,6 +229,25 @@ public final class VfxGraphRenderer {
                 GpuBuffer.USAGE_INDEX | GpuBuffer.USAGE_COPY_DST,
                 1024L * 4);
         arcTubeIndexCapacity = 1024;
+        instancedTexVertexBuffer = device.createBuffer(
+                () -> "VfxGraph Instanced Tex Vertices",
+                GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST,
+                (long) TEX_VERTEX_FORMAT.getVertexSize() * INSTANCED_TEX_VERTEX_CAPACITY);
+        instancedTexVertexCapacity = INSTANCED_TEX_VERTEX_CAPACITY;
+        blockMeshVertexBuffer = device.createBuffer(
+                () -> "VfxGraph Block Mesh Vertices",
+                GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST,
+                (long) BLOCK_MESH_FORMAT.getVertexSize() * BLOCK_MESH_VERTEX_CAPACITY);
+        blockMeshVertexCapacity = BLOCK_MESH_VERTEX_CAPACITY;
+        instancedTexInstanceBuffer = device.createBuffer(
+                () -> "VfxGraph Instanced Tex Instances",
+                GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST,
+                (long) INSTANCE_MAT_FORMAT.getVertexSize() * INSTANCED_TEX_INSTANCE_CAPACITY);
+        instancedTexInstanceCapacity = INSTANCED_TEX_INSTANCE_CAPACITY;
+        screenFlashColorBuffer = device.createBuffer(
+                () -> "VfxGraph Screen Flash Color",
+                GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST,
+                4L * Float.BYTES);
     }
 
     private RenderPipeline pipelineFor(RenderSpec spec) {
@@ -170,26 +255,31 @@ public final class VfxGraphRenderer {
             var bindGroup = switch (s.geometry()) {
                 case QUAD -> NOISE_BIND_GROUP;
                 case ARC -> ARC_BIND_GROUP;
+                case INSTANCED_TEX -> TEX_BIND_GROUP;
                 default -> CAMERA_BIND_GROUP;
             };
-            var blend = s.blend() == RenderSpec.Blend.ADDITIVE || s.blend() == RenderSpec.Blend.GLOW
+            var blend = s.blend() != RenderSpec.Blend.TRANSLUCENT
                     ? BlendFunction.ADDITIVE
                     : BlendFunction.TRANSLUCENT;
             var vertexFormat = switch (s.geometry()) {
                 case LINE, RIBBON -> SIMPLE_FORMAT;
                 case ARC -> ARC_TUBE_FORMAT;
+                case INSTANCED_TEX -> TEX_VERTEX_FORMAT;
                 default -> POSITION_FORMAT;
             };
             var instanceFormat = s.geometry() == RenderSpec.Geometry.LINE || s.geometry() == RenderSpec.Geometry.RIBBON
                     || s.geometry() == RenderSpec.Geometry.ARC
                     ? null
-                    : INSTANCE_FORMAT;
+                    : s.geometry() == RenderSpec.Geometry.INSTANCED_TEX ? INSTANCE_MAT_FORMAT : INSTANCE_FORMAT;
             var topology = s.geometry() == RenderSpec.Geometry.ARC
                     ? PrimitiveTopology.TRIANGLES
+                    : s.geometry() == RenderSpec.Geometry.INSTANCED_TEX ? s.topology()
                     : PrimitiveTopology.QUADS;
             var locationName = "vfx_graph_" + s.geometry().name().toLowerCase(Locale.ROOT)
                     + "_" + s.blend().name().toLowerCase(Locale.ROOT)
-                    + "_" + s.vertexShader().getPath() + "_" + s.fragmentShader().getPath();
+                    + "_" + s.vertexShader().getPath() + "_" + s.fragmentShader().getPath()
+                    + (s.geometry() == RenderSpec.Geometry.INSTANCED_TEX && topology == PrimitiveTopology.TRIANGLES
+                            ? "_tri" : "");
             var pipeline = buildPipeline(locationName, s.vertexShader(), s.fragmentShader(),
                     bindGroup, vertexFormat, instanceFormat, blend, topology);
             RenderSystem.getCompiledPipeline(pipeline);
@@ -257,6 +347,222 @@ public final class VfxGraphRenderer {
         this.arcBuffer = buffer;
     }
 
+    public void setInstanceGeometry(@Nullable InstanceGeometryBuffer buffer) {
+        this.instanceGeometry = buffer;
+    }
+
+    public void setBlockGeometry(@Nullable BlockGeometryBuffer buffer) {
+        this.blockGeometry = buffer;
+    }
+
+    public void renderDistortionRings(GpuTextureView target, ParticleBuffer buffer, RenderSpec spec,
+                                      RenderSpec.DistortionRing ring, WorldTransform transform, GraphCamera camera) {
+        if (ring == null) return;
+        int count = 0;
+        for (var i = 0; i < buffer.count(); i++) {
+            if (spec.matchesLayer(buffer.layer(i))) count++;
+        }
+        if (count == 0) return;
+
+        var vertices = buildDistortionVertices(buffer, spec, transform, camera);
+
+        var device = RenderSystem.getDevice();
+        writeCamera(device, camera);
+        var aspect = Math.abs(camera.projection().m11() / camera.projection().m00());
+        try (var stack = MemoryStack.stackPush()) {
+            var builder = Std140Builder.onStack(stack, DISTORTION_UBO_SIZE);
+            builder.putVec4(new Vector4f(ring.strength(), ring.width(), ring.edgeBlur(), aspect));
+            device.createCommandEncoder().writeToBuffer(distortionUbo.slice(), builder.get());
+        }
+        var scene = PostEffect.MAIN_SCENE.getColorTextureView();
+        if (scene == null) return;
+        var vertexCount = uploadDistortionVertices(vertices);
+        var pipeline = distortionPipeline(spec);
+        var encoder = device.createCommandEncoder();
+        try (var pass = encoder.createRenderPass(
+                () -> "VfxGraph distortion", target,
+                Optional.empty(), null, OptionalDouble.empty())) {
+            pass.setPipeline(RenderSystem.getCompiledPipeline(pipeline));
+            RenderSystem.bindDefaultUniforms(pass);
+            pass.setUniform("GraphCamera", cameraUbo.slice());
+            pass.setUniform("DistortionRing", distortionUbo.slice());
+            pass.setUniform("Sampler0", scene, distortionSampler);
+            pass.setVertexBuffer(0, distortionVertexBuffer.slice());
+            var sequential = RenderSystem.getSequentialBuffer(PrimitiveTopology.QUADS);
+            pass.setIndexBuffer(sequential.getBuffer(vertexCount), sequential.type());
+            pass.drawIndexed(vertexCount, 1, 0, 0, 0);
+        }
+    }
+
+    private int uploadDistortionVertices(ByteBuffer data) {
+        var vertexSize = DISTORTION_FORMAT.getVertexSize();
+        int vertices = data.remaining() / vertexSize;
+        if (vertices == 0) return 0;
+        var needed = (long) vertexSize * vertices;
+        if (needed > distortionVertexBuffer.size()) {
+            distortionVertexBuffer.close();
+            distortionVertexBuffer = RenderSystem.getDevice().createBuffer(
+                    () -> "VfxGraph Distortion Vertices",
+                    GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST, needed);
+        }
+        RenderSystem.getDevice().createCommandEncoder().writeToBuffer(distortionVertexBuffer.slice(), data);
+        return vertices;
+    }
+
+    private ByteBuffer buildDistortionVertices(ParticleBuffer buffer, RenderSpec spec,
+                                               WorldTransform transform, GraphCamera camera) {
+        var cam = camera.position();
+        var identity = transform.isIdentity();
+        distortionStaging.clear();
+        for (var i = 0; i < buffer.count(); i++) {
+            if (!spec.matchesLayer(buffer.layer(i))) continue;
+            float px = buffer.positionX(i);
+            float py = buffer.positionY(i);
+            float pz = buffer.positionZ(i);
+            if (!identity) {
+                transform.apply(px, py, pz, worldScratch);
+                px = worldScratch[0];
+                py = worldScratch[1];
+                pz = worldScratch[2];
+            }
+            float half = Math.abs(buffer.size(i) * transform.scale()) * 0.5f;
+            var u = new Vector3f(1f, 0f, 0f).rotate(transform.rotation());
+            var v = new Vector3f(0f, 1f, 0f).rotate(transform.rotation());
+            var roll = buffer.rotation(i);
+            if (roll != 0f) {
+                var c = (float) Math.cos(roll);
+                var s = (float) Math.sin(roll);
+                var nux = u.x * c + v.x * s;
+                var nuy = u.y * c + v.y * s;
+                var nuz = u.z * c + v.z * s;
+                v.set(v.x * c - u.x * s, v.y * c - u.y * s, v.z * c - u.z * s);
+                u.set(nux, nuy, nuz);
+            }
+            float rx = px - cam.x;
+            float ry = py - cam.y;
+            float rz = pz - cam.z;
+            putDistortionVertex(rx - u.x * half - v.x * half, ry - u.y * half - v.y * half, rz - u.z * half - v.z * half, 0f, 0f);
+            putDistortionVertex(rx + u.x * half - v.x * half, ry + u.y * half - v.y * half, rz + u.z * half - v.z * half, 1f, 0f);
+            putDistortionVertex(rx + u.x * half + v.x * half, ry + u.y * half + v.y * half, rz + u.z * half + v.z * half, 1f, 1f);
+            putDistortionVertex(rx - u.x * half + v.x * half, ry - u.y * half + v.y * half, rz - u.z * half + v.z * half, 0f, 1f);
+        }
+        distortionStaging.flip();
+        return distortionStaging;
+    }
+
+    private void putDistortionVertex(float x, float y, float z, float u, float v) {
+        if (distortionStaging.remaining() < 20) {
+            var grown = ByteBuffer.allocateDirect(distortionStaging.capacity() * 2)
+                    .order(ByteOrder.nativeOrder());
+            distortionStaging.flip();
+            grown.put(distortionStaging);
+            distortionStaging = grown;
+        }
+        distortionStaging.putFloat(x).putFloat(y).putFloat(z).putFloat(u).putFloat(v);
+    }
+
+    private RenderPipeline distortionPipeline(RenderSpec spec) {
+        return pipelines.computeIfAbsent(spec, s -> {
+            var bindGroup = BindGroupLayout.builder()
+                    .withUniform("GraphCamera", UniformType.UNIFORM_BUFFER)
+                    .withUniform("DistortionRing", UniformType.UNIFORM_BUFFER)
+                    .withUniform("Sampler0", UniformType.COMBINED_IMAGE_SAMPLER)
+                    .withUniform("Globals", UniformType.UNIFORM_BUFFER)
+                    .build();
+            var pipeline = RenderPipeline.builder()
+                    .withLocation(Identifier.fromNamespaceAndPath("academy", "pipeline/vfx_graph_distortion_ring"))
+                    .withVertexShader(s.vertexShader())
+                    .withFragmentShader(s.fragmentShader())
+                    .withBindGroupLayout(bindGroup)
+                    .withCull(false)
+                    .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                    .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                    .withVertexBinding(0, DISTORTION_FORMAT)
+                    .build();
+            RenderSystem.getCompiledPipeline(pipeline);
+            return pipeline;
+        });
+    }
+
+    /**
+     * 屏幕闪光（E1）：跨效果聚合 alpha 求和、按全局 cap 截断后画单个全屏 quad。
+     * 语义等同旧 {@code SCREEN_SPACE_POST} 的 {@code SkyStrikeScreenFlashRenderer} 求和路径。
+     * 无深度测试（全屏覆盖层），颜色取首个匹配粒子的 RGB。
+     */
+    public void renderScreenFlash(GpuTextureView target, List<ScreenFlashSource> sources) {
+        float sum = 0f;
+        float cap = 1f;
+        float r = 0.80f;
+        float g = 0.93f;
+        float b = 1.0f;
+        RenderSpec firstSpec = null;
+        boolean any = false;
+        for (var source : sources) {
+            var buffer = source.buffer();
+            if (buffer.count() == 0) continue;
+            cap = Math.max(cap, source.cap());
+            for (var spec : source.specs()) {
+                if (spec.geometry() != RenderSpec.Geometry.SCREEN_FLASH) continue;
+                if (firstSpec == null) firstSpec = spec;
+                for (var i = 0; i < buffer.count(); i++) {
+                    if (!spec.matchesLayer(buffer.layer(i))) continue;
+                    sum += Math.max(0f, buffer.alpha(i));
+                    if (!any) {
+                        r = buffer.colorR(i);
+                        g = buffer.colorG(i);
+                        b = buffer.colorB(i);
+                        any = true;
+                    }
+                }
+            }
+        }
+        if (firstSpec == null) return;
+        float alpha = Math.min(sum, cap);
+        if (alpha <= 0.001f) return;
+
+        var device = RenderSystem.getDevice();
+        try (var stack = MemoryStack.stackPush()) {
+            var color = stack.malloc(4 * Float.BYTES);
+            color.putFloat(r).putFloat(g).putFloat(b).putFloat(alpha).flip();
+            device.createCommandEncoder().writeToBuffer(screenFlashColorBuffer.slice(), color);
+        }
+        var pipeline = screenFlashPipeline(firstSpec);
+        var encoder = device.createCommandEncoder();
+        try (var pass = encoder.createRenderPass(
+                () -> "VfxGraph Screen Flash",
+                target,
+                Optional.empty(),
+                null,
+                OptionalDouble.empty()
+        )) {
+            pass.setPipeline(RenderSystem.getCompiledPipeline(pipeline));
+            pass.setVertexBuffer(0, quadBuffer.slice());
+            pass.setVertexBuffer(1, screenFlashColorBuffer.slice());
+            var sequential = RenderSystem.getSequentialBuffer(PrimitiveTopology.QUADS);
+            pass.setIndexBuffer(sequential.getBuffer(6), sequential.type());
+            pass.drawIndexed(6, 1, 0, 0, 0);
+        }
+    }
+
+    private RenderPipeline screenFlashPipeline(RenderSpec spec) {
+        return screenFlashPipelines.computeIfAbsent(spec, s -> {
+            var additive = s.blend() != RenderSpec.Blend.TRANSLUCENT;
+            var pipeline = RenderPipeline.builder()
+                    .withLocation(Identifier.fromNamespaceAndPath("academy", "pipeline/vfx_graph_screen_flash"))
+                    .withVertexShader(s.vertexShader())
+                    .withFragmentShader(s.fragmentShader())
+                    .withCull(false)
+                    .withColorTargetState(new ColorTargetState(
+                            additive ? BlendFunction.ADDITIVE : BlendFunction.TRANSLUCENT))
+                    .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                    .withVertexBinding(0, POSITION_FORMAT)
+                    .withVertexBinding(1, SCREEN_FLASH_INSTANCE_FORMAT)
+                    .build();
+            RenderSystem.getCompiledPipeline(pipeline);
+            return pipeline;
+        });
+    }
+
     public void render(GpuTextureView target, @Nullable GpuTextureView depth, ParticleBuffer buffer, GraphCamera camera, boolean clear) {
         render(target, depth, buffer, camera, clear, List.of(RenderSpec.DEFAULT), WorldTransform.identity(), false, List.of());
     }
@@ -284,10 +590,17 @@ public final class VfxGraphRenderer {
                        GraphCamera camera, boolean clear, List<RenderSpec> specs, WorldTransform transform, boolean bloomPass,
                        List<SurfaceMesh> surfaces) {
         var device = RenderSystem.getDevice();
+        var particleSpecs = specs.stream()
+                .filter(s -> s.geometry() != RenderSpec.Geometry.DISTORTION_RING
+                        && s.geometry() != RenderSpec.Geometry.SCREEN_FLASH).toList();
         var count = buffer.count();
         var hasSurfaces = !surfaces.isEmpty();
+        var hasInstancedTex = specs.stream().anyMatch(s -> s.geometry() == RenderSpec.Geometry.INSTANCED_TEX);
+        var hasBlockMesh = specs.stream().anyMatch(s -> s.geometry() == RenderSpec.Geometry.BLOCK_QUADS);
 
-        if (count == 0 && (arcBuffer == null || arcBuffer.count() == 0) && !hasSurfaces) {
+        if (count == 0 && (arcBuffer == null || arcBuffer.count() == 0) && !hasSurfaces
+                && !(hasInstancedTex && instanceGeometry != null && !instanceGeometry.isEmpty())
+                && !(hasBlockMesh && blockGeometry != null && !blockGeometry.isEmpty())) {
             if (clear) clearTarget(device, target, depth);
             return;
         }
@@ -296,7 +609,7 @@ public final class VfxGraphRenderer {
         writeCamera(device, camera);
         var encoder = device.createCommandEncoder();
         var preClearedDepth = false;
-        var anyBillboard = specs.stream().anyMatch(s -> s.geometry() == RenderSpec.Geometry.QUAD);
+        var anyBillboard = particleSpecs.stream().anyMatch(s -> s.geometry() == RenderSpec.Geometry.QUAD);
         var useSceneDepth = anyBillboard && sceneDepthUsable(RenderSpec.Geometry.QUAD);
         if (useSceneDepth && depth != null) {
             if (clear) {
@@ -307,13 +620,15 @@ public final class VfxGraphRenderer {
         }
         var clearDepth = depth != null && clear && !preClearedDepth ? OptionalDouble.of(0.0) : OptionalDouble.empty();
 
-        // renderpearl exposes a single shared command encoder per device and rejects
-        // writeToBuffer while a render pass is open, so arc geometry must be uploaded first.
-        var preparedArc = prepareArcPass(arcBuffer, camera, transform, bloomPass, specs);
-        var specTextures = resolveSpecTextures(specs, bloomPass);
+        var preparedArc = prepareArcPass(arcBuffer, camera, transform, bloomPass, particleSpecs);
+        var specTextures = resolveSpecTextures(particleSpecs, bloomPass);
+        var preparedInstancedTex = prepareInstancedTexPass(camera, transform, particleSpecs);
+        var instancedTexTextures = resolveInstancedTexTextures(particleSpecs, bloomPass);
+        var preparedBlockMesh = prepareBlockMeshPass(camera, particleSpecs);
+        writeInstancedParams(particleSpecs);
 
         try (var renderPass = encoder.createRenderPass(
-                () -> "VfxGraph " + specs, target,
+                () -> "VfxGraph " + particleSpecs, target,
                 clear ? Optional.of(CLEAR_COLOR) : Optional.empty(),
                 depth, clearDepth
         )) {
@@ -321,8 +636,9 @@ public final class VfxGraphRenderer {
                 drawSurfaces(renderPass, surfaces, camera);
             }
             var arcsDrawn = false;
-            for (var spec : specs) {
-                if (bloomPass && !spec.feedsBloom()) continue;
+            for (var index = 0; index < particleSpecs.size(); index++) {
+                var spec = particleSpecs.get(index);
+                if (bloomPass ? !spec.feedsBloom() : spec.bloomOnly()) continue;
                 switch (spec.geometry()) {
                     case MESH -> drawInstanced(renderPass, buffer, camera, cubeBuffer, transform, spec, null);
                     case LINE -> drawTrail(renderPass, buffer, camera, spec, PrimitiveTopology.LINES, transform);
@@ -333,6 +649,17 @@ public final class VfxGraphRenderer {
                             arcsDrawn = true;
                         }
                     }
+                    case INSTANCED_TEX -> {
+                        if (preparedInstancedTex != null) {
+                            drawInstancedTex(renderPass, preparedInstancedTex, spec,
+                                    instancedTexTextures.get(spec), instancedParamsSlice(index));
+                        }
+                    }
+                    case BLOCK_QUADS -> {
+                        if (preparedBlockMesh != null) {
+                            drawBlockMesh(renderPass, preparedBlockMesh, spec);
+                        }
+                    }
                     default ->
                             drawInstanced(renderPass, buffer, camera, quadBuffer, transform, spec, specTextures.get(spec));
                 }
@@ -340,15 +667,12 @@ public final class VfxGraphRenderer {
         }
     }
 
-    /**
-     * 选取首个参与本 pass 的 ARC 规格并完成弧线几何上传（必须在 render pass 外调用）。
-     */
     private @Nullable PreparedArc prepareArcPass(@Nullable ArcBuffer arcs, GraphCamera camera,
                                                  WorldTransform transform, boolean bloomPass,
                                                  List<RenderSpec> specs) {
         if (arcs == null || arcs.count() == 0) return null;
         for (var spec : specs) {
-            if (bloomPass && !spec.feedsBloom()) continue;
+            if (bloomPass ? !spec.feedsBloom() : spec.bloomOnly()) continue;
             if (spec.geometry() == RenderSpec.Geometry.ARC) {
                 return prepareArcTubes(arcs, camera, transform, bloomPass, spec);
             }
@@ -379,9 +703,6 @@ public final class VfxGraphRenderer {
         return new float[]{f, 1f};
     }
 
-    /**
-     * 构建并上传本帧弧线管网格（必须在 render pass 外调用）。
-     */
     private @Nullable PreparedArc prepareArcTubes(
             ArcBuffer arcBuffer,
             GraphCamera camera, WorldTransform transform, boolean bloomPass,
@@ -432,9 +753,6 @@ public final class VfxGraphRenderer {
         return new PreparedArc(arcTubePipeline(spec, bloomPass), vertexBytes, indexBytes, totalIndices);
     }
 
-    /**
-     * 在 render pass 内记录已上传的弧线绘制。
-     */
     private void drawArcTubes(RenderPass pass, PreparedArc prepared) {
         pass.setPipeline(RenderSystem.getCompiledPipeline(prepared.pipeline()));
         pass.setUniform("GraphCamera", cameraUbo.slice());
@@ -516,14 +834,302 @@ public final class VfxGraphRenderer {
         if (old != null) old.close();
     }
 
-    /**
-     * 预解析本 pass 参与绘制的贴图（必须在 render pass 外调用：贴图首次使用会上传并提交命令）。
-     */
+    private record PreparedInstancedTex(long vertexBytes, long instanceBytes,
+                                         int vertexCount, int instanceCount) {
+    }
+
+    private @Nullable PreparedInstancedTex prepareInstancedTexPass(GraphCamera camera,
+                                                                    WorldTransform transform,
+                                                                    List<RenderSpec> specs) {
+        var geometry = instanceGeometry;
+        if (geometry == null || geometry.isEmpty()) return null;
+        if (specs.stream().noneMatch(s -> s.geometry() == RenderSpec.Geometry.INSTANCED_TEX)) return null;
+        var vertexCount = geometry.vertexCount();
+        var instanceCount = geometry.instanceCount();
+        var vertexBytes = (long) TEX_VERTEX_FORMAT.getVertexSize() * vertexCount;
+        var instanceBytes = (long) INSTANCE_MAT_FORMAT.getVertexSize() * instanceCount;
+        if (vertexBytes > instancedTexVertexBuffer.size()) growInstancedTexVertexBuffer(vertexCount);
+        if (instanceBytes > instancedTexInstanceBuffer.size()) growInstancedTexInstanceBuffer(instanceCount);
+        instancedTexInstanceStaging = ensureInstancedTexStaging(
+                instancedTexInstanceStaging, Math.toIntExact(instanceBytes));
+        var staging = instancedTexInstanceStaging;
+        transformInstanceMatrices(geometry.instances(), staging, instanceCount,
+                camera.position(), transform);
+        staging.flip();
+        var vertices = geometry.vertices().duplicate();
+        vertices.position(0);
+        vertices.limit((int) vertexBytes);
+        var writeEncoder = RenderSystem.getDevice().createCommandEncoder();
+        writeEncoder.writeToBuffer(instancedTexVertexBuffer.slice(0, vertexBytes), vertices);
+        writeEncoder.writeToBuffer(instancedTexInstanceBuffer.slice(0, instanceBytes), staging);
+        return new PreparedInstancedTex(vertexBytes, instanceBytes, vertexCount, instanceCount);
+    }
+
+    private Map<RenderSpec, ResolvedTexture[]> resolveInstancedTexTextures(List<RenderSpec> specs, boolean bloomPass) {
+        var textures = new IdentityHashMap<RenderSpec, ResolvedTexture[]>();
+        var environment = UiEnvironment.get();
+        for (var spec : specs) {
+            if (bloomPass ? !spec.feedsBloom() : spec.bloomOnly()) continue;
+            if (spec.geometry() != RenderSpec.Geometry.INSTANCED_TEX) continue;
+            ResolvedTexture primary = null;
+            ResolvedTexture secondary = null;
+            if (spec.texture() != null) {
+                primary = environment.resolveTexture(spec.texture());
+            }
+            if (spec.texture1() != null) {
+                secondary = environment.resolveTexture(spec.texture1());
+            }
+            textures.put(spec, new ResolvedTexture[]{primary, secondary});
+        }
+        return textures;
+    }
+
+    private void drawInstancedTex(RenderPass pass, PreparedInstancedTex prepared, RenderSpec spec,
+                                   @Nullable ResolvedTexture[] textures, GpuBufferSlice params) {
+        pass.setPipeline(RenderSystem.getCompiledPipeline(pipelineFor(spec)));
+        pass.setUniform("GraphCamera", cameraUbo.slice());
+        pass.setUniform("InstancedParams", params);
+        var primary = textures == null ? null : textures[0];
+        if (primary != null) {
+            pass.setUniform("Sampler0", primary.getView(), primary.getSampler());
+        } else {
+            pass.setUniform("Sampler0", noiseView, noiseSampler);
+        }
+        var secondary = textures == null ? null : textures[1];
+        if (secondary != null) {
+            pass.setUniform("Sampler1", secondary.getView(), secondary.getSampler());
+        } else {
+            pass.setUniform("Sampler1", noiseView, noiseSampler);
+        }
+        RenderSystem.bindDefaultUniforms(pass);
+        pass.setVertexBuffer(0, instancedTexVertexBuffer.slice(0, prepared.vertexBytes()));
+        pass.setVertexBuffer(1, instancedTexInstanceBuffer.slice(0, prepared.instanceBytes()));
+        var topology = spec.topology();
+        var sequential = RenderSystem.getSequentialBuffer(topology);
+        var indexCount = topology == PrimitiveTopology.TRIANGLES
+                ? prepared.vertexCount() : prepared.vertexCount() * 3 / 2;
+        pass.setIndexBuffer(sequential.getBuffer(indexCount), sequential.type());
+        pass.drawIndexed(indexCount, prepared.instanceCount(), 0, 0, 0);
+    }
+
+    private void transformInstanceMatrices(ByteBuffer source, ByteBuffer target, int instanceCount,
+                                            Vector3f camPos, WorldTransform transform) {
+        var identity = transform.isIdentity();
+        var scratch = new float[3];
+        for (var i = 0; i < instanceCount; i++) {
+            var base = i * 64;
+            for (var column = 0; column < 3; column++) {
+                var offset = base + column * 16;
+                var x = source.getFloat(offset);
+                var y = source.getFloat(offset + 4);
+                var z = source.getFloat(offset + 8);
+                var w = source.getFloat(offset + 12);
+                if (identity) {
+                    target.putFloat(x).putFloat(y).putFloat(z).putFloat(w);
+                } else {
+                    transform.applyDirection(x, y, z, scratch);
+                    target.putFloat(scratch[0]).putFloat(scratch[1]).putFloat(scratch[2]).putFloat(w);
+                }
+            }
+            var tx = source.getFloat(base + 48);
+            var ty = source.getFloat(base + 52);
+            var tz = source.getFloat(base + 56);
+            var tw = source.getFloat(base + 60);
+            if (identity) {
+                target.putFloat(tx - camPos.x).putFloat(ty - camPos.y)
+                        .putFloat(tz - camPos.z).putFloat(tw);
+            } else {
+                transform.apply(tx, ty, tz, scratch);
+                target.putFloat(scratch[0] - camPos.x).putFloat(scratch[1] - camPos.y)
+                        .putFloat(scratch[2] - camPos.z).putFloat(tw);
+            }
+        }
+    }
+
+    private void growInstancedTexVertexBuffer(int requiredVertices) {
+        var newCapacity = Math.max(requiredVertices, instancedTexVertexCapacity * 2);
+        var old = instancedTexVertexBuffer;
+        instancedTexVertexBuffer = RenderSystem.getDevice().createBuffer(
+                () -> "VfxGraph Instanced Tex Vertices",
+                GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST,
+                (long) TEX_VERTEX_FORMAT.getVertexSize() * newCapacity);
+        instancedTexVertexCapacity = newCapacity;
+        if (old != null) old.close();
+    }
+
+    private void growInstancedTexInstanceBuffer(int requiredInstances) {
+        var newCapacity = Math.max(requiredInstances, instancedTexInstanceCapacity * 2);
+        var old = instancedTexInstanceBuffer;
+        instancedTexInstanceBuffer = RenderSystem.getDevice().createBuffer(
+                () -> "VfxGraph Instanced Tex Instances",
+                GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST,
+                (long) INSTANCE_MAT_FORMAT.getVertexSize() * newCapacity);
+        instancedTexInstanceCapacity = newCapacity;
+        if (old != null) old.close();
+    }
+
+    private static ByteBuffer ensureInstancedTexStaging(@Nullable ByteBuffer buffer, int needed) {
+        if (buffer == null || buffer.capacity() < needed) {
+            int capacity = Math.max(needed, buffer == null ? 65536 : Math.multiplyExact(buffer.capacity(), 2));
+            var replacement = MemoryUtil.memAlloc(capacity);
+            if (buffer != null) MemoryUtil.memFree(buffer);
+            buffer = replacement;
+        }
+        buffer.clear();
+        return buffer;
+    }
+
+    private void writeInstancedParams(List<RenderSpec> specs) {
+        if (specs.stream().noneMatch(s -> s.geometry() == RenderSpec.Geometry.INSTANCED_TEX)) return;
+        var count = specs.size();
+        var bytes = (long) INSTANCED_PARAMS_SIZE * count;
+        if (instancedParamsUbo == null || instancedParamsUbo.size() < bytes) {
+            if (instancedParamsUbo != null) instancedParamsUbo.close();
+            var capacity = Math.max(count, INSTANCED_PARAMS_CAPACITY);
+            instancedParamsUbo = RenderSystem.getDevice().createBuffer(
+                    () -> "VfxGraph Instanced Params",
+                    GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST,
+                    (long) INSTANCED_PARAMS_SIZE * capacity);
+        }
+        instancedParamsStaging = ensureInstancedParamsStaging(
+                instancedParamsStaging, Math.toIntExact(bytes));
+        var staging = instancedParamsStaging;
+        for (var spec : specs) {
+            var scale = spec.scale();
+            staging.putFloat(scale.x()).putFloat(scale.y()).putFloat(scale.z()).putFloat(1f);
+            var color = spec.color();
+            staging.putFloat(color.r()).putFloat(color.g()).putFloat(color.b()).putFloat(color.a());
+        }
+        staging.flip();
+        RenderSystem.getDevice().createCommandEncoder()
+                .writeToBuffer(Objects.requireNonNull(instancedParamsUbo).slice(0, bytes), staging);
+    }
+
+    private static ByteBuffer ensureInstancedParamsStaging(@Nullable ByteBuffer buffer, int needed) {
+        if (buffer == null || buffer.capacity() < needed) {
+            return BufferUtils.createByteBuffer(
+                    Math.max(needed, INSTANCED_PARAMS_SIZE * INSTANCED_PARAMS_CAPACITY));
+        }
+        buffer.clear();
+        return buffer;
+    }
+
+    private GpuBufferSlice instancedParamsSlice(int index) {
+        return Objects.requireNonNull(instancedParamsUbo)
+                .slice((long) index * INSTANCED_PARAMS_SIZE, INSTANCED_PARAMS_SIZE);
+    }
+
+    private record PreparedBlockMesh(long vertexBytes, int vertexCount) {
+    }
+
+    private @Nullable PreparedBlockMesh prepareBlockMeshPass(GraphCamera camera,
+                                                             List<RenderSpec> specs) {
+        var geometry = blockGeometry;
+        if (geometry == null || geometry.isEmpty()) return null;
+        if (specs.stream().noneMatch(s -> s.geometry() == RenderSpec.Geometry.BLOCK_QUADS)) return null;
+        var vertexCount = geometry.vertexCount();
+        var vertexBytes = (long) BLOCK_MESH_FORMAT.getVertexSize() * vertexCount;
+        if (blockMeshVertexBuffer == null || vertexBytes > (long) blockMeshVertexCapacity * BLOCK_MESH_FORMAT.getVertexSize()) {
+            growBlockMeshVertexBuffer(vertexCount);
+        }
+        blockMeshStaging = ensureBlockMeshStaging(blockMeshStaging, Math.toIntExact(vertexBytes));
+        var staging = blockMeshStaging;
+        compactBlockMeshVertices(geometry, staging, camera.position());
+        staging.flip();
+        var writeEncoder = RenderSystem.getDevice().createCommandEncoder();
+        writeEncoder.writeToBuffer(Objects.requireNonNull(blockMeshVertexBuffer).slice(0, vertexBytes), staging);
+        return new PreparedBlockMesh(vertexBytes, vertexCount);
+    }
+
+    private static void compactBlockMeshVertices(BlockGeometryBuffer geometry, ByteBuffer staging,
+                                                  Vector3f camPos) {
+        staging.clear();
+        var vertices = geometry.layerVertices();
+        var counts = geometry.layerVertexCounts();
+        if (vertices == null || counts == null) return;
+        for (var layer = 0; layer < counts.length; layer++) {
+            var count = counts[layer];
+            if (count == 0) continue;
+            var source = vertices[layer].duplicate();
+            for (var i = 0; i < count; i++) {
+                staging.putFloat(source.getFloat() - camPos.x);
+                staging.putFloat(source.getFloat() - camPos.y);
+                staging.putFloat(source.getFloat() - camPos.z);
+                staging.putFloat(source.getFloat());
+                staging.putFloat(source.getFloat());
+                staging.putFloat(source.getFloat());
+                staging.putFloat(source.getFloat());
+                staging.putFloat(source.getFloat());
+                staging.putFloat(source.getFloat());
+                staging.putShort(source.getShort());
+                staging.putShort(source.getShort());
+                source.position(source.position() + 4 * Byte.BYTES);
+            }
+        }
+    }
+
+    private void growBlockMeshVertexBuffer(int requiredVertices) {
+        var newCapacity = Math.max(requiredVertices, blockMeshVertexCapacity * 2);
+        var old = blockMeshVertexBuffer;
+        blockMeshVertexBuffer = RenderSystem.getDevice().createBuffer(
+                () -> "VfxGraph Block Mesh Vertices",
+                GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST,
+                (long) BLOCK_MESH_FORMAT.getVertexSize() * newCapacity);
+        blockMeshVertexCapacity = newCapacity;
+        if (old != null) old.close();
+    }
+
+    private static ByteBuffer ensureBlockMeshStaging(@Nullable ByteBuffer buffer, int needed) {
+        if (buffer == null || buffer.capacity() < needed) {
+            return BufferUtils.createByteBuffer(Math.max(needed, 4096));
+        }
+        buffer.clear();
+        return buffer;
+    }
+
+    private void drawBlockMesh(RenderPass pass, PreparedBlockMesh prepared, RenderSpec spec) {
+        pass.setPipeline(RenderSystem.getCompiledPipeline(blockMeshPipeline(spec)));
+        pass.setUniform("GraphCamera", cameraUbo.slice());
+        var atlas = Minecraft.getInstance().getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
+        pass.setUniform("Sampler0", atlas.getTextureView(), atlas.getSampler());
+        pass.setUniform("Sampler2", Minecraft.getInstance().gameRenderer.lightmap(),
+                RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+        RenderSystem.bindDefaultUniforms(pass);
+        pass.setVertexBuffer(0, Objects.requireNonNull(blockMeshVertexBuffer).slice(0, prepared.vertexBytes()));
+        var sequential = RenderSystem.getSequentialBuffer(PrimitiveTopology.QUADS);
+        var indexCount = prepared.vertexCount() * 3 / 2;
+        pass.setIndexBuffer(sequential.getBuffer(indexCount), sequential.type());
+        pass.drawIndexed(indexCount, 1, 0, 0, 0);
+    }
+
+    private RenderPipeline blockMeshPipeline(RenderSpec spec) {
+        return blockMeshPipelines.computeIfAbsent(spec, s -> {
+            var shaderSuffix = (s.vertexShader().getPath() + "_" + s.fragmentShader().getPath())
+                    .replace('/', '_');
+            var additive = s.blend() != RenderSpec.Blend.TRANSLUCENT;
+            var pipeline = RenderPipeline.builder()
+                    .withLocation(Identifier.fromNamespaceAndPath("academy",
+                            "pipeline/vfx_graph_block_mesh_" + shaderSuffix))
+                    .withVertexShader(s.vertexShader())
+                    .withFragmentShader(s.fragmentShader())
+                    .withBindGroupLayout(BLOCK_BIND_GROUP)
+                    .withCull(false)
+                    .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, true))
+                    .withColorTargetState(new ColorTargetState(
+                            additive ? BlendFunction.ADDITIVE : BlendFunction.TRANSLUCENT))
+                    .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                    .withVertexBinding(0, BLOCK_MESH_FORMAT)
+                    .build();
+            RenderSystem.getCompiledPipeline(pipeline);
+            return pipeline;
+        });
+    }
+
     private Map<RenderSpec, ResolvedTexture> resolveSpecTextures(List<RenderSpec> specs, boolean bloomPass) {
         var textures = new IdentityHashMap<RenderSpec, ResolvedTexture>();
         var environment = UiEnvironment.get();
         for (var spec : specs) {
-            if (bloomPass && !spec.feedsBloom()) continue;
+            if (bloomPass ? !spec.feedsBloom() : spec.bloomOnly()) continue;
             if (spec.geometry() != RenderSpec.Geometry.QUAD) continue;
             var textureId = spec.texture();
             if (textureId != null) {
@@ -568,9 +1174,6 @@ public final class VfxGraphRenderer {
                 instances, matched, billboard, depthView, texture);
     }
 
-    /**
-     * 复用直接 ByteBuffer 暂存动态顶点数据（transient memory 上传会拷贝，写入后可安全复用）。
-     */
     private static ByteBuffer ensureScratch(@Nullable ByteBuffer buffer, int needed) {
         if (buffer == null || buffer.capacity() < needed) {
             return BufferUtils.createByteBuffer(Math.max(needed, 4096));
@@ -777,6 +1380,7 @@ public final class VfxGraphRenderer {
         quadBuffer.close();
         cubeBuffer.close();
         cameraUbo.close();
+        screenFlashColorBuffer.close();
         noiseSampler.close();
         noiseView.close();
         noiseTexture.close();
@@ -794,7 +1398,20 @@ public final class VfxGraphRenderer {
         }
         if (arcTubeVertexBuffer != null) arcTubeVertexBuffer.close();
         if (arcTubeIndexBuffer != null) arcTubeIndexBuffer.close();
+        if (instancedTexVertexBuffer != null) instancedTexVertexBuffer.close();
+        if (instancedTexInstanceBuffer != null) instancedTexInstanceBuffer.close();
+        if (instancedTexInstanceStaging != null) {
+            MemoryUtil.memFree(instancedTexInstanceStaging);
+            instancedTexInstanceStaging = null;
+        }
+        if (instancedParamsUbo != null) instancedParamsUbo.close();
+        instancedParamsStaging = null;
+        if (blockMeshVertexBuffer != null) blockMeshVertexBuffer.close();
+        blockMeshStaging = null;
         arcLightningUbo.close();
+        distortionUbo.close();
+        distortionVertexBuffer.close();
+        distortionSampler.close();
         instanceData = null;
         lineData = null;
         surfaceData = null;

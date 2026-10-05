@@ -22,25 +22,16 @@ import java.util.*;
  * 名称可以参考 <a href="https://toarumajutsunoindex.fandom.com/wiki/Category:Esper_Abilities">这里</a> 喵
  */
 public abstract class AbilityCategory {
-    /**
-     * CODEC 因性能开销并不适合用于网络数据传输喵, 请使用 STREAM_CODEC 喵
-     */
     public static final Codec<AbilityCategory> CODEC =
             Codec.INT.xmap(Registries.ABILITY_CATEGORIES::byIdOrThrow, Registries.ABILITY_CATEGORIES::getId);
     public static final StreamCodec<ByteBuf, AbilityCategory> STREAM_CODEC =
             ByteBufCodecs.idMapper(Registries.ABILITY_CATEGORIES);
-    /**
-     * 成为此能力的概率喵
-     */
     private final float probability;
     private final @Nullable AbilityFactorProfile developmentProfile;
 
     private Map<Identifier, Skill> skills = new LinkedHashMap<>();
     private boolean sealed;
 
-    /**
-     * Stable namespaced codec for persistence; CODEC retains the legacy numeric representation.
-     */
     public static final Codec<AbilityCategory> ID_CODEC = Identifier.CODEC.flatXmap(
             id -> Registries.ABILITY_CATEGORIES.get(id)
                     .map(holder -> DataResult.success(holder.value()))
@@ -102,23 +93,14 @@ public abstract class AbilityCategory {
         return probability;
     }
 
-    /**
-     * Optional P.R.O.P.S profile used for server-authoritative initial ability prediction.
-     */
     public final Optional<AbilityFactorProfile> getDevelopmentProfile() {
         return Optional.ofNullable(developmentProfile);
     }
 
-    /**
-     * Whether this category exposes skills registered with {@link SkillScope#COMMON}.
-     */
     public boolean supportsCommonSkills() {
         return true;
     }
 
-    /**
-     * Optional resource exposed by this category. Categories without one keep the resource HUD hidden.
-     */
     public Optional<AbilityResourceSpec> getResourceSpec() {
         return Optional.empty();
     }
@@ -133,9 +115,6 @@ public abstract class AbilityCategory {
 
     public abstract Identifier getIcon();
 
-    /**
-     * 能力在开发机左侧面板中显示的名称喵
-     */
     public abstract String getDisplayName();
 
     public String getDescriptionId() {
@@ -163,9 +142,6 @@ public abstract class AbilityCategory {
             return this;
         }
 
-        /**
-         * Explicitly participates in initial development with the supplied profile and weight.
-         */
         public Builder development(float weight, AbilityFactorProfile profile) {
             if (!Float.isFinite(weight) || weight <= 0)
                 throw new IllegalArgumentException("Invalid development weight");
@@ -279,7 +255,7 @@ public abstract class AbilityCategory {
     }
 
     /**
-     * 要注意服务器不一定只初始化一次喵
+     * 要注意服务器不一定只初始化一次喵, 例如单人重新进入世界
      */
     public void initServer(MinecraftServerContext context) {
     }

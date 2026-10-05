@@ -64,7 +64,7 @@ private class IronSandCaptureApp(private val root: Path, private val environment
         if (target == null) target =
             TextureTarget("Iron sand capture", 1280, 720, GpuFormat.RGBA8_UNORM, GpuFormat.D32_FLOAT)
         if (renderer == null) {
-            renderer = VfxGraphRenderer(environment::loadTexture); glow = EditorGlow(renderer!!)
+            renderer = VfxGraphRenderer(); glow = EditorGlow(renderer!!)
         }
         val outputTarget = target!!
         val shot = shots[index]

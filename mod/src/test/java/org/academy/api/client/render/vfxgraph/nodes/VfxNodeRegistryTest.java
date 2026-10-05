@@ -22,7 +22,7 @@ class VfxNodeRegistryTest {
     @Test
     void registerAndFind() {
         assertNull(registry.find("missing"));
-        assertEquals(47, catalogSize());
+        assertEquals(48, catalogSize());
     }
 
     @Test

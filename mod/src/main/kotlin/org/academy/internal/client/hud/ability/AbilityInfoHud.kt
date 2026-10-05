@@ -6,9 +6,6 @@ import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.renderpearl.api.textures.FilterMode
 import com.mojang.renderpearl.api.textures.GpuTextureView
 import net.minecraft.client.Minecraft
-import net.neoforged.bus.api.SubscribeEvent
-import net.neoforged.neoforge.common.NeoForge
-import org.academy.AcademyCraft
 import org.academy.AcademyCraftClient
 import org.academy.api.client.ability.AbilitySystemClient
 import org.academy.api.client.ability.AbilitySystemClient.SkillInfo
@@ -29,7 +26,6 @@ import org.academy.api.client.input.InputSystem
 import org.academy.api.client.render.Render
 import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.resources.R
-import org.academy.api.client.vanilla.ResizeDisplayEvent
 import org.academy.api.common.ability.AbilityCategory
 import org.academy.api.common.util.L10n
 import org.academy.internal.client.hud.HudLayout
@@ -140,8 +136,7 @@ class AbilityInfoHud private constructor() {
         context.rebuildLayout()
     }
 
-    @SubscribeEvent
-    fun onResizeDisplay(@Suppress("unused") event: ResizeDisplayEvent) {
+    fun resize() {
         context.rebuildLayout()
     }
 
@@ -325,12 +320,13 @@ class AbilityInfoHud private constructor() {
                         marginBottom(6f)
                     }
 
+                    red = 0.2f
+                    blue = 0.2f
+                    green = 0.2f
+
                     setFrameUpdate {
-                        val key = AbilitySystemClient.category.key
                         texture(
-                            AcademyCraft.custom(
-                                key.namespace, "textures/ability/" + key.path + "/icon_overlay.png"
-                            )
+                            AbilitySystemClient.category.icon
                         )
                         true
                     }
@@ -495,7 +491,11 @@ class AbilityInfoHud private constructor() {
                     weight(1f)
                     marginRight(2f)
 
-                    text(info.skill.translatedName) {
+                    text("") {
+                        setFrameUpdate {
+                            text = info.skill.translatedName
+                            true
+                        }
                         textSize = 10f
                     }
 
@@ -527,7 +527,6 @@ class AbilityInfoHud private constructor() {
         fun initMain() {
             INSTANCE = AbilityInfoHud()
             AbilitySystemClient.registerHudToggle { instance.toggleActive() }
-            NeoForge.EVENT_BUS.register(INSTANCE)
             val config = AcademyCraftClient.Config.INSTANCE
                 .getConfig<AbilitySystemClient.Config>(AbilitySystemClient.CONFIG_KEY_ABILITY_SYSTEM)
 

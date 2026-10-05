@@ -129,7 +129,6 @@ public class VectorDeviation extends Skill {
 
     @Override
     public void initClient() {
-        VectorRedirectEffectPacket.initClient();
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);

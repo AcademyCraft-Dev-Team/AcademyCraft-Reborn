@@ -7,7 +7,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
-import org.academy.internal.client.render.vfx.SkyStrikeVfxClient;
+
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -16,6 +16,7 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+import org.academy.internal.common.ability.electromaster.Electromaster;
 
 @PacketTarget(ThreadType.CLIENT)
 public final class SkyStrikeVisualPacket extends Packet<ClientPacketListener, SkyStrikeVisualPacket> {
@@ -93,7 +94,7 @@ public final class SkyStrikeVisualPacket extends Packet<ClientPacketListener, Sk
             }
             var minecraft = Minecraft.getInstance();
             if (minecraft.level == null) return;
-            SkyStrikeVfxClient.spawn(packet.impact, packet.seed, packet.profile);
+            Electromaster.Client.SkyStrike.spawn(packet.impact, packet.seed, packet.profile);
         }
     }
 }

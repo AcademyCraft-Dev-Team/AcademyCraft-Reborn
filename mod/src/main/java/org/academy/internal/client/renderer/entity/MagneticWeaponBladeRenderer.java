@@ -1,18 +1,16 @@
 package org.academy.internal.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemDisplayContext;
 import org.academy.internal.client.renderer.entity.state.MagneticWeaponBladeRenderState;
+import org.academy.internal.common.world.entity.skill.BladeGeometry;
 import org.academy.internal.common.world.entity.skill.MagneticWeaponBlade;
-import org.academy.internal.common.world.entity.skill.MagneticWeaponBladeMotion;
 
 public final class MagneticWeaponBladeRenderer
         extends EntityRenderer<MagneticWeaponBlade, MagneticWeaponBladeRenderState> {
@@ -41,9 +39,13 @@ public final class MagneticWeaponBladeRenderer
                 entity
         );
         state.attacking = entity.isAttacking();
-        state.yRot = Mth.rotLerp(partialTick, entity.yRotO, entity.getYRot());
-        state.xRot = Mth.rotLerp(partialTick, entity.xRotO, entity.getXRot());
-        state.roll = MagneticWeaponBladeMotion.rollAt(entity.getAttackTick(), entity.getAttackSequence());
+        var transform = entity.transform(partialTick);
+        state.x = transform.position().x;
+        state.y = transform.position().y;
+        state.z = transform.position().z;
+        state.yRot = transform.yaw();
+        state.xRot = transform.pitch();
+        state.roll = transform.roll();
     }
 
     @Override
@@ -54,12 +56,7 @@ public final class MagneticWeaponBladeRenderer
         if (state.weapon.isEmpty()) return;
 
         poseStack.pushPose();
-        poseStack.rotate(Axis.YN.rotationDegrees(state.yRot));
-        poseStack.rotate(Axis.XP.rotationDegrees(state.xRot));
-        poseStack.rotate(Axis.ZP.rotationDegrees(state.roll));
-        poseStack.rotate(Axis.XP.rotationDegrees(90.0f));
-        poseStack.rotate(Axis.ZP.rotationDegrees(-45.0f));
-        poseStack.scale(1.45f, 1.45f, 1.45f);
+        poseStack.rotate(BladeGeometry.rotation(state.yRot, state.xRot, state.roll));
         state.weapon.submit(
                 poseStack,
                 collector,

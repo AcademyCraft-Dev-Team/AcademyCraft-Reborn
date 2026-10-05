@@ -34,7 +34,7 @@ object SkillSettingsApp : App {
     }
 
     override fun icon(): Identifier {
-        return R.textures.gui.app.abilitysettings.ability_settings
+        return R.textures.gui.app.ability_settings.ability_settings
     }
 
     private fun translate(key: String): String {
