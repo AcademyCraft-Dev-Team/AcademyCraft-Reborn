@@ -33,7 +33,7 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.api.server.vfx.SkillVfxService;
+import org.academy.api.server.ability.DarkmatterGraphEffects;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -230,7 +230,7 @@ public final class DarkmatterCut extends Skill {
                                 player, currentCost, skill,
                                 skill.getIterationTicks(player))) return;
                         applied[0] = true;
-                        spawnSlash(level, player, visualDirection, phase.gamma() > 0.0f ? 2.0f : 1.0f);
+                        spawnSlash(level, player, visualDirection, phase.gamma() > 0.0f ? 2.0f : 1.0f, 1);
                         level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP,
                                 SoundSource.PLAYERS, 1.0f, 1.0f);
                         var system = AbilitySystemServer.getSystem(player);
@@ -270,7 +270,7 @@ public final class DarkmatterCut extends Skill {
                                     context.milestone() >= 3 ? 4 : 8, () -> {
                                         if (!player.isAlive() || player.level() != level) return;
                                         spawnSlash(level, player, visualDirection.scale(-1.0),
-                                                1.5f);
+                                                1.5f, -1);
                                         for (var targetId : mirroredTargets) {
                                             if (!(level.getEntity(targetId) instanceof LivingEntity target)
                                                     || !DarkmatterTargeting.isAttackableBy(player, target)) continue;
@@ -390,15 +390,10 @@ public final class DarkmatterCut extends Skill {
                 ServerLevel level,
                 ServerPlayer player,
                 Vec3 direction,
-                float scale
+                float scale,
+                int reverse
         ) {
-            var position = player.position().add(0, player.getBbHeight() * 0.3, 0)
-                    .add(direction.scale(1.85));
-            float yRot = (float) Math.toDegrees(Math.atan2(-direction.x, direction.z));
-            float xRot = (float) Math.toDegrees(-Math.asin(Math.clamp(direction.y, -1.0, 1.0)))
-                    + player.getRandom().nextFloat() * 60 - 30;
-            SkillVfxService.slash(level, position, xRot, yRot, scale,
-                    player.getRandom().nextBoolean() ? 1 : -1, 4);
+            DarkmatterGraphEffects.cut(player, direction, scale, reverse);
         }
     }
 

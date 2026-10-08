@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>未元物质特效设计评审</title>
+<style>
+:root{color-scheme:dark;--bg:#0c0e11;--panel:#14181e;--line:#333a44;--text:#edf0f4;--sub:#b2bcc9}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.65 "Microsoft YaHei",sans-serif}
+header{padding:24px 32px 20px;border-bottom:1px solid var(--line)}h1{font-size:27px;margin:0 0 6px;letter-spacing:2px}p{margin:8px 0}.intro{color:var(--sub);max-width:1000px}a{color:#d3e3f7}
+.status{display:inline-block;border:1px solid #71819a;padding:2px 10px;font-size:12px;margin-right:8px}
+main{display:grid;grid-template-columns:260px minmax(0,1fr);gap:24px;max-width:1760px;margin:auto;padding:24px 32px}
+nav{display:grid;gap:10px;align-content:start}button{cursor:pointer;color:var(--text);font:inherit}
+.skill{display:flex;gap:12px;align-items:center;padding:10px;background:var(--panel);border:1px solid var(--line);text-align:left;border-radius:3px;transition:border-color .15s}
+.skill[aria-selected=true]{border-color:#ecf2fc;box-shadow:inset 3px 0 #ecf2fc}.skill:hover{border-color:#8495aa}.skill img{width:75px;aspect-ratio:1.5;object-fit:cover}.skill span{display:block}.skill small{color:var(--sub)}
+.content{min-width:0}.titlebar{display:flex;justify-content:space-between;gap:12px;align-items:baseline}.titlebar h2{font-size:24px;margin:0}.titlebar a{white-space:nowrap;font-size:13px}
+figure{margin:16px 0;border:1px solid var(--line);background:#080a0c}figure img{display:block;width:100%;height:auto}figcaption{padding:10px 14px;color:var(--sub);font-size:13px;border-top:1px solid var(--line)}
+.info{display:grid;grid-template-columns:1fr 1fr;gap:16px}.info article{background:var(--panel);border:1px solid var(--line);padding:15px 18px}h3{font-size:16px;margin:0 0 8px}.flow{font-size:16px;color:#e9f0fa}.dim{color:var(--sub)}
+footer{max-width:1760px;margin:0 auto;padding:12px 32px 32px;color:var(--sub);font-size:13px}details{border:1px solid var(--line);padding:12px 16px;margin-top:16px}summary{cursor:pointer}
+@media(max-width:960px){main{grid-template-columns:1fr;padding:16px}nav{grid-template-columns:repeat(3,minmax(0,1fr))}.skill{display:block;padding:8px}.skill img{width:100%;margin-bottom:5px}.info{grid-template-columns:1fr}header{padding:20px 16px}.titlebar{display:block}}
+@media(max-width:560px){nav{grid-template-columns:repeat(2,minmax(0,1fr))}h1{font-size:22px}}
+</style>
+</head>
+<body>
+<header><h1>未元物质特效设计评审</h1><p class="intro"><span class="status">本轮开发与验收完成</span>9 个技能 · AI 概念演示图 · 2026 年 10 月 7 日</p><p class="intro">白色实体羽片、珍珠灰分层、局部薄透边缘。按已确认方案使用本项目 VFXGraph 与内置编辑器开发；独角仙使用 Blockbench 建模。<a href="runtime/index.html">查看实际渲染、方块阻隔与性能验收</a>。</p></header>
+<main><nav aria-label="选择技能"><button class="skill" type="button" data-index="0" aria-selected="true"><img src="01_generation.png" alt=""><div><small>LV1 · 01</small><span>未元物质创造</span></div></button>
+<button class="skill" type="button" data-index="1" aria-selected="false"><img src="02_shaping.png" alt=""><div><small>LV1 · 02</small><span>未元物质塑形</span></div></button>
+<button class="skill" type="button" data-index="2" aria-selected="false"><img src="03_phase_tuning.png" alt=""><div><small>LV2 · 03</small><span>相态调谐</span></div></button>
+<button class="skill" type="button" data-index="3" aria-selected="false"><img src="04_disassemble.png" alt=""><div><small>LV2 · 04</small><span>未元解构</span></div></button>
+<button class="skill" type="button" data-index="4" aria-selected="false"><img src="05_cut.png" alt=""><div><small>LV3 · 05</small><span>未元物质切割</span></div></button>
+<button class="skill" type="button" data-index="5" aria-selected="false"><img src="06_interference.png" alt=""><div><small>LV3 · 06</small><span>未元干涉</span></div></button>
+<button class="skill" type="button" data-index="6" aria-selected="false"><img src="07_repair.png" alt=""><div><small>LV4 · 07</small><span>未元修复</span></div></button>
+<button class="skill" type="button" data-index="7" aria-selected="false"><img src="08_creation.png" alt=""><div><small>LV4 · 08</small><span>未元创生</span></div></button>
+<button class="skill" type="button" data-index="8" aria-selected="false"><img src="09_six_wings.png" alt=""><div><small>LV5 · 09</small><span>γ态·六翼</span></div></button></nav>
+<section class="content" aria-live="polite"><div class="titlebar"><h2 id="name"></h2><a id="original" target="_blank" rel="noopener">打开完整图片 ↗</a></div>
+<p id="theme" class="dim"></p><figure><img id="art" alt=""><figcaption id="caption"></figcaption></figure>
+<div class="info"><article><h3>动作与玩法</h3><p id="flow" class="flow"></p><p id="details"></p></article><article><h3>相态与实现</h3><p id="phases"></p><p id="graph" class="dim"></p></article></div>
+<details><summary>共用材质与实现边界</summary><p>原作依据是实体白羽、多层长短羽与三对翼。α／β／γ 和九个技能的具体动作来自项目现有玩法；不是原作已有的九套招式。</p><p>六翼与长翼斩需补充通用可编辑输出；干涉需要图控制公共方向场。图中不承诺真实折射、实体网格切割或可直接导入的任意网格。</p><p>创生的稳定生物造型由蓝图实体模型承担，VFXGraph 负责生成、攻击反馈和解体。持续效果按真实按键／开关状态结束，第一人称与多人叠加在开发后实机验收。</p></details></section></main>
+<footer><p>内置 imagegen 生成；概念图不代表游戏截图或已经实现。图中的白光、表面形变及密度在开发中以可读性和性能验证为准。</p><p><a href="README.md">完整设计说明</a> · <a href="references.md">原作来源与查阅范围</a> · 各图提示词保存在同目录 .prompt.txt 文件。</p></footer>
+<script>
+const skills=[{"id":"01_generation","name":"未元物质创造","level":"LV1","skill":"darkmatter_generation","theme":"凝聚与抹消","flow":"白羽粉向掌边收拢 → 压成致密物质核心 → 碎片沿羽轴解散。","details":"主键持续生成 MP，副键持续抹消；用短促、局部的视觉反馈表现物质储备变化，松键立即收束。图中的核心属于短暂效果，不新增持久实体或物品。","phases":"生成逐渐聚拢；抹消从边缘剥落。亮度保持稳定，以密度和运动方向表达强弱。","graph":"新增 generation / elimination 图；共用薄片材质、掌部锚点、进度曲线。","note":"下方上行是生成、下行是抹消；表示不同操作，非同时发生。方块手指是概念图生成细节，正式开发沿用现有玩家模型。"},{"id":"02_shaping","name":"未元物质塑形","level":"LV1","skill":"darkmatter_shaping","theme":"从羽骨长成形制","flow":"材料收拢 → 细长羽骨勾出形制 → 白色薄片合为稳定物体。","details":"编辑器提交成功后只播放一次短促塑形反馈，成品按现有规则进入背包。剑、工具、方块等小样用于展示材质，远程武器、护甲等保持既有等级解锁。","phases":"成品使用独立的 α／β 快照；塑形不会自动改写玩家当前配比。11 种形制共用骨架生长与表面收平的语言。","graph":"新增 shaping 图，按形制绑定表面或保守代理；物品实体仍用现有模型。","note":"悬浮成品仅是概念阶段展示，落地时不增加永久工坊或漂浮装备。"},{"id":"03_phase_tuning","name":"相态调谐","level":"LV2","skill":"darkmatter_phase_tuning","theme":"同一种白色物质的两种性状","flow":"α 致密、有力且棱缘明确 ↔ 混合态 ↔ β 薄透、松散且边缘活跃。","details":"持续按键把共享储备向 α 或 β 分配，松键结束。用羽片厚度、间距和响应速度显示配比，无新增伤害或投射物。","phases":"γ 是六翼的独立增幅储备，不参与本技能转换。相态都保持白色，避免靠颜色把能力拆成三套元素。","graph":"新增 phase_tuning 图；公开 density / flexibility / edgeActivity 等视觉参数。","note":"图的三组形态表示配比对照；γ 不在此图中。"},{"id":"04_disassemble","name":"未元解构","level":"LV2","skill":"darkmatter_disassemble","theme":"侵蚀与剥离","flow":"落点表面长出白色侵蚀边 → 羽状薄层剥落 → 小颗粒消隐，实际掉落回收。","details":"单次选中落点后同时表现实体和方块的实际结算。活体保持完整可辨，仅局部侵蚀；死亡或方块真实移除后才允许大面积散解。","phases":"α 偏物理解构，β 偏异常法则触发；标记引爆沿用共用的羽裂接触纹。","graph":"重做 disassemble 图；复用表面采样、erosion 与 smoke，增加分解完成阶段。","note":"不能把示意碎片当作真实网格切割；不出现持续射线或施术者到落点的光柱。"},{"id":"05_cut","name":"未元物质切割","level":"LV3","skill":"darkmatter_cut","theme":"扇形物质刃与反向镜像","flow":"短羽片沿扇面排开 → 一次宽薄刃掠过 → γ 延迟反向二斩 → 收束。","details":"主弧有明确的白色前缘、灰色内部和少量羽片尾缘，表现薄而有质量的切割面。γ 二斩保留现有 4–8 tick 延迟。","phases":"α 使形态更厚、更宽；β 强调薄刃和目标附着的羽裂纹；γ 二斩仍是同材质，靠反向与延迟区分。","graph":"迁移旧 SlashVfx 到图；新增通用物质曲面输出，短 Ribbon 只作尾部残影。","note":"图中两道弧属于相邻时刻叠示，不意味着无 γ 状态会同时二次命中。"},{"id":"06_interference","name":"未元干涉","level":"LV3","skill":"darkmatter_interference","theme":"风与环境光经过异质物质","flow":"介质薄片显露 → 前方风场／光场维持 → 目标表面出现局部接触 → 松键停止。","details":"α 是窄而有力的风暴和羽刃；β 是更广的环境光异常与侵蚀累积；γ 增加近身独立羽刃。原有服务端双锥体仍决定作用范围。","phases":"图下方三格是 α／β／γ 变体对照，不是三个按时自动转换的阶段。γ 在既有 α／β 上增幅。","graph":"以图控制方向场输出，复用公共 DirectionalFieldRenderer；羽刃、接触和主体生命周期都通过图调参。","note":"异常光不从眼睛或手掌发射。只承诺场景明暗与散射近似，不承诺光线追踪或真实折射。"},{"id":"07_repair","name":"未元修复","level":"LV4","skill":"darkmatter_repair","theme":"贴面生长与净化","flow":"受影响部位显露小补片 → 羽脉前沿长合裂口 → 恢复原材质，残屑消隐。","details":"治疗、可见装备修复或负面状态缩短成功后才播放脉冲。身体、盔甲与手持物各有落点；仅背包物品变化时不伪造世界中的成品。","phases":"α 偏身体和装备修复，β 的净化表现为局部附着痕消退；γ 合并更多修复部位，保持总亮度上限。","graph":"重做 repair 图；继续使用部位遮罩、表面绑定、growth 材质和合并更新。","note":"补片是视觉设计，不承诺真实切开或修补实体网格。健康闲置时不维持全身强光。"},{"id":"08_creation","name":"未元创生","level":"LV4","skill":"darkmatter_creation","theme":"由物质生长成模块化生命","flow":"近旁白色羽骨聚集 → 甲壳与肢体成形 → 构造生命行动／攻击 → 终止时解体。","details":"以白色独角仙作为材质与结构母题，覆盖步行、飞行、游泳躯干及近战颚、直射／追踪炮、感应器等模块。实际召唤仍遵守安全落点、4 个蓝图槽、最多 16 只与每只 40 CP。","phases":"各部位保持独立 α／β 快照；γ 催化沿用既有召唤时固化规则，不增加原作新生物设定。","graph":"新增召唤、解体、近战接触与炮弹尾迹图；稳定生物造型由现有蓝图实体模型承担。","note":"图中的模块小样用于造型方向，不代表本轮新增蓝图、攻击模式或任意网格输出。"},{"id":"09_six_wings","name":"γ态·六翼","level":"LV5","skill":"darkmatter_six_wings","theme":"三对实体白翼","flow":"背部六个翼根展开 → 上中下三对翼稳定 → 飞行／翼击 → 可控收回。","details":"上对抬起、中对平展、下对下压，六个根部与尖端可辨。长初级羽覆盖短覆羽，翼面保留灰色分层和实物重量。开关状态沿用现有飞行、减伤、翼击与 γ 增幅。","phases":"翼面以姿态和羽片收展体现强度；不会把 γ 画成替换 α／β 的第三种颜色或限时终极爆发。","graph":"迁移旧六翼渲染入口；增加可编辑的通用羽片阵列／骨架形状输出，提供实体中立锚点接口。","note":"六翼输出是开发期需补齐的能力。图的翼击与收回属于动作示意，必须实机校验六翼数量和第一人称视野。"}];
+function select(index){
+ const s=skills[index]; document.getElementById("name").textContent=s.level+" "+s.name;
+ ["theme","flow","details","phases","graph"].forEach(key=>document.getElementById(key).textContent=s[key]);
+ document.getElementById("art").src=s.id+".png";document.getElementById("art").alt=s.name+" AI概念演示图";
+ document.getElementById("original").href=s.id+".png";document.getElementById("caption").textContent=s.note;
+ document.querySelectorAll(".skill").forEach((button,i)=>button.setAttribute("aria-selected",String(i===index)));
+}
+document.querySelectorAll(".skill").forEach(button=>button.addEventListener("click",()=>select(Number(button.dataset.index))));select(0);
+</script>
+</body>
+</html>

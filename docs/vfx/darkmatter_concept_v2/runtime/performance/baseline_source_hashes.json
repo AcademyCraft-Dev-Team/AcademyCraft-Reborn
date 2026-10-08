@@ -1,0 +1,59 @@
+{
+  "phase": "before performance optimization, after wing angle and real block validation",
+  "date": "2026-10-07",
+  "not_a_git_commit": true,
+  "files": [
+    {
+      "path": "src/main/java/org/academy/api/client/render/post/DirectionalFieldRenderer.java",
+      "sha256": "3afbd68e98510d563e259e29344d1f9cf461a9d9628904f47534b4003bb5a237"
+    },
+    {
+      "path": "src/main/java/org/academy/api/client/render/post/WorldSurfaceMasks.java",
+      "sha256": "fd0aafbfdadc3fde7191c7a0f48e815718b98131cb5d15b65b48273edb3f3e1d"
+    },
+    {
+      "path": "src/main/java/org/academy/api/client/render/vfxgraph/render/VfxGraphRenderer.java",
+      "sha256": "d4aa68d51d0cb9d7b54cd003b6af003a998d0c7b56e60c74c07630ab1eb8dc9e"
+    },
+    {
+      "path": "src/main/java/org/academy/api/client/render/vfxgraph/nodes/FeatherArrayEmitter.java",
+      "sha256": "d91bac99594032ecd72205274328fa5856c150d85817ec18d6cb6bd49f8ed435"
+    },
+    {
+      "path": "src/main/java/org/academy/api/client/render/vfxgraph/shape/OcclusionQueryBudget.java",
+      "sha256": "c0467c8b02a31ba15dfbcdc7aa7fde9478ed3bc69b9e62365d87dadaacc65196"
+    },
+    {
+      "path": "src/main/java/org/academy/api/client/render/vfxgraph/shape/BlockSurfaceOcclusionSampler.java",
+      "sha256": "31f1068869f6dc66e5df83231bc3200b7402398af589e34dc7e2bf16421d9b36"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/client/render/vfx/DarkmatterSixWingsVfxClient.java",
+      "sha256": "4f537d01e7dbea4086fe494b1d3f66dccbc9037f9746e63948761dff6caa8745"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/client/render/vfx/DarkmatterVfxClient.java",
+      "sha256": "31d9f372cf4380d52639769e060a32a812de06de0786480708176106965cfb5d"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/client/render/vfx/InterferenceFieldClient.java",
+      "sha256": "9ee99c7a902f6a6d1a189c181b1878270c4e26a28a8b1613ef3b4fcd623a31d4"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/client/model/DarkmatterCreatureModel.java",
+      "sha256": "39cb7b4e0fc95300ef5b3806ba5d50bab9fd5270c9aa2303eed4bb553bf4be58"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/client/renderer/entity/DarkmatterBeetleRenderer.java",
+      "sha256": "cd256d40ba60c31502f22a43cae33dc1ea2161a744a17361465f5a069948f4bf"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/world/entity/ability/DarkmatterBeetle.java",
+      "sha256": "9c4eccf0a6b5c5d0a4c24adec25d7cd6d25041bd31950b6d2af4af5522e67bbf"
+    },
+    {
+      "path": "src/main/resources/assets/academy/shaders/include/directional_field.glsl",
+      "sha256": "cab83a573b1aa491abed51a9d54c7e4e46005166b49da965a6b1807e746be38a"
+    }
+  ]
+}

@@ -31,7 +31,7 @@ class DarkmatterVisualPacketTest {
             var buffer = Unpooled.buffer();
             try {
                 DarkmatterVisualPacket.CODEC.encode(buffer, packet);
-                assertTrue(buffer.readableBytes() < 100);
+                assertTrue(buffer.readableBytes() < 128);
                 var copy = DarkmatterVisualPacket.CODEC.decode(buffer);
                 assertEquals(0, buffer.readableBytes());
                 assertEquals(packet.dimension, copy.dimension);
@@ -39,7 +39,25 @@ class DarkmatterVisualPacketTest {
                 assertEquals(packet.position, copy.position); assertEquals(packet.parts, copy.parts);
                 assertEquals(packet.entityId, copy.entityId); assertEquals(packet.seed, copy.seed);
                 assertEquals(packet.range, copy.range); assertEquals(packet.width, copy.width); assertEquals(packet.height, copy.height);
+                assertEquals(packet.alpha, copy.alpha); assertEquals(packet.beta, copy.beta); assertEquals(packet.gamma, copy.gamma);
+                assertEquals(packet.variant, copy.variant); assertEquals(packet.direction, copy.direction);
                 assertTrue(copy.finished);
+            } finally { buffer.release(); }
+        }
+    }
+
+    @Test void independentShapePhaseAndMirroredCutDirectionSurviveTheWire() {
+        var dimension = Identifier.withDefaultNamespace("overworld");
+        for (int reverse : new int[]{-1, 1}) {
+            var packet = new DarkmatterVisualPacket(dimension, DarkmatterVisualPacket.Kind.CUT, -1, true,
+                    Vec3.ZERO, 2, .9f, 8.8f, 0, false, 17, null, 4, 1, 2, reverse, new Vec3(.6, 0, .8));
+            var buffer = Unpooled.buffer();
+            try {
+                DarkmatterVisualPacket.CODEC.encode(buffer, packet);
+                var copy = DarkmatterVisualPacket.CODEC.decode(buffer);
+                assertEquals(4, copy.alpha); assertEquals(1, copy.beta); assertEquals(2, copy.gamma);
+                assertEquals(reverse, copy.variant); assertEquals(packet.direction, copy.direction);
+                assertEquals(0, buffer.readableBytes());
             } finally { buffer.release(); }
         }
     }

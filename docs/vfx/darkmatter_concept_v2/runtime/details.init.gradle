@@ -1,0 +1,12 @@
+// Isolated real channel, repair, disassembly, and single-target feather capture.
+allprojects {
+    afterEvaluate {
+        neoForge.runs.named('clientDev') {
+            sourceSet.set(sourceSets.editor)
+            gameDirectory.set(file('run/ability-vfx'))
+            systemProperty 'academy.darkmatterVfxSmoke', 'true'
+            systemProperty 'academy.darkmatterVfxOutput', file('docs/vfx/darkmatter_concept_v2/runtime/details').absolutePath
+            programArguments.addAll('--width', '1280', '--height', '720')
+        }
+    }
+}

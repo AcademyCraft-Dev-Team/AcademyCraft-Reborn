@@ -149,6 +149,17 @@ public final class VfxGraphManager {
     private final Map<Float, GraphCamera> frameCameras = new HashMap<>();
     public FrameStatistics frameStatistics() { return frameStatistics; }
 
+    /** Submission totals for the current renderer pool; request snapshots outside frame timing. */
+    public VfxGraphRenderer.InstancingStatistics instancingStatistics() {
+        long draws = 0, instances = 0, triangles = 0, bytes = 0, skipped = 0;
+        for (var renderer : rendererPool.values()) {
+            var stats = renderer.instancingStatistics();
+            draws += stats.drawCalls(); instances += stats.instances(); triangles += stats.materialTriangles();
+            bytes += stats.uploadedBytes(); skipped += stats.zeroAlphaSkipped();
+        }
+        return new VfxGraphRenderer.InstancingStatistics(draws, instances, triangles, bytes, skipped);
+    }
+
     /** Cull before simulation, vertex building, staging and draw submission. */
     public void renderFrame(GpuTextureView target, @Nullable GpuTextureView depth, GraphCamera camera) {
         if (!initialized) return;
@@ -165,7 +176,8 @@ public final class VfxGraphManager {
         var iterator = effects.iterator();
         while (iterator.hasNext()) {
             var effect = iterator.next();
-            effect.setRenderVisible(false);
+            // Frame bindings may use the previous visibility result to skip expensive scene queries.
+            // Publish the current result below, after anchors and their bounds have been updated.
             // Lifetime follows elapsed game presentation time even when simulation steps are capped.
             if (effect.updateFrame(elapsed, camera, partialTick)) { iterator.remove(); continue; }
             var effectCamera = frameCameras.computeIfAbsent(effect.minimumFarPlane(),

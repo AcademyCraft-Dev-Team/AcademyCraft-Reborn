@@ -18,7 +18,9 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
+import org.academy.api.server.ability.DarkmatterGraphEffects;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.damage.DarkmatterLawMark;
@@ -65,7 +67,8 @@ public final class DarkmatterCreatureProjectile extends AbstractArrow implements
         this.speed = Math.max(0.4f, finitePositive(speed));
         this.outputAdjustmentBypassed = outputAdjustmentBypassed;
         maximumLifetime = Math.max(20, Math.round(48.0f / this.speed));
-        snapTo(creator.getX(), creator.getEyeY(), creator.getZ(), creator.getYRot(), creator.getXRot());
+        var muzzle = creator.position().add(Vec3.directionFromRotation(0, creator.yBodyRot).scale(.68)).add(0, .54, 0);
+        snapTo(muzzle.x, muzzle.y, muzzle.z, creator.getYRot(), creator.getXRot());
         var direction = target.getBoundingBox().getCenter().subtract(position());
         if (direction.lengthSqr() < 1.0e-8) direction = creator.getLookAngle();
         setDeltaMovement(direction.normalize().scale(this.speed));
@@ -116,6 +119,7 @@ public final class DarkmatterCreatureProjectile extends AbstractArrow implements
                 penetration
         );
         if (hurt) {
+            DarkmatterGraphEffects.creatureContact(target);
             target.addEffect(new MobEffectInstance(
                     MobEffects.WEAKNESS, 20 + Math.round(10.0f * betaPower), 0, false, false));
             if (homing && betaPower > 0.0f) {

@@ -34,7 +34,8 @@ import java.util.function.Consumer;
 public final class DarkmatterVfxClientSmoke {
     private static boolean opened, configured;
     private static volatile boolean ready;
-    private static int ticks, total;
+    private static int ticks, total, warmupTicks;
+    private static long fieldFramesBefore;
     private static float pitch;
     private static float yaw;
     private static net.minecraft.world.entity.LivingEntity hostile, friendly;
@@ -87,7 +88,10 @@ public final class DarkmatterVfxClientSmoke {
                 for (int x = -16; x <= 16; x++) for (int z = 160; z <= 245; z++) {
                     p.level().setBlock(new BlockPos(x, 80, z), Blocks.SMOOTH_STONE.defaultBlockState(), 3);
                 }
-                for (int x=-8;x<=8;x++) for(int z=170;z<=190;z++) for(int y=81;y<=85;y++) p.level().setBlock(new BlockPos(x,y,z),Blocks.AIR.defaultBlockState(),3);
+                // Remove the full glass/water fixture left by earlier isolated concept captures.
+                for (int x = -10; x <= 10; x++) for (int z = 169; z <= 195; z++) for (int y = 81; y <= 94; y++) {
+                    p.level().setBlock(new BlockPos(x, y, z), Blocks.AIR.defaultBlockState(), 3);
+                }
                 p.teleportTo(p.level(), 0, 81, 174.5, Set.of(), 0, 0, false);
                 p.setGameMode(GameType.CREATIVE);
                 p.getInventory().clearContent();
@@ -99,6 +103,7 @@ public final class DarkmatterVfxClientSmoke {
                 var manager = AbilitySystemServer.getSystem(p).getDarkmatterResourceManager();
                 manager.reconcile(p); manager.debugSetPools(p, 100, 0, 0, 0); manager.setAlphaPoints(p, 200);
                 for (var old : p.level().getEntitiesOfClass(net.minecraft.world.entity.Mob.class, p.getBoundingBox().inflate(80))) old.discard();
+                for (var old : p.level().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, p.getBoundingBox().inflate(80))) old.discard();
                 var zombie = new net.minecraft.world.entity.monster.zombie.Zombie(net.minecraft.world.entity.EntityTypes.ZOMBIE, p.level());
                 zombie.setPos(0, 81, 180); zombie.setNoAi(true); zombie.setNoGravity(true);
                 zombie.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH).setBaseValue(1000);
@@ -110,8 +115,13 @@ public final class DarkmatterVfxClientSmoke {
             });
         }
         if (!ready) return;
+        // Let startup toasts and world loading settle before the capture timeline begins.
+        if (++warmupTicks <= 200) return;
         ticks++;
-        if (ticks == 25) capture("client_day_before");
+        if (ticks == 25) {
+            fieldFramesBefore = org.academy.api.client.render.post.DirectionalFieldRenderer.renderedFrames();
+            capture("client_day_before");
+        }
         if (ticks >= 30 && ticks <= 88 && ticks % 20 == 10) server(p -> {
             AbilitySystemServer.getSystem(p).getDarkmatterResourceManager().debugSetPools(p, 100, 0, 0, 0);
             require(DarkmatterRadiation.Server.beginChannel(p), "Actual radiation channel active");
@@ -119,7 +129,15 @@ public final class DarkmatterVfxClientSmoke {
         if (ticks == 40) require(org.academy.internal.client.render.vfx.InterferenceFieldClient.activeCount() == 1, "Authoritative range field active");
         if (ticks == 46) {
             require(org.academy.internal.client.render.vfx.InterferenceFieldClient.activeCount() == 1, "Repeated pulses reuse the same field");
-            require(find("darkmatter_interference") == null, "Range uses scene shaders without interference beams or arcs");
+            var medium = require("darkmatter_interference");
+            var arcs = medium.effect().arcBuffer();
+            require(arcs != null && arcs.count() == 0, "Maintained interference medium emits no arcs");
+            var areas = org.academy.internal.client.render.vfx.InterferenceFieldClient.areas();
+            var styled = org.academy.internal.client.render.vfx.InterferenceFieldClient.styledAreas();
+            require(areas.size() == 1 && styled.size() == 1 && styled.getFirst().area().equals(areas.getFirst()),
+                    "Scene output shares the authoritative dual-cone area");
+            require(org.academy.api.client.render.post.DirectionalFieldRenderer.renderedFrames() > fieldFramesBefore,
+                    "Scene dual-cone field rendered beside the graph medium");
             capture("client_day_active");
         }
         if (ticks >= 40 && ticks <= 64 && ticks % 2 == 0) capture("motion/day_" + String.format("%03d", ticks));
@@ -133,6 +151,7 @@ public final class DarkmatterVfxClientSmoke {
         if (ticks == 90) server(DarkmatterRadiation.Server::endChannel);
         if (ticks == 104) {
             require(org.academy.internal.client.render.vfx.InterferenceFieldClient.activeCount() == 0, "Explicit stop clears maintained field");
+            require(find("darkmatter_interference") == null, "Explicit stop clears maintained graph medium");
             capture("client_night_after");
             mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
             server(p -> { command(p,"time set noon"); hostile.discard(); });
@@ -205,13 +224,17 @@ public final class DarkmatterVfxClientSmoke {
         if (ticks == 282) capture("client_indoor_active");
         if (ticks == 286) server(DarkmatterRadiation.Server::endChannel);
         if (ticks == 300) server(p -> DarkmatterGraphEffects.interference(p, 16));
-        if (ticks == 320) require(org.academy.internal.client.render.vfx.InterferenceFieldClient.activeCount() == 0, "Lost refresh times out safely");
+        if (ticks == 320) {
+            require(org.academy.internal.client.render.vfx.InterferenceFieldClient.activeCount() == 0, "Lost refresh times out safely");
+            require(find("darkmatter_interference") == null, "Lost refresh clears graph medium");
+        }
         if (ticks == 335) {
             yaw = -22;
             server(p -> {
             p.teleportTo(p.level(), -3, 81, 174.5, Set.of(), yaw, 0, false);
             for(int z=174;z<=190;z++) for(int x=-7;x<=7;x++) p.level().setBlock(new BlockPos(x,84,z),Blocks.AIR.defaultBlockState(),3);
             for (var old : p.level().getEntitiesOfClass(net.minecraft.world.entity.Mob.class, p.getBoundingBox().inflate(40))) old.discard();
+            for (var old : p.level().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, p.getBoundingBox().inflate(40))) old.discard();
             var target = new net.minecraft.world.entity.animal.cow.Cow(net.minecraft.world.entity.EntityTypes.COW, p.level());
             var other = new net.minecraft.world.entity.animal.cow.Cow(net.minecraft.world.entity.EntityTypes.COW, p.level());
             target.setPos(0,81,180); other.setPos(0,81,183);
@@ -235,6 +258,7 @@ public final class DarkmatterVfxClientSmoke {
         });
         if (ticks == 365) {
             require(DarkmatterVfxClient.activeCount() == 0, "All darkmatter effects clear after stop/leases");
+            require(find("darkmatter_feather") == null, "Feather graph clears after its real projectile exits");
             capture("client_cleared");
             System.out.println("[darkmatter-vfx-smoke] PASSED");
             mc.stop();

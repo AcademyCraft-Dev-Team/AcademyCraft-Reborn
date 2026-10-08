@@ -16,7 +16,9 @@ import org.academy.api.client.render.vfxgraph.render.VfxGraphRenderer;
 import org.academy.api.client.render.vfxgraph.render.WorldTransform;
 import org.academy.api.client.render.vfxgraph.shape.SurfaceProjector;
 import org.academy.api.client.render.vfxgraph.shape.SurfaceSampler;
+import org.academy.api.client.render.vfxgraph.shape.SurfaceOcclusionSampler;
 import org.joml.Quaternionf;
+import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
@@ -51,6 +53,13 @@ public final class ActiveEffect {
         effect.setArcSource(name, source);
     }
     private final Map<String, SurfaceSampler> samplers = new LinkedHashMap<>();
+    private final Map<String, SurfaceOcclusionSampler> occlusionSamplers = new LinkedHashMap<>();
+
+    /** Binds a cached entity-neutral surface boundary query; preserved through asset reloads. */
+    public void bindOcclusionSampler(String name, SurfaceOcclusionSampler sampler) {
+        occlusionSamplers.put(name, Objects.requireNonNull(sampler));
+        effect.setSurfaceOcclusionSampler(name, sampler);
+    }
 
     /** A posed surface, including normals; retained through editor reload and simulation reset. */
     public void bindSurfaceSampler(String name, SurfaceSampler sampler) {
@@ -60,6 +69,9 @@ public final class ActiveEffect {
 
     private GraphEffect effect;
     private @Nullable EffectFrameBinding frameBinding;
+    private @Nullable EffectAnchor anchor;
+    private final Matrix4f anchorTransform = new Matrix4f();
+    private final Vector3f anchorScale = new Vector3f();
     private float gameAgeSeconds;
     private float gameLifetimeSeconds = Float.POSITIVE_INFINITY;
     private String refreshKey = "";
@@ -76,11 +88,16 @@ public final class ActiveEffect {
         frameBinding = Objects.requireNonNull(binding);
     }
 
+    /** A reusable shape attachment, sampled before the optional per-frame parameter binding. */
+    public void bindAnchor(EffectAnchor anchor) {
+        this.anchor = Objects.requireNonNull(anchor);
+    }
+
     /** A uniformly scaled attachment matrix, e.g. a hand, bone, camera, or non-player emitter. */
     public void setTransform(Matrix4fc transform) {
         transform.getTranslation(position);
         transform.getUnnormalizedRotation(rotation).normalize();
-        scale = transform.getScale(new Vector3f()).x;
+        scale = transform.getScale(anchorScale).x;
     }
 
     public void setGameTimeLifetimeSeconds(float seconds) {
@@ -98,6 +115,14 @@ public final class ActiveEffect {
         if (Float.isFinite(dt) && dt > 0) gameAgeSeconds += dt;
         if (updateState()) return true;
         if (followEntity != null && camera != null) position.set(followEntity.getPosition(partialTick).toVector3f());
+        if (anchor != null) {
+            anchorTransform.identity();
+            if (!anchor.sample(anchorTransform, partialTick)) {
+                stop();
+                return true;
+            }
+            setTransform(anchorTransform);
+        }
         if (frameBinding != null && camera != null && !frameBinding.update(this, camera, partialTick)) {
             stop();
             return true;
@@ -134,6 +159,7 @@ public final class ActiveEffect {
     public float cullingRadius(float fallback) { return cullingRadius >= 0 ? cullingRadius : fallback; }
     public void setRenderDistance(float distance) { renderDistance = Math.max(0f, distance); }
     public float renderDistance(float fallback) { return renderDistance >= 0 ? renderDistance : fallback; }
+    /** During a frame binding this is the previous frame's result; rendering publishes the new result. */
     public boolean renderVisible() { return renderVisible; }
     void setRenderVisible(boolean visible) { renderVisible = visible; }
 
@@ -312,6 +338,7 @@ public final class ActiveEffect {
         }
         surfaces.forEach(effect::setSurfaceProjector);
         samplers.forEach(effect::setSurfaceSampler);
+        occlusionSamplers.forEach(effect::setSurfaceOcclusionSampler);
         arcSources.forEach(effect::setArcSource);
         return false;
     }
@@ -337,6 +364,7 @@ public final class ActiveEffect {
         effect = new GraphEffect(graph, registry);
         surfaces.forEach(effect::setSurfaceProjector);
         samplers.forEach(effect::setSurfaceSampler);
+        occlusionSamplers.forEach(effect::setSurfaceOcclusionSampler);
         arcSources.forEach(effect::setArcSource);
         for (var entry : bindings.entrySet()) {
             effect.setLiveParam(entry.getKey(), entry.getValue().get());
@@ -351,6 +379,7 @@ public final class ActiveEffect {
                 Objects.requireNonNull(operatorRegistry), system.parameters());
         surfaces.forEach(effect::setSurfaceProjector);
         samplers.forEach(effect::setSurfaceSampler);
+        occlusionSamplers.forEach(effect::setSurfaceOcclusionSampler);
         arcSources.forEach(effect::setArcSource);
         for (var entry : bindings.entrySet()) {
             effect.setLiveParam(entry.getKey(), entry.getValue().get());

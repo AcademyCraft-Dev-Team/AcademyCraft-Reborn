@@ -64,9 +64,16 @@ public final class WorldSurfaceMasks {
         if (!active() || replayTarget != null || state.isInvisible) return;
         var center = new Vec3(state.x, state.y + state.boundingBoxHeight / 2, state.z);
         double margin = Math.max(state.boundingBoxHeight, state.boundingBoxWidth);
-        if (areas.stream().noneMatch(a -> center.distanceTo(a.origin()) <= a.radius() + margin)) return;
+        boolean relevant = false;
+        for (var area : areas) {
+            double range = area.radius() + margin;
+            if (center.distanceToSqr(area.origin()) <= range * range) { relevant = true; break; }
+        }
+        if (!relevant) return;
+        boolean member = false;
+        for (var area : areas) if (area.contains(center)) { member = true; break; }
         ENTITIES.add(new EntityDraw(state, camera, x, y, z, new Matrix4f(pose.last().pose()),
-                new Matrix3f(pose.last().normal()), areas.stream().anyMatch(a -> a.contains(center))));
+                new Matrix3f(pose.last().normal()), member));
     }
 
     @SubscribeEvent public static void afterOpaque(RenderLevelStageEvent.AfterOpaqueFeatures event) {
@@ -144,6 +151,12 @@ public final class WorldSurfaceMasks {
     private static void replay(RenderTarget output, boolean onlySelected) {
         output.copyDepthFrom(opaque);
         RenderSystem.getDevice().createCommandEncoder().clearColorTexture(output.getColorTexture(), new Vector4f(0));
+        if (ENTITIES.isEmpty()) return;
+        if (onlySelected) {
+            boolean member = false;
+            for (var draw : ENTITIES) if (draw.selected) { member = true; break; }
+            if (!member) return;
+        }
         var storage = new SubmitNodeStorage();
         replayTarget = output;
         try {

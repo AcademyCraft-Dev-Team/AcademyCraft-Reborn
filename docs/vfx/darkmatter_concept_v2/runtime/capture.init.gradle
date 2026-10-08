@@ -1,0 +1,10 @@
+allprojects {
+    afterEvaluate {
+        extensions.getByName('kotlin').sourceSets.named('editor') {
+            kotlin.srcDir(rootProject.file('docs/vfx/darkmatter_concept_v2/runtime'))
+        }
+        neoForge.runs.named('graphEditor') {
+            systemProperty 'academy.desktop.main', 'org.academy.desktop.grapheditor.preview.DarkmatterConceptCaptureMainKt'
+        }
+    }
+}

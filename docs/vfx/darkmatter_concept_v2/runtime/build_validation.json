@@ -1,0 +1,48 @@
+{
+  "checkedAt": "2026-10-06 21:29:13 UTC",
+  "runtime": "JetBrains Runtime 25.0.3",
+  "development": {
+    "command": ".\\gradlew.bat test editorTest build -DisDev=true",
+    "exitCode": 0,
+    "durationSeconds": 26,
+    "log": "build/darkmatter-final-dev-validation.log",
+    "suites": [
+      {
+        "suite": "test",
+        "tests": 2263,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "editorTest",
+        "tests": 104,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "release": {
+    "command": ".\\gradlew.bat build -DisDev=false",
+    "exitCode": 0,
+    "durationSeconds": 24,
+    "log": "build/darkmatter-final-release-validation.log",
+    "suites": [
+      {
+        "suite": "test",
+        "tests": 2263,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "editorTest",
+        "tests": 104,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  }
+}

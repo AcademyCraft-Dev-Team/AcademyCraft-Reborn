@@ -74,7 +74,8 @@ class VfxContainerFullCatalogTest {
                 "vfx.block.axial_beam", "vfx.block.axial_discharge", "vfx.block.axial_shock",
                 "vfx.block.electric_bolt", "vfx.block.electric_orbit", "vfx.block.electric_shield", "vfx.block.electric_paths",
                 "vfx.block.electric_ring",
-                "vfx.block.material_sheets", "vfx.block.iron_sand", "vfx.block.organic_strands", "vfx.block.cloud_vortex"
+                "vfx.block.material_sheets", "vfx.block.iron_sand", "vfx.block.organic_strands", "vfx.block.cloud_vortex",
+                "vfx.block.feather_array", "vfx.block.material_fan", "vfx.block.output_material_surface"
         };
         for (var id : expected) {
             assertNotNull(blocks.find(id), "block should be registered: " + id);

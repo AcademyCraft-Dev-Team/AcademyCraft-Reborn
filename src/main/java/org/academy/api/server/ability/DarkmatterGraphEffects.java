@@ -3,11 +3,13 @@ package org.academy.api.server.ability;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.vfx.RepairVisualParts;
 import org.academy.api.common.vfx.DirectionalArea;
 import org.academy.internal.common.network.DarkmatterVisualPacket;
 import org.academy.internal.common.network.DarkmatterVisualPacket.Kind;
+import org.academy.internal.common.ability.darkmatter.resource.DarkmatterPhase;
 
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -24,13 +26,55 @@ public final class DarkmatterGraphEffects {
     }
     public static void interference(LivingEntity actor, DirectionalArea area) {
         if (!(actor.level() instanceof ServerLevel level)) return;
+        var phase = actor instanceof ServerPlayer player ? DarkmatterPhase.weights(player) : new DarkmatterPhase.Weights(.5f, .5f, 0);
         new DarkmatterVisualPacket(level.dimension().identifier(), Kind.INTERFERENCE, actor.getId(), true,
                 area.origin(), Math.min(32, actor.getBbWidth()), Math.min(64, actor.getBbHeight()),
                 (float) Math.min(512, area.radius()), 0, false,
-                actor.getUUID().getLeastSignificantBits(), area).broadcast(level);
+                actor.getUUID().getLeastSignificantBits(), area, phase.alpha(), phase.beta(), phase.gamma(),
+                0, area.direction()).broadcast(level);
     }
     public static void stopInterference(LivingEntity actor) { attached(actor, Kind.INTERFERENCE, false, 0, 0); }
     public static void lightContact(LivingEntity target) { attached(target, Kind.CONTACT, true, 0, 0); }
+
+    /** Maintained feedback is emitted only while a resource operation actually changes matter. */
+    public static void generation(LivingEntity actor, boolean erase) {
+        attached(actor, erase ? Kind.ELIMINATION : Kind.GENERATION, true, 0, 0);
+    }
+    public static void stopGeneration(LivingEntity actor, boolean erase) {
+        attached(actor, erase ? Kind.ELIMINATION : Kind.GENERATION, false, 0, 0);
+    }
+    public static void phaseTuning(LivingEntity actor) { attached(actor, Kind.PHASE_TUNING, true, 0, 0); }
+    public static void stopPhaseTuning(LivingEntity actor) { attached(actor, Kind.PHASE_TUNING, false, 0, 0); }
+
+    /** The completed item's independent phase snapshot is used instead of the actor's current phase. */
+    public static void shaping(LivingEntity actor, int shape, float alphaRatio) {
+        if (!(actor.level() instanceof ServerLevel level)) return;
+        new DarkmatterVisualPacket(level.dimension().identifier(), Kind.SHAPING, actor.getId(), true,
+                actor.position(), actor.getBbWidth(), actor.getBbHeight(), 0, 0, false, level.getGameTime(),
+                null, Math.clamp(alphaRatio, 0, 1), 1 - Math.clamp(alphaRatio, 0, 1), 0,
+                Math.clamp(shape, 0, 10), actor.getLookAngle()).broadcast(level);
+    }
+
+    public static void summon(LivingEntity creature) { attached(creature, Kind.SUMMON, true, 0, 0); }
+    public static void creatureContact(LivingEntity target) { attached(target, Kind.CREATURE_CONTACT, true, 0, 0); }
+
+    /** A frozen positional finish survives the entity removal without inventing a persistent corpse. */
+    public static void dismiss(LivingEntity creature) {
+        if (!(creature.level() instanceof ServerLevel level)) return;
+        new DarkmatterVisualPacket(level.dimension().identifier(), Kind.DISMISS, -1, true,
+                creature.position(), creature.getBbWidth(), creature.getBbHeight(), 0, 63, true,
+                creature.getUUID().getLeastSignificantBits() ^ level.getGameTime()).broadcast(level);
+    }
+
+    public static void cut(LivingEntity actor, Vec3 direction, float scale, int reverse) {
+        if (!(actor.level() instanceof ServerLevel level)) return;
+        var phase = actor instanceof ServerPlayer player ? DarkmatterPhase.weights(player) : new DarkmatterPhase.Weights(.5f, .5f, 0);
+        new DarkmatterVisualPacket(level.dimension().identifier(), Kind.CUT, -1, true,
+                actor.position().add(0, actor.getBbHeight() * .5f, 0), Math.clamp(scale, .1f, 32), .9f,
+                Math.clamp(4.4f * scale, .1f, 512), 0, false, level.getGameTime() ^ actor.getUUID().getLeastSignificantBits(),
+                null, phase.alpha(), phase.beta(), phase.gamma(), reverse < 0 ? -1 : 1, direction).broadcast(level);
+    }
+    public static void wingStrike(LivingEntity actor) { attached(actor, Kind.WING_STRIKE, true, 2.2f, 0); }
 
     public static void repair(LivingEntity subject) { repair(subject, RepairVisualParts.BODY); }
     public static void repair(LivingEntity subject, int parts) {
@@ -67,8 +111,10 @@ public final class DarkmatterGraphEffects {
 
     private static void attached(LivingEntity actor, Kind kind, boolean active, float range, int parts) {
         if (!(actor.level() instanceof ServerLevel level)) return;
+        var phase = actor instanceof ServerPlayer player ? DarkmatterPhase.weights(player) : new DarkmatterPhase.Weights(.5f, .5f, 0);
         new DarkmatterVisualPacket(level.dimension().identifier(), kind, actor.getId(), active, actor.position(),
                 Math.min(32, actor.getBbWidth()), Math.min(64, actor.getBbHeight()), Math.clamp(range, 0, 512), parts,
-                !actor.isAlive(), actor.getUUID().getLeastSignificantBits()).broadcast(level);
+                !actor.isAlive(), actor.getUUID().getLeastSignificantBits(), null,
+                phase.alpha(), phase.beta(), phase.gamma(), 0, actor.getLookAngle()).broadcast(level);
     }
 }

@@ -37,12 +37,25 @@ public record RenderSpec(
         @Nullable Identifier texture,
         String layer,
         ArcRender arc,
-        float particleBoundsScale
+        float particleBoundsScale,
+        boolean softDepth,
+        boolean cullZeroAlpha
 ) {
+    /** Older/custom outputs do not promise that their shader obeys particle alpha. */
+    public RenderSpec(Geometry geometry, Blend blend, Identifier vertexShader, Identifier fragmentShader,
+                      @Nullable Identifier texture, String layer, ArcRender arc, float particleBoundsScale,
+                      boolean softDepth) {
+        this(geometry, blend, vertexShader, fragmentShader, texture, layer, arc, particleBoundsScale, softDepth, false);
+    }
     /** Existing/custom shaders remain uncullable until their output declares a conservative bound. */
     public RenderSpec(Geometry geometry, Blend blend, Identifier vertexShader, Identifier fragmentShader,
                       @Nullable Identifier texture, String layer, ArcRender arc) {
         this(geometry, blend, vertexShader, fragmentShader, texture, layer, arc, 0f);
+    }
+
+    public RenderSpec(Geometry geometry, Blend blend, Identifier vertexShader, Identifier fragmentShader,
+                      @Nullable Identifier texture, String layer, ArcRender arc, float particleBoundsScale) {
+        this(geometry, blend, vertexShader, fragmentShader, texture, layer, arc, particleBoundsScale, true);
     }
 
     /**
@@ -54,7 +67,7 @@ public record RenderSpec(
             ArcRender.DEFAULT);
 
     public enum Geometry {
-        QUAD, MESH, LINE, RIBBON, ARC
+        QUAD, MESH, LINE, RIBBON, ARC, MATERIAL_SURFACE
     }
 
     public enum Blend {
@@ -108,6 +121,7 @@ public record RenderSpec(
             case "vfx.output_line", "vfx.block.output_line" -> Geometry.LINE;
             case "vfx.output_ribbon", "vfx.block.output_ribbon" -> Geometry.RIBBON;
             case "vfx.output_arc", "vfx.block.output_arc" -> Geometry.ARC;
+            case "vfx.block.output_material_surface" -> Geometry.MATERIAL_SURFACE;
             default -> Geometry.QUAD;
         };
         var blend = switch (node.properties().getOrDefault("blend", "").trim()) {
@@ -123,7 +137,9 @@ public record RenderSpec(
         var layer = node.properties().getOrDefault("layer", "").trim();
         var arc = arcRender(node);
         return new RenderSpec(geometry, blend, vertex, fragment, texture, layer, arc,
-                Math.max(0f, floatProp(node.properties(), "bounds_scale", 0f)));
+                Math.max(0f, floatProp(node.properties(), "bounds_scale", 0f)),
+                !"false".equalsIgnoreCase(node.properties().getOrDefault("soft_depth", "true")),
+                "true".equalsIgnoreCase(node.properties().getOrDefault("cull_zero_alpha", "false")));
     }
 
     /**
@@ -190,6 +206,9 @@ public record RenderSpec(
     public boolean matchesLayer(byte particleLayer) {
         return layer.isEmpty() || ParticleBuffer.layerByte(layer) == particleLayer;
     }
+
+    /** Explicit shader contract: alpha zero has no color, depth, or other visible contribution. */
+    public boolean shouldCullAlpha(float alpha) { return cullZeroAlpha && alpha <= 0f; }
 
     /** Arc layers are arbitrary graph-authored names, independent of the legacy particle layer table. */
     public boolean matchesArcLayer(String arcLayer) {

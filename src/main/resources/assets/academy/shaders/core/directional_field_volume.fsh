@@ -27,9 +27,11 @@ void main() {
         float root = sqrt(discriminant);
         float start = max(0.15, b - root), end = min(limit, b + root);
         if (end <= start) continue;
-        float stepSize = (end - start) / 32.0;
+        int samples = clamp(int(FieldStyles[i].w), 8, 48);
+        float stepSize = (end - start) / float(samples);
         float density = 0.0;
-        for (int s = 0; s < 32; s++) {
+        for (int s = 0; s < 48; s++) {
+            if (s >= samples) break;
             float distance = start + (float(s) + 0.5) * stepSize;
             vec3 p = ray * distance;
             float coverage = fieldAt(p, i);
@@ -42,7 +44,7 @@ void main() {
             density += coverage * shafts * transmission * stepSize;
         }
         float angle = 0.75 + 0.25 * pow(abs(dot(ray, sun)), 4.0);
-        float amount = (1.0 - exp(-density * 0.11)) * angle * FieldDirections[i].w;
+        float amount = (1.0 - exp(-density * 0.11)) * angle * FieldDirections[i].w * FieldStyles[i].y;
         result = max(result, amount);
     }
     fragColor = vec4(result * (0.6 + SunLight.w * 0.4), 0.0, 0.0, 1.0);

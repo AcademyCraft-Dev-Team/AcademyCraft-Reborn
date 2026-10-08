@@ -23,6 +23,7 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.ability.DarkmatterGraphEffects;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -209,8 +210,8 @@ public final class DarkmatterPhaseTuning extends Skill {
          * Ends the lease only when the released direction matches the active direction.
          */
         public static void endTuning(ServerPlayer player, Direction direction) {
-            TUNING.computeIfPresent(player.getUUID(), (_, state) ->
-                    state.direction == direction ? null : state);
+            var state = TUNING.get(player.getUUID());
+            if (state != null && state.direction == direction) clear(player);
         }
 
         public static boolean isTuning(ServerPlayer player) {
@@ -223,12 +224,12 @@ public final class DarkmatterPhaseTuning extends Skill {
             if (state == null) return;
             if (!player.isAlive() || player.hasDisconnected() || state.level != player.level()
                     || !skill.isEnabled(player)) {
-                TUNING.remove(player.getUUID());
+                clear(player);
                 return;
             }
             var now = player.level().getGameTime();
             if (now > state.leaseExpiresAt) {
-                TUNING.remove(player.getUUID(), state);
+                clear(player);
                 return;
             }
             var elapsedTicks = now - state.lastProcessedAt;
@@ -239,7 +240,17 @@ public final class DarkmatterPhaseTuning extends Skill {
                     resource.getPhaseSnapshot(player).totalPoints(),
                     skill.getEffectiveProficiencyMilestone(player), elapsedTicks);
             var changed = resource.tuneAlphaPoints(player, state.direction.sign * delta);
-            if (changed) skill.reportActivity(player, true);
+            if (changed) {
+                skill.reportActivity(player, true);
+                if (!state.visualActive || now - state.lastVisualTick >= 4) {
+                    DarkmatterGraphEffects.phaseTuning(player);
+                    state.visualActive = true;
+                    state.lastVisualTick = now;
+                }
+            } else if (state.visualActive) {
+                DarkmatterGraphEffects.stopPhaseTuning(player);
+                state.visualActive = false;
+            }
         }
 
         static float phaseStep(int milestone) {
@@ -257,7 +268,7 @@ public final class DarkmatterPhaseTuning extends Skill {
         }
 
         static void clear(ServerPlayer player) {
-            TUNING.remove(player.getUUID());
+            if (TUNING.remove(player.getUUID()) != null) DarkmatterGraphEffects.stopPhaseTuning(player);
         }
 
         private static final class TuningState {
@@ -266,6 +277,8 @@ public final class DarkmatterPhaseTuning extends Skill {
             private final Object level;
             private long lastProcessedAt;
             private long leaseExpiresAt;
+            private boolean visualActive;
+            private long lastVisualTick;
 
             private TuningState(Direction direction, Object level, long lastProcessedAt,
                                 long leaseExpiresAt) {

@@ -29,6 +29,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.ability.DarkmatterGraphEffects;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.render.vfx.DarkmatterSixWingsVfxClient;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -324,9 +325,10 @@ public final class DarkmatterSixWings extends Skill {
             var pair = new WingStrikePair(player.getUUID(), target.getUUID());
             if (now < NEXT_WING_STRIKE_TICK.getOrDefault(pair, 0L)) return;
             NEXT_WING_STRIKE_TICK.put(pair, now + 10L);
-            DarkmatterTargeting.hurt(level, target,
+            DarkmatterGraphEffects.wingStrike(player);
+            if (DarkmatterTargeting.hurt(level, target,
                     SkillDamageSource.of(player, Skills.DARKMATTER_SIX_WINGS.get()),
-                    1.0f + alpha);
+                    1.0f + alpha)) DarkmatterGraphEffects.lightContact(target);
         }
 
         @SubscribeEvent(priority = EventPriority.HIGH)

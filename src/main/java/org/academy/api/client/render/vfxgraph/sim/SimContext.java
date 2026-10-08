@@ -8,6 +8,7 @@ import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
 import org.academy.api.client.render.vfxgraph.arc.EffectArcSource;
 import org.academy.api.client.render.vfxgraph.shape.SurfaceProjector;
 import org.academy.api.client.render.vfxgraph.shape.SurfaceSampler;
+import org.academy.api.client.render.vfxgraph.shape.SurfaceOcclusionSampler;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -40,6 +41,9 @@ public final class SimContext {
     private Map<String, SurfaceSampler> samplers = Map.of();
     public void setSamplers(Map<String, SurfaceSampler> value) { samplers = value; }
     public @Nullable SurfaceSampler sampler(String name) { return samplers.get(name); }
+    private Map<String, SurfaceOcclusionSampler> occlusionSamplers = Map.of();
+    public void setOcclusionSamplers(Map<String, SurfaceOcclusionSampler> value) { occlusionSamplers = value; }
+    public @Nullable SurfaceOcclusionSampler occlusionSampler(String name) { return occlusionSamplers.get(name); }
 
     public int spawnStart;
 

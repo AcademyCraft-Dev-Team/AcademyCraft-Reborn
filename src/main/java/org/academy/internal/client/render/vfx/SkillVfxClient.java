@@ -51,7 +51,7 @@ public final class SkillVfxClient {
             return;
         }
         if (packet.state instanceof SkillVfxState.Slash slash) {
-            VfxManager.INSTANCE.spawn(new DarkmatterSlashVfx(slash));
+            DarkmatterSlashVfx.spawn(slash);
             return;
         }
         if (packet.state instanceof SkillVfxState.Burst burst) {

@@ -23,7 +23,7 @@ void main() {
     }
     volume = weight > 1e-5 ? volume / weight : texture(VolumeMask, texCoord).r;
     float surface = texture(SurfaceMask, texCoord).r;
-    float alpha = min(0.30, surface * 0.17 + volume * 0.42);
+    float alpha = min(0.24, surface + volume);
     if (alpha < 0.001) discard;
     fragColor = vec4(0.91, 0.92, 0.94, alpha);
 }

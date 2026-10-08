@@ -1,0 +1,484 @@
+{
+  "version": 1,
+  "kind": "vfx",
+  "id": "darkmatter_shaping",
+  "parameters": [
+    {
+      "id": "time",
+      "name": "time",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": -1
+      }
+    },
+    {
+      "id": "progress",
+      "name": "progress",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.25
+      }
+    },
+    {
+      "id": "seed",
+      "name": "seed",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 42
+      }
+    },
+    {
+      "id": "width",
+      "name": "width",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.6
+      }
+    },
+    {
+      "id": "height",
+      "name": "height",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1.8
+      }
+    },
+    {
+      "id": "range",
+      "name": "range",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 12
+      }
+    },
+    {
+      "id": "light",
+      "name": "light",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "strength",
+      "name": "strength",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "finished",
+      "name": "finished",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    },
+    {
+      "id": "sheet_scale",
+      "name": "sheet_scale",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "view_first_person",
+      "name": "view_first_person",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    },
+    {
+      "id": "alpha",
+      "name": "alpha",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.5
+      }
+    },
+    {
+      "id": "beta",
+      "name": "beta",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.5
+      }
+    },
+    {
+      "id": "gamma",
+      "name": "gamma",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    },
+    {
+      "id": "density",
+      "name": "density",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.5
+      }
+    },
+    {
+      "id": "flexibility",
+      "name": "flexibility",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.5
+      }
+    },
+    {
+      "id": "edge_activity",
+      "name": "edge_activity",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.5
+      }
+    },
+    {
+      "id": "shape",
+      "name": "shape",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    },
+    {
+      "id": "spread",
+      "name": "spread",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "attack",
+      "name": "attack",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    },
+    {
+      "id": "lod",
+      "name": "lod",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "radius",
+      "name": "radius",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 4.4
+      }
+    },
+    {
+      "id": "arc",
+      "name": "arc",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 2.2
+      }
+    },
+    {
+      "id": "reverse",
+      "name": "reverse",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    },
+    {
+      "id": "field_surface_strength",
+      "name": "field_surface_strength",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.16
+      }
+    },
+    {
+      "id": "field_air_strength",
+      "name": "field_air_strength",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.1
+      }
+    },
+    {
+      "id": "field_edge_width",
+      "name": "field_edge_width",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.22
+      }
+    },
+    {
+      "id": "field_scatter_count",
+      "name": "field_scatter_count",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 32
+      }
+    },
+    {
+      "id": "camera",
+      "name": "camera",
+      "type": "VEC3",
+      "default": {
+        "type": "VEC3",
+        "x": 0,
+        "y": 2,
+        "z": -8
+      }
+    },
+    {
+      "id": "camera_forward",
+      "name": "camera_forward",
+      "type": "VEC3",
+      "default": {
+        "type": "VEC3",
+        "x": 0,
+        "y": 0,
+        "z": 1
+      }
+    },
+    {
+      "id": "sun_direction",
+      "name": "sun_direction",
+      "type": "VEC3",
+      "default": {
+        "type": "VEC3",
+        "x": 0.3,
+        "y": 0.9,
+        "z": 0.3
+      }
+    },
+    {
+      "id": "fan_growth",
+      "name": "fan_growth",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0,
+            "v": 0.8,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.2,
+            "v": 1,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1,
+            "v": 1,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          }
+        ]
+      }
+    },
+    {
+      "id": "fan_width",
+      "name": "fan_width",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0,
+            "v": 0.7,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.35,
+            "v": 1,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1,
+            "v": 0.8,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          }
+        ]
+      }
+    },
+    {
+      "id": "fan_fade",
+      "name": "fan_fade",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0,
+            "v": 0,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.12,
+            "v": 1,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.65,
+            "v": 0.8,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1,
+            "v": 0,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          }
+        ]
+      }
+    },
+    {
+      "id": "wing_opacity",
+      "name": "wing_opacity",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0,
+            "v": 1,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1,
+            "v": 1,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          }
+        ]
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "spawn",
+      "type": "SPAWN",
+      "name": "01 / Pearl material motion and shape",
+      "x": 0,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "growing_ribs",
+          "type": "vfx.block.material_sheets",
+          "properties": {
+            "style": "2",
+            "count": "14",
+            "size": "0.095",
+            "opacity": "0.65",
+            "surface": "surface",
+            "lighting": "1"
+          }
+        },
+        {
+          "id": "settling_surface",
+          "type": "vfx.block.material_sheets",
+          "properties": {
+            "style": "2",
+            "count": "12",
+            "size": "0.13",
+            "opacity": "0.66",
+            "surface": "surface",
+            "lighting": "1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "output",
+      "type": "OUTPUT",
+      "name": "02 / Depth-tested white layers",
+      "x": 620,
+      "y": 0,
+      "blocks": [
+        {
+          "id": "growing_ribs_output",
+          "type": "vfx.block.output_quad",
+          "properties": {
+            "vertex": "academy:core/vfxgraph_material_sheet",
+            "shader": "academy:core/vfxgraph_material_form",
+            "blend": "translucent",
+            "layer": "smoke",
+            "bounds_scale": "1.21",
+            "cull_zero_alpha": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "flow": [
+    {
+      "from": "spawn",
+      "to": "output"
+    }
+  ],
+  "blockFlows": [],
+  "dataEdges": [],
+  "outputs": [
+    "growing_ribs_output"
+  ]
+}

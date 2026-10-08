@@ -86,6 +86,14 @@ public final class DarkmatterCreationData extends SkillData {
                 .map(SummonRecord::copy);
     }
 
+    /** Read-only membership without allocating or exposing a mutable summon record. */
+    public boolean containsSummon(UUID uuid) {
+        if (summons == null || uuid == null) return false;
+        var key = uuid.toString();
+        for (var record : summons) if (key.equals(record.uuid)) return true;
+        return false;
+    }
+
     public void addSummon(UUID uuid, String name, int investment, int slot,
                           String dimension, double x, double y, double z) {
         if (summons == null) summons = new ArrayList<>();

@@ -9,6 +9,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DarkmatterCreationDataTest {
     @Test
+    void membershipTracksEveryMutationWithoutReturningOrCopyingRecords() {
+        var data = new DarkmatterCreationData(); var uuid = UUID.randomUUID();
+        assertEquals(false, data.containsSummon(uuid));
+        data.addSummon(uuid, "unit", 5, 0, "minecraft:overworld", 1, 2, 3);
+        assertEquals(true, data.containsSummon(uuid));
+        data.removeSummon(uuid); assertEquals(false, data.containsSummon(uuid));
+        data.addSummon(uuid, "unit", 5, 0, "minecraft:overworld", 1, 2, 3);
+        data.drainOwnedEntities(); assertEquals(false, data.containsSummon(uuid));
+        assertEquals(false, data.containsSummon(null));
+    }
+
+    @Test
     void addDeduplicatesAndRemoveCleansOwnerList() {
         var data = new DarkmatterCreationData();
         var uuid = UUID.randomUUID();

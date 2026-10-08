@@ -13,6 +13,15 @@
       }
     },
     {
+      "id": "progress",
+      "name": "progress",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.25
+      }
+    },
+    {
       "id": "seed",
       "name": "seed",
       "type": "FLOAT",
@@ -76,6 +85,15 @@
       }
     },
     {
+      "id": "sheet_scale",
+      "name": "sheet_scale",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
       "id": "view_first_person",
       "name": "view_first_person",
       "type": "FLOAT",
@@ -83,24 +101,346 @@
         "type": "FLOAT",
         "value": 0
       }
+    },
+    {
+      "id": "alpha",
+      "name": "alpha",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.5
+      }
+    },
+    {
+      "id": "beta",
+      "name": "beta",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.5
+      }
+    },
+    {
+      "id": "gamma",
+      "name": "gamma",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    },
+    {
+      "id": "density",
+      "name": "density",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.5
+      }
+    },
+    {
+      "id": "flexibility",
+      "name": "flexibility",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.5
+      }
+    },
+    {
+      "id": "edge_activity",
+      "name": "edge_activity",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.5
+      }
+    },
+    {
+      "id": "shape",
+      "name": "shape",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    },
+    {
+      "id": "spread",
+      "name": "spread",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "attack",
+      "name": "attack",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    },
+    {
+      "id": "lod",
+      "name": "lod",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 1
+      }
+    },
+    {
+      "id": "radius",
+      "name": "radius",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 4.4
+      }
+    },
+    {
+      "id": "arc",
+      "name": "arc",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 2.2
+      }
+    },
+    {
+      "id": "reverse",
+      "name": "reverse",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0
+      }
+    },
+    {
+      "id": "field_surface_strength",
+      "name": "field_surface_strength",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.16
+      }
+    },
+    {
+      "id": "field_air_strength",
+      "name": "field_air_strength",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.1
+      }
+    },
+    {
+      "id": "field_edge_width",
+      "name": "field_edge_width",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 0.22
+      }
+    },
+    {
+      "id": "field_scatter_count",
+      "name": "field_scatter_count",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": 32
+      }
+    },
+    {
+      "id": "camera",
+      "name": "camera",
+      "type": "VEC3",
+      "default": {
+        "type": "VEC3",
+        "x": 0,
+        "y": 2,
+        "z": -8
+      }
+    },
+    {
+      "id": "camera_forward",
+      "name": "camera_forward",
+      "type": "VEC3",
+      "default": {
+        "type": "VEC3",
+        "x": 0,
+        "y": 0,
+        "z": 1
+      }
+    },
+    {
+      "id": "sun_direction",
+      "name": "sun_direction",
+      "type": "VEC3",
+      "default": {
+        "type": "VEC3",
+        "x": 0.3,
+        "y": 0.9,
+        "z": 0.3
+      }
+    },
+    {
+      "id": "fan_growth",
+      "name": "fan_growth",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0,
+            "v": 0.8,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.2,
+            "v": 1,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1,
+            "v": 1,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          }
+        ]
+      }
+    },
+    {
+      "id": "fan_width",
+      "name": "fan_width",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0,
+            "v": 0.7,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.35,
+            "v": 1,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1,
+            "v": 0.8,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          }
+        ]
+      }
+    },
+    {
+      "id": "fan_fade",
+      "name": "fan_fade",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0,
+            "v": 0,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.12,
+            "v": 1,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 0.65,
+            "v": 0.8,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1,
+            "v": 0,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          }
+        ]
+      }
+    },
+    {
+      "id": "wing_opacity",
+      "name": "wing_opacity",
+      "type": "CURVE",
+      "default": {
+        "type": "CURVE",
+        "curve": [
+          {
+            "t": 0,
+            "v": 1,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          },
+          {
+            "t": 1,
+            "v": 1,
+            "it": 0,
+            "ot": 0,
+            "i": "SMOOTH"
+          }
+        ]
+      }
     }
   ],
   "contexts": [
     {
       "id": "spawn",
       "type": "SPAWN",
-      "name": "01 / Bounded sampled material",
+      "name": "01 / Pearl material motion and shape",
       "x": 0,
       "y": 0,
       "blocks": [
         {
-          "id": "growth",
+          "id": "patch_growth",
           "type": "vfx.block.material_sheets",
           "properties": {
             "style": "2",
-            "count": "6",
-            "size": "0.15",
-            "opacity": "0.64",
+            "count": "8",
+            "size": "0.14",
+            "opacity": "0.6",
+            "surface": "surface",
+            "lighting": "1"
+          }
+        },
+        {
+          "id": "settling_ribs",
+          "type": "vfx.block.material_sheets",
+          "properties": {
+            "style": "2",
+            "count": "4",
+            "size": "0.06",
+            "opacity": "0.48",
             "surface": "surface",
             "lighting": "1"
           }
@@ -110,19 +450,20 @@
     {
       "id": "output",
       "type": "OUTPUT",
-      "name": "02 / Depth-tested pearl material",
+      "name": "02 / Depth-tested white layers",
       "x": 620,
       "y": 0,
       "blocks": [
         {
-          "id": "growth_output",
+          "id": "patch_growth_output",
           "type": "vfx.block.output_quad",
           "properties": {
             "vertex": "academy:core/vfxgraph_material_sheet",
             "shader": "academy:core/vfxgraph_material_growth",
             "blend": "translucent",
             "layer": "smoke",
-            "bounds_scale": "1.21"
+            "bounds_scale": "1.21",
+            "cull_zero_alpha": "true"
           }
         }
       ]
@@ -138,6 +479,6 @@
   "blockFlows": [],
   "dataEdges": [],
   "outputs": [
-    "growth_output"
+    "patch_growth_output"
   ]
 }

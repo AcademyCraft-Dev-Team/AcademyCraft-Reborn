@@ -36,7 +36,7 @@ public final class EntityRenderers {
         event.registerEntityRenderer(EntityTypes.DARKMATTER_FEATHER_PROJECTILE.get(),
                 net.minecraft.client.renderer.entity.NoopRenderer::new);
         event.registerEntityRenderer(EntityTypes.DARKMATTER_CREATURE_PROJECTILE.get(),
-                context -> new ThrownItemRenderer<>(context, 0.35f, true));
+                net.minecraft.client.renderer.entity.NoopRenderer::new);
         event.registerEntityRenderer(EntityTypes.DARKMATTER_SPEAR_PROJECTILE.get(),
                 context -> new ThrownItemRenderer<>(context, 1.25f, true));
         event.registerEntityRenderer(EntityTypes.DARKMATTER_BEETLE.get(), DarkmatterBeetleRenderer::new);

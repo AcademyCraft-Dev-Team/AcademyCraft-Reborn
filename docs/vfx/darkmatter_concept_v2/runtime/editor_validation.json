@@ -1,0 +1,158 @@
+{
+  "checkedAt": "2026-10-06 21:29:13 UTC",
+  "status": "PASSED",
+  "method": "原生 runGraphEditor；MCP open 与 reload；重载返回真实播放时间及存活粒子",
+  "graphCount": 16,
+  "graphs": [
+    {
+      "graph": "darkmatter_six_wings",
+      "opened": true,
+      "reloaded": true,
+      "mode": "vfx",
+      "playing": true,
+      "particleCount": 132,
+      "time": 29.287855
+    },
+    {
+      "graph": "darkmatter_generation",
+      "opened": true,
+      "reloaded": true,
+      "mode": "vfx",
+      "playing": true,
+      "particleCount": 22,
+      "time": 4.0088105
+    },
+    {
+      "graph": "darkmatter_elimination",
+      "opened": true,
+      "reloaded": true,
+      "mode": "vfx",
+      "playing": true,
+      "particleCount": 28,
+      "time": 4.9333487
+    },
+    {
+      "graph": "darkmatter_shaping",
+      "opened": true,
+      "reloaded": true,
+      "mode": "vfx",
+      "playing": true,
+      "particleCount": 26,
+      "time": 4.199363
+    },
+    {
+      "graph": "darkmatter_phase_tuning",
+      "opened": true,
+      "reloaded": true,
+      "mode": "vfx",
+      "playing": true,
+      "particleCount": 10,
+      "time": 6.659292
+    },
+    {
+      "graph": "darkmatter_disassemble",
+      "opened": true,
+      "reloaded": true,
+      "mode": "vfx",
+      "playing": true,
+      "particleCount": 48,
+      "time": 5.1672306
+    },
+    {
+      "graph": "darkmatter_cut",
+      "opened": true,
+      "reloaded": true,
+      "mode": "vfx",
+      "playing": true,
+      "particleCount": 1,
+      "time": 4.715924
+    },
+    {
+      "graph": "darkmatter_interference",
+      "opened": true,
+      "reloaded": true,
+      "mode": "vfx",
+      "playing": true,
+      "particleCount": 14,
+      "time": 4.1394424
+    },
+    {
+      "graph": "darkmatter_repair",
+      "opened": true,
+      "reloaded": true,
+      "mode": "vfx",
+      "playing": true,
+      "particleCount": 12,
+      "time": 4.983229
+    },
+    {
+      "graph": "darkmatter_creation_summon",
+      "opened": true,
+      "reloaded": true,
+      "mode": "vfx",
+      "playing": true,
+      "particleCount": 26,
+      "time": 4.967444
+    },
+    {
+      "graph": "darkmatter_creation_dismiss",
+      "opened": true,
+      "reloaded": true,
+      "mode": "vfx",
+      "playing": true,
+      "particleCount": 34,
+      "time": 5.6657934
+    },
+    {
+      "graph": "darkmatter_creation_contact",
+      "opened": true,
+      "reloaded": true,
+      "mode": "vfx",
+      "playing": true,
+      "particleCount": 14,
+      "time": 4.1502495
+    },
+    {
+      "graph": "darkmatter_creation_trail",
+      "opened": true,
+      "reloaded": true,
+      "mode": "vfx",
+      "playing": true,
+      "particleCount": 8,
+      "time": 5.181568
+    },
+    {
+      "graph": "darkmatter_feather",
+      "opened": true,
+      "reloaded": true,
+      "mode": "vfx",
+      "playing": true,
+      "particleCount": 2,
+      "time": 4.450103
+    },
+    {
+      "graph": "darkmatter_light_contact",
+      "opened": true,
+      "reloaded": true,
+      "mode": "vfx",
+      "playing": true,
+      "particleCount": 16,
+      "time": 5.298293
+    },
+    {
+      "graph": "darkmatter_wing_strike",
+      "opened": true,
+      "reloaded": true,
+      "mode": "vfx",
+      "playing": true,
+      "particleCount": 1,
+      "time": 4.599504
+    }
+  ],
+  "finalPreview": {
+    "graph": "darkmatter_six_wings",
+    "playing": true
+  },
+  "log": "build/darkmatter-native-editor-final.log",
+  "note": "未保存或重写图 JSON；编辑器保持运行，六翼预览可继续调参。"
+}

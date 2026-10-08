@@ -16,6 +16,7 @@ import org.academy.api.client.render.vfxgraph.render.VfxGraphRenderer;
 import org.academy.api.client.render.vfxgraph.render.WorldTransform;
 import org.academy.api.client.render.vfxgraph.shape.SurfaceProjector;
 import org.academy.api.client.render.vfxgraph.shape.SurfaceSampler;
+import org.academy.api.client.render.vfxgraph.shape.SurfaceOcclusionSampler;
 import org.academy.api.client.render.vfxgraph.arc.EffectArcSource;
 import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
 import org.academy.api.client.render.vfxgraph.sim.VfxSimulator;
@@ -132,6 +133,27 @@ public final class GraphEffect {
         }
     }
 
+    /** Reads the current graph blackboard, including editor defaults and live runtime overrides. */
+    public float floatParameter(String id, float fallback) {
+        Value value = liveParams.get(id);
+        if (value == null) {
+            for (var parameter : parameters) {
+                if (parameter.id().equals(id)) {
+                    value = parameter.defaultValue();
+                    break;
+                }
+            }
+        }
+        if (value == null) return fallback;
+        float result = switch (value.type()) {
+            case FLOAT -> value.asFloat();
+            case INT -> value.asInt();
+            case TIME -> ((Value.TimeVal) value).seconds();
+            default -> fallback;
+        };
+        return Float.isFinite(result) ? result : fallback;
+    }
+
     /** Supplies an emitter-local projection surface to container simulation blocks. */
     public void setSurfaceProjector(String name, SurfaceProjector surface) {
         if (systemSimulator != null) systemSimulator.setSurfaceProjector(name, surface);
@@ -139,6 +161,10 @@ public final class GraphEffect {
 
     public void setSurfaceSampler(String name, SurfaceSampler sampler) {
         if (systemSimulator != null) systemSimulator.setSurfaceSampler(name, sampler);
+    }
+
+    public void setSurfaceOcclusionSampler(String name, SurfaceOcclusionSampler sampler) {
+        if (systemSimulator != null) systemSimulator.setSurfaceOcclusionSampler(name, sampler);
     }
 
     public void setArcSource(String name, EffectArcSource source) {

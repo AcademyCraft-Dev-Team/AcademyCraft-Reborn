@@ -2,6 +2,7 @@ package org.academy.api.client.render.vfxgraph.render;
 
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
+import org.joml.Vector3fc;
 
 /**
  * 世界变换（M15-03）：把发射器局部坐标映射到世界坐标。
@@ -62,5 +63,20 @@ public record WorldTransform(Vector3f position, Quaternionf rotation, float scal
         out[0] = sx + qw * tx + (qy * tz - qz * ty);
         out[1] = sy + qw * ty + (qz * tx - qx * tz);
         out[2] = sz + qw * tz + (qx * ty - qy * tx);
+    }
+
+    /** Maps a local allowed half-space to normalized camera-relative world coordinates. */
+    public void applyClipPlane(float x, float y, float z, float offset, Vector3fc camera, float[] out) {
+        float localLength = (float) Math.sqrt(x * x + y * y + z * z);
+        if (!(localLength > 0.000001f) || Math.abs(scale) < 0.000001f) {
+            out[0] = 0; out[1] = 0; out[2] = 0; out[3] = 1;
+            return;
+        }
+        applyDirection(x, y, z, out);
+        float worldLength = (float) Math.sqrt(out[0] * out[0] + out[1] * out[1] + out[2] * out[2]);
+        out[0] /= worldLength; out[1] /= worldLength; out[2] /= worldLength;
+        out[3] = offset * Math.abs(scale) / localLength
+                + out[0] * (camera.x() - position.x) + out[1] * (camera.y() - position.y)
+                + out[2] * (camera.z() - position.z);
     }
 }

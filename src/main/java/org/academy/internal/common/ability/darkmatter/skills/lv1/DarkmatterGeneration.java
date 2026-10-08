@@ -23,6 +23,7 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.ability.DarkmatterGraphEffects;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -239,25 +240,31 @@ public final class DarkmatterGeneration extends Skill {
         @SubscribePacket
         public static void control(ControlPacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            var skill = Skills.DARKMATTER_GENERATION.get();
             if (packet.pressed()) {
-                if (!skill.isEnabled(player)) return;
-                HOLDING.compute(player.getUUID(), (_, existing) -> {
-                    var now = player.level().getGameTime();
-                    if (existing != null && existing.mode == packet.mode()
-                            && existing.level == player.level()) {
-                        existing.leaseExpiresAt = now + HoldState.LEASE_TICKS;
-                        return existing;
-                    }
-                    return new HoldState(packet.mode(), now, player.level());
-                });
-                return;
-            }
+                beginGeneration(player, packet.mode());
+            } else endGeneration(player, packet.mode());
+        }
 
+        /** Shared maintained operation entry for input, precision programs and client smoke validation. */
+        public static boolean beginGeneration(ServerPlayer player, Mode mode) {
+            if (player == null || mode == null || !Skills.DARKMATTER_GENERATION.get().isEnabled(player)) return false;
+            HOLDING.compute(player.getUUID(), (_, existing) -> {
+                var now = player.level().getGameTime();
+                if (existing != null && existing.mode == mode && existing.level == player.level()) {
+                    existing.leaseExpiresAt = now + HoldState.LEASE_TICKS;
+                    return existing;
+                }
+                if (existing != null) DarkmatterGraphEffects.stopGeneration(player, existing.mode == Mode.ERASE);
+                return new HoldState(mode, now, player.level());
+            });
+            return true;
+        }
+
+        public static void endGeneration(ServerPlayer player, Mode mode) {
             var state = HOLDING.remove(player.getUUID());
-            if (state != null && state.mode != packet.mode()) {
+            if (state != null && state.mode != mode) {
                 HOLDING.putIfAbsent(player.getUUID(), state);
-            }
+            } else if (state != null) DarkmatterGraphEffects.stopGeneration(player, state.mode == Mode.ERASE);
         }
 
         static void tick(ServerPlayer player) {
@@ -266,13 +273,13 @@ public final class DarkmatterGeneration extends Skill {
             var skill = Skills.DARKMATTER_GENERATION.get();
             if (!player.isAlive() || player.hasDisconnected() || state.level != player.level()
                     || !skill.isEnabled(player)) {
-                HOLDING.remove(player.getUUID());
+                clear(player);
                 return;
             }
 
             var now = player.level().getGameTime();
             if (now > state.leaseExpiresAt) {
-                HOLDING.remove(player.getUUID(), state);
+                clear(player);
                 return;
             }
             var elapsedTicks = now - state.lastProcessedAt;
@@ -298,11 +305,20 @@ public final class DarkmatterGeneration extends Skill {
                     state.triggered = true;
                 }
                 skill.reportActivity(player, true);
+                if (!state.visualActive || now - state.lastVisualTick >= 4) {
+                    DarkmatterGraphEffects.generation(player, state.mode == Mode.ERASE);
+                    state.visualActive = true;
+                    state.lastVisualTick = now;
+                }
+            } else if (state.visualActive) {
+                DarkmatterGraphEffects.stopGeneration(player, state.mode == Mode.ERASE);
+                state.visualActive = false;
             }
         }
 
         static void clear(ServerPlayer player) {
-            HOLDING.remove(player.getUUID());
+            var state = HOLDING.remove(player.getUUID());
+            if (state != null) DarkmatterGraphEffects.stopGeneration(player, state.mode == Mode.ERASE);
         }
 
         private static final class HoldState {
@@ -312,6 +328,8 @@ public final class DarkmatterGeneration extends Skill {
             private long lastProcessedAt;
             private long leaseExpiresAt;
             private boolean triggered;
+            private boolean visualActive;
+            private long lastVisualTick;
 
             private HoldState(Mode mode, long lastProcessedAt, Object level) {
                 this.mode = mode;

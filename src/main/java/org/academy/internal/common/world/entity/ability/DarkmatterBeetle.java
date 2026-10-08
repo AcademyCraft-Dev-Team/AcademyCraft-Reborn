@@ -13,6 +13,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.ContainerHelper;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -41,8 +42,10 @@ import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
+import org.academy.api.server.ability.DarkmatterGraphEffects;
 import org.academy.api.common.ability.darkmatter.DarkmatterCreaturePartType;
 import org.academy.api.common.ability.darkmatter.DarkmatterCreatureRegistries;
+import org.academy.api.common.ability.darkmatter.TargetAssignmentSnapshot;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilityBlockDrops;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -61,6 +64,25 @@ import java.util.*;
  * One entity type whose synchronized model branches and behavior are defined by a saved blueprint snapshot.
  */
 public final class DarkmatterBeetle extends Monster {
+    private static final String HEAD_JAW_KEY = DarkmatterCreatureRegistries.HEAD_JAW.toString();
+    private static final String TORSO_WALK_KEY = DarkmatterCreatureRegistries.TORSO_WALK.toString();
+    private static final String LIMBS_GUARD_KEY = DarkmatterCreatureRegistries.LIMBS_GUARD.toString();
+    private static final String ADDITIONAL_NONE_KEY = DarkmatterCreatureRegistries.ADDITIONAL_NONE.toString();
+    private static final String TORSO_FLY_KEY = DarkmatterCreatureRegistries.TORSO_FLY.toString();
+    private static final String TORSO_SWIM_KEY = DarkmatterCreatureRegistries.TORSO_SWIM.toString();
+    private static final String MODULE_SELF_REPAIR_KEY = DarkmatterCreatureRegistries.MODULE_SELF_REPAIR.toString();
+    private static final String ADDITIONAL_CARAPACE_KEY = DarkmatterCreatureRegistries.ADDITIONAL_CARAPACE.toString();
+    private static final String HEAD_HOMING_KEY = DarkmatterCreatureRegistries.HEAD_HOMING.toString();
+    private static final String MODULE_FORMATION_KEY = DarkmatterCreatureRegistries.MODULE_FORMATION.toString();
+    private static final String ADDITIONAL_SENSOR_KEY = DarkmatterCreatureRegistries.ADDITIONAL_SENSOR.toString();
+    private static final String MODULE_SCOUT_KEY = DarkmatterCreatureRegistries.MODULE_SCOUT.toString();
+    private static final String LIMBS_CARRIER_KEY = DarkmatterCreatureRegistries.LIMBS_CARRIER.toString();
+    private static final String MODULE_PICKUP_KEY = DarkmatterCreatureRegistries.MODULE_PICKUP.toString();
+    private static final String LIMBS_MINER_KEY = DarkmatterCreatureRegistries.LIMBS_MINER.toString();
+    private static final String MODULE_EXCAVATION_KEY = DarkmatterCreatureRegistries.MODULE_EXCAVATION.toString();
+    private static final String ADDITIONAL_WEAPON_KEY = DarkmatterCreatureRegistries.ADDITIONAL_WEAPON.toString();
+    private static final String MODULE_GUARD_KEY = DarkmatterCreatureRegistries.MODULE_GUARD.toString();
+    private static final String MODULE_FOCUS_KEY = DarkmatterCreatureRegistries.MODULE_FOCUS.toString();
     private static final Identifier PENETRATION_ID =
             AcademyCraft.academy("darkmatter_creature_penetration");
     private static final int MAX_CARGO_SLOTS = 27;
@@ -83,15 +105,18 @@ public final class DarkmatterBeetle extends Monster {
     private int investment = 5;
     private int abilityLevel = 1;
     private int proficiencyMilestone;
-    private String head = DarkmatterCreatureRegistries.HEAD_JAW.toString();
-    private String torso = DarkmatterCreatureRegistries.TORSO_WALK.toString();
-    private String limbs = DarkmatterCreatureRegistries.LIMBS_GUARD.toString();
-    private String additional = DarkmatterCreatureRegistries.ADDITIONAL_NONE.toString();
+    private String head = HEAD_JAW_KEY;
+    private String torso = TORSO_WALK_KEY;
+    private String limbs = LIMBS_GUARD_KEY;
+    private String additional = ADDITIONAL_NONE_KEY;
     private int headAlpha = 25;
     private int torsoAlpha = 25;
     private int limbsAlpha = 25;
     private int additionalAlpha = 25;
     private List<String> modules = List.of();
+    private Identifier headKey = DarkmatterCreatureRegistries.HEAD_JAW;
+    private int cachedHeadModel;
+    private List<Identifier> moduleKeys = List.of();
     private float averageGammaPower;
     private int outOfRangeTicks;
     private int outOfCombatTicks;
@@ -100,12 +125,15 @@ public final class DarkmatterBeetle extends Monster {
     private int nextHeadAttackTick;
     private int nextExcavationTick;
     private boolean outputAdjustmentBypassed;
+    private boolean visualEstablished;
     private NonNullList<ItemStack> cargo = NonNullList.withSize(MAX_CARGO_SLOTS, ItemStack.EMPTY);
 
     public DarkmatterBeetle(EntityType<? extends Monster> type, Level level) {
         super(type, level);
         xpReward = 0;
     }
+
+    public void markVisualEstablished() { visualEstablished = true; }
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
@@ -175,16 +203,16 @@ public final class DarkmatterBeetle extends Monster {
         setAttribute(Attributes.FOLLOW_RANGE, stats.followRange
                 * DarkmatterCreation.targetingRange(proficiencyMilestone));
         setAttribute(Attributes.KNOCKBACK_RESISTANCE,
-                torso.equals(DarkmatterCreatureRegistries.TORSO_WALK.toString())
+                torso.equals(TORSO_WALK_KEY)
                         ? Math.min(0.85, 0.12 * alphaPower(torsoAlpha)) : 0.0);
         setHealth(getMaxHealth());
     }
 
     private void configureNavigation() {
-        if (torso.equals(DarkmatterCreatureRegistries.TORSO_FLY.toString())) {
+        if (torso.equals(TORSO_FLY_KEY)) {
             navigation = new FlyingPathNavigation(this, level());
             moveControl = new FlyingMoveControl<>(this, 35, true);
-        } else if (torso.equals(DarkmatterCreatureRegistries.TORSO_SWIM.toString())) {
+        } else if (torso.equals(TORSO_SWIM_KEY)) {
             navigation = new AmphibiousPathNavigation(this, level());
             moveControl = new MoveControl<>(this);
         } else {
@@ -200,12 +228,17 @@ public final class DarkmatterBeetle extends Monster {
     }
 
     private void syncModels() {
-        entityData.set(HEAD_MODEL, modelId(head, DarkmatterCreaturePartType.BodySlot.HEAD));
+        // Part registrations are append-only. Successful resolutions remain valid; unknown keys
+        // are retried at their original use sites so late extension registration still works.
+        headKey = Identifier.tryParse(head);
+        cachedHeadModel = modelId(headKey, DarkmatterCreaturePartType.BodySlot.HEAD);
+        moduleKeys = modules.stream().map(Identifier::tryParse).filter(Objects::nonNull).toList();
+        entityData.set(HEAD_MODEL, cachedHeadModel);
         entityData.set(TORSO_MODEL, modelId(torso, DarkmatterCreaturePartType.BodySlot.TORSO));
         entityData.set(LIMBS_MODEL, modelId(limbs, DarkmatterCreaturePartType.BodySlot.LIMBS));
         entityData.set(ADDITIONAL_MODEL, modelId(additional, DarkmatterCreaturePartType.BodySlot.ADDITIONAL));
         entityData.set(DEGRADED,
-                modelId(head, DarkmatterCreaturePartType.BodySlot.HEAD) < 0
+                cachedHeadModel < 0
                         || modelId(torso, DarkmatterCreaturePartType.BodySlot.TORSO) < 0
                         || modelId(limbs, DarkmatterCreaturePartType.BodySlot.LIMBS) < 0
                         || modelId(additional, DarkmatterCreaturePartType.BodySlot.ADDITIONAL) < 0
@@ -216,9 +249,17 @@ public final class DarkmatterBeetle extends Monster {
     }
 
     private static int modelId(String raw, DarkmatterCreaturePartType.BodySlot slot) {
-        var id = Identifier.tryParse(raw);
+        return modelId(Identifier.tryParse(raw), slot);
+    }
+
+    private static int modelId(Identifier id, DarkmatterCreaturePartType.BodySlot slot) {
         return id == null ? -1 : DarkmatterCreatureRegistries.part(id)
                 .filter(type -> type.slot() == slot).map(DarkmatterCreaturePartType::clientModelId).orElse(-1);
+    }
+
+    private boolean hasRegisteredHead() {
+        if (cachedHeadModel < 0) cachedHeadModel = modelId(headKey, DarkmatterCreaturePartType.BodySlot.HEAD);
+        return cachedHeadModel >= 0;
     }
 
     private void applyDegradedName() {
@@ -273,7 +314,7 @@ public final class DarkmatterBeetle extends Monster {
     }
 
     public boolean isOwnedBy(ServerPlayer player) {
-        return getOwnerUUID().filter(player.getUUID()::equals).isPresent();
+        return ownerUUID != null && ownerUUID.equals(player.getUUID());
     }
 
     public boolean isOwnerAlly(Entity entity) {
@@ -281,7 +322,7 @@ public final class DarkmatterBeetle extends Monster {
         if (owner == null || entity == null) return false;
         if (entity == owner || TeamRelations.areAllied(owner, entity)) return true;
         return entity instanceof DarkmatterBeetle beetle
-                && beetle.getOwnerUUID().filter(owner.getUUID()::equals).isPresent();
+                && owner.getUUID().equals(beetle.ownerUUID);
     }
 
     @Override
@@ -292,8 +333,7 @@ public final class DarkmatterBeetle extends Monster {
     @Nullable
     public ServerPlayer getOwnerPlayer() {
         if (!(level() instanceof ServerLevel serverLevel)) return null;
-        return getOwnerUUID().map(uuid -> serverLevel.getServer().getPlayerList().getPlayer(uuid))
-                .orElse(null);
+        return ownerUUID == null ? null : serverLevel.getServer().getPlayerList().getPlayer(ownerUUID);
     }
 
     @Override
@@ -301,9 +341,11 @@ public final class DarkmatterBeetle extends Monster {
         super.tick();
         if (!(level() instanceof ServerLevel serverLevel)) return;
         var owner = getOwnerPlayer();
+        var recorded = owner != null && DarkmatterCreation.Server.isRecorded(owner, getUUID());
+        if (recorded) visualEstablished = true;
         if (owner == null || !owner.isAlive() || owner.hasDisconnected()
                 || !Skills.DARKMATTER_CREATION.get().isEnabled(owner)
-                || !DarkmatterCreation.Server.isRecorded(owner, getUUID())) {
+                || !recorded) {
             discard();
             return;
         }
@@ -316,9 +358,9 @@ public final class DarkmatterBeetle extends Monster {
             return;
         }
 
-        var flying = torso.equals(DarkmatterCreatureRegistries.TORSO_FLY.toString());
+        var flying = torso.equals(TORSO_FLY_KEY);
         setNoGravity(flying);
-        if (torso.equals(DarkmatterCreatureRegistries.TORSO_SWIM.toString()) && isInWater()) {
+        if (torso.equals(TORSO_SWIM_KEY) && isInWater()) {
             var boost = 1.0 + 0.025 * betaPower(torsoAlpha);
             setDeltaMovement(getDeltaMovement().multiply(boost, 1.0 + (boost - 1.0) * 0.5, boost));
         }
@@ -339,7 +381,7 @@ public final class DarkmatterBeetle extends Monster {
         } else {
             outOfCombatTicks = 0;
             updateCombatMovement(combatTarget, flying);
-            if (head.equals(DarkmatterCreatureRegistries.HEAD_JAW.toString())
+            if (head.equals(HEAD_JAW_KEY)
                     && tickCount >= nextHeadAttackTick
                     && distanceToSqr(combatTarget) <= meleeReachSqr(combatTarget)) {
                 doHurtTarget(serverLevel, combatTarget);
@@ -354,24 +396,24 @@ public final class DarkmatterBeetle extends Monster {
                 transferCargo(owner);
             }
             if (isExcavator()) assistOwnerExcavation(serverLevel, owner);
-            if (modules.contains(DarkmatterCreatureRegistries.MODULE_SELF_REPAIR.toString())
+            if (modules.contains(MODULE_SELF_REPAIR_KEY)
                     && outOfCombatTicks >= 100 && getHealth() < getMaxHealth()) {
                 heal(getMaxHealth() * 0.01f * DarkmatterCreation.moduleValueMultiplier(proficiencyMilestone));
             }
-            if (additional.equals(DarkmatterCreatureRegistries.ADDITIONAL_CARAPACE.toString())
+            if (additional.equals(ADDITIONAL_CARAPACE_KEY)
                     && outOfCombatTicks >= 100 && getHealth() < getMaxHealth()) {
                 heal(getMaxHealth() * 0.006f * betaPower(additionalAlpha));
             }
         }
 
         if (combatTarget != null
-                && modelId(head, DarkmatterCreaturePartType.BodySlot.HEAD) >= 0
-                && !head.equals(DarkmatterCreatureRegistries.HEAD_JAW.toString())) {
+                && hasRegisteredHead()
+                && !head.equals(HEAD_JAW_KEY)) {
             var beta = betaPower(headAlpha);
             var cooldown = Math.max(8, Math.round((head.contains("homing") ? 30 : 20)
                     / (1.0f + 0.10f * beta)
                     * (gammaCatalyzed() ? Math.max(0.5f, 1.0f - 0.05f * averageGammaPower) : 1.0f)));
-            var homing = head.equals(DarkmatterCreatureRegistries.HEAD_HOMING.toString());
+            var homing = head.equals(HEAD_HOMING_KEY);
             if (tickCount >= nextHeadAttackTick && (homing || hasLineOfSight(combatTarget))) {
                 rangedAttack(serverLevel, owner, combatTarget, false);
                 nextHeadAttackTick = tickCount + cooldown;
@@ -387,14 +429,14 @@ public final class DarkmatterBeetle extends Monster {
     }
 
     private void followOwner(ServerPlayer owner, boolean flying) {
-        var followDistance = modules.contains(DarkmatterCreatureRegistries.MODULE_FORMATION.toString())
+        var followDistance = modules.contains(MODULE_FORMATION_KEY)
                 ? 3.0 : 5.0;
         if (distanceToSqr(owner) <= followDistance * followDistance) {
             getNavigation().stop();
             return;
         }
         var destination = owner.position();
-        if (modules.contains(DarkmatterCreatureRegistries.MODULE_FORMATION.toString())) {
+        if (modules.contains(MODULE_FORMATION_KEY)) {
             var angle = (getUUID().hashCode() & 0xffff) / 65535.0 * Math.PI * 2.0;
             destination = destination.add(Math.cos(angle) * 2.5,
                     flying ? 2.0 + (getUUID().hashCode() & 3) * 0.45 : 0.0,
@@ -407,14 +449,14 @@ public final class DarkmatterBeetle extends Monster {
     }
 
     private void updateCombatMovement(LivingEntity target, boolean flying) {
-        if (head.equals(DarkmatterCreatureRegistries.HEAD_JAW.toString())) {
+        if (head.equals(HEAD_JAW_KEY)) {
             var y = flying ? target.getEyeY() : target.getY();
             getNavigation().moveTo(target.getX(), y, target.getZ(),
                     flying ? flightSpeed() : 1.15 * DarkmatterCreation.followSpeed(proficiencyMilestone));
             return;
         }
         var beta = betaPower(headAlpha);
-        var homing = head.equals(DarkmatterCreatureRegistries.HEAD_HOMING.toString());
+        var homing = head.equals(HEAD_HOMING_KEY);
         var preferred = (homing ? 14.0 : 11.0) + 2.0 * beta;
         var offset = position().subtract(target.position());
         var horizontal = new Vec3(offset.x, 0.0, offset.z);
@@ -449,7 +491,7 @@ public final class DarkmatterBeetle extends Monster {
 
     private int meleeCooldownTicks() {
         var beta = betaPower(headAlpha);
-        if (limbs.equals(DarkmatterCreatureRegistries.LIMBS_GUARD.toString())) {
+        if (limbs.equals(LIMBS_GUARD_KEY)) {
             beta += 0.5f * betaPower(limbsAlpha);
         }
         return Math.max(7, Math.round(20.0f / (1.0f + 0.12f * beta)));
@@ -457,42 +499,44 @@ public final class DarkmatterBeetle extends Monster {
 
     private void findTarget(ServerLevel level, ServerPlayer owner) {
         var range = getAttributeValue(Attributes.FOLLOW_RANGE);
-        if (additional.equals(DarkmatterCreatureRegistries.ADDITIONAL_SENSOR.toString())) {
+        if (additional.equals(ADDITIONAL_SENSOR_KEY)) {
             range += 2.0 * alphaPower(additionalAlpha);
         }
+        // Snapshot only this synchronous scan. No target/owner/blueprint data survives into a later tick.
+        var sensor = additional.equals(ADDITIONAL_SENSOR_KEY)
+                ? targetAssignments(getAttributeValue(Attributes.FOLLOW_RANGE)) : null;
+        var formation = modules.contains(MODULE_FORMATION_KEY) ? targetAssignments(48) : null;
         var target = level.getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(range),
-                        candidate -> isCommandedTarget(owner, candidate)).stream()
-                .min(Comparator.comparingDouble(candidate -> targetScore(level, candidate)))
+                        candidate -> isCommandedTarget(owner, candidate, sensor)).stream()
+                .min(Comparator.comparingDouble(candidate -> targetScore(candidate, formation)))
                 .orElse(null);
         setTarget(target);
     }
 
-    private double targetScore(ServerLevel level, LivingEntity candidate) {
+    private double targetScore(LivingEntity candidate, @Nullable TargetAssignmentSnapshot<LivingEntity> assignments) {
         var score = distanceToSqr(candidate);
-        if (!modules.contains(DarkmatterCreatureRegistries.MODULE_FORMATION.toString())) return score;
-        var duplicates = level.getEntitiesOfClass(
-                DarkmatterBeetle.class, getBoundingBox().inflate(48.0),
-                other -> other != this && ownerUUID != null
-                        && other.getOwnerUUID().filter(ownerUUID::equals).isPresent()
-                        && other.getTarget() == candidate).size();
-        return score + duplicates * 144.0;
+        return assignments == null ? score : score + assignments.count(candidate) * 144.0;
+    }
+
+    private TargetAssignmentSnapshot<LivingEntity> targetAssignments(double range) {
+        return TargetAssignmentSnapshot.capture(level().getEntitiesOfClass(DarkmatterBeetle.class, getBoundingBox().inflate(range)),
+                other -> other != this && ownerUUID != null && ownerUUID.equals(other.ownerUUID), DarkmatterBeetle::getTarget);
     }
 
     private void runModules(ServerLevel level, ServerPlayer owner) {
         var multiplier = DarkmatterCreation.moduleValueMultiplier(proficiencyMilestone);
-        for (var raw : modules) {
-            var id = Identifier.tryParse(raw);
-            if (id != null) DarkmatterCreatureRegistries.module(id)
+        for (var id : moduleKeys) {
+            DarkmatterCreatureRegistries.module(id)
                     .ifPresent(type -> type.handler().tick(this, owner, multiplier));
         }
-        if (modules.contains(DarkmatterCreatureRegistries.MODULE_SCOUT.toString())) {
+        if (modules.contains(MODULE_SCOUT_KEY)) {
             for (var target : level.getEntitiesOfClass(Monster.class, getBoundingBox().inflate(
                     getAttributeValue(Attributes.FOLLOW_RANGE)), mob -> mob.isAlive()
                     && DarkmatterTargeting.isAttackableBy(owner, mob))) {
                 target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 50, 0, false, false));
             }
         }
-        if (additional.equals(DarkmatterCreatureRegistries.ADDITIONAL_SENSOR.toString())) {
+        if (additional.equals(ADDITIONAL_SENSOR_KEY)) {
             var beta = betaPower(additionalAlpha);
             for (var target : level.getEntitiesOfClass(Monster.class,
                     getBoundingBox().inflate(getAttributeValue(Attributes.FOLLOW_RANGE)),
@@ -504,13 +548,13 @@ public final class DarkmatterBeetle extends Monster {
     }
 
     private boolean isCarrier() {
-        return limbs.equals(DarkmatterCreatureRegistries.LIMBS_CARRIER.toString())
-                || modules.contains(DarkmatterCreatureRegistries.MODULE_PICKUP.toString());
+        return limbs.equals(LIMBS_CARRIER_KEY)
+                || modules.contains(MODULE_PICKUP_KEY);
     }
 
     private boolean isExcavator() {
-        return limbs.equals(DarkmatterCreatureRegistries.LIMBS_MINER.toString())
-                || modules.contains(DarkmatterCreatureRegistries.MODULE_EXCAVATION.toString());
+        return limbs.equals(LIMBS_MINER_KEY)
+                || modules.contains(MODULE_EXCAVATION_KEY);
     }
 
     private void assistOwnerExcavation(ServerLevel level, ServerPlayer owner) {
@@ -591,7 +635,7 @@ public final class DarkmatterBeetle extends Monster {
         var alpha = alphaPower(headAlpha);
         var beta = betaPower(headAlpha);
         var base = getAttributeValue(Attributes.ATTACK_DAMAGE) * (0.75 + 0.20 * alpha);
-        if (additional.equals(DarkmatterCreatureRegistries.ADDITIONAL_WEAPON.toString())) {
+        if (additional.equals(ADDITIONAL_WEAPON_KEY)) {
             base += 0.5 + 0.6 * alphaPower(additionalAlpha);
         }
         if (gammaRepeat) base *= 0.5;
@@ -600,41 +644,44 @@ public final class DarkmatterBeetle extends Monster {
                 * AbilitySystemServer.getSystem(owner).getPlayerDamageMultiplier(owner.getUUID());
         target.invulnerableTime = 0;
         var penetration = Math.min(0.5f, 0.08f * beta
-                + (additional.equals(DarkmatterCreatureRegistries.ADDITIONAL_WEAPON.toString())
+                + (additional.equals(ADDITIONAL_WEAPON_KEY)
                 ? 0.06f * betaPower(additionalAlpha) : 0.0f));
         var projectile = EntityTypes
                 .DARKMATTER_CREATURE_PROJECTILE.get().create(
                         level, EntitySpawnReason.MOB_SUMMONED);
         if (projectile == null) return;
-        var homing = head.equals(DarkmatterCreatureRegistries.HEAD_HOMING.toString());
+        var homing = head.equals(HEAD_HOMING_KEY);
         var projectileSpeed = (homing ? 0.95f : 1.25f) + 0.12f * alpha;
         projectile.configure(owner, this, target, homing,
                 (float) (base * multiplier), penetration, beta, projectileSpeed,
                 outputAdjustmentBypassed);
-        if (level.addFreshEntity(projectile) && !gammaRepeat) {
-            recentHeadTarget = target.getUUID();
-            recentHeadAttackTick = tickCount;
+        if (level.addFreshEntity(projectile)) {
+            swing(InteractionHand.MAIN_HAND);
+            if (!gammaRepeat) {
+                recentHeadTarget = target.getUUID();
+                recentHeadAttackTick = tickCount;
+            }
         }
     }
 
     private boolean isCommandedTarget(ServerPlayer owner, LivingEntity target) {
+        return isCommandedTarget(owner, target, null);
+    }
+
+    private boolean isCommandedTarget(ServerPlayer owner, LivingEntity target,
+                                       @Nullable TargetAssignmentSnapshot<LivingEntity> sensorAssignments) {
         if (!DarkmatterTargeting.isAttackableBy(owner, target)) return false;
-        var guard = limbs.equals(DarkmatterCreatureRegistries.LIMBS_GUARD.toString())
-                || modules.contains(DarkmatterCreatureRegistries.MODULE_GUARD.toString());
-        var focus = modules.contains(DarkmatterCreatureRegistries.MODULE_FOCUS.toString());
-        var scout = modules.contains(DarkmatterCreatureRegistries.MODULE_SCOUT.toString());
-        var sensorShared = additional.equals(DarkmatterCreatureRegistries.ADDITIONAL_SENSOR.toString())
-                && level().getEntitiesOfClass(DarkmatterBeetle.class,
-                getBoundingBox().inflate(getAttributeValue(Attributes.FOLLOW_RANGE)),
-                other -> other != this && ownerUUID != null
-                        && other.getOwnerUUID().filter(ownerUUID::equals).isPresent()
-                        && other.getTarget() == target).stream().findAny().isPresent();
-        return target == getLastHurtByMob()
+        var guard = limbs.equals(LIMBS_GUARD_KEY)
+                || modules.contains(MODULE_GUARD_KEY);
+        var focus = modules.contains(MODULE_FOCUS_KEY);
+        var scout = modules.contains(MODULE_SCOUT_KEY);
+        if (target == getLastHurtByMob()
                 || (guard && target == owner.getLastHurtByMob())
                 || (focus && target == owner.getLastHurtMob())
-                || sensorShared
                 || (scout && target instanceof Monster)
-                || (guard && target instanceof Mob mob && mob.getTarget() == owner);
+                || (guard && target instanceof Mob mob && mob.getTarget() == owner)) return true;
+        return additional.equals(ADDITIONAL_SENSOR_KEY)
+                && (sensorAssignments != null ? sensorAssignments : targetAssignments(getAttributeValue(Attributes.FOLLOW_RANGE))).contains(target);
     }
 
     @Override
@@ -645,20 +692,20 @@ public final class DarkmatterBeetle extends Monster {
         var alpha = alphaPower(headAlpha);
         var beta = betaPower(headAlpha);
         var base = getAttributeValue(Attributes.ATTACK_DAMAGE) * (1.0 + 0.16 * alpha);
-        if (limbs.equals(DarkmatterCreatureRegistries.LIMBS_GUARD.toString())) {
+        if (limbs.equals(LIMBS_GUARD_KEY)) {
             base += 0.4 * alphaPower(limbsAlpha);
         }
-        if (torso.equals(DarkmatterCreatureRegistries.TORSO_SWIM.toString()) && isInWater()) {
+        if (torso.equals(TORSO_SWIM_KEY) && isInWater()) {
             base *= 1.0 + 0.08 * alphaPower(torsoAlpha);
         }
-        if (additional.equals(DarkmatterCreatureRegistries.ADDITIONAL_WEAPON.toString())) {
+        if (additional.equals(ADDITIONAL_WEAPON_KEY)) {
             base += 0.5 + 0.6 * alphaPower(additionalAlpha);
         }
         var multiplier = AbilitySystemServer.getSystem(owner)
                 .getPlayerAbilityPowerMultiplier(owner.getUUID())
                 * AbilitySystemServer.getSystem(owner).getPlayerDamageMultiplier(owner.getUUID());
         var penetration = Math.min(0.5f, 0.06f * beta
-                + (additional.equals(DarkmatterCreatureRegistries.ADDITIONAL_WEAPON.toString())
+                + (additional.equals(ADDITIONAL_WEAPON_KEY)
                 ? 0.06f * betaPower(additionalAlpha) : 0.0f));
         var damage = (float) (base * multiplier);
         var hurt = outputAdjustmentBypassed
@@ -677,18 +724,19 @@ public final class DarkmatterBeetle extends Monster {
                 penetration
         );
         if (hurt) {
+            swing(InteractionHand.MAIN_HAND);
             if (beta > 0.0f) target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS,
                     20 + Math.round(10 * beta), 0, false, false));
             recentHeadTarget = target.getUUID();
             recentHeadAttackTick = tickCount;
-            if (head.equals(DarkmatterCreatureRegistries.HEAD_JAW.toString()) && alpha > 0.0f) {
+            if (head.equals(HEAD_JAW_KEY) && alpha > 0.0f) {
                 var away = target.position().subtract(position());
                 if (away.lengthSqr() > 1.0e-6) {
                     var push = away.normalize().scale(0.12 + 0.08 * alpha);
                     target.push(push.x, Math.min(0.35, push.y + 0.08), push.z);
                 }
             }
-            level.sendParticles(ParticleTypes.END_ROD, getX(), getY() + .25, getZ(), 4, .1, .1, .1, .01);
+            DarkmatterGraphEffects.creatureContact(target);
         }
         return hurt;
     }
@@ -730,7 +778,7 @@ public final class DarkmatterBeetle extends Monster {
     public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
         if (DarkmatterTargeting.isDarkmatterDamage(source)) return false;
         var reduction = gammaCatalyzed() ? Math.min(0.75f, 0.03f * averageGammaPower) : 0.0f;
-        if (torso.equals(DarkmatterCreatureRegistries.TORSO_FLY.toString())) {
+        if (torso.equals(TORSO_FLY_KEY)) {
             reduction = Math.min(0.80f, reduction + Math.min(0.20f,
                     0.04f * alphaPower(torsoAlpha)));
         }
@@ -759,7 +807,7 @@ public final class DarkmatterBeetle extends Monster {
 
     @Override
     public boolean isPushable() {
-        return !modules.contains(DarkmatterCreatureRegistries.MODULE_FORMATION.toString());
+        return !modules.contains(MODULE_FORMATION_KEY);
     }
 
     @Override
@@ -768,6 +816,10 @@ public final class DarkmatterBeetle extends Monster {
         // Only destructive removal releases this construct's fixed CP occupation.
         if (!level().isClientSide() && reason.shouldDestroy()) {
             var owner = getOwnerPlayer();
+            if (visualEstablished) {
+                visualEstablished = false;
+                DarkmatterGraphEffects.dismiss(this);
+            }
             if (owner != null) DarkmatterCreation.Server.removeOwned(owner, getUUID());
         }
         super.remove(reason);

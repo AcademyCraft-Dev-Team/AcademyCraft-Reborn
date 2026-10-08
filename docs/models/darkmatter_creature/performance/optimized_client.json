@@ -1,0 +1,476 @@
+{
+  "label": "optimized",
+  "status": "PASSED",
+  "resolution": [
+    1280,
+    720
+  ],
+  "syntheticConnectedServerPlayers": 8,
+  "combat": false,
+  "framesPerStage": 120,
+  "stages": [
+    {
+      "scene": {
+        "stage": 0,
+        "requestedCreations": 0,
+        "trackedCreationsAtEnd": 0,
+        "nominalCameraDistance": 16,
+        "torsoCounts": [
+          0,
+          0,
+          0
+        ],
+        "actualDistances": {
+          "samples": 0
+        }
+      },
+      "gpuFrameMilliseconds": {
+        "samples": 120,
+        "median": 0.383808,
+        "p95": 0.389344
+      },
+      "cpuRenderEventMilliseconds": {
+        "samples": 120,
+        "median": 1.2436,
+        "p95": 1.3977
+      },
+      "frameIntervalMilliseconds": {
+        "samples": 119,
+        "median": 1.5083,
+        "p95": 2.6639
+      },
+      "serverTickMilliseconds": {
+        "samples": 39,
+        "median": 9.644,
+        "p95": 16.1353
+      }
+    },
+    {
+      "scene": {
+        "stage": 1,
+        "requestedCreations": 0,
+        "trackedCreationsAtEnd": 0,
+        "nominalCameraDistance": 24,
+        "torsoCounts": [
+          0,
+          0,
+          0
+        ],
+        "actualDistances": {
+          "samples": 0
+        }
+      },
+      "gpuFrameMilliseconds": {
+        "samples": 120,
+        "median": 0.390336,
+        "p95": 0.539264
+      },
+      "cpuRenderEventMilliseconds": {
+        "samples": 120,
+        "median": 1.2696,
+        "p95": 1.4228
+      },
+      "frameIntervalMilliseconds": {
+        "samples": 119,
+        "median": 1.5341,
+        "p95": 2.6616
+      },
+      "serverTickMilliseconds": {
+        "samples": 39,
+        "median": 9.2495,
+        "p95": 15.9061
+      }
+    },
+    {
+      "scene": {
+        "stage": 2,
+        "requestedCreations": 0,
+        "trackedCreationsAtEnd": 0,
+        "nominalCameraDistance": 32,
+        "torsoCounts": [
+          0,
+          0,
+          0
+        ],
+        "actualDistances": {
+          "samples": 0
+        }
+      },
+      "gpuFrameMilliseconds": {
+        "samples": 120,
+        "median": 0.403072,
+        "p95": 0.410016
+      },
+      "cpuRenderEventMilliseconds": {
+        "samples": 120,
+        "median": 1.2777,
+        "p95": 1.4486
+      },
+      "frameIntervalMilliseconds": {
+        "samples": 119,
+        "median": 1.5487,
+        "p95": 2.6458
+      },
+      "serverTickMilliseconds": {
+        "samples": 39,
+        "median": 8.7302,
+        "p95": 9.6322
+      }
+    },
+    {
+      "scene": {
+        "stage": 3,
+        "requestedCreations": 16,
+        "trackedCreationsAtEnd": 16,
+        "nominalCameraDistance": 16,
+        "torsoCounts": [
+          6,
+          5,
+          5
+        ],
+        "actualDistances": {
+          "samples": 16,
+          "median": 11.686734814778333,
+          "p95": 21.248954924016772
+        }
+      },
+      "gpuFrameMilliseconds": {
+        "samples": 120,
+        "median": 1.18464,
+        "p95": 1.468384
+      },
+      "cpuRenderEventMilliseconds": {
+        "samples": 120,
+        "median": 1.9547,
+        "p95": 2.2715
+      },
+      "frameIntervalMilliseconds": {
+        "samples": 119,
+        "median": 2.2845,
+        "p95": 3.2811
+      },
+      "serverTickMilliseconds": {
+        "samples": 39,
+        "median": 9.3186,
+        "p95": 18.7263
+      }
+    },
+    {
+      "scene": {
+        "stage": 4,
+        "requestedCreations": 16,
+        "trackedCreationsAtEnd": 16,
+        "nominalCameraDistance": 24,
+        "torsoCounts": [
+          6,
+          5,
+          5
+        ],
+        "actualDistances": {
+          "samples": 16,
+          "median": 19.39994692048542,
+          "p95": 29.040078226461393
+        }
+      },
+      "gpuFrameMilliseconds": {
+        "samples": 120,
+        "median": 1.187104,
+        "p95": 1.412224
+      },
+      "cpuRenderEventMilliseconds": {
+        "samples": 120,
+        "median": 1.8371,
+        "p95": 2.0619
+      },
+      "frameIntervalMilliseconds": {
+        "samples": 119,
+        "median": 2.1169,
+        "p95": 3.192
+      },
+      "serverTickMilliseconds": {
+        "samples": 39,
+        "median": 9.3446,
+        "p95": 10.8746
+      }
+    },
+    {
+      "scene": {
+        "stage": 5,
+        "requestedCreations": 16,
+        "trackedCreationsAtEnd": 16,
+        "nominalCameraDistance": 32,
+        "torsoCounts": [
+          6,
+          5,
+          5
+        ],
+        "actualDistances": {
+          "samples": 16,
+          "median": 27.38966307853046,
+          "p95": 37.03478020615107
+        }
+      },
+      "gpuFrameMilliseconds": {
+        "samples": 120,
+        "median": 1.144704,
+        "p95": 1.355456
+      },
+      "cpuRenderEventMilliseconds": {
+        "samples": 120,
+        "median": 1.5076,
+        "p95": 1.7896
+      },
+      "frameIntervalMilliseconds": {
+        "samples": 119,
+        "median": 1.8004,
+        "p95": 2.9803
+      },
+      "serverTickMilliseconds": {
+        "samples": 39,
+        "median": 9.0418,
+        "p95": 11.0599
+      }
+    },
+    {
+      "scene": {
+        "stage": 6,
+        "requestedCreations": 64,
+        "trackedCreationsAtEnd": 64,
+        "nominalCameraDistance": 16,
+        "torsoCounts": [
+          22,
+          21,
+          21
+        ],
+        "actualDistances": {
+          "samples": 64,
+          "median": 12.755568177289225,
+          "p95": 21.45918396952315
+        }
+      },
+      "gpuFrameMilliseconds": {
+        "samples": 120,
+        "median": 1.492608,
+        "p95": 1.76256
+      },
+      "cpuRenderEventMilliseconds": {
+        "samples": 120,
+        "median": 4.0973,
+        "p95": 4.3926
+      },
+      "frameIntervalMilliseconds": {
+        "samples": 119,
+        "median": 4.6919,
+        "p95": 5.8739
+      },
+      "serverTickMilliseconds": {
+        "samples": 39,
+        "median": 11.8221,
+        "p95": 15.8042
+      }
+    },
+    {
+      "scene": {
+        "stage": 7,
+        "requestedCreations": 64,
+        "trackedCreationsAtEnd": 64,
+        "nominalCameraDistance": 24,
+        "torsoCounts": [
+          22,
+          21,
+          21
+        ],
+        "actualDistances": {
+          "samples": 64,
+          "median": 20.65529708825628,
+          "p95": 29.303178396512543
+        }
+      },
+      "gpuFrameMilliseconds": {
+        "samples": 120,
+        "median": 4.284448,
+        "p95": 5.796
+      },
+      "cpuRenderEventMilliseconds": {
+        "samples": 120,
+        "median": 3.8071,
+        "p95": 4.1675
+      },
+      "frameIntervalMilliseconds": {
+        "samples": 119,
+        "median": 33.4475,
+        "p95": 34.9042
+      },
+      "serverTickMilliseconds": {
+        "samples": 81,
+        "median": 10.7315,
+        "p95": 13.5404
+      }
+    },
+    {
+      "scene": {
+        "stage": 8,
+        "requestedCreations": 64,
+        "trackedCreationsAtEnd": 64,
+        "nominalCameraDistance": 32,
+        "torsoCounts": [
+          22,
+          21,
+          21
+        ],
+        "actualDistances": {
+          "samples": 64,
+          "median": 28.492332537561662,
+          "p95": 37.12916945773354
+        }
+      },
+      "gpuFrameMilliseconds": {
+        "samples": 120,
+        "median": 1.558336,
+        "p95": 5.036992
+      },
+      "cpuRenderEventMilliseconds": {
+        "samples": 120,
+        "median": 2.6361,
+        "p95": 2.9186
+      },
+      "frameIntervalMilliseconds": {
+        "samples": 119,
+        "median": 33.418,
+        "p95": 34.9888
+      },
+      "serverTickMilliseconds": {
+        "samples": 81,
+        "median": 10.3605,
+        "p95": 12.6004
+      }
+    },
+    {
+      "scene": {
+        "stage": 9,
+        "requestedCreations": 128,
+        "trackedCreationsAtEnd": 128,
+        "nominalCameraDistance": 16,
+        "torsoCounts": [
+          43,
+          43,
+          42
+        ],
+        "actualDistances": {
+          "samples": 128,
+          "median": 14.516350353082203,
+          "p95": 23.774510849235845
+        }
+      },
+      "gpuFrameMilliseconds": {
+        "samples": 120,
+        "median": 1.593152,
+        "p95": 1.854944
+      },
+      "cpuRenderEventMilliseconds": {
+        "samples": 120,
+        "median": 6.732,
+        "p95": 7.1867
+      },
+      "frameIntervalMilliseconds": {
+        "samples": 119,
+        "median": 33.5018,
+        "p95": 35.1984
+      },
+      "serverTickMilliseconds": {
+        "samples": 81,
+        "median": 12.4669,
+        "p95": 15.6146
+      }
+    },
+    {
+      "scene": {
+        "stage": 10,
+        "requestedCreations": 128,
+        "trackedCreationsAtEnd": 128,
+        "nominalCameraDistance": 24,
+        "torsoCounts": [
+          43,
+          43,
+          42
+        ],
+        "actualDistances": {
+          "samples": 128,
+          "median": 22.542968918362863,
+          "p95": 31.49128178978367
+        }
+      },
+      "gpuFrameMilliseconds": {
+        "samples": 120,
+        "median": 1.708608,
+        "p95": 5.987584
+      },
+      "cpuRenderEventMilliseconds": {
+        "samples": 120,
+        "median": 5.7122,
+        "p95": 6.1282
+      },
+      "frameIntervalMilliseconds": {
+        "samples": 119,
+        "median": 33.458,
+        "p95": 35.1751
+      },
+      "serverTickMilliseconds": {
+        "samples": 80,
+        "median": 12.0034,
+        "p95": 15.9702
+      }
+    },
+    {
+      "scene": {
+        "stage": 11,
+        "requestedCreations": 128,
+        "trackedCreationsAtEnd": 128,
+        "nominalCameraDistance": 32,
+        "torsoCounts": [
+          43,
+          43,
+          42
+        ],
+        "actualDistances": {
+          "samples": 128,
+          "median": 30.47741882565961,
+          "p95": 39.40602676858656
+        }
+      },
+      "gpuFrameMilliseconds": {
+        "samples": 120,
+        "median": 1.433888,
+        "p95": 12.670944
+      },
+      "cpuRenderEventMilliseconds": {
+        "samples": 120,
+        "median": 3.4738,
+        "p95": 3.8196
+      },
+      "frameIntervalMilliseconds": {
+        "samples": 119,
+        "median": 33.4166,
+        "p95": 35.1428
+      },
+      "serverTickMilliseconds": {
+        "samples": 80,
+        "median": 11.9204,
+        "p95": 16.243
+      }
+    }
+  ],
+  "runtimeContracts": [
+    "blueprint_cache_replacement",
+    "owner_resolution",
+    "entity_save_load_cache_rebuild",
+    "late_head_registry",
+    "late_module_handler"
+  ],
+  "limitations": [
+    "Mock-connected players exercise real server ownership, skills and entity tracking; they are not eight remote game clients.",
+    "Each camera distance is nominal to scene center; actual moving entity distances are reported.",
+    "Whole frame and server tick timings include the common scene and vanilla costs. They are not isolated beetle draw times.",
+    "AI runs normally, including the documented existing swimming FloatGoal behavior inside real water."
+  ]
+}

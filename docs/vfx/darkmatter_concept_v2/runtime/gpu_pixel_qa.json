@@ -1,0 +1,983 @@
+[
+  {
+    "file": "gpu_darkmatter_generation_alpha.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 223,
+    "material_pixels_over_60": 26653
+  },
+  {
+    "file": "gpu_darkmatter_generation_beta.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 223,
+    "material_pixels_over_60": 26653
+  },
+  {
+    "file": "gpu_darkmatter_generation_gamma.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 223,
+    "material_pixels_over_60": 26653
+  },
+  {
+    "file": "gpu_darkmatter_elimination_alpha.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 222,
+    "material_pixels_over_60": 15439
+  },
+  {
+    "file": "gpu_darkmatter_elimination_beta.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 222,
+    "material_pixels_over_60": 15439
+  },
+  {
+    "file": "gpu_darkmatter_elimination_gamma.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 222,
+    "material_pixels_over_60": 15439
+  },
+  {
+    "file": "gpu_darkmatter_shaping_alpha.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 231,
+    "material_pixels_over_60": 18421
+  },
+  {
+    "file": "gpu_darkmatter_shaping_beta.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 231,
+    "material_pixels_over_60": 18421
+  },
+  {
+    "file": "gpu_darkmatter_shaping_gamma.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 231,
+    "material_pixels_over_60": 18421
+  },
+  {
+    "file": "gpu_darkmatter_phase_tuning_alpha.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 196,
+    "material_pixels_over_60": 5359
+  },
+  {
+    "file": "gpu_darkmatter_phase_tuning_beta.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 196,
+    "material_pixels_over_60": 5317
+  },
+  {
+    "file": "gpu_darkmatter_phase_tuning_gamma.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 196,
+    "material_pixels_over_60": 5353
+  },
+  {
+    "file": "gpu_darkmatter_disassemble_alpha.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 202,
+    "material_pixels_over_60": 6936
+  },
+  {
+    "file": "gpu_darkmatter_disassemble_beta.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 202,
+    "material_pixels_over_60": 6936
+  },
+  {
+    "file": "gpu_darkmatter_disassemble_gamma.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 202,
+    "material_pixels_over_60": 6936
+  },
+  {
+    "file": "gpu_darkmatter_cut_alpha.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 132,
+    "material_pixels_over_60": 12734
+  },
+  {
+    "file": "gpu_darkmatter_cut_beta.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 132,
+    "material_pixels_over_60": 7776
+  },
+  {
+    "file": "gpu_darkmatter_cut_gamma.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 132,
+    "material_pixels_over_60": 10645
+  },
+  {
+    "file": "gpu_darkmatter_interference_alpha.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 72,
+    "material_pixels_over_60": 113
+  },
+  {
+    "file": "gpu_darkmatter_interference_beta.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 72,
+    "material_pixels_over_60": 113
+  },
+  {
+    "file": "gpu_darkmatter_interference_gamma.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 72,
+    "material_pixels_over_60": 113
+  },
+  {
+    "file": "gpu_darkmatter_repair_alpha.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 195,
+    "material_pixels_over_60": 7143
+  },
+  {
+    "file": "gpu_darkmatter_repair_beta.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 195,
+    "material_pixels_over_60": 7143
+  },
+  {
+    "file": "gpu_darkmatter_repair_gamma.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 195,
+    "material_pixels_over_60": 7143
+  },
+  {
+    "file": "gpu_darkmatter_creation_summon_alpha.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 220,
+    "material_pixels_over_60": 14281
+  },
+  {
+    "file": "gpu_darkmatter_creation_summon_beta.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 220,
+    "material_pixels_over_60": 14281
+  },
+  {
+    "file": "gpu_darkmatter_creation_summon_gamma.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 220,
+    "material_pixels_over_60": 14281
+  },
+  {
+    "file": "gpu_darkmatter_creation_dismiss_alpha.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 192,
+    "material_pixels_over_60": 8615
+  },
+  {
+    "file": "gpu_darkmatter_creation_dismiss_beta.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 192,
+    "material_pixels_over_60": 8615
+  },
+  {
+    "file": "gpu_darkmatter_creation_dismiss_gamma.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 192,
+    "material_pixels_over_60": 8615
+  },
+  {
+    "file": "gpu_darkmatter_creation_contact_alpha.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 179,
+    "material_pixels_over_60": 6916
+  },
+  {
+    "file": "gpu_darkmatter_creation_contact_beta.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 179,
+    "material_pixels_over_60": 6916
+  },
+  {
+    "file": "gpu_darkmatter_creation_contact_gamma.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 179,
+    "material_pixels_over_60": 6916
+  },
+  {
+    "file": "gpu_darkmatter_creation_trail_alpha.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 214,
+    "material_pixels_over_60": 10675
+  },
+  {
+    "file": "gpu_darkmatter_creation_trail_beta.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 214,
+    "material_pixels_over_60": 10675
+  },
+  {
+    "file": "gpu_darkmatter_creation_trail_gamma.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 214,
+    "material_pixels_over_60": 10675
+  },
+  {
+    "file": "gpu_darkmatter_feather_alpha.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 220,
+    "material_pixels_over_60": 59853
+  },
+  {
+    "file": "gpu_darkmatter_feather_beta.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 220,
+    "material_pixels_over_60": 59853
+  },
+  {
+    "file": "gpu_darkmatter_feather_gamma.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 220,
+    "material_pixels_over_60": 59853
+  },
+  {
+    "file": "gpu_darkmatter_light_contact_alpha.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 183,
+    "material_pixels_over_60": 12681
+  },
+  {
+    "file": "gpu_darkmatter_light_contact_beta.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 183,
+    "material_pixels_over_60": 12681
+  },
+  {
+    "file": "gpu_darkmatter_light_contact_gamma.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 183,
+    "material_pixels_over_60": 12681
+  },
+  {
+    "file": "gpu_darkmatter_six_wings_alpha.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 232,
+    "material_pixels_over_60": 93715
+  },
+  {
+    "file": "gpu_darkmatter_six_wings_beta.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 232,
+    "material_pixels_over_60": 88865
+  },
+  {
+    "file": "gpu_darkmatter_six_wings_gamma.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 232,
+    "material_pixels_over_60": 91768
+  },
+  {
+    "file": "gpu_darkmatter_wing_strike_alpha.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 118,
+    "material_pixels_over_60": 12607
+  },
+  {
+    "file": "gpu_darkmatter_wing_strike_beta.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 118,
+    "material_pixels_over_60": 7675
+  },
+  {
+    "file": "gpu_darkmatter_wing_strike_gamma.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 118,
+    "material_pixels_over_60": 10517
+  },
+  {
+    "file": "gpu_darkmatter_six_wings_gamma_opening.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 236,
+    "material_pixels_over_60": 28232
+  },
+  {
+    "file": "gpu_darkmatter_six_wings_gamma_closing.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 237,
+    "material_pixels_over_60": 10087
+  },
+  {
+    "file": "gpu_darkmatter_six_wings_gamma_yaw_65.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 234,
+    "material_pixels_over_60": 39129
+  },
+  {
+    "file": "gpu_darkmatter_six_wings_gamma_first_person.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 20,
+    "material_pixels_over_60": 0
+  },
+  {
+    "file": "gpu_darkmatter_cut_gamma_reverse.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 185,
+    "material_pixels_over_60": 11796
+  },
+  {
+    "file": "gpu_darkmatter_cut_gamma_dissipating.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 20,
+    "material_pixels_over_60": 0
+  },
+  {
+    "file": "gpu_darkmatter_wing_strike_gamma_early.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 176,
+    "material_pixels_over_60": 10477
+  },
+  {
+    "file": "gpu_darkmatter_wing_strike_gamma_late.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 23,
+    "material_pixels_over_60": 0
+  },
+  {
+    "file": "gpu_darkmatter_repair_alpha_settled.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 192,
+    "material_pixels_over_60": 8806
+  },
+  {
+    "file": "gpu_darkmatter_disassemble_beta_terminal.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 125,
+    "material_pixels_over_60": 2733
+  },
+  {
+    "file": "gpu_darkmatter_interference_beta_night.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 38,
+    "material_pixels_over_60": 0
+  },
+  {
+    "file": "gpu_darkmatter_shaping_alpha_formed.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 231,
+    "material_pixels_over_60": 21491
+  },
+  {
+    "file": "gpu_darkmatter_phase_tuning_beta_flexible.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 196,
+    "material_pixels_over_60": 5304
+  },
+  {
+    "file": "gpu_darkmatter_cut_alpha_peak.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 198,
+    "material_pixels_over_60": 12685
+  },
+  {
+    "file": "gpu_darkmatter_cut_beta_peak.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 198,
+    "material_pixels_over_60": 7680
+  },
+  {
+    "file": "gpu_darkmatter_cut_gamma_peak.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 198,
+    "material_pixels_over_60": 10572
+  },
+  {
+    "file": "gpu_darkmatter_generation_alpha_condensed.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 227,
+    "material_pixels_over_60": 24817
+  },
+  {
+    "file": "gpu_darkmatter_generation_beta_condensed.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 227,
+    "material_pixels_over_60": 24817
+  },
+  {
+    "file": "gpu_darkmatter_generation_gamma_condensed.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 227,
+    "material_pixels_over_60": 24817
+  },
+  {
+    "file": "gpu_darkmatter_six_wings_alpha_flight.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 232,
+    "material_pixels_over_60": 93863
+  },
+  {
+    "file": "gpu_darkmatter_six_wings_beta_flight.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 232,
+    "material_pixels_over_60": 87916
+  },
+  {
+    "file": "gpu_darkmatter_six_wings_gamma_flight.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 232,
+    "material_pixels_over_60": 91400
+  },
+  {
+    "file": "gpu_darkmatter_feather_alpha_fit.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 220,
+    "material_pixels_over_60": 10526
+  },
+  {
+    "file": "gpu_darkmatter_feather_beta_fit.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 220,
+    "material_pixels_over_60": 10526
+  },
+  {
+    "file": "gpu_darkmatter_feather_gamma_fit.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 220,
+    "material_pixels_over_60": 10526
+  },
+  {
+    "file": "gpu_darkmatter_six_wings_gamma_single_feather.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 218,
+    "material_pixels_over_60": 48403
+  },
+  {
+    "file": "gpu_darkmatter_generation_alpha_time_12.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 222,
+    "material_pixels_over_60": 27322
+  },
+  {
+    "file": "gpu_darkmatter_generation_alpha_time_24.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 223,
+    "material_pixels_over_60": 26787
+  },
+  {
+    "file": "gpu_darkmatter_generation_alpha_time_42.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 226,
+    "material_pixels_over_60": 24523
+  },
+  {
+    "file": "gpu_darkmatter_generation_beta_time_12.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 222,
+    "material_pixels_over_60": 27322
+  },
+  {
+    "file": "gpu_darkmatter_generation_beta_time_24.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 223,
+    "material_pixels_over_60": 26787
+  },
+  {
+    "file": "gpu_darkmatter_generation_beta_time_42.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 226,
+    "material_pixels_over_60": 24523
+  },
+  {
+    "file": "gpu_darkmatter_generation_gamma_time_12.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 222,
+    "material_pixels_over_60": 27322
+  },
+  {
+    "file": "gpu_darkmatter_generation_gamma_time_24.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 223,
+    "material_pixels_over_60": 26787
+  },
+  {
+    "file": "gpu_darkmatter_generation_gamma_time_42.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 226,
+    "material_pixels_over_60": 24523
+  },
+  {
+    "file": "gpu_darkmatter_shaping_alpha_time_12.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 231,
+    "material_pixels_over_60": 14844
+  },
+  {
+    "file": "gpu_darkmatter_shaping_alpha_time_24.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 231,
+    "material_pixels_over_60": 18215
+  },
+  {
+    "file": "gpu_darkmatter_shaping_alpha_time_42.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 230,
+    "material_pixels_over_60": 22279
+  },
+  {
+    "file": "gpu_darkmatter_shaping_beta_time_12.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 231,
+    "material_pixels_over_60": 14844
+  },
+  {
+    "file": "gpu_darkmatter_shaping_beta_time_24.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 231,
+    "material_pixels_over_60": 18215
+  },
+  {
+    "file": "gpu_darkmatter_shaping_beta_time_42.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 230,
+    "material_pixels_over_60": 22279
+  },
+  {
+    "file": "gpu_darkmatter_shaping_gamma_time_12.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 231,
+    "material_pixels_over_60": 14844
+  },
+  {
+    "file": "gpu_darkmatter_shaping_gamma_time_24.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 231,
+    "material_pixels_over_60": 18215
+  },
+  {
+    "file": "gpu_darkmatter_shaping_gamma_time_42.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 230,
+    "material_pixels_over_60": 22279
+  },
+  {
+    "file": "gpu_darkmatter_elimination_alpha_time_12.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 225,
+    "material_pixels_over_60": 17961
+  },
+  {
+    "file": "gpu_darkmatter_elimination_alpha_time_24.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 222,
+    "material_pixels_over_60": 16252
+  },
+  {
+    "file": "gpu_darkmatter_elimination_alpha_time_42.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 221,
+    "material_pixels_over_60": 9170
+  },
+  {
+    "file": "gpu_darkmatter_elimination_beta_time_12.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 225,
+    "material_pixels_over_60": 17961
+  },
+  {
+    "file": "gpu_darkmatter_elimination_beta_time_24.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 222,
+    "material_pixels_over_60": 16252
+  },
+  {
+    "file": "gpu_darkmatter_elimination_beta_time_42.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 221,
+    "material_pixels_over_60": 9170
+  },
+  {
+    "file": "gpu_darkmatter_elimination_gamma_time_12.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 225,
+    "material_pixels_over_60": 17961
+  },
+  {
+    "file": "gpu_darkmatter_elimination_gamma_time_24.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 222,
+    "material_pixels_over_60": 16252
+  },
+  {
+    "file": "gpu_darkmatter_elimination_gamma_time_42.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 221,
+    "material_pixels_over_60": 9170
+  },
+  {
+    "file": "gpu_darkmatter_six_wings_gamma_blocked.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 232,
+    "material_pixels_over_60": 73564
+  },
+  {
+    "file": "gpu_darkmatter_six_wings_gamma_partial_penetration.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 232,
+    "material_pixels_over_60": 91238
+  },
+  {
+    "file": "gpu_darkmatter_six_wings_gamma_penetrating.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 232,
+    "material_pixels_over_60": 91876
+  },
+  {
+    "file": "gpu_darkmatter_six_wings_gamma_grid_medium.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 232,
+    "material_pixels_over_60": 91771
+  },
+  {
+    "file": "gpu_darkmatter_six_wings_gamma_grid_far.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 232,
+    "material_pixels_over_60": 91759
+  },
+  {
+    "file": "gpu_darkmatter_six_wings_gamma_mixed_grid.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 232,
+    "material_pixels_over_60": 91770
+  },
+  {
+    "file": "gpu_darkmatter_six_wings_gamma_lod_medium.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 227,
+    "material_pixels_over_60": 1834
+  },
+  {
+    "file": "gpu_darkmatter_six_wings_gamma_lod_far.png",
+    "size": [
+      1280,
+      720
+    ],
+    "max_luminance": 218,
+    "material_pixels_over_60": 523
+  }
+]

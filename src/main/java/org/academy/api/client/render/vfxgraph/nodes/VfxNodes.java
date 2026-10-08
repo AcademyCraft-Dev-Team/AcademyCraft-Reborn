@@ -103,7 +103,8 @@ public final class VfxNodes {
             prop("vertex", ValueType.STRING, Value.string("")),
             prop("shader", ValueType.STRING, Value.string("")),
             prop("blend", ValueType.STRING, Value.string("")),
-            prop("layer", ValueType.STRING, Value.string(""))
+            prop("layer", ValueType.STRING, Value.string("")),
+            prop("cull_zero_alpha", ValueType.BOOL, Value.of(false))
     );
 
     public static void registerAll(NodeRegistry metadata, VfxNodeRegistry vfx) {

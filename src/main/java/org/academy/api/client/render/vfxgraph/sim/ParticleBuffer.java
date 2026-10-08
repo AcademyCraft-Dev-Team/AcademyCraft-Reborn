@@ -32,6 +32,15 @@ public final class ParticleBuffer {
     private float[] vx;
     private float[] vy;
     private float[] vz;
+    private float[] surfaceNx;
+    private float[] surfaceNy;
+    private float[] surfaceNz;
+    private float[] surfaceClipX;
+    private float[] surfaceClipY;
+    private float[] surfaceClipZ;
+    private float[] surfaceClipW;
+    private float[] surfacePenetration;
+    private byte[] surfaceDetail;
     private float[] cr;
     private float[] cg;
     private float[] cb;
@@ -62,6 +71,15 @@ public final class ParticleBuffer {
         vx = new float[initialCapacity];
         vy = new float[initialCapacity];
         vz = new float[initialCapacity];
+        surfaceNx = new float[initialCapacity];
+        surfaceNy = new float[initialCapacity];
+        surfaceNz = new float[initialCapacity];
+        surfaceClipX = new float[initialCapacity];
+        surfaceClipY = new float[initialCapacity];
+        surfaceClipZ = new float[initialCapacity];
+        surfaceClipW = new float[initialCapacity];
+        surfacePenetration = new float[initialCapacity];
+        surfaceDetail = new byte[initialCapacity];
         cr = new float[initialCapacity];
         cg = new float[initialCapacity];
         cb = new float[initialCapacity];
@@ -106,6 +124,15 @@ public final class ParticleBuffer {
         startAlpha[i] = 0f;
         rotation[i] = 0f;
         mass[i] = 0f;
+        surfaceNx[i] = 0f;
+        surfaceNy[i] = 0f;
+        surfaceNz[i] = 1f;
+        surfaceClipX[i] = 0f;
+        surfaceClipY[i] = 0f;
+        surfaceClipZ[i] = 0f;
+        surfaceClipW[i] = 1f;
+        surfacePenetration[i] = 0f;
+        surfaceDetail[i] = 0;
         trailSize[i] = 0;
         return count++;
     }
@@ -124,6 +151,15 @@ public final class ParticleBuffer {
             vx[i] = vx[last];
             vy[i] = vy[last];
             vz[i] = vz[last];
+            surfaceNx[i] = surfaceNx[last];
+            surfaceNy[i] = surfaceNy[last];
+            surfaceNz[i] = surfaceNz[last];
+            surfaceClipX[i] = surfaceClipX[last];
+            surfaceClipY[i] = surfaceClipY[last];
+            surfaceClipZ[i] = surfaceClipZ[last];
+            surfaceClipW[i] = surfaceClipW[last];
+            surfacePenetration[i] = surfacePenetration[last];
+            surfaceDetail[i] = surfaceDetail[last];
             cr[i] = cr[last];
             cg[i] = cg[last];
             cb[i] = cb[last];
@@ -152,6 +188,15 @@ public final class ParticleBuffer {
         vx = Arrays.copyOf(vx, newCap);
         vy = Arrays.copyOf(vy, newCap);
         vz = Arrays.copyOf(vz, newCap);
+        surfaceNx = Arrays.copyOf(surfaceNx, newCap);
+        surfaceNy = Arrays.copyOf(surfaceNy, newCap);
+        surfaceNz = Arrays.copyOf(surfaceNz, newCap);
+        surfaceClipX = Arrays.copyOf(surfaceClipX, newCap);
+        surfaceClipY = Arrays.copyOf(surfaceClipY, newCap);
+        surfaceClipZ = Arrays.copyOf(surfaceClipZ, newCap);
+        surfaceClipW = Arrays.copyOf(surfaceClipW, newCap);
+        surfacePenetration = Arrays.copyOf(surfacePenetration, newCap);
+        surfaceDetail = Arrays.copyOf(surfaceDetail, newCap);
         cr = Arrays.copyOf(cr, newCap);
         cg = Arrays.copyOf(cg, newCap);
         cb = Arrays.copyOf(cb, newCap);
@@ -189,6 +234,34 @@ public final class ParticleBuffer {
         pz[i] = z;
     }
 
+    /** Local surface orientation, distinct from the longitudinal velocity used by shaped outputs. */
+    public void setSurfaceNormal(int i, float x, float y, float z) {
+        surfaceNx[i] = x;
+        surfaceNy[i] = y;
+        surfaceNz[i] = z;
+    }
+
+    public float surfaceNormalX(int i) { return surfaceNx[i]; }
+    public float surfaceNormalY(int i) { return surfaceNy[i]; }
+    public float surfaceNormalZ(int i) { return surfaceNz[i]; }
+
+    /** Independent local clipping half-space; the surface normal remains physical orientation. */
+    public void setSurfaceClipPlane(int i, float x, float y, float z, float w) {
+        surfaceClipX[i] = x; surfaceClipY[i] = y; surfaceClipZ[i] = z; surfaceClipW[i] = w;
+    }
+    public float surfaceClipX(int i) { return surfaceClipX[i]; }
+    public float surfaceClipY(int i) { return surfaceClipY[i]; }
+    public float surfaceClipZ(int i) { return surfaceClipZ[i]; }
+    public float surfaceClipW(int i) { return surfaceClipW[i]; }
+    public void setSurfacePenetration(int i, float value) { surfacePenetration[i] = Math.clamp(value, 0, 1); }
+    public float surfacePenetration(int i) { return surfacePenetration[i]; }
+
+    /** CPU-only mesh detail; never changes the instance layout or material attributes. */
+    public void setSurfaceDetail(int i, int detail) {
+        surfaceDetail[i] = (byte) org.academy.api.client.render.vfxgraph.shape.SurfaceDetailSelector.validDetail(detail);
+    }
+    public int surfaceDetail(int i) { return surfaceDetail[i]; }
+
     // ---- seed（每粒子稳定随机种子，M21 火焰） ----
 
     public float seed(int i) {
@@ -222,6 +295,8 @@ public final class ParticleBuffer {
             case "sky_cloud" -> 12;
             case "sky_halo" -> 13;
             case "iron_sand" -> 14;
+            case "feather" -> 15;
+            case "material_fan" -> 16;
             default -> 0;
         };
     }

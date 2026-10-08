@@ -67,7 +67,9 @@ public final class VfxBlocks {
             prop("shader", ValueType.STRING, Value.string("")),
             prop("texture", ValueType.STRING, Value.string("")),
             prop("blend", ValueType.STRING, Value.string("")),
-            prop("layer", ValueType.STRING, Value.string(""))
+            prop("layer", ValueType.STRING, Value.string("")),
+            prop("soft_depth", ValueType.BOOL, Value.of(true)),
+            prop("cull_zero_alpha", ValueType.BOOL, Value.of(false))
     );
 
     private static final List<PropertySpec> ARC_SURFACE_PROPS = List.of(
@@ -148,6 +150,10 @@ public final class VfxBlocks {
     );
 
     public static void registerAll(NodeRegistry metadata, VfxBlockRegistry blocks) {
+        metadata.register(type("vfx.block.feather_array", "spawn", "Feather Array / Paired Skeleton", FeatherArrayEmitter.properties()));
+        blocks.register("vfx.block.feather_array", (block, ports) -> FeatherArrayEmitter.create(block));
+        metadata.register(type("vfx.block.material_fan", "spawn", "Material Fan / Curved Blade", MaterialFanEmitter.properties()));
+        blocks.register("vfx.block.material_fan", (block, ports) -> MaterialFanEmitter.create(block));
         metadata.register(type("vfx.block.material_sheets", "spawn", "Material Sheets / Sampled Surface", MaterialSheetEmitter.properties()));
         blocks.register("vfx.block.material_sheets", (block, ports) -> MaterialSheetEmitter.create(block));
         metadata.register(type("vfx.block.organic_strands", "spawn", "Translucent Organic Strands",
@@ -417,6 +423,9 @@ public final class VfxBlocks {
         metadata.register(type("vfx.block.output_mesh", "output", "Output Mesh", OUTPUT_PROPERTIES));
         blocks.register("vfx.block.output_mesh", (n, p) -> (buf, ctx) -> {
         });
+
+        metadata.register(type("vfx.block.output_material_surface", "output", "Output Material / Curved Surface", OUTPUT_PROPERTIES));
+        blocks.register("vfx.block.output_material_surface", (n, p) -> (buf, ctx) -> { });
 
         metadata.register(type("vfx.block.output_line", "output", "Output Line / Trail", OUTPUT_PROPERTIES));
         blocks.register("vfx.block.output_line", (n, p) -> (buf, ctx) -> {

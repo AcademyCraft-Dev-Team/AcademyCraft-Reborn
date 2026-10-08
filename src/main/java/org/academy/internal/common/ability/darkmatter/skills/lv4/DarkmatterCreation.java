@@ -32,6 +32,7 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.ability.DarkmatterGraphEffects;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.gui.screen.DarkmatterCreationScreen;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -349,6 +350,8 @@ public final class DarkmatterCreation extends Skill {
                     creature.getUUID(), blueprint.name(), investment, normalizedSlot,
                     level.dimension().identifier().toString(), creature.getX(), creature.getY(), creature.getZ()));
             Skills.DARKMATTER_CREATION.get().reportActivity(player, true);
+            creature.markVisualEstablished();
+            DarkmatterGraphEffects.summon(creature);
             return SummonResult.SUMMONED;
         }
 
@@ -399,7 +402,7 @@ public final class DarkmatterCreation extends Skill {
         }
 
         public static boolean isRecorded(ServerPlayer player, UUID uuid) {
-            return data(player).flatMap(value -> value.getSummon(uuid)).isPresent();
+            return data(player).map(value -> value.containsSummon(uuid)).orElse(false);
         }
 
         public static boolean canProgramCreate(ServerPlayer player, Vec3 position, double maximumRange) {
@@ -443,6 +446,8 @@ public final class DarkmatterCreation extends Skill {
             updateData(player, mutable -> mutable.addSummon(creature.getUUID(), blueprint.name(),
                     blueprint.investment(), slot, level.dimension().identifier().toString(),
                     creature.getX(), creature.getY(), creature.getZ()));
+            creature.markVisualEstablished();
+            DarkmatterGraphEffects.summon(creature);
             return Optional.of(creature.getUUID());
         }
 

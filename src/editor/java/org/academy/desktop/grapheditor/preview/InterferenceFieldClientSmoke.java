@@ -31,7 +31,7 @@ public final class InterferenceFieldClientSmoke {
     private static boolean opened, configured;
     private static volatile boolean ready;
     private static volatile Throwable serverFailure;
-    private static int ticks, total;
+    private static int ticks, total, warmup;
     private static float yaw = -90, pitch = 12;
     private static long framesBefore;
     private static final java.util.List<Sample> samples = new java.util.ArrayList<>();
@@ -105,6 +105,8 @@ public final class InterferenceFieldClientSmoke {
             });
         }
         if (!ready) return;
+        // Let initial reload/advancement notifications finish before the scene comparison.
+        if (++warmup < 200) return;
         ticks++;
         if(ticks==25) { capture("outside_before"); framesBefore=DirectionalFieldRenderer.renderedFrames(); }
         if(ticks>=35&&ticks<=155&&ticks%5==0) server(p -> DarkmatterGraphEffects.interference(p,AREA));
@@ -177,13 +179,14 @@ public final class InterferenceFieldClientSmoke {
             require(InterferenceFieldClient.activeCount()==0,"Pitched range expires");
             reloading=mc.reloadResourcePacks();
         }
-        if(ticks>=460&&ticks<=485&&ticks%5==0) synthetic(1000000,AREA);
+        if(ticks>=460&&ticks<=555&&ticks%5==0) synthetic(1000000,AREA);
         if(ticks==480) {
             require(reloading.isDone()&&!reloading.isCompletedExceptionally(),"Resource reload completes");
             require(InterferenceFieldClient.activeCount()==1&&WorldSurfaceMasks.ready(),"Masks rebuild after resource reload");
-            capture("after_reload");
         }
-        if(ticks>=505 && mc.level.getGameTime()-lastSyntheticTick>14) {
+        // The reload future completes before the loading overlay fades out.
+        if(ticks==550) capture("after_reload");
+        if(ticks>=575 && mc.level.getGameTime()-lastSyntheticTick>14) {
             require(InterferenceFieldClient.activeCount()==0,"No stale field after reload and expiry");
             synthetic(1000000,AREA); exiting=true;
             mc.disconnect(new net.minecraft.client.gui.screens.TitleScreen(),false);

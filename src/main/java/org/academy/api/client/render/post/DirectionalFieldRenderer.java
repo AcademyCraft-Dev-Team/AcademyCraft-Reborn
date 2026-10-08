@@ -23,7 +23,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.client.render.Render;
-import org.academy.api.client.render.TextureBinding;
 import org.academy.api.common.vfx.DirectionalArea;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
@@ -37,7 +36,7 @@ import java.util.Optional;
 @EventBusSubscriber(modid = "academy", value = Dist.CLIENT)
 public final class DirectionalFieldRenderer {
     private static final int BATCH_SIZE = 16;
-    private static final int UBO_SIZE = 64 + 16 * 3 + BATCH_SIZE * 16 * 3;
+    private static final int UBO_SIZE = 64 + 16 * 3 + BATCH_SIZE * 16 * 4;
     private static final BlendFunction MAXIMUM = new BlendFunction(BlendFactor.ONE, BlendFactor.ONE, BlendOp.MAX);
     private static final RenderPipeline SURFACE = pipeline("directional_field_surface", MAXIMUM);
     private static final RenderPipeline VOLUME = pipeline("directional_field_volume", MAXIMUM);
@@ -45,7 +44,17 @@ public final class DirectionalFieldRenderer {
     private static GpuBuffer uniforms;
     private static TextureTarget surface, volume;
     private static long renderedFrames;
+    private static final Matrix4f VIEW_PROJECTION = new Matrix4f();
+    private static final Matrix4f INVERSE_PROJECTION = new Matrix4f();
+    private static final Vector4f PROJECTED_POINT = new Vector4f();
+    private static final Vector4f CLEAR_COLOR = new Vector4f();
     private record ScreenRect(int x, int y, int width, int height) { }
+    public record Field(DirectionalArea area, DirectionalFieldStyle style) {
+        public Field {
+            java.util.Objects.requireNonNull(area);
+            java.util.Objects.requireNonNull(style);
+        }
+    }
     private DirectionalFieldRenderer() { }
 
     private static RenderPipeline pipeline(String shader, BlendFunction blend) {
@@ -71,22 +80,30 @@ public final class DirectionalFieldRenderer {
 
     public static long renderedFrames() { return renderedFrames; }
     public static void render(Vec3 camera, Matrix4fc view, Matrix4fc projection, List<DirectionalArea> areas) {
-        if (areas.isEmpty()) { close(); return; }
+        renderStyled(camera, view, projection, areas.stream().map(a -> new Field(a, DirectionalFieldStyle.DEFAULT)).toList());
+    }
+
+    /** Multiple graph-authored styles share the existing maximum-coverage scene output. */
+    public static void renderStyled(Vec3 camera, Matrix4fc view, Matrix4fc projection, List<Field> fields) {
+        if (fields.isEmpty()) { close(); return; }
         if (!WorldSurfaceMasks.ready()) return;
         var mc = Minecraft.getInstance();
         if (mc.level == null) return;
         ensureTargets();
-        var viewProjection = new Matrix4f(projection).mul(view);
-        var inverse = new Matrix4f(viewProjection).invert();
+        var viewProjection = VIEW_PROJECTION.set(projection).mul(view);
+        var inverse = INVERSE_PROJECTION.set(viewProjection).invert();
         if (!inverse.isFinite()) return;
+        float sun = mc.level.environmentAttributes().getValue(EnvironmentAttributes.SUN_ANGLE, camera, null)
+                * (float) (Math.PI / 180);
+        float sunX = (float) Math.sin(sun), sunY = (float) Math.cos(sun);
         var encoder = RenderSystem.getDevice().createCommandEncoder();
-        encoder.clearColorTexture(surface.getColorTexture(), new Vector4f(0));
-        encoder.clearColorTexture(volume.getColorTexture(), new Vector4f(0));
-        for (int start = 0; start < areas.size(); start += BATCH_SIZE) {
-            var batch = areas.subList(start, Math.min(start + BATCH_SIZE, areas.size()));
-            writeUniforms(camera, inverse, batch);
+        encoder.clearColorTexture(surface.getColorTexture(), CLEAR_COLOR);
+        encoder.clearColorTexture(volume.getColorTexture(), CLEAR_COLOR);
+        for (int start = 0; start < fields.size(); start += BATCH_SIZE) {
+            int end = Math.min(start + BATCH_SIZE, fields.size());
+            writeUniforms(camera, inverse, fields, start, end, sunX, sunY);
             draw(surface.getColorTextureView(), SURFACE, null);
-            draw(volume.getColorTextureView(), VOLUME, volumeBounds(camera, viewProjection, batch));
+            draw(volume.getColorTextureView(), VOLUME, volumeBounds(camera, viewProjection, fields, start, end));
         }
         draw(GlowEffect.getInstance().getInput().getColorTextureView(), COMPOSITE, null);
         renderedFrames++;
@@ -102,54 +119,59 @@ public final class DirectionalFieldRenderer {
         volume = new TextureTarget("Directional air scattering", Math.max(1, main.width / 2), Math.max(1, main.height / 2), false, GpuFormat.RGBA8_UNORM);
     }
 
-    private static void writeUniforms(Vec3 camera, Matrix4fc inverse, List<DirectionalArea> areas) {
+    private static void writeUniforms(Vec3 camera, Matrix4fc inverse, List<Field> fields, int start, int end,
+                                      float sunX, float sunY) {
+        int count = end - start;
         var level = Minecraft.getInstance().level;
-        var sample = BlockPos.containing(areas.getFirst().origin());
+        var sample = BlockPos.containing(fields.get(start).area().origin());
         float light = Math.max(level.getBrightness(LightLayer.BLOCK, sample),
                 Math.max(0, level.getBrightness(LightLayer.SKY, sample) - level.getSkyDarken())) / 15f;
-        float sun = level.environmentAttributes().getValue(EnvironmentAttributes.SUN_ANGLE, camera, null)
-                * (float) (Math.PI / 180);
         try (var stack = MemoryStack.stackPush()) {
             var b = Std140Builder.onStack(stack, UBO_SIZE);
             b.putMat4f(inverse);
-            b.putVec4((float) Math.sin(sun), (float) Math.cos(sun), 0, light);
-            b.putVec4((level.getGameTime() % 24000) / 20f, areas.size(),
+            b.putVec4(sunX, sunY, 0, light);
+            b.putVec4((level.getGameTime() % 24000) / 20f, count,
                     RenderSystem.getDevice().getDeviceInfo().isZZeroToOne() ? 1 : 0, 0);
             // A camera-relative noise anchor keeps the shafts stable as the observer moves.
             b.putVec4((float) (camera.x % 4096), (float) (camera.y % 4096), (float) (camera.z % 4096), 0);
             for (int i = 0; i < BATCH_SIZE; i++) {
-                if (i < areas.size()) {
-                    var a = areas.get(i); var p = a.origin().subtract(camera);
-                    b.putVec4((float) p.x, (float) p.y, (float) p.z, (float) a.radius());
+                if (i < count) {
+                    var a = fields.get(start + i).area(); var p = a.origin();
+                    b.putVec4((float) (p.x - camera.x), (float) (p.y - camera.y), (float) (p.z - camera.z), (float) a.radius());
                 } else b.putVec4(0, 0, 0, 0);
             }
             for (int i = 0; i < BATCH_SIZE; i++) {
-                if (i < areas.size()) {
-                    var a = areas.get(i); var d = a.direction();
+                if (i < count) {
+                    var a = fields.get(start + i).area(); var d = a.direction();
                     float inside = a.airVisibility(camera);
                     b.putVec4((float) d.x, (float) d.y, (float) d.z, inside);
                 } else b.putVec4(0, 0, 1, 1);
             }
             for (int i = 0; i < BATCH_SIZE; i++) {
-                if (i < areas.size()) {
-                    var a = areas.get(i);
+                if (i < count) {
+                    var a = fields.get(start + i).area();
                     b.putVec4((float) a.first().radius(), (float) a.first().minimumDot(), (float) a.second().radius(), (float) a.second().minimumDot());
                 } else b.putVec4(0, 1, 0, 1);
+            }
+            for (int i = 0; i < BATCH_SIZE; i++) {
+                var style = i < count ? fields.get(start + i).style() : DirectionalFieldStyle.DEFAULT;
+                b.putVec4(style.surfaceStrength(), style.airStrength(), style.edgeWidth(), style.scatterSamples());
             }
             RenderSystem.getDevice().createCommandEncoder().writeToBuffer(uniforms.slice(), b.get());
         }
     }
 
     /** Conservative projected sphere boxes: skip off-screen air without shortening the gameplay range. */
-    private static ScreenRect volumeBounds(Vec3 camera, Matrix4fc matrix, List<DirectionalArea> batch) {
+    private static ScreenRect volumeBounds(Vec3 camera, Matrix4fc matrix, List<Field> fields, int start, int end) {
         float left = 1, bottom = 1, right = -1, top = -1;
-        for (var area : batch) {
-            var center = area.origin().subtract(camera);
+        for (int field = start; field < end; field++) {
+            var area = fields.get(field).area();
+            var center = area.origin();
             float l = Float.POSITIVE_INFINITY, b = l, r = Float.NEGATIVE_INFINITY, t = r;
             int behind = 0;
             for (int x = -1; x <= 1; x += 2) for (int y = -1; y <= 1; y += 2) for (int z = -1; z <= 1; z += 2) {
-                var p = matrix.transform(new Vector4f((float)(center.x + x * area.radius()),
-                        (float)(center.y + y * area.radius()), (float)(center.z + z * area.radius()), 1));
+                var p = matrix.transform(PROJECTED_POINT.set((float)(center.x - camera.x + x * area.radius()),
+                        (float)(center.y - camera.y + y * area.radius()), (float)(center.z - camera.z + z * area.radius()), 1));
                 if (p.w <= 0.001f) { behind++; continue; }
                 l = Math.min(l, p.x / p.w); r = Math.max(r, p.x / p.w);
                 b = Math.min(b, p.y / p.w); t = Math.max(t, p.y / p.w);
@@ -170,22 +192,22 @@ public final class DirectionalFieldRenderer {
     private static void draw(GpuTextureView output, RenderPipeline pipeline, ScreenRect bounds) {
         if (bounds != null && (bounds.width == 0 || bounds.height == 0)) return;
         var nearest = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST);
-        var bindings = List.of(
-                new TextureBinding("SceneDepth", WorldSurfaceMasks.opaque().getDepthTextureView(), nearest),
-                new TextureBinding("TransparentDepth", WorldSurfaceMasks.transparent().getDepthTextureView(), nearest),
-                new TextureBinding("TransparentMask", WorldSurfaceMasks.transparent().getColorTextureView(), nearest),
-                new TextureBinding("EntityMask", WorldSurfaceMasks.entities().getColorTextureView(), nearest),
-                new TextureBinding("SelectedMask", WorldSurfaceMasks.selected().getColorTextureView(), nearest),
-                new TextureBinding("SurfaceMask", surface.getColorTextureView(), nearest),
-                new TextureBinding("VolumeMask", volume.getColorTextureView(), nearest)
-        );
-        var names = samplerNames(pipeline.getFragmentShader().getPath());
         try (var pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
                 () -> "Directional field " + pipeline.getLocation(), output, Optional.empty())) {
             pass.setPipeline(pipeline);
             if (bounds != null) pass.enableScissor(bounds.x, bounds.y, bounds.width, bounds.height);
-            for (var binding : bindings) if (names.contains(binding.name()))
-                pass.bindTexture(binding.name(), binding.view(), binding.sampler());
+            pass.bindTexture("SceneDepth", WorldSurfaceMasks.opaque().getDepthTextureView(), nearest);
+            if (pipeline == COMPOSITE) {
+                pass.bindTexture("SurfaceMask", surface.getColorTextureView(), nearest);
+                pass.bindTexture("VolumeMask", volume.getColorTextureView(), nearest);
+            } else {
+                pass.bindTexture("TransparentDepth", WorldSurfaceMasks.transparent().getDepthTextureView(), nearest);
+                pass.bindTexture("TransparentMask", WorldSurfaceMasks.transparent().getColorTextureView(), nearest);
+                if (pipeline == SURFACE) {
+                    pass.bindTexture("EntityMask", WorldSurfaceMasks.entities().getColorTextureView(), nearest);
+                    pass.bindTexture("SelectedMask", WorldSurfaceMasks.selected().getColorTextureView(), nearest);
+                }
+            }
             pass.setUniform("DirectionalField", uniforms.slice());
             pass.setVertexBuffer(0, Render.Buffers.getInstance().getFSQuadVBNDC().slice());
             var indices = RenderSystem.getSequentialBuffer(PrimitiveTopology.QUADS);

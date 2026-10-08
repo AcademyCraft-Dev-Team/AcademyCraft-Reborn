@@ -26,6 +26,7 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.darkmatter.*;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.ability.DarkmatterGraphEffects;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.gui.screen.DarkmatterShapingScreen;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -215,6 +216,7 @@ public final class DarkmatterShaping extends Skill {
             skill.reportActivity(player, true);
             player.getInventory().setChanged();
             player.inventoryMenu.broadcastChanges();
+            DarkmatterGraphEffects.shaping(player, shape.ordinal(), Math.clamp(alphaPercent, 0, 100) / 100f);
             return Result.SHAPED;
         }
 
@@ -320,6 +322,7 @@ public final class DarkmatterShaping extends Skill {
             inventory.setChanged();
             player.inventoryMenu.broadcastChanges();
             skill.reportTrigger(player);
+            DarkmatterGraphEffects.shaping(player, DarkmatterShape.BLOCK.ordinal(), .5f);
             return Result.MATERIAL;
         }
 

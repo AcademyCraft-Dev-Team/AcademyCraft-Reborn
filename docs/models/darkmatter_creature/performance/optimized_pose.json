@@ -1,0 +1,55 @@
+{
+  "label": "optimized",
+  "benchmark": "detailed_rig_setup_anim_only",
+  "jvm": "25.0.3+1-b329.124",
+  "states": 324,
+  "combinationsPerDistance": 108,
+  "nominalDistancesBlocks": [
+    16,
+    24,
+    32
+  ],
+  "warmupSetupAnimCalls": 81000,
+  "batches": [
+    {
+      "setupAnimCalls": 64800,
+      "elapsedNanos": 5325900,
+      "meanPoseNanos": 82.18981481481481
+    },
+    {
+      "setupAnimCalls": 64800,
+      "elapsedNanos": 4649200,
+      "meanPoseNanos": 71.74691358024691
+    },
+    {
+      "setupAnimCalls": 64800,
+      "elapsedNanos": 4678900,
+      "meanPoseNanos": 72.20524691358025
+    },
+    {
+      "setupAnimCalls": 64800,
+      "elapsedNanos": 4917900,
+      "meanPoseNanos": 75.89351851851852
+    },
+    {
+      "setupAnimCalls": 64800,
+      "elapsedNanos": 4482800,
+      "meanPoseNanos": 69.17901234567901
+    },
+    {
+      "setupAnimCalls": 64800,
+      "elapsedNanos": 4292200,
+      "meanPoseNanos": 66.23765432098766
+    }
+  ],
+  "medianBatchMeanPoseNanos": 71.97608024691358,
+  "gcCollectionsDuringMeasurement": 0,
+  "bakedParts": 114,
+  "bakedCubes": 320,
+  "poseChecksum": -27.898253336548805,
+  "limitations": [
+    "Measures CPU setupAnim with the detailed rig only, not GPU or actual FPS.",
+    "Batch means include fixed state iteration and a pose checksum; they are not per-call latency percentiles.",
+    "Real client captures independently measure renderer geometry selection and world/entity costs."
+  ]
+}

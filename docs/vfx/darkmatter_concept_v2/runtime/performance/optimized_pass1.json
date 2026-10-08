@@ -1,0 +1,794 @@
+{
+  "label": "optimized",
+  "fixture_mode": "one local client, eighteen neutral living-entity anchors",
+  "diagnostic_schema_version": 2,
+  "renderer_counter_scope": "actual VFX instanced GPU submissions within the same 120 measured frames; snapshots outside CPU frame timing",
+  "archived_baseline_has_renderer_submission_counters": false,
+  "not_a_real_eighteen_client_network_benchmark": true,
+  "projectiles": "client-only real feather entity class, bounded stationary reset, production adapter; no server hit or resource test",
+  "mixed": "public visual API simulation, not actual skill input or resource settlement",
+  "resolution": [
+    1280,
+    720
+  ],
+  "gpu": "DeviceInfo[name\u003dNVIDIA GeForce RTX 5070 Ti/PCIe/SSE2, vendorName\u003dNVIDIA Corporation, driverInfo\u003d3.3.0 NVIDIA 610.74, isZZeroToOne\u003dtrue, backendName\u003dOpenGL, timestampPeriod\u003d1.0, limits\u003dDeviceLimits[maxAnisotropy\u003d16, minUniformOffsetAlignment\u003d256, maxTextureSize\u003d32768, maxMemoryAllocationSize\u003d9223372036854775807, maxMultiDrawDirectInterleavedDrawCount\u003d0, maxColorAttachments\u003d8], features\u003dDeviceFeatures[shaderDrawParameters\u003dtrue, multiDrawDirectInterleaved\u003dfalse, multiDrawDirectSeparate\u003dtrue, multiDrawIndirect\u003dtrue, drawIndirect\u003dtrue, nonZeroFirstInstance\u003dtrue, persistentMapping\u003dtrue], underlyingExtensions\u003d[GL_ARB_multi_draw_indirect, GL_ARB_buffer_storage, GL_ARB_shader_draw_parameters, GL_ARB_base_instance, GL_KHR_debug, GL_ARB_draw_indirect, GL_ARB_clip_control, GL_ARB_vertex_attrib_binding, GL_ARB_direct_state_access, GL_EXT_texture_filter_anisotropic], hintsAndWorkarounds\u003dHintsAndWorkarounds[writeToBufferIsSlow\u003dfalse, anisotropyHasKnownIssues\u003dfalse], type\u003dOTHER]",
+  "jvm": "25.0.3",
+  "vsync": false,
+  "frame_limit": 120,
+  "completed_windows": 14,
+  "required_windows": 14,
+  "final_all_darkmatter_cleared": true,
+  "windows": [
+    {
+      "stage": "neutral_18_baseline",
+      "neutral_tracked_cows": 18,
+      "wing_actors": 0,
+      "field_actors": 0,
+      "mixed_visual_api": false,
+      "client_fixture_projectiles": 0,
+      "nearest_actor_depth_blocks": 16,
+      "offscreen": false,
+      "sample_frames": 120,
+      "cpu_frame_submission_ms": {
+        "mean": 1.2730875,
+        "p95": 1.5753,
+        "samples": 120,
+        "median": 1.2369,
+        "p99": 1.8751
+      },
+      "gpu_whole_frame_ms": {
+        "mean": 0.3370416,
+        "p95": 0.341504,
+        "samples": 120,
+        "median": 0.329856,
+        "p99": 0.522208
+      },
+      "frame_interval_ms_including_pacing_and_diagnostics": {
+        "mean": 8.399343697478992,
+        "p95": 9.6618,
+        "samples": 119,
+        "median": 8.3585,
+        "p99": 10.1926
+      },
+      "max_active_graphs": 0,
+      "max_visible_graphs": 0,
+      "max_culled_graphs": 0,
+      "max_simulated_graphs": 0,
+      "max_darkmatter_particle_slots": 0,
+      "max_darkmatter_output_specs": 0,
+      "max_graph_instances_by_asset": {},
+      "max_live_feather_graphs": 0,
+      "new_feather_graph_admissions_during_window": 0,
+      "max_stopped_feather_graphs_waiting_for_render": 0,
+      "renderer_instancing_actual_submission_totals": {
+        "instances": 0,
+        "uploaded_instance_bytes": 0,
+        "material_triangles": 0,
+        "draw_calls": 0,
+        "zero_alpha_skipped_instances": 0
+      },
+      "measured_client_ticks": 22,
+      "feather_admissions_per_client_tick": 0.0,
+      "all_samples_without_screenshots": true
+    },
+    {
+      "stage": "wings_8_distance_16",
+      "neutral_tracked_cows": 18,
+      "wing_actors": 8,
+      "field_actors": 0,
+      "mixed_visual_api": false,
+      "client_fixture_projectiles": 0,
+      "nearest_actor_depth_blocks": 16,
+      "offscreen": false,
+      "sample_frames": 120,
+      "cpu_frame_submission_ms": {
+        "mean": 1.2617699999999998,
+        "p95": 1.4528,
+        "samples": 120,
+        "median": 1.2347,
+        "p99": 1.6228
+      },
+      "gpu_whole_frame_ms": {
+        "mean": 0.45929973333333335,
+        "p95": 0.58368,
+        "samples": 120,
+        "median": 0.444512,
+        "p99": 0.702528
+      },
+      "frame_interval_ms_including_pacing_and_diagnostics": {
+        "mean": 8.414328571428571,
+        "p95": 9.4514,
+        "samples": 119,
+        "median": 8.3668,
+        "p99": 9.6361
+      },
+      "max_active_graphs": 8,
+      "max_visible_graphs": 8,
+      "max_culled_graphs": 0,
+      "max_simulated_graphs": 8,
+      "max_darkmatter_particle_slots": 1056,
+      "max_darkmatter_output_specs": 8,
+      "max_graph_instances_by_asset": {
+        "academy:vfxgraph/darkmatter_six_wings": 8
+      },
+      "max_live_feather_graphs": 0,
+      "new_feather_graph_admissions_during_window": 0,
+      "max_stopped_feather_graphs_waiting_for_render": 0,
+      "renderer_instancing_actual_submission_totals": {
+        "instances": 123840,
+        "uploaded_instance_bytes": 10897920,
+        "material_triangles": 30009600,
+        "draw_calls": 960,
+        "zero_alpha_skipped_instances": 2880
+      },
+      "measured_client_ticks": 22,
+      "feather_admissions_per_client_tick": 0.0,
+      "all_samples_without_screenshots": true
+    },
+    {
+      "stage": "wings_18_distance_16",
+      "neutral_tracked_cows": 18,
+      "wing_actors": 18,
+      "field_actors": 0,
+      "mixed_visual_api": false,
+      "client_fixture_projectiles": 0,
+      "nearest_actor_depth_blocks": 16,
+      "offscreen": false,
+      "sample_frames": 120,
+      "cpu_frame_submission_ms": {
+        "mean": 1.4696133333333334,
+        "p95": 1.6054,
+        "samples": 120,
+        "median": 1.4025,
+        "p99": 2.3501
+      },
+      "gpu_whole_frame_ms": {
+        "mean": 0.6905424,
+        "p95": 0.871008,
+        "samples": 120,
+        "median": 0.655968,
+        "p99": 1.015648
+      },
+      "frame_interval_ms_including_pacing_and_diagnostics": {
+        "mean": 8.4102,
+        "p95": 9.5799,
+        "samples": 119,
+        "median": 8.3453,
+        "p99": 10.2941
+      },
+      "max_active_graphs": 18,
+      "max_visible_graphs": 18,
+      "max_culled_graphs": 0,
+      "max_simulated_graphs": 18,
+      "max_darkmatter_particle_slots": 2376,
+      "max_darkmatter_output_specs": 18,
+      "max_graph_instances_by_asset": {
+        "academy:vfxgraph/darkmatter_six_wings": 18
+      },
+      "max_live_feather_graphs": 0,
+      "new_feather_graph_admissions_during_window": 0,
+      "max_stopped_feather_graphs_waiting_for_render": 0,
+      "renderer_instancing_actual_submission_totals": {
+        "instances": 270720,
+        "uploaded_instance_bytes": 23823360,
+        "material_triangles": 56240640,
+        "draw_calls": 2160,
+        "zero_alpha_skipped_instances": 14400
+      },
+      "measured_client_ticks": 22,
+      "feather_admissions_per_client_tick": 0.0,
+      "all_samples_without_screenshots": true
+    },
+    {
+      "stage": "wings_18_distance_48",
+      "neutral_tracked_cows": 18,
+      "wing_actors": 18,
+      "field_actors": 0,
+      "mixed_visual_api": false,
+      "client_fixture_projectiles": 0,
+      "nearest_actor_depth_blocks": 48,
+      "offscreen": false,
+      "sample_frames": 120,
+      "cpu_frame_submission_ms": {
+        "mean": 1.3523691666666666,
+        "p95": 1.539,
+        "samples": 120,
+        "median": 1.3354,
+        "p99": 1.7796
+      },
+      "gpu_whole_frame_ms": {
+        "mean": 0.5823704000000001,
+        "p95": 0.780032,
+        "samples": 120,
+        "median": 0.546688,
+        "p99": 1.014304
+      },
+      "frame_interval_ms_including_pacing_and_diagnostics": {
+        "mean": 8.397926050420168,
+        "p95": 9.3103,
+        "samples": 119,
+        "median": 8.3582,
+        "p99": 9.9005
+      },
+      "max_active_graphs": 18,
+      "max_visible_graphs": 18,
+      "max_culled_graphs": 0,
+      "max_simulated_graphs": 18,
+      "max_darkmatter_particle_slots": 2376,
+      "max_darkmatter_output_specs": 18,
+      "max_graph_instances_by_asset": {
+        "academy:vfxgraph/darkmatter_six_wings": 18
+      },
+      "max_live_feather_graphs": 0,
+      "new_feather_graph_admissions_during_window": 0,
+      "max_stopped_feather_graphs_waiting_for_render": 0,
+      "renderer_instancing_actual_submission_totals": {
+        "instances": 220320,
+        "uploaded_instance_bytes": 19388160,
+        "material_triangles": 24238080,
+        "draw_calls": 2160,
+        "zero_alpha_skipped_instances": 64800
+      },
+      "measured_client_ticks": 22,
+      "feather_admissions_per_client_tick": 0.0,
+      "all_samples_without_screenshots": true
+    },
+    {
+      "stage": "wings_18_distance_96",
+      "neutral_tracked_cows": 18,
+      "wing_actors": 18,
+      "field_actors": 0,
+      "mixed_visual_api": false,
+      "client_fixture_projectiles": 0,
+      "nearest_actor_depth_blocks": 96,
+      "offscreen": false,
+      "sample_frames": 120,
+      "cpu_frame_submission_ms": {
+        "mean": 1.3153183333333334,
+        "p95": 1.4958,
+        "samples": 120,
+        "median": 1.2755,
+        "p99": 1.8245
+      },
+      "gpu_whole_frame_ms": {
+        "mean": 0.5530615999999999,
+        "p95": 0.724416,
+        "samples": 120,
+        "median": 0.52192,
+        "p99": 0.991776
+      },
+      "frame_interval_ms_including_pacing_and_diagnostics": {
+        "mean": 8.422802521008403,
+        "p95": 9.4483,
+        "samples": 119,
+        "median": 8.3568,
+        "p99": 9.8678
+      },
+      "max_active_graphs": 18,
+      "max_visible_graphs": 18,
+      "max_culled_graphs": 0,
+      "max_simulated_graphs": 18,
+      "max_darkmatter_particle_slots": 2376,
+      "max_darkmatter_output_specs": 18,
+      "max_graph_instances_by_asset": {
+        "academy:vfxgraph/darkmatter_six_wings": 18
+      },
+      "max_live_feather_graphs": 0,
+      "new_feather_graph_admissions_during_window": 0,
+      "max_stopped_feather_graphs_waiting_for_render": 0,
+      "renderer_instancing_actual_submission_totals": {
+        "instances": 207360,
+        "uploaded_instance_bytes": 18247680,
+        "material_triangles": 13271040,
+        "draw_calls": 2160,
+        "zero_alpha_skipped_instances": 77760
+      },
+      "measured_client_ticks": 22,
+      "feather_admissions_per_client_tick": 0.0,
+      "all_samples_without_screenshots": true
+    },
+    {
+      "stage": "wings_18_offscreen",
+      "neutral_tracked_cows": 18,
+      "wing_actors": 18,
+      "field_actors": 0,
+      "mixed_visual_api": false,
+      "client_fixture_projectiles": 0,
+      "nearest_actor_depth_blocks": 16,
+      "offscreen": true,
+      "sample_frames": 120,
+      "cpu_frame_submission_ms": {
+        "mean": 0.9714375000000001,
+        "p95": 1.1902,
+        "samples": 120,
+        "median": 0.9458,
+        "p99": 1.266
+      },
+      "gpu_whole_frame_ms": {
+        "mean": 0.26586773333333336,
+        "p95": 0.274624,
+        "samples": 120,
+        "median": 0.256512,
+        "p99": 0.492832
+      },
+      "frame_interval_ms_including_pacing_and_diagnostics": {
+        "mean": 8.401693277310924,
+        "p95": 9.3968,
+        "samples": 119,
+        "median": 8.3645,
+        "p99": 9.8569
+      },
+      "max_active_graphs": 18,
+      "max_visible_graphs": 0,
+      "max_culled_graphs": 18,
+      "max_simulated_graphs": 18,
+      "max_darkmatter_particle_slots": 2376,
+      "max_darkmatter_output_specs": 18,
+      "max_graph_instances_by_asset": {
+        "academy:vfxgraph/darkmatter_six_wings": 18
+      },
+      "max_live_feather_graphs": 0,
+      "new_feather_graph_admissions_during_window": 0,
+      "max_stopped_feather_graphs_waiting_for_render": 0,
+      "renderer_instancing_actual_submission_totals": {
+        "instances": 0,
+        "uploaded_instance_bytes": 0,
+        "material_triangles": 0,
+        "draw_calls": 0,
+        "zero_alpha_skipped_instances": 0
+      },
+      "measured_client_ticks": 22,
+      "feather_admissions_per_client_tick": 0.0,
+      "all_samples_without_screenshots": true
+    },
+    {
+      "stage": "fields_18_distance_16",
+      "neutral_tracked_cows": 18,
+      "wing_actors": 0,
+      "field_actors": 18,
+      "mixed_visual_api": false,
+      "client_fixture_projectiles": 0,
+      "nearest_actor_depth_blocks": 16,
+      "offscreen": false,
+      "sample_frames": 120,
+      "cpu_frame_submission_ms": {
+        "mean": 2.8158766666666666,
+        "p95": 3.3426,
+        "samples": 120,
+        "median": 2.7782,
+        "p99": 3.5913
+      },
+      "gpu_whole_frame_ms": {
+        "mean": 2.3445565333333334,
+        "p95": 2.954848,
+        "samples": 120,
+        "median": 2.272192,
+        "p99": 3.236672
+      },
+      "frame_interval_ms_including_pacing_and_diagnostics": {
+        "mean": 8.41503949579832,
+        "p95": 9.4986,
+        "samples": 119,
+        "median": 8.3653,
+        "p99": 9.7714
+      },
+      "max_active_graphs": 18,
+      "max_visible_graphs": 18,
+      "max_culled_graphs": 0,
+      "max_simulated_graphs": 18,
+      "max_darkmatter_particle_slots": 252,
+      "max_darkmatter_output_specs": 36,
+      "max_graph_instances_by_asset": {
+        "academy:vfxgraph/darkmatter_interference": 18
+      },
+      "max_live_feather_graphs": 0,
+      "new_feather_graph_admissions_during_window": 0,
+      "max_stopped_feather_graphs_waiting_for_render": 0,
+      "renderer_instancing_actual_submission_totals": {
+        "instances": 26880,
+        "uploaded_instance_bytes": 1505280,
+        "material_triangles": 0,
+        "draw_calls": 4320,
+        "zero_alpha_skipped_instances": 0
+      },
+      "measured_client_ticks": 22,
+      "feather_admissions_per_client_tick": 0.0,
+      "all_samples_without_screenshots": true
+    },
+    {
+      "stage": "fields_18_distance_48",
+      "neutral_tracked_cows": 18,
+      "wing_actors": 0,
+      "field_actors": 18,
+      "mixed_visual_api": false,
+      "client_fixture_projectiles": 0,
+      "nearest_actor_depth_blocks": 48,
+      "offscreen": false,
+      "sample_frames": 120,
+      "cpu_frame_submission_ms": {
+        "mean": 2.853971666666667,
+        "p95": 4.3241,
+        "samples": 120,
+        "median": 2.495,
+        "p99": 13.0549
+      },
+      "gpu_whole_frame_ms": {
+        "mean": 2.1834168000000003,
+        "p95": 2.930208,
+        "samples": 120,
+        "median": 1.882336,
+        "p99": 11.828832
+      },
+      "frame_interval_ms_including_pacing_and_diagnostics": {
+        "mean": 8.481970588235294,
+        "p95": 9.3243,
+        "samples": 119,
+        "median": 8.3471,
+        "p99": 13.3981
+      },
+      "max_active_graphs": 18,
+      "max_visible_graphs": 18,
+      "max_culled_graphs": 0,
+      "max_simulated_graphs": 18,
+      "max_darkmatter_particle_slots": 252,
+      "max_darkmatter_output_specs": 36,
+      "max_graph_instances_by_asset": {
+        "academy:vfxgraph/darkmatter_interference": 18
+      },
+      "max_live_feather_graphs": 0,
+      "new_feather_graph_admissions_during_window": 0,
+      "max_stopped_feather_graphs_waiting_for_render": 0,
+      "renderer_instancing_actual_submission_totals": {
+        "instances": 30240,
+        "uploaded_instance_bytes": 1693440,
+        "material_triangles": 0,
+        "draw_calls": 4320,
+        "zero_alpha_skipped_instances": 0
+      },
+      "measured_client_ticks": 22,
+      "feather_admissions_per_client_tick": 0.0,
+      "all_samples_without_screenshots": true
+    },
+    {
+      "stage": "fields_18_distance_96",
+      "neutral_tracked_cows": 18,
+      "wing_actors": 0,
+      "field_actors": 18,
+      "mixed_visual_api": false,
+      "client_fixture_projectiles": 0,
+      "nearest_actor_depth_blocks": 96,
+      "offscreen": false,
+      "sample_frames": 120,
+      "cpu_frame_submission_ms": {
+        "mean": 2.5628183333333334,
+        "p95": 2.9564,
+        "samples": 120,
+        "median": 2.5231,
+        "p99": 3.5479
+      },
+      "gpu_whole_frame_ms": {
+        "mean": 1.9779944,
+        "p95": 2.416,
+        "samples": 120,
+        "median": 1.912256,
+        "p99": 2.893536
+      },
+      "frame_interval_ms_including_pacing_and_diagnostics": {
+        "mean": 8.419480672268907,
+        "p95": 9.2303,
+        "samples": 119,
+        "median": 8.3546,
+        "p99": 9.8475
+      },
+      "max_active_graphs": 18,
+      "max_visible_graphs": 18,
+      "max_culled_graphs": 0,
+      "max_simulated_graphs": 18,
+      "max_darkmatter_particle_slots": 252,
+      "max_darkmatter_output_specs": 36,
+      "max_graph_instances_by_asset": {
+        "academy:vfxgraph/darkmatter_interference": 18
+      },
+      "max_live_feather_graphs": 0,
+      "new_feather_graph_admissions_during_window": 0,
+      "max_stopped_feather_graphs_waiting_for_render": 0,
+      "renderer_instancing_actual_submission_totals": {
+        "instances": 30240,
+        "uploaded_instance_bytes": 1693440,
+        "material_triangles": 0,
+        "draw_calls": 4320,
+        "zero_alpha_skipped_instances": 0
+      },
+      "measured_client_ticks": 22,
+      "feather_admissions_per_client_tick": 0.0,
+      "all_samples_without_screenshots": true
+    },
+    {
+      "stage": "mixed_18_distance_16",
+      "neutral_tracked_cows": 18,
+      "wing_actors": 18,
+      "field_actors": 18,
+      "mixed_visual_api": true,
+      "client_fixture_projectiles": 0,
+      "nearest_actor_depth_blocks": 16,
+      "offscreen": false,
+      "sample_frames": 120,
+      "cpu_frame_submission_ms": {
+        "mean": 4.834085,
+        "p95": 5.242,
+        "samples": 120,
+        "median": 4.7805,
+        "p99": 5.3526
+      },
+      "gpu_whole_frame_ms": {
+        "mean": 4.3345058666666665,
+        "p95": 4.878816,
+        "samples": 120,
+        "median": 4.25824,
+        "p99": 5.017568
+      },
+      "frame_interval_ms_including_pacing_and_diagnostics": {
+        "mean": 8.418495798319329,
+        "p95": 9.5562,
+        "samples": 119,
+        "median": 8.3544,
+        "p99": 9.9414
+      },
+      "max_active_graphs": 100,
+      "max_visible_graphs": 100,
+      "max_culled_graphs": 0,
+      "max_simulated_graphs": 100,
+      "max_darkmatter_particle_slots": 3972,
+      "max_darkmatter_output_specs": 138,
+      "max_graph_instances_by_asset": {
+        "academy:vfxgraph/darkmatter_six_wings": 18,
+        "academy:vfxgraph/darkmatter_repair": 16,
+        "academy:vfxgraph/darkmatter_interference": 18,
+        "academy:vfxgraph/darkmatter_generation": 7,
+        "academy:vfxgraph/darkmatter_phase_tuning": 15,
+        "academy:vfxgraph/darkmatter_elimination": 8,
+        "academy:vfxgraph/darkmatter_disassemble": 6,
+        "academy:vfxgraph/darkmatter_creation_summon": 3,
+        "academy:vfxgraph/darkmatter_creation_dismiss": 3,
+        "academy:vfxgraph/darkmatter_shaping": 12,
+        "academy:vfxgraph/darkmatter_cut": 6,
+        "academy:vfxgraph/darkmatter_wing_strike": 3,
+        "academy:vfxgraph/darkmatter_light_contact": 6,
+        "academy:vfxgraph/darkmatter_creation_contact": 3
+      },
+      "max_live_feather_graphs": 0,
+      "new_feather_graph_admissions_during_window": 0,
+      "max_stopped_feather_graphs_waiting_for_render": 0,
+      "renderer_instancing_actual_submission_totals": {
+        "instances": 440635,
+        "uploaded_instance_bytes": 33357320,
+        "material_triangles": 53003520,
+        "draw_calls": 15458,
+        "zero_alpha_skipped_instances": 23225
+      },
+      "measured_client_ticks": 21,
+      "feather_admissions_per_client_tick": 0.0,
+      "all_samples_without_screenshots": true
+    },
+    {
+      "stage": "feathers_191",
+      "neutral_tracked_cows": 18,
+      "wing_actors": 0,
+      "field_actors": 0,
+      "mixed_visual_api": false,
+      "client_fixture_projectiles": 191,
+      "nearest_actor_depth_blocks": 16,
+      "offscreen": false,
+      "sample_frames": 120,
+      "cpu_frame_submission_ms": {
+        "mean": 5.6822475,
+        "p95": 5.9627,
+        "samples": 120,
+        "median": 5.6544,
+        "p99": 6.0473
+      },
+      "gpu_whole_frame_ms": {
+        "mean": 4.855810933333333,
+        "p95": 5.13824,
+        "samples": 120,
+        "median": 4.838048,
+        "p99": 5.287296
+      },
+      "frame_interval_ms_including_pacing_and_diagnostics": {
+        "mean": 8.38827899159664,
+        "p95": 10.013,
+        "samples": 119,
+        "median": 8.3376,
+        "p99": 10.5126
+      },
+      "max_active_graphs": 191,
+      "max_visible_graphs": 191,
+      "max_culled_graphs": 0,
+      "max_simulated_graphs": 191,
+      "max_darkmatter_particle_slots": 382,
+      "max_darkmatter_output_specs": 191,
+      "max_graph_instances_by_asset": {
+        "academy:vfxgraph/darkmatter_feather": 191
+      },
+      "max_live_feather_graphs": 191,
+      "new_feather_graph_admissions_during_window": 0,
+      "max_stopped_feather_graphs_waiting_for_render": 0,
+      "renderer_instancing_actual_submission_totals": {
+        "instances": 45840,
+        "uploaded_instance_bytes": 2567040,
+        "material_triangles": 0,
+        "draw_calls": 22920,
+        "zero_alpha_skipped_instances": 0
+      },
+      "steady_feather_graph_retention": true,
+      "measured_client_ticks": 21,
+      "feather_admissions_per_client_tick": 0.0,
+      "all_samples_without_screenshots": true
+    },
+    {
+      "stage": "feathers_192",
+      "neutral_tracked_cows": 18,
+      "wing_actors": 0,
+      "field_actors": 0,
+      "mixed_visual_api": false,
+      "client_fixture_projectiles": 192,
+      "nearest_actor_depth_blocks": 16,
+      "offscreen": false,
+      "sample_frames": 120,
+      "cpu_frame_submission_ms": {
+        "mean": 5.635845000000001,
+        "p95": 5.9385,
+        "samples": 120,
+        "median": 5.5448,
+        "p99": 7.4606
+      },
+      "gpu_whole_frame_ms": {
+        "mean": 4.9185264,
+        "p95": 5.2408,
+        "samples": 120,
+        "median": 4.834816,
+        "p99": 6.657312
+      },
+      "frame_interval_ms_including_pacing_and_diagnostics": {
+        "mean": 8.438702521008404,
+        "p95": 9.9683,
+        "samples": 119,
+        "median": 8.3834,
+        "p99": 10.527
+      },
+      "max_active_graphs": 192,
+      "max_visible_graphs": 192,
+      "max_culled_graphs": 0,
+      "max_simulated_graphs": 192,
+      "max_darkmatter_particle_slots": 384,
+      "max_darkmatter_output_specs": 192,
+      "max_graph_instances_by_asset": {
+        "academy:vfxgraph/darkmatter_feather": 192
+      },
+      "max_live_feather_graphs": 192,
+      "new_feather_graph_admissions_during_window": 0,
+      "max_stopped_feather_graphs_waiting_for_render": 0,
+      "renderer_instancing_actual_submission_totals": {
+        "instances": 46080,
+        "uploaded_instance_bytes": 2580480,
+        "material_triangles": 0,
+        "draw_calls": 23040,
+        "zero_alpha_skipped_instances": 0
+      },
+      "steady_feather_graph_retention": true,
+      "measured_client_ticks": 21,
+      "feather_admissions_per_client_tick": 0.0,
+      "all_samples_without_screenshots": true
+    },
+    {
+      "stage": "feathers_193",
+      "neutral_tracked_cows": 18,
+      "wing_actors": 0,
+      "field_actors": 0,
+      "mixed_visual_api": false,
+      "client_fixture_projectiles": 193,
+      "nearest_actor_depth_blocks": 16,
+      "offscreen": false,
+      "sample_frames": 120,
+      "cpu_frame_submission_ms": {
+        "mean": 5.5647424999999995,
+        "p95": 5.8686,
+        "samples": 120,
+        "median": 5.497,
+        "p99": 7.2139
+      },
+      "gpu_whole_frame_ms": {
+        "mean": 4.914258666666667,
+        "p95": 5.248384,
+        "samples": 120,
+        "median": 4.842944,
+        "p99": 6.365856
+      },
+      "frame_interval_ms_including_pacing_and_diagnostics": {
+        "mean": 8.37706806722689,
+        "p95": 9.8551,
+        "samples": 119,
+        "median": 8.3357,
+        "p99": 10.0823
+      },
+      "max_active_graphs": 192,
+      "max_visible_graphs": 192,
+      "max_culled_graphs": 0,
+      "max_simulated_graphs": 192,
+      "max_darkmatter_particle_slots": 384,
+      "max_darkmatter_output_specs": 192,
+      "max_graph_instances_by_asset": {
+        "academy:vfxgraph/darkmatter_feather": 192
+      },
+      "max_live_feather_graphs": 192,
+      "new_feather_graph_admissions_during_window": 0,
+      "max_stopped_feather_graphs_waiting_for_render": 0,
+      "renderer_instancing_actual_submission_totals": {
+        "instances": 46080,
+        "uploaded_instance_bytes": 2580480,
+        "material_triangles": 0,
+        "draw_calls": 23040,
+        "zero_alpha_skipped_instances": 0
+      },
+      "steady_feather_graph_retention": true,
+      "measured_client_ticks": 20,
+      "feather_admissions_per_client_tick": 0.0,
+      "all_samples_without_screenshots": true
+    },
+    {
+      "stage": "feathers_256",
+      "neutral_tracked_cows": 18,
+      "wing_actors": 0,
+      "field_actors": 0,
+      "mixed_visual_api": false,
+      "client_fixture_projectiles": 256,
+      "nearest_actor_depth_blocks": 16,
+      "offscreen": false,
+      "sample_frames": 120,
+      "cpu_frame_submission_ms": {
+        "mean": 5.559435,
+        "p95": 5.8547,
+        "samples": 120,
+        "median": 5.5261,
+        "p99": 6.0413
+      },
+      "gpu_whole_frame_ms": {
+        "mean": 4.869990400000001,
+        "p95": 5.1672,
+        "samples": 120,
+        "median": 4.826592,
+        "p99": 5.464608
+      },
+      "frame_interval_ms_including_pacing_and_diagnostics": {
+        "mean": 8.388448739495798,
+        "p95": 10.1119,
+        "samples": 119,
+        "median": 8.3816,
+        "p99": 10.2617
+      },
+      "max_active_graphs": 192,
+      "max_visible_graphs": 192,
+      "max_culled_graphs": 0,
+      "max_simulated_graphs": 192,
+      "max_darkmatter_particle_slots": 384,
+      "max_darkmatter_output_specs": 192,
+      "max_graph_instances_by_asset": {
+        "academy:vfxgraph/darkmatter_feather": 192
+      },
+      "max_live_feather_graphs": 192,
+      "new_feather_graph_admissions_during_window": 0,
+      "max_stopped_feather_graphs_waiting_for_render": 0,
+      "renderer_instancing_actual_submission_totals": {
+        "instances": 46080,
+        "uploaded_instance_bytes": 2580480,
+        "material_triangles": 0,
+        "draw_calls": 23040,
+        "zero_alpha_skipped_instances": 0
+      },
+      "steady_feather_graph_retention": true,
+      "measured_client_ticks": 21,
+      "feather_admissions_per_client_tick": 0.0,
+      "all_samples_without_screenshots": true
+    }
+  ]
+}

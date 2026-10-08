@@ -8,4 +8,9 @@ public final class DarkmatterCreatureRenderState extends LivingEntityRenderState
     public int limbsModel;
     public int additionalModel;
     public boolean gammaCatalyzed;
+    public boolean swimming;
+    public float aimYaw;
+    public float aimPitch;
+    public float attackProgress;
+    public int animationPhaseSeed;
 }

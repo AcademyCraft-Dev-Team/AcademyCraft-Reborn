@@ -77,9 +77,9 @@ public abstract class MixinLevelRenderer {
         PostEffect.pre();
         SpacialExcisionVfxClient.renderPost();
         org.academy.api.client.render.post.WorldSurfaceMasks.renderEntities();
-        org.academy.api.client.render.post.DirectionalFieldRenderer.render(cameraState.pos,
+        org.academy.api.client.render.post.DirectionalFieldRenderer.renderStyled(cameraState.pos,
                 cameraState.viewRotationMatrix, cameraState.projectionMatrix,
-                org.academy.internal.client.render.vfx.InterferenceFieldClient.areas());
+                org.academy.internal.client.render.vfx.InterferenceFieldClient.styledAreas());
         GlowEffect.getInstance().process();
         PostEffect.post();
         org.academy.internal.client.ability.aeromanip.FlowSenseClient.render(
