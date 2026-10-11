@@ -100,16 +100,25 @@ public final class MagneticLevitation {
     }
 
     /**
-     * Bounded sink with reduced horizontal authority, used while a lost field is still recoverable. The
-     * mover keeps steering and full climb authority, so it can get back inside instead of only dropping.
+     * Bounded sink with reduced horizontal authority, used while a lost field is still recoverable.
+     * Without captured entry momentum, this overload immediately uses the sink target.
      */
     public Vec3 degradedVelocity(LivingEntity subject, double forward, double strafe, double vertical,
                                  double speed, LevitationTuning tuning) {
         var limits = tuning == null ? LevitationTuning.DEFAULT : tuning;
+        return degradedVelocity(subject, forward, strafe, vertical, speed, 0.0, limits.graceTicks(), limits);
+    }
+
+    /** Keeps steering while entry momentum decays over a single, finite support-loss window. */
+    public Vec3 degradedVelocity(LivingEntity subject, double forward, double strafe, double vertical,
+                                 double speed, double entryVerticalVelocity, int elapsedGraceTicks,
+                                 LevitationTuning tuning) {
+        var limits = tuning == null ? LevitationTuning.DEFAULT : tuning;
         var horizontal = MagneticMovement.flightDirection(subject.getYRot(), forward, strafe,
                 speed * limits.graceSpeedFactor());
         var smoothed = MagneticMovement.approachHorizontal(subject.getDeltaMovement(), horizontal);
-        return new Vec3(smoothed.x, MagneticMovement.degradedVertical(vertical, limits), smoothed.z);
+        return new Vec3(smoothed.x, MagneticMovement.degradedVertical(
+                vertical, entryVerticalVelocity, elapsedGraceTicks, limits), smoothed.z);
     }
 
     /** The field envelope reference from the last refresh, or null when ground alone carried membership. */

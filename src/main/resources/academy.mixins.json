@@ -97,6 +97,7 @@
     "client.MixinCamera",
     "client.MixinClientEntity",
     "client.MixinClientLevelMentalPerception",
+    "client.MixinClientLevelMineDetect",
     "client.MixinClientLevelTemporalScaling",
     "client.MixinClientLivingEntity",
     "client.MixinEntityRenderer",

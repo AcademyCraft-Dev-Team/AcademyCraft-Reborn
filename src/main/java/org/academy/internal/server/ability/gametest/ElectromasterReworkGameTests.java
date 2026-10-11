@@ -36,6 +36,7 @@ import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.reflection.*;
 import org.academy.internal.common.ability.electromaster.arc.ElectromasterArcActions;
+import org.academy.internal.common.ability.electromaster.field.MagneticFieldRuntime;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagnetManipulation;
 import org.academy.internal.common.ability.meltdowner.beam.ContinuousBeamReflection;
 import org.academy.internal.common.ability.meltdowner.beam.ContinuousReflectionSession;
@@ -69,7 +70,8 @@ public final class ElectromasterReworkGameTests {
 
     @SubscribeEvent
     private static void registerTests(RegisterGameTestsEvent event) {
-        for (var scenario : List.of("health", "resources", "attacks", "projectiles", "support")) {
+        for (var scenario : List.of("health", "resources", "attacks", "projectiles", "support",
+                "levitation_lifecycle", "levitation_supported_motion")) {
             var environment = event.registerEnvironment(AcademyCraft.academy("electromaster_rework/" + scenario),
                     new TestEnvironmentDefinition.AllOf(List.of()));
             event.registerTest(AcademyCraft.academy("electromaster_rework_" + scenario), new Instance(new TestData<>(
@@ -320,6 +322,157 @@ public final class ElectromasterReworkGameTests {
         check(helper, attacker.isNoGravity(), "Final release restores existing no-gravity state");
     }
 
+    private static MagneticFieldRuntime.Flight startFlight(GameTestHelper helper, ServerPlayer subject)
+            throws ReflectiveOperationException {
+        check(helper, MagneticFieldRuntime.toggle(subject), "Levitation request must start");
+        var flights = MagneticFieldRuntime.class.getDeclaredField("FLIGHTS");
+        flights.setAccessible(true);
+        return (MagneticFieldRuntime.Flight) ((java.util.Map<?, ?>) flights.get(null)).get(subject);
+    }
+
+    private static void levitationLifecycle(GameTestHelper helper, ServerPlayer subject)
+            throws ReflectiveOperationException {
+        var system = learn(subject);
+        var skill = Skills.MAGNET_MANIPULATION.get();
+        var supported = helper.absoluteVec(new Vec3(7.5, 3.5, 7.5));
+        var unsupported = helper.absoluteVec(new Vec3(7.5, 40, 7.5));
+        helper.setBlock(7, 2, 7, Blocks.STONE);
+        var event = new net.neoforged.neoforge.event.tick.ServerTickEvent.Pre(
+                () -> true, helper.getLevel().getServer());
+        var tuning = MagneticFieldEffects.levitationTuning(subject);
+        for (var milestone = 0; milestone <= 3; milestone++) {
+            system.setPlayerSkillProficiency(subject.getUUID(), skill, milestone * 1_000.0f);
+            subject.snapTo(unsupported);
+            subject.setNoGravity(false);
+            subject.setLastClientInput(new Input(false, false, false, false, true, false, false));
+            var untouched = new Vec3(0.1, -0.2, 0.1);
+            subject.setDeltaMovement(untouched);
+            subject.fallDistance = 7;
+            var flight = startFlight(helper, subject);
+            try {
+                for (var tick = 0; tick < 200; tick++) {
+                    flight.tick(event);
+                    check(helper, !subject.isNoGravity(), "Starting without support must never grant gravity control");
+                    check(helper, subject.getDeltaMovement().equals(untouched), "Waiting must not write motion");
+                    check(helper, subject.fallDistance == 7, "Waiting must preserve fall distance");
+                    check(helper, !subject.getData(AttachmentTypes.MAGNETIC_LEVITATION_DEGRADED),
+                            "Starting without support must not enter grace");
+                }
+                subject.snapTo(supported);
+                flight.tick(event);
+                check(helper, MagneticFieldRuntime.isHovering(subject), "Waiting must recover when support arrives");
+                subject.snapTo(unsupported);
+                subject.setDeltaMovement(new Vec3(0, tuning.maxClimbSpeed(), 0));
+                flight.tick(event);
+                check(helper, subject.getData(AttachmentTypes.MAGNETIC_LEVITATION_DEGRADED),
+                        "Actual support loss must enter grace");
+                check(helper, subject.getDeltaMovement().y > 0
+                                && subject.getDeltaMovement().y < tuning.maxClimbSpeed(),
+                        "Grace must preserve but reduce existing upward momentum");
+                subject.snapTo(supported);
+                flight.tick(event);
+                check(helper, MagneticFieldRuntime.isHovering(subject)
+                                && !subject.getData(AttachmentTypes.MAGNETIC_LEVITATION_DEGRADED),
+                        "Support returning during grace must restore ordinary movement immediately");
+                subject.snapTo(unsupported);
+                subject.setDeltaMovement(new Vec3(0, tuning.maxClimbSpeed(), 0));
+                var previous = tuning.maxClimbSpeed();
+                for (var tick = 1; tick <= tuning.graceTicks(); tick++) {
+                    flight.tick(event);
+                    var vertical = subject.getDeltaMovement().y;
+                    check(helper, subject.isNoGravity(), "Grace must keep its gravity lease until expiry");
+                    check(helper, vertical < previous, "Holding jump must not replenish momentum");
+                    previous = vertical;
+                }
+                check(helper, previous <= 0, "Upward momentum must end within one grace window");
+                flight.tick(event);
+                check(helper, !subject.isNoGravity(), "Expired grace must restore normal gravity");
+                subject.setDeltaMovement(untouched);
+                subject.fallDistance = 9;
+                for (var tick = 0; tick < 200; tick++) {
+                    flight.tick(event);
+                    check(helper, !subject.isNoGravity(), "Expired grace must never restart without new support");
+                    check(helper, subject.getDeltaMovement().equals(untouched), "Expired grace must not inject lift");
+                    check(helper, subject.fallDistance == 9, "Expired grace must not clear fall distance");
+                }
+                check(helper, subject.getData(AttachmentTypes.MAGNETIC_LEVITATION_REQUESTED),
+                        "Waiting must retain the user's levitation request");
+                subject.snapTo(supported);
+                flight.tick(event);
+                check(helper, MagneticFieldRuntime.isHovering(subject), "Expired grace must still allow reacquisition");
+
+                var otherSource = AcademyCraft.academy("levitation_lifecycle_other");
+                GravityControl.set(subject, otherSource, true);
+                try {
+                    subject.snapTo(unsupported);
+                    for (var tick = 0; tick <= tuning.graceTicks(); tick++) flight.tick(event);
+                    check(helper, subject.isNoGravity(), "Expiry must preserve another gravity owner");
+                } finally {
+                    GravityControl.set(subject, otherSource, false);
+                }
+                check(helper, !subject.isNoGravity(), "Expiry must have released the magnetic gravity owner");
+            } finally {
+                flight.unregister();
+            }
+            check(helper, !subject.getData(AttachmentTypes.MAGNETIC_LEVITATION_REQUESTED)
+                            && !subject.getData(AttachmentTypes.MAGNETIC_LEVITATION_ACTIVE)
+                            && !subject.getData(AttachmentTypes.MAGNETIC_LEVITATION_DEGRADED),
+                    "Stopping must clear every levitation state");
+        }
+    }
+
+    private static void levitationSupportedMotion(GameTestHelper helper, ServerPlayer subject)
+            throws ReflectiveOperationException {
+        var system = learn(subject);
+        for (var x = 2; x <= 13; x++) for (var z = 2; z <= 13; z++) helper.setBlock(x, 2, z, Blocks.STONE);
+        for (var x = 6; x <= 9; x++) helper.setBlock(x, 3, 6, Blocks.STONE);
+        var event = new net.neoforged.neoforge.event.tick.ServerTickEvent.Pre(
+                () -> true, helper.getLevel().getServer());
+        var tuning = MagneticFieldEffects.levitationTuning(subject);
+        for (var milestone = 0; milestone <= 3; milestone++) {
+            system.setPlayerSkillProficiency(subject.getUUID(), Skills.MAGNET_MANIPULATION.get(), milestone * 1_000.0f);
+            var radius = MagneticFieldTuning.supportRadius(milestone);
+            var start = helper.absoluteVec(new Vec3(3.5, 4.5, 6.5));
+            subject.snapTo(start.x, start.y, start.z, -90, 0);
+            subject.setDeltaMovement(new Vec3(MagneticFieldTuning.FLIGHT_SPEED_PER_TICK, 0, 0));
+            var flight = startFlight(helper, subject);
+            try {
+                for (var tick = 0; tick < 5; tick++) {
+                    subject.setLastClientInput(new Input(true, false, false, false, false, false, false));
+                    compareSupportedFlight(helper, subject, flight, event, 1, 0, radius, tuning);
+                    check(helper, subject.getDeltaMovement().horizontalDistance() > 1.8 * 0.9,
+                            "Cruising over terrain must retain its speed");
+                    subject.move(MoverType.SELF, subject.getDeltaMovement());
+                }
+                start = helper.absoluteVec(new Vec3(4.5, 4.5, 4.5));
+                subject.snapTo(start);
+                subject.setDeltaMovement(Vec3.ZERO);
+                for (var vertical : new int[]{1, 0, -1}) {
+                    subject.setLastClientInput(new Input(false, false, false, false, vertical > 0, vertical < 0, false));
+                    for (var tick = 0; tick < 40; tick++) {
+                        compareSupportedFlight(helper, subject, flight, event, 0, vertical, radius, tuning);
+                        subject.move(MoverType.SELF, subject.getDeltaMovement());
+                    }
+                }
+            } finally {
+                flight.unregister();
+            }
+        }
+    }
+
+    private static void compareSupportedFlight(GameTestHelper helper, ServerPlayer subject,
+                                               MagneticFieldRuntime.Flight flight,
+                                               net.neoforged.neoforge.event.tick.ServerTickEvent.Pre event,
+                                               int forward, int vertical, double radius, LevitationTuning tuning) {
+        var expected = new MagneticLevitation().step(subject, forward, 0, vertical,
+                MagneticFieldTuning.FLIGHT_SPEED_PER_TICK, radius, tuning);
+        check(helper, expected.supported(), "Baseline solver must have support");
+        flight.tick(event);
+        check(helper, MagneticFieldRuntime.isHovering(subject), "Runtime must remain supported");
+        check(helper, subject.getDeltaMovement().distanceToSqr(expected.velocity()) < 1.0e-18,
+                "Supported runtime motion must exactly match the unchanged solver");
+    }
+
     /**
      * Altitude must follow the surface underfoot. A wall beside the mover is valid field support but must
      * never become the height reference, which is what made hover altitude depend on an arbitrary
@@ -524,6 +677,8 @@ public final class ElectromasterReworkGameTests {
                     case "attacks" -> attacks(helper, attacker, defender);
                     case "projectiles" -> projectiles(helper, attacker, defender);
                     case "support" -> support(helper, attacker, defender);
+                    case "levitation_lifecycle" -> levitationLifecycle(helper, attacker);
+                    case "levitation_supported_motion" -> levitationSupportedMotion(helper, attacker);
                     default -> throw new IllegalArgumentException(scenario);
                 }
                 helper.succeed();

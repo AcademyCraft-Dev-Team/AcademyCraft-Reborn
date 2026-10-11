@@ -34,7 +34,7 @@ public final class MagneticFieldRuntime {
 
     public static boolean isHovering(ServerPlayer player) {
         var flight = FLIGHTS.get(player);
-        return flight != null && flight.hovering;
+        return flight != null && flight.phase == Flight.Phase.SUPPORTED;
     }
 
     public static boolean toggle(ServerPlayer player) {
@@ -82,22 +82,25 @@ public final class MagneticFieldRuntime {
     }
 
     public static final class Flight extends ServerContext {
+        private enum Phase { WAITING, SUPPORTED, GRACE }
+
         private final MagneticLevitation movement = new MagneticLevitation();
         private final net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dimension;
         private int activeTicks;
         private int graceTicks;
-        private boolean hovering;
+        private double graceEntryVerticalVelocity;
+        private Phase phase = Phase.WAITING;
         private boolean ended;
 
         Flight(ServerPlayer player) { super(player); dimension = player.level().dimension(); }
 
         public @Nullable SupportReference support() {
-            if (!hovering) return null;
+            if (phase != Phase.SUPPORTED) return null;
             return movement.ground() != null ? movement.ground() : movement.envelope();
         }
 
         private void stopVisual() {
-            if (hovering) MagneticSupportPacket.broadcast(player, null);
+            if (phase == Phase.SUPPORTED) MagneticSupportPacket.broadcast(player, null);
         }
 
         @SubscribeEvent public void tick(ServerTickEvent.Pre event) {
@@ -111,6 +114,7 @@ public final class MagneticFieldRuntime {
             var tuning = MagneticFieldEffects.levitationTuning(player);
             var radius = MagneticFieldTuning.supportRadius(skill.getEffectiveProficiencyMilestone(player));
             var canMove = EntityMotionGuard.canApplyMotionFrom(player, player);
+            if (!canMove) { releaseField(); return; }
             var input = player.getLastClientInput();
             if (input == null) input = Input.EMPTY;
             var forward = (input.forward() ? 1 : 0) - (input.backward() ? 1 : 0);
@@ -118,21 +122,24 @@ public final class MagneticFieldRuntime {
             var vertical = (input.jump() ? 1 : 0) - (input.shift() ? 1 : 0);
             // One solved tick carries field presence and ground clearance together, so the support probe
             // runs once per tick rather than once for admission and again for motion.
-            var step = canMove
-                    ? movement.step(player, forward, strafe, vertical,
-                            MagneticFieldTuning.FLIGHT_SPEED_PER_TICK, radius, tuning)
-                    : null;
+            var step = movement.step(player, forward, strafe, vertical,
+                    MagneticFieldTuning.FLIGHT_SPEED_PER_TICK, radius, tuning);
 
-            if (step == null || !step.supported()) {
-                stopVisual();
-                // Losing the field degrades into a bounded, steerable sink instead of dropping the gravity
-                // lease at once, so a mover that grazes the boundary can still climb back inside.
-                if (graceTicks >= tuning.graceTicks()) { releaseField(); return; }
+            if (!step.supported()) {
+                if (phase == Phase.SUPPORTED) {
+                    stopVisual();
+                    phase = Phase.GRACE;
+                    graceTicks = 0;
+                    graceEntryVerticalVelocity = player.getDeltaMovement().y;
+                }
+                // Only actual support loss starts a grace window. Once it expires, keep waiting for
+                // real support instead of granting another gravity lease and another burst of lift.
+                if (phase != Phase.GRACE || graceTicks >= tuning.graceTicks()) { releaseField(); return; }
                 graceTicks++;
                 GravityControl.set(player, MagneticFieldEffects.SOURCE, true);
                 applyMotion(movement.degradedVelocity(player, forward, strafe, vertical,
-                        MagneticFieldTuning.FLIGHT_SPEED_PER_TICK, tuning));
-                hovering = false;
+                        MagneticFieldTuning.FLIGHT_SPEED_PER_TICK,
+                        graceEntryVerticalVelocity, graceTicks, tuning));
                 state(player, true, false, true);
                 skill.reportActivity(player, true);
                 return;
@@ -145,7 +152,7 @@ public final class MagneticFieldRuntime {
             }
             GravityControl.set(player, MagneticFieldEffects.SOURCE, true);
             applyMotion(step.velocity());
-            hovering = true;
+            phase = Phase.SUPPORTED;
             state(player, true, true);
             if (activeTicks % 2 == 0) MagneticSupportPacket.broadcast(player, support());
             if (activeTicks++ == 0) skill.reportTrigger(player);
@@ -161,7 +168,8 @@ public final class MagneticFieldRuntime {
         private void releaseField() {
             stopVisual();
             graceTicks = 0;
-            hovering = false;
+            graceEntryVerticalVelocity = 0.0;
+            phase = Phase.WAITING;
             GravityControl.set(player, MagneticFieldEffects.SOURCE, false);
             state(player, true, false);
         }
@@ -170,6 +178,8 @@ public final class MagneticFieldRuntime {
             stopVisual();
             ended = true;
             graceTicks = 0;
+            graceEntryVerticalVelocity = 0.0;
+            phase = Phase.WAITING;
             FLIGHTS.remove(player, this);
             GravityControl.set(player, MagneticFieldEffects.SOURCE, false);
             state(player, false, false);

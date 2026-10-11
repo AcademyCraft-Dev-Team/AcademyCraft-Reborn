@@ -1,0 +1,11 @@
+allprojects {
+    afterEvaluate {
+        neoForge.runs.named('clientDev') {
+            sourceSet.set(sourceSets.editor)
+            gameDirectory.set(file('run/mine-detect-client'))
+            systemProperty 'academy.mineDetectSettingsSmoke', 'true'
+            systemProperty 'academy.mineDetectOutput', file('build/mine-detect-settings-validation').absolutePath
+            programArguments.addAll('--width', '1280', '--height', '720')
+        }
+    }
+}

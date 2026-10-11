@@ -63,16 +63,29 @@ public final class MagneticMovement {
     }
 
     /**
-     * Vertical speed while a lost field is still recoverable. Vertical input keeps full climb authority so
-     * a mover can lift itself back into range, while no input sinks into the grace window and downward
-     * input is capped at the ordinary descent speed.
+     * Sink target while a lost field is still recoverable. Without support, upward input cannot generate
+     * lift; downward input remains capped at the ordinary descent speed.
      */
     public static double degradedVertical(double input, LevitationTuning tuning) {
         if (tuning == null) return 0.0;
         var intent = Double.isFinite(input) ? Math.clamp(input, -1.0, 1.0) : 0.0;
-        if (intent > 0.0) return intent * tuning.maxClimbSpeed();
-        return Math.clamp(intent * tuning.inputVerticalSpeed() - tuning.sinkSpeed(),
+        return Math.clamp(Math.min(0.0, intent) * tuning.inputVerticalSpeed() - tuning.sinkSpeed(),
                 -tuning.maxDescentSpeed(), 0.0);
+    }
+
+    /**
+     * Preserves entry momentum briefly, then reaches the sink target by the end of one grace window.
+     * The caller must capture entry velocity once on support loss, never from the latest jump input.
+     */
+    public static double degradedVertical(double input, double entryVelocity, int elapsedTicks,
+                                          LevitationTuning tuning) {
+        if (tuning == null) return 0.0;
+        var entry = Double.isFinite(entryVelocity)
+                ? Math.clamp(entryVelocity, -tuning.maxDescentSpeed(), tuning.maxClimbSpeed()) : 0.0;
+        var progress = tuning.graceTicks() == 0 ? 1.0
+                : Math.clamp((double) elapsedTicks / tuning.graceTicks(), 0.0, 1.0);
+        var target = degradedVertical(input, tuning);
+        return entry + (target - entry) * progress;
     }
 
     public static Vec3 approachVelocity(Vec3 current, Vec3 feet, Vec3 destination, double maxSpeed) {

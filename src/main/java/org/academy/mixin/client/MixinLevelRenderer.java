@@ -84,6 +84,8 @@ public abstract class MixinLevelRenderer {
                 org.academy.internal.client.render.vfx.InterferenceFieldClient.styledAreas());
         GlowEffect.getInstance().process();
         PostEffect.post();
+        org.academy.internal.client.ability.electromaster.mine.MineDetectClient.render(
+                cameraState.pos, cameraState.viewRotationMatrix, cameraState.projectionMatrix);
         org.academy.internal.client.ability.aeromanip.FlowSenseClient.render(
                 cameraState.pos, cameraState.viewRotationMatrix, cameraState.projectionMatrix);
     }

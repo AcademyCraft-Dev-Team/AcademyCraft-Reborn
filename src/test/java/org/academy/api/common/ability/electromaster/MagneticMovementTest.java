@@ -165,16 +165,47 @@ class MagneticMovementTest {
     }
 
     @Test
-    void degradedVerticalSinksWithoutInputAndKeepsClimbAuthority() {
+    void degradedVerticalCannotCreateLiftWithoutSupport() {
         var tuning = LevitationTuning.DEFAULT;
         var sink = MagneticMovement.degradedVertical(0, tuning);
         assertTrue(sink < 0, "a mover without a field must not hold altitude");
         assertEquals(-tuning.sinkSpeed(), sink, 1.0e-9);
-        // Holding jump must still be able to climb back into the field.
-        assertEquals(tuning.maxClimbSpeed(), MagneticMovement.degradedVertical(1, tuning), 1.0e-9);
+        assertEquals(sink, MagneticMovement.degradedVertical(1, tuning), 1.0e-9);
         // Downward input is capped by the ordinary descent limit.
         assertEquals(-tuning.maxDescentSpeed(), MagneticMovement.degradedVertical(-1, tuning), 1.0e-9);
         assertEquals(-tuning.sinkSpeed(), MagneticMovement.degradedVertical(Double.NaN, tuning), 1.0e-9);
+    }
+
+    @Test
+    void supportLossPreservesMomentumThenStopsClimbingWithinOneGraceWindow() {
+        var tuning = LevitationTuning.DEFAULT;
+        var previous = tuning.maxClimbSpeed();
+        var upwardTravel = 0.0;
+        for (var tick = 1; tick <= 200; tick++) {
+            var velocity = MagneticMovement.degradedVertical(1, tuning.maxClimbSpeed(), tick, tuning);
+            assertTrue(velocity <= previous + 1.0e-9, "Holding jump cannot replenish entry momentum");
+            if (tick == 1) assertTrue(velocity > 0, "Existing climb momentum must not stop abruptly");
+            if (tick >= tuning.graceTicks()) assertTrue(velocity <= 0, "Climbing must end within the window");
+            upwardTravel += Math.max(0, velocity);
+            previous = velocity;
+        }
+        assertTrue(upwardTravel < 1.0, "Residual ascent must remain small and finite");
+    }
+
+    @Test
+    void graceCannotInventMomentumAndHandlesAnImmediateExpiry() {
+        var tuning = LevitationTuning.DEFAULT;
+        for (var entry : new double[]{0, -0.2, Double.NaN, Double.POSITIVE_INFINITY}) {
+            for (var tick = 1; tick <= 10; tick++) {
+                var velocity = MagneticMovement.degradedVertical(1, entry, tick, tuning);
+                assertTrue(Double.isFinite(velocity));
+                assertTrue(velocity <= 0, "Without upward entry momentum, jump must never lift");
+                assertTrue(velocity >= -tuning.maxDescentSpeed());
+            }
+        }
+        var immediate = new LevitationTuning(1.5, 4, 0.4, 0.5, 0.3, 0.3, 0.25, 0.6, 1152, 0);
+        assertEquals(-0.25, MagneticMovement.degradedVertical(1, 0.5, 0, immediate), 1.0e-9);
+        assertEquals(-0.3, MagneticMovement.degradedVertical(-1, 0.5, tuning.graceTicks(), tuning), 1.0e-9);
     }
 
     @Test

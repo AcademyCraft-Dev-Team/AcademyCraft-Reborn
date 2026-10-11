@@ -12,7 +12,8 @@ package org.academy.api.common.ability.electromaster;
  * clip through.</p>
  *
  * <p>{@link #graceTicks()} is how long a mover that lost its field keeps its gravity lease and a bounded
- * sink instead of dropping immediately, giving it a chance to steer back into range.</p>
+ * sink instead of dropping immediately, giving it a chance to steer back into range. Entry momentum
+ * decays within that single window; upward input cannot create lift without support.</p>
  *
  * <p>Values that the solver needs in order to do anything are required to be positive: a zero
  * {@code followGain}, climb, descent or vertical speed, or a zero input offset, would silently leave the
