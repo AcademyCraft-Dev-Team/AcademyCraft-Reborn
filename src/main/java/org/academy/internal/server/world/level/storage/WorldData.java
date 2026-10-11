@@ -5,23 +5,20 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.annotations.SerializedName;
-import org.academy.AcademyCraft;
 import org.academy.api.common.util.GsonUtil;
 import org.academy.internal.common.skilldata.SkillData;
 import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
 
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 public final class WorldData {
-    private static final Logger LOGGER = AcademyCraft.getLogger();
-
     @SerializedName("players")
     private final Map<UUID, Player> players = new HashMap<>();
 
@@ -35,7 +32,7 @@ public final class WorldData {
     private static boolean isValidFile(File file) {
         var gson = createGson();
 
-        try (var fileReader = new FileReader(file)) {
+        try (var fileReader = Files.newBufferedReader(file.toPath(), StandardCharsets.UTF_8)) {
             JsonObject jsonObject;
 
             try {
@@ -48,31 +45,30 @@ public final class WorldData {
 
             var fields = WorldData.class.getDeclaredFields();
 
-            return GsonUtil.isValidField(jsonObject, fields);
+            var playersElement = jsonObject.get("players");
+            return GsonUtil.isValidField(jsonObject, fields)
+                    && playersElement != null && playersElement.isJsonObject();
         } catch (IOException e) {
             return false;
         }
     }
 
     public static WorldData getWorldData(File file) {
+        if (!file.exists()) return new WorldData();
         var gson = createGson();
         if (!isValidFile(file)) {
-            var worldData = new WorldData();
-            LOGGER.debug("Creating new world data file.");
-            try (var fileWriter = new FileWriter(file)) {
-                gson.toJson(worldData, fileWriter);
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to create world data file", e);
-            }
-            return worldData;
+            throw new IllegalStateException("Invalid Academy world data file: " + file.getAbsolutePath());
         }
 
-        try (var reader = new FileReader(file)) {
+        try (var reader = Files.newBufferedReader(file.toPath(), StandardCharsets.UTF_8)) {
             var worldData = gson.fromJson(reader, WorldData.class);
-            if (worldData == null) return new WorldData();
+            if (worldData == null || worldData.players == null
+                    || worldData.players.values().stream().anyMatch(Objects::isNull)) {
+                throw new IllegalStateException("Invalid Academy world data file: " + file.getAbsolutePath());
+            }
             worldData.migrateLegacyData();
             return worldData;
-        } catch (IOException e) {
+        } catch (IOException | JsonSyntaxException e) {
             throw new RuntimeException("Failed to read world data file", e);
         }
     }

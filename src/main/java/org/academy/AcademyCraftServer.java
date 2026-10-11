@@ -1,13 +1,18 @@
 package org.academy;
 
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.storage.LevelResource;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.level.LevelEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import org.academy.api.common.profiler.AcademyProfiler;
 import org.academy.api.common.util.FileUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -35,13 +40,11 @@ import org.academy.internal.server.config.MusicConfig;
 import org.academy.internal.server.config.DimensionEffectsConfig;
 import org.academy.internal.server.entity.SurvivalDefenseRuntime;
 import org.academy.internal.server.time.TemporalRuntime;
-import org.academy.internal.server.world.level.storage.Player;
 import org.academy.internal.server.world.level.storage.WorldData;
-import org.jetbrains.annotations.Nullable;
+import org.academy.internal.server.world.level.storage.WorldDataStore;
 import org.slf4j.Logger;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -51,7 +54,8 @@ import java.nio.file.Path;
 @EventBusSubscriber
 public final class AcademyCraftServer {
     private static final Logger LOGGER = AcademyCraft.getLogger();
-    private static final long SAVE_INTERVAL_TICKS = 20 * 60 * 5;
+    private static final long SAVE_INTERVAL_TICKS = 20 * 60;
+    private static final long SAVE_RETRY_TICKS = 20 * 30;
     private final File worldDataFile;
     private final AcademyCraftConfig serverConfig;
     private final WorldData worldData;
@@ -62,7 +66,7 @@ public final class AcademyCraftServer {
     private final DimensionEffectsConfig dimensionEffectsConfig;
     private final TemporalRuntime temporalRuntime;
     private final MinecraftServer server;
-    private long lastSaveTick = 0;
+    private long nextSaveTick = SAVE_INTERVAL_TICKS;
 
     private AcademyCraftServer(MinecraftServerContext context) {
         context.setAcademyCraftServer(this);
@@ -73,8 +77,6 @@ public final class AcademyCraftServer {
         worldDataFile = server.getWorldPath(
                 LevelResource.ROOT).resolve(AcademyCraft.MOD_ID + ".json"
         ).toFile();
-        FileUtil.checkFile(worldDataFile);
-
         serverConfig = context.getAcademyCraftServerConfig();
 
         abilityConfig = serverConfig.getConfig(AbilityConfig.KEY);
@@ -196,48 +198,42 @@ public final class AcademyCraftServer {
         MusicRoomManager.tick(server);
         ServerJukeboxManager.tick(server);
         long currentTick = server.getTickCount();
-        if (currentTick - instance.lastSaveTick >= SAVE_INTERVAL_TICKS) {
-            instance.lastSaveTick = currentTick;
-            var snapshot = instance.createSnapshotAndClean();
-            if (snapshot == null) return;
-            instance.writeToFile(snapshot);
+        if (currentTick >= instance.nextSaveTick) {
+            instance.nextSaveTick = currentTick +
+                    (instance.saveData() ? SAVE_INTERVAL_TICKS : SAVE_RETRY_TICKS);
         }
     }
 
-    private void saveData() {
-        LOGGER.info("Saving world data...");
-        var snapshot = createSnapshotAndClean();
-        writeToFile(snapshot);
+    @SubscribeEvent
+    public static void onLevelSave(LevelEvent.Save event) {
+        if (!(event.getLevel() instanceof ServerLevel level)
+                || level != level.getServer().overworld()
+                || !level.getServer().hasAcademyCraftServer()) return;
+        var instance = level.getServer().getAcademyCraftServer();
+        var currentTick = level.getServer().getTickCount();
+        instance.nextSaveTick = currentTick +
+                (instance.saveData() ? SAVE_INTERVAL_TICKS : SAVE_RETRY_TICKS);
     }
 
-    /**
-     * @return JSON快照，没有脏数据则返回null
-     */
-    private @Nullable String createSnapshotAndClean() {
-        var hasDirtyData = worldData.getPlayers().values().stream()
-                .anyMatch(Player::isDirty);
-        if (!hasDirtyData) return null;
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)
+                || !player.level().getServer().hasAcademyCraftServer()) return;
+        var server = player.level().getServer();
+        var instance = server.getAcademyCraftServer();
+        instance.nextSaveTick = server.getTickCount() +
+                (instance.saveData() ? SAVE_INTERVAL_TICKS : SAVE_RETRY_TICKS);
+    }
 
-        String jsonSnapshot;
+    private boolean saveData() {
         try {
-            var gson = WorldData.createGson();
-            jsonSnapshot = gson.toJson(worldData);
-        } catch (Exception e) {
-            LOGGER.error("Failed to serialize WorldData", e);
-            return null;
-        }
-
-        worldData.getPlayers().values().forEach(Player::clean);
-        return jsonSnapshot;
-    }
-
-    private void writeToFile(@Nullable String jsonSnapshot) {
-        if (jsonSnapshot == null) return;
-        try (var writer = new FileWriter(worldDataFile)) {
-            writer.write(jsonSnapshot);
-            LOGGER.debug("WorldData saved successfully.");
-        } catch (IOException e) {
-            LOGGER.error("Failed to write WorldData to disk", e);
+            if (WorldDataStore.saveIfDirty(worldData, worldDataFile.toPath())) {
+                LOGGER.debug("WorldData saved successfully.");
+            }
+            return true;
+        } catch (IOException | RuntimeException e) {
+            LOGGER.error("Failed to save WorldData; dirty player data will be retried", e);
+            return false;
         }
     }
 }
