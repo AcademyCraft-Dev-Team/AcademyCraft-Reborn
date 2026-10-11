@@ -16,10 +16,11 @@ import org.academy.internal.common.network.misaka.MisakaNetManageDataPacket
 import org.academy.internal.common.network.misaka.RequestMisakaNetManagePacket
 import org.academy.internal.common.network.misaka.SetMisakaNetworkAllocationPacket
 import org.academy.internal.common.network.misaka.SetMisakaNetworkPermissionPacket
-import org.academy.internal.server.misaka.MisakaComputeSink
 import org.academy.internal.server.misaka.WirelessForwardingMisakaNAT
+import org.academy.internal.server.world.level.storage.MisakaNetworkAllocations
 import org.misaka.MisakaNetworkClient
 import java.util.Locale
+import java.util.UUID
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -847,10 +848,7 @@ internal object MisakaPanelManageUi {
     }
 
     fun buildAllocTab(host: MisakaPanelHost): FrameLayoutWidget {
-        val root = MisakaPanelLayouts.scrollTab {
-            for (sink in MisakaComputeSink.entries) {
-                addChild("sink_${sink.id()}", allocRow(host, sink))
-            }
+        val root = MisakaPanelLayouts.tabColumn {
             host.allocatedLabel = LabelWidget(
                 Component.translatable("screen.academy.misaka_net_allocated", 0).string
             ).apply {
@@ -859,16 +857,80 @@ internal object MisakaPanelManageUi {
                 layoutParams = LinearLayoutWidget.LayoutParams()
                     .widthMode(SizeMode.MATCH_PARENT)
                     .height(10f)
-                    .marginTop(MisakaNetworkPanelScreen.SPACING_MINOR)
             }
             addChild("allocated", host.allocatedLabel)
+            addChild(
+                "rows_scroll",
+                MisakaPanelLayouts.scrollBody {
+                    host.allocRowsHost = LinearLayoutWidget().apply {
+                        orientation = Orientation.VERTICAL
+                        spacing = MisakaNetworkPanelScreen.SPACING_MINOR
+                        isClickable = false
+                        layoutParams = LinearLayoutWidget.LayoutParams()
+                            .widthMode(SizeMode.MATCH_PARENT)
+                            .heightMode(SizeMode.WRAP_CONTENT)
+                    }
+                    addChild("alloc_rows", host.allocRowsHost)
+                }
+            )
         }
         root.visibility = Widget.Visibility.GONE
         root.isEnabled = false
         return root
     }
 
-    fun allocRow(host: MisakaPanelHost, sink: MisakaComputeSink): FrameLayoutWidget {
+    fun refreshAllocTab(host: MisakaPanelHost) {
+        host.allocSeekBars.clear()
+        host.allocInputs.clear()
+        host.allocRowsHost.clearChildren()
+
+        if (!host.manageIntegrated) {
+            host.allocRowsHost.addChild("locked", LabelWidget(
+                Component.translatable("screen.academy.misaka_net_alloc_locked_unintegrated").string
+            ).apply {
+                scale = 0.72f
+                alpha = 0.78f
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .heightMode(SizeMode.WRAP_CONTENT)
+            })
+            if (host.allocatedLabelInitialized) {
+                host.allocatedLabel.text = Component.translatable(
+                    "screen.academy.misaka_net_allocated",
+                    0
+                ).string
+            }
+            return
+        }
+
+        for (member in host.manageMembers) {
+            if (!host.localPlayerPercents.containsKey(member.playerUuid())) {
+                host.localPlayerPercents[member.playerUuid()] = 0
+            }
+        }
+        for (member in host.manageMembers) {
+            host.allocRowsHost.addChild(
+                "player_${member.playerUuid()}",
+                allocPlayerRow(host, member.playerUuid(), member.name())
+            )
+        }
+        for ((uuid, _) in host.localPlayerPercents.toList()) {
+            if (host.manageMembers.none { it.playerUuid() == uuid }) {
+                host.allocRowsHost.addChild(
+                    "player_$uuid",
+                    allocPlayerRow(host, uuid, uuid.toString().take(8))
+                )
+            }
+        }
+        if (host.allocatedLabelInitialized) {
+            host.allocatedLabel.text = Component.translatable(
+                "screen.academy.misaka_net_allocated",
+                MisakaNetworkAllocations.sum(host.localPlayerPercents)
+            ).string
+        }
+    }
+
+    fun allocPlayerRow(host: MisakaPanelHost, playerUuid: UUID, displayName: String): FrameLayoutWidget {
         val row = FrameLayoutWidget().apply {
             background = ColorDrawable(MisakaNetworkPanelScreen.ROW_PLANE)
             layoutParams = LinearLayoutWidget.LayoutParams()
@@ -893,9 +955,7 @@ internal object MisakaPanelManageUi {
                 .height(MisakaNetworkPanelScreen.INPUT_HEIGHT)
         }
         column.addChild("heading", heading)
-        heading.addChild("label", LabelWidget(
-            Component.translatable("screen.academy.misaka_net_sink.${sink.serializedName()}").string
-        ).apply {
+        heading.addChild("label", LabelWidget(displayName).apply {
             scale = 0.7f
             layoutParams = LinearLayoutWidget.LayoutParams()
                 .weight(1f)
@@ -914,11 +974,12 @@ internal object MisakaPanelManageUi {
 
         val input = TextBoxWidget(3).apply {
             setInputValidator { text -> text.isEmpty() || text.all { it.isDigit() } }
+            text = (host.localPlayerPercents[playerUuid] ?: 0).toString()
             layoutParams = LinearLayoutWidget.LayoutParams()
                 .size(MisakaNetworkPanelScreen.INPUT_WIDTH, MisakaNetworkPanelScreen.INPUT_HEIGHT)
                 .gravity(Gravity.CENTER)
         }
-        host.allocInputs[sink.id()] = input
+        host.allocInputs[playerUuid] = input
         valueGroup.addChild("input", input)
         valueGroup.addChild("pct", LabelWidget(
             Component.translatable("screen.academy.misaka_net_pct").string
@@ -933,7 +994,7 @@ internal object MisakaPanelManageUi {
         val seek = AllocSeekBar().apply {
             setMin(0f)
             setMax(100f)
-            setProgress(0f)
+            setProgress((host.localPlayerPercents[playerUuid] ?: 0).toFloat())
             setKeyProgressIncrement(1)
             setBackgroundColor(MisakaNetworkPanelScreen.SLIDER_TRACK)
             setProgressColor(MisakaNetworkPanelScreen.PRIMARY_FOREGROUND)
@@ -941,7 +1002,7 @@ internal object MisakaPanelManageUi {
                 .widthMode(SizeMode.MATCH_PARENT)
                 .height(MisakaNetworkPanelScreen.SLIDER_HEIGHT)
         }
-        host.allocSeekBars[sink.id()] = seek
+        host.allocSeekBars[playerUuid] = seek
         column.addChild("seek", seek)
 
         seek.setOnSeekBarChangeListener(object : SeekBarWidget.OnSeekBarChangeListener {
@@ -949,13 +1010,14 @@ internal object MisakaPanelManageUi {
                 if (host.suppressAllocCallbacks || !fromUser) {
                     return
                 }
-                setLocalPercent(host, sink.id(), progress.roundToInt())
-                if (seekBar.progress.roundToInt() != host.localPercents[sink.id()]) {
+                setLocalPlayerPercent(host, playerUuid, progress.roundToInt())
+                val clamped = host.localPlayerPercents[playerUuid] ?: 0
+                if (seekBar.progress.roundToInt() != clamped) {
                     host.suppressAllocCallbacks = true
-                    seekBar.setProgress(host.localPercents[sink.id()].toFloat())
+                    seekBar.setProgress(clamped.toFloat())
                     host.suppressAllocCallbacks = false
                 }
-                syncAllocInput(host, sink.id())
+                syncAllocInput(host, playerUuid)
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBarWidget) = Unit
@@ -970,49 +1032,62 @@ internal object MisakaPanelManageUi {
             if (host.suppressAllocCallbacks) {
                 return@setOnFocusLost
             }
-            val parsed = input.text.toIntOrNull() ?: host.localPercents[sink.id()]
-            setLocalPercent(host, sink.id(), parsed)
-            syncAllocWidgetsFromLocal(host, sink.id())
+            val parsed = input.text.toIntOrNull() ?: (host.localPlayerPercents[playerUuid] ?: 0)
+            setLocalPlayerPercent(host, playerUuid, parsed)
+            syncAllocWidgetsFromLocal(host, playerUuid)
             commitAllocations(host)
         }
         return row
     }
 
-    fun setLocalPercent(host: MisakaPanelHost, index: Int, requested: Int) {
-        val others = MisakaComputeSink.sum(host.localPercents) - host.localPercents[index]
-        host.localPercents[index] = max(0, minOf(100 - others, requested))
+    fun setLocalPlayerPercent(host: MisakaPanelHost, playerUuid: UUID, requested: Int) {
+        val others = MisakaNetworkAllocations.sum(host.localPlayerPercents) -
+            (host.localPlayerPercents[playerUuid] ?: 0)
+        host.localPlayerPercents[playerUuid] = max(0, minOf(100 - others, requested))
         if (host.allocatedLabelInitialized) {
             host.allocatedLabel.text = Component.translatable(
                 "screen.academy.misaka_net_allocated",
-                MisakaComputeSink.sum(host.localPercents)
+                MisakaNetworkAllocations.sum(host.localPlayerPercents)
             ).string
         }
     }
 
-    fun syncAllocInput(host: MisakaPanelHost, index: Int) {
+    fun syncAllocInput(host: MisakaPanelHost, playerUuid: UUID) {
         host.suppressAllocCallbacks = true
-        host.allocInputs[index]?.text = host.localPercents[index].toString()
+        host.allocInputs[playerUuid]?.text = (host.localPlayerPercents[playerUuid] ?: 0).toString()
         host.suppressAllocCallbacks = false
     }
 
-    fun syncAllocWidgetsFromLocal(host: MisakaPanelHost, index: Int) {
+    fun syncAllocWidgetsFromLocal(host: MisakaPanelHost, playerUuid: UUID) {
         host.suppressAllocCallbacks = true
-        host.allocSeekBars[index]?.setProgress(host.localPercents[index].toFloat())
-        host.allocInputs[index]?.text = host.localPercents[index].toString()
+        val value = (host.localPlayerPercents[playerUuid] ?: 0).toFloat()
+        host.allocSeekBars[playerUuid]?.setProgress(value)
+        host.allocInputs[playerUuid]?.text = value.toInt().toString()
         host.suppressAllocCallbacks = false
-    }
-
-    fun refreshAllocWidgets(host: MisakaPanelHost) {
-        for (i in 0 until MisakaComputeSink.COUNT) {
-            syncAllocWidgetsFromLocal(host, i)
-        }
     }
 
     fun commitAllocations(host: MisakaPanelHost) {
-        host.localPercents = MisakaComputeSink.clampAllocations(host.localPercents)
-        refreshAllocWidgets(host)
+        if (!host.manageIntegrated) {
+            return
+        }
+        val clamped = MisakaNetworkAllocations.clampPlayerPercents(host.localPlayerPercents)
+        host.localPlayerPercents.clear()
+        host.localPlayerPercents.putAll(clamped)
+        for (uuid in host.allocSeekBars.keys) {
+            syncAllocWidgetsFromLocal(host, uuid)
+        }
+        if (host.allocatedLabelInitialized) {
+            host.allocatedLabel.text = Component.translatable(
+                "screen.academy.misaka_net_allocated",
+                MisakaNetworkAllocations.sum(host.localPlayerPercents)
+            ).string
+        }
         MisakaNetworkClient.send(
-            SetMisakaNetworkAllocationPacket(host.data.misakaUuid(), host.localPercents, host.managePageIndex)
+            SetMisakaNetworkAllocationPacket(
+                host.data.misakaUuid(),
+                host.localPlayerPercents,
+                host.managePageIndex
+            )
         )
     }
 

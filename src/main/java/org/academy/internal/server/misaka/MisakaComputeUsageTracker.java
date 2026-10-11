@@ -9,11 +9,10 @@ import java.util.UUID;
  * {@link MisakaComputeContribution#settleAndApply} clears it every
  * {@link MisakaComputeContribution#SETTLE_INTERVAL_TICKS} ticks).
  * <ul>
- *   <li>Player usage: CP occupations / skills → demand (filled as CP).</li>
- *   <li>Charge usage: orbital designator hold → burns the player's claimable network
- *       supply without converting to CP.</li>
- *   <li>Network usage: direct network draws → burn supply before CP settle.</li>
+ *   <li>Charge usage: ACTUAL {@code consumeRate} grants + FORCE {@code onCompute} totals → burn supply.</li>
+ *   <li>Network usage: direct network draws → burn supply before budget settle.</li>
  * </ul>
+ * Skill CP demand is no longer tracked here; compute is device-only.
  */
 public final class MisakaComputeUsageTracker {
     private static final Map<UUID, Float> USAGE_MSK = new HashMap<>();
@@ -30,12 +29,28 @@ public final class MisakaComputeUsageTracker {
         USAGE_MSK.merge(playerUuid, msk, Float::sum);
     }
 
-    /** Orbital / designator hold: consumes claimable MSk without granting CP. */
+    /** ACTUAL/FORCE device spend this settle window (burns network supply; no CP grant). */
     public static void addChargeUsage(UUID playerUuid, float msk) {
-        if (playerUuid == null || !(msk > 0.0f) || !Float.isFinite(msk)) {
+        if (playerUuid == null || !Float.isFinite(msk) || msk == 0.0f) {
             return;
         }
         CHARGE_USAGE_MSK.merge(playerUuid, msk, Float::sum);
+        float next = CHARGE_USAGE_MSK.getOrDefault(playerUuid, 0.0f);
+        if (next <= 0.0f) {
+            CHARGE_USAGE_MSK.remove(playerUuid);
+        }
+    }
+
+    /** Replace this player's charge burn for the settle window (used after ACTUAL re-flush). */
+    public static void setChargeUsage(UUID playerUuid, float msk) {
+        if (playerUuid == null) {
+            return;
+        }
+        if (!Float.isFinite(msk) || msk <= 0.0f) {
+            CHARGE_USAGE_MSK.remove(playerUuid);
+        } else {
+            CHARGE_USAGE_MSK.put(playerUuid, msk);
+        }
     }
 
     public static void addNetworkUsage(UUID networkId, float msk) {

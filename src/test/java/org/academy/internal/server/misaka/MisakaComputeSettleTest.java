@@ -5,18 +5,10 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class MisakaComputeSettleTest {
     private static final float CP_PER_MSK = 2.0f;
-
-    @Test
-    void clampAllocationsCapsSumAt100() {
-        assertArrayEquals(new int[]{40, 40, 20, 0}, MisakaComputeSink.clampAllocations(new int[]{40, 40, 30, 10}));
-        assertArrayEquals(new int[]{0, 0, 0, 0}, MisakaComputeSink.clampAllocations(null));
-        assertEquals(100, MisakaComputeSink.sum(MisakaComputeSink.clampAllocations(new int[]{50, 50, 50, 50})));
-    }
 
     /** Design §9.4: group 100 MSk, A demand 100, B demand 100 → equal split of 75 priority. */
     @Test

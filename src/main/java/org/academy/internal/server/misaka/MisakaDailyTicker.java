@@ -21,6 +21,10 @@ public final class MisakaDailyTicker {
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
         var server = event.getServer();
+        var access = ServerMisakaComputeAccess.INSTANCE;
+        for (var player : server.getPlayerList().getPlayers()) {
+            access.tickPlayer(player);
+        }
         // settleAndApply self-gates to every SETTLE_INTERVAL_TICKS (1s) with full MSk/s.
         MisakaComputeContribution.settleAndApply(server);
 

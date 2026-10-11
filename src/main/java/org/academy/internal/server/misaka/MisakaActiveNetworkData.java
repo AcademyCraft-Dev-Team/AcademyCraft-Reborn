@@ -75,10 +75,20 @@ public final class MisakaActiveNetworkData extends SavedData {
         if (last != null && gameTime - last < cooldown) {
             return false;
         }
+        forceSetActive(playerId, networkId, gameTime);
+        return true;
+    }
+
+    /**
+     * Set ActiveNetwork without cooldown (designator bind-to-satellite network, etc.).
+     */
+    public void forceSetActive(UUID playerId, UUID networkId, long gameTime) {
+        if (playerId == null || networkId == null) {
+            return;
+        }
         activeByPlayer.put(playerId, networkId);
         lastSwitchGameTime.put(playerId, gameTime);
         setDirty();
-        return true;
     }
 
     public void clear(UUID playerUuid) {

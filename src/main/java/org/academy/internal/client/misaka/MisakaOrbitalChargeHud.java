@@ -27,7 +27,13 @@ public final class MisakaOrbitalChargeHud {
             MisakaOrbitalChargeDisplay.clear();
             return;
         }
-        MisakaOrbitalChargeDisplay.set(true, packet.charge(), packet.need(), packet.rate());
+        MisakaOrbitalChargeDisplay.set(
+                true,
+                packet.charge(),
+                packet.need(),
+                packet.rate(),
+                packet.statusKey()
+        );
         showOverlay(true);
     }
 
@@ -55,6 +61,11 @@ public final class MisakaOrbitalChargeHud {
             return;
         }
         lastOverlayTick = tick;
+        String statusKey = MisakaOrbitalChargeDisplay.statusKey();
+        if (statusKey != null && !statusKey.isEmpty()) {
+            player.sendOverlayMessage(Component.translatable(statusKey));
+            return;
+        }
         float progress = MisakaOrbitalChargeDisplay.progress();
         int filled = Math.round(progress * 20.0f);
         var bar = new StringBuilder(22).append('[');

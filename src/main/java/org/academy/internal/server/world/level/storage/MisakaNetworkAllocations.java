@@ -2,41 +2,32 @@ package org.academy.internal.server.world.level.storage;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 import org.academy.AcademyCraft;
-import org.academy.internal.server.misaka.MisakaComputeSink;
-import org.jspecify.annotations.Nullable;
 
-import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
 /**
- * Per Misaka-network-component compute allocation percentages keyed by stable network {@link UUID}.
- * Legacy BlockPos string keys are migrated on first server access via {@link MisakaNetworkRegistry}.
+ * Per Misaka-network compute allocation percentages keyed by player UUID.
+ * Legacy sink int[] and BlockPos keys are discarded / migrated without purpose semantics.
  */
 public final class MisakaNetworkAllocations extends SavedData {
-    public static final int CURRENT_DATA_VERSION = 1;
+    public static final int CURRENT_DATA_VERSION = 2;
 
-    private static final Codec<int[]> PERCENTS_CODEC = Codec.INT.listOf().xmap(
-            list -> {
-                var raw = new int[MisakaComputeSink.COUNT];
-                for (int i = 0; i < Math.min(MisakaComputeSink.COUNT, list.size()); i++) {
-                    raw[i] = list.get(i);
-                }
-                return MisakaComputeSink.clampAllocations(raw);
-            },
-            arr -> Arrays.stream(arr == null ? new int[MisakaComputeSink.COUNT] : arr).boxed().toList()
-    );
+    private static final Codec<Map<UUID, Integer>> PLAYER_PERCENTS_CODEC =
+            Codec.unboundedMap(MisakaSavedDataCodecs.UUID_STRING_CODEC, Codec.INT).xmap(
+                    MisakaNetworkAllocations::clampPlayerPercents,
+                    map -> map
+            );
 
     public static final Codec<MisakaNetworkAllocations> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.INT.optionalFieldOf("data_version", 0).forGetter(data -> data.dataVersion),
-            Codec.unboundedMap(Codec.STRING, PERCENTS_CODEC)
+            Codec.unboundedMap(Codec.STRING, PLAYER_PERCENTS_CODEC)
                     .fieldOf("allocations")
                     .forGetter(MisakaNetworkAllocations::encodeAllocations)
     ).apply(instance, MisakaNetworkAllocations::fromCodec));
@@ -48,117 +39,106 @@ public final class MisakaNetworkAllocations extends SavedData {
     );
 
     private int dataVersion = CURRENT_DATA_VERSION;
-    private final Map<UUID, int[]> byNetworkId = new HashMap<>();
-    /** Legacy BlockPos keys awaiting {@link #migrateLegacy(MinecraftServer)}. */
-    private final Map<BlockPos, int[]> pendingLegacy = new HashMap<>();
-    private @Nullable transient MinecraftServer owningServer;
-    private boolean legacyMigrated;
+    private final Map<UUID, Map<UUID, Integer>> byNetworkId = new HashMap<>();
 
     public MisakaNetworkAllocations() {
     }
 
-    private static MisakaNetworkAllocations fromCodec(int dataVersion, Map<String, int[]> raw) {
+    private static MisakaNetworkAllocations fromCodec(int dataVersion, Map<String, Map<UUID, Integer>> raw) {
         var data = new MisakaNetworkAllocations();
         data.dataVersion = dataVersion;
         if (raw != null) {
             for (var entry : raw.entrySet()) {
-                var key = entry.getKey();
-                var percents = MisakaComputeSink.clampAllocations(entry.getValue());
-                if (key == null) {
+                if (entry.getKey() == null) {
                     continue;
                 }
                 try {
-                    data.byNetworkId.put(UUID.fromString(key), percents);
-                    continue;
+                    var networkId = UUID.fromString(entry.getKey());
+                    data.byNetworkId.put(networkId, clampPlayerPercents(entry.getValue()));
                 } catch (IllegalArgumentException ignored) {
-                }
-                var pos = tryParseBlockPos(key);
-                if (pos != null) {
-                    data.pendingLegacy.put(pos, percents);
+                    // Drop legacy BlockPos keys and unreadable entries (v1 sink arrays never decode here).
                 }
             }
         }
-        if (data.pendingLegacy.isEmpty()) {
-            data.dataVersion = CURRENT_DATA_VERSION;
-            data.legacyMigrated = true;
-        }
+        data.dataVersion = CURRENT_DATA_VERSION;
         return data;
     }
 
-    private Map<String, int[]> encodeAllocations() {
-        var out = new HashMap<String, int[]>();
-        byNetworkId.forEach((id, percents) -> out.put(id.toString(), percents));
-        // Preserve unmigrated legacy keys across save if server never ran.
-        pendingLegacy.forEach((pos, percents) ->
-                out.put(pos.getX() + "," + pos.getY() + "," + pos.getZ(), percents));
+    private Map<String, Map<UUID, Integer>> encodeAllocations() {
+        var out = new HashMap<String, Map<UUID, Integer>>();
+        byNetworkId.forEach((id, percents) -> out.put(id.toString(), Map.copyOf(percents)));
         return out;
     }
 
-    private static @Nullable BlockPos tryParseBlockPos(String value) {
-        try {
-            var parts = value.split(",");
-            if (parts.length != 3) {
-                return null;
-            }
-            return new BlockPos(
-                    Integer.parseInt(parts[0].trim()),
-                    Integer.parseInt(parts[1].trim()),
-                    Integer.parseInt(parts[2].trim())
-            );
-        } catch (NumberFormatException ex) {
-            return null;
+    public static Map<UUID, Integer> clampPlayerPercents(Map<UUID, Integer> raw) {
+        var out = new LinkedHashMap<UUID, Integer>();
+        if (raw == null || raw.isEmpty()) {
+            return out;
         }
+        int sum = 0;
+        for (var entry : raw.entrySet()) {
+            if (entry.getKey() == null || entry.getValue() == null) {
+                continue;
+            }
+            int value = Math.max(0, Math.min(100, entry.getValue()));
+            if (sum + value > 100) {
+                value = 100 - sum;
+            }
+            if (value > 0) {
+                out.put(entry.getKey(), value);
+            }
+            sum += value;
+            if (sum >= 100) {
+                break;
+            }
+        }
+        return out;
+    }
+
+    public static int sum(Map<UUID, Integer> percents) {
+        if (percents == null) {
+            return 0;
+        }
+        int sum = 0;
+        for (int value : percents.values()) {
+            sum += Math.max(0, value);
+        }
+        return sum;
     }
 
     public static MisakaNetworkAllocations get(MinecraftServer server) {
-        var data = server.overworld().getDataStorage().computeIfAbsent(SAVED_DATA_TYPE);
-        data.owningServer = server;
-        data.migrateLegacy(server);
-        return data;
+        return server.overworld().getDataStorage().computeIfAbsent(SAVED_DATA_TYPE);
     }
 
-    private void migrateLegacy(MinecraftServer server) {
-        if (legacyMigrated || pendingLegacy.isEmpty()) {
-            legacyMigrated = true;
-            dataVersion = CURRENT_DATA_VERSION;
-            return;
-        }
-        var level = server.overworld();
-        var registry = MisakaNetworkRegistry.get(server);
-        for (var entry : pendingLegacy.entrySet()) {
-            var networkId = registry.resolveOrCreate(level, entry.getKey());
-            byNetworkId.putIfAbsent(networkId, MisakaComputeSink.clampAllocations(entry.getValue()));
-        }
-        pendingLegacy.clear();
-        legacyMigrated = true;
-        dataVersion = CURRENT_DATA_VERSION;
-        setDirty();
-    }
-
-    public int[] get(UUID networkId) {
+    public Map<UUID, Integer> get(UUID networkId) {
         if (networkId == null) {
-            return new int[MisakaComputeSink.COUNT];
+            return Map.of();
         }
-        ensureMigrated();
         var stored = byNetworkId.get(networkId);
-        return stored == null
-                ? new int[MisakaComputeSink.COUNT]
-                : Arrays.copyOf(stored, MisakaComputeSink.COUNT);
+        return stored == null ? Map.of() : Map.copyOf(stored);
     }
 
-    public void set(UUID networkId, int[] percents) {
+    public void set(UUID networkId, Map<UUID, Integer> percents) {
         if (networkId == null) {
             return;
         }
-        ensureMigrated();
-        byNetworkId.put(networkId, MisakaComputeSink.clampAllocations(percents));
+        var clamped = clampPlayerPercents(percents);
+        if (clamped.isEmpty()) {
+            byNetworkId.remove(networkId);
+        } else {
+            byNetworkId.put(networkId, new LinkedHashMap<>(clamped));
+        }
         dataVersion = CURRENT_DATA_VERSION;
         setDirty();
     }
 
-    private void ensureMigrated() {
-        if (!legacyMigrated && owningServer != null) {
-            migrateLegacy(owningServer);
+    /** Ensure integrated networks without rows default 100% to {@code privilegePlayer}. */
+    public void ensureDefaultPrivilege(UUID networkId, UUID privilegePlayer) {
+        if (networkId == null || privilegePlayer == null) {
+            return;
+        }
+        if (!byNetworkId.containsKey(networkId) || byNetworkId.get(networkId).isEmpty()) {
+            set(networkId, Map.of(privilegePlayer, 100));
         }
     }
 }

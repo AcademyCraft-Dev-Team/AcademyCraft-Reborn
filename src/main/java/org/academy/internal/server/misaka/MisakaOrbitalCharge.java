@@ -2,12 +2,17 @@ package org.academy.internal.server.misaka;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
+import org.academy.AcademyCraft;
+import org.academy.api.common.misaka.MisakaComputeAccess;
+import org.academy.internal.common.misaka.MisakaNetworkPermission;
 import org.academy.internal.common.network.misaka.MisakaOrbitalChargePacket;
+import org.academy.internal.server.world.level.storage.MisakaNetworkGovernance;
 import org.academy.internal.server.world.level.storage.MisakaRelayRegistry;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
@@ -18,11 +23,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Hold-to-charge orbital strike for the laser designator.
- * Draws from the player's Misaka-allocated compute (as available CP), up to
- * {@code chargeRate} MSk/s, until {@code chargeNeed} is reached. Releasing early discards progress.
+ * All network compute is spent only through {@link MisakaComputeAccess#consumeRate}
+ * (registered HELD+ACTUAL device); charge accumulates solely from that return value.
  */
 public final class MisakaOrbitalCharge {
     private static final Map<UUID, Session> SESSIONS = new ConcurrentHashMap<>();
+    private static final Identifier DESIGNATOR_ID = AcademyCraft.academy("laser_designator");
+    private static final float GRANT_EPS = 1.0e-4f;
 
     private MisakaOrbitalCharge() {
     }
@@ -58,7 +65,7 @@ public final class MisakaOrbitalCharge {
             return;
         }
         clear(player.getUUID());
-        sync(player, false, 0.0f, chargeNeed(player.level().getServer()), 0.0f);
+        sync(player, false, 0.0f, chargeNeed(player.level().getServer()), 0.0f, "");
     }
 
     /**
@@ -76,58 +83,55 @@ public final class MisakaOrbitalCharge {
             return false;
         }
 
+        float need = chargeNeed(server);
+        float rateCap = chargeRate(server);
+        var session = session(player);
+        boolean firstTick = session.lastTick == Integer.MIN_VALUE;
+
         var gate = MisakaOrbitalStrikeSupport.validateBegin(server, satelliteId, player);
         if (gate != MisakaOrbitalStrikeSupport.BeginResult.OK) {
-            player.sendOverlayMessage(Component.translatable(MisakaOrbitalStrikeSupport.messageKey(gate)));
-            clear(player);
+            // Soft-block: keep hold HUD alive. Hard clear() every tick was wiping the action bar.
+            softBlock(player, session, need, MisakaOrbitalStrikeSupport.messageKey(gate));
             return false;
         }
 
         var entry = MisakaRelayRegistry.get(server).get(satelliteId);
         if (entry == null) {
-            clear(player);
+            softBlock(player, session, need, "message.academy.laser_designator_sat_missing");
             return false;
         }
 
-        var active = MisakaActiveNetworkData.get(server).getActive(player).orElse(null);
-        if (active == null || !active.equals(entry.networkId)) {
-            player.sendOverlayMessage(Component.translatable("message.academy.laser_designator_wrong_network"));
-            clear(player);
+        boolean switched = ensureActiveNetwork(player, entry.networkId, server.overworld().getGameTime());
+        if (!switched && !isActiveNetwork(player, entry.networkId)) {
+            softBlock(player, session, need, "message.academy.laser_designator_wrong_network");
             return false;
         }
 
-        float need = chargeNeed(server);
-        float rateCap = chargeRate(server);
-        String name = player.getGameProfile().name();
-        // Claimable share of network supply (friendly sisters), not last-settle demand fill.
-        float claimable = MisakaComputeContribution.claimableMskPerSecond(server, name, entry.networkId);
-        float rate = Math.min(rateCap, Math.max(0.0f, claimable));
-        var session = session(player);
-        if (!(rate > 0.0f)) {
-            player.sendOverlayMessage(Component.translatable("message.academy.laser_designator_no_alloc"));
-            session.touch(server.getTickCount());
-            sync(player, true, session.charge, need, 0.0f);
+        var access = ServerMisakaComputeAccess.INSTANCE;
+        // Refresh device budget on first hold tick / ActiveNetwork switch / empty budget so
+        // consumeRate can draw without waiting for the next settle second.
+        if (firstTick || switched || !(access.playerBudgetMskPerSecond(player) > GRANT_EPS)) {
+            MisakaComputeContribution.syncPlayerDeviceBudget(player, entry.networkId);
+        }
+
+        float hudRate = hudRate(access, player, rateCap);
+        float granted = MisakaComputeAccess.consumeRateStatic(player, DESIGNATOR_ID, rateCap);
+        if (!(granted > GRANT_EPS)) {
+            String reason;
+            if (access.effectivePercent(player, DESIGNATOR_ID) <= 0) {
+                reason = "message.academy.laser_designator_no_alloc";
+            } else if (!(access.playerBudgetMskPerSecond(player) > GRANT_EPS)) {
+                reason = "message.academy.laser_designator_no_compute";
+            } else {
+                reason = "message.academy.laser_designator_no_compute";
+            }
+            softBlock(player, session, need, reason);
             return false;
         }
 
-        int settleEpoch = server.getTickCount() / MisakaComputeContribution.SETTLE_INTERVAL_TICKS;
-        session.rollWindow(settleEpoch);
-
-        float want = Math.min(rate / MisakaComputeContribution.SETTLE_INTERVAL_TICKS, need - session.charge);
-        float room = rate - session.drawnThisWindow;
-        float take = Math.min(want, Math.max(0.0f, room));
-        if (!(take > 1.0e-4f)) {
-            sync(player, true, session.charge, need, rate);
-            return false;
-        }
-
-        // Spend from the player's claimable Misaka budget this settle window (demand ledger),
-        // not from last-second CP fill — idle friendly supply must still be usable.
-        MisakaComputeUsageTracker.addChargeUsage(player.getUUID(), take);
-        session.charge += take;
-        session.drawnThisWindow += take;
+        session.charge += granted;
         session.touch(server.getTickCount());
-        sync(player, true, session.charge, need, rate);
+        sync(player, true, session.charge, need, hudRate, "");
 
         if (session.charge + 1.0e-3f < need) {
             return false;
@@ -135,8 +139,7 @@ public final class MisakaOrbitalCharge {
 
         BlockPos target = aim.resolveTarget(player);
         if (target == null) {
-            player.sendOverlayMessage(Component.translatable("message.academy.laser_designator_no_target"));
-            clear(player);
+            softBlock(player, session, need, "message.academy.laser_designator_no_target");
             return false;
         }
 
@@ -147,16 +150,84 @@ public final class MisakaOrbitalCharge {
         return result == MisakaOrbitalStrikeSupport.BeginResult.OK;
     }
 
+    /**
+     * End-of-tick hook from device window flush. Charge is applied from
+     * {@link MisakaComputeAccess#consumeRate}'s return value inside {@link #tickCharge}.
+     */
+    public static void finalizeTickGrant(ServerPlayer player) {
+        // no-op — hold-use applies grants synchronously from consumeRate.
+    }
+
     public static void onReleased(ServerPlayer player) {
         var session = SESSIONS.remove(player.getUUID());
-        sync(player, false, 0.0f, chargeNeed(player.level().getServer()), 0.0f);
+        sync(player, false, 0.0f, chargeNeed(player.level().getServer()), 0.0f, "");
         if (session != null && session.charge > 1.0e-3f) {
             player.sendOverlayMessage(Component.translatable("message.academy.laser_designator_charge_cancel"));
         }
     }
 
-    private static void sync(ServerPlayer player, boolean active, float charge, float need, float rate) {
-        MisakaNetworkServer.send(player, new MisakaOrbitalChargePacket(active, charge, need, rate));
+    /**
+     * Keep the hold session + client HUD active, and pin a status lang key so the client
+     * does not replace it with an empty clear packet every tick.
+     */
+    private static void softBlock(ServerPlayer player, Session session, float need, String statusKey) {
+        var server = player.level().getServer();
+        if (server != null) {
+            session.touch(server.getTickCount());
+        }
+        sync(player, true, session.charge, need, 0.0f, statusKey);
+    }
+
+    /**
+     * Ensure ActiveNetwork matches the satellite network (auto-switch, no cooldown),
+     * when the player has satellite-use permission.
+     *
+     * @return true if the active network was changed this call
+     */
+    private static boolean ensureActiveNetwork(ServerPlayer player, UUID networkId, long gameTime) {
+        if (isActiveNetwork(player, networkId)) {
+            return false;
+        }
+        var governance = MisakaNetworkGovernance.get(player.level().getServer());
+        if (!governance.hasPermissionOrOpen(
+                player,
+                networkId,
+                MisakaNetworkPermission.SATELLITE_USE,
+                MisakaNetworkPermission.SATELLITE_MANAGE,
+                MisakaNetworkPermission.ACCESS,
+                MisakaNetworkPermission.ADMIN
+        )) {
+            return false;
+        }
+        MisakaActiveNetworkData.get(player.level().getServer())
+                .forceSetActive(player.getUUID(), networkId, gameTime);
+        return true;
+    }
+
+    private static boolean isActiveNetwork(ServerPlayer player, UUID networkId) {
+        var active = MisakaActiveNetworkData.get(player.level().getServer()).getActive(player).orElse(null);
+        return networkId.equals(active);
+    }
+
+    private static float hudRate(MisakaComputeAccess access, ServerPlayer player, float rateCap) {
+        float budget = Math.max(0.0f, access.playerBudgetMskPerSecond(player));
+        int percent = Math.max(0, access.effectivePercent(player, DESIGNATOR_ID));
+        float share = budget * (percent / 100.0f);
+        if (!(share > 0.0f)) {
+            return 0.0f;
+        }
+        return Math.min(rateCap, share);
+    }
+
+    private static void sync(
+            ServerPlayer player,
+            boolean active,
+            float charge,
+            float need,
+            float rate,
+            String statusKey
+    ) {
+        MisakaNetworkServer.send(player, new MisakaOrbitalChargePacket(active, charge, need, rate, statusKey));
     }
 
     private static Session session(ServerPlayer player) {
@@ -170,16 +241,7 @@ public final class MisakaOrbitalCharge {
 
     private static final class Session {
         float charge;
-        float drawnThisWindow;
-        int settleEpoch = Integer.MIN_VALUE;
         int lastTick = Integer.MIN_VALUE;
-
-        void rollWindow(int epoch) {
-            if (epoch != settleEpoch) {
-                settleEpoch = epoch;
-                drawnThisWindow = 0.0f;
-            }
-        }
 
         void touch(int tick) {
             lastTick = tick;

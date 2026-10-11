@@ -7,7 +7,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import org.academy.internal.client.gui.screen.MisakaNetworkPanelScreen;
 import org.academy.internal.common.network.PacketTypes;
-import org.academy.internal.server.misaka.MisakaComputeSink;
+import org.academy.internal.server.world.level.storage.MisakaNetworkAllocations;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.api.common.network.ThreadType;
 import org.misaka.api.common.network.annotation.PacketTarget;
@@ -16,7 +16,9 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @PacketTarget(ThreadType.CLIENT)
@@ -38,7 +40,8 @@ public final class MisakaNetManageDataPacket
     private final float priorityAllocatedMsk;
     private final float sharedAllocatedMsk;
     private final List<SisterSummary> sisters;
-    private final int[] percents;
+    private final List<PlayerPercent> playerPercents;
+    private final boolean integrated;
     private final List<String> adminNames;
     private final List<MemberSummary> members;
     private final boolean viewerCanEditMembers;
@@ -54,7 +57,8 @@ public final class MisakaNetManageDataPacket
             float priorityAllocatedMsk,
             float sharedAllocatedMsk,
             List<SisterSummary> sisters,
-            int[] percents,
+            List<PlayerPercent> playerPercents,
+            boolean integrated,
             List<String> adminNames,
             List<MemberSummary> members,
             boolean viewerCanEditMembers
@@ -69,10 +73,32 @@ public final class MisakaNetManageDataPacket
         this.priorityAllocatedMsk = priorityAllocatedMsk;
         this.sharedAllocatedMsk = sharedAllocatedMsk;
         this.sisters = sisters == null ? List.of() : List.copyOf(sisters);
-        this.percents = MisakaComputeSink.clampAllocations(percents);
+        this.playerPercents = playerPercents == null
+                ? List.of()
+                : List.copyOf(toPercents(MisakaNetworkAllocations.clampPlayerPercents(toMap(playerPercents))));
+        this.integrated = integrated;
         this.adminNames = adminNames == null ? List.of() : List.copyOf(adminNames);
         this.members = members == null ? List.of() : List.copyOf(members);
         this.viewerCanEditMembers = viewerCanEditMembers;
+    }
+
+    private static Map<UUID, Integer> toMap(List<PlayerPercent> list) {
+        var map = new LinkedHashMap<UUID, Integer>();
+        if (list == null) {
+            return map;
+        }
+        for (var entry : list) {
+            if (entry != null && entry.playerUuid() != null) {
+                map.put(entry.playerUuid(), entry.percent());
+            }
+        }
+        return map;
+    }
+
+    private static List<PlayerPercent> toPercents(Map<UUID, Integer> map) {
+        var list = new ArrayList<PlayerPercent>();
+        map.forEach((uuid, percent) -> list.add(new PlayerPercent(uuid, percent)));
+        return list;
     }
 
     private static void encode(ByteBuf buf, MisakaNetManageDataPacket packet) {
@@ -96,13 +122,17 @@ public final class MisakaNetManageDataPacket
             buf.writeBoolean(sister.incapacitated());
             buf.writeBoolean(sister.inCoverage());
         }
-        for (int i = 0; i < MisakaComputeSink.COUNT; i++) {
-            ByteBufCodecs.VAR_INT.encode(buf, packet.percents[i]);
+        ByteBufCodecs.VAR_INT.encode(buf, packet.playerPercents.size());
+        for (var entry : packet.playerPercents) {
+            MisakaPacketCodecs.encodeUuid(buf, entry.playerUuid());
+            ByteBufCodecs.VAR_INT.encode(buf, entry.percent());
         }
+        buf.writeBoolean(packet.integrated);
         ByteBufCodecs.collection(ArrayList::new, ByteBufCodecs.STRING_UTF8)
                 .encode(buf, new ArrayList<>(packet.adminNames));
         ByteBufCodecs.VAR_INT.encode(buf, packet.members.size());
         for (var member : packet.members) {
+            MisakaPacketCodecs.encodeUuid(buf, member.playerUuid());
             ByteBufCodecs.STRING_UTF8.encode(buf, member.name());
             buf.writeBoolean(member.admin());
             ByteBufCodecs.collection(ArrayList::new, ByteBufCodecs.STRING_UTF8)
@@ -135,15 +165,21 @@ public final class MisakaNetManageDataPacket
                     buf.readBoolean()
             ));
         }
-        int[] percents = new int[MisakaComputeSink.COUNT];
-        for (int i = 0; i < MisakaComputeSink.COUNT; i++) {
-            percents[i] = ByteBufCodecs.VAR_INT.decode(buf);
+        int percentCount = ByteBufCodecs.VAR_INT.decode(buf);
+        var playerPercents = new ArrayList<PlayerPercent>(percentCount);
+        for (int i = 0; i < percentCount; i++) {
+            playerPercents.add(new PlayerPercent(
+                    MisakaPacketCodecs.decodeUuid(buf),
+                    ByteBufCodecs.VAR_INT.decode(buf)
+            ));
         }
+        boolean integrated = buf.readBoolean();
         List<String> adminNames = ByteBufCodecs.collection(ArrayList::new, ByteBufCodecs.STRING_UTF8).decode(buf);
         int memberCount = ByteBufCodecs.VAR_INT.decode(buf);
         var members = new ArrayList<MemberSummary>(memberCount);
         for (int i = 0; i < memberCount; i++) {
             members.add(new MemberSummary(
+                    MisakaPacketCodecs.decodeUuid(buf),
                     ByteBufCodecs.STRING_UTF8.decode(buf),
                     buf.readBoolean(),
                     ByteBufCodecs.collection(ArrayList::new, ByteBufCodecs.STRING_UTF8).decode(buf)
@@ -161,7 +197,8 @@ public final class MisakaNetManageDataPacket
                 priorityAllocatedMsk,
                 sharedAllocatedMsk,
                 sisters,
-                percents,
+                playerPercents,
+                integrated,
                 adminNames,
                 members,
                 viewerCanEditMembers
@@ -216,8 +253,12 @@ public final class MisakaNetManageDataPacket
         return sisters;
     }
 
-    public int[] percents() {
-        return percents.clone();
+    public List<PlayerPercent> playerPercents() {
+        return playerPercents;
+    }
+
+    public boolean integrated() {
+        return integrated;
     }
 
     public List<String> adminNames() {
@@ -233,7 +274,7 @@ public final class MisakaNetManageDataPacket
     }
 
     public int allocatedSum() {
-        return MisakaComputeSink.sum(percents);
+        return MisakaNetworkAllocations.sum(toMap(playerPercents));
     }
 
     @Override
@@ -256,7 +297,10 @@ public final class MisakaNetManageDataPacket
         }
     }
 
-    public record MemberSummary(String name, boolean admin, List<String> permissions) {
+    public record PlayerPercent(UUID playerUuid, int percent) {
+    }
+
+    public record MemberSummary(UUID playerUuid, String name, boolean admin, List<String> permissions) {
         public MemberSummary {
             name = name == null ? "" : name;
             permissions = permissions == null ? List.of() : List.copyOf(permissions);

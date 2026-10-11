@@ -18,7 +18,6 @@ import org.academy.internal.common.network.misaka.SetMisakaNetworkNodePacket
 import org.academy.internal.common.network.misaka.SetMisakaWanderAnchorPacket
 import org.academy.internal.common.network.misaka.SetMisakaWanderStylePacket
 import org.academy.internal.common.world.entity.misaka.WanderStyle
-import org.academy.internal.server.misaka.MisakaComputeSink
 import org.academy.internal.server.misaka.WirelessForwardingMisakaNAT
 import org.misaka.MisakaNetworkClient
 import java.util.UUID
@@ -32,6 +31,7 @@ class MisakaNetworkPanelScreen(
     private lateinit var managePage: LinearLayoutWidget
     override lateinit var sistersTabContent: FrameLayoutWidget
     override lateinit var allocTabContent: FrameLayoutWidget
+    override lateinit var allocRowsHost: LinearLayoutWidget
     override lateinit var membersTabContent: FrameLayoutWidget
     override var manageSisters: List<MisakaNetManageDataPacket.SisterSummary> = emptyList()
     override lateinit var sistersRows: LinearLayoutWidget
@@ -71,9 +71,10 @@ class MisakaNetworkPanelScreen(
     override var manageCanEditMembers = false
     override var memberPermIndex = 0
     override var selectedMemberName: String = ""
-    override var localPercents = IntArray(MisakaComputeSink.COUNT)
-    override val allocSeekBars = arrayOfNulls<SeekBarWidget>(MisakaComputeSink.COUNT)
-    override val allocInputs = arrayOfNulls<TextBoxWidget>(MisakaComputeSink.COUNT)
+    override var manageIntegrated = false
+    override var localPlayerPercents: MutableMap<UUID, Int> = linkedMapOf()
+    override val allocSeekBars: MutableMap<UUID, SeekBarWidget> = linkedMapOf()
+    override val allocInputs: MutableMap<UUID, TextBoxWidget> = linkedMapOf()
     override var suppressAllocCallbacks = false
     override lateinit var memberNameInput: TextBoxWidget
 
@@ -177,7 +178,11 @@ class MisakaNetworkPanelScreen(
         manageAdminNames = packet.adminNames()
         manageMembers = packet.members()
         manageCanEditMembers = packet.viewerCanEditMembers()
-        localPercents = packet.percents()
+        manageIntegrated = packet.integrated()
+        localPlayerPercents = LinkedHashMap()
+        for (pp in packet.playerPercents()) {
+            localPlayerPercents[pp.playerUuid()] = pp.percent()
+        }
         manageSisters = packet.sisters()
         MisakaPanelManageUi.refreshSisterRows(this)
         MisakaPanelManageUi.refreshSisterSelection(this)
@@ -199,13 +204,7 @@ class MisakaNetworkPanelScreen(
                 pages
             ).string
         }
-        MisakaPanelManageUi.refreshAllocWidgets(this)
-        if (::allocatedLabel.isInitialized) {
-            allocatedLabel.text = Component.translatable(
-                "screen.academy.misaka_net_allocated",
-                MisakaComputeSink.sum(localPercents)
-            ).string
-        }
+        MisakaPanelManageUi.refreshAllocTab(this)
     }
 
     override fun createSubmenuTopBar(titleText: String): LinearLayoutWidget {

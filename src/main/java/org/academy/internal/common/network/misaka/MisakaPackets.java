@@ -13,6 +13,7 @@ public final class MisakaPackets {
         MisakaSisterHandInteractPacket.initServer();
         RequestMisakaNetManagePacket.initServer();
         SetMisakaNetworkAllocationPacket.initServer();
+        SetMisakaDeviceAllocationPacket.initServer();
         SetMisakaNetworkPermissionPacket.initServer();
         DisconnectMisakaFromNetworkPacket.initServer();
         TransferDeviceOwnerPacket.initServer();
@@ -22,5 +23,6 @@ public final class MisakaPackets {
         MisakaPanelDataPacket.initClient();
         MisakaNetManageDataPacket.initClient();
         MisakaOrbitalChargePacket.initClient();
+        MisakaDeviceQuotaSyncPacket.initClient();
     }
 }

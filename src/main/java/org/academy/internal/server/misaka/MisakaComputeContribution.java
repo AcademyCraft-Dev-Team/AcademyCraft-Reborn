@@ -3,9 +3,7 @@ package org.academy.internal.server.misaka;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.AcademyCraft;
-import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.misaka.MisakaNAT;
-import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.misaka.MisakaNetworkPermission;
 import org.academy.internal.common.world.entity.misaka.favor.FavorService;
 import org.academy.internal.server.world.level.storage.MisakaNetworkAllocations;
@@ -69,37 +67,32 @@ public final class MisakaComputeContribution {
     }
 
     /**
-     * Settle personal + shared + leftover-sink CP once per second.
-     * Each player receives from at most one network: their {@link MisakaActiveNetworkData}
-     * selection if set and reachable, otherwise the lexicographically first reachable network
-     * (auto-bind on first settle).
+     * Settle player MSk budgets once per second.
+     * Integrated networks cut the pool by admin player percents; unintegrated networks still use
+     * benevolent-set fairness. Results feed device windows — no direct CP grant.
      */
     public static void settleAndApply(MinecraftServer server) {
         if (server.getTickCount() % SETTLE_INTERVAL_TICKS != 0) {
             return;
         }
 
+        var access = ServerMisakaComputeAccess.INSTANCE;
+        access.closeAllWindows(server);
+
         var index = MisakaComputeIndex.get(server);
         index.rebuildIfDirty(server);
 
         float ratio = cpPerMsk(server);
-        var usageByUuid = MisakaComputeUsageTracker.snapshot();
         var chargeByUuid = MisakaComputeUsageTracker.chargeSnapshot();
         var networkUsageById = new HashMap<>(MisakaComputeUsageTracker.networkSnapshot());
-        var usageByName = new HashMap<String, Float>();
         var playerByName = new HashMap<String, ServerPlayer>();
 
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             String name = player.getGameProfile().name();
             playerByName.put(name, player);
             index.putPlayerName(name, player.getUUID());
-            float used = usageByUuid.getOrDefault(player.getUUID(), 0.0f);
-            if (used > 0.0f) {
-                usageByName.put(name, used);
-            }
         }
 
-        // Fold designator charge into per-network supply burn (no CP payout).
         var activeDataEarly = MisakaActiveNetworkData.get(server);
         for (var entry : chargeByUuid.entrySet()) {
             float charge = entry.getValue() == null ? 0.0f : entry.getValue();
@@ -123,14 +116,13 @@ public final class MisakaComputeContribution {
         }
 
         var groupsByNetwork = new HashMap<UUID, List<MisakaComputeSettle.GroupBucket>>();
-        var namesNeeded = new HashSet<String>(usageByName.keySet());
+        var namesNeeded = new HashSet<String>();
         for (var entry : index.benevolentGroups().entrySet()) {
             var key = entry.getKey();
-            List<String> names = key.groupNames();
-            namesNeeded.addAll(names);
+            namesNeeded.addAll(key.groupNames());
             groupsByNetwork
                     .computeIfAbsent(key.networkId(), ignored -> new ArrayList<>())
-                    .add(new MisakaComputeSettle.GroupBucket(names, entry.getValue()));
+                    .add(new MisakaComputeSettle.GroupBucket(key.groupNames(), entry.getValue()));
         }
 
         var allocations = MisakaNetworkAllocations.get(server);
@@ -138,15 +130,27 @@ public final class MisakaComputeContribution {
         networkIds.addAll(groupsByNetwork.keySet());
         networkIds.addAll(index.networkTotals().keySet());
 
-        var reconByNetwork = new HashMap<UUID, String>();
-        var percentsByNetwork = new HashMap<UUID, int[]>();
         for (UUID networkId : networkIds) {
             String recon = index.reconstructionPrivilege(networkId);
             if (recon != null && !recon.isEmpty()) {
-                reconByNetwork.put(networkId, recon);
                 namesNeeded.add(recon);
+                UUID privilegeUuid = index.resolvePlayerUuid(recon);
+                if (privilegeUuid == null) {
+                    ServerPlayer online = playerByName.get(recon);
+                    if (online != null) {
+                        privilegeUuid = online.getUUID();
+                    }
+                }
+                if (privilegeUuid != null && index.reconstructionSisterUuid(networkId) != null) {
+                    allocations.ensureDefaultPrivilege(networkId, privilegeUuid);
+                }
             }
-            percentsByNetwork.put(networkId, allocations.get(networkId));
+        }
+
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (access.hasDeviceConsumer(player)) {
+                namesNeeded.add(player.getGameProfile().name());
+            }
         }
 
         var onlineByNetwork = new HashMap<UUID, Map<String, Boolean>>();
@@ -174,74 +178,123 @@ public final class MisakaComputeContribution {
             }
         }
 
-        var personalCp = new HashMap<String, Float>();
-        var sharedCp = new HashMap<String, Float>();
-        var networkCp = new HashMap<String, Float>();
         var nextSatisfaction = new HashMap<String, Float>();
         var nextAllocated = new HashMap<String, Float>();
         var nextNetworkDemand = new HashMap<UUID, Float>();
         var nextNetworkPriority = new HashMap<UUID, Float>();
         var nextNetworkShared = new HashMap<UUID, Float>();
+        var nextBudgets = new HashMap<UUID, Float>();
         var governance = MisakaNetworkGovernance.get(server);
 
         for (UUID networkId : networkIds.stream().sorted().toList()) {
-            var demandForNet = new HashMap<String, Float>();
-            float demandSum = 0.0f;
-            for (var entry : usageByName.entrySet()) {
-                if (networkId.equals(activeNetworkByName.get(entry.getKey()))) {
-                    demandForNet.put(entry.getKey(), entry.getValue());
-                    demandSum += entry.getValue();
-                }
-            }
-            nextNetworkDemand.put(networkId, demandSum);
-            Map<String, Boolean> online = onlineByNetwork.getOrDefault(networkId, Map.of());
-            var accessNames = sharedAccessNames(governance, networkId, demandForNet.keySet(), playerByName);
             float networkBurn = networkUsageById.getOrDefault(networkId, 0.0f);
             var groupsForNet = applyNetworkBurn(
                     groupsByNetwork.getOrDefault(networkId, List.of()),
                     networkBurn
             );
-            // Include direct network draws in demand for UI satisfaction.
-            if (networkBurn > 0.0f) {
-                nextNetworkDemand.put(networkId, demandSum + networkBurn);
+            Map<String, Boolean> online = onlineByNetwork.getOrDefault(networkId, Map.of());
+            float totalSupply = 0.0f;
+            for (var bucket : groupsForNet) {
+                if (bucket != null) {
+                    totalSupply += Math.max(0.0f, bucket.mskTick());
+                }
             }
-            // §7.1: a network without a reconstruction work stays dispersed — each benevolent
-            // set keeps its own sisters' output instead of feeding one network-wide pool.
-            var partial = index.reconstructionSisterUuid(networkId) == null
-                    ? MisakaComputeSettle.settleUnintegrated(
-                            groupsForNet,
-                            demandForNet,
-                            online,
-                            null,
-                            ratio,
-                            accessNames
-                    )
-                    : MisakaComputeSettle.settle(
-                            groupsForNet,
-                            demandForNet,
-                            online,
-                            null,
-                            percentsByNetwork.get(networkId),
-                            reconByNetwork.get(networkId),
-                            ratio,
-                            accessNames
-                    );
-            mergeFloatMap(personalCp, partial.personalCpByName());
-            mergeFloatMap(sharedCp, partial.sharedCpByName());
-            mergeFloatMap(networkCp, partial.networkCpByName());
-            nextSatisfaction.putAll(partial.satisfactionByName());
-            float prioritySum = 0.0f;
-            for (var entry : partial.personalAllocatedMskByName().entrySet()) {
-                nextAllocated.merge(entry.getKey(), entry.getValue(), Float::sum);
-                prioritySum += entry.getValue();
+
+            if (index.reconstructionSisterUuid(networkId) == null) {
+                var demandForNet = new HashMap<String, Float>();
+                for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                    String name = player.getGameProfile().name();
+                    if (!networkId.equals(activeNetworkByName.get(name))) {
+                        continue;
+                    }
+                    if (!access.hasDeviceConsumer(player)) {
+                        continue;
+                    }
+                    demandForNet.put(name, Float.MAX_VALUE / 4.0f);
+                }
+                float uiDemand = demandForNet.isEmpty() ? 0.0f : totalSupply;
+                nextNetworkDemand.put(networkId, uiDemand + Math.max(0.0f, networkBurn));
+                var accessNames = sharedAccessNames(governance, networkId, demandForNet.keySet(), playerByName);
+                // Device consumers on ActiveNetwork receive budgets even OOR (satellite / designator).
+                // Coverage still gates sister supply via networkTotals; it must not zero device cuts.
+                var settleOnline = new HashMap<>(online);
+                for (String name : demandForNet.keySet()) {
+                    settleOnline.put(name, true);
+                }
+                var partial = MisakaComputeSettle.settleUnintegrated(
+                        groupsForNet,
+                        demandForNet,
+                        settleOnline,
+                        null,
+                        ratio,
+                        accessNames
+                );
+                nextSatisfaction.putAll(partial.satisfactionByName());
+                float prioritySum = 0.0f;
+                for (var entry : partial.personalAllocatedMskByName().entrySet()) {
+                    nextAllocated.merge(entry.getKey(), entry.getValue(), Float::sum);
+                    prioritySum += entry.getValue();
+                    ServerPlayer player = playerByName.get(entry.getKey());
+                    if (player != null) {
+                        nextBudgets.merge(player.getUUID(), entry.getValue(), Float::sum);
+                    }
+                }
+                float sharedSum = 0.0f;
+                for (var entry : partial.sharedAllocatedMskByName().entrySet()) {
+                    nextAllocated.merge(entry.getKey(), entry.getValue(), Float::sum);
+                    sharedSum += entry.getValue();
+                    ServerPlayer player = playerByName.get(entry.getKey());
+                    if (player != null) {
+                        nextBudgets.merge(player.getUUID(), entry.getValue(), Float::sum);
+                    }
+                }
+                nextNetworkPriority.put(networkId, prioritySum);
+                nextNetworkShared.put(networkId, sharedSum);
+            } else {
+                var playerPercents = allocations.get(networkId);
+                float demandSum = 0.0f;
+                float prioritySum = 0.0f;
+                for (var entry : playerPercents.entrySet()) {
+                    UUID playerUuid = entry.getKey();
+                    int percent = entry.getValue() == null ? 0 : entry.getValue();
+                    if (percent <= 0) {
+                        continue;
+                    }
+                    ServerPlayer player = null;
+                    for (ServerPlayer onlinePlayer : server.getPlayerList().getPlayers()) {
+                        if (onlinePlayer.getUUID().equals(playerUuid)) {
+                            player = onlinePlayer;
+                            break;
+                        }
+                    }
+                    if (player == null) {
+                        continue;
+                    }
+                    String name = player.getGameProfile().name();
+                    if (!networkId.equals(activeNetworkByName.get(name))) {
+                        continue;
+                    }
+                    // Coverage (online map) is not required: player UUID% is an admin cut of the
+                    // network pool for device budgets (orbital designator may be used OOR).
+                    if (!governance.hasPermissionOrOpen(
+                            player, networkId, MisakaNetworkPermission.ACCESS, MisakaNetworkPermission.ADMIN
+                    )) {
+                        continue;
+                    }
+                    float budget = totalSupply * (percent / 100.0f);
+                    if (!(budget > 0.0f)) {
+                        continue;
+                    }
+                    nextBudgets.merge(playerUuid, budget, Float::sum);
+                    nextAllocated.merge(name, budget, Float::sum);
+                    nextSatisfaction.put(name, 1.0f);
+                    demandSum += budget;
+                    prioritySum += budget;
+                }
+                nextNetworkDemand.put(networkId, demandSum + Math.max(0.0f, networkBurn));
+                nextNetworkPriority.put(networkId, prioritySum);
+                nextNetworkShared.put(networkId, 0.0f);
             }
-            float sharedSum = 0.0f;
-            for (var entry : partial.sharedAllocatedMskByName().entrySet()) {
-                nextAllocated.merge(entry.getKey(), entry.getValue(), Float::sum);
-                sharedSum += entry.getValue();
-            }
-            nextNetworkPriority.put(networkId, prioritySum);
-            nextNetworkShared.put(networkId, sharedSum);
         }
 
         lastSatisfactionByName.clear();
@@ -255,15 +308,126 @@ public final class MisakaComputeContribution {
         lastNetworkSharedAllocated.clear();
         lastNetworkSharedAllocated.putAll(nextNetworkShared);
 
-        var academy = server.getAcademyCraftServer();
-        if (academy != null) {
-            var ability = academy.getAbilitySystemServer();
-            applyNamedCp(personalCp, playerByName, ability);
-            applyNamedCp(sharedCp, playerByName, ability);
-            applyNamedCp(networkCp, playerByName, ability);
-        }
+        access.clearBudgets();
+        nextBudgets.forEach(access::setPlayerBudget);
+        access.openAllWindows(server);
 
         MisakaComputeUsageTracker.clear();
+        MisakaDeviceQuotaSync.syncAll(server);
+    }
+
+    /**
+     * Immediately apply the device-budget cut for {@code networkId} to this player and reopen
+     * their ACTUAL/FORCE window. Used when ActiveNetwork changes mid settle-window (e.g. laser
+     * designator binds to a satellite network). Spending still goes only through
+     * {@link org.academy.api.common.misaka.MisakaComputeAccess#consumeRate}.
+     */
+    public static void syncPlayerDeviceBudget(ServerPlayer player, UUID networkId) {
+        if (player == null || networkId == null) {
+            return;
+        }
+        var server = player.level().getServer();
+        if (server == null) {
+            return;
+        }
+        var access = ServerMisakaComputeAccess.INSTANCE;
+        float budget = computeDeviceBudgetMsk(server, player, networkId);
+        access.setPlayerBudget(player.getUUID(), budget);
+        access.reopenWindow(player);
+    }
+
+    /**
+     * Device-budget MSk/s for {@code player} on {@code networkId}, using the same rules as
+     * {@link #settleAndApply} (integrated UUID% cut, or unintegrated Max-Min with OOR-eligible
+     * device consumers). Returns 0 when the player is not a device consumer or lacks ACCESS.
+     */
+    static float computeDeviceBudgetMsk(MinecraftServer server, ServerPlayer player, UUID networkId) {
+        if (server == null || player == null || networkId == null) {
+            return 0.0f;
+        }
+        var access = ServerMisakaComputeAccess.INSTANCE;
+        if (!access.hasDeviceConsumer(player)) {
+            return 0.0f;
+        }
+        var governance = MisakaNetworkGovernance.get(server);
+        if (!governance.hasPermissionOrOpen(
+                player, networkId, MisakaNetworkPermission.ACCESS, MisakaNetworkPermission.ADMIN
+        )) {
+            return 0.0f;
+        }
+        var index = MisakaComputeIndex.get(server);
+        index.rebuildIfDirty(server);
+        float totalSupply = index.networkTotals().getOrDefault(networkId, 0.0f);
+        if (!(totalSupply > DEMAND_EPS)) {
+            return 0.0f;
+        }
+        if (index.reconstructionSisterUuid(networkId) != null) {
+            int percent = MisakaNetworkAllocations.get(server).get(networkId)
+                    .getOrDefault(player.getUUID(), 0);
+            if (percent <= 0) {
+                return 0.0f;
+            }
+            return totalSupply * (percent / 100.0f);
+        }
+
+        var groupsForNet = new ArrayList<MisakaComputeSettle.GroupBucket>();
+        for (var entry : index.benevolentGroups().entrySet()) {
+            if (!networkId.equals(entry.getKey().networkId())) {
+                continue;
+            }
+            groupsForNet.add(new MisakaComputeSettle.GroupBucket(
+                    entry.getKey().groupNames(),
+                    entry.getValue() == null ? 0.0f : entry.getValue()
+            ));
+        }
+        float networkBurn = MisakaComputeUsageTracker.networkSnapshot().getOrDefault(networkId, 0.0f);
+        for (var entry : MisakaComputeUsageTracker.chargeSnapshot().entrySet()) {
+            float charge = entry.getValue() == null ? 0.0f : entry.getValue();
+            if (!(charge > 0.0f)) {
+                continue;
+            }
+            for (ServerPlayer onlinePlayer : server.getPlayerList().getPlayers()) {
+                if (!onlinePlayer.getUUID().equals(entry.getKey())) {
+                    continue;
+                }
+                var active = MisakaActiveNetworkData.get(server).getActive(onlinePlayer).orElse(null);
+                if (networkId.equals(active)) {
+                    networkBurn += charge;
+                }
+                break;
+            }
+        }
+        groupsForNet = new ArrayList<>(applyNetworkBurn(groupsForNet, networkBurn));
+
+        var demandForNet = new HashMap<String, Float>();
+        var settleOnline = new HashMap<String, Boolean>();
+        var playerByName = new HashMap<String, ServerPlayer>();
+        for (ServerPlayer onlinePlayer : server.getPlayerList().getPlayers()) {
+            String name = onlinePlayer.getGameProfile().name();
+            playerByName.put(name, onlinePlayer);
+            var active = MisakaActiveNetworkData.get(server).getActive(onlinePlayer).orElse(null);
+            if (!networkId.equals(active) || !access.hasDeviceConsumer(onlinePlayer)) {
+                continue;
+            }
+            demandForNet.put(name, Float.MAX_VALUE / 4.0f);
+            settleOnline.put(name, true);
+        }
+        String selfName = player.getGameProfile().name();
+        demandForNet.putIfAbsent(selfName, Float.MAX_VALUE / 4.0f);
+        settleOnline.put(selfName, true);
+
+        var accessNames = sharedAccessNames(governance, networkId, demandForNet.keySet(), playerByName);
+        var partial = MisakaComputeSettle.settleUnintegrated(
+                groupsForNet,
+                demandForNet,
+                settleOnline,
+                null,
+                cpPerMsk(server),
+                accessNames
+        );
+        float personal = partial.personalAllocatedMskByName().getOrDefault(selfName, 0.0f);
+        float shared = partial.sharedAllocatedMskByName().getOrDefault(selfName, 0.0f);
+        return Math.max(0.0f, personal + shared);
     }
 
     /** Cached personal satisfaction from the last settle, or empty if never settled. */
@@ -280,70 +444,6 @@ public final class MisakaComputeContribution {
             return 0.0f;
         }
         return lastAllocatedMskByName.getOrDefault(name, 0.0f);
-    }
-
-    /**
-     * MSk/s this player can claim from {@code networkId} right now (benevolent-set share, or
-     * full integrated pool with ACCESS). Independent of last-settle demand allocation — idle
-     * supply still counts so friendly sisters always yield usable compute.
-     */
-    public static float claimableMskPerSecond(
-            MinecraftServer server,
-            String playerName,
-            UUID networkId
-    ) {
-        if (server == null || networkId == null || playerName == null || playerName.isEmpty()) {
-            return 0.0f;
-        }
-        var index = MisakaComputeIndex.get(server);
-        index.rebuildIfDirty(server);
-        float total = index.networkTotals().getOrDefault(networkId, 0.0f);
-        if (!(total > 0.0f)) {
-            return 0.0f;
-        }
-
-        ServerPlayer online = null;
-        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            if (playerName.equals(player.getGameProfile().name())) {
-                online = player;
-                break;
-            }
-        }
-        if (online == null) {
-            return 0.0f;
-        }
-
-        var governance = MisakaNetworkGovernance.get(server);
-        boolean access = governance.hasPermissionOrOpen(
-                online,
-                networkId,
-                MisakaNetworkPermission.ACCESS,
-                MisakaNetworkPermission.ADMIN
-        );
-        if (!access) {
-            return 0.0f;
-        }
-
-        // Integrated network: ACCESS members may draw on the whole pool.
-        if (index.reconstructionSisterUuid(networkId) != null) {
-            return total;
-        }
-
-        // Dispersed: only buckets that list this player as benevolent.
-        float sum = 0.0f;
-        for (var entry : index.benevolentGroups().entrySet()) {
-            if (!networkId.equals(entry.getKey().networkId())) {
-                continue;
-            }
-            if (!entry.getKey().groupNames().contains(playerName)) {
-                continue;
-            }
-            float msk = entry.getValue() == null ? 0.0f : entry.getValue();
-            if (msk > 0.0f) {
-                sum += msk;
-            }
-        }
-        return sum;
     }
 
     /**
@@ -432,8 +532,9 @@ public final class MisakaComputeContribution {
     }
 
     /**
-     * Prefer persisted ActiveNetwork when reachable; otherwise auto-select the first reachable
-     * network and persist it (no cooldown on auto-bind).
+     * Prefer the player's persisted ActiveNetwork when it still names a known network
+     * (coverage is not required — orbital designator / device budgets must keep working OOR).
+     * If unset, auto-select the first reachable network and persist it (no cooldown on auto-bind).
      */
     private static @Nullable UUID resolveActiveNetwork(
             MisakaActiveNetworkData activeData,
@@ -446,7 +547,7 @@ public final class MisakaComputeContribution {
         Optional<UUID> stored = activeData.getActive(player);
         if (stored.isPresent()) {
             UUID id = stored.get();
-            if (Boolean.TRUE.equals(onlineByNetwork.getOrDefault(id, Map.of()).get(name))) {
+            if (networkIds.contains(id)) {
                 return id;
             }
         }
@@ -524,31 +625,6 @@ public final class MisakaComputeContribution {
             scaled.add(new MisakaComputeSettle.GroupBucket(bucket.groupNames(), bucket.mskTick() * scale));
         }
         return scaled;
-    }
-
-    private static void applyNamedCp(
-            Map<String, Float> deltas,
-            Map<String, ServerPlayer> players,
-            AbilitySystemServer ability
-    ) {
-        for (var entry : deltas.entrySet()) {
-            float add = entry.getValue() == null ? 0.0f : entry.getValue();
-            if (!(add > 0.0f)) {
-                continue;
-            }
-            ServerPlayer player = players.get(entry.getKey());
-            if (player == null) {
-                continue;
-            }
-            UUID uuid = player.getUUID();
-            float max = ability.getPlayerMaxCP(uuid);
-            float available = ability.getPlayerAvailableCP(uuid);
-            float next = Math.min(max, available + add);
-            if (next > available) {
-                ability.setPlayerAvailableCP(uuid, next);
-                ability.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
-            }
-        }
     }
 
     /** Notify after Misaka contribution may have changed; also dirties the compute index. */

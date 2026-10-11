@@ -370,7 +370,7 @@ public final class MisakaNetworkGovernance extends SavedData {
             }
             var sorted = new ArrayList<>(builder.perms);
             sorted.sort(Enum::compareTo);
-            rows.add(new MemberRow(name, builder.admin, List.copyOf(sorted)));
+            rows.add(new MemberRow(uuid, name, builder.admin, List.copyOf(sorted)));
         });
         rows.sort((a, b) -> {
             if (a.admin() != b.admin()) {
@@ -381,7 +381,7 @@ public final class MisakaNetworkGovernance extends SavedData {
         return rows;
     }
 
-    public record MemberRow(String name, boolean admin, List<MisakaNetworkPermission> permissions) {
+    public record MemberRow(UUID playerUuid, String name, boolean admin, List<MisakaNetworkPermission> permissions) {
         public MemberRow {
             name = name == null ? "" : name;
             permissions = permissions == null ? List.of() : List.copyOf(permissions);

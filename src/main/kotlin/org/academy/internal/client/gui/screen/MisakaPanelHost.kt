@@ -25,13 +25,16 @@ internal interface MisakaPanelHost {
     var manageYourSatisfaction: Float
     var managePriorityAllocatedMsk: Float
     var manageSharedAllocatedMsk: Float
-    var localPercents: IntArray
-    val allocSeekBars: Array<SeekBarWidget?>
-    val allocInputs: Array<TextBoxWidget?>
+    /** Integrated network: player UUID → percent. Empty when unintegrated (alloc tab locked). */
+    var manageIntegrated: Boolean
+    var localPlayerPercents: MutableMap<UUID, Int>
+    val allocSeekBars: MutableMap<UUID, SeekBarWidget>
+    val allocInputs: MutableMap<UUID, TextBoxWidget>
     var suppressAllocCallbacks: Boolean
 
     var sistersTabContent: FrameLayoutWidget
     var allocTabContent: FrameLayoutWidget
+    var allocRowsHost: LinearLayoutWidget
     var membersTabContent: FrameLayoutWidget
     /** Current manage-page sister rows (source of truth for selection / rebuild). */
     var manageSisters: List<MisakaNetManageDataPacket.SisterSummary>

@@ -60,6 +60,7 @@ import org.academy.internal.client.ability.ProficiencySkillSettingsClient;
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
 import org.academy.internal.client.ability.program.AbilityProgramEditorClient;
 import org.academy.internal.client.animation.AbilityDeveloperSleepClient;
+import org.academy.internal.client.app.misaka.MisakaDeviceQuotaApp;
 import org.academy.internal.client.app.music.backend.MusicPlayerBackend;
 import org.academy.internal.client.app.music.ui.MusicApp;
 import org.academy.internal.client.app.props.PropsApp;
@@ -127,6 +128,7 @@ public final class AcademyCraftClient {
         TerminalHud.Companion.addApp(MusicApp.INSTANCE);
         PropsIcon.INSTANCE.init();
         TerminalHud.Companion.addApp(PropsApp.INSTANCE);
+        TerminalHud.Companion.addApp(MisakaDeviceQuotaApp.INSTANCE);
         PropsClientState.init();
 
         MusicPlayerBackend.Companion.init();

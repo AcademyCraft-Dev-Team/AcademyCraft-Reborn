@@ -9,23 +9,26 @@ public final class MisakaOrbitalChargeDisplay {
     private static float charge;
     private static float need = 1000.0f;
     private static float rate;
+    private static String statusKey = "";
 
     private MisakaOrbitalChargeDisplay() {
     }
 
-    public static void set(boolean nowActive, float nowCharge, float nowNeed, float nowRate) {
+    public static void set(boolean nowActive, float nowCharge, float nowNeed, float nowRate, String nowStatusKey) {
         active = nowActive;
         charge = Math.max(0.0f, nowCharge);
         need = Math.max(1.0f, nowNeed);
         rate = Math.max(0.0f, nowRate);
+        statusKey = nowStatusKey == null ? "" : nowStatusKey;
         if (!active) {
             charge = 0.0f;
             rate = 0.0f;
+            statusKey = "";
         }
     }
 
     public static void clear() {
-        set(false, 0.0f, need, 0.0f);
+        set(false, 0.0f, need, 0.0f, "");
     }
 
     public static boolean isActive() {
@@ -42,6 +45,10 @@ public final class MisakaOrbitalChargeDisplay {
 
     public static float rate() {
         return rate;
+    }
+
+    public static String statusKey() {
+        return statusKey;
     }
 
     public static float progress() {

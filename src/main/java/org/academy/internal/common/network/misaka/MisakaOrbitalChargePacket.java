@@ -3,6 +3,7 @@ package org.academy.internal.common.network.misaka;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import org.academy.internal.client.misaka.MisakaOrbitalChargeHud;
 import org.academy.internal.common.network.PacketTypes;
@@ -25,16 +26,19 @@ public final class MisakaOrbitalChargePacket extends Packet<ClientPacketListener
     private final float charge;
     private final float need;
     private final float rate;
+    /** Empty when charging normally; otherwise a lang key shown instead of the progress bar. */
+    private final String statusKey;
 
-    public MisakaOrbitalChargePacket(boolean active, float charge, float need, float rate) {
+    public MisakaOrbitalChargePacket(boolean active, float charge, float need, float rate, String statusKey) {
         this.active = active;
         this.charge = charge;
         this.need = need;
         this.rate = rate;
+        this.statusKey = statusKey == null ? "" : statusKey;
     }
 
     public static MisakaOrbitalChargePacket clear() {
-        return new MisakaOrbitalChargePacket(false, 0.0f, 0.0f, 0.0f);
+        return new MisakaOrbitalChargePacket(false, 0.0f, 0.0f, 0.0f, "");
     }
 
     private static void encode(ByteBuf buf, MisakaOrbitalChargePacket packet) {
@@ -42,10 +46,17 @@ public final class MisakaOrbitalChargePacket extends Packet<ClientPacketListener
         buf.writeFloat(packet.charge);
         buf.writeFloat(packet.need);
         buf.writeFloat(packet.rate);
+        ByteBufCodecs.STRING_UTF8.encode(buf, packet.statusKey);
     }
 
     private static MisakaOrbitalChargePacket decode(ByteBuf buf) {
-        return new MisakaOrbitalChargePacket(buf.readBoolean(), buf.readFloat(), buf.readFloat(), buf.readFloat());
+        return new MisakaOrbitalChargePacket(
+                buf.readBoolean(),
+                buf.readFloat(),
+                buf.readFloat(),
+                buf.readFloat(),
+                ByteBufCodecs.STRING_UTF8.decode(buf)
+        );
     }
 
     public static synchronized void initClient() {
@@ -70,6 +81,10 @@ public final class MisakaOrbitalChargePacket extends Packet<ClientPacketListener
 
     public float rate() {
         return rate;
+    }
+
+    public String statusKey() {
+        return statusKey;
     }
 
     @Override

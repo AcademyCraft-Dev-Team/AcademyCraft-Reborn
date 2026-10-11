@@ -16,6 +16,7 @@ import org.misaka.MisakaNetworkServer;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public final class MisakaNetManageSupport {
@@ -111,11 +112,19 @@ public final class MisakaNetManageSupport {
                     inCoverage
             ));
         }
-        int[] percents = MisakaNetworkAllocations.get(server).get(networkId);
+        var playerAlloc = MisakaNetworkAllocations.get(server).get(networkId);
+        var playerPercents = new ArrayList<MisakaNetManageDataPacket.PlayerPercent>();
+        playerAlloc.forEach((uuid, percent) ->
+                playerPercents.add(new MisakaNetManageDataPacket.PlayerPercent(uuid, percent)));
+        boolean integrated = MisakaComputeIndex.get(server).reconstructionSisterUuid(networkId) != null;
         float totalMsk = MisakaComputeIndex.get(server).networkTotals().getOrDefault(networkId, 0f);
         float demandMsk = MisakaComputeContribution.networkDemandMsk(server, networkId);
         String playerName = player.getGameProfile().name();
-        float yourAllocated = MisakaComputeContribution.claimableMskPerSecond(server, playerName, networkId);
+        float yourAllocated = MisakaComputeContribution.lastAllocatedMsk(playerName);
+        if (!(yourAllocated > 0.0f) && integrated) {
+            int pct = playerAlloc.getOrDefault(player.getUUID(), 0);
+            yourAllocated = totalMsk * (pct / 100.0f);
+        }
         float filled = MisakaComputeContribution.lastAllocatedMsk(playerName);
         float yourSatisfaction = filled > 0.0f && MisakaComputeContribution.lastSatisfactionByName.containsKey(playerName)
                 ? MisakaComputeContribution.lastSatisfaction(playerName)
@@ -128,7 +137,8 @@ public final class MisakaNetManageSupport {
             for (var perm : row.permissions()) {
                 permNames.add(perm.name());
             }
-            members.add(new MisakaNetManageDataPacket.MemberSummary(row.name(), row.admin(), permNames));
+            members.add(new MisakaNetManageDataPacket.MemberSummary(
+                    row.playerUuid(), row.name(), row.admin(), permNames));
         }
         boolean canEdit = governance.hasPermission(player, networkId, MisakaNetworkPermission.ADMIN);
         return new MisakaNetManageDataPacket(
@@ -142,14 +152,15 @@ public final class MisakaNetManageSupport {
                 MisakaComputeContribution.lastNetworkPriorityAllocatedMsk(networkId),
                 MisakaComputeContribution.lastNetworkSharedAllocatedMsk(networkId),
                 summaries,
-                percents,
+                playerPercents,
+                integrated,
                 governance.listAdminDisplayNames(networkId),
                 members,
                 canEdit
         );
     }
 
-    public static boolean setAllocations(ServerPlayer player, UUID misakaUuid, int[] percents) {
+    public static boolean setAllocations(ServerPlayer player, UUID misakaUuid, Map<UUID, Integer> percents) {
         var server = player.level().getServer();
         if (server == null || misakaUuid == null) {
             return false;
@@ -161,7 +172,21 @@ public final class MisakaNetManageSupport {
         MisakaComputeIndex.get(server).rebuildIfDirty(server);
         var overworld = server.overworld();
         var networkId = MisakaNAT.get().resolveNetworkId(overworld, record.networkNodePos);
-        MisakaNetworkAllocations.get(server).set(networkId, percents);
+        if (MisakaComputeIndex.get(server).reconstructionSisterUuid(networkId) == null) {
+            return false;
+        }
+        var governance = MisakaNetworkGovernance.get(server);
+        var clamped = MisakaNetworkAllocations.clampPlayerPercents(percents);
+        for (var entry : clamped.entrySet()) {
+            if (entry.getValue() == null || entry.getValue() <= 0) {
+                continue;
+            }
+            if (!governance.hasPermission(entry.getKey(), networkId, MisakaNetworkPermission.ACCESS)
+                    && !governance.hasPermission(entry.getKey(), networkId, MisakaNetworkPermission.ADMIN)) {
+                return false;
+            }
+        }
+        MisakaNetworkAllocations.get(server).set(networkId, clamped);
         return true;
     }
 

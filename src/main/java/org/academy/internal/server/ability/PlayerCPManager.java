@@ -23,10 +23,10 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.world.level.block.AbilityDeveloperSleep;
 import org.academy.internal.server.config.AbilityConfig;
-import org.academy.internal.server.misaka.MisakaComputeContribution;
 import org.academy.internal.server.misaka.MisakaComputeIndex;
-import org.academy.internal.server.misaka.MisakaComputeSettle;
 import org.academy.internal.server.misaka.MisakaComputeUsageTracker;
+import org.academy.internal.server.misaka.MisakaDeviceQuotaSync;
+import org.academy.internal.server.misaka.ServerMisakaComputeAccess;
 import org.academy.internal.server.world.level.storage.Player;
 import org.misaka.MisakaNetworkServer;
 
@@ -201,6 +201,8 @@ public class PlayerCPManager implements AbilitySubsystem {
         MisakaComputeIndex.get(player.level().getServer()).putPlayerName(player.getGameProfile().name(), player.getUUID());
         refreshCommonSkillBonuses(player.getUUID());
         syncManager.schedulePlayerSync(player.getUUID(), SyncTypes.CP_DATA);
+        ServerMisakaComputeAccess.INSTANCE.tickPlayer(player);
+        MisakaDeviceQuotaSync.sync(player);
     }
 
     @Override
@@ -469,14 +471,6 @@ public class PlayerCPManager implements AbilitySubsystem {
             ));
             cpData.setAvailableCP(cpData.getAvailableCP() - cpAmount, getMaxCP(uuid));
             enterOverloadIfDepleted(uuid, cpData);
-            var server = syncManager.getMinecraftServer();
-            float cpPerMsk = server == null
-                    ? MisakaComputeContribution.CP_PER_MSK
-                    : MisakaComputeContribution.cpPerMsk(server);
-            MisakaComputeUsageTracker.addUsage(
-                    uuid,
-                    MisakaComputeSettle.cpToUsageMsk(cpAmount, cpPerMsk)
-            );
         }
         if (mpAmount > 0.0f) {
             cpData.setCurrMP(Math.max(0.0f, cpData.getCurrMP() - mpAmount));

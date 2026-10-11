@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class MisakaNetManageDataPacketCoverageTest {
     private static final UUID SISTER_A = UUID.fromString("00000000-0000-0000-0000-0000000000a1");
     private static final UUID SISTER_B = UUID.fromString("00000000-0000-0000-0000-0000000000b2");
+    private static final UUID PLAYER_A = UUID.fromString("00000000-0000-0000-0000-0000000000c3");
 
     @Test
     void codecRoundTripsInCoverage() {
@@ -32,10 +33,11 @@ class MisakaNetManageDataPacketCoverageTest {
                         new MisakaNetManageDataPacket.SisterSummary(
                                 SISTER_B, 2, 80, 0f, "node-a", true, false, false)
                 ),
-                new int[]{40, 0, 0, 0},
+                List.of(new MisakaNetManageDataPacket.PlayerPercent(PLAYER_A, 100)),
+                true,
                 List.of("alice", "bob"),
                 List.of(new MisakaNetManageDataPacket.MemberSummary(
-                        "alice", true, List.of("ADMIN", "ACCESS"))),
+                        PLAYER_A, "alice", true, List.of("ADMIN", "ACCESS"))),
                 true
         );
         var buf = Unpooled.buffer();
@@ -57,8 +59,13 @@ class MisakaNetManageDataPacketCoverageTest {
         assertEquals(0.8125f, decoded.yourSatisfaction(), 0.001f);
         assertEquals(5.0f, decoded.priorityAllocatedMsk(), 0.001f);
         assertEquals(1.5f, decoded.sharedAllocatedMsk(), 0.001f);
+        assertTrue(decoded.integrated());
+        assertEquals(1, decoded.playerPercents().size());
+        assertEquals(PLAYER_A, decoded.playerPercents().getFirst().playerUuid());
+        assertEquals(100, decoded.playerPercents().getFirst().percent());
         assertEquals(List.of("alice", "bob"), decoded.adminNames());
         assertEquals(1, decoded.members().size());
+        assertEquals(PLAYER_A, decoded.members().getFirst().playerUuid());
         assertTrue(decoded.viewerCanEditMembers());
     }
 }
