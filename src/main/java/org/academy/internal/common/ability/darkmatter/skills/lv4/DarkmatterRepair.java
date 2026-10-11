@@ -172,7 +172,8 @@ public final class DarkmatterRepair extends Skill {
         }
 
         static float matterCost(float betaRatio, int milestone) {
-            var amount = 4.0f - 3.0f * Math.clamp(betaRatio, 0.0f, 1.0f);
+            // Pulses run every tick: 0.2-0.8 MP/s stays below even the 1 MP/s natural recovery.
+            var amount = (0.8f - 0.6f * Math.clamp(betaRatio, 0.0f, 1.0f)) / 20.0f;
             return Math.clamp(milestone, 0, 3) >= 1 ? amount * 0.8f : amount;
         }
 

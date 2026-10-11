@@ -7,8 +7,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class DarkmatterRepairTest {
     @Test
     void productiveCostAndTargetCountFollowMilestones() {
-        assertEquals(1.0f, DarkmatterRepair.Server.matterCost(1.0f, 0), 0.0001f);
-        assertEquals(0.8f, DarkmatterRepair.Server.matterCost(1.0f, 1), 0.0001f);
+        assertEquals(0.01f, DarkmatterRepair.Server.matterCost(1.0f, 0), 0.0001f);
+        assertEquals(0.008f, DarkmatterRepair.Server.matterCost(1.0f, 1), 0.0001f);
         assertEquals(1, DarkmatterRepair.Server.repairTargetCount(false, 0));
         assertEquals(2, DarkmatterRepair.Server.repairTargetCount(true, 0));
         assertEquals(2, DarkmatterRepair.Server.repairTargetCount(false, 3));
@@ -29,10 +29,10 @@ class DarkmatterRepairTest {
         assertEquals(1.0f, DarkmatterRepair.Server.bodyHeal(0.0f, 0), 0.0001f);
         assertEquals(4.5f, DarkmatterRepair.Server.bodyHeal(0.5f, 0), 0.0001f);
         assertEquals(8.0f, DarkmatterRepair.Server.bodyHeal(1.0f, 0), 0.0001f);
-        assertEquals(4.0f, DarkmatterRepair.Server.matterCost(0.0f, 0), 0.0001f);
-        assertEquals(2.5f, DarkmatterRepair.Server.matterCost(0.5f, 0), 0.0001f);
-        assertEquals(3.2f, DarkmatterRepair.Server.matterCost(0.0f, 1), 0.0001f);
-        assertEquals(2.0f, DarkmatterRepair.Server.matterCost(0.5f, 1), 0.0001f);
+        assertEquals(0.04f, DarkmatterRepair.Server.matterCost(0.0f, 0), 0.0001f);
+        assertEquals(0.025f, DarkmatterRepair.Server.matterCost(0.5f, 0), 0.0001f);
+        assertEquals(0.032f, DarkmatterRepair.Server.matterCost(0.0f, 1), 0.0001f);
+        assertEquals(0.02f, DarkmatterRepair.Server.matterCost(0.5f, 1), 0.0001f);
     }
 
     @Test

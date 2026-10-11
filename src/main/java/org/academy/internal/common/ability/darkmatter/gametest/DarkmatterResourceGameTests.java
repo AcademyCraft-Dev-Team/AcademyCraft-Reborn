@@ -25,6 +25,7 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -40,6 +41,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.ItemAbilities;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.world.damagesource.DamageTypes;
@@ -58,6 +60,7 @@ import org.academy.internal.common.ability.darkmatter.skills.lv2.DarkmatterPhase
 import org.academy.internal.common.ability.darkmatter.skills.lv3.DarkmatterRadiation;
 import org.academy.internal.common.ability.darkmatter.skills.lv4.DarkmatterRepair;
 import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
+import org.academy.internal.common.event.DarkmatterEquipmentEvents;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 import org.academy.internal.common.world.entity.projectile.DarkmatterFeatherProjectile;
@@ -934,8 +937,8 @@ public final class DarkmatterResourceGameTests {
                                 new net.neoforged.neoforge.event.tick.PlayerTickEvent.Post(player));
                         assertClose(helper, 2 + 8.2f * tick, player.getHealth(),
                                 "Every tick must heal 8 alpha health plus 1% maximum health");
-                        assertClose(helper, 50 - 4 * tick, manager.getView(player).totalMatter(),
-                                "Alpha recovery must spend 4 MP per tick");
+                        assertClose(helper, 50 - 0.04f * tick, manager.getView(player).totalMatter(),
+                                "Alpha recovery must spend 0.04 MP per tick");
                         org.academy.internal.common.entitycontrol.TrueHealthOffsetRuntime.afterEntityTick(
                                 new net.neoforged.neoforge.event.tick.EntityTickEvent.Post(player));
                         assertClose(helper, 2 + 8.2f * tick, player.getHealth(),
@@ -946,7 +949,7 @@ public final class DarkmatterResourceGameTests {
                     manager.setAlphaPoints(player, 0);
                     helper.assertTrue(DarkmatterRepair.Server.tryPulse(player), "Pure beta recovery failed");
                     assertClose(helper, 19.6f, player.getHealth(), "Beta must heal 1 plus 1% maximum health");
-                    assertClose(helper, 41, manager.getView(player).totalMatter(), "Pure beta must spend 1 MP");
+                    assertClose(helper, 49.91f, manager.getView(player).totalMatter(), "Pure beta must spend 0.01 MP");
 
                     var beforeOffset = state.encodedOffset;
                     org.academy.internal.common.entitycontrol.EntityControlApi.banHeal(player, 19.6f);
@@ -965,6 +968,98 @@ public final class DarkmatterResourceGameTests {
                     assertClose(helper, 10, manager.getView(player).totalMatter(), "Idle recovery consumed MP");
                 } finally {
                     org.academy.internal.common.entitycontrol.EntityControlApi.allowHeal(player);
+                    removePlayer(helper, player);
+                }
+                helper.succeed();
+            }
+        },
+        REPAIR_SUSTAINED_COST_STAYS_BELOW_RECOVERY(
+                "repair_sustained_cost_stays_below_recovery", 40) {
+            @Override
+            void run(GameTestHelper helper) {
+                var player = createPlayer(helper, 4);
+                var system = AbilitySystemServer.getSystem(player);
+                var skill = Skills.DARKMATTER_REPAIR.get();
+                system.addPlayerSkill(player, skill.getKeyString());
+                var manager = system.getDarkmatterResourceManager();
+                try {
+                    helper.assertTrue(DarkmatterRepair.Server.toggle(player), "Repair toggle failed");
+                    for (var milestone = 0; milestone <= 3; milestone++) {
+                        system.setPlayerSkillProficiency(player.getUUID(), skill, milestone * 1_000.0f);
+                        for (var alphaPoints : new int[]{0, 100, 200}) {
+                            manager.setAlphaPoints(player, alphaPoints);
+                            manager.debugSetPools(player, 10, 0, 0, 0);
+                            var pulsesBefore = DarkmatterRepair.Server.productivePulses(player.getUUID());
+                            for (var tick = 1; tick <= 200; tick++) {
+                                player.tickCount = tick;
+                                player.setHealth(1.0f);
+                                DarkmatterRepair.Events.onPlayerTick(new PlayerTickEvent.Post(player));
+                                manager.tick(player);
+                            }
+                            helper.assertTrue(DarkmatterRepair.Server.productivePulses(player.getUUID())
+                                            == pulsesBefore + 200,
+                                    "Sustained repair skipped productive ticks or exhausted MP");
+                            helper.assertTrue(manager.getView(player).naturalMatter() >= 11.99f,
+                                    "Ten seconds of continuous repair must gain at least 2 natural MP");
+                        }
+                    }
+                } finally {
+                    removePlayer(helper, player);
+                }
+                helper.succeed();
+            }
+        },
+        REPAIR_PAUSES_CARRIED_EQUIPMENT_DECAY(
+                "repair_pauses_carried_equipment_decay", 40) {
+            @Override
+            void run(GameTestHelper helper) {
+                var player = createPlayer(helper, 4);
+                var system = AbilitySystemServer.getSystem(player);
+                system.addPlayerSkill(player, Skills.DARKMATTER_REPAIR.get().getKeyString());
+                var manager = system.getDarkmatterResourceManager();
+                try {
+                    player.getInventory().clearContent();
+                    var tool = new ItemStack(org.academy.internal.common.world.item.Items.DARKMATTER_TOOL.get());
+                    var spear = new ItemStack(org.academy.internal.common.world.item.Items.DARKMATTER_SPEAR.get());
+                    var bow = new ItemStack(org.academy.internal.common.world.item.Items.DARKMATTER_BOW.get());
+                    var helmet = new ItemStack(org.academy.internal.common.world.item.Items.DARK_MATTER_HELMET.get());
+                    var chestplate = new ItemStack(org.academy.internal.common.world.item.Items.DARK_MATTER_CHESTPLATE.get());
+                    var leggings = new ItemStack(org.academy.internal.common.world.item.Items.DARK_MATTER_LEGGINGS.get());
+                    var boots = new ItemStack(org.academy.internal.common.world.item.Items.DARK_MATTER_BOOTS.get());
+                    player.setItemSlot(EquipmentSlot.MAINHAND, tool);
+                    player.setItemSlot(EquipmentSlot.OFFHAND, spear);
+                    player.getInventory().setItem(9, bow);
+                    player.setItemSlot(EquipmentSlot.HEAD, helmet);
+                    player.setItemSlot(EquipmentSlot.CHEST, chestplate);
+                    player.setItemSlot(EquipmentSlot.LEGS, leggings);
+                    player.setItemSlot(EquipmentSlot.FEET, boots);
+                    var stacks = List.of(tool, spear, bow, helmet, chestplate, leggings, boots);
+                    for (var stack : stacks) DarkmatterItemUtil.setIntegrity(stack, 0.5f);
+                    manager.debugSetPools(player, 0, 0, 0, 0);
+                    helper.assertTrue(DarkmatterRepair.Server.toggle(player), "Repair toggle failed");
+                    for (var alphaPoints : new int[]{0, 200}) {
+                        manager.setAlphaPoints(player, alphaPoints);
+                        for (var tick = 0; tick < 40; tick++) {
+                            DarkmatterEquipmentEvents.Events.onPlayerTick(new PlayerTickEvent.Post(player));
+                        }
+                        for (var stack : stacks) {
+                            helper.assertTrue(DarkmatterItemUtil.integrity(stack) == 0.5f,
+                                    "Enabled repair must pause every carried slot even with zero MP: " + stack);
+                        }
+                    }
+                    tool.setDamageValue(120);
+                    DarkmatterEquipmentEvents.Events.onPlayerTick(new PlayerTickEvent.Post(player));
+                    assertClose(helper, 0.49f, DarkmatterItemUtil.integrity(tool),
+                            "Repair must preserve actual tool-use wear");
+                    helper.assertTrue(tool.getDamageValue() == 0, "Vanilla wear was not absorbed");
+                    helper.assertTrue(DarkmatterRepair.Server.toggle(player), "Repair disable failed");
+                    var before = stacks.stream().map(DarkmatterItemUtil::integrity).toList();
+                    DarkmatterEquipmentEvents.Events.onPlayerTick(new PlayerTickEvent.Post(player));
+                    for (var index = 0; index < stacks.size(); index++) {
+                        helper.assertTrue(DarkmatterItemUtil.integrity(stacks.get(index)) < before.get(index),
+                                "Disabling repair must resume decay for every carried slot");
+                    }
+                } finally {
                     removePlayer(helper, player);
                 }
                 helper.succeed();
@@ -998,14 +1093,14 @@ public final class DarkmatterResourceGameTests {
                         "Alpha repair restored the wrong integrity fraction");
                 helper.assertTrue(player.getAbsorptionAmount() > 0.0f,
                         "Successful alpha repair did not grant structural absorption");
-                assertClose(helper, 46.0f, manager.getView(player).totalMatter(),
+                assertClose(helper, 49.96f, manager.getView(player).totalMatter(),
                         "Alpha repair consumed the wrong MP amount");
 
                 DarkmatterItemUtil.setIntegrity(tool, 1.0f);
                 player.setAbsorptionAmount(0.0f);
                 helper.assertTrue(!DarkmatterRepair.Server.tryPulse(player),
                         "Repair consumed a pulse for absorption without damaged equipment");
-                assertClose(helper, 46.0f, manager.getView(player).totalMatter(),
+                assertClose(helper, 49.96f, manager.getView(player).totalMatter(),
                         "Idle repair consumed MP");
 
                 helper.assertTrue(manager.setAlphaPoints(player, 0),
@@ -1052,7 +1147,7 @@ public final class DarkmatterResourceGameTests {
                 helper.assertTrue(DarkmatterRepair.Server.productivePulses(
                                 player.getUUID()) == 5,
                         "Repair productive-pulse ledger diverged from actual work");
-                assertClose(helper, 40.2f, manager.getView(player).totalMatter(),
+                assertClose(helper, 49.902f, manager.getView(player).totalMatter(),
                         "Repair costs did not follow beta allocation and the proficiency discount");
                 removePlayer(helper, player);
                 helper.succeed();

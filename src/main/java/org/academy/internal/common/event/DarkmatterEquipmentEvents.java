@@ -317,15 +317,16 @@ public final class DarkmatterEquipmentEvents {
             var milestone = shaping.isEnabled(player)
                     ? shaping.getEffectiveProficiencyMilestone(player) : 0;
             var lifetime = integrityLifetimeTicks(milestone);
+            var repairEnabled = Skills.DARKMATTER_REPAIR.get().isEnabled(player);
             var changed = false;
             for (var stack : player.getInventory().getNonEquipmentItems()) {
-                changed |= tickNativeStack(player, stack, lifetime);
+                changed |= tickNativeStack(player, stack, lifetime, repairEnabled);
             }
             for (var slot : new EquipmentSlot[]{
                     EquipmentSlot.OFFHAND,
                     EquipmentSlot.HEAD, EquipmentSlot.CHEST,
                     EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
-                changed |= tickNativeStack(player, player.getItemBySlot(slot), lifetime);
+                changed |= tickNativeStack(player, player.getItemBySlot(slot), lifetime, repairEnabled);
             }
             if (changed) {
                 player.getInventory().setChanged();
@@ -369,10 +370,11 @@ public final class DarkmatterEquipmentEvents {
 
         private static boolean tickNativeStack(ServerPlayer player,
                                                ItemStack stack,
-                                               int lifetimeTicks) {
+                                               int lifetimeTicks,
+                                               boolean repairEnabled) {
             if (!DarkmatterItemUtil.isNativeEquipment(stack)) return false;
             var changed = DarkmatterItemUtil.absorbVanillaDurabilityDamage(stack);
-            changed |= DarkmatterItemUtil.decayIntegrity(stack, lifetimeTicks);
+            if (!repairEnabled) changed |= DarkmatterItemUtil.decayIntegrity(stack, lifetimeTicks);
             changed |= DarkmatterItemUtil.setEnchantmentLevel(
                     player.registryAccess(), stack, Enchantments.MENDING, 0);
             return changed;
