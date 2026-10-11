@@ -103,12 +103,11 @@ final class PrecisionProgramExecutionBridge {
 
     record NativeExecution(ProgramVm.Session session, ProgramExecutionFrame frame) {
         ProgramVmResult run(long gameTime) {
-            return session.run(
-                    gameTime,
-                    MAX_FUEL,
-                    AbilityProgramDefinitions.mentalout().executors(),
-                    frame
-            );
+            return run(gameTime, MAX_FUEL);
+        }
+
+        ProgramVmResult run(long gameTime, int fuel) {
+            return session.run(gameTime, fuel, AbilityProgramDefinitions.mentalout().executors(), frame);
         }
     }
 

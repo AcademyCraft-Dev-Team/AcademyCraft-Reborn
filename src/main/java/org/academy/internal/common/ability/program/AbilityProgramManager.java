@@ -64,12 +64,17 @@ import java.util.*;
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class AbilityProgramManager {
     public static final int SLOT_COUNT = 10;
+    private static final int MAX_AUTOMATIC_RUNS_PER_PLAYER_TICK = 4;
+    private static final long FAILED_LOOP_RETRY_TICKS = 100L;
     private static final int MAX_CATEGORY_LENGTH = 128;
     private static final int MAX_BOOK_BASE64_LENGTH =
             (ProgramBookCodec.MAX_BOOK_ENCODED_BYTES + 2) / 3 * 4;
     private static final Map<UUID, Long> LAST_EXECUTION_SEQUENCE = new HashMap<>();
     private static final Map<LoopExecutionKey, Long> LOOP_EXECUTION_COUNTS = new HashMap<>();
     private static final Map<LoopExecutionKey, Long> LAST_TRACE_TICK = new HashMap<>();
+    private static final Map<LoopExecutionKey, Long> FAILED_LOOP_RETRY_AT = new HashMap<>();
+    private static final Map<UUID, AutomaticRunBudget> AUTOMATIC_RUN_BUDGETS = new HashMap<>();
+    private static final Map<UUID, Integer> NEXT_AUTOMATIC_SLOT = new HashMap<>();
     private static final Map<Identifier, CategoryExecutionAdapter> EXECUTION_ADAPTERS = Map.of(
             AcceleratorProgramNodeCatalog.ACCELERATOR,
             AbilityProgramManager::executeAccelerator,
@@ -178,14 +183,19 @@ public final class AbilityProgramManager {
         if (adapter == null) return;
         var gameTime = player.level().getGameTime();
         var capabilities = learnedCapabilities(playerData);
-        for (var slot = 0; slot < SLOT_COUNT; slot++) {
+        var playerId = player.getUUID();
+        var firstSlot = NEXT_AUTOMATIC_SLOT.getOrDefault(playerId, 0);
+        for (var offset = 0; offset < SLOT_COUNT; offset++) {
+            var slot = (firstSlot + offset) % SLOT_COUNT;
             var program = current.slot(slot).program();
             if (program == null) continue;
+            // Health matching latches its threshold, so do not consume that edge when no run can start.
+            if (trigger == ProgramTriggers.Type.HEALTH
+                    && !automaticRunBudgetAvailable(playerId, gameTime)) continue;
             var matches = trigger == ProgramTriggers.Type.HEALTH
                     ? ProgramTriggers.matchesHealth(program, player, category, slot)
                     : ProgramTriggers.matches(program, trigger, movement, gameTime);
             if (matches && trigger == ProgramTriggers.Type.CHAT) {
-                var playerId = player.getUUID();
                 matches = ProgramTriggers.matchesChat(program,
                         AbilityProgramTriggerRuntime.currentChatMessage(playerId),
                         playerId.equals(AbilityProgramTriggerRuntime.currentChatSender(playerId)));
@@ -199,6 +209,10 @@ public final class AbilityProgramManager {
             var executionSlot = slot;
             if (!compiled.valid()) continue;
             var loopKey = new LoopExecutionKey(player.getUUID(), category, slot, program.id());
+            if (trigger == ProgramTriggers.Type.LOOP
+                    && gameTime < FAILED_LOOP_RETRY_AT.getOrDefault(loopKey, Long.MIN_VALUE)) continue;
+            if (!consumeAutomaticRunBudget(playerId, gameTime)) continue;
+            NEXT_AUTOMATIC_SLOT.put(playerId, (slot + 1) % SLOT_COUNT);
             var loopIndex = trigger == ProgramTriggers.Type.LOOP
                     ? LOOP_EXECUTION_COUNTS.getOrDefault(loopKey, 0L) : 0L;
             var invocation = AbilityProgramTriggerRuntime.invocation(
@@ -230,12 +244,30 @@ public final class AbilityProgramManager {
                 }
             }
             if (trigger == ProgramTriggers.Type.LOOP && outcome.successful()) {
+                FAILED_LOOP_RETRY_AT.remove(loopKey);
                 LOOP_EXECUTION_COUNTS.put(
                         loopKey,
                         loopIndex == Long.MAX_VALUE ? Long.MAX_VALUE : loopIndex + 1L
                 );
+            } else if (trigger == ProgramTriggers.Type.LOOP && !outcome.successful()) {
+                FAILED_LOOP_RETRY_AT.put(loopKey, gameTime + FAILED_LOOP_RETRY_TICKS);
             }
         }
+    }
+
+    private static boolean consumeAutomaticRunBudget(UUID playerId, long gameTime) {
+        if (!automaticRunBudgetAvailable(playerId, gameTime)) return false;
+        AUTOMATIC_RUN_BUDGETS.get(playerId).remaining--;
+        return true;
+    }
+
+    private static boolean automaticRunBudgetAvailable(UUID playerId, long gameTime) {
+        var budget = AUTOMATIC_RUN_BUDGETS.computeIfAbsent(playerId, ignored -> new AutomaticRunBudget());
+        if (budget.tick != gameTime) {
+            budget.tick = gameTime;
+            budget.remaining = MAX_AUTOMATIC_RUNS_PER_PLAYER_TICK;
+        }
+        return budget.remaining > 0;
     }
 
     private static void sendRunTrace(
@@ -254,6 +286,9 @@ public final class AbilityProgramManager {
         LAST_EXECUTION_SEQUENCE.clear();
         LOOP_EXECUTION_COUNTS.clear();
         LAST_TRACE_TICK.clear();
+        FAILED_LOOP_RETRY_AT.clear();
+        AUTOMATIC_RUN_BUDGETS.clear();
+        NEXT_AUTOMATIC_SLOT.clear();
         ProgramChatHistory.clear();
     }
 
@@ -264,6 +299,10 @@ public final class AbilityProgramManager {
                 key -> key.ownerId().equals(event.getEntity().getUUID()));
         LAST_TRACE_TICK.keySet().removeIf(
                 key -> key.ownerId().equals(event.getEntity().getUUID()));
+        FAILED_LOOP_RETRY_AT.keySet().removeIf(
+                key -> key.ownerId().equals(event.getEntity().getUUID()));
+        AUTOMATIC_RUN_BUDGETS.remove(event.getEntity().getUUID());
+        NEXT_AUTOMATIC_SLOT.remove(event.getEntity().getUUID());
         if (event.getEntity() instanceof ServerPlayer player) {
             ServerProgramScheduler.cancelOwner(player.level().getServer(), player.getUUID());
             ServerElectromasterProgramRuntime.releaseControlled(player);
@@ -1570,6 +1609,11 @@ public final class AbilityProgramManager {
             int slot,
             UUID programId
     ) {
+    }
+
+    private static final class AutomaticRunBudget {
+        private long tick = Long.MIN_VALUE;
+        private int remaining;
     }
 
     private record ExecutionOutcome(

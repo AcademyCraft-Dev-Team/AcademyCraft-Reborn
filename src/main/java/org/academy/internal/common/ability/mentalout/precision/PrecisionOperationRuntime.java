@@ -45,6 +45,7 @@ public final class PrecisionOperationRuntime {
     private static final float UNLOCKED_DYNAMIC_COST_MULTIPLIER = 0.9f;
     private static final Identifier CONTROL_SOURCE = AcademyCraft.academy("precision_operation");
     private static final int SLOT_COUNT = AbilityProgramManager.SLOT_COUNT;
+    private static final int AUTOMATIC_FUEL_PER_TICK = 128;
     private static final double MAX_ACTION_RANGE = AbilityProgramSpatialRanges.forCategory(
             PrecisionProgramNodeCatalog.MENTALOUT).actionRange();
     private static final Map<UUID, ActiveContext[]> ACTIVE = new HashMap<>();
@@ -115,7 +116,9 @@ public final class PrecisionOperationRuntime {
                 invocation,
                 player.level()::getGameTime
         );
-        var vmResult = nativeExecution.run(now);
+        var vmResult = invocation == null
+                ? nativeExecution.run(now)
+                : nativeExecution.run(now, AUTOMATIC_FUEL_PER_TICK);
         if (vmResult.status() == ProgramVmResult.Status.SUSPENDED
                 || vmResult.status() == ProgramVmResult.Status.FUEL_EXHAUSTED) {
             if (invocation == null) {
@@ -132,7 +135,7 @@ public final class PrecisionOperationRuntime {
                     nativeExecution.session(),
                     AbilityProgramDefinitions.mentalout().executors(),
                     nativeExecution.frame(),
-                    PrecisionGraph.MAX_NODES * PrecisionGraph.MAX_NODES + 1,
+                    AUTOMATIC_FUEL_PER_TICK,
                     now + 1L,
                     ServerProgramExecution.MAX_LIFETIME_TICKS,
                     (_, termination) -> {

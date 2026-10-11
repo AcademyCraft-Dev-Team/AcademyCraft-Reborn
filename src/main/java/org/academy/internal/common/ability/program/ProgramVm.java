@@ -1,5 +1,6 @@
 package org.academy.internal.common.ability.program;
 
+import net.minecraft.resources.Identifier;
 import org.academy.internal.common.ability.program.compile.CompiledProgram;
 import org.academy.internal.common.ability.program.registry.ProgramExecutorLookup;
 import org.academy.internal.common.ability.program.registry.ProgramNodeExecutor;
@@ -19,6 +20,10 @@ import java.util.*;
  * Resumable, fuel-metered interpreter. Exhausting a time slice never blocks the server tick.
  */
 public final class ProgramVm {
+    private static final long FAILURE_LOG_INTERVAL_TICKS = 1_200L;
+    private static final int MAX_FAILURE_LOG_KEYS = 256;
+    private static final Map<FailureKey, FailureWindow> FAILURE_LOGS = new LinkedHashMap<>();
+
     private ProgramVm() {
     }
 
@@ -374,11 +379,50 @@ public final class ProgramVm {
         } catch (RuntimeException exception) {
             var diagnostic = AbilityProgramManager.actionDiagnostic(exception);
             if (diagnostic == ProgramVmDiagnostic.ACTION_REJECTED) {
-                AcademyCraft.LOGGER.warn(
-                        "Program node {} ({}) failed", node.id(), node.typeId(), exception);
+                var programId = context.attachment(ProgramExecutionFrame.class)
+                        .flatMap(ProgramExecutionFrame::invocation)
+                        .map(ProgramInvocationContext::programId).orElse(null);
+                var suppressed = recordFailure(new FailureKey(programId, node.id(), node.typeId(),
+                        exception.getClass()), context.gameTime());
+                if (suppressed >= 0) {
+                    AcademyCraft.LOGGER.warn("Program node {} ({}) failed in program {} ({} repeats suppressed)",
+                            node.id(), node.typeId(), programId, suppressed, exception);
+                }
             }
             throw new ExecutionFailure(diagnostic == ProgramVmDiagnostic.ACTION_REJECTED
                     ? ProgramVmDiagnostic.EXECUTOR_ERROR : diagnostic, node.id());
+        }
+    }
+
+    private static synchronized long recordFailure(FailureKey key, long tick) {
+        var window = FAILURE_LOGS.get(key);
+        if (window == null) {
+            if (FAILURE_LOGS.size() >= MAX_FAILURE_LOG_KEYS) {
+                FAILURE_LOGS.remove(FAILURE_LOGS.keySet().iterator().next());
+            }
+            FAILURE_LOGS.put(key, new FailureWindow(tick));
+            return 0;
+        }
+        if (tick < window.lastLoggedTick || tick - window.lastLoggedTick >= FAILURE_LOG_INTERVAL_TICKS) {
+            var suppressed = window.suppressed;
+            window.lastLoggedTick = tick;
+            window.suppressed = 0;
+            return suppressed;
+        }
+        window.suppressed++;
+        return -1;
+    }
+
+    private record FailureKey(@Nullable UUID programId, int nodeId, Identifier nodeType,
+                              Class<? extends RuntimeException> exceptionType) {
+    }
+
+    private static final class FailureWindow {
+        private long lastLoggedTick;
+        private long suppressed;
+
+        private FailureWindow(long lastLoggedTick) {
+            this.lastLoggedTick = lastLoggedTick;
         }
     }
 

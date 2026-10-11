@@ -1956,6 +1956,7 @@ public final class MentalControlRuntime {
 
         private final Map<UUID, SubjectState> subjects = new HashMap<>();
         private final Map<UUID, LeaseRecord> leases = new LinkedHashMap<>();
+        private final Map<UUID, Set<UUID>> leasesBySubject = new HashMap<>();
         private final PriorityQueue<ExpiryEntry> expirations = new PriorityQueue<>();
         private long sequence;
 
@@ -1968,6 +1969,7 @@ public final class MentalControlRuntime {
             var leaseSequence = ++sequence;
             var record = new LeaseRecord(leaseId, input, leaseSequence);
             leases.put(leaseId, record);
+            leasesBySubject.computeIfAbsent(input.subjectId(), ignored -> new HashSet<>()).add(leaseId);
             var replacement = new RemovalResult();
             var subject = subjects.computeIfAbsent(input.subjectId(), ignored -> new SubjectState());
             for (var entry : input.directives().entrySet()) {
@@ -2040,11 +2042,11 @@ public final class MentalControlRuntime {
         }
 
         synchronized boolean hasActiveControl(UUID controllerId, UUID subjectId, long now) {
-            return leases.values().stream().anyMatch(lease ->
-                    lease.input().controllerId().equals(controllerId)
-                            && lease.input().subjectId().equals(subjectId)
-                            && lease.input().expiresAt() > now
-                            && !lease.entries().isEmpty());
+            return leasesBySubject.getOrDefault(subjectId, Set.of()).stream()
+                    .map(leases::get)
+                    .filter(Objects::nonNull)
+                    .anyMatch(lease -> lease.input().controllerId().equals(controllerId)
+                            && lease.input().expiresAt() > now && !lease.entries().isEmpty());
         }
 
         synchronized boolean hasImpressionAlliance(
@@ -2127,11 +2129,7 @@ public final class MentalControlRuntime {
         }
 
         synchronized RemovalResult removeBySubject(UUID subjectId) {
-            var ids = leases.values().stream()
-                    .filter(lease -> lease.input().subjectId().equals(subjectId))
-                    .map(LeaseRecord::id)
-                    .toList();
-            return removeAll(Set.copyOf(ids));
+            return removeAll(Set.copyOf(leasesBySubject.getOrDefault(subjectId, Set.of())));
         }
 
 
@@ -2140,8 +2138,9 @@ public final class MentalControlRuntime {
                 Identifier source,
                 UUID subjectId
         ) {
-            var ids = leases.values().stream()
-                    .filter(lease -> lease.input().subjectId().equals(subjectId))
+            var ids = leasesBySubject.getOrDefault(subjectId, Set.of()).stream()
+                    .map(leases::get)
+                    .filter(Objects::nonNull)
                     .filter(lease -> lease.input().controllerId().equals(controllerId))
                     .filter(lease -> lease.input().source().equals(source))
                     .map(LeaseRecord::id)
@@ -2209,12 +2208,15 @@ public final class MentalControlRuntime {
         synchronized void restore(TableSnapshot snapshot) {
             subjects.clear();
             leases.clear();
+            leasesBySubject.clear();
             expirations.clear();
             sequence = snapshot.sequence();
             for (var saved : snapshot.leases()) {
                 var record = new LeaseRecord(saved.id(), saved.input(), saved.sequence());
                 record.entries().putAll(saved.entries());
                 leases.put(record.id(), record);
+                leasesBySubject.computeIfAbsent(record.input().subjectId(), ignored -> new HashSet<>())
+                        .add(record.id());
                 var subject = subjects.computeIfAbsent(
                         record.input().subjectId(),
                         ignored -> new SubjectState()
@@ -2246,8 +2248,9 @@ public final class MentalControlRuntime {
          * one of the remaining domains while its binding is inactive.
          */
         private Set<UUID> effectiveLeaseIds(UUID subjectId, long now) {
-            var candidates = leases.values().stream()
-                    .filter(lease -> lease.input().subjectId().equals(subjectId))
+            var candidates = leasesBySubject.getOrDefault(subjectId, Set.of()).stream()
+                    .map(leases::get)
+                    .filter(Objects::nonNull)
                     .filter(lease -> lease.input().expiresAt() > now)
                     .filter(lease -> lease.entries().keySet().containsAll(
                             lease.input().directives().keySet()))
@@ -2283,6 +2286,11 @@ public final class MentalControlRuntime {
             if (lease == null) return;
             result.addLease(leaseId);
             var subjectId = lease.input().subjectId();
+            var indexed = leasesBySubject.get(subjectId);
+            if (indexed != null) {
+                indexed.remove(leaseId);
+                if (indexed.isEmpty()) leasesBySubject.remove(subjectId);
+            }
             result.addSubject(subjectId);
             var subject = subjects.get(subjectId);
             if (subject == null) return;
