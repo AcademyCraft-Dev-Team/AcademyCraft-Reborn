@@ -16,7 +16,10 @@ class DesktopUiHost(
     private val environment: DesktopEnvironment,
 ) : WindowEventHandler {
 
-    private val uiContext = UiContext()
+    // The host is the WindowEventHandler and therefore exists before the window's GPU device.
+    // UiContext allocates GPU projection buffers; defer it until the first frame after initRenderer.
+    private val uiContextDelegate = lazy { UiContext() }
+    private val uiContext by uiContextDelegate
     private var window: Window? = null
     var target: TextureTarget? = null
         private set
@@ -92,7 +95,7 @@ class DesktopUiHost(
         imGuiBackend = null
         target?.destroyBuffers()
         target = null
-        uiContext.close()
+        if (uiContextDelegate.isInitialized()) uiContext.close()
     }
 
     override fun framebufferSizeChanged() {
