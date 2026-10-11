@@ -39,6 +39,7 @@ public record BlockStructureRestoreResult(
         UNLOADED,
         OUT_OF_WORLD,
         OCCUPIED,
-        WORLD_CHANGE_FAILED
+        WORLD_CHANGE_FAILED,
+        RECOVERY_REQUIRED
     }
 }

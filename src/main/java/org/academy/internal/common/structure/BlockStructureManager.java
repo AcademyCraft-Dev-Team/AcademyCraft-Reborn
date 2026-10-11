@@ -9,7 +9,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.structure.BlockStructure;
 import org.academy.api.common.structure.BlockStructureCaptureOptions;
@@ -22,6 +21,7 @@ import org.academy.api.common.structure.BlockStructureSettlementResult;
 import org.academy.api.common.structure.BlockStructureSettlementMode;
 import org.academy.api.common.structure.BlockStructureSnapshot;
 import org.academy.internal.common.world.entity.structure.BlockStructureEntity;
+import org.academy.AcademyCraft;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -31,16 +31,21 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Objects;
 import java.util.function.Predicate;
 
 import static net.minecraft.world.level.block.Block.UPDATE_CLIENTS;
 import static net.minecraft.world.level.block.Block.UPDATE_KNOWN_SHAPE;
 import static net.minecraft.world.level.block.Block.UPDATE_SUPPRESS_DROPS;
+import static net.minecraft.world.level.block.Block.UPDATE_SKIP_BLOCK_ENTITY_SIDEEFFECTS;
+import static net.minecraft.world.level.block.Block.UPDATE_SKIP_ON_PLACE;
 
 /** Server-authoritative capture and restoration transactions. */
 public final class BlockStructureManager {
     private static final int BULK_UPDATE_FLAGS = UPDATE_CLIENTS
             | UPDATE_KNOWN_SHAPE
+            | UPDATE_SKIP_BLOCK_ENTITY_SIDEEFFECTS
+            | UPDATE_SKIP_ON_PLACE
             | UPDATE_SUPPRESS_DROPS;
 
     private BlockStructureManager() {
@@ -493,6 +498,15 @@ public final class BlockStructureManager {
                     );
                 }
             }
+            try {
+                // Reject payloads we cannot faithfully reconstruct before admitting an entity or removing a source.
+                BlockStructureTransferState.validateWrite(level, position, state, blockEntityData);
+            } catch (RuntimeException failure) {
+                AcademyCraft.LOGGER.warn("Block structure capture rejected non-restorable data at {}",
+                        position, failure);
+                return BlockStructureCaptureResult.failure(
+                        BlockStructureCaptureResult.Status.REJECTED, position);
+            }
             var collisionBoxes = state.getCollisionShape(level, position).toAabbs();
             if (collisionBoxes.size() > BlockStructureSnapshot.MAX_COLLISION_BOXES_PER_BLOCK) {
                 return BlockStructureCaptureResult.failure(
@@ -521,30 +535,50 @@ public final class BlockStructureManager {
             ));
         }
         var snapshot = new BlockStructureSnapshot(blocks);
-        var removed = new ArrayList<BlockPos>(positions.size());
-        for (var position : positions) {
-            if (!level.setBlock(position, Blocks.AIR.defaultBlockState(), BULK_UPDATE_FLAGS)) {
-                restoreOriginal(level, origin, snapshot, removed);
-                return BlockStructureCaptureResult.failure(
-                        BlockStructureCaptureResult.Status.WORLD_CHANGE_FAILED, position);
-            }
-            removed.add(position);
-        }
-
+        var transfer = new BlockStructureTransferState(true);
+        // Admit the entity before removing any source block, including cancellation by another mod.
         var spawned = spawn(
                 level,
                 snapshot,
                 new Vec3(origin.getX(), origin.getY(), origin.getZ()),
                 options.gravityEnabled(),
-                options.restoreWhenSettled()
+                options.restoreWhenSettled(),
+                transfer
         );
         if (spawned.isEmpty()) {
-            restoreOriginal(level, origin, snapshot, positions);
             return BlockStructureCaptureResult.failure(
                     BlockStructureCaptureResult.Status.ENTITY_SPAWN_FAILED, origin);
         }
-        updateBoundaries(level, positions);
-        return BlockStructureCaptureResult.success(spawned.get(), positions.size());
+        var entity = (BlockStructureEntity) spawned.get();
+        BlockPos changing = origin;
+        try {
+            for (var block : snapshot.blocks()) {
+                var position = origin.offset(block.relativePosition());
+                changing = position;
+                requireUnchanged(level, position, block.state(), block.blockEntityData().orElse(null));
+                if (entity.isRemoved()) throw new IllegalStateException("Capture entity was removed");
+                transfer.writeCell(level, position, Blocks.AIR.defaultBlockState(),
+                        null, BULK_UPDATE_FLAGS);
+            }
+            if (entity.isRemoved() || !transfer.matchesAfterImages(level)) {
+                throw new IllegalStateException("Capture changed before ownership commit");
+            }
+        } catch (RuntimeException failure) {
+            var recovered = rollbackTransfer(entity, level);
+            AcademyCraft.LOGGER.error("Block structure {} capture failed at {}; rollback complete: {}",
+                    entity.getUUID(), changing, recovered, failure);
+            return recovered ? BlockStructureCaptureResult.failure(
+                    BlockStructureCaptureResult.Status.WORLD_CHANGE_FAILED, changing)
+                    : BlockStructureCaptureResult.failure(
+                    BlockStructureCaptureResult.Status.RECOVERY_REQUIRED, changing);
+        }
+        entity.setPendingTransfer(null);
+        for (var block : snapshot.blocks()) {
+            notifyPlacement(level, origin.offset(block.relativePosition()),
+                    Blocks.AIR.defaultBlockState(), block.state());
+        }
+        notifyBoundaries(level, positions);
+        return BlockStructureCaptureResult.success(entity, positions.size());
     }
 
     public static Optional<BlockStructure> spawn(
@@ -553,6 +587,13 @@ public final class BlockStructureManager {
             Vec3 position,
             boolean gravityEnabled,
             boolean restoreWhenSettled
+    ) {
+        return spawn(level, snapshot, position, gravityEnabled, restoreWhenSettled, null);
+    }
+
+    private static Optional<BlockStructure> spawn(
+            ServerLevel level, BlockStructureSnapshot snapshot, Vec3 position,
+            boolean gravityEnabled, boolean restoreWhenSettled, BlockStructureTransferState transfer
     ) {
         if (level == null || snapshot == null || snapshot.isEmpty() || !finite(position)) {
             return Optional.empty();
@@ -564,7 +605,14 @@ public final class BlockStructureManager {
         var entity = new BlockStructureEntity(level);
         entity.initialize(snapshot, gravityEnabled, restoreWhenSettled);
         entity.setPos(position);
-        return level.addFreshEntity(entity) ? Optional.of(entity) : Optional.empty();
+        entity.setPendingTransfer(transfer);
+        try {
+            if (level.addFreshEntity(entity) && !entity.isRemoved()) return Optional.of(entity);
+        } catch (RuntimeException failure) {
+            AcademyCraft.LOGGER.error("Block structure admission failed at {}", position, failure);
+        }
+        entity.discard();
+        return Optional.empty();
     }
 
     public static BlockStructureRestoreResult restore(
@@ -574,6 +622,12 @@ public final class BlockStructureManager {
         if (!(entity.level() instanceof ServerLevel level)) {
             return BlockStructureRestoreResult.failure(
                     BlockStructureRestoreResult.Status.WRONG_LEVEL);
+        }
+        if (entity.isRemoved()) {
+            return BlockStructureRestoreResult.failure(BlockStructureRestoreResult.Status.INVALID_STRUCTURE);
+        }
+        if (entity.pendingTransfer() != null) {
+            return BlockStructureRestoreResult.failure(BlockStructureRestoreResult.Status.RECOVERY_REQUIRED);
         }
         var snapshot = entity.snapshot();
         if (snapshot.isEmpty()) {
@@ -613,228 +667,131 @@ public final class BlockStructureManager {
             ));
         }
         placements.sort(Comparator.comparingInt(value -> value.position.getY()));
-        var placed = new ArrayList<Placement>(placements.size());
-        for (var placement : placements) {
-            if (!level.setBlock(placement.position, placement.state, BULK_UPDATE_FLAGS)) {
-                rollbackPlacements(level, placed);
-                return BlockStructureRestoreResult.failure(
-                        BlockStructureRestoreResult.Status.WORLD_CHANGE_FAILED,
-                        placement.position
-                );
+        var transfer = new BlockStructureTransferState(false);
+        entity.setPendingTransfer(transfer);
+        BlockPos changing = entity.blockPosition();
+        try {
+            for (var placement : placements) {
+                changing = placement.position;
+                requireUnchanged(level, changing, placement.previousState, placement.previousBlockEntityData);
+                if (entity.isRemoved()) throw new IllegalStateException("Restoring entity was removed");
+                transfer.writeCell(level, changing, placement.state,
+                        placement.blockEntityData, BULK_UPDATE_FLAGS);
             }
-            placed.add(placement);
-        }
-        for (var placement : placements) {
-            if (placement.blockEntityData == null) continue;
-            var blockEntity = BlockEntity.loadStatic(
-                    placement.position,
-                    placement.state,
-                    placement.blockEntityData,
-                    level.registryAccess()
-            );
-            if (blockEntity == null) {
-                rollbackPlacements(level, placed);
-                return BlockStructureRestoreResult.failure(
-                        BlockStructureRestoreResult.Status.WORLD_CHANGE_FAILED,
-                        placement.position
-                );
+            if (entity.isRemoved() || !transfer.matchesAfterImages(level)) {
+                throw new IllegalStateException("Restoration changed before ownership commit");
             }
-            level.setBlockEntity(blockEntity);
+        } catch (RuntimeException failure) {
+            var recovered = rollbackTransfer(entity, level);
+            AcademyCraft.LOGGER.error("Block structure restoration failed at {}; rollback complete: {}",
+                    changing, recovered, failure);
+            return BlockStructureRestoreResult.failure(recovered
+                    ? BlockStructureRestoreResult.Status.WORLD_CHANGE_FAILED
+                    : BlockStructureRestoreResult.Status.RECOVERY_REQUIRED, changing);
         }
-        updateBoundaries(level, placements.stream().map(value -> value.position).toList());
+        entity.setPendingTransfer(null);
         BlockStructureKineticRuntime.stop(entity);
         entity.discard();
+        for (var placement : placements) {
+            notifyPlacement(level, placement.position, placement.state, placement.previousState);
+        }
+        notifyBoundaries(level, placements.stream().map(value -> value.position).toList());
         return BlockStructureRestoreResult.success(placements.size());
     }
 
-    /**
-     * Terminal, best-effort restoration used when a structure stops moving.
-     * Unlike {@link #restore(BlockStructureEntity, BlockStructurePlacementPolicy)},
-     * this operation cannot leave the entity behind: each cell is either placed
-     * independently or emitted as a block item before the structure is discarded.
-     */
+    /** All-or-nothing placement; failed settlement must not turn a container into an empty item. */
     public static BlockStructureSettlementResult settle(
             BlockStructureEntity entity,
             BlockStructurePlacementPolicy placementPolicy
     ) {
-        if (!(entity.level() instanceof ServerLevel level)) {
-            return BlockStructureSettlementResult.failure(
-                    BlockStructureSettlementResult.Status.WRONG_LEVEL);
-        }
-        var snapshot = entity.snapshot();
-        if (snapshot.isEmpty()) {
-            BlockStructureKineticRuntime.stop(entity);
-            entity.discard();
-            return BlockStructureSettlementResult.failure(
-                    BlockStructureSettlementResult.Status.INVALID_STRUCTURE);
-        }
-        if (placementPolicy == null) {
-            throw new IllegalArgumentException("placementPolicy cannot be null");
-        }
-
-        var alignment = BlockStructureGridAlignment.nearest(
-                snapshot, entity.position(), entity.getYRot());
-        var placements = snapshot.blocks().stream()
-                .map(block -> new SettlementPlacement(
-                        alignment.target(block.relativePosition()),
-                        block.state().rotate(alignment.rotation()),
-                        block.blockEntityData().orElse(null),
-                        block.settlementMode()))
-                .sorted(Comparator.comparingInt(value -> value.position.getY()))
-                .toList();
-        var occupiedTargets = new HashSet<BlockPos>();
-        var changedPositions = new ArrayList<BlockPos>();
-        var dropPosition = entity.blockPosition().immutable();
-        var placedBlocks = 0;
-        var droppedBlocks = 0;
-
-        for (var placement : placements) {
-            if (settleCell(level, placement, placementPolicy,
-                    occupiedTargets, changedPositions)) placedBlocks++;
-            else {
-                dropBlock(level, dropPosition, placement.state);
-                droppedBlocks++;
-            }
-        }
-
-        try {
-            updateBoundaries(level, changedPositions);
-        } finally {
-            BlockStructureKineticRuntime.stop(entity);
-            entity.discard();
-        }
-        return BlockStructureSettlementResult.success(placedBlocks, droppedBlocks);
+        var result = restore(entity, placementPolicy);
+        if (result.succeeded()) return BlockStructureSettlementResult.success(result.affectedBlocks(), 0);
+        entity.deferSettlement();
+        var status = switch (result.status()) {
+            case WRONG_LEVEL -> BlockStructureSettlementResult.Status.WRONG_LEVEL;
+            case INVALID_STRUCTURE -> BlockStructureSettlementResult.Status.INVALID_STRUCTURE;
+            case RECOVERY_REQUIRED -> BlockStructureSettlementResult.Status.RECOVERY_REQUIRED;
+            default -> BlockStructureSettlementResult.Status.RETAINED;
+        };
+        return BlockStructureSettlementResult.failure(status);
     }
 
-    /**
-     * Dematerializes a stopped structure. Fixed building cells restore directly, while natural
-     * terrain cells become vanilla falling-block entities from the lowest layer upward. Cells
-     * that cannot be emitted safely become block-item drops instead.
-     */
+    /** Admit all falling cells and place all fixed cells before relinquishing the source payload. */
     public static void beginGravitySettlement(BlockStructureEntity entity) {
-        if (entity == null || entity.isRemoved()) return;
-        if (!(entity.level() instanceof ServerLevel level)) {
-            entity.discard();
-            return;
-        }
-        var snapshot = entity.snapshot();
-        if (snapshot.isEmpty()) {
-            BlockStructureKineticRuntime.stop(entity);
-            entity.discard();
-            return;
-        }
+        if (entity == null || entity.isRemoved() || entity.isTransferPending()
+                || !(entity.level() instanceof ServerLevel level) || entity.snapshot().isEmpty()) return;
+        entity.deferSettlement();
         var alignment = BlockStructureGridAlignment.nearest(
-                snapshot, entity.position(), entity.getYRot());
-        var cells = snapshot.blocks().stream()
-                .map(block -> new SettlementPlacement(
-                        alignment.target(block.relativePosition()),
-                        block.state().rotate(alignment.rotation()),
-                        block.blockEntityData().orElse(null),
+                entity.snapshot(), entity.position(), entity.getYRot());
+        var cells = entity.snapshot().blocks().stream()
+                .map(block -> new SettlementPlacement(alignment.target(block.relativePosition()),
+                        block.state().rotate(alignment.rotation()), block.blockEntityData().orElse(null),
                         block.settlementMode()))
                 .sorted((left, right) -> BlockStructureSettlementMotion.compareBottomUp(
                         left.position, right.position))
                 .toList();
-        var dropPosition = entity.blockPosition().immutable();
-        BlockStructureKineticRuntime.stop(entity);
-        entity.discard();
-
-        var occupiedTargets = new HashSet<BlockPos>();
-        var changedPositions = new ArrayList<BlockPos>();
+        var targets = new HashSet<BlockPos>();
         for (var cell : cells) {
-            if (cell.settlementMode != BlockStructureSettlementMode.FIXED) continue;
-            if (!settleCell(
-                    level,
-                    cell,
-                    BlockStructurePlacementPolicy.AIR_ONLY,
-                    occupiedTargets,
-                    changedPositions
-            )) {
-                dropBlock(level, dropPosition, cell.state);
-            }
+            if (!targets.add(cell.position) || !level.isInWorldBounds(cell.position)
+                    || !level.isLoaded(cell.position) || !level.getBlockState(cell.position).isAir()) return;
         }
-        updateBoundaries(level, changedPositions);
-        for (var cell : cells) {
-            if (cell.settlementMode != BlockStructureSettlementMode.FALLING) continue;
-            if (!occupiedTargets.add(cell.position)
-                    || !level.isInWorldBounds(cell.position)
-                    || !level.isLoaded(cell.position)
-                    || !level.getBlockState(cell.position).isAir()
-                    || !spawnFallingCell(level, cell)) {
-                dropBlock(level, dropPosition, cell.state);
-            }
-        }
-    }
-
-    private static boolean spawnFallingCell(
-            ServerLevel level,
-            SettlementPlacement cell
-    ) {
+        var transfer = new BlockStructureTransferState(false);
+        entity.setPendingTransfer(transfer);
+        var fallingCells = new ArrayList<FallingBlockEntity>();
+        var changed = new ArrayList<BlockPos>();
         try {
-            if (!level.setBlock(cell.position, cell.state, BULK_UPDATE_FLAGS)) return false;
-            var falling = FallingBlockEntity.fall(level, cell.position, cell.state);
-            falling.dropItem = true;
-            if (cell.blockEntityData != null) {
-                falling.blockData = cell.blockEntityData.copy();
-            }
-            return true;
-        } catch (RuntimeException ignored) {
-            if (level.isLoaded(cell.position)
-                    && level.getBlockState(cell.position).equals(cell.state)) {
-                level.setBlock(cell.position, Blocks.AIR.defaultBlockState(), BULK_UPDATE_FLAGS);
-            }
-            return false;
-        }
-    }
-
-    private static boolean settleCell(
-            ServerLevel level,
-            SettlementPlacement placement,
-            BlockStructurePlacementPolicy placementPolicy,
-            HashSet<BlockPos> occupiedTargets,
-            ArrayList<BlockPos> changedPositions
-    ) {
-        if (!occupiedTargets.add(placement.position)
-                || !level.isInWorldBounds(placement.position)
-                || !level.isLoaded(placement.position)) return false;
-        BlockState previousState = null;
-        CompoundTag previousBlockEntityData = null;
-        var changed = false;
-        try {
-            previousState = level.getBlockState(placement.position);
-            if (!placementPolicy.canReplace(level, placement.position, previousState)) return false;
-            previousBlockEntityData = saveBlockEntity(
-                    level.getBlockEntity(placement.position), level);
-            if (!level.setBlock(placement.position, placement.state, BULK_UPDATE_FLAGS)) {
-                return false;
-            }
-            changed = true;
-            changedPositions.add(placement.position);
-            if (placement.blockEntityData == null) return true;
-            var blockEntity = BlockEntity.loadStatic(
-                    placement.position,
-                    placement.state,
-                    placement.blockEntityData,
-                    level.registryAccess()
-            );
-            if (blockEntity == null) {
-                restoreCell(level, placement.position, previousState,
-                        previousBlockEntityData);
-                return false;
-            }
-            level.setBlockEntity(blockEntity);
-            blockEntity.setChanged();
-            return true;
-        } catch (RuntimeException ignored) {
-            if (changed && previousState != null) {
-                try {
-                    restoreCell(level, placement.position, previousState,
-                            previousBlockEntityData);
-                } catch (RuntimeException ignoredRestoreFailure) {
-                    // The entity still terminates; this cell is represented by its dropped item.
+            for (var cell : cells) {
+                if (!falls(cell)) continue;
+                // Constructing the candidate does not mutate the block grid.
+                var state = cell.state.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED)
+                        ? cell.state.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED, false)
+                        : cell.state;
+                var falling = org.academy.mixin.common.FallingBlockEntityInvoker.academy$create(
+                        level, cell.position.getX() + 0.5, cell.position.getY(), cell.position.getZ() + 0.5, state);
+                fallingCells.add(falling);
+                falling.setNoGravity(true);
+                if (!level.addFreshEntity(falling) || falling.isRemoved() || falling.level() != level) {
+                    throw new IllegalStateException("Falling cell admission rejected at " + cell.position);
                 }
             }
-            return false;
+            // Entity admission callbacks may have changed a destination since preflight.
+            for (var cell : cells) requireUnchanged(level, cell.position, Blocks.AIR.defaultBlockState(), null);
+            for (var cell : cells) {
+                if (falls(cell)) continue;
+                requireUnchanged(level, cell.position, Blocks.AIR.defaultBlockState(), null);
+                transfer.writeCell(level, cell.position, cell.state,
+                        cell.blockEntityData, BULK_UPDATE_FLAGS);
+                changed.add(cell.position);
+            }
+            // Fixed-cell callbacks may also have replaced a falling cell's previously empty destination.
+            for (var cell : cells) {
+                if (falls(cell)) requireUnchanged(level, cell.position, Blocks.AIR.defaultBlockState(), null);
+            }
+            if (!transfer.matchesAfterImages(level)) {
+                throw new IllegalStateException("Settlement blocks changed before ownership commit");
+            }
+            if (entity.isRemoved() || fallingCells.stream().anyMatch(FallingBlockEntity::isRemoved)) {
+                throw new IllegalStateException("Settlement participant was removed before commit");
+            }
+        } catch (RuntimeException failure) {
+            fallingCells.forEach(FallingBlockEntity::discard);
+            var recovered = rollbackTransfer(entity, level);
+            AcademyCraft.LOGGER.error("Gravity settlement failed for {}; rollback complete: {}",
+                    entity.getUUID(), recovered, failure);
+            return;
         }
+        entity.setPendingTransfer(null);
+        entity.discard();
+        fallingCells.forEach(falling -> falling.setNoGravity(false));
+        for (var cell : cells) {
+            if (!falls(cell)) notifyPlacement(level, cell.position, cell.state, Blocks.AIR.defaultBlockState());
+        }
+        notifyBoundaries(level, changed);
+    }
+
+    private static boolean falls(SettlementPlacement cell) {
+        return cell.settlementMode == BlockStructureSettlementMode.FALLING
+                && cell.blockEntityData == null && !cell.state.hasBlockEntity();
     }
 
     private static List<BlockPos> normalizedPositions(Iterable<BlockPos> positions) {
@@ -861,70 +818,48 @@ public final class BlockStructureManager {
         return new BlockPos(minimumX, minimumY, minimumZ);
     }
 
-    private static void restoreOriginal(
-            ServerLevel level,
-            BlockPos origin,
-            BlockStructureSnapshot snapshot,
-            Collection<BlockPos> removed
-    ) {
-        var removedSet = new HashSet<>(removed);
-        for (var block : snapshot.blocks()) {
-            var position = origin.offset(block.relativePosition());
-            if (!removedSet.contains(position)) continue;
-            level.setBlock(position, block.state(), BULK_UPDATE_FLAGS);
-            block.blockEntityData().ifPresent(data -> {
-                var blockEntity = BlockEntity.loadStatic(
-                        position, block.state(), data, level.registryAccess());
-                if (blockEntity != null) level.setBlockEntity(blockEntity);
-            });
+    private static boolean rollbackTransfer(BlockStructureEntity entity, ServerLevel level) {
+        var transfer = entity.pendingTransfer();
+        if (transfer == null) return true;
+        if (!transfer.rollback(level, BULK_UPDATE_FLAGS)) {
+            // The entity remains quarantined. Its full payload is never automatically reactivated.
+            return false;
         }
-        updateBoundaries(level, removed);
+        entity.setPendingTransfer(null);
+        if (transfer.discardAfterRollback()) entity.discard();
+        else entity.deferSettlement();
+        return true;
     }
 
-    private static void rollbackPlacements(ServerLevel level, List<Placement> placements) {
-        for (var index = placements.size() - 1; index >= 0; index--) {
-            var placement = placements.get(index);
-            level.setBlock(placement.position, placement.previousState, BULK_UPDATE_FLAGS);
-            if (placement.previousBlockEntityData != null) {
-                var blockEntity = BlockEntity.loadStatic(
-                        placement.position,
-                        placement.previousState,
-                        placement.previousBlockEntityData,
-                        level.registryAccess()
-                );
-                if (blockEntity != null) level.setBlockEntity(blockEntity);
-            }
+    private static void requireUnchanged(ServerLevel level, BlockPos position, BlockState state,
+                                         CompoundTag blockEntityData) {
+        if (!level.isLoaded(position) || !level.getBlockState(position).equals(state)
+                || !Objects.equals(blockEntityData, saveBlockEntity(level.getBlockEntity(position), level))) {
+            throw new IllegalStateException("Block changed during transfer at " + position);
         }
-        updateBoundaries(level, placements.stream().map(value -> value.position).toList());
     }
 
-    private static void restoreCell(
-            ServerLevel level,
-            BlockPos position,
-            BlockState previousState,
-            CompoundTag previousBlockEntityData
-    ) {
-        level.setBlock(position, previousState, BULK_UPDATE_FLAGS);
-        if (previousBlockEntityData == null) return;
-        var blockEntity = BlockEntity.loadStatic(
-                position,
-                previousState,
-                previousBlockEntityData,
-                level.registryAccess()
-        );
-        if (blockEntity != null) level.setBlockEntity(blockEntity);
-    }
-
-    private static void dropBlock(
-            ServerLevel level,
-            BlockPos dropPosition,
-            BlockState state
-    ) {
+    private static void notifyBoundaries(ServerLevel level, Collection<BlockPos> positions) {
         try {
-            var stack = new ItemStack(state.getBlock());
-            if (!stack.isEmpty()) Block.popResource(level, dropPosition, stack);
-        } catch (RuntimeException ignored) {
-            // A third-party block must not keep the structure entity alive forever.
+            updateBoundaries(level, positions);
+        } catch (RuntimeException failure) {
+            // Ownership has committed. A failing neighbor must not cause the payload to be duplicated.
+            AcademyCraft.LOGGER.error("Structure boundary notification failed after transfer commit", failure);
+        }
+    }
+
+    /** Run non-reversible placement effects only after the source relinquishes its payload. */
+    private static void notifyPlacement(ServerLevel level, BlockPos position,
+                                        BlockState expectedState, BlockState previousState) {
+        try {
+            // An earlier callback may have consumed or replaced this cell (for example a golem pattern).
+            if (expectedState.equals(previousState) || !level.isLoaded(position)
+                    || !level.getBlockState(position).equals(expectedState)) return;
+            expectedState.onPlace(level, position, previousState, false);
+        } catch (RuntimeException failure) {
+            // Spawning an entity or consuming neighboring blocks cannot be undone by cell before-images.
+            AcademyCraft.LOGGER.error("Structure placement callback failed after transfer commit at {}",
+                    position, failure);
         }
     }
 

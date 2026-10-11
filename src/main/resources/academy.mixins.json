@@ -15,6 +15,7 @@
     "common.AbstractArrowVectorAccessor",
     "common.EntitySharedFlagInvoker",
     "common.EntityStateAccessor",
+    "common.FallingBlockEntityInvoker",
     "common.LevelTicksAccessor",
     "common.LivingEntityAttackStateAccessor",
     "common.LivingEntityDamageInvoker",

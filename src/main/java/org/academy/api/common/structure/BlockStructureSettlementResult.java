@@ -1,8 +1,8 @@
 package org.academy.api.common.structure;
 
 /**
- * Terminal result of materializing a stopped structure. Blocks that cannot be
- * placed at the aligned pose are converted to dropped block items.
+ * Result of materializing a stopped structure. Failed placement retains the complete
+ * structure; droppedBlocks is retained for source compatibility and is zero on this path.
  */
 public record BlockStructureSettlementResult(
         Status status,
@@ -40,6 +40,8 @@ public record BlockStructureSettlementResult(
     public enum Status {
         SUCCESS,
         INVALID_STRUCTURE,
-        WRONG_LEVEL
+        WRONG_LEVEL,
+        RETAINED,
+        RECOVERY_REQUIRED
     }
 }

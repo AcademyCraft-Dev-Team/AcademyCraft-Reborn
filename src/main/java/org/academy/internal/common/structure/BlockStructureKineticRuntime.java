@@ -88,6 +88,7 @@ public final class BlockStructureKineticRuntime {
         Objects.requireNonNull(options, "options");
         Objects.requireNonNull(impactHandler, "impactHandler");
         if (!(structure.asEntity() instanceof BlockStructureEntity entity)
+                || entity.isTransferPending()
                 || entity.level().isClientSide()
                 || entity.level() != controller.level()
                 || entity.isRemoved()

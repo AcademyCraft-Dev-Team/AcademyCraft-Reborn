@@ -33,6 +33,7 @@ import org.academy.internal.common.structure.BlockStructureCollisionRuntime;
 import org.academy.internal.common.structure.BlockStructureKineticRuntime;
 import org.academy.internal.common.structure.BlockStructureManager;
 import org.academy.internal.common.structure.BlockStructureSettlementMotion;
+import org.academy.internal.common.structure.BlockStructureTransferState;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.world.entity.EntityTypes;
 
@@ -58,6 +59,8 @@ public final class BlockStructureEntity extends Entity
                     BlockStructureEntity.class,
                     EntityDataSerializers.BOOLEAN
             );
+    private static final EntityDataAccessor<Boolean> TRANSFER_PENDING = SynchedEntityData.defineId(
+            BlockStructureEntity.class, EntityDataSerializers.BOOLEAN);
     private static final double LINEAR_DRAG = 0.98;
     private static final double MAX_SPEED = 16.0;
     private static final double REST_SPEED_SQUARED = 0.0004;
@@ -74,6 +77,8 @@ public final class BlockStructureEntity extends Entity
     private final Set<UUID> supportedEntityIds = new HashSet<>();
     private UUID motionControllerId;
     private long motionControllerExpiresAt;
+    private BlockStructureTransferState pendingTransfer;
+    private long nextSettlementAttempt;
 
     public BlockStructureEntity(EntityType<? extends BlockStructureEntity> type, Level level) {
         super(type, level);
@@ -105,6 +110,7 @@ public final class BlockStructureEntity extends Entity
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         builder.define(STRUCTURE, BlockStructureSnapshot.EMPTY);
         builder.define(RESTORE_WHEN_SETTLED, false);
+        builder.define(TRANSFER_PENDING, false);
     }
 
     @Override
@@ -133,6 +139,10 @@ public final class BlockStructureEntity extends Entity
     public void tick() {
         super.tick();
         BlockStructureCollisionRuntime.update(this);
+        if (isTransferPending()) {
+            setDeltaMovement(Vec3.ZERO);
+            return;
+        }
         if (structure.isEmpty()) {
             if (!level().isClientSide()) discard();
             return;
@@ -213,7 +223,7 @@ public final class BlockStructureEntity extends Entity
             var propulsionFinished = BlockStructureKineticRuntime.controller(this) == null
                     && !externallyControlled;
             var settlementPrevented = BlockStructureKineticRuntime.preventsSettlement(this);
-            if (BlockStructureSettlementMotion.shouldBegin(
+            if (level().getGameTime() >= nextSettlementAttempt && BlockStructureSettlementMotion.shouldBegin(
                     settlementPrevented,
                     stopped,
                     fullyStopped,
@@ -422,7 +432,7 @@ public final class BlockStructureEntity extends Entity
 
     @Override
     public boolean isPickable() {
-        return true;
+        return !isTransferPending();
     }
 
     @Override
@@ -437,12 +447,12 @@ public final class BlockStructureEntity extends Entity
 
     @Override
     public boolean canBeCollidedWith(Entity other) {
-        return other != this && !isRemoved();
+        return other != this && !isRemoved() && !isTransferPending();
     }
 
     @Override
     public void collectCollisionShapes(AABB bounds, Consumer<VoxelShape> output) {
-        if (bounds == null || output == null || collisionGeometry.isEmpty()) return;
+        if (bounds == null || output == null || collisionGeometry.isEmpty() || isTransferPending()) return;
         collisionGeometry.collectCollisionShapes(
                 bounds,
                 position(),
@@ -454,7 +464,7 @@ public final class BlockStructureEntity extends Entity
 
     @Override
     public boolean supports(AABB entityBounds, double tolerance) {
-        return entityBounds != null && collisionGeometry.supports(
+        return !isTransferPending() && entityBounds != null && collisionGeometry.supports(
                 entityBounds,
                 tolerance,
                 position(),
@@ -470,7 +480,7 @@ public final class BlockStructureEntity extends Entity
 
     @Override
     public void setDeltaMovement(Vec3 velocity) {
-        super.setDeltaMovement(finiteVelocity(velocity));
+        super.setDeltaMovement(pendingTransfer == null ? finiteVelocity(velocity) : Vec3.ZERO);
         if (level().isClientSide()) return;
         var source = EntityMotionGuard.currentMotionSourceEntity();
         if (source == null || source == this || source.isRemoved()
@@ -496,6 +506,7 @@ public final class BlockStructureEntity extends Entity
 
     @Override
     public void setPosition(Vec3 position) {
+        if (pendingTransfer != null) return;
         if (position == null
                 || !Double.isFinite(position.x)
                 || !Double.isFinite(position.y)
@@ -521,6 +532,7 @@ public final class BlockStructureEntity extends Entity
 
     @Override
     public void setVelocity(Vec3 velocity) {
+        if (pendingTransfer != null) return;
         setDeltaMovement(finiteVelocity(velocity));
         hurtMarked = true;
     }
@@ -538,6 +550,7 @@ public final class BlockStructureEntity extends Entity
 
     @Override
     public void setYawDegrees(float yawDegrees) {
+        if (pendingTransfer != null) return;
         if (!Float.isFinite(yawDegrees)) return;
         setYRot(Mth.wrapDegrees(yawDegrees));
         refreshStructureBounds();
@@ -545,7 +558,7 @@ public final class BlockStructureEntity extends Entity
 
     @Override
     public void alignToGrid() {
-        if (structure.isEmpty()) return;
+        if (structure.isEmpty() || isTransferPending()) return;
         var alignment = BlockStructureGridAlignment.nearest(
                 structure, position(), getYRot());
         setYawDegrees(alignment.yawDegrees());
@@ -573,6 +586,29 @@ public final class BlockStructureEntity extends Entity
         return BlockStructureManager.settle(this, placementPolicy);
     }
 
+    /** A failed rollback keeps the complete payload and before-images in this saved entity. */
+    public BlockStructureTransferState pendingTransfer() {
+        return pendingTransfer;
+    }
+
+    public void setPendingTransfer(BlockStructureTransferState transfer) {
+        pendingTransfer = transfer;
+        entityData.set(TRANSFER_PENDING, transfer != null);
+        if (transfer != null) {
+            BlockStructureKineticRuntime.stop(this);
+            setDeltaMovement(Vec3.ZERO);
+            hurtMarked = true;
+        }
+    }
+
+    public boolean isTransferPending() {
+        return entityData.get(TRANSFER_PENDING);
+    }
+
+    public void deferSettlement() {
+        nextSettlementAttempt = level().getGameTime() + 20;
+    }
+
     @Override
     protected void readAdditionalSaveData(ValueInput input) {
         structure = BlockStructureSnapshot.load(input.childOrEmpty("academy_structure"));
@@ -580,6 +616,9 @@ public final class BlockStructureEntity extends Entity
         entityData.set(STRUCTURE, structure);
         entityData.set(RESTORE_WHEN_SETTLED,
                 input.getBooleanOr("academy_restore_when_settled", false));
+        pendingTransfer = input.child("academy_pending_transfer")
+                .map(BlockStructureTransferState::load).orElse(null);
+        entityData.set(TRANSFER_PENDING, pendingTransfer != null);
         refreshStructureBounds();
     }
 
@@ -588,6 +627,7 @@ public final class BlockStructureEntity extends Entity
         structure.save(output.child("academy_structure"));
         output.putBoolean("academy_restore_when_settled",
                 entityData.get(RESTORE_WHEN_SETTLED));
+        if (pendingTransfer != null) pendingTransfer.save(output.child("academy_pending_transfer"));
     }
 
     private static Vec3 finiteVelocity(Vec3 velocity) {

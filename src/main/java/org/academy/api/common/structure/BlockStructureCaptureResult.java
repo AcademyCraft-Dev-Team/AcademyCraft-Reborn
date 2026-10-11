@@ -4,7 +4,7 @@ import net.minecraft.core.BlockPos;
 
 import java.util.Optional;
 
-/** Result of an atomic structure capture request. */
+/** Result of a structure capture request; incomplete rollback is reported as recovery required. */
 public record BlockStructureCaptureResult(
         Status status,
         Optional<BlockStructure> structure,
@@ -58,6 +58,7 @@ public record BlockStructureCaptureResult(
         BLOCK_ENTITY_DATA_TOO_LARGE,
         COLLISION_DATA_TOO_LARGE,
         WORLD_CHANGE_FAILED,
-        ENTITY_SPAWN_FAILED
+        ENTITY_SPAWN_FAILED,
+        RECOVERY_REQUIRED
     }
 }
