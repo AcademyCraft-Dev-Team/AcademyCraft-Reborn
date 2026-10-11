@@ -67,6 +67,46 @@ class MaterialShapeVfxTest {
                 new Vector3f(4, 0, 0), new Vector3f()));
     }
 
+    @Test void eachFlyingPairKeepsABroadCurvedFanAndGraduatedLongOuterFeathers() {
+        var root = new Vector3f();
+        var axis = new Vector3f();
+        var normal = new Vector3f();
+        var roots = new Vector3f[14];
+        var tips = new Vector3f[14];
+        var lengths = new float[14];
+        float previousRelativeBreadth = 0;
+        for (int pair = 0; pair < 3; pair++) {
+            for (int feather = 0; feather < 14; feather++) {
+                FeatherArrayGeometry.sample(pair, 3, 1, feather, 14, false, 3.6f, 1.25f,
+                        -0.2f, 1, 0, 0, 0, root, axis, normal);
+                roots[feather] = new Vector3f(root);
+                tips[feather] = new Vector3f(root).add(axis);
+                lengths[feather] = axis.length();
+            }
+            var chord = new Vector3f(tips[13]).sub(roots[0]);
+            float chordLength = (float) Math.hypot(chord.x, chord.y);
+            float minimum = 0, maximum = 0, leadingArch = 0;
+            for (int feather = 0; feather < 14; feather++) {
+                float rootDistance = (chord.y * (roots[feather].x - roots[0].x)
+                        - chord.x * (roots[feather].y - roots[0].y)) / chordLength;
+                float tipDistance = (chord.y * (tips[feather].x - roots[0].x)
+                        - chord.x * (tips[feather].y - roots[0].y)) / chordLength;
+                minimum = Math.min(minimum, Math.min(rootDistance, tipDistance));
+                maximum = Math.max(maximum, Math.max(rootDistance, tipDistance));
+                leadingArch = Math.max(leadingArch, -rootDistance);
+            }
+            float relativeBreadth = (maximum - minimum) / chordLength;
+            assertTrue(relativeBreadth > 0.23f, "Each pair needs a broad flight-feather fan, including the upper wings");
+            assertTrue(leadingArch > chordLength * 0.10f, "The leading edge must arch away from the tip chord");
+            if (pair > 0) assertEquals(previousRelativeBreadth, relativeBreadth, 0.001f,
+                    "Rotating a wing must not flatten its primary silhouette");
+            previousRelativeBreadth = relativeBreadth;
+            assertTrue(lengths[7] > lengths[0] * 3, "Small shoulder feathers transition into long secondary feathers");
+            assertTrue(lengths[11] > lengths[13], "Outer primaries taper in length instead of ending in one paddle");
+            assertTrue(tips[13].x > tips[12].x, "The swept terminal primary still finishes the wingtip");
+        }
+    }
+
     @Test void materialFanUsesOneContinuousSurfaceAndKeepsReverseSlashIndependent() {
         var node = MaterialFanEmitter.create(block("vfx.block.material_fan", Map.of("lifetime", "0.32")));
         var buffer = new ParticleBuffer();
@@ -285,6 +325,95 @@ class MaterialShapeVfxTest {
         assertEquals(1, buffer.surfaceNormalZ(0));
     }
 
+    @Test void wholeWingOcclusionEnvelopeIncludesTheExpandedFanAndCurvedVanes() {
+        var node = FeatherArrayEmitter.create(block("vfx.block.feather_array", Map.of()));
+        var buffer = new ParticleBuffer();
+        var parameters = new HashMap<String, Value>();
+        var context = context(parameters);
+        var queryRoots = new Vector3f[6];
+        var queryTips = new Vector3f[6];
+        var widths = new float[6];
+        int[] queries = {0};
+        context.setOcclusionSamplers(Map.of("occlusion", (group, root, tip, normal, halfWidth, plane) -> {
+            queryRoots[group] = new Vector3f(root);
+            queryTips[group] = new Vector3f(tip);
+            widths[group] = halfWidth;
+            queries[0]++;
+            return false;
+        }));
+        var root = new Vector3f();
+        var axis = new Vector3f();
+        var normal = new Vector3f();
+        var vertex = new Vector3f();
+        var chord = new Vector3f();
+        var offset = new Vector3f();
+        for (float grounded : new float[]{0, 1}) {
+            parameters.put("grounded", Value.of(grounded));
+            node.step(buffer, context);
+            for (int particle = 0; particle < buffer.count(); particle++) {
+                int group = particle / 22;
+                root.set(buffer.positionX(particle), buffer.positionY(particle), buffer.positionZ(particle));
+                axis.set(buffer.velocityX(particle), buffer.velocityY(particle), buffer.velocityZ(particle));
+                normal.set(buffer.surfaceNormalX(particle), buffer.surfaceNormalY(particle), buffer.surfaceNormalZ(particle));
+                chord.set(queryTips[group]).sub(queryRoots[group]);
+                for (int u = -1; u <= 1; u++) for (int v = 0; v <= 4; v++) {
+                    FeatherArrayGeometry.sampleSurface(root, axis, normal, buffer.size(particle), buffer.rotation(particle),
+                            buffer.age(particle), u, v / 4f, vertex);
+                    offset.set(vertex).sub(queryRoots[group]);
+                    float t = Math.clamp(offset.dot(chord) / chord.lengthSquared(), 0, 1);
+                    offset.fma(-t, chord);
+                    assertTrue(offset.length() <= widths[group] + 0.00001f,
+                            "The single wing query must include the long secondary vanes, not just the terminal primary");
+                }
+            }
+        }
+        assertEquals(12, queries[0], "Expanded geometry still makes only six queries per update");
+    }
+
+    @Test void fanOcclusionRaysUseActualGroundClearWingPoints() {
+        var node = FeatherArrayEmitter.create(block("vfx.block.feather_array", Map.of()));
+        var buffer = new ParticleBuffer();
+        var parameters = new HashMap<String, Value>();
+        parameters.put("grounded", Value.of(1f));
+        var context = context(parameters);
+        int[] queries = {0};
+        context.setOcclusionSamplers(Map.of("occlusion", new org.academy.api.client.render.vfxgraph.shape.SurfaceOcclusionSampler() {
+            @Override public boolean sample(int group, org.joml.Vector3fc root, org.joml.Vector3fc tip,
+                                            org.joml.Vector3fc normal, float width, org.joml.Vector4f plane) {
+                fail("The feather array must supply actual fan endpoints rather than offsetting its capsule");
+                return false;
+            }
+            @Override public boolean sampleFan(int group, org.joml.Vector3fc root, org.joml.Vector3fc tip,
+                                               org.joml.Vector3fc edgeA, org.joml.Vector3fc edgeB,
+                                               org.joml.Vector3fc normal, float width, org.joml.Vector4f plane) {
+                queries[0]++;
+                assertTrue(root.y() >= .1199f);
+                for (var endpoint : new org.joml.Vector3fc[]{tip, edgeA, edgeB}) {
+                    assertTrue(endpoint.y() >= .1199f, "An open floor must not intersect any of the three rays");
+                    boolean actualPoint = false;
+                    for (int i = group * 22; i < (group + 1) * 22; i++) {
+                        if (buffer.alpha(i) <= 0) continue;
+                        var featherRoot = new Vector3f(buffer.positionX(i), buffer.positionY(i), buffer.positionZ(i));
+                        var featherTip = new Vector3f(featherRoot).add(buffer.velocityX(i), buffer.velocityY(i), buffer.velocityZ(i));
+                        actualPoint |= endpoint.distanceSquared(featherRoot) < .000001f
+                                || endpoint.distanceSquared(featherTip) < .000001f;
+                    }
+                    assertTrue(actualPoint, "Probe endpoints must belong to the visible posed wing");
+                }
+                assertTrue(edgeA.distanceSquared(edgeB) > .0001f, "The side probes must sample distinct parts of the fan");
+                return false;
+            }
+        }));
+        for (float span : new float[]{1.8f, 3.6f, 7.2f}) for (float spread : new float[]{.25f, 1})
+            for (float attack : new float[]{0, .8f}) {
+                parameters.put("span", Value.of(span));
+                parameters.put("spread", Value.of(spread));
+                parameters.put("attack", Value.of(attack));
+                node.step(buffer, context);
+            }
+        assertEquals(72, queries[0]);
+    }
+
     @Test void sharedWingDimensionsControlGeometryWithoutRebuildingOwnedSlots() {
         var node = FeatherArrayEmitter.create(block("vfx.block.feather_array", Map.of()));
         var buffer = new ParticleBuffer();
@@ -293,7 +422,8 @@ class MaterialShapeVfxTest {
         float extent = maxSideExtent(buffer);
         node.step(buffer, context(Map.of("grounded", Value.of(0f), "span", Value.of(7.2f),
                 "root_height", Value.of(1.75f), "root_depth", Value.of(.3f))));
-        assertEquals(rootY + .5f + .67f * 3.6f * .87f * .015f, buffer.positionY(0), .00001f);
+        assertEquals(1.99f + (rootY - 1.49f) * 2, buffer.positionY(0), .00001f,
+                "Changing span scales the local wing around its translated body attachment");
         assertEquals(rootZ + .5f, buffer.positionZ(0), .00001f);
         assertEquals(seed, buffer.seed(0));
         assertEquals(132, buffer.count());

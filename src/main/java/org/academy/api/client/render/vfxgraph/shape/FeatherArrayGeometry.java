@@ -12,31 +12,47 @@ public final class FeatherArrayGeometry {
                               float flexibility, float attack, Vector3f root, Vector3f longitudinal,
                               Vector3f normal) {
         samplePose(pair, pairs, side, ordinal, count, covert, span, rootHeight, rootDepth, spread,
-                time, flexibility, attack, 0, true, root, longitudinal, normal);
+                time, flexibility, attack, 0, root, longitudinal, normal);
     }
 
     private static void samplePose(int pair, int pairs, int side, int ordinal, int count, boolean covert,
                                    float span, float rootHeight, float rootDepth, float spread, float time,
-                                   float flexibility, float attack, float grounded, boolean legacyFlight, Vector3f root,
+                                   float flexibility, float attack, float grounded, Vector3f root,
                                    Vector3f longitudinal, Vector3f normal) {
         float t = count <= 1 ? 0.5f : ordinal / (float) (count - 1);
         float pairPosition = pairs <= 1 ? 0 : 1 - pair * 2f / (pairs - 1);
-        float flyingSlope = pairPosition * 0.67f + (legacyFlight ? 0 : 0.045f * (1 - pairPosition * pairPosition));
-        // At rest complete wing axes are approximately +16/+3/-10 degrees; the upper pair
-        // lowers and the middle pair rises slightly while the lower vanes still clear the feet.
-        float standingSlope = 0.16f + pairPosition * 0.28f - pairPosition * pairPosition * 0.01f;
-        float slope = flyingSlope + (standingSlope - flyingSlope) * Math.clamp(grounded, 0, 1);
-        float lateral = span * (1 - Math.abs(pairPosition) * 0.13f);
+        // Build the same broad fan in a wing-local frame before rotating each pair. World-Y
+        // feather directions flatten the upper pair into a narrow chain of overlapping leaves.
+        float flyingAngle = 0.065f + pairPosition * 0.61f;
+        // Whole-wing tip directions stay close to the existing +16/+3/-10 degree standing pose.
+        float standingAngle = 0.13f + pairPosition * 0.235f;
+        float angle = flyingAngle + (standingAngle - flyingAngle) * Math.clamp(grounded, 0, 1);
+        float forwardX = (float) Math.cos(angle), forwardY = (float) Math.sin(angle);
+        float lateral = span * (1 - Math.abs(pairPosition) * 0.10f);
         float opening = Math.clamp(spread, 0, 1) * (1 - Math.clamp(attack, 0, 1) * 0.52f);
         float flutter = (float) Math.sin(time * 2.2f + pair * 1.2f + t * 0.9f) * flexibility;
-        float u = 0.015f + t * (covert ? 0.78f : 0.88f);
-        root.set(side * (0.17f + lateral * u * opening),
-                rootHeight + pairPosition * 0.24f + slope * lateral * u * opening - (1 - opening) * u * 0.65f,
-                rootDepth - u * 0.3f + flutter * u + (covert ? -0.035f : 0));
-        float length = lateral * (covert ? 0.20f + t * 0.08f : 0.30f + t * 0.20f);
-        longitudinal.set(side * (0.25f + t * 0.5f) * opening,
-                (slope * 0.65f - 0.35f + t * 0.14f) * opening - (1 - opening) * 0.85f,
-                -0.12f + flutter * 0.12f).normalize().mul(length);
+        float station = covert ? 0.025f + t * 0.91f : t;
+        float u = covert ? 0.005f + t * 0.72f : 0.015f + t * 0.75f;
+        float arch = 0.135f * (float) Math.sin(station * Math.PI);
+        // A continuous overlapping row follows the shoulder. Its shallower fan covers the long
+        // feathers' exposed quills instead of making two sparse rows of large isolated scales.
+        float trailing = -arch - (covert ? 0.02f : 0);
+        root.set(side * (0.17f + lateral * (forwardX * u + forwardY * trailing) * opening),
+                rootHeight + pairPosition * 0.24f
+                        + lateral * (forwardY * u - forwardX * trailing) * opening - (1 - opening) * u * 0.65f,
+                rootDepth - u * 0.3f + flutter * u + (covert ? -0.075f : 0));
+        float length = covert
+                ? 0.21f + 0.10f * (float) Math.sin(station * Math.PI * 0.82f)
+                : 0.14f + 0.39f * (float) Math.sin(t * Math.PI * 0.68f) + 0.07f * smooth((t - 0.60f) / 0.40f);
+        length *= lateral;
+        // Long secondary feathers open across the wing; outer primaries turn progressively into
+        // distinct swept tips. A curved angle progression avoids a single broad paddle at the end.
+        float fanAngle = 0.15f + 0.98f * (float) Math.pow(1 - station, 0.70f);
+        if (covert) fanAngle = 0.22f + 0.20f * (1 - station);
+        float along = (float) Math.cos(fanAngle), across = (float) Math.sin(fanAngle);
+        longitudinal.set(side * (forwardX * along + forwardY * across) * opening,
+                (forwardY * along - forwardX * across) * opening - (1 - opening) * 0.85f,
+                -0.065f + flutter * 0.12f).normalize().mul(length);
         normal.set(-longitudinal.z * side * 0.05f, 0, 1).normalize();
     }
 
@@ -50,7 +66,7 @@ public final class FeatherArrayGeometry {
                               float widthRatio, float roll, float edgeActivity, Vector3f root,
                               Vector3f longitudinal, Vector3f normal) {
         samplePose(pair, pairs, side, ordinal, count, covert, span, rootHeight, rootDepth, spread, time,
-                flexibility, attack, grounded, false, root, longitudinal, normal);
+                flexibility, attack, grounded, root, longitudinal, normal);
         float pairPosition = pairs <= 1 ? 0 : 1 - pair * 2f / (pairs - 1);
         constrainMinimumHeight(root, longitudinal, normal, rootHeight + pairPosition * 0.24f,
                 grounded, minimumHeight, widthRatio, roll, edgeActivity);
@@ -128,5 +144,30 @@ public final class FeatherArrayGeometry {
     /** Conservative local bound for the fully spread skeleton and long primary feathers. */
     public static float boundsRadius(float span, float rootHeight, float rootDepth) {
         return Math.max(0.1f, Math.abs(span)) * 1.75f + Math.abs(rootHeight) + Math.abs(rootDepth) + 0.5f;
+    }
+
+    /** Capsule radius around a whole-wing query segment enclosing one complete curved feather. */
+    public static float surfaceQueryRadius(Vector3f queryRoot, Vector3f queryTip, Vector3f root,
+                                           Vector3f longitudinal, float widthRatio, float edgeActivity) {
+        float rootDistance = segmentDistance(queryRoot, queryTip, root.x, root.y, root.z);
+        float tipDistance = segmentDistance(queryRoot, queryTip, root.x + longitudinal.x,
+                root.y + longitudinal.y, root.z + longitudinal.z);
+        float surfaceMargin = longitudinal.length() * (Math.abs(widthRatio) * 0.5f
+                + 0.073f + Math.clamp(edgeActivity, 0, 1) * 0.025f);
+        return Math.max(rootDistance, tipDistance) + surfaceMargin;
+    }
+
+    private static float segmentDistance(Vector3f start, Vector3f end, float x, float y, float z) {
+        float dx = end.x - start.x, dy = end.y - start.y, dz = end.z - start.z;
+        x -= start.x; y -= start.y; z -= start.z;
+        float lengthSquared = dx * dx + dy * dy + dz * dz;
+        float t = lengthSquared > 0.000001f ? Math.clamp((x * dx + y * dy + z * dz) / lengthSquared, 0, 1) : 0;
+        x -= dx * t; y -= dy * t; z -= dz * t;
+        return (float) Math.sqrt(x * x + y * y + z * z);
+    }
+
+    private static float smooth(float value) {
+        value = Math.clamp(value, 0, 1);
+        return value * value * (3 - 2 * value);
     }
 }

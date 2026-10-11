@@ -59,13 +59,15 @@ export function darkmatterGraphs() {
     ['darkmatter_creation_summon', [sheets('bone_growth', 2, 16, .13, .64, 'growth'), sheets('shell_plates', 2, 10, .16, .66, 'blade')]],
     ['darkmatter_creation_dismiss', [sheets('shell_peeling', 3, 16, .13, .58, 'erosion'), sheets('bone_fragments', 6, 18, .045, .48, 'smoke', 'cloud')]],
     ['darkmatter_creation_contact', [sheets('jaw_contact', 1, 8, .18, .62, 'contact'), sheets('impact_laminae', 3, 6, .05, .48, 'blade')]],
-    ['darkmatter_cut', [shape('matter_fan', 'material_fan', { radius: 4.4, arc: 2.2, width: .9, lifetime: .32, opacity: .82 }, 'vfxgraph_material_fan', 'material_fan')]],
-    ['darkmatter_wing_strike', [shape('wing_fan', 'material_fan', { radius: 2.2, arc: 2.6, width: .55, lifetime: .32, opacity: .72 }, 'vfxgraph_material_fan', 'material_fan')]],
+    ['darkmatter_cut', [shape('matter_fan', 'material_fan', { radius: 4.4, arc: 2.2, width: 1.936, lifetime: .32, opacity: .74 }, 'vfxgraph_material_fan', 'material_fan')]],
+    ['darkmatter_wing_strike', [shape('wing_fan', 'material_fan', { radius: 2.2, arc: 2.6, width: .924, lifetime: .32, opacity: .68 }, 'vfxgraph_material_fan', 'material_fan')]],
     ['darkmatter_six_wings', [shape('six_wings', 'feather_array', { pairs: 3, feathers: 14, coverts: 8, span: 3.6, root_height: 1.25, root_depth: -.20, spread: 1, flex: .10, opacity: .90, grounded: 1, minimum_height: .12, occlusion: 'occlusion', block_penetration: 0, surface_detail: 0 }, 'vfxgraph_feather_surface', 'feather')]],
   ];
   return definitions.map(([id, layers]) => {
     const reconstruction = id === 'darkmatter_disassemble' || id === 'darkmatter_repair';
-    const defaults = reconstruction ? reconstructionDefaults(id === 'darkmatter_repair') : DARKMATTER_GRAPH_DEFAULTS;
+    const defaults = reconstruction ? reconstructionDefaults(id === 'darkmatter_repair') : { ...DARKMATTER_GRAPH_DEFAULTS,
+      ...(id === 'darkmatter_cut' ? { width: 1.936, radius: 4.4, arc: 2.2 }
+        : id === 'darkmatter_wing_strike' ? { width: .924, radius: 2.2, arc: 2.6 } : {}) };
     // Emitters that share a particle layer share one output, avoiding duplicate blending.
     const outputs = layers.filter((entry, index, all) =>
       all.findIndex(other => other.output.properties.layer === entry.output.properties.layer) === index).map(entry => entry.output);

@@ -45,7 +45,8 @@ private class DarkmatterConceptCaptureApp(private val root: Path, private val en
     private var waiting = false
     private var warmup = 0
     private val results = mutableListOf<Map<String, Any>>()
-    private val outputDir = root.resolve("docs/vfx/darkmatter_concept_v2/runtime")
+    private val outputDir = root.resolve(System.getProperty("academy.darkmatterCaptureOutput",
+        "docs/vfx/darkmatter_concept_v2/runtime"))
     private data class Phase(val id: String, val alpha: Float, val beta: Float, val gamma: Float)
     private data class Shot(val asset: String, val phase: Phase, val time: Float = .18f,
         val progress: Float = .38f, val suffix: String = "", val spread: Float = 1f,
@@ -55,7 +56,7 @@ private class DarkmatterConceptCaptureApp(private val root: Path, private val en
     private val phases = listOf(Phase("alpha", .85f, .15f, 0f), Phase("beta", .15f, .85f, 0f), Phase("gamma", .55f, .45f, .6f))
     private val assets = listOf("generation", "elimination", "shaping", "phase_tuning", "disassemble", "cut", "interference",
         "repair", "creation_summon", "creation_dismiss", "creation_contact", "creation_trail", "feather", "light_contact", "six_wings", "wing_strike")
-    private val shots = assets.flatMap { asset -> phases.map { phase ->
+    private val allShots = assets.flatMap { asset -> phases.map { phase ->
         Shot("darkmatter_$asset", phase, time = if (asset == "interference") .9f else if (asset == "six_wings") .65f else .18f,
             attack = if (asset == "wing_strike") .8f else 0f)
     } } + listOf(
@@ -90,6 +91,10 @@ private class DarkmatterConceptCaptureApp(private val root: Path, private val en
             Shot("darkmatter_six_wings", phases[2], .65f, suffix = "lod_medium", cameraDistance = 45f),
             Shot("darkmatter_six_wings", phases[2], .65f, suffix = "lod_far", cameraDistance = 85f))
 
+    private val selectedAssets = System.getProperty("academy.darkmatterCaptureAssets", "")
+        .split(',').filter { it.isNotBlank() }.toSet()
+    private val shots = allShots.filter { selectedAssets.isEmpty() || it.asset.removePrefix("darkmatter_") in selectedAssets }
+
     init { VfxBlocks.registerAll(metadata, blocks) }
     override fun onFrame(partialTick: Float) { RenderSystem.executePendingTasks() }
     override fun createRoot(): WidgetContainer = FrameLayoutWidget()
@@ -107,6 +112,8 @@ private class DarkmatterConceptCaptureApp(private val root: Path, private val en
         val study = shot.suffix == "single_feather"
         val fit = shot.suffix == "fit"
         val cut = shot.asset.endsWith("cut") || shot.asset.endsWith("wing_strike")
+        val wingStrike = shot.asset.endsWith("wing_strike")
+        val fanRadius = if (wingStrike) 2.2f else 4.4f
         val field = shot.asset.endsWith("interference")
         val local = listOf("generation", "elimination", "shaping", "phase_tuning", "feather", "creation_trail").any { shot.asset.endsWith(it) }
         val center = if (study) Vector3f(3.5f, 3.65f, -.45f) else if (field) Vector3f(0f, 2.2f, 7f) else if (cut) Vector3f(0f, 1.2f, 3f)
@@ -129,7 +136,8 @@ private class DarkmatterConceptCaptureApp(private val root: Path, private val en
             "block_penetration" to shot.penetration,
             "lod" to if (shot.cameraDistance > 0) (1 - (eye.length() - 16) / 64).coerceIn(.2f, 1f) else 1f,
             "attack" to shot.attack, "reverse" to shot.reverse, "view_first_person" to if (shot.firstPerson) 1f else 0f,
-            "radius" to if (cut) 4.4f else 1f, "width" to if (cut) .55f + shot.phase.alpha * .4f else .6f,
+            "radius" to if (cut) fanRadius else 1f,
+            "width" to if (wingStrike) fanRadius * .42f else if (cut) fanRadius * (.38f + shot.phase.alpha * .12f) else .6f,
             "height" to if (cut) 1.2f else 1.8f, "sheet_scale" to 1f, "finished" to if (shot.suffix == "terminal") 1f else 0f)
         live.forEach { (key, value) -> sim.setLiveParam(key, Value.of(value)) }
         val detail = if (shot.cameraDistance > 0) SurfaceDetailSelector().update(1.8f,

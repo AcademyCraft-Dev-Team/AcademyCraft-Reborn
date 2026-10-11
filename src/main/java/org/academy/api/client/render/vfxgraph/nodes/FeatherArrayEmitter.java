@@ -44,6 +44,10 @@ public final class FeatherArrayEmitter {
         var camera = new Vector3f();
         var queryRoot = new Vector3f();
         var queryTip = new Vector3f();
+        var queryEdgeA = new Vector3f();
+        var queryEdgeB = new Vector3f();
+        var querySide = new Vector3f();
+        var featherTip = new Vector3f();
         var clipPlanes = new Vector4f[pairs * 2];
         for (int i = 0; i < clipPlanes.length; i++) clipPlanes[i] = new Vector4f(0, 0, 0, 1);
         return (buffer, context) -> {
@@ -78,21 +82,7 @@ public final class FeatherArrayEmitter {
                 for (int sideIndex = 0; sideIndex < 2; sideIndex++) {
                     int side = sideIndex == 0 ? -1 : 1;
                     var clipPlane = clipPlanes[pair * 2 + sideIndex].set(0, 0, 0, 1);
-                    if (occlusion != null && opacity > 0) {
-                        float widthRatio = 0.24f * (0.85f + density * 0.2f);
-                        FeatherArrayGeometry.sample(pair, pairs, side, 0, primaries, false, span,
-                                rootHeight, rootDepth,
-                                spread, time, flexibility, attack, grounded, minimumHeight, widthRatio,
-                                0, edgeActivity, queryRoot, axis, normal);
-                        FeatherArrayGeometry.sample(pair, pairs, side, primaries - 1, primaries, false, span,
-                                rootHeight, rootDepth,
-                                spread, time, flexibility, attack, grounded, minimumHeight, widthRatio,
-                                0, edgeActivity, root, axis, normal);
-                        queryTip.set(root).add(axis);
-                        float halfWidth = axis.length() * widthRatio * 0.5f;
-                        if (!occlusion.sample(pair * 2 + sideIndex, queryRoot, queryTip, normal, halfWidth, clipPlane)
-                                || !clipPlane.isFinite()) clipPlane.set(0, 0, 0, 1);
-                    }
+                    int wingStart = ordinal;
                     for (int layer = 0; layer < 2; layer++) {
                         boolean covert = layer == 1;
                         int count = covert ? coverts : primaries;
@@ -107,23 +97,65 @@ public final class FeatherArrayEmitter {
                                 buffer.setAlpha(particle, 0);
                                 continue;
                             }
-                            float widthRatio = (covert ? 0.38f : 0.24f) * (0.85f + density * 0.2f);
+                            float station = feather / (float) Math.max(1, count - 1);
+                            float widthRatio = (covert ? 0.46f : 0.32f + 0.07f * (1 - smooth(station / 0.45f)))
+                                    * (0.90f + density * 0.15f);
                             float roll = flexibility * 0.12f * (float) Math.sin(time * 1.8f + feather * 0.3f);
                             FeatherArrayGeometry.sample(pair, pairs, side, feather, count, covert, span,
                                     rootHeight, rootDepth,
                                     spread, time, flexibility, attack, grounded, minimumHeight, widthRatio,
                                     roll, edgeActivity, root, axis, normal);
                             float near = firstPerson ? nearVisibility(root, axis, camera, axis.length() * widthRatio * 0.5f) : 1;
-                            float shade = covert ? 0.85f + feather / (float) Math.max(1, count) * 0.07f : 0.95f;
+                            float shade = covert ? 0.86f + station * 0.045f
+                                    : 0.925f + station * 0.040f;
                             buffer.setPosition(particle, root.x, root.y, root.z);
                             buffer.setVelocity(particle, axis.x, axis.y, axis.z);
                             buffer.setSurfaceNormal(particle, normal.x, normal.y, normal.z);
-                            buffer.setSurfaceClipPlane(particle, clipPlane.x, clipPlane.y, clipPlane.z, clipPlane.w);
                             buffer.setSurfacePenetration(particle, penetration);
                             buffer.setSize(particle, widthRatio);
                             buffer.setRotation(particle, roll);
                             buffer.setColor(particle, shade, shade * 0.995f, shade * 0.985f, opacity * near);
                         }
+                    }
+                    if (occlusion != null && opacity > 0) {
+                        int first = slots.index(wingStart), last = slots.index(wingStart + primaries - 1);
+                        queryRoot.set(buffer.positionX(first), buffer.positionY(first), buffer.positionZ(first));
+                        queryTip.set(buffer.positionX(last) + buffer.velocityX(last),
+                                buffer.positionY(last) + buffer.velocityY(last), buffer.positionZ(last) + buffer.velocityZ(last));
+                        normal.set(buffer.surfaceNormalX(last), buffer.surfaceNormalY(last), buffer.surfaceNormalZ(last));
+                        querySide.set(queryTip).sub(queryRoot).cross(normal);
+                        if (querySide.lengthSquared() > .000001f) querySide.normalize();
+                        else querySide.set(0, 1, 0);
+                        queryEdgeA.set(queryTip);
+                        queryEdgeB.set(queryTip);
+                        float rootProjection = querySide.dot(queryRoot), lowProjection = 0, highProjection = 0;
+                        float halfWidth = 0;
+                        // Reuse this frame's geometry. A broad fan cannot be bounded by its last
+                        // primary's width: the middle secondary feathers extend much farther down.
+                        for (int feather = wingStart; feather < ordinal; feather++) {
+                            int particle = slots.index(feather);
+                            if (buffer.alpha(particle) <= 0) continue;
+                            root.set(buffer.positionX(particle), buffer.positionY(particle), buffer.positionZ(particle));
+                            axis.set(buffer.velocityX(particle), buffer.velocityY(particle), buffer.velocityZ(particle));
+                            halfWidth = Math.max(halfWidth, FeatherArrayGeometry.surfaceQueryRadius(queryRoot, queryTip,
+                                    root, axis, buffer.size(particle), edgeActivity));
+                            featherTip.set(root).add(axis);
+                            float rootAcross = querySide.dot(root) - rootProjection;
+                            float tipAcross = querySide.dot(featherTip) - rootProjection;
+                            if (rootAcross < lowProjection) { lowProjection = rootAcross; queryEdgeA.set(root); }
+                            if (tipAcross < lowProjection) { lowProjection = tipAcross; queryEdgeA.set(featherTip); }
+                            if (rootAcross > highProjection) { highProjection = rootAcross; queryEdgeB.set(root); }
+                            if (tipAcross > highProjection) { highProjection = tipAcross; queryEdgeB.set(featherTip); }
+                        }
+                        // Probe only real wing points. Offsetting the complete capsule around its
+                        // root would send the lower ray underground while the feathers clear it.
+                        if (!occlusion.sampleFan(pair * 2 + sideIndex, queryRoot, queryTip, queryEdgeA, queryEdgeB,
+                                normal, halfWidth, clipPlane)
+                                || !clipPlane.isFinite()) clipPlane.set(0, 0, 0, 1);
+                    }
+                    for (int feather = wingStart; feather < ordinal; feather++) {
+                        int particle = slots.index(feather);
+                        buffer.setSurfaceClipPlane(particle, clipPlane.x, clipPlane.y, clipPlane.z, clipPlane.w);
                     }
                 }
             }

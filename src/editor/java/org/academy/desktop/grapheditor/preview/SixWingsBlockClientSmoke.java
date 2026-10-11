@@ -112,8 +112,24 @@ public final class SixWingsBlockClientSmoke {
         if (ticks == 85) { require(clipped() == 0, "Full visual penetration bypasses boundary sampling"); capture("wall_penetrating"); }
         if (ticks == 95) { wings.effect().setLiveParam("block_penetration", Value.of(0f)); server(p -> wall(p, false)); }
         if (ticks == 115) { require(clipped() == 0, "Removing real blocks releases cached boundaries"); capture("wall_removed"); }
-        if (ticks == 120) server(p -> require(DarkmatterSixWings.Server.debugSetActive(p, false), "Server gamma state stopped"));
-        if (ticks == 140) {
+        if (ticks == 120) mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+        if (ticks == 128) capture("grounded_back");
+        if (ticks == 132) {
+            mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
+            server(p -> {
+                p.getAbilities().flying = true; p.onUpdateAbilities();
+                p.teleportTo(p.level(), 0, 85, 185, Set.of(), 0, 0, false);
+            });
+        }
+        if (ticks == 150) {
+            require(!mc.player.onGround() && mc.player.getAbilities().flying, "Flight view uses an airborne player");
+            capture("flight_front");
+        }
+        if (ticks == 155) server(p -> {
+            p.getAbilities().flying = false; p.onUpdateAbilities();
+            require(DarkmatterSixWings.Server.debugSetActive(p, false), "Server gamma state stopped");
+        });
+        if (ticks == 175) {
             require(DarkmatterSixWingsVfxClient.activeCount() == 0, "Stopped wings release their sampler and graph");
             try {
                 Files.createDirectories(output());

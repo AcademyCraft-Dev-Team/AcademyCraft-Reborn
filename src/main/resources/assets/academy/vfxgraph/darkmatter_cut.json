@@ -36,7 +36,7 @@
       "type": "FLOAT",
       "default": {
         "type": "FLOAT",
-        "value": 0.6
+        "value": 1.936
       }
     },
     {
@@ -427,9 +427,9 @@
           "properties": {
             "radius": "4.4",
             "arc": "2.2",
-            "width": "0.9",
+            "width": "1.936",
             "lifetime": "0.32",
-            "opacity": "0.82",
+            "opacity": "0.74",
             "radius_curve": "fan_growth",
             "width_curve": "fan_width",
             "opacity_curve": "fan_fade"

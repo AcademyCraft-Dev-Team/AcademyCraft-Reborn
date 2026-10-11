@@ -15,4 +15,16 @@ public interface SurfaceOcclusionSampler {
      */
     boolean sample(int group, Vector3fc localRoot, Vector3fc localTip, Vector3fc surfaceNormal,
                    float halfWidth, Vector4f allowedPlane);
+
+    /**
+     * Samples a fan from one actual attachment to three points on its posed surface. Unlike a
+     * capsule radius, these endpoints describe the fan without shifting its attachment outside
+     * the physical surface. The default preserves existing samplers and functional implementations.
+     * Inputs are borrowed for this call and must not be retained.
+     */
+    default boolean sampleFan(int group, Vector3fc localRoot, Vector3fc centerTip,
+                              Vector3fc edgeTipA, Vector3fc edgeTipB, Vector3fc surfaceNormal,
+                              float halfWidth, Vector4f allowedPlane) {
+        return sample(group, localRoot, centerTip, surfaceNormal, halfWidth, allowedPlane);
+    }
 }

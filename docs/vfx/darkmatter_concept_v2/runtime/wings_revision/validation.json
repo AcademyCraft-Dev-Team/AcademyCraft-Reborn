@@ -1,0 +1,152 @@
+{
+  "recorded_at": "2026-10-08T16:01:08.654404+00:00",
+  "base_local_commit": "520ced48a43d8dfd1530f4de1ff6910d50f4b7cd",
+  "checks": {
+    "development_build_editor_tests_gpu_gameplay": {
+      "passed": true,
+      "local_log": "build/darkmatter-wings-revision-final-visual-dev.log"
+    },
+    "release_build": {
+      "passed": true,
+      "local_log": "build/darkmatter-wings-revision-release.log"
+    },
+    "all_nine_skills": {
+      "passed": true,
+      "local_log": "build/darkmatter-wings-revision-all-skills.log"
+    },
+    "performance": {
+      "passed": true,
+      "local_log": "build/darkmatter-wings-revision-performance.log"
+    }
+  },
+  "tests": {
+    "test": {
+      "tests": 2267,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "editorTest": {
+      "tests": 104,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "gpu_captures": 38,
+  "block_check": "PASSED\nReal wall clipped 66 of 132 feather slots.\nBlocked / 0.35 partial / full penetration checked.\nRemoval and stop clear boundaries.\n",
+  "all_skills_check": "PASSED\nObserved real graphs: [darkmatter_creation_contact, darkmatter_creation_dismiss, darkmatter_creation_summon, darkmatter_disassemble, darkmatter_elimination, darkmatter_six_wings, darkmatter_light_contact, darkmatter_wing_strike, darkmatter_cut, darkmatter_generation, darkmatter_interference, darkmatter_phase_tuning, darkmatter_shaping, darkmatter_repair, darkmatter_creation_trail]\nGamma cut instances: 2\nWing strike impulse: true\nCannon trail: true\nCreature contact: true\nNo live darkmatter graphs after cleanup.\n",
+  "performance_caveat": "One local client with 18 neutral anchors, not 18 network clients. Historical medians are different runs, not controlled repeated A/B measurements.",
+  "performance_medians": [
+    {
+      "stage": "neutral_18_baseline",
+      "cpu_median_ms": 1.1239,
+      "gpu_median_ms": 0.329216,
+      "previous_cpu_median_ms": 1.1974,
+      "previous_gpu_median_ms": 0.337472
+    },
+    {
+      "stage": "wings_8_distance_16",
+      "cpu_median_ms": 1.436,
+      "gpu_median_ms": 0.50576,
+      "previous_cpu_median_ms": 1.3474,
+      "previous_gpu_median_ms": 0.446336
+    },
+    {
+      "stage": "wings_18_distance_16",
+      "cpu_median_ms": 1.6298,
+      "gpu_median_ms": 0.87744,
+      "previous_cpu_median_ms": 1.659,
+      "previous_gpu_median_ms": 0.734496
+    },
+    {
+      "stage": "wings_18_distance_48",
+      "cpu_median_ms": 1.6117,
+      "gpu_median_ms": 0.728448,
+      "previous_cpu_median_ms": 1.4895,
+      "previous_gpu_median_ms": 0.6
+    },
+    {
+      "stage": "wings_18_distance_96",
+      "cpu_median_ms": 1.4637,
+      "gpu_median_ms": 0.672416,
+      "previous_cpu_median_ms": 1.4881,
+      "previous_gpu_median_ms": 0.5392
+    },
+    {
+      "stage": "wings_18_offscreen",
+      "cpu_median_ms": 0.9992,
+      "gpu_median_ms": 0.259648,
+      "previous_cpu_median_ms": 1.11,
+      "previous_gpu_median_ms": 0.259488
+    },
+    {
+      "stage": "fields_18_distance_16",
+      "cpu_median_ms": 3.0195,
+      "gpu_median_ms": 2.39344,
+      "previous_cpu_median_ms": 2.936,
+      "previous_gpu_median_ms": 2.204736
+    },
+    {
+      "stage": "fields_18_distance_48",
+      "cpu_median_ms": 2.5608,
+      "gpu_median_ms": 1.961408,
+      "previous_cpu_median_ms": 2.6659,
+      "previous_gpu_median_ms": 1.737056
+    },
+    {
+      "stage": "fields_18_distance_96",
+      "cpu_median_ms": 2.4327,
+      "gpu_median_ms": 1.843296,
+      "previous_cpu_median_ms": 2.2924,
+      "previous_gpu_median_ms": 1.595648
+    },
+    {
+      "stage": "mixed_18_distance_16",
+      "cpu_median_ms": 4.9336,
+      "gpu_median_ms": 4.402784,
+      "previous_cpu_median_ms": 5.2189,
+      "previous_gpu_median_ms": 4.449632
+    },
+    {
+      "stage": "feathers_191",
+      "cpu_median_ms": 5.912,
+      "gpu_median_ms": 4.968,
+      "previous_cpu_median_ms": 5.9675,
+      "previous_gpu_median_ms": 5.003584
+    },
+    {
+      "stage": "feathers_192",
+      "cpu_median_ms": 5.7334,
+      "gpu_median_ms": 4.974912,
+      "previous_cpu_median_ms": 5.6126,
+      "previous_gpu_median_ms": 4.88384
+    },
+    {
+      "stage": "feathers_193",
+      "cpu_median_ms": 5.7308,
+      "gpu_median_ms": 4.959648,
+      "previous_cpu_median_ms": 5.6388,
+      "previous_gpu_median_ms": 4.892032
+    },
+    {
+      "stage": "feathers_256",
+      "cpu_median_ms": 5.7475,
+      "gpu_median_ms": 4.948224,
+      "previous_cpu_median_ms": 5.5609,
+      "previous_gpu_median_ms": 4.859168
+    }
+  ],
+  "source_sha256": {
+    "src/main/java/org/academy/api/client/render/vfxgraph/nodes/FeatherArrayEmitter.java": "47dbfddc5d180ee5210839c9eb587c252e49e2d87b8fbfb41ad67eca6c539720",
+    "src/main/java/org/academy/api/client/render/vfxgraph/shape/FeatherArrayGeometry.java": "1e115ba96623c89c0d40fa49332919f4b1c43cc355e237c3ad5cac83e3a1beb1",
+    "src/main/java/org/academy/api/client/render/vfxgraph/shape/BlockSurfaceOcclusionSampler.java": "e09e57471189c30c540ac84ada8f69404454b99e92c079a2354965e4cef4f523",
+    "src/main/java/org/academy/api/client/render/vfxgraph/shape/SurfaceOcclusionSampler.java": "189283c7880976b5776e0f4bd021566462550301692aad802f043d6fdc7cf371",
+    "src/main/java/org/academy/internal/client/render/vfx/DarkmatterVfxClient.java": "60395978518a866ff3c58f4e64ebcfeb995a84857e1627a3906be17650f5ebdc",
+    "src/main/java/org/academy/internal/client/render/vfx/DarkmatterSlashVfx.java": "bc40e739ce4d4f62bd0430746415b2bdd8ed89cd98a92e27f3927e42f9a614f1",
+    "src/main/resources/assets/academy/shaders/include/darkmatter_feather.glsl": "17fb3412a49ee97510c7991893ff09f347a9b05296349b6d29c55fe3d6dc0e65",
+    "src/main/resources/assets/academy/shaders/core/vfxgraph_feather_surface.fsh": "76351c9364aac729fde2e6cf5a4dec15f969791e8185724c9b617621f638f1e0",
+    "src/main/resources/assets/academy/vfxgraph/darkmatter_cut.json": "f23857c7ee8c55d55ad732f4856918bf7c82d987f8b5ce5b218d0106361c28ac",
+    "src/main/resources/assets/academy/vfxgraph/darkmatter_wing_strike.json": "6d7480eeb6869dae83bfc39c2b73c9ba4eef6200f3dbe6ae74a816af378493e7"
+  }
+}

@@ -36,7 +36,7 @@
       "type": "FLOAT",
       "default": {
         "type": "FLOAT",
-        "value": 0.6
+        "value": 0.924
       }
     },
     {
@@ -198,7 +198,7 @@
       "type": "FLOAT",
       "default": {
         "type": "FLOAT",
-        "value": 4.4
+        "value": 2.2
       }
     },
     {
@@ -207,7 +207,7 @@
       "type": "FLOAT",
       "default": {
         "type": "FLOAT",
-        "value": 2.2
+        "value": 2.6
       }
     },
     {
@@ -427,9 +427,9 @@
           "properties": {
             "radius": "2.2",
             "arc": "2.6",
-            "width": "0.55",
+            "width": "0.924",
             "lifetime": "0.32",
-            "opacity": "0.72",
+            "opacity": "0.68",
             "radius_curve": "fan_growth",
             "width_curve": "fan_width",
             "opacity_curve": "fan_fade"

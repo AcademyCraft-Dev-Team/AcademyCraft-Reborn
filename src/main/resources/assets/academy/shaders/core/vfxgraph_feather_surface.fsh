@@ -11,7 +11,11 @@ in float materialPenetration;
 out vec4 fragColor;
 
 void main() {
-    vec4 feather = academyDarkmatterFeather(texCoord, materialPhase, edgeActivity);
+    // Six-wing roots narrow independently of the shared feather material used by other skills.
+    float shaft = academyFeatherShaftX(texCoord.y);
+    float rootWidth = mix(0.72, 1.0, smoothstep(0.02, 0.30, texCoord.y));
+    vec2 featherUv = vec2(((texCoord.x * 2.0 - 1.0 - shaft) / rootWidth + shaft + 1.0) * 0.5, texCoord.y);
+    vec4 feather = academyDarkmatterFeather(featherUv, materialPhase, edgeActivity);
     float alpha = vertexColor.a * feather.a;
     alpha *= mix(smoothstep(0.0, 0.04, surfaceBoundary), 1.0, clamp(materialPenetration, 0.0, 1.0));
     vec2 screenUv = gl_FragCoord.xy / textureSize(Sampler1, 0);

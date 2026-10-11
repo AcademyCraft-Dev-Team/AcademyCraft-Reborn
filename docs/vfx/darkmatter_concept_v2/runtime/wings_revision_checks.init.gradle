@@ -1,0 +1,17 @@
+allprojects {
+    afterEvaluate {
+        neoForge.runs.named('clientDev') {
+            sourceSet.set(sourceSets.editor)
+            gameDirectory.set(file('run/ability-vfx'))
+            if (System.getProperty('academy.wingsRevisionCheck', 'skills') == 'performance') {
+                systemProperty 'academy.darkmatterPerformanceSmoke', 'true'
+                systemProperty 'academy.darkmatterPerformanceLabel', 'wings_revision'
+                systemProperty 'academy.darkmatterPerformanceOutput', file('docs/vfx/darkmatter_concept_v2/runtime/wings_revision').absolutePath
+            } else {
+                systemProperty 'academy.darkmatterConceptSmoke', 'true'
+                systemProperty 'academy.darkmatterConceptOutput', file('docs/vfx/darkmatter_concept_v2/runtime/wings_revision/skills').absolutePath
+            }
+            programArguments.addAll('--width', '1280', '--height', '720')
+        }
+    }
+}

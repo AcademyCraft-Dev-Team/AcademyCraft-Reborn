@@ -293,7 +293,8 @@ public final class DarkmatterVfxClient {
                 params.putFloat("shape", state.variant);
                 params.putFloat("radius", state.kind == Kind.CUT ? state.range * (.88f + density * .18f) : state.kind == Kind.WING_STRIKE ? state.range : 1);
                 params.putFloat("reverse", state.variant < 0 ? 1 : 0);
-                params.putFloat("width", state.kind == Kind.CUT ? .55f + density * .40f : state.kind == Kind.WING_STRIKE ? .55f : state.width);
+                params.putFloat("width", state.kind == Kind.CUT ? state.range * (.38f + density * .12f)
+                        : state.kind == Kind.WING_STRIKE ? state.range * .42f : state.width);
                 params.putFloat("surface_patches", state.kind == Kind.REPAIR || subject == null ? 6 : 1);
                 constantsDirty = false;
             }

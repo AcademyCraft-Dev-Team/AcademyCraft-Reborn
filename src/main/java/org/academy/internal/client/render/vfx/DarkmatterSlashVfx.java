@@ -36,7 +36,7 @@ public final class DarkmatterSlashVfx {
             if (level == null || Minecraft.getInstance().level != level) return false;
             active.effect().setLiveParam("time", Value.of(active.gameAgeSeconds()));
             active.effect().setLiveParam("radius", Value.of(state.scale() * 4.4f));
-            active.effect().setLiveParam("width", Value.of(.75f));
+            active.effect().setLiveParam("width", Value.of(state.scale() * 1.936f));
             active.effect().setLiveParam("height", Value.of(0f));
             active.effect().setLiveParam("reverse", Value.of(state.direction() < 0 ? 1f : 0));
             active.effect().setLiveParam("camera", Value.of(new Vector3f(camera.position()).sub(state.position().toVector3f())));
