@@ -297,6 +297,7 @@ public final class ParticleBuffer {
             case "iron_sand" -> 14;
             case "feather" -> 15;
             case "material_fan" -> 16;
+            case "lamina" -> 17;
             default -> 0;
         };
     }

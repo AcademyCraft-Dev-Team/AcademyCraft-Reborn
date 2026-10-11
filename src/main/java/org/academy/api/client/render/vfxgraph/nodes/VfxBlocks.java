@@ -156,6 +156,8 @@ public final class VfxBlocks {
         blocks.register("vfx.block.material_fan", (block, ports) -> MaterialFanEmitter.create(block));
         metadata.register(type("vfx.block.material_sheets", "spawn", "Material Sheets / Sampled Surface", MaterialSheetEmitter.properties()));
         blocks.register("vfx.block.material_sheets", (block, ports) -> MaterialSheetEmitter.create(block));
+        metadata.register(type("vfx.block.surface_laminae", "spawn", "Surface Laminae / Peel and Reconstruct", SurfaceLaminaEmitter.properties()));
+        blocks.register("vfx.block.surface_laminae", (block, ports) -> SurfaceLaminaEmitter.create(block));
         metadata.register(type("vfx.block.organic_strands", "spawn", "Translucent Organic Strands",
                 List.of(prop("mode", ValueType.INT, Value.of(0)),
                         prop("count", ValueType.INT, Value.of(12)),

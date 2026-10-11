@@ -354,7 +354,7 @@ public final class DarkmatterDisassemble extends Skill {
                         target, level, source, damage,
                         penetration(phase.beta(), context.milestone()));
                 if (hurt) {
-                    DarkmatterGraphEffects.disassemble(target);
+                    DarkmatterGraphEffects.disassemble(player, target, target.getBoundingBox().getCenter());
                 }
                 level.playSound(
                         null,
@@ -522,7 +522,7 @@ public final class DarkmatterDisassemble extends Skill {
                                 player, target.getMaxHealth() / 10.0f);
                     }
                     if (target.getHealth() < healthBefore || wasAlive && !target.isAlive()) {
-                        DarkmatterGraphEffects.disassemble(target);
+                        DarkmatterGraphEffects.disassemble(player, target, impact);
                     }
                 }
 
@@ -725,7 +725,7 @@ public final class DarkmatterDisassemble extends Skill {
         ) {
             var tool = createLootTool(level.registryAccess(), fortune);
             return AbilityBlockDrops.harvestBlock(level, pos, player, player, tool, drops -> {
-                DarkmatterGraphEffects.disassembleBlock(level, pos);
+                DarkmatterGraphEffects.disassembleBlock(level, pos, player);
                 for (var drop : drops) {
                     if (drop.isEmpty()) continue;
                     if (SpatialStorageService.collect(player, drop)) continue;

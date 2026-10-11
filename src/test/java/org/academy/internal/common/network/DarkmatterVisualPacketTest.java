@@ -71,4 +71,31 @@ class DarkmatterVisualPacketTest {
         assertThrows(IllegalArgumentException.class, () -> new DarkmatterVisualPacket(dimension,
                 DarkmatterVisualPacket.Kind.INTERFERENCE, 0, true, new Vec3(Double.NaN, 0, 0), 1, 1, 16, 0, false, 42));
     }
+
+    @Test void disassemblyContactAndCasterPhaseSurviveTheWire() {
+        var contact = new DarkmatterVisualPacket.SurfaceContact(new Vec3(.3, 1.2, -.12), new Vec3(2, 0, 0));
+        var packet = new DarkmatterVisualPacket(Identifier.withDefaultNamespace("overworld"),
+                DarkmatterVisualPacket.Kind.DISASSEMBLE, 42, true, new Vec3(20, 65, -12),
+                .6f, 1.8f, 0, 0, false, 42, null, 4, 1, 2, 0, new Vec3(0, 0, 1), contact);
+        var buffer = Unpooled.buffer();
+        try {
+            DarkmatterVisualPacket.CODEC.encode(buffer, packet);
+            var copy = DarkmatterVisualPacket.CODEC.decode(buffer);
+            assertEquals(contact, copy.surfaceContact);
+            assertEquals(4, copy.alpha);
+            assertEquals(1, copy.beta);
+            assertEquals(2, copy.gamma);
+            assertEquals(0, buffer.readableBytes());
+        } finally { buffer.release(); }
+    }
+
+    @Test void invalidOrUnrelatedSurfaceContactsAreRejected() {
+        assertThrows(IllegalArgumentException.class, () -> new DarkmatterVisualPacket.SurfaceContact(Vec3.ZERO, Vec3.ZERO));
+        assertThrows(IllegalArgumentException.class, () -> new DarkmatterVisualPacket.SurfaceContact(new Vec3(200, 0, 0), new Vec3(0, 1, 0)));
+        assertThrows(IllegalArgumentException.class, () -> new DarkmatterVisualPacket.SurfaceContact(new Vec3(Double.NaN, 0, 0), new Vec3(0, 1, 0)));
+        var contact = new DarkmatterVisualPacket.SurfaceContact(Vec3.ZERO, new Vec3(0, 1, 0));
+        assertThrows(IllegalArgumentException.class, () -> new DarkmatterVisualPacket(Identifier.withDefaultNamespace("overworld"),
+                DarkmatterVisualPacket.Kind.REPAIR, 1, true, Vec3.ZERO, 1, 2, 0, 1, false, 42,
+                null, 1, 1, 0, 0, new Vec3(0, 0, 1), contact));
+    }
 }

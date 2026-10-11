@@ -26,6 +26,20 @@ const shape = (id, type, properties, shader, layer) =>
     vertex: `academy:core/${shader}`, shader: `academy:core/${shader}`,
     blend: 'translucent', layer, soft_depth: false, bounds_scale: 0, cull_zero_alpha: true,
   }) });
+const laminae = (id, mode, patches, strands, fragments) =>
+  ({ id, spawn: block(id, 'surface_laminae', {
+    mode, patches, strands, fragments, opacity: .96, length_scale: 1, width_scale: 1, lift: .16, surface: 'surface',
+  }), output: block(`${id}_output`, 'output_material_surface', {
+    vertex: 'academy:core/vfxgraph_surface_lamina', shader: 'academy:core/vfxgraph_surface_lamina',
+    blend: 'translucent', layer: 'lamina', soft_depth: true, bounds_scale: 0, cull_zero_alpha: true,
+  }) });
+
+const reconstructionDefaults = (repair) => ({
+  time: -1, progress: .35, seed: 42, width: .6, height: 1.8, light: 1, strength: 1, finished: 0,
+  alpha: .5, beta: .5, gamma: 0, density: .5, flexibility: .5, edge_activity: .5,
+  lod: 1, surface_patches: repair ? 6 : 1,
+  ...(repair ? Object.fromEntries(Array.from({ length: 6 }, (_, index) => [`repair_progress_${index}`, -1])) : {}),
+});
 
 export function darkmatterGraphs() {
   const definitions = [
@@ -40,11 +54,8 @@ export function darkmatterGraphs() {
       sheets('altered_light', 1, 6, .5, .18, 'light', 'smoke', 'ground'),
     ]],
     ['darkmatter_light_contact', [sheets('contact', 1, 8, .24, .66, 'contact'), sheets('contact_fragments', 6, 8, .025, .44, 'smoke', 'cloud')]],
-    ['darkmatter_repair', [sheets('patch_growth', 2, 8, .14, .60, 'growth'), sheets('settling_ribs', 2, 4, .06, .48, 'blade')]],
-    ['darkmatter_disassemble', [
-      sheets('erosion', 3, 16, .11, .52, 'erosion'), sheets('peeling_laminae', 3, 8, .07, .54, 'blade'),
-      sheets('dissolving_dust', 4, 6, .08, .22, 'smoke', 'cloud'), sheets('fine_fragments', 6, 18, .025, .40, 'smoke', 'cloud'),
-    ]],
+    ['darkmatter_repair', [laminae('reconstruction_front', 'repair', 6, 4, 0)]],
+    ['darkmatter_disassemble', [laminae('separation_front', 'disassemble', 6, 8, 12)]],
     ['darkmatter_creation_summon', [sheets('bone_growth', 2, 16, .13, .64, 'growth'), sheets('shell_plates', 2, 10, .16, .66, 'blade')]],
     ['darkmatter_creation_dismiss', [sheets('shell_peeling', 3, 16, .13, .58, 'erosion'), sheets('bone_fragments', 6, 18, .045, .48, 'smoke', 'cloud')]],
     ['darkmatter_creation_contact', [sheets('jaw_contact', 1, 8, .18, .62, 'contact'), sheets('impact_laminae', 3, 6, .05, .48, 'blade')]],
@@ -53,28 +64,31 @@ export function darkmatterGraphs() {
     ['darkmatter_six_wings', [shape('six_wings', 'feather_array', { pairs: 3, feathers: 14, coverts: 8, span: 3.6, root_height: 1.25, root_depth: -.20, spread: 1, flex: .10, opacity: .90, grounded: 1, minimum_height: .12, occlusion: 'occlusion', block_penetration: 0, surface_detail: 0 }, 'vfxgraph_feather_surface', 'feather')]],
   ];
   return definitions.map(([id, layers]) => {
+    const reconstruction = id === 'darkmatter_disassemble' || id === 'darkmatter_repair';
+    const defaults = reconstruction ? reconstructionDefaults(id === 'darkmatter_repair') : DARKMATTER_GRAPH_DEFAULTS;
     // Emitters that share a particle layer share one output, avoiding duplicate blending.
     const outputs = layers.filter((entry, index, all) =>
       all.findIndex(other => other.output.properties.layer === entry.output.properties.layer) === index).map(entry => entry.output);
     return {
       version: 1, kind: 'vfx', id,
       parameters: [
-        ...Object.entries(DARKMATTER_GRAPH_DEFAULTS).map(([id, value]) => ({ id, name: id, type: 'FLOAT', default: { type: 'FLOAT', value } })),
+        ...Object.entries(defaults).map(([id, value]) => ({ id, name: id, type: 'FLOAT', default: { type: 'FLOAT', value } })),
         ...(id === 'darkmatter_six_wings' ? Object.entries({ grounded: 1, minimum_height: .12, transition_seconds: .30, block_penetration: 0,
           span: 3.6, root_height: 1.25, root_depth: -.20 })
           .map(([id, value]) => ({ id, name: id, type: 'FLOAT', default: { type: 'FLOAT', value } })) : []),
-        ...(id === 'darkmatter_six_wings' ? Object.entries({ surface_detail: 0, surface_detail_override: -1 })
+        ...(id === 'darkmatter_six_wings' || reconstruction ? Object.entries(reconstruction
+          ? { surface_detail: 0 } : { surface_detail: 0, surface_detail_override: -1 })
           .map(([id, value]) => ({ id, name: id, type: 'INT', default: { type: 'INT', value } })) : []),
         ...[['camera', [0, 2, -8]], ['camera_forward', [0, 0, 1]], ['sun_direction', [.3, .9, .3]]].map(([id, value]) =>
           ({ id, name: id, type: 'VEC3', default: { type: 'VEC3', x: value[0], y: value[1], z: value[2] } })),
-        ...Object.entries({ fan_growth: [[0, .8], [.2, 1], [1, 1]], fan_width: [[0, .7], [.35, 1], [1, .8]],
+        ...Object.entries(reconstruction ? {} : { fan_growth: [[0, .8], [.2, 1], [1, 1]], fan_width: [[0, .7], [.35, 1], [1, .8]],
           fan_fade: [[0, 0], [.12, 1], [.65, .8], [1, 0]], wing_opacity: [[0, 1], [1, 1]] })
           .map(([id, keys]) => ({ id, name: id, type: 'CURVE', default: { type: 'CURVE',
             curve: keys.map(([t, v]) => ({ t, v, it: 0, ot: 0, i: 'SMOOTH' })) } })),
       ],
       contexts: [
-        { id: 'spawn', type: 'SPAWN', name: '01 / Pearl material motion and shape', x: 0, y: 0, blocks: layers.map(layer => layer.spawn) },
-        { id: 'output', type: 'OUTPUT', name: '02 / Depth-tested white layers', x: 620, y: 0, blocks: outputs },
+        { id: 'spawn', type: 'SPAWN', name: reconstruction ? '01 / Continuous surface reconstruction' : '01 / Pearl material motion and shape', x: 0, y: 0, blocks: layers.map(layer => layer.spawn) },
+        { id: 'output', type: 'OUTPUT', name: reconstruction ? '02 / Depth-tested solid white laminae' : '02 / Depth-tested white layers', x: 620, y: 0, blocks: outputs },
       ],
       operators: [], flow: [{ from: 'spawn', to: 'output' }], blockFlows: [], dataEdges: [], outputs: outputs.map(b => b.id),
     };

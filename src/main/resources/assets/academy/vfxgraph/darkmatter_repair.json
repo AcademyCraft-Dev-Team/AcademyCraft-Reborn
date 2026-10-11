@@ -18,7 +18,7 @@
       "type": "FLOAT",
       "default": {
         "type": "FLOAT",
-        "value": 0.25
+        "value": 0.35
       }
     },
     {
@@ -49,15 +49,6 @@
       }
     },
     {
-      "id": "range",
-      "name": "range",
-      "type": "FLOAT",
-      "default": {
-        "type": "FLOAT",
-        "value": 12
-      }
-    },
-    {
       "id": "light",
       "name": "light",
       "type": "FLOAT",
@@ -78,24 +69,6 @@
     {
       "id": "finished",
       "name": "finished",
-      "type": "FLOAT",
-      "default": {
-        "type": "FLOAT",
-        "value": 0
-      }
-    },
-    {
-      "id": "sheet_scale",
-      "name": "sheet_scale",
-      "type": "FLOAT",
-      "default": {
-        "type": "FLOAT",
-        "value": 1
-      }
-    },
-    {
-      "id": "view_first_person",
-      "name": "view_first_person",
       "type": "FLOAT",
       "default": {
         "type": "FLOAT",
@@ -157,33 +130,6 @@
       }
     },
     {
-      "id": "shape",
-      "name": "shape",
-      "type": "FLOAT",
-      "default": {
-        "type": "FLOAT",
-        "value": 0
-      }
-    },
-    {
-      "id": "spread",
-      "name": "spread",
-      "type": "FLOAT",
-      "default": {
-        "type": "FLOAT",
-        "value": 1
-      }
-    },
-    {
-      "id": "attack",
-      "name": "attack",
-      "type": "FLOAT",
-      "default": {
-        "type": "FLOAT",
-        "value": 0
-      }
-    },
-    {
       "id": "lod",
       "name": "lod",
       "type": "FLOAT",
@@ -193,66 +139,75 @@
       }
     },
     {
-      "id": "radius",
-      "name": "radius",
+      "id": "surface_patches",
+      "name": "surface_patches",
       "type": "FLOAT",
       "default": {
         "type": "FLOAT",
-        "value": 4.4
+        "value": 6
       }
     },
     {
-      "id": "arc",
-      "name": "arc",
+      "id": "repair_progress_0",
+      "name": "repair_progress_0",
       "type": "FLOAT",
       "default": {
         "type": "FLOAT",
-        "value": 2.2
+        "value": -1
       }
     },
     {
-      "id": "reverse",
-      "name": "reverse",
+      "id": "repair_progress_1",
+      "name": "repair_progress_1",
       "type": "FLOAT",
       "default": {
         "type": "FLOAT",
+        "value": -1
+      }
+    },
+    {
+      "id": "repair_progress_2",
+      "name": "repair_progress_2",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": -1
+      }
+    },
+    {
+      "id": "repair_progress_3",
+      "name": "repair_progress_3",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": -1
+      }
+    },
+    {
+      "id": "repair_progress_4",
+      "name": "repair_progress_4",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": -1
+      }
+    },
+    {
+      "id": "repair_progress_5",
+      "name": "repair_progress_5",
+      "type": "FLOAT",
+      "default": {
+        "type": "FLOAT",
+        "value": -1
+      }
+    },
+    {
+      "id": "surface_detail",
+      "name": "surface_detail",
+      "type": "INT",
+      "default": {
+        "type": "INT",
         "value": 0
-      }
-    },
-    {
-      "id": "field_surface_strength",
-      "name": "field_surface_strength",
-      "type": "FLOAT",
-      "default": {
-        "type": "FLOAT",
-        "value": 0.16
-      }
-    },
-    {
-      "id": "field_air_strength",
-      "name": "field_air_strength",
-      "type": "FLOAT",
-      "default": {
-        "type": "FLOAT",
-        "value": 0.1
-      }
-    },
-    {
-      "id": "field_edge_width",
-      "name": "field_edge_width",
-      "type": "FLOAT",
-      "default": {
-        "type": "FLOAT",
-        "value": 0.22
-      }
-    },
-    {
-      "id": "field_scatter_count",
-      "name": "field_scatter_count",
-      "type": "FLOAT",
-      "default": {
-        "type": "FLOAT",
-        "value": 32
       }
     },
     {
@@ -287,162 +242,29 @@
         "y": 0.9,
         "z": 0.3
       }
-    },
-    {
-      "id": "fan_growth",
-      "name": "fan_growth",
-      "type": "CURVE",
-      "default": {
-        "type": "CURVE",
-        "curve": [
-          {
-            "t": 0,
-            "v": 0.8,
-            "it": 0,
-            "ot": 0,
-            "i": "SMOOTH"
-          },
-          {
-            "t": 0.2,
-            "v": 1,
-            "it": 0,
-            "ot": 0,
-            "i": "SMOOTH"
-          },
-          {
-            "t": 1,
-            "v": 1,
-            "it": 0,
-            "ot": 0,
-            "i": "SMOOTH"
-          }
-        ]
-      }
-    },
-    {
-      "id": "fan_width",
-      "name": "fan_width",
-      "type": "CURVE",
-      "default": {
-        "type": "CURVE",
-        "curve": [
-          {
-            "t": 0,
-            "v": 0.7,
-            "it": 0,
-            "ot": 0,
-            "i": "SMOOTH"
-          },
-          {
-            "t": 0.35,
-            "v": 1,
-            "it": 0,
-            "ot": 0,
-            "i": "SMOOTH"
-          },
-          {
-            "t": 1,
-            "v": 0.8,
-            "it": 0,
-            "ot": 0,
-            "i": "SMOOTH"
-          }
-        ]
-      }
-    },
-    {
-      "id": "fan_fade",
-      "name": "fan_fade",
-      "type": "CURVE",
-      "default": {
-        "type": "CURVE",
-        "curve": [
-          {
-            "t": 0,
-            "v": 0,
-            "it": 0,
-            "ot": 0,
-            "i": "SMOOTH"
-          },
-          {
-            "t": 0.12,
-            "v": 1,
-            "it": 0,
-            "ot": 0,
-            "i": "SMOOTH"
-          },
-          {
-            "t": 0.65,
-            "v": 0.8,
-            "it": 0,
-            "ot": 0,
-            "i": "SMOOTH"
-          },
-          {
-            "t": 1,
-            "v": 0,
-            "it": 0,
-            "ot": 0,
-            "i": "SMOOTH"
-          }
-        ]
-      }
-    },
-    {
-      "id": "wing_opacity",
-      "name": "wing_opacity",
-      "type": "CURVE",
-      "default": {
-        "type": "CURVE",
-        "curve": [
-          {
-            "t": 0,
-            "v": 1,
-            "it": 0,
-            "ot": 0,
-            "i": "SMOOTH"
-          },
-          {
-            "t": 1,
-            "v": 1,
-            "it": 0,
-            "ot": 0,
-            "i": "SMOOTH"
-          }
-        ]
-      }
     }
   ],
   "contexts": [
     {
       "id": "spawn",
       "type": "SPAWN",
-      "name": "01 / Pearl material motion and shape",
+      "name": "01 / Continuous surface reconstruction",
       "x": 0,
       "y": 0,
       "blocks": [
         {
-          "id": "patch_growth",
-          "type": "vfx.block.material_sheets",
+          "id": "reconstruction_front",
+          "type": "vfx.block.surface_laminae",
           "properties": {
-            "style": "2",
-            "count": "8",
-            "size": "0.14",
-            "opacity": "0.6",
-            "surface": "surface",
-            "lighting": "1"
-          }
-        },
-        {
-          "id": "settling_ribs",
-          "type": "vfx.block.material_sheets",
-          "properties": {
-            "style": "2",
-            "count": "4",
-            "size": "0.06",
-            "opacity": "0.48",
-            "surface": "surface",
-            "lighting": "1"
+            "mode": "repair",
+            "patches": "6",
+            "strands": "4",
+            "fragments": "0",
+            "opacity": "0.96",
+            "length_scale": "1",
+            "width_scale": "1",
+            "lift": "0.16",
+            "surface": "surface"
           }
         }
       ]
@@ -450,19 +272,20 @@
     {
       "id": "output",
       "type": "OUTPUT",
-      "name": "02 / Depth-tested white layers",
+      "name": "02 / Depth-tested solid white laminae",
       "x": 620,
       "y": 0,
       "blocks": [
         {
-          "id": "patch_growth_output",
-          "type": "vfx.block.output_quad",
+          "id": "reconstruction_front_output",
+          "type": "vfx.block.output_material_surface",
           "properties": {
-            "vertex": "academy:core/vfxgraph_material_sheet",
-            "shader": "academy:core/vfxgraph_material_growth",
+            "vertex": "academy:core/vfxgraph_surface_lamina",
+            "shader": "academy:core/vfxgraph_surface_lamina",
             "blend": "translucent",
-            "layer": "smoke",
-            "bounds_scale": "1.21",
+            "layer": "lamina",
+            "soft_depth": "true",
+            "bounds_scale": "0",
             "cull_zero_alpha": "true"
           }
         }
@@ -479,6 +302,6 @@
   "blockFlows": [],
   "dataEdges": [],
   "outputs": [
-    "patch_growth_output"
+    "reconstruction_front_output"
   ]
 }

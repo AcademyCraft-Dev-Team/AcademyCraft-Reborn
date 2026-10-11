@@ -1,0 +1,2103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>未元物质 · 分解与修复 / 实装验证画册</title>
+  <style>
+    :root{--paper:#f5f3ef;--ink:#23282b;--muted:#626b6e;--line:#d4d6d2;--accent:#60776c;--soft:#e9ece7;--viewport:#111419}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.75 "Microsoft YaHei UI","Microsoft YaHei","PingFang SC",sans-serif}main{max-width:1420px;margin:auto;padding:0 46px 54px}a{color:inherit;text-decoration-thickness:1px;text-underline-offset:4px}a:hover{color:var(--accent)}button,input,select{font:inherit}button,select{background:transparent;color:var(--ink);border:1px solid #bfc7c1;border-radius:2px;padding:6px 10px}button{cursor:pointer}button[aria-pressed="true"]{background:#dce4db;border-color:#8da08e}button:hover{background:#e9ece7}button:focus-visible,select:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #687f71;outline-offset:3px}nav{display:flex;justify-content:space-between;gap:20px;align-items:center;padding:24px 0;border-bottom:1px solid var(--line);font-size:11px;letter-spacing:.09em}nav div{display:flex;gap:22px}nav a{text-decoration:none}.hero{padding:58px 0 34px;max-width:960px}.eyebrow{font-size:11px;letter-spacing:.17em;color:var(--muted);margin:0 0 15px}h1{font-size:clamp(34px,4.4vw,58px);line-height:1.25;font-weight:500;margin:0 0 24px;letter-spacing:-.03em}h1 span{display:block;font-size:.47em;letter-spacing:.07em;margin-top:15px}.lead{font-size:17px;line-height:1.9;max-width:840px;margin:0 0 18px}.small,.note{font-size:12px;color:var(--muted)}.note{margin:8px 0 0}.status-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 0 56px}.status-item{padding:20px 22px 20px 0}.status-item strong{display:block;font-size:15px;font-weight:500}.status-item p{margin:4px 0 0;font-size:12px;color:var(--muted)}.state{display:inline-block;font-size:10px;font-weight:500;letter-spacing:.06em;padding:1px 7px;margin-left:9px;border:1px solid #b8c3b8;color:#48604f;vertical-align:2px}.state.pending{color:#776c4c;border-color:#cbc5b6}section{scroll-margin-top:25px;margin-bottom:58px}.section-head{display:flex;gap:25px;justify-content:space-between;align-items:end;margin:0 0 22px}.section-head h2{font-size:28px;font-weight:500;line-height:1.35;margin:0}.section-head h2 span{font-size:12px;color:var(--muted);margin-right:16px}.section-head p{max-width:600px;font-size:12px;color:var(--muted);margin:0}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px}.capture-card{min-width:0}.card-title{border-top:2px solid #91a094;padding:14px 0 12px;display:flex;gap:16px;justify-content:space-between;align-items:start}h3{font-size:18px;font-weight:500;margin:0}.card-title p{font-size:12px;color:var(--muted);margin:3px 0 0}.source-tag{font-size:10px;white-space:nowrap;color:#596b61;letter-spacing:.08em;padding-top:4px}.viewport{aspect-ratio:16/9;overflow:hidden;background:var(--viewport);border:1px solid #bdc4be;position:relative}.viewport img{width:100%;height:100%;display:block;object-fit:contain;transform-origin:var(--origin,50% 50%)}.viewport.zoomed img{transform:scale(2)}.zoom-label{display:none;position:absolute;left:10px;bottom:9px;background:rgba(17,20,25,.85);padding:1px 7px;color:#e4e9e5;font-size:10px;pointer-events:none}.zoomed .zoom-label{display:block}.controls{display:flex;gap:7px;align-items:center;flex-wrap:wrap;padding:12px 0 7px}.controls button{font-size:11px}.select-row{display:flex;gap:10px;justify-content:space-between;align-items:center;margin:8px 0 10px}.select-row label{font-size:12px;color:var(--muted)}.select-row select{font-size:12px;max-width:77%;padding:5px 8px}.frame-readout{font-size:12px;margin:0;line-height:1.8}.frame-readout strong{font-weight:500}.frame-meta{display:block;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.frame-footer{display:flex;gap:12px;justify-content:space-between;align-items:baseline;font-size:11px;margin-top:9px}.frame-footer a{overflow-wrap:anywhere}.frame-footer button{font-size:10px;white-space:nowrap;padding:2px 7px}.principles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin:26px 0 30px;padding:20px;background:var(--soft)}.principles h3{font-size:13px;font-weight:600;margin-bottom:6px}.principles p{font-size:12px;margin:0;color:#55605a}.details{border-top:1px solid var(--line);padding-top:16px;margin-top:25px}.details summary{cursor:pointer;font-size:13px}.details .cards{margin-top:23px}.manifest-note{border-left:2px solid #8ba08d;padding:12px 17px;background:#e9ede6;font-size:12px;margin:20px 0}.pending-panel{border:1px solid var(--line);padding:26px;background:#efeee9;color:#6b705f}.pending-panel p{margin:4px 0}.section-divider{border-top:1px solid var(--line);padding-top:30px}.range-row{display:flex;gap:12px;align-items:center;margin:13px 0 5px}.range-row input{width:100%;accent-color:#6e8677;cursor:pointer}.range-row output{font-size:11px;min-width:55px;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}.evidence-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:38px}.evidence-links{margin:0;padding:0;list-style:none}.evidence-links li{border-bottom:1px solid var(--line);padding:11px 0;font-size:12px}.evidence-links small{display:block;color:var(--muted);margin-top:2px}.evidence-notes{font-size:12px;color:var(--muted)}.evidence-notes p{margin:0 0 14px}.evidence-notes strong{color:var(--ink);font-weight:500}footer{border-top:1px solid var(--line);padding-top:18px;display:flex;justify-content:space-between;gap:20px;font-size:11px;color:var(--muted)}noscript{display:block;padding:15px;border:1px solid var(--line)}
+    [hidden]{display:none!important}.budget-scroll{overflow-x:auto;margin:24px 0 12px}table{width:100%;border-collapse:collapse;text-align:left;font-size:12px;min-width:670px}th,td{border-bottom:1px solid var(--line);padding:11px 13px;white-space:nowrap}th{font-size:11px;color:var(--muted);font-weight:500;background:var(--soft)}td:first-child{font-weight:500}td{font-variant-numeric:tabular-nums}
+    @media(max-width:800px){main{padding:0 20px 36px}nav{align-items:start;gap:13px}nav div{gap:12px;flex-wrap:wrap;justify-content:end}.hero{padding-top:37px}.lead{font-size:15px}.status-row{grid-template-columns:1fr;margin-bottom:38px}.status-item{padding:12px 0}.status-item+.status-item{border-top:1px solid var(--line)}.cards,.evidence-grid{grid-template-columns:1fr;gap:28px}.section-head{display:block}.section-head p{margin-top:10px}.principles{grid-template-columns:1fr;gap:16px;padding:18px}section{margin-bottom:42px}.source-tag{font-size:9px}.select-row select{max-width:80%}.section-head h2{font-size:25px}footer{display:block}footer span{display:block;margin-top:7px}}
+    @media print{body{background:#fff}main{max-width:none;padding:0}.hero{padding-top:20px}nav,.controls,.select-row,.range-row,.frame-footer button{display:none}.capture-card{break-inside:avoid}.cards{gap:15px}.status-row{margin-bottom:30px}.viewport.zoomed img{transform:none}.zoom-label{display:none!important}section{margin-bottom:30px}}
+  </style>
+</head>
+<body>
+<main>
+  <nav aria-label="验证画册导航"><a href="../index.html">ACADEMYCRAFT REBORN · VFX 03</a><div><a href="#editor">编辑器</a><a href="#gameplay">单人实机</a><a href="#multiplayer">双客户端</a><a href="#evidence">验证记录</a></div></nav>
+  <header class="hero">
+    <p class="eyebrow">DARK MATTER / GPU &amp; GAMEPLAY CAPTURES</p>
+    <h1>未元物质<span>分解与修复 · 实装验证画册</span></h1>
+    <p class="lead">检查白色片层如何贴住表面、分离、接合与退白。这里的画面来自内置编辑器和游戏渲染目标的原始截图，每张均可打开完整 PNG。</p>
+    <p class="small"><a href="../index.html#disassemble">分解设计目标</a> · <a href="../index.html#repair">修复设计目标</a> · <a href="validation.json">最终验证记录</a> · <a href="editor/gpu_capture_manifest.json">编辑器原始记录</a></p>
+  </header>
+  <div class="status-row" aria-label="证据范围">
+    <div class="status-item"><strong>编辑器 GPU <span class="state">25 张原图</span></strong><p>生产图与着色器；前臂盒体、方块盒体代理。</p></div>
+    <div class="status-item"><strong>单人实机 <span class="state" id="single-status">PASSED · 141 张</span></strong><p id="single-summary">真实客户端与集成服务器，成功技能调用触发。</p></div>
+    <div class="status-item"><strong>双客户端 <span class="state" id="multi-status">PASSED · 184 张</span></strong><p id="multi-summary">独立施术者、观察者与专用服务器，TCP 联机。</p></div>
+  </div>
+
+  <section id="editor" aria-labelledby="editor-title">
+    <div class="section-head"><h2 id="editor-title"><span>01</span>编辑器 · 形体与阶段</h2><p>灰蓝色长盒是前臂尺寸的中性代理体。白质使用生产 VFXGraph 和真实 GPU 着色器，局部采样范围与游戏运行时一致。</p></div>
+    <div class="cards" id="editor-main"></div>
+    <div class="principles">
+      <div><h3>沿用设计动作</h3><p>分解向外抬起、错开并离析；修复由两端向中部接合，再压平收退。侧面图用于检查贴附和厚度。</p></div>
+      <div><h3>保持局部尺度</h3><p>长盒保留完整轮廓。切换“局部 2×”只是放大同一截图，原始文件与截图构图保持不变。</p></div>
+      <div><h3>环境与相态对照</h3><p>附带姿态、弱光和 β 相态画面。弱光参数属于编辑器固定输入，游戏夜景单独列在实机部分。</p></div>
+    </div>
+    <details class="details"><summary>方块残影与固定进度对照 · 另 7 张 GPU 原图</summary><div class="cards" id="editor-extra"></div><p class="note">连续进度代理图固定 progress = 0.68421054，用于比较同一形态在不同时间输入下的外观。网络续接和实例保持由下面的游戏记录证明。</p></details>
+    <div class="budget-scroll"><table aria-label="编辑器捕获的几何规模"><thead><tr><th scope="col">本轮代理场景</th><th scope="col">draw calls</th><th scope="col">渲染实例</th><th scope="col">片层三角形</th><th scope="col">上传字节</th><th scope="col">粒子槽</th></tr></thead><tbody><tr><td>实体局部分解</td><td>1–2</td><td>8–20</td><td>2,048–2,816</td><td>704–1,760</td><td>60</td></tr><tr><td>六面方块残影</td><td>1–2</td><td>12–24</td><td>3,072–3,840</td><td>1,056–2,112</td><td>60</td></tr><tr><td>修复单部位</td><td>1</td><td>4</td><td>1,024</td><td>352</td><td>24</td></tr></tbody></table></div>
+    <p class="note">数值为这 25 帧 GPU manifest 的实际范围；“修复单部位”仅一个活动前臂 patch。粒子槽与最终渲染实例分别统计，这些数据不代表全身多部位或多人场景的总耗时。</p>
+  </section>
+
+  <section id="gameplay" class="section-divider" aria-labelledby="gameplay-title">
+    <div class="section-head"><h2 id="gameplay-title"><span>02</span>游戏 · 真实部位与触发</h2><p>服务器真实恢复生命、修复原生未元物质物品、造成伤害或移除方块后触发生产特效。下列画面为游戏原始截图。</p></div>
+    <div id="gameplay-pending" class="pending-panel" hidden><p>请通过原始记录查看单人截图。</p></div>
+    <div class="cards" id="gameplay-cards"></div>
+    <p class="manifest-note" id="gameplay-checks" hidden></p>
+  </section>
+
+  <section id="multiplayer" class="section-divider" aria-labelledby="multiplayer-title">
+    <div class="section-head"><h2 id="multiplayer-title"><span>03</span>联机 · 两个真实客户端</h2><p>施术者与观察者独立连接专用服务器。各自记录收到的图实例、进度与最终清理，并保存本客户端的真实帧。</p></div>
+    <div id="multiplayer-pending" class="pending-panel" hidden><p>请通过原始记录查看双客户端截图。</p></div>
+    <div class="cards" id="multiplayer-cards"></div>
+    <p class="manifest-note" id="multiplayer-checks" hidden></p>
+  </section>
+
+  <section id="evidence" class="section-divider" aria-labelledby="evidence-title">
+    <div class="section-head"><h2 id="evidence-title"><span>04</span>原始记录与复现入口</h2><p>画册只切换和放大现有截图，不模拟效果、不重绘模型、不加工原图。</p></div>
+    <div class="evidence-grid">
+      <ul class="evidence-links" id="evidence-links">
+        <li><a href="validation.json">最终验证总表 · 2026-10-09</a><small>主测试 2,302 项、编辑器 104 项、特殊 JVM 9 项、开发/发布构建，以及单人和双客户端验收通过；含命令、日志入口与源码/产物 SHA。</small></li>
+        <li><a href="editor/gpu_capture_manifest.json">编辑器 GPU · 25 帧参数与几何记录</a><small>包含时间、进度、相态、光照、镜头、实例数、三角形数和上传字节数。</small></li>
+        <li><a href="capture.init.gradle">编辑器 / 单人启动配置</a> · <a href="DarkmatterReconstructionCaptureMain.kt">GPU capture 源码</a> · <a href="DarkmatterReconstructionClientSmoke.java">实机场景源码</a><small>runGraphEditor 与 runClientDev 使用这一独立验证入口。</small></li>
+        <li><a href="multiplayer.init.gradle">双客户端启动配置</a> · <a href="DarkmatterReconstructionMultiplayerServer.java">服务器场景</a> · <a href="DarkmatterReconstructionMultiplayerClient.java">客户端采集</a><small>每次运行使用新的 academyVfxSession 目录，隔离握手、阶段和完成文件。</small></li>
+      </ul>
+      <div class="evidence-notes">
+        <p><strong>GPU 来源。</strong>内置编辑器将生产图送入 VfxGraphRenderer，再从渲染目标读取 PNG。游戏部分从真实客户端主渲染目标读取 PNG；页面中的序列切换不插帧。</p>
+        <p><strong>模型边界。</strong>编辑器长盒用于形体对照，玩家和生物实际模型请看游戏部分。局部表面代理不等同于任意模型的完整蒙皮采样，活体模型保留原有完整轮廓。</p>
+        <p><strong>第一人称。</strong>修复使用手部镜头代理，白层完整位于视野内。该反馈没有采样当前工具的真实网格，不能据此推断白质精确贴合任意手持物的表面。</p>
+        <p><strong>标准护甲。</strong>铁胸甲场景触发生命恢复的 BODY 反馈，同时核查普通铁胸甲的耐久未被修复。其用途是检查护甲外的可见性。</p>
+        <p><strong>性能范围。</strong>记录提供几何规模、实例数量和清理结果。本画册没有独立 GPU 计时或 FPS 基准，不把截图中的帧率数字用作性能结论。</p>
+      </div>
+    </div>
+  </section>
+  <noscript>阶段切换需要 JavaScript。可通过上方原始记录获取全部 PNG 文件名，或直接查看 <a href="editor/gpu_disassemble_stage_2_front.png">分解</a> 与 <a href="editor/gpu_repair_stage_2_front.png">修复</a> 原图。</noscript>
+  <footer><span>ACADEMYCRAFT REBORN · 未元物质重构 v3</span><span>原始 GPU 帧 / 实机帧 · <a href="../index.html">返回设计方案</a></span></footer>
+</main>
+<script>
+  'use strict';
+  const editorPath = 'editor/';
+  const singleRun = {
+  "status": "PASSED · 141 张",
+  "summary": "真实客户端 + 集成服务器；生命、装备、伤害与方块调用。",
+  "checks": "单人 result.json：连续成功脉冲保留 1 个图实例，记录的最低 progress = 0.68421054；标准铁胸甲 BODY 场景已观察到生产修复图，胸甲 damage 保持 40；最终附着与图实例清理通过。",
+  "evidence": [
+    {
+      "href": "gameplay/result.json",
+      "title": "单人实机 · 完整截图与断言结果",
+      "note": "141 张原图；每帧记录 tick、活动图、进度与胸甲状态。"
+    }
+  ],
+  "viewers": [
+    {
+      "title": "修复 · 真实玩家",
+      "description": "BODY 白质贴附躯干与前臂，原角色模型完整。",
+      "source": "GAME / 实机截图",
+      "initialFrame": 3,
+      "origin": "50% 67%",
+      "scenes": [
+        {
+          "name": "单次生命恢复 · 阶段序列",
+          "frames": [
+            {
+              "file": "gameplay/repair_single/frame_21.png",
+              "label": "tick 21",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "gameplay/repair_single/frame_22.png",
+              "label": "tick 22",
+              "meta": "repair progress 0.205"
+            },
+            {
+              "file": "gameplay/repair_single/frame_23.png",
+              "label": "tick 23",
+              "meta": "repair progress 0.205"
+            },
+            {
+              "file": "gameplay/repair_single/frame_24.png",
+              "label": "tick 24",
+              "meta": "repair progress 0.205"
+            },
+            {
+              "file": "gameplay/repair_single/frame_25.png",
+              "label": "tick 25",
+              "meta": "repair progress 0.205"
+            },
+            {
+              "file": "gameplay/repair_single/frame_26.png",
+              "label": "tick 26",
+              "meta": "repair progress 0.205"
+            },
+            {
+              "file": "gameplay/repair_single/frame_27.png",
+              "label": "tick 27",
+              "meta": "repair progress 0.911"
+            },
+            {
+              "file": "gameplay/repair_single/frame_28.png",
+              "label": "tick 28",
+              "meta": "repair progress 0.911"
+            },
+            {
+              "file": "gameplay/repair_single/frame_29.png",
+              "label": "tick 29",
+              "meta": "repair progress 0.911"
+            },
+            {
+              "file": "gameplay/repair_single/frame_30.png",
+              "label": "tick 30",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "gameplay/repair_single/frame_31.png",
+              "label": "tick 31",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "gameplay/repair_single/frame_32.png",
+              "label": "tick 32",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "gameplay/repair_single/frame_33.png",
+              "label": "tick 33",
+              "meta": "记录时无活动重构图"
+            }
+          ]
+        },
+        {
+          "name": "停止修复 · 收退与清理",
+          "frames": [
+            {
+              "file": "gameplay/repair_stop/frame_98.png",
+              "label": "tick 98",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "gameplay/repair_stop/frame_99.png",
+              "label": "tick 99",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "gameplay/repair_stop/frame_100.png",
+              "label": "tick 100",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "gameplay/repair_stop/frame_101.png",
+              "label": "tick 101",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "gameplay/repair_stop/frame_102.png",
+              "label": "tick 102",
+              "meta": "repair progress 0.752"
+            },
+            {
+              "file": "gameplay/repair_stop/frame_103.png",
+              "label": "tick 103",
+              "meta": "repair progress 0.916"
+            },
+            {
+              "file": "gameplay/repair_stop/frame_104.png",
+              "label": "tick 104",
+              "meta": "repair progress 0.924"
+            },
+            {
+              "file": "gameplay/repair_stop/frame_105.png",
+              "label": "tick 105",
+              "meta": "repair progress 1.000"
+            },
+            {
+              "file": "gameplay/repair_stop/frame_106.png",
+              "label": "tick 106",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "gameplay/repair_stop/frame_107.png",
+              "label": "tick 107",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "gameplay/repair_stop/frame_108.png",
+              "label": "tick 108",
+              "meta": "记录时无活动重构图"
+            }
+          ]
+        },
+        {
+          "name": "第一人称原生工具 · 手部镜头代理",
+          "frames": [
+            {
+              "file": "gameplay/repair_first_person_hand/frame_122.png",
+              "label": "tick 122",
+              "meta": "记录时无活动重构图 · 手部镜头代理；未采样工具网格"
+            },
+            {
+              "file": "gameplay/repair_first_person_hand/frame_123.png",
+              "label": "tick 123",
+              "meta": "记录时无活动重构图 · 手部镜头代理；未采样工具网格"
+            },
+            {
+              "file": "gameplay/repair_first_person_hand/frame_124.png",
+              "label": "tick 124",
+              "meta": "repair progress 0.350 · 手部镜头代理；未采样工具网格"
+            },
+            {
+              "file": "gameplay/repair_first_person_hand/frame_125.png",
+              "label": "tick 125",
+              "meta": "repair progress 0.313 · 手部镜头代理；未采样工具网格"
+            },
+            {
+              "file": "gameplay/repair_first_person_hand/frame_126.png",
+              "label": "tick 126",
+              "meta": "repair progress 0.442 · 手部镜头代理；未采样工具网格"
+            },
+            {
+              "file": "gameplay/repair_first_person_hand/frame_127.png",
+              "label": "tick 127",
+              "meta": "repair progress 0.442 · 手部镜头代理；未采样工具网格"
+            },
+            {
+              "file": "gameplay/repair_first_person_hand/frame_128.png",
+              "label": "tick 128",
+              "meta": "repair progress 0.442 · 手部镜头代理；未采样工具网格"
+            },
+            {
+              "file": "gameplay/repair_first_person_hand/frame_129.png",
+              "label": "tick 129",
+              "meta": "repair progress 0.442 · 手部镜头代理；未采样工具网格"
+            },
+            {
+              "file": "gameplay/repair_first_person_hand/frame_130.png",
+              "label": "tick 130",
+              "meta": "repair progress 0.684 · 手部镜头代理；未采样工具网格"
+            },
+            {
+              "file": "gameplay/repair_first_person_hand/frame_131.png",
+              "label": "tick 131",
+              "meta": "repair progress 0.684 · 手部镜头代理；未采样工具网格"
+            }
+          ]
+        },
+        {
+          "name": "夜间 BODY · 第一人称手部代理",
+          "frames": [
+            {
+              "file": "gameplay/repair_night/frame_188.png",
+              "label": "tick 188",
+              "meta": "记录时无活动重构图 · 手部镜头代理；原始夜景"
+            },
+            {
+              "file": "gameplay/repair_night/frame_189.png",
+              "label": "tick 189",
+              "meta": "repair progress 0.145 · 手部镜头代理；原始夜景"
+            },
+            {
+              "file": "gameplay/repair_night/frame_190.png",
+              "label": "tick 190",
+              "meta": "repair progress 0.289 · 手部镜头代理；原始夜景"
+            },
+            {
+              "file": "gameplay/repair_night/frame_191.png",
+              "label": "tick 191",
+              "meta": "repair progress 0.434 · 手部镜头代理；原始夜景"
+            },
+            {
+              "file": "gameplay/repair_night/frame_192.png",
+              "label": "tick 192",
+              "meta": "repair progress 0.576 · 手部镜头代理；原始夜景"
+            },
+            {
+              "file": "gameplay/repair_night/frame_193.png",
+              "label": "tick 193",
+              "meta": "repair progress 0.716 · 手部镜头代理；原始夜景"
+            },
+            {
+              "file": "gameplay/repair_night/frame_194.png",
+              "label": "tick 194",
+              "meta": "repair progress 0.855 · 手部镜头代理；原始夜景"
+            },
+            {
+              "file": "gameplay/repair_night/frame_195.png",
+              "label": "tick 195",
+              "meta": "repair progress 0.995 · 手部镜头代理；原始夜景"
+            },
+            {
+              "file": "gameplay/repair_night/frame_196.png",
+              "label": "tick 196",
+              "meta": "repair progress 1.000 · disassemble progress 0.126 · 手部镜头代理；原始夜景"
+            }
+          ]
+        },
+        {
+          "name": "背包物品修复 · 无世界图",
+          "frames": [
+            {
+              "file": "gameplay/repair_inventory_only.png",
+              "label": "tick 150",
+              "meta": "记录时无活动重构图"
+            }
+          ]
+        },
+        {
+          "name": "最终清理",
+          "frames": [
+            {
+              "file": "gameplay/cleared.png",
+              "label": "tick 385",
+              "meta": "记录时无活动重构图"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "分解 · 活体与方块",
+      "description": "真实伤害或移除后触发；红色闪烁与方块碎粒保留游戏原貌。",
+      "source": "GAME / 实机截图",
+      "initialFrame": 5,
+      "origin": "50% 64%",
+      "scenes": [
+        {
+          "name": "牛 · 非致命命中",
+          "frames": [
+            {
+              "file": "gameplay/disassemble_living/frame_161.png",
+              "label": "tick 161",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "gameplay/disassemble_living/frame_162.png",
+              "label": "tick 162",
+              "meta": "disassemble progress 0.089"
+            },
+            {
+              "file": "gameplay/disassemble_living/frame_163.png",
+              "label": "tick 163",
+              "meta": "disassemble progress 0.206"
+            },
+            {
+              "file": "gameplay/disassemble_living/frame_164.png",
+              "label": "tick 164",
+              "meta": "disassemble progress 0.306"
+            },
+            {
+              "file": "gameplay/disassemble_living/frame_165.png",
+              "label": "tick 165",
+              "meta": "disassemble progress 0.306"
+            },
+            {
+              "file": "gameplay/disassemble_living/frame_166.png",
+              "label": "tick 166",
+              "meta": "disassemble progress 0.406"
+            },
+            {
+              "file": "gameplay/disassemble_living/frame_167.png",
+              "label": "tick 167",
+              "meta": "disassemble progress 0.406"
+            },
+            {
+              "file": "gameplay/disassemble_living/frame_168.png",
+              "label": "tick 168",
+              "meta": "disassemble progress 0.592"
+            },
+            {
+              "file": "gameplay/disassemble_living/frame_169.png",
+              "label": "tick 169",
+              "meta": "disassemble progress 0.592"
+            },
+            {
+              "file": "gameplay/disassemble_living/frame_170.png",
+              "label": "tick 170",
+              "meta": "disassemble progress 0.592"
+            },
+            {
+              "file": "gameplay/disassemble_living/frame_171.png",
+              "label": "tick 171",
+              "meta": "disassemble progress 0.786"
+            },
+            {
+              "file": "gameplay/disassemble_living/frame_172.png",
+              "label": "tick 172",
+              "meta": "disassemble progress 0.786"
+            },
+            {
+              "file": "gameplay/disassemble_living/frame_173.png",
+              "label": "tick 173",
+              "meta": "disassemble progress 0.786"
+            },
+            {
+              "file": "gameplay/disassemble_living/frame_174.png",
+              "label": "tick 174",
+              "meta": "disassemble progress 1.000"
+            },
+            {
+              "file": "gameplay/disassemble_living/frame_175.png",
+              "label": "tick 175",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "gameplay/disassemble_living/frame_176.png",
+              "label": "tick 176",
+              "meta": "记录时无活动重构图"
+            }
+          ]
+        },
+        {
+          "name": "牛 · 夜间命中",
+          "frames": [
+            {
+              "file": "gameplay/disassemble_night/frame_196.png",
+              "label": "tick 196",
+              "meta": "repair progress 1.000 · disassemble progress 0.126"
+            },
+            {
+              "file": "gameplay/disassemble_night/frame_197.png",
+              "label": "tick 197",
+              "meta": "disassemble progress 0.208"
+            },
+            {
+              "file": "gameplay/disassemble_night/frame_198.png",
+              "label": "tick 198",
+              "meta": "disassemble progress 0.208"
+            },
+            {
+              "file": "gameplay/disassemble_night/frame_199.png",
+              "label": "tick 199",
+              "meta": "disassemble progress 0.371"
+            },
+            {
+              "file": "gameplay/disassemble_night/frame_200.png",
+              "label": "tick 200",
+              "meta": "disassemble progress 0.371"
+            },
+            {
+              "file": "gameplay/disassemble_night/frame_201.png",
+              "label": "tick 201",
+              "meta": "disassemble progress 0.529"
+            },
+            {
+              "file": "gameplay/disassemble_night/frame_202.png",
+              "label": "tick 202",
+              "meta": "disassemble progress 0.529"
+            },
+            {
+              "file": "gameplay/disassemble_night/frame_203.png",
+              "label": "tick 203",
+              "meta": "disassemble progress 0.691"
+            },
+            {
+              "file": "gameplay/disassemble_night/frame_204.png",
+              "label": "tick 204",
+              "meta": "disassemble progress 0.691"
+            },
+            {
+              "file": "gameplay/disassemble_night/frame_205.png",
+              "label": "tick 205",
+              "meta": "disassemble progress 0.845"
+            }
+          ]
+        },
+        {
+          "name": "牛 · 致命命中",
+          "frames": [
+            {
+              "file": "gameplay/disassemble_terminal/frame_227.png",
+              "label": "tick 227",
+              "meta": "disassemble progress 0.152"
+            },
+            {
+              "file": "gameplay/disassemble_terminal/frame_228.png",
+              "label": "tick 228",
+              "meta": "disassemble progress 0.160"
+            },
+            {
+              "file": "gameplay/disassemble_terminal/frame_229.png",
+              "label": "tick 229",
+              "meta": "disassemble progress 0.258"
+            },
+            {
+              "file": "gameplay/disassemble_terminal/frame_230.png",
+              "label": "tick 230",
+              "meta": "disassemble progress 0.355"
+            },
+            {
+              "file": "gameplay/disassemble_terminal/frame_231.png",
+              "label": "tick 231",
+              "meta": "disassemble progress 0.455"
+            },
+            {
+              "file": "gameplay/disassemble_terminal/frame_232.png",
+              "label": "tick 232",
+              "meta": "disassemble progress 0.455"
+            },
+            {
+              "file": "gameplay/disassemble_terminal/frame_233.png",
+              "label": "tick 233",
+              "meta": "disassemble progress 0.554"
+            },
+            {
+              "file": "gameplay/disassemble_terminal/frame_234.png",
+              "label": "tick 234",
+              "meta": "disassemble progress 0.554"
+            },
+            {
+              "file": "gameplay/disassemble_terminal/frame_235.png",
+              "label": "tick 235",
+              "meta": "disassemble progress 0.745"
+            },
+            {
+              "file": "gameplay/disassemble_terminal/frame_236.png",
+              "label": "tick 236",
+              "meta": "disassemble progress 0.745"
+            },
+            {
+              "file": "gameplay/disassemble_terminal/frame_237.png",
+              "label": "tick 237",
+              "meta": "disassemble progress 0.745"
+            },
+            {
+              "file": "gameplay/disassemble_terminal/frame_238.png",
+              "label": "tick 238",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "gameplay/disassemble_terminal/frame_239.png",
+              "label": "tick 239",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "gameplay/disassemble_terminal/frame_240.png",
+              "label": "tick 240",
+              "meta": "记录时无活动重构图"
+            }
+          ]
+        },
+        {
+          "name": "单块实际移除 · 白质残影",
+          "frames": [
+            {
+              "file": "gameplay/disassemble_block/frame_254.png",
+              "label": "tick 254",
+              "meta": "disassemble progress 0.154"
+            },
+            {
+              "file": "gameplay/disassemble_block/frame_255.png",
+              "label": "tick 255",
+              "meta": "disassemble progress 0.166"
+            },
+            {
+              "file": "gameplay/disassemble_block/frame_256.png",
+              "label": "tick 256",
+              "meta": "disassemble progress 0.268"
+            },
+            {
+              "file": "gameplay/disassemble_block/frame_257.png",
+              "label": "tick 257",
+              "meta": "disassemble progress 0.288"
+            },
+            {
+              "file": "gameplay/disassemble_block/frame_258.png",
+              "label": "tick 258",
+              "meta": "disassemble progress 0.380"
+            },
+            {
+              "file": "gameplay/disassemble_block/frame_259.png",
+              "label": "tick 259",
+              "meta": "disassemble progress 0.386"
+            },
+            {
+              "file": "gameplay/disassemble_block/frame_260.png",
+              "label": "tick 260",
+              "meta": "disassemble progress 0.482"
+            },
+            {
+              "file": "gameplay/disassemble_block/frame_261.png",
+              "label": "tick 261",
+              "meta": "disassemble progress 0.578"
+            },
+            {
+              "file": "gameplay/disassemble_block/frame_262.png",
+              "label": "tick 262",
+              "meta": "disassemble progress 0.674"
+            },
+            {
+              "file": "gameplay/disassemble_block/frame_263.png",
+              "label": "tick 263",
+              "meta": "disassemble progress 0.766"
+            },
+            {
+              "file": "gameplay/disassemble_block/frame_264.png",
+              "label": "tick 264",
+              "meta": "disassemble progress 0.766"
+            },
+            {
+              "file": "gameplay/disassemble_block/frame_265.png",
+              "label": "tick 265",
+              "meta": "disassemble progress 0.858"
+            },
+            {
+              "file": "gameplay/disassemble_block/frame_266.png",
+              "label": "tick 266",
+              "meta": "disassemble progress 0.948"
+            },
+            {
+              "file": "gameplay/disassemble_block/frame_267.png",
+              "label": "tick 267",
+              "meta": "disassemble progress 0.948"
+            }
+          ]
+        },
+        {
+          "name": "12 个追踪目标 · 单客户端",
+          "frames": [
+            {
+              "file": "gameplay/tracked_subjects/frame_306.png",
+              "label": "tick 306",
+              "meta": "disassemble progress 0.231 × 12"
+            },
+            {
+              "file": "gameplay/tracked_subjects/frame_307.png",
+              "label": "tick 307",
+              "meta": "disassemble progress 0.240 × 12"
+            },
+            {
+              "file": "gameplay/tracked_subjects/frame_308.png",
+              "label": "tick 308",
+              "meta": "disassemble progress 0.323 × 12"
+            },
+            {
+              "file": "gameplay/tracked_subjects/frame_309.png",
+              "label": "tick 309",
+              "meta": "disassemble progress 0.406 × 12"
+            },
+            {
+              "file": "gameplay/tracked_subjects/frame_310.png",
+              "label": "tick 310",
+              "meta": "disassemble progress 0.488 × 12"
+            },
+            {
+              "file": "gameplay/tracked_subjects/frame_311.png",
+              "label": "tick 311",
+              "meta": "disassemble progress 0.571 × 12"
+            },
+            {
+              "file": "gameplay/tracked_subjects/frame_312.png",
+              "label": "tick 312",
+              "meta": "disassemble progress 0.654 × 12"
+            },
+            {
+              "file": "gameplay/tracked_subjects/frame_313.png",
+              "label": "tick 313",
+              "meta": "disassemble progress 0.735 × 12"
+            },
+            {
+              "file": "gameplay/tracked_subjects/frame_314.png",
+              "label": "tick 314",
+              "meta": "disassemble progress 0.817 × 12"
+            }
+          ]
+        },
+        {
+          "name": "21 个方块实际移除",
+          "frames": [
+            {
+              "file": "gameplay/batch_blocks/frame_332.png",
+              "label": "tick 332",
+              "meta": "disassemble progress 0.228 × 21"
+            },
+            {
+              "file": "gameplay/batch_blocks/frame_333.png",
+              "label": "tick 333",
+              "meta": "disassemble progress 0.240 × 21"
+            },
+            {
+              "file": "gameplay/batch_blocks/frame_334.png",
+              "label": "tick 334",
+              "meta": "disassemble progress 0.337 × 21"
+            },
+            {
+              "file": "gameplay/batch_blocks/frame_335.png",
+              "label": "tick 335",
+              "meta": "disassemble progress 0.435 × 21"
+            },
+            {
+              "file": "gameplay/batch_blocks/frame_336.png",
+              "label": "tick 336",
+              "meta": "disassemble progress 0.537 × 21"
+            },
+            {
+              "file": "gameplay/batch_blocks/frame_337.png",
+              "label": "tick 337",
+              "meta": "disassemble progress 0.537 × 21"
+            },
+            {
+              "file": "gameplay/batch_blocks/frame_338.png",
+              "label": "tick 338",
+              "meta": "disassemble progress 0.712 × 21"
+            },
+            {
+              "file": "gameplay/batch_blocks/frame_339.png",
+              "label": "tick 339",
+              "meta": "disassemble progress 0.712 × 21"
+            },
+            {
+              "file": "gameplay/batch_blocks/frame_340.png",
+              "label": "tick 340",
+              "meta": "disassemble progress 0.897 × 21"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "标准铁胸甲 · BODY 可见性",
+      "description": "恢复缺失生命；普通铁胸甲耐久未被修复。",
+      "source": "GAME / 实机截图",
+      "initialFrame": 4,
+      "origin": "50% 67%",
+      "scenes": [
+        {
+          "name": "穿铁胸甲 · 修复前至收尾",
+          "frames": [
+            {
+              "file": "gameplay/repair_iron_chestplate/before.png",
+              "label": "tick 349",
+              "meta": "记录时无活动重构图 · 铁胸甲 damage 40"
+            },
+            {
+              "file": "gameplay/repair_iron_chestplate/frame_351.png",
+              "label": "tick 351",
+              "meta": "记录时无活动重构图 · 铁胸甲 damage 40"
+            },
+            {
+              "file": "gameplay/repair_iron_chestplate/frame_352.png",
+              "label": "tick 352",
+              "meta": "repair progress 0.142 · 铁胸甲 damage 40"
+            },
+            {
+              "file": "gameplay/repair_iron_chestplate/frame_353.png",
+              "label": "tick 353",
+              "meta": "repair progress 0.298 · 铁胸甲 damage 40"
+            },
+            {
+              "file": "gameplay/repair_iron_chestplate/frame_354.png",
+              "label": "tick 354",
+              "meta": "repair progress 0.447 · 铁胸甲 damage 40"
+            },
+            {
+              "file": "gameplay/repair_iron_chestplate/frame_355.png",
+              "label": "tick 355",
+              "meta": "repair progress 0.605 · 铁胸甲 damage 40"
+            },
+            {
+              "file": "gameplay/repair_iron_chestplate/frame_356.png",
+              "label": "tick 356",
+              "meta": "repair progress 0.763 · 铁胸甲 damage 40"
+            },
+            {
+              "file": "gameplay/repair_iron_chestplate/frame_357.png",
+              "label": "tick 357",
+              "meta": "repair progress 0.921 · 铁胸甲 damage 40"
+            },
+            {
+              "file": "gameplay/repair_iron_chestplate/frame_358.png",
+              "label": "tick 358",
+              "meta": "repair progress 0.921 · 铁胸甲 damage 40"
+            },
+            {
+              "file": "gameplay/repair_iron_chestplate/frame_359.png",
+              "label": "tick 359",
+              "meta": "repair progress 1.000 · 铁胸甲 damage 40"
+            },
+            {
+              "file": "gameplay/repair_iron_chestplate/frame_360.png",
+              "label": "tick 360",
+              "meta": "记录时无活动重构图 · 铁胸甲 damage 40"
+            },
+            {
+              "file": "gameplay/repair_iron_chestplate/frame_361.png",
+              "label": "tick 361",
+              "meta": "记录时无活动重构图 · 铁胸甲 damage 40"
+            },
+            {
+              "file": "gameplay/repair_iron_chestplate/frame_362.png",
+              "label": "tick 362",
+              "meta": "记录时无活动重构图 · 铁胸甲 damage 40"
+            },
+            {
+              "file": "gameplay/repair_iron_chestplate/frame_363.png",
+              "label": "tick 363",
+              "meta": "记录时无活动重构图 · 铁胸甲 damage 40"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "连续修复 · 保持与收尾",
+      "description": "连续成功脉冲保持现有白质，停止后完成退白。",
+      "source": "GAME / 实机截图",
+      "initialFrame": 4,
+      "origin": "50% 67%",
+      "scenes": [
+        {
+          "name": "持续工作 · tick 69–93",
+          "frames": [
+            {
+              "file": "gameplay/repair_continuous/frame_69.png",
+              "label": "tick 69",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "gameplay/repair_continuous/frame_72.png",
+              "label": "tick 72",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "gameplay/repair_continuous/frame_75.png",
+              "label": "tick 75",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "gameplay/repair_continuous/frame_78.png",
+              "label": "tick 78",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "gameplay/repair_continuous/frame_81.png",
+              "label": "tick 81",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "gameplay/repair_continuous/frame_84.png",
+              "label": "tick 84",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "gameplay/repair_continuous/frame_87.png",
+              "label": "tick 87",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "gameplay/repair_continuous/frame_90.png",
+              "label": "tick 90",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "gameplay/repair_continuous/frame_93.png",
+              "label": "tick 93",
+              "meta": "repair progress 0.684"
+            }
+          ]
+        },
+        {
+          "name": "停止工作 · tick 98–108",
+          "frames": [
+            {
+              "file": "gameplay/repair_stop/frame_98.png",
+              "label": "tick 98",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "gameplay/repair_stop/frame_99.png",
+              "label": "tick 99",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "gameplay/repair_stop/frame_100.png",
+              "label": "tick 100",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "gameplay/repair_stop/frame_101.png",
+              "label": "tick 101",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "gameplay/repair_stop/frame_102.png",
+              "label": "tick 102",
+              "meta": "repair progress 0.752"
+            },
+            {
+              "file": "gameplay/repair_stop/frame_103.png",
+              "label": "tick 103",
+              "meta": "repair progress 0.916"
+            },
+            {
+              "file": "gameplay/repair_stop/frame_104.png",
+              "label": "tick 104",
+              "meta": "repair progress 0.924"
+            },
+            {
+              "file": "gameplay/repair_stop/frame_105.png",
+              "label": "tick 105",
+              "meta": "repair progress 1.000"
+            },
+            {
+              "file": "gameplay/repair_stop/frame_106.png",
+              "label": "tick 106",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "gameplay/repair_stop/frame_107.png",
+              "label": "tick 107",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "gameplay/repair_stop/frame_108.png",
+              "label": "tick 108",
+              "meta": "记录时无活动重构图"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+};
+  const multiplayerRun = {
+  "status": "PASSED · 184 张",
+  "pending": false,
+  "summary": "2 个独立 TCP 客户端 · reconstruction-v3-20261009-final4",
+  "checks": "服务器及双方 JSON 均通过。两端各保留 1 个连续修复图，各采集 46 个稳态样本。施术者 progress [0.68421054, 0.7709704]；观察者 [0.68421054, 0.68950456]。施术者各 BODY patch 平台占比 97.8% / 97.8% / 97.8%；观察者各 BODY patch 平台占比 100.0% / 100.0% / 100.0%（顺序：躯干 / 右臂 / 左臂；每部分均要求 ≥50% 样本位于 [0.66,0.72]）。已知中心腹部命中在双方分别采样 10 / 11 帧，均绑定躯干。最终图与附着均清理。",
+  "visualNote": "",
+  "viewers": [
+    {
+      "title": "施术者客户端",
+      "description": "真实第一人称施术者，可观察自己的局部反馈与目标受击。",
+      "source": "TCP CLIENT / 实机截图",
+      "initialFrame": 1,
+      "origin": "50% 65%",
+      "scenes": [
+        {
+          "name": "真实玩家受击",
+          "frames": [
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_player/frame_2.png",
+              "label": "阶段 tick 2",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_player/frame_4.png",
+              "label": "阶段 tick 4",
+              "meta": "disassemble progress 0.217"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_player/frame_6.png",
+              "label": "阶段 tick 6",
+              "meta": "disassemble progress 0.377"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_player/frame_8.png",
+              "label": "阶段 tick 8",
+              "meta": "disassemble progress 0.535"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_player/frame_10.png",
+              "label": "阶段 tick 10",
+              "meta": "disassemble progress 0.680"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_player/frame_12.png",
+              "label": "阶段 tick 12",
+              "meta": "disassemble progress 0.842"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_player/frame_14.png",
+              "label": "阶段 tick 14",
+              "meta": "disassemble progress 0.989"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_player/frame_16.png",
+              "label": "阶段 tick 16",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_player/frame_18.png",
+              "label": "阶段 tick 18",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_player/frame_20.png",
+              "label": "阶段 tick 20",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_player/frame_35.png",
+              "label": "阶段 tick 35",
+              "meta": "记录时无活动重构图"
+            }
+          ]
+        },
+        {
+          "name": "持续修复 · 接续形态",
+          "frames": [
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_continuous/frame_2.png",
+              "label": "阶段 tick 2",
+              "meta": "repair progress 0.253"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_continuous/frame_4.png",
+              "label": "阶段 tick 4",
+              "meta": "repair progress 0.508"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_continuous/frame_6.png",
+              "label": "阶段 tick 6",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_continuous/frame_8.png",
+              "label": "阶段 tick 8",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_continuous/frame_10.png",
+              "label": "阶段 tick 10",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_continuous/frame_12.png",
+              "label": "阶段 tick 12",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_continuous/frame_14.png",
+              "label": "阶段 tick 14",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_continuous/frame_16.png",
+              "label": "阶段 tick 16",
+              "meta": "repair progress 0.771"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_continuous/frame_18.png",
+              "label": "阶段 tick 18",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_continuous/frame_20.png",
+              "label": "阶段 tick 20",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_continuous/frame_35.png",
+              "label": "阶段 tick 35",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_continuous/frame_55.png",
+              "label": "阶段 tick 55",
+              "meta": "repair progress 0.684"
+            }
+          ]
+        },
+        {
+          "name": "单次修复",
+          "frames": [
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_single/frame_2.png",
+              "label": "阶段 tick 2",
+              "meta": "repair progress 0.240"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_single/frame_4.png",
+              "label": "阶段 tick 4",
+              "meta": "repair progress 0.240"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_single/frame_6.png",
+              "label": "阶段 tick 6",
+              "meta": "repair progress 0.782"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_single/frame_8.png",
+              "label": "阶段 tick 8",
+              "meta": "repair progress 0.805"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_single/frame_10.png",
+              "label": "阶段 tick 10",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_single/frame_12.png",
+              "label": "阶段 tick 12",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_single/frame_14.png",
+              "label": "阶段 tick 14",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_single/frame_16.png",
+              "label": "阶段 tick 16",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_single/frame_18.png",
+              "label": "阶段 tick 18",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_single/frame_20.png",
+              "label": "阶段 tick 20",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_single/frame_35.png",
+              "label": "阶段 tick 35",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_single/frame_55.png",
+              "label": "阶段 tick 55",
+              "meta": "记录时无活动重构图"
+            }
+          ]
+        },
+        {
+          "name": "实际移除方块",
+          "frames": [
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_block/frame_2.png",
+              "label": "阶段 tick 2",
+              "meta": "disassemble progress 0.149"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_block/frame_4.png",
+              "label": "阶段 tick 4",
+              "meta": "disassemble progress 0.306"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_block/frame_6.png",
+              "label": "阶段 tick 6",
+              "meta": "disassemble progress 0.452"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_block/frame_8.png",
+              "label": "阶段 tick 8",
+              "meta": "disassemble progress 0.612"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_block/frame_10.png",
+              "label": "阶段 tick 10",
+              "meta": "disassemble progress 0.760"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_block/frame_12.png",
+              "label": "阶段 tick 12",
+              "meta": "disassemble progress 0.920"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_block/frame_14.png",
+              "label": "阶段 tick 14",
+              "meta": "disassemble progress 1.000"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_block/frame_16.png",
+              "label": "阶段 tick 16",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_block/frame_18.png",
+              "label": "阶段 tick 18",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_block/frame_20.png",
+              "label": "阶段 tick 20",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_block/frame_35.png",
+              "label": "阶段 tick 35",
+              "meta": "记录时无活动重构图"
+            }
+          ]
+        },
+        {
+          "name": "双方同时修复与分解",
+          "frames": [
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/simultaneous/frame_2.png",
+              "label": "阶段 tick 2",
+              "meta": "repair progress 0.242 · repair progress 0.242 · disassemble progress 0.142"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/simultaneous/frame_4.png",
+              "label": "阶段 tick 4",
+              "meta": "repair progress 0.516 · repair progress 0.516 · disassemble progress 0.302"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/simultaneous/frame_6.png",
+              "label": "阶段 tick 6",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.451"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/simultaneous/frame_8.png",
+              "label": "阶段 tick 8",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.225"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/simultaneous/frame_10.png",
+              "label": "阶段 tick 10",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.374"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/simultaneous/frame_12.png",
+              "label": "阶段 tick 12",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.151"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/simultaneous/frame_14.png",
+              "label": "阶段 tick 14",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.297"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/simultaneous/frame_16.png",
+              "label": "阶段 tick 16",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.072"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/simultaneous/frame_18.png",
+              "label": "阶段 tick 18",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.228"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/simultaneous/frame_20.png",
+              "label": "阶段 tick 20",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.385"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/simultaneous/frame_35.png",
+              "label": "阶段 tick 35",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.372"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/simultaneous/frame_55.png",
+              "label": "阶段 tick 55",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.380"
+            }
+          ]
+        },
+        {
+          "name": "停止修复",
+          "frames": [
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_stop/frame_2.png",
+              "label": "阶段 tick 2",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_stop/frame_4.png",
+              "label": "阶段 tick 4",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_stop/frame_6.png",
+              "label": "阶段 tick 6",
+              "meta": "repair progress 0.916"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_stop/frame_8.png",
+              "label": "阶段 tick 8",
+              "meta": "repair progress 1.000"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_stop/frame_10.png",
+              "label": "阶段 tick 10",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_stop/frame_12.png",
+              "label": "阶段 tick 12",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_stop/frame_14.png",
+              "label": "阶段 tick 14",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_stop/frame_16.png",
+              "label": "阶段 tick 16",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_stop/frame_18.png",
+              "label": "阶段 tick 18",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_stop/frame_20.png",
+              "label": "阶段 tick 20",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/repair_stop/frame_35.png",
+              "label": "阶段 tick 35",
+              "meta": "记录时无活动重构图"
+            }
+          ]
+        },
+        {
+          "name": "最终清理",
+          "frames": [
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/cleanup/frame_2.png",
+              "label": "阶段 tick 2",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.223"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/cleanup/frame_4.png",
+              "label": "阶段 tick 4",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.382"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/cleanup/frame_6.png",
+              "label": "阶段 tick 6",
+              "meta": "repair progress 0.921 · repair progress 0.921 · disassemble progress 0.538"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/cleanup/frame_8.png",
+              "label": "阶段 tick 8",
+              "meta": "repair progress 1.000 · repair progress 1.000 · disassemble progress 0.683"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/cleanup/frame_10.png",
+              "label": "阶段 tick 10",
+              "meta": "disassemble progress 0.840"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/cleanup/frame_12.png",
+              "label": "阶段 tick 12",
+              "meta": "disassemble progress 0.997"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/cleanup/frame_14.png",
+              "label": "阶段 tick 14",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/cleanup/frame_16.png",
+              "label": "阶段 tick 16",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/cleanup/frame_18.png",
+              "label": "阶段 tick 18",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/cleanup/frame_20.png",
+              "label": "阶段 tick 20",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/cleanup/frame_35.png",
+              "label": "阶段 tick 35",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/cleanup/frame_55.png",
+              "label": "阶段 tick 55",
+              "meta": "记录时无活动重构图"
+            }
+          ]
+        },
+        {
+          "name": "初始状态",
+          "frames": [
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/baseline/frame_2.png",
+              "label": "阶段 tick 2",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/baseline/frame_4.png",
+              "label": "阶段 tick 4",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/baseline/frame_6.png",
+              "label": "阶段 tick 6",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/baseline/frame_8.png",
+              "label": "阶段 tick 8",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/baseline/frame_10.png",
+              "label": "阶段 tick 10",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/baseline/frame_12.png",
+              "label": "阶段 tick 12",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/baseline/frame_14.png",
+              "label": "阶段 tick 14",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/baseline/frame_16.png",
+              "label": "阶段 tick 16",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/baseline/frame_18.png",
+              "label": "阶段 tick 18",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/baseline/frame_20.png",
+              "label": "阶段 tick 20",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/caster/baseline/frame_35.png",
+              "label": "阶段 tick 35",
+              "meta": "记录时无活动重构图"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "观察者客户端",
+      "description": "独立 TCP 观察者；受击阶段切到第三人称正面。",
+      "source": "TCP CLIENT / 实机截图",
+      "initialFrame": 1,
+      "origin": "50% 65%",
+      "scenes": [
+        {
+          "name": "真实玩家受击",
+          "frames": [
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_player/frame_2.png",
+              "label": "阶段 tick 2",
+              "meta": "disassemble progress 0.151"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_player/frame_4.png",
+              "label": "阶段 tick 4",
+              "meta": "disassemble progress 0.298"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_player/frame_6.png",
+              "label": "阶段 tick 6",
+              "meta": "disassemble progress 0.451"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_player/frame_8.png",
+              "label": "阶段 tick 8",
+              "meta": "disassemble progress 0.606"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_player/frame_10.png",
+              "label": "阶段 tick 10",
+              "meta": "disassemble progress 0.766"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_player/frame_12.png",
+              "label": "阶段 tick 12",
+              "meta": "disassemble progress 0.923"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_player/frame_14.png",
+              "label": "阶段 tick 14",
+              "meta": "disassemble progress 1.000"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_player/frame_16.png",
+              "label": "阶段 tick 16",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_player/frame_18.png",
+              "label": "阶段 tick 18",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_player/frame_20.png",
+              "label": "阶段 tick 20",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_player/frame_35.png",
+              "label": "阶段 tick 35",
+              "meta": "记录时无活动重构图"
+            }
+          ]
+        },
+        {
+          "name": "持续修复 · 接续形态",
+          "frames": [
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_continuous/frame_2.png",
+              "label": "阶段 tick 2",
+              "meta": "repair progress 0.253"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_continuous/frame_4.png",
+              "label": "阶段 tick 4",
+              "meta": "repair progress 0.513"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_continuous/frame_6.png",
+              "label": "阶段 tick 6",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_continuous/frame_8.png",
+              "label": "阶段 tick 8",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_continuous/frame_10.png",
+              "label": "阶段 tick 10",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_continuous/frame_12.png",
+              "label": "阶段 tick 12",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_continuous/frame_14.png",
+              "label": "阶段 tick 14",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_continuous/frame_16.png",
+              "label": "阶段 tick 16",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_continuous/frame_18.png",
+              "label": "阶段 tick 18",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_continuous/frame_20.png",
+              "label": "阶段 tick 20",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_continuous/frame_35.png",
+              "label": "阶段 tick 35",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_continuous/frame_55.png",
+              "label": "阶段 tick 55",
+              "meta": "repair progress 0.684"
+            }
+          ]
+        },
+        {
+          "name": "单次修复",
+          "frames": [
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_single/frame_2.png",
+              "label": "阶段 tick 2",
+              "meta": "repair progress 0.258"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_single/frame_4.png",
+              "label": "阶段 tick 4",
+              "meta": "repair progress 0.526"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_single/frame_6.png",
+              "label": "阶段 tick 6",
+              "meta": "repair progress 0.776"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_single/frame_8.png",
+              "label": "阶段 tick 8",
+              "meta": "repair progress 1.000"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_single/frame_10.png",
+              "label": "阶段 tick 10",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_single/frame_12.png",
+              "label": "阶段 tick 12",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_single/frame_14.png",
+              "label": "阶段 tick 14",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_single/frame_16.png",
+              "label": "阶段 tick 16",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_single/frame_18.png",
+              "label": "阶段 tick 18",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_single/frame_20.png",
+              "label": "阶段 tick 20",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_single/frame_35.png",
+              "label": "阶段 tick 35",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_single/frame_55.png",
+              "label": "阶段 tick 55",
+              "meta": "记录时无活动重构图"
+            }
+          ]
+        },
+        {
+          "name": "实际移除方块",
+          "frames": [
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_block/frame_2.png",
+              "label": "阶段 tick 2",
+              "meta": "disassemble progress 0.148"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_block/frame_4.png",
+              "label": "阶段 tick 4",
+              "meta": "disassemble progress 0.300"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_block/frame_6.png",
+              "label": "阶段 tick 6",
+              "meta": "disassemble progress 0.452"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_block/frame_8.png",
+              "label": "阶段 tick 8",
+              "meta": "disassemble progress 0.609"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_block/frame_10.png",
+              "label": "阶段 tick 10",
+              "meta": "disassemble progress 0.763"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_block/frame_12.png",
+              "label": "阶段 tick 12",
+              "meta": "disassemble progress 0.918"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_block/frame_14.png",
+              "label": "阶段 tick 14",
+              "meta": "disassemble progress 1.000"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_block/frame_16.png",
+              "label": "阶段 tick 16",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_block/frame_18.png",
+              "label": "阶段 tick 18",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_block/frame_20.png",
+              "label": "阶段 tick 20",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_block/frame_35.png",
+              "label": "阶段 tick 35",
+              "meta": "记录时无活动重构图"
+            }
+          ]
+        },
+        {
+          "name": "双方同时修复与分解",
+          "frames": [
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/simultaneous/frame_2.png",
+              "label": "阶段 tick 2",
+              "meta": "repair progress 0.200 · repair progress 0.200 · disassemble progress 0.117"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/simultaneous/frame_4.png",
+              "label": "阶段 tick 4",
+              "meta": "repair progress 0.200 · repair progress 0.200 · disassemble progress 0.117"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/simultaneous/frame_6.png",
+              "label": "阶段 tick 6",
+              "meta": "repair progress 0.674 · repair progress 0.674 · disassemble progress 0.394"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/simultaneous/frame_8.png",
+              "label": "阶段 tick 8",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.192"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/simultaneous/frame_10.png",
+              "label": "阶段 tick 10",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.378"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/simultaneous/frame_12.png",
+              "label": "阶段 tick 12",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.152"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/simultaneous/frame_14.png",
+              "label": "阶段 tick 14",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.297"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/simultaneous/frame_16.png",
+              "label": "阶段 tick 16",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.072"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/simultaneous/frame_18.png",
+              "label": "阶段 tick 18",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.228"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/simultaneous/frame_20.png",
+              "label": "阶段 tick 20",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.383"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/simultaneous/frame_35.png",
+              "label": "阶段 tick 35",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.383"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/simultaneous/frame_55.png",
+              "label": "阶段 tick 55",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.374"
+            }
+          ]
+        },
+        {
+          "name": "停止修复",
+          "frames": [
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_stop/frame_2.png",
+              "label": "阶段 tick 2",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_stop/frame_4.png",
+              "label": "阶段 tick 4",
+              "meta": "repair progress 0.684"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_stop/frame_6.png",
+              "label": "阶段 tick 6",
+              "meta": "repair progress 0.908"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_stop/frame_8.png",
+              "label": "阶段 tick 8",
+              "meta": "repair progress 1.000"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_stop/frame_10.png",
+              "label": "阶段 tick 10",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_stop/frame_12.png",
+              "label": "阶段 tick 12",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_stop/frame_14.png",
+              "label": "阶段 tick 14",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_stop/frame_16.png",
+              "label": "阶段 tick 16",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_stop/frame_18.png",
+              "label": "阶段 tick 18",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_stop/frame_20.png",
+              "label": "阶段 tick 20",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/repair_stop/frame_35.png",
+              "label": "阶段 tick 35",
+              "meta": "记录时无活动重构图"
+            }
+          ]
+        },
+        {
+          "name": "最终清理",
+          "frames": [
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/cleanup/frame_2.png",
+              "label": "阶段 tick 2",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.231"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/cleanup/frame_4.png",
+              "label": "阶段 tick 4",
+              "meta": "repair progress 0.684 · repair progress 0.684 · disassemble progress 0.378"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/cleanup/frame_6.png",
+              "label": "阶段 tick 6",
+              "meta": "repair progress 0.913 · repair progress 0.913 · disassemble progress 0.534"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/cleanup/frame_8.png",
+              "label": "阶段 tick 8",
+              "meta": "repair progress 1.000 · repair progress 1.000 · disassemble progress 0.689"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/cleanup/frame_10.png",
+              "label": "阶段 tick 10",
+              "meta": "disassemble progress 0.846"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/cleanup/frame_12.png",
+              "label": "阶段 tick 12",
+              "meta": "disassemble progress 1.000"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/cleanup/frame_14.png",
+              "label": "阶段 tick 14",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/cleanup/frame_16.png",
+              "label": "阶段 tick 16",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/cleanup/frame_18.png",
+              "label": "阶段 tick 18",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/cleanup/frame_20.png",
+              "label": "阶段 tick 20",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/cleanup/frame_35.png",
+              "label": "阶段 tick 35",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/cleanup/frame_55.png",
+              "label": "阶段 tick 55",
+              "meta": "记录时无活动重构图"
+            }
+          ]
+        },
+        {
+          "name": "初始状态",
+          "frames": [
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/baseline/frame_2.png",
+              "label": "阶段 tick 2",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/baseline/frame_4.png",
+              "label": "阶段 tick 4",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/baseline/frame_6.png",
+              "label": "阶段 tick 6",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/baseline/frame_8.png",
+              "label": "阶段 tick 8",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/baseline/frame_10.png",
+              "label": "阶段 tick 10",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/baseline/frame_12.png",
+              "label": "阶段 tick 12",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/baseline/frame_14.png",
+              "label": "阶段 tick 14",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/baseline/frame_16.png",
+              "label": "阶段 tick 16",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/baseline/frame_18.png",
+              "label": "阶段 tick 18",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/baseline/frame_20.png",
+              "label": "阶段 tick 20",
+              "meta": "记录时无活动重构图"
+            },
+            {
+              "file": "multiplayer/reconstruction-v3-20261009-final4/observer/baseline/frame_35.png",
+              "label": "阶段 tick 35",
+              "meta": "记录时无活动重构图"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "href": "multiplayer/reconstruction-v3-20261009-final4/server-result.txt",
+      "title": "双客户端 · 专用服务器结果",
+      "note": "独立 session：reconstruction-v3-20261009-final4"
+    },
+    {
+      "href": "multiplayer/reconstruction-v3-20261009-final4/caster-result.json",
+      "title": "双客户端 · 施术者原始记录",
+      "note": "461 条 tick 记录；逐 patch min / max / 平台样本数与比例。"
+    },
+    {
+      "href": "multiplayer/reconstruction-v3-20261009-final4/observer-result.json",
+      "title": "双客户端 · 观察者原始记录",
+      "note": "491 条 tick 记录；逐 patch min / max / 平台样本数与比例。"
+    },
+    {
+      "href": "multiplayer/reconstruction-v3-20261009-final4/caster-diagnostics.json",
+      "title": "受击表面坐标 · 施术者",
+      "note": "只读诊断：原始命中、绑定部位、各部位中心，以及渲染缓冲位置。"
+    },
+    {
+      "href": "multiplayer/reconstruction-v3-20261009-final4/observer-diagnostics.json",
+      "title": "受击表面坐标 · 观察者",
+      "note": "只读诊断：原始命中、绑定部位、各部位中心，以及渲染缓冲位置。"
+    }
+  ]
+};
+
+  function frame(file, label, meta) { return {file, label, meta}; }
+  function editorEffect(kind, title, motion, stages, times) {
+    const prefix = 'gpu_' + kind;
+    const views = ['front', 'side'];
+    const scenes = views.map((view, side) => ({
+      name: side ? '侧面 · 贴附与厚度' : '正面 · 三个阶段',
+      frames: stages.map((stage, i) => frame(editorPath + prefix + '_stage_' + (i + 1) + '_' + view + '.png',
+        ['01 · ' + (kind === 'repair' ? '窄束接入' : '局部侵入'), '02 · ' + (kind === 'repair' ? '相向桥接' : '外翻错位'), '03 · ' + (kind === 'repair' ? '压平退白' : '细片离析')][i],
+        'progress ' + stage + ' · time ' + times[i] + ' s · light 1.0'))
+    }));
+    scenes.push({name:'姿态 / 弱光 / β 相态',frames:[
+      frame(editorPath + prefix + '_posed.png','姿态旋转','同一局部代理表面随姿态旋转'),
+      frame(editorPath + prefix + '_night.png','弱光输入','light 0.12 · 编辑器参数对照'),
+      frame(editorPath + prefix + '_beta.png','β 相态','具体相态参数见原始 manifest')
+    ]});
+    return {title, description:motion, source:'EDITOR GPU / 盒体代理', scenes, initialFrame:1};
+  }
+
+  function createViewer(target, config) {
+    const article = document.createElement('article'); article.className = 'capture-card';
+    article.innerHTML = '<div class="card-title"><div><h3></h3><p></p></div><span class="source-tag"></span></div>'
+      + '<div class="viewport"><img loading="lazy" alt=""><span class="zoom-label">原图局部 · 2×</span></div>'
+      + '<div class="select-row"><label>查看场景</label><select aria-label="选择截图场景"></select></div>'
+      + '<div class="controls" aria-label="截图阶段"></div>'
+      + '<div class="range-row"><input type="range" min="0" value="0" aria-label="切换原始截图"><output></output></div>'
+      + '<p class="frame-readout"><strong></strong><span class="frame-meta"></span></p>'
+      + '<div class="frame-footer"><a target="_blank" rel="noopener">打开完整 PNG ↗</a><button type="button" aria-pressed="false">局部 2×</button></div>';
+    article.querySelector('h3').textContent = config.title;
+    article.querySelector('.card-title p').textContent = config.description;
+    article.querySelector('.source-tag').textContent = config.source;
+    const viewport = article.querySelector('.viewport'), img = article.querySelector('img');
+    if(config.origin) viewport.style.setProperty('--origin',config.origin);
+    const select = article.querySelector('select'), range = article.querySelector('input'), buttons = article.querySelector('.controls');
+    const zoom = article.querySelector('.frame-footer button');
+    config.scenes.forEach((scene, i) => { const opt = document.createElement('option'); opt.value = i; opt.textContent = scene.name; select.appendChild(opt); });
+    let sceneIndex = 0, frameIndex = 0;
+    function showFrame(index) {
+      const frames = config.scenes[sceneIndex].frames; frameIndex = Math.min(frames.length - 1, Math.max(0, index));
+      const item = frames[frameIndex]; img.src = item.file; img.alt = config.title + ' · ' + config.scenes[sceneIndex].name + ' · ' + item.label;
+      article.querySelector('.frame-footer a').href = item.file;
+      article.querySelector('.frame-readout strong').textContent = item.label;
+      article.querySelector('.frame-meta').textContent = item.meta;
+      range.value = frameIndex; article.querySelector('output').value = (frameIndex + 1) + ' / ' + frames.length;
+      range.setAttribute('aria-valuetext', item.label);
+      buttons.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.index) === frameIndex)));
+    }
+    function showScene(index, selectedFrame = 0) {
+      sceneIndex = index; const frames = config.scenes[index].frames;
+      range.max = frames.length - 1; article.querySelector('.range-row').hidden = frames.length <= 4;
+      buttons.replaceChildren();
+      const picks = frames.length <= 4 ? frames.map((_, i) => i) : [0, Math.floor((frames.length - 1) / 2), frames.length - 1];
+      picks.forEach((i, n) => { const b = document.createElement('button'); b.type = 'button'; b.dataset.index = i;
+        b.textContent = frames.length <= 4 ? frames[i].label : ['首帧', '中间帧', '末帧'][n];
+        b.addEventListener('click', () => showFrame(i)); buttons.appendChild(b); });
+      showFrame(selectedFrame);
+    }
+    range.addEventListener('input', () => showFrame(Number(range.value)));
+    select.addEventListener('change', () => showScene(Number(select.value)));
+    zoom.addEventListener('click', () => { const enabled = viewport.classList.toggle('zoomed'); zoom.setAttribute('aria-pressed', String(enabled)); zoom.textContent = enabled ? '还原整帧' : '局部 2×'; });
+    target.appendChild(article); showScene(0, config.initialFrame || 0);
+  }
+
+  createViewer(document.querySelector('#editor-main'), editorEffect('disassemble','未元物质分解','局部侵入 → 外翻错位 → 细片离析',[0.10,0.40,0.76],[0.065,0.260,0.494]));
+  createViewer(document.querySelector('#editor-main'), editorEffect('repair','未元物质修复','窄束接入 → 相向桥接 → 压平退白',[0.15,0.50,0.88],[0.057,0.190,0.3344]));
+  createViewer(document.querySelector('#editor-extra'), {title:'已移除方块',description:'六个暴露面的白质残影，场景中无替代实心方块。',source:'EDITOR GPU / 方块代理',initialFrame:1,scenes:[{name:'方块残影 · 四个阶段',frames:[0.065,0.25,0.49,0.64].map((t,i)=>frame(editorPath+'gpu_disassemble_removed_block_'+(i+1)+'.png',['01 · 侵入','02 · 外翻','03 · 离析','04 · 消退'][i],'time '+t+' s · 六个暴露面'))}]});
+  createViewer(document.querySelector('#editor-extra'), {title:'保持接合形态',description:'固定进度输入，仅比较形体；连续脉冲见实机记录。',source:'EDITOR GPU / 盒体代理',scenes:[{name:'固定 progress 0.68421054',frames:[30,55,80].map(t=>frame(editorPath+'gpu_repair_continuous_'+t+'.png','time '+(t/100).toFixed(2)+' s','progress 0.68421054 · 4 instances / 1024 triangles'))}]});
+
+  function addEvidence(href, title, note) {
+    const li = document.createElement('li'), a = document.createElement('a'), small = document.createElement('small');
+    a.href = href; a.textContent = title; small.textContent = note; li.append(a,small); document.querySelector('#evidence-links').appendChild(li);
+  }
+  function activateRun(run, name) {
+    if(!run) return;
+    const id = name === 'single' ? 'gameplay' : 'multiplayer';
+    document.querySelector('#'+id+'-pending').hidden = true;
+    const status = document.querySelector('#'+(name === 'single' ? 'single' : 'multi')+'-status');
+    status.textContent = run.status; status.classList.toggle('pending', Boolean(run.pending));
+    document.querySelector('#'+(name === 'single' ? 'single' : 'multi')+'-summary').textContent = run.summary;
+    run.viewers.forEach(viewer => createViewer(document.querySelector('#'+id+'-cards'),viewer));
+    const checks = document.querySelector('#'+id+'-checks'); checks.textContent = run.checks; checks.hidden = false;
+    if (run.visualNote) { const note = document.createElement('p'); note.className = 'pending-panel'; note.textContent = run.visualNote; checks.after(note); }
+    run.evidence.forEach(link => addEvidence(link.href,link.title,link.note));
+  }
+  activateRun(singleRun,'single'); activateRun(multiplayerRun,'multi');
+</script>
+</body>
+</html>

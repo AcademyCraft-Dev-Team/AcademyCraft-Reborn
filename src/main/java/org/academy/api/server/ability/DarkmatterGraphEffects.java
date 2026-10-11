@@ -83,8 +83,12 @@ public final class DarkmatterGraphEffects {
         long now = subject.level().getGameTime();
         var previous = REPAIR_PULSES.get(subject);
         if (previous != null && now >= previous.tick && now - previous.tick < 5) {
-            if ((parts & ~previous.parts) == 0) return;
-            parts |= previous.parts;
+            int newParts = parts & ~previous.parts;
+            if (newParts == 0) return;
+            REPAIR_PULSES.put(subject, new RepairPulse(previous.tick, parts | previous.parts));
+            // A newly repaired site must not renew an older site which did not succeed this pulse.
+            attached(subject, Kind.REPAIR, true, 0, newParts);
+            return;
         }
         REPAIR_PULSES.put(subject, new RepairPulse(now, parts));
         attached(subject, Kind.REPAIR, true, 0, parts);
@@ -92,15 +96,62 @@ public final class DarkmatterGraphEffects {
 
     public static void disassemble(LivingEntity subject) { attached(subject, Kind.DISASSEMBLE, true, 0, 0); }
 
+    /** Visual-only overload preserving caster phase and a target-relative proxy contact. */
+    public static void disassemble(LivingEntity actor, LivingEntity subject, Vec3 impact) {
+        var normal = impact.subtract(subject.getBoundingBox().getCenter());
+        if (normal.lengthSqr() < 1e-8) normal = actor.getEyePosition().subtract(subject.getBoundingBox().getCenter());
+        if (normal.lengthSqr() < 1e-8) normal = new Vec3(0, 0, -1);
+        disassemble(actor, subject, impact, normal);
+    }
+
+    /** The contact is projected onto the target's bounding proxy, never interpreted as a mesh wound. */
+    public static void disassemble(LivingEntity actor, LivingEntity subject, Vec3 impact, Vec3 normal) {
+        if (!(subject.level() instanceof ServerLevel level) || actor.level() != level) return;
+        if (!Double.isFinite(impact.lengthSqr()) || !Double.isFinite(normal.lengthSqr()) || normal.lengthSqr() < 1e-12) return;
+        var phase = phase(actor);
+        var box = subject.getBoundingBox();
+        double x = Math.clamp(impact.x, box.minX, box.maxX);
+        double y = Math.clamp(impact.y, box.minY, box.maxY);
+        double z = Math.clamp(impact.z, box.minZ, box.maxZ);
+        Vec3 face;
+        if (Math.abs(normal.x) >= Math.abs(normal.y) && Math.abs(normal.x) >= Math.abs(normal.z)) {
+            x = normal.x < 0 ? box.minX : box.maxX;
+            face = new Vec3(normal.x < 0 ? -1 : 1, 0, 0);
+        } else if (Math.abs(normal.y) >= Math.abs(normal.z)) {
+            y = normal.y < 0 ? box.minY : box.maxY;
+            face = new Vec3(0, normal.y < 0 ? -1 : 1, 0);
+        } else {
+            z = normal.z < 0 ? box.minZ : box.maxZ;
+            face = new Vec3(0, 0, normal.z < 0 ? -1 : 1);
+        }
+        float width = Math.min(32, subject.getBbWidth()), height = Math.min(64, subject.getBbHeight());
+        var relative = new Vec3(x, y, z).subtract(subject.position());
+        var contact = new DarkmatterVisualPacket.SurfaceContact(new Vec3(
+                Math.clamp(relative.x, -width * .5, width * .5), Math.clamp(relative.y, 0, height),
+                Math.clamp(relative.z, -width * .5, width * .5)), face);
+        new DarkmatterVisualPacket(level.dimension().identifier(), Kind.DISASSEMBLE, subject.getId(), true,
+                subject.position(), width, height,
+                0, 0, !subject.isAlive(), subject.getUUID().getLeastSignificantBits(), null,
+                phase.alpha(), phase.beta(), phase.gamma(), 0, face, contact).broadcast(level);
+    }
+
     /** Call only after successful removal; retain the removed block's exposed surface bounds. */
     public static void disassembleBlock(ServerLevel level, BlockPos position) {
+        disassembleBlock(level, position, null);
+    }
+
+    /** Successful block removal with explicit caster phase; the absent block is represented by a white remnant. */
+    public static void disassembleBlock(ServerLevel level, BlockPos position,
+                                       @org.jspecify.annotations.Nullable LivingEntity actor) {
         int faces = 0;
         for (var face : net.minecraft.core.Direction.values()) {
             if (!level.getBlockState(position.relative(face)).isSolidRender()) faces |= 1 << face.ordinal();
         }
         if (faces == 0) return;
+        var phase = actor == null ? new DarkmatterPhase.Weights(.5f, .5f, 0) : phase(actor);
         new DarkmatterVisualPacket(level.dimension().identifier(), Kind.DISASSEMBLE, -1, true,
-                Vec3.atBottomCenterOf(position), 1, 1, 0, faces, true, position.asLong()).broadcast(level);
+                Vec3.atBottomCenterOf(position), 1, 1, 0, faces, true, position.asLong(), null,
+                phase.alpha(), phase.beta(), phase.gamma(), 0, new Vec3(0, 0, 1)).broadcast(level);
     }
 
     public static void disassemble(ServerLevel level, Vec3 position, float radius) {
@@ -111,10 +162,14 @@ public final class DarkmatterGraphEffects {
 
     private static void attached(LivingEntity actor, Kind kind, boolean active, float range, int parts) {
         if (!(actor.level() instanceof ServerLevel level)) return;
-        var phase = actor instanceof ServerPlayer player ? DarkmatterPhase.weights(player) : new DarkmatterPhase.Weights(.5f, .5f, 0);
+        var phase = phase(actor);
         new DarkmatterVisualPacket(level.dimension().identifier(), kind, actor.getId(), active, actor.position(),
                 Math.min(32, actor.getBbWidth()), Math.min(64, actor.getBbHeight()), Math.clamp(range, 0, 512), parts,
                 !actor.isAlive(), actor.getUUID().getLeastSignificantBits(), null,
                 phase.alpha(), phase.beta(), phase.gamma(), 0, actor.getLookAngle()).broadcast(level);
+    }
+
+    private static DarkmatterPhase.Weights phase(LivingEntity actor) {
+        return actor instanceof ServerPlayer player ? DarkmatterPhase.weights(player) : new DarkmatterPhase.Weights(.5f, .5f, 0);
     }
 }

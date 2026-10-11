@@ -1,0 +1,8490 @@
+{
+  "continuousPatches": [
+    {
+      "bridgeSamples": 45,
+      "minimum": 0.68421054,
+      "bridgeRatio": 0.9782608695652174,
+      "patch": 0,
+      "maximum": 0.7709704
+    },
+    {
+      "bridgeSamples": 45,
+      "minimum": 0.68421054,
+      "bridgeRatio": 0.9782608695652174,
+      "patch": 2,
+      "maximum": 0.7709704
+    },
+    {
+      "bridgeSamples": 45,
+      "minimum": 0.68421054,
+      "bridgeRatio": 0.9782608695652174,
+      "patch": 3,
+      "maximum": 0.7709704
+    }
+  ],
+  "continuousSamples": 46,
+  "frames": [
+    {
+      "phaseTick": 1,
+      "phase": "loading",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 1,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 2,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 3,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 4,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 5,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 6,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 7,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 8,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 9,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 10,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 11,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 12,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 13,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 14,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 15,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 16,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 17,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 18,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 19,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 20,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 21,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 22,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 23,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 24,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 25,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 26,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 27,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 28,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 29,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 30,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 31,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 32,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 33,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 34,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 35,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 36,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 37,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 38,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 39,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 40,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 41,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 42,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 43,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 44,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 45,
+      "phase": "baseline",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 1,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 2,
+      "phase": "repair_single",
+      "graphs": [
+        {
+          "time": 0.095008,
+          "progress": 0.23951481,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.23951481,
+            1.0,
+            0.23951481,
+            0.23951481,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 3,
+      "phase": "repair_single",
+      "graphs": [
+        {
+          "time": 0.095008,
+          "progress": 0.23951481,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.23951481,
+            1.0,
+            0.23951481,
+            0.23951481,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 4,
+      "phase": "repair_single",
+      "graphs": [
+        {
+          "time": 0.095008,
+          "progress": 0.23951481,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.23951481,
+            1.0,
+            0.23951481,
+            0.23951481,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 5,
+      "phase": "repair_single",
+      "graphs": [
+        {
+          "time": 0.095008,
+          "progress": 0.23951481,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.23951481,
+            1.0,
+            0.23951481,
+            0.23951481,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 6,
+      "phase": "repair_single",
+      "graphs": [
+        {
+          "time": 0.30213782,
+          "progress": 0.781507,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.781507,
+            1.0,
+            0.781507,
+            0.781507,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 7,
+      "phase": "repair_single",
+      "graphs": [
+        {
+          "time": 0.4356212,
+          "progress": 0.8051501,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.8051501,
+            1.0,
+            0.8051501,
+            0.8051501,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 8,
+      "phase": "repair_single",
+      "graphs": [
+        {
+          "time": 0.4356212,
+          "progress": 0.8051501,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.8051501,
+            1.0,
+            0.8051501,
+            0.8051501,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 9,
+      "phase": "repair_single",
+      "graphs": [
+        {
+          "time": 0.4985375,
+          "progress": 1.0,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 10,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 11,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 12,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 13,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 14,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 15,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 16,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 17,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 18,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 19,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 20,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 21,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 22,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 23,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 24,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 25,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 26,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 27,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 28,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 29,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 30,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 31,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 32,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 33,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 34,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 35,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 36,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 37,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 38,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 39,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 40,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 41,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 42,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 43,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 44,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 45,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 46,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 47,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 48,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 49,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 50,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 51,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 52,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 53,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 54,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 55,
+      "phase": "repair_single",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 1,
+      "phase": "repair_continuous",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 2,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 0.0846612,
+          "progress": 0.2526213,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.2526213,
+            1.0,
+            0.2526213,
+            0.2526213,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 3,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 0.1548746,
+          "progress": 0.2973376,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.2973376,
+            1.0,
+            0.2973376,
+            0.2973376,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 4,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 0.1821919,
+          "progress": 0.5078125,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.5078125,
+            1.0,
+            0.5078125,
+            0.5078125,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 5,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 0.2512654,
+          "progress": 0.5525288,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.5525288,
+            1.0,
+            0.5525288,
+            0.5525288,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 6,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 0.2864391,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 7,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 0.3570998,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 8,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 0.3857679,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 9,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 0.455172,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 10,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 0.4822194,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 11,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 0.55175734,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 12,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 0.58728164,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 13,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 0.6565013,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 14,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 0.68405044,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 15,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 0.7539196,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 16,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 0.78161657,
+          "progress": 0.7709704,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.7709704,
+            1.0,
+            0.7709704,
+            0.7709704,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 17,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 0.8517986,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 18,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 0.8873996,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 19,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 0.9586049,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 20,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 0.9861236,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 21,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 1.0556929,
+          "progress": 0.6946444,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.6946444,
+            1.0,
+            0.6946444,
+            0.6946444,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 22,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 1.0830669,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 23,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 1.1330798,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 24,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 1.183525,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 25,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 1.2340087,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 26,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 1.2840014,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 27,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 1.3334677,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 28,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 1.3845851,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 29,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 1.4356471,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 30,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 1.4858968,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 31,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 1.5358292,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 32,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 1.5869209,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 33,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 1.6368915,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 34,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 1.687904,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 35,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 1.7375249,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 36,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 1.8084214,
+          "progress": 0.69747126,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.69747126,
+            1.0,
+            0.69747126,
+            0.69747126,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 37,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 1.8355461,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 38,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 1.8855507,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 39,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 1.9357151,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 40,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 1.9859273,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 41,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 2.0364544,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 42,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 2.0865388,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 43,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 2.1364825,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 44,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 2.1865237,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 45,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 2.2366755,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 46,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 2.2878697,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 47,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 2.3304634,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 48,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 2.3812766,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 49,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 2.4314222,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 50,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 2.4811811,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 51,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 2.5316846,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 52,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 2.582436,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 53,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 2.6335902,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 54,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 2.6836493,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 55,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 2.733585,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 56,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 2.8014596,
+          "progress": 0.68950456,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68950456,
+            1.0,
+            0.68950456,
+            0.68950456,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 57,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 2.8368227,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 58,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 2.8867106,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 59,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 2.9377506,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 60,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 2.9801638,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 61,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 3.0312583,
+          "progress": 0.7709704,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.7709704,
+            1.0,
+            0.7709704,
+            0.7709704,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 62,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 3.0817423,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 63,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 3.1316848,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 64,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 3.182386,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 65,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 3.233018,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 66,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 3.2848346,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 67,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 3.335473,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 68,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 3.385844,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 69,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 3.4365757,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 70,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 3.4866972,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 71,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 3.530173,
+          "progress": 0.76583064,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.76583064,
+            1.0,
+            0.76583064,
+            0.76583064,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 72,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 3.579894,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 73,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 3.6299746,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 74,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 3.6807632,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 75,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 3.7323177,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 76,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 3.78249,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 77,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 3.8332653,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 78,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 3.883188,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 79,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 3.9347093,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 80,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 3.9848573,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 81,
+      "phase": "repair_continuous",
+      "graphs": [
+        {
+          "time": 4.034682,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 1,
+      "phase": "repair_stop",
+      "graphs": [
+        {
+          "time": 4.08476,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 2,
+      "phase": "repair_stop",
+      "graphs": [
+        {
+          "time": 4.1358075,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 3,
+      "phase": "repair_stop",
+      "graphs": [
+        {
+          "time": 4.2067356,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 4,
+      "phase": "repair_stop",
+      "graphs": [
+        {
+          "time": 4.233497,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 5,
+      "phase": "repair_stop",
+      "graphs": [
+        {
+          "time": 4.302477,
+          "progress": 0.68693465,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68693465,
+            1.0,
+            0.68693465,
+            0.68693465,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 6,
+      "phase": "repair_stop",
+      "graphs": [
+        {
+          "time": 4.337191,
+          "progress": 0.91591287,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.91591287,
+            1.0,
+            0.91591287,
+            0.91591287,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 7,
+      "phase": "repair_stop",
+      "graphs": [
+        {
+          "time": 4.4049582,
+          "progress": 0.9606291,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.9606291,
+            1.0,
+            0.9606291,
+            0.9606291,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 8,
+      "phase": "repair_stop",
+      "graphs": [
+        {
+          "time": 4.4318094,
+          "progress": 1.0,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 9,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 10,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 11,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 12,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 13,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 14,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 15,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 16,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 17,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 18,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 19,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 20,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 21,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 22,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 23,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 24,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 25,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 26,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 27,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 28,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 29,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 30,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 31,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 32,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 33,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 34,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 35,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 36,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 37,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 38,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 39,
+      "phase": "repair_stop",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 1,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 2,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 3,
+      "phase": "disassemble_player",
+      "graphs": [
+        {
+          "time": 0.117348805,
+          "progress": 0.09692313,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 4,
+      "phase": "disassemble_player",
+      "graphs": [
+        {
+          "time": 0.1436114,
+          "progress": 0.21692313,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 5,
+      "phase": "disassemble_player",
+      "graphs": [
+        {
+          "time": 0.21224049,
+          "progress": 0.24307697,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 6,
+      "phase": "disassemble_player",
+      "graphs": [
+        {
+          "time": 0.2477921,
+          "progress": 0.37692314,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 7,
+      "phase": "disassemble_player",
+      "graphs": [
+        {
+          "time": 0.3161565,
+          "progress": 0.4015385,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 8,
+      "phase": "disassemble_player",
+      "graphs": [
+        {
+          "time": 0.3512157,
+          "progress": 0.53538465,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 9,
+      "phase": "disassemble_player",
+      "graphs": [
+        {
+          "time": 0.4191661,
+          "progress": 0.5615385,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 10,
+      "phase": "disassemble_player",
+      "graphs": [
+        {
+          "time": 0.44555658,
+          "progress": 0.68,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 11,
+      "phase": "disassemble_player",
+      "graphs": [
+        {
+          "time": 0.52405035,
+          "progress": 0.7076923,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 12,
+      "phase": "disassemble_player",
+      "graphs": [
+        {
+          "time": 0.55033684,
+          "progress": 0.84153855,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 13,
+      "phase": "disassemble_player",
+      "graphs": [
+        {
+          "time": 0.6192216,
+          "progress": 0.86769235,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 14,
+      "phase": "disassemble_player",
+      "graphs": [
+        {
+          "time": 0.6460791,
+          "progress": 0.9892308,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 15,
+      "phase": "disassemble_player",
+      "graphs": [
+        {
+          "time": 0.7136583,
+          "progress": 1.0,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 16,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 17,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 18,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 19,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 20,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 21,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 22,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 23,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 24,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 25,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 26,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 27,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 28,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 29,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 30,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 31,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 32,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 33,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 34,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 35,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 36,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 37,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 38,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 39,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 40,
+      "phase": "disassemble_player",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 1,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 2,
+      "phase": "disassemble_block",
+      "graphs": [
+        {
+          "time": 0.0992211,
+          "progress": 0.14923076,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 3,
+      "phase": "disassemble_block",
+      "graphs": [
+        {
+          "time": 0.1653613,
+          "progress": 0.17538463,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 4,
+      "phase": "disassemble_block",
+      "graphs": [
+        {
+          "time": 0.20036249,
+          "progress": 0.30615386,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 5,
+      "phase": "disassemble_block",
+      "graphs": [
+        {
+          "time": 0.268404,
+          "progress": 0.33230773,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 6,
+      "phase": "disassemble_block",
+      "graphs": [
+        {
+          "time": 0.29551637,
+          "progress": 0.4523077,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 7,
+      "phase": "disassemble_block",
+      "graphs": [
+        {
+          "time": 0.36386877,
+          "progress": 0.47846153,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 8,
+      "phase": "disassemble_block",
+      "graphs": [
+        {
+          "time": 0.39974,
+          "progress": 0.6123077,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 9,
+      "phase": "disassemble_block",
+      "graphs": [
+        {
+          "time": 0.4690149,
+          "progress": 0.6384616,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 10,
+      "phase": "disassemble_block",
+      "graphs": [
+        {
+          "time": 0.49558213,
+          "progress": 0.76000005,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 11,
+      "phase": "disassemble_block",
+      "graphs": [
+        {
+          "time": 0.5640987,
+          "progress": 0.7861539,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 12,
+      "phase": "disassemble_block",
+      "graphs": [
+        {
+          "time": 0.5993229,
+          "progress": 0.92,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 13,
+      "phase": "disassemble_block",
+      "graphs": [
+        {
+          "time": 0.6682279,
+          "progress": 0.94461536,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 14,
+      "phase": "disassemble_block",
+      "graphs": [
+        {
+          "time": 0.6951065,
+          "progress": 1.0,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 15,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 16,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 17,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 18,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 19,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 20,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 21,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 22,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 23,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 24,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 25,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 26,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 27,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 28,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 29,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 30,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 31,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 32,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 33,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 34,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 35,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 36,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 37,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 38,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 39,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 40,
+      "phase": "disassemble_block",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 1,
+      "phase": "simultaneous",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 2,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 0.092931196,
+          "progress": 0.24208471,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.24208471,
+            1.0,
+            0.24208471,
+            0.24208471,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.092931196,
+          "progress": 0.24208471,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.24208471,
+            1.0,
+            0.24208471,
+            0.24208471,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.092931196,
+          "progress": 0.14153844,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 3,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 0.1615827,
+          "progress": 0.28680098,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.28680098,
+            1.0,
+            0.28680098,
+            0.28680098,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.1615827,
+          "progress": 0.28680098,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.28680098,
+            1.0,
+            0.28680098,
+            0.28680098,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.1615827,
+          "progress": 0.16769229,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 4,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 0.1965274,
+          "progress": 0.5157792,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.5157792,
+            1.0,
+            0.5157792,
+            0.5157792,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.1965274,
+          "progress": 0.5157792,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.5157792,
+            1.0,
+            0.5157792,
+            0.5157792,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.1965274,
+          "progress": 0.30153844,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 5,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 0.2663564,
+          "progress": 0.5604955,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.5604955,
+            1.0,
+            0.5604955,
+            0.5604955,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.2663564,
+          "progress": 0.5604955,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.5604955,
+            1.0,
+            0.5604955,
+            0.5604955,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.2663564,
+          "progress": 0.3276923,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 6,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 0.293624,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.293624,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.293624,
+          "progress": 0.45076922,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 7,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 0.36180633,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.36180633,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.36180633,
+          "progress": 0.092307664,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 8,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 0.39702713,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.39702713,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.39702713,
+          "progress": 0.22461537,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 9,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 0.46574745,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.46574745,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.46574745,
+          "progress": 0.2507692,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 10,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 0.49330875,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.49330875,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.49330875,
+          "progress": 0.37384614,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 11,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 0.563472,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.563472,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.563472,
+          "progress": 0.39999995,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 12,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 0.59857935,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.59857935,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.59857935,
+          "progress": 0.1507692,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 13,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 0.66658354,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.66658354,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.66658354,
+          "progress": 0.17692304,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 14,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 0.6932689,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.6932689,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.6932689,
+          "progress": 0.296923,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 15,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 0.76154023,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.76154023,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.76154023,
+          "progress": 0.32307687,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 16,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 0.79731345,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.79731345,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.79731345,
+          "progress": 0.07230764,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 17,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 0.86397797,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.86397797,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.86397797,
+          "progress": 0.09692302,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 18,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 0.899098,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.899098,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.899098,
+          "progress": 0.22769225,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 19,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 0.96596175,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.96596175,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 0.96596175,
+          "progress": 0.2538461,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 20,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 1.0006554,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.0006554,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.0006554,
+          "progress": 0.38461533,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 21,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 1.0680559,
+          "progress": 0.702611,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.702611,
+            1.0,
+            0.702611,
+            0.702611,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.0680559,
+          "progress": 0.702611,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.702611,
+            1.0,
+            0.702611,
+            0.702611,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.0680559,
+          "progress": 0.4107692,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 22,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 1.0960459,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.0960459,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.0960459,
+          "progress": 0.14615378,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 23,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 1.1465889,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.1465889,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.1465889,
+          "progress": 0.22461532,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 24,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 1.1966639,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.1966639,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.1966639,
+          "progress": 0.3015384,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 25,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 1.2473032,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.2473032,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.2473032,
+          "progress": 0.37999994,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 26,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 1.2977258,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.2977258,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.2977258,
+          "progress": 0.07230762,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 27,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 1.3475845,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.3475845,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.3475845,
+          "progress": 0.1492307,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 28,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 1.3983508,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.3983508,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.3983508,
+          "progress": 0.22769223,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 29,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 1.4489965,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.4489965,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.4489965,
+          "progress": 0.3046153,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 30,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 1.4988308,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.4988308,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.4988308,
+          "progress": 0.3815384,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 31,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 1.5492529,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.5492529,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.5492529,
+          "progress": 0.073846065,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 32,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 1.5993198,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.5993198,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.5993198,
+          "progress": 0.15230761,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 33,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 1.6503915,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.6503915,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.6503915,
+          "progress": 0.23076916,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 34,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 1.7004917,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.7004917,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.7004917,
+          "progress": 0.30769226,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 35,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 1.7427686,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.7427686,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.7427686,
+          "progress": 0.3723076,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 36,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 1.810501,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.810501,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.810501,
+          "progress": 0.39846146,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 37,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 1.8462856,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.8462856,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.8462856,
+          "progress": 0.14769222,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 38,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 1.8963944,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.8963944,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.8963944,
+          "progress": 0.22461529,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 39,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 1.9467744,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.9467744,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.9467744,
+          "progress": 0.30153838,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 40,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 1.996672,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.996672,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 1.996672,
+          "progress": 0.37846145,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 41,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 2.0471036,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.0471036,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.0471036,
+          "progress": 0.07076913,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 42,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 2.0973492,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.0973492,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.0973492,
+          "progress": 0.14923067,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 43,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 2.1471553,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.1471553,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.1471553,
+          "progress": 0.22615375,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 44,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 2.1987863,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.1987863,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.1987863,
+          "progress": 0.3046153,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 45,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 2.2484932,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.2484932,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.2484932,
+          "progress": 0.3815384,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 46,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 2.300044,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.300044,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.300044,
+          "progress": 0.075384505,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 47,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 2.350444,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.350444,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.350444,
+          "progress": 0.15384606,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 48,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 2.3939254,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.3939254,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.3939254,
+          "progress": 0.21999991,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 49,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 2.4438624,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.4438624,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.4438624,
+          "progress": 0.29846144,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 50,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 2.4943218,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.4943218,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.4943218,
+          "progress": 0.3753845,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 51,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 2.5452151,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.5452151,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.5452151,
+          "progress": 0.06923067,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 52,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 2.596526,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.596526,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.596526,
+          "progress": 0.14769222,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 53,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 2.6468487,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.6468487,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.6468487,
+          "progress": 0.22461529,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 54,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 2.6977248,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.6977248,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.6977248,
+          "progress": 0.30307683,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 55,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 2.7471523,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.7471523,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.7471523,
+          "progress": 0.3799999,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 56,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 2.8140173,
+          "progress": 0.6946444,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.6946444,
+            1.0,
+            0.6946444,
+            0.6946444,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.8140173,
+          "progress": 0.6946444,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.6946444,
+            1.0,
+            0.6946444,
+            0.6946444,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.8140173,
+          "progress": 0.40615377,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 57,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 2.8488166,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.8488166,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.8488166,
+          "progress": 0.15076911,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 58,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 2.8991978,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.8991978,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.8991978,
+          "progress": 0.22923064,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 59,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 2.9499965,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.9499965,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 2.9499965,
+          "progress": 0.3076922,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 60,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 3.0003018,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.0003018,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.0003018,
+          "progress": 0.38461527,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 61,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 3.0425882,
+          "progress": 0.76840055,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.76840055,
+            1.0,
+            0.76840055,
+            0.76840055,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.0425882,
+          "progress": 0.76840055,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.76840055,
+            1.0,
+            0.76840055,
+            0.76840055,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.0425882,
+          "progress": 0.44923064,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 62,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 3.0935793,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.0935793,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.0935793,
+          "progress": 0.1430768,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 63,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 3.1434953,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.1434953,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.1434953,
+          "progress": 0.21999988,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 64,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 3.1940339,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.1940339,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.1940339,
+          "progress": 0.2984614,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 65,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 3.2450216,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.2450216,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.2450216,
+          "progress": 0.37692297,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 66,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 3.295218,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.295218,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.295218,
+          "progress": 0.06923064,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 67,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 3.3461435,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.3461435,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.3461435,
+          "progress": 0.14615372,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 68,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 3.3965993,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.3965993,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.3965993,
+          "progress": 0.22461525,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 69,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 3.4477012,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.4477012,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.4477012,
+          "progress": 0.3030768,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 70,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 3.4981852,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.4981852,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.4981852,
+          "progress": 0.38153833,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 71,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 3.5487175,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.5487175,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.5487175,
+          "progress": 0.07384602,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 72,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 3.5986614,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.5986614,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.5986614,
+          "progress": 0.1507691,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 73,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 3.6485941,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.6485941,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.6485941,
+          "progress": 0.22769219,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 74,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 3.699219,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.699219,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.699219,
+          "progress": 0.3061537,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 75,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 3.7497842,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.7497842,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.7497842,
+          "progress": 0.38461527,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 76,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 3.8001587,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.8001587,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.8001587,
+          "progress": 0.076922946,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 77,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 3.8510096,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.8510096,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.8510096,
+          "progress": 0.15384601,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 78,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 3.8932052,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.8932052,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.8932052,
+          "progress": 0.21999988,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 79,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 3.9431107,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.9431107,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.9431107,
+          "progress": 0.29692295,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 80,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 3.9942183,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.9942183,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 3.9942183,
+          "progress": 0.3753845,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 81,
+      "phase": "simultaneous",
+      "graphs": [
+        {
+          "time": 4.044404,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 4.044404,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 4.044404,
+          "progress": 0.067692176,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 1,
+      "phase": "cleanup",
+      "graphs": [
+        {
+          "time": 4.095336,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 4.095336,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 4.095336,
+          "progress": 0.14615372,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 2,
+      "phase": "cleanup",
+      "graphs": [
+        {
+          "time": 4.145368,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 4.145368,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 4.145368,
+          "progress": 0.22307679,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 3,
+      "phase": "cleanup",
+      "graphs": [
+        {
+          "time": 4.213469,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 4.213469,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 4.213469,
+          "progress": 0.24923064,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 4,
+      "phase": "cleanup",
+      "graphs": [
+        {
+          "time": 4.2483106,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 4.2483106,
+          "progress": 0.68421054,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.68421054,
+            1.0,
+            0.68421054,
+            0.68421054,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 4.2483106,
+          "progress": 0.38153833,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 5,
+      "phase": "cleanup",
+      "graphs": [
+        {
+          "time": 4.315394,
+          "progress": 0.69747126,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.69747126,
+            1.0,
+            0.69747126,
+            0.69747126,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 4.315394,
+          "progress": 0.69747126,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.69747126,
+            1.0,
+            0.69747126,
+            0.69747126,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 4.315394,
+          "progress": 0.40769216,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 6,
+      "phase": "cleanup",
+      "graphs": [
+        {
+          "time": 4.3500996,
+          "progress": 0.92105263,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.92105263,
+            1.0,
+            0.92105263,
+            0.92105263,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 4.3500996,
+          "progress": 0.92105263,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.92105263,
+            1.0,
+            0.92105263,
+            0.92105263,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 4.3500996,
+          "progress": 0.5384614,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 7,
+      "phase": "cleanup",
+      "graphs": [
+        {
+          "time": 4.41677,
+          "progress": 0.963199,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.963199,
+            1.0,
+            0.963199,
+            0.963199,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 4.41677,
+          "progress": 0.963199,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            0.963199,
+            1.0,
+            0.963199,
+            0.963199,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 4.41677,
+          "progress": 0.56307673,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 8,
+      "phase": "cleanup",
+      "graphs": [
+        {
+          "time": 4.4437923,
+          "progress": 1.0,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 4.4437923,
+          "progress": 1.0,
+          "asset": "academy:vfxgraph/darkmatter_repair",
+          "slots": 24,
+          "repairPatches": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "time": 4.4437923,
+          "progress": 0.6830768,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 3
+    },
+    {
+      "phaseTick": 9,
+      "phase": "cleanup",
+      "graphs": [
+        {
+          "time": 4.5200133,
+          "progress": 0.70923066,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 10,
+      "phase": "cleanup",
+      "graphs": [
+        {
+          "time": 4.5465283,
+          "progress": 0.83999985,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 11,
+      "phase": "cleanup",
+      "graphs": [
+        {
+          "time": 4.613616,
+          "progress": 0.8661537,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 12,
+      "phase": "cleanup",
+      "graphs": [
+        {
+          "time": 4.6483493,
+          "progress": 0.9969229,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 13,
+      "phase": "cleanup",
+      "graphs": [
+        {
+          "time": 4.7162538,
+          "progress": 1.0,
+          "asset": "academy:vfxgraph/darkmatter_disassemble",
+          "slots": 60,
+          "repairPatches": [
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0,
+            -1.0
+          ]
+        }
+      ],
+      "active": 1
+    },
+    {
+      "phaseTick": 14,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 15,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 16,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 17,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 18,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 19,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 20,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 21,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 22,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 23,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 24,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 25,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 26,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 27,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 28,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 29,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 30,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 31,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 32,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 33,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 34,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 35,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 36,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 37,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 38,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 39,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 40,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 41,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 42,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 43,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 44,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 45,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 46,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 47,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 48,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 49,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 50,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 51,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 52,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 53,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 54,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 55,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 56,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 57,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 58,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 59,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 60,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 61,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 62,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 63,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 64,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 65,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 66,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 67,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 68,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 69,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 70,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 71,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 72,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 73,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 74,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 75,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 76,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 77,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 78,
+      "phase": "cleanup",
+      "graphs": [],
+      "active": 0
+    },
+    {
+      "phaseTick": 1,
+      "phase": "done",
+      "graphs": [],
+      "active": 0
+    }
+  ],
+  "passed": true,
+  "maximumProgress": 0.7709704,
+  "centerHitBindingSamples": 10,
+  "network": "independent TCP game client connected to dedicated server",
+  "role": "caster",
+  "continuousGraphInstances": 1,
+  "minimumProgress": 0.68421054
+}

@@ -98,7 +98,9 @@ class AbilityVfxUpdateTest {
     }
 
     @Test void matterSheetsStayBoundedFollowSurfacesAndNeverProduceArcs() throws Exception {
-        for (var name : new String[]{"darkmatter_interference", "darkmatter_light_contact", "darkmatter_repair", "darkmatter_disassemble"}) {
+        for (var name : new String[]{"darkmatter_interference", "darkmatter_light_contact", "darkmatter_generation",
+                "darkmatter_shaping", "darkmatter_phase_tuning", "darkmatter_elimination", "darkmatter_creation_contact",
+                "darkmatter_creation_summon", "darkmatter_creation_dismiss"}) {
             var sim = load(name);
             sim.setLiveParam("progress", Value.of(0.4f));
             float[] offset = {2};
@@ -126,6 +128,52 @@ class AbilityVfxUpdateTest {
         }
     }
 
+    @Test void reconstructionSurfacesStayBoundedAndFollowTheirTwoDimensionalAnchors() throws Exception {
+        for (var name : new String[]{"darkmatter_repair", "darkmatter_disassemble"}) {
+            var sim = load(name);
+            sim.setLiveParam("progress", Value.of(.4f));
+            float[] offset = {2};
+            sim.setSurfaceSampler("surface", (patch, u, v, p, n) -> {
+                p.set(offset[0], v * .4f, 3 + u * .2f); n.set(1, 0, 0); return true;
+            });
+            for (int frame = 0; frame < 200; frame++) at(sim, frame / 20f);
+            var layers = sim.buffer();
+            int count = layers.count();
+            assertTrue(count > 0 && count <= 64);
+            assertEquals(0, sim.arcBuffer().count());
+            assertTrue(layers.alpha(0) > .8f, "The joined white layer remains an opaque material body");
+            assertTrue(layers.velocityY(0) > .1f, "The layer axis must come from distinct surface samples");
+            assertEquals(1, layers.surfaceNormalX(0), 1e-6);
+            float previousX = layers.positionX(0);
+            offset[0] += 3;
+            at(sim, 10);
+            assertEquals(previousX + 3, layers.positionX(0), 1e-6);
+            sim.buffer().kill(0);
+            at(sim, 11);
+            assertEquals(count, layers.count(), "Swap removal must restore the bounded owned slots");
+            sim.setLiveParam("progress", Value.of(1f));
+            at(sim, 12);
+            for (int i = 0; i < count; i++) assertEquals(0, layers.alpha(i));
+        }
+    }
+
+    @Test void reconstructionLodReducesWholeLayersAndSurfaceGridTogether() throws Exception {
+        for (var name : new String[]{"darkmatter_repair", "darkmatter_disassemble"}) {
+            var sim = load(name);
+            sim.setLiveParam("progress", Value.of(.4f));
+            at(sim, .2f);
+            int full = visibleParticles(sim);
+            assertTrue(full > 0);
+            sim.setLiveParam("lod", Value.of(.35f));
+            sim.setLiveParam("surface_detail", Value.of(org.academy.api.client.render.vfxgraph.shape.SurfaceDetailSelector.FAR));
+            at(sim, .2f);
+            int reduced = visibleParticles(sim);
+            assertTrue(reduced > 0 && reduced < full, "Distant reconstruction keeps fewer complete layers");
+            for (int i = 0; i < sim.buffer().count(); i++) if (sim.buffer().alpha(i) > .001f)
+                assertEquals(org.academy.api.client.render.vfxgraph.shape.SurfaceDetailSelector.FAR, sim.buffer().surfaceDetail(i));
+        }
+    }
+
     @Test void nearCameraMediumAndFirstPersonReticleRemainClear() {
         var camera = new org.joml.Vector3f();
         var forward = new org.joml.Vector3f(0, 0, 1);
@@ -139,7 +187,7 @@ class AbilityVfxUpdateTest {
                 new org.joml.Vector3f(3, 0, 4), camera, forward, true));
     }
 
-    @Test void featherDoesNotFadeMidFlightAndDissolveSmokeExpandsThenClears() throws Exception {
+    @Test void featherRemainsVisibleAndLegacyEliminationFragmentsShrinkThenClear() throws Exception {
         var feather = load("darkmatter_feather");
         for (float time : new float[]{0, 0.5f, 1.9f}) {
             at(feather, time);
@@ -147,16 +195,45 @@ class AbilityVfxUpdateTest {
             assertEquals(0, feather.arcBuffer().count());
             assertTrue(feather.buffer().alpha(0) > 0.5f, "A live projectile must remain readable");
         }
-        var dissolve = load("darkmatter_disassemble");
+        var dissolve = load("darkmatter_elimination");
         dissolve.setLiveParam("progress", Value.of(0.2f));
         at(dissolve, 0.13f);
-        float earlySmokeSize = size(dissolve, "cloud");
+        float earlyFragmentSize = size(dissolve, "cloud");
         dissolve.setLiveParam("progress", Value.of(0.7f));
         at(dissolve, 0.45f);
-        assertTrue(size(dissolve, "cloud") > earlySmokeSize, "Smoke expands as surface fragments dissolve");
+        assertTrue(size(dissolve, "cloud") < earlyFragmentSize, "Legacy elimination keeps its shrinking white fragments");
         dissolve.setLiveParam("progress", Value.of(1f));
         at(dissolve, 0.65f);
         for (int i = 0; i < dissolve.buffer().count(); i++) assertEquals(0, dissolve.buffer().alpha(i));
+    }
+
+    @Test void disassemblyReleasesOnlyShortLivedFragmentsAfterTheSurfacePeels() throws Exception {
+        var disassembly = load("darkmatter_disassemble");
+        disassembly.setLiveParam("progress", Value.of(.2f));
+        at(disassembly, .13f);
+        assertEquals(0, visibleLaminaFragments(disassembly));
+        disassembly.setLiveParam("progress", Value.of(.7f));
+        at(disassembly, .45f);
+        assertTrue(visibleLaminaFragments(disassembly) > 0, "Late separation creates short-lived geometric fragments");
+        assertTrue(visibleLaminaFragments(disassembly) <= 12);
+        disassembly.setLiveParam("progress", Value.of(1f));
+        at(disassembly, .65f);
+        for (int i = 0; i < disassembly.buffer().count(); i++) assertEquals(0, disassembly.buffer().alpha(i));
+    }
+
+    private static int visibleLaminaFragments(VfxSystemSimulator sim) {
+        int count = 0;
+        for (int i = 0; i < sim.buffer().count(); i++) {
+            // SurfaceLaminaGeometry reserves rotations above two for detached fragment motion.
+            if (sim.buffer().rotation(i) >= 2 && sim.buffer().alpha(i) > .001f) count++;
+        }
+        return count;
+    }
+
+    private static int visibleParticles(VfxSystemSimulator sim) {
+        int count = 0;
+        for (int i = 0; i < sim.buffer().count(); i++) if (sim.buffer().alpha(i) > .001f) count++;
+        return count;
     }
 
     @Test void projectileAndFocusHaveIdenticalCoreAndHaloAtEveryReleaseSize() throws Exception {

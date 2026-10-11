@@ -2,9 +2,14 @@ package org.academy.internal.client.render.vfx;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.animal.cow.Cow;
+import net.minecraft.world.entity.animal.cow.CowVariant;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
@@ -19,6 +24,7 @@ import org.academy.api.client.render.vfxgraph.runtime.EffectParameterCache;
 import org.academy.api.client.render.vfxgraph.runtime.StableEffectAdmission;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.api.client.render.vfxgraph.shape.HumanoidSurfacePose;
+import org.academy.api.client.render.vfxgraph.shape.SurfaceDetailSelector;
 import org.academy.api.client.render.vfxgraph.shape.SurfaceSampler;
 import org.academy.api.common.vfx.RepairVisualParts;
 import org.academy.internal.common.network.DarkmatterVisualPacket;
@@ -125,6 +131,8 @@ public final class DarkmatterVfxClient {
 
     private static final class Visual {
         static final int[] FACE_ORDER = {2, 3, 4, 5, 0, 1};
+        static final String[] REPAIR_PROGRESS_KEYS = {"repair_progress_0", "repair_progress_1", "repair_progress_2",
+                "repair_progress_3", "repair_progress_4", "repair_progress_5"};
         static final float[][] BODY_MIN = {{-4, 0, -2}, {-4, -8, -4}, {-3, -2, -2}, {-1, -2, -2}, {-2, 0, -2}, {-2, 0, -2}};
         static final float[][] BODY_MAX = {{4, 12, 2}, {4, 0, 4}, {1, 10, 2}, {3, 10, 2}, {2, 12, 2}, {2, 12, 2}};
         final LivingEntity subject;
@@ -145,6 +153,21 @@ public final class DarkmatterVfxClient {
         long suspendedTick;
         final ClientLevel level;
         final long[] partTicks = new long[7];
+        final RepairVisualTimeline repairTimeline = new RepairVisualTimeline();
+        final SurfaceDetailSelector reconstructionDetail = new SurfaceDetailSelector();
+        final Matrix4f surfaceInverse = new Matrix4f();
+        final Matrix4f cowSurfaceTransform = new Matrix4f();
+        final Vector3f cowSurfaceMin = new Vector3f(), cowSurfaceMax = new Vector3f();
+        final Vector3f contactPoint = new Vector3f(), surfaceNormal = new Vector3f();
+        final float[] repairProgress = new float[RepairVisualTimeline.PATCH_COUNT];
+        final float[] bodyPadding = new float[RepairVisualTimeline.PATCH_COUNT];
+        int equippedArmorParts;
+        double frameTick;
+        boolean contactBound, contactPosed;
+        boolean cowSurfaceAvailable, contactCowSurface;
+        boolean contactFeetRegion;
+        int contactPart, contactFace;
+        float contactU = .5f, contactV = .5f;
         DarkmatterVisualPacket state;
         long updated;
         Vec3 origin;
@@ -195,10 +218,14 @@ public final class DarkmatterVfxClient {
             constantsDirty |= state.width != packet.width || state.height != packet.height || state.range != packet.range
                     || state.alpha != packet.alpha || state.beta != packet.beta || state.gamma != packet.gamma
                     || state.variant != packet.variant || state.seed != packet.seed || state.finished != packet.finished;
+            // Each successful hit owns a fresh contact; its bone-local anchor stays fixed between packets.
+            if (packet.kind == Kind.DISASSEMBLE || !java.util.Objects.equals(state.surfaceContact, packet.surfaceContact)) contactBound = false;
             state = packet;
             density = packet.alpha + packet.beta > 0 ? packet.alpha / (packet.alpha + packet.beta) : .5f;
             updated = level.getGameTime();
             for (int i = 0; i < partTicks.length; i++) if ((packet.parts & (1 << i)) != 0) partTicks[i] = updated;
+            if (packet.kind == Kind.REPAIR) repairTimeline.pulse(RepairVisualTimeline.patchMask(packet.parts,
+                    subject == null || subject.getMainArm() == HumanoidArm.RIGHT), updated);
         }
 
         boolean valid() {
@@ -239,12 +266,20 @@ public final class DarkmatterVfxClient {
                 for (int i = 0; i < posed.length; i++) posed[i].set(modelRoot).mul(bones[i]);
             }
             float elapsed = (level.getGameTime() - updated + partialTick) / 20f;
+            frameTick = level.getGameTime() + partialTick;
             float age = ageOffset + active.gameAgeSeconds();
             boolean maintained = state.kind == Kind.GENERATION || state.kind == Kind.ELIMINATION || state.kind == Kind.PHASE_TUNING;
             progress = maintained ? age % .7f / .7f
                     : Math.clamp(elapsed / (state.kind == Kind.CONTACT || state.kind == Kind.CREATURE_CONTACT ? .18f
                     : state.kind == Kind.REPAIR ? .38f : state.kind == Kind.CUT || state.kind == Kind.WING_STRIKE ? .32f : .65f), 0, 1);
-            prepareSurfaces(camera);
+            if (state.kind == Kind.REPAIR) {
+                progress = 1;
+                for (int i = 0; i < repairProgress.length; i++) {
+                    repairProgress[i] = repairTimeline.progress(i, frameTick);
+                    if (repairTimeline.active(i, frameTick)) progress = Math.min(progress, repairProgress[i]);
+                }
+            }
+            prepareSurfaces(camera, partialTick);
             environment.update(level, origin.x, origin.y + state.height * .6, origin.z, subject == null ? (int) state.seed : subject.getId());
             var graph = active.effect();
             if (params.begin(graph) || constantsDirty) {
@@ -259,9 +294,24 @@ public final class DarkmatterVfxClient {
                 params.putFloat("radius", state.kind == Kind.CUT ? state.range * (.88f + density * .18f) : state.kind == Kind.WING_STRIKE ? state.range : 1);
                 params.putFloat("reverse", state.variant < 0 ? 1 : 0);
                 params.putFloat("width", state.kind == Kind.CUT ? .55f + density * .40f : state.kind == Kind.WING_STRIKE ? .55f : state.width);
+                params.putFloat("surface_patches", state.kind == Kind.REPAIR || subject == null ? 6 : 1);
                 constantsDirty = false;
             }
             params.putFloat("time", age); params.putFloat("progress", progress);
+            if (state.kind == Kind.REPAIR) for (int i = 0; i < repairProgress.length; i++)
+                params.putFloat(REPAIR_PROGRESS_KEYS[i], repairProgress[i]);
+            if (state.kind == Kind.REPAIR || state.kind == Kind.DISASSEMBLE) {
+                float featureLength = Math.max(.05f, Math.min(state.width * .64f, state.height * .30f));
+                float completeRadius = Math.max(state.width, state.height) + .4f;
+                int detail = reconstructionDetail.update(featureLength, completeRadius,
+                        viewPosition.length(), camera.projection());
+                params.putInt("surface_detail", detail);
+                params.putFloat("lod", switch (detail) {
+                    case SurfaceDetailSelector.MEDIUM -> .65f;
+                    case SurfaceDetailSelector.FAR -> .35f;
+                    default -> 1;
+                });
+            }
             params.putFloat("sheet_scale", firstPerson && state.kind == Kind.REPAIR ? .45f : 1);
             params.putFloat("light", environment.light());
             inverse.transform(sunlight.set(environment.sunlight()));
@@ -275,8 +325,25 @@ public final class DarkmatterVfxClient {
         }
 
         /** Per-frame transforms are shared by all surface samples of this effect. */
-        void prepareSurfaces(GraphCamera camera) {
+        void prepareSurfaces(GraphCamera camera, float partialTick) {
             frameParts = parts();
+            cowSurfaceAvailable = state.kind == Kind.DISASSEMBLE && subject instanceof Cow;
+            if (cowSurfaceAvailable) {
+                var cow = (Cow) subject;
+                CowReconstructionSurface.prepare(cow.isBaby(),
+                        cow.getVariant().value().modelAndTexture().model() == CowVariant.ModelType.COLD,
+                        cow.getScale(), Mth.rotLerp(partialTick, cow.yBodyRotO, cow.yBodyRot),
+                        cow.deathTime > 0 ? cow.deathTime + partialTick : 0,
+                        cowSurfaceMin, cowSurfaceMax, cowSurfaceTransform);
+            }
+            boolean reconstruction = subject instanceof Player && (state.kind == Kind.REPAIR || state.kind == Kind.DISASSEMBLE);
+            equippedArmorParts = 0;
+            if (reconstruction) {
+                if (HumanoidArmorLayer.shouldRender(subject.getItemBySlot(EquipmentSlot.HEAD), EquipmentSlot.HEAD)) equippedArmorParts |= RepairVisualParts.HEAD;
+                if (HumanoidArmorLayer.shouldRender(subject.getItemBySlot(EquipmentSlot.CHEST), EquipmentSlot.CHEST)) equippedArmorParts |= RepairVisualParts.CHEST;
+                if (HumanoidArmorLayer.shouldRender(subject.getItemBySlot(EquipmentSlot.LEGS), EquipmentSlot.LEGS)) equippedArmorParts |= RepairVisualParts.LEGS;
+                if (HumanoidArmorLayer.shouldRender(subject.getItemBySlot(EquipmentSlot.FEET), EquipmentSlot.FEET)) equippedArmorParts |= RepairVisualParts.FEET;
+            }
             bodyChoiceCount = 0;
             if (state.kind != Kind.REPAIR || (frameParts & (RepairVisualParts.BODY | RepairVisualParts.CHEST)) != 0) bodyChoices[bodyChoiceCount++] = 0;
             if (state.kind != Kind.REPAIR || (frameParts & RepairVisualParts.HEAD) != 0) bodyChoices[bodyChoiceCount++] = 1;
@@ -288,8 +355,13 @@ public final class DarkmatterVfxClient {
                 bodyMin[i].set(BODY_MIN[i][0], BODY_MIN[i][1], BODY_MIN[i][2]);
                 bodyMax[i].set(BODY_MAX[i][0], BODY_MAX[i][1], BODY_MAX[i][2]);
                 if (i >= 4 && (frameParts & RepairVisualParts.FEET) != 0 && (frameParts & RepairVisualParts.LEGS) == 0) bodyMin[i].y = 8;
-                if ((i == 2 || i == 3) && state.kind == Kind.REPAIR && (frameParts & RepairVisualParts.BODY) == 0) bodyMin[i].y = 7;
                 bodyMin[i].div(16); bodyMax[i].div(16);
+                boolean feetRegion = state.kind == Kind.REPAIR
+                        ? (frameParts & RepairVisualParts.FEET) != 0 && (frameParts & RepairVisualParts.LEGS) == 0
+                        : contactBound && contactPosed && contactPart == i && contactFeetRegion;
+                bodyPadding[i] = reconstruction ? ReconstructionSurfacePadding.forPart(i, equippedArmorParts, feetRegion) : 0;
+                float padding = bodyPadding[i];
+                bodyMin[i].sub(padding, padding, padding); bodyMax[i].add(padding, padding, padding);
             }
             exposedCount = 0;
             for (int i = 0; i < 6; i++) if ((state.parts & (1 << i)) != 0) exposedFaces[exposedCount++] = FACE_ORDER[i];
@@ -314,8 +386,12 @@ public final class DarkmatterVfxClient {
                 formationTransform.identity().rotateY(subject == null ? 0 : (float) Math.toRadians(-subject.getYRot()));
                 formationTransform.translate(rightMain ? -.30f : .30f, state.height * .62f, .42f);
             }
+            float handProjectionScale = firstPerson && state.kind == Kind.REPAIR
+                    ? FirstPersonRepairSurface.projectionScale(camera.projection()) : 1;
             for (int i = 0; i < handTransforms.length; i++) {
                 handTransforms[i].set(viewInverse).setTranslation(camera.position().x - position.x, camera.position().y - position.y, camera.position().z - position.z);
+                // Match the normal hand projection without changing world depth or other skills.
+                handTransforms[i].scale(handProjectionScale, handProjectionScale, 1);
                 handTransforms[i].translate(i == 0 ? .30f : -.30f, -.23f, -.53f);
             }
         }
@@ -329,7 +405,8 @@ public final class DarkmatterVfxClient {
         boolean sampleSubject(int index, float u, float v, Vector3f p, Vector3f n) {
             if (state.kind == Kind.GENERATION || state.kind == Kind.ELIMINATION || state.kind == Kind.SHAPING || state.kind == Kind.PHASE_TUNING)
                 return sampleFormation(index, u, v, p, n);
-            if (state.kind == Kind.REPAIR && firstPerson) return sampleHand(index, u, v, p, n);
+            if (state.kind == Kind.REPAIR) return sampleRepair(index, u, v, p, n);
+            if (state.kind == Kind.DISASSEMBLE) return sampleDisassembly(index, u, v, p, n);
             if (posedAvailable) {
                 if (bodyChoiceCount == 0) return false;
                 int part = bodyChoices[index % bodyChoiceCount];
@@ -345,6 +422,106 @@ public final class DarkmatterVfxClient {
             SurfaceSampler.box(face, u, v, boxMin, boxMax, identity, p, n);
             return true;
         }
+
+        /** Fixed patch identities avoid moving old laminae when another equipment site joins. */
+        boolean sampleRepair(int index, float u, float v, Vector3f p, Vector3f n) {
+            int part = Math.floorMod(index, RepairVisualTimeline.PATCH_COUNT);
+            if (!repairTimeline.active(part, frameTick)) return false;
+            if (firstPerson) {
+                if (part != 2 && part != 3) return false;
+                boolean mainPatch = (part == 2) == (subject.getMainArm() == HumanoidArm.RIGHT);
+                if (!mainPatch && subject.getOffhandItem().isEmpty()
+                        && !(subject.getMainHandItem().getItem() instanceof net.minecraft.world.item.MapItem)) return false;
+                SurfaceSampler.box(5, .18f + u * .64f, .18f + v * .64f,
+                        handMin, handMax, handTransforms[part == 2 ? 0 : 1], p, n);
+                return true;
+            }
+            if (posedAvailable) {
+                // One small, continuous front patch per actual site. Arms always use the forearm.
+                float startV = part == 2 || part == 3 ? .36f : .18f;
+                float spanV = part == 2 || part == 3 ? .56f : .64f;
+                SurfaceSampler.box(4, .18f + u * .64f, startV + v * spanV,
+                        bodyMin[part], bodyMax[part], posed[part], p, n);
+            } else {
+                // A bounded proxy patch is deliberately conservative for non-humanoid actors.
+                float centerX = part == 2 ? .24f : part == 3 ? .76f : part == 4 ? .38f : part == 5 ? .62f : .5f;
+                boolean feetOnly = part >= 4 && (frameParts & RepairVisualParts.FEET) != 0 && (frameParts & RepairVisualParts.LEGS) == 0;
+                float centerY = part == 1 ? .88f : feetOnly ? .075f : part >= 4 ? .2f : part >= 2 ? .55f : .62f;
+                SurfaceSampler.box(4, centerX + (u - .5f) * .2f, centerY + (v - .5f) * (feetOnly ? .1f : .16f),
+                        boxMin, boxMax, identity, p, n);
+            }
+            return true;
+        }
+
+        /** Every strand of an entity samples the same anchored patch; removed blocks expose separate faces. */
+        boolean sampleDisassembly(int index, float u, float v, Vector3f p, Vector3f n) {
+            if (subject == null) {
+                int face = Math.floorMod(index, 6);
+                if (state.parts != 0 && (state.parts & (1 << directionOrdinal(face))) == 0) return false;
+                SurfaceSampler.box(face, .12f + u * .76f, .12f + v * .76f, boxMin, boxMax, identity, p, n);
+                return true;
+            }
+            if (!contactBound || contactPosed != posedAvailable || contactCowSurface != cowSurfaceAvailable) bindDisassemblyContact();
+            float sampleU = Math.clamp(contactU + (u - .5f) * .64f, .04f, .96f);
+            float sampleV = Math.clamp(contactV + (v - .5f) * .64f, .04f, .96f);
+            SurfaceSampler.box(contactFace, sampleU, sampleV,
+                    posedAvailable ? bodyMin[contactPart] : cowSurfaceAvailable ? cowSurfaceMin : boxMin,
+                    posedAvailable ? bodyMax[contactPart] : cowSurfaceAvailable ? cowSurfaceMax : boxMax,
+                    posedAvailable ? posed[contactPart] : cowSurfaceAvailable ? cowSurfaceTransform : identity, p, n);
+            return true;
+        }
+
+        void bindDisassemblyContact() {
+            var contact = state.surfaceContact;
+            if (contact == null) {
+                contactPoint.set(0, state.height * .68f, -state.width * .5f);
+                surfaceNormal.set(0, 0, -1);
+            } else {
+                contactPoint.set((float) contact.localOffset().x, (float) contact.localOffset().y, (float) contact.localOffset().z);
+                surfaceNormal.set((float) contact.normal().x, (float) contact.normal().y, (float) contact.normal().z);
+            }
+            contactPart = 0;
+            if (posedAvailable) {
+                // The packet describes an AABB hit, not a mesh hit. Client-specific limb swing
+                // must not steal a torso contact before the selected bone-local anchor is locked.
+                contactPart = HumanoidProxyContact.select(contactPoint, modelRoot, bodyMin, bodyMax);
+                surfaceInverse.set(posed[contactPart]).invert();
+                surfaceInverse.transformPosition(contactPoint);
+                surfaceInverse.transformDirection(surfaceNormal).normalize();
+                contactFeetRegion = contactPart >= 4 && contactPoint.y >= .5f;
+                if (contactPart >= 4) {
+                    float padding = ReconstructionSurfacePadding.forPart(contactPart, equippedArmorParts, contactFeetRegion);
+                    float difference = padding - bodyPadding[contactPart];
+                    bodyMin[contactPart].sub(difference, difference, difference);
+                    bodyMax[contactPart].add(difference, difference, difference);
+                    bodyPadding[contactPart] = padding;
+                }
+            }
+            if (cowSurfaceAvailable) {
+                surfaceInverse.set(cowSurfaceTransform).invert();
+                surfaceInverse.transformPosition(contactPoint);
+                surfaceInverse.transformDirection(surfaceNormal).normalize();
+            }
+            var min = posedAvailable ? bodyMin[contactPart] : cowSurfaceAvailable ? cowSurfaceMin : boxMin;
+            var max = posedAvailable ? bodyMax[contactPart] : cowSurfaceAvailable ? cowSurfaceMax : boxMax;
+            contactFace = dominantFace(surfaceNormal);
+            contactU = contactFace < 2 ? fraction(contactPoint.z, min.z, max.z) : fraction(contactPoint.x, min.x, max.x);
+            contactV = contactFace == 2 || contactFace == 3 ? fraction(contactPoint.z, min.z, max.z) : fraction(contactPoint.y, min.y, max.y);
+            // Keep the whole differential-sampled patch on the selected face, even for edge impacts.
+            contactU = Math.clamp(contactU, .36f, .64f);
+            contactV = Math.clamp(contactV, .36f, .64f);
+            contactPosed = posedAvailable;
+            contactCowSurface = cowSurfaceAvailable;
+            contactBound = true;
+        }
+
+        static float fraction(float value, float min, float max) { return (value - min) / Math.max(.001f, max - min); }
+        static int dominantFace(Vector3f normal) {
+            if (Math.abs(normal.x) >= Math.abs(normal.y) && Math.abs(normal.x) >= Math.abs(normal.z)) return normal.x < 0 ? 0 : 1;
+            if (Math.abs(normal.y) >= Math.abs(normal.z)) return normal.y < 0 ? 2 : 3;
+            return normal.z < 0 ? 4 : 5;
+        }
+        static int directionOrdinal(int face) { return switch (face) { case 0 -> 4; case 1 -> 5; case 2 -> 0; case 3 -> 1; case 4 -> 2; default -> 3; }; }
 
         /** Small posed proxy surfaces show the completed shape without creating a second item entity. */
         boolean sampleFormation(int index, float u, float v, Vector3f p, Vector3f n) {
@@ -362,14 +539,5 @@ public final class DarkmatterVfxClient {
             return true;
         }
 
-        boolean sampleHand(int index, float u, float v, Vector3f p, Vector3f n) {
-            boolean body = (frameParts & RepairVisualParts.BODY) != 0;
-            boolean main = (frameParts & RepairVisualParts.MAIN_HAND) != 0, off = (frameParts & RepairVisualParts.OFF_HAND) != 0;
-            if (!body && !main && !off || index >= (main && off ? 4 : 2)) return false;
-            boolean right = subject.getMainArm() == HumanoidArm.RIGHT;
-            if (off && (!main || index % 2 != 0)) right = !right;
-            SurfaceSampler.box(5, u, v, handMin, handMax, handTransforms[right ? 0 : 1], p, n);
-            return true;
-        }
     }
 }

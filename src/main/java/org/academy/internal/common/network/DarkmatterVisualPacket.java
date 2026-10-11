@@ -21,6 +21,16 @@ import org.misaka.api.common.network.packet.PacketType;
 /** Upserts bounded presentation state; camera and environmental lighting stay client-side. */
 @PacketTarget(ThreadType.CLIENT)
 public final class DarkmatterVisualPacket extends Packet<ClientPacketListener, DarkmatterVisualPacket> {
+    /** Target-relative contact on a proxy surface; the normal is in world axes at the event time. */
+    public record SurfaceContact(Vec3 localOffset, Vec3 normal) {
+        public SurfaceContact {
+            if (localOffset == null || normal == null || !Double.isFinite(localOffset.lengthSqr())
+                    || localOffset.lengthSqr() > 128 * 128 || !Double.isFinite(normal.lengthSqr())
+                    || normal.lengthSqr() < 1e-12) throw new IllegalArgumentException("Invalid surface contact");
+            normal = normal.normalize();
+        }
+    }
+
     public enum Kind {
         INTERFERENCE("darkmatter_interference", 12), CONTACT("darkmatter_light_contact", 4),
         REPAIR("darkmatter_repair", 8), DISASSEMBLE("darkmatter_disassemble", 13),
@@ -52,6 +62,13 @@ public final class DarkmatterVisualPacket extends Packet<ClientPacketListener, D
         b.writeFloat(p.alpha); b.writeFloat(p.beta); b.writeFloat(p.gamma);
         ByteBufCodecs.VAR_INT.encode(b, p.variant);
         Vec3.STREAM_CODEC.encode(b, p.direction);
+        if (p.kind == Kind.DISASSEMBLE) {
+            b.writeBoolean(p.surfaceContact != null);
+            if (p.surfaceContact != null) {
+                Vec3.STREAM_CODEC.encode(b, p.surfaceContact.localOffset());
+                Vec3.STREAM_CODEC.encode(b, p.surfaceContact.normal());
+            }
+        }
     }, b -> {
         var dimension = Identifier.STREAM_CODEC.decode(b);
         int kind = b.readUnsignedByte();
@@ -63,9 +80,13 @@ public final class DarkmatterVisualPacket extends Packet<ClientPacketListener, D
         int parts = b.readUnsignedByte(); boolean finished = b.readBoolean(); long seed = b.readLong();
         var area = b.readBoolean() ? new DirectionalArea(position, Vec3.STREAM_CODEC.decode(b),
                 new DirectionalArea.Cone(b.readDouble(), b.readDouble()), new DirectionalArea.Cone(b.readDouble(), b.readDouble())) : null;
+        float alpha = b.readFloat(), beta = b.readFloat(), gamma = b.readFloat();
+        int variant = ByteBufCodecs.VAR_INT.decode(b);
+        var direction = Vec3.STREAM_CODEC.decode(b);
+        var contact = KINDS[kind] == Kind.DISASSEMBLE && b.readBoolean()
+                ? new SurfaceContact(Vec3.STREAM_CODEC.decode(b), Vec3.STREAM_CODEC.decode(b)) : null;
         return new DarkmatterVisualPacket(dimension, KINDS[kind], entity, active, position,
-                width, height, range, parts, finished, seed, area,
-                b.readFloat(), b.readFloat(), b.readFloat(), ByteBufCodecs.VAR_INT.decode(b), Vec3.STREAM_CODEC.decode(b));
+                width, height, range, parts, finished, seed, area, alpha, beta, gamma, variant, direction, contact);
     });
 
     public final Identifier dimension;
@@ -80,6 +101,7 @@ public final class DarkmatterVisualPacket extends Packet<ClientPacketListener, D
     public final float alpha, beta, gamma;
     public final int variant;
     public final Vec3 direction;
+    public final @org.jspecify.annotations.Nullable SurfaceContact surfaceContact;
 
     public DarkmatterVisualPacket(Identifier dimension, Kind kind, int entityId, boolean active, Vec3 position,
                                   float width, float height, float range, int parts, boolean finished, long seed) {
@@ -97,6 +119,15 @@ public final class DarkmatterVisualPacket extends Packet<ClientPacketListener, D
                                   float width, float height, float range, int parts, boolean finished, long seed,
                                   @org.jspecify.annotations.Nullable DirectionalArea area,
                                   float alpha, float beta, float gamma, int variant, Vec3 direction) {
+        this(dimension, kind, entityId, active, position, width, height, range, parts, finished, seed,
+                area, alpha, beta, gamma, variant, direction, null);
+    }
+
+    public DarkmatterVisualPacket(Identifier dimension, Kind kind, int entityId, boolean active, Vec3 position,
+                                  float width, float height, float range, int parts, boolean finished, long seed,
+                                  @org.jspecify.annotations.Nullable DirectionalArea area,
+                                  float alpha, float beta, float gamma, int variant, Vec3 direction,
+                                  @org.jspecify.annotations.Nullable SurfaceContact surfaceContact) {
         if (entityId < -1 || !Double.isFinite(position.lengthSqr()) || !finiteBound(width, 32)
                 || !finiteBound(height, 64) || !finiteBound(range, 512) || (parts & ~RepairVisualParts.ALL) != 0
                 || !finiteBound(alpha, 16) || !finiteBound(beta, 16) || !finiteBound(gamma, 16)
@@ -111,6 +142,9 @@ public final class DarkmatterVisualPacket extends Packet<ClientPacketListener, D
         this.area = area;
         this.alpha = alpha; this.beta = beta; this.gamma = gamma; this.variant = variant;
         this.direction = direction.normalize();
+        if (surfaceContact != null && kind != Kind.DISASSEMBLE)
+            throw new IllegalArgumentException("Surface contact is only valid for disassembly");
+        this.surfaceContact = surfaceContact;
     }
 
     private static boolean finiteBound(float value, float max) { return Float.isFinite(value) && value >= 0 && value <= max; }

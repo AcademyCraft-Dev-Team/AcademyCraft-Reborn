@@ -1,0 +1,22 @@
+// Reuse isolated two-client TCP launchers, replacing the older general VFX scenario.
+allprojects {
+    afterEvaluate {
+        sourceSets.editor.java.srcDir(rootProject.file('docs/vfx/darkmatter_reconstruction_v3/runtime'))
+        def session = providers.gradleProperty('academyVfxSession').getOrElse('reconstruction-v3-manual')
+        def output = file("docs/vfx/darkmatter_reconstruction_v3/runtime/multiplayer/${session}").absolutePath
+        neoForge.runs.named('serverVfxValidation') {
+            sourceSet.set(sourceSets.editor)
+            systemProperty 'academy.vfxValidation.server', 'false'
+            systemProperty 'academy.reconstructionMultiplayerServer', 'true'
+            systemProperty 'academy.reconstructionOutput', output
+        }
+        ['caster', 'observer'].each { role ->
+            neoForge.runs.named('clientVfx' + role.capitalize()) {
+                sourceSet.set(sourceSets.editor)
+                systemProperty 'academy.vfxValidation.role', ''
+                systemProperty 'academy.reconstructionMultiplayerRole', role
+                systemProperty 'academy.reconstructionOutput', output
+            }
+        }
+    }
+}

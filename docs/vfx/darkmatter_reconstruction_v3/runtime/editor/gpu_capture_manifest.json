@@ -1,0 +1,1227 @@
+[
+  {
+    "file": "gpu_disassemble_stage_1_front.png",
+    "asset": "darkmatter_disassemble",
+    "parameters": {
+      "time": 0.065,
+      "progress": 0.1,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 0.6,
+      "height": 1.8,
+      "sheet_scale": 1.0,
+      "finished": 0.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 1.0,
+      "repair_progress_0": 0.1,
+      "repair_progress_1": 0.1,
+      "repair_progress_2": 0.1,
+      "repair_progress_3": 0.1,
+      "repair_progress_4": 0.1,
+      "repair_progress_5": 0.1
+    },
+    "fixture": "neutral posed cuboid forearm proxy; not an in-game player model",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "single pulse",
+    "particleSlots": 60,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 1,
+    "instances": 8,
+    "materialTriangles": 2048,
+    "uploadedBytes": 704,
+    "camera": [
+      0.72,
+      0.66,
+      -3.0
+    ],
+    "orthoHalfHeight": 0.58
+  },
+  {
+    "file": "gpu_disassemble_stage_1_side.png",
+    "asset": "darkmatter_disassemble",
+    "parameters": {
+      "time": 0.065,
+      "progress": 0.1,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 0.6,
+      "height": 1.8,
+      "sheet_scale": 1.0,
+      "finished": 0.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 1.0,
+      "repair_progress_0": 0.1,
+      "repair_progress_1": 0.1,
+      "repair_progress_2": 0.1,
+      "repair_progress_3": 0.1,
+      "repair_progress_4": 0.1,
+      "repair_progress_5": 0.1
+    },
+    "fixture": "neutral posed cuboid forearm proxy; not an in-game player model",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "single pulse",
+    "particleSlots": 60,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 1,
+    "instances": 8,
+    "materialTriangles": 2048,
+    "uploadedBytes": 704,
+    "camera": [
+      2.2,
+      0.66,
+      -1.8
+    ],
+    "orthoHalfHeight": 0.58
+  },
+  {
+    "file": "gpu_disassemble_stage_2_front.png",
+    "asset": "darkmatter_disassemble",
+    "parameters": {
+      "time": 0.26,
+      "progress": 0.4,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 0.6,
+      "height": 1.8,
+      "sheet_scale": 1.0,
+      "finished": 0.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 1.0,
+      "repair_progress_0": 0.4,
+      "repair_progress_1": 0.4,
+      "repair_progress_2": 0.4,
+      "repair_progress_3": 0.4,
+      "repair_progress_4": 0.4,
+      "repair_progress_5": 0.4
+    },
+    "fixture": "neutral posed cuboid forearm proxy; not an in-game player model",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "single pulse",
+    "particleSlots": 60,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 1,
+    "instances": 8,
+    "materialTriangles": 2048,
+    "uploadedBytes": 704,
+    "camera": [
+      0.72,
+      0.66,
+      -3.0
+    ],
+    "orthoHalfHeight": 0.58
+  },
+  {
+    "file": "gpu_disassemble_stage_2_side.png",
+    "asset": "darkmatter_disassemble",
+    "parameters": {
+      "time": 0.26,
+      "progress": 0.4,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 0.6,
+      "height": 1.8,
+      "sheet_scale": 1.0,
+      "finished": 0.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 1.0,
+      "repair_progress_0": 0.4,
+      "repair_progress_1": 0.4,
+      "repair_progress_2": 0.4,
+      "repair_progress_3": 0.4,
+      "repair_progress_4": 0.4,
+      "repair_progress_5": 0.4
+    },
+    "fixture": "neutral posed cuboid forearm proxy; not an in-game player model",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "single pulse",
+    "particleSlots": 60,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 1,
+    "instances": 8,
+    "materialTriangles": 2048,
+    "uploadedBytes": 704,
+    "camera": [
+      2.2,
+      0.66,
+      -1.8
+    ],
+    "orthoHalfHeight": 0.58
+  },
+  {
+    "file": "gpu_disassemble_stage_3_front.png",
+    "asset": "darkmatter_disassemble",
+    "parameters": {
+      "time": 0.494,
+      "progress": 0.76,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 0.6,
+      "height": 1.8,
+      "sheet_scale": 1.0,
+      "finished": 0.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 1.0,
+      "repair_progress_0": 0.76,
+      "repair_progress_1": 0.76,
+      "repair_progress_2": 0.76,
+      "repair_progress_3": 0.76,
+      "repair_progress_4": 0.76,
+      "repair_progress_5": 0.76
+    },
+    "fixture": "neutral posed cuboid forearm proxy; not an in-game player model",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "single pulse",
+    "particleSlots": 60,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 2,
+    "instances": 20,
+    "materialTriangles": 2816,
+    "uploadedBytes": 1760,
+    "camera": [
+      0.72,
+      0.66,
+      -3.0
+    ],
+    "orthoHalfHeight": 0.58
+  },
+  {
+    "file": "gpu_disassemble_stage_3_side.png",
+    "asset": "darkmatter_disassemble",
+    "parameters": {
+      "time": 0.494,
+      "progress": 0.76,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 0.6,
+      "height": 1.8,
+      "sheet_scale": 1.0,
+      "finished": 0.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 1.0,
+      "repair_progress_0": 0.76,
+      "repair_progress_1": 0.76,
+      "repair_progress_2": 0.76,
+      "repair_progress_3": 0.76,
+      "repair_progress_4": 0.76,
+      "repair_progress_5": 0.76
+    },
+    "fixture": "neutral posed cuboid forearm proxy; not an in-game player model",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "single pulse",
+    "particleSlots": 60,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 2,
+    "instances": 20,
+    "materialTriangles": 2816,
+    "uploadedBytes": 1760,
+    "camera": [
+      2.2,
+      0.66,
+      -1.8
+    ],
+    "orthoHalfHeight": 0.58
+  },
+  {
+    "file": "gpu_disassemble_posed.png",
+    "asset": "darkmatter_disassemble",
+    "parameters": {
+      "time": 0.26,
+      "progress": 0.4,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 0.6,
+      "height": 1.8,
+      "sheet_scale": 1.0,
+      "finished": 0.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 1.0,
+      "repair_progress_0": 0.4,
+      "repair_progress_1": 0.4,
+      "repair_progress_2": 0.4,
+      "repair_progress_3": 0.4,
+      "repair_progress_4": 0.4,
+      "repair_progress_5": 0.4
+    },
+    "fixture": "neutral posed cuboid forearm proxy; not an in-game player model",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "single pulse",
+    "particleSlots": 60,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 1,
+    "instances": 8,
+    "materialTriangles": 2048,
+    "uploadedBytes": 704,
+    "camera": [
+      0.9081675,
+      0.60690886,
+      -3.0
+    ],
+    "orthoHalfHeight": 0.58
+  },
+  {
+    "file": "gpu_disassemble_night.png",
+    "asset": "darkmatter_disassemble",
+    "parameters": {
+      "time": 0.26,
+      "progress": 0.4,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 0.12,
+      "strength": 1.0,
+      "width": 0.6,
+      "height": 1.8,
+      "sheet_scale": 1.0,
+      "finished": 0.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 1.0,
+      "repair_progress_0": 0.4,
+      "repair_progress_1": 0.4,
+      "repair_progress_2": 0.4,
+      "repair_progress_3": 0.4,
+      "repair_progress_4": 0.4,
+      "repair_progress_5": 0.4
+    },
+    "fixture": "neutral posed cuboid forearm proxy; not an in-game player model",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "single pulse",
+    "particleSlots": 60,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 1,
+    "instances": 8,
+    "materialTriangles": 2048,
+    "uploadedBytes": 704,
+    "camera": [
+      0.72,
+      0.66,
+      -3.0
+    ],
+    "orthoHalfHeight": 0.58
+  },
+  {
+    "file": "gpu_disassemble_beta.png",
+    "asset": "darkmatter_disassemble",
+    "parameters": {
+      "time": 0.26,
+      "progress": 0.4,
+      "alpha": 0.14999998,
+      "beta": 0.85,
+      "gamma": 0.0,
+      "density": 0.14999998,
+      "flexibility": 0.85,
+      "edge_activity": 0.745,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 0.6,
+      "height": 1.8,
+      "sheet_scale": 1.0,
+      "finished": 0.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 1.0,
+      "repair_progress_0": 0.4,
+      "repair_progress_1": 0.4,
+      "repair_progress_2": 0.4,
+      "repair_progress_3": 0.4,
+      "repair_progress_4": 0.4,
+      "repair_progress_5": 0.4
+    },
+    "fixture": "neutral posed cuboid forearm proxy; not an in-game player model",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "single pulse",
+    "particleSlots": 60,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 1,
+    "instances": 8,
+    "materialTriangles": 2048,
+    "uploadedBytes": 704,
+    "camera": [
+      0.72,
+      0.66,
+      -3.0
+    ],
+    "orthoHalfHeight": 0.58
+  },
+  {
+    "file": "gpu_repair_stage_1_front.png",
+    "asset": "darkmatter_repair",
+    "parameters": {
+      "time": 0.057,
+      "progress": 0.15,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 0.6,
+      "height": 1.8,
+      "sheet_scale": 1.0,
+      "finished": 0.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 6.0,
+      "repair_progress_0": 0.15,
+      "repair_progress_1": 0.15,
+      "repair_progress_2": 0.15,
+      "repair_progress_3": 0.15,
+      "repair_progress_4": 0.15,
+      "repair_progress_5": 0.15
+    },
+    "fixture": "neutral posed cuboid forearm proxy; not an in-game player model",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "single pulse",
+    "particleSlots": 24,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 1,
+    "instances": 4,
+    "materialTriangles": 1024,
+    "uploadedBytes": 352,
+    "camera": [
+      0.72,
+      0.66,
+      -3.0
+    ],
+    "orthoHalfHeight": 0.58
+  },
+  {
+    "file": "gpu_repair_stage_1_side.png",
+    "asset": "darkmatter_repair",
+    "parameters": {
+      "time": 0.057,
+      "progress": 0.15,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 0.6,
+      "height": 1.8,
+      "sheet_scale": 1.0,
+      "finished": 0.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 6.0,
+      "repair_progress_0": 0.15,
+      "repair_progress_1": 0.15,
+      "repair_progress_2": 0.15,
+      "repair_progress_3": 0.15,
+      "repair_progress_4": 0.15,
+      "repair_progress_5": 0.15
+    },
+    "fixture": "neutral posed cuboid forearm proxy; not an in-game player model",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "single pulse",
+    "particleSlots": 24,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 1,
+    "instances": 4,
+    "materialTriangles": 1024,
+    "uploadedBytes": 352,
+    "camera": [
+      2.2,
+      0.66,
+      -1.8
+    ],
+    "orthoHalfHeight": 0.58
+  },
+  {
+    "file": "gpu_repair_stage_2_front.png",
+    "asset": "darkmatter_repair",
+    "parameters": {
+      "time": 0.19,
+      "progress": 0.5,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 0.6,
+      "height": 1.8,
+      "sheet_scale": 1.0,
+      "finished": 0.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 6.0,
+      "repair_progress_0": 0.5,
+      "repair_progress_1": 0.5,
+      "repair_progress_2": 0.5,
+      "repair_progress_3": 0.5,
+      "repair_progress_4": 0.5,
+      "repair_progress_5": 0.5
+    },
+    "fixture": "neutral posed cuboid forearm proxy; not an in-game player model",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "single pulse",
+    "particleSlots": 24,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 1,
+    "instances": 4,
+    "materialTriangles": 1024,
+    "uploadedBytes": 352,
+    "camera": [
+      0.72,
+      0.66,
+      -3.0
+    ],
+    "orthoHalfHeight": 0.58
+  },
+  {
+    "file": "gpu_repair_stage_2_side.png",
+    "asset": "darkmatter_repair",
+    "parameters": {
+      "time": 0.19,
+      "progress": 0.5,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 0.6,
+      "height": 1.8,
+      "sheet_scale": 1.0,
+      "finished": 0.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 6.0,
+      "repair_progress_0": 0.5,
+      "repair_progress_1": 0.5,
+      "repair_progress_2": 0.5,
+      "repair_progress_3": 0.5,
+      "repair_progress_4": 0.5,
+      "repair_progress_5": 0.5
+    },
+    "fixture": "neutral posed cuboid forearm proxy; not an in-game player model",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "single pulse",
+    "particleSlots": 24,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 1,
+    "instances": 4,
+    "materialTriangles": 1024,
+    "uploadedBytes": 352,
+    "camera": [
+      2.2,
+      0.66,
+      -1.8
+    ],
+    "orthoHalfHeight": 0.58
+  },
+  {
+    "file": "gpu_repair_stage_3_front.png",
+    "asset": "darkmatter_repair",
+    "parameters": {
+      "time": 0.3344,
+      "progress": 0.88,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 0.6,
+      "height": 1.8,
+      "sheet_scale": 1.0,
+      "finished": 0.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 6.0,
+      "repair_progress_0": 0.88,
+      "repair_progress_1": 0.88,
+      "repair_progress_2": 0.88,
+      "repair_progress_3": 0.88,
+      "repair_progress_4": 0.88,
+      "repair_progress_5": 0.88
+    },
+    "fixture": "neutral posed cuboid forearm proxy; not an in-game player model",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "single pulse",
+    "particleSlots": 24,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 1,
+    "instances": 4,
+    "materialTriangles": 1024,
+    "uploadedBytes": 352,
+    "camera": [
+      0.72,
+      0.66,
+      -3.0
+    ],
+    "orthoHalfHeight": 0.58
+  },
+  {
+    "file": "gpu_repair_stage_3_side.png",
+    "asset": "darkmatter_repair",
+    "parameters": {
+      "time": 0.3344,
+      "progress": 0.88,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 0.6,
+      "height": 1.8,
+      "sheet_scale": 1.0,
+      "finished": 0.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 6.0,
+      "repair_progress_0": 0.88,
+      "repair_progress_1": 0.88,
+      "repair_progress_2": 0.88,
+      "repair_progress_3": 0.88,
+      "repair_progress_4": 0.88,
+      "repair_progress_5": 0.88
+    },
+    "fixture": "neutral posed cuboid forearm proxy; not an in-game player model",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "single pulse",
+    "particleSlots": 24,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 1,
+    "instances": 4,
+    "materialTriangles": 1024,
+    "uploadedBytes": 352,
+    "camera": [
+      2.2,
+      0.66,
+      -1.8
+    ],
+    "orthoHalfHeight": 0.58
+  },
+  {
+    "file": "gpu_repair_posed.png",
+    "asset": "darkmatter_repair",
+    "parameters": {
+      "time": 0.19,
+      "progress": 0.5,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 0.6,
+      "height": 1.8,
+      "sheet_scale": 1.0,
+      "finished": 0.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 6.0,
+      "repair_progress_0": 0.5,
+      "repair_progress_1": 0.5,
+      "repair_progress_2": 0.5,
+      "repair_progress_3": 0.5,
+      "repair_progress_4": 0.5,
+      "repair_progress_5": 0.5
+    },
+    "fixture": "neutral posed cuboid forearm proxy; not an in-game player model",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "single pulse",
+    "particleSlots": 24,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 1,
+    "instances": 4,
+    "materialTriangles": 1024,
+    "uploadedBytes": 352,
+    "camera": [
+      0.9081675,
+      0.60690886,
+      -3.0
+    ],
+    "orthoHalfHeight": 0.58
+  },
+  {
+    "file": "gpu_repair_night.png",
+    "asset": "darkmatter_repair",
+    "parameters": {
+      "time": 0.19,
+      "progress": 0.5,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 0.12,
+      "strength": 1.0,
+      "width": 0.6,
+      "height": 1.8,
+      "sheet_scale": 1.0,
+      "finished": 0.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 6.0,
+      "repair_progress_0": 0.5,
+      "repair_progress_1": 0.5,
+      "repair_progress_2": 0.5,
+      "repair_progress_3": 0.5,
+      "repair_progress_4": 0.5,
+      "repair_progress_5": 0.5
+    },
+    "fixture": "neutral posed cuboid forearm proxy; not an in-game player model",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "single pulse",
+    "particleSlots": 24,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 1,
+    "instances": 4,
+    "materialTriangles": 1024,
+    "uploadedBytes": 352,
+    "camera": [
+      0.72,
+      0.66,
+      -3.0
+    ],
+    "orthoHalfHeight": 0.58
+  },
+  {
+    "file": "gpu_repair_beta.png",
+    "asset": "darkmatter_repair",
+    "parameters": {
+      "time": 0.19,
+      "progress": 0.5,
+      "alpha": 0.14999998,
+      "beta": 0.85,
+      "gamma": 0.0,
+      "density": 0.14999998,
+      "flexibility": 0.85,
+      "edge_activity": 0.745,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 0.6,
+      "height": 1.8,
+      "sheet_scale": 1.0,
+      "finished": 0.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 6.0,
+      "repair_progress_0": 0.5,
+      "repair_progress_1": 0.5,
+      "repair_progress_2": 0.5,
+      "repair_progress_3": 0.5,
+      "repair_progress_4": 0.5,
+      "repair_progress_5": 0.5
+    },
+    "fixture": "neutral posed cuboid forearm proxy; not an in-game player model",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "single pulse",
+    "particleSlots": 24,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 1,
+    "instances": 4,
+    "materialTriangles": 1024,
+    "uploadedBytes": 352,
+    "camera": [
+      0.72,
+      0.66,
+      -3.0
+    ],
+    "orthoHalfHeight": 0.58
+  },
+  {
+    "file": "gpu_disassemble_removed_block_1.png",
+    "asset": "darkmatter_disassemble",
+    "parameters": {
+      "time": 0.065,
+      "progress": 0.1,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 1.0,
+      "height": 1.0,
+      "sheet_scale": 1.0,
+      "finished": 1.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 6.0,
+      "repair_progress_0": 0.1,
+      "repair_progress_1": 0.1,
+      "repair_progress_2": 0.1,
+      "repair_progress_3": 0.1,
+      "repair_progress_4": 0.1,
+      "repair_progress_5": 0.1
+    },
+    "fixture": "removed unit block, six exposed faces, no replacement solid geometry",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "single pulse",
+    "particleSlots": 60,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 1,
+    "instances": 12,
+    "materialTriangles": 3072,
+    "uploadedBytes": 1056,
+    "camera": [
+      0.72,
+      0.8,
+      -3.0
+    ],
+    "orthoHalfHeight": 0.87
+  },
+  {
+    "file": "gpu_disassemble_removed_block_2.png",
+    "asset": "darkmatter_disassemble",
+    "parameters": {
+      "time": 0.25,
+      "progress": 0.3846154,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 1.0,
+      "height": 1.0,
+      "sheet_scale": 1.0,
+      "finished": 1.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 6.0,
+      "repair_progress_0": 0.3846154,
+      "repair_progress_1": 0.3846154,
+      "repair_progress_2": 0.3846154,
+      "repair_progress_3": 0.3846154,
+      "repair_progress_4": 0.3846154,
+      "repair_progress_5": 0.3846154
+    },
+    "fixture": "removed unit block, six exposed faces, no replacement solid geometry",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "single pulse",
+    "particleSlots": 60,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 1,
+    "instances": 12,
+    "materialTriangles": 3072,
+    "uploadedBytes": 1056,
+    "camera": [
+      0.72,
+      0.8,
+      -3.0
+    ],
+    "orthoHalfHeight": 0.87
+  },
+  {
+    "file": "gpu_disassemble_removed_block_3.png",
+    "asset": "darkmatter_disassemble",
+    "parameters": {
+      "time": 0.49,
+      "progress": 0.75384617,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 1.0,
+      "height": 1.0,
+      "sheet_scale": 1.0,
+      "finished": 1.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 6.0,
+      "repair_progress_0": 0.75384617,
+      "repair_progress_1": 0.75384617,
+      "repair_progress_2": 0.75384617,
+      "repair_progress_3": 0.75384617,
+      "repair_progress_4": 0.75384617,
+      "repair_progress_5": 0.75384617
+    },
+    "fixture": "removed unit block, six exposed faces, no replacement solid geometry",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "single pulse",
+    "particleSlots": 60,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 2,
+    "instances": 24,
+    "materialTriangles": 3840,
+    "uploadedBytes": 2112,
+    "camera": [
+      0.72,
+      0.8,
+      -3.0
+    ],
+    "orthoHalfHeight": 0.87
+  },
+  {
+    "file": "gpu_disassemble_removed_block_4.png",
+    "asset": "darkmatter_disassemble",
+    "parameters": {
+      "time": 0.64,
+      "progress": 0.9846154,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 1.0,
+      "height": 1.0,
+      "sheet_scale": 1.0,
+      "finished": 1.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 6.0,
+      "repair_progress_0": 0.9846154,
+      "repair_progress_1": 0.9846154,
+      "repair_progress_2": 0.9846154,
+      "repair_progress_3": 0.9846154,
+      "repair_progress_4": 0.9846154,
+      "repair_progress_5": 0.9846154
+    },
+    "fixture": "removed unit block, six exposed faces, no replacement solid geometry",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "single pulse",
+    "particleSlots": 60,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 2,
+    "instances": 24,
+    "materialTriangles": 3840,
+    "uploadedBytes": 2112,
+    "camera": [
+      0.72,
+      0.8,
+      -3.0
+    ],
+    "orthoHalfHeight": 0.87
+  },
+  {
+    "file": "gpu_repair_continuous_30.png",
+    "asset": "darkmatter_repair",
+    "parameters": {
+      "time": 0.3,
+      "progress": 0.68421054,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 0.6,
+      "height": 1.8,
+      "sheet_scale": 1.0,
+      "finished": 0.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 6.0,
+      "repair_progress_0": 0.68421054,
+      "repair_progress_1": 0.68421054,
+      "repair_progress_2": 0.68421054,
+      "repair_progress_3": 0.68421054,
+      "repair_progress_4": 0.68421054,
+      "repair_progress_5": 0.68421054
+    },
+    "fixture": "neutral posed cuboid forearm proxy; not an in-game player model",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "fixed retained progress fixture; network continuity requires gameplay probe",
+    "particleSlots": 24,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 1,
+    "instances": 4,
+    "materialTriangles": 1024,
+    "uploadedBytes": 352,
+    "camera": [
+      0.72,
+      0.66,
+      -3.0
+    ],
+    "orthoHalfHeight": 0.58
+  },
+  {
+    "file": "gpu_repair_continuous_55.png",
+    "asset": "darkmatter_repair",
+    "parameters": {
+      "time": 0.55,
+      "progress": 0.68421054,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 0.6,
+      "height": 1.8,
+      "sheet_scale": 1.0,
+      "finished": 0.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 6.0,
+      "repair_progress_0": 0.68421054,
+      "repair_progress_1": 0.68421054,
+      "repair_progress_2": 0.68421054,
+      "repair_progress_3": 0.68421054,
+      "repair_progress_4": 0.68421054,
+      "repair_progress_5": 0.68421054
+    },
+    "fixture": "neutral posed cuboid forearm proxy; not an in-game player model",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "fixed retained progress fixture; network continuity requires gameplay probe",
+    "particleSlots": 24,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 1,
+    "instances": 4,
+    "materialTriangles": 1024,
+    "uploadedBytes": 352,
+    "camera": [
+      0.72,
+      0.66,
+      -3.0
+    ],
+    "orthoHalfHeight": 0.58
+  },
+  {
+    "file": "gpu_repair_continuous_80.png",
+    "asset": "darkmatter_repair",
+    "parameters": {
+      "time": 0.8,
+      "progress": 0.68421054,
+      "alpha": 0.55,
+      "beta": 0.45,
+      "gamma": 0.0,
+      "density": 0.55,
+      "flexibility": 0.45,
+      "edge_activity": 0.465,
+      "light": 1.0,
+      "strength": 1.0,
+      "width": 0.6,
+      "height": 1.8,
+      "sheet_scale": 1.0,
+      "finished": 0.0,
+      "view_first_person": 0.0,
+      "lod": 1.0,
+      "surface_patches": 6.0,
+      "repair_progress_0": 0.68421054,
+      "repair_progress_1": 0.68421054,
+      "repair_progress_2": 0.68421054,
+      "repair_progress_3": 0.68421054,
+      "repair_progress_4": 0.68421054,
+      "repair_progress_5": 0.68421054
+    },
+    "fixture": "neutral posed cuboid forearm proxy; not an in-game player model",
+    "source": "real production graph / editor VfxGraphRenderer / GPU screenshot readback",
+    "continuation": "fixed retained progress fixture; network continuity requires gameplay probe",
+    "particleSlots": 24,
+    "geometry": [
+      "MATERIAL_SURFACE"
+    ],
+    "shaders": [
+      "academy:core/vfxgraph_surface_lamina"
+    ],
+    "drawCalls": 1,
+    "instances": 4,
+    "materialTriangles": 1024,
+    "uploadedBytes": 352,
+    "camera": [
+      0.72,
+      0.66,
+      -3.0
+    ],
+    "orthoHalfHeight": 0.58
+  }
+]

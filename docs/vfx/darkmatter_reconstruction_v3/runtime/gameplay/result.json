@@ -1,0 +1,3487 @@
+{
+  "minimumContinuousProgress": 0.68421054,
+  "continuousGraphInstances": 1,
+  "captures": [
+    {
+      "file": "baseline.png",
+      "tick": 10,
+      "graphs": [],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_single/frame_21.png",
+      "tick": 21,
+      "graphs": [],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_single/frame_22.png",
+      "tick": 22,
+      "graphs": [
+        {
+          "time": 0.1365463,
+          "progress": 0.20507812,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_single/frame_23.png",
+      "tick": 23,
+      "graphs": [
+        {
+          "time": 0.1365463,
+          "progress": 0.20507812,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_single/frame_24.png",
+      "tick": 24,
+      "graphs": [
+        {
+          "time": 0.1365463,
+          "progress": 0.20507812,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_single/frame_25.png",
+      "tick": 25,
+      "graphs": [
+        {
+          "time": 0.1365463,
+          "progress": 0.20507812,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_single/frame_26.png",
+      "tick": 26,
+      "graphs": [
+        {
+          "time": 0.1365463,
+          "progress": 0.20507812,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_single/frame_27.png",
+      "tick": 27,
+      "graphs": [
+        {
+          "time": 0.6431415,
+          "progress": 0.91077304,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_single/frame_28.png",
+      "tick": 28,
+      "graphs": [
+        {
+          "time": 0.6431415,
+          "progress": 0.91077304,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_single/frame_29.png",
+      "tick": 29,
+      "graphs": [
+        {
+          "time": 0.6431415,
+          "progress": 0.91077304,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_single/frame_30.png",
+      "tick": 30,
+      "graphs": [],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_single/frame_31.png",
+      "tick": 31,
+      "graphs": [],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_single/frame_32.png",
+      "tick": 32,
+      "graphs": [],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_single/frame_33.png",
+      "tick": 33,
+      "graphs": [],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_continuous/frame_69.png",
+      "tick": 69,
+      "graphs": [
+        {
+          "time": 0.69951874,
+          "progress": 0.68421054,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_continuous/frame_72.png",
+      "tick": 72,
+      "graphs": [
+        {
+          "time": 0.849246,
+          "progress": 0.68421054,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_continuous/frame_75.png",
+      "tick": 75,
+      "graphs": [
+        {
+          "time": 0.99936396,
+          "progress": 0.68421054,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_continuous/frame_78.png",
+      "tick": 78,
+      "graphs": [
+        {
+          "time": 1.1490155,
+          "progress": 0.68421054,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_continuous/frame_81.png",
+      "tick": 81,
+      "graphs": [
+        {
+          "time": 1.2991753,
+          "progress": 0.68421054,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_continuous/frame_84.png",
+      "tick": 84,
+      "graphs": [
+        {
+          "time": 1.4497219,
+          "progress": 0.68421054,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_continuous/frame_87.png",
+      "tick": 87,
+      "graphs": [
+        {
+          "time": 1.5993427,
+          "progress": 0.68421054,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_continuous/frame_90.png",
+      "tick": 90,
+      "graphs": [
+        {
+          "time": 1.7497892,
+          "progress": 0.68421054,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_continuous/frame_93.png",
+      "tick": 93,
+      "graphs": [
+        {
+          "time": 1.8991294,
+          "progress": 0.68421054,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_stop/frame_98.png",
+      "tick": 98,
+      "graphs": [
+        {
+          "time": 2.1489096,
+          "progress": 0.68421054,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_stop/frame_99.png",
+      "tick": 99,
+      "graphs": [
+        {
+          "time": 2.20894,
+          "progress": 0.68421054,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_stop/frame_100.png",
+      "tick": 100,
+      "graphs": [
+        {
+          "time": 2.26902,
+          "progress": 0.68421054,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_stop/frame_101.png",
+      "tick": 101,
+      "graphs": [
+        {
+          "time": 2.3307612,
+          "progress": 0.68421054,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_stop/frame_102.png",
+      "tick": 102,
+      "graphs": [
+        {
+          "time": 2.3954458,
+          "progress": 0.75246716,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_stop/frame_103.png",
+      "tick": 103,
+      "graphs": [
+        {
+          "time": 2.3992274,
+          "progress": 0.91591287,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_stop/frame_104.png",
+      "tick": 104,
+      "graphs": [
+        {
+          "time": 2.4675043,
+          "progress": 0.92362255,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_stop/frame_105.png",
+      "tick": 105,
+      "graphs": [
+        {
+          "time": 2.5284193,
+          "progress": 1.0,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_stop/frame_106.png",
+      "tick": 106,
+      "graphs": [],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_stop/frame_107.png",
+      "tick": 107,
+      "graphs": [],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_stop/frame_108.png",
+      "tick": 108,
+      "graphs": [],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_first_person_hand/frame_122.png",
+      "tick": 122,
+      "graphs": [],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_first_person_hand/frame_123.png",
+      "tick": 123,
+      "graphs": [],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_first_person_hand/frame_124.png",
+      "tick": 124,
+      "graphs": [
+        {
+          "time": -1.0,
+          "progress": 0.35,
+          "slots": 0,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_first_person_hand/frame_125.png",
+      "tick": 125,
+      "graphs": [
+        {
+          "time": 0.0706992,
+          "progress": 0.31301397,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_first_person_hand/frame_126.png",
+      "tick": 126,
+      "graphs": [
+        {
+          "time": 0.27014223,
+          "progress": 0.44202304,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_first_person_hand/frame_127.png",
+      "tick": 127,
+      "graphs": [
+        {
+          "time": 0.27014223,
+          "progress": 0.44202304,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_first_person_hand/frame_128.png",
+      "tick": 128,
+      "graphs": [
+        {
+          "time": 0.27014223,
+          "progress": 0.44202304,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_first_person_hand/frame_129.png",
+      "tick": 129,
+      "graphs": [
+        {
+          "time": 0.27014223,
+          "progress": 0.44202304,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_first_person_hand/frame_130.png",
+      "tick": 130,
+      "graphs": [
+        {
+          "time": 0.4858117,
+          "progress": 0.68421054,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_first_person_hand/frame_131.png",
+      "tick": 131,
+      "graphs": [
+        {
+          "time": 0.4858117,
+          "progress": 0.68421054,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_inventory_only.png",
+      "tick": 150,
+      "graphs": [],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_living/frame_161.png",
+      "tick": 161,
+      "graphs": [],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_living/frame_162.png",
+      "tick": 162,
+      "graphs": [
+        {
+          "time": 0.117676005,
+          "progress": 0.08922927,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_living/frame_163.png",
+      "tick": 163,
+      "graphs": [
+        {
+          "time": 0.1940582,
+          "progress": 0.20615235,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_living/frame_164.png",
+      "tick": 164,
+      "graphs": [
+        {
+          "time": 0.2577059,
+          "progress": 0.30615234,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_living/frame_165.png",
+      "tick": 165,
+      "graphs": [
+        {
+          "time": 0.2577059,
+          "progress": 0.30615234,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_living/frame_166.png",
+      "tick": 166,
+      "graphs": [
+        {
+          "time": 0.37812352,
+          "progress": 0.4061524,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_living/frame_167.png",
+      "tick": 167,
+      "graphs": [
+        {
+          "time": 0.37812352,
+          "progress": 0.4061524,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_living/frame_168.png",
+      "tick": 168,
+      "graphs": [
+        {
+          "time": 0.502438,
+          "progress": 0.5923062,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_living/frame_169.png",
+      "tick": 169,
+      "graphs": [
+        {
+          "time": 0.502438,
+          "progress": 0.5923062,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_living/frame_170.png",
+      "tick": 170,
+      "graphs": [
+        {
+          "time": 0.502438,
+          "progress": 0.5923062,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_living/frame_171.png",
+      "tick": 171,
+      "graphs": [
+        {
+          "time": 0.6841508,
+          "progress": 0.78615236,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_living/frame_172.png",
+      "tick": 172,
+      "graphs": [
+        {
+          "time": 0.6841508,
+          "progress": 0.78615236,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_living/frame_173.png",
+      "tick": 173,
+      "graphs": [
+        {
+          "time": 0.6841508,
+          "progress": 0.78615236,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_living/frame_174.png",
+      "tick": 174,
+      "graphs": [
+        {
+          "time": 0.86700964,
+          "progress": 1.0,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_living/frame_175.png",
+      "tick": 175,
+      "graphs": [],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_living/frame_176.png",
+      "tick": 176,
+      "graphs": [],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_night/frame_188.png",
+      "tick": 188,
+      "graphs": [],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_night/frame_189.png",
+      "tick": 189,
+      "graphs": [
+        {
+          "time": 0.1042628,
+          "progress": 0.14494243,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_night/frame_190.png",
+      "tick": 190,
+      "graphs": [
+        {
+          "time": 0.1592315,
+          "progress": 0.2893709,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_night/frame_191.png",
+      "tick": 191,
+      "graphs": [
+        {
+          "time": 0.2135704,
+          "progress": 0.43431333,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_night/frame_192.png",
+      "tick": 192,
+      "graphs": [
+        {
+          "time": 0.26666582,
+          "progress": 0.5761719,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_night/frame_193.png",
+      "tick": 193,
+      "graphs": [
+        {
+          "time": 0.32035092,
+          "progress": 0.71597457,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_night/frame_194.png",
+      "tick": 194,
+      "graphs": [
+        {
+          "time": 0.3728122,
+          "progress": 0.8552632,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_night/frame_195.png",
+      "tick": 195,
+      "graphs": [
+        {
+          "time": 0.42642173,
+          "progress": 0.99455184,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_night/frame_196.png",
+      "tick": 196,
+      "graphs": [
+        {
+          "time": 0.4796,
+          "progress": 1.0,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        },
+        {
+          "time": 0.1031783,
+          "progress": 0.12615232,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_night/frame_196.png",
+      "tick": 196,
+      "graphs": [
+        {
+          "time": 0.4796,
+          "progress": 1.0,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        },
+        {
+          "time": 0.1031783,
+          "progress": 0.12615232,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_night/frame_197.png",
+      "tick": 197,
+      "graphs": [
+        {
+          "time": 0.2068509,
+          "progress": 0.20769079,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_night/frame_198.png",
+      "tick": 198,
+      "graphs": [
+        {
+          "time": 0.2068509,
+          "progress": 0.20769079,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_night/frame_199.png",
+      "tick": 199,
+      "graphs": [
+        {
+          "time": 0.31171212,
+          "progress": 0.3707677,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_night/frame_200.png",
+      "tick": 200,
+      "graphs": [
+        {
+          "time": 0.31171212,
+          "progress": 0.3707677,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_night/frame_201.png",
+      "tick": 201,
+      "graphs": [
+        {
+          "time": 0.4154317,
+          "progress": 0.5292292,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_night/frame_202.png",
+      "tick": 202,
+      "graphs": [
+        {
+          "time": 0.4154317,
+          "progress": 0.5292292,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_night/frame_203.png",
+      "tick": 203,
+      "graphs": [
+        {
+          "time": 0.5203357,
+          "progress": 0.69076777,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_night/frame_204.png",
+      "tick": 204,
+      "graphs": [
+        {
+          "time": 0.5203357,
+          "progress": 0.69076777,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_night/frame_205.png",
+      "tick": 205,
+      "graphs": [
+        {
+          "time": 0.52492046,
+          "progress": 0.8446139,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_terminal/frame_227.png",
+      "tick": 227,
+      "graphs": [
+        {
+          "time": 0.1000669,
+          "progress": 0.1523061,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_terminal/frame_228.png",
+      "tick": 228,
+      "graphs": [
+        {
+          "time": 0.1635142,
+          "progress": 0.1599984,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_terminal/frame_229.png",
+      "tick": 229,
+      "graphs": [
+        {
+          "time": 0.2269689,
+          "progress": 0.25845993,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_terminal/frame_230.png",
+      "tick": 230,
+      "graphs": [
+        {
+          "time": 0.2900851,
+          "progress": 0.35538304,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_terminal/frame_231.png",
+      "tick": 231,
+      "graphs": [
+        {
+          "time": 0.3548735,
+          "progress": 0.45538303,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_terminal/frame_232.png",
+      "tick": 232,
+      "graphs": [
+        {
+          "time": 0.3548735,
+          "progress": 0.45538303,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_terminal/frame_233.png",
+      "tick": 233,
+      "graphs": [
+        {
+          "time": 0.47768912,
+          "progress": 0.5538446,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_terminal/frame_234.png",
+      "tick": 234,
+      "graphs": [
+        {
+          "time": 0.47768912,
+          "progress": 0.5538446,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_terminal/frame_235.png",
+      "tick": 235,
+      "graphs": [
+        {
+          "time": 0.6004862,
+          "progress": 0.7446138,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_terminal/frame_236.png",
+      "tick": 236,
+      "graphs": [
+        {
+          "time": 0.6004862,
+          "progress": 0.7446138,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_terminal/frame_237.png",
+      "tick": 237,
+      "graphs": [
+        {
+          "time": 0.6004862,
+          "progress": 0.7446138,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_terminal/frame_238.png",
+      "tick": 238,
+      "graphs": [],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_terminal/frame_239.png",
+      "tick": 239,
+      "graphs": [],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_terminal/frame_240.png",
+      "tick": 240,
+      "graphs": [],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_block/frame_254.png",
+      "tick": 254,
+      "graphs": [
+        {
+          "time": 0.0967111,
+          "progress": 0.15384455,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_block/frame_255.png",
+      "tick": 255,
+      "graphs": [
+        {
+          "time": 0.1632233,
+          "progress": 0.16615224,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_block/frame_256.png",
+      "tick": 256,
+      "graphs": [
+        {
+          "time": 0.22751279,
+          "progress": 0.26769072,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_block/frame_257.png",
+      "tick": 257,
+      "graphs": [
+        {
+          "time": 0.2913661,
+          "progress": 0.2876907,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_block/frame_258.png",
+      "tick": 258,
+      "graphs": [
+        {
+          "time": 0.29548502,
+          "progress": 0.3799984,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_block/frame_259.png",
+      "tick": 259,
+      "graphs": [
+        {
+          "time": 0.35663742,
+          "progress": 0.38615224,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_block/frame_260.png",
+      "tick": 260,
+      "graphs": [
+        {
+          "time": 0.42035303,
+          "progress": 0.48153687,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_block/frame_261.png",
+      "tick": 261,
+      "graphs": [
+        {
+          "time": 0.48158923,
+          "progress": 0.5784599,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_block/frame_262.png",
+      "tick": 262,
+      "graphs": [
+        {
+          "time": 0.5421376,
+          "progress": 0.6738446,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_block/frame_263.png",
+      "tick": 263,
+      "graphs": [
+        {
+          "time": 0.6010798,
+          "progress": 0.76615226,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_block/frame_264.png",
+      "tick": 264,
+      "graphs": [
+        {
+          "time": 0.6010798,
+          "progress": 0.76615226,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_block/frame_265.png",
+      "tick": 265,
+      "graphs": [
+        {
+          "time": 0.6606221,
+          "progress": 0.85845995,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_block/frame_266.png",
+      "tick": 266,
+      "graphs": [
+        {
+          "time": 0.7748289,
+          "progress": 0.9476908,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "disassemble_block/frame_267.png",
+      "tick": 267,
+      "graphs": [
+        {
+          "time": 0.7748289,
+          "progress": 0.9476908,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "tracked_subjects/frame_306.png",
+      "tick": 306,
+      "graphs": [
+        {
+          "time": 0.1501521,
+          "progress": 0.23076774,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.1501521,
+          "progress": 0.23076774,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.1501521,
+          "progress": 0.23076774,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.1501521,
+          "progress": 0.23076774,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.1501521,
+          "progress": 0.23076774,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.1501521,
+          "progress": 0.23076774,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.1501521,
+          "progress": 0.23076774,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.1501521,
+          "progress": 0.23076774,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.1501521,
+          "progress": 0.23076774,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.1501521,
+          "progress": 0.23076774,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.1501521,
+          "progress": 0.23076774,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.1501521,
+          "progress": 0.23076774,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "tracked_subjects/frame_307.png",
+      "tick": 307,
+      "graphs": [
+        {
+          "time": 0.20353489,
+          "progress": 0.2399985,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.20353489,
+          "progress": 0.2399985,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.20353489,
+          "progress": 0.2399985,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.20353489,
+          "progress": 0.2399985,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.20353489,
+          "progress": 0.2399985,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.20353489,
+          "progress": 0.2399985,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.20353489,
+          "progress": 0.2399985,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.20353489,
+          "progress": 0.2399985,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.20353489,
+          "progress": 0.2399985,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.20353489,
+          "progress": 0.2399985,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.20353489,
+          "progress": 0.2399985,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.20353489,
+          "progress": 0.2399985,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "tracked_subjects/frame_308.png",
+      "tick": 308,
+      "graphs": [
+        {
+          "time": 0.2575441,
+          "progress": 0.3230754,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.2575441,
+          "progress": 0.3230754,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.2575441,
+          "progress": 0.3230754,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.2575441,
+          "progress": 0.3230754,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.2575441,
+          "progress": 0.3230754,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.2575441,
+          "progress": 0.3230754,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.2575441,
+          "progress": 0.3230754,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.2575441,
+          "progress": 0.3230754,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.2575441,
+          "progress": 0.3230754,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.2575441,
+          "progress": 0.3230754,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.2575441,
+          "progress": 0.3230754,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.2575441,
+          "progress": 0.3230754,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "tracked_subjects/frame_309.png",
+      "tick": 309,
+      "graphs": [
+        {
+          "time": 0.31150842,
+          "progress": 0.4061524,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.31150842,
+          "progress": 0.4061524,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.31150842,
+          "progress": 0.4061524,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.31150842,
+          "progress": 0.4061524,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.31150842,
+          "progress": 0.4061524,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.31150842,
+          "progress": 0.4061524,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.31150842,
+          "progress": 0.4061524,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.31150842,
+          "progress": 0.4061524,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.31150842,
+          "progress": 0.4061524,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.31150842,
+          "progress": 0.4061524,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.31150842,
+          "progress": 0.4061524,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.31150842,
+          "progress": 0.4061524,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "tracked_subjects/frame_310.png",
+      "tick": 310,
+      "graphs": [
+        {
+          "time": 0.3643661,
+          "progress": 0.4876908,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3643661,
+          "progress": 0.4876908,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3643661,
+          "progress": 0.4876908,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3643661,
+          "progress": 0.4876908,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3643661,
+          "progress": 0.4876908,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3643661,
+          "progress": 0.4876908,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3643661,
+          "progress": 0.4876908,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3643661,
+          "progress": 0.4876908,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3643661,
+          "progress": 0.4876908,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3643661,
+          "progress": 0.4876908,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3643661,
+          "progress": 0.4876908,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3643661,
+          "progress": 0.4876908,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "tracked_subjects/frame_311.png",
+      "tick": 311,
+      "graphs": [
+        {
+          "time": 0.4181304,
+          "progress": 0.57076776,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.4181304,
+          "progress": 0.57076776,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.4181304,
+          "progress": 0.57076776,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.4181304,
+          "progress": 0.57076776,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.4181304,
+          "progress": 0.57076776,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.4181304,
+          "progress": 0.57076776,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.4181304,
+          "progress": 0.57076776,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.4181304,
+          "progress": 0.57076776,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.4181304,
+          "progress": 0.57076776,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.4181304,
+          "progress": 0.57076776,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.4181304,
+          "progress": 0.57076776,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.4181304,
+          "progress": 0.57076776,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "tracked_subjects/frame_312.png",
+      "tick": 312,
+      "graphs": [
+        {
+          "time": 0.4717711,
+          "progress": 0.65384465,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.4717711,
+          "progress": 0.65384465,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.4717711,
+          "progress": 0.65384465,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.4717711,
+          "progress": 0.65384465,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.4717711,
+          "progress": 0.65384465,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.4717711,
+          "progress": 0.65384465,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.4717711,
+          "progress": 0.65384465,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.4717711,
+          "progress": 0.65384465,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.4717711,
+          "progress": 0.65384465,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.4717711,
+          "progress": 0.65384465,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.4717711,
+          "progress": 0.65384465,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.4717711,
+          "progress": 0.65384465,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "tracked_subjects/frame_313.png",
+      "tick": 313,
+      "graphs": [
+        {
+          "time": 0.5249823,
+          "progress": 0.73538315,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5249823,
+          "progress": 0.73538315,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5249823,
+          "progress": 0.73538315,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5249823,
+          "progress": 0.73538315,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5249823,
+          "progress": 0.73538315,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5249823,
+          "progress": 0.73538315,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5249823,
+          "progress": 0.73538315,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5249823,
+          "progress": 0.73538315,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5249823,
+          "progress": 0.73538315,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5249823,
+          "progress": 0.73538315,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5249823,
+          "progress": 0.73538315,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5249823,
+          "progress": 0.73538315,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "tracked_subjects/frame_314.png",
+      "tick": 314,
+      "graphs": [
+        {
+          "time": 0.5781797,
+          "progress": 0.81692165,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5781797,
+          "progress": 0.81692165,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5781797,
+          "progress": 0.81692165,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5781797,
+          "progress": 0.81692165,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5781797,
+          "progress": 0.81692165,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5781797,
+          "progress": 0.81692165,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5781797,
+          "progress": 0.81692165,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5781797,
+          "progress": 0.81692165,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5781797,
+          "progress": 0.81692165,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5781797,
+          "progress": 0.81692165,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5781797,
+          "progress": 0.81692165,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5781797,
+          "progress": 0.81692165,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "batch_blocks/frame_332.png",
+      "tick": 332,
+      "graphs": [
+        {
+          "time": 0.14856412,
+          "progress": 0.22769088,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.14856412,
+          "progress": 0.22769088,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.14856412,
+          "progress": 0.22769088,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.14856412,
+          "progress": 0.22769088,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.14856412,
+          "progress": 0.22769088,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.14856412,
+          "progress": 0.22769088,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.14856412,
+          "progress": 0.22769088,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.14856412,
+          "progress": 0.22769088,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.14856412,
+          "progress": 0.22769088,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.14856412,
+          "progress": 0.22769088,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.14856412,
+          "progress": 0.22769088,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.14856412,
+          "progress": 0.22769088,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.14856412,
+          "progress": 0.22769088,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.14856412,
+          "progress": 0.22769088,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.14856412,
+          "progress": 0.22769088,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.14856412,
+          "progress": 0.22769088,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.14856412,
+          "progress": 0.22769088,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.14856412,
+          "progress": 0.22769088,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.14856412,
+          "progress": 0.22769088,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.14856412,
+          "progress": 0.22769088,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.14856412,
+          "progress": 0.22769088,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "batch_blocks/frame_333.png",
+      "tick": 333,
+      "graphs": [
+        {
+          "time": 0.21213001,
+          "progress": 0.23999856,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.21213001,
+          "progress": 0.23999856,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.21213001,
+          "progress": 0.23999856,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.21213001,
+          "progress": 0.23999856,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.21213001,
+          "progress": 0.23999856,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.21213001,
+          "progress": 0.23999856,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.21213001,
+          "progress": 0.23999856,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.21213001,
+          "progress": 0.23999856,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.21213001,
+          "progress": 0.23999856,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.21213001,
+          "progress": 0.23999856,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.21213001,
+          "progress": 0.23999856,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.21213001,
+          "progress": 0.23999856,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.21213001,
+          "progress": 0.23999856,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.21213001,
+          "progress": 0.23999856,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.21213001,
+          "progress": 0.23999856,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.21213001,
+          "progress": 0.23999856,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.21213001,
+          "progress": 0.23999856,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.21213001,
+          "progress": 0.23999856,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.21213001,
+          "progress": 0.23999856,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.21213001,
+          "progress": 0.23999856,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.21213001,
+          "progress": 0.23999856,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "batch_blocks/frame_334.png",
+      "tick": 334,
+      "graphs": [
+        {
+          "time": 0.27510712,
+          "progress": 0.33692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.27510712,
+          "progress": 0.33692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.27510712,
+          "progress": 0.33692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.27510712,
+          "progress": 0.33692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.27510712,
+          "progress": 0.33692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.27510712,
+          "progress": 0.33692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.27510712,
+          "progress": 0.33692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.27510712,
+          "progress": 0.33692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.27510712,
+          "progress": 0.33692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.27510712,
+          "progress": 0.33692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.27510712,
+          "progress": 0.33692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.27510712,
+          "progress": 0.33692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.27510712,
+          "progress": 0.33692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.27510712,
+          "progress": 0.33692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.27510712,
+          "progress": 0.33692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.27510712,
+          "progress": 0.33692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.27510712,
+          "progress": 0.33692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.27510712,
+          "progress": 0.33692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.27510712,
+          "progress": 0.33692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.27510712,
+          "progress": 0.33692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.27510712,
+          "progress": 0.33692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "batch_blocks/frame_335.png",
+      "tick": 335,
+      "graphs": [
+        {
+          "time": 0.3382779,
+          "progress": 0.4353832,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3382779,
+          "progress": 0.4353832,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3382779,
+          "progress": 0.4353832,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3382779,
+          "progress": 0.4353832,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3382779,
+          "progress": 0.4353832,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3382779,
+          "progress": 0.4353832,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3382779,
+          "progress": 0.4353832,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3382779,
+          "progress": 0.4353832,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3382779,
+          "progress": 0.4353832,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3382779,
+          "progress": 0.4353832,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3382779,
+          "progress": 0.4353832,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3382779,
+          "progress": 0.4353832,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3382779,
+          "progress": 0.4353832,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3382779,
+          "progress": 0.4353832,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3382779,
+          "progress": 0.4353832,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3382779,
+          "progress": 0.4353832,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3382779,
+          "progress": 0.4353832,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3382779,
+          "progress": 0.4353832,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3382779,
+          "progress": 0.4353832,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3382779,
+          "progress": 0.4353832,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.3382779,
+          "progress": 0.4353832,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "batch_blocks/frame_336.png",
+      "tick": 336,
+      "graphs": [
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "batch_blocks/frame_337.png",
+      "tick": 337,
+      "graphs": [
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.40461272,
+          "progress": 0.5369216,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "batch_blocks/frame_338.png",
+      "tick": 338,
+      "graphs": [
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "batch_blocks/frame_339.png",
+      "tick": 339,
+      "graphs": [
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.5229967,
+          "progress": 0.71230626,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "batch_blocks/frame_340.png",
+      "tick": 340,
+      "graphs": [
+        {
+          "time": 0.6460353,
+          "progress": 0.89692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.6460353,
+          "progress": 0.89692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.6460353,
+          "progress": 0.89692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.6460353,
+          "progress": 0.89692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.6460353,
+          "progress": 0.89692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.6460353,
+          "progress": 0.89692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.6460353,
+          "progress": 0.89692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.6460353,
+          "progress": 0.89692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.6460353,
+          "progress": 0.89692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.6460353,
+          "progress": 0.89692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.6460353,
+          "progress": 0.89692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.6460353,
+          "progress": 0.89692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.6460353,
+          "progress": 0.89692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.6460353,
+          "progress": 0.89692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.6460353,
+          "progress": 0.89692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.6460353,
+          "progress": 0.89692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.6460353,
+          "progress": 0.89692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.6460353,
+          "progress": 0.89692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.6460353,
+          "progress": 0.89692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.6460353,
+          "progress": 0.89692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        },
+        {
+          "time": 0.6460353,
+          "progress": 0.89692163,
+          "slots": 60,
+          "asset": "academy:vfxgraph/darkmatter_disassemble"
+        }
+      ],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    },
+    {
+      "file": "repair_iron_chestplate/before.png",
+      "tick": 349,
+      "graphs": [],
+      "chestDamage": 40,
+      "chestItem": "minecraft:iron_chestplate"
+    },
+    {
+      "file": "repair_iron_chestplate/frame_351.png",
+      "tick": 351,
+      "graphs": [],
+      "chestDamage": 40,
+      "chestItem": "minecraft:iron_chestplate"
+    },
+    {
+      "file": "repair_iron_chestplate/frame_352.png",
+      "tick": 352,
+      "graphs": [
+        {
+          "time": 0.1073581,
+          "progress": 0.14185855,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 40,
+      "chestItem": "minecraft:iron_chestplate"
+    },
+    {
+      "file": "repair_iron_chestplate/frame_353.png",
+      "tick": 353,
+      "graphs": [
+        {
+          "time": 0.1656162,
+          "progress": 0.29759458,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 40,
+      "chestItem": "minecraft:iron_chestplate"
+    },
+    {
+      "file": "repair_iron_chestplate/frame_354.png",
+      "tick": 354,
+      "graphs": [
+        {
+          "time": 0.2245641,
+          "progress": 0.44716284,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 40,
+      "chestItem": "minecraft:iron_chestplate"
+    },
+    {
+      "file": "repair_iron_chestplate/frame_355.png",
+      "tick": 355,
+      "graphs": [
+        {
+          "time": 0.284543,
+          "progress": 0.60546875,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 40,
+      "chestItem": "minecraft:iron_chestplate"
+    },
+    {
+      "file": "repair_iron_chestplate/frame_356.png",
+      "tick": 356,
+      "graphs": [
+        {
+          "time": 0.34516543,
+          "progress": 0.7632607,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 40,
+      "chestItem": "minecraft:iron_chestplate"
+    },
+    {
+      "file": "repair_iron_chestplate/frame_357.png",
+      "tick": 357,
+      "graphs": [
+        {
+          "time": 0.40467903,
+          "progress": 0.92105263,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 40,
+      "chestItem": "minecraft:iron_chestplate"
+    },
+    {
+      "file": "repair_iron_chestplate/frame_358.png",
+      "tick": 358,
+      "graphs": [
+        {
+          "time": 0.40467903,
+          "progress": 0.92105263,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 40,
+      "chestItem": "minecraft:iron_chestplate"
+    },
+    {
+      "file": "repair_iron_chestplate/frame_359.png",
+      "tick": 359,
+      "graphs": [
+        {
+          "time": 0.5195383,
+          "progress": 1.0,
+          "slots": 24,
+          "asset": "academy:vfxgraph/darkmatter_repair"
+        }
+      ],
+      "chestDamage": 40,
+      "chestItem": "minecraft:iron_chestplate"
+    },
+    {
+      "file": "repair_iron_chestplate/frame_360.png",
+      "tick": 360,
+      "graphs": [],
+      "chestDamage": 40,
+      "chestItem": "minecraft:iron_chestplate"
+    },
+    {
+      "file": "repair_iron_chestplate/frame_361.png",
+      "tick": 361,
+      "graphs": [],
+      "chestDamage": 40,
+      "chestItem": "minecraft:iron_chestplate"
+    },
+    {
+      "file": "repair_iron_chestplate/frame_362.png",
+      "tick": 362,
+      "graphs": [],
+      "chestDamage": 40,
+      "chestItem": "minecraft:iron_chestplate"
+    },
+    {
+      "file": "repair_iron_chestplate/frame_363.png",
+      "tick": 363,
+      "graphs": [],
+      "chestDamage": 40,
+      "chestItem": "minecraft:iron_chestplate"
+    },
+    {
+      "file": "cleared.png",
+      "tick": 385,
+      "graphs": [],
+      "chestDamage": 0,
+      "chestItem": "minecraft:air"
+    }
+  ],
+  "armoredRepairAttachmentObserved": true,
+  "passed": true,
+  "networkScope": "one real client plus integrated server; twelve tracked cows are not twelve clients"
+}

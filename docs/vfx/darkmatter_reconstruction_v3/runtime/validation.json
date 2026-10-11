@@ -1,0 +1,213 @@
+{
+  "schema_version": 1,
+  "id": "darkmatter_reconstruction_v3_implementation",
+  "validated_on": "2026-10-09",
+  "status": "passed",
+  "toolchain": "JetBrains Runtime 25 / checked-in Gradle wrapper / project VFXGraph and built-in editor renderer",
+  "scope": {
+    "skills": [
+      "darkmatter_disassemble",
+      "darkmatter_repair"
+    ],
+    "visual_implementation": "Reusable surface_laminae node, closed thin surface geometry, dedicated white matter shader, stable contact and successful-site attachment",
+    "gameplay_rules_changed": false,
+    "six_wings_changed_in_this_work": false,
+    "git_commit_created_in_this_work": false,
+    "workspace_contains_unrelated_preexisting_changes": true,
+    "world_projection_fix": "VFXGraph now shares the complete world projection including vanilla hurt/view bob, preserving scene-depth alignment.",
+    "contact_binding_fix": "AABB contacts select stable humanoid anatomy before following the animated bone, so local/remote leg animation phases cannot steal abdominal hits.",
+    "first_person_visibility": "A default empty offhand does not emit a floating repair patch; the two-hand map exception is retained."
+  },
+  "checks": [
+    {
+      "name": "development_build_tests_editor_and_single_player",
+      "command": ".\\gradlew.bat build test editorTest runClientDev -DisDev=true -I docs/vfx/darkmatter_reconstruction_v3/runtime/capture.init.gradle --offline --console=plain",
+      "result": "passed",
+      "log": "../../../../build/darkmatter-reconstruction-final-dev.log",
+      "main_tests": 2302,
+      "editor_tests": 104,
+      "special_jvm_tests": {
+        "testClassPointerFallback": 3,
+        "testCompactObjectHeaders": 3,
+        "testUncompressedClassPointers": 3
+      },
+      "failures": 0,
+      "single_player_result": "gameplay/result.json",
+      "editor_gpu_manifest": "editor/gpu_capture_manifest.json",
+      "editor_capture_reuse": "25 successful GPU captures reused: subsequent changes only affect Minecraft attachment, first-person hand visibility and world projection; standalone editor renderer and graphs are unchanged."
+    },
+    {
+      "name": "release_build",
+      "command": ".\\gradlew.bat build -DisDev=false --offline --console=plain",
+      "result": "passed",
+      "log": "../../../../build/darkmatter-reconstruction-release-validation.log",
+      "artifact": "../../../../build/libs/academy-26.2.0-0.0.4-alpha-release.jar",
+      "packaging": "New node, geometry, attachment helpers and shaders are present; documentation capture/smoke/multiplayer helpers are absent from the release jar."
+    },
+    {
+      "name": "editor_authoring_and_save_roundtrip",
+      "command": "node --test tools/vfxgraph-editor/scripts/darkmatter-reconstruction.test.mjs",
+      "result": "passed",
+      "tests": 2,
+      "reuse": "Successful checks reused: packaged graph JSON, authoring script and editor serializer were unchanged by subsequent attachment/projection/geometry boundary fixes."
+    },
+    {
+      "name": "two_independent_tcp_clients",
+      "session": "reconstruction-v3-20261009-final4",
+      "commands": [
+        ".\\gradlew.bat runServerVfxValidation -DisDev=true -I docs/vfx/darkmatter_reconstruction_v3/runtime/multiplayer.init.gradle -PacademyVfxSession=reconstruction-v3-20261009-final4 --offline --console=plain",
+        ".\\gradlew.bat runClientVfxCaster -DisDev=true -I docs/vfx/darkmatter_reconstruction_v3/runtime/multiplayer.init.gradle -PacademyVfxSession=reconstruction-v3-20261009-final4 --offline --console=plain",
+        ".\\gradlew.bat runClientVfxObserver -DisDev=true -I docs/vfx/darkmatter_reconstruction_v3/runtime/multiplayer.init.gradle -PacademyVfxSession=reconstruction-v3-20261009-final4 --offline --console=plain"
+      ],
+      "rerun_note": "Use a new academyVfxSession for each run so previous ready/done files cannot satisfy the next run.",
+      "result": "passed",
+      "server_result": "multiplayer/reconstruction-v3-20261009-final4/server-result.txt",
+      "caster_result": "multiplayer/reconstruction-v3-20261009-final4/caster-result.json",
+      "observer_result": "multiplayer/reconstruction-v3-20261009-final4/observer-result.json",
+      "continuous_graph_instances_per_client": 1,
+      "continuous_samples_per_client": 46,
+      "body_patch_ids": [
+        0,
+        2,
+        3
+      ],
+      "caster_progress_range": [
+        0.68421054,
+        0.7709704
+      ],
+      "observer_progress_range": [
+        0.68421054,
+        0.68950456
+      ],
+      "scope": "Dedicated server and two independent TCP game clients; successful healing, real player damage, block removal, simultaneous effects and cleanup.",
+      "superseded_session": "final1 exposed accumulated repair fade. final2/final3 exposed local-player abdominal hits binding to an animated leg; diag1 identified it numerically. final4 is the final acceptance run.",
+      "body_patch_bridge_ratios": {
+        "observer": [
+          {
+            "patch": 0,
+            "maximum": 0.68950456,
+            "bridgeSamples": 46,
+            "minimum": 0.68421054,
+            "bridgeRatio": 1.0
+          },
+          {
+            "patch": 2,
+            "maximum": 0.68950456,
+            "bridgeSamples": 46,
+            "minimum": 0.68421054,
+            "bridgeRatio": 1.0
+          },
+          {
+            "patch": 3,
+            "maximum": 0.68950456,
+            "bridgeSamples": 46,
+            "minimum": 0.68421054,
+            "bridgeRatio": 1.0
+          }
+        ],
+        "caster": [
+          {
+            "bridgeSamples": 45,
+            "minimum": 0.68421054,
+            "bridgeRatio": 0.9782608695652174,
+            "patch": 0,
+            "maximum": 0.7709704
+          },
+          {
+            "bridgeSamples": 45,
+            "minimum": 0.68421054,
+            "bridgeRatio": 0.9782608695652174,
+            "patch": 2,
+            "maximum": 0.7709704
+          },
+          {
+            "bridgeSamples": 45,
+            "minimum": 0.68421054,
+            "bridgeRatio": 0.9782608695652174,
+            "patch": 3,
+            "maximum": 0.7709704
+          }
+        ]
+      },
+      "center_hit_binding_samples": {
+        "required_part": 0,
+        "caster": 10,
+        "observer": 11
+      },
+      "diagnostics": [
+        "multiplayer/reconstruction-v3-20261009-final4/caster-diagnostics.json",
+        "multiplayer/reconstruction-v3-20261009-final4/observer-diagnostics.json"
+      ]
+    },
+    {
+      "name": "git_diff_whitespace",
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "visual_review": {
+    "source": "Unedited native PNG readbacks; no AI retouching or composited gameplay.",
+    "gallery": "index.html",
+    "editor": "25 views from production graphs through the editor VfxGraphRenderer; neutral posed cuboid proxy, not a game player.",
+    "gameplay": "Single pulse, continuous renewal, successful-site filtering, inventory-only suppression, first-person hand proxy, iron chestplate BODY overlay, living/terminal targets, night, twelve cows and twenty-one removed blocks.",
+    "reviewed_examples": [
+      "gameplay/disassemble_living/frame_164.png",
+      "gameplay/disassemble_living/frame_168.png",
+      "gameplay/repair_continuous/frame_81.png",
+      "gameplay/repair_first_person_hand/frame_126.png",
+      "gameplay/repair_iron_chestplate/frame_356.png",
+      "multiplayer/reconstruction-v3-20261009-final4/observer/repair_continuous/frame_35.png",
+      "multiplayer/reconstruction-v3-20261009-final4/caster/disassemble_player/frame_4.png",
+      "multiplayer/reconstruction-v3-20261009-final4/observer/disassemble_player/frame_4.png"
+    ]
+  },
+  "bounded_render_work": {
+    "disassemble_fixed_slots": 60,
+    "repair_fixed_slots": 24,
+    "near_living_target_main_laminae": 8,
+    "near_removed_block_main_laminae_maximum": 12,
+    "disassemble_fragments_maximum": 12,
+    "repair_main_laminae_per_successful_patch": 4,
+    "global_active_effect_limit": 64,
+    "global_retained_state_limit": 512,
+    "details": "Fixed slots reused; invisible slots culled; medium/far LOD reduces paired laminae and mesh resolution; renewal retains its graph; parameter names and surface scratch objects are reused.",
+    "measured_gpu_milliseconds_or_fps_improvement": false,
+    "measurement_limit": "Editor manifest records draw calls, instances, material triangles and uploads. No frame-time improvement percentage or large-server player capacity is claimed."
+  },
+  "boundaries": [
+    "Client and server must use this same build: disassembly contact data extends the packet format.",
+    "Player surfaces use posed part proxies; cows use a dedicated torso proxy. Other living models retain bounded AABB fallback, not arbitrary mesh skinning.",
+    "First-person repair uses a camera-relative hand proxy with FOV compensation; arbitrary held-item mesh attachment is not implemented.",
+    "Original models remain intact. Removed blocks use a white remnant, not the original block material or a model-cutting system.",
+    "No unconfirmed MP recovery visuals are emitted.",
+    "Fragments remain within the target-local short-lived effect; a separate world-space detached-particle solver is not introduced.",
+    "Two actual network clients were tested. Twelve cows are entity load, not twelve client connections."
+  ],
+  "source_sha256": {
+    "src/main/java/org/academy/api/client/render/vfxgraph/nodes/SurfaceLaminaEmitter.java": "818e62d80aae1ff9a5d7caf7a48748d515040a27c047da9f9c1c90b891c7650f",
+    "src/main/java/org/academy/api/client/render/vfxgraph/shape/SurfaceLaminaGeometry.java": "a346de0a0ccb59490d0059dbe4957c2c0e62e95ce6d29709df424b0b847572a0",
+    "src/main/java/org/academy/api/client/render/vfxgraph/nodes/VfxBlocks.java": "66e454441476896dff6e6b4cba9d6ed2ed69690a71c2eaaf6690431b164c77d4",
+    "src/main/java/org/academy/api/client/render/vfxgraph/sim/ParticleBuffer.java": "b2844b891783a31dd28be19c16e1fc8f33c1ed9d3fe5be7d7854fe613258cf8e",
+    "src/main/java/org/academy/api/server/ability/DarkmatterGraphEffects.java": "66f7b5137ab6212bfc46130ba1292158dbf35721d1e929b4428d6e69185f7210",
+    "src/main/java/org/academy/internal/client/render/vfx/DarkmatterVfxClient.java": "f453985cb9cbbc9d6a7fbf25e3e1ecbebae693ab934df360e039424bd3062f5f",
+    "src/main/java/org/academy/internal/client/render/vfx/RepairVisualTimeline.java": "94ee87ef6ddb9261bcdd58e8f7e941a9d53d70e65a55fce71a75d2ed4cd74487",
+    "src/main/java/org/academy/internal/client/render/vfx/FirstPersonRepairSurface.java": "72fdf9ddf64cbf8eb9af679e0748bfde97ba16c22011f077fce954675e867baf",
+    "src/main/java/org/academy/internal/client/render/vfx/CowReconstructionSurface.java": "37e6332bf4a0038a48a136265937f1a830d63fec25a884947dc323a2917c7400",
+    "src/main/java/org/academy/internal/client/render/vfx/ReconstructionSurfacePadding.java": "2e6facee0b88f33aaea7f715fc1d49b9a6be1065d490a3fd6f20ab89fe14d37d",
+    "src/main/java/org/academy/internal/common/network/DarkmatterVisualPacket.java": "bbf554b4fce1e942ca07dffc6a3cab895ecc108b9ea55930f36bee012ab67f2a",
+    "src/main/java/org/academy/internal/common/ability/darkmatter/skills/lv1/DarkmatterDisassemble.java": "ae759454faf81d4cbb5217e4bb913a63a56de5ebcdefa5c3e3a473dcd8d14836",
+    "src/main/java/org/academy/mixin/client/MixinLevelRenderer.java": "3148c995905162a3b9f5908c015aa7a88f5c7ec53fe8027b9b46ad86fa1fb68e",
+    "src/main/resources/assets/academy/shaders/core/vfxgraph_surface_lamina.vsh": "0584e89100e80031f12a7698ed191606f6e52b5c14aa3d5ab88977afff5a773f",
+    "src/main/resources/assets/academy/shaders/core/vfxgraph_surface_lamina.fsh": "901b2188384de26d9a8e05e774ad9d66feeada5334bdcd909abba4369c983d08",
+    "src/main/resources/assets/academy/vfxgraph/darkmatter_disassemble.json": "9e40ae4c3a0c799b21a58a972d0bfce8743cf270389178e83882889e6e04830e",
+    "src/main/resources/assets/academy/vfxgraph/darkmatter_repair.json": "7a5ec2e141317cf305a4543a28f153cdd787a0298c48d81d718d534e4d587740",
+    "tools/vfxgraph-editor/scripts/author-darkmatter-vfx.mjs": "44176997452b767165dc21afecbca65cd746a373813a176b7ae0f6964c557131",
+    "tools/vfxgraph-editor/scripts/darkmatter-reconstruction.test.mjs": "f0c12b869c2cd5870f924b01b27aed794ecda7d4633f23fc7806d896f9fa2615",
+    "src/main/java/org/academy/internal/client/render/vfx/HumanoidProxyContact.java": "e38320d03a17023be51ffaea8bc29c1e4f24babb7232c043d6ab0eee61acddcc"
+  },
+  "git_head_before_this_work_commit": "520ced48a43d8dfd1530f4de1ff6910d50f4b7cd",
+  "artifact_sha256": {
+    "build/libs/academy-26.2.0-0.0.4-alpha-release.jar": "04bd142e2fcf21b4da67b1d1d93d1406dfb618e4d2c9b3cdd4360a9458bfb9bf",
+    "build/libs/academy-26.2.0-0.0.4-alpha-dev.jar": "79565386cd77835de84212bb89c9e132ada877484bf105f22400b386d865d70b"
+  }
+}

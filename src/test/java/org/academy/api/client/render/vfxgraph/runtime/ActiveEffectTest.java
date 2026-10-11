@@ -59,7 +59,8 @@ class ActiveEffectTest {
                     new org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry(), new Vector3f());
             boolean[] available = {true};
             active.bind("progress", () -> Value.of(0.5f));
-            active.bindSurfaceSampler("surface", (i, u, v, p, n) -> { p.set(3, 2, 1); n.set(1, 0, 0); return available[0]; });
+            // A surface has two independent tangents: a constant point is intentionally rejected by volumetric layers.
+            active.bindSurfaceSampler("surface", (i, u, v, p, n) -> { p.set(3, 2 + v * .4f, 1 + u * .2f); n.set(1, 0, 0); return available[0]; });
             active.tick(0.05f);
             assertTrue(active.effect().buffer().positionX(0) > 3);
             active.reload(system);
@@ -68,7 +69,7 @@ class ActiveEffectTest {
             assertTrue(active.effect().buffer().alpha(0) > 0);
             available[0] = false;
             active.tick(0.05f);
-            assertEquals(0, active.effect().buffer().alpha(0));
+            for (int i = 0; i < active.effect().buffer().count(); i++) assertEquals(0, active.effect().buffer().alpha(i));
         }
     }
 

@@ -22,6 +22,7 @@ import org.academy.internal.client.ability.aeromanip.HighSpeedJetHighlightClient
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
 import org.academy.internal.client.ability.mentalout.WideAreaInterferenceClientState;
 import org.academy.internal.client.render.vfx.SpacialExcisionVfxClient;
+import org.academy.internal.client.render.vfx.SpatialCutFrameProjectionContext;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.joml.Vector3f;
@@ -66,10 +67,11 @@ public abstract class MixinLevelRenderer {
         var mainTarget = Minecraft.getInstance().gameRenderer.mainRenderTarget();
         var target = mainTarget.getColorTextureView();
         if (target != null) {
+            var frameProjection = SpatialCutFrameProjectionContext.currentCopy();
             var graphCamera = GraphCamera.fromGameCamera(
                     new Vector3f((float) cameraState.pos.x, (float) cameraState.pos.y, (float) cameraState.pos.z),
                     new Matrix4f(cameraState.viewRotationMatrix),
-                    new Matrix4f(cameraState.projectionMatrix)
+                    frameProjection == null ? new Matrix4f(cameraState.projectionMatrix) : frameProjection
             );
             VfxGraphManager.INSTANCE.renderFrame(target, mainTarget.getDepthTextureView(), graphCamera);
         }
