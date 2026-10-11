@@ -438,7 +438,7 @@ public final class LaminarCutter extends Skill {
                 clearSoftBlocks(player, level, origin, end,
                         direction, bladeRight, bladeNormal, tier);
             }
-            spawnBladeVisual(level, origin, direction, bladeRight, length);
+            AeromanipVfx.blade(level, origin, direction, bladeRight, length, halfWidth * 2);
         }
 
         static Vec3 bladeRight(Vec3 direction, @Nullable Vec3 bladePlaneDirection) {
@@ -530,11 +530,6 @@ public final class LaminarCutter extends Skill {
                 }
                 return Math.max(0.0, forward);
             }
-        }
-
-        private static void spawnBladeVisual(ServerLevel level, Vec3 start, Vec3 direction,
-                                             Vec3 bladeRight, double range) {
-            AeromanipVfx.blade(level, start, direction, bladeRight, range);
         }
 
         private static void clearSoftBlocks(ServerPlayer player, ServerLevel level,

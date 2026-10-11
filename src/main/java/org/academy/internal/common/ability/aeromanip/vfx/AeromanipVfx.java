@@ -6,6 +6,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
+import org.academy.api.common.vfx.PlanarSheetOrientation;
 import org.academy.internal.common.network.SpawnVfxGraphPacket;
 
 public final class AeromanipVfx {
@@ -41,13 +42,29 @@ public final class AeromanipVfx {
     }
 
     public static void blade(ServerLevel level, Vec3 origin, Vec3 direction, double length) {
-        spawn(level, MIST_BLADE, origin, direction, Math.max(0.05, length / 5.0), 0.8f);
+        blade(level, origin, direction, Vec3.ZERO, length);
     }
 
     public static void blade(ServerLevel level, Vec3 origin, Vec3 direction,
             Vec3 bladeRight, double length) {
-        spawn(level, MIST_BLADE, origin, direction, bladeRight,
-                Math.max(0.05, length / 5.0), 0.8f);
+        blade(level, origin, direction, bladeRight, length, 5);
+    }
+
+    /** The visible sheet matches the resolved attack length, width and optional plane rotation. */
+    public static void blade(ServerLevel level, Vec3 origin, Vec3 direction,
+            Vec3 bladeRight, double length, double width) {
+        var forward = direction != null && finite(direction) && direction.lengthSqr() > 1.0e-8
+                ? direction.normalize() : UP;
+        var right = bladeRight != null && finite(bladeRight)
+                ? bladeRight.subtract(forward.scale(bladeRight.dot(forward))) : Vec3.ZERO;
+        if (right.lengthSqr() < 1.0e-8) right = new Vec3(-forward.z, 0, forward.x);
+        right = right.lengthSqr() < 1.0e-8 ? new Vec3(1, 0, 0) : right.normalize();
+        var normal = right.cross(forward).normalize();
+        SpawnVfxGraphPacket.broadcast(level, MIST_BLADE, origin, forward, right,
+                -1, 1f, 0.8f, Map.of("length", (float) (Double.isFinite(length) ? Math.clamp(length, 0.1, 256) : 24),
+                        "width", (float) (Double.isFinite(width) ? Math.clamp(width, 0.1, 32) : 5),
+                        "sheet_roll", PlanarSheetOrientation.roll(normal, right),
+                        "edge_roll", PlanarSheetOrientation.roll(right, normal.scale(-1))));
     }
 
     public static void marker(ServerPlayer observer, Vec3 center, double radius) {
@@ -75,6 +92,10 @@ public final class AeromanipVfx {
     private static float finiteScale(double scale) {
         if (!Double.isFinite(scale)) return 1f;
         return (float) Math.clamp(scale, 0.05, 128.0);
+    }
+
+    private static boolean finite(Vec3 vector) {
+        return Double.isFinite(vector.x) && Double.isFinite(vector.y) && Double.isFinite(vector.z);
     }
 
     private static Identifier graph(String name) {

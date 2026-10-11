@@ -210,6 +210,10 @@ public final class VfxBlocks {
                 SurfaceDischargeEmitter.properties()));
         blocks.register("vfx.block.surface_discharge", SurfaceDischargeEmitter::create);
 
+        metadata.register(type("vfx.block.planar_sheet", "spawn", "Continuous Planar Sheet / Thin Fins",
+                PlanarSheetEmitter.properties()));
+        blocks.register("vfx.block.planar_sheet", (block, ports) -> PlanarSheetEmitter.create(block));
+
         metadata.register(typeWithPorts("vfx.block.spawn_rate", "spawn", "Spawn Rate",
                 List.of(in("rate", "Rate", ValueType.FLOAT)),
                 List.of(prop("rate", ValueType.FLOAT, Value.of(10f)), prop("param", ValueType.STRING, Value.string(""))),
