@@ -27,8 +27,7 @@ import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.input.MouseScrollEvent;
 import org.academy.api.client.render.LevelRenderEvent;
-import org.academy.api.client.render.Render;
-import org.academy.api.client.renderer.LineBoxRenderer;
+import org.academy.api.client.renderer.TargetSelectionRenderer;
 import org.academy.api.client.resources.R;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
@@ -179,23 +178,11 @@ public final class DefensiveTeleport extends Skill {
                         .filter(Objects::nonNull)
                         .distinct()
                         .toList();
-                var cameraPosition = event.getCameraPosition();
-                var renderBox = cameraRelativeBox(box, cameraPosition);
-                var selectedRenderBoxes = selected.stream()
-                        .map(entity -> cameraRelativeBox(
-                                entity.getBoundingBox().inflate(0.04), cameraPosition))
-                        .toList();
-                event.submitCustomGeometry(Render.RenderTypes.MINE_DETECT_LINES,
-                        (snapshot, consumer) -> {
-                            LineBoxRenderer.renderWireframeBox(
-                                    snapshot, consumer, renderBox,
-                                    1.0f, 0.25f, 0.75f, 1.0f);
-                            for (var selectedBox : selectedRenderBoxes) {
-                                LineBoxRenderer.renderWireframeBox(
-                                        snapshot, consumer, selectedBox,
-                                        1.0f, 1.0f, 1.0f, 1.0f);
-                            }
-                        });
+                TargetSelectionRenderer.renderRegion(event, this, box, TargetSelectionRenderer.Palette.TELEPORT);
+                for (var entity : selected) {
+                    TargetSelectionRenderer.renderEntity(event, entity, entity,
+                            TargetSelectionRenderer.Palette.TELEPORT, TargetSelectionRenderer.State.SECONDARY);
+                }
             }
 
             private static boolean isPreviewThreat(Player player, Entity entity) {

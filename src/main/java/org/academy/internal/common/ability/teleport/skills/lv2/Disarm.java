@@ -14,7 +14,6 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.academy.AcademyCraftClient;
@@ -24,8 +23,7 @@ import org.academy.api.client.ability.ClientContext;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.render.LevelRenderEvent;
-import org.academy.api.client.render.Render;
-import org.academy.api.client.renderer.LineBoxRenderer;
+import org.academy.api.client.renderer.TargetSelectionRenderer;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
@@ -130,34 +128,19 @@ public class Disarm extends Skill {
                     cleanup();
                     return;
                 }
-                var minecraft = Minecraft.getInstance();
                 var range = AbilitySystemClient.getSkillProficiencyMilestone(Skills.DISARM.get()) >= 2
                         ? 20.0 : MAX_RANGE;
                 var target = TeleportTargeting.findFirstLivingEntity(player, range);
-                AABB preview;
                 if (target != null) {
                     targetEntityId = target.getId();
-                    preview = target.getBoundingBox().inflate(0.2);
+                    TargetSelectionRenderer.renderEntity(event, this, target,
+                            TargetSelectionRenderer.Palette.TELEPORT, TargetSelectionRenderer.State.LOCKED);
                 } else {
                     targetEntityId = -1;
                     var point = player.getEyePosition(event.getPartialTick())
                             .add(player.getViewVector(event.getPartialTick()).scale(range));
-                    preview = new AABB(point.x - 0.5, point.y - 0.5, point.z - 0.5,
-                            point.x + 0.5, point.y + 0.5, point.z + 0.5);
+                    TargetSelectionRenderer.renderDestination(event, this, point, TargetSelectionRenderer.Palette.TELEPORT);
                 }
-
-                var camera = minecraft.gameRenderer.mainCamera().position();
-                var matrices = event.getMatrixStack();
-                matrices.pushPose();
-                matrices.translate((float) -camera.x, (float) -camera.y, (float) -camera.z);
-                event.submitCustomGeometry(Render.RenderTypes.MINE_DETECT_LINES,
-                        (snapshot, consumer) -> LineBoxRenderer.renderWireframeBox(
-                                snapshot, consumer, preview,
-                                target != null ? 0.6f : 1.0f,
-                                target != null ? 0.2f : 0.1f,
-                                target != null ? 1.0f : 0.1f,
-                                1.0f));
-                matrices.popPose();
             }
 
             private void cleanup() {

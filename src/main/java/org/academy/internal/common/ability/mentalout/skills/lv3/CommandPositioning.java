@@ -57,6 +57,7 @@ import java.util.UUID;
  */
 public final class CommandPositioning extends Skill {
     public static final int CONTROL_PRIORITY = 250;
+    public static final int MAX_SUBJECTS_PER_COMMAND = 12;
 
     public CommandPositioning() {
         super(Builder
@@ -138,6 +139,10 @@ public final class CommandPositioning extends Skill {
                 skipped++;
                 continue;
             }
+            if (eligible.size() >= MAX_SUBJECTS_PER_COMMAND) {
+                skipped++;
+                continue;
+            }
             eligible.add(subject);
         }
 
@@ -201,7 +206,7 @@ public final class CommandPositioning extends Skill {
             requested = value.add(new Vec3(
                     Math.cos(angle) * radius, 0.0, Math.sin(angle) * radius));
         }
-        var resolved = GroupControlNavigation.findNearestReachablePosition(subject, requested)
+        var resolved = GroupControlNavigation.findNearestOccupablePosition(subject, requested)
                 .orElse(requested);
         return new ControlDestination.Position(dimension, resolved);
     }
@@ -296,6 +301,10 @@ public final class CommandPositioning extends Skill {
                 if (!subject.isAlive() || subject.isRemoved() || subject.level() != player.level()
                         || subject.getUUID().equals(destinationEntity)
                         || !MentalControlApi.evaluate(subject, ControlCapability.PATH_CONTROL).supported()) {
+                    skipped++;
+                    continue;
+                }
+                if (subjects.size() >= MAX_SUBJECTS_PER_COMMAND) {
                     skipped++;
                     continue;
                 }

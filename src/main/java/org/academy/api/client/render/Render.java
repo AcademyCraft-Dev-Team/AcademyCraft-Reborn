@@ -996,6 +996,17 @@ public final class Render {
                 .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
                 .build();
 
+        public static final RenderPipeline TARGET_SELECTION = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
+                .withLocation(academy("pipeline/target_selection"))
+                .withVertexShader(R.shaders.position_color)
+                .withFragmentShader(R.shaders.position_color)
+                .withCull(false)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR)
+                .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
+                .build();
+
         public static final RenderPipeline LEVEL_POS_COLOR_QUADS = builder(MATRICES_FOG_LIGHT_DIR_SNIPPET)
                 .withLocation(academy("pipeline/level_pos_color_quads"))
                 .withVertexShader(R.shaders.position_color)
@@ -1257,6 +1268,11 @@ public final class Render {
                         .setOutputTarget(GLOW_TARGET)
                         .sortOnUpload()
                         .createRenderSetup()
+        );
+
+        public static final RenderType TARGET_SELECTION = create(
+                "target_selection",
+                RenderSetup.builder(RenderPipelines.TARGET_SELECTION).sortOnUpload().createRenderSetup()
         );
 
         public static final RenderType POS_COLOR_QUADS = create(

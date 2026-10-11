@@ -25,8 +25,7 @@ import org.academy.api.client.ability.ClientContext;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.render.LevelRenderEvent;
-import org.academy.api.client.render.Render;
-import org.academy.api.client.renderer.LineBoxRenderer;
+import org.academy.api.client.renderer.TargetSelectionRenderer;
 import org.academy.api.client.resources.R;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
@@ -150,8 +149,6 @@ public final class FleshRipping extends Skill {
                     cleanup();
                     return;
                 }
-                var minecraft = Minecraft.getInstance();
-                AABB preview;
                 var living = findTarget(player);
                 if (living != null) {
                     targetEntityId = living.getId();
@@ -164,27 +161,14 @@ public final class FleshRipping extends Skill {
                     living = retained;
                 }
                 if (living != null) {
-                    preview = living.getBoundingBox().inflate(0.2);
+                    TargetSelectionRenderer.renderEntity(event, this, living,
+                            TargetSelectionRenderer.Palette.TELEPORT, TargetSelectionRenderer.State.LOCKED);
                 } else {
                     targetEntityId = -1;
                     var point = player.getEyePosition(event.getPartialTick())
                             .add(player.getViewVector(event.getPartialTick()).scale(MAX_RANGE));
-                    preview = new AABB(point.x - 0.5, point.y - 0.5, point.z - 0.5,
-                            point.x + 0.5, point.y + 0.5, point.z + 0.5);
+                    TargetSelectionRenderer.renderDestination(event, this, point, TargetSelectionRenderer.Palette.TELEPORT);
                 }
-
-                var renderType = Render.RenderTypes.MINE_DETECT_LINES;
-                var camera = minecraft.gameRenderer.mainCamera().position();
-                var matrices = event.getMatrixStack();
-                matrices.pushPose();
-                matrices.translate((float) -camera.x, (float) -camera.y, (float) -camera.z);
-                event.submitCustomGeometry(renderType, (snapshot, consumer) ->
-                        LineBoxRenderer.renderWireframeBox(snapshot, consumer, preview,
-                                targetEntityId >= 0 ? 0.6f : 1.0f,
-                                targetEntityId >= 0 ? 0.2f : 0.1f,
-                                targetEntityId >= 0 ? 1.0f : 0.1f,
-                                1.0f));
-                matrices.popPose();
             }
 
             private static LivingEntity findTarget(LocalPlayer player) {

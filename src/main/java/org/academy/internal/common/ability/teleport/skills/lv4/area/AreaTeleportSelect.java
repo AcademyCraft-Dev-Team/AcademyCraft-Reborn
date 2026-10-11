@@ -19,8 +19,7 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.render.LevelRenderEvent;
-import org.academy.api.client.render.Render;
-import org.academy.api.client.renderer.LineBoxRenderer;
+import org.academy.api.client.renderer.TargetSelectionRenderer;
 import org.academy.api.client.resources.R;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
@@ -159,25 +158,13 @@ public final class AreaTeleportSelect extends Skill {
             var minecraft = Minecraft.getInstance();
             if (minecraft.level == null) return;
             var dimension = minecraft.level.dimension().identifier().toString();
-            var renderType = Render.RenderTypes.MINE_DETECT_LINES;
-            var camera = minecraft.gameRenderer.mainCamera().position();
-            var matrices = event.getMatrixStack();
-            matrices.pushPose();
-            matrices.translate((float) -camera.x, (float) -camera.y, (float) -camera.z);
-            event.submitCustomGeometry(renderType, (snapshot, consumer) -> {
-                for (var preview : previews) {
-                    if (!dimension.equals(preview.dimension)) continue;
-                    var box = new AABB(preview.min.getX(), preview.min.getY(), preview.min.getZ(),
-                            preview.max.getX() + 1.0, preview.max.getY() + 1.0, preview.max.getZ() + 1.0);
-                    var color = preview.color;
-                    LineBoxRenderer.renderWireframeBox(snapshot, consumer, box,
-                            color == 0 ? 1.0f : 0.1f,
-                            color == 1 ? 1.0f : color == 2 ? 0.9f : 0.8f,
-                            color == 2 ? 1.0f : 0.1f,
-                            1.0f);
-                }
-            });
-            matrices.popPose();
+            for (var preview : previews) {
+                if (!dimension.equals(preview.dimension)) continue;
+                var box = new AABB(preview.min.getX(), preview.min.getY(), preview.min.getZ(),
+                        preview.max.getX() + 1.0, preview.max.getY() + 1.0, preview.max.getZ() + 1.0);
+                TargetSelectionRenderer.renderRegion(event, List.of(Client.class, preview.color), box,
+                        TargetSelectionRenderer.Palette.TELEPORT);
+            }
         }
 
         public static class Config extends KeyBindingConfig {

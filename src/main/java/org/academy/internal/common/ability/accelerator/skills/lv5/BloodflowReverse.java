@@ -27,8 +27,7 @@ import org.academy.api.client.ability.ClientContext;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.render.LevelRenderEvent;
-import org.academy.api.client.render.Render;
-import org.academy.api.client.renderer.LineBoxRenderer;
+import org.academy.api.client.renderer.TargetSelectionRenderer;
 import org.academy.api.client.resources.R;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
@@ -224,18 +223,8 @@ public class BloodflowReverse extends Skill {
                 var target = updateTarget(event.getPartialTick());
                 if (target == null) return;
 
-                var minecraft = Minecraft.getInstance();
-                var camera = minecraft.gameRenderer.mainCamera().position();
-                var bounds = target.getBoundingBox().inflate(TARGET_BOX_INFLATE);
-                var matrices = event.getMatrixStack();
-                matrices.pushPose();
-                matrices.translate((float) -camera.x, (float) -camera.y, (float) -camera.z);
-                event.submitCustomGeometry(Render.RenderTypes.MINE_DETECT_LINES, (snapshot, consumer) ->
-                        LineBoxRenderer.renderWireframeBox(
-                                snapshot, consumer, bounds,
-                                1.0f, 0.15f, 0.15f, 1.0f
-                        ));
-                matrices.popPose();
+                TargetSelectionRenderer.renderEntity(event, this, target,
+                        TargetSelectionRenderer.Palette.BLOODFLOW, TargetSelectionRenderer.State.LOCKED);
             }
 
             private LivingEntity updateTarget(float partialTick) {

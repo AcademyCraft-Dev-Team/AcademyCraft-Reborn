@@ -15,7 +15,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -29,8 +28,7 @@ import org.academy.api.client.ability.ClientContext;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.render.LevelRenderEvent;
-import org.academy.api.client.render.Render;
-import org.academy.api.client.renderer.LineBoxRenderer;
+import org.academy.api.client.renderer.TargetSelectionRenderer;
 import org.academy.api.client.resources.R;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
@@ -55,6 +53,7 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
@@ -79,10 +78,8 @@ public final class ThreateningTeleport extends Skill {
         );
     }
 
-    static Vec3 untargetedDestination(Vec3 eyePosition, Vec3 viewDirection) {
-        var direction = viewDirection.normalize();
-        if (direction.lengthSqr() < 1.0e-6) return eyePosition;
-        return eyePosition.add(direction.scale(UNTARGETED_RANGE));
+    static @Nullable Vec3 untargetedDestination(LivingEntity source, Vec3 eyePosition, Vec3 viewDirection) {
+        return TeleportTargeting.findSelfTeleportCenter(source, eyePosition, viewDirection, UNTARGETED_RANGE);
     }
 
     static boolean shouldDropTeleportedItem(boolean hasTarget, boolean targetKilled) {
@@ -166,34 +163,18 @@ public final class ThreateningTeleport extends Skill {
                     return;
                 }
                 var target = updateTarget();
-                AABB preview;
                 if (target != null) {
-                    preview = target.getBoundingBox().inflate(0.2);
+                    TargetSelectionRenderer.renderEntity(event, this, target,
+                            TargetSelectionRenderer.Palette.TELEPORT, TargetSelectionRenderer.State.LOCKED);
                 } else {
                     var point = ThreateningTeleport.untargetedDestination(
+                            player,
                             player.getEyePosition(event.getPartialTick()),
                             player.getViewVector(event.getPartialTick())
                     );
-                    preview = new AABB(
-                            point.x - 0.5, point.y - 0.5, point.z - 0.5,
-                            point.x + 0.5, point.y + 0.5, point.z + 0.5
-                    );
+                    if (point == null) return;
+                    TargetSelectionRenderer.renderDestination(event, this, point, TargetSelectionRenderer.Palette.TELEPORT);
                 }
-
-                var minecraft = Minecraft.getInstance();
-                var camera = minecraft.gameRenderer.mainCamera().position();
-                var matrices = event.getMatrixStack();
-                matrices.pushPose();
-                matrices.translate((float) -camera.x, (float) -camera.y, (float) -camera.z);
-                event.submitCustomGeometry(Render.RenderTypes.MINE_DETECT_LINES, (snapshot, consumer) ->
-                        LineBoxRenderer.renderWireframeBox(
-                                snapshot, consumer, preview,
-                                target != null ? 0.6f : 1.0f,
-                                target != null ? 0.2f : 0.1f,
-                                target != null ? 1.0f : 0.1f,
-                                1.0f
-                        ));
-                matrices.popPose();
             }
 
             private LivingEntity updateTarget() {
@@ -238,6 +219,10 @@ public final class ThreateningTeleport extends Skill {
             if (player.getMainHandItem().isEmpty()) return;
             var targetRange = skill.scaledRange(player, MAX_RANGE);
             var lockedTarget = TeleportTargeting.findFirstLivingEntity(player, targetRange);
+            var untargetedDestination = lockedTarget == null
+                    ? ThreateningTeleport.untargetedDestination(player, player.getEyePosition(), player.getLookAngle())
+                    : null;
+            if (lockedTarget == null && untargetedDestination == null) return;
 
             skill.executeActive(player, (ctx, actualCost) -> {
                 if (lockedTarget != null && (!lockedTarget.isAlive()
@@ -252,8 +237,7 @@ public final class ThreateningTeleport extends Skill {
 
                 var teleported = mainHand.copyWithCount(1);
                 var destination = lockedTarget == null
-                        ? ThreateningTeleport.untargetedDestination(
-                        player.getEyePosition(), player.getLookAngle())
+                        ? untargetedDestination
                         : new Vec3(lockedTarget.getX(),
                         lockedTarget.getY() + lockedTarget.getBbHeight() * 0.5, lockedTarget.getZ());
                 if (!player.isCreative()) mainHand.shrink(1);
