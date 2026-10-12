@@ -1,0 +1,126 @@
+import java.security.MessageDigest
+
+// Native compilation is deliberately absent from check/build; native binaries are not packaged.
+// Only the Java bridge resource below is included in the mod.
+// Run nativePhysicsTest explicitly after installing the pinned Rust toolchain and a host linker.
+def nativeRoot = file('native/academy_physics')
+def nativeOutput = layout.buildDirectory.dir('native-physics').get().asFile
+def os = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+def arch = System.getProperty('os.arch').toLowerCase(Locale.ROOT)
+def windows = os.startsWith('windows')
+def linux = os == 'linux'
+def supported = (windows || linux) && arch in ['amd64', 'x86_64']
+def targetTriple = windows ? 'x86_64-pc-windows-msvc' : 'x86_64-unknown-linux-gnu'
+def hostPlatform = windows ? 'windows-x86_64' : 'linux-x86_64'
+def libraryName = windows ? 'academy_physics.dll' : 'libacademy_physics.so'
+def rustOutput = new File(nativeOutput, 'cargo')
+def rustLibrary = new File(rustOutput, "${targetTriple}/release/${libraryName}")
+def artifacts = new File(nativeOutput, 'artifacts')
+def library = new File(artifacts, libraryName)
+def manifest = new File(artifacts, 'academy_physics.properties')
+def cargo = providers.gradleProperty('academyCargo').getOrElse('cargo')
+def nativeSources = fileTree(nativeRoot) {
+    include 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'src/**/*.rs', 'ABI.md'
+}
+def requireHost = {
+    if (!supported) {
+        throw new GradleException('The native physics prototype currently builds only on Windows/Linux x86_64')
+    }
+}
+def digest = { byte[] data -> MessageDigest.getInstance('SHA-256').digest(data).encodeHex().toString() }
+
+// FML creates the mod's named module after JVM startup, too late for a command-line
+// native-access grant by module name. Keep the restricted FFM caller in one explicitly
+// loaded unnamed bridge, covered by --enable-native-access=ALL-UNNAMED.
+def bridge = sourceSets.create('nativePhysicsBridge') {
+    compileClasspath += files(layout.buildDirectory.dir('classes/java/main'))
+}
+def compileBridge = tasks.named(bridge.compileJavaTaskName, JavaCompile) {
+    dependsOn tasks.named('compileJava')
+}
+tasks.named('processResources', ProcessResources) {
+    from(compileBridge.flatMap { it.destinationDirectory }.map {
+        it.file('org/academy/internal/common/structure/physics/FfmPhysicsAccess.class')
+    }) {
+        into 'academy/native_physics'
+        rename { 'FfmPhysicsAccess.bin' }
+    }
+}
+
+def testRust = tasks.register('testNativePhysicsRust', Exec) {
+    group = 'verification'
+    description = 'Runs the pinned native solver ABI/lifecycle unit tests (requires Rust)'
+    workingDir nativeRoot
+    commandLine cargo, 'test', '--locked', '--target', targetTriple,
+            '--target-dir', rustOutput.absolutePath
+    doFirst { requireHost() }
+}
+def buildRust = tasks.register('buildNativePhysics', Exec) {
+    group = 'academy'
+    description = 'Builds the opt-in double precision solver library (requires Rust)'
+    mustRunAfter testRust
+    workingDir nativeRoot
+    commandLine cargo, 'build', '--release', '--locked', '--target', targetTriple,
+            '--target-dir', rustOutput.absolutePath
+    inputs.files(nativeSources)
+    inputs.property('targetTriple', targetTriple)
+    inputs.property('cargoExecutable', cargo)
+    outputs.file(rustLibrary)
+    doFirst { requireHost() }
+}
+def prepareNative = tasks.register('prepareNativePhysics') {
+    group = 'academy'
+    description = 'Copies the solver library and writes its checked ABI/platform/SHA-256 manifest'
+    dependsOn buildRust
+    inputs.file(rustLibrary)
+    inputs.files(nativeSources)
+    outputs.files(library, manifest)
+    doLast {
+        requireHost()
+        artifacts.mkdirs()
+        java.nio.file.Files.copy(rustLibrary.toPath(), library.toPath(),
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        def sourceDigest = MessageDigest.getInstance('SHA-256')
+        nativeSources.files.sort { it.path }.each {
+            sourceDigest.update(nativeRoot.toPath().relativize(it.toPath()).toString()
+                    .replace('\\', '/').getBytes('UTF-8'))
+            sourceDigest.update((byte) 0)
+            sourceDigest.update(it.bytes)
+        }
+        manifest.setText("""format=academy-native-physics-v1
+abi=1
+engine=rapier3d-f64-0.36.1
+platform=${hostPlatform}
+library=${libraryName}
+sha256=${digest(library.bytes)}
+rustVersion=1.99.0
+target=${targetTriple}
+sourceSha256=${sourceDigest.digest().encodeHex()}
+""", 'UTF-8')
+    }
+}
+
+def physicsTests = sourceSets.create('nativePhysicsTest') {
+    compileClasspath += sourceSets.main.output
+    runtimeClasspath += sourceSets.main.output
+}
+dependencies {
+    nativePhysicsTestImplementation platform('org.junit:junit-bom:5.10.2')
+    nativePhysicsTestImplementation 'org.junit.jupiter:junit-jupiter'
+    nativePhysicsTestRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+tasks.register('nativePhysicsTest', Test) {
+    group = 'verification'
+    description = 'Runs real Java 25 FFM + Rapier tests; never silently skips a missing library'
+    dependsOn prepareNative, testRust
+    testClassesDirs = physicsTests.output.classesDirs
+    classpath = physicsTests.runtimeClasspath
+    useJUnitPlatform()
+    jvmArgs '--enable-native-access=ALL-UNNAMED'
+    inputs.file(library)
+    inputs.file(manifest)
+    systemProperty 'academy.nativePhysics.library',
+            providers.gradleProperty('academyNativePhysicsLibrary').getOrElse(library.absolutePath)
+    systemProperty 'academy.nativePhysics.manifest',
+            providers.gradleProperty('academyNativePhysicsManifest').getOrElse(manifest.absolutePath)
+}

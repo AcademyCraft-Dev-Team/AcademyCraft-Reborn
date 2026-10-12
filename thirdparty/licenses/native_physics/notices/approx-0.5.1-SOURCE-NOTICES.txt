@@ -1,0 +1,31 @@
+Source notices retained from approx-0.5.1
+
+Each section reproduces an entire source comment block without shortening its license terms.
+Identical blocks are collected once, with every matching source location listed below.
+Locations include tests/benches where present; their inclusion does not assert runtime linkage.
+The added headings and source locations are collection metadata, not changes to upstream notices.
+
+================================================================================
+Comment SHA-256: b8cb86ca7d849d3e21d9c0287d1a42fd7207040eb38226675265fdbdbf1fb3a3
+Sources:
+  src/lib.rs:1
+  src/macros.rs:1
+  tests/abs_diff_eq.rs:1
+  tests/macros.rs:1
+  tests/relative_eq.rs:1
+  tests/ulps_eq.rs:1
+
+// Copyright 2015 Brendan Zabarauskas
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+

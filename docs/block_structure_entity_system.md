@@ -14,7 +14,7 @@
 
 现有技能继续使用短时操纵用的快照实体。新增的独立后端已具备真实 `ServerLevel` 方块容器原型，提供服务端内容访问、原版方块运行、保存生命周期、旋转投影与受限逐格交互；它尚未接到旧技能上。最终目标仍是独立安装时也能运行完整动态方块空间，安装 Sable 时通过可选后端统一接管，详见[完整设计方案](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/block_structure_physics_and_sable_compat_plan.zh-CN.md)。
 
-2026 年 10 月 12 日的第一批实现增加了公共空间与单位契约、失败保留和回滚数据隔离，以及可组合的碰撞查询。第二批增加四个独占维度槽、实体无关的公共生命周期 API 和真实区块容器。第三批加入模型投影、任意四元数姿态下的逐格命中、作用域上下文与受限拉杆交互。第四批接入原版普通单箱的专用模型、开盖状态与真实库存菜单，第五批完成六种原版方块的受限逐格放置及对应验收。第六批已写入受限持续采掘、真实工具与掉落归属处理，最终采掘客户端 r3 通过，其余本批检查状态见下文。当前仍为 P0 部分完成；通用放置、采掘与菜单、原生刚体后端和 Sable 桥尚未实现。各批的历史验收与本批待验证状态分别记录于下文。
+2026 年 10 月 12 日的第一批实现增加了公共空间与单位契约、失败保留和回滚数据隔离，以及可组合的碰撞查询。第二批增加四个独占维度槽、实体无关的公共生命周期 API 和真实区块容器。第三批加入模型投影、任意四元数姿态下的逐格命中、作用域上下文与受限拉杆交互。第四批接入原版普通单箱的专用模型、开盖状态与真实库存菜单，第五批完成六种原版方块的受限逐格放置及对应验收。第六批完成受限持续采掘、真实工具与掉落归属处理，基础检查、最终采掘客户端 r3 及既有客户端回归均已通过。第七批推进独立双精度刚体的原生绑定基础，验证状态见文末。当前仍为 P0 部分完成；通用放置、采掘与菜单、结构与宿主世界的刚体接入和 Sable 桥尚未实现。
 
 ## 模块
 
@@ -176,7 +176,7 @@ result.structure().ifPresent(structure -> {
 
 后续按[完整设计方案](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/block_structure_physics_and_sable_compat_plan.zh-CN.md) 推进，当前未完成项包括：
 
-1. 完成第六批持续采掘的实际验收，再将受限放置、采掘与单箱菜单扩展到更多方块、工具及运动期间的操作；不以白名单场景代替完整原版语义。
+1. 将已验收的受限放置、采掘与单箱菜单扩展到更多方块、工具及运动期间的操作，并补独立专服与双客户端的并发验收；不以白名单场景代替完整原版语义。
 2. 持久交易协调、明确的隔离数据恢复入口，以及跨存储崩溃恢复验证。
 3. 补齐通用原版放置、破坏、菜单、BE 专用呈现、局部实体与流体边界，以及分区同步/渲染闭环；扩展容量和回收协议须先处理永久槽的内容归属。
 4. 完整刚体后端、角速度、旋转承载、拆分、质心/惯性及材料响应；全方向网格还原需方块及 BE 旋转适配。
@@ -498,3 +498,61 @@ r5 的文件访问拒绝原因未确定。只读检查未发现 manifest 读写�
 脚本显式启用 `academy.nativeStructureMiningSmoke`，检查目录位于 `run/` 内且名称以 `native-structure-mining-smoke` 开头，并要求指定世界已有 `level.dat`。探针另验真实世界路径及专用 fixture 索引为空；成功或失败后均保留本次世界，从测试前副本另建目录重跑，不能清空库存、删除 owner/recovery 或重置 fixture 制造通过。
 
 验收必须同时看到完整的 `NATIVE_STRUCTURE_MINING_SMOKE_PASSED` 和 `NATIVE_STRUCTURE_MINING_RECOVERY_EVIDENCE`，打开 `NATIVE_STRUCTURE_MINING_SCREENSHOT` 指向的石头及单箱 PNG 确认旋转结构上的裂纹。故障槽的 recovery 文件必须保留并核对交付分类，不能仅凭通过日志推断恢复安全。最终 r3 的实际记录见上文；重跑时仍须独立核对每项断言和证据。世界、截图与日志保留在忽略的 run/build 目录。
+
+## 第七批：独立双精度刚体绑定基础
+
+本批将求解器候选落实为官方 `rapier3d-f64 = 0.36.1`，使用精确 Rust `1.99.0` stable 工具链和 `Cargo.lock`。下载的 Rapier crate SHA-256 为 `f4588855e9c5451702147b5c6ddff4d93887f1e59c9504b6ac3571818f6ec3d2`。我方 Rust 源码位于 `native/academy_physics`，采用自有版本化 C ABI；Java 25 通过正式 FFM API 调用，不依赖 Sable 的 Rust 分支、JNI 实现或原生二进制。[ABI 契约](D:/mcmodtest/AcademyCraft-Reborn-26.2/native/academy_physics/ABI.md)记录数据布局、限额和错误语义。
+
+这是显式启用的独立求解器原型。普通 `test`、开发/发布 `build` 不要求 Rust，也不加载或打包该原生库。它尚未连接 `NativeStructureRuntime`、方块碰撞形状、内容版本、投影或旧技能；因此本批的自由落体、复合刚体、碰撞和旋转结果不能作为“实体化结构已经拥有完整物理”的验收。P0 整体仍未完成。
+
+内部 Java 封装位于 `org.academy.internal.common.structure.physics`，只交换数值和受控句柄，不把 Minecraft 对象传到原生侧。世界持有 double 宿主原点，送入求解器的是相对坐标；每个世界、刚体和库都有明确关闭顺序及线程归属。世界关闭后不能再使用旧刚体；原生句柄不复用，不能用另一世界的句柄越界访问。Rust panic 不能越过 C ABI，异常世界停止后续求解，但仍允许销毁。
+
+加载只接受显式配置的库文件和配套 manifest，检查 ABI、引擎、平台、文件名和 SHA-256。manifest 还记录 Rust 版本、目标 triple 和源码摘要。此摘要用于核对本地构建输入及产物一致性，不是发布者签名，也不保证不同编译器/系统环境生成逐字节相同的二进制。Windows x86_64 为本轮实际验证平台；Linux x86_64 的构建接线仍需独立机器验收，其他平台尚未提供。
+
+NeoForge 在 JVM 启动后创建 `academy` 模块，启动参数 `--enable-native-access=academy` 无法预先授权该模块。本批将唯一执行受限 FFM 调用的 Java 类独立编译为固定的 `academy/native_physics/FfmPhysicsAccess.bin` 资源，再由受控类加载器定义到未命名模块。显式探针使用 `--enable-native-access=ALL-UNNAMED`，桥接类检查自身实际授权状态；该 JVM 参数授权所有未命名模块，并非仅授权此桥。普通运行不会打开此桥或加载 DLL，不依赖 JDK 当前的兼容警告放行。库先销毁所属世界、关闭代码 arena，再删除已复核摘要的私有库副本；清理失败只允许重试关闭。
+
+本批锁定依赖图包含 59 个第三方 crate，完整许可原文、源内归属和固定版本来源见 [依赖清单](D:/mcmodtest/AcademyCraft-Reborn-26.2/thirdparty/native_physics_dependencies.md)。索引同时覆盖可选与构建时依赖，不表示每个列出的 crate 都链接进当前 DLL。
+
+### 第七批验证与重跑
+
+2026 年 10 月 12 日，Windows x86_64、JBR 25.0.3、MSVC 14.44 与 Windows SDK 10.0.26100.0 上完成下列检查。客户端只在标题界面运行独立求解器；专服只使用全新的隔离世界，没有玩家接入。这不是移动方块、多人或 Sable 混装验收。
+
+| 检查 | 实际结果与证明范围 | 记录 |
+| --- | --- | --- |
+| 基础 JUnit | 2414 项，零失败、错误或跳过；包含 16 项本批数值、manifest、桥接权限和生命周期检查 | `build/native-physics-p7-bridge-tests.log`；最终构建日志见下文 |
+| Rust | 12 项通过，含 C ABI 长度/对齐/别名、句柄归属与耗尽、预算、故障隔离和真实引擎行为 | `build/native-physics-p7-bridge-tests.log` |
+| 真实引擎 JVM | 17 项通过，含重力、接触、睡眠、复合质量/惯性、偏心冲量、旋转、CCD、远坐标、分步、线程和资源释放 | `build/native-physics-p7-bridge-tests.log` |
+| 真实 NeoForge 客户端 | `owner_module=academy`、`binding_module=ALL-UNNAMED`、实际原生访问授权为 true；720 步后高度 `0.4999309852979097`、竖直速度 0、关闭成功，退出 0 | `build/native-physics-p7-client.log`；`run/native-physics-smoke-client-20261012-p7-r1/native-physics-client-result.txt` |
+| 真实独立专服 | 最终 r3 与客户端相同数值及模块证据；正常停止事件、服务端线程结束、退出码 0；日志记录各维度保存完成，没有保存/关闭异常或 crash report | `build/native-physics-p7-server-r3.log`；r3 目录下 result 与 exit 两份记录 |
+| 隔离守卫 | 已有世界与指向外部目录的 junction 均在启动前被拒绝；外部哨兵文件未改变 | `build/native-physics-p7-guard-existing.log`、`build/native-physics-p7-guard-junction.log` |
+
+最终 `test build -DisDev=true` 与 `build -DisDev=false` 均成功退出 0，日志为 `build/native-physics-p7-build-dev-final.log` 和 `build/native-physics-p7-build-release.log`；构建同时执行的 104 项编辑器测试亦全部通过。两份成品均包含唯一的 11572 字节桥接资源与 71 份原生依赖许可/索引文件，不含正常模组路径下的 `FfmPhysicsAccess.class`、本库 DLL/SO 或 Rust 工具链。核对了 59 个锁定 crate 对应的 139 条完整许可/源内归属引用与摘要。
+
+成品、模块探针、XML 汇总及日志索引保存在 `build/native-physics-p7-validation.json`，本批相关文件摘要保存在 `build/native-physics-p7-source-manifest.json`。开发 JAR SHA-256 为 `6f0d96ebdac11793d2a026ee44ef4e37ffe236f895f1c0f83cbc82007e95e1ea`，发布 JAR 为 `e80885486216c228a395d6b834b45037a2ce125b0b1392d53865976806608c9e`。本批没有重跑旧结构三组 GameTest 和逐格交互客户端；没有更改这些运行路径，本批探针也不代替其未来真实物理接入后的回归。
+
+本轮 DLL SHA-256 为 `c8ab64f663ecb2ca9727ce94f57f9d90fe547a5c77c6b77518ca479f1def2dbd`；最终原生源码/ABI 文档摘要为 `cdd61b70d56679574508228bdfd363ac3e4c97fa1bd57300304b8f62cabe7f25`。验收后仅补充 ABI 文档中 no-op 操作不保证唤醒的语义，并重新生成 manifest，DLL 摘要未改变。模组默认构建不需要 Cargo；原生测试则显式调用固定工具链，不以缺库跳过测试。
+
+初次 CCD 测试错误假设关闭显式 CCD 就必然穿过静态薄墙；Rapier 0.36.1 自带快速动态体对固定碰撞体的自动 CCD。最终测试保留自动保护检查，并改用动态薄墙验证显式 CCD 的对照。输入速度上限 `10000` 是 ABI 校验范围，求解器仍保留默认 `400` 单位/秒速度限制，见 ABI 契约；不声称旋转扫掠与真实方块世界高速碰撞已验收。
+
+初次专服 r1 暴露动态模块原生访问未授权，保留 `build/native-physics-p7-server.log`、失败结果与崩溃记录；修复后客户端 r1、专服 r2 通过，收紧存档隔离后专服 r3 再次通过。专服探针仅在显式启用且完成隔离检查后，等待正常停止流程和服务端线程结束，再由守护线程退出自身 JVM，避免已有非守护线程使测试挂起。此停止顺序不代表任意崩溃的数据安全保证。
+
+客户端及专服启动日志仍有本机 OSHI/Windows Perflib 计数器读取异常和可选类缺失警告，均发生在物理探针前；本批没有修改这些既有路径。验收要求完整 PASSED 数值/模块/关闭证据、退出码与无物理或保存失败，不能仅依据 Gradle 成功或忽略所有 ERROR。Linux、真实方块物理、旧技能迁移、双客户端与 Sable 混装均仍待验证。
+
+开发机须先有固定版本 Rust、Windows MSVC C++/SDK 或 Linux linker；Gradle 不自动安装工具链。可通过 `-PacademyCargo=<cargo绝对路径>` 指定项目外或构建目录中的 cargo。原生输出全部留在 `build/native-physics`；不要提交 DLL、Cargo target、日志或测试世界。
+
+```powershell
+.\gradlew.bat nativePhysicsTest -DisDev=true
+```
+
+该显式任务执行 Rust 测试、构建 release 库、生成 `build/native-physics/artifacts/academy_physics.properties`，随后运行独立 Java 测试。缺失工具链、原生库、错误摘要或 ABI 不匹配会失败，不静默跳过。
+
+模组探针使用 `validation/native_structure/physics.init.gradle`。先创建全新 `run/native-physics-smoke-client-自定名称` 或 `run/native-physics-smoke-server-自定名称`；客户端无需存档。专服只复制已接受的 EULA，并准备 `server-ip=127.0.0.1`、空闲端口、`level-name=native-physics-smoke` 的 `server.properties`，世界目录必须不存在。已有世界、目录链接、旧结果或退出标记在启动前拒绝，探针启动任务禁用配置缓存以每次重新检查；不得复用通过或失败的目录。
+
+```powershell
+$physicsLibrary = Join-Path (Get-Location) 'build/native-physics/artifacts/academy_physics.dll'
+$physicsManifest = Join-Path (Get-Location) 'build/native-physics/artifacts/academy_physics.properties'
+.\gradlew.bat runClientDev -DisDev=true -DisCompat=false --init-script validation/native_structure/physics.init.gradle -PacademyNativePhysicsSmoke=client -PacademyNativePhysicsSmokeDirectory=run/native-physics-smoke-client-自定名称 "-PacademyNativePhysicsLibrary=$physicsLibrary" "-PacademyNativePhysicsManifest=$physicsManifest"
+.\gradlew.bat runServerCompat -DisDev=true -DisCompat=false --init-script validation/native_structure/physics.init.gradle -PacademyNativePhysicsSmoke=server -PacademyNativePhysicsSmokeDirectory=run/native-physics-smoke-server-自定名称 "-PacademyNativePhysicsLibrary=$physicsLibrary" "-PacademyNativePhysicsManifest=$physicsManifest"
+```
+
+两次启动顺序执行；如 Cargo 不在 PATH，均追加 `-PacademyCargo=<绝对路径>`。结果必须包含 `NATIVE_PHYSICS_CLIENT_PASSED` 或 `NATIVE_PHYSICS_SERVER_PASSED`，并核对目录内结果文件、实际 module/native-access、`closed=true` 与进程退出码。专服还须核对 `native-physics-server-exit.txt` 和保存/关闭日志。客户端超时、OOM 或缺少通过文件均算失败，即使外层进程碰巧退出 0。运行日志、世界及原生产物留在忽略的 build/run 目录。

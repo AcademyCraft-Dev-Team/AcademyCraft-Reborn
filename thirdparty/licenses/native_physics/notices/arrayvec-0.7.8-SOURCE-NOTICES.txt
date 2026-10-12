@@ -1,0 +1,24 @@
+Source notices retained from arrayvec-0.7.8
+
+Each section reproduces an entire source comment block without shortening its license terms.
+Identical blocks are collected once, with every matching source location listed below.
+Locations include tests/benches where present; their inclusion does not assert runtime linkage.
+The added headings and source locations are collection metadata, not changes to upstream notices.
+
+================================================================================
+Comment SHA-256: 1fa23849bf79a2e13d3f98e8045cd0349e05ddd564782cf0cf8cee458c08da13
+Sources:
+  src/char.rs:1
+
+// Copyright 2012-2016 The Rust Project Developers. See the COPYRIGHT
+// file at the top-level directory of this distribution and at
+// http://rust-lang.org/COPYRIGHT.
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+//
+// Original authors: alexchrichton, bluss
+

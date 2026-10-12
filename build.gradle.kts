@@ -590,3 +590,6 @@ val editorTest = tasks.register<Test>("editorTest") {
 tasks.check {
     dependsOn(editorTest)
 }
+
+// Opt-in native solver prototype; normal builds require neither Rust nor a native library.
+apply(from = "gradle/native-physics.gradle")

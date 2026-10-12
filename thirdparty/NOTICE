@@ -6,6 +6,14 @@ projects.
 
 The complete text for each software license can be found in the directory "thirdparty/licenses".
 
+* Optional native physics prototype (not bundled as a native binary in the mod JAR)
+  * Engine: official rapier3d-f64 0.36.1, Apache-2.0.
+  * Wrapper source: native/academy_physics; dependency versions/checksums: Cargo.lock.
+  * Dependency attribution and complete license mappings: thirdparty/native_physics_dependencies.md.
+  * License/notice texts: thirdparty/licenses/native_physics/.
+  * The inventory also covers optional and build-time crates in the lockfile; it does not
+    imply that every listed crate is linked into the selected native build.
+
 * source-sans
   * Copyright 2010-2024 Adobe
   * License:

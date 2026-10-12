@@ -1,0 +1,33 @@
+Source notices retained from wide-1.7.1
+
+Each section reproduces an entire source comment block without shortening its license terms.
+Identical blocks are collected once, with every matching source location listed below.
+Locations include tests/benches where present; their inclusion does not assert runtime linkage.
+The added headings and source locations are collection metadata, not changes to upstream notices.
+
+================================================================================
+Comment SHA-256: fc494272494528cf72fd59f7ca5a64c41e7e6081872d6a95165a6e740e91a956
+Sources:
+  src/f32x16_.rs:1154
+  src/f32x4_.rs:1493
+  src/f32x8_.rs:1176
+
+    // C0..C5 from SLEEF's minimax polynomial for 1/cbrt(d) on [0.5, 1.0)
+    // Naoki Shibata et al., "SLEEF: A Portable Vectorized Library of C99
+    // Mathematical Functions", https://sleef.org / https://github.com/shibatch/sleef
+    // Licensed under the Boost Software License 1.0.
+    // These are the f32-precision coefficients; our f64 variants use the f64
+    // set.
+
+================================================================================
+Comment SHA-256: ea5cd410f8875d852565fc2c5febb25a4d19e4f051016519b205cde35843ee2c
+Sources:
+  src/f64x2_.rs:1399
+  src/f64x4_.rs:1160
+  src/f64x8_.rs:1173
+
+    // C0..C5 from SLEEF's minimax polynomial for 1/cbrt(d) on [0.5, 1.0)
+    // Naoki Shibata et al., "SLEEF: A Portable Vectorized Library of C99
+    // Mathematical Functions", https://sleef.org / https://github.com/shibatch/sleef
+    // Licensed under the Boost Software License 1.0.
+

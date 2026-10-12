@@ -1,0 +1,25 @@
+Source notices retained from stable_deref_trait-1.2.1
+
+Each section reproduces an entire source comment block without shortening its license terms.
+Identical blocks are collected once, with every matching source location listed below.
+Locations include tests/benches where present; their inclusion does not assert runtime linkage.
+The added headings and source locations are collection metadata, not changes to upstream notices.
+
+================================================================================
+Comment SHA-256: b9ebd258c34bf2f4b7525714cea038ec31d26a0d717166891ce177eec3f40e08
+Sources:
+  src/lib.rs:1
+
+// Copyright 2017 Robert Grosse
+
+================================================================================
+Comment SHA-256: 91325d4d826f290bcd8e5974b9c28e5715fd75a1265850a96e024703962590f6
+Sources:
+  src/lib.rs:3
+
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+

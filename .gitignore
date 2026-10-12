@@ -117,6 +117,9 @@ gradle-app.setting
 
 **/build/
 
+# Cargo outputs are directed to build/native-physics by Gradle; also ignore manual builds.
+/native/**/target/
+
 # Common working directory
 run/
 runs/
@@ -130,6 +133,7 @@ runs/
 *.py
 *.txt
 !src/main/resources/assets/academy/gui/ability_developer_gui_layout.txt
+!/thirdparty/licenses/native_physics/**/*.txt
 *.exe
 
 .vscode

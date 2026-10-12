@@ -1,0 +1,1687 @@
+{
+  "schemaVersion": 1,
+  "scope": "All 59 registry packages in native/academy_physics/Cargo.lock, including optional/build-time packages; not a runtime linkage inventory.",
+  "engine": "rapier3d-f64-0.36.1",
+  "lockSha256": "13f512852b6bc69e83dbe203475bcc61554ce174a2adbdac95384ebf6a4cde59",
+  "packages": [
+    {
+      "name": "allocator-api2",
+      "version": "0.2.21",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923",
+      "repository": "https://github.com/zakarumych/allocator-api2",
+      "authors": [
+        "Zakarum <zaq.dev@icloud.com>"
+      ],
+      "sourceCommit": "63cd7fcc2f8854b5821c7054d026e8a4647acde1",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/20fe7b00e904ed690e3b9fd6073784d3fc428141dbd10b81c01fd143d0797f58.txt",
+          "sha256": "20fe7b00e904ed690e3b9fd6073784d3fc428141dbd10b81c01fd143d0797f58",
+          "origin": "crate:allocator-api2-0.2.21/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/36516aefdc84c5d5a1e7485425913a22dbda69eb1930c5e84d6ae4972b5194b9.txt",
+          "sha256": "36516aefdc84c5d5a1e7485425913a22dbda69eb1930c5e84d6ae4972b5194b9",
+          "origin": "crate:allocator-api2-0.2.21/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "approx",
+      "version": "0.5.1",
+      "declaredLicense": "Apache-2.0",
+      "crateChecksum": "cab112f0a86d568ea0e627cc1d6be74a1e9cd55214684db5561995f6dad897c6",
+      "repository": "https://github.com/brendanzab/approx",
+      "authors": [
+        "Brendan Zabarauskas <bjzaba@yahoo.com.au>"
+      ],
+      "sourceCommit": "13fcbc78dcda4d0136de07c36a7979d545f08e38",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE",
+          "path": "texts/3ddf9be5c28fe27dad143a5dc76eea25222ad1dd68934a047064e56ed2fa40c5.txt",
+          "sha256": "3ddf9be5c28fe27dad143a5dc76eea25222ad1dd68934a047064e56ed2fa40c5",
+          "origin": "crate:approx-0.5.1/LICENSE"
+        }
+      ],
+      "sourceNotices": {
+        "path": "notices/approx-0.5.1-SOURCE-NOTICES.txt",
+        "sha256": "99f4a8c7a033636a0d4ae9a339de98eadde41a085804207234d29cbc8d4928cc",
+        "blocks": 1
+      }
+    },
+    {
+      "name": "arrayvec",
+      "version": "0.7.8",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56",
+      "repository": "https://github.com/bluss/arrayvec",
+      "authors": [
+        "bluss"
+      ],
+      "sourceCommit": "0cb664cf505844348538230479b0040b44f3faf1",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "crate:arrayvec-0.7.8/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/4da95ec4ecb65b738d470b7d762894ad9c97da93e6cbfb18b570fc2c96f4b871.txt",
+          "sha256": "4da95ec4ecb65b738d470b7d762894ad9c97da93e6cbfb18b570fc2c96f4b871",
+          "origin": "crate:arrayvec-0.7.8/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": {
+        "path": "notices/arrayvec-0.7.8-SOURCE-NOTICES.txt",
+        "sha256": "2acdcd9bd03b46873e13f039df080a9d694857636b3d55291333b78416e1eea0",
+        "blocks": 1
+      }
+    },
+    {
+      "name": "autocfg",
+      "version": "1.5.1",
+      "declaredLicense": "Apache-2.0 OR MIT",
+      "crateChecksum": "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53",
+      "repository": "https://github.com/cuviper/autocfg",
+      "authors": [
+        "Josh Stone <cuviper@gmail.com>"
+      ],
+      "sourceCommit": "2799b09c24e6632f8e653c5cd8fc303e85a906ba",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "crate:autocfg-1.5.1/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/27995d58ad5c1145c1a8cd86244ce844886958a35eb2b78c6b772748669999ac.txt",
+          "sha256": "27995d58ad5c1145c1a8cd86244ce844886958a35eb2b78c6b772748669999ac",
+          "origin": "crate:autocfg-1.5.1/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "bitflags",
+      "version": "2.13.2",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "3ded4057c258ba199e2d26386d3af3780957ecaee6c4ef4041c6b4b8b97c0b06",
+      "repository": "https://github.com/bitflags/bitflags",
+      "authors": [
+        "The Rust Project Developers"
+      ],
+      "sourceCommit": "80ce9b545acb0bd42150695fc351889cac1d8eb4",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "crate:bitflags-2.13.2/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb.txt",
+          "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+          "origin": "crate:bitflags-2.13.2/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": {
+        "path": "notices/bitflags-2.13.2-SOURCE-NOTICES.txt",
+        "sha256": "7d668c261873f2af8838facbdfb68997d65496214ca31eb9d98e5cb6f75d8ae2",
+        "blocks": 1
+      }
+    },
+    {
+      "name": "bytemuck",
+      "version": "1.25.2",
+      "declaredLicense": "Zlib OR Apache-2.0 OR MIT",
+      "crateChecksum": "95832e849adfb21180ccb6826a99da14e5d266ae5c2e668e1602cf234f153797",
+      "repository": "https://github.com/Lokathor/bytemuck",
+      "authors": [
+        "Lokathor <zefria@gmail.com>"
+      ],
+      "sourceCommit": "f363643e951a7ac9e4b9921de982f2b0918902e3",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/e3ba223bb1423f0aad8c3dfce0fe3148db48926d41e6fbc3afbbf5ff9e1c89cb.txt",
+          "sha256": "e3ba223bb1423f0aad8c3dfce0fe3148db48926d41e6fbc3afbbf5ff9e1c89cb",
+          "origin": "crate:bytemuck-1.25.2/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/9df9ba60a11af705f2e451b53762686e615d86f76b169cf075c3237730dbd7e2.txt",
+          "sha256": "9df9ba60a11af705f2e451b53762686e615d86f76b169cf075c3237730dbd7e2",
+          "origin": "crate:bytemuck-1.25.2/LICENSE-MIT"
+        },
+        {
+          "originalName": "LICENSE-ZLIB",
+          "path": "texts/84b34dd7608f7fb9b17bd588a6bf392bf7de504e2716f024a77d89f1b145a151.txt",
+          "sha256": "84b34dd7608f7fb9b17bd588a6bf392bf7de504e2716f024a77d89f1b145a151",
+          "origin": "crate:bytemuck-1.25.2/LICENSE-ZLIB"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "byteorder",
+      "version": "1.5.0",
+      "declaredLicense": "Unlicense OR MIT",
+      "crateChecksum": "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b",
+      "repository": "https://github.com/BurntSushi/byteorder",
+      "authors": [
+        "Andrew Gallant <jamslam@gmail.com>"
+      ],
+      "sourceCommit": "ec068eefa042d494475db125c4b034bd8e9e34dd",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "COPYING",
+          "path": "texts/01c266bced4a434da0051174d6bee16a4c82cf634e2679b6155d40d75012390f.txt",
+          "sha256": "01c266bced4a434da0051174d6bee16a4c82cf634e2679b6155d40d75012390f",
+          "origin": "crate:byteorder-1.5.0/COPYING"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f.txt",
+          "sha256": "0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f",
+          "origin": "crate:byteorder-1.5.0/LICENSE-MIT"
+        },
+        {
+          "originalName": "UNLICENSE",
+          "path": "texts/7e12e5df4bae12cb21581ba157ced20e1986a0508dd10d0e8a4ab9a4cf94e85c.txt",
+          "sha256": "7e12e5df4bae12cb21581ba157ced20e1986a0508dd10d0e8a4ab9a4cf94e85c",
+          "origin": "crate:byteorder-1.5.0/UNLICENSE"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "downcast-rs",
+      "version": "2.0.2",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "117240f60069e65410b3ae1bb213295bd828f707b5bec6596a1afc8793ce0cbc",
+      "repository": "https://github.com/marcianx/downcast-rs",
+      "authors": [],
+      "sourceCommit": "d30dcb42084251a20017eb45215957bf18fb7db5",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/8173d5c29b4f956d532781d2b86e4e30f83e6b7878dce18c919451d6ba707c90.txt",
+          "sha256": "8173d5c29b4f956d532781d2b86e4e30f83e6b7878dce18c919451d6ba707c90",
+          "origin": "crate:downcast-rs-2.0.2/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/fb252fecf98d9af8f1d9201c5860319a514f5a8a24700dc84fc6ea287a7a4958.txt",
+          "sha256": "fb252fecf98d9af8f1d9201c5860319a514f5a8a24700dc84fc6ea287a7a4958",
+          "origin": "crate:downcast-rs-2.0.2/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": {
+        "path": "notices/downcast-rs-2.0.2-SOURCE-NOTICES.txt",
+        "sha256": "70d05b96b7261dcda996a55b4afa08d9443c597a08e437d21c9605de4b8d119f",
+        "blocks": 1
+      }
+    },
+    {
+      "name": "either",
+      "version": "1.19.0",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "0e9c71c2167ca323c882b99918929403426e2373ea17242ff5653e0d5e1058be",
+      "repository": "https://github.com/rayon-rs/either",
+      "authors": [],
+      "sourceCommit": "1e4326df5972eb4a0ced66cb3b67fa0c5aca8493",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "crate:either-1.19.0/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/7576269ea71f767b99297934c0b2367532690f8c4badc695edf8e04ab6a1e545.txt",
+          "sha256": "7576269ea71f767b99297934c0b2367532690f8c4badc695edf8e04ab6a1e545",
+          "origin": "crate:either-1.19.0/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "ena",
+      "version": "0.14.4",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "eabffdaee24bd1bf95c5ef7cec31260444317e72ea56c4c91750e8b7ee58d5f1",
+      "repository": "https://github.com/rust-lang/ena",
+      "authors": [
+        "Niko Matsakis <niko@alum.mit.edu>"
+      ],
+      "sourceCommit": "2fd6662ed68516a9fe8e4b35324db01b1f6e09d9",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "crate:ena-0.14.4/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/0621878e61f0d0fda054bcbe02df75192c28bde1ecc8289cbd86aeba2dd72720.txt",
+          "sha256": "0621878e61f0d0fda054bcbe02df75192c28bde1ecc8289cbd86aeba2dd72720",
+          "origin": "crate:ena-0.14.4/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": {
+        "path": "notices/ena-0.14.4-SOURCE-NOTICES.txt",
+        "sha256": "082741ad3cf8f35855f3e599eaae392c5d2b56ed372099371ae6e5c1ce7acd3e",
+        "blocks": 3
+      }
+    },
+    {
+      "name": "equivalent",
+      "version": "1.0.2",
+      "declaredLicense": "Apache-2.0 OR MIT",
+      "crateChecksum": "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f",
+      "repository": "https://github.com/indexmap-rs/equivalent",
+      "authors": [],
+      "sourceCommit": "44cdd44f8b8ebb5f9ae096c7550a5e74ffb7d6ae",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "crate:equivalent-1.0.2/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/7365cc8878a1d7ce155a58c4ca09c3d7a6be413efa5334a80ea842912b669349.txt",
+          "sha256": "7365cc8878a1d7ce155a58c4ca09c3d7a6be413efa5334a80ea842912b669349",
+          "origin": "crate:equivalent-1.0.2/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "foldhash",
+      "version": "0.2.0",
+      "declaredLicense": "Zlib",
+      "crateChecksum": "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb",
+      "repository": "https://github.com/orlp/foldhash",
+      "authors": [
+        "Orson Peters <orsonpeters@gmail.com>"
+      ],
+      "sourceCommit": "8f878c636fda9c9e93384824ea45e06d03f009f5",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE",
+          "path": "texts/b1181a40b2a7b25cf66fd01481713bc1005df082c53ef73e851e55071b102744.txt",
+          "sha256": "b1181a40b2a7b25cf66fd01481713bc1005df082c53ef73e851e55071b102744",
+          "origin": "crate:foldhash-0.2.0/LICENSE"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "glam",
+      "version": "0.30.10",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "19fc433e8437a212d1b6f1e68c7824af3aed907da60afa994e7f542d18d12aa9",
+      "repository": "https://github.com/bitshifter/glam-rs",
+      "authors": [
+        "Cameron Hart <cameron.hart@gmail.com>"
+      ],
+      "sourceCommit": "990737c58c8c6f4315a4ad09806aa55aa141a503",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "ATTRIBUTION.md",
+          "path": "texts/9f0738ead3dcc72bac87afc652c2466e1bc130d235db7798f98da4d4ef013639.txt",
+          "sha256": "9f0738ead3dcc72bac87afc652c2466e1bc130d235db7798f98da4d4ef013639",
+          "origin": "crate:glam-0.30.10/ATTRIBUTION.md"
+        },
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/be33ddb87a30fd321ab100e2d922cba512e50ec7a63d8e62e5bfc0798dd4b585.txt",
+          "sha256": "be33ddb87a30fd321ab100e2d922cba512e50ec7a63d8e62e5bfc0798dd4b585",
+          "origin": "crate:glam-0.30.10/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "origin": "crate:glam-0.30.10/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "glam",
+      "version": "0.31.1",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "556f6b2ea90b8d15a74e0e7bb41671c9bdf38cd9f78c284d750b9ce58a2b5be7",
+      "repository": "https://github.com/bitshifter/glam-rs",
+      "authors": [
+        "Cameron Hart <cameron.hart@gmail.com>"
+      ],
+      "sourceCommit": "2f54355b7ecb4670685f103a9742747784af90e4",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "ATTRIBUTION.md",
+          "path": "texts/9f0738ead3dcc72bac87afc652c2466e1bc130d235db7798f98da4d4ef013639.txt",
+          "sha256": "9f0738ead3dcc72bac87afc652c2466e1bc130d235db7798f98da4d4ef013639",
+          "origin": "crate:glam-0.31.1/ATTRIBUTION.md"
+        },
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/be33ddb87a30fd321ab100e2d922cba512e50ec7a63d8e62e5bfc0798dd4b585.txt",
+          "sha256": "be33ddb87a30fd321ab100e2d922cba512e50ec7a63d8e62e5bfc0798dd4b585",
+          "origin": "crate:glam-0.31.1/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "origin": "crate:glam-0.31.1/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "glam",
+      "version": "0.32.1",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "f70749695b063ecbf6b62949ccccde2e733ec3ecbbd71d467dca4e5c6c97cca0",
+      "repository": "https://github.com/bitshifter/glam-rs",
+      "authors": [
+        "Cameron Hart <cameron.hart@gmail.com>"
+      ],
+      "sourceCommit": "e8ed32dcd0232b8078b2be91d6fd8f3b99c28842",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "ATTRIBUTION.md",
+          "path": "texts/9f0738ead3dcc72bac87afc652c2466e1bc130d235db7798f98da4d4ef013639.txt",
+          "sha256": "9f0738ead3dcc72bac87afc652c2466e1bc130d235db7798f98da4d4ef013639",
+          "origin": "crate:glam-0.32.1/ATTRIBUTION.md"
+        },
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/be33ddb87a30fd321ab100e2d922cba512e50ec7a63d8e62e5bfc0798dd4b585.txt",
+          "sha256": "be33ddb87a30fd321ab100e2d922cba512e50ec7a63d8e62e5bfc0798dd4b585",
+          "origin": "crate:glam-0.32.1/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "origin": "crate:glam-0.32.1/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "glam",
+      "version": "0.33.12",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "37bfe73dc8ec21f54d181e5a60554327ec3f1c600c455a75ccbfc65d2106a6c4",
+      "repository": "https://github.com/bitshifter/glam-rs",
+      "authors": [],
+      "sourceCommit": "e7d680ed34c051cfa8741f76821628a925161280",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "ATTRIBUTION.md",
+          "path": "texts/9f0738ead3dcc72bac87afc652c2466e1bc130d235db7798f98da4d4ef013639.txt",
+          "sha256": "9f0738ead3dcc72bac87afc652c2466e1bc130d235db7798f98da4d4ef013639",
+          "origin": "crate:glam-0.33.12/ATTRIBUTION.md"
+        },
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/be33ddb87a30fd321ab100e2d922cba512e50ec7a63d8e62e5bfc0798dd4b585.txt",
+          "sha256": "be33ddb87a30fd321ab100e2d922cba512e50ec7a63d8e62e5bfc0798dd4b585",
+          "origin": "crate:glam-0.33.12/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "origin": "crate:glam-0.33.12/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "glamx",
+      "version": "0.3.1",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "28d74079318e3a077bd3d15faa90fde24fa37bb9f157f92f853e6019a15fd413",
+      "repository": "https://github.com/dimforge/glamx",
+      "authors": [
+        "Sébastien Crozet <developer@crozet.re>"
+      ],
+      "sourceCommit": "f530eef5be6a009d29499d1d8919b4f1bee19477",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/be33ddb87a30fd321ab100e2d922cba512e50ec7a63d8e62e5bfc0798dd4b585.txt",
+          "sha256": "be33ddb87a30fd321ab100e2d922cba512e50ec7a63d8e62e5bfc0798dd4b585",
+          "origin": "crate:glamx-0.3.1/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "origin": "crate:glamx-0.3.1/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "hash32",
+      "version": "0.3.1",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "47d60b12902ba28e2730cd37e95b8c9223af2808df9e902d4df49588d1470606",
+      "repository": "https://github.com/japaric/hash32",
+      "authors": [
+        "Jorge Aparicio <jorge@japaric.io>"
+      ],
+      "sourceCommit": "d44eb33a01be4582669d9a1fa3f7c58455a21de9",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "crate:hash32-0.3.1/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/c986bcdb83103d4ddf58aeb7b5302359782e54dc4eea14a0cc27c62dcbd50729.txt",
+          "sha256": "c986bcdb83103d4ddf58aeb7b5302359782e54dc4eea14a0cc27c62dcbd50729",
+          "origin": "crate:hash32-0.3.1/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "hashbrown",
+      "version": "0.16.1",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100",
+      "repository": "https://github.com/rust-lang/hashbrown",
+      "authors": [
+        "Amanieu d'Antras <amanieu@gmail.com>"
+      ],
+      "sourceCommit": "1876e4f02708b93903d55ef598f68e82a826518f",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "crate:hashbrown-0.16.1/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/ff8f68cb076caf8cefe7a6430d4ac086ce6af2ca8ce2c4e5a2004d4552ef52a2.txt",
+          "sha256": "ff8f68cb076caf8cefe7a6430d4ac086ce6af2ca8ce2c4e5a2004d4552ef52a2",
+          "origin": "crate:hashbrown-0.16.1/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "hashbrown",
+      "version": "0.17.1",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a",
+      "repository": "https://github.com/rust-lang/hashbrown",
+      "authors": [],
+      "sourceCommit": "c62a63a61b7caf2de8f9ecb7b06a66b0ab6bdf3d",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "crate:hashbrown-0.17.1/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/ff8f68cb076caf8cefe7a6430d4ac086ce6af2ca8ce2c4e5a2004d4552ef52a2.txt",
+          "sha256": "ff8f68cb076caf8cefe7a6430d4ac086ce6af2ca8ce2c4e5a2004d4552ef52a2",
+          "origin": "crate:hashbrown-0.17.1/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "heapless",
+      "version": "0.8.0",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "0bfb9eb618601c89945a70e254898da93b13be0388091d42117462b265bb3fad",
+      "repository": "https://github.com/rust-embedded/heapless",
+      "authors": [
+        "Jorge Aparicio <jorge@japaric.io>",
+        "Per Lindgren <per.lindgren@ltu.se>",
+        "Emil Fresk <emil.fresk@gmail.com>"
+      ],
+      "sourceCommit": "9feb6647225316e9022f3ebdd63ab0c2380edeb8",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "crate:heapless-0.8.0/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/035e70219855119df4273b3c5b97543ae82e0dd60c520416e759107c602f651b.txt",
+          "sha256": "035e70219855119df4273b3c5b97543ae82e0dd60c520416e759107c602f651b",
+          "origin": "crate:heapless-0.8.0/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": {
+        "path": "notices/heapless-0.8.0-SOURCE-NOTICES.txt",
+        "sha256": "d5e08a4c8ae3dccb915b6b8599f6bc6845260067c5c707cc23bed967b232d853",
+        "blocks": 2
+      }
+    },
+    {
+      "name": "libm",
+      "version": "0.2.16",
+      "declaredLicense": "MIT",
+      "crateChecksum": "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981",
+      "repository": "https://github.com/rust-lang/compiler-builtins",
+      "authors": [
+        "Alex Crichton <alex@alexcrichton.com>",
+        "Amanieu d'Antras <amanieu@gmail.com>",
+        "Jorge Aparicio <japaricious@gmail.com>",
+        "Trevor Gross <tg@trevorgross.com>"
+      ],
+      "sourceCommit": "dfd2203a4d6110820ad7bb65cafe1bf331a03a3d",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE.txt",
+          "path": "texts/3823dda7cf046602f4b4e77ec8e227863dc4736037cc85bb33d9f19febe16bb7.txt",
+          "sha256": "3823dda7cf046602f4b4e77ec8e227863dc4736037cc85bb33d9f19febe16bb7",
+          "origin": "crate:libm-0.2.16/LICENSE.txt"
+        }
+      ],
+      "sourceNotices": {
+        "path": "notices/libm-0.2.16-SOURCE-NOTICES.txt",
+        "sha256": "c7610bbc37bb802dea07ed97049e10d4b9e53532cfec8db056ce6eb0dc549457",
+        "blocks": 19
+      }
+    },
+    {
+      "name": "log",
+      "version": "0.4.34",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6",
+      "repository": "https://github.com/rust-lang/log",
+      "authors": [
+        "The Rust Project Developers"
+      ],
+      "sourceCommit": "8034743dd9d7f7583bd9a670271483d176130911",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "crate:log-0.4.34/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb.txt",
+          "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+          "origin": "crate:log-0.4.34/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": {
+        "path": "notices/log-0.4.34-SOURCE-NOTICES.txt",
+        "sha256": "c60bcf5efeea28b031049406b41d258891595b6ff18ff3c10df4c3b208d838d3",
+        "blocks": 2
+      }
+    },
+    {
+      "name": "matrixmultiply",
+      "version": "0.3.11",
+      "declaredLicense": "MIT/Apache-2.0",
+      "crateChecksum": "3f607c237553f086e7043417a51df26b2eb899d3caff94e6a67592ff992fedc7",
+      "repository": "https://github.com/bluss/matrixmultiply/",
+      "authors": [
+        "bluss",
+        "R. Janis Goldschmidt"
+      ],
+      "sourceCommit": "07f968c20e0df41e3fd694e9c47ef5368ec9eee1",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "crate:matrixmultiply-0.3.11/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/792d075c7bad6dac258a44e799eb64cbf465e24d9932d27669be08c5ec957e27.txt",
+          "sha256": "792d075c7bad6dac258a44e799eb64cbf465e24d9932d27669be08c5ec957e27",
+          "origin": "crate:matrixmultiply-0.3.11/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": {
+        "path": "notices/matrixmultiply-0.3.11-SOURCE-NOTICES.txt",
+        "sha256": "61bd928d97d1feae210f1c0424c369a83e01af87f8f21f2448b42c5d0d73fafe",
+        "blocks": 10
+      }
+    },
+    {
+      "name": "nalgebra",
+      "version": "0.35.0",
+      "declaredLicense": "Apache-2.0",
+      "crateChecksum": "adc43a60c217b0c6ff46e47f26911015ad8d2e5a8be1af668c67e370d99a4346",
+      "repository": "https://github.com/dimforge/nalgebra",
+      "authors": [
+        "Sébastien Crozet <developer@crozet.re>"
+      ],
+      "sourceCommit": "5f927f6c821d0ced07a0e086e5f37251cab2a8c3",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE",
+          "path": "texts/ceacfa4d7fa67df64ab09a56fe248c50a3bfc9bc00374d69bd74ad763b14b89c.txt",
+          "sha256": "ceacfa4d7fa67df64ab09a56fe248c50a3bfc9bc00374d69bd74ad763b14b89c",
+          "origin": "crate:nalgebra-0.35.0/LICENSE"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "nalgebra-macros",
+      "version": "0.3.0",
+      "declaredLicense": "Apache-2.0",
+      "crateChecksum": "973e7178a678cfd059ccec50887658d482ce16b0aa9da3888ddeab5cd5eb4889",
+      "repository": "https://github.com/dimforge/nalgebra",
+      "authors": [
+        "Andreas Longva",
+        "Sébastien Crozet <developer@crozet.re>"
+      ],
+      "sourceCommit": "631064a3bcdf0b307f23ab0853b8dadad52a7d37",
+      "sourceCommitDirty": true,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE",
+          "path": "texts/ceacfa4d7fa67df64ab09a56fe248c50a3bfc9bc00374d69bd74ad763b14b89c.txt",
+          "sha256": "ceacfa4d7fa67df64ab09a56fe248c50a3bfc9bc00374d69bd74ad763b14b89c",
+          "origin": "crate:nalgebra-macros-0.3.0/LICENSE"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "num-bigint",
+      "version": "0.4.8",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "c89e69e7e0f03bea5ef08013795c25018e101932225a656383bd384495ecc367",
+      "repository": "https://github.com/rust-num/num-bigint",
+      "authors": [
+        "The Rust Project Developers"
+      ],
+      "sourceCommit": "65330056d6c00def4c6cda78c87453f4c2a76913",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "crate:num-bigint-0.4.8/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb.txt",
+          "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+          "origin": "crate:num-bigint-0.4.8/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": {
+        "path": "notices/num-bigint-0.4.8-SOURCE-NOTICES.txt",
+        "sha256": "62e7e3a9b795997e6173b7963a506be480887a234842390ea7f615ed3df76a32",
+        "blocks": 2
+      }
+    },
+    {
+      "name": "num-complex",
+      "version": "0.4.6",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "73f88a1307638156682bada9d7604135552957b7818057dcef22705b4d509495",
+      "repository": "https://github.com/rust-num/num-complex",
+      "authors": [
+        "The Rust Project Developers"
+      ],
+      "sourceCommit": "91fdc06356c0c868cb88b5a180859023c57e6e50",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "crate:num-complex-0.4.6/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb.txt",
+          "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+          "origin": "crate:num-complex-0.4.6/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": {
+        "path": "notices/num-complex-0.4.6-SOURCE-NOTICES.txt",
+        "sha256": "14f5404c5a5381455c2bc53f20edf4e78ab16e7ba22068492f404d8879e48a1f",
+        "blocks": 1
+      }
+    },
+    {
+      "name": "num-derive",
+      "version": "0.5.1",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "e4e98dc3b890f6c23a0f9d3d491a2823d0dea0fa656302a13dd225fa924112a8",
+      "repository": "https://github.com/rust-num/num-derive",
+      "authors": [
+        "The Rust Project Developers"
+      ],
+      "sourceCommit": "2f73ee84281877c71a262d2e6e9f9097ad308306",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "crate:num-derive-0.5.1/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb.txt",
+          "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+          "origin": "crate:num-derive-0.5.1/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": {
+        "path": "notices/num-derive-0.5.1-SOURCE-NOTICES.txt",
+        "sha256": "7e6af9cba3633bd1f2832c85b90eb41d460ab630e3f88cb8f27293f2838a0574",
+        "blocks": 2
+      }
+    },
+    {
+      "name": "num-integer",
+      "version": "0.1.47",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "7ce2d95d4b3734dc35aa2f45e1aa22cd416814592a4f9d9205e11affd5b8e10b",
+      "repository": "https://github.com/rust-num/num-integer",
+      "authors": [
+        "The Rust Project Developers"
+      ],
+      "sourceCommit": "765fd9b3eb9397471d41b9f613e530f6d9d6383f",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "crate:num-integer-0.1.47/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb.txt",
+          "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+          "origin": "crate:num-integer-0.1.47/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": {
+        "path": "notices/num-integer-0.1.47-SOURCE-NOTICES.txt",
+        "sha256": "300b04367333422069e9f824f0daa130f3a7f18cc0f9b906277294027c0794b1",
+        "blocks": 1
+      }
+    },
+    {
+      "name": "num-rational",
+      "version": "0.4.2",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "f83d14da390562dca69fc84082e73e548e1ad308d24accdedd2720017cb37824",
+      "repository": "https://github.com/rust-num/num-rational",
+      "authors": [
+        "The Rust Project Developers"
+      ],
+      "sourceCommit": "4d55ad22ac86ebbc4cb45d79a956e4a1f7af57d1",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "crate:num-rational-0.4.2/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb.txt",
+          "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+          "origin": "crate:num-rational-0.4.2/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": {
+        "path": "notices/num-rational-0.4.2-SOURCE-NOTICES.txt",
+        "sha256": "545683e8b69efa397e952c82b947fb6102b6cb1f11e5650c3ab054dfc87fa61b",
+        "blocks": 1
+      }
+    },
+    {
+      "name": "num-traits",
+      "version": "0.2.19",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841",
+      "repository": "https://github.com/rust-num/num-traits",
+      "authors": [
+        "The Rust Project Developers"
+      ],
+      "sourceCommit": "7ec3d41d39b28190ec1d42db38021107b3951f3a",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "crate:num-traits-0.2.19/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb.txt",
+          "sha256": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
+          "origin": "crate:num-traits-0.2.19/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": {
+        "path": "notices/num-traits-0.2.19-SOURCE-NOTICES.txt",
+        "sha256": "fffd72700c2f6f6bbc1ca09fb5abcf60a14983dcccbf04a6764af4971499fb3b",
+        "blocks": 1
+      }
+    },
+    {
+      "name": "ordered-float",
+      "version": "5.5.0",
+      "declaredLicense": "MIT",
+      "crateChecksum": "8c7c9e0d9b23589f26070720bac724174bfec1083e82f7854cdd0267518343c0",
+      "repository": "https://github.com/reem/rust-ordered-float",
+      "authors": [
+        "Jonathan Reem <jonathan.reem@gmail.com>",
+        "Matt Brubeck <mbrubeck@limpet.net>"
+      ],
+      "sourceCommit": "2d56f3e8ab8bfea8d67df7d7295791ccad102f66",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/f7715d38a3fa1b4ac97c5729740752505a39cb92ee83ab5b102aeb5eaa7cdea4.txt",
+          "sha256": "f7715d38a3fa1b4ac97c5729740752505a39cb92ee83ab5b102aeb5eaa7cdea4",
+          "origin": "crate:ordered-float-5.5.0/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "parry3d-f64",
+      "version": "0.31.1",
+      "declaredLicense": "Apache-2.0",
+      "crateChecksum": "ffb9e04261f1783d8f66f36767b2b73132a63c9b30b12a5ed47e1faa240f7591",
+      "repository": "https://github.com/dimforge/parry",
+      "authors": [
+        "Sébastien Crozet <developer@crozet.re>"
+      ],
+      "sourceCommit": "3383f51cbbe9af70565427e7a66c605e1557c1fc",
+      "sourceCommitDirty": true,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE",
+          "path": "texts/ceacfa4d7fa67df64ab09a56fe248c50a3bfc9bc00374d69bd74ad763b14b89c.txt",
+          "sha256": "ceacfa4d7fa67df64ab09a56fe248c50a3bfc9bc00374d69bd74ad763b14b89c",
+          "origin": "https://raw.githubusercontent.com/dimforge/parry/3383f51cbbe9af70565427e7a66c605e1557c1fc/LICENSE"
+        }
+      ],
+      "sourceNotices": {
+        "path": "notices/parry3d-f64-0.31.1-SOURCE-NOTICES.txt",
+        "sha256": "63523c0f73ba9afc100718ac8f133645b3e226cf01421e70493a8f30fd269ebb",
+        "blocks": 3
+      }
+    },
+    {
+      "name": "proc-macro2",
+      "version": "1.0.107",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9",
+      "repository": "https://github.com/dtolnay/proc-macro2",
+      "authors": [
+        "David Tolnay <dtolnay@gmail.com>",
+        "Alex Crichton <alex@alexcrichton.com>"
+      ],
+      "sourceCommit": "ed8a5497669cd63db33bf24646f261b012bbbc4a",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "origin": "crate:proc-macro2-1.0.107/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "origin": "crate:proc-macro2-1.0.107/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "profiling",
+      "version": "1.0.18",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "3d595e54a326bc53c1c197b32d295e14b169e3cfeaa8dc82b529f947fba6bcf5",
+      "repository": "https://github.com/aclysma/profiling",
+      "authors": [
+        "Philip Degarmo <aclysma@gmail.com>"
+      ],
+      "sourceCommit": "8271551172eb6fa4cba47369aedd93790c623df9",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/10d30a673cd5e9349bdc02aeb48f14b3386d27d0da32df8f0a555d4aa16aa551.txt",
+          "sha256": "10d30a673cd5e9349bdc02aeb48f14b3386d27d0da32df8f0a555d4aa16aa551",
+          "origin": "https://raw.githubusercontent.com/aclysma/profiling/8271551172eb6fa4cba47369aedd93790c623df9/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/c8167fdeeed46d3f244d3f85c5bf998ce889343691c32be2c61a8bc4b5c08333.txt",
+          "sha256": "c8167fdeeed46d3f244d3f85c5bf998ce889343691c32be2c61a8bc4b5c08333",
+          "origin": "https://raw.githubusercontent.com/aclysma/profiling/8271551172eb6fa4cba47369aedd93790c623df9/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "profiling-procmacros",
+      "version": "1.0.18",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "4488a4a36b9a4ba6b9334a32a39971f77c1436ec82c38707bce707699cc3bbcb",
+      "repository": "https://github.com/aclysma/profiling",
+      "authors": [
+        "Philip Degarmo <aclysma@gmail.com>"
+      ],
+      "sourceCommit": "8271551172eb6fa4cba47369aedd93790c623df9",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/10d30a673cd5e9349bdc02aeb48f14b3386d27d0da32df8f0a555d4aa16aa551.txt",
+          "sha256": "10d30a673cd5e9349bdc02aeb48f14b3386d27d0da32df8f0a555d4aa16aa551",
+          "origin": "https://raw.githubusercontent.com/aclysma/profiling/8271551172eb6fa4cba47369aedd93790c623df9/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/c8167fdeeed46d3f244d3f85c5bf998ce889343691c32be2c61a8bc4b5c08333.txt",
+          "sha256": "c8167fdeeed46d3f244d3f85c5bf998ce889343691c32be2c61a8bc4b5c08333",
+          "origin": "https://raw.githubusercontent.com/aclysma/profiling/8271551172eb6fa4cba47369aedd93790c623df9/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "quote",
+      "version": "1.0.47",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "1fbf4db142a473a8d80c26bbf18454ed458bf8d26c8219c331daecfdbd079001",
+      "repository": "https://github.com/dtolnay/quote",
+      "authors": [
+        "David Tolnay <dtolnay@gmail.com>"
+      ],
+      "sourceCommit": "723dcb47d3f0ddc896e17287c8a8d3f2ea2317d5",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "origin": "crate:quote-1.0.47/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "origin": "crate:quote-1.0.47/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "rapier3d-f64",
+      "version": "0.36.1",
+      "declaredLicense": "Apache-2.0",
+      "crateChecksum": "f4588855e9c5451702147b5c6ddff4d93887f1e59c9504b6ac3571818f6ec3d2",
+      "repository": "https://github.com/dimforge/rapier",
+      "authors": [
+        "Sébastien Crozet <sebcrozet@dimforge.com>"
+      ],
+      "sourceCommit": "475caa3ff4646fd9a796b67d14116256f4962bc7",
+      "sourceCommitDirty": true,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE",
+          "path": "texts/ceacfa4d7fa67df64ab09a56fe248c50a3bfc9bc00374d69bd74ad763b14b89c.txt",
+          "sha256": "ceacfa4d7fa67df64ab09a56fe248c50a3bfc9bc00374d69bd74ad763b14b89c",
+          "origin": "https://raw.githubusercontent.com/dimforge/rapier/475caa3ff4646fd9a796b67d14116256f4962bc7/LICENSE"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "rawpointer",
+      "version": "0.2.1",
+      "declaredLicense": "MIT/Apache-2.0",
+      "crateChecksum": "60a357793950651c4ed0f3f52338f53b2f809f32d83a07f72909fa13e4c6c1e3",
+      "repository": "https://github.com/bluss/rawpointer/",
+      "authors": [
+        "bluss"
+      ],
+      "sourceCommit": "e4f5800e86acc8cb610430a3f361977480e2b0a6",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "crate:rawpointer-0.2.1/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/7576269ea71f767b99297934c0b2367532690f8c4badc695edf8e04ab6a1e545.txt",
+          "sha256": "7576269ea71f767b99297934c0b2367532690f8c4badc695edf8e04ab6a1e545",
+          "origin": "crate:rawpointer-0.2.1/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": {
+        "path": "notices/rawpointer-0.2.1-SOURCE-NOTICES.txt",
+        "sha256": "3ea1dc74a5cd20c7e97933cc4f5e373ddd84d27817477d107476c6214433dfa8",
+        "blocks": 1
+      }
+    },
+    {
+      "name": "robust",
+      "version": "1.2.0",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "4e27ee8bb91ca0adcf0ecb116293afa12d393f9c2b9b9cd54d33e8078fe19839",
+      "repository": "https://github.com/georust/robust",
+      "authors": [
+        "The Spade Developers",
+        "The GeoRust Developers"
+      ],
+      "sourceCommit": "654f34cb8cdb3ae21bf59ef3472f92652942cd74",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "crate:robust-1.2.0/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/ddb606a4226673241b8dedb155a25b271178d028a2bf74c90ee47fe495f4d9bc.txt",
+          "sha256": "ddb606a4226673241b8dedb155a25b271178d028a2bf74c90ee47fe495f4d9bc",
+          "origin": "crate:robust-1.2.0/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": {
+        "path": "notices/robust-1.2.0-SOURCE-NOTICES.txt",
+        "sha256": "88194efa57372e001aecd1c99d2afe47c2ea4bc019f288a7202f52967364e4e1",
+        "blocks": 1
+      }
+    },
+    {
+      "name": "rstar",
+      "version": "0.13.0",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "5912b862fa5ffb462607bfd1e35036c458c537921f508c8235a83d5f3987edfe",
+      "repository": "https://github.com/georust/rstar",
+      "authors": [
+        "Stefan Altmayer <stoeoef@gmail.com>",
+        "The Georust Developers <mods@georust.org>"
+      ],
+      "sourceCommit": "82c969d4677a6f624900056e044d7e7ec8439c18",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "https://raw.githubusercontent.com/georust/rstar/82c969d4677a6f624900056e044d7e7ec8439c18/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/9b3a76c27bac8f3e0ff2d1f64f65941c50310ae3ff69318cea230bd4a36822c5.txt",
+          "sha256": "9b3a76c27bac8f3e0ff2d1f64f65941c50310ae3ff69318cea230bd4a36822c5",
+          "origin": "https://raw.githubusercontent.com/georust/rstar/82c969d4677a6f624900056e044d7e7ec8439c18/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "safe_arch",
+      "version": "1.2.0",
+      "declaredLicense": "Zlib OR Apache-2.0 OR MIT",
+      "crateChecksum": "42c6efa15875e6ecb39ca61fb0b0c1a40b84fac5a5ffe71eef7d1000c8eb3f5f",
+      "repository": "https://github.com/Lokathor/safe_arch",
+      "authors": [
+        "Lokathor <zefria@gmail.com>"
+      ],
+      "sourceCommit": "d45ee8c53c38fdddee2eade0a5ddef1a3c677b4c",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE.md",
+          "path": "texts/e3ba223bb1423f0aad8c3dfce0fe3148db48926d41e6fbc3afbbf5ff9e1c89cb.txt",
+          "sha256": "e3ba223bb1423f0aad8c3dfce0fe3148db48926d41e6fbc3afbbf5ff9e1c89cb",
+          "origin": "crate:safe_arch-1.2.0/LICENSE-APACHE.md"
+        },
+        {
+          "originalName": "LICENSE-MIT.md",
+          "path": "texts/e57011537d230b14e790f6666dc00816f7b371ebbd7da8a12491e51086fec278.txt",
+          "sha256": "e57011537d230b14e790f6666dc00816f7b371ebbd7da8a12491e51086fec278",
+          "origin": "crate:safe_arch-1.2.0/LICENSE-MIT.md"
+        },
+        {
+          "originalName": "LICENSE-ZLIB.md",
+          "path": "texts/c43b9a9b1387ed53d2c49263838261129a010e280e3a174a792242c3e2c98db9.txt",
+          "sha256": "c43b9a9b1387ed53d2c49263838261129a010e280e3a174a792242c3e2c98db9",
+          "origin": "crate:safe_arch-1.2.0/LICENSE-ZLIB.md"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "serde",
+      "version": "1.0.229",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "4148590afebada386688f18773da617792bf2ef03ffc1e4cbd2b1d45b023e0ba",
+      "repository": "https://github.com/serde-rs/serde",
+      "authors": [
+        "Erick Tryzelaar <erick.tryzelaar@gmail.com>",
+        "David Tolnay <dtolnay@gmail.com>"
+      ],
+      "sourceCommit": "7fc3b4c30c94f73a96ebd1553f2b090d928fc3a8",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "origin": "crate:serde-1.0.229/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "origin": "crate:serde-1.0.229/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "serde_core",
+      "version": "1.0.229",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "67dca2c9c51e58a4791a4b1ed58308b39c64224d349a935ab5039aa360942a48",
+      "repository": "https://github.com/serde-rs/serde",
+      "authors": [
+        "Erick Tryzelaar <erick.tryzelaar@gmail.com>",
+        "David Tolnay <dtolnay@gmail.com>"
+      ],
+      "sourceCommit": "7fc3b4c30c94f73a96ebd1553f2b090d928fc3a8",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "origin": "crate:serde_core-1.0.229/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "origin": "crate:serde_core-1.0.229/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "serde_derive",
+      "version": "1.0.229",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "e7a5d71263a5a7d47b41f6b3f06ba276f10cc18b0931f1799f710578e2309348",
+      "repository": "https://github.com/serde-rs/serde",
+      "authors": [
+        "Erick Tryzelaar <erick.tryzelaar@gmail.com>",
+        "David Tolnay <dtolnay@gmail.com>"
+      ],
+      "sourceCommit": "7fc3b4c30c94f73a96ebd1553f2b090d928fc3a8",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "origin": "crate:serde_derive-1.0.229/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "origin": "crate:serde_derive-1.0.229/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "simba",
+      "version": "0.10.2",
+      "declaredLicense": "Apache-2.0",
+      "crateChecksum": "f1a7200d82ff1c7b4235efd12f11e2537a402c91cf83a5cb97ce80eef787fde7",
+      "repository": "https://github.com/dimforge/simba",
+      "authors": [
+        "sebcrozet <developer@crozet.re>"
+      ],
+      "sourceCommit": "16a77ffd653f5842028c53681460e20386428966",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE",
+          "path": "texts/ceacfa4d7fa67df64ab09a56fe248c50a3bfc9bc00374d69bd74ad763b14b89c.txt",
+          "sha256": "ceacfa4d7fa67df64ab09a56fe248c50a3bfc9bc00374d69bd74ad763b14b89c",
+          "origin": "crate:simba-0.10.2/LICENSE"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "slab",
+      "version": "0.4.12",
+      "declaredLicense": "MIT",
+      "crateChecksum": "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5",
+      "repository": "https://github.com/tokio-rs/slab",
+      "authors": [
+        "Carl Lerche <me@carllerche.com>"
+      ],
+      "sourceCommit": "a1e4346070a48c936d808de75191dee5d01e433c",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE",
+          "path": "texts/8ce0830173fdac609dfb4ea603fdc002c2f4af0dc9b1a005653f5da9cf534b18.txt",
+          "sha256": "8ce0830173fdac609dfb4ea603fdc002c2f4af0dc9b1a005653f5da9cf534b18",
+          "origin": "crate:slab-0.4.12/LICENSE"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "smallvec",
+      "version": "1.16.3",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "5b3dc8af474f516a851ff4bd12db780f948b9250ad37211e4eec0bccea54e01b",
+      "repository": "https://github.com/servo/rust-smallvec",
+      "authors": [
+        "The Servo Project Developers"
+      ],
+      "sourceCommit": "bb9e44b68571e28e88196dcdb11fab89f3df5a0a",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "crate:smallvec-1.16.3/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/0b28172679e0009b655da42797c03fd163a3379d5cfa67ba1f1655e974a2a1a9.txt",
+          "sha256": "0b28172679e0009b655da42797c03fd163a3379d5cfa67ba1f1655e974a2a1a9",
+          "origin": "crate:smallvec-1.16.3/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": {
+        "path": "notices/smallvec-1.16.3-SOURCE-NOTICES.txt",
+        "sha256": "9cbd2a9908aa6675a4cb6a82e34a88e41ef938ba506749dcd799f56d02881ab6",
+        "blocks": 1
+      }
+    },
+    {
+      "name": "spade",
+      "version": "2.15.1",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "9699399fd9349b00b184f5635b074f9ec93afffef30c853f8c875b32c0f8c7fa",
+      "repository": "https://github.com/Stoeoef/spade",
+      "authors": [
+        "Stefan Altmayer <stoeoef@gmail.com>"
+      ],
+      "sourceCommit": "c8befc96bbbc1898a89cb19f9f3104a848936374",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30.txt",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "origin": "crate:spade-2.15.1/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/fc1a4c9482e823f450af4c85471ca6e58d1fd0b3bd0998be4547b1be4a5bc4af.txt",
+          "sha256": "fc1a4c9482e823f450af4c85471ca6e58d1fd0b3bd0998be4547b1be4a5bc4af",
+          "origin": "crate:spade-2.15.1/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "stable_deref_trait",
+      "version": "1.2.1",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596",
+      "repository": "https://github.com/storyyeller/stable_deref_trait",
+      "authors": [
+        "Robert Grosse <n210241048576@gmail.com>"
+      ],
+      "sourceCommit": "30002b4228f7cdee309217b6bf6eee099dda0b00",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2.txt",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "origin": "crate:stable_deref_trait-1.2.1/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/5e05b024f653a5ce199e77cbbbd42fb5553562ec714b819421ed0c3e552a75d7.txt",
+          "sha256": "5e05b024f653a5ce199e77cbbbd42fb5553562ec714b819421ed0c3e552a75d7",
+          "origin": "crate:stable_deref_trait-1.2.1/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": {
+        "path": "notices/stable_deref_trait-1.2.1-SOURCE-NOTICES.txt",
+        "sha256": "e933f040b15d3aae275623e0f62dd086c4070e3a254f2ad20a356943cccc0910",
+        "blocks": 2
+      }
+    },
+    {
+      "name": "static_assertions",
+      "version": "1.1.0",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f",
+      "repository": "https://github.com/nvzqz/static-assertions-rs",
+      "authors": [
+        "Nikolai Vazquez"
+      ],
+      "sourceCommit": "18bc65a094d890fe1faa5d3ccb70f12b89eabf56",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30.txt",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "origin": "crate:static_assertions-1.1.0/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/ea084a2373ebc1f0902c09266e7bf25a05ab3814c1805bb017ffa7308f90c061.txt",
+          "sha256": "ea084a2373ebc1f0902c09266e7bf25a05ab3814c1805bb017ffa7308f90c061",
+          "origin": "crate:static_assertions-1.1.0/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "syn",
+      "version": "2.0.119",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "872831b642d1a07999a962a351ed35b955ea2cfc8f3862091e2a240a84f17297",
+      "repository": "https://github.com/dtolnay/syn",
+      "authors": [
+        "David Tolnay <dtolnay@gmail.com>"
+      ],
+      "sourceCommit": "3295f9e9841785ac88a5e558c884854d5fb7d67f",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "origin": "crate:syn-2.0.119/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "origin": "crate:syn-2.0.119/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "syn",
+      "version": "3.0.8",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "01016da373cd8f7ef12624f796309f5c31ba8d646dd08856c02cd741d823c622",
+      "repository": "https://github.com/dtolnay/syn",
+      "authors": [
+        "David Tolnay <dtolnay@gmail.com>"
+      ],
+      "sourceCommit": "f18a0838eef5317b88609d1d1a9814f924bc883a",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "origin": "crate:syn-3.0.8/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "origin": "crate:syn-3.0.8/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "thiserror",
+      "version": "2.0.21",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "09e52cb86a36cede5cb101bf8908837b3e4c6e5e59fe7fd85c23fb56200d189e",
+      "repository": "https://github.com/dtolnay/thiserror",
+      "authors": [
+        "David Tolnay <dtolnay@gmail.com>"
+      ],
+      "sourceCommit": "b1827ee06f81a7d7f954e676771e19a97f9f8e3b",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "origin": "crate:thiserror-2.0.21/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "origin": "crate:thiserror-2.0.21/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "thiserror-impl",
+      "version": "2.0.21",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "fe5197923287db20a58125f0bc85c062f7f2c892de97b18c356f9efb14b28524",
+      "repository": "https://github.com/dtolnay/thiserror",
+      "authors": [
+        "David Tolnay <dtolnay@gmail.com>"
+      ],
+      "sourceCommit": "b1827ee06f81a7d7f954e676771e19a97f9f8e3b",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "origin": "crate:thiserror-impl-2.0.21/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "origin": "crate:thiserror-impl-2.0.21/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "typenum",
+      "version": "1.20.1",
+      "declaredLicense": "MIT OR Apache-2.0",
+      "crateChecksum": "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20",
+      "repository": "https://github.com/paholg/typenum",
+      "authors": [],
+      "sourceCommit": "0db9a0f731981f29266b63586c29fa07e4477b1a",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE",
+          "path": "texts/db11fec9946737df39ca3898d9cd8c10ec6f6c3a884a6802b0ad0b81b4e8f23a.txt",
+          "sha256": "db11fec9946737df39ca3898d9cd8c10ec6f6c3a884a6802b0ad0b81b4e8f23a",
+          "origin": "crate:typenum-1.20.1/LICENSE"
+        },
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/516b24e051bf5630880ebbd55c40a25ce9552ebaf8970a53e8976eb70e522406.txt",
+          "sha256": "516b24e051bf5630880ebbd55c40a25ce9552ebaf8970a53e8976eb70e522406",
+          "origin": "crate:typenum-1.20.1/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/a825bd853ab71619a4923d7b4311221427848070ff44d990da39b0b274c1683f.txt",
+          "sha256": "a825bd853ab71619a4923d7b4311221427848070ff44d990da39b0b274c1683f",
+          "origin": "crate:typenum-1.20.1/LICENSE-MIT"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "unicode-ident",
+      "version": "1.0.27",
+      "declaredLicense": "(MIT OR Apache-2.0) AND Unicode-3.0",
+      "crateChecksum": "a2c754d6c33795a1c324727428e5a7dedb5b06195f9890bdbcba760d3e246563",
+      "repository": "https://github.com/dtolnay/unicode-ident",
+      "authors": [
+        "David Tolnay <dtolnay@gmail.com>"
+      ],
+      "sourceCommit": "c1ac3afb721f3cea6527bc2255340a04d0de3ca0",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE",
+          "path": "texts/62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a.txt",
+          "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+          "origin": "crate:unicode-ident-1.0.27/LICENSE-APACHE"
+        },
+        {
+          "originalName": "LICENSE-MIT",
+          "path": "texts/23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3.txt",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "origin": "crate:unicode-ident-1.0.27/LICENSE-MIT"
+        },
+        {
+          "originalName": "LICENSE-UNICODE",
+          "path": "texts/f7db81051789b729fea528a63ec4c938fdcb93d9d61d97dc8cc2e9df6d47f2a1.txt",
+          "sha256": "f7db81051789b729fea528a63ec4c938fdcb93d9d61d97dc8cc2e9df6d47f2a1",
+          "origin": "crate:unicode-ident-1.0.27/LICENSE-UNICODE"
+        }
+      ],
+      "sourceNotices": null
+    },
+    {
+      "name": "wide",
+      "version": "1.7.1",
+      "declaredLicense": "Zlib OR Apache-2.0 OR MIT",
+      "crateChecksum": "d920ac99c3c8edce110cb8d07dbb324d6d026011dce85b1e9355b70f0adacc4f",
+      "repository": "https://github.com/Lokathor/wide",
+      "authors": [
+        "Lokathor <zefria@gmail.com>"
+      ],
+      "sourceCommit": "a0519073776eb89579b8e12c6c7689df13f93c53",
+      "sourceCommitDirty": false,
+      "licenseFiles": [
+        {
+          "originalName": "LICENSE-APACHE.txt",
+          "path": "texts/d64ac6ba60c7352115244dcfcb46c24f934603dd92e64835beafe7631c485abc.txt",
+          "sha256": "d64ac6ba60c7352115244dcfcb46c24f934603dd92e64835beafe7631c485abc",
+          "origin": "crate:wide-1.7.1/LICENSE-APACHE.txt"
+        },
+        {
+          "originalName": "LICENSE-MIT.txt",
+          "path": "texts/69c62cda6938d510467c134dc0b5c83fb9c8ca847b9cd9d9d2fe9ab427c82100.txt",
+          "sha256": "69c62cda6938d510467c134dc0b5c83fb9c8ca847b9cd9d9d2fe9ab427c82100",
+          "origin": "crate:wide-1.7.1/LICENSE-MIT.txt"
+        },
+        {
+          "originalName": "LICENSE-ZLIB.txt",
+          "path": "texts/3c6921f3dfec0bed0cfa2d632616edd7380a875c8ad76c7b23dc59892259f62c.txt",
+          "sha256": "3c6921f3dfec0bed0cfa2d632616edd7380a875c8ad76c7b23dc59892259f62c",
+          "origin": "crate:wide-1.7.1/LICENSE-ZLIB.txt"
+        }
+      ],
+      "sourceNotices": {
+        "path": "notices/wide-1.7.1-SOURCE-NOTICES.txt",
+        "sha256": "37a418bce6fc52df105578253aa5715e723c3af6d0e9f1bb4c82d17c4eb77bb2",
+        "blocks": 2
+      }
+    }
+  ]
+}

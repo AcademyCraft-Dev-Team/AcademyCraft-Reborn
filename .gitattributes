@@ -19,3 +19,6 @@
 *.ogg binary
 *.mp3 binary
 *.wav binary
+
+# Preserve exact upstream license/notice bytes referenced by the native-physics SHA-256 index.
+thirdparty/licenses/native_physics/**/*.txt -text !eol whitespace=-blank-at-eof,cr-at-eol

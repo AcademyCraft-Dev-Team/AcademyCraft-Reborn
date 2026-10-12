@@ -1,0 +1,40 @@
+Source notices retained from num-derive-0.5.1
+
+Each section reproduces an entire source comment block without shortening its license terms.
+Identical blocks are collected once, with every matching source location listed below.
+Locations include tests/benches where present; their inclusion does not assert runtime linkage.
+The added headings and source locations are collection metadata, not changes to upstream notices.
+
+================================================================================
+Comment SHA-256: ff983b8120a220d7550eb016c24ec4b681d4e05d00a997d98dcc82e0dff300bd
+Sources:
+  src/lib.rs:1
+
+// Copyright 2012-2015 The Rust Project Developers. See the COPYRIGHT
+// file at the top-level directory of this distribution and at
+// http://rust-lang.org/COPYRIGHT.
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+
+================================================================================
+Comment SHA-256: efb5abb5f74bc55d8e620a25100704e1644a5e1b9380e94434979bec3344e47e
+Sources:
+  tests/empty_enum.rs:1
+  tests/num_derive_without_num.rs:1
+  tests/trivial.rs:1
+  tests/with_custom_values.rs:1
+
+// Copyright 2013-2015 The Rust Project Developers. See the COPYRIGHT
+// file at the top-level directory of this distribution and at
+// http://rust-lang.org/COPYRIGHT.
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+

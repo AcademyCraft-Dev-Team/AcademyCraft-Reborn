@@ -1,0 +1,25 @@
+Source notices retained from downcast-rs-2.0.2
+
+Each section reproduces an entire source comment block without shortening its license terms.
+Identical blocks are collected once, with every matching source location listed below.
+Locations include tests/benches where present; their inclusion does not assert runtime linkage.
+The added headings and source locations are collection metadata, not changes to upstream notices.
+
+================================================================================
+Comment SHA-256: de3a0fb108b887baaba87b0f0006f34ca671a23eb3adfcb87479accd7e58a4a7
+Sources:
+  README.md:155 (complete License and Contribution sections)
+
+## License
+
+Copyright 2020, Ashish Myles (maintainer) and contributors.
+This software is dual-licensed under the [MIT](LICENSE-MIT) and
+[Apache 2.0](LICENSE-APACHE) licenses.
+
+### Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
+dual licensed as above, without any additional terms or conditions.
+
+

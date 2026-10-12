@@ -1,0 +1,22 @@
+[package]
+name = "academy_physics"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "GPL-3.0-only"
+publish = false
+description = "Independent, bounded double-precision rigid-body ABI for AcademyCraft"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+rapier3d-f64 = { version = "=0.36.1", default-features = false, features = ["dim3", "f64", "std"] }
+
+[profile.release]
+panic = "unwind"
+lto = "thin"
+codegen-units = 1
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"

@@ -1,0 +1,20 @@
+Source notices retained from rawpointer-0.2.1
+
+Each section reproduces an entire source comment block without shortening its license terms.
+Identical blocks are collected once, with every matching source location listed below.
+Locations include tests/benches where present; their inclusion does not assert runtime linkage.
+The added headings and source locations are collection metadata, not changes to upstream notices.
+
+================================================================================
+Comment SHA-256: e4fa1277b445e11816c06c221d30df2ea96a5978ac43364b47fcd246e1ada612
+Sources:
+  src/lib.rs:1
+
+// Copyright 2016-2019 bluss and rawpointer developers.
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+

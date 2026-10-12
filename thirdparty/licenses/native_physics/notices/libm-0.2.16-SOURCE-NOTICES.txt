@@ -1,0 +1,352 @@
+Source notices retained from libm-0.2.16
+
+Each section reproduces an entire source comment block without shortening its license terms.
+Identical blocks are collected once, with every matching source location listed below.
+Locations include tests/benches where present; their inclusion does not assert runtime linkage.
+The added headings and source locations are collection metadata, not changes to upstream notices.
+
+================================================================================
+Comment SHA-256: 74344ebf347f27ca446e00f1c1921f705546f4b20e0fb31c183cd2c8464b1bc5
+Sources:
+  src/math/acos.rs:2
+  src/math/asin.rs:2
+  src/math/j0.rs:2
+  src/math/j1.rs:2
+  src/math/jn.rs:2
+  src/math/log.rs:2
+  src/math/log10.rs:2
+  src/math/log2.rs:2
+  src/math/rem_pio2_large.rs:3
+
+/*
+ * ====================================================
+ * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+ *
+ * Developed at SunSoft, a Sun Microsystems, Inc. business.
+ * Permission to use, copy, modify, and distribute this
+ * software is freely granted, provided that this notice
+ * is preserved.
+ * ====================================================
+ */
+
+================================================================================
+Comment SHA-256: 0c3d0381d2cd647be68590170490be5f624c962d9f95eb698489e578c1de8f05
+Sources:
+  src/math/acosf.rs:5
+  src/math/asinf.rs:5
+  src/math/atan.rs:2
+  src/math/atan2f.rs:5
+  src/math/atanf.rs:5
+  src/math/cbrtf.rs:6
+  src/math/cosf.rs:6
+  src/math/erf.rs:3
+  src/math/erff.rs:5
+  src/math/expf.rs:5
+  src/math/expm1.rs:2
+  src/math/expm1f.rs:5
+  src/math/j0f.rs:5
+  src/math/j1f.rs:5
+  src/math/jnf.rs:5
+  src/math/k_cosf.rs:6
+  src/math/k_sinf.rs:6
+  src/math/lgammaf_r.rs:5
+  src/math/log10f.rs:2
+  src/math/log1p.rs:2
+  src/math/log1pf.rs:2
+  src/math/log2f.rs:2
+  src/math/logf.rs:5
+  src/math/powf.rs:5
+  src/math/rem_pio2f.rs:6
+  src/math/sincos.rs:2
+  src/math/sincosf.rs:6
+  src/math/sinf.rs:6
+  src/math/tanf.rs:6
+
+/*
+ * ====================================================
+ * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+ *
+ * Developed at SunPro, a Sun Microsystems, Inc. business.
+ * Permission to use, copy, modify, and distribute this
+ * software is freely granted, provided that this notice
+ * is preserved.
+ * ====================================================
+ */
+
+================================================================================
+Comment SHA-256: 11f476f899dacfef801a097465ad0755ad4546afe03b02c9a17aa38e228344e1
+Sources:
+  src/math/atan2.rs:2
+  src/math/lgamma_r.rs:2
+
+/*
+ * ====================================================
+ * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+ *
+ * Developed at SunSoft, a Sun Microsystems, Inc. business.
+ * Permission to use, copy, modify, and distribute this
+ * software is freely granted, provided that this notice
+ * is preserved.
+ * ====================================================
+ *
+ */
+
+================================================================================
+Comment SHA-256: f73e293daa12abe52dd73882816fe4002b4f6e69065892abd57881180fb26bf2
+Sources:
+  src/math/cbrt.rs:1
+  src/math/fma.rs:1
+  src/math/generic/ceil.rs:1
+  src/math/generic/fma.rs:1
+  src/math/generic/rint.rs:1
+  src/math/generic/sqrt.rs:1
+
+/* SPDX-License-Identifier: MIT */
+
+================================================================================
+Comment SHA-256: 225167f203ade8fe5b0714aed4abf358d23fb9dd385a63580ba216ac88a7b799
+Sources:
+  src/math/cbrt.rs:2
+
+/* origin: core-math/src/binary64/cbrt/cbrt.c
+ * Copyright (c) 2021-2022 Alexei Sibidanov.
+ * Ported to Rust in 2025 by Trevor Gross.
+ */
+
+================================================================================
+Comment SHA-256: f53a3c97c9531345379adbe79db501062242feefd51de57162178585ea62788f
+Sources:
+  src/math/cos.rs:1
+
+// origin: FreeBSD /usr/src/lib/msun/src/s_cos.c */
+//
+// ====================================================
+// Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+//
+// Developed at SunPro, a Sun Microsystems, Inc. business.
+// Permission to use, copy, modify, and distribute this
+// software is freely granted, provided that this notice
+// is preserved.
+// ====================================================
+
+================================================================================
+Comment SHA-256: 15e78071c8347a689c48ec92bbdd5eba7bd8dc74f86ee3e7ad31d34b24fefe83
+Sources:
+  src/math/exp.rs:2
+  src/math/pow.rs:2
+
+/*
+ * ====================================================
+ * Copyright (C) 2004 by Sun Microsystems, Inc. All rights reserved.
+ *
+ * Permission to use, copy, modify, and distribute this
+ * software is freely granted, provided that this notice
+ * is preserved.
+ * ====================================================
+ */
+
+================================================================================
+Comment SHA-256: b24dea27b63aa91f44ce04d53d6e84d8b7a76faef78a2224ed2a751a6aa6c0bd
+Sources:
+  src/math/exp2.rs:1
+
+// origin: FreeBSD /usr/src/lib/msun/src/s_exp2.c */
+//-
+// Copyright (c) 2005 David Schultz <das@FreeBSD.ORG>
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+// OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+// SUCH DAMAGE.
+
+================================================================================
+Comment SHA-256: 9b9ce313edd1fd1cdd9e16ec7ffe26e9b4ea644d4da334618edef2ef79d180fd
+Sources:
+  src/math/exp2f.rs:1
+
+// origin: FreeBSD /usr/src/lib/msun/src/s_exp2f.c
+//-
+// Copyright (c) 2005 David Schultz <das@FreeBSD.ORG>
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+// OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+// SUCH DAMAGE.
+
+================================================================================
+Comment SHA-256: cc7ddd4aec15d176fc40570979991b6bbe00d3ec3d9bbf7c5dd8bfe0e04278b9
+Sources:
+  src/math/generic/floor.rs:1
+
+/* SPDX-License-Identifier: MIT
+ * origin: musl src/math/floor.c */
+
+================================================================================
+Comment SHA-256: a997449a08324894b63f1159f979a44ef52a95bd4a0d2374c76e2e1b87e50963
+Sources:
+  src/math/generic/fmax.rs:1
+  src/math/generic/fmaximum_num.rs:1
+  src/math/generic/fmaximum.rs:1
+  src/math/generic/fmin.rs:1
+  src/math/generic/fminimum_num.rs:1
+  src/math/generic/fminimum.rs:1
+  src/math/generic/fmod.rs:1
+  src/math/support/int_traits/narrowing_div.rs:1
+  src/math/support/modular.rs:1
+
+/* SPDX-License-Identifier: MIT OR Apache-2.0 */
+
+================================================================================
+Comment SHA-256: b1e0b197ab096657b36a818578674de4e4af0030827bf8a6e5b4405fafda000d
+Sources:
+  src/math/generic/trunc.rs:1
+
+/* SPDX-License-Identifier: MIT
+ * origin: musl src/math/trunc.c */
+
+================================================================================
+Comment SHA-256: 50dc54cee8b36780c535e15a6d30d75226fe2bdb81d450e375118e42bd3bc659
+Sources:
+  src/math/k_cos.rs:1
+
+// origin: FreeBSD /usr/src/lib/msun/src/k_cos.c
+//
+// ====================================================
+// Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+//
+// Developed at SunSoft, a Sun Microsystems, Inc. business.
+// Permission to use, copy, modify, and distribute this
+// software is freely granted, provided that this notice
+// is preserved.
+// ====================================================
+
+================================================================================
+Comment SHA-256: a04bfa8426560b34a6dc330fb3f55ebc8def1092f0cf2faf86093bcd5d7c82aa
+Sources:
+  src/math/k_sin.rs:1
+
+// origin: FreeBSD /usr/src/lib/msun/src/k_sin.c
+//
+// ====================================================
+// Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+//
+// Developed at SunSoft, a Sun Microsystems, Inc. business.
+// Permission to use, copy, modify, and distribute this
+// software is freely granted, provided that this notice
+// is preserved.
+// ====================================================
+
+================================================================================
+Comment SHA-256: 68726120d836ef745923a5412ad99f724cec7a97e053c0b1c1dd6639336c167e
+Sources:
+  src/math/k_tan.rs:1
+
+// origin: FreeBSD /usr/src/lib/msun/src/k_tan.c */
+//
+// ====================================================
+// Copyright 2004 Sun Microsystems, Inc.  All Rights Reserved.
+//
+// Permission to use, copy, modify, and distribute this
+// software is freely granted, provided that this notice
+// is preserved.
+// ====================================================
+
+================================================================================
+Comment SHA-256: 5a534ed1f9266ed799e9f2e3f830f15411762021829da121b23df5edc498c6b6
+Sources:
+  src/math/k_tanf.rs:2
+
+/*
+ * ====================================================
+ * Copyright 2004 Sun Microsystems, Inc.  All Rights Reserved.
+ *
+ * Permission to use, copy, modify, and distribute this
+ * software is freely granted, provided that this notice
+ * is preserved.
+ * ====================================================
+ */
+
+================================================================================
+Comment SHA-256: 370d3d0ecd600731cb6b225e4a037d18d9ab48fac6a463563f088227c2fd0964
+Sources:
+  src/math/rem_pio2.rs:1
+
+// origin: FreeBSD /usr/src/lib/msun/src/e_rem_pio2.c
+//
+// ====================================================
+// Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+//
+// Developed at SunPro, a Sun Microsystems, Inc. business.
+// Permission to use, copy, modify, and distribute this
+// software is freely granted, provided that this notice
+// is preserved.
+// ====================================================
+//
+// Optimized by Bruce D. Evans. */
+
+================================================================================
+Comment SHA-256: aa31720e0a22f01d45849f4f5badc7a75fbabc8073b08df329baa9305cf2c682
+Sources:
+  src/math/sin.rs:1
+
+// origin: FreeBSD /usr/src/lib/msun/src/s_sin.c */
+//
+// ====================================================
+// Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+//
+// Developed at SunPro, a Sun Microsystems, Inc. business.
+// Permission to use, copy, modify, and distribute this
+// software is freely granted, provided that this notice
+// is preserved.
+// ====================================================
+
+================================================================================
+Comment SHA-256: 3c85590cea896eaab7cb8a8f4474902c6b44fb0d67ee569737cac1942f9933a9
+Sources:
+  src/math/tan.rs:1
+
+// origin: FreeBSD /usr/src/lib/msun/src/s_tan.c */
+//
+// ====================================================
+// Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+//
+// Developed at SunPro, a Sun Microsystems, Inc. business.
+// Permission to use, copy, modify, and distribute this
+// software is freely granted, provided that this notice
+// is preserved.
+// ====================================================
+

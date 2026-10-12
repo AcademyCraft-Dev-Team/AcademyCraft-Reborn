@@ -1,0 +1,26 @@
+Source notices retained from heapless-0.8.0
+
+Each section reproduces an entire source comment block without shortening its license terms.
+Identical blocks are collected once, with every matching source location listed below.
+Locations include tests/benches where present; their inclusion does not assert runtime linkage.
+The added headings and source locations are collection metadata, not changes to upstream notices.
+
+================================================================================
+Comment SHA-256: de8b98d068bcadd6c3a0f5ff62cf079c93a80c37fa87142da93759c09974b2b1
+Sources:
+  build.rs:51
+
+// this function was taken from anyhow v1.0.63 build script
+// https://crates.io/crates/anyhow/1.0.63 (last visited 2022-09-02)
+// the code is licensed under 'MIT or APACHE-2.0'
+
+================================================================================
+Comment SHA-256: 516f0ab7c1bbd9af8aac25f4d6733d70a34cea73faf82f55f31d21ca5a7d560e
+Sources:
+  src/pool/arc.rs:65
+
+// reference counting logic is based on version 1.63.0 of the Rust standard library (`alloc`  crate)
+// which is licensed under 'MIT or APACHE-2.0'
+// https://github.com/rust-lang/rust/blob/1.63.0/library/alloc/src/sync.rs#L235 (last visited
+// 2022-09-05)
+

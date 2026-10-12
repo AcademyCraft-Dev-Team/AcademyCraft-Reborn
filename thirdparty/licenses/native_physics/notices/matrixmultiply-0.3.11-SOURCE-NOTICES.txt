@@ -1,0 +1,278 @@
+Source notices retained from matrixmultiply-0.3.11
+
+Each section reproduces an entire source comment block without shortening its license terms.
+Identical blocks are collected once, with every matching source location listed below.
+Locations include tests/benches where present; their inclusion does not assert runtime linkage.
+The added headings and source locations are collection metadata, not changes to upstream notices.
+
+================================================================================
+Comment SHA-256: cb8ee3095807ac751c9f1e85fad3dabfb2b96a41eda84a8b367615170b81fec6
+Sources:
+  src/archparam_defaults.rs:1
+
+// Copyright 2016 - 2018 Ulrik Sverdrup "bluss"
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+//! architecture specific parameters
+
+================================================================================
+Comment SHA-256: 689303060091ab96a1221b0868b939f48c6a3f45c903c2d27561ef0083276051
+Sources:
+  src/archparam.rs:1
+
+// Copyright 2016 - 2021 Ulrik Sverdrup "bluss"
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+//! architecture specific parameters
+//!
+//! NC: Columns in C, B that we handle at a time. (5th loop)
+//! KC: Rows of Bj at a time (4th loop)
+//! MC: Rows of Ap at a time. (3rd loop)
+
+================================================================================
+Comment SHA-256: df0d2d843d2b207d3760ee032413fcb9a1ebe80e62b99c408c97d20999208611
+Sources:
+  src/cgemm_common.rs:1
+
+// Copyright 2021-2023 Ulrik Sverdrup "bluss"
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+
+================================================================================
+Comment SHA-256: b242cb2983907097cde936c0fbc1d8de786f6738fc04bc1bf8b1ad5ec16de943
+Sources:
+  src/cgemm_kernel.rs:1
+  src/kernel.rs:1
+  src/zgemm_kernel.rs:1
+
+// Copyright 2016 - 2021 Ulrik Sverdrup "bluss"
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+
+================================================================================
+Comment SHA-256: 9468aebb6972a4dcd23edfdde26674816ca3c91806b04508941810728afb8398
+Sources:
+  src/constfind.rs:1
+
+//! Copyright 2026 Ulrik Sverdrup "bluss"
+
+================================================================================
+Comment SHA-256: 2f323e55d269b351832881bdf8340bc7e9d56932190487cdd599044458267a9f
+Sources:
+  src/constparse.rs:1
+
+// Copyright (c) 2021 DutchGhost
+// Copyright (c) 2021 matrixmultiply authors
+//
+// Incorporpated in matrixmultiply under these terms, see main license files.
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+
+================================================================================
+Comment SHA-256: 253a841dc139e09d40ec1913c1ccb50e445c62c8f4966edccd1ce75bbecf6e0c
+Sources:
+  src/debugmacros.rs:1
+  src/gemm.rs:1
+  src/loopmacros.rs:1
+  src/util.rs:1
+
+// Copyright 2016 - 2018 Ulrik Sverdrup "bluss"
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+
+================================================================================
+Comment SHA-256: 07e2dcdaa4e2c0919d84bc73130ebed2132b1b526cf790f1679520c37e68f5dc
+Sources:
+  src/dgemm_kernel.rs:1
+  src/packing.rs:1
+  src/sgemm_kernel.rs:1
+
+// Copyright 2016 - 2023 Ulrik Sverdrup "bluss"
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+
+================================================================================
+Comment SHA-256: cdf7182a6b13a8fdf8721ecf4971812c6665f51c8c9c82c252d05a66e01aa55e
+Sources:
+  src/lib.rs:1
+
+// Copyright 2016 - 2023 Ulrik Sverdrup "bluss"
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+//!
+//! General matrix multiplication for f32, f64, and complex matrices. Operates on
+//! matrices with general layout (they can use arbitrary row and column stride).
+//!
+//! This crate uses the same macro/microkernel approach to matrix multiplication as
+//! the [BLIS][bl] project.
+//!
+//! We presently provide a few good microkernels, portable and for x86-64 and
+//! AArch64 NEON, and only one operation: the general matrix-matrix
+//! multiplication (“gemm”).
+//!
+//! [bl]: https://github.com/flame/blis
+//!
+//! ## Matrix Representation
+//!
+//! **matrixmultiply** supports matrices with general stride, so a matrix
+//! is passed using a pointer and four integers:
+//!
+//! - `a: *const f32`, pointer to the first element in the matrix
+//! - `m: usize`, number of rows
+//! - `k: usize`, number of columns
+//! - `rsa: isize`, row stride
+//! - `csa: isize`, column stride
+//!
+//! In this example, A is a m by k matrix. `a` is a pointer to the element at
+//! index *0, 0*.
+//!
+//! The *row stride* is the pointer offset (in number of elements) to the
+//! element on the next row. It’s the distance from element *i, j* to *i + 1,
+//! j*.
+//!
+//! The *column stride* is the pointer offset (in number of elements) to the
+//! element in the next column. It’s the distance from element *i, j* to *i,
+//! j + 1*.
+//!
+//! For example for a contiguous matrix, row major strides are *rsa=k,
+//! csa=1* and column major strides are *rsa=1, csa=m*.
+//!
+//! Strides can be negative or even zero, but for a mutable matrix elements
+//! may not alias each other.
+//!
+//! ## Portability and Performance
+//!
+//! - The default kernels are written in portable Rust and available
+//!   on all targets. These may depend on autovectorization to perform well.
+//!
+//! - *x86* and *x86-64* features can be detected at runtime by default or
+//!   compile time, and the following kernel variants are
+//!   implemented:
+//!
+//!   - `avx`
+//!   - `avx2,fma`
+//!   - `avx512f`
+//!
+//! - *aarch64* features can be detected at runtime by default or compile time,
+//!   and the following kernel variants are implemented:
+//!
+//!   - `neon`
+//!
+//! - *wasm32* target features need to be enabled at compile-time. The library
+//!   can take advantage of these if enabled:
+//!
+//!   - `simd128` (sgemm) (will also use `relaxed-simd` if enabled)
+//!
+//! ## Features
+//!
+//! ### `std`
+//!
+//! `std` is enabled by default.
+//!
+//! This crate can be used without the standard library (`#![no_std]`) by
+//! disabling the default `std` feature. To do so, use this in your
+//! `Cargo.toml`:
+//!
+//! ```toml
+//! matrixmultiply = { version = "0.3", default-features = false }
+//! ```
+//!
+//! Runtime CPU feature detection is available **only** when `std` is enabled.
+//! Without the `std` feature, the crate uses special CPU features only if they
+//! are enabled at compile time. (To enable CPU features at compile time, pass
+//! the relevant
+//! [`target-cpu`](https://doc.rust-lang.org/rustc/codegen-options/index.html#target-cpu)
+//! or
+//! [`target-feature`](https://doc.rust-lang.org/rustc/codegen-options/index.html#target-feature)
+//! option to `rustc`.)
+//!
+//! ### `avx512`
+//!
+//! `avx512` is enabled by default.
+//!
+//! It enables the AVX-512 kernels for x86/x86-64, which are then used at runtime on CPUs that
+//! support the `avx512f` target feature.
+//!
+//! ### `threading`
+//!
+//! `threading` is an optional crate feature
+//!
+//! Threading enables multithreading for the operations. The environment variable
+//! `MATMUL_NUM_THREADS` decides how many threads are used at maximum. At the moment 1-4 are
+//! supported and the default is the number of physical cpus (as detected by `num_cpus`).
+//!
+//! ### `cgemm`
+//!
+//! `cgemm` is an optional crate feature.
+//!
+//! It enables the `cgemm` and `zgemm` methods for complex matrix multiplication.
+//! This is an **experimental feature** and not yet as performant as the float kernels on x86.
+//!
+//! The complex representation we use is `[f64; 2]`.
+//!
+//! ### `constconf`
+//!
+//! `constconf` is an optional feature. When enabled, cache-sensitive parameters of
+//! the gemm implementations can be tweaked *at compile time* by defining the following variables:
+//!
+//! - `MATMUL_SGEMM_MC`
+//!   (And so on, for S, D, C, ZGEMM and with NC, KC or MC).
+//!
+//! ## Other Notes
+//!
+//! The functions in this crate are thread safe, as long as the destination
+//! matrix is distinct.
+//!
+//! ## Rust Version (MSRV)
+//!
+//! This version requires Rust 1.75 or later; the crate follows a carefully
+//! considered upgrade policy, where updating the minimum Rust version is not a breaking
+//! change.
+//!
+//! Some features are enabled with later versions: from Rust 1.89 x86/x86-64 AVX-512 support.
+
+================================================================================
+Comment SHA-256: c795e14f0ef26ded9335c59b869f79b56d21c114a79e86119a61643a1a11ea43
+Sources:
+  src/ptr.rs:1
+
+// Copyright 2020, 2022 Ulrik Sverdrup "bluss"
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+
