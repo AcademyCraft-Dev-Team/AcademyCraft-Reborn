@@ -5,7 +5,7 @@ import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 
 /**
- * Server-side protection hook for native empty-hand block adapters. The actor remains
+ * Server-side protection hook for audited native block-use adapters. The actor remains
  * in the host world. Cancel to deny. This is not a vanilla PlayerInteractEvent substitute
  * for arbitrary blocks; hit/context coordinates explicitly identify the structure space.
  */

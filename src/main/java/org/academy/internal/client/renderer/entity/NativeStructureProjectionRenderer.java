@@ -26,7 +26,8 @@ import java.util.Map;
 public final class NativeStructureProjectionRenderer
         extends EntityRenderer<NativeStructureProjectionEntity, NativeStructureProjectionRenderState> {
     private static final boolean SMOKE_DIAGNOSTICS = Boolean.getBoolean("academy.nativeStructureProjectionSmoke")
-            || Boolean.getBoolean("academy.nativeStructureChestSmoke");
+            || Boolean.getBoolean("academy.nativeStructureChestSmoke")
+            || Boolean.getBoolean("academy.nativeStructurePlacementSmoke");
     private static final Map<Integer, Submission> SMOKE_SUBMISSIONS = new HashMap<>();
     private final ChestModel chestModel;
     private final SpriteGetter sprites;

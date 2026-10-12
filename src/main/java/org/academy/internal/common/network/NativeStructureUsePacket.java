@@ -7,7 +7,9 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.phys.Vec3;
+import org.academy.AcademyCraft;
 import org.academy.api.common.structure.*;
 import org.academy.internal.common.structure.space.NativeStructureDimensions;
 import org.academy.internal.common.structure.space.NativeStructureInteraction;
@@ -36,8 +38,11 @@ public final class NativeStructureUsePacket extends Packet<ServerGamePacketListe
             int face = buffer.readUnsignedByte();
             if (face >= Direction.values().length || !NativeStructureDimensions.contains(position)
                     || position.getY() < -64 || position.getY() > 319) throw new IllegalArgumentException("Invalid structure cell");
-            return new NativeStructureUsePacket(new StructureHit(new SpaceBlockRef(reference, position),
-                    runtimeId, revision, pose, Direction.values()[face], readPoint(buffer), readPoint(buffer), buffer.readBoolean()));
+            var hit = new StructureHit(new SpaceBlockRef(reference, position), runtimeId, revision, pose,
+                    Direction.values()[face], readPoint(buffer), readPoint(buffer), buffer.readBoolean());
+            int hand = buffer.readUnsignedByte();
+            if (hand > 1) throw new IllegalArgumentException("Invalid structure interaction hand");
+            return new NativeStructureUsePacket(hit, hand == 0 ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND);
         }
 
         @Override public void encode(ByteBuf output, NativeStructureUsePacket packet) {
@@ -60,6 +65,7 @@ public final class NativeStructureUsePacket extends Packet<ServerGamePacketListe
             writePoint(buffer, hit.localPoint());
             writePoint(buffer, hit.worldPoint());
             buffer.writeBoolean(hit.inside());
+            buffer.writeByte(packet.hand == InteractionHand.MAIN_HAND ? 0 : 1);
         }
 
         private Vec3 readPoint(FriendlyByteBuf buffer) {
@@ -76,9 +82,15 @@ public final class NativeStructureUsePacket extends Packet<ServerGamePacketListe
     };
     private static boolean initialized;
     private final StructureHit hit;
+    private final InteractionHand hand;
 
-    public NativeStructureUsePacket(StructureHit hit) { this.hit = Objects.requireNonNull(hit); }
+    public NativeStructureUsePacket(StructureHit hit) { this(hit, InteractionHand.MAIN_HAND); }
+    public NativeStructureUsePacket(StructureHit hit, InteractionHand hand) {
+        this.hit = Objects.requireNonNull(hit, "hit");
+        this.hand = Objects.requireNonNull(hand, "hand");
+    }
     public StructureHit hit() { return hit; }
+    public InteractionHand hand() { return hand; }
 
     public static synchronized void initServer() {
         if (initialized) return;
@@ -92,7 +104,13 @@ public final class NativeStructureUsePacket extends Packet<ServerGamePacketListe
 
     public static final class Server {
         @SubscribePacket public static void handle(NativeStructureUsePacket packet) {
-            NativeStructureInteraction.useBlock(packet.getPacketListener().getPlayer(), packet.hit);
+            var player = packet.getPacketListener().getPlayer();
+            var result = NativeStructureInteraction.useBlock(player, packet.hit, packet.hand);
+            if (Boolean.getBoolean("academy.nativeStructurePlacementSmoke")) {
+                AcademyCraft.LOGGER.info("NATIVE_STRUCTURE_PLACEMENT_PACKET_RESULT result={} hand={} selected={} held={} hit={} canUse={}",
+                        result, packet.hand, player.getInventory().getSelectedSlot(), player.getItemInHand(packet.hand),
+                        packet.hit, NativeStructureInteraction.canUseMenu(player));
+            }
         }
     }
 }

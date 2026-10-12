@@ -6,6 +6,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.structure.SpaceBlockRef;
 import org.academy.api.common.structure.StructureHit;
@@ -39,7 +40,9 @@ class NativeStructureUsePacketTest {
         try {
             NativeStructureUsePacket.CODEC.encode(buffer, new NativeStructureUsePacket(hit));
             assertTrue(buffer.readableBytes() < 512);
-            var copy = NativeStructureUsePacket.CODEC.decode(buffer).hit();
+            var packet = NativeStructureUsePacket.CODEC.decode(buffer);
+            assertEquals(InteractionHand.MAIN_HAND, packet.hand());
+            var copy = packet.hit();
             assertEquals(0, buffer.readableBytes());
             assertEquals(hit.block(), copy.block());
             assertEquals(hit.runtimeId(), copy.runtimeId());
@@ -105,6 +108,45 @@ class NativeStructureUsePacketTest {
         }
     }
 
+    @Test
+    void explicitHandsRoundTripAndOldConstructorKeepsMainHand() {
+        for (var hand : InteractionHand.values()) {
+            var buffer = new FriendlyByteBuf(Unpooled.buffer());
+            try {
+                writeObservation(buffer, 0, 1, POSITION, Direction.UP.ordinal(), Vec3.ZERO, Vec3.ZERO, Vec3.ZERO);
+                var hit = NativeStructureUsePacket.CODEC.decode(buffer).hit();
+                buffer.clear();
+                NativeStructureUsePacket.CODEC.encode(buffer, new NativeStructureUsePacket(hit, hand));
+                var result = NativeStructureUsePacket.CODEC.decode(buffer);
+                assertEquals(hand, result.hand());
+                assertEquals(hit, result.hit());
+                assertEquals(0, buffer.readableBytes());
+                assertEquals(InteractionHand.MAIN_HAND, new NativeStructureUsePacket(hit).hand());
+                assertThrows(NullPointerException.class, () -> new NativeStructureUsePacket(hit, null));
+            } finally {
+                buffer.release();
+            }
+        }
+    }
+
+    @Test
+    void decoderRejectsEveryNonHandByteAndAnOmittedHand() {
+        for (var invalid : new int[]{2, 3, 127, 128, 255}) {
+            assertRejected(buffer -> {
+                writeObservation(buffer, 0, 1, POSITION, Direction.UP.ordinal(), Vec3.ZERO, Vec3.ZERO, Vec3.ZERO);
+                buffer.setByte(buffer.writerIndex() - 1, invalid);
+            });
+        }
+        var buffer = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            writeObservation(buffer, 0, 1, POSITION, Direction.UP.ordinal(), Vec3.ZERO, Vec3.ZERO, Vec3.ZERO);
+            buffer.writerIndex(buffer.writerIndex() - 1);
+            assertThrows(IndexOutOfBoundsException.class, () -> NativeStructureUsePacket.CODEC.decode(buffer));
+        } finally {
+            buffer.release();
+        }
+    }
+
     private static void assertRejected(Consumer<FriendlyByteBuf> payload) {
         var buffer = new FriendlyByteBuf(Unpooled.buffer());
         try {
@@ -134,6 +176,7 @@ class NativeStructureUsePacketTest {
         writePoint(buffer, localPoint);
         writePoint(buffer, worldPoint);
         buffer.writeBoolean(false);
+        buffer.writeByte(0);
     }
 
     private static void writePoint(FriendlyByteBuf buffer, Vec3 point) {

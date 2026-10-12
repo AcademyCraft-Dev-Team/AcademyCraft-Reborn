@@ -313,3 +313,76 @@ result.structure().ifPresent(structure -> {
 ```
 
 必须看到 `NATIVE_STRUCTURE_CHEST_SMOKE_PASSED` 并打开 `screenshots/` 下真实界面及世界 PNG 核对。出现失败时保留世界与日志；不能清空库存后重复探针来制造通过。
+
+## 第五批：旋转结构上的受限逐格放置
+
+本批为独立动态空间增加玩家放置入口，范围是原版精确 `BlockItem` 的石头、圆石、橡木木板、橡木楼梯、橡木台阶和拉杆。状态、BE 和容器组件导入暂不开放；未知物品子类、门床等多格方块、流体、重力块及模组机器需另行适配。已支持的箱子和拉杆在未蹲下时优先交互，蹲下时使用可放置物品；主手为空时可使用副手。客户端命中结构后，未适配物品只走原版空中使用，避免透过结构对宿主方块执行 `useOn`。
+
+使用包明确携带主手或副手，服务端依据真实双手与当前目标重新选择，不接受客户端指定任意手。客户端和服务端需使用本批一致的包格式，未实现旧格式互通。客户端在发送使用请求前发送原版快捷栏选择包，覆盖同一 tick 切换槽位后立即使用的情况。26.2 的原版包通过 `PacketProcessor` 排队，Misaka 包原先通过 `server.execute` 排队，仅按发送顺序调用两个入口仍可能乱序。`MixinC2SPacketNativeStructureOrder` 仅将 `NATIVE_STRUCTURE_USE` 对应的外层包先送入同一个 `PacketProcessor`，随后执行原有解码和派发，使正常网络路径先处理此前的快捷栏、移动及玩家指令包；其他 Misaka 包保持原处理方式。
+
+玩家始终留在宿主世界。专用 `BlockPlaceContext` 使用真实玩家、真实结构存储和局部命中，并逆变换视线提供方向与转角。实际放置调用原版 `BlockItem.place`，保留台阶合并、楼梯形状、拉杆支撑、邻居更新及本地游戏事件。放置声音转换到宿主位置；原版按玩家 Level 读取局部坐标的放置成就暂不触发，不能把宿主同坐标方块当成放置结果。
+
+服务端重新执行真实射线与手选择，校验运行期身份、几何版本、姿态、建造资格、动作 tick、手持物品与目标完整数据。公开的 `StructurePlacementEvent` 提供明确空间的保护入口，回调后再次校验。最后一轮形状回调之后、预留材料之前，再用真实双手和潜行状态确认仍为同一只手的放置；实际写入前继续复验这些快照，避免回调改变主副手优先级。普通 NeoForge `PlayerInteractEvent` 的玩家 Level 仍是宿主，因此本适配不冒充任意第三方保护插件已经兼容。
+
+候选方块使用任意四元数下的有向包围盒分解和 SAT 检查宿主方块、阻挡建造的实体及其他活动结构，保留台阶和楼梯空隙；相切允许。空间、区块加载状态、形状复杂度与检查工作量均有限制，新增格数不能超过当前 4096 格呈现上限。这里是放置前的重叠判定，并非刚体求解器或运动碰撞实现。
+
+生存物品采用单件预留：完成预检后从真实手持堆栈取一件交给原版放置，明确未写入才退回；已发生写入的异常保留内容并隔离结构，不回放回调或覆盖玩家库存快照。这仍不是玩家数据与结构区块跨文件的崩溃原子事务；进程中止、断电与跨后端迁移的完整恢复留在总体计划中。
+
+当前仍为 P0 部分完成。本批没有持续采掘、破坏进度或掉落协议，没有为独立空间增加刚体运动、碰撞求解或乘载，也没有将旧技能迁移到该空间；Sable 桥与混装适配尚未实现。旋转静态结构上的受限放置通过，不代表运动期间的完整原版操作或任意物品放置已经完成。
+
+### 第五批验证记录
+
+2026 年 10 月 12 日使用 JBR 25、未安装 Sable 的环境验证。第四轮隔离客户端运行通过；补充预扣前策略复验后，第六轮以最终放置代码再次完整通过。以下区分真实客户端发包和同一集成服务器内的直接调用。
+
+| 检查 | 实际证明范围 | 结果 |
+| --- | --- | --- |
+| 真实客户端主手放置 | 先以空槽稳定视线，再于同一客户端回调切换楼梯槽并立即调用使用入口；在任意轴旋转结构上放置局部朝北、下半部楼梯 | `APPLIED`；生存楼梯 2→1，副手台阶未消费 |
+| 真实客户端副手放置与合并 | 主手空槽，副手放下半台阶，再向同一局部格合并为双台阶 | 两次 `APPLIED`；副手材料 2→1→0，上方未多放一格 |
+| 真实客户端拉杆 | 放置依附局部地面的朝北拉杆，再持拉杆普通使用已放置拉杆 | 放置与切换均通过；互动优先，第二次没有额外消费 |
+| 旧包与主链守恒 | 重发首次放置的旧命中包；统计已放置方块、全部标记库存及宿主／存储世界掉落 | 旧包 `STALE`；全程 8 单位守恒、无标记掉落 |
+| 服务端直接保护负例 | 取消事件、回调切换真实手持槽、回调改变原始支撑格；事件中尝试保存、卸载、CAS 和改变姿态 | 全部拒绝放置且未消费；重入操作被拒绝 |
+| 服务端直接碰撞负例 | 石头／楼梯与阻挡建造的真实玩家相交；宿主石头与候选石头／拉杆相交；第二活动结构占据候选位置 | 均拒绝；空碰撞形状的拉杆仍允许与玩家重叠 |
+| 写入后异常守恒 | 第三结构成功写入石头后，宿主放置声监听器主动抛错；随后重放原请求并尝试卸载 | 方块保留，库存 2→1，合计仍为 2；结构进入 `RECOVERY_REQUIRED`，重放和卸载拒绝，无补发物品 |
+| 保存、重载与呈现 | 主结构同 JVM 保存、卸载、重新加载；比较楼梯／双台阶／拉杆状态、运行期身份及材料数，等待实际模型提交后截图 | 通过；最终卸载无投影残留，PNG 已打开查看 |
+| 普通单箱客户端回归 | 真实取放／拆分、移动与卸载关闭、运行期身份与旧菜单包、BE 替换、时间暂停纠正、收纳袋入口、开盖与截图 | 通过；7 件标记钻石守恒，两张 PNG 已打开查看 |
+| 旧投影客户端回归 | 建造资格、保护取消、回调重入、姿态变化拒绝、空手真实发包、旧包、拉杆／红石灯／熔炉、旋转呈现和卸载 | 通过；3 单位矿物料保留，PNG 已打开查看 |
+| `test -DisDev=true` | 新增 8 项 OBB 几何、3 项局部朝向、5 项主副手策略和 2 项手字段编码测试，含原有测试 | 2378 项，零失败、零错误、零跳过 |
+| 三组既有 GameTest | `academy:native_structure_query`、`academy:native_structure_space`、`academy:block_structure_safety` | 最终代码重新运行，三个注册测试均通过，包含原有存储故障与旧安全场景 |
+| 开发／发布构建 | `build -DisDev=true`、`build -DisDev=false`，包含各自检查任务 | 最终代码均成功 |
+
+最后一处手选择修正只涉及放置分支；本批箱子及空手投影成功结果复用于各自未变的交互分支，放置探针、JUnit、两种构建与三组 GameTest 均在此修正后重新执行。最终顺序记录为 `build/native-structure-p5-validation.json`，源码哈希清单为 `build/native-structure-p5-source-manifest.json`；日志为 `build/native-structure-p5-*.log`，运行产物不进入 Git。
+
+最终成功世界为 `run/native-structure-placement-smoke-20261012-r6`，进程 51116，主结构 UUID `df0d8ac5-8531-4647-b255-2dd04328aa59`。日志 `build/native-structure-p5-placement-client.log` 含 `NATIVE_STRUCTURE_PLACEMENT_SMOKE_PASSED`；[旋转放置结果截图](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-placement-smoke-20261012-r6/screenshots/native-structure-placement-51116-1791811655190.png)已核对。故障结构 UUID 为 `9f95473f-9eef-4d20-a00c-5b5fad5f5ab8`，保留隔离证据。日志中的 `NATIVE_STRUCTURE_PLACEMENT_EXPECTED_POST_WRITE_SOUND_FAILURE` 是这一负例的预期异常，必须同时看到后续 `NATIVE_STRUCTURE_PLACEMENT_SERVER_DIRECT_POST_WRITE_FAULT` 守恒标记与整轮通过标记，不能忽略其他异常。
+
+各轮均保留世界和日志，没有通过修改产品射线、碰撞或材料校验来绕过失败：
+
+| 轮次 | 观察与处理 | 证据 |
+| --- | --- | --- |
+| r1 | 首次楼梯请求发出后未放置，阶段超时；没有结构隔离，增加服务端返回值和状态诊断 | `build/native-structure-p5-placement-first-failure.log` |
+| r2 | 收到使用包时服务端仍选空槽，返回 `UNSUPPORTED`；稍后才选中楼梯，且碰撞检查通过。定位到原版与 Misaka 两条调度队列，修复结构包的处理顺序 | `build/native-structure-p5-placement-order-failure.log` |
+| r3 | 首次放置已 `APPLIED`、旧包已 `STALE`；副手阶段客户端命中正确，服务端视线却恢复为水平朝南。探针传送记录了零角度，后续 `lookAt` 不能替换待确认的传送角度；改为把目标计算出的 yaw／pitch 直接写入 `TeleportTransition` | `build/native-structure-p5-placement-camera-failure.log` |
+| r4 | 使用新的原始存档副本，真实主／副手放置、负例、异常守恒、保存重载和截图全部完成 | `build/native-structure-p5-placement-r4-passed.log` |
+| r5 | 增加最终手选择复验后，放置及写后异常守恒通过；重载时 Windows 对元数据原子替换返回 `AccessDeniedException`，整轮失败。保留世界和元数据，未放宽断言或关闭原子写 | `build/native-structure-p5-placement-metadata-failure.log` |
+| r6 | 与 r5 相同代码、全新原始副本，完整链和保存重载通过 | `build/native-structure-p5-placement-client.log` |
+
+r5 的文件访问拒绝原因未确定。只读检查未发现 manifest 读写流未关闭：写入流在原子替换前关闭，失败发生在创建新运行期句柄前，加载返回拒绝并恢复原索引；失败世界保留三个 owner 标记及故障结构的 recovery 文件。r6 通过不能证明文件访问拒绝永不复现，后续 Windows 长时间运行与重启恢复验收仍需覆盖此问题。
+
+箱子回归使用 `run/native-structure-chest-smoke-20261012-p5`，进程 6824，结构 UUID `9003bd35-aea9-4112-86fd-2ec37c2fdba0`；[界面截图](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-chest-smoke-20261012-p5/screenshots/native-structure-chest-gui-6824-1791811078649.png)与[箱体截图](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-chest-smoke-20261012-p5/screenshots/native-structure-chest-world-6824-1791811084355.png)已核对。世界中的锁定提示来自拒绝用例，最终锁已恢复为空。
+
+旧投影探针本轮也触发了原有零角度传送竞态，停在首次建造资格负例之后，最终超时；失败世界 `run/native-structure-projection-smoke-20261012-p5` 与日志 `build/native-structure-p5-projection-camera-failure.log` 保留。仅将探针的 `positionPlayer` 改为在传送中直接给出实际角度，保留原位置、距离及全部断言。新副本 `run/native-structure-projection-smoke-20261012-p5-r2` 完整通过，进程 72228，结构 UUID `1872ed3b-1ac8-43a0-b78a-ca851822fd43`；[旋转五格截图](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-projection-smoke-20261012-p5-r2/screenshots/native-structure-projection-72228-1791811333625.png)已核对。两个成功日志分别为 `build/native-structure-p5-chest-client.log`、`build/native-structure-p5-projection-client.log`。
+
+本轮没有对六种白名单材料逐一做真实客户端放置；客户端成功链覆盖楼梯、台阶与拉杆，石头另由服务端异常路径覆盖。真实多人网络延迟、第三方保护插件、通用物品组件、跨 JVM／崩溃恢复、持续采掘、物理运动和 Sable 混装均不在上述通过结论内。
+
+### 第五批重跑入口
+
+先在 `run/native-structure-placement-smoke-自定名称/saves/Native Structure Placement Smoke` 准备已经退出游戏的全新测试前副本。需要至少三个未分配的永久槽：主链、第二结构碰撞负例、写入后异常隔离各占一个；卸载不回收槽位。玩家开始时双手均空、允许建造且非旁观者，快捷栏至少有五个空槽，副手必须为空。探针只往这些空槽及空副手放入标记材料，不清空或覆盖既有库存；它会切换生存模式、启用飞行并在宿主世界内调整测试镜头。
+
+使用 JBR 25 与仓库规定的 `JAVA_HOME`，执行：
+
+```powershell
+.\gradlew.bat runClientDev -DisDev=true --init-script validation/native_structure/placement.init.gradle -PacademyNativeStructurePlacementDirectory=run/native-structure-placement-smoke-自定名称
+```
+
+脚本显式启用 `academy.nativeStructurePlacementSmoke`，检查游戏目录位于仓库 `run/` 下且名称以 `native-structure-placement-smoke` 开头，并要求指定世界已有 `level.dat`。探针另检查世界真实路径及专用 fixture 索引为空；成功或失败的运行均不可直接重新执行，应保留原世界与日志，从测试前副本另建目录。出现原版实验设置提示时，仅对这个隔离副本备份并加载。
+
+必须看到完整的 `NATIVE_STRUCTURE_PLACEMENT_SMOKE_PASSED`，并打开 `screenshots/` 下本轮 PNG 确认旋转模型。第三槽的故障隔离必须保留，不能重置结构或归还材料以制造通过。世界、截图与日志均在忽略的 run/build 目录，不进入 Git。

@@ -1,0 +1,22 @@
+allprojects {
+    afterEvaluate {
+        def runRoot = new File(rootProject.projectDir, 'run').canonicalFile
+        def setting = providers.gradleProperty('academyNativeStructurePlacementDirectory')
+                .getOrElse('run/native-structure-placement-smoke')
+        def directory = rootProject.file(setting).canonicalFile
+        if (!directory.toPath().startsWith(runRoot.toPath())
+                || !directory.name.startsWith('native-structure-placement-smoke')) {
+            throw new GradleException('Placement smoke directory must be inside run/ and begin native-structure-placement-smoke')
+        }
+        def world = new File(directory, 'saves/Native Structure Placement Smoke').canonicalFile
+        if (!world.toPath().startsWith(directory.toPath()) || !new File(world, 'level.dat').isFile()) {
+            throw new GradleException('Prepare an isolated saves/Native Structure Placement Smoke world before running this probe')
+        }
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.nativeStructurePlacementSmoke', 'true'
+            programArguments.addAll('--width', '1280', '--height', '720',
+                    '--quickPlaySingleplayer', 'Native Structure Placement Smoke')
+        }
+    }
+}

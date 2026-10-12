@@ -5,7 +5,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
-import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.UUIDUtil;
@@ -408,10 +407,13 @@ public final class NativeStructureProjectionClientSmoke {
         player.getAbilities().mayfly = true;
         player.getAbilities().flying = true;
         player.onUpdateAbilities();
-        require(player.teleport(new TeleportTransition(player.level(), feet, Vec3.ZERO, 0, 0,
+        var direction = eyeTarget.subtract(feet.add(0, player.getEyeHeight(), 0));
+        float yaw = (float) Math.toDegrees(Math.atan2(-direction.x, direction.z));
+        float pitch = (float) -Math.toDegrees(Math.atan2(direction.y, Math.hypot(direction.x, direction.z)));
+        // The teleport acknowledgement must retain this view instead of restoring zero rotation.
+        require(player.teleport(new TeleportTransition(player.level(), feet, Vec3.ZERO, yaw, pitch,
                         TeleportTransition.DO_NOTHING)) == player,
                 "Host-only camera positioning was rejected");
-        player.lookAt(EntityAnchorArgument.Anchor.EYES, eyeTarget);
     }
 
     private static void verifyUnload() {

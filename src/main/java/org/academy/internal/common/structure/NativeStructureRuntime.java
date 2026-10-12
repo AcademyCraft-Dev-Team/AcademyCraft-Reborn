@@ -288,6 +288,13 @@ public final class NativeStructureRuntime implements StructureBackend {
                 && handle.projection.viewState().revision() == handle.geometryRevision();
     }
 
+    /** A current projection is the bounded, complete content count used by the placement adapter. */
+    public int presentedCellCount(StructureRef reference) {
+        requireThread();
+        if (!isPresented(reference)) return -1;
+        return loaded.get(reference.id()).projection.view().cells().size();
+    }
+
     /** Internal adapter guard. Callbacks cannot unload/save or start a second API write midway. */
     public boolean runInteraction(StructureRef reference, Runnable action) {
         return runGuarded(reference, action, true);

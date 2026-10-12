@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LeverBlock;
 import net.minecraft.world.phys.AABB;
@@ -23,7 +24,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.WeakHashMap;
 
-/** Explicit vanilla adapters; never lend a host player to a foreign Level. */
+/** Explicit vanilla adapters; the real actor's level always remains the host world. */
 public final class NativeStructureInteraction {
     public enum Result { APPLIED, DENIED, STALE, UNSUPPORTED, BUSY }
     private static final WeakHashMap<ServerPlayer, Integer> LAST_USE = new WeakHashMap<>();
@@ -32,17 +33,21 @@ public final class NativeStructureInteraction {
     private NativeStructureInteraction() {}
 
     public static Result useLever(ServerPlayer player, StructureHit proposed) {
-        return use(player, proposed, true);
+        return use(player, proposed, InteractionHand.MAIN_HAND, true);
     }
 
     public static Result useBlock(ServerPlayer player, StructureHit proposed) {
-        return use(player, proposed, false);
+        return useBlock(player, proposed, InteractionHand.MAIN_HAND);
     }
 
-    private static Result use(ServerPlayer player, StructureHit proposed, boolean leverOnly) {
+    public static Result useBlock(ServerPlayer player, StructureHit proposed, InteractionHand hand) {
+        return use(player, proposed, hand, false);
+    }
+
+    private static Result use(ServerPlayer player, StructureHit proposed, InteractionHand hand, boolean leverOnly) {
         var server = player.level().getServer();
         if (!server.isSameThread()) throw new IllegalStateException("Structure interaction requires server thread");
-        if (!allowed(player)) return Result.DENIED;
+        if (!canUseMenu(player) || leverOnly && !emptyHands(player)) return Result.DENIED;
         synchronized (LAST_USE) {
             int tick = server.getTickCount();
             var last = LAST_USE.put(player, tick);
@@ -57,12 +62,19 @@ public final class NativeStructureInteraction {
             if (initial == null) return Result.STALE;
             var storage = runtime.storageLevel(handle.reference()).orElseThrow();
             var initialState = storage.getBlockState(initial.block().localPosition());
+            var selection = NativeStructurePlacementPolicy.selectAction(player.getMainHandItem(),
+                    player.getOffhandItem(), player.isSecondaryUseActive(), initialState);
+            if (selection == null || selection.hand() != hand) return Result.UNSUPPORTED;
+            if (!leverOnly && selection.action() == NativeStructurePlacementPolicy.Action.PLACE) {
+                return NativeStructurePlacement.place(player, initial, hand,
+                        () -> valid(player, proposed).orElse(null)) ? Result.APPLIED : Result.DENIED;
+            }
             var action = initialState.is(Blocks.LEVER) ? StructureInteractionEvent.Action.USE_LEVER
                     : !leverOnly && initialState.is(Blocks.CHEST) ? StructureInteractionEvent.Action.OPEN_CONTAINER : null;
             if (action == null) return Result.UNSUPPORTED;
             boolean denied = StructureContexts.call(handle, context ->
                     NeoForge.EVENT_BUS.post(new StructureInteractionEvent(player, initial, context, action)).isCanceled());
-            if (denied || !allowed(player)) return Result.DENIED;
+            if (denied || !canUseMenu(player) || leverOnly && !emptyHands(player)) return Result.DENIED;
             // Protection listeners may move the actor/structure or change blocks synchronously.
             // The original version remains the expectation: a listener cannot replace the target.
             if (!runtime.isPresented(handle.reference())) return Result.STALE;
@@ -70,6 +82,9 @@ public final class NativeStructureInteraction {
             if (current == null) return Result.STALE;
             var position = current.block().localPosition();
             var state = storage.getBlockState(position);
+            // Protection callbacks may change the held item or secondary-use flag without a block update.
+            if (!selection.equals(NativeStructurePlacementPolicy.selectAction(player.getMainHandItem(),
+                    player.getOffhandItem(), player.isSecondaryUseActive(), state))) return Result.DENIED;
             if (action == StructureInteractionEvent.Action.OPEN_CONTAINER) {
                 boolean[] opened = { false };
                 boolean ran = runtime.runMenuInteraction(handle.reference(), () -> StructureContexts.run(handle,
@@ -89,8 +104,8 @@ public final class NativeStructureInteraction {
         }
     }
 
-    private static boolean allowed(ServerPlayer player) {
-        return canUseMenu(player) && player.getMainHandItem().isEmpty() && player.getOffhandItem().isEmpty();
+    private static boolean emptyHands(ServerPlayer player) {
+        return player.getMainHandItem().isEmpty() && player.getOffhandItem().isEmpty();
     }
 
     /** Persistent menu validity excludes per-action time scaling and hand contents. */
