@@ -669,6 +669,10 @@ public final class PacketTypes {
             PLAYER_LEFT_CLICK_SWING = PACKET_TYPES.register("player_left_click_swing",
             () -> new PacketType<>(PlayerLeftClickSwingPacket.class, PlayerLeftClickSwingPacket.CODEC));
 
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, NativeStructureUsePacket>>
+            NATIVE_STRUCTURE_USE = PACKET_TYPES.register("native_structure_use",
+            () -> new PacketType<>(NativeStructureUsePacket.class, NativeStructureUsePacket.CODEC));
+
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MagneticHookActionPacket>>
             MAGNETIC_HOOK_ACTION = PACKET_TYPES.register("magnetic_hook_action",
             () -> new PacketType<>(MagneticHookActionPacket.class, MagneticHookActionPacket.CODEC));

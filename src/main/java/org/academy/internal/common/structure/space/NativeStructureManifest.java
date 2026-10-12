@@ -1,0 +1,319 @@
+package org.academy.internal.common.structure.space;
+
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtAccounter;
+import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.Tag;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.phys.Vec3;
+import org.academy.api.common.structure.StructurePose;
+import org.academy.api.common.structure.StructureRef;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.zip.GZIPOutputStream;
+
+/**
+ * Bounded native-space index and permanent slot ownership markers. Invalid metadata disables
+ * writes rather than replacing the index with an empty save. These files do not form a
+ * transaction with vanilla chunk files and do not provide crash-atomic world transfers.
+ */
+public final class NativeStructureManifest {
+    public static final int SLOT_COUNT = 4;
+    public static final int MAX_PAYLOAD_BYTES = 1024 * 1024;
+    private static final int VERSION = 1;
+    private static final Identifier BACKEND = Identifier.fromNamespaceAndPath("academy", "native_level");
+
+    public record Entry(StructureRef reference, int slot, StructurePose pose,
+                        boolean active, boolean quarantined) {
+        public Entry {
+            Objects.requireNonNull(reference, "reference");
+            Objects.requireNonNull(pose, "pose");
+            validateSlot(slot);
+            if (!BACKEND.equals(reference.backend())) {
+                throw new IllegalArgumentException("Unexpected native structure backend");
+            }
+            if (isStorageDimension(reference.dimension())) {
+                throw new IllegalArgumentException("A storage dimension cannot be the visible host");
+            }
+        }
+    }
+
+    private final Path directory;
+    private final Path metadata;
+    private final Map<UUID, Entry> entries = new LinkedHashMap<>();
+    private boolean healthy = true;
+
+    public NativeStructureManifest(Path directory) throws IOException {
+        this.directory = Objects.requireNonNull(directory, "directory").toAbsolutePath().normalize();
+        Files.createDirectories(this.directory);
+        metadata = this.directory.resolve("metadata.dat");
+        BasicFileAttributes attributes;
+        try {
+            attributes = Files.readAttributes(metadata, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+        } catch (NoSuchFileException absent) {
+            // Permanent owner markers may exist without an index after an interrupted allocation.
+            return;
+        } catch (IOException unavailable) {
+            healthy = false;
+            return;
+        }
+        try {
+            if (!attributes.isRegularFile() || attributes.size() > MAX_PAYLOAD_BYTES) {
+                throw new IOException("Native structure metadata is not a bounded regular file");
+            }
+            var decoded = decode(NbtIo.readCompressed(metadata, NbtAccounter.create(MAX_PAYLOAD_BYTES)));
+            entries.putAll(decoded);
+        } catch (IOException | RuntimeException malformed) {
+            healthy = false;
+            entries.clear();
+        }
+    }
+
+    public List<Entry> entries() {
+        return List.copyOf(entries.values());
+    }
+
+    public Optional<Entry> get(UUID id) {
+        return Optional.ofNullable(entries.get(Objects.requireNonNull(id, "id")));
+    }
+
+    /** Updates an existing identity or adds one previously unindexed identity. */
+    public void put(Entry entry) {
+        if (!healthy) throw new IllegalStateException("Native structure metadata requires recovery");
+        Objects.requireNonNull(entry, "entry");
+        var prior = entries.get(entry.reference().id());
+        if (prior != null && (!prior.reference().equals(entry.reference()) || prior.slot() != entry.slot())) {
+            throw new IllegalArgumentException("An existing structure cannot change its identity or slot");
+        }
+        for (var other : entries.values()) {
+            if (other.slot() == entry.slot() && !other.reference().id().equals(entry.reference().id())) {
+                throw new IllegalArgumentException("Native structure slot is already indexed");
+            }
+        }
+        entries.put(entry.reference().id(), entry);
+    }
+
+    public boolean healthy() {
+        return healthy;
+    }
+
+    public void persist() throws IOException {
+        requireHealthy();
+        var root = new CompoundTag();
+        root.putInt("version", VERSION);
+        var values = new ListTag();
+        for (var entry : entries.values()) values.add(encode(entry));
+        root.put("entries", values);
+        writeAtomically(metadata, root);
+    }
+
+    /** Claims once; neither unloading nor losing the index makes a slot reusable. */
+    public void claimSlot(int slot, UUID owner) throws IOException {
+        requireHealthy();
+        validateSlot(slot);
+        Objects.requireNonNull(owner, "owner");
+        var marker = marker(slot);
+        try (var channel = FileChannel.open(marker, StandardOpenOption.CREATE_NEW,
+                StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS)) {
+            var bytes = ByteBuffer.wrap(owner.toString().getBytes(StandardCharsets.US_ASCII));
+            while (bytes.hasRemaining()) channel.write(bytes);
+            channel.force(true);
+        } catch (FileAlreadyExistsException occupied) {
+            if (!ownsSlot(slot, owner)) throw new IOException("Native structure slot is already claimed", occupied);
+        }
+    }
+
+    /** Unreadable, malformed, or non-regular markers never establish ownership. */
+    public boolean ownsSlot(int slot, UUID owner) {
+        validateSlot(slot);
+        Objects.requireNonNull(owner, "owner");
+        if (!healthy) return false;
+        try {
+            var path = marker(slot);
+            var attributes = Files.readAttributes(path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+            if (!attributes.isRegularFile() || attributes.size() != 36) return false;
+            return owner.toString().equals(Files.readString(path, StandardCharsets.US_ASCII));
+        } catch (IOException | RuntimeException unavailable) {
+            return false;
+        }
+    }
+
+    /** Any marker or failure to inspect it reserves the slot, even without valid metadata. */
+    public boolean slotClaimed(int slot) {
+        validateSlot(slot);
+        if (!healthy) return true;
+        try {
+            Files.readAttributes(marker(slot), BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+            return true;
+        } catch (NoSuchFileException absent) {
+            return false;
+        } catch (IOException | RuntimeException unavailable) {
+            return true;
+        }
+    }
+
+    /** Recovery evidence independently blocks activation even if the index save failed. */
+    public boolean hasRecovery(int slot) {
+        validateSlot(slot);
+        if (!healthy) return true;
+        try {
+            Files.readAttributes(directory.resolve("recovery_" + slot + ".dat"),
+                    BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+            return true;
+        } catch (NoSuchFileException absent) {
+            return false;
+        } catch (IOException | RuntimeException unavailable) {
+            return true;
+        }
+    }
+
+    /** Saves recovery evidence only; this method never applies or automatically replays it. */
+    public void persistRecovery(int slot, CompoundTag recovery) throws IOException {
+        requireHealthy();
+        validateSlot(slot);
+        writeAtomically(directory.resolve("recovery_" + slot + ".dat"),
+                Objects.requireNonNull(recovery, "recovery"));
+    }
+
+    private Path marker(int slot) {
+        return directory.resolve("owner_" + slot + ".txt");
+    }
+
+    private void requireHealthy() throws IOException {
+        if (!healthy) throw new IOException("Native structure metadata requires recovery");
+    }
+
+    private static void validateSlot(int slot) {
+        if (slot < 0 || slot >= SLOT_COUNT) throw new IllegalArgumentException("Invalid native structure slot");
+    }
+
+    private static boolean isStorageDimension(Identifier dimension) {
+        if (!dimension.getNamespace().equals("academy")) return false;
+        for (var slot = 0; slot < SLOT_COUNT; slot++) {
+            if (dimension.getPath().equals("structure_space_" + slot)) return true;
+        }
+        return false;
+    }
+
+    private static CompoundTag encode(Entry entry) {
+        var tag = new CompoundTag();
+        tag.putString("id", entry.reference().id().toString());
+        tag.putString("dimension", entry.reference().dimension().toString());
+        tag.putString("backend", entry.reference().backend().toString());
+        tag.putLong("generation", entry.reference().generation());
+        tag.putInt("slot", entry.slot());
+        tag.putBoolean("active", entry.active());
+        tag.putBoolean("quarantined", entry.quarantined());
+        var pose = new CompoundTag();
+        pose.putDouble("x", entry.pose().worldOrigin().x);
+        pose.putDouble("y", entry.pose().worldOrigin().y);
+        pose.putDouble("z", entry.pose().worldOrigin().z);
+        pose.putDouble("rotation_x", entry.pose().rotationX());
+        pose.putDouble("rotation_y", entry.pose().rotationY());
+        pose.putDouble("rotation_z", entry.pose().rotationZ());
+        pose.putDouble("rotation_w", entry.pose().rotationW());
+        tag.put("pose", pose);
+        return tag;
+    }
+
+    private static Map<UUID, Entry> decode(CompoundTag root) throws IOException {
+        requireType(root, "version", Tag.TAG_INT);
+        if (root.getInt("version").orElseThrow() != VERSION) throw new IOException("Unknown manifest version");
+        requireType(root, "entries", Tag.TAG_LIST);
+        var values = root.getList("entries").orElseThrow();
+        if (values.size() > SLOT_COUNT) throw new IOException("Too many native structures");
+        var decoded = new LinkedHashMap<UUID, Entry>();
+        var usedSlots = new boolean[SLOT_COUNT];
+        for (var value : values) {
+            if (!(value instanceof CompoundTag tag)) throw new IOException("Expected a structure entry");
+            for (var key : List.of("id", "dimension", "backend")) requireType(tag, key, Tag.TAG_STRING);
+            requireType(tag, "generation", Tag.TAG_LONG);
+            requireType(tag, "slot", Tag.TAG_INT);
+            requireType(tag, "pose", Tag.TAG_COMPOUND);
+            var reference = new StructureRef(UUID.fromString(tag.getString("id").orElseThrow()),
+                    Identifier.parse(tag.getString("dimension").orElseThrow()),
+                    Identifier.parse(tag.getString("backend").orElseThrow()),
+                    tag.getLong("generation").orElseThrow());
+            var pose = tag.getCompound("pose").orElseThrow();
+            for (var key : List.of("x", "y", "z", "rotation_x", "rotation_y", "rotation_z", "rotation_w")) {
+                requireType(pose, key, Tag.TAG_DOUBLE);
+            }
+            var entry = new Entry(reference, tag.getInt("slot").orElseThrow(), new StructurePose(
+                    new Vec3(pose.getDouble("x").orElseThrow(), pose.getDouble("y").orElseThrow(),
+                            pose.getDouble("z").orElseThrow()),
+                    pose.getDouble("rotation_x").orElseThrow(), pose.getDouble("rotation_y").orElseThrow(),
+                    pose.getDouble("rotation_z").orElseThrow(), pose.getDouble("rotation_w").orElseThrow()),
+                    readFlag(tag, "active"), readFlag(tag, "quarantined"));
+            if (decoded.putIfAbsent(reference.id(), entry) != null || usedSlots[entry.slot()]) {
+                throw new IOException("Duplicate native structure identity or slot");
+            }
+            usedSlots[entry.slot()] = true;
+        }
+        return decoded;
+    }
+
+    private static boolean readFlag(CompoundTag tag, String key) throws IOException {
+        requireType(tag, key, Tag.TAG_BYTE);
+        var value = tag.getByte(key).orElseThrow();
+        if (value != 0 && value != 1) throw new IOException("Invalid manifest flag: " + key);
+        return value == 1;
+    }
+
+    private static void requireType(CompoundTag tag, String key, byte type) throws IOException {
+        var value = tag.get(key);
+        if (value == null || value.getId() != type) throw new IOException("Missing or invalid manifest field: " + key);
+    }
+
+    private static void writeAtomically(Path target, CompoundTag payload) throws IOException {
+        var size = payload.sizeInBytes();
+        if (size < 0 || size > MAX_PAYLOAD_BYTES) throw new IOException("Native structure payload is too large");
+        var encoded = new ByteArrayOutputStream();
+        try (var output = new DataOutputStream(new GZIPOutputStream(encoded))) {
+            // writeCompressed uses vanilla's oversized-string fallback, which can erase data.
+            NbtIo.writeUnnamedTag(payload, output);
+        }
+        var data = encoded.toByteArray();
+        if (data.length > MAX_PAYLOAD_BYTES) throw new IOException("Native structure payload is too large");
+        try {
+            // The same bounded decoder must be able to reopen every file that we commit.
+            var decoded = NbtIo.readCompressed(new ByteArrayInputStream(data), NbtAccounter.create(MAX_PAYLOAD_BYTES));
+            if (!payload.equals(decoded)) {
+                throw new IOException("Native structure payload did not round-trip without changes");
+            }
+        } catch (RuntimeException invalid) {
+            throw new IOException("Native structure payload exceeds decoding limits", invalid);
+        }
+        var temporary = Files.createTempFile(target.getParent(), target.getFileName().toString(), ".tmp");
+        try {
+            try (var channel = FileChannel.open(temporary, StandardOpenOption.WRITE)) {
+                var bytes = ByteBuffer.wrap(data);
+                while (bytes.hasRemaining()) channel.write(bytes);
+                channel.force(true);
+            }
+            Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        } finally {
+            Files.deleteIfExists(temporary);
+        }
+    }
+}

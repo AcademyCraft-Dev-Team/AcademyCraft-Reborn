@@ -353,6 +353,9 @@ neoForge {
             type.set("gameTestServer")
             environment("IS_DEV", "true")
             gameDirectory.set(file("run/gametest"))
+            // GameTestServer uses only the flat preset, discarding datapack dimension entries.
+            // Also supply the fixture for unfiltered or wildcard runs which include the native test.
+            programArguments.addAll("--packs", file("src/test/gametest_packs").absolutePath)
             providers.gradleProperty("academyGameTests").orNull?.let {
                 programArguments.addAll("--tests", it)
             }

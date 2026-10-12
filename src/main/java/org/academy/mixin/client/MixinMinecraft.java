@@ -64,7 +64,12 @@ public abstract class MixinMinecraft {
     @Inject(method = "startUseItem", at = @At("HEAD"), cancellable = true)
     private void startUseItem(CallbackInfo ci) {
         if (MentalIntrusionClientState.blocksWorldInteraction()
-                || PlayerControlClientState.blocksWorldInteraction(true)) ci.cancel();
+                || PlayerControlClientState.blocksWorldInteraction(true)) {
+            ci.cancel();
+            return;
+        }
+        if (org.academy.internal.client.structure.NativeStructureClientInteraction.tryUse(
+                (Minecraft) (Object) this)) ci.cancel();
     }
 
     @Inject(method = "runTick", at = @At("HEAD"))

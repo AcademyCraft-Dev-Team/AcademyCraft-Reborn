@@ -41,5 +41,6 @@ public final class EntityRenderers {
                 context -> new ThrownItemRenderer<>(context, 1.25f, true));
         event.registerEntityRenderer(EntityTypes.DARKMATTER_BEETLE.get(), DarkmatterBeetleRenderer::new);
         event.registerEntityRenderer(EntityTypes.BLOCK_STRUCTURE.get(), BlockStructureRenderer::new);
+        event.registerEntityRenderer(EntityTypes.NATIVE_STRUCTURE_PROJECTION.get(), NativeStructureProjectionRenderer::new);
     }
 }

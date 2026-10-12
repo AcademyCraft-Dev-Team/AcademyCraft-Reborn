@@ -1,0 +1,15 @@
+allprojects {
+    afterEvaluate {
+        def runRoot = new File(rootProject.projectDir, 'run').canonicalFile
+        def directory = rootProject.file(providers.gradleProperty('academyNativeQueryDirectory')
+                .getOrElse('run/native-structure-query-gametest')).canonicalFile
+        if (!directory.toPath().startsWith(runRoot.toPath())
+                || !directory.name.startsWith('native-structure-query-gametest')) {
+            throw new GradleException('Query fixture must live in run/native-structure-query-gametest*')
+        }
+        neoForge.runs.named('gameTestServer') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.nativeStructureQueryTests', 'true'
+        }
+    }
+}

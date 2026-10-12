@@ -1,0 +1,29 @@
+allprojects {
+    afterEvaluate {
+        def smokePhase = providers.gradleProperty('academyNativeStructureSmoke').orNull
+        if (!(smokePhase in ['write', 'read'])) {
+            throw new GradleException('Explicitly choose -PacademyNativeStructureSmoke=write or =read')
+        }
+
+        def runRoot = new File(rootProject.projectDir, 'run').canonicalFile
+        def directorySetting = providers.gradleProperty('academyNativeStructureSmokeDirectory')
+                .getOrElse('run/native-structure-client-smoke')
+        def smokeDirectory = rootProject.file(directorySetting).canonicalFile
+        if (!smokeDirectory.toPath().startsWith(runRoot.toPath())
+                || !smokeDirectory.name.startsWith('native-structure-client-smoke')) {
+            throw new GradleException('Smoke directory must be inside this checkout run/ and begin native-structure-client-smoke')
+        }
+        def worldDirectory = new File(smokeDirectory, 'saves/Native Structure Smoke').canonicalFile
+        if (!worldDirectory.toPath().startsWith(smokeDirectory.toPath())
+                || !new File(worldDirectory, 'level.dat').isFile()) {
+            throw new GradleException('Prepare an isolated saves/Native Structure Smoke world before running this probe')
+        }
+
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(smokeDirectory)
+            systemProperty 'academy.nativeStructureSmoke', smokePhase
+            programArguments.addAll('--width', '960', '--height', '540',
+                    '--quickPlaySingleplayer', 'Native Structure Smoke')
+        }
+    }
+}

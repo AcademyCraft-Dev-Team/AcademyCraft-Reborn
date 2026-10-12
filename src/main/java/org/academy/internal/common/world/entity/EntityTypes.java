@@ -13,6 +13,7 @@ import org.academy.internal.common.world.entity.projectile.DarkmatterCreaturePro
 import org.academy.internal.common.world.entity.projectile.DarkmatterSpearProjectile;
 import org.academy.internal.common.world.entity.skill.*;
 import org.academy.internal.common.world.entity.structure.BlockStructureEntity;
+import org.academy.internal.common.world.entity.structure.NativeStructureProjectionEntity;
 import org.academy.internal.common.world.entity.vehicle.CleaningRobot;
 
 import static org.academy.AcademyCraft.MOD_ID;
@@ -118,6 +119,13 @@ public class EntityTypes {
                     builder -> builder.sized(1.0f, 1.0f)
                             .clientTrackingRange(160)
                             .updateInterval(1)
+            );
+
+    public static final DeferredHolder<EntityType<?>, EntityType<NativeStructureProjectionEntity>> NATIVE_STRUCTURE_PROJECTION =
+            ENTITY_TYPES.registerEntityType(
+                    "native_structure_projection", NativeStructureProjectionEntity::new, MobCategory.MISC,
+                    builder -> builder.sized(1.0f, 1.0f).noSave().noSummon()
+                            .clientTrackingRange(10).updateInterval(1)
             );
 
     private EntityTypes() {

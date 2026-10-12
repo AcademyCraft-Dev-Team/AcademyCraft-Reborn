@@ -12,9 +12,9 @@
 - 将水平朝向吸附到最近的 90 度，并在当前位置对齐方块网格后还原；
 - 在捕获或还原中途失败时尝试回滚；回滚不能完成时保留完整载荷和写入前数据并隔离结构。
 
-当前运行实现仍是短时操纵用的快照实体，没有动态子世界、隐藏区块、移动中的逐格放置/破坏/菜单或 Sable 适配器。后续目标已扩展为独立安装时也能运行完整动态方块空间，安装 Sable 时通过可选后端统一接管，详见[完整设计方案](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/block_structure_physics_and_sable_compat_plan.zh-CN.md)。
+现有技能继续使用短时操纵用的快照实体。新增的独立后端已具备真实 `ServerLevel` 方块容器原型，提供服务端内容访问、原版方块运行和保存生命周期；它尚未接到移动呈现、玩家逐格操作或旧技能上。最终目标仍是独立安装时也能运行完整动态方块空间，安装 Sable 时通过可选后端统一接管，详见[完整设计方案](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/block_structure_physics_and_sable_compat_plan.zh-CN.md)。
 
-2026 年 10 月 12 日的第一批实现增加了公共空间与单位契约、失败保留和回滚数据隔离，以及可组合的碰撞查询。它是 P0 的一部分；独立区块路由、原生刚体后端和 Sable 桥仍未实现。
+2026 年 10 月 12 日的第一批实现增加了公共空间与单位契约、失败保留和回滚数据隔离，以及可组合的碰撞查询。第二批增加四个独占维度槽、实体无关的公共生命周期 API 和真实区块容器。第三批加入模型投影、任意四元数姿态下的逐格命中、作用域上下文与受限拉杆交互。当前仍为 P0 部分完成；完整放置、采掘、菜单、原生刚体后端和 Sable 桥尚未实现。
 
 ## 模块
 
@@ -28,6 +28,9 @@
 - `StructurePose`：double 世界原点与归一化四元数，提供点/方向正逆变换及世界表面速度；
 - `StructureAnchor`：局部格、偏移、单位法线和可选格代次；目前只描述锚点，尚不提供运行时查找或拆分重映射；
 - `LegacyMotionUnits`：显式转换旧格/tick 与格/秒单位，拒绝非有限值和转换溢出；
+- `StructureSpaces`、`StructureBackend`：独立后端入口，以及创建空容器、精确查询、装载和停用；
+- `StructureHandle`、`StructureLifecycle`：运行时句柄与 `LOADING`、`ACTIVE`、`UNLOADED`、`RECOVERY_REQUIRED` 状态；
+- `StructureWorldAccess`、`StructureBlockData`、`StructureWriteResult`：局部格读取、完整 BE 数据的防御复制和服务端单格比较后写入；
 - `BlockStructureSnapshot`：不可变、原点相对的结构数据；
 - `BlockStructureGridAlignment`：纯坐标网格吸附算法；
 - `BlockStructureKinetics`：带生命周期句柄的质量感知推进与扫掠碰撞回调；
@@ -37,7 +40,7 @@
 内部实现位于 `org.academy.internal.common.structure` 和
 `org.academy.internal.common.world.entity.structure`。`BlockStructureTransferState` 保存尝试写入位置的原方块及 BE 数据、预期写入结果和完成状态，用于当前调用内回滚和失败隔离。客户端渲染器逐块提交原版移动方块模型。
 
-## 生命周期和不变量
+## 快照实体生命周期和不变量
 
 1. 调用方在服务端选定位置，并提供纯函数式捕获策略。
 2. 系统去重、排序并验证所有位置、区块、方块和方块实体数据上限。
@@ -89,7 +92,7 @@ result.structure().ifPresent(structure -> {
 
 普通实体喷口也支持弹射物。箭等射弹可安装喷口；激活时会清除箭的入地/静止状态并保留原所有者，以喷口反向推力重新进入飞行。`Shift+H` 瞄准已安装自有喷口的弹射物时仅激活该弹射物的喷口，瞄准方块时仍执行结构捕获发射。
 
-## 当前交互模型
+## 快照实体当前交互模型
 
 结构会在捕获时保存各方块的原版碰撞形状，并在每个 16×16×16 局部分区内合并连续碰撞盒。单方块最多保存 64 个碰撞盒，单结构最多保存 16,384 个，超过上限时捕获会以 `COLLISION_DATA_TOO_LARGE` 失败且不改动世界。实体碰撞查询使用旋转后的复合体素形状；外包框只负责空间索引、选择和渲染裁剪。顶部承载也复用同一份复合碰撞数据，因此实体可以站在结构内部的楼板或台阶上，而不再局限于结构最高处。移动结构以扫掠碰撞检测命中实体，基础伤害和击退由公开的 `BlockStructureKinetics` 质量/速度函数计算并带单目标冷却；高速射流可以在此基础上叠加技能威力与资源规则。
 
@@ -105,13 +108,75 @@ result.structure().ifPresent(structure -> {
 - 方块实体 NBT 会完整保存，但实体化期间不 tick、不开菜单，也暂不提交方块实体专用渲染；
 - 独立流体方块和依赖方块实体专用渲染的模型可能在实体化期间不可见。
 
+## 独立真实区块容器原型（P0 第二批）
+
+### 存储与边界
+
+`academy:native_level` 后端使用数据包静态声明的四个空维度：`academy:structure_space_0` 至 `academy:structure_space_3`。每个结构永久独占一个 `ServerLevel`；它们采用 `minecraft:overworld` 维度类型和无层、无结构、无装饰的 flat 生成器，不与宿主或另一结构共享远处 plot。此版本没有运行时注册维度或容量扩展能力，一个存档最多分配四个身份，停用不会释放槽位。
+
+每个容器允许的局部 X/Z 为 `[-32, 31]`，Y 按实际存储 level 的最小构建高度到最大构建高度（含端点）校验。局部坐标固定，允许负坐标；`StructureRef.dimension` 表示可见宿主维度，公开 API 不暴露存储维度或原始 `LevelChunk`。姿态变化只更新局部到宿主的变换元数据，不改变存储格子，也不会使方块在宿主中出现或运动。
+
+对四个保留维度，`Level.setBlock(BlockPos, BlockState, int, int)` 拒绝边界外写入；对应的 `getBlockState`、`getFluidState`、`getBlockEntity` 分别返回屏障、空流体和 null。普通维度保持原行为。这里的虚拟屏障约束这些 Level 入口及经它们访问的邻居/流体逻辑，不能视为实体物理围墙，也不能阻止任意模组直接调用 `LevelChunk`、直接注册实体或绕过这些方法。
+
+传送事件拒绝玩家和普通实体进入四个保留维度；原版传送命令和门户最终经过这一事件。已经被旧存档记录在这些精确维度中的玩家，登录时尝试回到主世界安全出生位置，不修改背包；恢复被其他逻辑拒绝或抛错时记录失败。直接 `addFreshEntity`、`summon`、实体越界及跨空间归属迁移不在本批保护范围内。实际搭建门户和真实玩家重登录仍须单独验证。
+
+每个活动槽为 X/Z 区块 `[-2, 1]` 的 16 个区块持有可移除的 `ENTITY_TICKING` 票据，标志为加载、模拟和保持维度活动（14），不使用持久强加载票。原版票据等级会使外围区块参与加载或模拟，因此 16 是直接持票数量，不是所有驻留区块的硬上限。此实现不修改宿主的世界边界或全局游戏规则。
+
+### 公共生命周期与内容操作
+
+使用 `StructureSpaces.backend(server)` 获取当前服务器后端。接口面向技能、精密操作和非玩家调用者，不要求实体或玩家；所有操作必须在所属服务端线程进行。
+
+| 操作或状态 | 本批行为 |
+| --- | --- |
+| `createEmpty(hostLevel, pose)` | 只创建空容器，不捕获或删除宿主方块；分配前检查空内容并永久认领槽位，实体加载完成后再次验空，发现旧内容则隔离 |
+| `resolve(reference)` | 只查找已经加载的精确身份，不创建内容、不增加票据；调用方仍需检查生命周期 |
+| `load(reference)` | 校验 UUID、宿主维度、后端、代次、owner 和恢复记录；装载成功先返回 `LOADING` 句柄 |
+| `LOADING → ACTIVE` | 等待全部持票区块与其实体加载就绪；只有 `ACTIVE` 可读取内容、修改姿态或写格 |
+| `unload(reference)` | 保存原版区块/实体与索引，停用、撤票并永久作废旧句柄；不删除内容、不回收槽位 |
+| 重新 `load` | 保留原 `StructureRef`，返回新的运行时句柄；旧句柄及其 `world()` 访问对象不会重新生效 |
+| `RECOVERY_REQUIRED` | 禁止普通内容访问和变更，冻结世界运行并保留恢复证据；不自动重放或重新激活 |
+
+`StructureWorldAccess.read(localPos)` 返回实际方块状态和脱离世界的完整 BE 数据副本。`compareAndSet(localPos, expected, replacement)` 只有在当前 state 和完整 BE NBT 都等于预期值时才写入；结果区分 `APPLIED`、`CONFLICT`、`REJECTED`、`OUT_OF_BOUNDS`、`NOT_READY` 和 `RECOVERY_REQUIRED`。前后镜像验证沿用 `BlockStructureTransferState`，含 BE 的写入先校验保存/加载往返；失败只能在确认可安全回滚时返回拒绝，否则隔离。单格写入对写前和写后 BE 各限制为 256 KiB，恢复文件仍有独立的大小限制。
+
+这是受信服务端内容操作，不是玩家放置或挖掘协议：调用方负责权限、工具、物品消耗和掉落。本批没有菜单、采掘进度、客户端写入包或多格事务。提交后的 `onPlace` 与邻居更新允许原版副作用继续改变方块；`APPLIED` 不保证该格在回调或后续 tick 后仍等于 replacement，回调异常也不能通过重建旧库存来补偿。
+
+### 运行、保存与故障边界
+
+已激活容器通过自己的真实 `ServerLevel` 运行原版 BE、红石、block/fluid 计划 tick 和局部实体，并由原版区块及实体存储链保存。票据使它们在没有玩家进入时也能模拟；这不等于所有第三方机器、随机 tick 或跨维度依赖都已适配。`LOADING` 也允许 level tick，以完成实体加载。没有可运行句柄、停用、隔离或已锁存 I/O 失败的槽在 `ServerLevel.tick` 入口暂停整次世界 tick；这是停用/冻结机制，不保证区块和实体立即从内存驱逐，也不阻止外部模组直接修改该 level。
+
+上述暂停指不执行本容器的逻辑 tick，不冻结原版共享的 `gameTime`。停用期间熔炉等 BE 状态不推进，计划 tick 保留在队列中；重新装载后，已经超过触发时刻的计划 tick 可以立即执行，与普通区块暂停模拟时的时间语义一致。独立逻辑时钟和技能时停映射尚未实现。
+
+索引位于存档的 `data/academy/native_structures/metadata.dat`，记录身份、槽位、宿主、姿态及 active/quarantined 标记；内容使用各维度的原版区块与实体文件。`owner_N.txt` 永久认领槽位，即使分配中断或索引缺失也不自动复用。损坏、未知版本或无法安全读取的索引会禁止继续分配和装载，不覆盖成空索引。`recovery_N.dat` 记录恢复证据，其存在本身阻止重新激活。元数据和恢复文件使用有界 NBT、完整往返校验及临时文件原子替换，但不与原版文件形成共同事务。
+
+正常停服后，健康且 active 的已保存结构在启动时重新装载；inactive 结构需显式 `load`。正常重启验证必须在同一存档进行两次独立服务器启动，比较身份、槽位、姿态、完整库存、实体和后续 tick 行为，不能用同一次进程内的 unload/load 代替。当前验证状态见下表。
+
+`MinecraftServer.reportChunkLoadFailure` 和 `reportChunkSaveFailure` 对四个存储维度报告的 I/O 错误会按服务器/槽位锁存；报告来自异步线程时也只登记维度，不在那里访问世界。该槽在本次服务器会话内不能通过再次装载解除失败；运行时禁止继续活动并尝试持久化隔离，原版诊断仍照常执行。普通维度报告不会污染结构槽。这只覆盖原版明确报告的错误：解析器静默跳过无效 BE/实体、缺失注册项或吞掉字段等不一定进入报告入口，尚无完整内容校验和、原版数据损坏审计或自动修复器。I/O 锁存本身在服务器会话结束后清理，跨重启拒绝依赖成功保存的 quarantine/recovery 记录，不能夸大为任意存储故障后的永久保证。
+
+第二批未实现宿主与容器之间的捕获/还原迁移、移动中的放置/破坏/菜单、空间事件转换、渲染/网络、刚体、Sable 桥或旧技能迁移。索引、BE/实体保存和恢复证据也不构成跨文件崩溃原子提交；硬终止、断电、磁盘损坏和原版静默解析丢弃不属于“正常重启已支持”的等价场景。
+
+## 宿主投影与逐格命中（P0 第三批）
+
+活动容器的模型通过独立 `NativeStructureProjectionEntity` 呈现在宿主世界。投影不保存、不持有方块归属、不承担碰撞、重力或结算；移除投影不会丢弃或还原容器内容。姿态与内容分开同步，姿态使用现有 double 原点和单位四元数，渲染与查询使用相同的当前姿态，尚未加入网络插值或物理驱动。
+
+模型视图只包含 `BlockPos + BlockState`，不会发送完整 BE NBT 或库存。最多 4096 格，支持无方块实体的普通 `MODEL` 状态；方块实体目前仅允许原版熔炉、高炉、烟熏炉、漏斗、发射器与投掷器的状态模型。26.2 的箱子等专用模型也可能报告 `MODEL`，因此不能仅凭这个标记认定可呈现。存在流体、未支持的方块实体、非模型方块或超过上限时，整个投影隐藏，容器和内容继续保留。公共 `StructureSpaces.presentationStatus` 区分空内容、不支持内容、超限、宿主不可用和已显示。投影实体以可见内容中心作为跟踪位置；模型仍按结构原点变换，避免局部坐标较大时在错误区段被裁剪。未加载宿主中心区块时不为投影强制加载世界。
+
+初始视图扫描跳过空 section，后续从 `LevelChunk.setBlockState` 收集实际变化格，覆盖原版机器、红石与计划 tick。脏格集合最多 8192 项，超过时转一次全量扫描；超过视图上限的扫描及时停止。当前状态变化仍同步完整有界视图，没有分片、单格网络差量或 BE 专用渲染。
+
+`StructureQueries.raycast(host, from, to)` 返回 `StructureHit`，记录结构局部格、局部面、局部/宿主命中点、姿态、运行期 UUID 与几何版本。查询逆变换射线并使用实际原版 `OUTLINE` 形状，排除容器外围的虚拟屏障，处理宿主与其他结构遮挡；它不保证结构已呈现，也不授予任何操作权限。宿主查询遇到未加载区块会拒绝，不为射线加载区块。每次激活产生新的 `runtimeId`；姿态、API 写入或原生区块状态变化会使旧命中失效，持久引用保持不变。
+
+`StructureContexts.call/run` 提供仅当前线程、最多 16 层的 `SpaceContext`，异常退出也会恢复外层上下文；它不修改玩家所属世界、位置或朝向。新调用方可用公共空间引用与内容访问接口集成精密操作或非玩家逻辑。
+
+本批唯一接入的玩家操作为**双手空闲时右键原版拉杆**。客户端单独查询结构命中，服务端使用真实玩家的眼睛、朝向和交互距离重新计算；再检查结构激活/呈现版本、方块与实体遮挡、建造资格、宿主保护/世界边界，以及时停和精神控制门禁。公开可取消的 `StructureInteractionEvent` 携带真实玩家和空间上下文；事件后再次校验，防止监听器改变姿态、内容或玩家。拉杆调用原版容器内 `pull`，红石更新留在容器内，点击声转到宿主。动作期间禁止 API 写入、保存、卸载与姿态更改重入；回调异常会保留数据并隔离，不尝试撤销已经发出的副作用。
+
+这个专用事件不等价于所有原版 `PlayerInteractEvent` 保护插件已兼容。普通放置、采掘、物品消耗、菜单距离和第三方交互需要后续各自适配，不能把局部命中直接交给绑定宿主玩家的原版交互包。旧技能尚未迁移到此容器，Sable 混装也尚未验证。
+
 ## 后续阶段
 
 后续按[完整设计方案](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/block_structure_physics_and_sable_compat_plan.zh-CN.md) 推进，当前未完成项包括：
 
-1. 真实区块/动态空间路由、交互执行上下文和独立后端技术原型；这是 P0 的剩余核心工作。
+1. 在已有上下文、投影与命中重验上完成放置、采掘、菜单及运动期间的原版操作；这是 P0 的剩余核心工作。
 2. 持久交易协调、明确的隔离数据恢复入口，以及跨存储崩溃恢复验证。
-3. 移动中的原版放置、破坏、BE tick、菜单、红石、流体与分区同步/渲染闭环。
+3. 将容器内已能运行的 BE、红石和计划 tick 接到移动空间；补齐原版放置、破坏、菜单、流体边界及分区同步/渲染闭环。
 4. 完整刚体后端、角速度、旋转承载、拆分、质心/惯性及材料响应；全方向网格还原需方块及 BE 旋转适配。
 5. Sable 可选桥、跨后端迁移，以及喷口、磁力、反射、传送、时停和精密操作向公共服务迁移。
 
@@ -123,7 +188,7 @@ result.structure().ifPresent(structure -> {
 - 游戏内：含方块实体结构的捕获/重载/还原，水平与垂直碰撞，玩家站立搬运；静止后结算、占位时完整保留、解除阻挡后重试；喷口/气流技能推动、箭喷口再发射、单体与区域传送、碰撞伤害和矢量反射/折射；
 - 兼容：活塞、流体、跨区块边界、受保护区域和卸载边界由调用策略与集成测试逐项确认。
 
-## 本批次验证记录
+## 第一批验证记录
 
 2026 年 10 月 12 日使用 JetBrains Runtime 25 和仓库 Gradle wrapper 完成以下检查，最终均通过：
 
@@ -138,4 +203,71 @@ result.structure().ifPresent(structure -> {
 
 客户端检查由显式系统属性 `academy.blockStructureSmoke=true` 启用，使用 `run/block-structure-client-smoke-20261012` 下的隔离世界。临时 init script 将 `clientDev.gameDirectory` 指向该目录，并加入 `--quickPlaySingleplayer "Block Structure Smoke"`；它与测试世界、日志均位于忽略的 build/run 目录，不能依赖其存在于新检出中。重新执行时须先准备独立测试世界，游戏目录名须以 `block-structure-client-smoke` 开头。检查等待实体状态与方块更新完成同步后再验证稳定状态，并有超时限制。
 
-本轮客户端验证检查了同步、碰撞和渲染器注册，没有证明移动箱子的专用渲染、菜单或逐格交互已经实现。真实 Sable/航空学混装、技能全链路人工检查、动态区块与完整刚体、跨存储崩溃恢复均未纳入本批次通过结论。
+第一批客户端验证检查了快照实体同步、碰撞和渲染器注册，没有证明移动箱子的专用渲染、菜单或逐格交互已经实现。真实 Sable/航空学混装、技能全链路人工检查、独立真实区块原型、完整刚体及跨存储崩溃恢复均未纳入第一批通过结论。
+
+## 第二批验证记录
+
+2026 年 10 月 12 日使用 JBR 25 对本批最终代码完成以下验证；第一批结果未代替新增实现的检查。
+
+| 检查 | 命令或场景 | 结果 |
+| --- | --- | --- |
+| 单元测试 | `./gradlew test -DisDev=true`；公共值类型、Manifest 编解码、错误输入与 owner/recovery 约束 | 2333 项，零失败、零错误、零跳过；其中新增 14 项 Manifest 测试 |
+| 真实容器 GameTest | `./gradlew runGameTestServer -DisDev=true -PacademyGameTests=academy:native_structure_space`；双空间隔离、负坐标、完整 NBT CAS、真实熔炉/漏斗/红石、边界、传送命令与卸载重载 | 1 个注册测试通过；无人状态持续 550 tick，停用 60 tick 后机器与待执行 tick 保留，重载继续 |
+| 数据安全回归 | `./gradlew runGameTestServer -DisDev=true -PacademyGameTests=academy:block_structure_safety` | 1 个注册测试内九类现有场景通过 |
+| 正常重启 | 同一测试存档两次独立 JVM；自动激活、身份/槽位/姿态、完整库存、实体及恢复后 tick | write/read 均通过；7 钻石、1 个铁矿物料守恒，盔甲架 UUID/属性一致且数量为 1，原生未来 tick 执行完成 |
+| I/O 失败门禁 | 原版 load/save report 入口、异步报告、普通维度不污染、拒绝分配失败槽 | 容器 GameTest 通过；注入报告而非实际损坏磁盘，三条预期错误由 `NATIVE_STRUCTURE_SYNTHETIC_IO_REPORTS_BEGIN/PASSED` 标识 |
+| 隔离客户端 | `runClientDev` 两进程 native smoke；真实普通世界加载新增维度/Mixin | 通过；未重复旧 snapshot 客户端探针，旧路径由安全 GameTest 回归；不证明新容器移动呈现 |
+| 开发构建 | `./gradlew build -DisDev=true` | 成功，包含项目配置的检查任务 |
+| 发布构建 | `./gradlew build -DisDev=false` | 成功，包含项目配置的检查任务 |
+| 文档与改动格式 | `git diff --check`、本地链接与实现范围核对 | 通过 |
+
+最终跨进程测试使用 `run/native-structure-client-smoke-20261012-final`，write PID 为 56180，read PID 为 68424。两次记录的结构 UUID 都为 `160e10f7-3777-44d1-8e89-a6416b14c3ab`，局部盔甲架 UUID 都为 `fc9f5cff-db02-4b76-b6f6-75d9b7cfe854`。read 观察到保存的熔炉进度从 40/200 继续，未来 tick 剩余 996 tick，最终灯熄灭、计划队列清空、1 个铁锭和 7 个钻石均保留。日志及验证清单位于 `build/native-structure-final-*.log`、`build/native-structure-client-final-write.log` 和 `build/native-structure-validation.json`。
+
+真实门户、保留维度中的玩家重登录、实际磁盘损坏/断电、Sable/航空学混装及移动空间交互仍待对应阶段验证，本表不覆盖这些场景。
+
+### 重跑入口
+
+容器 GameTest 使用 `src/test/gametest_packs/native_structure_fixture`。原版 GameTestServer 从 flat preset 建立测试世界，会忽略普通数据包维度条目；Gradle 仅为 GameTest 运行添加这个测试 pack，保留原版三维度并补齐四个容器维度。它不会覆盖普通客户端或专服的 flat preset。
+
+跨进程检查使用已入库的 `validation/native_structure/run.init.gradle`。先在仓库 `run/native-structure-client-smoke-自定名称/saves/Native Structure Smoke` 准备一次性测试世界；可复制已退出游戏的测试存档，不使用正在游玩的世界。要求至少一个未分配槽，且没有本次探针的 `academy-native-structure-smoke.nbt`。脚本会校验目录和世界名称，拒绝覆盖已有验证证据。首次出现原版实验设置提示时，可为这个测试副本创建备份并加载。
+
+按顺序运行下列两个独立命令，并等待前一个客户端正常退出。两次使用相同目录；JBR 25 和 `JAVA_HOME` 要求与仓库其余验证一致。
+
+```powershell
+.\gradlew.bat runClientDev -DisDev=true --init-script validation/native_structure/run.init.gradle -PacademyNativeStructureSmoke=write -PacademyNativeStructureSmokeDirectory=run/native-structure-client-smoke-自定名称
+.\gradlew.bat runClientDev -DisDev=true --init-script validation/native_structure/run.init.gradle -PacademyNativeStructureSmoke=read -PacademyNativeStructureSmokeDirectory=run/native-structure-client-smoke-自定名称
+```
+
+两个进程分别记录 `NATIVE_STRUCTURE_SMOKE_WRITE_PASSED` 和 `NATIVE_STRUCTURE_SMOKE_READ_PASSED`。证据包含不同的进程 ID/启动时间、结构引用、姿态、完整箱子 NBT、尚未完成的真实熔炉、HIGH 优先级未来计划 tick，以及局部盔甲架的 UUID、位置、自定义名和无重力状态。read 阶段必须依靠启动自动激活，之后观察铁锭产出、红石灯熄灭、队列清空和单个实体保持，再保存停用。世界、备份、证据和日志均留在被忽略的 run/build 目录，不进入 Git。
+
+## 第三批验证记录
+
+2026 年 10 月 12 日使用 JBR 25 验证。真实测试发现并修复了两项问题：26.2 的 `MODEL` 标记不能区分箱子专用部件；实体局部原点所在区段可能遮蔽实际可见的远处结构。测试保留对应断言，未通过减少检查范围处理失败。
+
+| 检查 | 实际证明范围 | 结果 |
+| --- | --- | --- |
+| `test -DisDev=true` | 上下文异常/嵌套/线程隔离、任意姿态编解码、命中包信任边界、视图网络上限；含原有测试 | 2350 项，零失败、零错误、零跳过；比第二批增加 17 项 |
+| `academy:native_structure_query` | 旋转楼梯真实空隙、任意轴四元数和负格坐标、宿主/双结构遮挡、原生状态即时版本、pose/运行期身份过期；脏格视图刷新、真实箱子/流体隐藏保留、EMPTY 恢复、4096/4097 格保留与恢复 | 最终代码通过 |
+| `runClientDev` 投影探针 | 真实玩家建造资格、保护取消、监听器改变姿态、写入重入拒绝；空手客户端入口实际发包、拉杆/灯和熔炉状态同步、旧命中包重放；任意姿态模型截图、卸载后无残影且完整炉内 NBT 保留 | 通过；截图已人工查看，五个模型可见 |
+| 原容器与旧数据安全回归 | `academy:native_structure_space`、`academy:block_structure_safety` | 两个注册 GameTest 通过；原 I/O 故障注入与九类旧安全场景均通过 |
+| 开发/发布构建 | `build -DisDev=true`、`build -DisDev=false` | 两种配置均成功，包含各自检查任务 |
+
+最终客户端使用 `run/native-structure-projection-smoke-20261012-final`，进程 65156，结构 UUID `b2b1a310-d89b-45b3-9b5e-8a578f5e4c3d`。`NATIVE_STRUCTURE_PROJECTION_SMOKE_PASSED` 记录实际发包、旧包重放、模型帧提交、卸载和炉内 3 单位矿物料守恒；图片为该目录 `screenshots/native-structure-projection-65156-1791802361997.png`，已核对旋转后的点亮熔炉、拉杆、红石灯、石块与楼梯。日志在 `build/native-structure-p3-*.log`，顺序验证清单为 `build/native-structure-p3-validation.json`。这些运行产物不进入 Git。
+
+第三批未重新执行第二批的双 JVM 持久化探针；本批没有修改 manifest/vanilla 存储格式，采用原容器 GameTest 回归保存/重载。真实多人延迟、第三方保护插件、Sable 混装、完整放置/采掘/菜单、刚体及运动承载仍待验证和后续实现。
+
+### 第三批重跑入口
+
+查询/呈现 GameTest 用独立存档，占两个永久槽；通过 init script 显式启用，普通未筛选 GameTest 不注册此测试，避免与存储故障注入用例共享四个有限槽。测试脚本复用专用 fixture，不删除世界或回收 owner 标记。
+
+```powershell
+.\gradlew.bat runGameTestServer -DisDev=true -PacademyGameTests=academy:native_structure_query --init-script validation/native_structure/query.init.gradle
+```
+
+客户端先在 `run/native-structure-projection-smoke-自定名称/saves/Native Structure Projection Smoke` 准备已退出游戏的一次性存档副本，保留至少一个未分配槽，玩家双手空闲、允许建造且非旁观者。探针仅在显式属性开启并通过路径守卫后运行，复用一个专用槽，改变该测试玩家的飞行状态及宿主内位置以控制镜头；不会传送玩家到容器或重写玩家库存。不要将实际游玩存档改名作为测试副本。
+
+```powershell
+.\gradlew.bat runClientDev -DisDev=true --init-script validation/native_structure/projection.init.gradle -PacademyNativeStructureProjectionDirectory=run/native-structure-projection-smoke-自定名称
+```
+
+探针等待真实状态同步和至少 20 个模型提交帧，再保存 PNG、验证卸载与内容保留并正常关闭。出现原版实验设置提示时，对这个副本备份并加载即可。检查必须见到 `NATIVE_STRUCTURE_PROJECTION_SMOKE_PASSED`，且实际打开 PNG 确认模型可见；不能仅凭 Gradle 编译或单纯截图文件存在认定呈现成功。

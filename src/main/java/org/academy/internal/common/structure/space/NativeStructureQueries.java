@@ -1,0 +1,231 @@
+package org.academy.internal.common.structure.space;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import org.academy.api.common.structure.SpaceBlockRef;
+import org.academy.api.common.structure.StructureContexts;
+import org.academy.api.common.structure.StructureHandle;
+import org.academy.api.common.structure.StructureHit;
+import org.academy.api.common.structure.StructureHitValidation;
+import org.academy.api.common.structure.StructureLifecycle;
+import org.academy.api.common.structure.StructurePose;
+import org.academy.api.common.structure.StructureQueries;
+import org.academy.api.common.structure.StructureRef;
+import org.academy.internal.common.structure.NativeStructureRuntime;
+import org.jspecify.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+
+/** Exact selection-shape queries; all addresses exposed to callers remain structure-local. */
+public final class NativeStructureQueries {
+    private static final double HIT_POINT_TOLERANCE_SQUARED = 1.0 / (64.0 * 64.0);
+    private static final double POSE_TOLERANCE = 1.0E-10;
+    private static final double DISTANCE_TOLERANCE = 1.0E-7;
+
+    private NativeStructureQueries() {
+    }
+
+    public static Optional<StructureHit> raycast(ServerLevel host, Vec3 worldFrom, Vec3 worldTo) {
+        validateRay(host, worldFrom, worldTo);
+        var backend = NativeStructureRuntime.backend(host.getServer());
+        try {
+            var snapshots = new ArrayList<Snapshot>();
+            for (var handle : backend.activeStructures(host)) {
+                snapshots.add(new Snapshot(handle, handle.reference(), handle.runtimeId(), handle.geometryRevision(),
+                        handle.pose(), backend.storageLevel(handle.reference()).orElseThrow(UnavailableRay::new)));
+            }
+            if (snapshots.isEmpty()) return Optional.empty();
+            // This getter refuses missing chunks before touching their states or block entities.
+            var hostHit = new LoadedBlockGetter(host, false).clip(context(worldFrom, worldTo));
+            var hostDistance = hostHit.getType() == HitResult.Type.MISS ? Double.POSITIVE_INFINITY
+                    : worldFrom.distanceTo(hostHit.getLocation());
+            StructureHit nearest = null;
+            var nearestDistance = Double.POSITIVE_INFINITY;
+            for (var snapshot : snapshots) {
+                var localFrom = snapshot.pose.worldToLocalPoint(worldFrom);
+                var localTo = snapshot.pose.worldToLocalPoint(worldTo);
+                var bounds = new AABB(NativeStructureDimensions.MIN_COORDINATE, snapshot.level.getMinY(),
+                        NativeStructureDimensions.MIN_COORDINATE, NativeStructureDimensions.MAX_COORDINATE_EXCLUSIVE,
+                        snapshot.level.getMaxY() + 1.0, NativeStructureDimensions.MAX_COORDINATE_EXCLUSIVE);
+                if (!bounds.contains(localFrom) && bounds.clip(localFrom, localTo).isEmpty()) continue;
+                var hit = StructureContexts.call(snapshot.handle, ignored ->
+                        new LoadedBlockGetter(snapshot.level, true).clip(context(localFrom, localTo)));
+                if (hit.getType() == HitResult.Type.MISS) continue;
+                var worldPoint = snapshot.pose.localToWorldPoint(hit.getLocation());
+                var distance = worldFrom.distanceTo(worldPoint);
+                // A coincident host face wins; hitting a structure never permits reaching through it.
+                if (distance >= hostDistance - DISTANCE_TOLERANCE) continue;
+                if (nearest != null && (distance > nearestDistance + DISTANCE_TOLERANCE
+                        || Math.abs(distance - nearestDistance) <= DISTANCE_TOLERANCE
+                        && snapshot.reference.id().compareTo(nearest.block().structure().id()) >= 0)) continue;
+                nearest = new StructureHit(new SpaceBlockRef(snapshot.reference, hit.getBlockPos()),
+                        snapshot.runtimeId, snapshot.revision, snapshot.pose, hit.getDirection(),
+                        hit.getLocation(), worldPoint, hit.isInside());
+                nearestDistance = distance;
+            }
+            // Shape callbacks can reenter mod code; never return an observation spanning mutations.
+            for (var snapshot : snapshots) if (!snapshot.isCurrent()) return Optional.empty();
+            return Optional.ofNullable(nearest);
+        } catch (UnavailableRay | IllegalStateException unavailable) {
+            return Optional.empty();
+        }
+    }
+
+    public static StructureHitValidation validate(ServerLevel host, Vec3 trustedWorldFrom,
+                                                  Vec3 trustedWorldTo, StructureHit proposed) {
+        validateRay(host, trustedWorldFrom, trustedWorldTo);
+        Objects.requireNonNull(proposed, "proposed");
+        var reference = proposed.block().structure();
+        if (!reference.dimension().equals(host.dimension().identifier())) {
+            return StructureHitValidation.failure(StructureHitValidation.Status.NOT_AVAILABLE);
+        }
+        try {
+            return validateCurrent(host, trustedWorldFrom, trustedWorldTo, proposed);
+        } catch (IllegalStateException unavailable) {
+            // An asynchronous storage failure can invalidate a handle between its accessors.
+            return StructureHitValidation.failure(StructureHitValidation.Status.NOT_AVAILABLE);
+        }
+    }
+
+    private static StructureHitValidation validateCurrent(ServerLevel host, Vec3 trustedWorldFrom,
+                                                          Vec3 trustedWorldTo, StructureHit proposed) {
+        var handle = NativeStructureRuntime.backend(host.getServer()).resolve(proposed.block().structure()).orElse(null);
+        if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) {
+            return StructureHitValidation.failure(StructureHitValidation.Status.NOT_AVAILABLE);
+        }
+        if (!handle.runtimeId().equals(proposed.runtimeId())
+                || handle.geometryRevision() != proposed.geometryRevision()
+                || !equivalentPose(handle.pose(), proposed.pose())) {
+            return StructureHitValidation.failure(StructureHitValidation.Status.STALE);
+        }
+        var current = raycast(host, trustedWorldFrom, trustedWorldTo).orElse(null);
+        if (current == null || !current.block().equals(proposed.block())) {
+            return StructureHitValidation.failure(StructureHitValidation.Status.NOT_VISIBLE);
+        }
+        if (!current.runtimeId().equals(proposed.runtimeId())
+                || current.geometryRevision() != proposed.geometryRevision()
+                || !equivalentPose(current.pose(), proposed.pose())) {
+            return StructureHitValidation.failure(StructureHitValidation.Status.STALE);
+        }
+        if (current.localFace() != proposed.localFace() || current.inside() != proposed.inside()
+                || current.localPoint().distanceToSqr(proposed.localPoint()) > HIT_POINT_TOLERANCE_SQUARED
+                || current.worldPoint().distanceToSqr(proposed.worldPoint()) > HIT_POINT_TOLERANCE_SQUARED) {
+            return StructureHitValidation.failure(StructureHitValidation.Status.NOT_VISIBLE);
+        }
+        return StructureHitValidation.valid(current);
+    }
+
+    /** Normalization after wire reconstruction may change the final quaternion bits. */
+    static boolean equivalentPose(StructurePose first, StructurePose second) {
+        var a = first.worldOrigin();
+        var b = second.worldOrigin();
+        if (Math.abs(a.x - b.x) > POSE_TOLERANCE || Math.abs(a.y - b.y) > POSE_TOLERANCE
+                || Math.abs(a.z - b.z) > POSE_TOLERANCE) return false;
+        var ar = first.rotation();
+        var br = second.rotation();
+        // q and -q describe the same orientation. Compare components rather than 1 - dot,
+        // which loses precision near identity and admits much larger angular differences.
+        return quaternionNear(ar.x, ar.y, ar.z, ar.w, br.x, br.y, br.z, br.w)
+                || quaternionNear(ar.x, ar.y, ar.z, ar.w, -br.x, -br.y, -br.z, -br.w);
+    }
+
+    private static boolean quaternionNear(double ax, double ay, double az, double aw,
+                                          double bx, double by, double bz, double bw) {
+        return Math.abs(ax - bx) <= POSE_TOLERANCE && Math.abs(ay - by) <= POSE_TOLERANCE
+                && Math.abs(az - bz) <= POSE_TOLERANCE && Math.abs(aw - bw) <= POSE_TOLERANCE;
+    }
+
+    private static ClipContext context(Vec3 from, Vec3 to) {
+        return new ClipContext(from, to, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, CollisionContext.empty());
+    }
+
+    private static void validateRay(ServerLevel host, Vec3 from, Vec3 to) {
+        Objects.requireNonNull(host, "host");
+        if (!host.getServer().isSameThread()) throw new IllegalStateException("Structure rays require the server thread");
+        if (host.getServer().getLevel(host.dimension()) != host
+                || NativeStructureDimensions.isStorageLevel(host.dimension())) {
+            throw new IllegalArgumentException("Structure rays require a live host level");
+        }
+        requireFinite(from);
+        requireFinite(to);
+        var length = from.distanceTo(to);
+        if (!Double.isFinite(length) || length < 1.0E-6 || length > StructureQueries.MAX_RAY_LENGTH) {
+            throw new IllegalArgumentException("Structure ray length must be positive and at most 256 blocks");
+        }
+    }
+
+    private static void requireFinite(Vec3 point) {
+        Objects.requireNonNull(point, "point");
+        // Vanilla's DDA floors into BlockPos integers; reject coordinates that would saturate them.
+        if (!Double.isFinite(point.x) || !Double.isFinite(point.y) || !Double.isFinite(point.z)
+                || Math.abs(point.x) > Integer.MAX_VALUE - StructureQueries.MAX_RAY_LENGTH
+                || Math.abs(point.y) > Integer.MAX_VALUE - StructureQueries.MAX_RAY_LENGTH
+                || Math.abs(point.z) > Integer.MAX_VALUE - StructureQueries.MAX_RAY_LENGTH) {
+            throw new IllegalArgumentException("Structure ray coordinates must be finite and representable as blocks");
+        }
+    }
+
+    private record Snapshot(StructureHandle handle, StructureRef reference, UUID runtimeId,
+                            long revision, StructurePose pose, ServerLevel level) {
+        private boolean isCurrent() {
+            return handle.lifecycle() == StructureLifecycle.ACTIVE
+                    && handle.reference().equals(reference) && handle.runtimeId().equals(runtimeId)
+                    && handle.geometryRevision() == revision && handle.pose().equals(pose);
+        }
+    }
+
+    private static final class UnavailableRay extends RuntimeException {
+        private UnavailableRay() {
+            super(null, null, false, false);
+        }
+    }
+
+    /** Excludes the storage boundary barriers and refuses every unavailable chunk lookup. */
+    private record LoadedBlockGetter(ServerLevel level, boolean structure) implements BlockGetter {
+        private boolean outside(BlockPos position) {
+            return level.isOutsideBuildHeight(position) || structure && !NativeStructureDimensions.contains(position);
+        }
+
+        private void requireLoaded(BlockPos position) {
+            if (!level.hasChunkAt(position)) throw new UnavailableRay();
+        }
+
+        @Override
+        public @Nullable BlockEntity getBlockEntity(BlockPos position) {
+            if (outside(position)) return null;
+            requireLoaded(position);
+            return level.getBlockEntity(position);
+        }
+
+        @Override
+        public BlockState getBlockState(BlockPos position) {
+            if (outside(position)) return Blocks.AIR.defaultBlockState();
+            requireLoaded(position);
+            return level.getBlockState(position);
+        }
+
+        @Override
+        public FluidState getFluidState(BlockPos position) {
+            if (outside(position)) return Fluids.EMPTY.defaultFluidState();
+            requireLoaded(position);
+            return level.getFluidState(position);
+        }
+
+        @Override public int getHeight() { return level.getHeight(); }
+        @Override public int getMinY() { return level.getMinY(); }
+    }
+}

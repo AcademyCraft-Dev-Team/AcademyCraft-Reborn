@@ -260,7 +260,7 @@ public final class BlockStructureApi {
     /**
      * Generates a structure entity from existing snapshot data without changing
      * world blocks. The legacy restore flag is retained for data compatibility;
-     * every stopped structure now settles to blocks or drops.
+     * stopped structures attempt whole-structure settlement and retain their contents if blocked.
      */
     public static Optional<BlockStructure> spawn(
             ServerLevel level,
