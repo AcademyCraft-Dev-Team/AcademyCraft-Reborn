@@ -1,0 +1,22 @@
+allprojects {
+    afterEvaluate {
+        def runRoot = new File(rootProject.projectDir, 'run').canonicalFile
+        def setting = providers.gradleProperty('academyNativeStructureMiningDirectory')
+                .getOrElse('run/native-structure-mining-smoke')
+        def directory = rootProject.file(setting).canonicalFile
+        if (!directory.toPath().startsWith(runRoot.toPath())
+                || !directory.name.startsWith('native-structure-mining-smoke')) {
+            throw new GradleException('Mining smoke directory must be inside run/ and begin native-structure-mining-smoke')
+        }
+        def world = new File(directory, 'saves/Native Structure Mining Smoke').canonicalFile
+        if (!world.toPath().startsWith(directory.toPath()) || !new File(world, 'level.dat').isFile()) {
+            throw new GradleException('Prepare an isolated saves/Native Structure Mining Smoke world before running this probe')
+        }
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.nativeStructureMiningSmoke', 'true'
+            programArguments.addAll('--width', '1280', '--height', '720',
+                    '--quickPlaySingleplayer', 'Native Structure Mining Smoke')
+        }
+    }
+}

@@ -28,7 +28,9 @@ import org.academy.internal.common.structure.space.NativeStructureStorageErrors;
 import org.academy.internal.common.structure.space.NativeStructureChanges;
 import org.academy.internal.common.structure.space.NativeStructureViewCache;
 import org.academy.internal.common.structure.space.NativeStructureChestSessions;
+import org.academy.internal.common.structure.space.NativeStructureMiningSessions;
 import org.academy.internal.common.world.entity.structure.NativeStructureProjectionEntity;
+import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -39,6 +41,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 /** A bounded real-world container prototype. Each persistent identity exclusively owns one level. */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
@@ -56,6 +59,8 @@ public final class NativeStructureRuntime implements StructureBackend {
     private final NativeStructureManifest manifest;
     private final Map<UUID, Handle> loaded = new LinkedHashMap<>();
     private final Map<Integer, CompoundTag> pendingRecovery = new LinkedHashMap<>();
+    // Keep ownership-bearing adapter objects alive when encoding or disk persistence fails.
+    private final Map<Integer, Supplier<CompoundTag>> pendingAdapterRecovery = new LinkedHashMap<>();
     private boolean closed;
     private boolean dirty;
 
@@ -200,6 +205,7 @@ public final class NativeStructureRuntime implements StructureBackend {
             // Return carried items and stop viewers before the final storage save. Close callbacks
             // cannot reopen this structure or reenter a write/unload while the gate is held.
             NativeStructureChestSessions.closeStructure(server, reference);
+            NativeStructureMiningSessions.closeStructure(server, reference);
             if (!saveHandle(handle)) return false;
             var before = manifest.get(reference.id()).orElseThrow();
             try {
@@ -300,6 +306,11 @@ public final class NativeStructureRuntime implements StructureBackend {
         return runGuarded(reference, action, true);
     }
 
+    /** An adapter's failed outputs are evidence only; this runtime never retries their effects. */
+    public boolean runInteraction(StructureRef reference, Runnable action, Supplier<CompoundTag> recoveryEvidence) {
+        return runGuarded(reference, action, true, Objects.requireNonNull(recoveryEvidence, "recoveryEvidence"));
+    }
+
     /** Inventory traffic has its own vanilla sync; it does not change geometric hit versions. */
     public boolean runMenuInteraction(StructureRef reference, Runnable action) {
         return runGuarded(reference, action, false);
@@ -317,6 +328,11 @@ public final class NativeStructureRuntime implements StructureBackend {
     }
 
     private boolean runGuarded(StructureRef reference, Runnable action, boolean changeGeometry) {
+        return runGuarded(reference, action, changeGeometry, null);
+    }
+
+    private boolean runGuarded(StructureRef reference, Runnable action, boolean changeGeometry,
+                               @Nullable Supplier<CompoundTag> recoveryEvidence) {
         requireThread();
         Objects.requireNonNull(action, "action");
         var handle = loaded.get(reference.id());
@@ -329,9 +345,9 @@ public final class NativeStructureRuntime implements StructureBackend {
             action.run();
             if (changeGeometry) handle.bumpRevision();
             return true;
-        } catch (RuntimeException failure) {
+        } catch (RuntimeException | AssertionError | LinkageError failure) {
             // Vanilla callbacks can already have emitted effects; never replay/roll back an action.
-            handle.quarantine(new BlockStructureTransferState(false), failure);
+            handle.quarantine(new BlockStructureTransferState(false), failure, recoveryEvidence);
             return false;
         } finally {
             handle.writing = false;
@@ -366,8 +382,15 @@ public final class NativeStructureRuntime implements StructureBackend {
     }
 
     private void flushRecovery() throws IOException {
-        for (var record : pendingRecovery.entrySet()) manifest.persistRecovery(record.getKey(), record.getValue());
+        for (var record : pendingRecovery.entrySet()) {
+            var evidence = record.getValue().copy();
+            var adapter = pendingAdapterRecovery.get(record.getKey());
+            if (adapter != null) evidence.put("adapter_evidence",
+                    Objects.requireNonNull(adapter.get(), "adapter recovery evidence").copy());
+            manifest.persistRecovery(record.getKey(), evidence);
+        }
         pendingRecovery.clear();
+        pendingAdapterRecovery.clear();
     }
 
     private final class Handle implements StructureHandle, StructureWorldAccess {
@@ -568,19 +591,29 @@ public final class NativeStructureRuntime implements StructureBackend {
         }
 
         private void quarantine(BlockStructureTransferState transfer, RuntimeException failure) {
+            quarantine(transfer, failure, null);
+        }
+
+        private void quarantine(BlockStructureTransferState transfer, Throwable failure,
+                                @Nullable Supplier<CompoundTag> recoveryEvidence) {
             state = StructureLifecycle.RECOVERY_REQUIRED;
-            discardProjection();
+            // Retain adapter-owned outputs before even projection removal invokes mod callbacks.
+            if (recoveryEvidence != null) pendingAdapterRecovery.put(slot, recoveryEvidence);
+            pendingRecovery.putIfAbsent(slot, new CompoundTag());
+            try { discardProjection(); }
+            catch (RuntimeException | AssertionError | LinkageError discardFailure) { failure.addSuppressed(discardFailure); }
             var entry = manifest.get(reference.id()).orElseThrow();
             manifest.put(new Entry(reference, slot, entry.pose(), true, true));
             dirty = true;
+            // Failed encoding must retain the only owner of already split inventory items.
             try {
                 var output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, level.registryAccess());
                 transfer.save(output);
                 pendingRecovery.put(slot, output.buildResult());
                 flushRecovery();
-            } catch (IOException | RuntimeException saveFailure) { failure.addSuppressed(saveFailure); }
+            } catch (IOException | RuntimeException | AssertionError | LinkageError saveFailure) { failure.addSuppressed(saveFailure); }
             try { manifest.persist(); }
-            catch (IOException | RuntimeException saveFailure) { failure.addSuppressed(saveFailure); }
+            catch (IOException | RuntimeException | AssertionError | LinkageError saveFailure) { failure.addSuppressed(saveFailure); }
             AcademyCraft.LOGGER.error("Native structure quarantined; recovery data retained: {}", reference, failure);
         }
 
@@ -602,6 +635,7 @@ public final class NativeStructureRuntime implements StructureBackend {
         if (runtime == null || runtime.closed) return;
         NativeStructureChestSessions.tick(event.getServer());
         for (var handle : List.copyOf(runtime.loaded.values())) handle.updateProjection();
+        NativeStructureMiningSessions.tick(event.getServer());
         if (runtime.dirty && event.getServer().getTickCount() % 100 == 0) runtime.persistIndex();
     }
 
@@ -624,6 +658,7 @@ public final class NativeStructureRuntime implements StructureBackend {
             for (var handle : List.copyOf(runtime.loaded.values())) {
                 handle.closing = true;
                 NativeStructureChestSessions.closeStructure(event.getServer(), handle.reference);
+                NativeStructureMiningSessions.closeStructure(event.getServer(), handle.reference);
             }
             if (runtime.manifest.healthy()) runtime.persistIndex();
         }

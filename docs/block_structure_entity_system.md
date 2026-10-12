@@ -14,7 +14,7 @@
 
 现有技能继续使用短时操纵用的快照实体。新增的独立后端已具备真实 `ServerLevel` 方块容器原型，提供服务端内容访问、原版方块运行、保存生命周期、旋转投影与受限逐格交互；它尚未接到旧技能上。最终目标仍是独立安装时也能运行完整动态方块空间，安装 Sable 时通过可选后端统一接管，详见[完整设计方案](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/block_structure_physics_and_sable_compat_plan.zh-CN.md)。
 
-2026 年 10 月 12 日的第一批实现增加了公共空间与单位契约、失败保留和回滚数据隔离，以及可组合的碰撞查询。第二批增加四个独占维度槽、实体无关的公共生命周期 API 和真实区块容器。第三批加入模型投影、任意四元数姿态下的逐格命中、作用域上下文与受限拉杆交互。第四批接入原版普通单箱的专用模型、开盖状态与真实库存菜单。当前仍为 P0 部分完成；完整放置、采掘、通用菜单、原生刚体后端和 Sable 桥尚未实现。
+2026 年 10 月 12 日的第一批实现增加了公共空间与单位契约、失败保留和回滚数据隔离，以及可组合的碰撞查询。第二批增加四个独占维度槽、实体无关的公共生命周期 API 和真实区块容器。第三批加入模型投影、任意四元数姿态下的逐格命中、作用域上下文与受限拉杆交互。第四批接入原版普通单箱的专用模型、开盖状态与真实库存菜单，第五批完成六种原版方块的受限逐格放置及对应验收。第六批已写入受限持续采掘、真实工具与掉落归属处理，最终采掘客户端 r3 通过，其余本批检查状态见下文。当前仍为 P0 部分完成；通用放置、采掘与菜单、原生刚体后端和 Sable 桥尚未实现。各批的历史验收与本批待验证状态分别记录于下文。
 
 ## 模块
 
@@ -31,6 +31,8 @@
 - `StructureSpaces`、`StructureBackend`：独立后端入口，以及创建空容器、精确查询、装载和停用；
 - `StructureHandle`、`StructureLifecycle`：运行时句柄与 `LOADING`、`ACTIVE`、`UNLOADED`、`RECOVERY_REQUIRED` 状态；
 - `StructureWorldAccess`、`StructureBlockData`、`StructureWriteResult`：局部格读取、完整 BE 数据的防御复制和服务端单格比较后写入；
+- `StructureHit`、`StructureQueries`、`StructureContexts`、`SpaceContext`：逐格查询、命中重验和显式空间上下文；查询本身不授予操作权限；
+- `StructureInteractionEvent`、`StructurePlacementEvent`、`StructureMiningEvent`：受限玩家操作的可取消保护入口；采掘区分 `START` 与 `FINISH`，事件中的工具数据为防御副本；
 - `BlockStructureSnapshot`：不可变、原点相对的结构数据；
 - `BlockStructureGridAlignment`：纯坐标网格吸附算法；
 - `BlockStructureKinetics`：带生命周期句柄的质量感知推进与扫掠碰撞回调；
@@ -138,7 +140,7 @@ result.structure().ifPresent(structure -> {
 
 `StructureWorldAccess.read(localPos)` 返回实际方块状态和脱离世界的完整 BE 数据副本。`compareAndSet(localPos, expected, replacement)` 只有在当前 state 和完整 BE NBT 都等于预期值时才写入；结果区分 `APPLIED`、`CONFLICT`、`REJECTED`、`OUT_OF_BOUNDS`、`NOT_READY` 和 `RECOVERY_REQUIRED`。前后镜像验证沿用 `BlockStructureTransferState`，含 BE 的写入先校验保存/加载往返；失败只能在确认可安全回滚时返回拒绝，否则隔离。单格写入对写前和写后 BE 各限制为 256 KiB，恢复文件仍有独立的大小限制。
 
-这是受信服务端内容操作，不是玩家放置或挖掘协议：调用方负责权限、工具、物品消耗和掉落。本批没有菜单、采掘进度、客户端写入包或多格事务。提交后的 `onPlace` 与邻居更新允许原版副作用继续改变方块；`APPLIED` 不保证该格在回调或后续 tick 后仍等于 replacement，回调异常也不能通过重建旧库存来补偿。
+这是受信服务端内容操作，不是玩家放置或挖掘协议：调用方负责权限、工具、物品消耗和掉落。第二批本身没有菜单、采掘进度、客户端写入包或多格事务；第四至六批另建受限玩家适配，不能用 CAS 绕过其规则。提交后的 `onPlace` 与邻居更新允许原版副作用继续改变方块；`APPLIED` 不保证该格在回调或后续 tick 后仍等于 replacement，回调异常也不能通过重建旧库存来补偿。
 
 ### 运行、保存与故障边界
 
@@ -168,15 +170,15 @@ result.structure().ifPresent(structure -> {
 
 本批唯一接入的玩家操作为**双手空闲时右键原版拉杆**。客户端单独查询结构命中，服务端使用真实玩家的眼睛、朝向和交互距离重新计算；再检查结构激活/呈现版本、方块与实体遮挡、建造资格、宿主保护/世界边界，以及时停和精神控制门禁。公开可取消的 `StructureInteractionEvent` 携带真实玩家和空间上下文；事件后再次校验，防止监听器改变姿态、内容或玩家。拉杆调用原版容器内 `pull`，红石更新留在容器内，点击声转到宿主。动作期间禁止 API 写入、保存、卸载与姿态更改重入；回调异常会保留数据并隔离，不尝试撤销已经发出的副作用。
 
-这个专用事件不等价于所有原版 `PlayerInteractEvent` 保护插件已兼容。普通放置、采掘、物品消耗、菜单距离和第三方交互需要后续各自适配，不能把局部命中直接交给绑定宿主玩家的原版交互包。旧技能尚未迁移到此容器，Sable 混装也尚未验证。
+这个专用事件不等价于所有原版 `PlayerInteractEvent` 保护插件已兼容。第四至六批分别增加普通单箱、受限放置和受限采掘适配；通用物品、菜单和第三方交互仍需逐项处理，不能把局部命中直接交给绑定宿主玩家的原版交互包。旧技能尚未迁移到此容器，Sable 混装也尚未验证。
 
 ## 后续阶段
 
 后续按[完整设计方案](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/block_structure_physics_and_sable_compat_plan.zh-CN.md) 推进，当前未完成项包括：
 
-1. 在已有上下文、投影与命中重验上完成放置、采掘、菜单及运动期间的原版操作；这是 P0 的剩余核心工作。
+1. 完成第六批持续采掘的实际验收，再将受限放置、采掘与单箱菜单扩展到更多方块、工具及运动期间的操作；不以白名单场景代替完整原版语义。
 2. 持久交易协调、明确的隔离数据恢复入口，以及跨存储崩溃恢复验证。
-3. 将容器内已能运行的 BE、红石和计划 tick 接到移动空间；补齐原版放置、破坏、菜单、流体边界及分区同步/渲染闭环。
+3. 补齐通用原版放置、破坏、菜单、BE 专用呈现、局部实体与流体边界，以及分区同步/渲染闭环；扩展容量和回收协议须先处理永久槽的内容归属。
 4. 完整刚体后端、角速度、旋转承载、拆分、质心/惯性及材料响应；全方向网格还原需方块及 BE 旋转适配。
 5. Sable 可选桥、跨后端迁移，以及喷口、磁力、反射、传送、时停和精密操作向公共服务迁移。
 
@@ -386,3 +388,113 @@ r5 的文件访问拒绝原因未确定。只读检查未发现 manifest 读写�
 脚本显式启用 `academy.nativeStructurePlacementSmoke`，检查游戏目录位于仓库 `run/` 下且名称以 `native-structure-placement-smoke` 开头，并要求指定世界已有 `level.dat`。探针另检查世界真实路径及专用 fixture 索引为空；成功或失败的运行均不可直接重新执行，应保留原世界与日志，从测试前副本另建目录。出现原版实验设置提示时，仅对这个隔离副本备份并加载。
 
 必须看到完整的 `NATIVE_STRUCTURE_PLACEMENT_SMOKE_PASSED`，并打开 `screenshots/` 下本轮 PNG 确认旋转模型。第三槽的故障隔离必须保留，不能重置结构或归还材料以制造通过。世界、截图与日志均在忽略的 run/build 目录，不进入 Git。
+
+## 第六批：受限持续采掘
+
+本批代码为独立后端增加持续按住攻击键的逐格采掘，最终代码的隔离客户端 r3 已完成下述场景验证。玩家始终属于宿主世界，工具和背包使用真实对象；不会暂改玩家 Level、位置或朝向，也不创建假玩家或覆盖库存副本。客户端命中结构后阻止攻击穿透到宿主方块或实体，不预测删除结构内容；只有服务端完成破坏后才更新投影。
+
+### 支持范围与会话
+
+方块白名单为原版石头、圆石、橡木木板、橡木楼梯、橡木台阶、拉杆、红石灯、钻石矿石、青金石矿石和普通单箱。所有含流体状态均拒绝；箱子须为单格、未含水的实际原版 `ChestBlockEntity`，并且没有尚未展开的战利品表。其他 BE、熔炉、双箱、陷阱箱、门床、重力块及模组方块不在本批采掘范围内。
+
+主手可为空手或审核过的原版镐、剑、斧、锹、锄及剪刀，含当前版本的铜工具。服务端同时核对物品身份、实际类和组件修改；非空工具必须只有一件。普通附魔、磨损、修复代价、不可破坏和显示组件可保留，替换工具规则、耐久上限或增加未知行为组件则拒绝。未知工具子类不因继承原版类而获准。普通效率、急迫、挖掘疲劳、水下和离地修正使用真实玩家状态；掉落采用真实工具的精准采集、时运和耐久路径。本批没有执行原版开始击打时的 `HIT_BLOCK` 附魔效果，不能据此宣称任意数据驱动附魔都已完整适配。
+
+`NativeStructureMiningSessions` 持有服务端会话，入口为 `start`、`hold`、`stop`、`abort`，统一由 `tick` 推进并在结构关闭时清理。网络使用 `START / HOLD / STOP / ABORT`；同一连接的请求 ID 必须为递增正数，只有 START 携带完整命中。旧请求不能续租、完成或取消新会话。
+
+| 阶段 | 服务端行为 |
+| --- | --- |
+| START | 使用真实眼睛、视线和射程重算目标，严格核对原请求的运行期身份、版本和姿态；在结构操作锁及 `StructureContexts` 内发出可取消的 START 事件，回调后复验并计算首个 tick |
+| HOLD | 只续租，不增加采掘进度；最后一次有效续租超过 40 个服务端 tick 后，会话过期且不能复活 |
+| 逐 tick | 每个服务端 tick 至多累计一次实际挖掘速度；绑定同一结构、运行期身份和局部格，重新验证视线、权限、工具、游戏模式、菜单和控制资格 |
+| READY / STOP | 进度到 1 才发送 READY；STOP 可以提前锁存，但不能跳过所需 tick。普通完成统一延后到投影更新之后的会话 tick，仍须通过最终重验；没有原版提前 STOP 的宽限完成路径 |
+| ABORT / 失效 | 松开、移开、超距、换工具或槽位、打开菜单、迁维、断线、内容变化及结构停用等会终止会话并清除裂纹；创造模式可在有效 START 内立即完成 |
+
+后续 tick 不锁住 START 时的姿态；只改变结构 pose、玩家继续瞄准同一局部格时可持续采掘。当前内容校验采用整个存储 level 的方块变化版本以及目标完整 state/BE 数据，其他格的方块状态版本变化或目标 BE 数据变化也会保守取消，尚未细分为逐格采掘版本。时间倍率没有动作机会的 tick 不累计进度；完全失去操作资格时终止，客户端续租仍须正常维持。原版宿主采掘与结构采掘互斥。
+
+进度包只传结构身份、运行期 UUID、局部格、状态 ID、破坏者、请求 ID、递增更新序号、状态和裂纹阶段，不传库存或完整 BE NBT。服务端广播给宿主附近玩家及操作者，每 20 tick 至少刷新一次；结束时也清理曾收到该会话的观察者。客户端按破坏者的更新序号拒绝旧进度，裂纹随当前姿态渲染，并设置本地超时清理。真实多人观察、重连和延迟条件仍须另行实测。
+
+### 破坏、保护事件与掉落归属
+
+`StructureMiningEvent` 的 `START` 和 `FINISH` 均携带真实玩家、命中、`SpaceContext`、写前数据与防御复制的工具；监听器可取消操作。最终破坏由 `NativeStructureMining.destroy` 在结构写入锁内执行，保护回调、关闭该格箱子菜单、方块回调及工具回调后继续复验身份、权限、目标和真实工具。动作期间拒绝普通 API 写入、保存、卸载与姿态更改重入，异常进入 `RECOVERY_REQUIRED`，不重放破坏回调。
+
+最终作用域处理同时覆盖 `RuntimeException`、`AssertionError` 和 `LinkageError`；已拦截的输出失败会锁存失败状态，即使回调吞掉异常，也不能继续成功发布。物品生成拦截覆盖原版私有 `popResource` 入口。致命 `VirtualMachineError` 不被转换成普通失败结果；这些边界仍不构成进程崩溃安全保证。
+
+适配仍使用原版方块的 `playerWillDestroy`、工具 `mineBlock`、`onDestroyedByPlayer`、`destroy` 和适用时的 `playerDestroy`，保留实际工具耐久、采集资格、统计及消耗。NeoForge 破坏和掉落事件使用存储 level 与局部格，事件中的玩家仍属于宿主；保护插件须识别 `StructureContexts` 或直接使用公开结构事件。不能仅靠 `player.level()` 解释局部坐标，也不能把本批视为所有原版左键事件或第三方保护已等价兼容。
+
+破坏作用域暂存本次新产生的物品实体与经验，再将其位置、方向和速度转换到宿主。只改变这些新掉落实体的空间归属，不迁移玩家。每个输出都有唯一对象、UUID 和交付状态；部分交付后失败不再次生成已交付项。实际箱子库存从真实 BE 取出，原版战利品计算使用真实工具与当前 BE；不会从初始捕获快照恢复被取走的物品。
+
+当前输出预算为 512 项、累计经验 32767、编码后的输出数据 256 KiB 和恢复证据 900000 字节。未加载宿主、越界、输出超限或交付拒绝都必须保留已有归属证据并停止继续交付。最后一格被挖掉后，呈现状态转为 `EMPTY` 并移除投影，结构身份、存储内容和永久槽仍保留，可以保存和重新加载；本批没有自动回收槽位。
+
+### 恢复证据的含义
+
+发生写入或部分交付异常时，`recovery_N.dat` 的 `adapter_evidence` 保存 `schema=native_mining_drops_v1`、`manual_recovery_only=true`，以及结构身份、工具观察、写入状态、剩余 BE 和输出账本。账本区分 `PENDING`、`ATTEMPTED`、`PUBLISHED`、`REJECTED`、`UNCERTAIN`；其中 `UNCERTAIN` 表示不能安全判断外部回调后的交付结果，不能当作未交付而补发。
+
+`before_cell_observation_do_not_restore` 和工具的 `before_observation_do_not_restore` 只是写前观察，不授权重建整箱或恢复工具。`raw_loot_observation_do_not_replay` 记录尚未完成的战利品阶段，也不能直接再执行掉落。核对守恒时应区分宿主已交付对象、账本中未交付的唯一对象和真实 BE 剩余内容，不能把已交付记录再计作一份待恢复库存。
+
+恢复文件存在即阻止重新激活。序列化或落盘失败时，运行时仍保留证据供应者及其持有的实际输出对象，并继续隔离；这只是在当前进程保留恢复材料，不能保证未落盘对象在硬终止后仍存在。本批尚无自动重放、管理员恢复命令，或联合玩家数据、原版区块、宿主实体与 manifest 的崩溃原子提交协议。
+
+### 第六批验证状态
+
+2026 年 10 月 12 日最终采掘客户端 r3、JUnit、两种构建及三组 GameTest 均已通过；既有放置、单箱和投影客户端均已按相同最终代码重新验收通过。第五批的历史通过记录不代替本批新增采掘、网络和掉落路径的验证。
+
+| 检查 | 必须记录的证明范围 | 当前结果 |
+| --- | --- | --- |
+| JUnit | `test -DisDev=true`；逐 tick 进度、续租与提前 STOP、暂停和变速、旧更新拒绝、包边界及输出账本，含原有测试 | XML 汇总 2398 项，零失败、零错误、零跳过 |
+| 开发与发布构建 | `build -DisDev=true`、`build -DisDev=false` | 最终代码分别成功，退出码均为 0 |
+| 三组既有 GameTest | `academy:native_structure_query`、`academy:native_structure_space`、`academy:block_structure_safety` | 三个注册测试均通过；查询标记、容器 550 tick 与 I/O 报告注入标记、旧安全九类场景均保留 |
+| 真实客户端采掘 | 真实按键链、松开取消、换工具/槽位、移动 pose 后继续、旧包拒绝、START/FINISH 取消 | r3 全部通过；石头与单箱裂纹各有清晰截图，均已打开核对 |
+| 实际资源 | 石头产物与耐久、7 件箱内标记钻石、矿石产物与经验、精准采集和创造模式 | r3 通过；1 圆石、7 件箱内钻石及箱子本体保留，普通矿石增加 1 钻石和 5 经验，精准采集产 1 矿石且不增经验，工具按次磨损，创造模式不产掉落/不磨损 |
+| 空结构与重载 | 最后一格删除后无投影，保存/卸载/重新加载后身份和空内容保留 | r3 同 JVM 重载通过，runtimeId 更新，已挖四格仍为空；没有回收永久槽 |
+| 部分交付故障 | 第二个宿主输出被取消后隔离；宿主、未交付账本与 BE 剩余的 12 件标记物品守恒；旧请求不重放 | r3 通过：已交付 7、未交付 5、BE 剩余 0；再次调用不追加输出，隔离结构拒绝卸载。该项为集成服务器内直接调用破坏入口 |
+| 既有客户端受影响分支 | 放置、普通单箱和投影交互使用最终代码及各自全新隔离副本顺序重跑 | 三项全部通过；菜单 7 件库存、放置 8 单位及故障 2 单位守恒，投影交互与卸载保留正常 |
+
+基础检查的实际命令、开始/结束时间和退出码记录于 `build/native-structure-p6-validation.json`，对应日志为 `build/native-structure-p6-test.log`、`build/native-structure-p6-build-dev.log`、`build/native-structure-p6-build-release.log`、`build/native-structure-p6-query.log`、`build/native-structure-p6-space.log` 和 `build/native-structure-p6-safety.log`。`build/native-structure-p6-source-manifest.json` 保存本轮 34 个文件的源码哈希。三项既有客户端使用同一份未变源码重跑，日志和截图见下表；运行产物不进入 Git。
+
+真实双客户端专服、所有白名单材料/工具/附魔组合、第三方保护、跨 JVM／崩溃恢复、物理运动与 Sable 混装均不在本探针的通过范围内。
+
+### 第六批客户端记录
+
+最终世界为 `run/native-structure-mining-smoke-20261012-r3`，进程 79632，主结构 UUID 为 `f083627c-7705-4d93-8ce1-47d5daa2887b`，故障结构 UUID 为 `da3d690a-3c83-4108-a808-e3a83f8ecb46`。`build/native-structure-p6-mining-client.log` 包含 `NATIVE_STRUCTURE_MINING_SMOKE_PASSED`，记录真实输入、取消、换工具、移动姿态、旧包、箱内 7 件物品、工具磨损、矿石 5 经验、精准采集、创造模式、空结构重载及部分交付隔离全部完成。[石头裂纹截图](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-mining-smoke-20261012-r3/screenshots/native-structure-mining-stone-cracks-79632-1791814119051.png)与[单箱裂纹截图](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-mining-smoke-20261012-r3/screenshots/native-structure-mining-chest-cracks-79632-1791814123647.png)均已打开核对，裂纹清晰贴合任意轴旋转后的实际模型。
+
+故障证据保存为该世界的 `data/academy/native_structures/recovery_1.dat`。故障注入明确取消第二次宿主物品生成，日志中的 `Host refused a native structure drop` 和对应 quarantine 是预期拒绝；其后两次 `NATIVE_STRUCTURE_MINING_RECOVERY_EVIDENCE` 均为 `delivered=7 pending=5 remaining=0 total=12`，最后仍有整轮通过标记。不能仅忽略 ERROR 日志而认定通过，也不能将这一确定取消场景扩展为所有 `UNCERTAIN` 或磁盘故障均已验证。
+
+| 轮次 | 观察与处理 | 证据 |
+| --- | --- | --- |
+| r1 | 使用 `run/native-structure-mining-smoke-20261012`，首次 START 之前生存模式的初始 onGround 状态关闭探针飞行，玩家掉离目标；服务端 ABORT 阶段持续无会话，最终超时。保留失败世界，只修探针通过正常玩家能力包维持已明确准许的飞行 | `build/native-structure-p6-mining-flight-failure.log` |
+| r2 | 全新副本 `run/native-structure-mining-smoke-20261012-r2` 完成真实采掘及故障守恒，普通矿石经验为 3；属于中间修订验证，不作最终源码验收 | `build/native-structure-p6-mining-r2-passed.log` |
+| r3 | 最终收口代码在全新副本重跑全部链路，并分别捕获石头与普通单箱裂纹；普通矿石经验为 5，故障交付 7+5+0=12。两张 PNG 均已实际查看 | `build/native-structure-p6-mining-client.log` |
+
+各轮没有放宽真实射线、距离、工具、进度或资源守恒断言。r2 与 r3 的矿石经验不同属于原版允许的 3 至 7 范围；该探针校验增量及精准采集不产经验，不把一次随机值固定为所有运行的期望。
+
+三个既有客户端回归均使用 `run/native-structure-{chest,placement,projection}-smoke-20261012-p6` 下的新世界，未复用已完成的 fixture。对应 `validation/native_structure/{chest,placement,projection}.init.gradle` 与目录参数记录在 `build/native-structure-p6-validation.json`，三轮均正常退出且没有追加源码修改。
+
+| 回归 | 通过标记及日志 | 结构身份与已核对截图 |
+| --- | --- | --- |
+| 单箱菜单 | `NATIVE_STRUCTURE_CHEST_SMOKE_PASSED`；`build/native-structure-p6-chest-client.log`；真实菜单包、快捷移动、拆分、游标、关闭、失效会话及 7 件库存守恒 | 进程 51356，`f7b69315-6384-44f2-b7dd-3b013b848b64`；[菜单](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-chest-smoke-20261012-p6/screenshots/native-structure-chest-gui-51356-1791814417972.png)、[世界模型](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-chest-smoke-20261012-p6/screenshots/native-structure-chest-world-51356-1791814423674.png) |
+| 旋转放置 | `NATIVE_STRUCTURE_PLACEMENT_SMOKE_PASSED`；`build/native-structure-p6-placement-client.log`；主副手放置、旧包、保护、碰撞、写后故障隔离及保存重载 | 进程 20592，`9a469838-1822-4fee-9150-e38c753e9d10`；[放置结果](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-placement-smoke-20261012-p6/screenshots/native-structure-placement-20592-1791814500229.png) |
+| 投影交互 | `NATIVE_STRUCTURE_PROJECTION_SMOKE_PASSED`；`build/native-structure-p6-projection-client.log`；真实交互包、过期包、熔炉状态、旋转呈现及卸载保留 | 进程 59096，`e492bf85-111c-4b46-b91a-b06cc1217a58`；[旋转五格](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-projection-smoke-20261012-p6/screenshots/native-structure-projection-59096-1791814595226.png) |
+
+本次放置回归的预期写后故障结构为 `9c17e163-c073-49f7-915d-786604fcbeab`；日志中的异常须与 `NATIVE_STRUCTURE_PLACEMENT_SERVER_DIRECT_POST_WRITE_FAULT` 一起读取，其结果为方块保留、库存余 1、总单位 2、隔离且拒绝重放。
+
+### 第六批重跑入口
+
+使用 JBR 25 和仓库 Gradle wrapper，按顺序运行基础验证：
+
+```powershell
+.\gradlew.bat test -DisDev=true
+.\gradlew.bat build -DisDev=true
+.\gradlew.bat build -DisDev=false
+.\gradlew.bat runGameTestServer -DisDev=true -PacademyGameTests=academy:native_structure_query --init-script validation/native_structure/query.init.gradle
+.\gradlew.bat runGameTestServer -DisDev=true -PacademyGameTests=academy:native_structure_space
+.\gradlew.bat runGameTestServer -DisDev=true -PacademyGameTests=academy:block_structure_safety
+```
+
+客户端先准备已经退出游戏的全新测试前副本：`run/native-structure-mining-smoke-自定名称/saves/Native Structure Mining Smoke`。需要至少两个未分配永久槽，分别用于主链和部分掉落交付故障；玩家双手为空、快捷栏至少四个空槽，测试世界不能有干扰经验守恒统计的既有经验球。探针向空槽放入标记铁镐、精准采集铁镐和铁斧，不覆盖原有库存；会切换生存/创造模式、启用飞行并在宿主调整镜头。
+
+```powershell
+.\gradlew.bat runClientDev -DisDev=true --init-script validation/native_structure/mining.init.gradle -PacademyNativeStructureMiningDirectory=run/native-structure-mining-smoke-自定名称
+```
+
+脚本显式启用 `academy.nativeStructureMiningSmoke`，检查目录位于 `run/` 内且名称以 `native-structure-mining-smoke` 开头，并要求指定世界已有 `level.dat`。探针另验真实世界路径及专用 fixture 索引为空；成功或失败后均保留本次世界，从测试前副本另建目录重跑，不能清空库存、删除 owner/recovery 或重置 fixture 制造通过。
+
+验收必须同时看到完整的 `NATIVE_STRUCTURE_MINING_SMOKE_PASSED` 和 `NATIVE_STRUCTURE_MINING_RECOVERY_EVIDENCE`，打开 `NATIVE_STRUCTURE_MINING_SCREENSHOT` 指向的石头及单箱 PNG 确认旋转结构上的裂纹。故障槽的 recovery 文件必须保留并核对交付分类，不能仅凭通过日志推断恢复安全。最终 r3 的实际记录见上文；重跑时仍须独立核对每项断言和证据。世界、截图与日志保留在忽略的 run/build 目录。

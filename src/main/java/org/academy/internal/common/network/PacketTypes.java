@@ -673,6 +673,14 @@ public final class PacketTypes {
             NATIVE_STRUCTURE_USE = PACKET_TYPES.register("native_structure_use",
             () -> new PacketType<>(NativeStructureUsePacket.class, NativeStructureUsePacket.CODEC));
 
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, NativeStructureMinePacket>>
+            NATIVE_STRUCTURE_MINE = PACKET_TYPES.register("native_structure_mine",
+            () -> new PacketType<>(NativeStructureMinePacket.class, NativeStructureMinePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, NativeStructureMiningProgressPacket>>
+            NATIVE_STRUCTURE_MINING_PROGRESS = PACKET_TYPES.register("native_structure_mining_progress",
+            () -> new PacketType<>(NativeStructureMiningProgressPacket.class, NativeStructureMiningProgressPacket.CODEC));
+
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MagneticHookActionPacket>>
             MAGNETIC_HOOK_ACTION = PACKET_TYPES.register("magnetic_hook_action",
             () -> new PacketType<>(MagneticHookActionPacket.class, MagneticHookActionPacket.CODEC));

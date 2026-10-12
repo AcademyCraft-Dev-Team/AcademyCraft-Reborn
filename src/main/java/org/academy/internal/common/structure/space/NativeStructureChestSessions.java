@@ -108,6 +108,15 @@ public final class NativeStructureChestSessions {
         }
     }
 
+    /** Return carried items before destroying this exact container, without closing other cells. */
+    public static void closeBlock(MinecraftServer server, StructureRef reference, UUID runtimeId, BlockPos position) {
+        requireThread(server);
+        for (var session : snapshot(server)) {
+            if (session.reference.equals(reference) && session.runtimeId.equals(runtimeId)
+                    && session.position.equals(position)) session.close();
+        }
+    }
+
     /** Closes invalid/deferred sessions without relying on the player's simulation tick rate. */
     public static void tick(MinecraftServer server) {
         requireThread(server);

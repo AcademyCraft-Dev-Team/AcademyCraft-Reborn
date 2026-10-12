@@ -10,6 +10,7 @@ import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
 import org.academy.internal.client.ability.mentalout.MentalResistanceClientState;
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
 import org.academy.internal.common.network.PlayerLeftClickSwingPacket;
+import org.academy.internal.client.structure.NativeStructureMiningClient;
 import org.misaka.MisakaNetworkClient;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -25,10 +26,17 @@ public abstract class MixinMinecraft {
     @Final
     private Window window;
 
+    @Shadow protected int missTime;
+
     @Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
     private void academy$blockMentalIntrusionAttack(CallbackInfoReturnable<Boolean> cir) {
         if (MentalIntrusionClientState.blocksWorldInteraction()
-                || PlayerControlClientState.blocksWorldInteraction(true)) cir.setReturnValue(false);
+                || PlayerControlClientState.blocksWorldInteraction(true)) {
+            NativeStructureMiningClient.abort((Minecraft) (Object) this);
+            cir.setReturnValue(false);
+            return;
+        }
+        if (NativeStructureMiningClient.startAttack((Minecraft) (Object) this, missTime)) cir.setReturnValue(false);
     }
 
     @Inject(
@@ -46,7 +54,12 @@ public abstract class MixinMinecraft {
     @Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)
     private void academy$blockMentalIntrusionMining(boolean down, CallbackInfo ci) {
         if (MentalIntrusionClientState.blocksWorldInteraction()
-                || PlayerControlClientState.blocksWorldInteraction(down)) ci.cancel();
+                || PlayerControlClientState.blocksWorldInteraction(down)) {
+            NativeStructureMiningClient.abort((Minecraft) (Object) this);
+            ci.cancel();
+            return;
+        }
+        if (NativeStructureMiningClient.continueAttack((Minecraft) (Object) this, down, missTime)) ci.cancel();
     }
 
     @Inject(
@@ -63,6 +76,10 @@ public abstract class MixinMinecraft {
 
     @Inject(method = "startUseItem", at = @At("HEAD"), cancellable = true)
     private void startUseItem(CallbackInfo ci) {
+        if (NativeStructureMiningClient.isActive()) {
+            ci.cancel();
+            return;
+        }
         if (MentalIntrusionClientState.blocksWorldInteraction()
                 || PlayerControlClientState.blocksWorldInteraction(true)) {
             ci.cancel();

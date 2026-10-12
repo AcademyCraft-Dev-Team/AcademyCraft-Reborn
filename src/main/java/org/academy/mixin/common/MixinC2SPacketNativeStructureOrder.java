@@ -18,7 +18,8 @@ public abstract class MixinC2SPacketNativeStructureOrder {
 
     @Inject(method = "handle(Lnet/minecraft/server/network/ServerGamePacketListenerImpl;)V", at = @At("HEAD"))
     private void academy$orderNativeStructureUse(ServerGamePacketListenerImpl listener, CallbackInfo callback) {
-        if (id == PacketTypes.NATIVE_STRUCTURE_USE.get().getPacketId()) {
+        if (id == PacketTypes.NATIVE_STRUCTURE_USE.get().getPacketId()
+                || id == PacketTypes.NATIVE_STRUCTURE_MINE.get().getPacketId()) {
             // In 26.2 vanilla uses PacketProcessor, while the wrapper uses server.execute.
             // Route this wrapper into the same ordered queue before its normal decode/dispatch.
             PacketUtils.ensureRunningOnSameThread((C2SPacket) (Object) this, listener, listener.player.level());

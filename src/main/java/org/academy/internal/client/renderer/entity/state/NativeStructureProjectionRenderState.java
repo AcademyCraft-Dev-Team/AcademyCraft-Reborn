@@ -2,10 +2,13 @@ package org.academy.internal.client.renderer.entity.state;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.block.MovingBlockRenderState;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
+import net.minecraft.client.resources.model.ModelManager;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.LightCoordsUtil;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.CardinalLighting;
 import net.minecraft.world.level.ColorResolver;
 import net.minecraft.world.level.LightLayer;
@@ -19,12 +22,14 @@ import org.academy.internal.common.structure.space.NativeStructureView;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.ToDoubleFunction;
 
 /** Local model context plus host light sampling, shared by every visible cell in one frame. */
 public final class NativeStructureProjectionRenderState extends EntityRenderState {
     public final List<BlockRenderData> blocks = new ArrayList<>();
     public final List<ChestRenderData> chests = new ArrayList<>();
+    public final List<CrackRenderData> cracks = new ArrayList<>();
     public StructurePose pose = StructurePose.identity(Vec3.ZERO);
     public int projectionEntityId;
     public long runtimeRevision;
@@ -57,6 +62,27 @@ public final class NativeStructureProjectionRenderState extends EntityRenderStat
         }
     }
 
+    /** Capture actual model parts in the extraction phase; submission never reads live world state. */
+    public void updateCracks(Map<BlockPos, Integer> stages, ModelManager models) {
+        cracks.clear();
+        for (var chest : chests) chest.crackStage = stages.getOrDefault(chest.localPosition, -1);
+        if (stages.isEmpty()) return;
+        var random = RandomSource.createThreadLocalInstance();
+        for (var block : blocks) {
+            var stage = stages.get(block.localPosition());
+            if (stage == null || stage < 0 || stage > 9) continue;
+            var local = block.renderState();
+            var model = models.getBlockStateModelSet().get(local.blockState);
+            random.setSeed(local.blockState.getSeed(block.localPosition()));
+            var parts = new ArrayList<BlockStateModelPart>();
+            model.collectParts(local, block.localPosition(), local.blockState, random, parts);
+            cracks.add(new CrackRenderData(block.localPosition(), local.blockState.getOffset(block.localPosition()),
+                    List.copyOf(parts), stage));
+        }
+    }
+
+    public record CrackRenderData(BlockPos localPosition, Vec3 modelOffset, List<BlockStateModelPart> parts, int stage) {}
+
     private static boolean fullyOccluded(NativeStructureView view, BlockPos position) {
         for (var direction : Direction.values()) {
             var neighbor = view.getBlockState(position.relative(direction));
@@ -87,6 +113,7 @@ public final class NativeStructureProjectionRenderState extends EntityRenderStat
         public final Direction facing;
         public float openness;
         public int lightCoords;
+        public int crackStage = -1;
 
         private ChestRenderData(BlockPos localPosition, Direction facing) {
             this.localPosition = localPosition;

@@ -103,6 +103,7 @@ public final class AcademyCraftServer {
         MusicAccountPackets.initServer();
         PlayerLeftClickSwingPacket.initServer();
         org.academy.internal.common.network.NativeStructureUsePacket.initServer();
+        org.academy.internal.common.network.NativeStructureMinePacket.initServer();
         org.academy.internal.common.world.item.CoinItem.initServer();
         MagneticHookActionPacket.initServer();
         AbilityProgramManager.initServer();

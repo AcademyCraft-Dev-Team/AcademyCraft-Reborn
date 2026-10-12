@@ -1,6 +1,7 @@
 package org.academy.internal.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.object.chest.ChestModel;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -10,6 +11,7 @@ import net.minecraft.client.renderer.blockentity.ChestRenderer;
 import net.minecraft.client.renderer.blockentity.state.ChestRenderState;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.sprite.SpriteGetter;
@@ -17,6 +19,7 @@ import net.minecraft.client.resources.model.sprite.SpriteId;
 import net.minecraft.world.level.block.state.properties.ChestType;
 import org.academy.internal.client.renderer.entity.state.NativeStructureProjectionRenderState;
 import org.academy.internal.common.world.entity.structure.NativeStructureProjectionEntity;
+import org.academy.internal.client.structure.NativeStructureMiningClient;
 import org.joml.Quaternionf;
 
 import java.util.HashMap;
@@ -27,7 +30,8 @@ public final class NativeStructureProjectionRenderer
         extends EntityRenderer<NativeStructureProjectionEntity, NativeStructureProjectionRenderState> {
     private static final boolean SMOKE_DIAGNOSTICS = Boolean.getBoolean("academy.nativeStructureProjectionSmoke")
             || Boolean.getBoolean("academy.nativeStructureChestSmoke")
-            || Boolean.getBoolean("academy.nativeStructurePlacementSmoke");
+            || Boolean.getBoolean("academy.nativeStructurePlacementSmoke")
+            || Boolean.getBoolean("academy.nativeStructureMiningSmoke");
     private static final Map<Integer, Submission> SMOKE_SUBMISSIONS = new HashMap<>();
     private final ChestModel chestModel;
     private final SpriteGetter sprites;
@@ -61,6 +65,7 @@ public final class NativeStructureProjectionRenderer
         state.runtimeRevision = entity.viewState().revision();
         if (entity.level() instanceof ClientLevel level) {
             state.updateBlocks(entity.view(), level, pose, position -> entity.chestOpenness(position, partialTick));
+            state.updateCracks(NativeStructureMiningClient.cracks(entity), Minecraft.getInstance().getModelManager());
         }
     }
 
@@ -79,17 +84,30 @@ public final class NativeStructureProjectionRenderer
             nodeCollector.submitMovingBlock(poseStack, cell.renderState(), state.outlineColor);
             poseStack.popPose();
         }
+        int maximumCrackStage = -1;
+        for (var crack : state.cracks) {
+            poseStack.pushPose();
+            var position = crack.localPosition();
+            poseStack.translate(position.getX(), position.getY(), position.getZ());
+            poseStack.translate(crack.modelOffset());
+            nodeCollector.submitBreakingBlockModel(poseStack, crack.parts(), crack.stage());
+            poseStack.popPose();
+            maximumCrackStage = Math.max(maximumCrackStage, crack.stage());
+        }
         float maximumChestOpenness = 0;
         for (var chest : state.chests) {
             poseStack.pushPose();
             var position = chest.localPosition;
             poseStack.translate(position.getX(), position.getY(), position.getZ());
+            var crumbling = chest.crackStage < 0 || chest.crackStage > 9 ? null
+                    : new ModelFeatureRenderer.CrumblingOverlay(chest.crackStage, poseStack.last().copy());
             poseStack.mulPose(ChestRenderer.modelTransformation(chest.facing));
             var closed = 1.0f - chest.openness;
             var easedOpen = 1.0f - closed * closed * closed;
             nodeCollector.submitModel(chestModel, easedOpen, poseStack, chest.lightCoords,
-                    OverlayTexture.NO_OVERLAY, -1, chestSprite, sprites, state.outlineColor, null);
+                    OverlayTexture.NO_OVERLAY, -1, chestSprite, sprites, state.outlineColor, crumbling);
             maximumChestOpenness = Math.max(maximumChestOpenness, chest.openness);
+            maximumCrackStage = Math.max(maximumCrackStage, chest.crackStage);
             poseStack.popPose();
         }
         poseStack.popPose();
@@ -98,7 +116,8 @@ public final class NativeStructureProjectionRenderer
             SMOKE_SUBMISSIONS.put(state.projectionEntityId, new Submission(
                     previous == null ? 1 : previous.frames() + 1, state.runtimeRevision,
                     (previous == null ? 0 : previous.chestFrames()) + (state.chests.isEmpty() ? 0 : 1),
-                    maximumChestOpenness));
+                    maximumChestOpenness,
+                    (previous == null ? 0 : previous.crackFrames()) + (maximumCrackStage < 0 ? 0 : 1), maximumCrackStage));
         }
     }
 
@@ -123,6 +142,16 @@ public final class NativeStructureProjectionRenderer
         return submission == null ? 0 : submission.chestOpenness();
     }
 
-    private record Submission(long frames, long revision, long chestFrames, float chestOpenness) {
+    public static long submittedCrackFrames(int entityId) {
+        var submission = SMOKE_SUBMISSIONS.get(entityId);
+        return submission == null ? 0 : submission.crackFrames();
+    }
+
+    public static int lastSubmittedCrackStage(int entityId) {
+        var submission = SMOKE_SUBMISSIONS.get(entityId);
+        return submission == null ? -1 : submission.crackStage();
+    }
+
+    private record Submission(long frames, long revision, long chestFrames, float chestOpenness, long crackFrames, int crackStage) {
     }
 }
