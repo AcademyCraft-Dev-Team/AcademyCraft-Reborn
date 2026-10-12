@@ -1,0 +1,23 @@
+allprojects {
+    afterEvaluate {
+        def runRoot = new File(rootProject.projectDir, 'run').canonicalFile
+        def directorySetting = providers.gradleProperty('academyNativeStructureChestDirectory')
+                .getOrElse('run/native-structure-chest-smoke')
+        def smokeDirectory = rootProject.file(directorySetting).canonicalFile
+        if (!smokeDirectory.toPath().startsWith(runRoot.toPath())
+                || !smokeDirectory.name.startsWith('native-structure-chest-smoke')) {
+            throw new GradleException('Chest smoke directory must be inside run/ and begin native-structure-chest-smoke')
+        }
+        def worldDirectory = new File(smokeDirectory, 'saves/Native Structure Chest Smoke').canonicalFile
+        if (!worldDirectory.toPath().startsWith(smokeDirectory.toPath())
+                || !new File(worldDirectory, 'level.dat').isFile()) {
+            throw new GradleException('Prepare an isolated saves/Native Structure Chest Smoke world before running this probe')
+        }
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(smokeDirectory)
+            systemProperty 'academy.nativeStructureChestSmoke', 'true'
+            programArguments.addAll('--width', '1280', '--height', '720',
+                    '--quickPlaySingleplayer', 'Native Structure Chest Smoke')
+        }
+    }
+}

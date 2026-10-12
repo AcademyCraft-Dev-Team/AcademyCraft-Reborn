@@ -1,5 +1,6 @@
 package org.academy.internal.common.world.entity.structure;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
@@ -7,6 +8,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.ChestLidController;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
@@ -15,10 +17,15 @@ import org.academy.api.common.structure.StructurePose;
 import org.academy.api.common.structure.StructureRef;
 import org.academy.internal.common.structure.space.NativeStructureView;
 import org.academy.internal.common.structure.space.NativeStructureViewState;
+import org.academy.internal.common.structure.space.NativeStructureLidTargets;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.jspecify.annotations.Nullable;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 /** Disposable host-world view. Storage ownership and physics never live on this entity. */
@@ -29,6 +36,10 @@ public final class NativeStructureProjectionEntity extends Entity {
     private static final EntityDataAccessor<NativeStructureView> VIEW = SynchedEntityData.defineId(
             NativeStructureProjectionEntity.class,
             org.academy.internal.common.network.syncher.EntityDataSerializers.NATIVE_STRUCTURE_VIEW.get());
+    private static final EntityDataAccessor<NativeStructureLidTargets> LIDS = SynchedEntityData.defineId(
+            NativeStructureProjectionEntity.class,
+            org.academy.internal.common.network.syncher.EntityDataSerializers.NATIVE_STRUCTURE_LID_TARGETS.get());
+    private final Map<BlockPos, ChestLidController> clientChestLids = new HashMap<>();
 
     public NativeStructureProjectionEntity(EntityType<? extends NativeStructureProjectionEntity> type, Level level) {
         super(type, level);
@@ -56,6 +67,7 @@ public final class NativeStructureProjectionEntity extends Entity {
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         builder.define(STATE, NativeStructureViewState.EMPTY);
         builder.define(VIEW, NativeStructureView.EMPTY);
+        builder.define(LIDS, NativeStructureLidTargets.EMPTY);
     }
 
     public NativeStructureView view() {
@@ -64,6 +76,29 @@ public final class NativeStructureProjectionEntity extends Entity {
 
     public NativeStructureViewState viewState() {
         return entityData.get(STATE);
+    }
+
+    public NativeStructureLidTargets openChests() {
+        return entityData.get(LIDS);
+    }
+
+    /** Independent visual metadata: changing lid targets never changes view contents or its revision. */
+    public void setOpenChests(Set<BlockPos> positions) {
+        requireServerUpdate(viewState().revision());
+        var requested = new NativeStructureLidTargets(positions);
+        var supported = new HashSet<BlockPos>();
+        for (var position : requested.openPositions()) {
+            if (NativeStructureView.isSingleChestState(view().getBlockState(position))) supported.add(position);
+        }
+        entityData.set(LIDS, supported.isEmpty() ? NativeStructureLidTargets.EMPTY
+                : new NativeStructureLidTargets(supported));
+    }
+
+    /** Client animation only; this never reads or constructs a chest block entity. */
+    public float chestOpenness(BlockPos position, float partialTick) {
+        var controller = clientChestLids.get(position);
+        return controller == null ? 0 : controller.getOpenness(
+                Float.isFinite(partialTick) ? Math.clamp(partialTick, 0.0f, 1.0f) : 1.0f);
     }
 
     /** P0 deliberately uses the same current transform for model submission and exact ray tests. */
@@ -113,12 +148,40 @@ public final class NativeStructureProjectionEntity extends Entity {
     public void onSyncedDataUpdated(EntityDataAccessor<?> accessor) {
         super.onSyncedDataUpdated(accessor);
         if (STATE.equals(accessor) || VIEW.equals(accessor)) refreshAnchorAndBounds();
+        if (level().isClientSide() && clientChestLids != null) {
+            if (VIEW.equals(accessor)) refreshClientChests();
+            else if (LIDS.equals(accessor)) updateClientLidTargets();
+        }
     }
 
     @Override
     public void tick() {
         // No baseTick: a view must not tick portals, fire, fluids, gravity, or storage contents.
         setDeltaMovement(Vec3.ZERO);
+        if (level().isClientSide()) {
+            for (var lid : clientChestLids.values()) lid.tickLid();
+        }
+    }
+
+    @Override
+    public void onRemovedFromLevel() {
+        clientChestLids.clear();
+        super.onRemovedFromLevel();
+    }
+
+    private void refreshClientChests() {
+        clientChestLids.keySet().removeIf(position -> !NativeStructureView.isSingleChestState(view().getBlockState(position)));
+        for (var cell : view().cells()) {
+            if (NativeStructureView.isSingleChestState(cell.state())) {
+                clientChestLids.computeIfAbsent(cell.position(), ignored -> new ChestLidController());
+            }
+        }
+        updateClientLidTargets();
+    }
+
+    private void updateClientLidTargets() {
+        var targets = openChests();
+        clientChestLids.forEach((position, controller) -> controller.shouldBeOpen(targets.isOpen(position)));
     }
 
     private void refreshAnchorAndBounds() {

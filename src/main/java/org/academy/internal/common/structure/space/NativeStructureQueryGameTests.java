@@ -261,14 +261,14 @@ public final class NativeStructureQueryGameTests {
 
         private void verifyUnsupportedBlockEntity(NativeStructureProjectionEntity previous) {
             var chestCell = CELL.east();
-            check(storage(a).setBlock(chestCell, Blocks.CHEST.defaultBlockState(), QUIET_FLAGS),
+            check(storage(a).setBlock(chestCell, Blocks.TRAPPED_CHEST.defaultBlockState(), QUIET_FLAGS),
                     "Unsupported block entity fixture must be installed");
             await(() -> presented(StructurePresentationStatus.UNSUPPORTED_CONTENT, 0), 40, () -> {
                 check(previous.isRemoved() && storage(a).getBlockState(CELL).is(Blocks.BRICKS)
-                                && storage(a).getBlockState(chestCell).is(Blocks.CHEST)
+                                && storage(a).getBlockState(chestCell).is(Blocks.TRAPPED_CHEST)
                                 && storage(a).getBlockEntity(chestCell) instanceof Container chest && chest.isEmpty()
                                 && active(a),
-                        "A real chest must hide the entire projection without changing its live block entity");
+                        "An unsupported trapped chest must hide the projection without changing its live block entity");
                 // This exact empty chest was just created by the fixture; no inventory is erased.
                 storage(a).setBlock(chestCell, Blocks.AIR.defaultBlockState(), QUIET_FLAGS);
                 await(() -> presented(StructurePresentationStatus.VISIBLE, 1), 40,
@@ -358,7 +358,8 @@ public final class NativeStructureQueryGameTests {
             var level = storage(a);
             var fluidCell = CELL.east();
             var previousBlockEntity = level.getBlockEntity(fluidCell);
-            var emptyFixtureChest = level.getBlockState(fluidCell).is(Blocks.CHEST)
+            var emptyFixtureChest = (level.getBlockState(fluidCell).is(Blocks.CHEST)
+                    || level.getBlockState(fluidCell).is(Blocks.TRAPPED_CHEST))
                     && previousBlockEntity instanceof Container chest && chest.isEmpty();
             check(emptyFixtureChest || previousBlockEntity == null
                             && (level.getBlockState(fluidCell).isAir() || level.getBlockState(fluidCell).is(Blocks.WATER)),
@@ -420,13 +421,13 @@ public final class NativeStructureQueryGameTests {
             rejectView(() -> new NativeStructureView.Cell(BlockPos.ZERO, Blocks.WATER.defaultBlockState()),
                     "Fluid states must never enter a state-only model view");
             for (var block : List.of(Blocks.FURNACE, Blocks.BLAST_FURNACE, Blocks.SMOKER,
-                    Blocks.HOPPER, Blocks.DISPENSER, Blocks.DROPPER)) {
+                    Blocks.HOPPER, Blocks.DISPENSER, Blocks.DROPPER, Blocks.CHEST)) {
                 check(block.defaultBlockState().hasBlockEntity()
                                 && NativeStructureView.isSupportedState(block.defaultBlockState()),
                         "Audited vanilla state-only block entity models must remain supported");
                 new NativeStructureView.Cell(BlockPos.ZERO, block.defaultBlockState());
             }
-            for (var block : List.of(Blocks.CHEST, Blocks.TRAPPED_CHEST, Blocks.ENDER_CHEST,
+            for (var block : List.of(Blocks.TRAPPED_CHEST, Blocks.ENDER_CHEST,
                     Blocks.SHULKER_BOX, Blocks.ENCHANTING_TABLE, Blocks.CAMPFIRE, Blocks.BELL,
                     Blocks.BREWING_STAND)) {
                 check(!NativeStructureView.isSupportedState(block.defaultBlockState()),
@@ -434,6 +435,12 @@ public final class NativeStructureQueryGameTests {
                 rejectView(() -> new NativeStructureView.Cell(BlockPos.ZERO, block.defaultBlockState()),
                         "Block entity renderer content must never masquerade as a complete model view");
             }
+            var chest = Blocks.CHEST.defaultBlockState();
+            rejectView(() -> new NativeStructureView.Cell(BlockPos.ZERO, chest.setValue(
+                    net.minecraft.world.level.block.ChestBlock.TYPE,
+                    net.minecraft.world.level.block.state.properties.ChestType.LEFT)), "Double chests remain unsupported");
+            rejectView(() -> new NativeStructureView.Cell(BlockPos.ZERO, chest.setValue(
+                    net.minecraft.world.level.block.ChestBlock.WATERLOGGED, true)), "Waterlogged chests remain unsupported");
         }
 
         private void rejectView(Runnable action, String message) {

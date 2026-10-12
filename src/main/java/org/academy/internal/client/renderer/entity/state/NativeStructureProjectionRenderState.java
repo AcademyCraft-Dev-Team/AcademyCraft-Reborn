@@ -5,9 +5,11 @@ import net.minecraft.client.renderer.block.MovingBlockRenderState;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.world.level.CardinalLighting;
 import net.minecraft.world.level.ColorResolver;
 import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
@@ -17,29 +19,42 @@ import org.academy.internal.common.structure.space.NativeStructureView;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.ToDoubleFunction;
 
 /** Local model context plus host light sampling, shared by every visible cell in one frame. */
 public final class NativeStructureProjectionRenderState extends EntityRenderState {
     public final List<BlockRenderData> blocks = new ArrayList<>();
+    public final List<ChestRenderData> chests = new ArrayList<>();
     public StructurePose pose = StructurePose.identity(Vec3.ZERO);
     public int projectionEntityId;
     public long runtimeRevision;
 
     private NativeStructureView cachedView = NativeStructureView.EMPTY;
 
-    public void updateBlocks(NativeStructureView view, ClientLevel level, StructurePose currentPose) {
+    public void updateBlocks(NativeStructureView view, ClientLevel level, StructurePose currentPose,
+                             ToDoubleFunction<BlockPos> chestOpenness) {
         pose = currentPose;
         if (cachedView != view) {
             cachedView = view;
             blocks.clear();
+            chests.clear();
             for (var cell : view.cells()) {
                 if (!fullyOccluded(view, cell.position())) {
-                    blocks.add(new BlockRenderData(cell.position(), new LocalMovingBlockRenderState(view, cell)));
+                    if (NativeStructureView.isSingleChestState(cell.state())) {
+                        chests.add(new ChestRenderData(cell.position(), cell.state().getValue(ChestBlock.FACING)));
+                    } else {
+                        blocks.add(new BlockRenderData(cell.position(), new LocalMovingBlockRenderState(view, cell)));
+                    }
                 }
             }
         }
         var lighting = rotatedLighting(level.cardinalLighting(), currentPose);
         for (var block : blocks) block.renderState().updateFrame(level, currentPose, lighting);
+        for (var chest : chests) {
+            chest.openness = (float) chestOpenness.applyAsDouble(chest.localPosition);
+            chest.lightCoords = LightCoordsUtil.getLightCoords(level,
+                    BlockPos.containing(currentPose.localToWorldPoint(Vec3.atCenterOf(chest.localPosition))));
+        }
     }
 
     private static boolean fullyOccluded(NativeStructureView view, BlockPos position) {
@@ -64,6 +79,19 @@ public final class NativeStructureProjectionRenderState extends EntityRenderStat
     }
 
     public record BlockRenderData(BlockPos localPosition, LocalMovingBlockRenderState renderState) {
+    }
+
+    /** Only the public model inputs are retained; no inventory or client block entity is created. */
+    public static final class ChestRenderData {
+        public final BlockPos localPosition;
+        public final Direction facing;
+        public float openness;
+        public int lightCoords;
+
+        private ChestRenderData(BlockPos localPosition, Direction facing) {
+            this.localPosition = localPosition;
+            this.facing = facing;
+        }
     }
 
     /** Model queries remain local; only lighting and biome tint cross into the host world. */

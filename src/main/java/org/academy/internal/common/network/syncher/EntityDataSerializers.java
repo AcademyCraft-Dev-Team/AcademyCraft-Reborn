@@ -10,6 +10,7 @@ import org.academy.api.common.arc.ArcPath;
 import org.academy.api.common.structure.BlockStructureSnapshot;
 import org.academy.internal.common.structure.space.NativeStructureView;
 import org.academy.internal.common.structure.space.NativeStructureViewState;
+import org.academy.internal.common.structure.space.NativeStructureLidTargets;
 
 import java.util.List;
 
@@ -30,6 +31,9 @@ public final class EntityDataSerializers {
     public static final DeferredHolder<EntityDataSerializer<?>, EntityDataSerializer<NativeStructureViewState>> NATIVE_STRUCTURE_VIEW_STATE =
             ENTITY_DATA_SERIALIZERS.register("native_structure_view_state",
                     () -> EntityDataSerializer.forValueType(NativeStructureViewState.STREAM_CODEC));
+    public static final DeferredHolder<EntityDataSerializer<?>, EntityDataSerializer<NativeStructureLidTargets>> NATIVE_STRUCTURE_LID_TARGETS =
+            ENTITY_DATA_SERIALIZERS.register("native_structure_lid_targets",
+                    () -> EntityDataSerializer.forValueType(NativeStructureLidTargets.STREAM_CODEC));
 
     private EntityDataSerializers() {
     }

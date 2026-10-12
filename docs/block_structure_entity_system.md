@@ -12,9 +12,9 @@
 - 将水平朝向吸附到最近的 90 度，并在当前位置对齐方块网格后还原；
 - 在捕获或还原中途失败时尝试回滚；回滚不能完成时保留完整载荷和写入前数据并隔离结构。
 
-现有技能继续使用短时操纵用的快照实体。新增的独立后端已具备真实 `ServerLevel` 方块容器原型，提供服务端内容访问、原版方块运行和保存生命周期；它尚未接到移动呈现、玩家逐格操作或旧技能上。最终目标仍是独立安装时也能运行完整动态方块空间，安装 Sable 时通过可选后端统一接管，详见[完整设计方案](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/block_structure_physics_and_sable_compat_plan.zh-CN.md)。
+现有技能继续使用短时操纵用的快照实体。新增的独立后端已具备真实 `ServerLevel` 方块容器原型，提供服务端内容访问、原版方块运行、保存生命周期、旋转投影与受限逐格交互；它尚未接到旧技能上。最终目标仍是独立安装时也能运行完整动态方块空间，安装 Sable 时通过可选后端统一接管，详见[完整设计方案](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/block_structure_physics_and_sable_compat_plan.zh-CN.md)。
 
-2026 年 10 月 12 日的第一批实现增加了公共空间与单位契约、失败保留和回滚数据隔离，以及可组合的碰撞查询。第二批增加四个独占维度槽、实体无关的公共生命周期 API 和真实区块容器。第三批加入模型投影、任意四元数姿态下的逐格命中、作用域上下文与受限拉杆交互。当前仍为 P0 部分完成；完整放置、采掘、菜单、原生刚体后端和 Sable 桥尚未实现。
+2026 年 10 月 12 日的第一批实现增加了公共空间与单位契约、失败保留和回滚数据隔离，以及可组合的碰撞查询。第二批增加四个独占维度槽、实体无关的公共生命周期 API 和真实区块容器。第三批加入模型投影、任意四元数姿态下的逐格命中、作用域上下文与受限拉杆交互。第四批接入原版普通单箱的专用模型、开盖状态与真实库存菜单。当前仍为 P0 部分完成；完整放置、采掘、通用菜单、原生刚体后端和 Sable 桥尚未实现。
 
 ## 模块
 
@@ -264,10 +264,52 @@ result.structure().ifPresent(structure -> {
 .\gradlew.bat runGameTestServer -DisDev=true -PacademyGameTests=academy:native_structure_query --init-script validation/native_structure/query.init.gradle
 ```
 
-客户端先在 `run/native-structure-projection-smoke-自定名称/saves/Native Structure Projection Smoke` 准备已退出游戏的一次性存档副本，保留至少一个未分配槽，玩家双手空闲、允许建造且非旁观者。探针仅在显式属性开启并通过路径守卫后运行，复用一个专用槽，改变该测试玩家的飞行状态及宿主内位置以控制镜头；不会传送玩家到容器或重写玩家库存。不要将实际游玩存档改名作为测试副本。
+客户端先在 `run/native-structure-projection-smoke-自定名称/saves/Native Structure Projection Smoke` 准备已退出游戏的一次性存档副本，保留至少一个未分配槽，玩家双手空闲、允许建造且非旁观者。探针仅在显式属性开启并通过路径守卫后运行，使用一个专用槽，改变该测试玩家的飞行状态及宿主内位置以控制镜头；不会传送玩家到容器或重写玩家库存。不要将实际游玩存档改名作为测试副本。负例要求拉杆与灯初始关闭，成功完成后保留的开启状态不能直接作为下次测试输入；重跑应从原始测试前副本新建隔离目录。
 
 ```powershell
 .\gradlew.bat runClientDev -DisDev=true --init-script validation/native_structure/projection.init.gradle -PacademyNativeStructureProjectionDirectory=run/native-structure-projection-smoke-自定名称
 ```
 
 探针等待真实状态同步和至少 20 个模型提交帧，再保存 PNG、验证卸载与内容保留并正常关闭。出现原版实验设置提示时，对这个副本备份并加载即可。检查必须见到 `NATIVE_STRUCTURE_PROJECTION_SMOKE_PASSED`，且实际打开 PNG 确认模型可见；不能仅凭 Gradle 编译或单纯截图文件存在认定呈现成功。
+
+## 第四批：原版普通单箱
+
+这一批沿用独立容器内容所有权，增加普通、未含水、`ChestType.SINGLE` 的原版箱子。客户端复用原版 `ChestModel`、朝向、材质及开合曲线；投影仅增加有界的开盖位置集合，最坏 4096 个位置占 16386 字节，不包含库存、锁或战利品表。开合动画保存在客户端投影生命周期中，不推动几何版本，也不重发方块视图。
+
+空手右键沿已有旋转命中和服务端复验通道打开菜单。公共 `StructureInteractionEvent.action()` 区分 `USE_LEVER` 与 `OPEN_CONTAINER`，原三参数构造保持拉杆语义。初次打开继续校验建造资格、世界保护、遮挡、原版箱盖阻塞及锁；未展开的战利品表本批明确拒绝，不自动生成内容。钥匙持物开箱、双箱、陷阱箱、末影箱和模组容器不在本批支持范围。
+
+服务端 `NativeStructureChestMenu` 使用真实 `ChestBlockEntity` 与真实玩家背包，客户端使用原版三行箱子界面和槽位协议。玩家不进入存储维度，也不复制库存给替身。会话绑定结构引用、运行期 UUID、局部格和精确 BE 实例；持续菜单按当前姿态把玩家眼睛逆变换到局部空间，使用原版单位格 AABB 距离与四格容器缓冲。转动或近距离移动不会仅因几何版本变化而关箱；越距、失活、换维度、BE 替换或变为不支持状态会关闭。
+
+菜单持续有效性不要求双手为空，时间缩放的非动作 tick 只拒绝写入。普通点击、快捷转移和收纳袋选择入口持有结构写入锁；拒绝预测点击后全量纠正客户端槽位。广播读取同样受控，回调无法在读取或取放中卸载、保存、CAS 或改变姿态。回调中的关闭和原版换菜单请求延后到处理完成后的服务器 tick，避免原数据包后续更新到另一菜单。
+
+卸载先禁止新会话，再走原版关闭归还鼠标持物，最后保存。会话维护独立于玩家时间倍率。箱子的原版开盖人数重查定点合并宿主世界中的实际使用者，保留计数、方块事件及本地游戏事件；开关声音使用变换后的宿主位置。没有把这种定点适配宣称为任意方块事件、容器或保护插件的完整兼容。
+
+### 第四批验证记录
+
+2026 年 10 月 12 日使用 JBR 25，在未安装 Sable 的开发环境验证：
+
+| 检查 | 实际证明范围 | 结果 |
+| --- | --- | --- |
+| `test -DisDev=true` | 新增 7 个开盖集合编码边界用例和 3 个旋转容器距离用例，含全部原有测试 | 2360 项，零失败、零错误、零跳过 |
+| 三组 GameTest | `academy:native_structure_query`、`academy:native_structure_space`、`academy:block_structure_safety`；普通单箱获准，双箱、含水箱及陷阱箱仍拒绝 | 通过 |
+| 单箱真实客户端 | 空手入口真实发包、63 槽同步、快捷取出/放回、右键拆分；鼠标持物时移远和卸载关闭、重载运行期身份变化、旧菜单包拒绝、替换 BE 关闭 | 通过；7 件标记钻石全程守恒 |
+| 时间与独立库存入口 | 实体时间倍率为 0 时，真实点击预测被全量纠正，菜单继续存在；真实收纳袋选择包正常时获准，暂停时拒绝 | 通过；测试收纳袋内 1 石块、1 泥土保留 |
+| 方块限制与呈现 | 箱盖阻塞、锁定和未展开战利品表拒绝；原版 opener 超过 5 tick 重查仍为 1，关闭归 0；真实模型提交、开盖插值、GUI 和世界截图 | 通过；两张 PNG 已打开查看 |
+| 旧逐格交互客户端回归 | 拉杆、红石灯、熔炉、楼梯；保护取消、回调重入拒绝、旧命中包、任意姿态呈现与卸载保留 | 通过；PNG 已打开查看 |
+| 开发／发布构建 | `build -DisDev=true`、`build -DisDev=false`，包含对应检查任务 | 均成功 |
+
+单箱测试世界为 `run/native-structure-chest-smoke-20261012`，进程 63240，结构 UUID `b3f3b5b9-1aaa-4761-b084-f340a2457f8f`。真实[箱子界面](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-chest-smoke-20261012/screenshots/native-structure-chest-gui-63240-1791807788472.png)和[旋转箱体](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-chest-smoke-20261012/screenshots/native-structure-chest-world-63240-1791807794326.png)已核对。世界截图中的锁定提示来自此前的拒绝用例；箱子的锁已恢复为空，最终库存保存后停用。
+
+旧场景回归最终使用 `run/native-structure-projection-smoke-20261012-p4-fresh`，进程 4356，结构 UUID `8d752599-90f2-4521-93b3-28fdad922350`。[旋转五格场景](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-projection-smoke-20261012-p4-fresh/screenshots/native-structure-projection-4356-1791808094021.png)通过。首次误用上轮已操作完的存档，因拉杆初始已开启而被探针拒绝；失败存档和 `build/native-structure-p4-projection-fixture-failure.log` 均保留，改用未操作副本重跑，没有放宽断言或清空内容。成功日志在 `build/native-structure-p4-*.log`。
+
+本轮单箱的 unload/load 在同一 JVM 中验证；双 JVM 内容持久化继续采用第二批证据，没有将本轮菜单探针计作新的进程崩溃或重启恢复证明。真实多人同步、断线重连、第三方回调兼容、通用放置采掘、物理运动和 Sable 混装仍属后续验收。
+
+### 第四批重跑入口
+
+先在 `run/native-structure-chest-smoke-自定名称/saves/Native Structure Chest Smoke` 准备已经退出游戏的隔离副本，保留一个空闲永久槽。玩家双手空闲、允许建造且非旁观者；背包需有空闲快捷栏位置。探针只操作专用箱子中的标记测试物品，统计箱内、玩家、鼠标持物及两个世界中的掉落，不清空玩家既有库存。
+
+```powershell
+.\gradlew.bat runClientDev -DisDev=true --init-script validation/native_structure/chest.init.gradle -PacademyNativeStructureChestDirectory=run/native-structure-chest-smoke-自定名称
+```
+
+必须看到 `NATIVE_STRUCTURE_CHEST_SMOKE_PASSED` 并打开 `screenshots/` 下真实界面及世界 PNG 核对。出现失败时保留世界与日志；不能清空库存后重复探针来制造通过。

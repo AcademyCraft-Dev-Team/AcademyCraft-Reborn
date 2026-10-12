@@ -92,7 +92,7 @@ public final class NativeStructureUsePacket extends Packet<ServerGamePacketListe
 
     public static final class Server {
         @SubscribePacket public static void handle(NativeStructureUsePacket packet) {
-            NativeStructureInteraction.useLever(packet.getPacketListener().getPlayer(), packet.hit);
+            NativeStructureInteraction.useBlock(packet.getPacketListener().getPlayer(), packet.hit);
         }
     }
 }

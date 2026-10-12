@@ -23,7 +23,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.WeakHashMap;
 
-/** Explicit, resource-free vanilla adapter; never lends a host player to a foreign Level. */
+/** Explicit vanilla adapters; never lend a host player to a foreign Level. */
 public final class NativeStructureInteraction {
     public enum Result { APPLIED, DENIED, STALE, UNSUPPORTED, BUSY }
     private static final WeakHashMap<ServerPlayer, Integer> LAST_USE = new WeakHashMap<>();
@@ -32,6 +32,14 @@ public final class NativeStructureInteraction {
     private NativeStructureInteraction() {}
 
     public static Result useLever(ServerPlayer player, StructureHit proposed) {
+        return use(player, proposed, true);
+    }
+
+    public static Result useBlock(ServerPlayer player, StructureHit proposed) {
+        return use(player, proposed, false);
+    }
+
+    private static Result use(ServerPlayer player, StructureHit proposed, boolean leverOnly) {
         var server = player.level().getServer();
         if (!server.isSameThread()) throw new IllegalStateException("Structure interaction requires server thread");
         if (!allowed(player)) return Result.DENIED;
@@ -48,9 +56,12 @@ public final class NativeStructureInteraction {
             var initial = valid(player, proposed).orElse(null);
             if (initial == null) return Result.STALE;
             var storage = runtime.storageLevel(handle.reference()).orElseThrow();
-            if (!storage.getBlockState(initial.block().localPosition()).is(Blocks.LEVER)) return Result.UNSUPPORTED;
+            var initialState = storage.getBlockState(initial.block().localPosition());
+            var action = initialState.is(Blocks.LEVER) ? StructureInteractionEvent.Action.USE_LEVER
+                    : !leverOnly && initialState.is(Blocks.CHEST) ? StructureInteractionEvent.Action.OPEN_CONTAINER : null;
+            if (action == null) return Result.UNSUPPORTED;
             boolean denied = StructureContexts.call(handle, context ->
-                    NeoForge.EVENT_BUS.post(new StructureInteractionEvent(player, initial, context)).isCanceled());
+                    NeoForge.EVENT_BUS.post(new StructureInteractionEvent(player, initial, context, action)).isCanceled());
             if (denied || !allowed(player)) return Result.DENIED;
             // Protection listeners may move the actor/structure or change blocks synchronously.
             // The original version remains the expectation: a listener cannot replace the target.
@@ -59,6 +70,12 @@ public final class NativeStructureInteraction {
             if (current == null) return Result.STALE;
             var position = current.block().localPosition();
             var state = storage.getBlockState(position);
+            if (action == StructureInteractionEvent.Action.OPEN_CONTAINER) {
+                boolean[] opened = { false };
+                boolean ran = runtime.runMenuInteraction(handle.reference(), () -> StructureContexts.run(handle,
+                        context -> opened[0] = NativeStructureChestSessions.open(player, current)));
+                return ran && opened[0] ? Result.APPLIED : Result.DENIED;
+            }
             if (!state.is(Blocks.LEVER)) return Result.UNSUPPORTED;
             var host = player.level();
             if (!runtime.runInteraction(current.block().structure(), () -> StructureContexts.run(handle,
@@ -73,6 +90,11 @@ public final class NativeStructureInteraction {
     }
 
     private static boolean allowed(ServerPlayer player) {
+        return canUseMenu(player) && player.getMainHandItem().isEmpty() && player.getOffhandItem().isEmpty();
+    }
+
+    /** Persistent menu validity excludes per-action time scaling and hand contents. */
+    public static boolean canMaintainMenu(ServerPlayer player) {
         // Custom payloads bypass the vanilla packet injections. Keep the same control,
         // paralysis and temporal action-tick gates as MixinServerGamePacketListenerImpl.
         // Vanilla also refuses block use before client loading/teleport acknowledgement.
@@ -80,9 +102,13 @@ public final class NativeStructureInteraction {
                 || player.connection == null || !player.connection.hasClientLoaded()
                 || ((MixinServerGamePacketListenerNativeStructureAccess) player.connection)
                         .academy$awaitingPositionFromClient() != null
-                || !player.getMainHandItem().isEmpty() || !player.getOffhandItem().isEmpty()
                 || PlayerControlSessionManager.blocksUntrustedWorldAction(player)
                 || MentalControlRuntime.isFrozen(player) || AbilityHitEffects.isParalyzed(player)) return false;
+        return true;
+    }
+
+    public static boolean canUseMenu(ServerPlayer player) {
+        if (!canMaintainMenu(player)) return false;
         var context = (MinecraftServerContext) player.level().getServer();
         return !context.hasAcademyCraftServer() || ((TemporalRuntime) context.getAcademyCraftServer()
                 .getTemporalService()).isPlayerActionTick(player);

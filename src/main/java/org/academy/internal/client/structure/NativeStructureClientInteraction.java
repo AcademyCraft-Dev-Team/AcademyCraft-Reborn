@@ -9,7 +9,7 @@ import org.misaka.MisakaNetworkClient;
 
 import java.lang.ref.WeakReference;
 
-/** Routes only the explicit empty-hand lever adapter; ordinary input keeps vanilla handling. */
+/** Routes the explicit empty-hand adapters; ordinary input keeps vanilla handling. */
 public final class NativeStructureClientInteraction {
     private static long lastUseTick = Long.MIN_VALUE;
     private static WeakReference<ClientLevel> lastLevel = new WeakReference<>(null);
@@ -22,8 +22,9 @@ public final class NativeStructureClientInteraction {
                 || minecraft.getCameraEntity() != player || player.isSpectator() || !player.getAbilities().mayBuild
                 || !player.getMainHandItem().isEmpty() || !player.getOffhandItem().isEmpty()) return false;
         var picked = NativeStructureRaycast.pick(player, player.blockInteractionRange(), 1.0F).orElse(null);
-        if (picked == null || !picked.projection().view().getBlockState(
-                picked.structureHit().block().localPosition()).is(Blocks.LEVER)) return false;
+        if (picked == null) return false;
+        var state = picked.projection().view().getBlockState(picked.structureHit().block().localPosition());
+        if (!state.is(Blocks.LEVER) && !state.is(Blocks.CHEST)) return false;
         long tick = minecraft.level.getGameTime();
         if (lastLevel.get() == minecraft.level && tick >= lastUseTick && tick - lastUseTick < 4) return true;
         lastLevel = new WeakReference<>(minecraft.level);

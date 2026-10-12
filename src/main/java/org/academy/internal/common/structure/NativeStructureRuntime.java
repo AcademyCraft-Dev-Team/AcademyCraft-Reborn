@@ -27,6 +27,7 @@ import org.academy.internal.common.structure.space.NativeStructureTickets;
 import org.academy.internal.common.structure.space.NativeStructureStorageErrors;
 import org.academy.internal.common.structure.space.NativeStructureChanges;
 import org.academy.internal.common.structure.space.NativeStructureViewCache;
+import org.academy.internal.common.structure.space.NativeStructureChestSessions;
 import org.academy.internal.common.world.entity.structure.NativeStructureProjectionEntity;
 
 import java.io.IOException;
@@ -192,22 +193,30 @@ public final class NativeStructureRuntime implements StructureBackend {
         requireThread();
         if (exactEntry(reference).isEmpty()) return false;
         var handle = loaded.get(reference.id());
-        if (handle == null || handle.writing || handle.saving
+        if (handle == null || handle.writing || handle.saving || handle.closing
                 || handle.state == StructureLifecycle.RECOVERY_REQUIRED) return false;
-        if (!save(reference)) return false;
-        var before = manifest.get(reference.id()).orElseThrow();
+        handle.closing = true;
         try {
-            manifest.put(new Entry(reference, before.slot(), before.pose(), false, false));
-            manifest.persist();
-        } catch (IOException | RuntimeException failure) {
-            manifest.put(before);
-            AcademyCraft.LOGGER.error("Native structure unload refused after save failure: {}", reference, failure);
-            return false;
+            // Return carried items and stop viewers before the final storage save. Close callbacks
+            // cannot reopen this structure or reenter a write/unload while the gate is held.
+            NativeStructureChestSessions.closeStructure(server, reference);
+            if (!saveHandle(handle)) return false;
+            var before = manifest.get(reference.id()).orElseThrow();
+            try {
+                manifest.put(new Entry(reference, before.slot(), before.pose(), false, false));
+                manifest.persist();
+            } catch (IOException | RuntimeException failure) {
+                manifest.put(before);
+                AcademyCraft.LOGGER.error("Native structure unload refused after save failure: {}", reference, failure);
+                return false;
+            }
+            handle.state = StructureLifecycle.UNLOADED;
+            handle.releaseTickets();
+            loaded.remove(reference.id());
+            return true;
+        } finally {
+            handle.closing = false;
         }
-        handle.state = StructureLifecycle.UNLOADED;
-        handle.releaseTickets();
-        loaded.remove(reference.id());
-        return true;
     }
 
     /** Flushes vanilla chunks/entities and our index during a normal running server session. */
@@ -215,7 +224,13 @@ public final class NativeStructureRuntime implements StructureBackend {
         requireThread();
         if (exactEntry(reference).isEmpty()) return false;
         var handle = loaded.get(reference.id());
-        if (handle == null || handle.writing || handle.saving
+        if (handle == null || handle.closing) return false;
+        return saveHandle(handle);
+    }
+
+    private boolean saveHandle(Handle handle) {
+        var reference = handle.reference;
+        if (handle.writing || handle.saving
                 || NativeStructureStorageErrors.failed(handle.level)) return false;
         handle.refresh();
         if (handle.state != StructureLifecycle.ACTIVE) return false;
@@ -275,16 +290,37 @@ public final class NativeStructureRuntime implements StructureBackend {
 
     /** Internal adapter guard. Callbacks cannot unload/save or start a second API write midway. */
     public boolean runInteraction(StructureRef reference, Runnable action) {
+        return runGuarded(reference, action, true);
+    }
+
+    /** Inventory traffic has its own vanilla sync; it does not change geometric hit versions. */
+    public boolean runMenuInteraction(StructureRef reference, Runnable action) {
+        return runGuarded(reference, action, false);
+    }
+
+    /** Also valid from inside a guarded action; this query does not acquire a second write lock. */
+    public boolean isAvailableForMenu(StructureRef reference) {
+        requireThread();
+        var handle = loaded.get(reference.id());
+        if (handle == null || !handle.reference.equals(reference) || handle.closing) return false;
+        handle.refresh();
+        return handle.state == StructureLifecycle.ACTIVE
+                && handle.presentation == StructurePresentationStatus.VISIBLE
+                && handle.projection != null && !handle.projection.isRemoved();
+    }
+
+    private boolean runGuarded(StructureRef reference, Runnable action, boolean changeGeometry) {
         requireThread();
         Objects.requireNonNull(action, "action");
         var handle = loaded.get(reference.id());
-        if (handle == null || !handle.reference.equals(reference) || handle.writing || handle.saving) return false;
+        if (handle == null || !handle.reference.equals(reference)
+                || handle.writing || handle.saving || handle.closing) return false;
         handle.refresh();
         if (handle.state != StructureLifecycle.ACTIVE) return false;
         handle.writing = true;
         try {
             action.run();
-            handle.bumpRevision();
+            if (changeGeometry) handle.bumpRevision();
             return true;
         } catch (RuntimeException failure) {
             // Vanilla callbacks can already have emitted effects; never replay/roll back an action.
@@ -342,6 +378,7 @@ public final class NativeStructureRuntime implements StructureBackend {
         private StructureLifecycle state = StructureLifecycle.LOADING;
         private boolean writing;
         private boolean saving;
+        private boolean closing;
 
         private Handle(StructureRef reference, int slot, ServerLevel level, boolean freshAllocation) {
             this.reference = reference;
@@ -405,6 +442,7 @@ public final class NativeStructureRuntime implements StructureBackend {
                 projection.updatePose(pose, revision);
                 projection.setView(viewCache.view(), revision);
             }
+            projection.setOpenChests(NativeStructureChestSessions.openPositions(server, reference, runtimeId));
             presentation = StructurePresentationStatus.VISIBLE;
         }
 
@@ -443,7 +481,7 @@ public final class NativeStructureRuntime implements StructureBackend {
 
         @Override public void setPose(StructurePose pose) {
             requireActive();
-            if (writing || saving) throw new IllegalStateException("Cannot change pose during a write or save");
+            if (writing || saving || closing) throw new IllegalStateException("Cannot change pose during a write, save or close");
             Objects.requireNonNull(pose, "pose");
             if (pose.equals(pose())) return;
             manifest.put(new Entry(reference, slot, pose, true, false));
@@ -477,7 +515,7 @@ public final class NativeStructureRuntime implements StructureBackend {
             position = position.immutable();
             refresh();
             if (state == StructureLifecycle.RECOVERY_REQUIRED) return StructureWriteResult.RECOVERY_REQUIRED;
-            if (writing || saving || state != StructureLifecycle.ACTIVE || loaded.get(reference.id()) != this) {
+            if (writing || saving || closing || state != StructureLifecycle.ACTIVE || loaded.get(reference.id()) != this) {
                 return StructureWriteResult.NOT_READY;
             }
             if (!contains(position)) return StructureWriteResult.OUT_OF_BOUNDS;
@@ -555,6 +593,7 @@ public final class NativeStructureRuntime implements StructureBackend {
         NativeStructureRuntime runtime;
         synchronized (SERVERS) { runtime = SERVERS.get(event.getServer()); }
         if (runtime == null || runtime.closed) return;
+        NativeStructureChestSessions.tick(event.getServer());
         for (var handle : List.copyOf(runtime.loaded.values())) handle.updateProjection();
         if (runtime.dirty && event.getServer().getTickCount() % 100 == 0) runtime.persistIndex();
     }
@@ -574,7 +613,13 @@ public final class NativeStructureRuntime implements StructureBackend {
     @SubscribeEvent public static void stopping(ServerStoppingEvent event) {
         NativeStructureRuntime runtime;
         synchronized (SERVERS) { runtime = SERVERS.get(event.getServer()); }
-        if (runtime != null && runtime.manifest.healthy()) runtime.persistIndex();
+        if (runtime != null) {
+            for (var handle : List.copyOf(runtime.loaded.values())) {
+                handle.closing = true;
+                NativeStructureChestSessions.closeStructure(event.getServer(), handle.reference);
+            }
+            if (runtime.manifest.healthy()) runtime.persistIndex();
+        }
     }
 
     @SubscribeEvent public static void stopped(ServerStoppedEvent event) {

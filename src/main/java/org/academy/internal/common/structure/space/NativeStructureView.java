@@ -7,9 +7,11 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.AABB;
@@ -78,8 +80,8 @@ public final class NativeStructureView implements BlockGetter {
 
     /**
      * MODEL alone is insufficient in 26.2: chests and other block entities also use that
-     * shape while requiring separate special/BE renderer submissions. Only these exact
-     * vanilla block entity blocks have been checked to render completely from block state.
+     * shape while requiring separate special/BE renderer submissions. The ordinary single
+     * chest has an explicit model path; the other audited vanilla blocks need only block state.
      * Unknown block entity types, including subclasses supplied by mods, fail closed.
      */
     public static boolean isSupportedState(BlockState state) {
@@ -88,8 +90,16 @@ public final class NativeStructureView implements BlockGetter {
                 || !state.getFluidState().isEmpty()) return false;
         if (!state.hasBlockEntity()) return true;
         var block = state.getBlock();
-        return block == Blocks.FURNACE || block == Blocks.BLAST_FURNACE || block == Blocks.SMOKER
+        return isSingleChestState(state)
+                || block == Blocks.FURNACE || block == Blocks.BLAST_FURNACE || block == Blocks.SMOKER
                 || block == Blocks.HOPPER || block == Blocks.DISPENSER || block == Blocks.DROPPER;
+    }
+
+    /** Only the exact, dry vanilla single chest has a dedicated inventory-free model path. */
+    public static boolean isSingleChestState(BlockState state) {
+        Objects.requireNonNull(state, "state");
+        return state.getBlock() == Blocks.CHEST && state.getValue(ChestBlock.TYPE) == ChestType.SINGLE
+                && state.getFluidState().isEmpty();
     }
 
     @Override
