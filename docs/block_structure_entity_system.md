@@ -18,6 +18,10 @@
 
 第十批已完成有界区域与运动检查点、无原生配置时的数据保留、显式恢复及停服门禁。最新 r2 三个独立专服 JVM、客户端 r2、最终全量/原生测试、三组 GameTest 及两种构建均已通过，证据独立于第九批；设计与验收状态见[第十批](#第十批有界物理区域与运动状态保存恢复)。
 
+第十一批已完成同宿主多个独立有界区域、稳定区域 UUID、manifest v3 兼容迁移和按区暂停/恢复；真实专服/客户端 r1、实际 v2 存档副本升级、新 v3 三 JVM、双区域跨 JVM r2、原生测试、三组 GameTest、最终全量测试和两种构建均已通过。结果按本批证据核对，不继承第十批通过结论。本轮只按宿主已加载区块独立调度，不增加主动加载、区域自动迁移/合并或分区几何缓存。
+
+第十二批已写入保守的宿主地形分区缓存：复用未变化分片的碰撞形状和盒列表，仍逐格复验已加载区块、方块状态及实际读取的邻居。真实专服/客户端 r1、三 JVM 持久化、双区域专项、2476 项最终基础测试、17 项原生 JVM、12 项 Rust 与三组 GameTest 已通过，两种构建与成品核对也已通过，结果不沿用第十一批结论；有限力控制留待下一批。本批不增加区域/存储容量、主动加载或自动分区迁移，也不宣称已有性能指标改善。
+
 ## 模块
 
 公开 API 位于 `org.academy.api.common.structure`：
@@ -35,7 +39,8 @@
 - `StructureWorldAccess`、`StructureBlockData`、`StructureWriteResult`：局部格读取、完整 BE 数据的防御复制和服务端单格比较后写入；
 - `StructureHit`、`StructureQueries`、`StructureContexts`、`SpaceContext`：逐格查询、命中重验和显式空间上下文；查询本身不授予操作权限；
 - `StructureInteractionEvent`、`StructurePlacementEvent`、`StructureMiningEvent`：受限玩家操作的可取消保护入口；采掘区分 `START` 与 `FINISH`，事件中的工具数据为防御副本；
-- `StructurePhysics`、`StructurePhysicsRegion`、`StructureMotionState`：有界物理区域、精确结构附加、运动控制与快照；第十批增加保存区域查询、显式恢复及显式放弃物理关联；
+- `StructurePhysics`、`StructurePhysicsRegion`、`StructureMotionState`：有界物理区域、精确结构附加、运动控制与快照；第十批增加保存区域查询、显式恢复及显式放弃物理关联，第十一批增加稳定区域 UUID 与按 ID 选择；
+- `StructurePhysicsRegionInfo`：指定宿主的已保存区域描述，含 ID、bounds、关联结构数和整区恢复许可；不是原生句柄或操作授权；
 - `BlockStructureSnapshot`：不可变、原点相对的结构数据；
 - `BlockStructureGridAlignment`：纯坐标网格吸附算法；
 - `BlockStructureKinetics`：带生命周期句柄的质量感知推进与扫掠碰撞回调；
@@ -182,7 +187,7 @@ result.structure().ifPresent(structure -> {
 1. 第九批已通过移动共享单箱、竞争放置/采掘及有界延迟的真实双客户端场景；继续补齐迟加入、断线重连、高转速边界等尚未覆盖的部署与网络矩阵。
 2. 持久交易协调、明确的隔离数据恢复入口，以及跨存储崩溃恢复验证。
 3. 补齐通用原版放置、破坏、菜单、BE 专用呈现、局部实体与流体边界，以及分区同步/渲染闭环；扩展容量和回收协议须先处理永久槽的内容归属。
-4. 第十批已完成区域与运动检查点、显式恢复及本批验收；此后扩展加载/分区调度、材料密度、有限力控制、旋转承载和拆分，验证高速与旋转扫掠。全方向网格还原仍需方块及 BE 旋转适配。
+4. 第十批已完成区域与运动检查点、显式恢复及本批验收；第十一批同宿主多区域的已加载区块独立调度也已通过限定场景和最终回归。第十二批保守地形缓存已通过限定场景和最终回归；有限力控制随后推进，主动加载、材料密度、旋转承载和拆分仍需扩展，高速与旋转扫掠继续专项验证。全方向网格还原仍需方块及 BE 旋转适配。
 5. Sable 可选桥、跨后端迁移，以及喷口、磁力、反射、传送、时停和精密操作向公共服务迁移。
 
 ## 验证清单
@@ -826,3 +831,137 @@ foreach ($stage in @('prepare', 'unavailable', 'resume')) {
 Cargo 不在 PATH 时，启用原生库的阶段按第七批入口指定 `-PacademyCargo=<绝对路径>`。unavailable 阶段必须省略两个原生产物参数，也不使用全局配置补入它们；init 不会为该阶段调用原生构建任务或授予 native access。每阶段都必须使用新 JVM，不以进程内 unload/load 代替跨进程恢复。
 
 保留 `checkpoint.nbt`、`unavailable.nbt`、三份控制台日志及 `native-physics-persistence-<stage>-result.txt` / `native-physics-persistence-<stage>-exit.txt`。结果首行应为 `PASSED`，退出文件必须同时记录 `exit_status=0`、`server_thread_terminated=true` 和 `stopping_guards_verified=true`，并核对三个 PID/启动时间与正常保存记录。检查点 NBT 是探针的不可变观察凭据，不是生产自动回滚或补发协议。
+
+## 第十一批：同宿主多区域与独立加载门禁
+
+本批将物理区域从“每宿主唯一”改为稳定 UUID 标识的多个独立区域。每个区域仍在原宿主内有固定 bounds 和自己的原生世界，按已加载区块及成员状态决定是否步进；缺块、内容不支持、成员卸载或恢复几何不匹配只暂停所属区域。其他满足条件的区域可继续正常求解。这是有界的独立调度，不是按玩家距离主动载入区块，也不包含结构跨分区自动迁移、边界接触桥接或区域合并。
+
+### 区域身份、配额与选择
+
+`StructurePhysicsRegion.id()` 返回区域身份，区别于每次原生求解会话的 session ID 和结构运行期 ID。`StructurePhysics.savedRegions(host)` 返回不可变的 `StructurePhysicsRegionInfo` 列表，描述该宿主的保存关联；调用方不得依赖列表顺序。关联数包含该区域已保存的成员，整区 `resumeAllowed` 由各成员许可共同决定。查询不加载原生库或区块，也不授予修改内容的权限。
+
+`resumeRegion(host, regionId)` 与 `discardSavedRegion(host, regionId)` 精确选择区域，未知 ID 不会转向其他区域。旧 `savedRegionBounds(host)`、无 ID 的 resume/discard 保留单区域便利语义；若该宿主有多个保存区域就明确抛出歧义错误，不选择第一个，更不清空整个宿主。关闭某区域只清该区域关联和释放其原生资源；detach 仍仅作用于指定成员。另一区域的检查点、暂停状态与运动不会因按 ID 关闭或放弃而被清除。
+
+[NativeStructurePhysicsRegionLayout](D:/mcmodtest/AcademyCraft-Reborn-26.2/src/main/java/org/academy/internal/common/structure/physics/NativeStructurePhysicsRegionLayout.java) 共用同一套运行期和存档校验：所有宿主的 live 与 saved 预留合计最多三个不同区域 UUID，相同区域的多个成员不重复计数。没有成员的实时空区域也占配额；没有保存关联的空区域不会出现在 savedRegions，也不会仅因打开过就持久化。空碰撞几何但仍有成员关联的区域则继续保留检查点。
+
+各区域每轴仍不超过 24 格。同一宿主的不同区域须至少沿一个轴保留一整格间隔；相交、相切或间隔不足一格均拒绝，包括尚未加载、等待恢复的区域。校验合并 live 和 saved 预留，在加载原生库之前完成。该限制避免独立求解世界之间出现未求解的动态接触；可能接触的结构应放进同一区域。结构越出所属固定区域仍按原有失败策略处理，不自动跳到相邻区域。四个永久结构槽和原生 ABI/资源上限均未扩大。
+
+### Manifest v3 与旧存档
+
+`NativeStructurePhysicsAttachment` 新增 `regionId`，manifest 写版本升为 3，physics 的 `region_id` 只接受完整、小写 canonical UUID 字符串。全索引检查同一 UUID 必须对应相同宿主和 bounds；不同区域的预算和间隔也在原子 `putAll` 提交前统一验证，失败不写半组姿态或运动。
+
+v1 无 physics 的旧结构继续作为静止、未附加内容读取；v1 夹带 physics 仍拒绝。v2 先保留原先“同宿主只有一组相同 bounds”的校验，再用固定命名域、规范宿主名与六个边界 double 字节确定区域 UUID，正负零归一；不使用随机数、运行期计数、记录顺序或文件路径。相同 v2 文件重复打开或成员倒序得到同样区域身份，姿态、速度、质心、睡眠观察、恢复许可和关联成员保持。坏 v2 不能借升级被偷偷拆成多个合法区域；v2 夹带 v3 region_id 也拒绝。
+
+单独解码不会重写原文件，后续正常持久化写出 v3。旧构建不认识 v3 时会按未知版本拒绝写入，因此不能把本升级解释为可任意降级覆盖。无原生配置时仍保留迁移后的检查点，不自动启用求解。第十批的显式恢复、摘要匹配、睡眠唤醒、无离线补跑、停服门禁和内容归属规则保持；本批只把相关读取、发布、关闭、丢弃及失败作用域改为选定区域。
+
+### 第十一批验证状态
+
+| 检查 | 必需证据 | 当前结果 |
+| --- | --- | --- |
+| 布局、模型与 API 单测 | 重复记录去重、全局三个预留、同 ID 归属一致、六向一格边界、重叠/相切拒绝、旧便利 API 歧义拒绝 | 已通过，包含在本批最终 2472 项 JUnit 中 |
+| Manifest v1/v2/v3 | v1 静止、v2 稳定迁移和内容不变、严格字段、批量失败无半写、按区清除不影响其他检查点 | 已通过最终 JUnit，并分别执行真实旧 v2 升级和新 v3 跨 JVM 回归 |
+| 同宿主独立区域实测 | 远处缺块区域零步进且不加载区块，同时近处已加载区域正常运动；按区关闭/卸载隔离 | 专服 r1 240 tick、客户端 r1 273 tick 通过，均确认隔离缺块区域时已加载区域推进 20 步 |
+| 双区域跨 JVM 专项 | 布局拒绝、配额、按 ID 选择、独立暂停/恢复/关闭与两组运动检查点 | r2 prepare/resume 在 114/25 tick 通过，两 JVM 退出 0、停服门禁通过 |
+| 实际 v2 存档升级 | 使用第十批完整存档的隔离副本，经缺少原生配置、显式恢复的独立 JVM 验证 UUID、运动、完整库存和正常退出 | `p11-v2-r1` 两个新 JVM 通过；原始 v2 世界保持不变，非零线角速度、七钻石完整 NBT 与停服门禁均通过 |
+| 新 v3 正常保存/恢复 | 全新存档依次 prepare/unavailable/resume，跨进程保持检查点与内容 | `p11-r1` 三个新 JVM 在 67/42/24 tick 通过，均正常退出 0 并通过 stopping 门禁 |
+| 原生与结构 GameTest | 真实引擎 JVM、Rust、query/space/safety 回归 | 17 项原生 JVM、12 项 Rust 与三组 GameTest 已通过；space 包含存储错误报告注入 |
+| 全量与构建回归 | 最新 JUnit、编辑器、开发/发布构建及最终成品核对 | 最终 JUnit 2472、编辑器 104、原生 JVM 17 项均零失败/错误/跳过；开发/发布构建通过 |
+
+同宿主区域实测沿用 [physics_world.init.gradle](D:/mcmodtest/AcademyCraft-Reborn-26.2/validation/native_structure/physics_world.init.gradle) 和 `NativeStructurePhysicsWorldSmoke`，每轮仍需全新隔离目录，保留服务端结果、客户端移动样本与实际截图；命令模板见第八批入口。专服 r1 的 [日志](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-world-server-r1.log) 记录 240 tick PASSED、正常保存与成功退出，结果记录 `missing_chunk_region_isolated=true`、`loaded_region_steps=20`。
+
+客户端 r1 在 [隔离目录](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-smoke-client-20261013-p11-r1) 完成 273 tick，记录 41 个移动样本，同样确认缺块区域零步进且不隐式加载，另一已加载区域推进 20 步。[日志](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-client-r1.log) 记录 PASSED、正常保存与 `BUILD SUCCESSFUL`；根代理已实际打开[下落前](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-smoke-client-20261013-p11-r1/screenshots/native-structure-physics-before-84060.png)和[落地后](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-smoke-client-20261013-p11-r1/screenshots/native-structure-physics-landed-84060.png)两图核对完整模型及接触后呈现。界面操作仅用于载入隔离副本，场景仍为 `actions=server_fixture`、`actual_keyboard_actions=false`，不代替玩家输入或多人网络验收。
+
+实际旧存档升级沿用 [physics_persistence.init.gradle](D:/mcmodtest/AcademyCraft-Reborn-26.2/validation/native_structure/physics_persistence.init.gradle)，使用第十批原始 v2 完整世界的全新隔离副本 [p11-v2-r1](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-persistence-20261013-p11-v2-r1)，没有修改来源世界。unavailable 与 resume 分别在 PID 71828/30452 的新 JVM 运行 42/23 tick，两份 result 为 PASSED，两份 exit 均确认 `exit_status=0`、服务器线程结束和 `stopping_guards_verified=true`。缺少原生配置时保留检查点，恢复首步线速度为 `(0.75, 2.018999999999995, 0.15)`，角速度为 `(0.19995739525909756, 0.40133179276392333, 0.09460174945235322)`；七钻石完整 NBT、摘要不匹配暂停、重载与旧命中拒绝通过。控制台日志为 [unavailable](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-persistence-unavailable-v2-r1.log) 与 [resume](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-persistence-resume-v2-r1.log)；这些限定升级结果与其余本批验收分别记录。
+
+新 v3 格式另在 [p11-r1](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-persistence-20261013-p11-r1) 依次执行 prepare/unavailable/resume，PID 为 46940/37036/51388，分别运行 67/42/24 tick。三份结果均 PASSED，退出文件均确认退出 0、服务器线程结束及 stopping 门禁通过；日志为 [prepare](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-persistence-prepare-r1.log)、[unavailable](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-persistence-unavailable-r1.log) 与 [resume](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-persistence-resume-r1.log)。这是新格式正常保存/恢复回归，与使用旧完整世界的 v2 升级验证分别记录。
+
+[原生测试](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-native-tests.log) 已通过 17 项真实引擎 JVM 和 12 项 Rust；[query](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-query-gametest.log)、[space](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-space-gametest.log) 与 [safety](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-safety-gametest.log) 均记录 `All 1 required tests passed`，space 另含 `SYNTHETIC_IO_REPORTS_PASSED`。最终 [test](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-test-final.log)、[开发构建](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-build-dev.log)与[发布构建](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-build-release.log)分别在 11/23/28 秒成功；XML 核对 JUnit 2472、编辑器 104、原生 JVM 17 项，全部零失败、错误或跳过。
+
+新增区域专项 r1 在 KICK 阶段失败，[日志](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-regions-prepare-r1.log)与失败目录保留。夹具在贴地时同时设置平移和旋转，正常接触使区域 B 的 X 速度变为约 `-0.365`，绝对值未满足 `> 0.4` 的预期；实际运动未丢失。修订仅让夹具先真实离地再采样，保留非零运动断言，没有修改生产求解或放宽控制门禁。
+
+修订后的 [区域专项 r2](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-regions-20261013-p11-r2) 已完成 prepare/resume 两个独立 JVM，PID 为 78636/692，分别运行 114/25 tick，两份 result 均为 PASSED，两份 exit 均确认退出 0、服务端线程结束和 stopping 门禁通过。[prepare 日志](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-regions-prepare-r2.log)及结果记录两结构碰撞几何最低 Y 先真实超过 `111.35`，才设置运动；下一实际步进确认线速度分别为 `(0.6, 2.5094999999999974, 0.1)` 和 `(-0.6, 2.5094999999999974, 0.1)`，角速度均非零，再保存两组检查点。
+
+[resume 日志](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-regions-resume-r2.log)确认跨 JVM 区域 UUID 保持、结构运行期身份更新、无 ID 便利入口歧义拒绝和未知 UUID 隔离。只恢复 A 时 B 保持待恢复；B 几何不匹配暂停并保留检查点时，A 的步数和姿态继续推进；修复 B 后恢复其首步运动。关闭 A 只清 A 关联，B 继续运动，旧 A 区域句柄拒绝使用，最后关闭 B 才清剩余关联。prepare 还覆盖相交/相切/不足一格拒绝、精确一格允许、全局三区域配额与卸载隔离；这些是限定服务端夹具的证据，不代表自动分区迁移或任意多人负载已通过。
+
+最终证据索引为 [validation](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-validation.json) 与 [artifacts](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-artifacts.json)，源码及全部相关文件摘要分别为 [source-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-source-manifest.json) 与 [all-files-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-all-files-manifest.json)。本批共 18 个相关文件，其中 16 个为源码/测试/验证配置；文件清单不代表已提交，当前尚无本批提交授权。
+
+开发 JAR SHA-256 为 `23d4bcf3c7aff75db3ecf2ecc7876bc21bcfb2bf3c3efd526746f7d3cdef856e`，发布 JAR 为 `7bc2e87d7f648e42a1d1226c2fa678a7e6beceb89b8dd2cb83d620620b816dfa`。两份成品均包含新增区域类型、共享布局校验与固定 FFM 桥资源，不包含 DLL/SO/dylib。外部 DLL 与第十批相同，SHA-256 仍为 `c8ab64f663ecb2ca9727ce94f57f9d90fe547a5c77c6b77518ca479f1def2dbd`；显式配置与原生权限要求未变。
+
+### 双区域跨 JVM 重跑入口
+
+入口为 [physics_regions.init.gradle](D:/mcmodtest/AcademyCraft-Reborn-26.2/validation/native_structure/physics_regions.init.gradle)。先预建全新、无链接的 `run/native-structure-physics-regions-*` 隔离目录，并准备已接受的 EULA 与 `server-ip=127.0.0.1`、`level-name=native-structure-physics-regions-smoke`、`pause-when-empty-seconds=0`。prepare 的世界、`regions-checkpoint.nbt` 和两个阶段结果/退出标记必须不存在；resume 必须复用 prepare 的完整世界，且只在其正常保存退出后启动新 JVM。
+
+```powershell
+$regionsRun = 'run/native-structure-physics-regions-p11-new'
+$physicsLibrary = Join-Path (Get-Location) 'build/native-physics/artifacts/academy_physics.dll'
+$physicsManifest = Join-Path (Get-Location) 'build/native-physics/artifacts/academy_physics.properties'
+foreach ($stage in @('prepare', 'resume')) {
+    .\gradlew.bat runServerCompat -DisDev=true -DisCompat=false --no-configuration-cache --init-script validation/native_structure/physics_regions.init.gradle "-PacademyStructurePhysicsRegions=$stage" "-PacademyStructurePhysicsRegionsDirectory=$regionsRun" "-PacademyNativePhysicsLibrary=$physicsLibrary" "-PacademyNativePhysicsManifest=$physicsManifest"
+    if ($LASTEXITCODE -ne 0) { throw "Regions JVM failed: $stage" }
+}
+```
+
+两个阶段都必须显式传入原生库与 manifest 的绝对路径，init 明确启用 `ALL-UNNAMED` 原生访问。Cargo 不在 PATH 时另传 `-PacademyCargo=<绝对路径>`。每阶段同时检查 `native-physics-regions-<stage>-result.txt` 首行 PASSED 与对应 `-exit.txt` 中的退出 0、`server_thread_terminated=true`、`stopping_guards_verified=true`，并保留日志、不同 PID/启动时间和 `regions-checkpoint.nbt`。场景结果先于停服写出，不能仅凭 PASSED 或 Gradle 成功代替联合核对；该检查点仍是探针观察证据，不提供生产自动恢复协议。
+
+本批不增加区域自动迁移/合并、跨区域动态体接触、地形分区缓存、主动宿主加载、永久槽扩容、材料、实体承载、网络插值、技能迁移、Sable 桥或跨存储崩溃原子协议。未开启的保存区域按 UUID 显式放弃这一正向路径，未另做独立实机用例；不能将已测的关闭活动区域和错误 ID 拒绝当作该路径的实机证据。P0 仍部分完成，独立区域按区暂停也不代表 storage level 的原版逻辑一起暂停。
+
+## 第十二批：保守地形分区缓存
+
+本批只缓存物理区域内宿主地形的碰撞提取结果。每个区域独占缓存，以原有含 halo 的地形扫描范围与 16³ 区段的交集分片；每个来源格只归属一个分片，形状仍完整保留，不在分片边缘裁剪或替换为整立方体。缓存不改变结构局部几何的提取、原生求解参数、单次成组姿态/运动发布或 manifest v3 格式。
+
+### 复用与提交契约
+
+每个分片保留提取时读取的全部方块状态（包括空气）、已加载区块对象身份和形状实际读取的邻居；邻居读取范围沿用整个区域扫描范围的额外一格，不因分片边界收窄。跨片读取归入读取方的回执，被读取格变化时对应旧分片不能复用。宿主实例、世界边界、当前容量和区块可用性仍须检查，不能仅凭没有收到方块变化事件便认定缓存有效；直接写入 section 的变化也必须由状态复验发现。
+
+未变化分片可复用形状/盒列表，变化分片重新提取到候选集合；所有分片完成后统一检查回执、读取预算和总盒预算，再替换缓存。后面分片的提取回调若改变前面已复用或新提取分片，最终复验必须拒绝整批。任何脏分片因缺块、不支持内容、超限或不稳定而失败，区域都不能退回旧 aggregate 继续步进。缓存成功提交只代表获得候选几何，实际物理步前仍执行原有最后复验。
+
+原有 65,536 个地形来源格和 131,072 次提取状态读取的全域预算不随切片倍增；组合缓存时也计入复用分片原有的读取成本。动态几何每 tick 占用的盒数变化后，以当前剩余容量重新约束完整缓存地形，总量仍受每原生世界 2048 盒限制。冷热路径及单片重建使用稳定盒序，不能仅因 map 插入顺序不同而推进 terrain epoch 或重建原生世界。
+
+缓存仅在服务端线程和当前区域会话内使用，不持久化，不作为恢复许可。卸载引起的原生世界释放、最后成员移除、区域失败、关闭和停服都清除缓存引用；暂停期间即使保留可复验的记录，恢复仍须按当前状态重新检查。清理不能保留可被误用的旧 aggregate 或宿主区块引用，诊断累计计数与当前缓存项数分开处理。
+
+这项优化减少重复调用形状逻辑、分解碰撞盒和分配列表；逐格 loaded/state receipt 检查没有减少。复杂度不能表述为只检查区段数，也不能从缓存命中次数推导 MSPT、帧率或总体内存改善。本批仍保持全服务器三个 live/saved 区域预留、四个永久存储槽及已有每轴 24 格边界；不增加自动分区迁移/合并、主动宿主加载、有限力/PD 控制或玩家承载。
+
+### 第十二批验证状态
+
+| 检查 | 必需证据 | 当前结果 |
+| --- | --- | --- |
+| 冷/暖/局部失效 | 暖缓存避免重复形状提取；单片变化仅重建必要分片，组合盒与冷提取一致 | 专服/客户端 r1 均通过几何多重集对照、暖复用与单脏片；真实静态帧 captures 分别保持 18/8 |
+| 回执与边界 | 空气变实块、原始 section 写入、跨片邻居/halo、区块身份替换、世界边界收缩、负坐标及分片边缘 | 两端 r1 通过原始 section 写入、世界边界、缺块不加载；四项新增单测覆盖负坐标/halo 归属、半开分片稳定序、非法范围及共享预算。跨片邻居变化和区块对象替换仅有源码契约复审，无独立专项实机 |
+| 预算与失败 | 全域读取不倍增、动态盒数增长后缓存预算收缩、脏片失败零步进、失败提交不回退旧几何 | 两端均通过缩小总盒预算拒绝、宿主蛛网暂停 5 tick 且无旧几何回退；基础单测最终通过 |
+| 生命周期与真实场景 | 原生重建、卸载/重载、关闭、失败、停服清理；真实专服和客户端物理投影回归 | 专服 246 tick、客户端 279 tick 通过，unload/reload/close 缓存项与正常退出通过；客户端 41 个移动样本、两图已目视 |
+| 正常持久化回归 | prepare/unavailable/resume 三个独立 JVM，检查点与内容保留、恢复和停服门禁 | r1 在 67/42/23 tick 全部通过，均退出 0 且 stopping 门禁通过 |
+| 双区域回归 | 稳定 UUID、独立暂停/恢复/关闭、两组运动检查点与跨 JVM 恢复 | prepare/resume r1 在 114/25 tick 通过，两端退出 0 且 stopping 门禁通过 |
+| 基础与成品 | 最终 JUnit/编辑器、原生 JVM/Rust、三组结构 GameTest、开发/发布构建、产物与源码摘要 | JUnit 2476、编辑器 104、原生 JVM 17 项均零失败/错误/跳过，Rust 12 项和三组 GameTest 通过；开发/发布构建及成品核对通过，不继承第十一批统计 |
+
+真实专服 r1 使用 [隔离目录](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-smoke-server-20261013-p12-r1)，[日志](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-world-server-r1.log)与结果记录 246 tick PASSED；退出文件同时确认 `exit_status=0`、服务器停止事件和线程结束，日志保留正常保存记录。首次缓存有 18 个分片、扫描 10,051 格，真实静态帧的成功提取计数保持 18。完整提取以盒的多重集比较，避免不同遍历顺序制造假差异；单脏片、原始 section 写入、缩预算、边界变化、clear 后重抓及缺块不加载均有独立结果标记。
+
+运行中在区域内远离结构中心的安全测试空气格放置不支持的蛛网，区域连续 5 tick 暂停，步数不前进且没有旧碰撞回退；将测试格恢复为空气后继续求解。结构卸载时缓存项清零、重载后重新提取，最后关闭区域也清零；原有下落/接触、内容与地形更新、tick freeze、多区域缺块隔离和运动恢复回归均通过。场景仍为 `actions=server_fixture`、`actual_keyboard_actions=false`，这些计数只证明复用和失效行为，不是运行耗时改善数据。
+
+[Rust 日志](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-rust.log)记录 12 项通过，任务用时 1 秒。首次[编译](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-compile.log)失败仅因限定嵌套类型的 `@Nullable` 注解位置不合法；调整为类型段注解后，[compile r2](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-compile-r2.log) 在 4 秒通过，未将编译通过当作实机验收。首轮[全量测试](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-test-initial.log)执行 2476 项，新增测试把空范围的既有 `INVALID_BOUNDS` 误期望为 `LIMIT_EXCEEDED`；只修正测试区分空范围和超额预算，生产行为未改。随后[最终基础测试](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-test-final.log)已在 9 秒通过 2476 项；首轮失败历史保留，不改写成首次全部通过。
+
+客户端 r1 使用 [隔离目录](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-smoke-client-20261013-p12-r1)，在 279 tick 完成所有 `terrain_cache` 标记，记录 41 个移动样本；[日志](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-client-r1.log)为 `BUILD SUCCESSFUL in 1m 2s`，正常保存退出 0。初始 8 个分片同样扫描 10,051 格，静态帧 captures 保持 8；与专服的 18 分片不同来自区域位置相对 16³ 区段的对齐，不是少查了来源格。根代理已实际打开[悬空旋转](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-smoke-client-20261013-p12-r1/screenshots/native-structure-physics-before-77776.png)和[落地后](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-smoke-client-20261013-p12-r1/screenshots/native-structure-physics-landed-77776.png)两张截图，确认完整模型与接触后显示正确。`actual_keyboard_actions=false`，截图与移动样本仍只证明服务端夹具的物理呈现。
+
+三 JVM 持久化回归在 [p12-r1](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-persistence-20261013-p12-r1) 完成 prepare/unavailable/resume，PID 为 57408/41792/62388，分别 67/42/23 tick；对应任务用时 14/11/10 秒。三份结果均为 PASSED，三份 exit 均同时确认退出 0、服务器线程结束和 `stopping_guards_verified=true`，日志为 [prepare](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-persistence-prepare-r1.log)、[unavailable](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-persistence-unavailable-r1.log) 与 [resume](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-persistence-resume-r1.log)。缺库保留检查点、无离线补跑、摘要不匹配暂停、恢复首步运动、卸载/重载与旧运行期拒绝均通过；缓存自身不存盘，也不因本轮重启获得自动恢复控制的语义。双区域专项、专用原生 JVM、三组 GameTest 与两种构建的通过证据见下文。
+
+双区域回归使用 [p12-r1](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-regions-20261013-p12-r1)，prepare/resume 的 PID 为 58032/45448，分别 114/25 tick、任务 17/11 秒，两个 result 均 PASSED，exit 均记录退出 0、服务器线程结束和 stopping 门禁通过；日志为 [prepare](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-regions-prepare-r1.log) 与 [resume](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-regions-resume-r1.log)。本轮再次覆盖布局门禁、持久区域身份、按区恢复/暂停/关闭与运动检查点，没有将第十一批结果直接计入。
+
+[原生 JVM 测试](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-native-tests.log)本次 2 秒成功，XML 对应 17 项，依赖同时重跑 Rust 12 项并通过。[query](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-query-gametest.log)、[space](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-space-gametest.log)和[safety](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-safety-gametest.log)分别在 10/12/9 秒通过。新增四项缓存单测与实机标记的证明范围分别列在表中；跨片邻居变化、区块对象替换未另做独立实机，不把源码门禁推断写成执行结果。
+
+最终[开发构建](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-build-dev.log)与[发布构建](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-build-release.log)分别 23/28 秒成功、退出 0。最终 XML 核对基础测试 2476、编辑器 104、原生 JVM 17 项，均零失败、错误或跳过；Rust 12 项通过。开发 JAR SHA-256 为 `80169f5cff6267ed455ba72608ff2d3fc4e33e157d6678ff91907f03f3237c3f`，发布 JAR 为 `bb1ccb7f6a8959f1202a92129b4e70baae2bde866eb7c1f006e903fa62231e34`。两份成品均包含缓存新类与固定 FFM 桥，不含 DLL/SO/dylib；外部 DLL 与第十一批相同，显式加载要求不变。
+
+证据索引为 [validation](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-validation.json)、[artifacts](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-artifacts.json)、[source-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-source-manifest.json)、[all-files-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-all-files-manifest.json)及[delta-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-delta-manifest.json)。累计 22 个相关文件含尚未提交的第十一批内容，本 P12 影响 8 个文件（含两份文档）；20 项源码/测试/验证配置的摘要与冻结版本一致。第十一批的 18 个文件仍保留于 `build/native-structure-p12-baseline` 作为增量对照，当前没有本批提交授权，清单不表示已创建提交。
+
+本批验证限于缓存、安全门禁、物理呈现与持久化/区域回归，没有重新执行全部玩家交互流程或真实双客户端网络矩阵。跨片邻居变化和区块对象替换的独立实机、性能指标、主动加载、有限力控制及其他范围外事项仍保留其未验收状态。
+
+### 第十二批重跑入口
+
+沿用 [physics_world.init.gradle](D:/mcmodtest/AcademyCraft-Reborn-26.2/validation/native_structure/physics_world.init.gradle) 的专服/客户端入口，不增加默认启动行为。分别预建全新、无链接的 `run/native-structure-physics-smoke-server-*` 和 `run/native-structure-physics-smoke-client-*` 隔离目录，不能复用已有结果或退出标记。专服准备已接受的 EULA 与 `server-ip=127.0.0.1`、`level-name=native-structure-physics-smoke`，世界目录必须不存在；客户端按第八批入口准备 `saves/Native Structure Physics Smoke` 的全新副本及两个未使用的 owner 槽。
+
+```powershell
+$physicsLibrary = Join-Path (Get-Location) 'build/native-physics/artifacts/academy_physics.dll'
+$physicsManifest = Join-Path (Get-Location) 'build/native-physics/artifacts/academy_physics.properties'
+.\gradlew.bat runServerCompat -DisDev=true -DisCompat=false --no-configuration-cache --init-script validation/native_structure/physics_world.init.gradle -PacademyStructurePhysicsSmoke=server -PacademyStructurePhysicsSmokeDirectory=run/native-structure-physics-smoke-server-p12-new "-PacademyNativePhysicsLibrary=$physicsLibrary" "-PacademyNativePhysicsManifest=$physicsManifest"
+.\gradlew.bat runClientDev -DisDev=true --no-configuration-cache --init-script validation/native_structure/physics_world.init.gradle -PacademyStructurePhysicsSmoke=client -PacademyStructurePhysicsSmokeDirectory=run/native-structure-physics-smoke-client-p12-new "-PacademyNativePhysicsLibrary=$physicsLibrary" "-PacademyNativePhysicsManifest=$physicsManifest"
+```
+
+两个命令分别执行并核对退出码，不在失败后自动继续。Cargo 不在 PATH 时另传 `-PacademyCargo=<绝对路径>`；两个原生产物路径必须为绝对路径，原生访问继续由 init 显式授权。保留每端 `native-structure-physics-<mode>-result.txt`、控制台日志、正常保存与退出证据，专服另核对 `native-structure-physics-server-exit.txt`，客户端实际打开 before/landed 截图并核对移动样本。新增缓存断言与诊断记录按最终夹具实际输出验收，不能仅用原有物理 PASSED 标记证明缓存行为；场景仍为服务端夹具，不代替真实玩家操作或多人压力测试。

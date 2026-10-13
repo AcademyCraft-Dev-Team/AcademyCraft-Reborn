@@ -290,16 +290,39 @@ public final class NativeStructureRuntime implements StructureBackend {
         return physics.savedRegionBounds(host);
     }
 
+    public List<StructurePhysicsRegionInfo> savedPhysicsRegions(ServerLevel host) {
+        requireThread();
+        return physics.savedRegions(host);
+    }
+
     public StructurePhysicsRegion resumePhysicsRegion(ServerLevel host) {
         requireRunning();
         if (physicsStepping) throw new IllegalStateException("Cannot resume a region during a physics step");
         return physics.resume(host);
     }
 
+    public StructurePhysicsRegion resumePhysicsRegion(ServerLevel host, UUID regionId) {
+        requireRunning();
+        if (physicsStepping) throw new IllegalStateException("Cannot resume a region during a physics step");
+        return physics.resume(host, Objects.requireNonNull(regionId, "regionId"));
+    }
+
     public boolean discardSavedPhysicsRegion(ServerLevel host) {
         requireRunning();
         if (physicsStepping) throw new IllegalStateException("Cannot discard a region during a physics step");
         return physics.discardSaved(host);
+    }
+
+    public boolean discardSavedPhysicsRegion(ServerLevel host, UUID regionId) {
+        requireRunning();
+        if (physicsStepping) throw new IllegalStateException("Cannot discard a region during a physics step");
+        return physics.discardSaved(host, Objects.requireNonNull(regionId, "regionId"));
+    }
+
+    /** All reservations, including inactive structures and hosts with no live physics region. */
+    public List<Entry> savedPhysicsEntries() {
+        requireThread();
+        return manifest.entries().stream().filter(entry -> entry.physicsAttachment() != null).toList();
     }
 
     /** Detached persistence observations; reading these never opens a library or loads a chunk. */
@@ -313,6 +336,12 @@ public final class NativeStructureRuntime implements StructureBackend {
                 && entry.reference().dimension().equals(host.dimension().identifier())).toList();
     }
 
+    public List<Entry> savedPhysicsEntries(ServerLevel host, UUID regionId) {
+        Objects.requireNonNull(regionId, "regionId");
+        return savedPhysicsEntries(host).stream()
+                .filter(entry -> entry.physicsAttachment().regionId().equals(regionId)).toList();
+    }
+
     /** Internal control publication. Disk flushing retains the same pose/motion pair. */
     public void setPhysicsAttachment(StructureRef reference, @Nullable NativeStructurePhysicsAttachment attachment) {
         requireThread();
@@ -323,8 +352,9 @@ public final class NativeStructureRuntime implements StructureBackend {
     }
 
     /** Validate every member before changing any record, including unloaded members. */
-    public void clearPhysicsAttachments(ServerLevel host) {
-        var entries = savedPhysicsEntries(host);
+    public void clearPhysicsAttachments(ServerLevel host, UUID regionId) {
+        requireRunning();
+        var entries = savedPhysicsEntries(host, regionId);
         for (var entry : entries) requirePhysicsMetadataMutable(entry);
         manifest.putAll(entries.stream().map(entry -> entry.withPhysicsAttachment(null)).toList());
         for (var entry : entries) invalidateInteractionHistory(entry.reference());
@@ -406,8 +436,14 @@ public final class NativeStructureRuntime implements StructureBackend {
             Objects.requireNonNull(entry.getValue());
             var handle = (Handle) entry.getKey();
             var before = manifest.get(handle.reference.id()).orElseThrow();
+            var attachment = Objects.requireNonNull(attachments.get(handle));
+            if (before.physicsAttachment() == null
+                    || !before.physicsAttachment().regionId().equals(attachment.regionId())
+                    || !before.physicsAttachment().bounds().equals(attachment.bounds())) {
+                throw new IllegalStateException("A physics step cannot transfer its region reservation");
+            }
             replacements.add(before.withPose(entry.getValue())
-                    .withPhysicsAttachment(Objects.requireNonNull(attachments.get(handle))));
+                    .withPhysicsAttachment(attachment));
             if (!entry.getValue().equals(before.pose())) moved.add(handle);
         }
         manifest.putAll(replacements);

@@ -2,31 +2,24 @@ package org.academy.internal.common.structure.physics;
 
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.common.structure.StructurePhysics;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Persisted intent and last coherent motion observation, bound to its manifest entry's pose.
  * This value never loads native code or authorizes automatic activation after a restart.
  */
-public record NativeStructurePhysicsAttachment(AABB bounds, @Nullable Motion motion, boolean resumeAllowed) {
+public record NativeStructurePhysicsAttachment(UUID regionId, AABB bounds, @Nullable Motion motion, boolean resumeAllowed) {
     public NativeStructurePhysicsAttachment {
-        Objects.requireNonNull(bounds, "bounds");
-        for (double value : new double[]{bounds.minX, bounds.minY, bounds.minZ, bounds.maxX, bounds.maxY, bounds.maxZ}) {
-            PhysicsLimits.range(value, -29_999_980, 29_999_980, "saved region coordinate");
-        }
-        for (double size : new double[]{bounds.getXsize(), bounds.getYsize(), bounds.getZsize()}) {
-            if (!Double.isFinite(size) || size <= 0 || size > StructurePhysics.MAX_REGION_AXIS) {
-                throw new IllegalArgumentException("Saved physics region axes must be in (0, 24]");
-            }
-        }
+        Objects.requireNonNull(regionId, "regionId");
+        NativeStructurePhysicsRegionLayout.validateBounds(bounds);
     }
 
     /** Preserves the checkpoint when a failure forbids resuming it. */
     public NativeStructurePhysicsAttachment withResumeAllowed(boolean allowed) {
-        return new NativeStructurePhysicsAttachment(bounds, motion, allowed);
+        return new NativeStructurePhysicsAttachment(regionId, bounds, motion, allowed);
     }
 
     /**

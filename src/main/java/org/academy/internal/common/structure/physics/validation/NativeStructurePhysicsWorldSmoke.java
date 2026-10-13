@@ -55,7 +55,7 @@ public final class NativeStructurePhysicsWorldSmoke {
     private static volatile ClientState clientState = new ClientState("WAITING", List.of(), null, null, "", false, false, null);
     private static volatile String capturedStage = "";
     private static volatile String capturePath = "";
-    private enum Phase { ACTIVATE, BEFORE, FALL, LANDED, TERRAIN_FALL, TERRAIN_LAND,
+    private enum Phase { ACTIVATE, BEFORE, FALL, LANDED, HOST_UNSUPPORTED, HOST_RESTORED, TERRAIN_FALL, TERRAIN_LAND,
         LOCAL_ADD, LOCAL_REMOVE, UNSUPPORTED, SUPPORTED_AGAIN, FROZEN, THAWED,
         PAIR_ARM, PAIR, EMPTY, UNLOAD, RELOAD, BOUNDARY, FINISHED }
 
@@ -74,16 +74,21 @@ public final class NativeStructurePhysicsWorldSmoke {
     private final StringBuilder evidence = new StringBuilder("actions=server_fixture\nactual_keyboard_actions=false\n");
     private StructureHandle a, b;
     private StructurePhysicsRegion region;
+    private StructurePhysicsRegion loadedRegion;
     private AABB bounds;
     private BlockPos base;
     private Phase phase = Phase.ACTIVATE;
     private int ticks, phaseTicks, stableTicks, exitStatus = 1;
     private boolean sawGravity, compoundMassVerified, addedLowerFloor, fixtureFreeze, complete, orderlyStop, watching;
+    private boolean terrainStaticFramesVerified, hostTerrainUnsupported;
     private long beforeEpoch, beforeContent, beforeTerrain, pausedSteps;
+    private long staticCacheCaptures = -1, staticCacheCells, staticCacheHits;
     private double beforeMass;
     private StructurePose firstPose, frozenPose, savedPose;
+    private StructurePose loadedRegionStart;
     private UUID oldRuntime;
     private BlockPos farChunkProbe;
+    private BlockPos terrainProbePos;
     private String failure;
 
     private NativeStructurePhysicsWorldSmoke(MinecraftServer server, UUID playerId, String role) {
@@ -176,7 +181,7 @@ public final class NativeStructurePhysicsWorldSmoke {
             player.setDeltaMovement(Vec3.ZERO);
         }
         if (phase != Phase.ACTIVATE && phase != Phase.UNLOAD && phase != Phase.RELOAD && phase != Phase.BOUNDARY && phase != Phase.FINISHED
-                && phase != Phase.UNSUPPORTED && phase != Phase.FROZEN) {
+                && phase != Phase.UNSUPPORTED && phase != Phase.FROZEN && phase != Phase.HOST_UNSUPPORTED) {
             require(region == null || region.status() == StructurePhysicsRegion.Status.READY,
                     "Unexpected physics region status: " + diagnostic());
         }
@@ -195,6 +200,7 @@ public final class NativeStructurePhysicsWorldSmoke {
                         "Real stone/slab/stair geometry must preserve partial cuboids");
                 evidence.append("initial_cells=3\ninitial_boxes=").append(geometry.boxes().size()).append('\n');
                 floor(base.getY(), true);
+                terrainProbePos = NativeStructureTerrainCacheSmokeChecks.run(host, bounds, base, evidence);
                 firstPose = poseAt(base.getX() + 0.5, base.getY() + 6, base.getZ() + 0.5,
                         new Quaterniond().rotationXYZ(0.28, 0.1, 0.2));
                 a.setPose(firstPose);
@@ -211,6 +217,18 @@ public final class NativeStructurePhysicsWorldSmoke {
             }
             case FALL -> {
                 var motion = region.motion(a.reference()).orElseThrow();
+                if (!terrainStaticFramesVerified) {
+                    var cache = diagnostics().terrainCache();
+                    if (staticCacheCaptures < 0) {
+                        require(cache.partitions() > 0 && cache.captures() > 0, "Real physics region never populated its terrain cache");
+                        staticCacheCaptures = cache.captures(); staticCacheCells = cache.scannedCells(); staticCacheHits = cache.hits();
+                    } else {
+                        require(cache.captures() == staticCacheCaptures && cache.scannedCells() == staticCacheCells && cache.hits() > staticCacheHits,
+                                "A static host frame re-extracted cached terrain: " + cache);
+                        terrainStaticFramesVerified = true;
+                        evidence.append("terrain_cache_real_static_frames_hit=true\nterrain_cache_real_static_captures=").append(cache.captures()).append('\n');
+                    }
+                }
                 if (!compoundMassVerified) {
                     require(Math.abs(motion.mass() - 2.25) < 1.0E-8,
                             "Stone + bottom slab + straight stair must have native mass 2.25, got " + motion.mass());
@@ -230,6 +248,28 @@ public final class NativeStructurePhysicsWorldSmoke {
             case LANDED -> {
                 if (!captureReady("landed")) return;
                 recordCapture("landed");
+                require(terrainStaticFramesVerified, "Static-frame terrain cache reuse was not observed");
+                frozenPose = a.pose(); pausedSteps = diagnostics().steps();
+                require(host.getBlockState(terrainProbePos).isAir()
+                                && host.setBlock(terrainProbePos, Blocks.COBWEB.defaultBlockState(), FLAGS),
+                        "Cannot prepare unsupported host terrain in its isolated test cell");
+                hostTerrainUnsupported = true;
+                next(Phase.HOST_UNSUPPORTED);
+            }
+            case HOST_UNSUPPORTED -> {
+                require(region.status() == StructurePhysicsRegion.Status.PAUSED && region.diagnostic().contains("unsupported_content"),
+                        "Dirty unsupported host terrain reused old cached geometry: " + diagnostic());
+                require(diagnostics().steps() == pausedSteps && samePose(a.pose(), frozenPose),
+                        "Dirty unsupported host terrain advanced or published a stale-collider step");
+                if (phaseTicks < 5) return;
+                restoreHostTerrainProbe();
+                evidence.append("terrain_cache_unsupported_host_paused=true\nterrain_cache_no_stale_fallback=true\nhost_pause_ticks=").append(phaseTicks).append('\n');
+                next(Phase.HOST_RESTORED);
+            }
+            case HOST_RESTORED -> {
+                require(diagnostics().steps() > pausedSteps && region.motion(a.reference()).isPresent(),
+                        "Restoring supported host terrain did not resume physics");
+                evidence.append("terrain_cache_supported_host_resumed=true\n");
                 beforeTerrain = diagnostics().terrainEpoch();
                 frozenPose = a.pose();
                 floor(base.getY(), false);
@@ -352,6 +392,7 @@ public final class NativeStructurePhysicsWorldSmoke {
                         "Unloaded member must park its physics cohort: " + diagnostic());
                 require(diagnostics().steps() == pausedSteps, "Parked physics cohort continued stepping");
                 require(region.motion(b.reference()).isEmpty() && diagnostics().bodies() == 0, "Unloaded body was not released");
+                require(diagnostics().terrainCache().partitions() == 0, "Unloading the cohort retained cached terrain receipts");
                 require(runtime.resolve(b.reference()).isEmpty(), "Unloaded handle remained resolvable");
                 if (phaseTicks < 20) return;
                 evidence.append("unload_cohort_paused=true\nparked_steps_unchanged=true\nunload_pause_ticks=").append(phaseTicks).append('\n');
@@ -365,10 +406,12 @@ public final class NativeStructurePhysicsWorldSmoke {
                 require(b.pose().worldOrigin().distanceTo(savedPose.worldOrigin()) < 0.05,
                         "Restored resting body moved away from its saved pose");
                 require(diagnostics().bodies() == 1, "Reload did not restore the saved physical member");
+                require(diagnostics().terrainCache().partitions() > 0, "Reload did not rebuild its released terrain cache");
                 evidence.append("empty_body_released=true\nowner_retained=true\nunload_body_released=true\nreload_motion_restored=true\n");
+                evidence.append("terrain_cache_unload_released=true\nterrain_cache_reload_rebuilt=true\n");
                 region.close();
                 require(region.status() == StructurePhysicsRegion.Status.CLOSED, "Region failed to close");
-                releaseHostTickets();
+                require(diagnostics().terrainCache().partitions() == 0, "Closed region retained terrain cache references");
                 int farX = base.getX() + 32768;
                 farChunkProbe = new BlockPos(farX, base.getY(), base.getZ());
                 require(!host.hasChunkAt(farChunkProbe), "Boundary fixture must start in an unloaded chunk");
@@ -377,17 +420,39 @@ public final class NativeStructurePhysicsWorldSmoke {
                 region = StructurePhysics.openRegion(host, new AABB(farX - 4, base.getY() - 2, base.getZ() - 4,
                         farX + 4, base.getY() + 6, base.getZ() + 4));
                 region.attach(b);
+                put(a, CELL, Blocks.STONE.defaultBlockState());
+                a.setPose(poseAt(base.getX() + 0.5, base.getY() + 2, base.getZ() + 0.5, new Quaterniond()));
+                loadedRegionStart = a.pose();
+                loadedRegion = StructurePhysics.openRegion(host, bounds);
+                loadedRegion.attach(a);
+                require(!loadedRegion.id().equals(region.id()), "Independent regions reused a persistent identity");
                 next(Phase.BOUNDARY);
             }
             case BOUNDARY -> {
                 require(region.status() == StructurePhysicsRegion.Status.PAUSED, "Unloaded host region must pause: " + diagnostic());
                 require(diagnostics().steps() == 0 && samePose(frozenPose, b.pose()), "Unloaded region advanced or published motion");
                 require(!host.hasChunkAt(farChunkProbe), "Physics implicitly loaded an unavailable host chunk");
+                require(loadedRegion.status() == StructurePhysicsRegion.Status.READY,
+                        "Missing distant chunks paused the independent loaded region: " + loadedRegion.diagnostic());
                 if (phaseTicks < 20) return;
-                evidence.append("unloaded_region_paused=true\nunloaded_region_steps=0\nno_implicit_chunk_load=true\n");
+                var loadedDiagnostics = ((NativeStructurePhysics.Region) loadedRegion).diagnostics();
+                require(loadedDiagnostics.steps() >= 20 && loadedDiagnostics.bodies() == 1
+                                && a.pose().worldOrigin().distanceTo(loadedRegionStart.worldOrigin()) > 0.5,
+                        "Loaded region did not advance independently of the missing-chunk region");
+                evidence.append("unloaded_region_paused=true\nunloaded_region_steps=0\nno_implicit_chunk_load=true\n")
+                        .append("missing_chunk_region_isolated=true\nloaded_region_steps=").append(loadedDiagnostics.steps()).append('\n');
                 region.close();
                 require(region.status() == StructurePhysicsRegion.Status.CLOSED, "Boundary region did not close");
+                require(diagnostics().terrainCache().partitions() == 0, "Closed missing-chunk region retained terrain cache references");
+                require(loadedRegion.status() == StructurePhysicsRegion.Status.READY
+                                && loadedRegion.motion(a.reference()).isPresent(),
+                        "Closing the distant region cleared the loaded region");
+                loadedRegion.close();
+                require(((NativeStructurePhysics.Region) loadedRegion).diagnostics().terrainCache().partitions() == 0,
+                        "Closed loaded region retained terrain cache references");
+                evidence.append("terrain_cache_region_close_released=true\n");
                 require(runtime.unload(a.reference()) && runtime.unload(b.reference()), "Final fixture save/unload failed");
+                releaseHostTickets();
                 next(Phase.FINISHED);
                 if ("server".equals(role)) finish();
             }
@@ -477,6 +542,14 @@ public final class NativeStructurePhysicsWorldSmoke {
         }
     }
 
+    private void restoreHostTerrainProbe() {
+        if (!hostTerrainUnsupported) return;
+        require(host.getBlockState(terrainProbePos).is(Blocks.COBWEB)
+                        && host.setBlock(terrainProbePos, Blocks.AIR.defaultBlockState(), FLAGS),
+                "Unsupported host fixture could not restore its original AIR cell");
+        hostTerrainUnsupported = false;
+    }
+
     private static void put(StructureHandle handle, BlockPos pos, BlockState state) {
         var before = handle.world().read(pos);
         if (before.state().equals(state)) return;
@@ -515,7 +588,8 @@ public final class NativeStructurePhysicsWorldSmoke {
 
     private void finish() {
         require(!complete && phase == Phase.FINISHED && failure == null, "Invalid probe completion");
-        require(fixtureTickets.isEmpty() && !fixtureFreeze, "Fixture host tickets or freeze were not released");
+        require(fixtureTickets.isEmpty() && !fixtureFreeze && !hostTerrainUnsupported,
+                "Fixture host tickets, freeze or temporary unsupported terrain were not released");
         evidence.append("ticks=").append(ticks).append("\nclosed=true\nfixture_tickets_released=true\n");
         writeResult("PASSED\n" + evidence);
         exitStatus = 0; complete = true; publish("");
@@ -529,6 +603,8 @@ public final class NativeStructurePhysicsWorldSmoke {
             failure = error.toString();
             AcademyCraft.LOGGER.error("NATIVE_STRUCTURE_PHYSICS_WORLD_SMOKE_FAILED role={} phase={}", role, phase, error);
             try { if (region != null) region.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
+            try { if (loadedRegion != null) loadedRegion.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
+            try { restoreHostTerrainProbe(); } catch (Throwable restoring) { error.addSuppressed(restoring); }
             try { releaseFixtureFreeze(); } catch (Throwable thawing) { error.addSuppressed(thawing); }
             try { releaseHostTickets(); } catch (Throwable releasing) { error.addSuppressed(releasing); }
             try { writeResult("FAILED\nphase=" + phase + "\nfailure=" + error + "\n" + evidence); }
@@ -566,6 +642,7 @@ public final class NativeStructurePhysicsWorldSmoke {
         var scenario = active;
         if (scenario != null && scenario.server == event.getServer()) {
             scenario.orderlyStop = true;
+            scenario.restoreHostTerrainProbe();
             scenario.releaseFixtureFreeze();
             scenario.releaseHostTickets();
         }

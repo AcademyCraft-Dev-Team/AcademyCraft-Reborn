@@ -6,6 +6,8 @@ import org.academy.internal.common.structure.NativeStructureRuntime;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.List;
+import java.util.UUID;
 
 /** Explicit entry point for the independent backend's bounded host-world physics prototype. */
 public final class StructurePhysics {
@@ -14,7 +16,7 @@ public final class StructurePhysics {
     private StructurePhysics() {}
 
     /**
-     * Opens at most one physics region in this live host level, on its owning server thread.
+     * Opens a new independent physics region in this live host level, on its owning server thread.
      * Each region axis must have positive finite length of at most 24 blocks. Opening a region
      * does not capture host blocks, attach structures automatically, or provide entity transport.
      *
@@ -24,11 +26,15 @@ public final class StructurePhysics {
      * never loads the library. Missing permission, invalid artifacts or unavailable native code
      * fail explicitly, without another backend or simulated-success fallback.</p>
      *
-     * <p>Saved attachments reserve their region until explicitly resumed or discarded. This
-     * method refuses that pending state instead of replacing saved velocity with a fresh body.</p>
+     * <p>Live and saved regions together reserve at most three distinct regions per server.
+     * Two regions in the same host must be separated along at least one axis by one block.
+     * Saved attachments reserve their bounds until explicitly resumed or discarded. Overlapping
+     * or insufficiently separated regions are rejected, including regions whose chunks are not
+     * loaded. Structures that may collide belong in the same region. Regions do not merge,
+     * transfer members, or advance one another while paused.</p>
      *
      * @throws IllegalArgumentException if the bounds are invalid or this is not a supported host
-     * @throws IllegalStateException if called off-thread, another region exists, or loading fails
+     * @throws IllegalStateException if called off-thread, a reservation conflicts, the budget is full, or loading fails
      */
     public static StructurePhysicsRegion openRegion(ServerLevel host, AABB bounds) {
         Objects.requireNonNull(host, "host");
@@ -36,10 +42,22 @@ public final class StructurePhysics {
         return NativeStructureRuntime.backend(host.getServer()).openPhysicsRegion(host, bounds);
     }
 
-    /** Reads saved region bounds without loading the native library or activating structure chunks. */
+    /**
+     * Reads the sole saved region's bounds without loading native code or chunks.
+     * More than one saved region is ambiguous and throws; use {@link #savedRegions} in that case.
+     */
     public static Optional<AABB> savedRegionBounds(ServerLevel host) {
         Objects.requireNonNull(host, "host");
         return NativeStructureRuntime.backend(host.getServer()).savedPhysicsRegionBounds(host);
+    }
+
+    /**
+     * Lists immutable saved region descriptions for this host without opening native code or
+     * loading chunks. Regions without any saved members are absent. Do not rely on list order.
+     */
+    public static List<StructurePhysicsRegionInfo> savedRegions(ServerLevel host) {
+        Objects.requireNonNull(host, "host");
+        return NativeStructureRuntime.backend(host.getServer()).savedPhysicsRegions(host);
     }
 
     /**
@@ -51,19 +69,38 @@ public final class StructurePhysics {
      * again or the saved association is explicitly discarded.
      * Saved sleeping bodies resume awake so the fresh solver can establish current contacts.
      * Failed checkpoints require discard and cannot be resumed. No offline time is simulated.
+     * This convenience overload requires exactly one saved region in this host.
      */
     public static StructurePhysicsRegion resumeRegion(ServerLevel host) {
         Objects.requireNonNull(host, "host");
         return NativeStructureRuntime.backend(host.getServer()).resumePhysicsRegion(host);
     }
 
+    /** Resumes the exact saved region in this host; other regions and their checkpoints are unchanged. */
+    public static StructurePhysicsRegion resumeRegion(ServerLevel host, UUID regionId) {
+        Objects.requireNonNull(host, "host");
+        Objects.requireNonNull(regionId, "regionId");
+        return NativeStructureRuntime.backend(host.getServer()).resumePhysicsRegion(host, regionId);
+    }
+
     /**
-     * Removes saved physics associations only when no live region exists. Stored blocks and poses
-     * remain unchanged. Returns false when no association existed. Close a live region first.
+     * Removes the sole saved region's associations only when that region has no live handle.
+     * Stored blocks and poses remain unchanged. Returns false when no association existed.
+     * More than one saved region is ambiguous and throws without changing any association.
      */
     public static boolean discardSavedRegion(ServerLevel host) {
         Objects.requireNonNull(host, "host");
         return NativeStructureRuntime.backend(host.getServer()).discardSavedPhysicsRegion(host);
+    }
+
+    /**
+     * Discards only the selected saved region in this host, preserving stored content and poses.
+     * Close its live handle first. Returns false for an unknown ID; it never selects another region.
+     */
+    public static boolean discardSavedRegion(ServerLevel host, UUID regionId) {
+        Objects.requireNonNull(host, "host");
+        Objects.requireNonNull(regionId, "regionId");
+        return NativeStructureRuntime.backend(host.getServer()).discardSavedPhysicsRegion(host, regionId);
     }
 
     static void requireBounds(AABB bounds) {

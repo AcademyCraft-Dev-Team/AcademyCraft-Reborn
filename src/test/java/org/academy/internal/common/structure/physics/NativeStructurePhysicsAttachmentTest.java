@@ -4,24 +4,28 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 
+import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class NativeStructurePhysicsAttachmentTest {
     private static final AABB BOUNDS = new AABB(-12, 64, -12, 12, 88, 12);
     private static final String DIGEST = "0123456789abcdef".repeat(4);
+    private static final UUID REGION_ID = new UUID(7, 11);
 
     @Test
     void blockedResumePreservesMotionAndSleepingObservationWithoutLoadingNativeCode() {
         var motion = new NativeStructurePhysicsAttachment.Motion(new Vec3(-10_000, 0.25, 10_000),
                 new Vec3(0, 2, 0), new Vec3(0.5, 80.25, -0.5), true, DIGEST);
-        var attachment = new NativeStructurePhysicsAttachment(BOUNDS, motion, true);
+        var attachment = new NativeStructurePhysicsAttachment(REGION_ID, BOUNDS, motion, true);
         var blocked = attachment.withResumeAllowed(false);
         assertEquals(BOUNDS, blocked.bounds());
+        assertEquals(REGION_ID, blocked.regionId());
         assertSame(motion, blocked.motion());
         assertTrue(blocked.motion().sleeping());
         assertFalse(blocked.resumeAllowed());
         assertTrue(attachment.resumeAllowed());
-        assertNull(new NativeStructurePhysicsAttachment(BOUNDS, null, true).motion());
+        assertNull(new NativeStructurePhysicsAttachment(REGION_ID, BOUNDS, null, true).motion());
     }
 
     @Test
@@ -29,11 +33,12 @@ class NativeStructurePhysicsAttachmentTest {
         for (var bounds : new AABB[]{new AABB(0, 0, 0, 0, 1, 1), new AABB(0, 0, 0, 24.001, 1, 1),
                 new AABB(0, 0, 0, 1, Double.POSITIVE_INFINITY, 1), new AABB(Double.NaN, 0, 0, 1, 1, 1),
                 new AABB(29_999_980, 0, 0, 29_999_981, 1, 1)}) {
-            assertThrows(IllegalArgumentException.class, () -> new NativeStructurePhysicsAttachment(bounds, null, true));
+            assertThrows(IllegalArgumentException.class, () -> new NativeStructurePhysicsAttachment(REGION_ID, bounds, null, true));
         }
-        assertThrows(NullPointerException.class, () -> new NativeStructurePhysicsAttachment(null, null, true));
+        assertThrows(NullPointerException.class, () -> new NativeStructurePhysicsAttachment(REGION_ID, null, null, true));
+        assertThrows(NullPointerException.class, () -> new NativeStructurePhysicsAttachment(null, BOUNDS, null, true));
         assertDoesNotThrow(() -> new NativeStructurePhysicsAttachment(
-                new AABB(29_999_956, 0, -29_999_980, 29_999_980, 24, -29_999_956), null, false));
+                REGION_ID, new AABB(29_999_956, 0, -29_999_980, 29_999_980, 24, -29_999_956), null, false));
     }
 
     @Test

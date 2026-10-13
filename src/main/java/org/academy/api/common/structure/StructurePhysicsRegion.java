@@ -4,6 +4,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * A bounded, server-thread-owned physics region in one host level. Every method, including
@@ -21,10 +22,12 @@ import java.util.Optional;
  * its structures at their last published poses, forgets their saved associations and releases its native resources; it neither
  * deletes stored blocks nor unloads their structure containers.</p>
  *
- * <p>Unloading a member preserves its checkpoint and pauses the live cohort until an explicit
+ * <p>Unloading a member preserves its checkpoint and pauses this region's live cohort until an explicit
  * structure load makes it available again. No host chunk is force-loaded. On restoration, a
  * changed collision digest pauses the entire region rather than applying old velocity to new
- * geometry. Online geometry changes retain the existing rigid velocity field at the new COM.</p>
+ * geometry. Online geometry changes retain the existing rigid velocity field at the new COM.
+ * Other regions in the same host continue independently. Distinct regions cannot overlap or
+ * touch: they have a one-block separation and no cross-region dynamic contacts or automatic migration.</p>
  *
  * <p>This prototype does not implement entity carrying, skill migration or Sable interoperability.
  * Physics pause is separate from storage-level
@@ -37,6 +40,9 @@ public interface StructurePhysicsRegion extends AutoCloseable {
         FAILED,
         CLOSED
     }
+
+    /** Stable saved region identity; a recreated region has a new solver session but retains this ID. */
+    UUID id();
 
     /** Fixed host-coordinate simulation bounds; queries do not expand or load the region. */
     AABB bounds();

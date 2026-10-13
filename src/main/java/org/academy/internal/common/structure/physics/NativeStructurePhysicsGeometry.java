@@ -23,12 +23,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.IntConsumer;
 
 /** Server-thread, bounded collision observations; never drains the presentation dirty-cell queue. */
 public final class NativeStructurePhysicsGeometry {
     public static final int MAX_STRUCTURE_CELLS = 128;
     public static final int MAX_TERRAIN_CELLS = 65_536;
-    private static final int MAX_READS = MAX_TERRAIN_CELLS * 2;
+    static final int MAX_READS = MAX_TERRAIN_CELLS * 2;
     private static final double WORLD_LIMIT = 30_000_000;
     private static final AABB EMPTY_BOUNDS = new AABB(0, 0, 0, 0, 0, 0);
     // These exact vanilla classes obtain collision geometry from state, not actor/BE/tick data.
@@ -94,10 +95,17 @@ public final class NativeStructurePhysicsGeometry {
      * maxBoxes is the caller's remaining world budget, after reserving all dynamic bodies.
      */
     public static Snapshot captureTerrain(ServerLevel host, AABB worldBounds, PhysicsVector origin, int maxBoxes) {
+        var scan = terrainScan(host, worldBounds, origin, maxBoxes);
+        return captureTerrainPartition(host, scan, scan.inflate(1), origin, maxBoxes, MAX_READS, ignored -> {});
+    }
+
+    /** Planning performs the same gates for a warm cache and a complete direct extraction. */
+    static AABB terrainScan(ServerLevel host, AABB worldBounds, PhysicsVector origin, int maxBoxes) {
         requireThread(host);
         Objects.requireNonNull(origin, "origin");
         Objects.requireNonNull(worldBounds, "worldBounds");
-        if (NativeStructureDimensions.isStorageLevel(host.dimension()) || maxBoxes < 0
+        if (host.getServer().getLevel(host.dimension()) != host
+                || NativeStructureDimensions.isStorageLevel(host.dimension()) || maxBoxes < 0
                 || maxBoxes > NativePhysicsWorld.MAX_BOXES || !validBounds(worldBounds)
                 || !host.getWorldBorder().isWithinBounds(worldBounds)) {
             throw denied(Failure.INVALID_BOUNDS, "Invalid terrain region or collision budget");
@@ -109,19 +117,62 @@ public final class NativeStructurePhysicsGeometry {
         int maxY = Math.min(host.getMaxY(), floor(worldBounds.maxY) + 1);
         int maxZ = floor(worldBounds.maxZ) + 1;
         requireCellBudget(minX, minY, minZ, maxX, maxY, maxZ);
-        var scan = new AABB(minX, minY, minZ, maxX + 1.0, maxY + 1.0, maxZ + 1.0);
-        // Neighbour-dependent shapes may inspect one further ring, still using loaded chunks only.
-        var getter = new LoadedGetter(host, false, scan.inflate(1));
+        return new AABB(minX, minY, minZ, maxX + 1.0, maxY + 1.0, maxZ + 1.0);
+    }
+
+    /** A partition owns cells, not clipped shapes; neighbours may use the original full read domain. */
+    static Snapshot captureTerrainPartition(ServerLevel host, AABB cells, AABB readBounds,
+                                             PhysicsVector origin, int maxBoxes, int maxReads,
+                                             IntConsumer scannedCells) {
+        requireThread(host);
+        if (maxReads < 0 || maxReads > MAX_READS) throw denied(Failure.LIMIT_EXCEEDED, "Invalid remaining terrain read budget");
+        int minX = (int) cells.minX, minY = (int) cells.minY, minZ = (int) cells.minZ;
+        int maxX = (int) cells.maxX - 1, maxY = (int) cells.maxY - 1, maxZ = (int) cells.maxZ - 1;
+        var getter = new LoadedGetter(host, false, readBounds, maxReads);
         for (int x = minX >> 4; x <= maxX >> 4; x++) {
             for (int z = minZ >> 4; z <= maxZ >> 4; z++) getter.chunk(x, z);
         }
         var result = new ArrayList<PhysicsBox>();
         int nonAir = 0;
-        for (var mutable : BlockPos.betweenClosed(minX, minY, minZ, maxX, maxY, maxZ)) {
-            var position = mutable.immutable();
-            if (captureCell(getter, position, origin, maxBoxes, result)) nonAir++;
+        int scanned = 0;
+        try {
+            for (var mutable : BlockPos.betweenClosed(minX, minY, minZ, maxX, maxY, maxZ)) {
+                var position = mutable.immutable();
+                scanned++;
+                if (captureCell(getter, position, origin, maxBoxes, result)) nonAir++;
+            }
+            return finish(getter, result, -1, nonAir);
+        } finally {
+            scannedCells.accept(scanned);
         }
-        return finish(getter, result, -1, nonAir);
+    }
+
+    /** Combines observations without losing air cells, neighbour reads or chunk identities. */
+    static Snapshot combineTerrain(ServerLevel host, List<Snapshot> partitions, int maxBoxes) {
+        requireThread(host);
+        var observations = new ArrayList<LoadedGetter>();
+        var boxes = new ArrayList<PhysicsBox>();
+        int reads = 0, nonAir = 0;
+        for (var partition : partitions) {
+            reads = Math.addExact(reads, partition.readCount());
+            requireTerrainBudget(Math.addExact(boxes.size(), partition.boxes.size()), reads, maxBoxes);
+            for (var getter : partition.observations) {
+                if (getter.level != host || getter.structure) throw denied(Failure.INVALID_BOUNDS, "Cannot combine unrelated terrain observations");
+                observations.add(getter);
+            }
+            boxes.addAll(partition.boxes);
+            nonAir = Math.addExact(nonAir, partition.nonAirCells);
+        }
+        var combined = new Snapshot(observations, boxes, -1, nonAir);
+        if (!combined.stillValid()) throw denied(Failure.UNSTABLE_SOURCE, "Terrain changed while combining partitions");
+        return combined;
+    }
+
+    static void requireTerrainBudget(int boxes, int reads, int maxBoxes) {
+        if (maxBoxes < 0 || maxBoxes > NativePhysicsWorld.MAX_BOXES || boxes < 0 || boxes > maxBoxes
+                || reads < 0 || reads > MAX_READS) {
+            throw denied(Failure.LIMIT_EXCEEDED, "Combined terrain exceeds the collision or read budget");
+        }
     }
 
     private static Snapshot finish(LoadedGetter getter, List<PhysicsBox> boxes, long revision, int nonAir) {
@@ -209,14 +260,18 @@ public final class NativeStructurePhysicsGeometry {
 
     /** Immutable output plus a receipt retaining every observed state and loaded chunk identity. */
     public static final class Snapshot {
-        private final LoadedGetter observations;
+        private final List<LoadedGetter> observations;
         private final List<PhysicsBox> boxes;
         private final AABB bounds;
         private final long sourceRevision;
         private final int nonAirCells;
 
         private Snapshot(LoadedGetter observations, List<PhysicsBox> boxes, long sourceRevision, int nonAirCells) {
-            this.observations = observations;
+            this(List.of(observations), boxes, sourceRevision, nonAirCells);
+        }
+
+        private Snapshot(List<LoadedGetter> observations, List<PhysicsBox> boxes, long sourceRevision, int nonAirCells) {
+            this.observations = List.copyOf(observations);
             this.boxes = List.copyOf(boxes);
             this.sourceRevision = sourceRevision;
             this.nonAirCells = nonAirCells;
@@ -237,20 +292,28 @@ public final class NativeStructurePhysicsGeometry {
         public long sourceRevision() { return sourceRevision; }
         public int nonAirCells() { return nonAirCells; }
 
+        int readCount() {
+            int total = 0;
+            for (var getter : observations) total = Math.addExact(total, getter.reads);
+            return total;
+        }
+
         /** No shape/BE callbacks and no loads. Call after extraction callbacks and immediately before use. */
         public boolean stillValid() {
-            var level = observations.level;
-            requireThread(level);
-            if (level.getServer().getLevel(level.dimension()) != level
-                    || observations.structure && NativeStructureChanges.revision(level) != sourceRevision) return false;
-            for (var entry : observations.chunks.entrySet()) {
-                var pos = entry.getKey();
-                if (level.getChunkSource().getChunkNow(pos.x(), pos.z()) != entry.getValue()) return false;
-            }
-            for (var entry : observations.states.entrySet()) {
-                var pos = entry.getKey();
-                var chunk = observations.chunks.get(new ChunkKey(pos.getX() >> 4, pos.getZ() >> 4));
-                if (chunk == null || chunk.getBlockState(pos) != entry.getValue()) return false;
+            for (var observation : observations) {
+                var level = observation.level;
+                requireThread(level);
+                if (level.getServer().getLevel(level.dimension()) != level
+                        || observation.structure && NativeStructureChanges.revision(level) != sourceRevision) return false;
+                for (var entry : observation.chunks.entrySet()) {
+                    var pos = entry.getKey();
+                    if (level.getChunkSource().getChunkNow(pos.x(), pos.z()) != entry.getValue()) return false;
+                }
+                for (var entry : observation.states.entrySet()) {
+                    var pos = entry.getKey();
+                    var chunk = observation.chunks.get(new ChunkKey(pos.getX() >> 4, pos.getZ() >> 4));
+                    if (chunk == null || chunk.getBlockState(pos) != entry.getValue()) return false;
+                }
             }
             return true;
         }
@@ -264,12 +327,18 @@ public final class NativeStructurePhysicsGeometry {
         private final @Nullable AABB readBounds;
         private final Map<ChunkKey, LevelChunk> chunks = new HashMap<>();
         private final Map<BlockPos, BlockState> states = new HashMap<>();
+        private final int maxReads;
         private int reads;
 
         private LoadedGetter(ServerLevel level, boolean structure, @Nullable AABB readBounds) {
+            this(level, structure, readBounds, MAX_READS);
+        }
+
+        private LoadedGetter(ServerLevel level, boolean structure, @Nullable AABB readBounds, int maxReads) {
             this.level = level;
             this.structure = structure;
             this.readBounds = readBounds;
+            this.maxReads = maxReads;
         }
 
         private LevelChunk chunk(int x, int z) {
@@ -281,7 +350,7 @@ public final class NativeStructurePhysicsGeometry {
         }
 
         @Override public BlockState getBlockState(BlockPos position) {
-            if (++reads > MAX_READS) throw denied(Failure.LIMIT_EXCEEDED, "Collision shape state-read budget exceeded");
+            if (++reads > maxReads) throw denied(Failure.LIMIT_EXCEEDED, "Collision shape state-read budget exceeded");
             if (level.isOutsideBuildHeight(position)) return Blocks.AIR.defaultBlockState();
             if (structure && !NativeStructureDimensions.contains(position)) {
                 throw denied(Failure.UNSUPPORTED_CONTENT, "Collision shape depends on cells outside its storage container");
@@ -319,7 +388,7 @@ public final class NativeStructurePhysicsGeometry {
     }
 
     private static int floor(double value) { return (int) Math.floor(value); }
-    private static GeometryException denied(Failure failure, String message) { return new GeometryException(failure, message); }
+    static GeometryException denied(Failure failure, String message) { return new GeometryException(failure, message); }
 
     private static void requireThread(ServerLevel level) {
         Objects.requireNonNull(level, "level");

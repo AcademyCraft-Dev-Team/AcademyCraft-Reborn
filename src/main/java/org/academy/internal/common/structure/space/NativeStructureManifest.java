@@ -11,6 +11,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.structure.StructurePose;
 import org.academy.api.common.structure.StructureRef;
 import org.academy.internal.common.structure.physics.NativeStructurePhysicsAttachment;
+import org.academy.internal.common.structure.physics.NativeStructurePhysicsRegionLayout;
 import org.jspecify.annotations.Nullable;
 
 import java.io.ByteArrayInputStream;
@@ -28,6 +29,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -45,7 +47,7 @@ import java.util.zip.GZIPOutputStream;
 public final class NativeStructureManifest {
     public static final int SLOT_COUNT = 4;
     public static final int MAX_PAYLOAD_BYTES = 1024 * 1024;
-    private static final int VERSION = 2;
+    private static final int VERSION = 3;
     private static final Identifier BACKEND = Identifier.fromNamespaceAndPath("academy", "native_level");
 
     public record Entry(StructureRef reference, int slot, StructurePose pose,
@@ -273,28 +275,37 @@ public final class NativeStructureManifest {
     private static Map<UUID, Entry> decode(CompoundTag root) throws IOException {
         requireType(root, "version", Tag.TAG_INT);
         int version = root.getInt("version").orElseThrow();
-        if (version != 1 && version != VERSION) throw new IOException("Unknown manifest version");
+        if (version != 1 && version != 2 && version != VERSION) throw new IOException("Unknown manifest version");
         requireType(root, "entries", Tag.TAG_LIST);
         var values = root.getList("entries").orElseThrow();
         if (values.size() > SLOT_COUNT) throw new IOException("Too many native structures");
         var decoded = new LinkedHashMap<UUID, Entry>();
         var usedSlots = new boolean[SLOT_COUNT];
+        var legacyRegions = new LinkedHashMap<Identifier, AABB>();
         for (var value : values) {
             if (!(value instanceof CompoundTag tag)) throw new IOException("Expected a structure entry");
             for (var key : List.of("id", "dimension", "backend")) requireType(tag, key, Tag.TAG_STRING);
             requireType(tag, "generation", Tag.TAG_LONG);
             requireType(tag, "slot", Tag.TAG_INT);
             requireType(tag, "pose", Tag.TAG_COMPOUND);
-            NativeStructurePhysicsAttachment attachment = null;
-            if (tag.get("physics") != null) {
-                if (version == 1) throw new IOException("Legacy manifests cannot contain physics checkpoints");
-                requireType(tag, "physics", Tag.TAG_COMPOUND);
-                attachment = NativeStructurePhysicsAttachmentCodec.decode(tag.getCompound("physics").orElseThrow());
-            }
             var reference = new StructureRef(UUID.fromString(tag.getString("id").orElseThrow()),
                     Identifier.parse(tag.getString("dimension").orElseThrow()),
                     Identifier.parse(tag.getString("backend").orElseThrow()),
                     tag.getLong("generation").orElseThrow());
+            NativeStructurePhysicsAttachment attachment = null;
+            if (tag.get("physics") != null) {
+                if (version == 1) throw new IOException("Legacy manifests cannot contain physics checkpoints");
+                requireType(tag, "physics", Tag.TAG_COMPOUND);
+                var physics = tag.getCompound("physics").orElseThrow();
+                attachment = version == 2 ? NativeStructurePhysicsAttachmentCodec.decodeLegacyV2(physics, reference.dimension())
+                        : NativeStructurePhysicsAttachmentCodec.decode(physics);
+                if (version == 2) {
+                    var prior = legacyRegions.putIfAbsent(reference.dimension(), attachment.bounds());
+                    if (prior != null && !prior.equals(attachment.bounds())) {
+                        throw new IOException("Legacy host contains conflicting physics region bounds");
+                    }
+                }
+            }
             var pose = tag.getCompound("pose").orElseThrow();
             for (var key : List.of("x", "y", "z", "rotation_x", "rotation_y", "rotation_z", "rotation_w")) {
                 requireType(pose, key, Tag.TAG_DOUBLE);
@@ -317,19 +328,16 @@ public final class NativeStructureManifest {
     private static void validateEntries(Iterable<Entry> candidates) {
         var usedSlots = new HashSet<Integer>();
         var usedIds = new HashSet<UUID>();
-        var regions = new LinkedHashMap<Identifier, AABB>();
+        var regions = new ArrayList<NativeStructurePhysicsRegionLayout.Region>();
         for (var entry : candidates) {
             if (!usedSlots.add(entry.slot()) || !usedIds.add(entry.reference().id())) {
                 throw new IllegalArgumentException("Duplicate native structure identity or slot");
             }
             var physics = entry.physicsAttachment();
             if (physics == null) continue;
-            var prior = regions.putIfAbsent(entry.reference().dimension(), physics.bounds());
-            if (prior != null && !prior.equals(physics.bounds())) {
-                throw new IllegalArgumentException("One host cannot persist multiple physics region bounds");
-            }
-            if (regions.size() > 3) throw new IllegalArgumentException("Too many saved physics hosts");
+            regions.add(new NativeStructurePhysicsRegionLayout.Region(physics.regionId(), entry.reference().dimension(), physics.bounds()));
         }
+        NativeStructurePhysicsRegionLayout.validate(regions);
     }
 
     private static boolean readFlag(CompoundTag tag, String key) throws IOException {

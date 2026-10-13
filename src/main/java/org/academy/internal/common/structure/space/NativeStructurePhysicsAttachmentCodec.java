@@ -2,12 +2,17 @@ package org.academy.internal.common.structure.space;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.structure.physics.NativeStructurePhysicsAttachment;
+import org.academy.internal.common.structure.physics.NativeStructurePhysicsRegionLayout;
+import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 
 /** Strict, bounded metadata values; neither decoding nor encoding touches a native library. */
 final class NativeStructurePhysicsAttachmentCodec {
@@ -18,6 +23,7 @@ final class NativeStructurePhysicsAttachmentCodec {
 
     static CompoundTag encode(NativeStructurePhysicsAttachment attachment) {
         var result = new CompoundTag();
+        result.putString("region_id", attachment.regionId().toString());
         var bounds = new CompoundTag();
         bounds.putDouble("min_x", attachment.bounds().minX);
         bounds.putDouble("min_y", attachment.bounds().minY);
@@ -41,8 +47,21 @@ final class NativeStructurePhysicsAttachmentCodec {
     }
 
     static NativeStructurePhysicsAttachment decode(CompoundTag tag) throws IOException {
+        return decode(tag, null);
+    }
+
+    static NativeStructurePhysicsAttachment decodeLegacyV2(CompoundTag tag, Identifier host) throws IOException {
+        return decode(tag, Objects.requireNonNull(host, "host"));
+    }
+
+    private static NativeStructurePhysicsAttachment decode(CompoundTag tag, @Nullable Identifier legacyHost) throws IOException {
         boolean hasMotion = tag.get("motion") != null;
-        requireKeys(tag, hasMotion ? Set.of("bounds", "resume_allowed", "motion") : Set.of("bounds", "resume_allowed"));
+        if (legacyHost == null) {
+            requireKeys(tag, hasMotion ? Set.of("region_id", "bounds", "resume_allowed", "motion")
+                    : Set.of("region_id", "bounds", "resume_allowed"));
+        } else {
+            requireKeys(tag, hasMotion ? Set.of("bounds", "resume_allowed", "motion") : Set.of("bounds", "resume_allowed"));
+        }
         var bounds = compound(tag, "bounds");
         requireKeys(bounds, BOUNDS_KEYS);
         double minX = number(bounds, "min_x"), minY = number(bounds, "min_y"), minZ = number(bounds, "min_z");
@@ -58,8 +77,21 @@ final class NativeStructurePhysicsAttachmentCodec {
                     vector(values, "angular_velocity"), vector(values, "local_center_of_mass"),
                     flag(values, "sleeping"), values.getString("geometry_digest").orElseThrow());
         }
-        return new NativeStructurePhysicsAttachment(new AABB(minX, minY, minZ, maxX, maxY, maxZ),
-                motion, flag(tag, "resume_allowed"));
+        var decodedBounds = new AABB(minX, minY, minZ, maxX, maxY, maxZ);
+        var regionId = legacyHost == null ? regionId(tag) : NativeStructurePhysicsRegionLayout.legacyId(legacyHost, decodedBounds);
+        return new NativeStructurePhysicsAttachment(regionId, decodedBounds, motion, flag(tag, "resume_allowed"));
+    }
+
+    private static UUID regionId(CompoundTag tag) throws IOException {
+        requireType(tag, "region_id", Tag.TAG_STRING);
+        var value = tag.getString("region_id").orElseThrow();
+        try {
+            var result = UUID.fromString(value);
+            if (!result.toString().equals(value)) throw new IllegalArgumentException("Noncanonical UUID");
+            return result;
+        } catch (IllegalArgumentException invalid) {
+            throw new IOException("Invalid saved physics region UUID", invalid);
+        }
     }
 
     private static CompoundTag encodeVector(Vec3 value) {

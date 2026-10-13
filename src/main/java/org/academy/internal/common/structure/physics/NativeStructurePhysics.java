@@ -12,6 +12,7 @@ import org.academy.api.server.time.TemporalChannel;
 import org.academy.internal.common.structure.BlockStructureOrientedBox;
 import org.academy.internal.common.structure.NativeStructureRuntime;
 import org.academy.internal.common.structure.space.NativeStructureDimensions;
+import org.academy.internal.common.structure.space.NativeStructureManifest;
 
 import java.io.IOException;
 import java.util.*;
@@ -20,7 +21,7 @@ import java.util.*;
 public final class NativeStructurePhysics implements AutoCloseable {
     private final MinecraftServer server;
     private final NativeStructureRuntime runtime;
-    private final Map<ServerLevel, Region> regions = new IdentityHashMap<>();
+    private final Map<UUID, Region> regions = new LinkedHashMap<>();
     private NativePhysicsLibrary library;
     private boolean closed;
 
@@ -31,34 +32,38 @@ public final class NativeStructurePhysics implements AutoCloseable {
 
     public StructurePhysicsRegion open(ServerLevel host, AABB bounds) {
         requireHost(host);
-        if (savedRegionBounds(host).isPresent()) {
-            throw new IllegalStateException("Saved physics attachments require resumeRegion or discardSavedRegion");
-        }
-        return createRegion(host, bounds);
+        var reservations = reservations();
+        UUID id;
+        do { id = UUID.randomUUID(); }
+        while (containsRegion(reservations, id));
+        return createRegion(host, id, bounds);
     }
 
     public Optional<AABB> savedRegionBounds(ServerLevel host) {
+        return soleSavedRegion(savedRegions(host)).map(StructurePhysicsRegionInfo::bounds);
+    }
+
+    public List<StructurePhysicsRegionInfo> savedRegions(ServerLevel host) {
         requireHost(host);
-        AABB bounds = null;
-        for (var entry : runtime.savedPhysicsEntries(host)) {
-            var next = Objects.requireNonNull(entry.physicsAttachment()).bounds();
-            requireBounds(next);
-            if (bounds != null && !bounds.equals(next)) {
-                throw new IllegalStateException("Saved physics attachments disagree about their region bounds");
-            }
-            bounds = next;
-        }
-        return Optional.ofNullable(bounds);
+        return describeSaved(runtime.savedPhysicsEntries(host));
     }
 
     public StructurePhysicsRegion resume(ServerLevel host) {
-        var bounds = savedRegionBounds(host).orElseThrow(() -> new IllegalStateException("No saved physics region"));
-        var entries = runtime.savedPhysicsEntries(host);
-        if (entries.stream().anyMatch(entry -> !entry.physicsAttachment().resumeAllowed())) {
+        var saved = soleSavedRegion(savedRegions(host))
+                .orElseThrow(() -> new IllegalStateException("No saved physics region"));
+        return resume(host, saved.id());
+    }
+
+    public StructurePhysicsRegion resume(ServerLevel host, UUID id) {
+        requireHost(host);
+        Objects.requireNonNull(id, "regionId");
+        var saved = savedRegions(host).stream().filter(region -> region.id().equals(id)).findFirst()
+                .orElseThrow(() -> new IllegalStateException("No saved physics region with this ID in the host"));
+        if (!saved.resumeAllowed()) {
             throw new IllegalStateException("Saved physics region failed; explicitly discard its attachments before reassembly");
         }
-        var region = createRegion(host, bounds);
-        for (var entry : entries) if (entry.active()) {
+        var region = createRegion(host, id, saved.bounds());
+        for (var entry : runtime.savedPhysicsEntries(host, id)) if (entry.active()) {
             region.members.put(entry.reference(), new Member(entry.reference(),
                     runtime.resolve(entry.reference()).orElse(null), entry.physicsAttachment().motion()));
         }
@@ -69,10 +74,65 @@ public final class NativeStructurePhysics implements AutoCloseable {
 
     public boolean discardSaved(ServerLevel host) {
         requireHost(host);
-        if (regions.containsKey(host)) throw new IllegalStateException("Close the live physics region before discarding saved attachments");
-        if (runtime.savedPhysicsEntries(host).isEmpty()) return false;
-        runtime.clearPhysicsAttachments(host);
+        var saved = soleSavedRegion(savedRegions(host));
+        if (saved.isEmpty()) {
+            if (regions.values().stream().anyMatch(region -> region.host == host)) {
+                throw new IllegalStateException("Close the live physics region before discarding saved attachments");
+            }
+            return false;
+        }
+        return discardSaved(host, saved.orElseThrow().id());
+    }
+
+    public boolean discardSaved(ServerLevel host, UUID id) {
+        requireHost(host);
+        Objects.requireNonNull(id, "regionId");
+        var live = regions.get(id);
+        if (live != null && live.host == host) {
+            throw new IllegalStateException("Close the live physics region before discarding saved attachments");
+        }
+        if (runtime.savedPhysicsEntries(host, id).isEmpty()) return false;
+        runtime.clearPhysicsAttachments(host, id);
         return true;
+    }
+
+    static Optional<StructurePhysicsRegionInfo> soleSavedRegion(List<StructurePhysicsRegionInfo> saved) {
+        if (saved.size() > 1) throw new IllegalStateException("Several saved physics regions exist; select an explicit region ID");
+        return saved.stream().findFirst();
+    }
+
+    static List<StructurePhysicsRegionInfo> describeSaved(Collection<NativeStructureManifest.Entry> entries) {
+        var descriptions = new LinkedHashMap<UUID, StructurePhysicsRegionInfo>();
+        var layout = new ArrayList<NativeStructurePhysicsRegionLayout.Region>();
+        for (var entry : entries) {
+            var attachment = Objects.requireNonNull(entry.physicsAttachment());
+            layout.add(new NativeStructurePhysicsRegionLayout.Region(attachment.regionId(),
+                    entry.reference().dimension(), attachment.bounds()));
+            var previous = descriptions.get(attachment.regionId());
+            descriptions.put(attachment.regionId(), new StructurePhysicsRegionInfo(attachment.regionId(),
+                    attachment.bounds(), previous == null ? 1 : Math.incrementExact(previous.structures()),
+                    attachment.resumeAllowed() && (previous == null || previous.resumeAllowed())));
+        }
+        NativeStructurePhysicsRegionLayout.validate(layout);
+        return List.copyOf(descriptions.values());
+    }
+
+    private List<NativeStructurePhysicsRegionLayout.Region> reservations() {
+        var reservations = new ArrayList<NativeStructurePhysicsRegionLayout.Region>();
+        for (var entry : runtime.savedPhysicsEntries()) {
+            var attachment = Objects.requireNonNull(entry.physicsAttachment());
+            reservations.add(new NativeStructurePhysicsRegionLayout.Region(attachment.regionId(),
+                    entry.reference().dimension(), attachment.bounds()));
+        }
+        for (var region : regions.values()) {
+            reservations.add(new NativeStructurePhysicsRegionLayout.Region(region.id,
+                    region.host.dimension().identifier(), region.bounds));
+        }
+        return reservations;
+    }
+
+    private static boolean containsRegion(Collection<NativeStructurePhysicsRegionLayout.Region> regions, UUID id) {
+        return regions.stream().anyMatch(region -> region.id().equals(id));
     }
 
     private void requireHost(ServerLevel host) {
@@ -85,22 +145,28 @@ public final class NativeStructurePhysics implements AutoCloseable {
         }
     }
 
-    private Region createRegion(ServerLevel host, AABB bounds) {
+    private Region createRegion(ServerLevel host, UUID id, AABB bounds) {
         requireHost(host);
         Objects.requireNonNull(bounds);
         if (regions.values().stream().anyMatch(region -> region.closing)) {
             throw new IllegalStateException("Retry pending physics cleanup before opening a new region");
         }
         requireBounds(bounds);
-        if (regions.containsKey(host)) throw new IllegalStateException("This host already owns a physics region");
-        // Each region uses one world and temporarily a second during a geometry replacement.
-        if (regions.size() >= 3) throw new IllegalStateException("At most three host physics regions may be open");
+        if (regions.containsKey(id)) throw new IllegalStateException("This physics region is already open");
+        // Empty live regions and inactive saved regions both reserve space and native-world capacity.
+        // A geometry replacement temporarily uses a second world, within the same three-region limit.
+        var reservations = reservations();
+        reservations.add(new NativeStructurePhysicsRegionLayout.Region(id, host.dimension().identifier(), bounds));
+        try { NativeStructurePhysicsRegionLayout.validate(reservations); }
+        catch (IllegalArgumentException conflict) {
+            throw new IllegalStateException("Physics region conflicts with live or saved reservations", conflict);
+        }
         if (library == null) {
             try { library = NativePhysicsLibrary.openConfigured(); }
             catch (IOException failure) { throw new IllegalStateException("Cannot open configured structure physics", failure); }
         }
-        var region = new Region(host, bounds);
-        regions.put(host, region);
+        var region = new Region(host, id, bounds);
+        regions.put(id, region);
         return region;
     }
 
@@ -178,12 +244,15 @@ public final class NativeStructurePhysics implements AutoCloseable {
     }
 
     public record Diagnostics(UUID sessionId, long steps, long geometryEpoch, long terrainEpoch,
-                              int bodies, int terrainBoxes, long rebuilds) {}
+                              int bodies, int terrainBoxes, long rebuilds,
+                              NativeStructureTerrainCache.Diagnostics terrainCache) {}
 
     public final class Region implements StructurePhysicsRegion {
         private final ServerLevel host;
+        private final UUID id;
         private final AABB bounds;
         private final PhysicsVector origin;
+        private final NativeStructureTerrainCache terrainCache;
         private final UUID sessionId = UUID.randomUUID();
         private final Map<StructureRef, Member> members = new LinkedHashMap<>();
         private Status status = Status.READY;
@@ -199,12 +268,15 @@ public final class NativeStructurePhysics implements AutoCloseable {
         private long terrainEpoch;
         private long rebuilds;
 
-        private Region(ServerLevel host, AABB bounds) {
+        private Region(ServerLevel host, UUID id, AABB bounds) {
             this.host = host;
+            this.id = id;
             this.bounds = bounds;
             origin = vector(bounds.getCenter());
+            terrainCache = new NativeStructureTerrainCache(host, bounds, origin);
         }
 
+        @Override public UUID id() { requireThread(); return id; }
         @Override public AABB bounds() { requireThread(); return bounds; }
         @Override public Status status() { requireThread(); return status; }
         @Override public String diagnostic() { requireThread(); return diagnostic; }
@@ -213,7 +285,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
             requireThread();
             return new Diagnostics(sessionId, steps, geometryEpoch, terrainEpoch,
                     (int) members.values().stream().filter(member -> member.body != null).count(),
-                    terrainBoxes.size(), rebuilds);
+                    terrainBoxes.size(), rebuilds, terrainCache.diagnostics());
         }
 
         @Override public void attach(StructureHandle handle) {
@@ -226,7 +298,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
             if (runtime.savedPhysicsEntries(host).stream().anyMatch(entry -> entry.reference().equals(handle.reference()))) {
                 throw new IllegalStateException("Saved motion must be resumed, not replaced by a fresh attachment");
             }
-            runtime.setPhysicsAttachment(handle.reference(), new NativeStructurePhysicsAttachment(bounds, null, true));
+            runtime.setPhysicsAttachment(handle.reference(), new NativeStructurePhysicsAttachment(id, bounds, null, true));
             runtime.invalidateInteractionHistory(handle.reference());
             members.put(handle.reference(), new Member(handle));
             rebuildRequired = true;
@@ -301,7 +373,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
 
         private void removeInvalidated() {
             if (members.values().stream().noneMatch(member -> member.invalidated)) return;
-            var saved = runtime.savedPhysicsEntries(host);
+            var saved = runtime.savedPhysicsEntries(host, id);
             boolean parked = members.values().stream().anyMatch(member -> member.invalidated
                     && saved.stream().anyMatch(entry -> entry.reference().equals(member.reference)));
             for (var iterator = members.values().iterator(); iterator.hasNext();) {
@@ -327,7 +399,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
             if (status == Status.FAILED) return;
             // Only an explicit structure load makes an inactive checkpoint eligible to join.
             // A member unloaded from this live cohort parks the whole cohort until it is loaded again.
-            for (var entry : runtime.savedPhysicsEntries(host)) {
+            for (var entry : runtime.savedPhysicsEntries(host, id)) {
                 if (!entry.physicsAttachment().bounds().equals(bounds)) {
                     pause("saved_region_bounds_changed"); return;
                 }
@@ -379,8 +451,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
                         pause("saved_geometry_mismatch"); return;
                     }
                 }
-                var nextTerrain = NativeStructurePhysicsGeometry.captureTerrain(host, bounds, origin,
-                        NativePhysicsWorld.MAX_BOXES - dynamicBoxes);
+                var nextTerrain = terrainCache.capture(NativePhysicsWorld.MAX_BOXES - dynamicBoxes);
                 if (members.values().stream().anyMatch(member -> member.invalidated)
                         || geometry.values().stream().anyMatch(next -> !next.stillValid())
                         || !nextTerrain.stillValid()) {
@@ -426,6 +497,10 @@ public final class NativeStructurePhysics implements AutoCloseable {
                 status = Status.READY;
                 diagnostic = "running";
             } catch (NativeStructurePhysicsGeometry.GeometryException unavailable) {
+                if (unavailable.failure() == NativeStructurePhysicsGeometry.Failure.UNLOADED_CHUNK) {
+                    terrainCache.clear();
+                    terrain = null;
+                }
                 pause(unavailable.failure().name().toLowerCase(Locale.ROOT) + ": " + unavailable.getMessage());
             } catch (RuntimeException | AssertionError | LinkageError failure) {
                 fail(failure);
@@ -524,7 +599,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
             var saved = motion == null ? null : new NativeStructurePhysicsAttachment.Motion(
                     motion.linearVelocity(), motion.angularVelocity(), motion.localCenterOfMass(), motion.sleeping(),
                     NativeStructurePhysicsGeometryDigest.of(member.geometry.boxes()));
-            return new NativeStructurePhysicsAttachment(bounds, saved, true);
+            return new NativeStructurePhysicsAttachment(id, bounds, saved, true);
         }
 
         /** One coherent publication includes both moving and zero-collision attachments. */
@@ -559,14 +634,16 @@ public final class NativeStructurePhysics implements AutoCloseable {
             diagnostic = failure.getClass().getSimpleName() + ": " + failure.getMessage();
             try { disposeWorld(); }
             catch (RuntimeException | AssertionError | LinkageError cleanup) { failure.addSuppressed(cleanup); }
-            AcademyCraft.LOGGER.error("Structure physics region {} stopped; published poses and storage retained", sessionId, failure);
+            AcademyCraft.LOGGER.error("Structure physics region {} session {} stopped; published poses and storage retained", id, sessionId, failure);
         }
 
         private void disposeWorld() {
-            if (world != null) { world.close(); world = null; }
-            for (var member : members.values()) member.body = null;
+            // A released or parked world must not retain references to host chunks through its cache.
+            terrainCache.clear();
             terrain = null;
             terrainBoxes = List.of();
+            if (world != null) { world.close(); world = null; }
+            for (var member : members.values()) member.body = null;
             rebuildRequired = true;
         }
 
@@ -582,7 +659,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
             if (status == Status.CLOSED) return;
             // Explicit close forgets intent; server shutdown only releases session resources.
             // Validate the persistent mutation before changing native ownership.
-            if (forgetAttachments) runtime.clearPhysicsAttachments(host);
+            if (forgetAttachments) runtime.clearPhysicsAttachments(host, id);
             closing = true;
             status = Status.PAUSED;
             diagnostic = "closing_retry_required_until_complete";
@@ -590,13 +667,13 @@ public final class NativeStructurePhysics implements AutoCloseable {
             for (var member : members.values()) runtime.invalidateInteractionHistory(member.reference);
             members.clear();
             // Keep this close receipt registered until the last library release succeeds.
-            if (regions.size() == 1 && regions.get(host) == this && library != null) {
+            if (regions.size() == 1 && regions.get(id) == this && library != null) {
                 library.close();
                 library = null;
             }
             status = Status.CLOSED;
             diagnostic = "closed";
-            regions.remove(host, this);
+            regions.remove(id, this);
         }
     }
 
