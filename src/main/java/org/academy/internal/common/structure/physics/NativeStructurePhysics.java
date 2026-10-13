@@ -356,8 +356,9 @@ public final class NativeStructurePhysics implements AutoCloseable {
                 }
             }
             disposeWorldForRebind();
+            var previousBounds = bounds;
             try {
-                if (!runtime.rebindPhysicsAttachments(host, id, bounds, newBounds)) return false;
+                if (!runtime.rebindPhysicsAttachments(host, id, previousBounds, newBounds)) return false;
             } catch (IllegalStateException unavailable) {
                 AcademyCraft.LOGGER.warn("Physics region {} rebase refused: {}", id, unavailable.getMessage());
                 return false;
@@ -367,6 +368,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
             terrainCache = new NativeStructureTerrainCache(host, bounds, origin);
             status = Status.PAUSED;
             diagnostic = "awaiting_rebound_geometry";
+            AcademyCraft.LOGGER.info("Physics region {} rebound from {} to {}", id, previousBounds, newBounds);
             return true;
         }
 

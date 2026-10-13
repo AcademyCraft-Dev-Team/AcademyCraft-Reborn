@@ -33,6 +33,7 @@
 | `NativeStructureManifest.removeEntry/releaseSlot`、`NativeStructureRuntime.discardEmpty` | P20 新增：空结构槽位回收；仅未加载、空、未隔离、无恢复证据、无物理附件的结构可释放；P19 回滚不再永久烧槽 |
 | `NativePhysicsArtifact` 解析 | P21 更新：显式属性 → 显式环境 → home（属性/环境）→ 游戏目录 `academy/native_physics/` 固定布局；部分配置显式失败；物理打开异常统一为 `IllegalStateException` 并保留原因 |
 | `NativeStructurePhysics.Region.rebind`/`rebindPhysicsAttachments` | P22 新增：物理区域重绑（成员全体必须容纳、布局分离校验、附件先原子持久化再采纳、控制保留、下一 tick 重建）；牵引目标越界时自动重绑一次；初次抓取仍严格要求盒内 |
+| `NativeStructureProjectionEntity` 碰撞/承载、`NativeStructureCollisionBoxes` | P23 新增：投影按同步视图提供双方同源的实体碰撞（轴对齐精确、任意姿态有界细分），`canBeCollidedWith` 有内容时为真；服务端按“脚底接触点经旧/新姿态映射”搬运站立的实体，平移与旋转都正确 |
 | `NativeCaptureWhitelist` | P19 新增：普通无 BE 正质量满方块的起步白名单；BE/流体/waterlogged/随机或计划 tick/重力和非满形状在首次写入前显式拒绝，不静默丢弃 |
 | 三类 `Server*ProgramRuntime` | 仍存在 Entity/宿主 BlockPos、FallingBlock、直接赋速及回滚旧速度路径；不能把 Sable plot 地址当宿主格 |
 
@@ -62,7 +63,7 @@
 ### 动能搬运的后续顺序（最高优先级）
 
 1. **公共捕获事务**：预检选择、权限、内容与几何预算；目标预留、持久化日志、复制校验、源移除、目标提交；每个阶段提供异常及重启恢复证据。先明确普通块范围，BE/计划 tick 不得静默丢弃。**P19 已交付机制与原生后端接入（见下节）；Sable 生产捕获与真实跨 JVM 强杀恢复仍属后续。**
-2. **独立后端可供技能使用**：制品部署、容器容量/回收、活动物理区域跟随与恢复，以及真实玩家碰撞/承载。不能让玩家每四次使用便耗尽永久槽，也不能发布仅在测试 JVM 外部属性下可运行的默认技能。**P20 已交付空结构槽位回收，P21 已交付制品部署约定，P22 已交付物理区域重绑与牵引跟随（见下节）；真实玩家承载仍待做。**
+2. **独立后端可供技能使用**：制品部署、容器容量/回收、活动物理区域跟随与恢复，以及真实玩家碰撞/承载。不能让玩家每四次使用便耗尽永久槽，也不能发布仅在测试 JVM 外部属性下可运行的默认技能。**全部子项已交付：P20 槽位回收、P21 制品部署约定、P22 区域重绑与跟随、P23 真实碰撞与承载（见下节）。**
 3. **双后端捕获接入**：未装 Sable 创建独立结构，兼容混装创建 Sable 结构；未知版本/不可用时给出失败并保留源方块，不降级为旧实体。外部 assembly helper 仍只作测试工具，不能代替生产事务。
 4. **迁移 `KineticThrow`**：保持区域选择和能力预算；HeldStructure 改为公共引用/租约；抬升、投掷、终止遵守有限力、单位、惯性契约；接触伤害只结算一次，不在世界碰撞时自动变回方块。
 5. **承载验收**：独立和完整混装各测静止、升降、行走、跳跃、边缘、顶墙和旋转，之后测真实双端延迟。旧实体对照测试不能替代这些结果。
@@ -112,6 +113,16 @@
 - 失败轨迹：首次 prepare（p22-r1）在迁移后的 `verifyRegionInfo` 失败——该断言与 resume 阶段都硬编码原始边界；改为阶段感知期望（resume 阶段预期迁移后边界）并为迁移后摘要增加专用断言。
 - 未验边界：跟随目标必须能放进同尺寸重绑盒（含 0.25 安全内边距），因此长距离牵引需要技能逐 tick 更新较近目标，一次越界远目标仍以 `OUT_OF_BOUNDS` 结束；`rebind` 目前是具体 `NativeStructurePhysics.Region` 的公开方法而非 `StructurePhysicsRegion` 接口成员，尚未接入技能/命令显式入口；重绑不改变成员内容与存档；真实玩家承载仍未实现。
 - 当前构建（含 P19/P20/P21/P22，不含技能迁移）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `E8BDA66804D06917EBE22A3C08AB0EAD840D00A41CA062087F2AB25FEE34B6B0`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `21A77CD5AB884A2E1414E90BB81D02B0589280FE1FD9B7D81BFC22F4307AB399`。未复制到整合包，未操作用户存档。
+
+### P23 真实玩家碰撞与承载（2026-10-13）
+
+- `NativeStructureProjectionEntity` 实现 `BlockStructureCollision`：碰撞盒由同步视图推导（`NativeStructureCollisionBoxes.localBoxes` 以视图自身作为 BlockGetter 解析邻接状态），轴对齐姿态精确变换，任意四元数姿态按输出预算（2048 盒）做 3³→2³→整盒 的均匀细分近似；服务端与客户端从同一发布状态导出同源形状。投影在加入/同步数据/姿态视图更新时注册进 `BlockStructureCollisionRuntime`，移除时注销；`canBeCollidedWith` 仅在当前内容有碰撞时为真，`isPushable=false`、`isPickable=false` 不变。
+- 服务端承载：`NativeStructureRuntime` 每 tick 在投影更新后，对脚底落在结构表面容差内（站立 0.18 / 恢复 0.5）的实体执行搬运——把脚底接触点经**上一姿态**映射到局部网格坐标、再经**新姿态**映射回世界（平移与旋转都正确），随后对齐表面、保留落地状态与 `hurtMarked=true`；带物理附件与非附件结构同样适用（非附件结构姿态不变则自然无操作）。
+- 集成修复（P22 缺陷）：牵引跟随重绑后区域处于 PAUSED 待下一 tick 重建，技能若同一 tick 继续 `lease.setControl` 会被 `controllable` 判定不可用而结束会话；现在重绑当 tick 保留会话并延后一 tick 下发新指令。
+- 失败轨迹：初版承载按 `pose.worldOrigin()` 增量搬运；该结构局部质心位于局部 y≈80，旋转时姿态原点每 tick 扫掠约 10 格，导致骑乘实体被甩飞并连带真实抓取技能目标失控（GRASP HOLD 失败、眼位漂移）；改为接触点映射后修复。
+- 验证（最终修订版）：单元 2558 项（新增 5 项碰撞盒用例：轴对齐判定、独立角点变换、细分预算与覆盖、支撑面语义）与 Sable 11 项零失败/错误/跳过（`build/p23-tests-final.log`）；世界烟测 `run/native-structure-physics-smoke-server-p23-r12` 退出 0，承载证据 `support_rider_standing=true`（脚底 112.0 = 期望表面 112.0）、`support_carried_delta=1.63`、`support_descend_feet=112.0`、`support_carrying_both_directions=true`，真实抓取技能与其余全部阶段通过（`build/p23-world-smoke-r12.log`）；区域两阶段探针 `run/native-structure-physics-regions-20261013-p23-r4` prepare/resume 均 PASSED（含重绑恢复）；事务 gametest r8 通过；`nativePhysicsTest` 20 项通过；`build -DisDev=true` 38 秒、`-DisDev=false` 60 秒通过（`build/p23-build-dev-final.log`、`build/p23-build-release-final.log`）。
+- 未验边界：非轴对齐碰撞是有界细分近似（盒预算 2048，超限时降低细分精度）；承载只对支撑判定容差内的实体生效，未测高速自旋与跳跃/下船继承表面速度等细节；客户端本地玩家碰撞依赖同步视图，未做真实双端键盘操作验证；投影仍不可交互（`isPickable=false`）。
+- 当前构建（含 P19–P23，不含技能迁移）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `2197C2B2211B737ADA5E7B756BEDE0D3540D87D31A7E2E435C3D8791EB096AFB`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `D66097FB72A76F53312FB932998891C13207BAD06677820BDAD5C2352997D932`。未复制到整合包，未操作用户存档。
 
 ### P18 最终结果（2026-10-13）
 

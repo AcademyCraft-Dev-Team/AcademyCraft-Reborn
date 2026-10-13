@@ -55,7 +55,7 @@ public final class NativeStructurePhysicsWorldSmoke {
     private static volatile ClientState clientState = new ClientState("WAITING", List.of(), null, null, "", false, false, null);
     private static volatile String capturedStage = "";
     private static volatile String capturePath = "";
-    private enum Phase { ACTIVATE, BEFORE, FALL, LANDED, CONTROL, LEASE, ENTITY_ARM, ENTITY_CONTROL, ENTITY_CLEANUP, GRASP, GRASP_CLEANUP, CONTROL_RAW_SOLID, CONTROL_RAW_RESET,
+    private enum Phase { ACTIVATE, BEFORE, FALL, LANDED, CONTROL, SUPPORT, LEASE, ENTITY_ARM, ENTITY_CONTROL, ENTITY_CLEANUP, GRASP, GRASP_CLEANUP, CONTROL_RAW_SOLID, CONTROL_RAW_RESET,
         CONTROL_RAW_AIR, CONTROL_RAW_FINISH, HOST_UNSUPPORTED, HOST_RESTORED, TERRAIN_FALL, TERRAIN_LAND,
         LOCAL_ADD, LOCAL_REMOVE, UNSUPPORTED, SUPPORTED_AGAIN, FROZEN, THAWED,
         PAIR_ARM, PAIR, EMPTY, UNLOAD, RELOAD, BOUNDARY, FINISHED }
@@ -77,6 +77,7 @@ public final class NativeStructurePhysicsWorldSmoke {
     private StructurePhysicsRegion region;
     private StructurePhysicsRegion loadedRegion;
     private NativeStructurePhysicsControlSmokeChecks controlChecks;
+    private NativeStructurePhysicsSupportSmokeChecks supportChecks;
     private NativeStructurePhysicsLeaseSmokeChecks leaseChecks;
     private NativeStructurePhysicsEntityControlSmokeChecks entityChecks;
     private NativeStructurePhysicsGraspSmokeChecks graspChecks;
@@ -273,6 +274,13 @@ public final class NativeStructurePhysicsWorldSmoke {
                 boolean captured = captureReady("controlled");
                 if (captured && controlChecks.capture().equals("controlled")) recordCapture("controlled");
                 if (!controlChecks.advance(captured)) return;
+                supportChecks = new NativeStructurePhysicsSupportSmokeChecks(host, region, a,
+                        () -> minY(a), base.getY() + 1, evidence);
+                next(Phase.SUPPORT);
+            }
+            case SUPPORT -> {
+                if (!supportChecks.advance()) return;
+                supportChecks.close(); supportChecks = null;
                 leaseChecks = new NativeStructurePhysicsLeaseSmokeChecks(region, a, () -> minY(a), base.getY() + 1, evidence);
                 next(Phase.LEASE);
             }

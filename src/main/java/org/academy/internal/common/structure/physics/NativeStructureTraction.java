@@ -175,6 +175,11 @@ public final class NativeStructureTraction {
                             || !acceptsTarget(host, region, body, point, targetPosition, targetVelocity)) {
                         return finish(OUT_OF_BOUNDS);
                     }
+                    // The rebase rebuilds the native world on the next tick; this update stays
+                    // active with the previous bounded command and defers the new one.
+                    observedPoint = point;
+                    target = targetPosition;
+                    return ACTIVE;
                 }
                 var control = anchor(localPoint, targetPosition, targetVelocity, settings);
                 try {

@@ -13,8 +13,13 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import org.academy.api.common.structure.BlockStructureCollision;
 import org.academy.api.common.structure.StructurePose;
 import org.academy.api.common.structure.StructureRef;
+import org.academy.internal.common.structure.BlockStructureCollisionRuntime;
+import org.academy.internal.common.structure.NativeStructureCollisionBoxes;
 import org.academy.internal.common.structure.space.NativeStructureView;
 import org.academy.internal.common.structure.space.NativeStructureViewState;
 import org.academy.internal.common.structure.space.NativeStructureLidTargets;
@@ -23,13 +28,21 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 
-/** Disposable host-world view. Storage ownership and physics never live on this entity. */
-public final class NativeStructureProjectionEntity extends Entity {
+/**
+ * Disposable host-world view. Storage ownership and physics never live on this entity. It also
+ * supplies the visible structure's real entity collision through the synced view, so both sides
+ * derive the same shapes from the same published state.
+ */
+public final class NativeStructureProjectionEntity extends Entity implements BlockStructureCollision {
+    private static final double SHAPE_MERGE_EPSILON = 1.0E-7;
     private static final EntityDataAccessor<NativeStructureViewState> STATE = SynchedEntityData.defineId(
             NativeStructureProjectionEntity.class,
             org.academy.internal.common.network.syncher.EntityDataSerializers.NATIVE_STRUCTURE_VIEW_STATE.get());
@@ -40,6 +53,9 @@ public final class NativeStructureProjectionEntity extends Entity {
             NativeStructureProjectionEntity.class,
             org.academy.internal.common.network.syncher.EntityDataSerializers.NATIVE_STRUCTURE_LID_TARGETS.get());
     private final Map<BlockPos, ChestLidController> clientChestLids = new HashMap<>();
+    private long cachedRevision = Long.MIN_VALUE;
+    private @Nullable StructurePose cachedPose;
+    private List<AABB> cachedWorldBoxes = List.of();
 
     public NativeStructureProjectionEntity(EntityType<? extends NativeStructureProjectionEntity> type, Level level) {
         super(type, level);
@@ -147,11 +163,19 @@ public final class NativeStructureProjectionEntity extends Entity {
     @Override
     public void onSyncedDataUpdated(EntityDataAccessor<?> accessor) {
         super.onSyncedDataUpdated(accessor);
-        if (STATE.equals(accessor) || VIEW.equals(accessor)) refreshAnchorAndBounds();
+        if (STATE.equals(accessor) || VIEW.equals(accessor)) {
+            refreshAnchorAndBounds();
+        }
         if (level().isClientSide() && clientChestLids != null) {
             if (VIEW.equals(accessor)) refreshClientChests();
             else if (LIDS.equals(accessor)) updateClientLidTargets();
         }
+    }
+
+    @Override
+    public void onAddedToLevel() {
+        super.onAddedToLevel();
+        BlockStructureCollisionRuntime.update(this);
     }
 
     @Override
@@ -165,6 +189,7 @@ public final class NativeStructureProjectionEntity extends Entity {
 
     @Override
     public void onRemovedFromLevel() {
+        BlockStructureCollisionRuntime.unregister(this);
         clientChestLids.clear();
         super.onRemovedFromLevel();
     }
@@ -187,6 +212,7 @@ public final class NativeStructureProjectionEntity extends Entity {
     private void refreshAnchorAndBounds() {
         // setPos also rebuilds makeBoundingBox, including when only view extents changed.
         setPos(anchor(viewState().pose(), view()));
+        if (isAddedToLevel()) BlockStructureCollisionRuntime.update(this);
     }
 
     @Override
@@ -215,8 +241,50 @@ public final class NativeStructureProjectionEntity extends Entity {
     }
 
     @Override
-    public boolean canBeCollidedWith(@Nullable Entity other) {
+    public boolean isPushable() {
         return false;
+    }
+
+    @Override
+    public boolean canBeCollidedWith(@Nullable Entity other) {
+        return other != this && !isRemoved() && hasCollision();
+    }
+
+    /** Whether the current published content has any entity collision boxes. */
+    public boolean hasCollision() {
+        return !worldCollisionBoxes().isEmpty();
+    }
+
+    /** World-space collision boxes for the current view and pose, cached per revision. */
+    public List<AABB> worldCollisionBoxes() {
+        var state = viewState();
+        if (cachedRevision == state.revision() && state.pose().equals(cachedPose)) return cachedWorldBoxes;
+        cachedWorldBoxes = NativeStructureCollisionBoxes.worldBoxes(
+                NativeStructureCollisionBoxes.localBoxes(view()), state.pose());
+        cachedRevision = state.revision();
+        cachedPose = state.pose();
+        return cachedWorldBoxes;
+    }
+
+    @Override
+    public void collectCollisionShapes(AABB bounds, Consumer<VoxelShape> output) {
+        if (bounds == null || output == null || isRemoved()) return;
+        var query = bounds.inflate(SHAPE_MERGE_EPSILON);
+        for (var box : worldCollisionBoxes()) {
+            if (box.intersects(query)) output.accept(Shapes.create(box));
+        }
+    }
+
+    @Override
+    public boolean supports(AABB entityBounds, double tolerance) {
+        return entityBounds != null && NativeStructureCollisionBoxes.supports(
+                worldCollisionBoxes(), entityBounds, tolerance);
+    }
+
+    /** Highest support surface for an entity footprint; used by server-side carrying. */
+    public OptionalDouble supportSurfaceY(AABB entityBounds, double tolerance) {
+        return entityBounds == null ? OptionalDouble.empty()
+                : NativeStructureCollisionBoxes.supportSurfaceY(worldCollisionBoxes(), entityBounds, tolerance);
     }
 
     @Override

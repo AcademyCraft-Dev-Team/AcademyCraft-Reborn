@@ -9,12 +9,14 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
@@ -60,6 +62,10 @@ public final class NativeStructureRuntime implements StructureBackend {
             | Block.UPDATE_SUPPRESS_DROPS;
     // Leave room for both images and their enclosing journal in the bounded recovery file.
     private static final int MAX_BLOCK_ENTITY_BYTES = 262_144;
+    // Carrying mirrors the legacy platform tolerances: recovery is looser than standing.
+    private static final double CARRY_SUPPORT_TOLERANCE = 0.18;
+    private static final double CARRY_RECOVERY_TOLERANCE = 0.5;
+    private static final double CARRY_ALIGNMENT_EPSILON = 1.0E-5;
     private static final Map<MinecraftServer, NativeStructureRuntime> SERVERS = new IdentityHashMap<>();
     private static final List<ChunkPos> CHUNKS = chunks();
 
@@ -698,6 +704,7 @@ public final class NativeStructureRuntime implements StructureBackend {
         private final NativeStructureViewCache viewCache = new NativeStructureViewCache();
         private final NativeStructurePoseHistory poseHistory = new NativeStructurePoseHistory();
         private NativeStructureProjectionEntity projection;
+        private @Nullable StructurePose lastCarryPose;
         private StructurePresentationStatus presentation = StructurePresentationStatus.NOT_ACTIVE;
         private long geometryRevision;
         private long observedChanges;
@@ -741,6 +748,7 @@ public final class NativeStructureRuntime implements StructureBackend {
             poseHistory.clear();
             if (projection != null) projection.discard();
             projection = null;
+            lastCarryPose = null;
             presentation = StructurePresentationStatus.NOT_ACTIVE;
         }
 
@@ -770,6 +778,8 @@ public final class NativeStructureRuntime implements StructureBackend {
                     presentation = StructurePresentationStatus.HOST_UNAVAILABLE;
                     return;
                 }
+                // A freshly admitted view establishes a new carrying baseline.
+                lastCarryPose = null;
             } else {
                 projection.updatePose(pose, revision);
                 projection.setView(viewCache.view(), revision);
@@ -965,9 +975,69 @@ public final class NativeStructureRuntime implements StructureBackend {
         if (runtime == null || runtime.closed || !runtime.enabled) return;
         runtime.physics.tick();
         NativeStructureChestSessions.tick(event.getServer());
-        for (var handle : List.copyOf(runtime.loaded.values())) handle.updateProjection();
+        for (var handle : List.copyOf(runtime.loaded.values())) {
+            handle.updateProjection();
+            runtime.carryStandingEntities(handle);
+        }
         NativeStructureMiningSessions.tick(event.getServer());
         if (runtime.dirty && event.getServer().getTickCount() % 100 == 0) runtime.persistIndex();
+    }
+
+    /**
+     * Carries entities standing on a view with the published structure motion. The contact point
+     * is mapped through the previous pose into local grid coordinates and back through the new
+     * pose, so rotation and translation both move the rider correctly; the pose origin itself is
+     * not a contact and can sweep far when the body rotates around a distant local center of mass.
+     */
+    private void carryStandingEntities(Handle handle) {
+        var projection = handle.projection;
+        if (projection == null || projection.isRemoved()) {
+            handle.lastCarryPose = null;
+            return;
+        }
+        var level = projection.level();
+        if (!(level instanceof ServerLevel)) return;
+        var pose = projection.viewState().pose();
+        var previous = handle.lastCarryPose;
+        handle.lastCarryPose = pose;
+        if (previous == null || !projection.hasCollision()) return;
+        var query = projection.getBoundingBox().inflate(CARRY_RECOVERY_TOLERANCE);
+        for (var entity : level.getEntities(projection, query, entity -> entity != projection && entity.isAlive()
+                && !entity.isPassenger() && !entity.isSpectator() && !entity.noPhysics)) {
+            carryEntity(projection, previous, pose, entity);
+        }
+    }
+
+    private static void carryEntity(NativeStructureProjectionEntity projection, StructurePose previous,
+                                    StructurePose pose, Entity entity) {
+        var surface = projection.supportSurfaceY(entity.getBoundingBox(), CARRY_SUPPORT_TOLERANCE);
+        if (surface.isEmpty()) {
+            surface = projection.supportSurfaceY(entity.getBoundingBox(), CARRY_RECOVERY_TOLERANCE);
+            if (surface.isEmpty()) return;
+        }
+        var feet = entity.getBoundingBox();
+        var contact = new Vec3((feet.minX + feet.maxX) / 2.0, surface.getAsDouble(),
+                (feet.minZ + feet.maxZ) / 2.0);
+        var movement = pose.localToWorldPoint(previous.worldToLocalPoint(contact)).subtract(contact);
+        if (movement.lengthSqr() <= 1.0E-12) return;
+        var previousPosition = entity.position();
+        BlockStructureCollisionRuntime.runIgnoring(projection, () -> entity.move(MoverType.SHULKER_BOX, movement));
+        var corrected = projection.supportSurfaceY(entity.getBoundingBox(), CARRY_RECOVERY_TOLERANCE);
+        if (corrected.isEmpty()) return;
+        var correction = corrected.getAsDouble() - entity.getBoundingBox().minY;
+        if (Math.abs(correction) > CARRY_ALIGNMENT_EPSILON) {
+            var correctionMovement = new Vec3(0.0, correction, 0.0);
+            BlockStructureCollisionRuntime.runIgnoring(projection,
+                    () -> entity.move(MoverType.SHULKER_BOX, correctionMovement));
+        }
+        var alignmentError = corrected.getAsDouble() - entity.getBoundingBox().minY;
+        if (Math.abs(alignmentError) > CARRY_ALIGNMENT_EPSILON) return;
+        var carriedMovement = entity.position().subtract(previousPosition);
+        var velocity = entity.getDeltaMovement();
+        if (velocity.y < 0.0) entity.setDeltaMovement(velocity.x, 0.0, velocity.z);
+        entity.setOnGroundWithMovement(true, carriedMovement);
+        entity.resetFallDistance();
+        entity.hurtMarked = true;
     }
 
     private void persistIndex() {
