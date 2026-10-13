@@ -163,8 +163,12 @@ public final class NativeStructurePhysics implements AutoCloseable {
             throw new IllegalStateException("Physics region conflicts with live or saved reservations", conflict);
         }
         if (library == null) {
-            try { library = NativePhysicsLibrary.openConfigured(); }
-            catch (IOException failure) { throw new IllegalStateException("Cannot open configured structure physics", failure); }
+            try {
+                library = NativePhysicsLibrary.openConfigured();
+            } catch (IOException | RuntimeException failure) {
+                // One stable failure type for callers; the actionable reason stays in the message.
+                throw new IllegalStateException("Structure physics is unavailable: " + failure.getMessage(), failure);
+            }
         }
         var region = new Region(host, id, bounds);
         regions.put(id, region);

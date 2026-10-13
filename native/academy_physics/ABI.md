@@ -232,3 +232,23 @@ format, ABI, engine, platform, library filename and actual artifact hash. The
 repository root orchestrates Cargo builds, the generated lockfile, dependency
 license notices and JVM integration probes. No library is downloaded at game
 runtime and this foundation does not enable Minecraft physics automatically.
+
+## Deployment resolution
+
+Callers do not need JVM properties. The loader resolves the verified artifact in
+this order and never probes class paths or downloads:
+
+1. Explicit pair `-Dacademy.nativePhysics.library` and
+   `-Dacademy.nativePhysics.manifest` (both required together, absolute paths).
+2. Environment pair `ACADEMY_NATIVE_PHYSICS_LIBRARY` and
+   `ACADEMY_NATIVE_PHYSICS_MANIFEST`.
+3. Home directory from `-Dacademy.nativePhysics.home` or
+   `ACADEMY_NATIVE_PHYSICS_HOME`; it must contain the platform library file and
+   `academy_physics.properties`.
+4. Fixed game-directory layout `academy/native_physics/` beside the installed
+   game, holding the same two files with their exact platform names.
+
+A partially configured explicit pair, a broken explicit home, or a mismatched
+artifact is an explicit failure; the loader never falls back to a later source
+after one was selected. `--enable-native-access=ALL-UNNAMED` remains a launcher
+requirement, and the bridge reports it as its own actionable failure when absent.

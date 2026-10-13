@@ -1,5 +1,8 @@
 package org.academy.internal.common.structure.physics;
 
+import net.neoforged.fml.loading.FMLPaths;
+import org.jspecify.annotations.Nullable;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -9,15 +12,28 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 
-/** Explicit development artifact contract; reading it does not load or link a library. */
+/**
+ * Deployment artifact contract; reading it does not load or link a library. The verified artifact
+ * is discovered without required JVM properties: explicit system properties first, then explicit
+ * environment variables, then a configured home, and finally the fixed game-directory layout
+ * {@code academy/native_physics/} beside the installed game.
+ */
 public record NativePhysicsArtifact(Path library, Path manifest, String sha256, String platform) {
     public static final String ENGINE = "rapier3d-f64-0.36.1";
     public static final int ABI = 1;
     public static final int ENGINE_VERSION = 3601;
     public static final String LIBRARY_PROPERTY = "academy.nativePhysics.library";
     public static final String MANIFEST_PROPERTY = "academy.nativePhysics.manifest";
+    public static final String HOME_PROPERTY = "academy.nativePhysics.home";
+    public static final String LIBRARY_ENVIRONMENT = "ACADEMY_NATIVE_PHYSICS_LIBRARY";
+    public static final String MANIFEST_ENVIRONMENT = "ACADEMY_NATIVE_PHYSICS_MANIFEST";
+    public static final String HOME_ENVIRONMENT = "ACADEMY_NATIVE_PHYSICS_HOME";
+    public static final String CONVENTIONAL_DIRECTORY = "academy/native_physics";
+    public static final String MANIFEST_FILE_NAME = "academy_physics.properties";
     private static final String FORMAT = "academy-native-physics-v1";
     private static final int MAX_MANIFEST_BYTES = 16_384;
     private static final long MAX_LIBRARY_BYTES = 64L * 1024 * 1024;
@@ -25,17 +41,106 @@ public record NativePhysicsArtifact(Path library, Path manifest, String sha256, 
             "rustVersion", "sourceSha256", "target");
 
     public static NativePhysicsArtifact configured() throws IOException {
-        var library = requiredProperty(LIBRARY_PROPERTY);
-        var manifest = requiredProperty(MANIFEST_PROPERTY);
-        return verify(Path.of(library), Path.of(manifest), currentPlatform());
+        return resolve(System::getProperty, System::getenv, conventionalDirectory());
     }
 
-    public static NativePhysicsArtifact verify(Path library, Path manifest, String platform) throws IOException {
-        var expectedName = switch (platform) {
+    /**
+     * Pure resolution order used by {@link #configured()}: explicit property pair, explicit
+     * environment pair, property or environment home, then the conventional game directory.
+     * A partially configured pair is an explicit failure, never a silent fallback.
+     */
+    static NativePhysicsArtifact resolve(Function<String, String> properties,
+                                         Function<String, String> environment,
+                                         @Nullable Path conventionalDirectory) throws IOException {
+        Objects.requireNonNull(properties, "properties");
+        Objects.requireNonNull(environment, "environment");
+        var propertyLibrary = present(properties.apply(LIBRARY_PROPERTY));
+        var propertyManifest = present(properties.apply(MANIFEST_PROPERTY));
+        if (propertyLibrary != null || propertyManifest != null) {
+            if (propertyLibrary == null || propertyManifest == null) {
+                throw new IllegalStateException("Native physics requires both -D" + LIBRARY_PROPERTY
+                        + " and -D" + MANIFEST_PROPERTY);
+            }
+            return verify(absolute(propertyLibrary, LIBRARY_PROPERTY),
+                    absolute(propertyManifest, MANIFEST_PROPERTY), currentPlatform());
+        }
+        var environmentLibrary = present(environment.apply(LIBRARY_ENVIRONMENT));
+        var environmentManifest = present(environment.apply(MANIFEST_ENVIRONMENT));
+        if (environmentLibrary != null || environmentManifest != null) {
+            if (environmentLibrary == null || environmentManifest == null) {
+                throw new IllegalStateException("Native physics requires both " + LIBRARY_ENVIRONMENT
+                        + " and " + MANIFEST_ENVIRONMENT);
+            }
+            return verify(absolute(environmentLibrary, LIBRARY_ENVIRONMENT),
+                    absolute(environmentManifest, MANIFEST_ENVIRONMENT), currentPlatform());
+        }
+        var home = firstPresent(properties.apply(HOME_PROPERTY), environment.apply(HOME_ENVIRONMENT));
+        if (home != null) {
+            var homeDirectory = Path.of(home);
+            if (!homeDirectory.isAbsolute()) {
+                throw new IllegalStateException("Native physics home must be absolute: " + home);
+            }
+            var artifact = fromHome(homeDirectory, currentPlatform());
+            if (artifact == null) {
+                throw new IOException("Native physics home does not contain a deployed artifact: " + home);
+            }
+            return artifact;
+        }
+        if (conventionalDirectory != null) {
+            var artifact = fromHome(conventionalDirectory, currentPlatform());
+            if (artifact != null) return artifact;
+        }
+        throw new IllegalStateException("Native physics is opt-in; set -D" + LIBRARY_PROPERTY + " and -D"
+                + MANIFEST_PROPERTY + ", set -D" + HOME_PROPERTY + " or " + HOME_ENVIRONMENT
+                + ", or deploy the verified artifact to " + CONVENTIONAL_DIRECTORY
+                + "/ in the game directory");
+    }
+
+    private static @Nullable Path conventionalDirectory() {
+        try {
+            var game = FMLPaths.GAMEDIR.get();
+            return game == null ? null : game.resolve(CONVENTIONAL_DIRECTORY);
+        } catch (RuntimeException | LinkageError unavailable) {
+            // Plain unit tests and early startup have no FML paths; the convention is simply absent.
+            return null;
+        }
+    }
+
+    private static @Nullable NativePhysicsArtifact fromHome(Path home, String platform) throws IOException {
+        var library = home.resolve(expectedLibraryName(platform));
+        var manifest = home.resolve(MANIFEST_FILE_NAME);
+        if (!Files.isRegularFile(library) || !Files.isRegularFile(manifest)) return null;
+        return verify(library, manifest, platform);
+    }
+
+    private static String expectedLibraryName(String platform) {
+        return switch (platform) {
             case "windows-x86_64" -> "academy_physics.dll";
             case "linux-x86_64" -> "libacademy_physics.so";
             default -> throw new IllegalArgumentException("Unsupported native physics platform: " + platform);
         };
+    }
+
+    private static @Nullable String firstPresent(@Nullable String first, @Nullable String second) {
+        if (first != null && !first.isBlank()) return first;
+        return second != null && !second.isBlank() ? second : null;
+    }
+
+    private static @Nullable String present(@Nullable String value) {
+        return value == null || value.isBlank() ? null : value;
+    }
+
+    private static Path absolute(String value, String source) {
+        if (value.isBlank()) throw new IllegalStateException("Native physics path is empty: " + source);
+        var path = Path.of(value);
+        if (!path.isAbsolute()) {
+            throw new IllegalStateException("Native physics artifact path must be absolute: " + source);
+        }
+        return path;
+    }
+
+    public static NativePhysicsArtifact verify(Path library, Path manifest, String platform) throws IOException {
+        var expectedName = expectedLibraryName(platform);
         var libraryPath = library.toRealPath();
         var manifestPath = manifest.toRealPath();
         if (!Files.isRegularFile(libraryPath) || !Files.isRegularFile(manifestPath)) {
@@ -118,15 +223,5 @@ public record NativePhysicsArtifact(Path library, Path manifest, String sha256, 
         if (system.startsWith("windows")) return "windows-x86_64";
         if (system.equals("linux")) return "linux-x86_64";
         throw new IllegalStateException("Unsupported native physics operating system: " + system);
-    }
-
-    private static String requiredProperty(String name) {
-        var value = System.getProperty(name);
-        if (value == null || value.isBlank()) {
-            throw new IllegalStateException("Native physics is opt-in; explicitly set -D" + name + "=<absolute artifact path>");
-        }
-        var path = Path.of(value);
-        if (!path.isAbsolute()) throw new IllegalStateException("Native physics artifact path must be absolute: " + name);
-        return value;
     }
 }

@@ -1,0 +1,60 @@
+allprojects {
+    afterEvaluate {
+        def mode = providers.gradleProperty('academyNativePhysicsSmoke').orNull
+        if (mode != 'server') {
+            throw new GradleException('Choose -PacademyNativePhysicsSmoke=server for the deployment probe')
+        }
+        def runRoot = rootProject.file('run').canonicalFile
+        def directory = rootProject.file(providers.gradleProperty('academyNativePhysicsSmokeDirectory')
+                .getOrElse('run/native-physics-smoke-server-deploy')).canonicalFile
+        if (!directory.toPath().startsWith(runRoot.toPath()) || !directory.isDirectory()
+                || !directory.name.startsWith('native-physics-smoke-server')) {
+            throw new GradleException('Prepare an isolated run/native-physics-smoke-server* directory')
+        }
+        if (java.nio.file.Files.exists(new File(directory, 'native-physics-server-result.txt').toPath(),
+                java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+            throw new GradleException('Use a fresh smoke directory; an earlier result must not be overwritten')
+        }
+        def world = new File(directory, 'native-physics-smoke')
+        if (java.nio.file.Files.exists(world.toPath(), java.nio.file.LinkOption.NOFOLLOW_LINKS)
+                || world.canonicalFile.toPath() != world.toPath()) {
+            throw new GradleException('Deployment probe requires a new literal native-physics-smoke world path')
+        }
+        def eula = new File(directory, 'eula.txt')
+        def settingsFile = new File(directory, 'server.properties')
+        if (!eula.isFile() || !(eula.text =~ /(?m)^eula=true\s*$/).find() || !settingsFile.isFile()) {
+            throw new GradleException('Prepare the isolated server with an accepted EULA and server.properties')
+        }
+        def settings = new Properties()
+        settingsFile.withInputStream { settings.load(it) }
+        if (settings.getProperty('level-name') != 'native-physics-smoke'
+                || settings.getProperty('server-ip') != '127.0.0.1') {
+            throw new GradleException('Physics server must bind 127.0.0.1 and use level-name=native-physics-smoke')
+        }
+        def artifacts = rootProject.layout.buildDirectory.dir('native-physics/artifacts').get().asFile
+        neoForge.runs.named('serverCompat') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.nativePhysicsSmoke', mode
+            systemProperty 'academy.nativePhysicsSmokeDirectory', directory.absolutePath
+            systemProperty 'academy.nativePhysicsSmokeRunRoot', runRoot.absolutePath
+            // Deliberately no academy.nativePhysics.library/manifest: the fixed game-directory layout must resolve.
+            environment 'ACADEMY_NATIVE_PHYSICS_LIBRARY', ''
+            environment 'ACADEMY_NATIVE_PHYSICS_MANIFEST', ''
+            environment 'ACADEMY_NATIVE_PHYSICS_HOME', ''
+            jvmArgument '--enable-native-access=ALL-UNNAMED'
+        }
+        tasks.named('runServerCompat') {
+            notCompatibleWithConfigurationCache('Deployment probe must revalidate its fresh world before every launch')
+            dependsOn 'prepareNativePhysics'
+            doFirst {
+                def target = new File(directory, 'academy/native_physics')
+                target.mkdirs()
+                copy {
+                    from artifacts
+                    include 'academy_physics.*'
+                    into target
+                }
+            }
+        }
+    }
+}

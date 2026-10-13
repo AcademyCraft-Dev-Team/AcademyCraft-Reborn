@@ -31,6 +31,7 @@
 | `StructureQueries/StructureTraction` | 已接入固定哈希 Sable 查询及真实 prePhysics 有限力；旧 `BlockStructureEntity` 尚未统一进入该后端控制契约 |
 | `StructureTransactions`/`StructureCaptureCoordinator` | P19 新增：后端无关的分阶段捕获事务；预检、WAL 日志、目标预留、复制校验、提交决定、源移除、发布回收与重启恢复；Sable 捕获仍显式返回不可用 |
 | `NativeStructureManifest.removeEntry/releaseSlot`、`NativeStructureRuntime.discardEmpty` | P20 新增：空结构槽位回收；仅未加载、空、未隔离、无恢复证据、无物理附件的结构可释放；P19 回滚不再永久烧槽 |
+| `NativePhysicsArtifact` 解析 | P21 更新：显式属性 → 显式环境 → home（属性/环境）→ 游戏目录 `academy/native_physics/` 固定布局；部分配置显式失败；物理打开异常统一为 `IllegalStateException` 并保留原因 |
 | `NativeCaptureWhitelist` | P19 新增：普通无 BE 正质量满方块的起步白名单；BE/流体/waterlogged/随机或计划 tick/重力和非满形状在首次写入前显式拒绝，不静默丢弃 |
 | 三类 `Server*ProgramRuntime` | 仍存在 Entity/宿主 BlockPos、FallingBlock、直接赋速及回滚旧速度路径；不能把 Sable plot 地址当宿主格 |
 
@@ -60,7 +61,7 @@
 ### 动能搬运的后续顺序（最高优先级）
 
 1. **公共捕获事务**：预检选择、权限、内容与几何预算；目标预留、持久化日志、复制校验、源移除、目标提交；每个阶段提供异常及重启恢复证据。先明确普通块范围，BE/计划 tick 不得静默丢弃。**P19 已交付机制与原生后端接入（见下节）；Sable 生产捕获与真实跨 JVM 强杀恢复仍属后续。**
-2. **独立后端可供技能使用**：制品部署、容器容量/回收、活动物理区域跟随与恢复，以及真实玩家碰撞/承载。不能让玩家每四次使用便耗尽永久槽，也不能发布仅在测试 JVM 外部属性下可运行的默认技能。**P20 已交付空结构槽位回收（见下节）；制品部署、物理区域跟随与真实玩家承载仍待做。**
+2. **独立后端可供技能使用**：制品部署、容器容量/回收、活动物理区域跟随与恢复，以及真实玩家碰撞/承载。不能让玩家每四次使用便耗尽永久槽，也不能发布仅在测试 JVM 外部属性下可运行的默认技能。**P20 已交付空结构槽位回收，P21 已交付制品部署约定（见下节）；物理区域跟随与真实玩家承载仍待做。**
 3. **双后端捕获接入**：未装 Sable 创建独立结构，兼容混装创建 Sable 结构；未知版本/不可用时给出失败并保留源方块，不降级为旧实体。外部 assembly helper 仍只作测试工具，不能代替生产事务。
 4. **迁移 `KineticThrow`**：保持区域选择和能力预算；HeldStructure 改为公共引用/租约；抬升、投掷、终止遵守有限力、单位、惯性契约；接触伤害只结算一次，不在世界碰撞时自动变回方块。
 5. **承载验收**：独立和完整混装各测静止、升降、行走、跳跃、边缘、顶墙和旋转，之后测真实双端延迟。旧实体对照测试不能替代这些结果。
@@ -92,6 +93,15 @@
 - 失败轨迹：首次运行单测暴露 `persist()` 直传活索引导致的清空别名 bug（候选持久化内 clear+putAll 同一 map），拆分为普通持久化与候选持久化两条路径后修复。
 - 未验边界：成功捕获或保留内容的结构仍占用永久槽，静态化或显式销毁属后续；启动不自动修复历史遗留的「已认领但无索引」空槽（仅记录为安全泄漏）；`discardEmpty` 目前是内部 API，尚未接入技能或命令入口；真实玩家流程未验。
 - 当前构建（含 P19/P20，不含技能迁移）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `055082A2E4DE4555A96A99F1E27D5F8B45DDD4ED723F206633C8B14F744FDD6D`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `A96D6A4164327EC3FBED5D395C95457AB35224B76891D2A82032D8AC7D89863F`。未复制到整合包，未操作用户存档。
+
+### P21 制品部署解析与统一异常（2026-10-13）
+
+- `NativePhysicsArtifact` 新增纯解析 `resolve(properties, environment, conventionalDirectory)`：显式属性对 → 显式环境对 → `academy.nativePhysics.home`/`ACADEMY_NATIVE_PHYSICS_HOME` → 游戏目录固定布局 `academy/native_physics/`（平台库文件名 + `academy_physics.properties`）。部分配置（只设一项）或显式 home 缺件均显式失败，不再回退到更弱来源；空白值按未设置处理；哈希/版本校验与私有副本逻辑不变，仍不打包、不下载二进制。
+- `NativeStructurePhysics.createRegion` 打开物理的统一失败面：`IOException` 与 `RuntimeException` 一律转为携带原始消息与原因的 `IllegalStateException`，权限缺失等诊断保持可读。
+- 新增验证脚本 `validation/native_structure/physics_deploy.init.gradle`：隔离专服目录内按固定布局放置 `prepareNativePhysics` 制品、清空原生环境变量、不设任何 `-Dacademy.nativePhysics.*`，仅保留 `--enable-native-access=ALL-UNNAMED` 运行既有 `nativePhysicsSmoke=server` 探针。
+- 验证（最终修订版）：单元 2551 项（新增 3 项解析顺序/部分配置/未配置用例）与 Sable 11 项零失败/错误/跳过（`build/p21-tests-final.log`）；原生 JVM 专项 20 项通过（`nativePhysicsTest`，显式属性路径回归）；`build -DisDev=true` 36 秒、`-DisDev=false` 57 秒通过（`build/p21-build-dev-final.log`、`build/p21-build-release-final.log`）；部署专服探针 `run/native-physics-smoke-server-deploy1` 退出 0：真实求解器 720 步、`binding_native_access=true`、`height=0.4999`、结果 `native-physics-server-result.txt` 为 PASSED，证明仅凭游戏目录约定即可发现并加载原生库（日志 `build/p21-deploy-probe.log`）。
+- 未验边界：Linux `.so` 布局仅由同一代码路径覆盖，未在本机实跑；`--enable-native-access` 仍需启动器/部署方提供，模组无法在运行时添加 JVM 参数（仅在缺失时给出可操作诊断）；未在整合包/真实玩家环境验证。
+- 当前构建（含 P19/P20/P21，不含技能迁移）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `0899E1505E8BCB1FB26CC5169197F1E9185411D499A9FFD215BD77726EAEB962`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `6C2429DCC682E2F7D64D8458814839510C4F8251B86B5990B97F55C3CF5B756B`。未复制到整合包，未操作用户存档。
 
 ### P18 最终结果（2026-10-13）
 
