@@ -19,6 +19,12 @@ import java.util.UUID;
  * <p>Region pause, attachment/content invalidation, unload, failure, close and server shutdown
  * invalidate live leases. No lease or command is saved or restored. A terminal lease never
  * becomes active again and cannot affect a later lease, even if the controller ID is reused.</p>
+ *
+ * <p>Leases acquired through {@link StructurePhysicsRegion#acquireEntityControl} additionally
+ * follow the exact controller entity's lifetime and host membership. They invalidate on entity
+ * leave/logout and when the backend observes death or stale membership before a physics step,
+ * command update or renewal. Unbound leases keep their actor-independent behavior. Neither
+ * variant detects skill cancellation or renews itself automatically.</p>
  */
 public interface StructurePhysicsLease extends AutoCloseable {
     int MAX_DURATION_TICKS = 200;

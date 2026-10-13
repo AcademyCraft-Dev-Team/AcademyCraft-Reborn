@@ -1,5 +1,6 @@
 package org.academy.api.common.structure;
 
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -9,7 +10,7 @@ import java.util.UUID;
 /**
  * A bounded, server-thread-owned physics region in one host level. Every method, including
  * reads and close, requires its owning server thread. This interface exposes no raw native
- * handles, storage levels, player dependence or backend memory.
+ * handles, storage levels or backend memory and does not require a player.
  *
  * <p>Ordinary structure saving checkpoints attachments, bounds and the last coherently published
  * motion together with the pose. Server shutdown releases native resources while retaining these
@@ -133,6 +134,29 @@ public interface StructurePhysicsRegion extends AutoCloseable {
      */
     Optional<StructurePhysicsLease> acquireControl(StructureRef reference, UUID controllerId,
                                                   StructurePhysicsControl control, int durationTicks);
+
+    /**
+     * Acquires the same bounded exclusive lease, additionally binding it to one exact live entity
+     * instance in this host level. Both players and non-player entities are supported. The entity
+     * must be registered in the host; players also require their current player-list entry and an
+     * accepting connection. A matching UUID on another instance cannot inherit this lease.
+     * Invalid actors are rejected without changing an existing command or lease.
+     *
+     * <p>Leaving the level or logging out revokes the binding. Before physics applies controls,
+     * and before updating or renewing this lease, the backend rechecks the actor's life, removal,
+     * host and registration identity. An unavailable actor invalidates only its leases, preserving
+     * solved motion and stored blocks. Death is observed at these boundaries, not through a
+     * cancellable pre-death event. Read methods report the last observed lease state.</p>
+     *
+     * <p>Duration, exclusivity and command limits match acquireControl. No automatic renewal,
+     * actor loading, ownership/reach permission or skill-resource check is provided. Callers
+     * still close on skill/program cancellation. Entity bindings are never saved or restored;
+     * callers must explicitly acquire again after respawn, reconnect or transfer.</p>
+     *
+     * @throws IllegalArgumentException if the actor is not a live, registered controller in this host
+     */
+    Optional<StructurePhysicsLease> acquireEntityControl(StructureRef reference, Entity actor, UUID controllerId,
+                                                        StructurePhysicsControl control, int durationTicks);
 
     /** Idempotent after successful release; a failed native release remains an explicit error. */
     @Override

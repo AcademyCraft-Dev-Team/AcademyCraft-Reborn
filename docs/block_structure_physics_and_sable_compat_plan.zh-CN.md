@@ -16,6 +16,8 @@
 
 第十三批已按用户授权提交为 `e2bf5ccb`。第十四批接续 P1 的公共控制会话，加入独占限时租约；2507 项基础测试、104 项编辑器测试、20 项原生 JVM、12 项 Rust、真实专服 r1/客户端 r2、跨 JVM 回归、三组 GameTest、两种构建及成品核对均已通过。采用本批证据，保留首次客户端超时记录与限定验收边界。
 
+第十四批已按用户授权提交为 `4f3a1a0a`。第十五批已实现实体绑定租约，为玩家与非玩家提供统一的控制者生命周期撤销；2507 项基础测试、104 项编辑器测试、20 项原生 JVM、12 项 Rust、真实专服 r1、客户端 r1、三 JVM 持久化、双区域、三组 GameTest、两种构建及成品核对均已通过，不继承第十四批通过结论。
+
 ## 本批次落地进展
 
 第一批完成 P0 的空间/单位基础和现有快照实体的数据安全改动，第二批加入独立 `ServerLevel` 容器，第三批加入模型投影、旋转后的逐格命中、作用域上下文和受限拉杆交互，第四批加入普通单箱，第五批加入受限放置。第六批实现受限持续采掘及掉落归属处理，第七批完成独立双精度刚体绑定；第八批增加真实结构、地形几何、内容屏障及姿态发布的有界连接。第九批接续服务器姿态历史、同帧玩家回执、请求去重和最新采掘观察，已通过直连与固定延迟的真实双客户端链，最终全量/两种构建也已通过。P0 整体未完成；本表区分已写入代码的范围与完整目标，详细验收及剩余边界见系统文档。
@@ -35,6 +37,7 @@
 | 保守地形分区缓存 | 第十二批按区域独占 16³ 分片缓存，复用当前回执仍有效的形状/盒列表，脏片候选整批复验后提交 | 专服/客户端、跨 JVM、基础/原生测试和三组 GameTest 已过，两种构建与成品核对也已通过；逐格状态/区块身份复验保留，全域读取/盒预算不放大；无主动加载、容量扩展、自动迁移或已测性能指标 |
 | 有限力与单点 PD | 第十三批公开 `StructurePhysicsControl`/`StructurePhysicsControls` 与每结构一个临时控制槽，三个子步读取真实运动并通过点冲量施力 | 基础/原生测试、专服/客户端、跨 JVM、两种构建与成品核对均已通过；力范数有界、暂停与内容失效清槽、不保存或补跑控制；不包含方向锁定、玩家抓取协议、技能迁移、材料或 Sable 接入 |
 | 独占限时控制会话 | 第十四批 `StructurePhysicsLease` 绑定精确成员，原子获取初始命令、独占槽、1 至 200 服务器 tick 租期、显式续期及失效回收；限定专项及最终验收已通过 | 死亡/离线/跨维度由调用者 close，超时兜底，不自动检测实体生命周期；无权限授权、抢占优先级、叠力、技能迁移或 Sable 桥 |
+| 实体绑定控制会话 | 第十五批新增 `acquireEntityControl`，玩家与非玩家共用精确实体实例绑定，离开宿主/注销事件及物理、更新、续期边界审计已通过本批限定验收 | 玩家注销/连接专项采用 EmbeddedChannel，非真实 TCP 故障链；不自动续期、不保存、不自动迁移技能；原 UUID 标签租约继续由调用方管理生命周期 |
 | 空间身份与姿态 | `StructureRef`、`SpaceBlockRef`、`StructurePose`、`StructureAnchor`；double 位置、单位四元数、点/方向正逆变换、表面速度及防御复制 | 已有独立后端生命周期服务；尚无自动锚点重映射和多个后端的选择/迁移 |
 | 旧接口衔接 | `BlockStructure.reference()`、`pose()`、`velocityPerSecond()`；旧 yaw 转换补偿 snapshot pivot；`LegacyMotionUnits` 集中换算速度和加速度 | 旧实体仍使用 tick 单位及 Y 轴姿态，技能未全面迁移，质量/力值未重新标定 |
 | 捕获与还原 | 捕获前验证 BE 数据能完整重建，通过实体生成事件后再核对来源 state/NBT；写前记录原状态和预期结果，提交及回滚均整批校验；阻挡结算返回 `RETAINED`，保留完整载荷 | 外部回调已转移库存或产生不明确写入结果时保持隔离；这不构成跨区块/实体文件的崩溃原子提交 |
@@ -215,7 +218,31 @@ Rust 12 项已通过；首次编译只因限定嵌套类型的 Nullable 注解�
 
 最终[开发构建](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p14-build-dev.log)与[发布构建](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p14-build-release.log)分别 21/27 秒成功、退出 0。[证据收集器](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p14-finalize.py)已核对 9 项源码与冻结版本一致、11 个相关文件范围、2507/104/20 项 XML 零失败/错误/跳过、Rust 12、各探针/退出门禁、截图与成品；结果为 [validation](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p14-validation.json)、[artifacts](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p14-artifacts.json)、[source-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p14-source-manifest.json)及[all-files-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p14-all-files-manifest.json)。[开发 JAR](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/libs/academy-26.2.0-0.0.4-alpha-dev.jar)的 SHA-256 为 `5881302a01711901a32ccc8be787f24f529018641e803709d759404848784d7b`，[发布 JAR](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/libs/academy-26.2.0-0.0.4-alpha-release.jar)为 `42ee9aceb3aa71f60dbbfd17f33cc4a668e28088edc7a9a48b17552e6f5cb297`；新公共/内部类型与 FFM 桥完整，成品不含原生二进制，外部 DLL 与第十三批相同。
 
-详细契约与证明范围见[第十四批系统记录](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/block_structure_entity_system.md#第十四批独占限时控制租约)。本批限定验收已完成，用户已确认创建本地 Git 提交；纯地形重建保留租约、活动租约直接停服撤销只有源码/相邻回归覆盖，不能将公共租约子集计作整个 P1 或 Sable 适配完成。
+详细契约与证明范围见[第十四批系统记录](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/block_structure_entity_system.md#第十四批独占限时控制租约)。本批限定验收已完成，用户已确认并创建本地提交 `4f3a1a0a`；纯地形重建保留租约、活动租约直接停服撤销只有源码/相邻回归覆盖，不能将公共租约子集计作整个 P1 或 Sable 适配完成。
+
+### 第十五批的实现与验收边界
+
+本批优先补齐 P1 控制者生命周期，公开 `StructurePhysicsRegion.acquireEntityControl(reference, actor, controllerId, initialControl, durationTicks)`，返回既有 `StructurePhysicsLease`。绑定精确实体实例、原宿主和实体 UUID，玩家与非玩家共用入口；原 UUID 标签租约保持原语义。实体必须存活、未移除、注册在当前宿主，玩家另通过 `PlayerList` 精确实例及连接检查。相同 UUID 的重生、重连或跨维度替身不继承旧控制。
+
+宿主离开事件与玩家注销按已有运行时路由撤销，不创建新的运行时；物理施力、更新及续期边界再次检查绑定。死亡以边界实际 `isAlive()` 状态判断，不提前依赖可取消死亡事件。已观察的离开不可因同 tick 返回而恢复，未被事件或边界观察的同 tick 死亡后立即恢复不在本批承诺内。检查仅面向已有活动控制，不扫描全部实体，不加载区块，也不自动续期。
+
+失效只撤销对应租约并清命令，保留结构速度和内容，其他控制者与无实体租约仍可工作；区域本身不因控制者失效而暂停或失败。租约独占、1 至 200 tick 期限、终态与旧句柄隔离沿用第十四批；所有绑定与命令均不保存。技能主动取消、资源和权限仍由调用方负责。本批不合并旧动能投掷/喷流迁移、材料密度、承载或 Sable 桥。
+
+本批[基础测试](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p15-test-final.log) 16 秒通过，2507 项零失败、错误或跳过；[原生测试](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p15-native-tests.log) 4 秒通过，20 项原生 JVM 零失败、错误或跳过，Rust 12 项通过。新增行为由真实 Minecraft 夹具覆盖，不将既有测试数量写成新增专项单测。
+
+专服 [r1 日志](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p15-world-server-r1.log)记录 449 tick PASSED、34 秒成功、全维度保存和退出 0，停止事件与线程结束门禁通过。NPC 续期 PD 抬升、死亡前已排队的力不进入下一求解步、新实体有限力按质量积分一次、空租约移除、同 tick 返回及同 UUID 替身隔离通过；死亡写入/续期及时拒绝，区域保持 READY，其他控制者和 UUID 标签租约保留。所有控制窗口直接姿态/速度写入为 0。
+
+客户端 [r1 日志](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p15-client-r1.log)记录 494 tick PASSED、45 个移动样本、2 分 24 秒成功、退出 0 和全维度保存，实体断言及正常相机玩家获取/释放通过。根代理实际确认实验世界备份提示并进入世界，随后打开 before/landed/controlled 三图核对投影下落、接触和悬停。本批两端首次均通过；客户端既有 Perflib 009 与 OSHI NPE 仍记录，不能声称日志零异常。两端 `actual_keyboard_actions=false`，三图不代表新增租约 UI 或抓取操作。
+
+三 JVM 持久化 r1 的 prepare/unavailable/resume 在 PID 65304/30460/74720 完成 67/42/23 tick、15/11/10 秒，均 PASSED、退出 0，停止事件、线程结束与 stopping 门禁通过。保存时实体绑定 Anchor 活动，冻结撤销后夹具显式移除控制实体；新 JVM 原运动恢复，绑定/命令不恢复，同 UUID 新实体显式获取成功。UUID 仅写入独立验收 checkpoint，不是生产 manifest 新增字段，也不把冻结后停服扩大为活动实体租约直接停服撤销的独立证明。
+
+双区域 r1 的 prepare/resume 在 PID 71752/82060 完成 114/25 tick、16/10 秒，两阶段 PASSED、退出 0，停止事件、线程结束与 stopping 门禁通过。错误区域操作/控制/租约隔离、独立恢复和关闭 A 后 B 持续运动回归通过；这是旧区域与 UUID 标签租约回归，不作为新增跨区域实体绑定专项。
+
+三组 GameTest query/space/safety 分别 10/12/9 秒通过，各有 `All 1 required tests passed`；本批未重跑旧 oracle 缺实体字段分支或 v2 迁移，不能把历史迁移记录改成本批实测。最终[开发构建](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p15-build-dev.log)与[发布构建](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p15-build-release.log)分别 21/24 秒成功、退出 0；XML 为基础 2507、编辑器 104、原生 JVM 20 项，均零失败、错误或跳过，Rust 12 项通过。
+
+[证据收集器](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p15-finalize.py)已核对 8 项源码与冻结版本一致、10 个相关文件范围、各阶段结果/退出门禁、三图与成品；证据为 [validation](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p15-validation.json)、[artifacts](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p15-artifacts.json)、[source-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p15-source-manifest.json)及[all-files-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p15-all-files-manifest.json)。开发 JAR SHA-256 为 `d23ce0cbf36b9acc3c3fbf5674139a9bd34922ef970b57dc7be2eee4e3f2b64c`，发布 JAR 为 `13eea9362175675c51ffd2fec06e0294a298513bcd71d117363ed675ecfdcbf0`；实体绑定类型与 FFM 桥齐全，成品无原生二进制，外部 DLL 与第十四批相同，ABI 和 manifest v3 未变。
+
+注册 `ServerPlayer` 加 EmbeddedChannel 已覆盖本批夹具的跨维度、死亡、断连标志、关闭连接与注销路径，明确 `entity_player_actual_tcp_disconnect=false`，不等于真实 TCP 断线/重连。本批所有执行阶段首轮通过，限定验收已完成，用户已确认创建本地 Git 提交；完整 P1、旧技能迁移和 Sable 桥仍未完成。详细契约、执行证据和剩余范围统一记入[第十五批系统记录](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/block_structure_entity_system.md#第十五批实体绑定控制租约与生命周期撤销)。
 
 ## 现有系统与目标的差距
 

@@ -8,6 +8,9 @@ import net.minecraft.nbt.NbtIo;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
@@ -68,6 +71,7 @@ public final class NativeStructurePhysicsPersistenceSmoke {
     private StructureHandle moving, resting, unloaded;
     private StructurePhysicsRegion region;
     private StructurePhysicsLease movingLease, restingLease;
+    private ArmorStand controlActor;
     private CompoundTag oracle;
     private Phase phase = Phase.ACTIVATE;
     private int ticks, age, sleepingTicks;
@@ -190,7 +194,12 @@ public final class NativeStructurePhysicsPersistenceSmoke {
                 require(motion.linearVelocity().x > 0.5 && motion.linearVelocity().y > 1
                         && motion.angularVelocity().length() > 0.2 && !motion.sleeping(), "Checkpoint needs actual nonzero linear and angular motion");
                 require(region.motion(resting.reference()).orElseThrow().sleeping(), "Independent resting fixture must remain asleep");
-                movingLease = region.acquireControl(moving.reference(), UUID.randomUUID(), new StructurePhysicsControl.Anchor(motion.localCenterOfMass(),
+                controlActor = EntityTypes.ARMOR_STAND.create(host, EntitySpawnReason.COMMAND);
+                require(controlActor != null, "Cannot create persistence controller fixture");
+                controlActor.setNoGravity(true); controlActor.setPos(new Vec3(1.5, 129, 1.5));
+                require(host.addFreshEntity(controlActor) && host.getEntity(controlActor.getUUID()) == controlActor,
+                        "Persistence controller was not registered in the actual host");
+                movingLease = region.acquireEntityControl(moving.reference(), controlActor, UUID.randomUUID(), new StructurePhysicsControl.Anchor(motion.localCenterOfMass(),
                         motion.pose().localToWorldPoint(motion.localCenterOfMass()).add(0, 0.5, 0), Vec3.ZERO, 60, 16, 40), 200).orElseThrow();
                 restingLease = region.acquireControl(resting.reference(), UUID.randomUUID(), new StructurePhysicsControl.Force(
                         region.motion(resting.reference()).orElseThrow().localCenterOfMass(), Vec3.ZERO), 200).orElseThrow();
@@ -200,10 +209,11 @@ public final class NativeStructurePhysicsPersistenceSmoke {
                         "Control persistence probe must save while both transient configurations exist");
                 require(movingLease.state() == StructurePhysicsLease.State.ACTIVE && restingLease.state() == StructurePhysicsLease.State.ACTIVE,
                         "Persistence evidence did not include two active leases at save time");
-                report.append("transient_controls_present_at_save=true\ntransient_leases_present_at_save=true\n");
+                report.append("transient_controls_present_at_save=true\ntransient_leases_present_at_save=true\nentity_bound_lease_present_at_save=true\n");
                 assertSavedMotion(moving, motion);
                 assertSavedMotion(resting, region.motion(resting.reference()).orElseThrow());
                 oracle = new CompoundTag(); oracle.putInt("schema", 1); oracle.putLong("pid", PID); oracle.putLong("process_start", PROCESS_START);
+                oracle.putString("control_actor", controlActor.getUUID().toString());
                 oracle.put("moving", writeBody(moving)); oracle.put("resting", writeBody(resting));
                 saveHit(oracle);
                 writeNbt("checkpoint.nbt", oracle);
@@ -217,7 +227,7 @@ public final class NativeStructurePhysicsPersistenceSmoke {
                         "Frozen save retained transient controls into another tick");
                 NativeStructurePhysicsLeaseSmokeChecks.assertInvalidated(movingLease);
                 NativeStructurePhysicsLeaseSmokeChecks.assertInvalidated(restingLease);
-                report.append("control_freeze_does_not_replay=true\nlease_save_freeze_invalidated=true\n");
+                report.append("control_freeze_does_not_replay=true\nlease_save_freeze_invalidated=true\nentity_binding_save_freeze_invalidated=true\n");
                 finish();
             }
             case UNAVAILABLE -> {
@@ -274,6 +284,22 @@ public final class NativeStructurePhysicsPersistenceSmoke {
                             "Fresh lease acquisition/release changed restored motion");
                 }
                 report.append("transient_leases_not_restored=true\nrestored_members_reacquire_control=true\n");
+                if (oracle.contains("control_actor")) {
+                    var actorId = UUID.fromString(oracle.getStringOr("control_actor", ""));
+                    require(host.getEntity(actorId) == null, "Discarded controller fixture unexpectedly survived restart");
+                    controlActor = EntityTypes.ARMOR_STAND.create(host, EntitySpawnReason.COMMAND);
+                    require(controlActor != null, "Cannot create replacement persistence actor");
+                    controlActor.setUUID(actorId); controlActor.setNoGravity(true); controlActor.setPos(new Vec3(1.5, 129, 1.5));
+                    require(host.addFreshEntity(controlActor), "Cannot register replacement persistence actor");
+                    var rebound = region.acquireEntityControl(moving.reference(), controlActor, UUID.randomUUID(),
+                            new StructurePhysicsControl.Force(motion.localCenterOfMass(), Vec3.ZERO), 8).orElseThrow();
+                    rebound.close(); releaseControlActor();
+                    require(region.control(moving.reference()).isEmpty() && region.motion(moving.reference()).orElseThrow().equals(motion),
+                            "Fresh entity binding changed recovered motion or restored an old command");
+                    report.append("entity_binding_checkpoint_present=true\nentity_binding_not_restored=true\nentity_replacement_explicit_acquire=true\n");
+                } else {
+                    report.append("entity_binding_checkpoint_present=false\n");
+                }
                 resumedPose = moving.pose();
                 report.append("first_step_velocity_restored=true\ncontact_rebuild_wakes=true\nfirst_linear=").append(motion.linearVelocity())
                         .append("\nfirst_angular=").append(motion.angularVelocity()).append('\n');
@@ -426,6 +452,7 @@ public final class NativeStructurePhysicsPersistenceSmoke {
 
     private void finish() {
         require(!complete && !failed, "Probe already finished");
+        releaseControlActor();
         releaseTickets(); report.append("fixture_tickets_released=true\nticks=").append(ticks).append('\n');
         writeText(resultName(MODE), "PASSED\n" + report); complete = true; next(Phase.FINISHED);
         AcademyCraft.LOGGER.info("NATIVE_STRUCTURE_PHYSICS_PERSISTENCE_PASSED stage={} pid={}", MODE, PID);
@@ -437,6 +464,7 @@ public final class NativeStructurePhysicsPersistenceSmoke {
         catch (Throwable error) {
             failed = true;
             AcademyCraft.LOGGER.error("NATIVE_STRUCTURE_PHYSICS_PERSISTENCE_FAILED stage={} phase={}", MODE, phase, error);
+            try { releaseControlActor(); } catch (Throwable release) { error.addSuppressed(release); }
             try { releaseTickets(); } catch (Throwable release) { error.addSuppressed(release); }
             try { writeText(resultName(MODE), "FAILED\nphase=" + phase + "\nfailure=" + error + "\n" + report); }
             catch (Throwable writing) { error.addSuppressed(writing); }
@@ -448,6 +476,13 @@ public final class NativeStructurePhysicsPersistenceSmoke {
     private void writeText(String name, String text) {
         try { Files.writeString(directory.resolve(name), text, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE); }
         catch (IOException error) { throw new IllegalStateException("Cannot write immutable probe result", error); }
+    }
+
+    private void releaseControlActor() {
+        if (controlActor != null) {
+            if (!controlActor.isRemoved()) controlActor.discard();
+            controlActor = null;
+        }
     }
 
     private void writeNbt(String name, CompoundTag tag) {
@@ -485,6 +520,7 @@ public final class NativeStructurePhysicsPersistenceSmoke {
             AcademyCraft.LOGGER.error("NATIVE_STRUCTURE_PHYSICS_PERSISTENCE_STOPPING_GUARDS_FAILED stage={}", MODE, error);
         }
         try {
+            scenario.releaseControlActor();
             scenario.releaseTickets();
             // Production captures/closes its solver at NORMAL priority before this thaw; no new tick follows.
             if (scenario.frozen) { scenario.server.tickRateManager().setFrozen(false); scenario.frozen = false; }

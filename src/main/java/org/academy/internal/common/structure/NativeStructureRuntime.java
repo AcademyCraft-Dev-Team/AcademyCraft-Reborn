@@ -8,6 +8,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.storage.LevelResource;
@@ -15,6 +16,8 @@ import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
@@ -837,6 +840,21 @@ public final class NativeStructureRuntime implements StructureBackend {
     @SubscribeEvent public static void started(ServerStartedEvent event) {
         var runtime = backend(event.getServer());
         for (var entry : runtime.manifest.entries()) if (entry.active()) runtime.load(entry.reference());
+    }
+
+    @SubscribeEvent public static void controllerLeft(EntityLeaveLevelEvent event) {
+        if (event.getLevel() instanceof ServerLevel level) invalidateController(level, event.getEntity());
+    }
+
+    @SubscribeEvent public static void controllerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity().level() instanceof ServerLevel level) invalidateController(level, event.getEntity());
+    }
+
+    private static void invalidateController(ServerLevel level, Entity controller) {
+        NativeStructureRuntime runtime;
+        // Lifecycle observation must never initialize a backend, load native code or allocate storage.
+        synchronized (SERVERS) { runtime = SERVERS.get(level.getServer()); }
+        if (runtime != null && !runtime.closed) runtime.physics.invalidateController(controller);
     }
 
     @SubscribeEvent public static void tick(ServerTickEvent.Post event) {

@@ -3,6 +3,7 @@ package org.academy.internal.common.structure.physics;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
@@ -190,12 +191,22 @@ public final class NativeStructurePhysics implements AutoCloseable {
         for (var region : regions.values()) {
             var member = region.members.get(reference);
             if (member == null) continue;
-            member.controls.invalidate();
+            member.invalidateControl();
             if (member.handle != null && member.handle.lifecycle() == StructureLifecycle.RECOVERY_REQUIRED) {
                 runtime.markPhysicsFailed(reference);
             }
             member.invalidated = true;
             if (!region.busy) region.removeInvalidated();
+        }
+    }
+
+    /** Entity leave/logout events also revoke during geometry callbacks, without native mutation. */
+    public void invalidateController(Entity actor) {
+        requireThread();
+        Objects.requireNonNull(actor, "actor");
+        for (var region : regions.values()) for (var member : region.members.values()) {
+            var binding = member.actorBinding;
+            if (binding != null && binding.actor.is(actor)) member.invalidateControl();
         }
     }
 
@@ -389,7 +400,24 @@ public final class NativeStructurePhysics implements AutoCloseable {
             var member = controllable(reference);
             validateControl(member, control);
             return member.controls.acquire(controllerId, control, durationTicks)
-                    .map(ticket -> new Lease(member, ticket));
+                    .map(ticket -> {
+                        member.actorBinding = null;
+                        return new Lease(member, ticket);
+                    });
+        }
+
+        @Override public Optional<StructurePhysicsLease> acquireEntityControl(StructureRef reference, Entity actor,
+                                                                               UUID controllerId,
+                                                                               StructurePhysicsControl control,
+                                                                               int durationTicks) {
+            var member = controllable(reference);
+            validateControl(member, control);
+            var controller = new NativeStructureControlActor(actor, host, server);
+            return member.controls.acquire(controllerId, control, durationTicks)
+                    .map(ticket -> {
+                        member.actorBinding = new ActorBinding(ticket, controller);
+                        return new Lease(member, ticket);
+                    });
         }
 
         private final class Lease implements StructurePhysicsLease {
@@ -420,7 +448,17 @@ public final class NativeStructurePhysics implements AutoCloseable {
 
             private void requireActiveMember() {
                 requireMutable();
+                // An old handle must never validate or revoke a later owner's actor binding.
+                if (ticket.state() != State.ACTIVE) {
+                    throw new IllegalStateException("Structure physics lease is no longer active");
+                }
+                member.checkActor(ticket);
                 if (ticket.state() != State.ACTIVE || controllable(member.reference) != member) {
+                    throw new IllegalStateException("Structure physics lease is no longer active");
+                }
+                // The geometry/time checks above may observe Minecraft callbacks.
+                member.checkActor(ticket);
+                if (ticket.state() != State.ACTIVE) {
                     throw new IllegalStateException("Structure physics lease is no longer active");
                 }
             }
@@ -431,6 +469,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
                 if (ticket.state() != State.ACTIVE) return;
                 requireMutable();
                 ticket.close();
+                member.clearTerminalActor();
             }
         }
 
@@ -465,7 +504,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
                 var member = iterator.next();
                 runtime.invalidateInteractionHistory(member.reference);
                 var entry = saved.stream().filter(value -> value.reference().equals(member.reference)).findFirst().orElse(null);
-                if (entry == null) { member.controls.invalidate(); iterator.remove(); continue; }
+                if (entry == null) { member.invalidateControl(); iterator.remove(); continue; }
                 if (member.invalidated) member.handle = null;
                 member.invalidated = false;
                 if (parked) {
@@ -480,6 +519,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
 
         private void tick() {
             if (status == Status.CLOSED || status == Status.FAILED || closing) return;
+            checkActors();
             removeInvalidated();
             if (status == Status.FAILED) return;
             // Only an explicit structure load makes an inactive checkpoint eligible to join.
@@ -503,7 +543,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
                     pause("awaiting_structure_activation"); return;
                 }
                 if (member.handle != current) {
-                    member.controls.invalidate();
+                    member.invalidateControl();
                     member.handle = current;
                     rebuildRequired = true;
                     runtime.invalidateInteractionHistory(member.reference);
@@ -554,7 +594,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
                     if (member.geometry == null || !member.geometry.stillValid()
                             || member.geometry.sourceRevision() != next.sourceRevision()
                             || member.geometry.nonAirCells() != next.nonAirCells()
-                            || !member.geometry.boxes().equals(next.boxes())) member.controls.invalidate();
+                            || !member.geometry.boxes().equals(next.boxes())) member.invalidateControl();
                 });
                 if (rebuildRequired || terrainChanged || shapesChanged) replaceWorld(geometry, nextTerrain);
                 if (contentChanged) geometryEpoch = Math.incrementExact(geometryEpoch);
@@ -607,6 +647,8 @@ public final class NativeStructurePhysics implements AutoCloseable {
         }
 
         private void stepWithControls() {
+            // Shape/time callbacks have finished; invalid actors release only their own command.
+            checkActors();
             if (members.values().stream().noneMatch(member -> member.controls.control().isPresent())) {
                 world.step(0.05, 3);
                 return;
@@ -750,9 +792,16 @@ public final class NativeStructurePhysics implements AutoCloseable {
             });
         }
 
-        private void clearControls() { for (var member : members.values()) member.controls.invalidate(); }
+        private void clearControls() { for (var member : members.values()) member.invalidateControl(); }
 
-        private void tickControlLeases() { for (var member : members.values()) member.controls.tick(); }
+        private void checkActors() { for (var member : members.values()) member.checkActor(); }
+
+        private void tickControlLeases() {
+            for (var member : members.values()) {
+                member.controls.tick();
+                member.clearTerminalActor();
+            }
+        }
 
         private void pause(String reason) {
             clearControls();
@@ -816,6 +865,8 @@ public final class NativeStructurePhysics implements AutoCloseable {
 
     private record ControlImpulse(NativePhysicsBody body, PhysicsVector value, PhysicsVector point) {}
 
+    private record ActorBinding(NativeStructureControlSlot.Ticket ticket, NativeStructureControlActor actor) {}
+
     private static final class Member {
         private final StructureRef reference;
         private StructureHandle handle;
@@ -823,6 +874,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
         private NativePhysicsBody body;
         private StructureMotionState published;
         private final NativeStructureControlSlot controls = new NativeStructureControlSlot();
+        private ActorBinding actorBinding;
         private boolean invalidated;
         private boolean restoring;
         private NativeStructurePhysicsAttachment.Motion restoreMotion;
@@ -832,6 +884,27 @@ public final class NativeStructurePhysics implements AutoCloseable {
             this.handle = handle;
             restoreMotion = motion;
             restoring = true;
+        }
+
+        private void invalidateControl() {
+            actorBinding = null;
+            controls.invalidate();
+        }
+
+        private void clearTerminalActor() {
+            if (actorBinding != null && actorBinding.ticket.state() != StructurePhysicsLease.State.ACTIVE) {
+                actorBinding = null;
+            }
+        }
+
+        private void checkActor() {
+            clearTerminalActor();
+            var binding = actorBinding;
+            if (binding != null && !binding.actor.available() && actorBinding == binding) invalidateControl();
+        }
+
+        private void checkActor(NativeStructureControlSlot.Ticket ticket) {
+            if (actorBinding != null && actorBinding.ticket == ticket) checkActor();
         }
     }
 
