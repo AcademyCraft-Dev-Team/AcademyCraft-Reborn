@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -14,7 +15,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.TagValueOutput;
-import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
@@ -22,19 +22,13 @@ import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.structure.StructureBackendStatus;
-import org.academy.api.common.structure.StructureBlockData;
 import org.academy.api.common.structure.StructureCaptureRequest;
 import org.academy.api.common.structure.StructureCaptureResult;
 import org.academy.api.common.structure.StructureHandle;
-import org.academy.api.common.structure.StructureLifecycle;
-import org.academy.api.common.structure.StructurePose;
 import org.academy.api.common.structure.StructureRef;
 import org.academy.api.common.structure.StructureWriteResult;
 import org.academy.internal.common.structure.BlockStructureTransferState;
-import org.academy.internal.common.structure.NativeStructureRuntime;
 import org.academy.internal.common.structure.StructureBackendRouter;
-import org.academy.internal.common.structure.physics.NativePhysicsWorld;
-import org.academy.internal.common.structure.physics.NativeStructurePhysicsGeometry;
 import org.academy.internal.common.structure.space.NativeStructureDimensions;
 import org.jspecify.annotations.Nullable;
 
@@ -74,7 +68,6 @@ public final class StructureCaptureCoordinator {
     private final StructureCaptureClaims claims = new StructureCaptureClaims();
     private final Map<UUID, PendingCapture> pending = new LinkedHashMap<>();
     private final Map<UUID, StructureCaptureResult> finished = new LinkedHashMap<>();
-    private @Nullable NativeStructureRuntime runtime;
     private @Nullable StructureTransactionJournal journal;
     private boolean journalAttempted;
     private boolean closed;
@@ -147,6 +140,7 @@ public final class StructureCaptureCoordinator {
                         case NATIVE -> "native_unavailable";
                     });
         }
+        var backend = new NativeCaptureTarget(server);
         var journal = journal();
         if (journal == null || !journal.healthy()) {
             return StructureCaptureResult.failure(transactionId,
@@ -160,9 +154,10 @@ public final class StructureCaptureCoordinator {
             return StructureCaptureResult.failure(transactionId, StructureCaptureResult.Status.TOO_LARGE,
                     ordered.get(request.maximumBlocks()), "block_budget_exceeded");
         }
-        if (ordered.size() > NativeStructurePhysicsGeometry.MAX_STRUCTURE_CELLS) {
+        var cellBudget = backend.cellBudget();
+        if (ordered.size() > cellBudget) {
             return StructureCaptureResult.failure(transactionId, StructureCaptureResult.Status.REJECTED,
-                    ordered.get(NativeStructurePhysicsGeometry.MAX_STRUCTURE_CELLS), "native_structure_cell_budget");
+                    ordered.get(cellBudget), "native_structure_cell_budget");
         }
         var origin = minimumCorner(ordered);
         for (var position : ordered) {
@@ -209,7 +204,7 @@ public final class StructureCaptureCoordinator {
                 cells.add(new StructureTransactionJournal.Cell(ordered.get(index),
                         encodeState(host, states.get(index))));
             }
-            var record = new StructureTransactionJournal.Record(transactionId, NativeStructureRuntime.ID,
+            var record = new StructureTransactionJournal.Record(transactionId, backend.backendId(),
                     host.dimension().identifier(), origin, StructureTransactionJournal.Stage.PREPARED, null,
                     cells, null);
             if (!persistNew(record)) {
@@ -217,24 +212,24 @@ public final class StructureCaptureCoordinator {
                 return StructureCaptureResult.failure(transactionId,
                         StructureCaptureResult.Status.JOURNAL_WRITE_FAILED, "journal_prepare_failed");
             }
-            var handle = runtime().createEmpty(host, StructurePose.identity(Vec3.atLowerCornerOf(origin)));
-            if (handle.isEmpty()) {
+            var allocated = backend.allocate(host, origin);
+            if (allocated.isEmpty()) {
                 recycleQuietly(transactionId);
                 claims.release(transactionId);
                 return StructureCaptureResult.failure(transactionId,
                         StructureCaptureResult.Status.BACKEND_UNAVAILABLE, "no_free_native_slot");
             }
-            var target = handle.get().reference();
+            var target = allocated.get();
             record = record.withTarget(target.id());
             if (!persistNew(record)) {
-                unloadQuietly(target);
+                unloadQuietly(backend, target);
                 recycleQuietly(transactionId);
-                discardEmptyQuietly(target);
+                discardEmptyQuietly(backend, target);
                 claims.release(transactionId);
                 return StructureCaptureResult.failure(transactionId,
                         StructureCaptureResult.Status.JOURNAL_WRITE_FAILED, "journal_allocation_failed");
             }
-            var capture = new PendingCapture(record, host, origin, target, ordered, cells, states,
+            var capture = new PendingCapture(record, host, origin, target, backend, ordered, cells, states,
                     request.permission(), false);
             pending.put(transactionId, capture);
             try {
@@ -289,12 +284,11 @@ public final class StructureCaptureCoordinator {
     }
 
     private void stepAwaitActivation(PendingCapture capture) {
-        var handle = resolveHandle(capture);
-        if (handle == null) {
+        if (resolveHandle(capture) == null) {
             retain(capture, "target_handle_unavailable", null);
             return;
         }
-        if (handle.lifecycle() != StructureLifecycle.ACTIVE) {
+        if (!capture.backend.ready(capture.target)) {
             if (!sourceMatches(capture)) {
                 abort(capture, StructureCaptureResult.Status.SOURCE_CHANGED, "source_changed_before_copy");
                 return;
@@ -316,16 +310,13 @@ public final class StructureCaptureCoordinator {
             abort(capture, StructureCaptureResult.Status.PERMISSION_DENIED, "permission_revoked_before_commit");
             return;
         }
-        var handle = resolveHandle(capture);
-        if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) {
+        if (!capture.backend.ready(capture.target)) {
             capture.phase = Phase.AWAIT_ACTIVATION;
             return;
         }
-        var access = handle.world();
-        var air = new StructureBlockData(Blocks.AIR.defaultBlockState());
         for (int index = 0; index < capture.positions.size(); index++) {
             var offset = capture.positions.get(index).subtract(capture.origin);
-            var write = access.compareAndSet(offset, air, new StructureBlockData(capture.states.get(index)));
+            var write = capture.backend.writeCell(capture.target, offset, capture.states.get(index));
             if (write == StructureWriteResult.RECOVERY_REQUIRED) {
                 retain(capture, "target_backend_quarantined_during_copy", null);
                 return;
@@ -339,7 +330,8 @@ public final class StructureCaptureCoordinator {
         }
         for (int index = 0; index < capture.positions.size(); index++) {
             var offset = capture.positions.get(index).subtract(capture.origin);
-            if (!access.read(offset).state().equals(capture.states.get(index))) {
+            var current = capture.backend.readCell(capture.target, offset);
+            if (current.isEmpty() || !current.get().equals(capture.states.get(index))) {
                 abort(capture, StructureCaptureResult.Status.TARGET_WRITE_FAILED, "target_verify_mismatch");
                 return;
             }
@@ -400,25 +392,22 @@ public final class StructureCaptureCoordinator {
             return;
         }
         if (capture.copyProgress > 0) {
-            var handle = resolveHandle(capture);
-            if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) {
+            if (resolveHandle(capture) == null || !capture.backend.ready(capture.target)) {
                 if (++capture.waited > ACTIVATION_TIMEOUT_TICKS) {
                     retain(capture, "rollback_target_unavailable", null);
                 }
                 return;
             }
-            var access = handle.world();
             for (int index = 0; index < capture.copyProgress; index++) {
                 var offset = capture.positions.get(index).subtract(capture.origin);
                 var expected = capture.states.get(index);
-                var current = access.read(offset).state();
-                if (current.isAir()) continue;
-                if (!current.equals(expected)) {
+                var current = capture.backend.readCell(capture.target, offset);
+                if (current.isPresent() && current.get().isAir()) continue;
+                if (current.isEmpty() || !current.get().equals(expected)) {
                     retain(capture, "rollback_found_unknown_target_content", null);
                     return;
                 }
-                var cleared = access.compareAndSet(offset, new StructureBlockData(expected),
-                        new StructureBlockData(Blocks.AIR.defaultBlockState()));
+                var cleared = capture.backend.clearCell(capture.target, offset, expected);
                 if (cleared != StructureWriteResult.APPLIED) {
                     retain(capture, "rollback_target_clear_failed:" + cleared.name().toLowerCase(Locale.ROOT), null);
                     return;
@@ -426,18 +415,19 @@ public final class StructureCaptureCoordinator {
             }
             for (int index = 0; index < capture.copyProgress; index++) {
                 var offset = capture.positions.get(index).subtract(capture.origin);
-                if (!access.read(offset).state().isAir()) {
+                var current = capture.backend.readCell(capture.target, offset);
+                if (current.isEmpty() || !current.get().isAir()) {
                     retain(capture, "rollback_target_clear_verify_failed", null);
                     return;
                 }
             }
         }
-        unloadQuietly(capture.target);
+        unloadQuietly(capture.backend, capture.target);
         if (!recycleQuietly(capture.transactionId)) {
             retain(capture, "rollback_journal_recycle_failed", null);
             return;
         }
-        discardEmptyQuietly(capture.target);
+        discardEmptyQuietly(capture.backend, capture.target);
         if (capture.recovery) {
             finishRecovery(capture);
             return;
@@ -449,7 +439,7 @@ public final class StructureCaptureCoordinator {
     }
 
     private void stepSaveTarget(PendingCapture capture) {
-        if (!runtime().save(capture.target)) {
+        if (!capture.backend.save(capture.target)) {
             if (++capture.saveWaited > SAVE_TIMEOUT_TICKS) {
                 retain(capture, "target_save_timeout", null);
             }
@@ -588,9 +578,9 @@ public final class StructureCaptureCoordinator {
         }
     }
 
-    private void unloadQuietly(StructureRef reference) {
+    private void unloadQuietly(CaptureTarget backend, StructureRef reference) {
         try {
-            runtime().unload(reference);
+            backend.deactivate(reference);
         } catch (RuntimeException failure) {
             AcademyCraft.LOGGER.error("Structure transaction could not deactivate its empty target: {}",
                     reference, failure);
@@ -598,9 +588,9 @@ public final class StructureCaptureCoordinator {
     }
 
     /** Capacity hygiene after a confirmed rollback: a failed capture must not burn a permanent slot. */
-    private void discardEmptyQuietly(StructureRef reference) {
+    private void discardEmptyQuietly(CaptureTarget backend, StructureRef reference) {
         try {
-            if (!runtime().discardEmpty(reference)) {
+            if (!backend.releaseEmpty(reference)) {
                 AcademyCraft.LOGGER.warn("Empty capture target slot was not released; capacity remains consumed: {}",
                         reference);
             }
@@ -611,19 +601,12 @@ public final class StructureCaptureCoordinator {
     }
 
     private @Nullable StructureHandle resolveHandle(PendingCapture capture) {
-        var backend = runtime();
-        var handle = backend.resolve(capture.target).orElse(null);
-        if (handle != null || !capture.recovery) return handle;
-        return backend.load(capture.target).orElse(null);
+        return capture.backend.resolve(capture.target, capture.recovery).orElse(null);
     }
 
     private boolean geometryWithinBudget(PendingCapture capture) {
-        var storage = runtime().storageLevel(capture.target);
-        if (storage.isEmpty()) return false;
         try {
-            var geometry = NativeStructurePhysicsGeometry.captureStructure(storage.get());
-            return geometry.nonAirCells() == capture.positions.size()
-                    && geometry.boxes().size() <= NativePhysicsWorld.MAX_BOXES;
+            return capture.backend.verifyCopy(capture.target, capture.positions.size());
         } catch (RuntimeException failure) {
             AcademyCraft.LOGGER.error("Structure capture target geometry was rejected: {}",
                     capture.transactionId, failure);
@@ -647,11 +630,6 @@ public final class StructureCaptureCoordinator {
             if (capture.host.getBlockEntity(position) != null) return false;
         }
         return true;
-    }
-
-    private NativeStructureRuntime runtime() {
-        if (runtime == null) runtime = NativeStructureRuntime.backend(server);
-        return Objects.requireNonNull(runtime, "native runtime");
     }
 
     private @Nullable StructureTransactionJournal journal() {
@@ -695,7 +673,8 @@ public final class StructureCaptureCoordinator {
     }
 
     private void registerRecovery(StructureTransactionJournal.Record record) {
-        if (!NativeStructureRuntime.ID.equals(record.backend())) {
+        var backend = targetFor(server, record.backend());
+        if (backend == null) {
             AcademyCraft.LOGGER.error("Structure transaction record belongs to an unsupported backend: {}",
                     record.backend());
             return;
@@ -725,7 +704,7 @@ public final class StructureCaptureCoordinator {
             return;
         }
         var target = new StructureRef(record.targetStructure(), record.hostDimension(), record.backend(), 0);
-        var capture = new PendingCapture(record, host, record.origin(), target, positions,
+        var capture = new PendingCapture(record, host, record.origin(), target, backend, positions,
                 record.cells(), states, null, true);
         capture.copyProgress = record.stage() == StructureTransactionJournal.Stage.TARGET_ALLOCATED
                 || record.stage() == StructureTransactionJournal.Stage.COPIED ? positions.size() : 0;
@@ -747,6 +726,10 @@ public final class StructureCaptureCoordinator {
         }
         claims.release(record.transactionId());
         AcademyCraft.LOGGER.info("Prepared structure transaction {} rolled back before any copy", record.transactionId());
+    }
+
+    private static @Nullable CaptureTarget targetFor(MinecraftServer server, Identifier backendId) {
+        return NativeCaptureTarget.ID.equals(backendId) ? new NativeCaptureTarget(server) : null;
     }
 
     private static List<BlockState> decodeStates(ServerLevel host, StructureTransactionJournal.Record record) {
@@ -843,6 +826,7 @@ public final class StructureCaptureCoordinator {
         private final ServerLevel host;
         private final BlockPos origin;
         private final StructureRef target;
+        private final CaptureTarget backend;
         private final List<BlockPos> positions;
         private final List<StructureTransactionJournal.Cell> cells;
         private final List<BlockState> states;
@@ -859,13 +843,14 @@ public final class StructureCaptureCoordinator {
         private @Nullable StructureCaptureResult result;
 
         private PendingCapture(StructureTransactionJournal.Record record, ServerLevel host, BlockPos origin,
-                               StructureRef target, List<BlockPos> positions,
+                               StructureRef target, CaptureTarget backend, List<BlockPos> positions,
                                List<StructureTransactionJournal.Cell> cells, List<BlockState> states,
                                @Nullable BiPredicate<ServerLevel, BlockPos> permission, boolean recovery) {
             this.record = record;
             this.host = host;
             this.origin = origin;
             this.target = target;
+            this.backend = backend;
             this.positions = positions;
             this.cells = cells;
             this.states = states;

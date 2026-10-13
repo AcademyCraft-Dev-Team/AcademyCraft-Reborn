@@ -64,7 +64,7 @@
 
 1. **公共捕获事务**：预检选择、权限、内容与几何预算；目标预留、持久化日志、复制校验、源移除、目标提交；每个阶段提供异常及重启恢复证据。先明确普通块范围，BE/计划 tick 不得静默丢弃。**P19 已交付机制与原生后端接入（见下节）；Sable 生产捕获与真实跨 JVM 强杀恢复仍属后续。**
 2. **独立后端可供技能使用**：制品部署、容器容量/回收、活动物理区域跟随与恢复，以及真实玩家碰撞/承载。不能让玩家每四次使用便耗尽永久槽，也不能发布仅在测试 JVM 外部属性下可运行的默认技能。**全部子项已交付：P20 槽位回收、P21 制品部署约定、P22 区域重绑与跟随、P23 真实碰撞与承载（见下节）。**
-3. **双后端捕获接入**：未装 Sable 创建独立结构，兼容混装创建 Sable 结构；未知版本/不可用时给出失败并保留源方块，不降级为旧实体。外部 assembly helper 仍只作测试工具，不能代替生产事务。
+3. **双后端捕获接入**：未装 Sable 创建独立结构，兼容混装创建 Sable 结构；未知版本/不可用时给出失败并保留源方块，不降级为旧实体。外部 assembly helper 仍只作测试工具，不能代替生产事务。**P24 第一步（执行器抽象）已交付；Sable 执行器与烟测待做（见下节）。**
 4. **迁移 `KineticThrow`**：保持区域选择和能力预算；HeldStructure 改为公共引用/租约；抬升、投掷、终止遵守有限力、单位、惯性契约；接触伤害只结算一次，不在世界碰撞时自动变回方块。
 5. **承载验收**：独立和完整混装各测静止、升降、行走、跳跃、边缘、顶墙和旋转，之后测真实双端延迟。旧实体对照测试不能替代这些结果。
 6. 再迁移高速喷流/磁场操作和三类行动节点；矢量改变运动、磁力筛选材料、空气通过受力锚点控制，共用结构身份、质量、资源和释放契约。
@@ -123,6 +123,19 @@
 - 验证（最终修订版）：单元 2558 项（新增 5 项碰撞盒用例：轴对齐判定、独立角点变换、细分预算与覆盖、支撑面语义）与 Sable 11 项零失败/错误/跳过（`build/p23-tests-final.log`）；世界烟测 `run/native-structure-physics-smoke-server-p23-r12` 退出 0，承载证据 `support_rider_standing=true`（脚底 112.0 = 期望表面 112.0）、`support_carried_delta=1.63`、`support_descend_feet=112.0`、`support_carrying_both_directions=true`，真实抓取技能与其余全部阶段通过（`build/p23-world-smoke-r12.log`）；区域两阶段探针 `run/native-structure-physics-regions-20261013-p23-r4` prepare/resume 均 PASSED（含重绑恢复）；事务 gametest r8 通过；`nativePhysicsTest` 20 项通过；`build -DisDev=true` 38 秒、`-DisDev=false` 60 秒通过（`build/p23-build-dev-final.log`、`build/p23-build-release-final.log`）。
 - 未验边界：非轴对齐碰撞是有界细分近似（盒预算 2048，超限时降低细分精度）；承载只对支撑判定容差内的实体生效，未测高速自旋与跳跃/下船继承表面速度等细节；客户端本地玩家碰撞依赖同步视图，未做真实双端键盘操作验证；投影仍不可交互（`isPickable=false`）。
 - 当前构建（含 P19–P23，不含技能迁移）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `2197C2B2211B737ADA5E7B756BEDE0D3540D87D31A7E2E435C3D8791EB096AFB`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `D66097FB72A76F53312FB932998891C13207BAD06677820BDAD5C2352997D932`。未复制到整合包，未操作用户存档。
+
+### P24 第一步：捕获执行器抽象（2026-10-13，进行中）
+
+- 新增 `CaptureTarget`（transaction 包内接口）：`allocate/cellBudget/ready/writeCell/readCell/clearCell/quarantined/deactivate/save/releaseEmpty/resolve(recovery)/verifyCopy/backendId`；新增 `NativeCaptureTarget` 独占全部 `NativeStructureRuntime`/`StructureHandle`/几何预算调用。`StructureCaptureCoordinator` 不再直接接触任何后端类型，恢复路径经 `targetFor(server, record.backend())` 按日志 `Record.backend` 分派（目前仅原生，非原生仍保留记录并报错）。公共 API、状态/明细/日志文本、journal 阶段与保留/回滚语义均未改变。
+- 验证（行为等价）：单元 2558 + Sable 11 零失败（`build/p24a-tests-final.log`）；事务 gametest `run/native-structure-transaction-gametest-r9` 通过（完整提交、拒绝、回滚/前向恢复、容量回收，`All 1 required tests passed`）；`build -DisDev=true/-DisDev=false` 均通过。
+- **Sable 执行器下一步（调研已完成的落地要点）**：
+  - 最小 API：`SubLevelContainer.getContainer/allocateNewSubLevel/addObserver/removeSubLevel(ship, REMOVED)/getSubLevel(UUID)`；`LevelPlot.getCenterBlock/newEmptyChunk/getChunkHolder/getEmbeddedLevelAccessor/toLocal/toGlobal`；`LevelChunk.setBlockState(globalPos, state, flags)`（flags 建议 `SKIP_ON_PLACE|SKIP_BLOCK_ENTITY_SIDEEFFECTS`=768，源移除沿用 818）；`ServerSubLevel.getUserDataTag/setUserDataTag`；`ServerLevelPlot.save()`/`SubLevelSerializer.toData` 为内存检查点，落盘用 `SubLevelHoldingChunkMap.saveAll()`（异常会被吞，需独立观察）。
+  - 硬约束：空船在容器 tick 会被质量失效自动 `destroyAllBlocks`，**分配 + 首格写入必须同一调用链完成**（Sable 执行器 `ready` 恒为真、COPY 与 allocate 同 tick）；优先 `allocateNewSubLevel`（occupancy 驱动），不用 `allocateSubLevel` 直指 plot；预决策回滚用 `removeSubLevel(ship, REMOVED)`（非空壳释放，会清实体/POI/enqueue 删除），提交后未知一律 `RECOVERY_REQUIRED`。
+  - 恢复隔离边界：`fullyLoad` 先通知 observer 再恢复 `user_data`，且无经验证的加载前隔离 hook；重启恢复只做同会话已证明的部分，文档与烟测证据必须如实标注该边界。
+  - 烟测接入：`SableStructureSmoke` 新增 CAPTURE 阶段（COAST 之后），仿 `academySableCompound` 增加开关；断言 `pending→succeeded`、源格 AIR、`StructureSpaces.resolve` 内容逐格一致、journal 回收，并加白名单拒绝负例；运行 `runServerSable/runClientSable` 隔离目录。
+  - `SableStructureTransactions` 若需纳入打包必检，加入 `gradle/sable-compat.gradle` 的 `bridgeEntries` 列表。
+- 未验边界：本步无行为变化，全部沿用既有边界；执行器抽象本身尚无 Sable 实现，Sable 捕获仍返回显式不可用。
+- 当前构建（含 P19–P23 + P24 第一步）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `F56D22BCDEA2CB140475F752E81C3F42F6D97C8E979A3D47923BBB5196DDF7B5`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `018B57F70B1A5C2E4DED9BDF27E12C06784D7A798DF329755E4716E34A639A88`。未复制到整合包，未操作用户存档。
 
 ### P18 最终结果（2026-10-13）
 
