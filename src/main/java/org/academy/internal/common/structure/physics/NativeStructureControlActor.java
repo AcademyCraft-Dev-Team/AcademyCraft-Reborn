@@ -21,7 +21,13 @@ final class NativeStructureControlActor {
         this.host = host;
         this.server = server;
         if (!available()) {
-            throw new IllegalArgumentException("Physics controller must be the exact live registered entity in this host");
+            throw new UnavailableActor();
+        }
+    }
+
+    static final class UnavailableActor extends IllegalArgumentException {
+        private UnavailableActor() {
+            super("Physics controller must be the exact live registered entity in this host");
         }
     }
 

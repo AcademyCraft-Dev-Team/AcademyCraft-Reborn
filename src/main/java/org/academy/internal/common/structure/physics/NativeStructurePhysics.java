@@ -176,6 +176,22 @@ public final class NativeStructurePhysics implements AutoCloseable {
         return regions.values().stream().anyMatch(region -> region.members.containsKey(reference));
     }
 
+    public Optional<StructurePhysicsRegion> activeRegion(ServerLevel host, StructureRef reference) {
+        requireThread();
+        Objects.requireNonNull(host, "host");
+        Objects.requireNonNull(reference, "reference");
+        if (closed || regions.values().stream().anyMatch(region -> region.busy)
+                || host.getServer() != server || server.getLevel(host.dimension()) != host
+                || !reference.dimension().equals(host.dimension().identifier())) return Optional.empty();
+        for (var region : regions.values()) {
+            var member = region.members.get(reference);
+            if (region.host == host && region.status == StructurePhysicsRegion.Status.READY && !region.closing
+                    && !region.busy && member != null && !member.invalidated && member.handle != null
+                    && member.body != null && member.published != null) return Optional.of(region);
+        }
+        return Optional.empty();
+    }
+
     public boolean historyAvailable(StructureRef reference) {
         requireThread();
         return !closed && regions.values().stream().anyMatch(region -> {
@@ -335,6 +351,14 @@ public final class NativeStructurePhysics implements AutoCloseable {
                     ? Optional.empty() : Optional.ofNullable(member.published);
         }
 
+        /** Immutable current collision bounds for internal target-domain checks, never a recapture. */
+        Optional<AABB> localControlBounds(StructureRef reference) {
+            requireThread();
+            var member = members.get(Objects.requireNonNull(reference));
+            return member == null || member.invalidated || member.geometry == null || !member.geometry.stillValid()
+                    ? Optional.empty() : Optional.of(member.geometry.bounds());
+        }
+
         @Override public void setVelocity(StructureRef reference, Vec3 linear, Vec3 angular) {
             var member = controllable(reference);
             member.controls.requireUnleased();
@@ -421,6 +445,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
         }
 
         private final class Lease implements StructurePhysicsLease {
+            private final Region owner = Region.this;
             private final Member member;
             private final NativeStructureControlSlot.Ticket ticket;
 
@@ -471,6 +496,26 @@ public final class NativeStructurePhysics implements AutoCloseable {
                 ticket.close();
                 member.clearTerminalActor();
             }
+        }
+
+        /** Exact-capability lifecycle cleanup only; safe inside a shape callback and never native. */
+        void invalidateTractionLease(StructurePhysicsLease candidate) {
+            requireThread();
+            if (candidate instanceof Lease lease && lease.owner == this
+                    && members.get(lease.member.reference) == lease.member
+                    && lease.member.controls.owns(lease.ticket)) lease.member.invalidateControl();
+        }
+
+        /** Readiness observation for classifying a rejected control call, without catching policy defects. */
+        boolean tractionAvailable(StructureRef reference) {
+            requireThread();
+            var member = members.get(Objects.requireNonNull(reference));
+            return !closed && !closing && regions.values().stream().noneMatch(region -> region.busy)
+                    && status == Status.READY && member != null && member.handle != null
+                    && member.body != null && !member.invalidated && runtime.physicsAvailable(member.handle)
+                    && terrain != null && terrain.stillValid()
+                    && members.values().stream().allMatch(current -> current.geometry != null && current.geometry.stillValid())
+                    && normalTime();
         }
 
         private Member controllable(StructureRef reference) {

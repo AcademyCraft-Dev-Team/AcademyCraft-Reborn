@@ -96,6 +96,16 @@ public final class NativeStructureRuntime implements StructureBackend {
         }
     }
 
+    /** Read-only lookup: a targeting/control query must not create a backend or storage. */
+    public static Optional<NativeStructureRuntime> existing(MinecraftServer server) {
+        Objects.requireNonNull(server, "server");
+        if (!server.isSameThread()) throw new IllegalStateException("Structure access requires the server thread");
+        synchronized (SERVERS) {
+            var runtime = SERVERS.get(server);
+            return runtime == null || runtime.closed || runtime.stopping ? Optional.empty() : Optional.of(runtime);
+        }
+    }
+
     @Override
     public Identifier id() {
         return ID;
@@ -286,6 +296,11 @@ public final class NativeStructureRuntime implements StructureBackend {
         requireRunning();
         if (physicsStepping) throw new IllegalStateException("Cannot open a region during a physics step");
         return physics.open(host, bounds);
+    }
+
+    public Optional<StructurePhysicsRegion> activePhysicsRegion(ServerLevel host, StructureRef reference) {
+        requireThread();
+        return closed || stopping ? Optional.empty() : physics.activeRegion(host, reference);
     }
 
     public Optional<AABB> savedPhysicsRegionBounds(ServerLevel host) {

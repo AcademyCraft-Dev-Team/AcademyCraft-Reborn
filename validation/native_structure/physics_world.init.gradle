@@ -2,6 +2,8 @@ allprojects {
     afterEvaluate {
         def mode = providers.gradleProperty('academyStructurePhysicsSmoke').orNull
         if (!(mode in ['client', 'server'])) throw new GradleException('Choose -PacademyStructurePhysicsSmoke=client or =server')
+        def graspSmoke = providers.gradleProperty('academyStructurePhysicsGraspSmoke').getOrElse('false')
+        if (!(graspSmoke in ['true', 'false'])) throw new GradleException('academyStructurePhysicsGraspSmoke must be true or false')
         def runRoot = rootProject.file('run').canonicalFile
         def directory = rootProject.file(providers.gradleProperty('academyStructurePhysicsSmokeDirectory')
                 .getOrElse("run/native-structure-physics-smoke-${mode}")).canonicalFile
@@ -42,6 +44,7 @@ allprojects {
         neoForge.runs.named(mode == 'client' ? 'clientDev' : 'serverCompat') {
             gameDirectory.set(directory)
             systemProperty 'academy.nativeStructurePhysicsSmoke', 'true'
+            systemProperty 'academy.nativeStructurePhysicsGraspSmoke', graspSmoke
             systemProperty 'academy.nativeStructurePhysicsSmokeMode', mode
             systemProperty 'academy.nativeStructurePhysicsSmokeDirectory', directory.absolutePath
             systemProperty 'academy.nativeStructurePhysicsSmokeRunRoot', runRoot.absolutePath

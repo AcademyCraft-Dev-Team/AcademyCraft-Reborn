@@ -16,6 +16,19 @@ public final class StructurePhysics {
     private StructurePhysics() {}
 
     /**
+     * Finds an existing ready region containing this exact structure reference in this host.
+     * Reads only live ownership; does not initialize a backend/native library, load chunks or
+     * structures, resume saved regions, or attach a structure. Paused/closed members are absent.
+     * Requires the owning server thread. The returned region is not a reservation or permission.
+     */
+    public static Optional<StructurePhysicsRegion> activeRegion(ServerLevel host, StructureRef reference) {
+        Objects.requireNonNull(host, "host");
+        Objects.requireNonNull(reference, "reference");
+        return NativeStructureRuntime.existing(host.getServer())
+                .flatMap(runtime -> runtime.activePhysicsRegion(host, reference));
+    }
+
+    /**
      * Opens a new independent physics region in this live host level, on its owning server thread.
      * Each region axis must have positive finite length of at most 24 blocks. Opening a region
      * does not capture host blocks, attach structures automatically, or provide entity transport.

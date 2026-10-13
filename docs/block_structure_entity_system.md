@@ -1087,6 +1087,8 @@ $physicsManifest = Join-Path (Get-Location) 'build/native-physics/artifacts/acad
 
 ## 第十五批：实体绑定控制租约与生命周期撤销
 
+本批已按用户授权提交为 `1b027ac3`。以下保留当批实现与验收记录。
+
 本批承接第十四批的调用者生命周期缺口，为技能、精密操作程序和非玩家服务端调用者增加同一条实体绑定入口。公开方法为 [StructurePhysicsRegion.acquireEntityControl](D:/mcmodtest/AcademyCraft-Reborn-26.2/src/main/java/org/academy/api/common/structure/StructurePhysicsRegion.java)：`acquireEntityControl(reference, actor, controllerId, initialControl, durationTicks)`，继续返回 [StructurePhysicsLease](D:/mcmodtest/AcademyCraft-Reborn-26.2/src/main/java/org/academy/api/common/structure/StructurePhysicsLease.java)。原有 UUID 标签获取入口保持可用，不隐式绑定任何实体。本节实现及限定验收已完成，不代表整个 P1 或旧技能迁移完成。
 
 ### 实体身份与撤销边界
@@ -1134,3 +1136,39 @@ $physicsManifest = Join-Path (Get-Location) 'build/native-physics/artifacts/acad
 证据索引为 [validation](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p15-validation.json)、[artifacts](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p15-artifacts.json)、[source-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p15-source-manifest.json)与[all-files-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p15-all-files-manifest.json)。[开发 JAR](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/libs/academy-26.2.0-0.0.4-alpha-dev.jar)的 SHA-256 为 `d23ce0cbf36b9acc3c3fbf5674139a9bd34922ef970b57dc7be2eee4e3f2b64c`，[发布 JAR](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/libs/academy-26.2.0-0.0.4-alpha-release.jar)为 `13eea9362175675c51ffd2fec06e0294a298513bcd71d117363ed675ecfdcbf0`。新实体绑定类型、既有公共控制类型与固定 FFM 桥齐全，JAR 不含 DLL/SO/dylib；外部 DLL 与第十四批完全一致，SHA-256 仍为 `c8ab64f663ecb2ca9727ce94f57f9d90fe547a5c77c6b77518ca479f1def2dbd`，原生 ABI 与 manifest v3 不变。
 
 两端沿用 `actions=server_fixture`、`actual_keyboard_actions=false`。三图是本批重拍的既有物理动作，不代表实体绑定 UI 或实际抓取输入；相机玩家仅验证正常绑定入口。客户端仍有既有 Perflib 009 与 OSHI 进程采集 NPE，不能宣称整个日志零异常。本批所有执行阶段均在首轮通过，没有新增失败重跑。后续重跑须使用全新 `*-p15-*` 隔离目录，并联合检查新增实体绑定断言、PASSED、正常保存和退出门禁。真实 TCP 断线/重连、旧技能迁移、Sable 适配、材料与承载、完整异常/网络矩阵仍属后续工作。
+
+## 第十六批：气动牵引接入独立物理结构
+
+本批在已有活动独立刚体上接入现有气动牵引技能，并抽出玩家、程序和非玩家可复用的公共牵引会话。空气操纵的通用效果是：从可信观察选定可见抓点，按当前姿态跟踪固定局部锚点，以有界弹簧阻尼力牵引，失效或取消后保留求解运动并撤销控制。玩家输入、技能等级、CP 与压缩空气消耗留在技能层，公共服务不自动支付资源或授予权限。
+
+范围限于已加载、已有物理区域的结构；不会捕获宿主方块、创建或恢复求解区域、加载区块或替换旧结构结算。已有普通实体与旧快照结构继续走原有牵引路径。目标超出固定区域时明确拒绝并释放，不扩大区域、不传送或直接赋速。材料密度、方向锁定、动能投掷、高速喷流、程序节点事务迁移与 Sable 桥仍属后续工作。
+
+验收将分别记录公共非玩家入口、服务端技能与资源路径、真实客户端输入。本批测试副本可通过现有内存按键配置临时将停止键设为 H 松开，以便输入工具执行真实 G 启动、滚轮调距、H 释放；完成与失败均还原原绑定，不写磁盘配置。该路径不等于默认 G 持续按住实测，默认 G 的按下/松开另验证一次点击，不伪造持续按键证据。
+
+公共入口为 `StructureTraction.tryAcquire(actor, controllerId, hit, settings, permission)`。它按控制者当前眼位与朝向重新验证命中，绑定精确结构运行实例、局部抓点和实体控制租约。每次 `update(targetPosition, targetVelocity)` 重新检查实体、权限、质量、距离、遮挡、区域及宿主边界，成功后续期；失败为终态并释放，不自动抢占或重新获取。权限回调异常保留原异常，同时清理控制。旧会话关闭不能撤销新持有者。许可策略由可信服务器调用方提供，UUID 标签本身不授予权限。
+
+气动牵引使用最大求解质量 32、弹簧系数 120（对应熟练度里程碑提升至 144）、阻尼 36、最大力 1000 和 3 tick 租期；这些是当前求解单位，不是材料密度换算后的千克。技能沿用每 10 个有效控制 tick 的 CP 与压缩空气扣费；支付失败在物理步之前撤销命令。普通实体、宿主方块与原生结构按距离参与选取和遮挡，前景结构占用时不会穿透选择后方物品。重复启动不叠加会话或收费，停止幂等。
+
+目标边界检查使用当前旋转结构的完整 AABB，并检查平移到目标与按目标速度预测 0.05 秒后的位置；区域保留 0.25 格余量。不预测未来角运动，也不消除释放后的惯性，实际越界仍由既有求解区域保护处理。公共 API 可由注册的非玩家实体使用；本批没有修改精密操作节点的事务语义，不能把原实体速度回滚直接套到已发生碰撞的刚体上。
+
+### 第十六批验证记录
+
+专服使用[隔离 r6 世界](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-smoke-server-20261013-p16-r6)，[日志](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p16-world-server-r6.log)记录 572 tick、42 秒、退出 0；[结果](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-smoke-server-20261013-p16-r6/native-structure-physics-server-result.txt)与[退出文件](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-smoke-server-20261013-p16-r6/native-structure-physics-server-exit.txt)确认 PASSED、正常保存、停止事件和线程终止。自动场景通过普通物品优先选取、后方无宿主碰撞物品不抢占已持有结构、重复启停与扣费次数、实际 PD 运动、滚轮共用服务端调距、停止后精确重力步、占用者隔离、遮挡/距离/资源失效撤销。NPC 场景通过权限拒绝与撤销、质量预算、越界终态、权限异常原样传播并清理精确租约、回调移除实体和真实刚体运动。结构控制窗口直接姿态/速度写入均为 0。
+
+客户端使用[隔离 r2 世界](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-smoke-client-20261013-p16-r2)，[日志](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p16-client-r2.log)记录 4068 tick（其中手动窗口 3457 tick）、43 个移动姿态样本、4 分 11 秒和退出 0；[结果](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-smoke-client-20261013-p16-r2/native-structure-physics-client-result.txt)含全部牵引标记。根代理通过 Computer Use 实际点击默认 G，随后在临时 `G_PRESS_H_RELEASE` 绑定下以真实 G 启动、3 个滚轮事件调距、真实 H 释放。滚轮实际为向上 1 次、向下 2 次：向外目标较低，拉近到 2 格后满足释放净空；没有把它写成一次滚轮完成全部检查。结构移动、CP/压缩空气扣费以及释放后下一步仅重力通过。默认 G 持续按住未执行，默认点击仅证明回调与无残留，不推断该点击的网络包到达；完整网络技能路径由后续自定义绑定证明。手动窗口仅临时将空气容量设为 2048，期间没有周期补充，结束恢复容量、原按键绑定与失焦暂停设置。
+
+根代理已实际打开并核对本轮[下落前](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-smoke-client-20261013-p16-r2/screenshots/native-structure-physics-before-79648.png)、[落地后](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-smoke-client-20261013-p16-r2/screenshots/native-structure-physics-landed-79648.png)、[有限力悬停](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-smoke-client-20261013-p16-r2/screenshots/native-structure-physics-controlled-79648.png)三图，投影、接触及悬停正常。这三张自动截图对应既有物理阶段，真实技能输入另由窗口操作、输入观察与服务端物理断言联合证明。自动玩家夹具仍为 EmbeddedChannel，不是实际 TCP 断线/重连专项。
+
+本批保留失败轨迹，没有覆盖失败日志：`compile-r1` 因沙箱不能读取 JBR 的 `java.security`，在编译前退出；`compile-r2` 使用了当前映射不存在的客户端消息方法，改为 `sendSystemMessage` 后 `compile-r3` 通过。专服 r1 在后方物品与调距共用的 SCROLL 阶段会话消失；r2 在移除遮挡后未等待下一物理步重建地形便获取控制，被当前几何有效性门禁正常拒绝；r3 多次相对结构重定位观察者造成累积位移，最后落地前触发真实区域越界保护；r4 固定观察点使用较小 Z 偏移，调距目标太低而未获得释放净空；r5 直接证实后方物品与当前视线段相交，宿主推挤是基于生成位置与原版行为的解释。最终夹具固定初始观察点、等待地形恢复，并将后方物品独立为一完整 tick 的无碰撞/位置稳定/距离断言，再移除物品进行调距；生产边界与遮挡规则没有为测试放宽。
+
+客户端 r1 在真实 G 创建会话后未取得原生结构而失败；窗口观察显示结构偏离准星，首次聚焦/抓取鼠标引起偏移是可能解释，没有作为已证实根因。r2 仅在默认点击结束后重新瞄准一次作为下一场景准备，并要求精确结构控制已激活后才进入持续验证，不合成技能包或自动启动。本次专服 r6 的生产与自动场景代码未因客户端手动分支修正改变，其成功结果按仓库复用规则保留。
+
+最终[基础测试](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p16-test-final.log) 11 秒通过，[原生专项](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p16-native-tests.log) 1 秒通过，Rust 12 项通过。[三 JVM 持久化 r1](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-persistence-20261013-p16-r1) prepare/unavailable/resume 的 PID 为 81744/58164/29344，分别 67/42/23 tick、14/11/10 秒通过；无引擎启动保持检查点，显式恢复运动，瞬时控制与实体绑定不恢复。[双区域 r1](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-regions-20261013-p16-r1) prepare/resume 分别 114/26 tick、16/11 秒通过，逐区控制隔离和独立恢复均通过。两个流程的每个阶段结果与退出文件联合确认正常保存、退出 0、停止事件、线程结束和 stopping 门禁。这些属于既有持久化/区域回归，不代替完整异常恢复或新增牵引存档的专项。
+
+三组 GameTest 的 [query](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p16-query-gametest.log)、[space](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p16-space-gametest.log)、[safety](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p16-safety-gametest.log) 分别 10/12/9 秒通过，每组记录 `All 1 required tests passed`。[开发构建](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p16-build-dev.log) 20 秒、[发布构建](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p16-build-release.log) 24 秒通过。最终 XML 核对基础 2517、编辑器 104、原生 JVM 20 项全部零失败、错误或跳过，Rust 12 项通过；新增纯参数/边界单测 10 项，真实技能与 NPC 行为由上述 Minecraft 场景证明。
+
+[证据收集器](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p16-finalize.py)已核对 16 个源码/测试/验证文件与冻结版本一致、各阶段完整日志/结果/退出记录、人工阅图确认及成品。本批共 18 个相关文件（另 2 个为文档），限定验收完成，用户已确认创建本批本地 Git 提交。索引为 [validation](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p16-validation.json)、[artifacts](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p16-artifacts.json)、[source-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p16-source-manifest.json)、[all-files-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p16-all-files-manifest.json)。逐区重复 checkpoint 和隔离标记完整保存为数组，没有用最后一条覆盖先前区域的证据。
+
+[开发 JAR](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/libs/academy-26.2.0-0.0.4-alpha-dev.jar) SHA-256 为 `62333152e7e52174bdf216f5d70741df454671d2e5dca7687246b98ac1db8bf1`，[发布 JAR](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/libs/academy-26.2.0-0.0.4-alpha-release.jar)为 `35a58568a9fa7f7ffbebf0e4f74ed6a0cb7698cb096c70a2853c1afaf1d3f9a1`。公共牵引与会话类型、实现和固定 FFM 桥齐全；JAR 不含原生二进制。外部 DLL 的 SHA-256 仍为 `c8ab64f663ecb2ca9727ce94f57f9d90fe547a5c77c6b77518ca479f1def2dbd`，原生 ABI 与 manifest v3 不变。日志中的既有 Perflib/OSHI 异常不等于本轮零异常日志。
+
+后续仍需其他技能与精密操作节点迁移、技能驱动的捕获/创建/恢复、材料与承载、Sable 桥、真实多人异常网络矩阵、通用方块/菜单兼容和跨平台原生制品验收。本批通过仅说明气动牵引对已有活动独立结构的限定闭环，不提前宣告整个 P0/P1/P2 或混装完成。

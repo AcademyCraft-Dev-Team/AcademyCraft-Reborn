@@ -55,7 +55,7 @@ public final class NativeStructurePhysicsWorldSmoke {
     private static volatile ClientState clientState = new ClientState("WAITING", List.of(), null, null, "", false, false, null);
     private static volatile String capturedStage = "";
     private static volatile String capturePath = "";
-    private enum Phase { ACTIVATE, BEFORE, FALL, LANDED, CONTROL, LEASE, ENTITY_ARM, ENTITY_CONTROL, ENTITY_CLEANUP, CONTROL_RAW_SOLID, CONTROL_RAW_RESET,
+    private enum Phase { ACTIVATE, BEFORE, FALL, LANDED, CONTROL, LEASE, ENTITY_ARM, ENTITY_CONTROL, ENTITY_CLEANUP, GRASP, GRASP_CLEANUP, CONTROL_RAW_SOLID, CONTROL_RAW_RESET,
         CONTROL_RAW_AIR, CONTROL_RAW_FINISH, HOST_UNSUPPORTED, HOST_RESTORED, TERRAIN_FALL, TERRAIN_LAND,
         LOCAL_ADD, LOCAL_REMOVE, UNSUPPORTED, SUPPORTED_AGAIN, FROZEN, THAWED,
         PAIR_ARM, PAIR, EMPTY, UNLOAD, RELOAD, BOUNDARY, FINISHED }
@@ -72,18 +72,19 @@ public final class NativeStructurePhysicsWorldSmoke {
     private final UUID playerId;
     private final List<Frame> frames = new ArrayList<>();
     private final List<ChunkPos> fixtureTickets = new ArrayList<>();
-    private final StringBuilder evidence = new StringBuilder("actions=server_fixture\nactual_keyboard_actions=false\n");
+    private final StringBuilder evidence = new StringBuilder();
     private StructureHandle a, b;
     private StructurePhysicsRegion region;
     private StructurePhysicsRegion loadedRegion;
     private NativeStructurePhysicsControlSmokeChecks controlChecks;
     private NativeStructurePhysicsLeaseSmokeChecks leaseChecks;
     private NativeStructurePhysicsEntityControlSmokeChecks entityChecks;
+    private NativeStructurePhysicsGraspSmokeChecks graspChecks;
     private StructurePhysicsLease lifecycleLease;
     private AABB bounds;
     private BlockPos base;
     private Phase phase = Phase.ACTIVATE;
-    private int ticks, phaseTicks, stableTicks, exitStatus = 1;
+    private int ticks, phaseTicks, stableTicks, exitStatus = 1, manualTicks;
     private boolean sawGravity, compoundMassVerified, addedLowerFloor, fixtureFreeze, complete, orderlyStop, watching;
     private boolean terrainStaticFramesVerified, hostTerrainUnsupported;
     private long beforeEpoch, beforeContent, beforeTerrain, pausedSteps;
@@ -103,6 +104,10 @@ public final class NativeStructurePhysicsWorldSmoke {
         this.server = server;
         this.playerId = playerId;
         this.role = role;
+        boolean actualInput = "client".equals(role) && Boolean.getBoolean("academy.nativeStructurePhysicsGraspSmoke");
+        evidence.append("actions=").append(actualInput ? "mixed_fixture_and_physical_input" : "server_fixture")
+                .append("\nactual_keyboard_actions=").append(actualInput)
+                .append("\nautomatic_physics_phases_keyboard_actions=false\n");
         directory = verifyDirectory(server, role);
         host = server.overworld();
         runtime = NativeStructureRuntime.backend(server);
@@ -181,8 +186,11 @@ public final class NativeStructurePhysicsWorldSmoke {
     }
 
     private void advance() {
-        require(++ticks < 2800, "Structure physics smoke exceeded its total deadline at " + phase);
-        require(++phaseTicks < 650, "Structure physics smoke phase timed out: " + phase + diagnostic());
+        ticks++; phaseTicks++;
+        boolean manual = graspChecks != null && graspChecks.manualWindow();
+        if (manual) manualTicks++;
+        require(ticks - manualTicks < 3500, "Structure physics smoke exceeded its automatic deadline at " + phase);
+        require(manual || phaseTicks < (phase == Phase.GRASP ? 750 : 650), "Structure physics smoke phase timed out: " + phase + diagnostic());
         if (playerId != null) {
             var player = server.getPlayerList().getPlayer(playerId);
             require(player != null && player.level() == host, "Camera player left its host world");
@@ -293,9 +301,23 @@ public final class NativeStructurePhysicsWorldSmoke {
                 require(region.motion(b.reference()).isEmpty()
                                 && NativeStructurePhysicsGeometry.captureStructure(storage(b)).nonAirCells() == 0,
                         "Entity-control companion did not return to its original empty detached state");
-                lifecycleLease = NativeStructurePhysicsLeaseSmokeChecks.armAtCurrentCom(region, a);
-                replaceControlSection(CELL, Blocks.STONE.defaultBlockState(), Blocks.COBBLESTONE.defaultBlockState());
-                next(Phase.CONTROL_RAW_SOLID);
+                if (Boolean.getBoolean("academy.nativeStructurePhysicsGraspSmoke")) {
+                    graspChecks = new NativeStructurePhysicsGraspSmokeChecks(host, region, a, LOCAL_CENTER,
+                            () -> minY(a), base.getY() + 1,
+                            playerId == null ? null : server.getPlayerList().getPlayer(playerId), directory, evidence);
+                    next(Phase.GRASP);
+                    return;
+                }
+                beginRawControlChecks();
+            }
+            case GRASP -> {
+                if (!graspChecks.advance()) return;
+                graspChecks.close(); graspChecks = null;
+                if (playerId != null) positionCamera(server.getPlayerList().getPlayer(playerId));
+                next(Phase.GRASP_CLEANUP);
+            }
+            case GRASP_CLEANUP -> {
+                beginRawControlChecks();
             }
             case CONTROL_RAW_SOLID -> {
                 require(region.control(a.reference()).isEmpty(), "Same-shape raw section content change retained the old control");
@@ -602,6 +624,12 @@ public final class NativeStructurePhysicsWorldSmoke {
         evidence.append("attached_set_pose_rejected=true\ninvalid_velocity_rejected=true\nrejected_controls_preserve_region=true\n");
     }
 
+    private void beginRawControlChecks() {
+        lifecycleLease = NativeStructurePhysicsLeaseSmokeChecks.armAtCurrentCom(region, a);
+        replaceControlSection(CELL, Blocks.STONE.defaultBlockState(), Blocks.COBBLESTONE.defaultBlockState());
+        next(Phase.CONTROL_RAW_SOLID);
+    }
+
     private void preparePair() {
         var detachedLease = NativeStructurePhysicsLeaseSmokeChecks.armAtCurrentCom(region, a);
         require(region.detach(a.reference()), "Could not detach compound for the next fixture");
@@ -638,7 +666,10 @@ public final class NativeStructurePhysicsWorldSmoke {
     }
 
     private NativeStructurePhysics.Diagnostics diagnostics() { return ((NativeStructurePhysics.Region) region).diagnostics(); }
-    private String diagnostic() { return region == null ? " (not opened)" : " " + region.status() + ": " + region.diagnostic(); }
+    private String diagnostic() {
+        return (region == null ? " (not opened)" : " " + region.status() + ": " + region.diagnostic())
+                + (graspChecks == null ? "" : " grasp=" + graspChecks.diagnostic());
+    }
     private Vec3 center(StructureHandle handle) { return handle.pose().localToWorldPoint(LOCAL_CENTER); }
     private ServerLevel storage(StructureHandle handle) { return runtime.storageLevel(handle.reference()).orElseThrow(); }
 
@@ -753,6 +784,7 @@ public final class NativeStructurePhysicsWorldSmoke {
             failure = error.toString();
             AcademyCraft.LOGGER.error("NATIVE_STRUCTURE_PHYSICS_WORLD_SMOKE_FAILED role={} phase={}", role, phase, error);
             try { if (entityChecks != null) entityChecks.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
+            try { if (graspChecks != null) graspChecks.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
             try { if (region != null) region.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
             try { if (loadedRegion != null) loadedRegion.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
             try { restoreControlSection(); } catch (Throwable restoring) { error.addSuppressed(restoring); }
@@ -795,6 +827,7 @@ public final class NativeStructurePhysicsWorldSmoke {
         if (scenario != null && scenario.server == event.getServer()) {
             scenario.orderlyStop = true;
             if (scenario.entityChecks != null) scenario.entityChecks.close();
+            if (scenario.graspChecks != null) scenario.graspChecks.close();
             scenario.restoreControlSection();
             scenario.restoreHostTerrainProbe();
             scenario.releaseFixtureFreeze();

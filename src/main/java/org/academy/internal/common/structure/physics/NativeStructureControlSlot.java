@@ -16,6 +16,10 @@ final class NativeStructureControlSlot {
         return Optional.ofNullable(control);
     }
 
+    boolean owns(Ticket candidate) {
+        return lease == candidate && candidate.state() == StructurePhysicsLease.State.ACTIVE;
+    }
+
     void setUnleased(StructurePhysicsControl replacement) {
         Objects.requireNonNull(replacement, "control");
         requireUnleased();

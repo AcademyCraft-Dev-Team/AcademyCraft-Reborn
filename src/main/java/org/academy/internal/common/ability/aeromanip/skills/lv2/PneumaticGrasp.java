@@ -2,9 +2,7 @@ package org.academy.internal.common.ability.aeromanip.skills.lv2;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.List;
-import java.util.Map;
-import java.util.WeakHashMap;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceKey;
@@ -21,6 +19,8 @@ import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -38,6 +38,11 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.structure.BlockStructure;
+import org.academy.api.common.structure.StructureHit;
+import org.academy.api.common.structure.StructureQueries;
+import org.academy.api.common.structure.StructureRef;
+import org.academy.api.common.structure.StructureTraction;
+import org.academy.api.common.structure.StructureTractionSession;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -60,6 +65,9 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.WeakHashMap;
 
 public final class PneumaticGrasp extends Skill {
@@ -155,30 +163,73 @@ public final class PneumaticGrasp extends Skill {
 
         @SubscribePacket
         public static void handle(StartPacket packet) {
-            var player = packet.getPacketListener().getPlayer();
-            if (ACTIVE.containsKey(player) || !Skills.PNEUMATIC_GRASP.get().isEnabled(player)) return;
+            start(packet.getPacketListener().getPlayer());
+        }
+
+        /** Same server-owned entry point used by the skill packet; it grants no extra capability. */
+        public static boolean start(ServerPlayer player) {
+            requireThread(player);
+            if (ACTIVE.containsKey(player) || !Skills.PNEUMATIC_GRASP.get().isEnabled(player)) return false;
             var context = new Context(player);
             ACTIVE.put(player, context);
             AbilitySystemServer.registerContext(context);
             Skills.PNEUMATIC_GRASP.get().reportTrigger(player);
+            return true;
         }
 
         @SubscribePacket
         public static void handle(StopPacket packet) {
-            var context = ACTIVE.get(packet.getPacketListener().getPlayer());
+            stop(packet.getPacketListener().getPlayer());
+        }
+
+        public static void stop(ServerPlayer player) {
+            requireThread(player);
+            var context = ACTIVE.get(player);
             if (context != null) context.end();
         }
 
         @SubscribePacket
         public static void handle(AdjustDistancePacket packet) {
-            var context = ACTIVE.get(packet.getPacketListener().getPlayer());
-            if (context != null) context.adjustDistance(packet.steps());
+            adjustDistance(packet.getPacketListener().getPlayer(), packet.steps());
+        }
+
+        public static void adjustDistance(ServerPlayer player, int steps) {
+            requireThread(player);
+            var context = ACTIVE.get(player);
+            if (context != null) context.adjustDistance(steps);
+        }
+
+        public enum TargetKind { NONE, ENTITY, STRUCTURE }
+
+        /** A server-thread observation for integrations and validation; it cannot drive the skill. */
+        public record Diagnostic(TargetKind targetKind, StructureRef nativeRef, Vec3 localAnchor,
+                                 int controlActiveTicks, double holdDistance, boolean nativeControlActive) {}
+
+        public static Optional<Diagnostic> diagnostic(ServerPlayer player) {
+            requireThread(player);
+            var context = ACTIVE.get(player);
+            if (context == null || context.ended) return Optional.empty();
+            var structure = context.structureControl;
+            return Optional.of(new Diagnostic(structure != null ? TargetKind.STRUCTURE
+                    : context.controlledTarget != null ? TargetKind.ENTITY : TargetKind.NONE,
+                    structure == null ? null : structure.reference(), structure == null ? null : structure.localPoint(),
+                    context.activeTicks, context.holdDistance,
+                    structure != null && structure.status() == StructureTraction.Status.ACTIVE));
+        }
+
+        private static void requireThread(ServerPlayer player) {
+            Objects.requireNonNull(player, "player");
+            if (!player.level().getServer().isSameThread()) {
+                throw new IllegalStateException("Pneumatic Grasp requires the owning server thread");
+            }
         }
 
         private static final class Context extends ServerContext {
             private final ResourceKey<Level> dimension;
             private final AeromanipResourceManager.UsageLease usageLease;
+            private final UUID controllerId = UUID.randomUUID();
             private Entity controlledTarget;
+            private StructureTractionSession structureControl;
             private double controlledSpeedCap;
             private double holdDistance = DEFAULT_CONTROL_DISTANCE;
             private int activeTicks;
@@ -200,6 +251,18 @@ public final class PneumaticGrasp extends Skill {
 
             @SubscribeEvent
             public void onTick(ServerTickEvent.Pre event) {
+                if (event.getServer() != player.level().getServer()) return;
+                try {
+                    tick();
+                } catch (RuntimeException | Error failure) {
+                    // Unknown failures must remain visible, but must not leave a held structure owned.
+                    try { end(); }
+                    catch (RuntimeException | Error cleanup) { failure.addSuppressed(cleanup); }
+                    throw failure;
+                }
+            }
+
+            private void tick() {
                 var skill = Skills.PNEUMATIC_GRASP.get();
                 if (ended || player.hasDisconnected() || !player.isAlive()
                         || !player.level().dimension().equals(dimension) || !skill.isEnabled(player)) {
@@ -209,29 +272,44 @@ public final class PneumaticGrasp extends Skill {
                 skill.reportActivity(player, false);
                 var eye = player.getEyePosition();
                 var look = player.getLookAngle().normalize();
-                if (look.lengthSqr() <= 1.0e-8) return;
+                if (look.lengthSqr() <= 1.0e-8) {
+                    if (structureControl != null) end();
+                    return;
+                }
                 var skillLevel = Math.clamp(skill.getLevel(player), 0, 2);
                 var milestone = skill.getEffectiveProficiencyMilestone(player);
                 var range = 16.0 + skillLevel * 4.0 + (milestone >= 1 ? 8.0 : 0.0);
+                if (structureControl != null) {
+                    moveStructure(eye, look, skillLevel, range);
+                    return;
+                }
                 if (!isValidTarget(controlledTarget, skillLevel, range)) {
-                    controlledTarget = findTarget(eye, look, skillLevel, range);
+                    controlledTarget = null;
+                    var selected = findTarget(eye, look, skillLevel, range);
+                    if (selected != null && selected.structureHit() != null) {
+                        var hit = selected.structureHit();
+                        var acquired = StructureTraction.tryAcquire(player, controllerId, hit,
+                                new StructureTraction.Settings(range, 32.0,
+                                        milestone >= 2 ? 144.0 : 120.0, 36.0, 1000.0, 3),
+                                (actor, handle) -> actor == player && !player.isSpectator()
+                                        && player.getAbilities().mayBuild && player.level().mayInteract(player,
+                                        BlockPos.containing(handle.pose().localToWorldPoint(hit.localPoint()))));
+                        if (acquired.status() != StructureTraction.Status.ACTIVE) {
+                            // Occupied or unavailable foreground structures still occlude later targets.
+                            end();
+                            return;
+                        }
+                        structureControl = acquired.session().orElseThrow();
+                        moveStructure(eye, look, skillLevel, range);
+                        return;
+                    }
+                    controlledTarget = selected == null ? null : selected.entity();
                     controlledSpeedCap = controlledTarget instanceof Projectile
                             ? Math.max(0.1, controlledTarget.getDeltaMovement().length())
                             : 0.0;
                 }
                 if (controlledTarget == null) return;
-                activeTicks++;
-                if (activeTicks % 10 == 0 && !skill.executeContinuousWithResource(
-                        player,
-                        _ -> 10.0f,
-                        _ -> Math.max(0.0f, AeromanipConfig.skillFloat(
-                                player, SkillNames.PNEUMATIC_GRASP,
-                                "compressedAirPerInterval", 2.0f)),
-                        (_, _) -> { },
-                        true)) {
-                    end();
-                    return;
-                }
+                if (!consumeControlTick(skill)) return;
                 if (milestone >= 3 && controlledTarget instanceof LivingEntity living
                         && living.onGround() && activeTicks % 5 == 0
                         && !skill.executeContinuousWithResource(
@@ -249,28 +327,110 @@ public final class PneumaticGrasp extends Skill {
                 skill.reportActivity(player, true);
             }
 
-            private Entity findTarget(Vec3 eye, Vec3 look,
-                                      int skillLevel, double range) {
+            private boolean consumeControlTick(PneumaticGrasp skill) {
+                activeTicks++;
+                if (activeTicks % 10 != 0 || skill.executeContinuousWithResource(
+                        player, _ -> 10.0f,
+                        _ -> Math.max(0.0f, AeromanipConfig.skillFloat(
+                                player, SkillNames.PNEUMATIC_GRASP, "compressedAirPerInterval", 2.0f)),
+                        (_, _) -> { }, true)) return true;
+                end();
+                return false;
+            }
+
+            private record Target(Entity entity, StructureHit structureHit) {}
+
+            private Target findTarget(Vec3 eye, Vec3 look, int skillLevel, double range) {
                 var end = eye.add(look.scale(range));
+                // Vanilla clip may read chunks; targeting must not activate an unloaded host corridor.
+                if (!rayLoaded(eye, end)) return null;
                 var blockHit = player.level().clip(new ClipContext(
                         eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
                 var blockDistance = blockHit.getType() == HitResult.Type.MISS
                         ? range * range
                         : eye.distanceToSqr(blockHit.getLocation());
-                var hit = ProjectileUtil.getEntityHitResult(
-                        player.level(), player, eye, end,
-                        player.getBoundingBox().expandTowards(look.scale(range)).inflate(1.25),
-                        entity -> isControllable(entity, skillLevel),
-                        0.8f);
-                if (hit == null || eye.distanceToSqr(hit.getLocation()) >= blockDistance) return null;
-                return hit.getEntity();
+                var entityHit = entityHit(eye, end, skillLevel);
+                double entityDistance = entityHit == null ? Double.POSITIVE_INFINITY
+                        : eye.distanceToSqr(entityHit.getLocation());
+                var structureHit = StructureQueries.raycast(player.level(), eye, end).orElse(null);
+                double structureDistance = structureHit == null ? Double.POSITIVE_INFINITY
+                        : eye.distanceToSqr(structureHit.worldPoint());
+                if (structureHit != null && structureDistance <= entityDistance && structureDistance < blockDistance) {
+                    return new Target(null, structureHit);
+                }
+                if (entityHit == null || entityDistance >= blockDistance || entityDistance >= structureDistance) return null;
+                return new Target(entityHit.getEntity(), null);
+            }
+
+            private EntityHitResult entityHit(Vec3 eye, Vec3 end, int skillLevel) {
+                return ProjectileUtil.getEntityHitResult(player.level(), player, eye, end,
+                        new AABB(eye, end).inflate(1.25), entity -> isControllable(entity, skillLevel), 0.8f);
             }
 
             private boolean isValidTarget(Entity target, int skillLevel, double range) {
                 return isControllable(target, skillLevel)
                         && target.level() == player.level()
                         && target.distanceToSqr(player) <= (range + 2.0) * (range + 2.0)
-                        && player.hasLineOfSight(target);
+                        && rayLoaded(player.getEyePosition(), target.getEyePosition())
+                        && player.hasLineOfSight(target)
+                        && !structureOccludes(player.getEyePosition(), target.getBoundingBox().getCenter());
+            }
+
+            private boolean rayLoaded(Vec3 from, Vec3 to) {
+                int minX = Mth.floor(Math.min(from.x, to.x)) >> 4;
+                int maxX = Mth.floor(Math.max(from.x, to.x)) >> 4;
+                int minZ = Mth.floor(Math.min(from.z, to.z)) >> 4;
+                int maxZ = Mth.floor(Math.max(from.z, to.z)) >> 4;
+                for (int x = minX; x <= maxX; x++) {
+                    for (int z = minZ; z <= maxZ; z++) {
+                        if (!player.level().hasChunk(x, z)) return false;
+                    }
+                }
+                return true;
+            }
+
+            private boolean structureOccludes(Vec3 eye, Vec3 point) {
+                double distance = eye.distanceToSqr(point);
+                if (distance < 1.0e-12 || distance > StructureQueries.MAX_RAY_LENGTH * StructureQueries.MAX_RAY_LENGTH) {
+                    return distance >= 1.0e-12;
+                }
+                return StructureQueries.raycast(player.level(), eye, point)
+                        .filter(hit -> eye.distanceToSqr(hit.worldPoint()) < distance).isPresent();
+            }
+
+            private void moveStructure(Vec3 eye, Vec3 look, int skillLevel, double range) {
+                if (structureControl.status() != StructureTraction.Status.ACTIVE) {
+                    end();
+                    return;
+                }
+                var anchor = structureControl.worldPoint();
+                double distance = eye.distanceToSqr(anchor);
+                var obstruction = distance < 1.0e-12 ? null : entityHit(eye, anchor, skillLevel);
+                if (distance > range * range || obstruction != null
+                        && eye.distanceToSqr(obstruction.getLocation()) < distance - 1.0e-8) {
+                    end();
+                    return;
+                }
+                var destination = player.isShiftKeyDown()
+                        ? anchor.add(anchor.subtract(eye).normalize().scale(4.0))
+                        : eye.add(look.scale(holdDistance));
+                if (structureControl.update(destination, Vec3.ZERO) != StructureTraction.Status.ACTIVE) {
+                    end();
+                    return;
+                }
+                var skill = Skills.PNEUMATIC_GRASP.get();
+                // Commands only reach the later physics tick. Failed payment closes them before that step.
+                if (!consumeControlTick(skill)) return;
+                spawnStructureEffect(eye, structureControl.worldPoint(), structureControl.targetPosition());
+                skill.reportActivity(player, true);
+            }
+
+            private void spawnStructureEffect(Vec3 eye, Vec3 anchor, Vec3 destination) {
+                if (activeTicks % 6 != 0) return;
+                var beam = anchor.subtract(eye);
+                if (beam.lengthSqr() > 1.0e-8) AeromanipVfx.stream(player.level(), eye, beam, beam.length());
+                AeromanipVfx.vortex(player.level(), anchor, 0.4);
+                AeromanipVfx.burst(player.level(), destination, 0.32);
             }
 
             private boolean isControllable(Entity entity, int skillLevel) {
@@ -352,8 +512,16 @@ public final class PneumaticGrasp extends Skill {
             protected void onUnregistered() {
                 controlledTarget = null;
                 controlledSpeedCap = 0.0;
-                usageLease.close();
-                ACTIVE.remove(player, this);
+                try {
+                    if (structureControl != null) {
+                        var released = structureControl;
+                        structureControl = null;
+                        released.close();
+                    }
+                } finally {
+                    try { usageLease.close(); }
+                    finally { ACTIVE.remove(player, this); }
+                }
             }
         }
     }
