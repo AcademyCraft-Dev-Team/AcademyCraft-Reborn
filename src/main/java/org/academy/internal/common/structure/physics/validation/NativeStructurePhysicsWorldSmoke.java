@@ -55,7 +55,7 @@ public final class NativeStructurePhysicsWorldSmoke {
     private static volatile ClientState clientState = new ClientState("WAITING", List.of(), null, null, "", false, false, null);
     private static volatile String capturedStage = "";
     private static volatile String capturePath = "";
-    private enum Phase { ACTIVATE, BEFORE, FALL, LANDED, CONTROL, CONTROL_RAW_SOLID, CONTROL_RAW_RESET,
+    private enum Phase { ACTIVATE, BEFORE, FALL, LANDED, CONTROL, LEASE, CONTROL_RAW_SOLID, CONTROL_RAW_RESET,
         CONTROL_RAW_AIR, CONTROL_RAW_FINISH, HOST_UNSUPPORTED, HOST_RESTORED, TERRAIN_FALL, TERRAIN_LAND,
         LOCAL_ADD, LOCAL_REMOVE, UNSUPPORTED, SUPPORTED_AGAIN, FROZEN, THAWED,
         PAIR_ARM, PAIR, EMPTY, UNLOAD, RELOAD, BOUNDARY, FINISHED }
@@ -77,6 +77,8 @@ public final class NativeStructurePhysicsWorldSmoke {
     private StructurePhysicsRegion region;
     private StructurePhysicsRegion loadedRegion;
     private NativeStructurePhysicsControlSmokeChecks controlChecks;
+    private NativeStructurePhysicsLeaseSmokeChecks leaseChecks;
+    private StructurePhysicsLease lifecycleLease;
     private AABB bounds;
     private BlockPos base;
     private Phase phase = Phase.ACTIVATE;
@@ -262,40 +264,47 @@ public final class NativeStructurePhysicsWorldSmoke {
                 boolean captured = captureReady("controlled");
                 if (captured && controlChecks.capture().equals("controlled")) recordCapture("controlled");
                 if (!controlChecks.advance(captured)) return;
-                NativeStructurePhysicsControlSmokeChecks.armAtCurrentCom(region, a);
+                leaseChecks = new NativeStructurePhysicsLeaseSmokeChecks(region, a, () -> minY(a), base.getY() + 1, evidence);
+                next(Phase.LEASE);
+            }
+            case LEASE -> {
+                if (!leaseChecks.advance()) return;
+                lifecycleLease = NativeStructurePhysicsLeaseSmokeChecks.armAtCurrentCom(region, a);
                 replaceControlSection(CELL, Blocks.STONE.defaultBlockState(), Blocks.COBBLESTONE.defaultBlockState());
                 next(Phase.CONTROL_RAW_SOLID);
             }
             case CONTROL_RAW_SOLID -> {
                 require(region.control(a.reference()).isEmpty(), "Same-shape raw section content change retained the old control");
+                NativeStructurePhysicsLeaseSmokeChecks.assertInvalidated(lifecycleLease);
                 require(NativeStructurePhysicsGeometry.captureStructure(storage(a)).sourceRevision() == controlRawRevision,
                         "Raw solid mutation unexpectedly passed through the ordinary storage revision hook");
                 restoreControlSection();
-                evidence.append("control_direct_same_shape_cleared=true\n");
+                evidence.append("control_direct_same_shape_cleared=true\nlease_direct_same_shape_invalidated=true\n");
                 next(Phase.CONTROL_RAW_RESET);
             }
             case CONTROL_RAW_RESET -> {
                 require(region.control(a.reference()).isEmpty(), "Raw content restoration resurrected an old control");
-                NativeStructurePhysicsControlSmokeChecks.armAtCurrentCom(region, a);
+                lifecycleLease = NativeStructurePhysicsLeaseSmokeChecks.armAtCurrentCom(region, a);
                 replaceControlSection(ADDED, Blocks.AIR.defaultBlockState(), Blocks.LEVER.defaultBlockState());
                 next(Phase.CONTROL_RAW_AIR);
             }
             case CONTROL_RAW_AIR -> {
                 require(region.control(a.reference()).isEmpty(), "Raw AIR-to-empty-collision content change retained the old control");
+                NativeStructurePhysicsLeaseSmokeChecks.assertInvalidated(lifecycleLease);
                 var geometry = NativeStructurePhysicsGeometry.captureStructure(storage(a));
                 require(geometry.sourceRevision() == controlRawRevision && geometry.nonAirCells() == 4,
                         "Raw AIR-to-LEVER fixture did not preserve revision and change actual occupied-cell count");
                 require(storage(a).getBlockState(ADDED).getCollisionShape(storage(a), ADDED).isEmpty(),
                         "Raw LEVER fixture unexpectedly has collision geometry");
                 restoreControlSection();
-                evidence.append("control_direct_air_noncolliding_cleared=true\n");
+                evidence.append("control_direct_air_noncolliding_cleared=true\nlease_direct_air_noncolliding_invalidated=true\n");
                 next(Phase.CONTROL_RAW_FINISH);
             }
             case CONTROL_RAW_FINISH -> {
                 require(region.control(a.reference()).isEmpty() && controlRawPos == null
                                 && NativeStructurePhysicsGeometry.captureStructure(storage(a)).nonAirCells() == 3,
                         "Raw control checks did not restore the original three-cell fixture");
-                NativeStructurePhysicsControlSmokeChecks.armAtCurrentCom(region, a);
+                lifecycleLease = NativeStructurePhysicsLeaseSmokeChecks.armAtCurrentCom(region, a);
                 frozenPose = a.pose(); pausedSteps = diagnostics().steps();
                 require(host.getBlockState(terrainProbePos).isAir()
                                 && host.setBlock(terrainProbePos, Blocks.COBWEB.defaultBlockState(), FLAGS),
@@ -309,6 +318,7 @@ public final class NativeStructurePhysicsWorldSmoke {
                 require(diagnostics().steps() == pausedSteps && samePose(a.pose(), frozenPose),
                         "Dirty unsupported host terrain advanced or published a stale-collider step");
                 require(region.control(a.reference()).isEmpty(), "Host geometry pause retained an active controller");
+                NativeStructurePhysicsLeaseSmokeChecks.assertInvalidated(lifecycleLease);
                 if (phaseTicks < 5) return;
                 restoreHostTerrainProbe();
                 evidence.append("terrain_cache_unsupported_host_paused=true\nterrain_cache_no_stale_fallback=true\nhost_pause_ticks=").append(phaseTicks).append('\n');
@@ -318,7 +328,7 @@ public final class NativeStructurePhysicsWorldSmoke {
                 require(diagnostics().steps() > pausedSteps && region.motion(a.reference()).isPresent(),
                         "Restoring supported host terrain did not resume physics");
                 require(region.control(a.reference()).isEmpty(), "Host recovery resurrected an old controller");
-                evidence.append("terrain_cache_supported_host_resumed=true\ncontrol_host_pause_cleared=true\n");
+                evidence.append("terrain_cache_supported_host_resumed=true\ncontrol_host_pause_cleared=true\nlease_host_pause_invalidated=true\n");
                 beforeTerrain = diagnostics().terrainEpoch();
                 frozenPose = a.pose();
                 floor(base.getY(), false);
@@ -340,7 +350,7 @@ public final class NativeStructurePhysicsWorldSmoke {
                         .append(diagnostics().terrainEpoch()).append('\n');
                 var motion = region.motion(a.reference()).orElseThrow();
                 beforeEpoch = motion.geometryEpoch(); beforeContent = motion.contentRevision(); beforeMass = motion.mass();
-                NativeStructurePhysicsControlSmokeChecks.armAtCurrentCom(region, a);
+                lifecycleLease = NativeStructurePhysicsLeaseSmokeChecks.armAtCurrentCom(region, a);
                 put(a, ADDED, Blocks.STONE.defaultBlockState());
                 next(Phase.LOCAL_ADD);
             }
@@ -351,8 +361,9 @@ public final class NativeStructurePhysicsWorldSmoke {
                 require(NativeStructurePhysicsGeometry.captureStructure(storage(a)).nonAirCells() == 4,
                         "Added storage cell is missing from extraction");
                 require(region.control(a.reference()).isEmpty(), "Adding local geometry retained its old controller");
+                NativeStructurePhysicsLeaseSmokeChecks.assertInvalidated(lifecycleLease);
                 beforeEpoch = motion.geometryEpoch(); beforeContent = motion.contentRevision();
-                NativeStructurePhysicsControlSmokeChecks.armAtCurrentCom(region, a);
+                lifecycleLease = NativeStructurePhysicsLeaseSmokeChecks.armAtCurrentCom(region, a);
                 put(a, ADDED, Blocks.AIR.defaultBlockState());
                 next(Phase.LOCAL_REMOVE);
             }
@@ -361,10 +372,11 @@ public final class NativeStructurePhysicsWorldSmoke {
                 if (motion.contentRevision() <= beforeContent || motion.geometryEpoch() <= beforeEpoch) return;
                 require(Math.abs(motion.mass() - beforeMass) < 1.0E-6, "Removing storage cell left stale rigid mass");
                 require(region.control(a.reference()).isEmpty(), "Removing local geometry retained its old controller");
-                evidence.append("control_content_change_cleared=true\n");
+                NativeStructurePhysicsLeaseSmokeChecks.assertInvalidated(lifecycleLease);
+                evidence.append("control_content_change_cleared=true\nlease_content_change_invalidated=true\n");
                 evidence.append("live_content_add_remove=true\ngeometry_epoch=").append(motion.geometryEpoch()).append('\n');
                 verifyRejectedControls();
-                NativeStructurePhysicsControlSmokeChecks.armAtCurrentCom(region, a);
+                lifecycleLease = NativeStructurePhysicsLeaseSmokeChecks.armAtCurrentCom(region, a);
                 frozenPose = a.pose(); pausedSteps = diagnostics().steps();
                 put(a, ADDED, Blocks.COBWEB.defaultBlockState());
                 next(Phase.UNSUPPORTED);
@@ -376,6 +388,7 @@ public final class NativeStructurePhysicsWorldSmoke {
                 require(diagnostics().steps() == pausedSteps && samePose(a.pose(), frozenPose),
                         "Unsupported geometry advanced or published motion");
                 require(region.control(a.reference()).isEmpty(), "Unsupported geometry pause retained its controller");
+                NativeStructurePhysicsLeaseSmokeChecks.assertInvalidated(lifecycleLease);
                 if (phaseTicks < 10) return;
                 evidence.append("unsupported_geometry_paused=true\nunsupported_pause_ticks=").append(phaseTicks).append('\n');
                 put(a, ADDED, Blocks.AIR.defaultBlockState());
@@ -388,7 +401,7 @@ public final class NativeStructurePhysicsWorldSmoke {
                         "Freeze fixture requires an initially running server");
                 evidence.append("supported_geometry_resumed=true\n");
                 require(region.control(a.reference()).isEmpty(), "Geometry restoration resurrected its old controller");
-                NativeStructurePhysicsControlSmokeChecks.armAtCurrentCom(region, a);
+                lifecycleLease = NativeStructurePhysicsLeaseSmokeChecks.armAtCurrentCom(region, a);
                 frozenPose = a.pose(); pausedSteps = diagnostics().steps();
                 fixtureFreeze = true;
                 server.tickRateManager().setFrozen(true);
@@ -403,6 +416,7 @@ public final class NativeStructurePhysicsWorldSmoke {
                 require(diagnostics().steps() == pausedSteps && samePose(a.pose(), frozenPose),
                         "Frozen world advanced or published physics motion");
                 require(region.control(a.reference()).isEmpty(), "Vanilla freeze retained a controller across the pause");
+                NativeStructurePhysicsLeaseSmokeChecks.assertInvalidated(lifecycleLease);
                 if (phaseTicks < 10) return;
                 evidence.append("vanilla_freeze_paused=true\nfreeze_pause_ticks=").append(phaseTicks).append('\n');
                 releaseFixtureFreeze();
@@ -413,7 +427,7 @@ public final class NativeStructurePhysicsWorldSmoke {
                                 && diagnostics().steps() > pausedSteps,
                         "Unfreezing the world did not resume the same physics region");
                 require(region.control(a.reference()).isEmpty(), "Unfreezing resurrected an old controller");
-                evidence.append("vanilla_freeze_resumed=true\ncontrol_freeze_resume_cleared=true\n");
+                evidence.append("vanilla_freeze_resumed=true\ncontrol_freeze_resume_cleared=true\nlease_freeze_invalidated=true\n");
                 preparePair();
                 next(Phase.PAIR_ARM);
             }
@@ -436,7 +450,7 @@ public final class NativeStructurePhysicsWorldSmoke {
                 require(right.x - left.x < 1.25, "Dynamic pair never reached each other");
                 require(diagnostics().bodies() == 2, "Both structures must remain bodies in one shared region");
                 evidence.append("shared_session=").append(diagnostics().sessionId()).append("\ndynamic_pair_contact=true\n");
-                NativeStructurePhysicsControlSmokeChecks.armAtCurrentCom(region, a);
+                lifecycleLease = NativeStructurePhysicsLeaseSmokeChecks.armAtCurrentCom(region, a);
                 put(a, CELL, Blocks.AIR.defaultBlockState());
                 frozenPose = a.pose();
                 next(Phase.EMPTY);
@@ -444,13 +458,14 @@ public final class NativeStructurePhysicsWorldSmoke {
             case EMPTY -> {
                 require(region.motion(a.reference()).isEmpty(), "Empty attached structure retained a rigid body");
                 require(region.control(a.reference()).isEmpty(), "Empty structure retained a controller");
+                NativeStructurePhysicsLeaseSmokeChecks.assertInvalidated(lifecycleLease);
                 require(samePose(a.pose(), frozenPose), "Empty structure continued moving");
                 require(diagnostics().bodies() == 1, "Empty structure did not release its body");
                 require(a.lifecycle() == StructureLifecycle.ACTIVE && runtime.resolve(a.reference()).orElseThrow() == a,
                         "Empty geometry must preserve persistent owner/active handle");
                 if (phaseTicks < 20) return;
                 savedPose = b.pose(); oldRuntime = b.runtimeId(); pausedSteps = diagnostics().steps();
-                NativeStructurePhysicsControlSmokeChecks.armAtCurrentCom(region, b);
+                lifecycleLease = NativeStructurePhysicsLeaseSmokeChecks.armAtCurrentCom(region, b);
                 require(runtime.unload(b.reference()), "Fixture save/unload failed");
                 next(Phase.UNLOAD);
             }
@@ -461,10 +476,11 @@ public final class NativeStructurePhysicsWorldSmoke {
                 require(diagnostics().steps() == pausedSteps, "Parked physics cohort continued stepping");
                 require(region.motion(b.reference()).isEmpty() && diagnostics().bodies() == 0, "Unloaded body was not released");
                 require(region.control(b.reference()).isEmpty(), "Unloading a member retained its controller");
+                NativeStructurePhysicsLeaseSmokeChecks.assertInvalidated(lifecycleLease);
                 require(diagnostics().terrainCache().partitions() == 0, "Unloading the cohort retained cached terrain receipts");
                 require(runtime.resolve(b.reference()).isEmpty(), "Unloaded handle remained resolvable");
                 if (phaseTicks < 20) return;
-                evidence.append("unload_cohort_paused=true\nparked_steps_unchanged=true\nunload_pause_ticks=").append(phaseTicks).append('\n');
+                evidence.append("unload_cohort_paused=true\nparked_steps_unchanged=true\nlease_empty_geometry_invalidated=true\nlease_unload_invalidated=true\nunload_pause_ticks=").append(phaseTicks).append('\n');
                 b = runtime.load(b.reference()).orElseThrow(() -> new IllegalStateException("Saved fixture did not reload"));
                 next(Phase.RELOAD);
             }
@@ -526,7 +542,10 @@ public final class NativeStructurePhysicsWorldSmoke {
                 require(loadedRegion.status() == StructurePhysicsRegion.Status.READY
                                 && loadedRegion.motion(a.reference()).isPresent(),
                         "Closing the distant region cleared the loaded region");
+                lifecycleLease = NativeStructurePhysicsLeaseSmokeChecks.armAtCurrentCom(loadedRegion, a);
                 loadedRegion.close();
+                NativeStructurePhysicsLeaseSmokeChecks.assertInvalidated(lifecycleLease);
+                evidence.append("lease_region_close_invalidated=true\n");
                 require(((NativeStructurePhysics.Region) loadedRegion).diagnostics().terrainCache().partitions() == 0,
                         "Closed loaded region retained terrain cache references");
                 evidence.append("terrain_cache_region_close_released=true\n");
@@ -560,7 +579,10 @@ public final class NativeStructurePhysicsWorldSmoke {
     }
 
     private void preparePair() {
+        var detachedLease = NativeStructurePhysicsLeaseSmokeChecks.armAtCurrentCom(region, a);
         require(region.detach(a.reference()), "Could not detach compound for the next fixture");
+        NativeStructurePhysicsLeaseSmokeChecks.assertInvalidated(detachedLease);
+        evidence.append("lease_detach_invalidated=true\n");
         for (var pos : CELLS) if (!pos.equals(CELL)) put(a, pos, Blocks.AIR.defaultBlockState());
         put(b, CELL, Blocks.STONE.defaultBlockState());
         a.setPose(poseAt(base.getX() - 1.5, base.getY() + 0.5, base.getZ() + 0.5, new Quaterniond()));

@@ -190,6 +190,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
         for (var region : regions.values()) {
             var member = region.members.get(reference);
             if (member == null) continue;
+            member.controls.invalidate();
             if (member.handle != null && member.handle.lifecycle() == StructureLifecycle.RECOVERY_REQUIRED) {
                 runtime.markPhysicsFailed(reference);
             }
@@ -203,6 +204,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
         if (!closed) for (var region : List.copyOf(regions.values())) {
             try { region.tick(); }
             catch (RuntimeException | AssertionError | LinkageError failure) { region.fail(failure); }
+            finally { region.tickControlLeases(); }
         }
     }
 
@@ -324,12 +326,13 @@ public final class NativeStructurePhysics implements AutoCloseable {
 
         @Override public void setVelocity(StructureRef reference, Vec3 linear, Vec3 angular) {
             var member = controllable(reference);
+            member.controls.requireUnleased();
             var linearValue = vector(Objects.requireNonNull(linear));
             var angularValue = vector(Objects.requireNonNull(angular));
             PhysicsLimits.vector(linearValue, 1.0E4, "linear velocity");
             PhysicsLimits.vector(angularValue, 1.0E4, "angular velocity");
             try {
-                member.control = null;
+                member.controls.clearUnleased();
                 member.body.setVelocity(linearValue, angularValue);
                 member.published = snapshot(member, member.body.state());
                 runtime.setPhysicsAttachment(reference, attachment(member, member.published));
@@ -338,12 +341,13 @@ public final class NativeStructurePhysics implements AutoCloseable {
 
         @Override public void applyImpulse(StructureRef reference, Vec3 impulse, Vec3 worldPoint) {
             var member = controllable(reference);
+            member.controls.requireUnleased();
             var value = vector(Objects.requireNonNull(impulse));
             var point = vector(Objects.requireNonNull(worldPoint));
             PhysicsLimits.vector(value, 1.0E12, "impulse");
             PhysicsLimits.vector(point.subtract(origin), 1.0E6, "relative impulse point");
             try {
-                member.control = null;
+                member.controls.clearUnleased();
                 member.body.applyImpulse(value, point);
                 member.published = snapshot(member, member.body.state());
                 runtime.setPhysicsAttachment(reference, attachment(member, member.published));
@@ -352,6 +356,11 @@ public final class NativeStructurePhysics implements AutoCloseable {
 
         @Override public void setControl(StructureRef reference, StructurePhysicsControl control) {
             var member = controllable(reference);
+            validateControl(member, control);
+            member.controls.setUnleased(control);
+        }
+
+        private void validateControl(Member member, StructurePhysicsControl control) {
             Objects.requireNonNull(control, "control");
             if (!containsPoint(member.geometry.bounds(), control.localPoint())) {
                 throw new IllegalArgumentException("Control point must lie inside the current local collision bounds");
@@ -361,22 +370,68 @@ public final class NativeStructurePhysics implements AutoCloseable {
                     || !host.getWorldBorder().isWithinBounds(BlockPos.containing(anchor.targetPosition())))) {
                 throw new IllegalArgumentException("Anchor target must lie inside the current host physics region");
             }
-            // Constructor and world-dependent gates finish before replacing the previous command.
-            member.control = control;
         }
 
         @Override public Optional<StructurePhysicsControl> control(StructureRef reference) {
             requireThread();
             var member = members.get(Objects.requireNonNull(reference));
-            return member == null || member.invalidated ? Optional.empty() : Optional.ofNullable(member.control);
+            return member == null || member.invalidated ? Optional.empty() : member.controls.control();
         }
 
         @Override public boolean clearControl(StructureRef reference) {
             requireMutable();
             var member = members.get(Objects.requireNonNull(reference));
-            if (member == null || member.control == null) return false;
-            member.control = null;
-            return true;
+            return member != null && member.controls.clearUnleased();
+        }
+
+        @Override public Optional<StructurePhysicsLease> acquireControl(StructureRef reference, UUID controllerId,
+                                                                         StructurePhysicsControl control, int durationTicks) {
+            var member = controllable(reference);
+            validateControl(member, control);
+            return member.controls.acquire(controllerId, control, durationTicks)
+                    .map(ticket -> new Lease(member, ticket));
+        }
+
+        private final class Lease implements StructurePhysicsLease {
+            private final Member member;
+            private final NativeStructureControlSlot.Ticket ticket;
+
+            private Lease(Member member, NativeStructureControlSlot.Ticket ticket) {
+                this.member = member;
+                this.ticket = ticket;
+            }
+
+            @Override public StructureRef reference() { requireThread(); return member.reference; }
+            @Override public UUID controllerId() { requireThread(); return ticket.controllerId(); }
+            @Override public State state() { requireThread(); return ticket.state(); }
+            @Override public int remainingTicks() { requireThread(); return ticket.remainingTicks(); }
+            @Override public Optional<StructurePhysicsControl> control() { requireThread(); return ticket.control(); }
+
+            @Override public void setControl(StructurePhysicsControl control) {
+                requireActiveMember();
+                validateControl(member, control);
+                ticket.setControl(control);
+            }
+
+            @Override public void renew(int durationTicks) {
+                requireActiveMember();
+                ticket.renew(durationTicks);
+            }
+
+            private void requireActiveMember() {
+                requireMutable();
+                if (ticket.state() != State.ACTIVE || controllable(member.reference) != member) {
+                    throw new IllegalStateException("Structure physics lease is no longer active");
+                }
+            }
+
+            @Override public void close() {
+                requireThread();
+                // Terminal handles remain safely closeable after region/server shutdown.
+                if (ticket.state() != State.ACTIVE) return;
+                requireMutable();
+                ticket.close();
+            }
         }
 
         private Member controllable(StructureRef reference) {
@@ -410,7 +465,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
                 var member = iterator.next();
                 runtime.invalidateInteractionHistory(member.reference);
                 var entry = saved.stream().filter(value -> value.reference().equals(member.reference)).findFirst().orElse(null);
-                if (entry == null) { iterator.remove(); continue; }
+                if (entry == null) { member.controls.invalidate(); iterator.remove(); continue; }
                 if (member.invalidated) member.handle = null;
                 member.invalidated = false;
                 if (parked) {
@@ -448,7 +503,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
                     pause("awaiting_structure_activation"); return;
                 }
                 if (member.handle != current) {
-                    member.control = null;
+                    member.controls.invalidate();
                     member.handle = current;
                     rebuildRequired = true;
                     runtime.invalidateInteractionHistory(member.reference);
@@ -499,7 +554,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
                     if (member.geometry == null || !member.geometry.stillValid()
                             || member.geometry.sourceRevision() != next.sourceRevision()
                             || member.geometry.nonAirCells() != next.nonAirCells()
-                            || !member.geometry.boxes().equals(next.boxes())) member.control = null;
+                            || !member.geometry.boxes().equals(next.boxes())) member.controls.invalidate();
                 });
                 if (rebuildRequired || terrainChanged || shapesChanged) replaceWorld(geometry, nextTerrain);
                 if (contentChanged) geometryEpoch = Math.incrementExact(geometryEpoch);
@@ -531,7 +586,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
                 }
                 publish(states);
                 for (var member : members.values()) {
-                    if (member.control instanceof StructurePhysicsControl.Force) member.control = null;
+                    member.controls.consumeForce();
                 }
                 steps = Math.incrementExact(steps);
                 status = Status.READY;
@@ -552,7 +607,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
         }
 
         private void stepWithControls() {
-            if (members.values().stream().noneMatch(member -> member.control != null)) {
+            if (members.values().stream().noneMatch(member -> member.controls.control().isPresent())) {
                 world.step(0.05, 3);
                 return;
             }
@@ -560,10 +615,11 @@ public final class NativeStructurePhysics implements AutoCloseable {
             for (int substep = 0; substep < 3; substep++) {
                 var impulses = new ArrayList<ControlImpulse>();
                 for (var member : members.values()) {
-                    if (member.control == null || member.body == null) continue;
+                    var control = member.controls.control().orElse(null);
+                    if (control == null || member.body == null) continue;
                     var motion = snapshot(member, member.body.state());
-                    var point = motion.pose().localToWorldPoint(member.control.localPoint());
-                    var impulse = vector(StructurePhysicsControls.force(member.control, motion).scale(duration));
+                    var point = motion.pose().localToWorldPoint(control.localPoint());
+                    var impulse = vector(StructurePhysicsControls.force(control, motion).scale(duration));
                     var worldPoint = vector(point);
                     PhysicsLimits.vector(impulse, 1.0E12, "control impulse");
                     PhysicsLimits.vector(worldPoint.subtract(origin), 1.0E6, "relative control point");
@@ -694,7 +750,9 @@ public final class NativeStructurePhysics implements AutoCloseable {
             });
         }
 
-        private void clearControls() { for (var member : members.values()) member.control = null; }
+        private void clearControls() { for (var member : members.values()) member.controls.invalidate(); }
+
+        private void tickControlLeases() { for (var member : members.values()) member.controls.tick(); }
 
         private void pause(String reason) {
             clearControls();
@@ -764,7 +822,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
         private NativeStructurePhysicsGeometry.Snapshot geometry;
         private NativePhysicsBody body;
         private StructureMotionState published;
-        private StructurePhysicsControl control;
+        private final NativeStructureControlSlot controls = new NativeStructureControlSlot();
         private boolean invalidated;
         private boolean restoring;
         private NativeStructurePhysicsAttachment.Motion restoreMotion;

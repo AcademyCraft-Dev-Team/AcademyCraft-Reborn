@@ -67,6 +67,7 @@ public final class NativeStructurePhysicsPersistenceSmoke {
     private final StringBuilder report = new StringBuilder("normal_shutdown_only=true\nautomatic_resume=false\n");
     private StructureHandle moving, resting, unloaded;
     private StructurePhysicsRegion region;
+    private StructurePhysicsLease movingLease, restingLease;
     private CompoundTag oracle;
     private Phase phase = Phase.ACTIVATE;
     private int ticks, age, sleepingTicks;
@@ -189,15 +190,17 @@ public final class NativeStructurePhysicsPersistenceSmoke {
                 require(motion.linearVelocity().x > 0.5 && motion.linearVelocity().y > 1
                         && motion.angularVelocity().length() > 0.2 && !motion.sleeping(), "Checkpoint needs actual nonzero linear and angular motion");
                 require(region.motion(resting.reference()).orElseThrow().sleeping(), "Independent resting fixture must remain asleep");
-                region.setControl(moving.reference(), new StructurePhysicsControl.Anchor(motion.localCenterOfMass(),
-                        motion.pose().localToWorldPoint(motion.localCenterOfMass()).add(0, 0.5, 0), Vec3.ZERO, 60, 16, 40));
-                region.setControl(resting.reference(), new StructurePhysicsControl.Force(
-                        region.motion(resting.reference()).orElseThrow().localCenterOfMass(), Vec3.ZERO));
+                movingLease = region.acquireControl(moving.reference(), UUID.randomUUID(), new StructurePhysicsControl.Anchor(motion.localCenterOfMass(),
+                        motion.pose().localToWorldPoint(motion.localCenterOfMass()).add(0, 0.5, 0), Vec3.ZERO, 60, 16, 40), 200).orElseThrow();
+                restingLease = region.acquireControl(resting.reference(), UUID.randomUUID(), new StructurePhysicsControl.Force(
+                        region.motion(resting.reference()).orElseThrow().localCenterOfMass(), Vec3.ZERO), 200).orElseThrow();
                 server.tickRateManager().setFrozen(true); frozen = true;
                 require(runtime.save(moving.reference()) && runtime.save(resting.reference()), "Checkpoint save failed");
                 require(region.control(moving.reference()).isPresent() && region.control(resting.reference()).isPresent(),
                         "Control persistence probe must save while both transient configurations exist");
-                report.append("transient_controls_present_at_save=true\n");
+                require(movingLease.state() == StructurePhysicsLease.State.ACTIVE && restingLease.state() == StructurePhysicsLease.State.ACTIVE,
+                        "Persistence evidence did not include two active leases at save time");
+                report.append("transient_controls_present_at_save=true\ntransient_leases_present_at_save=true\n");
                 assertSavedMotion(moving, motion);
                 assertSavedMotion(resting, region.motion(resting.reference()).orElseThrow());
                 oracle = new CompoundTag(); oracle.putInt("schema", 1); oracle.putLong("pid", PID); oracle.putLong("process_start", PROCESS_START);
@@ -212,7 +215,9 @@ public final class NativeStructurePhysicsPersistenceSmoke {
                 assertCheckpoint();
                 require(region.control(moving.reference()).isEmpty() && region.control(resting.reference()).isEmpty(),
                         "Frozen save retained transient controls into another tick");
-                report.append("control_freeze_does_not_replay=true\n");
+                NativeStructurePhysicsLeaseSmokeChecks.assertInvalidated(movingLease);
+                NativeStructurePhysicsLeaseSmokeChecks.assertInvalidated(restingLease);
+                report.append("control_freeze_does_not_replay=true\nlease_save_freeze_invalidated=true\n");
                 finish();
             }
             case UNAVAILABLE -> {
@@ -258,6 +263,17 @@ public final class NativeStructurePhysicsPersistenceSmoke {
                 require(!motion.sleeping(), "Moving recovery unexpectedly slept");
                 require(region.motion(resting.reference()).isPresent()
                         && !region.motion(resting.reference()).orElseThrow().sleeping(), "Restored resting body did not rebuild awake contacts");
+                for (var handle : List.of(moving, resting)) {
+                    var restored = region.motion(handle.reference()).orElseThrow();
+                    var fresh = region.acquireControl(handle.reference(), UUID.randomUUID(),
+                            new StructurePhysicsControl.Force(restored.localCenterOfMass(), Vec3.ZERO), 1).orElseThrow(() ->
+                            new IllegalStateException("New JVM restored a stale control lease's exclusive ownership"));
+                    fresh.close();
+                    require(fresh.state() == StructurePhysicsLease.State.RELEASED && region.control(handle.reference()).isEmpty()
+                                    && region.motion(handle.reference()).orElseThrow().equals(restored),
+                            "Fresh lease acquisition/release changed restored motion");
+                }
+                report.append("transient_leases_not_restored=true\nrestored_members_reacquire_control=true\n");
                 resumedPose = moving.pose();
                 report.append("first_step_velocity_restored=true\ncontact_rebuild_wakes=true\nfirst_linear=").append(motion.linearVelocity())
                         .append("\nfirst_angular=").append(motion.angularVelocity()).append('\n');

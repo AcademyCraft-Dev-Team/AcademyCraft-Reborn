@@ -77,6 +77,7 @@ public interface StructurePhysicsRegion extends AutoCloseable {
      * Requests world-space center-of-mass velocity in blocks/second and world-space angular
      * velocity in radians/second. Non-finite or out-of-budget values, stale references and
      * unavailable simulation states are rejected rather than queued across a pause.
+     * An active exclusive control lease rejects this unleased write.
      */
     void setVelocity(StructureRef reference, Vec3 linear, Vec3 angular);
 
@@ -84,6 +85,7 @@ public interface StructurePhysicsRegion extends AutoCloseable {
      * Applies a finite world-space impulse at a finite host-world point. Impulse uses the
      * solver's mass units times blocks/second; it is not a force applied repeatedly each tick.
      * Invalid inputs, stale references and unavailable simulation states are rejected.
+     * An active exclusive control lease rejects this unleased write.
      */
     void applyImpulse(StructureRef reference, Vec3 impulse, Vec3 worldPoint);
 
@@ -99,6 +101,7 @@ public interface StructurePhysicsRegion extends AutoCloseable {
      * failure, close and shutdown clear controls; they are never saved or replayed on resume.
      * Successful setVelocity/applyImpulse also clear the affected attachment's control.
      * Terrain-only replacement can preserve a control if the region never pauses.</p>
+     * <p>An active exclusive control lease rejects this unleased write.</p>
      *
      * <p>This trusted server API does not grant player reach, ownership or protection permission.
      * One anchor controls a point through bounded force, not orientation or a collision-free path.</p>
@@ -108,8 +111,28 @@ public interface StructurePhysicsRegion extends AutoCloseable {
     /** Last accepted transient configuration, not permission or a promise that the next step can run. */
     Optional<StructurePhysicsControl> control(StructureRef reference);
 
-    /** Clears the exact attachment's control, including while paused; does not change velocity. */
+    /** Clears an unleased control, including while paused; rejects an active lease and does not change velocity. */
     boolean clearControl(StructureRef reference);
+
+    /**
+     * Acquires exclusive, transient control of this exact attachment and installs its initial command.
+     * Empty means a command or lease already occupies the slot, including a lease whose one-shot Force
+     * has been consumed. This call never steals control, even when controllerId matches the occupant.
+     * The UUID labels a caller's session; it neither grants permission nor retrieves an existing lease.
+     *
+     * <p>Uses the same current geometry and command validation as setControl. Duration must be in
+     * [1, StructurePhysicsLease.MAX_DURATION_TICKS]. Each subsequent server tick consumes one tick of
+     * the lease after physics, independent of successful step count. Pause and content/lifecycle
+     * invalidation revoke it immediately. Renewal replaces the remaining duration; command updates
+     * do not renew. Lease ownership, identifiers and commands are never persisted.</p>
+     *
+     * <p>The returned object is the capability for updating, renewing and releasing this lease.
+     * While active, unleased setControl, clearControl, setVelocity and applyImpulse are rejected.
+     * Callers must close it on cancellation, actor death, logout or dimension change; timeout is a
+     * fallback, not actor lifecycle detection. All existing reach/protection checks remain their duty.</p>
+     */
+    Optional<StructurePhysicsLease> acquireControl(StructureRef reference, UUID controllerId,
+                                                  StructurePhysicsControl control, int durationTicks);
 
     /** Idempotent after successful release; a failed native release remains an explicit error. */
     @Override

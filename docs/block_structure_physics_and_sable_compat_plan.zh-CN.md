@@ -14,6 +14,8 @@
 
 第十一、十二批已按用户授权以本地提交 `f2a2d828` 收录 22 个相关文件。第十三批已写入有限力与单点 PD，2493 项基础测试、20 项原生 JVM、12 项 Rust 和真实专服/客户端 r1、三 JVM 持久化、双区域与三组 GameTest 已通过；最终两种构建和成品核对也已通过，不将旧批次物理记录计为本批证据。
 
+第十三批已按用户授权提交为 `e2bf5ccb`。第十四批接续 P1 的公共控制会话，加入独占限时租约；2507 项基础测试、104 项编辑器测试、20 项原生 JVM、12 项 Rust、真实专服 r1/客户端 r2、跨 JVM 回归、三组 GameTest、两种构建及成品核对均已通过。采用本批证据，保留首次客户端超时记录与限定验收边界。
+
 ## 本批次落地进展
 
 第一批完成 P0 的空间/单位基础和现有快照实体的数据安全改动，第二批加入独立 `ServerLevel` 容器，第三批加入模型投影、旋转后的逐格命中、作用域上下文和受限拉杆交互，第四批加入普通单箱，第五批加入受限放置。第六批实现受限持续采掘及掉落归属处理，第七批完成独立双精度刚体绑定；第八批增加真实结构、地形几何、内容屏障及姿态发布的有界连接。第九批接续服务器姿态历史、同帧玩家回执、请求去重和最新采掘观察，已通过直连与固定延迟的真实双客户端链，最终全量/两种构建也已通过。P0 整体未完成；本表区分已写入代码的范围与完整目标，详细验收及剩余边界见系统文档。
@@ -32,6 +34,7 @@
 | 同宿主多区域与加载门禁 | 第十一批稳定区域 UUID、按 ID 查询/恢复/放弃、同宿主多独立求解世界及按区暂停已写入；manifest v3 兼容 v1/v2，v2 身份按宿主和边界确定性生成 | 专服/客户端、v2 升级、双区域跨 JVM 和最终回归均通过；全服务器 live 与 saved 合计最多三个区域，实时空区域也计数，同宿主区域至少一轴间隔一格；无主动宿主加载、跨区接触或自动迁移/合并；第十一批不含分区缓存，第十二批见下一行 |
 | 保守地形分区缓存 | 第十二批按区域独占 16³ 分片缓存，复用当前回执仍有效的形状/盒列表，脏片候选整批复验后提交 | 专服/客户端、跨 JVM、基础/原生测试和三组 GameTest 已过，两种构建与成品核对也已通过；逐格状态/区块身份复验保留，全域读取/盒预算不放大；无主动加载、容量扩展、自动迁移或已测性能指标 |
 | 有限力与单点 PD | 第十三批公开 `StructurePhysicsControl`/`StructurePhysicsControls` 与每结构一个临时控制槽，三个子步读取真实运动并通过点冲量施力 | 基础/原生测试、专服/客户端、跨 JVM、两种构建与成品核对均已通过；力范数有界、暂停与内容失效清槽、不保存或补跑控制；不包含方向锁定、玩家抓取协议、技能迁移、材料或 Sable 接入 |
+| 独占限时控制会话 | 第十四批 `StructurePhysicsLease` 绑定精确成员，原子获取初始命令、独占槽、1 至 200 服务器 tick 租期、显式续期及失效回收；限定专项及最终验收已通过 | 死亡/离线/跨维度由调用者 close，超时兜底，不自动检测实体生命周期；无权限授权、抢占优先级、叠力、技能迁移或 Sable 桥 |
 | 空间身份与姿态 | `StructureRef`、`SpaceBlockRef`、`StructurePose`、`StructureAnchor`；double 位置、单位四元数、点/方向正逆变换、表面速度及防御复制 | 已有独立后端生命周期服务；尚无自动锚点重映射和多个后端的选择/迁移 |
 | 旧接口衔接 | `BlockStructure.reference()`、`pose()`、`velocityPerSecond()`；旧 yaw 转换补偿 snapshot pivot；`LegacyMotionUnits` 集中换算速度和加速度 | 旧实体仍使用 tick 单位及 Y 轴姿态，技能未全面迁移，质量/力值未重新标定 |
 | 捕获与还原 | 捕获前验证 BE 数据能完整重建，通过实体生成事件后再核对来源 state/NBT；写前记录原状态和预期结果，提交及回滚均整批校验；阻挡结算返回 `RETAINED`，保留完整载荷 | 外部回调已转移库存或产生不明确写入结果时保持隔离；这不构成跨区块/实体文件的崩溃原子提交 |
@@ -180,6 +183,39 @@ Rust 12 项已通过；首次编译只因限定嵌套类型的 Nullable 注解�
 三组 GameTest query/space/safety 分别 10/12/9 秒通过，各有 `All 1 required tests passed`，space 另保留合成 I/O 标记；日志链接见系统记录。客户端仍有与第十二批相同的 Perflib 009 环境错误，不称日志零异常。最终构建及成品核对均已通过；仅地形重建保留控制目前由源码审查覆盖，规定质量与参数下的 PD 结果不代表任意 gain、任意质量都稳定。
 
 最终开发/发布构建分别 23/27 秒成功并退出 0；XML 为基础 2493、编辑器 104、原生 JVM 20 项，均零失败、错误或跳过，Rust 12 项通过。证据为 [validation](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p13-validation.json)、[artifacts](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p13-artifacts.json)、[source-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p13-source-manifest.json)及[all-files-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p13-all-files-manifest.json)。本批 13 个相关文件，11 项源码/测试摘要与冻结版本一致；用户已在验收后明确授权为本批创建本地提交。开发 JAR SHA-256 为 `4f62019d079636edac24699d4f0f86d90b47154857a4d0f182fac9d5249b803e`，发布 JAR 为 `7317b83014a7decede034209871212cdbfb5e046506d9c3acf065b6581ec451c`；新公共类型和 FFM 桥齐全，无原生二进制，外部 DLL 与第十二批相同，ABI 与 manifest v3 未变。
+
+### 第十四批的实现与验收边界
+
+本批实现 P1 公共控制会话的有界子集。`StructurePhysicsRegion.acquireControl(reference, controllerId, initialControl, durationTicks)` 在当前几何与命令门禁通过后，原子取得独占槽并安装初始命令；已有无租约命令或活动租约时返回空，不抢占。`controllerId` 只是标签，同 ID 不能找回或覆盖旧租约；返回的 `StructurePhysicsLease` 对象才有更新、续期和释放能力。所有方法仍限所属服务器线程，可变操作拒绝物理步重入。
+
+租期为 1 至 200 服务器 tick，在每次区域 tick 处理结束后减一，不按成功物理步或子步计数。续期将剩余时间重设为请求值，不累加；设置命令不续期，无效请求保留原命令与期限。`Force` 成功消费后只清命令，空槽仍由活动租约独占；续期不会重放已经消费的力。无租约 `setControl`、`clearControl`、`setVelocity`、`applyImpulse` 在租约活动时全部拒绝，无租约时保留原行为。
+
+主动释放、超时、失效分别进入 `RELEASED`、`EXPIRED`、`INVALIDATED`，剩余时间为 0 且无命令。旧对象终态不可复活，重复 close 不影响后来新租约，即使结构与控制标签相同。内容回执/版本/格数/形状变化、句柄替换、卸载、detach、暂停、冻结、失败、关闭与停服均撤销；纯地形重建且没有暂停可保留。租约不保存或恢复，释放保留速度和方块，不隐含停止运动、静态化或销毁。
+
+调用方仍须在技能/程序取消、控制者死亡、离线或跨维度时 close，超时只是兜底，本批没有自动实体生命周期监听。结构可见、取得租约均不授予射线、距离、资源或保护权限。本批不引入玩家抓取协议、旧技能迁移、Sable 控制争用、优先级抢占或多控制者叠力。原生 ABI、manifest v3、显式原生配置与现有区域/存储预算均未变化。
+
+| 第十四批检查 | 当前状态 |
+| --- | --- |
+| 独占、租期边界、续期、不变性、终态与旧对象隔离 | 新增 14 项状态机单测，最终全量 2507 项零失败、错误或跳过 |
+| 真实求解、四种无租约写入门禁与生命周期 | 专服 r1 385 tick、客户端 r2 428 tick 通过全部 P13/P14 标记且正常退出；客户端 44 个移动样本与三张物理截图已核对 |
+| 带租约保存、跨 JVM 不恢复及区域隔离 | 三 JVM r1 在 67/42/24 tick、双区域 r1 在 114/25 tick 通过，全部退出 0 且 stopping 门禁通过 |
+| 全量/原生测试、两种构建与成品核对 | 基础 2507、编辑器 104、原生 JVM 20 项零失败/错误/跳过，Rust 12 项和三组 GameTest 通过；两种构建、成品及冻结源码核对通过 |
+
+[最终基础测试](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p14-test-final.log) 20 秒成功，XML 2507 项零失败、错误或跳过；[原生测试](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p14-native-tests.log) 5 秒成功，20 项原生 JVM 与 12 项 Rust 通过。持久化 prepare 的活动租约在保存后由冻结先撤销，不能宣称直接停服撤销活动租约已有独立实机证据；客户端三张物理图也不代替租约夹具断言或真实玩家输入。
+
+专服 [r1 日志](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p14-world-server-r1.log)确认 385 tick PASSED、31 秒成功，正常保存和退出 0、线程结束。续租真实 PD 抬升、Force/Anchor 精确到期与紧接重力释放、空槽独占、竞争/非法请求不变性、旧对象隔离，以及同盒原始写入、空碰撞格、内容、宿主暂停、冻结、detach、空几何、卸载/重载及关闭失效均有独立标记。控制窗口 pose/velocity writes 为 0；限定服务端夹具仍不证明玩家抓取输入或全部生命周期/网络矩阵。
+
+客户端 [r1 日志](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p14-client-r1.log)保留首次失败：实验性世界提示页没有及时确认 `Create Backup and Load`，触发全局 4000 tick/200 秒超时，3 分 34 秒构建失败、非零退出。场景未完成，不将其记为租约断言失败或成功；新 r2 隔离副本重跑未修改生产或探针。
+
+客户端 [r2 日志](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p14-client-r2.log)已记录 428 tick PASSED、44 个移动样本、1 分 2 秒成功和退出 0，全部维度正常保存，所有租约与既有物理断言通过。根代理已实际打开 before/landed/controlled 三图确认下落、接触和悬停投影，截图链接见系统记录；`actual_keyboard_actions=false`。启动仍有 Perflib 009 和 OSHI 进程信息采集 NPE，不宣称日志零异常或租约有专用 UI 验收。
+
+三 JVM 持久化 r1 的 prepare/unavailable/resume 分别为 PID 74464/78796/81944、67/42/24 tick、14/12/11 秒，全部 PASSED、退出 0 且 stopping 门禁通过。保存时两个租约 ACTIVE，随后冻结撤销；新 JVM 不恢复租约但可重新获取控制，原运动首步恢复和缺库检查点保留通过。日志与完整世界链接见系统记录。
+
+双区域 r1 的 prepare/resume 为 PID 72748/49184、114/25 tick、17/11 秒，结果与退出门禁均通过，新增 `wrong_region_leases_isolated=true` 在两个阶段均为真；原有运动恢复与区域独立生命周期回归通过。三组 GameTest query/space/safety 分别 11/12/9 秒，均记录 `All 1 required tests passed`。对应日志与完整世界见系统记录，两种构建及成品核对也已完成。
+
+最终[开发构建](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p14-build-dev.log)与[发布构建](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p14-build-release.log)分别 21/27 秒成功、退出 0。[证据收集器](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p14-finalize.py)已核对 9 项源码与冻结版本一致、11 个相关文件范围、2507/104/20 项 XML 零失败/错误/跳过、Rust 12、各探针/退出门禁、截图与成品；结果为 [validation](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p14-validation.json)、[artifacts](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p14-artifacts.json)、[source-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p14-source-manifest.json)及[all-files-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p14-all-files-manifest.json)。[开发 JAR](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/libs/academy-26.2.0-0.0.4-alpha-dev.jar)的 SHA-256 为 `5881302a01711901a32ccc8be787f24f529018641e803709d759404848784d7b`，[发布 JAR](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/libs/academy-26.2.0-0.0.4-alpha-release.jar)为 `42ee9aceb3aa71f60dbbfd17f33cc4a668e28088edc7a9a48b17552e6f5cb297`；新公共/内部类型与 FFM 桥完整，成品不含原生二进制，外部 DLL 与第十三批相同。
+
+详细契约与证明范围见[第十四批系统记录](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/block_structure_entity_system.md#第十四批独占限时控制租约)。本批限定验收已完成，用户已确认创建本地 Git 提交；纯地形重建保留租约、活动租约直接停服撤销只有源码/相邻回归覆盖，不能将公共租约子集计作整个 P1 或 Sable 适配完成。
 
 ## 现有系统与目标的差距
 
