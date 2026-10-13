@@ -317,10 +317,16 @@ public final class NativeStructurePhysicsRegionsSmoke {
         require(!regionA.detach(b.reference()) && !regionB.detach(a.reference()), "Wrong region detached another region's member");
         expectRejected(() -> regionA.setVelocity(b.reference(), Vec3.ZERO, Vec3.ZERO), "Wrong region controlled another region's member");
         expectRejected(() -> regionB.applyImpulse(a.reference(), new Vec3(1, 0, 0), CENTER), "Wrong region applied an impulse");
+        expectRejected(() -> regionA.setControl(b.reference(), new StructurePhysicsControl.Force(Vec3.ZERO, Vec3.ZERO)),
+                "Wrong region installed a transient controller");
+        require(regionA.control(b.reference()).isEmpty() && regionB.control(a.reference()).isEmpty(),
+                "Wrong region exposed another region's controller");
+        require(!regionA.clearControl(b.reference()) && !regionB.clearControl(a.reference()),
+                "Wrong region cleared another region's controller");
         expectRejected(() -> regionA.attach(b), "One structure became attached to two regions");
         require(runtime.savedPhysicsEntries(host).equals(before) && samePose(a.pose(), beforeA) && samePose(b.pose(), beforeB),
                 "Rejected cross-region operation mutated motion or pose");
-        assertContents(); report.append("wrong_region_operations_isolated=true\n");
+        assertContents(); report.append("wrong_region_operations_isolated=true\nwrong_region_controls_isolated=true\n");
     }
 
     private void verifyRegionInfo() {

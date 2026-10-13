@@ -189,8 +189,15 @@ public final class NativeStructurePhysicsPersistenceSmoke {
                 require(motion.linearVelocity().x > 0.5 && motion.linearVelocity().y > 1
                         && motion.angularVelocity().length() > 0.2 && !motion.sleeping(), "Checkpoint needs actual nonzero linear and angular motion");
                 require(region.motion(resting.reference()).orElseThrow().sleeping(), "Independent resting fixture must remain asleep");
+                region.setControl(moving.reference(), new StructurePhysicsControl.Anchor(motion.localCenterOfMass(),
+                        motion.pose().localToWorldPoint(motion.localCenterOfMass()).add(0, 0.5, 0), Vec3.ZERO, 60, 16, 40));
+                region.setControl(resting.reference(), new StructurePhysicsControl.Force(
+                        region.motion(resting.reference()).orElseThrow().localCenterOfMass(), Vec3.ZERO));
                 server.tickRateManager().setFrozen(true); frozen = true;
                 require(runtime.save(moving.reference()) && runtime.save(resting.reference()), "Checkpoint save failed");
+                require(region.control(moving.reference()).isPresent() && region.control(resting.reference()).isPresent(),
+                        "Control persistence probe must save while both transient configurations exist");
+                report.append("transient_controls_present_at_save=true\n");
                 assertSavedMotion(moving, motion);
                 assertSavedMotion(resting, region.motion(resting.reference()).orElseThrow());
                 oracle = new CompoundTag(); oracle.putInt("schema", 1); oracle.putLong("pid", PID); oracle.putLong("process_start", PROCESS_START);
@@ -201,7 +208,13 @@ public final class NativeStructurePhysicsPersistenceSmoke {
                         .append("\nsleep_observation_saved=true\nactive_at_shutdown=true\n");
                 next(Phase.CHECKPOINT);
             }
-            case CHECKPOINT -> { assertCheckpoint(); finish(); }
+            case CHECKPOINT -> {
+                assertCheckpoint();
+                require(region.control(moving.reference()).isEmpty() && region.control(resting.reference()).isEmpty(),
+                        "Frozen save retained transient controls into another tick");
+                report.append("control_freeze_does_not_replay=true\n");
+                finish();
+            }
             case UNAVAILABLE -> {
                 assertCheckpoint();
                 if (age < 40) return;
@@ -214,6 +227,8 @@ public final class NativeStructurePhysicsPersistenceSmoke {
                 finish();
             }
             case MISMATCH -> {
+                require(region.control(moving.reference()).isEmpty() && region.control(resting.reference()).isEmpty(),
+                        "Explicit resume restored a transient force or anchor configuration");
                 require(region.status() == StructurePhysicsRegion.Status.PAUSED
                                 && region.diagnostic().equals("saved_geometry_mismatch"),
                         "Changed saved shape did not pause recovery: " + region.status() + " " + region.diagnostic());
@@ -223,6 +238,7 @@ public final class NativeStructurePhysicsPersistenceSmoke {
                 if (age < 3) return;
                 put(moving, STONE, new StructureBlockData(Blocks.STONE.defaultBlockState()));
                 report.append("geometry_mismatch_paused=true\nmismatch_steps_zero=true\nmismatch_checkpoint_retained=true\n");
+                report.append("transient_controls_not_restored=true\n");
                 next(Phase.RESUME);
             }
             case RESUME -> {
@@ -233,6 +249,8 @@ public final class NativeStructurePhysicsPersistenceSmoke {
                 var saved = oracle.getCompoundOrEmpty("moving").getCompoundOrEmpty("motion");
                 var linear = readVector(saved.getCompoundOrEmpty("linear")); var angular = readVector(saved.getCompoundOrEmpty("angular"));
                 require(diagnostics().steps() == 1, "First recovery observation missed the first actual native step");
+                require(region.control(moving.reference()).isEmpty() && region.control(resting.reference()).isEmpty(),
+                        "First recovery step recreated an old controller");
                 require(Math.abs(motion.linearVelocity().x - linear.x) < 0.1 && Math.abs(motion.linearVelocity().z - linear.z) < 0.1
                                 && motion.linearVelocity().y > 1 && motion.linearVelocity().y < linear.y
                                 && motion.angularVelocity().distanceTo(angular) < 0.15,

@@ -87,6 +87,68 @@ final class NativePhysicsEngineIntegrationTest {
     }
 
     @Test
+    void finiteForceIntegratesSecondsAndRespondsToMassWithoutPersistingAfterRelease() {
+        double dt = 0.05 / 3;
+        try (var world = library.createWorld(PhysicsVector.ZERO, PhysicsVector.ZERO)) {
+            var light = world.createBody(BodyType.DYNAMIC, pose(0, 0, -2), boxes(0.5, 0.5, 0.5), 1, 0, 0, false);
+            var heavy = world.createBody(BodyType.DYNAMIC, pose(0, 0, 2), boxes(0.5, 0.5, 0.5), 2, 0, 0, false);
+            assertEquals(1, light.mass(), 1.0E-9);
+            assertEquals(2, heavy.mass(), 1.0E-9);
+            // Same six-unit force for exactly one second, refreshed at every actual substep.
+            for (int step = 0; step < 60; step++) {
+                light.applyImpulse(vector(6 * dt, 0, 0), light.pose().position());
+                heavy.applyImpulse(vector(6 * dt, 0, 0), heavy.pose().position());
+                world.step(dt, 1);
+            }
+            assertEquals(6, light.linearVelocity().x(), 1.0E-7);
+            assertEquals(3, heavy.linearVelocity().x(), 1.0E-7);
+            assertRange(light.pose().position().x(), 2.95, 3.1);
+            assertRange(heavy.pose().position().x(), 1.475, 1.55);
+            double releasedX = light.pose().position().x();
+            for (int step = 0; step < 6; step++) world.step(dt, 1);
+            assertEquals(6, light.linearVelocity().x(), 1.0E-7, "Released force must not remain in an engine accumulator");
+            assertEquals(0.6, light.pose().position().x() - releasedX, 1.0E-7);
+        }
+    }
+
+    @Test
+    void repeatedOffCenterFiniteForceProducesIntegratedTorque() {
+        double dt = 0.05 / 3;
+        try (var world = library.createWorld(PhysicsVector.ZERO, PhysicsVector.ZERO)) {
+            var body = cube(world, BodyType.DYNAMIC, 0, 0, 0, 0.5, false);
+            for (int step = 0; step < 6; step++) {
+                // A fixed world-space lever arm about the moving COM keeps torque exactly -1.
+                var point = body.pose().position().add(vector(0, 0.5, 0));
+                body.applyImpulse(vector(2 * dt, 0, 0), point);
+                world.step(dt, 1);
+            }
+            assertEquals(0.2, body.linearVelocity().x(), 1.0E-7);
+            assertEquals(-0.6, body.angularVelocity().z(), 1.0E-6);
+            assertRange(body.pose().rotation().z(), -0.025, -0.01);
+            assertFinite(body.state());
+        }
+    }
+
+    @Test
+    void sustainedFiniteForceCannotPushABodyThroughFixedCollisionGeometry() {
+        double dt = 0.05 / 3;
+        try (var world = library.createWorld(PhysicsVector.ZERO, PhysicsVector.ZERO)) {
+            var wall = body(world, BodyType.FIXED, pose(0, 0, 0), boxes(0.25, 4, 4), 0, false);
+            var pushed = cube(world, BodyType.DYNAMIC, -2, 0, 0, 0.5, true);
+            for (int step = 0; step < 120; step++) {
+                pushed.applyImpulse(vector(20 * dt, 0, 0), pushed.pose().position());
+                world.step(dt, 1);
+                assertTrue(pushed.pose().position().x() < -0.65,
+                        "A force request must still pass through the solver's contact response");
+            }
+            assertRange(pushed.pose().position().x(), -0.82, -0.70);
+            assertEquals(0, pushed.linearVelocity().x(), 0.1);
+            assertEquals(0, wall.pose().position().x(), 0);
+            assertFinite(pushed.state());
+        }
+    }
+
+    @Test
     void compoundHonorsChildRotationTranslationAndBodyRotation() {
         var quarterTurn = new PhysicsQuaternion(0, 0, Math.sqrt(0.5), Math.sqrt(0.5));
         try (var world = library.createWorld(PhysicsVector.ZERO, GRAVITY)) {

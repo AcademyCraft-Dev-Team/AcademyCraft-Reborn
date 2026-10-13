@@ -87,6 +87,30 @@ public interface StructurePhysicsRegion extends AutoCloseable {
      */
     void applyImpulse(StructureRef reference, Vec3 impulse, Vec3 worldPoint);
 
+    /**
+     * Replaces this exact attachment's one transient control slot. A Force acts over the next
+     * successful 0.05-second physics tick only; an Anchor remains until cleared or invalidated.
+     * Repeated calls replace rather than accumulate. Both use the solver's mass units and seconds.
+     * The local point must be inside the current collision AABB (it need not name a solid cell);
+     * an anchor target must be inside this region and the host world border. No chunks are loaded.
+     *
+     * <p>Requires the same current, unpaused geometry as immediate controls. Invalid requests
+     * leave the old control unchanged. Region pause, attachment/geometry invalidation, unloading,
+     * failure, close and shutdown clear controls; they are never saved or replayed on resume.
+     * Successful setVelocity/applyImpulse also clear the affected attachment's control.
+     * Terrain-only replacement can preserve a control if the region never pauses.</p>
+     *
+     * <p>This trusted server API does not grant player reach, ownership or protection permission.
+     * One anchor controls a point through bounded force, not orientation or a collision-free path.</p>
+     */
+    void setControl(StructureRef reference, StructurePhysicsControl control);
+
+    /** Last accepted transient configuration, not permission or a promise that the next step can run. */
+    Optional<StructurePhysicsControl> control(StructureRef reference);
+
+    /** Clears the exact attachment's control, including while paused; does not change velocity. */
+    boolean clearControl(StructureRef reference);
+
     /** Idempotent after successful release; a failed native release remains an explicit error. */
     @Override
     void close();

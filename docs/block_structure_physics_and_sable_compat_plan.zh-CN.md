@@ -10,7 +10,9 @@
 
 第十一批已写入同宿主多区域、稳定区域 UUID、按区显式恢复和独立加载门禁，以及 manifest v3 与 v2 确定性迁移。真实专服/客户端 r1、原始 v2 完整副本升级、新 v3 三 JVM、双区域跨 JVM r2、原生测试及三组 GameTest 已通过；最终全量测试与两种构建也已通过。第十批的通过记录不作为本批新增行为的验证结论。
 
-第十二批已写入保守地形分区缓存，真实专服/客户端 r1、三 JVM 持久化、双区域专项、2476 项最终基础测试、17 项原生 JVM、12 项 Rust 与三组 GameTest 已通过，两种构建与成品核对也已通过。缓存复用形状和盒列表，仍逐格验证已加载区块、状态及读取依赖；这不是按区段数检查的算法，也没有已测性能收益。有限力控制安排在后续批次，不随本批缓存一并开放。
+第十二批已写入保守地形分区缓存，真实专服/客户端 r1、三 JVM 持久化、双区域专项、2476 项最终基础测试、17 项原生 JVM、12 项 Rust 与三组 GameTest 已通过，两种构建与成品核对也已通过。缓存复用形状和盒列表，仍逐格验证已加载区块、状态及读取依赖；这不是按区段数检查的算法，也没有已测性能收益。
+
+第十一、十二批已按用户授权以本地提交 `f2a2d828` 收录 22 个相关文件。第十三批已写入有限力与单点 PD，2493 项基础测试、20 项原生 JVM、12 项 Rust 和真实专服/客户端 r1、三 JVM 持久化、双区域与三组 GameTest 已通过；最终两种构建和成品核对也已通过，不将旧批次物理记录计为本批证据。
 
 ## 本批次落地进展
 
@@ -29,6 +31,7 @@
 | 物理检查点与显式恢复 | 第十批 manifest v2 保存区域、附加、线角速度、旧局部质心、睡眠观察和稳定碰撞摘要；整组姿态/运动发布，旧 v1 静止兼容；三 JVM r2、客户端 r2 及最终回归通过 | 不自动加载原生库或恢复步进；摘要不匹配暂停整区，重新匹配可继续；睡眠恢复时唤醒，空运动从零速开始；不构成跨文件崩溃原子保存 |
 | 同宿主多区域与加载门禁 | 第十一批稳定区域 UUID、按 ID 查询/恢复/放弃、同宿主多独立求解世界及按区暂停已写入；manifest v3 兼容 v1/v2，v2 身份按宿主和边界确定性生成 | 专服/客户端、v2 升级、双区域跨 JVM 和最终回归均通过；全服务器 live 与 saved 合计最多三个区域，实时空区域也计数，同宿主区域至少一轴间隔一格；无主动宿主加载、跨区接触或自动迁移/合并；第十一批不含分区缓存，第十二批见下一行 |
 | 保守地形分区缓存 | 第十二批按区域独占 16³ 分片缓存，复用当前回执仍有效的形状/盒列表，脏片候选整批复验后提交 | 专服/客户端、跨 JVM、基础/原生测试和三组 GameTest 已过，两种构建与成品核对也已通过；逐格状态/区块身份复验保留，全域读取/盒预算不放大；无主动加载、容量扩展、自动迁移或已测性能指标 |
+| 有限力与单点 PD | 第十三批公开 `StructurePhysicsControl`/`StructurePhysicsControls` 与每结构一个临时控制槽，三个子步读取真实运动并通过点冲量施力 | 基础/原生测试、专服/客户端、跨 JVM、两种构建与成品核对均已通过；力范数有界、暂停与内容失效清槽、不保存或补跑控制；不包含方向锁定、玩家抓取协议、技能迁移、材料或 Sable 接入 |
 | 空间身份与姿态 | `StructureRef`、`SpaceBlockRef`、`StructurePose`、`StructureAnchor`；double 位置、单位四元数、点/方向正逆变换、表面速度及防御复制 | 已有独立后端生命周期服务；尚无自动锚点重映射和多个后端的选择/迁移 |
 | 旧接口衔接 | `BlockStructure.reference()`、`pose()`、`velocityPerSecond()`；旧 yaw 转换补偿 snapshot pivot；`LegacyMotionUnits` 集中换算速度和加速度 | 旧实体仍使用 tick 单位及 Y 轴姿态，技能未全面迁移，质量/力值未重新标定 |
 | 捕获与还原 | 捕获前验证 BE 数据能完整重建，通过实体生成事件后再核对来源 state/NBT；写前记录原状态和预期结果，提交及回滚均整批校验；阻挡结算返回 `RETAINED`，保留完整载荷 | 外部回调已转移库存或产生不明确写入结果时保持隔离；这不构成跨区块/实体文件的崩溃原子提交 |
@@ -126,7 +129,7 @@ manifest v3 的 `region_id` 必须是完整小写 UUID；同 ID 的宿主和 bou
 
 专项入口为 [physics_regions.init.gradle](D:/mcmodtest/AcademyCraft-Reborn-26.2/validation/native_structure/physics_regions.init.gradle)，两个阶段都显式传原生路径，在全新隔离目录依次 prepare/resume。完整命令和 result/exit 联合判定见[双区域重跑入口](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/block_structure_entity_system.md#双区域跨-jvm-重跑入口)；结果与日志位于 `run/native-structure-physics-regions-20261013-p11-r2` 和 `build/native-physics-p11-regions-{prepare,resume}-r2.log`。最终全量测试与两种构建已通过。
 
-本批最终 JUnit 2472 项、编辑器 104 项、原生 JVM 17 项均零失败、错误或跳过，Rust 12 项通过；最终 test、开发构建与发布构建分别用 11/23/28 秒成功。证据集中于 [validation](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-validation.json)、[artifacts](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-artifacts.json)、[source-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-source-manifest.json) 与 [all-files-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-all-files-manifest.json)。本批 18 个相关文件，尚无本批提交授权。开发 JAR SHA-256 为 `23d4bcf3c7aff75db3ecf2ecc7876bc21bcfb2bf3c3efd526746f7d3cdef856e`，发布 JAR 为 `7bc2e87d7f648e42a1d1226c2fa678a7e6beceb89b8dd2cb83d620620b816dfa`；两份均含新增 Java 类型和固定 FFM 桥，不含原生二进制，外部 DLL 与第十批相同。未开启保存区域按 UUID 放弃的正向路径未另做独立实机用例；这项边界与完整部署/混装矩阵仍明确保留，不计作本批已测场景。
+本批最终 JUnit 2472 项、编辑器 104 项、原生 JVM 17 项均零失败、错误或跳过，Rust 12 项通过；最终 test、开发构建与发布构建分别用 11/23/28 秒成功。证据集中于 [validation](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-validation.json)、[artifacts](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-artifacts.json)、[source-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-source-manifest.json) 与 [all-files-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p11-all-files-manifest.json)。本批 18 个相关文件；后续与第十二批一并提交为 `f2a2d828`。开发 JAR SHA-256 为 `23d4bcf3c7aff75db3ecf2ecc7876bc21bcfb2bf3c3efd526746f7d3cdef856e`，发布 JAR 为 `7bc2e87d7f648e42a1d1226c2fa678a7e6beceb89b8dd2cb83d620620b816dfa`；两份均含新增 Java 类型和固定 FFM 桥，不含原生二进制，外部 DLL 与第十批相同。未开启保存区域按 UUID 放弃的正向路径未另做独立实机用例；这项边界与完整部署/混装矩阵仍明确保留，不计作本批已测场景。
 
 ### 第十二批的实现与验收边界
 
@@ -146,9 +149,37 @@ Rust 12 项已通过；首次编译只因限定嵌套类型的 Nullable 注解�
 
 双区域 prepare/resume r1 也已通过：PID 58032/45448，114/25 tick、17/11 秒，两端均正常退出并通过 stopping 门禁。原生 JVM 17 项本次 2 秒通过，依赖重跑 Rust 12 项成功；query/space/safety 三组 GameTest 分别 10/12/9 秒通过。四项新增缓存单测覆盖负坐标/halo 归属、半开分片稳定序、非法范围及共享预算；跨片邻居变化和区块对象替换仍只有源码契约复审，没有独立专项实机，不能写成额外测试通过。
 
-最终开发/发布构建分别 23/28 秒成功并退出 0；XML 核对基础 2476、编辑器 104、原生 JVM 17 项均零失败、错误或跳过，Rust 12 项通过。证据为 [validation](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-validation.json)、[artifacts](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-artifacts.json)、[source-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-source-manifest.json)、[all-files-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-all-files-manifest.json)与[delta-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-delta-manifest.json)。累计 22 个相关文件含未提交的第十一批，本批影响 8 个（含两份文档），20 项源码/验证摘要与冻结版本一致；没有本批提交授权。开发 JAR SHA-256 为 `80169f5cff6267ed455ba72608ff2d3fc4e33e157d6678ff91907f03f3237c3f`，发布 JAR 为 `bb1ccb7f6a8959f1202a92129b4e70baae2bde866eb7c1f006e903fa62231e34`；新增类和固定 FFM 桥齐全、无原生二进制，外部 DLL 与第十一批相同。
+最终开发/发布构建分别 23/28 秒成功并退出 0；XML 核对基础 2476、编辑器 104、原生 JVM 17 项均零失败、错误或跳过，Rust 12 项通过。证据为 [validation](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-validation.json)、[artifacts](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-artifacts.json)、[source-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-source-manifest.json)、[all-files-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-all-files-manifest.json)与[delta-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p12-delta-manifest.json)。验收冻结时累计 22 个相关文件含当时未提交的第十一批，本批影响 8 个（含两份文档），20 项源码/验证摘要与冻结版本一致；验收冻结时尚无本批提交授权，后续已与第十一批一并提交为 `f2a2d828`。开发 JAR SHA-256 为 `80169f5cff6267ed455ba72608ff2d3fc4e33e157d6678ff91907f03f3237c3f`，发布 JAR 为 `bb1ccb7f6a8959f1202a92129b4e70baae2bde866eb7c1f006e903fa62231e34`；新增类和固定 FFM 桥齐全、无原生二进制，外部 DLL 与第十一批相同。
 
 重跑沿用 [physics_world.init.gradle](D:/mcmodtest/AcademyCraft-Reborn-26.2/validation/native_structure/physics_world.init.gradle)，隔离目录、双端命令和结果要求见[第十二批系统记录](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/block_structure_entity_system.md#第十二批保守地形分区缓存)。本批没有重新执行全部玩家交互流程或双客户端网络矩阵，未独立实测的跨片邻居/区块对象替换、性能指标与完整部署矩阵继续保留边界。
+
+### 第十三批的实现与验收边界
+
+本批将有限力和单点弹簧阻尼作为实体、玩家无关的公共能力，供后续技能、程序及非玩家调用。每结构一个临时槽，通过 `setControl` 覆盖、`control` 查询、`clearControl` 释放。`Force(localPoint, force)` 在下一次成功的 0.05 秒物理 tick 作用一次；`Anchor(localPoint, targetPosition, targetVelocity, stiffness, damping, maxForce)` 持续到释放或失效，二者互斥且重复设置不累加。非法请求拒绝而保留旧控制，成功的直接赋速/冲量会清槽。
+
+力和 PD 输出按向量范数限制为不超过 10,000；目标速度范数不超过 100 格/秒，刚度/阻尼不超过 10,000。局部点属于当前碰撞 AABB，可位于几何空隙，不承诺绑定某个真实方块。目标在区域与宿主世界边界内，不触发区块加载。每个子步读取实际姿态、质心及角速度，使用点速度 `v_COM + ω × (point − COM)`，计算位置/速度误差并限幅，再以 `J = F × (0.05 / 3)` 调用现有点冲量接口。三个子步都保留真实接触，最后统一发布；没有重力前馈、质量归一化或姿态锁定。
+
+内容版本、旧状态回执、非空气格数或形状改变时撤销该成员控制，卸载后新句柄不继承；仅地形重建且区域没有暂停时可继续，原生 body 从当前成员重新获取。暂停、时间冻结、失败、dispose、detach、关闭与停服清槽，恢复不补跑。控制不存盘，正常保存只保留已发布运动，显式恢复后须重新设置；释放保留实际速度及所有方块。原生 ABI、manifest v3、三区域/四槽配额与已加载门禁不变。
+
+| 第十三批检查 | 当前状态 |
+| --- | --- |
+| 公共纯数学、参数与范数边界 | 基础测试 2493 项、原生 JVM 20 项、Rust 12 项已通过 |
+| 有限力、单点 PD、接触及释放 | 专服 r1 314 tick、客户端 r1 355 tick 通过，客户端三图已核对 |
+| 原始区段变更、暂停及清槽 | 专服/客户端 r1 通过同盒替换、AIR 新增空碰撞格、内容变化、冻结、卸载/重载与赋速覆盖；完整异常矩阵未完成 |
+| 控制不持久化、运动与多区域回归 | 三 JVM r1 已验证带 Force/Anchor 保存但重启不恢复控制，运动首步恢复；双区域 r1 的错误区域控制隔离及既有回归也已通过 |
+| 全量/原生测试、两种构建与成品核对 | 基础 2493、编辑器 104、原生 JVM 20 与 Rust 12 项通过；三组 GameTest、两种构建和成品核对通过 |
+
+本轮 XML 核对基础 2493 与原生 JVM 20 项均零失败、错误或跳过，[test-final](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p13-test-final.log)为 19 秒成功，[native-tests](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p13-native-tests.log)为 2 秒成功并重跑通过 Rust 12 项。专服 [world-server-r1](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p13-world-server-r1.log)为 314 tick、27 秒、退出 0，正常保存；抬升平衡误差 `0.015790130406315942`，平台接触阻挡 20 tick，控制窗口的 pose/velocity writes 均为零。质量/时间步、一次消费、覆盖与清槽标记已过；场景仍为服务端夹具，不代替真实玩家抓取。剩余验证和最终清单待各自结果落地，不用第十二批统计补齐。
+
+具体契约与证据表见[第十三批系统记录](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/block_structure_entity_system.md#第十三批有限力与单点-pd-控制)。本批不实现方向 PD、独立扭矩约束、多控制者叠力、玩家抓取输入/权限会话、技能迁移、材料质量、承载或 Sable 控制；后续调用者仍须处理死亡、离线、取消等自身生命周期。P0 和完整通用控制目标仍未完成。
+
+客户端 [r1 日志](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p13-client-r1.log)记录 355 tick、46 个移动样本、1 分 31 秒成功和退出 0；全部 P13/P12 标记通过，抬升误差 `0.015790130407253855`。根代理已目视 before/landed/controlled 三图，确认下落、接触和受力悬停投影正确，图片链接与结果保留于系统记录。仍为 `actual_keyboard_actions=false` 的服务端夹具。
+
+三 JVM 持久化 r1 的 prepare/unavailable/resume 也已通过，PID 74664/83740/38280，67/42/25 tick，15/11/10 秒，均退出 0 且 stopping 门禁通过。保存时同时存在 Anchor/Force，下一 JVM 不恢复控制，原运动首步恢复；缺库保留与冻结不重放分别有标记。双区域 r1 的 prepare/resume 为 PID 84012/16288、114/26 tick、17/11 秒，两个阶段均 PASSED、退出 0 且 stopping 门禁通过，新增错误区域控制隔离标记为真。各阶段日志和完整世界见系统记录。
+
+三组 GameTest query/space/safety 分别 10/12/9 秒通过，各有 `All 1 required tests passed`，space 另保留合成 I/O 标记；日志链接见系统记录。客户端仍有与第十二批相同的 Perflib 009 环境错误，不称日志零异常。最终构建及成品核对均已通过；仅地形重建保留控制目前由源码审查覆盖，规定质量与参数下的 PD 结果不代表任意 gain、任意质量都稳定。
+
+最终开发/发布构建分别 23/27 秒成功并退出 0；XML 为基础 2493、编辑器 104、原生 JVM 20 项，均零失败、错误或跳过，Rust 12 项通过。证据为 [validation](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p13-validation.json)、[artifacts](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p13-artifacts.json)、[source-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p13-source-manifest.json)及[all-files-manifest](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/native-physics-p13-all-files-manifest.json)。本批 13 个相关文件，11 项源码/测试摘要与冻结版本一致；用户已在验收后明确授权为本批创建本地提交。开发 JAR SHA-256 为 `4f62019d079636edac24699d4f0f86d90b47154857a4d0f182fac9d5249b803e`，发布 JAR 为 `7317b83014a7decede034209871212cdbfb5e046506d9c3acf065b6581ec451c`；新公共类型和 FFM 桥齐全，无原生二进制，外部 DLL 与第十二批相同，ABI 与 manifest v3 未变。
 
 ## 现有系统与目标的差距
 
@@ -245,7 +276,7 @@ flowchart TD
 
 公共方法应覆盖 `capture`、`raycast`、`applyForceAt`、`applyImpulseAt`、`holdAnchor`、`releaseControl`、`tryMaterialize`、`extractRegion`、`teleportGroup`。施力不隐含捕获权限，捕获也不隐含控制整艘第三方船的权限。
 
-`StructureRef`、`SpaceBlockRef`、`StructurePose`、`StructureAnchor` 已有第一版实现。第二批又实现 `StructureSpaces` 入口及 `StructureBackend`、`StructureHandle`、`StructureWorldAccess` 的最小服务子集：创建空容器、精确查找、装载/停用、状态查询、姿态元数据和局部单格 CAS。第三批加入 `StructureHit`、`StructureQueries` 和 `StructureContexts`，第四至六批围绕它们增加受限操作及公开保护事件。第八批新增实体/玩家无关的 `StructurePhysics` 区域入口，不暴露原生句柄。表内的能力协商、导出、批量事务、有限力约束及通用控制仍是拟议扩展。
+`StructureRef`、`SpaceBlockRef`、`StructurePose`、`StructureAnchor` 已有第一版实现。第二批又实现 `StructureSpaces` 入口及 `StructureBackend`、`StructureHandle`、`StructureWorldAccess` 的最小服务子集：创建空容器、精确查找、装载/停用、状态查询、姿态元数据和局部单格 CAS。第三批加入 `StructureHit`、`StructureQueries` 和 `StructureContexts`，第四至六批围绕它们增加受限操作及公开保护事件。第八批新增实体/玩家无关的 `StructurePhysics` 区域入口，不暴露原生句柄；第十三批加入有限力和单点 PD 的受限公共子集，已通过本批限定验收。表内的能力协商、导出、批量事务及更完整的通用控制仍是拟议扩展。
 
 保留旧 `BlockStructure` 的兼容适配器和弃用期，但新服务不依赖 `asEntity()`。不能为 Sable 建一个假实体后继续使用旧的移动、碰撞和存档逻辑。确需原版伤害归属代理时，该代理只能携带归属，不负责结构内容和运动。
 
@@ -306,7 +337,7 @@ P0 第二批已选择并实现独立 `ServerLevel` 容器，未采用共享宿�
 
 第十二批已完成保守地形分区缓存的限定验收，保留逐格状态/加载回执；更完整的失效传播、主动宿主加载调度与材料响应仍为后续目标。门、活板门、活塞等需逐项审核，不能因普通楼梯/栅栏通过便全部开放。合并盒必须保持真实空洞，世界静态分区变化与内容版本在同一物理步屏障前就绪。当前固定区域不是无限移动世界。
 
-后续质量由数据驱动的方块密度和形状计算，必要时由适配器补充容器内容质量；不将硬度直接当密度。引擎已有非零质心、惯性、摩擦、回弹、阻尼和重力倍率基础，公共结构控制仍需有限力约束或 PD 控制器，不以每 tick 强制 setPos 实现悬浮抓取。任意 setVelocity 和传送均属于显式受控操作。
+后续质量由数据驱动的方块密度和形状计算，必要时由适配器补充容器内容质量；不将硬度直接当密度。引擎已有非零质心、惯性、摩擦、回弹、阻尼和重力倍率基础，第十三批已验证受限公共有限力与单点 PD，通过真实子步施力而非每 tick 强制 setPos。方向约束、材料及技能接入仍为后续工作；任意 setVelocity 和传送均属于显式受控操作。
 
 第八批三个子步仅已覆盖有界代表场景，不承诺高速投掷和旋转扫掠。后续将几何、质量、连通性和内容组成统一 mutation epoch，在下一物理步前一起发布。跨空间交易可延后提交；原版门、活塞或 BE 已经完成的普通空间内更新，则同步重建必要几何，或暂停受影响刚体的下一物理步直至新 epoch 就绪。预算不足不能让已改变的方块继续配旧碰撞运动。
 
@@ -458,7 +489,7 @@ Sable API 契约探针可以在 P1 后与独立后端开发并行，但不先把
 
 当前阶段状态为 **P0 部分落地**：空间/单位值类型、旧接口读取适配、结算失败保留、回滚隔离和碰撞接入调整，以及四个独占 `ServerLevel` 的真实容器、公共生命周期与受控内容访问已写入代码。第三至六批完成模型投影、旋转命中、拉杆、普通单箱及受限放置/采掘的代表场景；第七批完成独立 Rapier f64 绑定和专项验收。第八批有界真实结构/宿主地形求解、姿态发布和生命周期已通过其完整检查；第九批的移动共享单箱、竞争放置/采掘、重放保护和观察者裂纹已通过真实双客户端直连与每方向 100 ms 延迟的限定场景，既有采掘客户端回归也通过，最终全量/两种构建也已通过。运动承载、通用原版交互、技能迁移、Sable 桥及完整异常/网络矩阵仍未完成。上表完成条件保持不变，不将有界原型与代表场景计作整个 P0、P1 或 P2 完成。
 
-连续运动下的受限交互和并发验证已在第九批推进到上述有界范围，后续不再将其整体列为未做。第十批的运动检查点与显式恢复已通过最新三 JVM 专项、客户端和最终回归；第十一批已写入同宿主多区、稳定区域身份和只面向已加载区块的独立调度，限定场景与最终回归已通过。第十二批保守地形缓存已完成本批验收，下一批推进有限力控制；后续继续补齐尚未覆盖的部署/网络边界，并扩展主动加载、材料与承载。通用方块/工具、菜单、跨空间实体/流体和恢复容量仍逐项验收。固定延迟通过不覆盖迟加入、断线重连、丢包、乱序或全部高转速情况，延迟轮已出现一次被保守取消后重新发起的采掘。原版 tick freeze/解冻已有证据，真实 Temporal 混合区域、能力时间倍率和异常发布仍需专项验证。技能迁移和 Sable 桥按 P1 至 P4 的契约推进，不因限定多人链或正常重启通过便提前宣告混装或完整玩家物理完成。
+连续运动下的受限交互和并发验证已在第九批推进到上述有界范围，后续不再将其整体列为未做。第十批的运动检查点与显式恢复已通过最新三 JVM 专项、客户端和最终回归；第十一批已写入同宿主多区、稳定区域身份和只面向已加载区块的独立调度，限定场景与最终回归已通过。第十二批保守地形缓存已完成本批验收，第十三批已进入有限力与单点 PD 的实现和验证，已通过本批限定验收；后续继续补齐尚未覆盖的部署/网络边界，并扩展主动加载、材料与承载。通用方块/工具、菜单、跨空间实体/流体和恢复容量仍逐项验收。固定延迟通过不覆盖迟加入、断线重连、丢包、乱序或全部高转速情况，延迟轮已出现一次被保守取消后重新发起的采掘。原版 tick freeze/解冻已有证据，真实 Temporal 混合区域、能力时间倍率和异常发布仍需专项验证。技能迁移和 Sable 桥按 P1 至 P4 的契约推进，不因限定多人链或正常重启通过便提前宣告混装或完整玩家物理完成。
 
 每阶段保持可运行的纵向场景：先“一组箱子和楼梯被抓起，移动中放置拉杆、开箱、挖掉一格，再保存重载”，再扩大到喷口和复杂机器。任何阶段的未完成项明确列为待验证，不能以能渲染或能编译代替世界语义。
 

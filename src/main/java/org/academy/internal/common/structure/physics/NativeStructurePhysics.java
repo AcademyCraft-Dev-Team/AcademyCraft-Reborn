@@ -302,8 +302,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
             runtime.invalidateInteractionHistory(handle.reference());
             members.put(handle.reference(), new Member(handle));
             rebuildRequired = true;
-            status = Status.PAUSED;
-            diagnostic = "awaiting_geometry";
+            pause("awaiting_geometry");
         }
 
         @Override public boolean detach(StructureRef reference) {
@@ -330,6 +329,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
             PhysicsLimits.vector(linearValue, 1.0E4, "linear velocity");
             PhysicsLimits.vector(angularValue, 1.0E4, "angular velocity");
             try {
+                member.control = null;
                 member.body.setVelocity(linearValue, angularValue);
                 member.published = snapshot(member, member.body.state());
                 runtime.setPhysicsAttachment(reference, attachment(member, member.published));
@@ -343,10 +343,40 @@ public final class NativeStructurePhysics implements AutoCloseable {
             PhysicsLimits.vector(value, 1.0E12, "impulse");
             PhysicsLimits.vector(point.subtract(origin), 1.0E6, "relative impulse point");
             try {
+                member.control = null;
                 member.body.applyImpulse(value, point);
                 member.published = snapshot(member, member.body.state());
                 runtime.setPhysicsAttachment(reference, attachment(member, member.published));
             } catch (RuntimeException | AssertionError | LinkageError failure) { fail(failure); throw failure; }
+        }
+
+        @Override public void setControl(StructureRef reference, StructurePhysicsControl control) {
+            var member = controllable(reference);
+            Objects.requireNonNull(control, "control");
+            if (!containsPoint(member.geometry.bounds(), control.localPoint())) {
+                throw new IllegalArgumentException("Control point must lie inside the current local collision bounds");
+            }
+            if (control instanceof StructurePhysicsControl.Anchor anchor
+                    && (!containsPoint(bounds, anchor.targetPosition())
+                    || !host.getWorldBorder().isWithinBounds(BlockPos.containing(anchor.targetPosition())))) {
+                throw new IllegalArgumentException("Anchor target must lie inside the current host physics region");
+            }
+            // Constructor and world-dependent gates finish before replacing the previous command.
+            member.control = control;
+        }
+
+        @Override public Optional<StructurePhysicsControl> control(StructureRef reference) {
+            requireThread();
+            var member = members.get(Objects.requireNonNull(reference));
+            return member == null || member.invalidated ? Optional.empty() : Optional.ofNullable(member.control);
+        }
+
+        @Override public boolean clearControl(StructureRef reference) {
+            requireMutable();
+            var member = members.get(Objects.requireNonNull(reference));
+            if (member == null || member.control == null) return false;
+            member.control = null;
+            return true;
         }
 
         private Member controllable(StructureRef reference) {
@@ -418,6 +448,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
                     pause("awaiting_structure_activation"); return;
                 }
                 if (member.handle != current) {
+                    member.control = null;
                     member.handle = current;
                     rebuildRequired = true;
                     runtime.invalidateInteractionHistory(member.reference);
@@ -464,6 +495,12 @@ public final class NativeStructurePhysics implements AutoCloseable {
                 boolean terrainChanged = !terrainBoxes.equals(nextTerrain.boxes());
                 boolean shapesChanged = geometry.entrySet().stream().anyMatch(entry -> entry.getKey().geometry == null
                         || !entry.getKey().geometry.boxes().equals(entry.getValue().boxes()));
+                geometry.forEach((member, next) -> {
+                    if (member.geometry == null || !member.geometry.stillValid()
+                            || member.geometry.sourceRevision() != next.sourceRevision()
+                            || member.geometry.nonAirCells() != next.nonAirCells()
+                            || !member.geometry.boxes().equals(next.boxes())) member.control = null;
+                });
                 if (rebuildRequired || terrainChanged || shapesChanged) replaceWorld(geometry, nextTerrain);
                 if (contentChanged) geometryEpoch = Math.incrementExact(geometryEpoch);
                 if (terrainChanged) terrainEpoch = Math.incrementExact(terrainEpoch);
@@ -481,7 +518,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
                     diagnostic = "empty_collision_geometry";
                     return;
                 }
-                world.step(0.05, 3);
+                stepWithControls();
                 var states = new LinkedHashMap<Member, PhysicsBodyState>();
                 for (var member : members.values()) {
                     if (member.body == null) { member.published = null; continue; }
@@ -493,6 +530,9 @@ public final class NativeStructurePhysics implements AutoCloseable {
                     states.put(member, state);
                 }
                 publish(states);
+                for (var member : members.values()) {
+                    if (member.control instanceof StructurePhysicsControl.Force) member.control = null;
+                }
                 steps = Math.incrementExact(steps);
                 status = Status.READY;
                 diagnostic = "running";
@@ -508,6 +548,38 @@ public final class NativeStructurePhysics implements AutoCloseable {
                 busy = false;
                 runtime.endPhysicsStep(handles);
                 removeInvalidated();
+            }
+        }
+
+        private void stepWithControls() {
+            if (members.values().stream().noneMatch(member -> member.control != null)) {
+                world.step(0.05, 3);
+                return;
+            }
+            double duration = 0.05 / 3;
+            for (int substep = 0; substep < 3; substep++) {
+                var impulses = new ArrayList<ControlImpulse>();
+                for (var member : members.values()) {
+                    if (member.control == null || member.body == null) continue;
+                    var motion = snapshot(member, member.body.state());
+                    var point = motion.pose().localToWorldPoint(member.control.localPoint());
+                    var impulse = vector(StructurePhysicsControls.force(member.control, motion).scale(duration));
+                    var worldPoint = vector(point);
+                    PhysicsLimits.vector(impulse, 1.0E12, "control impulse");
+                    PhysicsLimits.vector(worldPoint.subtract(origin), 1.0E6, "relative control point");
+                    impulses.add(new ControlImpulse(member.body, impulse, worldPoint));
+                }
+                // Compute and validate all commands before mutating any native body in this substep.
+                // There are no Minecraft callbacks; only the outer tick publishes the solved cohort.
+                for (var impulse : impulses) {
+                    if (impulse.value.x() != 0 || impulse.value.y() != 0 || impulse.value.z() != 0) {
+                        impulse.body.applyImpulse(impulse.value, impulse.point);
+                    }
+                }
+                world.step(duration, 1);
+                for (var member : members.values()) if (member.body != null) {
+                    requireContained(member.geometry.bounds(), pose(member.body.state().pose()));
+                }
             }
         }
 
@@ -622,7 +694,13 @@ public final class NativeStructurePhysics implements AutoCloseable {
             });
         }
 
-        private void pause(String reason) { status = Status.PAUSED; diagnostic = reason; }
+        private void clearControls() { for (var member : members.values()) member.control = null; }
+
+        private void pause(String reason) {
+            clearControls();
+            status = Status.PAUSED;
+            diagnostic = reason;
+        }
 
         private void fail(Throwable failure) {
             for (var member : members.values()) {
@@ -638,6 +716,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
         }
 
         private void disposeWorld() {
+            clearControls();
             // A released or parked world must not retain references to host chunks through its cache.
             terrainCache.clear();
             terrain = null;
@@ -677,12 +756,15 @@ public final class NativeStructurePhysics implements AutoCloseable {
         }
     }
 
+    private record ControlImpulse(NativePhysicsBody body, PhysicsVector value, PhysicsVector point) {}
+
     private static final class Member {
         private final StructureRef reference;
         private StructureHandle handle;
         private NativeStructurePhysicsGeometry.Snapshot geometry;
         private NativePhysicsBody body;
         private StructureMotionState published;
+        private StructurePhysicsControl control;
         private boolean invalidated;
         private boolean restoring;
         private NativeStructurePhysicsAttachment.Motion restoreMotion;
@@ -698,6 +780,12 @@ public final class NativeStructurePhysics implements AutoCloseable {
     static boolean contains(AABB outer, AABB inner) {
         return inner.minX >= outer.minX && inner.minY >= outer.minY && inner.minZ >= outer.minZ
                 && inner.maxX <= outer.maxX && inner.maxY <= outer.maxY && inner.maxZ <= outer.maxZ;
+    }
+
+    private static boolean containsPoint(AABB bounds, Vec3 point) {
+        return point.x >= bounds.minX && point.x <= bounds.maxX
+                && point.y >= bounds.minY && point.y <= bounds.maxY
+                && point.z >= bounds.minZ && point.z <= bounds.maxZ;
     }
 
     private static PhysicsVector vector(Vec3 value) { return new PhysicsVector(value.x, value.y, value.z); }
