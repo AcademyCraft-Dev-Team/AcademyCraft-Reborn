@@ -14,8 +14,8 @@
 
 ## 工作区基线与提交边界
 
-- 仓库 `D:/mcmodtest/AcademyCraft-Reborn-26.2`，分支 `26.2`，最近提交 `b6d20626 接入气动牵引与公共结构牵引会话`。
-- 第十七批 Sable 查询/有限力牵引桥尚未提交；本次继续建立在这些修改上，不能清理或回退它们。
+- 仓库 `D:/mcmodtest/AcademyCraft-Reborn-26.2`，分支 `26.2`，最近提交 `05935f82 接入Sable结构牵引与整结构精密查询`；第十七批 Sable 查询/有限力牵引桥已随之提交。
+- P19 公共捕获事务（新 API、事务包、gametest、单测、验证脚本）为新增未跟踪文件；待用户确认后提交，不能与其它既有改动混提或回退。
 - `docs/vfx/darkmatter_reconstruction_v3/runtime/multiplayer/` 中既有未跟踪记录与本任务无关，不能混入提交。
 - `AGENTS.md` 要求完整功能与必要验证结束后，先获得该批本地提交确认；本轮修复尚无新的提交授权。
 - 外部 `D:/mcmodtest/create-fork` 有大量既有改动。Suite 专服模型注册补丁保存在 `validation/sable_compat/`，尚未套用；先前跨仓库范围问题仍待答复，不能当作已修复。
@@ -29,6 +29,8 @@
 | `MixinEntityGetter` | 用旧结构复合形状替换宽相 AABB，另有空间索引补充；不能删除其它模组提供的碰撞形状 |
 | `PneumaticGrasp` | 定位时固定质量上限为 32，且 Sable 烟测只有一格；P18 已改为公共整质量预算，并通过 25 格质量 50 的混装牵引。旧实体分支仍按 Entity 获取和写速度 |
 | `StructureQueries/StructureTraction` | 已接入固定哈希 Sable 查询及真实 prePhysics 有限力；旧 `BlockStructureEntity` 尚未统一进入该后端控制契约 |
+| `StructureTransactions`/`StructureCaptureCoordinator` | P19 新增：后端无关的分阶段捕获事务；预检、WAL 日志、目标预留、复制校验、提交决定、源移除、发布回收与重启恢复；Sable 捕获仍显式返回不可用 |
+| `NativeCaptureWhitelist` | P19 新增：普通无 BE 正质量满方块的起步白名单；BE/流体/waterlogged/随机或计划 tick/重力和非满形状在首次写入前显式拒绝，不静默丢弃 |
 | 三类 `Server*ProgramRuntime` | 仍存在 Entity/宿主 BlockPos、FallingBlock、直接赋速及回滚旧速度路径；不能把 Sable plot 地址当宿主格 |
 
 以上为代码观察，尚未把“可能原因”写成已复现的结论。
@@ -56,14 +58,29 @@
 
 ### 动能搬运的后续顺序（最高优先级）
 
-1. **公共捕获事务**：预检选择、权限、内容与几何预算；目标预留、持久化日志、复制校验、源移除、目标提交；每个阶段提供异常及重启恢复证据。先明确普通块范围，BE/计划 tick 不得静默丢弃。
+1. **公共捕获事务**：预检选择、权限、内容与几何预算；目标预留、持久化日志、复制校验、源移除、目标提交；每个阶段提供异常及重启恢复证据。先明确普通块范围，BE/计划 tick 不得静默丢弃。**P19 已交付机制与原生后端接入（见下节）；Sable 生产捕获与真实跨 JVM 强杀恢复仍属后续。**
 2. **独立后端可供技能使用**：制品部署、容器容量/回收、活动物理区域跟随与恢复，以及真实玩家碰撞/承载。不能让玩家每四次使用便耗尽永久槽，也不能发布仅在测试 JVM 外部属性下可运行的默认技能。
 3. **双后端捕获接入**：未装 Sable 创建独立结构，兼容混装创建 Sable 结构；未知版本/不可用时给出失败并保留源方块，不降级为旧实体。外部 assembly helper 仍只作测试工具，不能代替生产事务。
 4. **迁移 `KineticThrow`**：保持区域选择和能力预算；HeldStructure 改为公共引用/租约；抬升、投掷、终止遵守有限力、单位、惯性契约；接触伤害只结算一次，不在世界碰撞时自动变回方块。
 5. **承载验收**：独立和完整混装各测静止、升降、行走、跳跃、边缘、顶墙和旋转，之后测真实双端延迟。旧实体对照测试不能替代这些结果。
 6. 再迁移高速喷流/磁场操作和三类行动节点；矢量改变运动、磁力筛选材料、空气通过受力锚点控制，共用结构身份、质量、资源和释放契约。
 
-**当前不能对用户声称：动能搬运已改用新独立后端、站立抖动已修复、三个能力的行动节点已迁移完成。** 相关生产路径尚未改动，以上是接续工作的实现依赖，并非已交付功能。
+**当前不能对用户声称：动能搬运已改用新独立后端、站立抖动已修复、三个能力的行动节点已迁移完成。** 事务机制与原生后端接入口已就绪，但技能生产路径尚未改动，以上是接续工作的实现依赖，并非已交付功能。
+
+### P19 公共捕获事务（2026-10-13）
+
+- 新增公共入口 `StructureTransactions.capture/poll`；请求为 `StructureCaptureRequest`（位置集合、格数与跨度预算、逐格权限谓词），结果为 `StructureCaptureResult`（PENDING/SUCCESS、显式拒绝原因与 `RECOVERY_REQUIRED`、交易 ID 与结构引用）。公共签名不含 Sable 类型。
+- 新增后端无关事务实现 `internal/common/structure/transaction`：
+  - `StructureTransactionJournal`：每交易一个原子替换、强制刷新、往返校验的 NBT 日志；阶段 `PREPARED → TARGET_ALLOCATED → COPIED → COMMIT_DECIDED → PUBLISHED` 只进不退；损坏或身份不符的记录只隔离保留并报警，绝不猜测方向；`records()` 重新扫描目录以观察其它会话的写入。
+  - `StructureCaptureClaims`：来源格全有或全无互斥；拿不准或待恢复的交易持续占用，阻止重复捕获。
+  - `NativeCaptureWhitelist`：起步普通方块白名单 + 语义门（BE/流体/waterlogged/随机 tick/计划 tick/重力/非满方块/不可破坏），全部返回机器可读原因。
+  - `StructureCaptureCoordinator`：服务端线程状态机，含提交前回滚与提交后前向完成两条收敛路径；重启时在服务器启动阶段读取日志并先占用来源格。
+- 原生后端流程：预检 → 持久化 PREPARED → 槽位预留并记录目标（写入占用失败保持源格）→ 等待目标激活（超时回滚）→ 同 tick 逐格 `compareAndSet` 复制、整批复核与几何预算校验 → 持久化 COPIED 与提交决定 → 宿主源格以前后镜像移除并整批复核 → 目标保存 → PUBLISHED → 延后邻居通知 → 回收日志。提交前异常清空已写目标、停用并删除日志；提交后异常或未知内容保留日志与占用；目标保存失败在时限内重试。
+- 重启恢复：`PREPARED` 直接回收（从未写入内容）；`TARGET_ALLOCATED/COPIED` 在来源镜像成立时清空目标、停用并回收；`COMMIT_DECIDED/PUBLISHED` 前向完成剩余源移除与目标保存；来源或目标出现未知内容时保留证据，不自动补发。
+- 验证（最终修订版）：单元 2546 项（新增 16 项：日志往返/阶段推进/损坏隔离/超限拒绝/载荷防御、占用互斥、请求与结果契约）与 Sable 11 项零失败/错误/跳过（`build/p19-tests-final.log`）；`build -DisDev=true` 34 秒、`-DisDev=false` 55 秒通过（`build/p19-build-dev-final.log`、`build/p19-build-release-final.log`）；专用 gametest `academy:structure_transactions`（隔离目录 `run/native-structure-transaction-gametest-r5`，专用 init 脚本 `validation/native_structure/transaction.init.gradle`）通过：完整提交与源移除、目标内容一致、无掉落、日志回收、重复捕获拒绝；BE/随机 tick/waterlogged/白名单外/计划 tick/权限/块数/跨度的显式拒绝且源保留；`COPIED` 回滚与 `COMMIT_DECIDED` 前向两种恢复完成（日志 `build/p19-gametest-r5.log`）。gametest 仅在其专用系统属性开启时注册，并消耗永久槽位，必须使用新隔离目录。
+- 失败轨迹保留：r1 在 `thenWaitUntil` 抛 `AssertionError` 崩溃服务器（改用 `helper.assertTrue` 使等待循环可重试）；r2 waterlogged 楼梯被 `fluid_not_supported` 先拦（调整检查顺序输出精确原因）；r3 夹具向新分配槽位预写内容触发 `emptyContainer` 隔离（改为激活后经 `compareAndSet` 合法写入）；r4 通过后为 `begin` 增加异常收敛（回收日志、释放占用、返回明确失败）并复跑 r5。
+- 未验边界：真实进程强杀后的跨 JVM 重启恢复（当前由同会话预置日志驱动同一恢复代码路径）；Sable 侧生产捕获仍显式不可用；原生槽位为永久认领，失败或回滚会留下空占位，容量与回收属后续「独立后端可供技能使用」；恢复完成不重发放置/邻居通知；技能尚未迁移到该事务；白名单为起步子集（不含箱子等后续 BE 适配）。
+- 当前构建（含 P19，不含技能迁移）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `25C0ED95BA75FCD35200E98D09F4F1B584B69D4D1245A0BEBF1289AF97082C9A`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `926591F12222B6EB066EE1A8B209B5A79424624EE4F5BC978684D62FF83DB7C1`。未复制到整合包，未操作用户存档。
 
 ### P18 最终结果（2026-10-13）
 
@@ -113,6 +130,7 @@
 .\gradlew.bat test sableCompatTest -DisDev=true
 .\gradlew.bat build -DisDev=true
 .\gradlew.bat build -DisDev=false
+.\gradlew.bat runGameTestServer -I validation/native_structure/transaction.init.gradle -PacademyGameTests=academy:structure_transactions -PacademyStructureTransactionDirectory=run/native-structure-transaction-gametest-NEW -DisDev=true
 ```
 
 外部固定依赖由 `docs/sable_compat_artifacts.json` 与 `gradle/sable-compat.gradle` 锁定。不要为了启动未知 JAR 放宽哈希门禁。新游戏验证使用新的隔离目录，不覆盖成功或失败结果，不操作用户存档。

@@ -1,0 +1,15 @@
+allprojects {
+    afterEvaluate {
+        def runRoot = new File(rootProject.projectDir, 'run').canonicalFile
+        def directory = rootProject.file(providers.gradleProperty('academyStructureTransactionDirectory')
+                .getOrElse('run/native-structure-transaction-gametest')).canonicalFile
+        if (!directory.toPath().startsWith(runRoot.toPath())
+                || !directory.name.startsWith('native-structure-transaction-gametest')) {
+            throw new GradleException('Structure transaction fixture must live in run/native-structure-transaction-gametest*')
+        }
+        neoForge.runs.named('gameTestServer') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.structureTransactionTests', 'true'
+        }
+    }
+}
