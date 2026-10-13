@@ -11,6 +11,7 @@ import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.phys.AABB;
@@ -264,6 +265,42 @@ public final class NativeStructureRuntime implements StructureBackend {
         var handle = loaded.get(reference.id());
         if (handle == null || handle.closing) return false;
         return saveHandle(handle);
+    }
+
+    /**
+     * Releases the permanent slot of an unloaded, empty, unattached structure. This is the only
+     * path that can reuse container capacity. The storage is verified empty and saved before the
+     * index entry is removed; the owner marker is deleted last, so an interrupted release can
+     * only leak a claim, never resurrect content. Loaded, quarantined, recovering, physically
+     * attached or non-empty structures are refused without changes.
+     */
+    public boolean discardEmpty(StructureRef reference) {
+        requireThread();
+        if (!enabled || closed || stopping || physicsStepping) return false;
+        Objects.requireNonNull(reference, "reference");
+        var entry = exactEntry(reference).orElse(null);
+        if (entry == null || entry.quarantined() || entry.physicsAttachment() != null) return false;
+        if (manifest.hasRecovery(entry.slot()) || !manifest.ownsSlot(entry.slot(), reference.id())) return false;
+        // A loaded handle keeps the structure interactive; discarding requires an explicit unload.
+        if (loaded.containsKey(reference.id())) return false;
+        var level = server.getLevel(NativeStructureDimensions.slotKey(entry.slot()));
+        if (level == null || NativeStructureStorageErrors.failed(level)) return false;
+        try {
+            if (!emptyContainer(level)) return false;
+            var area = new BoundingBox(-32, level.getMinY(), -32,
+                    31, level.getMaxY(), 31);
+            level.getBlockTicks().clearArea(area);
+            level.getFluidTicks().clearArea(area);
+            level.save(null, true, false);
+            if (NativeStructureStorageErrors.failed(level) || !emptyContainer(level)) return false;
+            manifest.removeEntry(reference.id());
+            manifest.releaseSlot(entry.slot(), reference.id());
+            AcademyCraft.LOGGER.info("Released empty native structure slot {} for {}", entry.slot(), reference);
+            return true;
+        } catch (IOException | RuntimeException failure) {
+            AcademyCraft.LOGGER.error("Cannot release empty native structure slot: {}", reference, failure);
+            return false;
+        }
     }
 
     private boolean saveHandle(Handle handle) {

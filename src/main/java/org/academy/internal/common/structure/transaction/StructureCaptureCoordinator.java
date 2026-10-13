@@ -229,6 +229,7 @@ public final class StructureCaptureCoordinator {
             if (!persistNew(record)) {
                 unloadQuietly(target);
                 recycleQuietly(transactionId);
+                discardEmptyQuietly(target);
                 claims.release(transactionId);
                 return StructureCaptureResult.failure(transactionId,
                         StructureCaptureResult.Status.JOURNAL_WRITE_FAILED, "journal_allocation_failed");
@@ -436,6 +437,7 @@ public final class StructureCaptureCoordinator {
             retain(capture, "rollback_journal_recycle_failed", null);
             return;
         }
+        discardEmptyQuietly(capture.target);
         if (capture.recovery) {
             finishRecovery(capture);
             return;
@@ -591,6 +593,19 @@ public final class StructureCaptureCoordinator {
             runtime().unload(reference);
         } catch (RuntimeException failure) {
             AcademyCraft.LOGGER.error("Structure transaction could not deactivate its empty target: {}",
+                    reference, failure);
+        }
+    }
+
+    /** Capacity hygiene after a confirmed rollback: a failed capture must not burn a permanent slot. */
+    private void discardEmptyQuietly(StructureRef reference) {
+        try {
+            if (!runtime().discardEmpty(reference)) {
+                AcademyCraft.LOGGER.warn("Empty capture target slot was not released; capacity remains consumed: {}",
+                        reference);
+            }
+        } catch (RuntimeException failure) {
+            AcademyCraft.LOGGER.error("Structure transaction could not release its empty target slot: {}",
                     reference, failure);
         }
     }

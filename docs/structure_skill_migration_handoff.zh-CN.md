@@ -30,6 +30,7 @@
 | `PneumaticGrasp` | 定位时固定质量上限为 32，且 Sable 烟测只有一格；P18 已改为公共整质量预算，并通过 25 格质量 50 的混装牵引。旧实体分支仍按 Entity 获取和写速度 |
 | `StructureQueries/StructureTraction` | 已接入固定哈希 Sable 查询及真实 prePhysics 有限力；旧 `BlockStructureEntity` 尚未统一进入该后端控制契约 |
 | `StructureTransactions`/`StructureCaptureCoordinator` | P19 新增：后端无关的分阶段捕获事务；预检、WAL 日志、目标预留、复制校验、提交决定、源移除、发布回收与重启恢复；Sable 捕获仍显式返回不可用 |
+| `NativeStructureManifest.removeEntry/releaseSlot`、`NativeStructureRuntime.discardEmpty` | P20 新增：空结构槽位回收；仅未加载、空、未隔离、无恢复证据、无物理附件的结构可释放；P19 回滚不再永久烧槽 |
 | `NativeCaptureWhitelist` | P19 新增：普通无 BE 正质量满方块的起步白名单；BE/流体/waterlogged/随机或计划 tick/重力和非满形状在首次写入前显式拒绝，不静默丢弃 |
 | 三类 `Server*ProgramRuntime` | 仍存在 Entity/宿主 BlockPos、FallingBlock、直接赋速及回滚旧速度路径；不能把 Sable plot 地址当宿主格 |
 
@@ -59,7 +60,7 @@
 ### 动能搬运的后续顺序（最高优先级）
 
 1. **公共捕获事务**：预检选择、权限、内容与几何预算；目标预留、持久化日志、复制校验、源移除、目标提交；每个阶段提供异常及重启恢复证据。先明确普通块范围，BE/计划 tick 不得静默丢弃。**P19 已交付机制与原生后端接入（见下节）；Sable 生产捕获与真实跨 JVM 强杀恢复仍属后续。**
-2. **独立后端可供技能使用**：制品部署、容器容量/回收、活动物理区域跟随与恢复，以及真实玩家碰撞/承载。不能让玩家每四次使用便耗尽永久槽，也不能发布仅在测试 JVM 外部属性下可运行的默认技能。
+2. **独立后端可供技能使用**：制品部署、容器容量/回收、活动物理区域跟随与恢复，以及真实玩家碰撞/承载。不能让玩家每四次使用便耗尽永久槽，也不能发布仅在测试 JVM 外部属性下可运行的默认技能。**P20 已交付空结构槽位回收（见下节）；制品部署、物理区域跟随与真实玩家承载仍待做。**
 3. **双后端捕获接入**：未装 Sable 创建独立结构，兼容混装创建 Sable 结构；未知版本/不可用时给出失败并保留源方块，不降级为旧实体。外部 assembly helper 仍只作测试工具，不能代替生产事务。
 4. **迁移 `KineticThrow`**：保持区域选择和能力预算；HeldStructure 改为公共引用/租约；抬升、投掷、终止遵守有限力、单位、惯性契约；接触伤害只结算一次，不在世界碰撞时自动变回方块。
 5. **承载验收**：独立和完整混装各测静止、升降、行走、跳跃、边缘、顶墙和旋转，之后测真实双端延迟。旧实体对照测试不能替代这些结果。
@@ -81,6 +82,16 @@
 - 失败轨迹保留：r1 在 `thenWaitUntil` 抛 `AssertionError` 崩溃服务器（改用 `helper.assertTrue` 使等待循环可重试）；r2 waterlogged 楼梯被 `fluid_not_supported` 先拦（调整检查顺序输出精确原因）；r3 夹具向新分配槽位预写内容触发 `emptyContainer` 隔离（改为激活后经 `compareAndSet` 合法写入）；r4 通过后为 `begin` 增加异常收敛（回收日志、释放占用、返回明确失败）并复跑 r5。
 - 未验边界：真实进程强杀后的跨 JVM 重启恢复（当前由同会话预置日志驱动同一恢复代码路径）；Sable 侧生产捕获仍显式不可用；原生槽位为永久认领，失败或回滚会留下空占位，容量与回收属后续「独立后端可供技能使用」；恢复完成不重发放置/邻居通知；技能尚未迁移到该事务；白名单为起步子集（不含箱子等后续 BE 适配）。
 - 当前构建（含 P19，不含技能迁移）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `25C0ED95BA75FCD35200E98D09F4F1B584B69D4D1245A0BEBF1289AF97082C9A`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `926591F12222B6EB066EE1A8B209B5A79424624EE4F5BC978684D62FF83DB7C1`。未复制到整合包，未操作用户存档。
+
+### P20 空结构槽位回收（2026-10-13）
+
+- 新增 `NativeStructureManifest.removeEntry(UUID)` 与 `releaseSlot(int, UUID)`：候选索引先整体校验再原子写入并发布；存在恢复证据或仍被索引引用的槽位拒绝释放；owner 标记最后删除，中断只会泄漏认领，不会复活已删内容。
+- 新增 `NativeStructureRuntime.discardEmpty(StructureRef)`：仅接纳未加载、内容为空、未隔离、无恢复证据、无物理附件且存储维正常的结构；先确认空并清理该槽位区域计划/流体 tick、保存存储层并复核，再移除索引，最后删除 owner 标记。成功即释放一个永久槽位。
+- P19 集成：事务回滚（含重启恢复回滚）与分配日志失败路径在「清理目标 → 回收日志 → 停用」后调用 `discardEmpty`；日志删除在前、槽位释放在后，崩溃时最坏只是空占位泄漏。
+- 验证（最终修订版）：单元 2548 项（新增 2 项回收用例：删除条目与释放标记的顺序、恢复证据拦截）与 Sable 11 项零失败/错误/跳过（`build/p20-tests-final.log`）；`build -DisDev=true` 35 秒、`-DisDev=false` 55 秒通过（`build/p20-build-dev-final.log`、`build/p20-build-release-final.log`）；gametest `academy:structure_transactions` 在隔离目录 `run/native-structure-transaction-gametest-r6` 通过：回滚恢复自动释放槽位、容量上限拒绝第五个分配、已加载空探针显式 unload+discardEmpty 后新结构复用释放槽（日志 `build/p20-gametest-r6.log`）。
+- 失败轨迹：首次运行单测暴露 `persist()` 直传活索引导致的清空别名 bug（候选持久化内 clear+putAll 同一 map），拆分为普通持久化与候选持久化两条路径后修复。
+- 未验边界：成功捕获或保留内容的结构仍占用永久槽，静态化或显式销毁属后续；启动不自动修复历史遗留的「已认领但无索引」空槽（仅记录为安全泄漏）；`discardEmpty` 目前是内部 API，尚未接入技能或命令入口；真实玩家流程未验。
+- 当前构建（含 P19/P20，不含技能迁移）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `055082A2E4DE4555A96A99F1E27D5F8B45DDD4ED723F206633C8B14F744FDD6D`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `A96D6A4164327EC3FBED5D395C95457AB35224B76891D2A82032D8AC7D89863F`。未复制到整合包，未操作用户存档。
 
 ### P18 最终结果（2026-10-13）
 

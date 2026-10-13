@@ -569,6 +569,51 @@ class NativeStructureManifestTest {
         }
     }
 
+    @Test
+    void removingAnEntryPersistsBeforeTheSlotMarkerIsReleased() throws IOException {
+        var manifest = new NativeStructureManifest(directory);
+        var first = entry(1, 0, true, false);
+        var second = entry(2, 1, false, false);
+        manifest.claimSlot(0, first.reference().id());
+        manifest.claimSlot(1, second.reference().id());
+        manifest.put(first);
+        manifest.put(second);
+        manifest.persist();
+
+        manifest.removeEntry(first.reference().id());
+        assertEquals(List.of(second), manifest.entries());
+        assertEquals(List.of(second), new NativeStructureManifest(directory).entries());
+        assertTrue(manifest.slotClaimed(0), "The marker must survive until an explicit release");
+        assertTrue(manifest.ownsSlot(0, first.reference().id()));
+        assertThrows(IOException.class, () -> manifest.releaseSlot(0, new UUID(9, 9)));
+        assertThrows(IOException.class, () -> manifest.releaseSlot(1, second.reference().id()),
+                "An indexed structure must block releasing its slot");
+        manifest.releaseSlot(0, first.reference().id());
+        assertFalse(manifest.slotClaimed(0));
+        assertFalse(new NativeStructureManifest(directory).slotClaimed(0));
+        manifest.removeEntry(new UUID(9, 9));
+        manifest.removeEntry(second.reference().id());
+        assertEquals(List.of(), new NativeStructureManifest(directory).entries());
+    }
+
+    @Test
+    void removalAndReleaseAreBlockedByRecoveryEvidence() throws IOException {
+        var manifest = new NativeStructureManifest(directory);
+        var first = entry(1, 0, true, false);
+        manifest.claimSlot(0, first.reference().id());
+        manifest.put(first);
+        manifest.persist();
+        manifest.persistRecovery(0, new CompoundTag());
+        assertThrows(IOException.class, () -> manifest.removeEntry(first.reference().id()));
+        assertEquals(List.of(first), manifest.entries());
+        assertThrows(IOException.class, () -> manifest.releaseSlot(0, first.reference().id()));
+        assertTrue(manifest.slotClaimed(0));
+        Files.delete(directory.resolve("recovery_0.dat"));
+        manifest.removeEntry(first.reference().id());
+        manifest.releaseSlot(0, first.reference().id());
+        assertFalse(manifest.slotClaimed(0));
+    }
+
     private static void makeLegacyV2(CompoundTag root) {
         root.putInt("version", 2);
         for (var value : root.getList("entries").orElseThrow()) {

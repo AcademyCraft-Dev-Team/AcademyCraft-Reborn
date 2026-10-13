@@ -30,6 +30,7 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -189,12 +190,59 @@ public final class NativeStructureManifest {
     public void persist() throws IOException {
         requireHealthy();
         validateEntries(entries.values());
+        writeAtomically(metadata, encodeIndex(entries.values()));
+    }
+
+    private void persist(Map<UUID, Entry> candidate) throws IOException {
+        requireHealthy();
+        validateEntries(candidate.values());
+        writeAtomically(metadata, encodeIndex(candidate.values()));
+        entries.clear();
+        entries.putAll(candidate);
+    }
+
+    private static CompoundTag encodeIndex(Collection<Entry> values) {
         var root = new CompoundTag();
         root.putInt("version", VERSION);
-        var values = new ListTag();
-        for (var entry : entries.values()) values.add(encode(entry));
-        root.put("entries", values);
-        writeAtomically(metadata, root);
+        var list = new ListTag();
+        for (var entry : values) list.add(encode(entry));
+        root.put("entries", list);
+        return root;
+    }
+
+    /**
+     * Removes an identity from the index only when no recovery evidence references its slot.
+     * The candidate index is validated and written before the in-memory index publishes it.
+     * Deleting the permanent owner marker is a separate, later step ({@link #releaseSlot}).
+     */
+    public void removeEntry(UUID id) throws IOException {
+        requireHealthy();
+        Objects.requireNonNull(id, "id");
+        var entry = entries.get(id);
+        if (entry == null) return;
+        if (hasRecovery(entry.slot())) {
+            throw new IOException("Recovery evidence blocks removing this structure identity");
+        }
+        var candidate = new LinkedHashMap<>(entries);
+        candidate.remove(id);
+        persist(candidate);
+    }
+
+    /**
+     * Deletes a slot's permanent owner marker and any residual recovery file. Callers must have
+     * removed every referencing index entry first; the marker delete happens last so an
+     * interrupted release can only leak a claim, never resurrect deleted content.
+     */
+    public void releaseSlot(int slot, UUID owner) throws IOException {
+        requireHealthy();
+        validateSlot(slot);
+        Objects.requireNonNull(owner, "owner");
+        if (entries.values().stream().anyMatch(entry -> entry.slot() == slot)) {
+            throw new IOException("An indexed structure still references this slot");
+        }
+        if (hasRecovery(slot)) throw new IOException("Recovery evidence blocks slot release");
+        if (!ownsSlot(slot, owner)) throw new IOException("Slot ownership mismatch");
+        Files.deleteIfExists(marker(slot));
     }
 
     /** Claims once; neither unloading nor losing the index makes a slot reusable. */

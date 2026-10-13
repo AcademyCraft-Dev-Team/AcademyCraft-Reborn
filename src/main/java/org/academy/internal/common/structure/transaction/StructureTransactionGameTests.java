@@ -92,6 +92,7 @@ public final class StructureTransactionGameTests {
         private final ServerLevel host;
         private final MinecraftServer server;
         private final StructureBackend backend;
+        private final NativeStructureRuntime runtime;
         private UUID captureId;
         private StructureRef captureRef;
         private final List<BlockPos> captureCells = new ArrayList<>();
@@ -102,12 +103,16 @@ public final class StructureTransactionGameTests {
         private StructureRef forwardRef;
         private final List<BlockPos> forwardCells = new ArrayList<>();
         private UUID forwardId;
+        private StructureRef probeA;
+        private StructureRef probeB;
+        private StructureRef probeC;
 
         private Scenario(GameTestHelper helper) {
             this.helper = helper;
             this.host = helper.getLevel();
             this.server = host.getServer();
             this.backend = StructureSpaces.backend(server);
+            this.runtime = NativeStructureRuntime.backend(server);
         }
 
         private void beginCapture() {
@@ -296,16 +301,12 @@ public final class StructureTransactionGameTests {
         }
 
         private void verifyRollbackRecovery() {
-            var runtime = NativeStructureRuntime.backend(server);
-            var storage = orFail(runtime.storageLevel(rollbackRef), "Rollback fixture storage must stay addressable");
             for (var position : rollbackCells) {
                 require(host.getBlockState(position).is(Blocks.STONE),
                         "Pre-decision recovery must keep every source block");
-                require(storage.getBlockState(position.subtract(origin(rollbackCells))).isAir(),
-                        "Pre-decision recovery must clear its unverified target cells");
             }
             require(backend.resolve(rollbackRef).isEmpty(),
-                    "Rolled-back target must be deactivated, not left interactive");
+                    "Rolled-back target must be deactivated and released, not left interactive");
         }
 
         private void forwardResolved() {
@@ -313,7 +314,6 @@ public final class StructureTransactionGameTests {
         }
 
         private void verifyForwardRecovery() {
-            var runtime = NativeStructureRuntime.backend(server);
             var storage = orFail(runtime.storageLevel(forwardRef), "Forward fixture storage must stay addressable");
             for (var position : forwardCells) {
                 require(host.getBlockState(position).isAir(),
@@ -321,6 +321,31 @@ public final class StructureTransactionGameTests {
                 require(storage.getBlockState(position.subtract(origin(forwardCells))).is(Blocks.OAK_LOG),
                         "Decided recovery must preserve the copied target content");
             }
+        }
+
+        private void allocateRecyclingProbes() {
+            // The rolled-back target released its slot, so two more allocations must still fit.
+            probeA = orFail(runtime.createEmpty(host, StructurePose.identity(Vec3.ZERO)),
+                    "Recycling probe A requires the rolled-back slot to be reusable").reference();
+            probeB = orFail(runtime.createEmpty(host, StructurePose.identity(Vec3.ZERO)),
+                    "Recycling probe B requires a free container slot").reference();
+        }
+
+        private void recyclingProbesActive() {
+            require(orFail(backend.resolve(probeA), "Probe A vanished").lifecycle() == StructureLifecycle.ACTIVE
+                            && orFail(backend.resolve(probeB), "Probe B vanished").lifecycle()
+                            == StructureLifecycle.ACTIVE,
+                    "Recycling probes must activate before release");
+        }
+
+        private void verifyCapacityRecycling() {
+            require(runtime.createEmpty(host, StructurePose.identity(Vec3.ZERO)).isEmpty(),
+                    "The container must not exceed its permanent slot budget");
+            require(runtime.unload(probeA), "An activated empty probe must unload before release");
+            require(runtime.discardEmpty(probeA), "An unloaded empty structure must release its slot");
+            probeC = orFail(runtime.createEmpty(host, StructurePose.identity(Vec3.ZERO)),
+                    "A released slot must be reusable for a new structure").reference();
+            require(backend.resolve(probeC).isPresent(), "The reused slot must hold a resolvable structure");
         }
 
         private void cleanup() {
@@ -413,6 +438,9 @@ public final class StructureTransactionGameTests {
                     .thenExecute(() -> StructureCaptureCoordinator.recoverNow(helper.getLevel().getServer()))
                     .thenWaitUntil(scenario::forwardResolved)
                     .thenExecute(scenario::verifyForwardRecovery)
+                    .thenExecute(scenario::allocateRecyclingProbes)
+                    .thenWaitUntil(scenario::recyclingProbesActive)
+                    .thenExecute(scenario::verifyCapacityRecycling)
                     .thenExecute(scenario::cleanup)
                     .thenSucceed();
         }
