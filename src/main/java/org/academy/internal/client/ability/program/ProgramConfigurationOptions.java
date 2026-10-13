@@ -38,6 +38,7 @@ public final class ProgramConfigurationOptions {
             "world_position",
             "block_position",
             "entity_reference",
+            "structure_reference",
             "living_entity_reference",
             "direction_set",
             "world_position_set",

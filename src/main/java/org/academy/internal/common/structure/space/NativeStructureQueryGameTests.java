@@ -132,6 +132,10 @@ public final class NativeStructureQueryGameTests {
                     rotation.rotationX(), rotation.rotationY(), rotation.rotationZ(), rotation.rotationW());
             a.setPose(pose);
             b.setPose(identityAt(center.add(20, 0, 0)));
+            var air = worldRay(center.add(-2, 0, 0), center.add(3, 0, 0));
+            check(StructureQueries.clearSightline(host, air.from(), air.to()),
+                    "Loaded host air and empty native structures must form a complete clear sightline");
+            verifyUnloadedSightline();
             var stairs = Blocks.OAK_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.NORTH)
                     .setValue(StairBlock.HALF, Half.BOTTOM).setValue(StairBlock.SHAPE, StairsShape.STRAIGHT);
             check(storage(a).setBlock(CELL, stairs, QUIET_FLAGS), "Fixture must install real vanilla stairs");
@@ -141,9 +145,13 @@ public final class NativeStructureQueryGameTests {
                     new Vec3(CELL.getX() + 3, CELL.getY() + 0.75, CELL.getZ() + 0.75));
             check(StructureQueries.raycast(host, gap.from(), gap.to()).isEmpty(),
                     "Rotated staircase upper-half gap must not be filled by its outer box");
+            check(StructureQueries.clearSightline(host, gap.from(), gap.to()),
+                    "A complete sightline through the actual rotated stair gap must remain clear");
             var solid = localRay(pose, new Vec3(CELL.getX() - 2, CELL.getY() + 0.25, CELL.getZ() + 0.75),
                     new Vec3(CELL.getX() + 3, CELL.getY() + 0.25, CELL.getZ() + 0.75));
             var hit = hit(solid);
+            check(!StructureQueries.clearSightline(host, solid.from(), solid.to()),
+                    "A native staircase selection shape must obstruct a sightline");
             check(hit.block().structure().equals(a.reference()) && hit.block().localPosition().equals(CELL),
                     "Arbitrary quaternion query must retain the exact negative local cell");
             check(hit.localFace() == Direction.WEST && Math.abs(hit.localPoint().x - CELL.getX()) < 1.0E-6,
@@ -191,6 +199,24 @@ public final class NativeStructureQueryGameTests {
             verifyOcclusionAndReload();
         }
 
+        private void verifyUnloadedSightline() {
+            for (int offset = 0; offset < 32; offset++) {
+                int chunkX = 65_536 + offset, chunkZ = 65_536;
+                if (host.getChunkSource().getChunkNow(chunkX, chunkZ) != null) continue;
+                var from = new Vec3(chunkX * 16.0 + 2.5, center.y, chunkZ * 16.0 + 8.5);
+                var to = from.add(6, 0, 0);
+                // Deliberately do not use worldRay(): this corridor must remain unloaded.
+                check(!StructureQueries.clearSightline(host, from, to),
+                        "Missing host data must not be reported as a clear sightline");
+                check(StructureQueries.raycast(host, from, to).isEmpty(),
+                        "An unloaded corridor must also produce no selectable structure hit");
+                check(host.getChunkSource().getChunkNow(chunkX, chunkZ) == null,
+                        "Sightline and targeting queries must not load their missing host chunk");
+                return;
+            }
+            throw new AssertionError("Could not find an unloaded corridor for the loaded-only query check");
+        }
+
         private void verifyOcclusionAndReload() {
             a.setPose(identityAt(center));
             b.setPose(identityAt(center.add(3, 0, 0)));
@@ -200,6 +226,8 @@ public final class NativeStructureQueryGameTests {
             var nearest = hit(ray);
             check(nearest.block().structure().equals(a.reference()),
                     "Two structures on one ray must select the nearer real surface");
+            check(!StructureQueries.clearSightline(host, ray.from(), ray.to()),
+                    "A native structure in front of another target must obstruct ordinary entity control");
             clearCell(a);
             check(hit(ray).block().structure().equals(b.reference()),
                     "Removing the near cell must reveal the farther structure immediately");
@@ -213,8 +241,20 @@ public final class NativeStructureQueryGameTests {
                     "Host occlusion fixture must be placed");
             check(StructureQueries.raycast(host, ray.from(), ray.to()).isEmpty(),
                     "An ordinary host block must occlude both structures");
+            check(!StructureQueries.clearSightline(host, ray.from(), ray.to()),
+                    "A host occluder must report blocked even though no structure hit can be returned");
+            var hostOnly = worldRay(center.add(-2, 0, 0), center.add(-0.75, 0, 0));
+            check(StructureQueries.raycast(host, hostOnly.from(), hostOnly.to()).isEmpty()
+                            && !StructureQueries.clearSightline(host, hostOnly.from(), hostOnly.to()),
+                    "Host-only obstruction must remain blocked without any native hit in the segment");
             check(!StructureQueries.validate(host, ray.from(), ray.to(), nearest).succeeded(),
                     "A new host occluder must invalidate a previously visible hit");
+            var torch = Blocks.TORCH.defaultBlockState();
+            check(host.setBlock(blocker, torch, QUIET_FLAGS)
+                            && torch.getCollisionShape(host, blocker).isEmpty(),
+                    "The outline-only occluder fixture must have no physical collision shape");
+            check(!StructureQueries.clearSightline(host, hostOnly.from(), hostOnly.to()),
+                    "Sightline policy conservatively blocks selection outlines, including non-colliding torches");
             host.setBlock(blocker, Blocks.AIR.defaultBlockState(), QUIET_FLAGS);
             hostBlocker = null;
 

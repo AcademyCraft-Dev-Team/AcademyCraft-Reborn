@@ -1,0 +1,553 @@
+diff --git a/.porting/sources/Simulated-Project/simulated/common/src/main/java/dev/simulated_team/simulated/index/SimBlocks.java b/.porting/sources/Simulated-Project/simulated/common/src/main/java/dev/simulated_team/simulated/index/SimBlocks.java
+--- a/.porting/sources/Simulated-Project/simulated/common/src/main/java/dev/simulated_team/simulated/index/SimBlocks.java
++++ b/.porting/sources/Simulated-Project/simulated/common/src/main/java/dev/simulated_team/simulated/index/SimBlocks.java
+@@ -105,7 +105,7 @@
+                     .initialProperties(SharedProperties::wooden)
+                     .tag(BlockTags.MINEABLE_WITH_PICKAXE)
+                     .tag(BlockTags.MINEABLE_WITH_AXE)
+-                    .blockstate((c, p) -> p.horizontalFaceBlock(c.get(), AssetLookup.partialBaseModel(c, p)))
++                    .blockstate(() -> (c, p) -> p.horizontalFaceBlock(c.get(), AssetLookup.partialBaseModel(c, p)))
+                     .item()
+                     .transform(customItemModel())
+                     .recipe((c, p) -> p.shaped(RecipeCategory.MISC, c.get(), 1)
+@@ -126,7 +126,7 @@
+                     .initialProperties(SharedProperties::netheriteMetal)
+                     .properties((properties -> properties.destroyTime(5f)))
+                     .addLayer(() -> com.simibubi.create.foundation.render.LegacyRenderTypes::cutoutMipped)
+-                    .blockstate((ctx, prov) -> prov.directionalBlock(ctx.getEntry(),
++                    .blockstate(() -> (ctx, prov) -> prov.directionalBlock(ctx.getEntry(),
+                             blockState -> prov.models().getExistingFile(
+                                     prov.modLoc("block/swivel_bearing/block" + (blockState.getValue(SwivelBearingBlock.ASSEMBLED) ? "_assembled" : "")))))
+                     .transform(SimStress.setImpact(4.0))
+@@ -147,7 +147,7 @@
+     public static final BlockEntry<SwivelBearingPlateBlock> SWIVEL_BEARING_LINK_BLOCK =
+             REGISTRATE.block("swivel_bearing_link_block", SwivelBearingPlateBlock::new)
+                     .tag(AllTags.AllBlockTags.NON_MOVABLE.tag)
+-                    .blockstate((ctx, prov) ->
++                    .blockstate(() -> (ctx, prov) ->
+                             prov.directionalBlock(ctx.getEntry(), blockState -> prov.models().getExistingFile(prov.modLoc("block/swivel_bearing/bearing_plate"))))
+                     .initialProperties(SharedProperties::netheriteMetal)
+                     .properties(properties -> properties
+@@ -158,7 +158,7 @@
+
+     public static final BlockEntry<MergingGlueBlock> MERGING_GLUE =
+             REGISTRATE.block("merging_glue", MergingGlueBlock::new)
+-                    .blockstate((ctx, prov) ->
++                    .blockstate(() -> (ctx, prov) ->
+                             prov.directionalBlock(ctx.getEntry(), blockState -> prov.models().getExistingFile(prov.modLoc("block/merging_glue/block"))))
+                     .properties(p -> p.noOcclusion().instabreak().mapColor(MapColor.GRASS).friction(0.8F).sound(SoundType.SLIME_BLOCK))
+                     .addLayer(() -> com.simibubi.create.foundation.render.LegacyRenderTypes::cutoutMipped)
+@@ -170,7 +170,7 @@
+                     .tag(AllTags.AllBlockTags.NON_MOVABLE.tag)
+                     .initialProperties(SharedProperties::stone)
+                     .addLayer(() -> com.simibubi.create.foundation.render.LegacyRenderTypes::cutoutMipped)
+-                    .blockstate(SimBlockStateGen::directionalKineticAxisBlockstate)
++                    .blockstate(() -> SimBlockStateGen::directionalKineticAxisBlockstate)
+                     .properties(Block.Properties::noOcclusion)
+                     .transform(SimStress.setImpact(4.0))
+                     .tag(BlockTags.MINEABLE_WITH_PICKAXE)
+@@ -193,7 +193,7 @@
+                     .tag(AllTags.AllBlockTags.NON_MOVABLE.tag)
+                     .initialProperties(SharedProperties::stone)
+                     .addLayer(() -> com.simibubi.create.foundation.render.LegacyRenderTypes::cutoutMipped)
+-                    .blockstate(SimBlockStateGen::directionalAxisBlock)
++                    .blockstate(() -> SimBlockStateGen::directionalAxisBlock)
+                     .properties(p -> p.noOcclusion().forceSolidOn())
+                     .tag(BlockTags.MINEABLE_WITH_PICKAXE, BlockTags.MINEABLE_WITH_AXE, AllTags.AllBlockTags.BRITTLE.tag, SimTags.Blocks.SUPER_LIGHT)
+                     .recipe((c, p) -> p.shaped(RecipeCategory.MISC, c.get(), 1)
+@@ -263,7 +263,7 @@
+                         .unlockedBy("has_ingredient", p.has(AllBlocks.ANDESITE_CASING))
+                         .save(p);
+             })
+-            .blockstate(DirectionalGearshiftGenerator::generate)
++            .blockstate(() -> DirectionalGearshiftGenerator::generate)
+             .item()
+             .transform(customItemModel())
+             .register();
+@@ -272,7 +272,7 @@
+                     .initialProperties(SharedProperties::stone)
+                     .properties(BlockBehaviour.Properties::noOcclusion)
+                     .addLayer(() -> com.simibubi.create.foundation.render.LegacyRenderTypes::cutoutMipped)
+-                    .blockstate((c, p) -> p.directionalBlock(c.get(),
++                    .blockstate(() -> (c, p) -> p.directionalBlock(c.get(),
+                             blockState -> p.models().getExistingFile(p.modLoc("block/torsion_spring/block"))))
+                     .tag(BlockTags.MINEABLE_WITH_PICKAXE)
+                     .tag(BlockTags.MINEABLE_WITH_AXE)
+@@ -292,7 +292,7 @@
+     public static final BlockEntry<AugerShaftBlock> AUGER_SHAFT =
+             REGISTRATE.block("auger_shaft", AugerShaftBlock::new)
+                     .initialProperties(SharedProperties::softMetal)
+-                    .blockstate(SimBlockStateService.INSTANCE.augerShaftGenerate("auger_shaft", false))
++                    .blockstate(() -> SimBlockStateService.INSTANCE.augerShaftGenerate("auger_shaft", false))
+                     .transform(pickaxeOnly())
+                     .transform(SimStress.setImpact(0.5))
+                     .recipe((c, p) -> {
+@@ -318,7 +318,7 @@
+     public static final BlockEntry<AugerCogBlock> AUGER_COG =
+             REGISTRATE.block("auger_cog", AugerCogBlock::new)
+                     .initialProperties(SharedProperties::softMetal)
+-                    .blockstate(SimBlockStateService.INSTANCE.augerShaftGenerate("auger_cog", true))
++                    .blockstate(() -> SimBlockStateService.INSTANCE.augerShaftGenerate("auger_cog", true))
+                     .lang("Auger Cogwheel")
+                     .transform(pickaxeOnly())
+                     .transform(SimStress.setImpact(0.5))
+@@ -350,7 +350,7 @@
+                             .unlockedBy("has_ingredient", p.has(CommonMetal.IRON.plates))
+                             .save(p))
+                     .item()
+-                    .model((c, p) -> p
++                    .model(() -> (c, p) -> p
+                             .withExistingParent(colorName + "_portable_engine", p.modLoc("block/portable_engine/item"))
+                             .texture("0", p.modLoc("block/portable_engine/" + colorName))
+                             .texture("particle", p.modLoc("block/portable_engine/" + colorName))
+@@ -361,7 +361,7 @@
+             return createPortableEngine(color)
+                     .transform(CreativeTabItemTransforms.VisibilityType.SEARCH_ONLY.applyBlock())
+                     .item()
+-                    .model((c, p) -> p
++                    .model(() -> (c, p) -> p
+                             .withExistingParent(colorName + "_portable_engine", p.modLoc("block/portable_engine/item"))
+                             .texture("0", p.modLoc("block/portable_engine/" + colorName))
+                             .texture("particle", p.modLoc("block/portable_engine/" + colorName))
+@@ -380,7 +380,7 @@
+                 .properties(p -> p.sound(SoundType.NETHERITE_BLOCK).lightLevel((state) -> PortableEngineBlock.isLitState(state) ? 6 : 0))
+                 .properties(BlockBehaviour.Properties::noOcclusion)
+                 .addLayer(() -> com.simibubi.create.foundation.render.LegacyRenderTypes::cutoutMipped)
+-                .blockstate((c, p) -> p.horizontalBlock(c.get(), blockState -> p.models()
++                .blockstate(() -> (c, p) -> p.horizontalBlock(c.get(), blockState -> p.models()
+                         .withExistingParent(colorName + "_portable_engine", p.modLoc("block/portable_engine/block"))
+                                 .texture("0", p.modLoc("block/portable_engine/" + colorName))
+                                 .texture("particle", p.modLoc("block/portable_engine/" + colorName))
+@@ -396,7 +396,7 @@
+                     .initialProperties(SharedProperties::softMetal)
+                     .addLayer(() -> com.simibubi.create.foundation.render.LegacyRenderTypes::cutoutMipped)
+                     .tag(AllTags.AllBlockTags.SAFE_NBT.tag)
+-                    .blockstate(SimBlockStateGen::facingPoweredAxisBlockstate)
++                    .blockstate(() -> SimBlockStateGen::facingPoweredAxisBlockstate)
+                     .recipe((c, p) -> p.shaped(RecipeCategory.MISC, c.get(), 1)
+                             .pattern("A")
+                             .pattern("T")
+@@ -416,7 +416,7 @@
+                     .transform(DisplaySource.displaySource(SimDisplaySources.LASER_SENSOR_DISPLAY))
+                     .initialProperties(SharedProperties::wooden)
+                     .properties(BlockBehaviour.Properties::noOcclusion)
+-                    .blockstate((c, p) -> SimBlockStateService.INSTANCE.genericModelBuilder(c, p, SimBlockStateGen::xyLaser, (state) -> AssetLookup.forPowered(c, p).apply(state)))
++                    .blockstate(() -> (c, p) -> SimBlockStateService.INSTANCE.genericModelBuilder(c, p, SimBlockStateGen::xyLaser, (state) -> AssetLookup.forPowered(c, p).apply(state)))
+                     .tag(BlockTags.MINEABLE_WITH_PICKAXE)
+                     .tag(BlockTags.MINEABLE_WITH_AXE)
+                     .recipe((c, p) -> p.shaped(RecipeCategory.MISC, c.get(), 1)
+@@ -437,7 +437,7 @@
+                     .initialProperties(SharedProperties::wooden)
+                     .transform(axeOrPickaxe())
+                     .properties(BlockBehaviour.Properties::noOcclusion)
+-                    .blockstate(SimBlockStateGen::directionalAxisBlock)
++                    .blockstate(() -> SimBlockStateGen::directionalAxisBlock)
+                     .transform(DisplaySource.displaySource(SimDisplaySources.VELO_DISPLAY))
+                     .tag(AllTags.AllBlockTags.SAFE_NBT.tag)
+                     .recipe((c, p) -> p.shaped(RecipeCategory.MISC, c.get(), 1)
+@@ -460,7 +460,7 @@
+                     .addLayer(() -> com.simibubi.create.foundation.render.LegacyRenderTypes::cutoutMipped)
+                     .properties(BlockBehaviour.Properties::noOcclusion)
+                     .tag(AllTags.AllBlockTags.SAFE_NBT.tag)
+-                    .blockstate((c, p) -> SimBlockStateService.INSTANCE.genericModelBuilder(c, p,
++                    .blockstate(() -> (c, p) -> SimBlockStateService.INSTANCE.genericModelBuilder(c, p,
+                             SimBlockStateGen::xyAltitudeSensor,
+                             (state) -> p.models().getExistingFile(p.modLoc("block/" + c.getName() + "/block"))))
+                     .transform(DisplaySource.displaySource(SimDisplaySources.ALTITUDE_SENSOR_DISPLAY))
+@@ -498,7 +498,7 @@
+                             .unlockedBy("has_ingredient", p.has(SimItems.GYRO_MECHANISM))
+                             .save(p)
+                     )
+-                    .blockstate(BlockStateGen.horizontalAxisBlockProvider(true))
++                    .blockstate(() -> BlockStateGen.horizontalAxisBlockProvider(true))
+                     .item()
+                     .transform(customItemModel())
+                     .register();
+@@ -510,7 +510,7 @@
+                     .addLayer(() -> com.simibubi.create.foundation.render.LegacyRenderTypes::cutoutMipped)
+                     .properties(BlockBehaviour.Properties::noOcclusion)
+                     .tag(AllTags.AllBlockTags.SAFE_NBT.tag)
+-                    .blockstate((c, p) -> p.directionalBlock(c.get(), blockState -> p.models()
++                    .blockstate(() -> (c, p) -> p.directionalBlock(c.get(), blockState -> p.models()
+                             .getExistingFile(p.modLoc("block/navigation_table/block"))))
+                     .transform(DisplaySource.displaySource(SimDisplaySources.NAV_TABLE_DISPLAY))
+                     .recipe((c, p) -> p.shaped(RecipeCategory.MISC, c.get(), 1)
+@@ -530,7 +530,7 @@
+                     .initialProperties(SharedProperties::softMetal)
+                     .transform(DisplaySource.displaySource(SimDisplaySources.OPTICAL_SENSOR_DISPLAY))
+                     .properties(BlockBehaviour.Properties::noOcclusion)
+-                    .blockstate((c, p) -> SimBlockStateService.INSTANCE.genericModelBuilder(c, p, SimBlockStateGen::xyLaser, (state) -> AssetLookup.forPowered(c, p).apply(state)))
++                    .blockstate(() -> (c, p) -> SimBlockStateService.INSTANCE.genericModelBuilder(c, p, SimBlockStateGen::xyLaser, (state) -> AssetLookup.forPowered(c, p).apply(state)))
+                     .tag(AllTags.AllBlockTags.SAFE_NBT.tag)
+                     .tag(BlockTags.MINEABLE_WITH_PICKAXE)
+                     .tag(BlockTags.MINEABLE_WITH_AXE)
+@@ -560,7 +560,7 @@
+                     .transform(DisplaySource.displaySource(SimDisplaySources.DOCKING_CONNECTOR_DISPLAY))
+                     .properties(BlockBehaviour.Properties::noOcclusion)
+                     .properties(BlockBehaviour.Properties::dynamicShape)
+-                    .blockstate(SimBlockStateGen::facingPoweredAxisBlockstate)
++                    .blockstate(() -> SimBlockStateGen::facingPoweredAxisBlockstate)
+                     .item()
+                     .transform(customItemModel())
+                     .register();
+@@ -569,7 +569,7 @@
+             REGISTRATE.block("paired_docking_connector", PairedDockingConnectorBlock::new)
+                     .tag(AllTags.AllBlockTags.NON_MOVABLE.tag)
+                     .initialProperties(SharedProperties::stone)
+-                    .blockstate((c, p) -> p.simpleBlock(c.get(), p.models().getExistingFile(p.modLoc("block/docking_connector/block"))))
++                    .blockstate(() -> (c, p) -> p.simpleBlock(c.get(), p.models().getExistingFile(p.modLoc("block/docking_connector/block"))))
+                     .transform(pickaxeOnly())
+                     .properties(p -> p.sound(SoundType.NETHERITE_BLOCK))
+                     .properties(properties -> properties
+@@ -585,7 +585,7 @@
+                     .properties((p) -> p.noOcclusion()
+                             .isRedstoneConductor(SimBlocks::never))
+                     .addLayer(() -> com.simibubi.create.foundation.render.LegacyRenderTypes::cutoutMipped)
+-                    .blockstate((c, p) -> BlockStateGen.axisBlock(c, p, s -> {
++                    .blockstate(() -> (c, p) -> BlockStateGen.axisBlock(c, p, s -> {
+                         String suffix = s.getValue(AnalogTransmissionBlock.POWERED) ? "_on" : "";
+                         Identifier path = Simulated.path("block/" + c.getName() + "/block" + suffix);
+                         return p.models().getExistingFile(path);
+@@ -609,7 +609,7 @@
+                     .properties(p -> p.mapColor(MapColor.PODZOL))
+                     .addLayer(() -> com.simibubi.create.foundation.render.LegacyRenderTypes::cutoutMipped)
+                     .transform(axeOrPickaxe())
+-                    .blockstate(new SteeringWheelGenerator()::generate)
++                    .blockstate(() -> new SteeringWheelGenerator()::generate)
+                     .onRegister(ItemUseOverrides::addBlock)
+                     .transform(SimStress.setCapacity(16.0))
+                     .onRegister(BlockStressValues.setGeneratorSpeed(SteeringWheelBlockEntity.RPM))
+@@ -632,7 +632,7 @@
+                     .initialProperties(() -> Blocks.LEVER)
+                     .transform(axeOrPickaxe())
+                     .tag(AllTags.AllBlockTags.SAFE_NBT.tag)
+-                    .blockstate((c, p) -> p.horizontalFaceBlock(c.get(), AssetLookup.partialBaseModel(c, p)))
++                    .blockstate(() -> (c, p) -> p.horizontalFaceBlock(c.get(), AssetLookup.partialBaseModel(c, p)))
+                     .addLayer(() -> com.simibubi.create.foundation.render.LegacyRenderTypes::cutoutMipped)
+                     .recipe((c, p) -> p.shaped(RecipeCategory.MISC, c.get(), 1)
+                             .pattern("S")
+@@ -648,7 +648,7 @@
+     public static final BlockEntry<LinkedTypewriterBlock> LINKED_TYPEWRITER =
+             REGISTRATE.block("linked_typewriter", LinkedTypewriterBlock::new)
+                     .initialProperties(SharedProperties::softMetal)
+-                    .blockstate((ctx, prov) -> {
++                    .blockstate(() -> (ctx, prov) -> {
+                         prov.horizontalBlock(ctx.get(), blockState -> prov.models()
+                                 .getExistingFile(prov.modLoc("block/" + ctx.getName() + "/block" + (blockState.getValue(BlockStateProperties.POWERED) ? "_powered" : ""))));
+                     })
+@@ -664,7 +664,7 @@
+             REGISTRATE.block("directional_linked_receiver", DirectionalLinkedReceiverBlock::new)
+                     .initialProperties(SharedProperties::stone)
+                     .properties(p -> p.noOcclusion().forceSolidOn())
+-                    .blockstate(SimBlockStateGen::facingPoweredAxisBlockstate)
++                    .blockstate(() -> SimBlockStateGen::facingPoweredAxisBlockstate)
+                     .tag(AllTags.AllBlockTags.SAFE_NBT.tag, AllTags.AllBlockTags.BRITTLE.tag, SimTags.Blocks.SUPER_LIGHT, SimTags.Blocks.QUARTER_VOLUME)
+                     .transform(axeOrPickaxe())
+                     .item().transform(customItemModel())
+@@ -684,7 +684,7 @@
+             REGISTRATE.block("modulating_linked_receiver", ModulatingLinkedReceiverBlock::new)
+                     .initialProperties(SharedProperties::stone)
+                     .properties(p -> p.noOcclusion().forceSolidOn())
+-                    .blockstate(SimBlockStateGen::facingPoweredAxisBlockstate)
++                    .blockstate(() -> SimBlockStateGen::facingPoweredAxisBlockstate)
+                     .tag(AllTags.AllBlockTags.SAFE_NBT.tag, AllTags.AllBlockTags.BRITTLE.tag, SimTags.Blocks.SUPER_LIGHT, SimTags.Blocks.QUARTER_VOLUME)
+                     .transform(axeOrPickaxe())
+                     .item().transform(customItemModel())
+@@ -703,7 +703,7 @@
+     public static final BlockEntry<RedstoneAccumulatorBlock> REDSTONE_ACCUMULATOR =
+             REGISTRATE.block("redstone_accumulator", RedstoneAccumulatorBlock::new)
+                     .initialProperties(() -> Blocks.REPEATER)
+-                    .blockstate(RedstoneAccumulatorBlockStateGen.generate())
++                    .blockstate(() -> RedstoneAccumulatorBlockStateGen.generate())
+                     .tag(AllTags.AllBlockTags.SAFE_NBT.tag, SimTags.Blocks.DIODE)
+                     .recipe((c, p) -> p.shaped(RecipeCategory.MISC, c.get(), 1)
+                             .pattern(" Q ")
+@@ -724,7 +724,7 @@
+     public static final BlockEntry<RedstoneInductorBlock> REDSTONE_INDUCTOR =
+             REGISTRATE.block("redstone_inductor", RedstoneInductorBlock::new)
+                     .initialProperties(() -> Blocks.REPEATER)
+-                    .blockstate(SimBlockStateGen::redstoneInductorBlockstate)
++                    .blockstate(() -> SimBlockStateGen::redstoneInductorBlockstate)
+                     .tag(AllTags.AllBlockTags.SAFE_NBT.tag, SimTags.Blocks.DIODE)
+                     .recipe((c, p) -> p.shaped(RecipeCategory.MISC, c.get(), 1)
+                             .pattern(" C ")
+@@ -746,7 +746,7 @@
+             REGISTRATE.block("absorber", AbsorberBlock::new)
+                     .initialProperties(SharedProperties::copperMetal)
+                     .properties(BlockBehaviour.Properties::noOcclusion)
+-                    .blockstate((ctx, prov) -> {
++                    .blockstate(() -> (ctx, prov) -> {
+                         prov.horizontalBlock(ctx.get(), blockState -> prov.models()
+                                 .getExistingFile(prov.modLoc("block/" + ctx.getName() + "/block" + (blockState.getValue(BlockStateProperties.POWERED) ? "_powered" : ""))));
+                     })
+@@ -770,7 +770,7 @@
+                     .transform(pickaxeOnly())
+                     .properties(p -> p.sound(SoundType.NETHERITE_BLOCK))
+                     .properties(BlockBehaviour.Properties::noOcclusion)
+-                    .blockstate(SimBlockStateGen::facingPoweredAxisBlockstate)
++                    .blockstate(() -> SimBlockStateGen::facingPoweredAxisBlockstate)
+                     .item()
+                     .tag(SimTags.Items.ROTATE_WITH_NAV_ARROW)
+                     .transform(customItemModel())
+@@ -788,7 +788,7 @@
+                     .properties(p -> p.sound(SoundType.SCAFFOLDING))
+                     .properties(BlockBehaviour.Properties::noOcclusion)
+                     .lang("Symmetric Sail")
+-                    .blockstate((c, p) ->
++                    .blockstate(() -> (c, p) ->
+                             SimBlockStateService.INSTANCE.genericModelBuilder(c, p, SimBlockStateGen::xySymmetricSail,
+                                     (state) -> p.models().getExistingFile(Simulated.path("block/symmetric_sail/block"))))
+                     .recipe((c, p) -> {
+@@ -817,7 +817,7 @@
+             return REGISTRATE.block(colorName + "_symmetric_sail", p -> SymmetricSailBlock.withCanvas(p, colour))
+                     .initialProperties(SharedProperties::wooden)
+                     .properties(p -> p.sound(SoundType.SCAFFOLDING))
+-                    .blockstate((c, p) -> BlockStateGen.axisBlock(c, p, blockState -> p.models()
++                    .blockstate(() -> (c, p) -> BlockStateGen.axisBlock(c, p, blockState -> p.models()
+                             .withExistingParent(colorName + "_symmetric_sail",
+                                     p.modLoc("block/symmetric_sail/block"))
+                             .texture("0", Create.asResource("block/sail/canvas_" + colorName))
+@@ -837,7 +837,7 @@
+                 .transform(axeOnly())
+                 .tag(SimTags.Blocks.NAMEPLATE_BLOCKS)
+                 .addLayer(() -> com.simibubi.create.foundation.render.LegacyRenderTypes::cutoutMipped)
+-                .blockstate((ctx, prov) -> prov.horizontalBlock(ctx.get(), state -> {
++                .blockstate(() -> (ctx, prov) -> prov.horizontalBlock(ctx.get(), state -> {
+                     NameplateBlock.Position position = state.getValue(NameplateBlock.POSITION);
+                     return prov.models()
+                             .withExistingParent(colorName + "_nameplate_" + position.getSerializedName(), prov.modLoc("block/nameplate/block_" + position.getSerializedName()))
+@@ -867,7 +867,7 @@
+                 .onRegisterAfter(Registries.ITEM, v -> ItemDescription.useKey(v, "block.simulated.nameplate"))
+                 .item()
+                 .tag(SimTags.Items.NAMEPLATE_ITEMS)
+-                .transform(b -> b.model(SimBlockStateGen.coloredBlockItemModel("nameplate/" + colorName + "_nameplate", "nameplate/item")).build())
++                .transform(b -> b.model(() -> SimBlockStateGen.coloredBlockItemModel("nameplate/" + colorName + "_nameplate", "nameplate/item")).build())
+                 .transform(CreativeTabItemTransforms.VisibilityType.SEARCH_ONLY.conditionalApplyBlock(() -> !colorName.equals(DyeColor.WHITE.getSerializedName())))
+                 .register();
+     });
+@@ -877,7 +877,7 @@
+                     .transform(pickaxeOnly())
+                     .initialProperties(SharedProperties::softMetal)
+                     .properties(p -> p.forceSolidOn())
+-                    .blockstate((ctx, prov) -> prov.directionalBlock(ctx.getEntry(),
++                    .blockstate(() -> (ctx, prov) -> prov.directionalBlock(ctx.getEntry(),
+                             blockState -> prov.models().getExistingFile(
+                                     prov.modLoc("block/spring/" + (blockState.getValue(SpringBlock.SIZE) == SpringBlock.Size.MEDIUM ? "" : (blockState.getValue(SpringBlock.SIZE).getSerializedName() + "_")) + "block"))))
+                     .tag(AllTags.AllBlockTags.SAFE_NBT.tag, AllTags.AllBlockTags.BRITTLE.tag, AllTags.AllBlockTags.NON_MOVABLE.tag, SimTags.Blocks.LIGHT)
+@@ -902,7 +902,7 @@
+                 .tag(SimTags.Blocks.HANDLES)
+                 .onRegister(ItemUseOverrides::addBlock);
+
+-        builder.blockstate((ctx, prov) -> {
++        builder.blockstate(() -> (ctx, prov) -> {
+             SimBlockStateService.INSTANCE.directionalAxisBlock(ctx, prov, (blockState, vertical) -> {
+                 final String suffix = vertical ? "vertical" : "horizontal";
+                 if(variant == HandleBlock.Variant.IRON) {
+@@ -919,7 +919,7 @@
+         builder.onRegisterAfter(Registries.ITEM, v -> ItemDescription.useKey(v, "block.simulated.handle"));
+
+         final ItemBuilder<BlockItem, BlockBuilder<HandleBlock, CreateRegistrate>> itemBuilder = builder.item();
+-        itemBuilder.model((ctx, prov) -> {
++        itemBuilder.model(() -> (ctx, prov) -> {
+                     prov.withExistingParent(ctx.getName(), prov.modLoc("block/handle/item"))
+                             .texture("0", prov.modLoc("block/handle/" + name));
+                 });
+diff --git a/.porting/sources/Simulated-Project/simulated/common/src/main/java/dev/simulated_team/simulated/index/SimItems.java b/.porting/sources/Simulated-Project/simulated/common/src/main/java/dev/simulated_team/simulated/index/SimItems.java
+--- a/.porting/sources/Simulated-Project/simulated/common/src/main/java/dev/simulated_team/simulated/index/SimItems.java
++++ b/.porting/sources/Simulated-Project/simulated/common/src/main/java/dev/simulated_team/simulated/index/SimItems.java
+@@ -91,13 +91,13 @@
+     public static final ItemEntry<PhysicsStaffItem> PHYSICS_STAFF =
+             REGISTRATE.item("creative_physics_staff", PhysicsStaffItem::new)
+                     .properties(p -> p.rarity(Rarity.EPIC).stacksTo(1))
+-                    .model(AssetLookup.itemModelWithPartials())
++                    .model(() -> AssetLookup.itemModelWithPartials())
+                     .register();
+
+     public static final ItemEntry<PlungerLauncherItem> PLUNGER_LAUNCHER =
+             REGISTRATE.item("plunger_launcher", PlungerLauncherItem::new)
+                     .properties(p -> p.stacksTo(1).durability(200))
+-                    .model(AssetLookup.itemModelWithPartials())
++                    .model(() -> AssetLookup.itemModelWithPartials())
+                     .tag(Tags.Items.ENCHANTABLES, ItemTags.DURABILITY_ENCHANTABLE)
+                     .register();
+
+diff --git a/.porting/sources/Simulated-Project/aeronautics/common/src/main/java/dev/eriksonn/aeronautics/index/AeroBlocks.java b/.porting/sources/Simulated-Project/aeronautics/common/src/main/java/dev/eriksonn/aeronautics/index/AeroBlocks.java
+--- a/.porting/sources/Simulated-Project/aeronautics/common/src/main/java/dev/eriksonn/aeronautics/index/AeroBlocks.java
++++ b/.porting/sources/Simulated-Project/aeronautics/common/src/main/java/dev/eriksonn/aeronautics/index/AeroBlocks.java
+@@ -87,7 +87,7 @@
+                     AeroSoundEvents.ENVELOPE_HIT::event,
+                     () -> SoundEvents.WOOL_FALL)))
+             .properties(p -> p.mapColor(DyeColor.WHITE))
+-            .blockstate((c, p) -> p.simpleBlock(c.get(), p.models()
++            .blockstate(() -> (c, p) -> p.simpleBlock(c.get(), p.models()
+                     .cubeAll(c.getName(), p.modLoc("block/envelope_block/envelope_" + DyeColor.WHITE.getName()))))
+             .recipe((c, p) -> {
+                 p.shaped(RecipeCategory.MISC, c.get(), 4)
+@@ -131,7 +131,7 @@
+                                     AeroSoundEvents.ENVELOPE_HIT::event,
+                                     () -> SoundEvents.WOOL_FALL)))
+                     .properties(p -> p.mapColor(color))
+-                    .blockstate((c, p) -> p.simpleBlock(c.get(), p.models()
++                    .blockstate(() -> (c, p) -> p.simpleBlock(c.get(), p.models()
+                             .cubeAll(c.getName(), p.modLoc("block/envelope_block/envelope_" + colorName))))
+                     .recipe((c, p) ->{
+                     p.shaped(RecipeCategory.MISC, c.get(), 4)
+@@ -177,7 +177,7 @@
+                                 () -> SoundEvents.WOOL_FALL)))
+                 .properties(p -> p.mapColor(color))
+                 .transform(b -> b.transform(EncasingRegistry.addVariantTo(AllBlocks.SHAFT)))
+-                .blockstate((c, p) -> BlockStateGen.axisBlock(c, p, blockState -> p.models()
++                .blockstate(() -> (c, p) -> BlockStateGen.axisBlock(c, p, blockState -> p.models()
+                         .withExistingParent(colorName + "_envelope_encased_shaft",
+                                 p.modLoc("block/envelope_encased_shaft/block"))
+                         .texture("0", p.modLoc("block/envelope_block/envelope_" + colorName))))
+@@ -191,7 +191,7 @@
+                 .transform(CreativeTabItemTransforms.VisibilityType.INVISIBLE.applyBlock())
+                 .item()
+                 .tag(AeroTags.ItemTags.ENVELOPE)
+-                .transform(b -> b.model(SimBlockStateGen.coloredBlockItemModel("envelope_block/envelope_" + colorName, "envelope_encased_shaft/item")).build())
++                .transform(b -> b.model(() -> SimBlockStateGen.coloredBlockItemModel("envelope_block/envelope_" + colorName, "envelope_encased_shaft/item")).build())
+                 .register();
+     });
+
+@@ -202,7 +202,7 @@
+                     .properties(p -> p.sound(SoundType.NETHERITE_BLOCK))
+                     .properties(BlockBehaviour.Properties::noOcclusion)
+                     .properties(p -> p.lightLevel(HotAirBurnerBlock::getLightPower))
+-                    .blockstate((ctx, prov) ->
++                    .blockstate(() -> (ctx, prov) ->
+                             BlockStateGen.simpleBlock(ctx, prov,
+                                     blockState -> prov.models().getExistingFile(
+                                             prov.modLoc("block/" + ctx.getName() + "/block_" + blockState.getValue(HotAirBurnerBlock.VARIANT).getSerializedName()))
+@@ -229,7 +229,7 @@
+                     .initialProperties(SharedProperties::stone)
+                     .properties(p -> p.sound(SoundType.NETHERITE_BLOCK))
+                     .properties(BlockBehaviour.Properties::noOcclusion)
+-                    .blockstate((ctx, prov) ->
++                    .blockstate(() -> (ctx, prov) ->
+                             prov.horizontalBlock(ctx.get(), blockState -> prov.models()
+                                     .getExistingFile(prov.modLoc("block/" + ctx.getName() + "/block_" + (blockState.getValue(SteamVentBlock.VARIANT).getSerializedName())))))
+                     .item()
+@@ -251,7 +251,7 @@
+                     .properties(p -> p.sound(SoundType.COPPER))
+                     .properties(BlockBehaviour.Properties::noOcclusion)
+                     .transform(AeroStress.setImpact(2.0))
+-                    .blockstate((ctx, prov) -> SimBlockStateGen.facingBlockstate(ctx, prov, "block/propeller_bearing/block"))
++                    .blockstate(() -> (ctx, prov) -> SimBlockStateGen.facingBlockstate(ctx, prov, "block/propeller_bearing/block"))
+                     .transform(axeOrPickaxe())
+                     .item()
+                     .transform(customItemModel())
+@@ -271,7 +271,7 @@
+                     .properties(p -> p.sound(SoundType.COPPER))
+                     .transform(AeroStress.setImpact(2.0))
+                     .properties(BlockBehaviour.Properties::noOcclusion)
+-                    .blockstate(
++                    .blockstate(() ->
+                             (ctx, prov) -> SimBlockStateGen.facingBlockstate(ctx, prov, "block/gyroscopic_propeller_bearing/block"))
+                     .transform(axeOrPickaxe())
+                     .item()
+@@ -292,7 +292,7 @@
+                     .initialProperties(SharedProperties::softMetal)
+                     .transform(axeOrPickaxe())
+                     .transform(AeroStress.setImpact(4.0))
+-                    .blockstate((ctx, prov) -> {
++                    .blockstate(() -> (ctx, prov) -> {
+                         prov.getVariantBuilder(ctx.getEntry()).forAllStates((state) ->
+                                 ConfiguredModel.builder().modelFile(AssetLookup.partialBaseModel(ctx, prov))
+                                         .rotationY(state.getValue(BlockStateProperties.HORIZONTAL_AXIS) == Direction.Axis.X ? 90 : 0)
+@@ -319,7 +319,7 @@
+                     .transform(axeOrPickaxe())
+                     .properties(p -> p.sound(SoundType.WOOD))
+                     .transform(AeroStress.setImpact(4.0))
+-                    .blockstate(BlockStateGen.directionalBlockProvider(true))
++                    .blockstate(() -> BlockStateGen.directionalBlockProvider(true))
+                     .item()
+                     .transform(customItemModel())
+                     .recipe((c, p) -> {
+@@ -347,7 +347,7 @@
+                     .transform(axeOrPickaxe())
+                     .properties(p -> p.sound(SoundType.WOOD))
+                     .transform(AeroStress.setImpact(4.0))
+-                    .blockstate(BlockStateGen.directionalBlockProvider(true))
++                    .blockstate(() -> BlockStateGen.directionalBlockProvider(true))
+                     .recipe((c, p) -> {
+                         p.shapeless(RecipeCategory.MISC, c.get(), 1)
+                                 .requires(AeroBlocks.ANDESITE_PROPELLER)
+@@ -362,7 +362,7 @@
+     public static final BlockEntry<MountedPotatoCannonBlock> MOUNTED_POTATO_CANNON =
+             REGISTRATE.block("mounted_potato_cannon", MountedPotatoCannonBlock::new)
+                     .initialProperties(SharedProperties::stone)
+-                    .blockstate(AeroBlockStateGen::directionalPoweredAxisBlockstate)
++                    .blockstate(() -> AeroBlockStateGen::directionalPoweredAxisBlockstate)
+                     .properties(BlockBehaviour.Properties::noOcclusion)
+                     .transform(AeroStress.setImpact(2.0))
+                     .transform(pickaxeOnly())
+diff --git a/.porting/sources/Simulated-Project/offroad/common/src/main/java/dev/ryanhcode/offroad/index/OffroadBlocks.java b/.porting/sources/Simulated-Project/offroad/common/src/main/java/dev/ryanhcode/offroad/index/OffroadBlocks.java
+--- a/.porting/sources/Simulated-Project/offroad/common/src/main/java/dev/ryanhcode/offroad/index/OffroadBlocks.java
++++ b/.porting/sources/Simulated-Project/offroad/common/src/main/java/dev/ryanhcode/offroad/index/OffroadBlocks.java
+@@ -48,7 +48,7 @@
+                     .transform(pickaxeOnly())
+                     .transform(OffroadStress.setImpact(8))
+                     .addLayer(() -> com.simibubi.create.foundation.render.LegacyRenderTypes::cutoutMipped)
+-                    .blockstate(BlockStateGen.directionalAxisBlockProvider())
++                    .blockstate(() -> BlockStateGen.directionalAxisBlockProvider())
+                     .recipe((c, p) -> p.shaped(RecipeCategory.MISC, c.get(), 1)
+                             .pattern("S")
+                             .pattern("G")
+@@ -73,7 +73,7 @@
+                     .onRegister(movementBehaviour(new RockCuttingWheelActor()))
+                     .properties(BlockBehaviour.Properties::noOcclusion)
+                     .addLayer(() -> com.simibubi.create.foundation.render.LegacyRenderTypes::cutoutMipped)
+-                    .blockstate(SimBlockStateGen::directionalAxisBlock)
++                    .blockstate(() -> SimBlockStateGen::directionalAxisBlock)
+                     .recipe((c, p) -> p.shaped(RecipeCategory.MISC, c.get(), 1)
+                             .pattern("C")
+                             .pattern("G")
+@@ -98,7 +98,7 @@
+                     .transform(axeOrPickaxe())
+                     .addLayer(() -> com.simibubi.create.foundation.render.LegacyRenderTypes::cutoutMipped)
+                     .tag(AllTags.AllBlockTags.SAFE_NBT.tag)
+-                    .blockstate(BlockStateGen.horizontalBlockProvider(true))
++                    .blockstate(() -> BlockStateGen.horizontalBlockProvider(true))
+                     .transform(OffroadStress.setImpact(16.0))
+                     .item(RollerBlockItem::new)
+                     .transform(customItemModel())
+diff --git a/.porting/sources/Simulated-Project/offroad/common/src/main/java/dev/ryanhcode/offroad/index/OffroadItems.java b/.porting/sources/Simulated-Project/offroad/common/src/main/java/dev/ryanhcode/offroad/index/OffroadItems.java
+--- a/.porting/sources/Simulated-Project/offroad/common/src/main/java/dev/ryanhcode/offroad/index/OffroadItems.java
++++ b/.porting/sources/Simulated-Project/offroad/common/src/main/java/dev/ryanhcode/offroad/index/OffroadItems.java
+@@ -25,7 +25,7 @@
+                     .requires(Items.DRIED_KELP)
+                     .unlockedBy("has_ingredient", p.has(AllBlocks.SHAFT.get()))
+                     .save(p))
+-            .model(AssetLookup.itemModelWithPartials())
++            .model(() -> AssetLookup.itemModelWithPartials())
+             .register();
+
+     public static final ItemEntry<TireItem> TIRE = REGISTRATE.item("tire", TireItem::new)
+@@ -38,7 +38,7 @@
+                     .define('S', AllBlocks.SHAFT.asItem())
+                     .unlockedBy("has_ingredient", p.has(AllBlocks.SHAFT.get()))
+                     .save(p))
+-            .model(AssetLookup.itemModelWithPartials())
++            .model(() -> AssetLookup.itemModelWithPartials())
+             .register();
+
+     public static final ItemEntry<TireItem> LARGE_TIRE = REGISTRATE.item("large_tire", TireItem::new)
+@@ -51,7 +51,7 @@
+                     .define('S', AllBlocks.SHAFT.asItem())
+                     .unlockedBy("has_ingredient", p.has(AllBlocks.SHAFT.get()))
+                     .save(p))
+-            .model(AssetLookup.itemModelWithPartials())
++            .model(() -> AssetLookup.itemModelWithPartials())
+             .register();
+
+     public static final ItemEntry<TireItem> MONSTROUS_TIRE = REGISTRATE.item("monstrous_tire", TireItem::new)
+@@ -64,7 +64,7 @@
+                     .define('S', AllBlocks.SHAFT.asItem())
+                     .unlockedBy("has_ingredient", p.has(AllBlocks.SHAFT.get()))
+                     .save(p))
+-            .model(AssetLookup.itemModelWithPartials())
++            .model(() -> AssetLookup.itemModelWithPartials())
+             .register();
+
+     public static void init() {

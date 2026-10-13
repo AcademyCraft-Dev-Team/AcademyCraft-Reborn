@@ -109,6 +109,13 @@ final class NativeStructurePhysicsGraspSmokeChecks implements AutoCloseable {
             server.getPlayerList().placeNewPlayer(connection, player, cookie);
             player.connection.markClientLoaded(); player.setGameMode(GameType.SURVIVAL); player.setNoGravity(true);
             configure(player); aim(player);
+            var resolver = new org.academy.internal.common.ability.program.ServerProgramTargetResolver(player, 32, 32);
+            var target = resolver.lookStructureTarget().orElseThrow();
+            require(target.matches(handle) && resolver.structureMotion(target).orElseThrow().mass() == motion().mass(),
+                    "Program query failed to resolve the independent whole physical body");
+            require(resolver.structureMotion(new org.academy.api.common.ability.program.ProgramStructureReference(
+                    target.reference(), UUID.randomUUID())).isEmpty(), "Program query accepted an old activation");
+            evidence.append("program_whole_body_query=true\nprogram_stale_activation_rejected=true\n");
             initialCom = worldCom(motion()); initialAir = resources(player).getPlayerCurrMP(player.getUUID());
             itemStart = player.getEyePosition().add(player.getLookAngle().scale(1.5));
             spawnItem(itemStart);

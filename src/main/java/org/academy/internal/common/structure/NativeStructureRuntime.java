@@ -63,6 +63,7 @@ public final class NativeStructureRuntime implements StructureBackend {
     private static final List<ChunkPos> CHUNKS = chunks();
 
     private final MinecraftServer server;
+    private final boolean enabled;
     private final NativeStructurePhysics physics;
     private final NativeStructureManifest manifest;
     private final Map<UUID, Handle> loaded = new LinkedHashMap<>();
@@ -76,6 +77,7 @@ public final class NativeStructureRuntime implements StructureBackend {
 
     private NativeStructureRuntime(MinecraftServer server) {
         this.server = server;
+        enabled = StructureBackendRouter.nativeEnabled(server);
         physics = new NativeStructurePhysics(server, this);
         try {
             manifest = new NativeStructureManifest(server.getWorldPath(LevelResource.ROOT)
@@ -127,6 +129,8 @@ public final class NativeStructureRuntime implements StructureBackend {
 
     @Override
     public Optional<StructureHandle> createEmpty(ServerLevel hostLevel, StructurePose pose) {
+        requireThread();
+        if (!enabled) return Optional.empty();
         requireRunning();
         if (physicsStepping) throw new IllegalStateException("Cannot allocate during a physics step");
         Objects.requireNonNull(hostLevel, "hostLevel");
@@ -169,6 +173,8 @@ public final class NativeStructureRuntime implements StructureBackend {
 
     @Override
     public Optional<StructureHandle> load(StructureRef reference) {
+        requireThread();
+        if (!enabled) return Optional.empty();
         requireRunning();
         if (physicsStepping) throw new IllegalStateException("Cannot load during a physics step");
         var found = exactEntry(reference);
@@ -571,6 +577,7 @@ public final class NativeStructureRuntime implements StructureBackend {
 
     private void requireRunning() {
         requireThread();
+        if (!enabled) throw new IllegalStateException("Native structure activation is disabled while Sable is installed");
         if (stopping) throw new IllegalStateException("Structure backend is stopping");
     }
 
@@ -853,6 +860,7 @@ public final class NativeStructureRuntime implements StructureBackend {
     }
 
     @SubscribeEvent public static void started(ServerStartedEvent event) {
+        if (!StructureBackendRouter.nativeEnabled(event.getServer())) return;
         var runtime = backend(event.getServer());
         for (var entry : runtime.manifest.entries()) if (entry.active()) runtime.load(entry.reference());
     }
@@ -875,7 +883,7 @@ public final class NativeStructureRuntime implements StructureBackend {
     @SubscribeEvent public static void tick(ServerTickEvent.Post event) {
         NativeStructureRuntime runtime;
         synchronized (SERVERS) { runtime = SERVERS.get(event.getServer()); }
-        if (runtime == null || runtime.closed) return;
+        if (runtime == null || runtime.closed || !runtime.enabled) return;
         runtime.physics.tick();
         NativeStructureChestSessions.tick(event.getServer());
         for (var handle : List.copyOf(runtime.loaded.values())) handle.updateProjection();
@@ -884,6 +892,7 @@ public final class NativeStructureRuntime implements StructureBackend {
     }
 
     private void persistIndex() {
+        if (!enabled) return;
         boolean recoverySaved = false;
         try { flushRecovery(); recoverySaved = true; }
         catch (IOException | RuntimeException failure) {

@@ -7,6 +7,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import org.academy.internal.common.structure.space.NativeStructureChanges;
 import org.academy.internal.common.structure.space.NativeStructureDimensions;
+import org.academy.internal.common.structure.StructureBackendRouter;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -24,9 +25,11 @@ public abstract class MixinLevelChunkNativeStructureChanges {
     private void academy$trackNativeCell(BlockPos position, BlockState state, int flags,
                                          CallbackInfoReturnable<BlockState> callback) {
         var previous = callback.getReturnValue();
-        if (previous != null && previous != state && level instanceof ServerLevel serverLevel
-                && NativeStructureDimensions.isStorageLevel(serverLevel.dimension())) {
-            NativeStructureChanges.mark(serverLevel, position);
+        if (previous != null && previous != state && level instanceof ServerLevel serverLevel) {
+            if (NativeStructureDimensions.isStorageLevel(serverLevel.dimension())) {
+                NativeStructureChanges.mark(serverLevel, position);
+            }
+            StructureBackendRouter.onBlockChanged(serverLevel, position);
         }
     }
 }

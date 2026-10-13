@@ -42,6 +42,7 @@ import org.academy.api.common.ability.program.ProgramValueType;
 import org.academy.api.common.ability.program.ProgramValueTypes;
 import org.academy.api.common.ability.program.ProgramVector;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
+import org.academy.api.common.ability.program.ProgramStructureReference;
 import org.academy.api.server.ability.HostileTargets;
 import org.academy.internal.common.ability.darkmatter.targeting.DarkmatterTargeting;
 import org.jspecify.annotations.Nullable;
@@ -750,6 +751,24 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                         .findFirst()
                         .orElseGet(CommonProgramExecutors::emptyData);
                 });
+        put(result, CommonProgramNodeIds.LOOK_STRUCTURE, (context, _, _) ->
+                resolver(context).lookStructureTarget()
+                        .map(target -> data("structure", ProgramValueTypes.STRUCTURE_REFERENCE, target))
+                        .orElseGet(CommonProgramExecutors::emptyData));
+        put(result, CommonProgramNodeIds.STRUCTURE_MOTION, (context, _, inputs) -> {
+            var target = (ProgramStructureReference) raw(inputs, "structure", ProgramValueTypes.STRUCTURE_REFERENCE);
+            return resolver(context).structureMotion(target).map(motion -> {
+                var point = motion.pose().localToWorldPoint(motion.localCenterOfMass());
+                var velocity = motion.linearVelocity();
+                var angular = motion.angularVelocity();
+                return ProgramNodeStep.data(Map.of(
+                        "position", value(ProgramValueTypes.WORLD_POSITION, new ProgramWorldPosition(
+                                target.reference().dimension(), point.x, point.y, point.z)),
+                        "velocity", value(ProgramValueTypes.VECTOR, new ProgramVector(velocity.x, velocity.y, velocity.z)),
+                        "angular_velocity", value(ProgramValueTypes.VECTOR, new ProgramVector(angular.x, angular.y, angular.z)),
+                        "mass", value(ProgramValueTypes.FLOAT, motion.mass())));
+            }).orElseGet(CommonProgramExecutors::emptyData);
+        });
         put(result, CommonProgramNodeIds.ENTITIES_AROUND, (context, _, inputs) -> {
             var radius = nonNegative(floatValue(inputs, "radius"), "radius");
             var entities = resolver(context).entitiesAround(worldPosition(inputs, "center"), radius);

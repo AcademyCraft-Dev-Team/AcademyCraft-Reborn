@@ -47,7 +47,22 @@ public final class NativeStructureQueries {
         return raycast(host, worldFrom, worldTo, null, null, new HostObservations(host));
     }
 
+    public static boolean clearSightline(ServerLevel host, Vec3 worldFrom, Vec3 worldTo) {
+        var observation = observe(host, worldFrom, worldTo, null, null, new HostObservations(host));
+        return observation.complete && observation.hostClear && observation.hit.isEmpty();
+    }
+
+    private record RayObservation(boolean complete, boolean hostClear, Optional<StructureHit> hit) {
+        private static RayObservation unavailable() { return new RayObservation(false, false, Optional.empty()); }
+    }
+
     private static Optional<StructureHit> raycast(ServerLevel host, Vec3 worldFrom, Vec3 worldTo,
+                                                  @Nullable StructureRef rewind, @Nullable StructurePose oldPose,
+                                                  HostObservations observations) {
+        return observe(host, worldFrom, worldTo, rewind, oldPose, observations).hit;
+    }
+
+    private static RayObservation observe(ServerLevel host, Vec3 worldFrom, Vec3 worldTo,
                                                   @Nullable StructureRef rewind, @Nullable StructurePose oldPose,
                                                   HostObservations observations) {
         validateRay(host, worldFrom, worldTo);
@@ -60,7 +75,6 @@ public final class NativeStructureQueries {
                         handle.reference().equals(rewind) ? Objects.requireNonNull(oldPose) : currentPose,
                         currentPose, backend.storageLevel(handle.reference()).orElseThrow(UnavailableRay::new)));
             }
-            if (snapshots.isEmpty()) return Optional.empty();
             // This getter refuses missing chunks before touching their states or block entities.
             var hostHit = new LoadedBlockGetter(host, false, observations).clip(context(worldFrom, worldTo));
             var hostDistance = hostHit.getType() == HitResult.Type.MISS ? Double.POSITIVE_INFINITY
@@ -90,11 +104,14 @@ public final class NativeStructureQueries {
                 nearestDistance = distance;
             }
             // Shape callbacks can reenter mod code; never return an observation spanning mutations.
-            for (var snapshot : snapshots) if (!snapshot.isCurrent()) return Optional.empty();
-            if (!observations.stillValid()) return Optional.empty();
-            return Optional.ofNullable(nearest);
+            if (!backend.activeStructures(host).equals(snapshots.stream().map(Snapshot::handle).toList())) {
+                return RayObservation.unavailable();
+            }
+            for (var snapshot : snapshots) if (!snapshot.isCurrent()) return RayObservation.unavailable();
+            if (!observations.stillValid()) return RayObservation.unavailable();
+            return new RayObservation(true, hostHit.getType() == HitResult.Type.MISS, Optional.ofNullable(nearest));
         } catch (UnavailableRay | IllegalStateException unavailable) {
-            return Optional.empty();
+            return RayObservation.unavailable();
         }
     }
 

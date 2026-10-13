@@ -13,6 +13,11 @@ import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramVector;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
+import org.academy.api.common.ability.program.ProgramStructureReference;
+import org.academy.api.common.structure.StructureDynamics;
+import org.academy.api.common.structure.StructureLifecycle;
+import org.academy.api.common.structure.StructureQueries;
+import org.academy.api.common.structure.StructureSpaces;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 
 import java.util.Comparator;
@@ -85,6 +90,29 @@ public final class ServerProgramTargetResolver implements ProgramTargetResolver 
         var look = entity.getLookAngle();
         if (!finiteNonZero(look)) return Optional.empty();
         return Optional.of(new ProgramDirection(look.x, look.y, look.z));
+    }
+
+    @Override
+    public Optional<ProgramStructureReference> lookStructureTarget() {
+        if (!player.isAlive() || player.isRemoved()) return Optional.empty();
+        var eye = player.getEyePosition();
+        var look = player.getLookAngle();
+        if (!finite(eye) || !finiteNonZero(look)) return Optional.empty();
+        return StructureQueries.raycast(level(), eye, eye.add(look.normalize().scale(maximumRange)))
+                .map(hit -> new ProgramStructureReference(hit.block().structure(), hit.runtimeId()));
+    }
+
+    @Override
+    public Optional<StructureDynamics.State> structureMotion(ProgramStructureReference reference) {
+        Objects.requireNonNull(reference, "reference");
+        if (!player.isAlive() || player.isRemoved()
+                || !reference.reference().dimension().equals(level().dimension().identifier())) return Optional.empty();
+        var handle = StructureSpaces.resolve(level().getServer(), reference.reference()).orElse(null);
+        if (!reference.matches(handle) || handle.lifecycle() != StructureLifecycle.ACTIVE) return Optional.empty();
+        // A saved program reference is not an unlimited remote telemetry capability.
+        return StructureDynamics.motion(level(), reference.reference())
+                .filter(motion -> isWithinRadius(player.getEyePosition(),
+                        motion.pose().localToWorldPoint(motion.localCenterOfMass()), maximumRange));
     }
 
     @Override

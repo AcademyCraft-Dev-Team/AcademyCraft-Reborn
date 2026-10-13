@@ -17,16 +17,15 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
-import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.EntityHitResult;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
+import org.academy.api.common.ability.aeromanip.PneumaticStructureControl;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.ability.ClientContext;
 import org.academy.api.client.config.KeyBindingConfig;
@@ -38,6 +37,7 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.structure.BlockStructure;
+import org.academy.api.common.structure.StructureDynamics;
 import org.academy.api.common.structure.StructureHit;
 import org.academy.api.common.structure.StructureQueries;
 import org.academy.api.common.structure.StructureRef;
@@ -230,6 +230,7 @@ public final class PneumaticGrasp extends Skill {
             private final UUID controllerId = UUID.randomUUID();
             private Entity controlledTarget;
             private StructureTractionSession structureControl;
+            private float structureResourceMultiplier = 1;
             private double controlledSpeedCap;
             private double holdDistance = DEFAULT_CONTROL_DISTANCE;
             private int activeTicks;
@@ -283,23 +284,33 @@ public final class PneumaticGrasp extends Skill {
                     moveStructure(eye, look, skillLevel, range);
                     return;
                 }
-                if (!isValidTarget(controlledTarget, skillLevel, range)) {
+                var previousTarget = controlledTarget;
+                var validTarget = isValidTarget(previousTarget, skillLevel, range);
+                if (ended || controlledTarget != previousTarget) return;
+                if (!validTarget) {
                     controlledTarget = null;
                     var selected = findTarget(eye, look, skillLevel, range);
+                    if (ended) return;
                     if (selected != null && selected.structureHit() != null) {
                         var hit = selected.structureHit();
+                        var motion = StructureDynamics.motion(player.level(), hit.block().structure()).orElse(null);
+                        if (motion == null) { end(); return; }
                         var acquired = StructureTraction.tryAcquire(player, controllerId, hit,
-                                new StructureTraction.Settings(range, 32.0,
-                                        milestone >= 2 ? 144.0 : 120.0, 36.0, 1000.0, 3),
+                                PneumaticStructureControl.settings(motion.mass(), skillLevel, milestone, range),
                                 (actor, handle) -> actor == player && !player.isSpectator()
                                         && player.getAbilities().mayBuild && player.level().mayInteract(player,
                                         BlockPos.containing(handle.pose().localToWorldPoint(hit.localPoint()))));
+                        if (ended) {
+                            acquired.session().ifPresent(StructureTractionSession::close);
+                            return;
+                        }
                         if (acquired.status() != StructureTraction.Status.ACTIVE) {
                             // Occupied or unavailable foreground structures still occlude later targets.
                             end();
                             return;
                         }
                         structureControl = acquired.session().orElseThrow();
+                        structureResourceMultiplier = PneumaticStructureControl.resourceMultiplier(motion.mass());
                         moveStructure(eye, look, skillLevel, range);
                         return;
                     }
@@ -308,9 +319,11 @@ public final class PneumaticGrasp extends Skill {
                             ? Math.max(0.1, controlledTarget.getDeltaMovement().length())
                             : 0.0;
                 }
-                if (controlledTarget == null) return;
+                var target = controlledTarget;
+                if (target == null) return;
                 if (!consumeControlTick(skill)) return;
-                if (milestone >= 3 && controlledTarget instanceof LivingEntity living
+                if (ended || controlledTarget != target) return;
+                if (milestone >= 3 && target instanceof LivingEntity living
                         && living.onGround() && activeTicks % 5 == 0
                         && !skill.executeContinuousWithResource(
                         player,
@@ -321,19 +334,28 @@ public final class PneumaticGrasp extends Skill {
                     end();
                     return;
                 }
+                if (ended || controlledTarget != target) return;
+                // Resource/protection callbacks may have changed the corridor after selection.
+                validTarget = isValidTarget(target, skillLevel, range);
+                if (ended || controlledTarget != target) return;
+                if (!validTarget) {
+                    controlledTarget = null;
+                    return;
+                }
                 EntityMotionGuard.runWithMotionSource(
                         player,
-                        () -> moveTarget(controlledTarget, eye, look, skillLevel));
+                        () -> moveTarget(target, eye, look, skillLevel));
+                if (ended || controlledTarget != target) return;
                 skill.reportActivity(player, true);
             }
 
             private boolean consumeControlTick(PneumaticGrasp skill) {
                 activeTicks++;
                 if (activeTicks % 10 != 0 || skill.executeContinuousWithResource(
-                        player, _ -> 10.0f,
+                        player, _ -> 10.0f * structureResourceMultiplier,
                         _ -> Math.max(0.0f, AeromanipConfig.skillFloat(
-                                player, SkillNames.PNEUMATIC_GRASP, "compressedAirPerInterval", 2.0f)),
-                        (_, _) -> { }, true)) return true;
+                                player, SkillNames.PNEUMATIC_GRASP, "compressedAirPerInterval", 2.0f)) * structureResourceMultiplier,
+                        (_, _) -> { }, true)) return !ended;
                 end();
                 return false;
             }
@@ -342,23 +364,21 @@ public final class PneumaticGrasp extends Skill {
 
             private Target findTarget(Vec3 eye, Vec3 look, int skillLevel, double range) {
                 var end = eye.add(look.scale(range));
-                // Vanilla clip may read chunks; targeting must not activate an unloaded host corridor.
+                // Targeting must not activate an unloaded host corridor.
                 if (!rayLoaded(eye, end)) return null;
-                var blockHit = player.level().clip(new ClipContext(
-                        eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-                var blockDistance = blockHit.getType() == HitResult.Type.MISS
-                        ? range * range
-                        : eye.distanceToSqr(blockHit.getLocation());
                 var entityHit = entityHit(eye, end, skillLevel);
                 double entityDistance = entityHit == null ? Double.POSITIVE_INFINITY
                         : eye.distanceToSqr(entityHit.getLocation());
                 var structureHit = StructureQueries.raycast(player.level(), eye, end).orElse(null);
                 double structureDistance = structureHit == null ? Double.POSITIVE_INFINITY
                         : eye.distanceToSqr(structureHit.worldPoint());
-                if (structureHit != null && structureDistance <= entityDistance && structureDistance < blockDistance) {
+                // Public hits already include host occlusion and always use world coordinates.
+                // Sable's Level.clip can return private plot coordinates and is not comparable here.
+                if (structureHit != null && structureDistance <= entityDistance && structureDistance < range * range) {
                     return new Target(null, structureHit);
                 }
-                if (entityHit == null || entityDistance >= blockDistance || entityDistance >= structureDistance) return null;
+                if (entityHit == null || entityDistance >= range * range || entityDistance >= structureDistance
+                        || !clearSightline(eye, entityHit.getLocation())) return null;
                 return new Target(entityHit.getEntity(), null);
             }
 
@@ -371,9 +391,8 @@ public final class PneumaticGrasp extends Skill {
                 return isControllable(target, skillLevel)
                         && target.level() == player.level()
                         && target.distanceToSqr(player) <= (range + 2.0) * (range + 2.0)
-                        && rayLoaded(player.getEyePosition(), target.getEyePosition())
-                        && player.hasLineOfSight(target)
-                        && !structureOccludes(player.getEyePosition(), target.getBoundingBox().getCenter());
+                        && clearSightline(player.getEyePosition(), target.getEyePosition())
+                        && clearSightline(player.getEyePosition(), target.getBoundingBox().getCenter());
             }
 
             private boolean rayLoaded(Vec3 from, Vec3 to) {
@@ -389,21 +408,22 @@ public final class PneumaticGrasp extends Skill {
                 return true;
             }
 
-            private boolean structureOccludes(Vec3 eye, Vec3 point) {
+            private boolean clearSightline(Vec3 eye, Vec3 point) {
                 double distance = eye.distanceToSqr(point);
                 if (distance < 1.0e-12 || distance > StructureQueries.MAX_RAY_LENGTH * StructureQueries.MAX_RAY_LENGTH) {
-                    return distance >= 1.0e-12;
+                    return distance < 1.0e-12;
                 }
-                return StructureQueries.raycast(player.level(), eye, point)
-                        .filter(hit -> eye.distanceToSqr(hit.worldPoint()) < distance).isPresent();
+                return StructureQueries.clearSightline(player.level(), eye, point);
             }
 
             private void moveStructure(Vec3 eye, Vec3 look, int skillLevel, double range) {
-                if (structureControl.status() != StructureTraction.Status.ACTIVE) {
+                var control = structureControl;
+                if (ended || control == null) return;
+                if (control.status() != StructureTraction.Status.ACTIVE) {
                     end();
                     return;
                 }
-                var anchor = structureControl.worldPoint();
+                var anchor = control.worldPoint();
                 double distance = eye.distanceToSqr(anchor);
                 var obstruction = distance < 1.0e-12 ? null : entityHit(eye, anchor, skillLevel);
                 if (distance > range * range || obstruction != null
@@ -414,14 +434,18 @@ public final class PneumaticGrasp extends Skill {
                 var destination = player.isShiftKeyDown()
                         ? anchor.add(anchor.subtract(eye).normalize().scale(4.0))
                         : eye.add(look.scale(holdDistance));
-                if (structureControl.update(destination, Vec3.ZERO) != StructureTraction.Status.ACTIVE) {
+                var status = control.update(destination, Vec3.ZERO);
+                if (ended || structureControl != control) return;
+                if (status != StructureTraction.Status.ACTIVE) {
                     end();
                     return;
                 }
                 var skill = Skills.PNEUMATIC_GRASP.get();
                 // Commands only reach the later physics tick. Failed payment closes them before that step.
                 if (!consumeControlTick(skill)) return;
-                spawnStructureEffect(eye, structureControl.worldPoint(), structureControl.targetPosition());
+                if (ended || structureControl != control) return;
+                spawnStructureEffect(eye, control.worldPoint(), control.targetPosition());
+                if (ended || structureControl != control) return;
                 skill.reportActivity(player, true);
             }
 

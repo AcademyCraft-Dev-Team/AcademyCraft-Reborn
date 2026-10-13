@@ -26,10 +26,11 @@ public interface StructureTractionSession extends AutoCloseable {
 
     /**
      * Checks actor, runtime, permission, mass, current-point reach, loaded visibility and
-     * region bounds, then replaces the PD target and renews its short lease. A nearer face
+     * backend bounds, then replaces the PD target and renews its short lease. A nearer face
      * of this same structure is allowed; host blocks or another structure occlude control.
      * The current rotated body AABB translated to the requested target, and to its next-tick
-     * velocity prediction, must fit the region with a 0.25-block margin. This does not predict
+     * velocity prediction, must fit the backend's supported area: the native simulation
+     * region with a 0.25-block margin, or Sable's host height and world border. This does not predict
      * future body rotation, stop residual velocity or add a hard positional constraint.
      * Failure releases this session and is terminal. Velocity is blocks per second.
      */

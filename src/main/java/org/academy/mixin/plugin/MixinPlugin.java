@@ -1,6 +1,7 @@
 package org.academy.mixin.plugin;
 
 import org.academy.api.client.compatibility.IrisIntegration;
+import org.academy.internal.common.compat.SableStaffMixinGate;
 import org.jspecify.annotations.Nullable;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
@@ -22,6 +23,10 @@ public class MixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        if (mixinClassName.equals("org.academy.mixin.common.compat.MixinSablePhysicsStaffHandler")
+                || mixinClassName.equals("org.academy.mixin.common.compat.MixinSablePhysicsStaffDragSession")) {
+            return SableStaffMixinGate.state() == SableStaffMixinGate.State.VERIFIED;
+        }
         return true;
     }
 

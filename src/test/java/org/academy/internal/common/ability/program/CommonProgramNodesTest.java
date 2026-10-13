@@ -1405,6 +1405,57 @@ class CommonProgramNodesTest {
         assertEquals(targetBlock, session.variables().get("target_block").value());
     }
 
+    @Test
+    void structureNodesKeepBodyIdentityAndSolverUnitsThroughForwardingRuntime() {
+        var target = new org.academy.api.common.ability.program.ProgramStructureReference(
+                new org.academy.api.common.structure.StructureRef(UUID.randomUUID(), OVERWORLD,
+                        Identifier.parse("academy:native"), 0), UUID.randomUUID());
+        var state = new org.academy.api.common.structure.StructureDynamics.State(
+                org.academy.api.common.structure.StructurePose.identity(new net.minecraft.world.phys.Vec3(10, 64, 20)),
+                new net.minecraft.world.phys.Vec3(2, -3, 4), new net.minecraft.world.phys.Vec3(0, 1, 0),
+                new net.minecraft.world.phys.Vec3(1, 0.5, 2), 50);
+        var resolver = new ProgramTargetResolver() {
+            @Override public Optional<org.academy.api.common.ability.program.ProgramStructureReference> lookStructureTarget() {
+                return Optional.of(target);
+            }
+            @Override public Optional<org.academy.api.common.structure.StructureDynamics.State> structureMotion(
+                    org.academy.api.common.ability.program.ProgramStructureReference reference) {
+                return target.equals(reference) ? Optional.of(state) : Optional.empty();
+            }
+            @Override public Optional<ProgramWorldPosition> positionOf(Object entity) { return Optional.empty(); }
+            @Override public Optional<ProgramDirection> lookDirectionOf(Object entity) { return Optional.empty(); }
+            @Override public List<?> entitiesAround(ProgramWorldPosition center, double radius) { return List.of(); }
+            @Override public Optional<ProgramBlockPosition> raycastBlock(ProgramWorldPosition origin, ProgramDirection direction, double range) {
+                return Optional.empty();
+            }
+        };
+        org.academy.api.common.ability.program.ForwardingProgramTargetResolver forwarding = () -> resolver;
+        var graph = new ProgramGraph(List.of(
+                node(1, PrecisionProgramNodeIds.ON_CAST), node(2, CommonProgramNodeIds.LOOK_STRUCTURE),
+                variableNode(3, CommonProgramNodeIds.VARIABLE_SET, "body", ProgramValueTypes.STRUCTURE_REFERENCE.id()),
+                variableNode(4, CommonProgramNodeIds.VARIABLE_GET, "body", ProgramValueTypes.STRUCTURE_REFERENCE.id()),
+                node(5, CommonProgramNodeIds.STRUCTURE_MOTION),
+                variableNode(6, CommonProgramNodeIds.VARIABLE_SET, "mass", ProgramValueTypes.FLOAT.id()),
+                variableNode(7, CommonProgramNodeIds.VARIABLE_SET, "com", ProgramValueTypes.WORLD_POSITION.id()),
+                variableNode(8, CommonProgramNodeIds.VARIABLE_SET, "velocity", ProgramValueTypes.VECTOR.id()),
+                variableNode(9, CommonProgramNodeIds.VARIABLE_SET, "angular", ProgramValueTypes.VECTOR.id()),
+                node(10, CommonProgramNodeIds.STOP)), List.of(
+                edge(1, "flow", 3, "flow"), edge(2, "structure", 3, "value"),
+                edge(3, "flow", 6, "flow"), edge(4, "value", 5, "structure"), edge(5, "mass", 6, "value"),
+                edge(6, "flow", 7, "flow"), edge(5, "position", 7, "value"),
+                edge(7, "flow", 8, "flow"), edge(5, "velocity", 8, "value"),
+                edge(8, "flow", 9, "flow"), edge(5, "angular_velocity", 9, "value"), edge(9, "flow", 10, "flow")));
+        var variables = run(graph, forwarding).variables();
+        assertEquals(target, variables.get("body").value());
+        assertEquals(50.0, variables.get("mass").value());
+        assertEquals(new ProgramWorldPosition(OVERWORLD, 11, 64.5, 22), variables.get("com").value());
+        assertEquals(new ProgramVector(2, -3, 4), variables.get("velocity").value());
+        assertEquals(new ProgramVector(0, 1, 0), variables.get("angular").value());
+        assertFalse(ProgramValueTypes.canConnect(ProgramValueTypes.STRUCTURE_REFERENCE, ProgramValueTypes.ENTITY_REFERENCE));
+        assertFalse(ProgramValueTypes.canConnect(ProgramValueTypes.STRUCTURE_REFERENCE, ProgramValueTypes.BLOCK_POSITION));
+        assertFalse(ProgramValueTypes.canConnect(ProgramValueTypes.STRUCTURE_REFERENCE, ProgramValueTypes.CONTROL_DESTINATION));
+    }
+
     private static ProgramVm.Session run(ProgramGraph graph, Object attachment) {
         var compiled = ProgramCompiler.compile(
                 graph,

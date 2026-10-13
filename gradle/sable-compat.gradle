@@ -1,0 +1,255 @@
+import groovy.json.JsonSlurper
+import java.security.MessageDigest
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
+
+// The bridge is always compiled and packaged. Only its external API inputs are compileOnly.
+def lockFile = file('docs/sable_compat_artifacts.json')
+def lock = new JsonSlurper().parse(lockFile)
+if (lock.format != 'academy-sable-compat-v1') throw new GradleException('Unsupported Sable artifact manifest')
+def forkRoot = file(providers.gradleProperty('academySableFork').getOrElse('../create-fork'))
+def mavenRoot = file(providers.gradleProperty('academySableMaven').getOrElse(new File(forkRoot, '.porting/maven').path))
+def artifactFile = { String role ->
+    def artifact = lock.artifacts[role]
+    if (role == 'suite') return file(providers.gradleProperty('academySableSuiteJar')
+            .getOrElse(new File(forkRoot, artifact.forkPath).path))
+    def (group, name, version) = artifact.coordinate.split(':')
+    new File(mavenRoot, "${group.replace('.', '/')}/${name}/${version}/${name}-${version}.jar")
+}
+def sha256 = { byte[] bytes -> MessageDigest.getInstance('SHA-256').digest(bytes).encodeHex().toString().toUpperCase(Locale.ROOT) }
+def verifyFile = { File jar, Map artifact ->
+    def hint = "Expected ${artifact.sha256} (${artifact.bytes} bytes). Set -PacademySableMaven=<fixed local Maven repository> " +
+            'or -PacademySableFork=<create-fork checkout>; Suite can use -PacademySableSuiteJar=<finished bundle>. ' +
+            'Provision the exact artifacts listed in docs/sable_compat_artifacts.json; the bridge is never silently omitted.'
+    if (!jar.isFile()) throw new GradleException("Missing fixed Sable compatibility input: ${jar.absolutePath}. ${hint}")
+    if (jar.length() != artifact.bytes || sha256(jar.bytes) != artifact.sha256) {
+        throw new GradleException("Sable compatibility artifact differs from the audited build: ${jar.absolutePath}. ${hint}")
+    }
+}
+def verifyArtifact = { String role ->
+    def jar = artifactFile(role)
+    def artifact = lock.artifacts[role]
+    verifyFile(jar, artifact)
+    if (artifact.embedded) new ZipFile(jar).withCloseable { zip ->
+        artifact.embedded.each { path, nestedRole ->
+            def entry = zip.getEntry(path)
+            if (entry == null) throw new GradleException("Missing pinned embedded dependency ${jar}!${path}")
+            byte[] bytes = zip.getInputStream(entry).withCloseable { it.bytes }
+            def nested = lock.artifacts[nestedRole]
+            if (bytes.length != nested.bytes || sha256(bytes) != nested.sha256) {
+                throw new GradleException("Embedded Sable dependency differs from ${nested.coordinate}: ${jar}!${path}")
+            }
+        }
+    }
+}
+
+lock.compileOnly.each { role ->
+    dependencies.add('compileOnly', files(artifactFile(role)))
+    dependencies.add('testCompileOnly', files(artifactFile(role)))
+}
+def verifyCompile = tasks.register('verifySableCompatArtifacts') {
+    group = 'verification'
+    description = 'Verifies the exact external Sable/Companion API JARs and the embedded Sable dependency closure.'
+    inputs.file(lockFile)
+    // Do not declare missing files as @InputFiles: our diagnostic must explain how to provision CI.
+    notCompatibleWithConfigurationCache('External fixed-artifact verification must execute for each compilation')
+    doLast { lock.compileOnly.each { verifyArtifact(it) } }
+}
+tasks.withType(JavaCompile).configureEach { dependsOn verifyCompile }
+tasks.withType(Javadoc).configureEach { dependsOn verifyCompile }
+tasks.matching { it.name == 'compileKotlin' }.configureEach { dependsOn verifyCompile }
+
+// The ordinary test JVM deliberately omits optional mods. Actual Companion pose tests
+// run separately, with only their two pinned API inputs added to the test classpath.
+tasks.named('test', Test) {
+    exclude '**/sable/**'
+    classpath = sourceSets.test.runtimeClasspath.filter { candidate ->
+        !lock.compileOnly.any { candidate.canonicalFile == artifactFile(it).canonicalFile }
+    }
+}
+def sableCompatTest = tasks.register('sableCompatTest', Test) {
+    group = 'verification'
+    description = 'Runs Sable bridge transforms against the fixed real Companion API.'
+    dependsOn verifyCompile, tasks.named('testClasses')
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath + files(lock.compileOnly.collect { artifactFile(it) })
+    include '**/sable/**'
+    useJUnitPlatform()
+}
+tasks.named('check') { dependsOn sableCompatTest }
+
+def bridgeEntries = ['org/academy/internal/common/structure/sable/SableStructureAccess.class',
+                     'org/academy/internal/common/structure/sable/SableStructureTraction.class']
+def externalPrefixes = ['dev/ryanhcode/sable/', 'foundry/veil/', 'foundry/imguimc/']
+Closure inspectArchive
+inspectArchive = { byte[] bytes, String label, Set<String> rootEntries, int depth ->
+    if (depth > 8) throw new GradleException("Excessively nested JAR: ${label}")
+    new ZipInputStream(new ByteArrayInputStream(bytes)).withCloseable { zip ->
+        ZipEntry entry
+        while ((entry = zip.nextEntry) != null) {
+            if (depth == 0) rootEntries.add(entry.name)
+            if (externalPrefixes.any { entry.name.startsWith(it) }) {
+                throw new GradleException("External Sable dependency was packaged into Academy: ${label}!${entry.name}")
+            }
+            if (!entry.directory && entry.name.endsWith('.jar')) {
+                inspectArchive(zip.readAllBytes(), "${label}!${entry.name}", rootEntries, depth + 1)
+            }
+        }
+    }
+}
+def verifyPackage = { File jar ->
+    def entries = new HashSet<String>()
+    inspectArchive(jar.bytes, jar.absolutePath, entries, 0)
+    bridgeEntries.each { if (!entries.contains(it)) throw new GradleException("Missing always-built Sable bridge: ${jar}!${it}") }
+}
+def packaging = tasks.register('verifySableCompatPackaging') {
+    group = 'verification'
+    description = 'Requires both compatibility bridge classes and rejects recursively bundled external Sable dependencies.'
+    dependsOn tasks.named('jar')
+    inputs.file(tasks.named('jar', Jar).flatMap { it.archiveFile })
+    notCompatibleWithConfigurationCache('Inspects the just-built mod and its nested JARs')
+    doLast { verifyPackage(tasks.named('jar', Jar).get().archiveFile.get().asFile) }
+}
+def buildChecks = tasks.register('testSableCompatBuildChecks') {
+    group = 'verification'
+    description = 'Exercises missing/corrupt artifact and missing bridge/nested foreign class rejection with isolated ZIP fixtures.'
+    notCompatibleWithConfigurationCache('Uses isolated temporary archive fixtures')
+    doLast {
+        def rejected = { String fragment, Closure action ->
+            try { action() } catch (GradleException failure) {
+                if (!failure.message.contains(fragment)) throw failure
+                return
+            }
+            throw new GradleException("Build check failed to reject ${fragment}")
+        }
+        def zipBytes = { Map<String, byte[]> content ->
+            def output = new ByteArrayOutputStream()
+            new ZipOutputStream(output).withCloseable { zip ->
+                content.each { name, bytes -> zip.putNextEntry(new ZipEntry(name)); zip.write(bytes); zip.closeEntry() }
+            }
+            output.toByteArray()
+        }
+        def directory = temporaryDir
+        def missing = new File(directory, "missing-${UUID.randomUUID()}.jar")
+        rejected('Missing fixed', { verifyFile(missing, lock.artifacts.sable) })
+        def fixture = new File(directory, 'fixture.jar')
+        def classes = bridgeEntries.collectEntries { [(it): new byte[]{1}] }
+        fixture.bytes = zipBytes(classes)
+        verifyPackage(fixture)
+        def wrongHash = [bytes: fixture.length(), sha256: '0' * 64]
+        rejected('differs from the audited', { verifyFile(fixture, wrongHash) })
+        fixture.bytes = zipBytes([(bridgeEntries.first()): new byte[]{1}])
+        rejected('Missing always-built', { verifyPackage(fixture) })
+        classes['META-INF/jarjar/hidden.jar'] = zipBytes(['dev/ryanhcode/sable/companion/math/Pose3d.class': new byte[]{1}])
+        fixture.bytes = zipBytes(classes)
+        rejected('External Sable dependency', { verifyPackage(fixture) })
+        logger.lifecycle('Sable build checks passed: missing input, wrong hash, missing bridge, nested dependency rejection.')
+    }
+}
+tasks.named('check') { dependsOn packaging, buildChecks }
+
+def runtimeMode = providers.gradleProperty('academySableRuntime').getOrElse('none')
+def smokeEnabled = providers.gradleProperty('academySableSmoke').getOrElse('false') == 'true'
+def compoundSmoke = providers.gradleProperty('academySableCompound').getOrElse('false') == 'true'
+if (compoundSmoke && !smokeEnabled) throw new GradleException('academySableCompound requires academySableSmoke')
+def retentionEnabled = providers.gradleProperty('academySableRetention').getOrElse('false') == 'true'
+if (smokeEnabled && retentionEnabled) throw new GradleException('academySableSmoke and academySableRetention are mutually exclusive')
+if ((smokeEnabled || retentionEnabled) && runtimeMode == 'none') throw new GradleException('Sable validation requires an explicit academySableRuntime')
+if (!(runtimeMode in ['none', 'sable', 'suite'])) {
+    throw new GradleException('academySableRuntime must be sable or suite; omit it for normal standalone Academy runs')
+}
+if (runtimeMode != 'none') {
+    def roles = lock.runtimeGroups[runtimeMode]
+    def runtimeJars = roles.collect { artifactFile(it) }
+    runtimeJars.each { dependencies.add('runtimeOnly', files(it)) }
+    def runRoot = file('run/sable-compat').canonicalFile
+    def runBase = file(providers.gradleProperty('academySableRunDirectory').getOrElse("run/sable-compat/${runtimeMode}"))
+    if (!runBase.canonicalFile.toPath().startsWith(runRoot.toPath())
+            || runBase.absoluteFile.toPath().normalize() != runBase.canonicalFile.toPath()) {
+        throw new GradleException('academySableRunDirectory must be an isolated directory under run/sable-compat without links')
+    }
+    def verifyRuntime = tasks.register('verifySableCompatRuntime') {
+        group = 'verification'
+        description = 'Verifies the explicitly selected runtime closure before an isolated Sable launch.'
+        dependsOn verifyCompile
+        notCompatibleWithConfigurationCache('Rechecks runtime artifacts and isolated mod directories for every launch')
+        doLast {
+            roles.each { verifyArtifact(it) }
+            def permitted = runtimeJars.collect { it.canonicalFile }.toSet()
+            configurations.runtimeClasspath.files.findAll { it.isFile() && it.name.endsWith('.jar') }.each { jar ->
+                if (permitted.contains(jar.canonicalFile)) return
+                new ZipFile(jar).withCloseable { zip ->
+                    def duplicate = ['dev/ryanhcode/sable/Sable.class', 'dev/ryanhcode/sable/companion/math/Pose3d.class',
+                                     'dev/ryanhcode/sable/physics/impl/rapier/Rapier3D.class', 'foundry/veil/Veil.class',
+                                     'foundry/imguimc/ImGuiMC.class'].find { zip.getEntry(it) != null }
+                    def descriptor = zip.getEntry('META-INF/neoforge.mods.toml')
+                    def metadata = descriptor == null ? '' : zip.getInputStream(descriptor).withCloseable { it.getText('UTF-8') }
+                    if (duplicate || jar.name.toLowerCase(Locale.ROOT).contains('imguimc')
+                            || (metadata =~ /(?m)^\s*modId\s*=\s*["'](?:sable|sablecompanion|veil|imguimc|create|simulated|aeronautics|offroad)["']/)) {
+                        throw new GradleException("Unexpected duplicate/optional Sable runtime dependency: ${jar}")
+                    }
+                }
+            }
+            for (def side : ['client', 'server']) {
+                def game = new File(runBase, side)
+                if (!game.canonicalFile.toPath().startsWith(runRoot.toPath())
+                        || game.absoluteFile.toPath().normalize() != game.canonicalFile.toPath()) {
+                    throw new GradleException("Isolated Sable game directory resolves through a link: ${game}")
+                }
+                def mods = new File(game, 'mods')
+                if (mods.absoluteFile.toPath().normalize() != mods.canonicalFile.toPath()) {
+                    throw new GradleException("Isolated Sable mods directory resolves through a link: ${mods}")
+                }
+                if (mods.isDirectory() && mods.listFiles().any { it.name.endsWith('.jar') }) {
+                    throw new GradleException("Isolated Sable mods directory must be empty; the runtime closure is explicit: ${mods}")
+                }
+            }
+            logger.lifecycle("Verified Sable runtime group ${runtimeMode}: ${runtimeJars*.absolutePath}")
+        }
+    }
+    neoForge.runs {
+        clientSable {
+            client()
+            environment 'IS_DEV', 'true'
+            gameDirectory.set(new File(runBase, 'client'))
+            systemProperty 'academy.sableCompat.runtime', runtimeMode
+            if (providers.gradleProperty('academySableSmoke').getOrElse('false') == 'true') {
+                systemProperty 'academy.sable.smoke', 'true'
+                systemProperty 'academy.sable.smoke.side', 'client'
+                systemProperty 'academy.sable.smoke.compound', compoundSmoke.toString()
+                systemProperty 'academy.sable.smoke.root', runRoot.absolutePath
+                systemProperty 'academy.sable.smoke.directory', new File(runBase, 'client').absolutePath
+                programArguments.addAll('--quickPlaySingleplayer', 'Academy Sable Smoke', '--width', '1280', '--height', '720')
+            }
+        }
+        serverSable {
+            server()
+            environment 'IS_DEV', 'true'
+            gameDirectory.set(new File(runBase, 'server'))
+            systemProperty 'academy.sableCompat.runtime', runtimeMode
+            if (retentionEnabled) {
+                systemProperty 'academy.sable.retention', 'true'
+                systemProperty 'academy.sable.smoke.side', 'server'
+                systemProperty 'academy.sable.smoke.root', runRoot.absolutePath
+                systemProperty 'academy.sable.smoke.directory', new File(runBase, 'server').absolutePath
+            }
+            if (providers.gradleProperty('academySableSmoke').getOrElse('false') == 'true') {
+                systemProperty 'academy.sable.smoke', 'true'
+                systemProperty 'academy.sable.smoke.side', 'server'
+                systemProperty 'academy.sable.smoke.compound', compoundSmoke.toString()
+                systemProperty 'academy.sable.smoke.root', runRoot.absolutePath
+                systemProperty 'academy.sable.smoke.directory', new File(runBase, 'server').absolutePath
+            }
+            programArguments.add('--nogui')
+        }
+    }
+    tasks.matching { it.name in ['runClientSable', 'runServerSable'] }.configureEach {
+        dependsOn verifyRuntime
+        notCompatibleWithConfigurationCache('Revalidates the fixed external JARs and isolated runtime directory')
+    }
+    tasks.matching { it.name == 'runClientSable' }.configureEach {
+        doFirst { if (retentionEnabled) throw new GradleException('academySableRetention is a server-only fixture') }
+    }
+}

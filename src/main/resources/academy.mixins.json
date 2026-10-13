@@ -7,6 +7,8 @@
   "mixins": [
     "common.compat.MixinWorldWeaverWorldConfig",
     "common.compat.MixinBetterEndWorldConfig",
+    "common.compat.MixinSablePhysicsStaffHandler",
+    "common.compat.MixinSablePhysicsStaffDragSession",
     "common.MixinCommonHooksDamageComposition",
     "common.ItemCooldownsAccess",
     "common.CooldownInstanceAccess",

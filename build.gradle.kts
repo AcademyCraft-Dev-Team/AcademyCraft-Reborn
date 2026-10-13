@@ -132,6 +132,7 @@ val generateModsToml = tasks.register("generateModsToml") {
         addDep("misaka_network", misakaVersion)
         addDep("curios", "[16.0.0,)", "optional")
         addDep("beyonddimensions", "*", "optional")
+        addDep("sable", "*", "optional")
 
         config.set<MutableList<Config>>(listOf("dependencies", modId), dependencies)
 
@@ -593,3 +594,6 @@ tasks.check {
 
 // Opt-in native solver prototype; normal builds require neither Rust nor a native library.
 apply(from = "gradle/native-physics.gradle")
+
+// Fixed external compile-only APIs; runtime integration is an explicit isolated opt-in.
+apply(from = "gradle/sable-compat.gradle")

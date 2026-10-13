@@ -116,12 +116,12 @@ class ProgramConfigurationOptionsTest {
                 ))
         );
 
-        assertEquals(19, ProgramConfigurationOptions.options(
+        assertEquals(20, ProgramConfigurationOptions.options(
                 mentalout.entry(CommonProgramNodeIds.VARIABLE_GET),
                 "type",
                 new JsonPrimitive("academy:program_type/boolean")
         ).size());
-        assertEquals(19, ProgramConfigurationOptions.options(
+        assertEquals(20, ProgramConfigurationOptions.options(
                 mentalout.entry(CommonProgramNodeIds.SELECT_VALUE),
                 "type",
                 new JsonPrimitive("academy:program_type/boolean")

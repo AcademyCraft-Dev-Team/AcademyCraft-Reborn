@@ -1,0 +1,59 @@
+{
+  "format": "academy-sable-compat-v1",
+  "minecraft": "26.2",
+  "neoforge": "26.2.0.70",
+  "java": 25,
+  "notes": [
+    "These local fork artifacts are external compile/test inputs, never Academy JarJar contents.",
+    "Sable contains Companion common, Veil and Rapier. Runtime groups add only the top-level finished JARs.",
+    "The Suite bundle is a fork build output, not a published Maven coordinate.",
+    "Use academySableMaven or academySableFork for a provisioned fixed local repository; no automatic download or source substitution."
+  ],
+  "artifacts": {
+    "sable": {
+      "coordinate": "dev.ryanhcode.sable:sable-neoforge-26.2:2.0.6-port.26.2.0.70",
+      "sha256": "21A22BCD6B0DD5BC742472E332F7E8A17DD83CBBD471EBE97087E153ACC206CA",
+      "bytes": 13249093,
+      "embedded": {
+        "META-INF/jarjar/sable-companion-common-26.2-1.6.0-port.26.2.0.70.jar": "companion",
+        "META-INF/jarjar/veil-neoforge-26.2-4.3.2-port.26.2.0.70.jar": "veil",
+        "META-INF/jarjar/dev.ryanhcode.sable.sable-sable_rapier-26.2-2.0.6-port.26.2.0.70.jar": "rapier"
+      }
+    },
+    "companion": {
+      "coordinate": "dev.ryanhcode.sable-companion:sable-companion-common-26.2:1.6.0-port.26.2.0.70",
+      "sha256": "91E4FE9EF30994904BFA18BF140E804714700CD89D272A337B3ECAEA9DF5CAD4",
+      "bytes": 34898
+    },
+    "companionNeoForge": {
+      "coordinate": "dev.ryanhcode.sable-companion:sable-companion-neoforge-26.2:1.6.0-port.26.2.0.70",
+      "sha256": "91E4FE9EF30994904BFA18BF140E804714700CD89D272A337B3ECAEA9DF5CAD4",
+      "bytes": 34898
+    },
+    "veil": {
+      "coordinate": "foundry.veil:veil-neoforge-26.2:4.3.2-port.26.2.0.70",
+      "sha256": "B666125341E774DD13C57ACE5B6A0B7A4A164D7249BB1D5413F98B383680C71D",
+      "bytes": 3552447
+    },
+    "rapier": {
+      "coordinate": "dev.ryanhcode.sable:sable-sable_rapier-26.2:2.0.6-port.26.2.0.70",
+      "sha256": "7F946247D0E474ECE26C2538532D2EC99C01D4B72995C426F2A137E0A08A7369",
+      "bytes": 7607271
+    },
+    "create": {
+      "coordinate": "com.simibubi.create:create-26.2:6.1.0-port.26.2.0.70-fix.5",
+      "sha256": "CCEB1920D578FF5292FF8776BB41B800A6718AAB27A86641024E4F754276221E",
+      "bytes": 19621594
+    },
+    "suite": {
+      "forkPath": ".porting/sources/Simulated-Project/aeronautics-bundled/build/libs/create-aeronautics-bundled-26.2-1.3.2-port.26.2.0.70.jar",
+      "sha256": "F473A6BFC8BFB3FA3DA8169FC3D704EB4367994BF612369DCE32692CFBEB10AB",
+      "bytes": 33208554
+    }
+  },
+  "compileOnly": ["sable", "companion"],
+  "runtimeGroups": {
+    "sable": ["sable"],
+    "suite": ["sable", "create", "suite"]
+  }
+}

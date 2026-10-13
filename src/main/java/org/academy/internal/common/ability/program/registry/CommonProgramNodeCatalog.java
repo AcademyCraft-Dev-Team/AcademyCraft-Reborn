@@ -587,6 +587,17 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 "height",
                 ProgramValueTypes.FLOAT
         )));
+        put(result, CommonProgramNodeIds.LOOK_STRUCTURE, queryType(outputSchema(
+                "structure", ProgramValueTypes.STRUCTURE_REFERENCE)));
+        put(result, CommonProgramNodeIds.STRUCTURE_MOTION, queryType(new ProgramNodeSchema(
+                List.of(ProgramPortDefinition.requiredInput("structure", ProgramValueTypes.STRUCTURE_REFERENCE)),
+                List.of(
+                        ProgramPortDefinition.output("position", ProgramValueTypes.WORLD_POSITION),
+                        ProgramPortDefinition.output("velocity", ProgramValueTypes.VECTOR),
+                        ProgramPortDefinition.output("angular_velocity", ProgramValueTypes.VECTOR),
+                        ProgramPortDefinition.output("mass", ProgramValueTypes.FLOAT)
+                )
+        )));
         put(result, CommonProgramNodeIds.ENTITY_DATA, type(
                 EntityDataConfiguration.CODEC,
                 _ -> unarySchema(
@@ -1039,6 +1050,7 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 ProgramValueTypes.BLOCK_POSITION,
                 ProgramValueTypes.ENTITY_REFERENCE,
                 ProgramValueTypes.LIVING_ENTITY_REFERENCE,
+                ProgramValueTypes.STRUCTURE_REFERENCE,
                 ProgramValueTypes.DIRECTION_SET,
                 ProgramValueTypes.WORLD_POSITION_SET,
                 ProgramValueTypes.BLOCK_POSITION_SET,

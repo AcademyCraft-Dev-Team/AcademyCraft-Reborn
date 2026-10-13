@@ -462,6 +462,66 @@ P0 的最小探针增加持续打开移动箱子菜单、旋转后正确朝向�
 
 新放置与被破坏的方块均以当前内容为准，不从旧捕获快照“恢复”它们。技能可以记录原始格子来源，用于限制自动还原策略，但不能复制已被玩家取走的物品。
 
+### 固定 Sable 源码的后续生命周期审计（设计，未实现）
+
+以下是为下一阶段进行的源码审计，不属于本批捕获能力或验收结果。本批先完成已有 Sable 结构的查询、真实牵引和限定兼容验证；纯 Sable、完整 Suite、专服和客户端分别记录结果，不能由其中一项通过推导其余组合可用。本批桥接代码尚未修改外部 fork；参考仓库中的既有改动需要独立保留。可在 Academy 的版本与哈希门禁之后增加窄桥及必要观察/隔离 mixin；若无法证明内容守恒，捕获和静态化入口继续返回明确的不支持原因，不能调用原装配 helper 代替事务。
+
+公开方法足以组合受限的运行中转移，但不提供跨文件原子提交、事务期间的独立刚体冻结或通用 BE 副作用回滚。Java `public` 也不等于稳定扩展点：标有 `@ApiStatus.Internal` 的占用表、存储指针及加载方法必须单独列入固定版本契约，不能作为无条件兼容承诺。
+
+| 任务 | 已核对的方法与源码 | 使用边界 |
+| --- | --- | --- |
+| 分配目标 | [SubLevelContainer.allocateNewSubLevel / allocateSubLevel](D:/mcmodtest/create-fork/.porting/sources/Sable/common/src/main/java/dev/ryanhcode/sable/api/sublevel/SubLevelContainer.java:232) | 分配立即加入列表并调用 observer，不是隐藏的准备容器。先持久记录来源与交易 ID，分配成功后记录精确船 UUID/plot，再写入任何目标内容；空目标不能跨 tick 留待填充。直接指定 plot 时还必须检查包含未加载船的 occupancy，不能只检查 `getSubLevel(x,z)==null`。首期优先使用正常自动分配，不写 occupancy。 |
+| 创建 plot 分区 | [LevelPlot.newEmptyChunk / getChunkHolder / getCenterBlock](D:/mcmodtest/create-fork/.porting/sources/Sable/common/src/main/java/dev/ryanhcode/sable/sublevel/plot/LevelPlot.java:167) | 只创建新分配 plot 内所需分区；宿主分区预先全部已加载，不能通过读取目标偷偷生成宿主地形。局部格固定以 plot center 为原点。 |
+| 写入并更新物理 | `LevelChunk.setBlockState`、`Level.setBlock`；[SableCommonEvents.handleBlockChange](D:/mcmodtest/create-fork/.porting/sources/Sable/common/src/main/java/dev/ryanhcode/sable/SableCommonEvents.java:36) | 经真实方块变更路径更新质量、碰撞与边界，不直接改 section palette。准备阶段抑制放置、掉落及 BE 替换副作用，延后邻居通知；这些 flags 不会屏蔽全部模组回调，写后及整批结束必须再次核验。 |
+| 附加事务身份 | [ServerSubLevel.getUserDataTag / setUserDataTag](D:/mcmodtest/create-fork/.porting/sources/Sable/common/src/main/java/dev/ryanhcode/sable/sublevel/ServerSubLevel.java:549) | 复制已有 tag，只更新 Academy 命名空间的交易/来源元数据；不得覆盖其他模组数据。`user_data` 随船序列化，但不是写前日志或落盘回执。 |
+| 内容检查点 | [ServerLevelPlot.save](D:/mcmodtest/create-fork/.porting/sources/Sable/common/src/main/java/dev/ryanhcode/sable/sublevel/plot/ServerLevelPlot.java:352)、[SubLevelSerializer.toData](D:/mcmodtest/create-fork/.porting/sources/Sable/common/src/main/java/dev/ryanhcode/sable/sublevel/storage/serialization/SubLevelSerializer.java:186) | 得到内存 NBT，包含 chunk、BE、计划 tick 等内容；不能把方法返回称为保存完成。serializer 会过滤小速度，重载还受 Sable 速度保留配置影响，需单独记录真实运动观察，不能把它当无损运动回滚。 |
+| 正常保存 | [SubLevelHoldingChunkMap.saveAll](D:/mcmodtest/create-fork/.porting/sources/Sable/common/src/main/java/dev/ryanhcode/sable/sublevel/storage/holding/SubLevelHoldingChunkMap.java:205)、[SubLevelStorage.flush](D:/mcmodtest/create-fork/.porting/sources/Sable/common/src/main/java/dev/ryanhcode/sable/sublevel/storage/serialization/SubLevelStorage.java:326) | 前者包含加载/卸载处理，部分 I/O 异常仅记录后继续；后者抛出 flush 异常，但不能证明此前每次写入成功。不得通过另开 Sable region 文件写入来绕过其缓存和 holding 索引。 |
+| 整船撤销来源 | [ServerSubLevelContainer.removeSubLevel](D:/mcmodtest/create-fork/.porting/sources/Sable/common/src/main/java/dev/ryanhcode/sable/api/sublevel/ServerSubLevelContainer.java:137) | 目标内容及归属提交后，整船 `REMOVED` 可避免逐格清空触发零质量销毁。它还会处理 plot 实体、POI、observer、物理体与排队磁盘删除，因此不是可逆的空壳释放接口。 |
+
+### 首个可交付子集与拒绝条件
+
+建议首批交付“普通宿主块捕获 → 真实受力 → 显式释放 → 安全整船网格静态化”，并让独立与 Sable 后端执行相同结果契约。拟采用现有 256 格上限作为起始预算，另限制包围盒跨度、plot 分区、编码字节和同 tick 写入量。它是待测预算，不是已经验证的吞吐或外部大船容量。
+
+- 捕获仅接纳经过明确适配的普通、正质量、无 BE 方块；先用少量稳定原版实体块验证，不以“无 BE”或任意 tag 自动放行全部模组块。拒绝流体/waterlogged、计划或随机 tick 语义、多格依赖、易掉落支撑块、重力块、红石/POI、装配监听器、实体或外挂组件以及需要特殊坐标迁移的状态。源必须是普通宿主格，不能从另一艘船暗中裁取。完整预检后再复制，权限/内容/加载在回调后复核。
+- 目标初期只接纳 AIR，不覆盖可替换植物、液体、库存或未知内容。检查全部 footprint、世界边界、高度、实体挤压、已加载分区和保护策略；未加载返回原因，不主动加载。事务持有精确格子及结构实例 claim，重入、重复请求和同时捕获互斥。
+- 静态化初期只接纳 Academy 创建、当前内容仍满足白名单的完整结构；不开放任意外部船拆解或部分裁切。检查实时内容而非原始快照；玩家新增普通块需计入当前结构，加入不支持内容则整次拒绝并保留结构。
+- 只接受当前姿态已经满足四向水平整格映射，且线/角速度低于明示阈值的结构；阈值须经真实测试确定。越过容差返回 `NOT_GRID_ALIGNED`/`IN_MOTION` 等原因，不偷偷传送对齐或清速度。安全对齐控制可在之后另行提供。终止技能仍只释放控制并保留惯性。
+- 必须排除 plot 实体、乘员、跟踪点、BE actor、外部连接、控制占用和加载依赖。`SubLevelHelper.getLoadingDependencyChain/getConnectedChain` 可作固定版本的保守检查，但它们并不枚举所有外部物理约束；“依赖集合只有自己”不足以证明没有关节。未能观察某种 Suite/第三方约束时，对该状态拒绝静态化，不宣称手杖互斥等于全模组生命周期互斥。
+
+BE 库存是后续独立适配，不在以上首批白名单。普通单箱也需关闭/拒绝活跃菜单、阻止漏斗等物品转移，在源保持完整时准备目标 BE，以完整 metadata/components 改写坐标后往返校验，再按归属阶段移交；不能先 `Clearable.clearContent()`、清战利品表或生成普通方块物品。现有 `BlockStructureTransferState` 的 before/after-image 与完整 NBT 核验可以抽取复用，但它仍是调用内转移对象，不是跨存储 WAL。双箱、网络机器、计划 tick、附着数据和实体迁移逐种补适配与验收。
+
+### 写前日志、提交与恢复隔离
+
+拟新增后端无关的 `StructureTransactions`、捕获/静态化请求和结果类型，供技能、程序与非玩家实体共用；结果携带交易 ID、结构引用、明确拒绝原因或 `RECOVERY_REQUIRED`，不把异常变成“没找到结构”。公共接口不暴露 Sable 类型。建议实现分别放在 `internal/common/structure/transaction` 的协调器、日志、claim 与恢复服务，以及 `internal/common/structure/sable/SableStructureTransactions` 的固定桥中；这些均尚未实现。
+
+1. **准备**：服务端线程执行两侧预检，建立 actor/runtime/格子排他，持久记录交易 ID、后端/版本、两侧身份、完整前像/后像、内容哈希、预算、计划所有者和恢复策略。日志在第一处世界写入前完成可检查的写入/刷新；日志写入失败直接拒绝，不能先转移再补记。新船 UUID 必须在第一格目标内容写入前进入日志。
+2. **复制与核验**：同 tick 内填充目标，逐格及整批核验目标、源前像、精确结构实例、权限与分区状态。初始姿态按真实 COM 完成一次一致初始化，不把此操作用于持续控制。准备目标不能被菜单、交互、牵引或外部装配当作已提交内容；仅 Academy 查询过滤不足以形成这种隔离。
+3. **决定归属**：目标准备完整后，先持久记录提交决定，再清除捕获源格，或在静态化中撤销整艘源船。提交决定前可在全部期望镜像仍成立时回滚；决定后只完成目标与源清理，不能再次复制源库存。每次写入仍检查实际状态；未知回调、身份变化或镜像不符进入恢复隔离，不能覆盖第三方后来写入的内容。
+4. **检查点与发布**：源清理与目标保存需要可验证的两端检查点。只在满足持久化条件后写入发布状态、释放 claim、通知客户端和执行延后通知；发布后的邻居/放置回调可以合法消费内容，通知异常不得回滚到旧整份快照。`PUBLISHED` 日志只作核对与清理证据，不能因重启重新补发物品或还原旧库存。
+5. **回收日志**：需要确认目标内容、来源删除、Sable holding 索引及宿主区块保存一致，才允许清理可恢复载荷。未确认保持日志和诊断，不因一次 `saveAll()` 返回而删除唯一恢复证据。正常停止与强制终止分别测试。
+
+保存证据需要补两处 Academy 观察能力。首先，[现有 NativeStructureStorageErrors](D:/mcmodtest/AcademyCraft-Reborn-26.2/src/main/java/org/academy/internal/common/structure/space/NativeStructureStorageErrors.java:22) 只锁存四个独立存储维度的错误，不覆盖普通宿主区块。其次，Sable 的 `attemptSaveSubLevel`、holding 索引保存及 `saveAll` 会吞掉部分 I/O 异常。必须增加精确事务范围的失败观察并核对内容与索引回读；“再次 flush 没抛错”不能抹除前一次失败。独立日志需校验长度/版本/哈希、原子替换与刷新，损坏日志只隔离，不猜测提交方向。
+
+硬断电保证须另作限制：[SubLevelStorageFile 的大载荷路径](D:/mcmodtest/create-fork/.porting/sources/Sable/common/src/main/java/dev/ryanhcode/sable/sublevel/storage/region/SubLevelStorageFile.java:232) 先写外部临时文件再替换，外部文件写入没有显式 `force`；常规 `flush()` 只 force 主存储文件。不能把进程重启测试等同于操作系统/磁盘断电原子性。首期限制载荷并持久保留完整 WAL；若未验证外部载荷与目录刷新条件，应明确拒绝该持久化分支或保留恢复状态。
+
+重启必须在来源分区可交互以及涉事船开始物理/tick 之前读取日志并建立隔离。`SubLevelSerializer.fullyLoad` 先分配并通知 observer，之后才恢复 `user_data`，因此仅在普通 `onSubLevelAdded` 回调检查 tag 太晚；隔离应按日志中的 UUID/宿主格识别。可评估 Academy 自有的固定哈希窄 hook，在 `SubLevelHoldingChunkMap.loadHoldingSubLevel` 进入前保留待恢复 holder，完成协调后才继续正常加载，不直接调用 `fullyLoad` 生成另一份船或绕过 holding 索引。运行中 `moveToUnloaded` 会处理整条加载依赖链，仅在已证实独立单船的恢复路径才可评估使用；这不构成通用精确卸载 API。当前没有经验证的这套隔离，故仅完成复制/回滚代码不能开放生产捕获。
+
+最后质量格与移除异常需要独立规则。[SubLevelPhysicsSystem.updateMassDataFromBlockChange](D:/mcmodtest/create-fork/.porting/sources/Sable/common/src/main/java/dev/ryanhcode/sable/sublevel/system/SubLevelPhysicsSystem.java:517) 在质量失效时同步 `destroyAllBlocks()` 并标记移除，空 bounds 也会标记移除；逐格清空 plot 可能掉落剩余无质量内容，并永久失效原句柄。因此整船静态化优先在归属提交后调用 `removeSubLevel(ship, REMOVED)`，不逐格把船删空。该调用会通知多个 observer、处理实体/POI、卸载 chunk 并排队存储删除，任一回调异常都可能留下半移除状态：需核对 UUID 映射、精确实例、plot/物理及持久记录，保留 `RECOVERY_REQUIRED` 并幂等完成清理；禁止直接重试整段、重新创建同 UUID 或宣称原句柄恢复成功。失败目标的清理也只允许处理本交易独占且内容匹配的实例。
+
+### 下一阶段验收矩阵（全部待实施）
+
+| 验证组 | 必须覆盖的场景 | 验收依据 |
+| --- | --- | --- |
+| 普通块完整流程 | 单块/跨 chunk/上限选区、真实下落碰撞、牵引、释放、四向整格静态化；新增/破坏后的当前内容 | 两侧格数、状态、唯一归属一致；无额外物品，停止后惯性/重力保留；独立和 Sable 分别执行 |
+| 预检与争用 | BE/流体/负或零质量/不支持状态、目标占用、未加载、保护取消、超限、UUID 重载、重入与重复请求、外部约束/依赖 | 首次写入前拒绝；未加载宿主仍未加载，源与控制状态不被部分改动 |
+| 逐阶段异常 | 日志准备、分配 observer、建 plot chunk、第 N 格目标写、目标核验、提交决定、第 N 格清源、整船 remove observer、两端保存、发布通知、日志清理分别注入失败 | 提交前经核验回滚，提交后完成清理或隔离；不双发、不覆写不匹配内容，不把失败日志写作成功 |
+| 独立 JVM 恢复 | 在上述阶段强制结束进程，另一个 JVM 读同一存档；分别组合宿主新/旧快照、Sable 新/旧快照、重复恢复与损坏日志 | 恢复前不可交互/不参与物理；稳定交易 ID 幂等，单一所有者；无法判断时保留两侧证据而非自动补物 |
+| 持久化失败 | 宿主异步保存报告、Sable payload/holding 索引/删除写入/flush 失败、WAL 磁盘不可写及大载荷分支 | 每次失败被对应事务观察；恢复证据不提前删除，静默旧数据不通过哈希与索引核验 |
+| BE 后续适配 | 单箱库存/战利品表/components、菜单与漏斗争用、准备/提交回调消费、失败后库存变化 | 完整 NBT 和物品守恒；未知状态不从旧快照恢复。此组通过前 BE 始终不在准入白名单 |
+| 兼容与用户流程 | 无 Sable、固定纯 Sable、固定完整 Suite 各自专服/客户端；真实技能捕获至终止及显式静态化 | 不加载第二套物理；真实权限/资源路径；未完成的依赖组合继续明确门禁，不以单端或测试入口代替实际输入 |
+
+纯函数测试验证网格映射、预算、日志状态迁移和镜像条件；真实世界测试验证回调、物理与守恒；故障注入必须跨进程读取实际文件。既有正常重启、气动牵引和单格 CAS 结果可复用其原范围，不能替代本表的跨存储事务验证。
+
 ## Sable 共存与后端选择
 
 后端按结构固定，不按每次调用重新猜测。运行环境具有可用且经过验证的 Sable 桥时，新建 Academy 结构使用 Sable；没有 Sable 时使用独立后端。仅存在 Create 或航空学不是启用桥的充分条件。
@@ -470,7 +530,7 @@ P0 的最小探针增加持续打开移动箱子菜单、旋转后正确朝向�
 | --- | --- | --- |
 | 结构查询及空间变换 | `SableCompanion.INSTANCE`、`getAllIntersecting`、`SubLevelAccess.logicalPose` | 对外归一为世界/局部类型，隐藏 plot 地址 |
 | 从存储坐标找结构 | `getContaining` | 只用于已确认的存储命中；不能拿世界位置直接找船 |
-| 装配 | `SubLevelAssemblyHelper.assembleBlocks` | 外层权限、交易记录、后置校验和失败恢复 |
+| 装配 | `SubLevelAssemblyHelper.assembleBlocks`（仅行为参考） | 禁止直接用于生产捕获；按前节组合受限复制、持久事务及恢复隔离 |
 | 施力及速度 | `RigidBodyHandle.of`、`PhysicsPipeline` | 单位、局部/世界方向、作用点、冲量序号转换 |
 | 执行时序 | `ForgeSablePrePhysicsTickEvent` | 在物理子步消费控制目标 |
 | 碰撞与承载 | Sable 物理和实体接触流程 | 提取统一接触事件；停用旧碰撞、搬运和重复伤害 |
@@ -478,7 +538,7 @@ P0 的最小探针增加持续打开移动箱子菜单、旋转后正确朝向�
 
 `SubLevelHelper` 虽位于 api 包，其类被标记为内部接口，且 push/pop 使用单槽临时状态，不作为我方通用接口依赖。`RigidBodyHandle.applyImpulseAtPoint` 的局部/世界注释存在歧义；已核对当前 Java pipeline 和 Rust 实现：作用点为 plot-local，冲量为局部向量，随后由刚体姿态转到世界空间。连续力必须先乘子步时长得到冲量。`addLinearAndAngularVelocity` 则接收世界速度。桥需集中完成这些转换，并通过“旋转 90 度后偏心冲量”的契约测试防止版本变化带来回归。
 
-如果上游缺少可恢复装配、接触回调、数据附件或拆分映射等必要扩展点，应在 fork 提供窄接口，再由桥调用。不能用不稳定的反射写私有字段替代可靠数据迁移。原生 Rapier 类属于内部实现，我方不直接调用或再次加载它。当前 Sable 还存在无效质量触发方块销毁的路径、部分卸载事件和实体碰撞行为的 TODO；桥必须对无质量内容、BE 卸载和接触去重做专项验证。若现有路径不能满足内容守恒，需要先修复 fork 扩展点再开放该类捕获。
+原计划允许在上游补充可恢复装配、接触回调、数据附件或拆分映射等窄接口；本批先评估现有公开路径与 Academy 自有、受版本门禁的窄兼容 hook；外部 fork 的修复另行记录源码差异、构建及成品哈希。不能用不稳定的反射写私有字段替代可靠数据迁移。原生 Rapier 类属于内部实现，我方不直接调用或再次加载它。当前 Sable 还存在无效质量触发方块销毁的路径、部分卸载事件和实体碰撞行为的 TODO；桥必须对无质量内容、BE 卸载和接触去重做专项验证。现有路径无法证明内容守恒时，该类捕获继续关闭，不假设未来 fork 修改已经获准或完成。
 
 我方结构创建者与外部 Sable 船所有者分开保存。对已有船只只建立引用，不复制船体；控制权使用有期限的 lease，协商 Sable 手杖、航空学控制器和其他学院技能的冲突。一般推力可以叠加，独占抓取、时停和传送需要明确优先级及撤销规则。不能默认把“能看见船”视为“能拆解船”。
 
@@ -499,6 +559,59 @@ Sable 和我方独立求解器不同时求解会互相接触的动态结构。�
 构建采用隔离兼容包及固定版本 `compileOnly`；兼容测试配置单独添加运行依赖。发布 Academy JAR 不嵌入 Sable、Veil、Suite 或其 JNI。公共方法签名与常驻静态初始化中不得出现可选类；[MixinPlugin](D:/mcmodtest/AcademyCraft-Reborn-26.2/src/main/java/org/academy/mixin/plugin/MixinPlugin.java:24) 增加模组和能力门禁。版本不兼容时明确关闭桥及新捕获，不把结构加载失败当作结构不存在。
 
 ## 现有技能迁移
+
+### 本轮确定的发布顺序与行动契约
+
+本轮用户确定的后续顺序为：先完成 Sable 适配及两个后端的共同契约，再优化动能投掷、高速喷流、磁场操作等创建结构的技能，随后重设计矢量操作、电击使、空力使的精密操作行动节点。每一步必须形成可验收的纵向功能，不以已接入一个外部类或完成一个节点代替整个阶段。Sable 适配首先贯通已有结构的查询、权限和真实受力；可恢复捕获/还原、接触归属与旋转控制是后续创建技能的前置能力，不能绕过内容事务或用假实体承担第二套物理。
+
+固定 fork 的源码还限定了本轮可承诺的生命周期范围：`SubLevelContainer` 会删除质量为零或质心不存在的空结构，不能把 `allocateNewSubLevel` 直接映射为我方可跨 tick 填充的 `createEmpty`；`SubLevelAssemblyHelper.moveBlocks` 的逐格转移会在异常后继续，并在后续清除源格，不能直接当作可回滚的捕获/静态化事务。`user_data` 可保存自定义身份与事务元数据，但本身不保证方块转移原子性。Sable 的内部加载/卸载操作可能作用于依赖链，现有拆分回调缺少完成后的旧格到新结构映射，方块碰撞回调也不等于全局接触事件流。因此已有船体查询/牵引先开放；安全创建、恢复、拆分映射和技能碰撞归属完成公共契约及失败恢复验证后再开放。
+
+用户已确认：**“终止”表示释放本次控制并保留结构、现有惯性和重力；安全静态化是独立操作。** 睡眠、停止喷流、失去磁场和程序结束均不默认删除或放回方块。静态化必须验证完整目标 footprint、加载、权限、占用和可支持的方块状态旋转；只有全部目标内容成功接纳后才能撤销来源。拒绝或恢复待处理时保留唯一内容所有者，不先 `discard` 再尝试补方块。
+
+三类能力共享身份、内容、碰撞和求解器服务，但保留各自的作用机制：
+
+| 能力 | 创建与提取 | 移动与旋转 | 发射与终止 |
+| --- | --- | --- | --- |
+| 矢量操作 | 保留动能投掷的蓄力、选区、前方/上方安全裁剪和能力许可；按总质量、几何和 CP 预算提取 | 通过有限线动量、角动量或目标运动控制作用于刚体；姿态修正受惯量、角冲量和力矩预算限制 | 有限冲量发射，真实接触后结算技能效果；终止控制保留已形成运动，静态化另行请求 |
+| 电击使 | 提取具有磁性耦合的格子或结构；强制磁化是显式、付费且有期限的覆盖效果 | 在实际磁性部分施力，整船总质量决定加速度，磁性作用点决定可用力矩；一格铁不能给予整船无限推力 | 发射使用已取得的控制权；真实接触才伤害；终止撤销本次磁场和磁化覆盖，不删除内容 |
+| 空力使 | 气动控制与宿主提取分开授权；喷口支撑格必须能解析到实际结构格 | 压力或喷口在局部锚点施加有限力，方向随完整姿态逐子步变换；旋转来自喷口布局/力偶 | 停喷撤销后续力，保留线角速度；喷口移除、控制终止和结构静态化分别处理 |
+
+公共层沿 `StructureActorContext`、`StructureTransaction`、`StructureMotion` 扩展，复用现有 `StructureRef`、`SpaceBlockRef`、`StructureAnchor`、`StructurePhysicsLease` 和 `StructureTractionSession`。能力层分别提供公开的矢量、磁力和空气结构服务，技能、程序和非玩家入口调用同一能力服务。玩家 CP/压缩空气、非玩家资源提供方、权限主体和伤害归属由 actor context 明确给出，不因使用公共 API 而变成无限预算。
+
+目标运动和姿态由求解器实现，普通移动/旋转不能采用 `detach → setPose → attach`。单点牵引可自然产生力矩，但不保证目标姿态；完整旋转控制需要角速度反馈、最短四元数误差和有限力矩。多喷口/多磁性点提交同一 operation 的有限力组，合成总力与 `Σ(r × F)`，不能让节点数、喷口数或拆分碎片复制完整预算。共享推力和独占抓取必须分别协商控制。当前 Sable 没有公共手杖租约接口，本轮针对已核验哈希的固定 fork 增加隔离的只读占用观察和手杖入口拦截，双向测试通过后仅承诺学院与该版本手杖的互斥；未知版本或尚未完成 handler 观察时拒绝控制，不能宣称与所有模组控制器互斥。
+
+材料服务读取当前后端的真实总质量和惯量，并另行提供磁性参与质量、作用点和可受压表面；不能以我方材料估算覆盖 Sable 的质量。既有 `MagneticTargets` 的 tags/材料兼容规则可用于准入，但布尔磁性判定不足以计算整船作用力。预算覆盖捕获格数/形状/BE 数据、总质量、参与质量、力、力矩、冲量、角冲量、功率、距离和持续时长。动能投掷旧 `2.5 格/tick` 对应 `50 格/s`，磁力旧 `2.3 格/tick` 对应 `46 格/s`；使用 `LegacyMotionUnits` 明确换算并重新标定，旧推力还依赖原质量模型。现有有界物理验证不等于这些高速场景的 CCD 和旋转扫掠已验。
+
+### 精密操作节点的数据流与版本迁移
+
+新增结构引用/集合、结构局部格、结构锚点、姿态/角速度、结构操作结果，以及绑定 actor、runtime 和 invocation 的运行期控制令牌。旧 `ProgramBlockPosition` 和 `ProgramWorldPosition` 继续表示宿主格和世界点，结构引用不隐式转换为 `Entity`；控制令牌不是可保存后自动恢复的授权。公共查询和坐标转换可以共享，三类行动节点分别执行上表的能力策略。
+
+| 节点职责 | 必需输入 | 输出与规则 |
+| --- | --- | --- |
+| 创建/提取 | flow、选区或宿主格、能力配置、预算 | structure、result、flow；完成内容事务后才发布结构引用 |
+| 获取控制 | flow、structure/anchor、能力控制配置 | control、result、flow；权限/占用/质量/范围拒绝均有明确结果 |
+| 移动 | flow、control、世界目标或显式跟随锚点、持续时长 | result、flow；矢量动量修正、磁性牵引和气动受力保持不同约束 |
+| 旋转 | flow、control、目标姿态或角运动、作用点/喷口配置 | result、flow；能力无法形成所需力矩时拒绝或返回有限结果，不无条件赋姿态 |
+| 发射 | flow、control、方向及冲量/能力强度 | result、flow；交接为有界发射操作，不能提前对整条预设轨迹结算伤害 |
+| 终止控制 | flow、control | result、flow；幂等撤销自己的后续命令，保留结构与运动，不触及继任控制 |
+| 安全静态化 | flow、structure、目标网格姿态、放置策略 | result、flow；与终止分开，失败保留内容和恢复证据 |
+
+迁移涉及三套 `*ProgramNodeIds`、`*ProgramNodeCatalog`、`*ProgramRuntime`、`Server*ProgramRuntime`、`*ProgramExecutionBridge`、capabilities/definition，以及公共 value types、目标解析、执行 frame、invocation、scheduler 和 operation 清单。编辑器 palette/options、模板、翻译、剪贴板和导入导出同步更新。当前行动节点主要只输出 flow；创建/控制的结果必须成为后续节点可以使用的显式数据，不能按“该玩家最近控制的结构”隐式寻址。
+
+程序、节点 schema 和二进制 envelope 的版本分别迁移。旧图保留原端口语义，通过明确迁移器转换并保留原数据；不能只把 catalog schemaVersion 改成 2，导致当前严格版本检查拒绝旧图。持久保存的结构身份在运行时重新解析和授权，失效控制令牌不得重获权限。
+
+`ProgramActionTransaction` 跨 tick 执行时，补偿必须区分未提交内容与已参与物理的效果：未提交捕获可按版本回滚；已发生运动、碰撞或伤害不能通过恢复旧速度倒退世界。程序失败/取消撤销本 operation 的未执行命令和持续力，必要时另发起可恢复还原；成功结束明确释放控制或移交有期限操作。已消耗的物理功不能因程序失败无限返还资源。现电磁 `damageAlongTrajectory`、单格 FallingBlock 的先 discard 后补源格、空气节点恢复旧速度等路径均须迁移。
+
+### 后续迁移清单与验收
+
+1. Sable 查询/身份/真实牵引桥及同契约验证先行；门禁不兼容时明确拒绝，保持单一内容所有者和单一求解者。
+2. 捕获/安全静态化事务、材料采样、真实接触归属和有限角控制形成公共前置闭环；普通块、部分碰撞形状和受支持 BE 分别验收。
+3. 迁移 `KineticThrow` 与矢量能力服务：蓄力提取、悬停、有限冲量发射、实际接触、终止和静态化拒绝；验证高速薄墙及旋转扫掠。
+4. 迁移 `HighSpeedJet`、`HighSpeedJetStructureService`、`HighSpeedJetNozzle` 及其显示：完整 pitch/roll 下局部方向、偏心力矩、对称喷口抵消、断块/卸载不误挂、共享资源预算。
+5. 迁移 `MagnetManipulation` 与公开磁性服务：铁/非铁/混合材料、少量磁性材料拖动大结构的预算、强制磁化到期、磁性格移除后的撤销。保留自身磁悬浮及普通实体分支。
+6. 重设计三类精密操作节点，每类以“创建 → 移动 → 旋转 → 终止”和“发射/安全静态化失败”图验收，玩家、程序、非玩家入口复用同服务。
+
+既有 `KineticThrowTest`、`HighSpeedJetTest`、`HighSpeedJetStructureServiceTest`、`MagnetManipulationTest`、三类 `*ProgramExecutionBridgeTest` 及程序事务/版本/调度测试继续复用；它们目前主要覆盖配置、公式、schema 和模拟 runtime，不能替代真实世界验收。新增场景必须包括源格被占、结构被其他玩家编辑、拆分后锚点映射、同 UUID 重载、资源耗尽、程序取消、BE 库存变化、喷口破坏和真实双客户端竞争。每项在独立与 Sable 后端分别核对内容守恒、力预算、伤害去重和停止控制后的自由运动；未完成项仍记录为待验。
 
 第十五批已提交为 `1b027ac3`。第十六批已接入气动牵引对已有独立刚体的控制：它复用有限力、单点 PD 与实体租约，形成真实技能调用闭环。公共牵引会话面向任意合法控制实体，资源与玩家权限保留在调用层；专服、非玩家入口及客户端真实 G/滚轮/H 输入的限定场景已通过。客户端持续控制采用临时 G 启动/H 松开绑定，默认 G 持续按住未实测。现有宿主捕获、动能投掷结算和喷流挂载仍各自需要内容事务与接触能力，不在这批一并迁移。实现、失败轨迹和本批验证状态见[第十六批记录](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/block_structure_entity_system.md#第十六批气动牵引接入独立物理结构)。
 

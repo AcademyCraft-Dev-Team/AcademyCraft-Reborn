@@ -1,7 +1,7 @@
 package org.academy.api.common.structure;
 
 import net.minecraft.world.entity.Entity;
-import org.academy.internal.common.structure.physics.NativeStructureTraction;
+import org.academy.internal.common.structure.StructureBackendRouter;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -56,7 +56,7 @@ public final class StructureTraction {
 
     /**
      * Revalidates a proposed hit against this actor's current eye/look and configured reach,
-     * then acquires the already active native region's entity-bound control slot. Never loads
+     * then acquires the selected backend's entity-bound control slot. Never loads
      * chunks, activates structures, opens physics regions or initializes a missing backend.
      * Expected contention/unavailability is reported as a status instead of an exception.
      *
@@ -70,6 +70,6 @@ public final class StructureTraction {
      */
     public static Acquisition tryAcquire(Entity actor, UUID controllerId, StructureHit hit,
                                          Settings settings, BiPredicate<Entity, StructureHandle> permission) {
-        return NativeStructureTraction.acquire(actor, controllerId, hit, settings, permission);
+        return StructureBackendRouter.acquire(actor, controllerId, hit, settings, permission);
     }
 }

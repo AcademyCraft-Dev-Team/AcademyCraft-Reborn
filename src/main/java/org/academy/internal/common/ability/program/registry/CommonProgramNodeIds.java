@@ -107,6 +107,8 @@ public final class CommonProgramNodeIds {
     public static final Identifier ENTITY_LOOK_DIRECTION = id("query/entity_look_direction");
     public static final Identifier ENTITY_MOVEMENT_DIRECTION = id("query/entity_movement_direction");
     public static final Identifier ENTITY_MOTION = id("query/entity_motion");
+    public static final Identifier LOOK_STRUCTURE = id("query/look_structure");
+    public static final Identifier STRUCTURE_MOTION = id("query/structure_motion");
     public static final Identifier ENTITY_HEIGHT = id("query/entity_height");
     public static final Identifier ENTITY_DATA = id("query/entity_data");
     public static final Identifier CASTER = id("query/caster");

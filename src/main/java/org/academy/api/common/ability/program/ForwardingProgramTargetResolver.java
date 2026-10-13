@@ -11,6 +11,10 @@ public interface ForwardingProgramTargetResolver extends ProgramTargetResolver {
     @Override default Object caster() { return targetResolver().caster(); }
     @Override default Optional<Object> lookTarget() { return targetResolver().lookTarget(); }
     @Override default Optional<ProgramBlockPosition> lookBlockTarget() { return targetResolver().lookBlockTarget(); }
+    @Override default Optional<ProgramStructureReference> lookStructureTarget() { return targetResolver().lookStructureTarget(); }
+    @Override default Optional<org.academy.api.common.structure.StructureDynamics.State> structureMotion(ProgramStructureReference reference) {
+        return targetResolver().structureMotion(reference);
+    }
     @Override default Optional<ProgramWorldPosition> positionOf(Object entity) { return targetResolver().positionOf(entity); }
     @Override default Optional<ProgramWorldPosition> positionOf(Object entity, ProgramEntityPositionAnchor anchor) {
         return targetResolver().positionOf(entity, anchor);

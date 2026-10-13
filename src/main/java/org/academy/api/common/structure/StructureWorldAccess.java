@@ -11,10 +11,12 @@ public interface StructureWorldAccess {
     StructureRef reference();
 
     /**
-     * Reads the live block state and detached block-entity data.
+     * Reads the live block state and detached block-entity data. Unavailable content must
+     * not be reported as air; callers must handle the backend's loaded-content boundary.
      *
      * @throws IllegalArgumentException if the local position is outside the backend's bounds
-     * @throws IllegalStateException if called off the server thread or the handle is not active
+     * @throws IllegalStateException if called off the server thread, the handle is not active,
+     *                               or the requested content is unavailable
      */
     StructureBlockData read(BlockPos localPosition);
 

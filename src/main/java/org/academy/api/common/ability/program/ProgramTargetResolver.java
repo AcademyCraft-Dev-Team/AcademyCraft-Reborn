@@ -23,6 +23,17 @@ public interface ProgramTargetResolver {
         return Optional.empty();
     }
 
+    /** Selects a whole structure; no implicit conversion to host blocks or ordinary entities. */
+    default Optional<ProgramStructureReference> lookStructureTarget() {
+        return Optional.empty();
+    }
+
+    /** Solver units: blocks/second and radians/second. Never activates an unloaded structure. */
+    default Optional<org.academy.api.common.structure.StructureDynamics.State> structureMotion(
+            ProgramStructureReference reference) {
+        return Optional.empty();
+    }
+
     Optional<ProgramWorldPosition> positionOf(Object entityReference);
 
     default Optional<ProgramWorldPosition> positionOf(

@@ -1172,3 +1172,68 @@ $physicsManifest = Join-Path (Get-Location) 'build/native-physics/artifacts/acad
 [开发 JAR](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/libs/academy-26.2.0-0.0.4-alpha-dev.jar) SHA-256 为 `62333152e7e52174bdf216f5d70741df454671d2e5dca7687246b98ac1db8bf1`，[发布 JAR](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/libs/academy-26.2.0-0.0.4-alpha-release.jar)为 `35a58568a9fa7f7ffbebf0e4f74ed6a0cb7698cb096c70a2853c1afaf1d3f9a1`。公共牵引与会话类型、实现和固定 FFM 桥齐全；JAR 不含原生二进制。外部 DLL 的 SHA-256 仍为 `c8ab64f663ecb2ca9727ce94f57f9d90fe547a5c77c6b77518ca479f1def2dbd`，原生 ABI 与 manifest v3 不变。日志中的既有 Perflib/OSHI 异常不等于本轮零异常日志。
 
 后续仍需其他技能与精密操作节点迁移、技能驱动的捕获/创建/恢复、材料与承载、Sable 桥、真实多人异常网络矩阵、通用方块/菜单兼容和跨平台原生制品验收。本批通过仅说明气动牵引对已有活动独立结构的限定闭环，不提前宣告整个 P0/P1/P2 或混装完成。
+
+## 第十七批：Sable 查询、有限力牵引与安装门禁
+
+第十六批已提交为 `b6d20626`（接入气动牵引与公共结构牵引会话）。本批将公共 `StructureSpaces`、`StructureQueries` 与 `StructureTraction` 路由到经版本和成品 SHA-256 验证的 Sable 桥。未安装 Sable 时继续使用独立后端；安装受支持 Sable 后由 Sable 唯一负责结构内容、求解、渲染和原版方块交互。桥只查询已经加载的对象，不加载区块，不仿造空船生命周期，也不再创建 Academy 投影。
+
+当前 Sable 后端支持已有结构的解析、姿态、逐格只读状态与完整分离 BE 数据、旋转射线和有限力牵引。`createEmpty` 返回空，`load` 仅解析已经加载的对象，`unload` 返回 false，写入及直接设置姿态拒绝。捕获、静态化、拆分映射、接触归属、跨后端迁移仍未实现；不能把此桥写成完整 Sable 生命周期后端。既有动能投掷、高速喷流、磁场操作及三类精密操作节点尚未迁移，其公共服务与事务设计见[后续计划](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/block_structure_physics_and_sable_compat_plan.zh-CN.md)。用户已确定“终止”只释放控制，另设安全静态化。
+
+安装门禁使用 `NATIVE`、`SABLE`、`MIGRATION_REQUIRED`、`INCOMPATIBLE` 四种状态。只要检测到 Sable，独立结构就不激活，也不能打开独立求解区域。只读预检发现旧 native 索引、永久槽占用、恢复文件或损坏索引时保留原文件并报告迁移要求；兼容 Sable 的既有结构仍可查询和控制。旧内部调用可以创建一个被禁用的 native Java 对象，但不能创建/加载结构、开启区域或覆写索引。这不等于已经把旧结构迁移到 Sable。
+
+Sable 的局部原点固定在 plot 中心格，与随内容变化的质心分离。引用保留船 UUID，运行句柄绑定精确实例；同 UUID、同 plot 的卸载/重建不会复活旧句柄。宿主和结构均使用真实 OUTLINE 选择形状，返回世界命中点；宿主重合面优先。公共 `clearSightline` 只有在整个观察完整、已加载且没有宿主或结构轮廓阻挡时返回 true，空命中不等于透明。缺失区块、非单位缩放、读预算耗尽和查询回调期间的内容/姿态变化均保守拒绝。最多读取 16384 格、检查 256 个相交候选；桥不会为射线申请 ticket。
+
+真实牵引在 Sable 的公开 prePhysics 子步事件执行。它读取实际质量、质心、线速度和角速度，用公共 PD 计算世界力，乘本次实际秒数，再变换为该 fork 所需的局部冲量和 plot 内抓点。不会额外乘质量、重复减质心、传送刚体或改写速度。控制者的精确实体实例、活动连接、宿主、质量、可见性、权限、边界和限时独占槽会在获取、更新及每个子步复核；编辑内容、卸载、实体离开、租期结束或关闭立即撤销未来力。Sable 边界是宿主高度及世界边界，独立后端仍是有 0.25 格余量的有限区域。
+
+气动牵引沿用原有资源预算和公共入口。普通实体选择不再拿 Sable `Level.clip` 返回的内部 plot 坐标比较距离；选择及持续作用都检查公共完整视线。当前采用 OUTLINE，因此火把等无碰撞轮廓也会保守遮挡。资源/权限/形状回调若停止技能，捕获的精确会话或目标必须仍属于原上下文才继续操作；已经停止的上下文不会产生后续移动、特效或活动报告。
+
+Suite 兼容限于固定版本的物理手杖锁定与拖拽。早期门禁同时验证 Simulated、Sable 和 Companion 的版本及 SHA，两个窄 Mixin 只读取现有 handler/drag 对象并拦截新占用；不会提前加载手杖 SavedData、写私有集合或抢占现有控制。未知版本、缺少有效 handler 时明确拒绝 Academy 牵引。外部锁定/拖拽排除 Academy，Academy 控制期间排除新手杖锁定/拖拽，释放后恢复获取。此结果不证明航空器控制器、Create 轴承和所有外部约束都已统一仲裁。
+
+### 固定依赖与复现
+
+[成品清单](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/sable_compat_artifacts.json)保存坐标、字节数和 SHA-256；[Gradle 集成](D:/mcmodtest/AcademyCraft-Reborn-26.2/gradle/sable-compat.gradle)在编译前检查固定 Sable、Companion 及嵌入依赖，在打包后递归检查桥存在且未夹带 Sable/Veil/ImGuiMC 类。普通测试 JVM 不含可选 API，`sableCompatTest` 单独加载实际 Companion。缺失或错误成品必须明确失败，不静默省略桥。
+
+普通开发和 CI 现在需要预置这两个固定 compileOnly 成品。默认从 `../create-fork/.porting/maven` 读取，也可传 `-PacademySableFork=<目录>` 或 `-PacademySableMaven=<固定 Maven 目录>`；Suite 成品可传 `-PacademySableSuiteJar=<路径>`。这些依赖不会打包进入 Academy。运行组合只添加顶层 JAR：`sable` 为 Sable 本体，`suite` 为 Sable、Create、Suite，避免再次添加已嵌入的 Companion/Veil/Rapier。ImGuiMC 没有加入该运行组合。
+
+使用 JBR 25，在新的 `run/sable-compat/<批次>` 目录运行：
+
+```powershell
+.\gradlew.bat verifySableCompatArtifacts testSableCompatBuildChecks -DisDev=true
+.\gradlew.bat test sableCompatTest -DisDev=true
+.\gradlew.bat runServerSable -DisDev=true -PacademySableRuntime=sable -PacademySableSmoke=true -PacademySableRunDirectory=run/sable-compat/<新批次>
+.\gradlew.bat runClientSable -DisDev=true -PacademySableRuntime=suite -PacademySableSmoke=true -PacademySableRunDirectory=run/sable-compat/<另一新批次>
+```
+
+专服 `<批次>/server` 需隔离的 EULA/server.properties，绑定 `127.0.0.1`、`level-name=academy-sable-smoke`；客户端使用 `<批次>/client/saves/Academy Sable Smoke`。本次客户端从已生成测试世界复制 `level.dat` 和 `data/minecraft/world_gen_settings.dat` 创建无旧区块的测试副本，未使用用户存档。26.2 只复制 level.dat 不足以加载世界。每次结果使用 CREATE_NEW，不能复用已经完成的目录。普通启动不启用任何验证夹具。
+
+### 第十七批验证记录
+
+| 场景 | 本批结果与证明范围 |
+| --- | --- |
+| 纯 Sable 专服 r4 | 41 tick、退出 0；真实技能扣费和刚体运动、释放保留速度/重力、NPC、独占及旧会话隔离、实际资源完成事件中 STOP/重新获取全部通过 |
+| 纯 Sable 客户端 r2 | 42 tick、34 个客户端移动样本，真实 plot/姿态同步与截图通过；此轮早于新增资源回调专项，后者由专服 r4 与 Suite 客户端覆盖 |
+| Suite 客户端 r1 | 55 tick、46 个客户端移动样本；手杖锁定/拖拽双向争用、释放重新获取、资源回调停止以及公共物理路径通过 |
+| Suite 专服 r1 | 启动失败；固定 fork 三个模组构造时过早引用仅客户端的 BlockModelGenerators，未进入 Academy 场景，不算专服兼容通过 |
+| 独立模式专服 r1 | 572 tick、退出 0；包括原气动牵引/NPC 场景，有限力/PD、地形、控制生命周期和保存/重载回归通过 |
+| 独立模式 runClientDev r1 | 494 tick、退出 0；既有物理投影、接触和悬停三图通过，本轮未再次执行 G/滚轮/H 人工技能操作 |
+| 基础和专项 | 基础 2527、Sable 11、原生 JVM 20 项均零失败/错误/跳过；Rust 12 项通过；query/space/safety 三组 GameTest 各 1 项通过 |
+
+纯 Sable 的[专服结果](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/sable-compat/p17-sable-server-r4/server/sable-structure-server-result.txt)及[退出文件](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/sable-compat/p17-sable-server-r4/server/sable-structure-server-exit.txt)与[完整日志](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/sable-p17-server-r4.log)联合核验。Suite 的[客户端结果](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/sable-compat/p17-suite-client-r1/client/sable-structure-client-result.txt)、[客户端观察](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/sable-compat/p17-suite-client-r1/client/sable-structure-client-observation.txt)及[日志](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/sable-p17-suite-client-r1.log)记录了实际手杖公开 API 调用；没有用伪造占用集合代替兼容测试。
+
+根代理已实际查看纯 Sable [牵引截图](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/sable-compat/p17-sable-client-r2/client/screenshots/academy-sable-structure-62656.png)、Suite [牵引截图](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/sable-compat/p17-suite-client-r1/client/screenshots/academy-sable-structure-65236.png)，以及独立客户端的[下落前](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-smoke-client-20261013-p17-r1/screenshots/native-structure-physics-before-72124.png)、[落地后](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-smoke-client-20261013-p17-r1/screenshots/native-structure-physics-landed-72124.png)、[悬停](D:/mcmodtest/AcademyCraft-Reborn-26.2/run/native-structure-physics-smoke-client-20261013-p17-r1/screenshots/native-structure-physics-controlled-72124.png)。混装截图能观察旋转方块、施术者和牵引效果；输入工具只操作启动菜单，技能由服务器夹具调用。
+
+上述自动场景明确记录 `actual_keyboard_actions=false`、`embedded_player_is_real_tcp=false`。嵌入玩家使用 NeoForge 公开测试网络配置、真实配置同步发送及 PLAY listener；它不是实际 TCP/UDP 登录客户端，不证明客户端配置 ACK、UDP 认证、断线重连或默认持续按键。相机客户端是真实集成客户端。`native_runtime_remained_absent=true` 只证明混装场景没有创建 Academy native runtime，不是 OS 层 DLL 枚举。Sable 内容由公开装配 helper 创建，仅用于隔离夹具，不能反过来作为生产捕获的守恒证明。
+
+失败轨迹保留：编译 r1/r2 修正 26.2 的 ChunkPos 构造映射及构建中的缺失文件；专服 r1 的嵌入玩家未配置 NeoForge payload，r2 未执行配置同步，补齐公开测试连接生命周期后 r3/r4 通过。纯 Sable 客户端 r1 仅复制 level.dat，缺少独立 world_gen_settings.dat，世界加载失败，退出 0 也没有算通过；补齐测试副本后 r2 通过。Suite 专服 r1 的外部客户端类泄漏见[最小补丁及验证要求](D:/mcmodtest/AcademyCraft-Reborn-26.2/validation/sable_compat/README.zh-CN.md)，补丁尚未计为经过外部构建或专服验收。日志仍有既有 OSHI/Perflib 和外部模组弃用警告，不宣称零异常日志。
+
+开发/发布构建及真实旧存档安装门禁的最终记录在本批收尾后补充。完整 Sable 生命周期、生产捕获/静态化、一般外部约束、旧技能及精密操作运行时迁移、真实多人和完整异常/网络矩阵仍待后续实现与验收。
+
+## 第十八批：整结构质量预算与精密查询入口（2026-10-13）
+
+用户补充要求：未安装 Sable 的动能搬运也须创建新独立后端物理方块，不得继续默认创建旧结构实体。本批确认现有 `KineticThrow.captureAndLift` 仍使用旧 `BlockStructureApi.capture`；这一生产入口尚未切换，玩家承载与站立抖动也尚未修复。后端生产捕获、容量/恢复和承载的依赖顺序及后续工作见 [接续记录](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/structure_skill_migration_handoff.zh-CN.md)。
+
+新增 `StructureDynamics` 后端中立整刚体观测和公共 `PneumaticStructureControl`。气流牵引不再固定拒绝质量超过 32 的结构：总质量上限按等级为 128/256/512，单体力上限 2000/4000/8000；质量不超过 2.25 时保持既有轻型响应，较重结构扩展 PD 增益并遵守全局上限，资源按整质量计费。每个结构只有一份控制预算，命中格子只决定受力锚点。
+
+精密系统新增强类型 `STRUCTURE_REFERENCE` 与 `query/look_structure`、`query/structure_motion` 公共查询节点，输出世界质心、格/秒线速度、弧度/秒角速度和整质量。引用绑定运行期 activation，卸载重载不能恢复旧引用；现有图的实体/世界方块端口不变。三类能力的创建、移动、旋转、终止及安全静态化行动节点仍待迁移，不能将查询节点计为行动迁移完成。
+
+本批全量测试 2530 + Sable 11 通过；独立专服 r3 572 tick/退出 0，最终完整混装客户端 r3 的 25 格石头（总质量 50）通过真实牵引、手杖互斥、释放及程序查询，55 tick/退出 0，客户端观察 47 个运动样本。失败轨迹、命令、截图、构建和待验项统一记录在上述接续文档。用户以 Esc 停止界面自动化后，未继续窗口操作；本轮独立 `runClientDev` 和节点编辑器人工验证仍待进行。

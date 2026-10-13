@@ -2,11 +2,11 @@ package org.academy.api.common.structure;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
-import org.academy.internal.common.structure.space.NativeStructureQueries;
+import org.academy.internal.common.structure.StructureBackendRouter;
 
 import java.util.Optional;
 
-/** Server-thread targeting of the independent backend's loaded structures. */
+/** Server-thread targeting of the selected backend's loaded structures. */
 public final class StructureQueries {
     public static final double MAX_RAY_LENGTH = 256.0;
 
@@ -24,7 +24,17 @@ public final class StructureQueries {
      * @throws IllegalStateException if called off the owning server thread
      */
     public static Optional<StructureHit> raycast(ServerLevel host, Vec3 worldFrom, Vec3 worldTo) {
-        return NativeStructureQueries.raycast(host, worldFrom, worldTo);
+        return StructureBackendRouter.raycast(host, worldFrom, worldTo);
+    }
+
+    /**
+     * True only when the entire segment is loaded, supported and clear of host and structure
+     * selection shapes. An absent raycast hit alone does not establish this: incompatible
+     * backends, unsupported structures, exhausted query budgets and stale observations fail closed.
+     * Ordinary entity targeting should check this before applying an effect behind a structure.
+     */
+    public static boolean clearSightline(ServerLevel host, Vec3 worldFrom, Vec3 worldTo) {
+        return StructureBackendRouter.clearSightline(host, worldFrom, worldTo);
     }
 
     /**
@@ -36,6 +46,6 @@ public final class StructureQueries {
      */
     public static StructureHitValidation validate(ServerLevel host, Vec3 trustedWorldFrom,
                                                   Vec3 trustedWorldTo, StructureHit proposed) {
-        return NativeStructureQueries.validate(host, trustedWorldFrom, trustedWorldTo, proposed);
+        return StructureBackendRouter.validate(host, trustedWorldFrom, trustedWorldTo, proposed);
     }
 }

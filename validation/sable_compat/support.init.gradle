@@ -1,0 +1,14 @@
+allprojects {
+    afterEvaluate {
+        def root = new File(rootProject.projectDir, 'run/structure-support').canonicalFile
+        def game = rootProject.file(providers.gradleProperty('academySupportDirectory').get()).canonicalFile
+        if (!game.toPath().startsWith(root.toPath())) throw new GradleException('Support fixture requires run/structure-support')
+        def runName = providers.gradleProperty('academySupportRun').getOrElse('clientSable')
+        neoForge.runs.named(runName) {
+            gameDirectory.set(game)
+            systemProperty 'academy.structureSupportSmoke', 'true'
+            systemProperty 'academy.structureSupportRoot', root.absolutePath
+            programArguments.addAll('--quickPlaySingleplayer', 'Structure Support Smoke', '--width', '1280', '--height', '720')
+        }
+    }
+}

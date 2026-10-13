@@ -22,6 +22,7 @@ public final class ProgramValueTypes {
     public static final ProgramValueType WORLD_POSITION = type("world_position");
     public static final ProgramValueType BLOCK_POSITION = type("block_position");
     public static final ProgramValueType ENTITY_REFERENCE = type("entity_reference");
+    public static final ProgramValueType STRUCTURE_REFERENCE = type("structure_reference");
     public static final ProgramValueType LIVING_ENTITY_REFERENCE = type("living_entity_reference");
     public static final ProgramValueType WORLD_POSITION_SET = type("world_position_set");
     public static final ProgramValueType BLOCK_POSITION_SET = type("block_position_set");

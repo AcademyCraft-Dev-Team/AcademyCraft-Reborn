@@ -112,6 +112,43 @@ public final class NativeStructureManifest {
         }
     }
 
+    /** Read-only installation preflight: even a missing directory stays missing. */
+    public static Preflight inspect(Path directory) {
+        Objects.requireNonNull(directory, "directory");
+        try {
+            var attributes = Files.readAttributes(directory, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+            if (!attributes.isDirectory()) return new Preflight(0, true, false);
+        } catch (NoSuchFileException absent) {
+            return new Preflight(0, false, true);
+        } catch (IOException | RuntimeException unavailable) {
+            return new Preflight(0, true, false);
+        }
+        try {
+            boolean claims = false;
+            for (int slot = 0; slot < SLOT_COUNT; slot++) {
+                claims |= present(directory.resolve("owner_" + slot + ".txt"));
+                claims |= present(directory.resolve("recovery_" + slot + ".dat"));
+            }
+            var metadata = directory.resolve("metadata.dat");
+            if (!present(metadata)) return new Preflight(0, claims, true);
+            var file = Files.readAttributes(metadata, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+            if (!file.isRegularFile() || file.size() > MAX_PAYLOAD_BYTES) return new Preflight(0, claims, false);
+            var entries = decode(NbtIo.readCompressed(metadata, NbtAccounter.create(MAX_PAYLOAD_BYTES)));
+            return new Preflight(entries.size(), claims, true);
+        } catch (IOException | RuntimeException malformed) {
+            return new Preflight(0, true, false);
+        }
+    }
+
+    private static boolean present(Path path) throws IOException {
+        try { Files.readAttributes(path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS); return true; }
+        catch (NoSuchFileException absent) { return false; }
+    }
+
+    public record Preflight(int structures, boolean claimsOrRecovery, boolean healthy) {
+        public boolean requiresMigration() { return structures != 0 || claimsOrRecovery || !healthy; }
+    }
+
     public List<Entry> entries() {
         return List.copyOf(entries.values());
     }
