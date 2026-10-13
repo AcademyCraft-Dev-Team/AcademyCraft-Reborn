@@ -22,7 +22,6 @@ import org.academy.api.common.structure.StructureContexts;
 import org.academy.api.common.structure.StructureHandle;
 import org.academy.api.common.structure.StructureHit;
 import org.academy.api.common.structure.StructureMiningEvent;
-import org.academy.api.common.structure.StructureQueries;
 import org.academy.api.common.structure.StructureRef;
 import org.academy.internal.common.network.NativeStructureMiningProgressPacket;
 import org.academy.internal.common.network.NativeStructureMiningProgressPacket.Status;
@@ -95,7 +94,8 @@ public final class NativeStructureMiningSessions {
         boolean ran;
         try {
             ran = runtime.runMenuInteraction(handle.reference(), () -> StructureContexts.run(handle, context -> {
-                var hit = ray(player, proposed);
+                var receipt = NativeStructurePlayerTarget.capture(player, proposed);
+                var hit = receipt == null ? null : receipt.hit();
                 if (hit == null || !canMaintain(player) || !NativeStructureInteraction.canUseMenu(player)
                         || !handle.runtimeId().equals(hit.runtimeId())) return;
                 var pos = hit.block().localPosition();
@@ -105,6 +105,8 @@ public final class NativeStructureMiningSessions {
                 if (!NativeStructureMiningPolicy.canMine(before.state(), blockEntity)
                         || !hostAllows(player, player.level(), handle, pos)) return;
                 var session = new Session(client, player, requestId, handle, storage, hit, before, blockEntity);
+                session.observation = proposed;
+                session.receipt = receipt;
                 created[0] = session;
                 client.session = session;
                 if (session.currentHit() == null) return;
@@ -118,6 +120,7 @@ public final class NativeStructureMiningSessions {
             client.dispatching = false;
         }
         var session = created[0];
+        if (session != null) session.receipt = null;
         if (!ran || session == null || !session.started || session.cancelRequested) {
             if (session != null) end(session, Status.REJECTED);
             else reject(player, client, requestId, proposed);
@@ -131,22 +134,50 @@ public final class NativeStructureMiningSessions {
     public static void hold(ServerPlayer player, long requestId) {
         var session = matching(player, requestId);
         if (session == null || session.client.dispatching) return;
+        // Trusted in-process callers use the current actor ray. Network callers must supply an observation.
+        session.observation = null;
+        renew(session, false);
+    }
+
+    public static void hold(ServerPlayer player, long requestId, StructureHit observation) {
+        continueObserved(player, requestId, observation, false);
+    }
+
+    public static void stop(ServerPlayer player, long requestId, StructureHit observation) {
+        continueObserved(player, requestId, observation, true);
+    }
+
+    private static void continueObserved(ServerPlayer player, long requestId, StructureHit observation, boolean stop) {
+        Objects.requireNonNull(observation, "observation");
+        var session = matching(player, requestId);
+        if (session == null || session.client.dispatching) return;
+        if (!observation.block().equals(session.initialHit.block())
+                || !observation.runtimeId().equals(session.initialHit.runtimeId())
+                || session.observation != null && observation.geometryRevision() < session.observation.geometryRevision()) {
+            end(session, Status.ABORTED);
+            return;
+        }
+        session.observation = observation;
+        if (session.currentHit() == null) end(session, Status.ABORTED);
+        else renew(session, stop);
+    }
+
+    private static void renew(Session session, boolean stop) {
+        var player = session.player;
         long now = tickNumber(player.level().getServer());
         if (session.progress.expired(now)) end(session, Status.ABORTED);
-        else session.progress.hold(now);
+        else {
+            if (stop) session.progress.stop();
+            session.progress.hold(now);
+        }
     }
 
     /** Early STOP may wait for genuine server work; it never grants vanilla's 0.7 shortcut. */
     public static void stop(ServerPlayer player, long requestId) {
         var session = matching(player, requestId);
         if (session == null || session.client.dispatching) return;
-        long now = tickNumber(player.level().getServer());
-        if (session.progress.expired(now)) {
-            end(session, Status.ABORTED);
-            return;
-        }
-        session.progress.stop();
-        session.progress.hold(now);
+        session.observation = null;
+        renew(session, true);
         // Commit at the normal tick point after projections refresh. A pose update earlier
         // in this packet tick must not make a valid local-cell lease look temporarily stale.
     }
@@ -212,6 +243,16 @@ public final class NativeStructureMiningSessions {
     }
 
     private static boolean advance(Session session) {
+        boolean pinnedHere = session.receipt == null;
+        if (pinnedHere && !session.pinTarget()) return false;
+        try {
+            return advancePinned(session);
+        } finally {
+            if (pinnedHere) session.receipt = null;
+        }
+    }
+
+    private static boolean advancePinned(Session session) {
         if (session.currentHit() == null) return false;
         long now = tickNumber(session.server);
         if (!NativeStructureInteraction.canUseMenu(session.player)) {
@@ -240,12 +281,15 @@ public final class NativeStructureMiningSessions {
         session.client.dispatching = true;
         boolean completed = false;
         try {
+            if (!session.pinTarget()) return;
             var hit = session.currentHit();
             if (hit != null) {
                 completed = NativeStructureMining.destroy(session.player, hit,
-                        () -> NativeStructureInteraction.canUseMenu(session.player) ? session.currentHit() : null);
+                        () -> NativeStructureInteraction.canUseMenu(session.player) ? session.currentHit() : null,
+                        session.receipt::revalidate);
             }
         } finally {
+            session.receipt = null;
             session.client.dispatching = false;
             end(session, completed ? Status.COMPLETED : Status.REJECTED);
         }
@@ -259,26 +303,6 @@ public final class NativeStructureMiningSessions {
                 || player.getCooldowns().isOnCooldown(player.getMainHandItem())) return false;
         var gameMode = (MixinServerPlayerGameModeNativeStructureAccess) player.gameMode;
         return !gameMode.academy$isDestroyingBlock() && !gameMode.academy$hasDelayedDestroy();
-    }
-
-    private static @Nullable StructureHit ray(ServerPlayer player, @Nullable StructureHit proposed) {
-        double range = player.blockInteractionRange();
-        if (!Double.isFinite(range) || range <= 0 || range > StructureQueries.MAX_RAY_LENGTH) return null;
-        var host = player.level();
-        var from = player.getEyePosition();
-        var look = player.getLookAngle();
-        var to = from.add(look.scale(range));
-        var hit = proposed == null ? StructureQueries.raycast(host, from, to).orElse(null)
-                : StructureQueries.validate(host, from, to, proposed).currentHit().orElse(null);
-        if (hit == null || player.level() != host || !player.getEyePosition().equals(from)
-                || !player.getLookAngle().equals(look)) return null;
-        double distance = from.distanceToSqr(hit.worldPoint());
-        for (var entity : host.getEntities(player, new AABB(from, to).inflate(1),
-                candidate -> !candidate.isSpectator() && candidate.isPickable())) {
-            var box = entity.getBoundingBox().inflate(entity.getPickRadius());
-            if (box.contains(from) || box.clip(from, to).filter(point -> from.distanceToSqr(point) <= distance).isPresent()) return null;
-        }
-        return player.level() == host && player.getEyePosition().equals(from) && player.getLookAngle().equals(look) ? hit : null;
     }
 
     private static boolean hostAllows(ServerPlayer player, ServerLevel host, StructureHandle handle, BlockPos position) {
@@ -407,6 +431,8 @@ public final class NativeStructureMiningSessions {
         private final Set<ServerPlayer> recipients = Collections.newSetFromMap(new IdentityHashMap<>());
         private boolean started;
         private boolean cancelRequested;
+        private @Nullable StructureHit observation;
+        private NativeStructurePlayerTarget.@Nullable Observation receipt;
         private Vec3 lastWorldPoint;
         private int lastStage = -1;
         private Status lastStatus = Status.STARTED;
@@ -452,7 +478,7 @@ public final class NativeStructureMiningSessions {
         private @Nullable StructureHit currentHit() {
             try {
                 if (!unchanged()) return null;
-                var hit = ray(player, null);
+                var hit = receipt == null ? NativeStructurePlayerTarget.current(player, observation) : receipt.revalidate();
                 if (hit == null || !hit.block().equals(initialHit.block()) || !hit.runtimeId().equals(initialHit.runtimeId())
                         || !hostAllows(player, host, handle, position) || !unchanged()) return null;
                 lastWorldPoint = hit.worldPoint();
@@ -460,6 +486,13 @@ public final class NativeStructureMiningSessions {
             } catch (IllegalStateException unavailable) {
                 return null;
             }
+        }
+
+        private boolean pinTarget() {
+            var proposed = observation == null ? NativeStructurePlayerTarget.current(player, null) : observation;
+            if (proposed == null) return false;
+            receipt = NativeStructurePlayerTarget.capture(player, proposed);
+            return receipt != null;
         }
     }
 }

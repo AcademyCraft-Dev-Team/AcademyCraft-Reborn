@@ -25,6 +25,7 @@ public interface StructureHandle {
     /**
      * Changes the local-to-host transform without moving or renumbering local cells.
      * This does not provide collision checking, passenger transport, or physical motion.
+     * An attached physical structure rejects this call; detach it before teleporting.
      *
      * @throws IllegalStateException if this handle is not active or the thread is wrong
      */

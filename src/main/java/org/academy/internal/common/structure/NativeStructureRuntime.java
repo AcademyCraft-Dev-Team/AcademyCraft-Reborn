@@ -12,6 +12,7 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.TagValueOutput;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
@@ -29,6 +30,9 @@ import org.academy.internal.common.structure.space.NativeStructureChanges;
 import org.academy.internal.common.structure.space.NativeStructureViewCache;
 import org.academy.internal.common.structure.space.NativeStructureChestSessions;
 import org.academy.internal.common.structure.space.NativeStructureMiningSessions;
+import org.academy.internal.common.structure.space.NativeStructurePoseHistory;
+import org.academy.internal.common.structure.physics.NativeStructurePhysics;
+import org.academy.internal.common.structure.physics.NativeStructurePhysicsAttachment;
 import org.academy.internal.common.world.entity.structure.NativeStructureProjectionEntity;
 import org.jspecify.annotations.Nullable;
 
@@ -56,16 +60,20 @@ public final class NativeStructureRuntime implements StructureBackend {
     private static final List<ChunkPos> CHUNKS = chunks();
 
     private final MinecraftServer server;
+    private final NativeStructurePhysics physics;
     private final NativeStructureManifest manifest;
     private final Map<UUID, Handle> loaded = new LinkedHashMap<>();
     private final Map<Integer, CompoundTag> pendingRecovery = new LinkedHashMap<>();
     // Keep ownership-bearing adapter objects alive when encoding or disk persistence fails.
     private final Map<Integer, Supplier<CompoundTag>> pendingAdapterRecovery = new LinkedHashMap<>();
     private boolean closed;
+    private boolean stopping;
     private boolean dirty;
+    private boolean physicsStepping;
 
     private NativeStructureRuntime(MinecraftServer server) {
         this.server = server;
+        physics = new NativeStructurePhysics(server, this);
         try {
             manifest = new NativeStructureManifest(server.getWorldPath(LevelResource.ROOT)
                     .resolve("data/academy/native_structures"));
@@ -95,7 +103,7 @@ public final class NativeStructureRuntime implements StructureBackend {
         if (!NativeStructureDimensions.isStorageLevel(level.dimension())) return true;
         NativeStructureRuntime runtime;
         synchronized (SERVERS) { runtime = SERVERS.get(level.getServer()); }
-        if (runtime == null || runtime.closed) return false;
+        if (runtime == null || runtime.closed || runtime.stopping) return false;
         for (var handle : runtime.loaded.values()) {
             if (handle.level == level && !NativeStructureStorageErrors.failed(level)
                     && (handle.state == StructureLifecycle.LOADING
@@ -106,7 +114,8 @@ public final class NativeStructureRuntime implements StructureBackend {
 
     @Override
     public Optional<StructureHandle> createEmpty(ServerLevel hostLevel, StructurePose pose) {
-        requireThread();
+        requireRunning();
+        if (physicsStepping) throw new IllegalStateException("Cannot allocate during a physics step");
         Objects.requireNonNull(hostLevel, "hostLevel");
         Objects.requireNonNull(pose, "pose");
         if (hostLevel.getServer() != server || NativeStructureDimensions.isStorageLevel(hostLevel.dimension())
@@ -147,7 +156,8 @@ public final class NativeStructureRuntime implements StructureBackend {
 
     @Override
     public Optional<StructureHandle> load(StructureRef reference) {
-        requireThread();
+        requireRunning();
+        if (physicsStepping) throw new IllegalStateException("Cannot load during a physics step");
         var found = exactEntry(reference);
         if (found.isEmpty()) return Optional.empty();
         var current = loaded.get(reference.id());
@@ -161,7 +171,7 @@ public final class NativeStructureRuntime implements StructureBackend {
         var level = server.getLevel(NativeStructureDimensions.slotKey(entry.slot()));
         if (level == null || NativeStructureStorageErrors.failed(level)) return Optional.empty();
         try {
-            var active = new Entry(reference, entry.slot(), entry.pose(), true, false);
+            var active = entry.withAvailability(true, false);
             manifest.put(active);
             manifest.persist();
             return activate(active, level, false);
@@ -196,6 +206,7 @@ public final class NativeStructureRuntime implements StructureBackend {
     @Override
     public boolean unload(StructureRef reference) {
         requireThread();
+        if (stopping || physicsStepping) return false;
         if (exactEntry(reference).isEmpty()) return false;
         var handle = loaded.get(reference.id());
         if (handle == null || handle.writing || handle.saving || handle.closing
@@ -209,7 +220,7 @@ public final class NativeStructureRuntime implements StructureBackend {
             if (!saveHandle(handle)) return false;
             var before = manifest.get(reference.id()).orElseThrow();
             try {
-                manifest.put(new Entry(reference, before.slot(), before.pose(), false, false));
+                manifest.put(before.withAvailability(false, false));
                 manifest.persist();
             } catch (IOException | RuntimeException failure) {
                 manifest.put(before);
@@ -217,6 +228,7 @@ public final class NativeStructureRuntime implements StructureBackend {
                 return false;
             }
             handle.state = StructureLifecycle.UNLOADED;
+            physics.invalidate(reference);
             handle.releaseTickets();
             loaded.remove(reference.id());
             return true;
@@ -228,6 +240,7 @@ public final class NativeStructureRuntime implements StructureBackend {
     /** Flushes vanilla chunks/entities and our index during a normal running server session. */
     public boolean save(StructureRef reference) {
         requireThread();
+        if (stopping || physicsStepping) return false;
         if (exactEntry(reference).isEmpty()) return false;
         var handle = loaded.get(reference.id());
         if (handle == null || handle.closing) return false;
@@ -264,6 +277,142 @@ public final class NativeStructureRuntime implements StructureBackend {
     public Optional<ServerLevel> storageLevel(StructureRef reference) {
         requireThread();
         return exactEntry(reference).map(entry -> server.getLevel(NativeStructureDimensions.slotKey(entry.slot())));
+    }
+
+    public StructurePhysicsRegion openPhysicsRegion(ServerLevel host, AABB bounds) {
+        requireRunning();
+        if (physicsStepping) throw new IllegalStateException("Cannot open a region during a physics step");
+        return physics.open(host, bounds);
+    }
+
+    public Optional<AABB> savedPhysicsRegionBounds(ServerLevel host) {
+        requireThread();
+        return physics.savedRegionBounds(host);
+    }
+
+    public StructurePhysicsRegion resumePhysicsRegion(ServerLevel host) {
+        requireRunning();
+        if (physicsStepping) throw new IllegalStateException("Cannot resume a region during a physics step");
+        return physics.resume(host);
+    }
+
+    public boolean discardSavedPhysicsRegion(ServerLevel host) {
+        requireRunning();
+        if (physicsStepping) throw new IllegalStateException("Cannot discard a region during a physics step");
+        return physics.discardSaved(host);
+    }
+
+    /** Detached persistence observations; reading these never opens a library or loads a chunk. */
+    public List<Entry> savedPhysicsEntries(ServerLevel host) {
+        requireThread();
+        if (host.getServer() != server || server.getLevel(host.dimension()) != host
+                || NativeStructureDimensions.isStorageLevel(host.dimension())) {
+            throw new IllegalArgumentException("Physics requires a live non-storage host");
+        }
+        return manifest.entries().stream().filter(entry -> entry.physicsAttachment() != null
+                && entry.reference().dimension().equals(host.dimension().identifier())).toList();
+    }
+
+    /** Internal control publication. Disk flushing retains the same pose/motion pair. */
+    public void setPhysicsAttachment(StructureRef reference, @Nullable NativeStructurePhysicsAttachment attachment) {
+        requireThread();
+        var entry = exactEntry(reference).orElseThrow(() -> new IllegalArgumentException("Unknown structure"));
+        requirePhysicsMetadataMutable(entry);
+        manifest.put(entry.withPhysicsAttachment(attachment));
+        dirty = true;
+    }
+
+    /** Validate every member before changing any record, including unloaded members. */
+    public void clearPhysicsAttachments(ServerLevel host) {
+        var entries = savedPhysicsEntries(host);
+        for (var entry : entries) requirePhysicsMetadataMutable(entry);
+        manifest.putAll(entries.stream().map(entry -> entry.withPhysicsAttachment(null)).toList());
+        for (var entry : entries) invalidateInteractionHistory(entry.reference());
+        if (!entries.isEmpty()) dirty = true;
+    }
+
+    private void requirePhysicsMetadataMutable(Entry entry) {
+        requireRunning();
+        if (physicsStepping) throw new IllegalStateException("Cannot change physics attachment during a step");
+        var handle = loaded.get(entry.reference().id());
+        if (handle != null && (handle.writing || handle.saving || handle.closing)) {
+            throw new IllegalStateException("Cannot change physics attachment during a write, save or close");
+        }
+    }
+
+    /** Failure can only revoke resumption; it never replaces the last coherent pose or velocity. */
+    public void markPhysicsFailed(StructureRef reference) {
+        requireThread();
+        var entry = exactEntry(reference).orElse(null);
+        if (entry == null || entry.physicsAttachment() == null || !entry.physicsAttachment().resumeAllowed()) return;
+        manifest.put(entry.withPhysicsAttachment(entry.physicsAttachment().withResumeAllowed(false)));
+        invalidateInteractionHistory(reference);
+        dirty = true;
+    }
+
+    /** Internal physics gate; no storage or mutation ownership is transferred. */
+    public boolean physicsAvailable(StructureHandle structure) {
+        requireThread();
+        if (stopping) return false;
+        if (!(structure instanceof Handle handle) || loaded.get(handle.reference.id()) != handle) return false;
+        handle.refresh();
+        return handle.state == StructureLifecycle.ACTIVE && !handle.writing && !handle.saving && !handle.closing;
+    }
+
+    /** Shape callbacks may call mod APIs; keep the same exclusion boundary as a storage mutation. */
+    public boolean beginPhysicsStep(List<StructureHandle> structures) {
+        requireThread();
+        if (stopping || physicsStepping || structures.stream().anyMatch(handle -> !physicsAvailable(handle))) return false;
+        physicsStepping = true;
+        return true;
+    }
+
+    public void endPhysicsStep(List<StructureHandle> structures) {
+        requireThread();
+        physicsStepping = false;
+    }
+
+    /** Only published, uninterrupted physical motion can reconcile an old network observation. */
+    public Optional<StructurePose> previousPhysicalPose(StructureHit proposed) {
+        requireThread();
+        var handle = loaded.get(proposed.block().structure().id());
+        if (handle == null || !handle.reference.equals(proposed.block().structure())
+                || !handle.runtimeId.equals(proposed.runtimeId()) || !physics.historyAvailable(handle.reference)
+                || !isPresented(handle.reference)) return Optional.empty();
+        return handle.poseHistory.find(Integer.toUnsignedLong(server.getTickCount()), proposed.geometryRevision(),
+                NativeStructureChanges.revision(handle.level)).map(NativeStructurePoseHistory.Frame::pose);
+    }
+
+    /** Attachment/teleport/failure boundaries cannot be crossed by a delayed click. */
+    public void invalidateInteractionHistory(StructureRef reference) {
+        requireThread();
+        var handle = loaded.get(reference.id());
+        if (handle != null && handle.reference.equals(reference)) handle.poseHistory.clear();
+    }
+
+    /** Validates the whole cohort before changing any manifest pose; no block/entity callbacks. */
+    public void publishPhysicsPoses(Map<StructureHandle, StructurePose> poses,
+                                   Map<StructureHandle, NativeStructurePhysicsAttachment> attachments) {
+        requireThread();
+        if (stopping || !physicsStepping || !manifest.healthy()) throw new IllegalStateException("Missing physics publication guard");
+        if (!poses.keySet().equals(attachments.keySet())) throw new IllegalArgumentException("Incomplete physics cohort");
+        var replacements = new ArrayList<Entry>();
+        var moved = new ArrayList<Handle>();
+        for (var entry : poses.entrySet()) {
+            if (!physicsAvailable(entry.getKey()) || !physics.attached(entry.getKey().reference())
+                    || ((Handle) entry.getKey()).geometryRevision == Long.MAX_VALUE) {
+                throw new IllegalStateException("Structure became unavailable before physics publication");
+            }
+            Objects.requireNonNull(entry.getValue());
+            var handle = (Handle) entry.getKey();
+            var before = manifest.get(handle.reference.id()).orElseThrow();
+            replacements.add(before.withPose(entry.getValue())
+                    .withPhysicsAttachment(Objects.requireNonNull(attachments.get(handle))));
+            if (!entry.getValue().equals(before.pose())) moved.add(handle);
+        }
+        manifest.putAll(replacements);
+        moved.forEach(Handle::bumpPoseRevision);
+        if (!replacements.isEmpty()) dirty = true;
     }
 
     /** Snapshot of current handles; does not activate unloaded structures. */
@@ -319,6 +468,7 @@ public final class NativeStructureRuntime implements StructureBackend {
     /** Also valid from inside a guarded action; this query does not acquire a second write lock. */
     public boolean isAvailableForMenu(StructureRef reference) {
         requireThread();
+        if (stopping) return false;
         var handle = loaded.get(reference.id());
         if (handle == null || !handle.reference.equals(reference) || handle.closing) return false;
         handle.refresh();
@@ -337,7 +487,7 @@ public final class NativeStructureRuntime implements StructureBackend {
         Objects.requireNonNull(action, "action");
         var handle = loaded.get(reference.id());
         if (handle == null || !handle.reference.equals(reference)
-                || handle.writing || handle.saving || handle.closing) return false;
+                || stopping || physicsStepping || handle.writing || handle.saving || handle.closing) return false;
         handle.refresh();
         if (handle.state != StructureLifecycle.ACTIVE) return false;
         handle.writing = true;
@@ -363,6 +513,11 @@ public final class NativeStructureRuntime implements StructureBackend {
     private void requireThread() {
         if (!server.isSameThread()) throw new IllegalStateException("Structure access requires the server thread");
         if (closed) throw new IllegalStateException("Structure backend belongs to a stopped server");
+    }
+
+    private void requireRunning() {
+        requireThread();
+        if (stopping) throw new IllegalStateException("Structure backend is stopping");
     }
 
     private static List<ChunkPos> chunks() {
@@ -401,6 +556,7 @@ public final class NativeStructureRuntime implements StructureBackend {
         private final boolean freshAllocation;
         private final UUID runtimeId = UUID.randomUUID();
         private final NativeStructureViewCache viewCache = new NativeStructureViewCache();
+        private final NativeStructurePoseHistory poseHistory = new NativeStructurePoseHistory();
         private NativeStructureProjectionEntity projection;
         private StructurePresentationStatus presentation = StructurePresentationStatus.NOT_ACTIVE;
         private long geometryRevision;
@@ -432,11 +588,17 @@ public final class NativeStructureRuntime implements StructureBackend {
         }
 
         private void bumpRevision() {
+            poseHistory.clear();
+            bumpPoseRevision();
+        }
+
+        private void bumpPoseRevision() {
             if (geometryRevision == Long.MAX_VALUE) throw new IllegalStateException("Structure revision exhausted");
             geometryRevision++;
         }
 
         private void discardProjection() {
+            poseHistory.clear();
             if (projection != null) projection.discard();
             projection = null;
             presentation = StructurePresentationStatus.NOT_ACTIVE;
@@ -474,6 +636,10 @@ public final class NativeStructureRuntime implements StructureBackend {
             }
             projection.setOpenChests(NativeStructureChestSessions.openPositions(server, reference, runtimeId));
             presentation = StructurePresentationStatus.VISIBLE;
+            if (physics.historyAvailable(reference)) {
+                poseHistory.remember(Integer.toUnsignedLong(server.getTickCount()), revision,
+                        NativeStructureChanges.revision(level), pose);
+            } else poseHistory.clear();
         }
 
         private void refresh() {
@@ -510,7 +676,12 @@ public final class NativeStructureRuntime implements StructureBackend {
         }
 
         @Override public void setPose(StructurePose pose) {
+            requireRunning();
             requireActive();
+            if (physicsStepping || physics.attached(reference)
+                    || manifest.get(reference.id()).orElseThrow().physicsAttachment() != null) {
+                throw new IllegalStateException("Detach or discard saved physics before directly changing its pose");
+            }
             if (writing || saving || closing) throw new IllegalStateException("Cannot change pose during a write, save or close");
             Objects.requireNonNull(pose, "pose");
             if (pose.equals(pose())) return;
@@ -545,7 +716,7 @@ public final class NativeStructureRuntime implements StructureBackend {
             position = position.immutable();
             refresh();
             if (state == StructureLifecycle.RECOVERY_REQUIRED) return StructureWriteResult.RECOVERY_REQUIRED;
-            if (writing || saving || closing || state != StructureLifecycle.ACTIVE || loaded.get(reference.id()) != this) {
+            if (stopping || physicsStepping || writing || saving || closing || state != StructureLifecycle.ACTIVE || loaded.get(reference.id()) != this) {
                 return StructureWriteResult.NOT_READY;
             }
             if (!contains(position)) return StructureWriteResult.OUT_OF_BOUNDS;
@@ -597,13 +768,16 @@ public final class NativeStructureRuntime implements StructureBackend {
         private void quarantine(BlockStructureTransferState transfer, Throwable failure,
                                 @Nullable Supplier<CompoundTag> recoveryEvidence) {
             state = StructureLifecycle.RECOVERY_REQUIRED;
+            physics.invalidate(reference);
             // Retain adapter-owned outputs before even projection removal invokes mod callbacks.
             if (recoveryEvidence != null) pendingAdapterRecovery.put(slot, recoveryEvidence);
             pendingRecovery.putIfAbsent(slot, new CompoundTag());
             try { discardProjection(); }
             catch (RuntimeException | AssertionError | LinkageError discardFailure) { failure.addSuppressed(discardFailure); }
             var entry = manifest.get(reference.id()).orElseThrow();
-            manifest.put(new Entry(reference, slot, entry.pose(), true, true));
+            var attachment = entry.physicsAttachment();
+            manifest.put(entry.withAvailability(true, true).withPhysicsAttachment(
+                    attachment == null ? null : attachment.withResumeAllowed(false)));
             dirty = true;
             // Failed encoding must retain the only owner of already split inventory items.
             try {
@@ -633,6 +807,7 @@ public final class NativeStructureRuntime implements StructureBackend {
         NativeStructureRuntime runtime;
         synchronized (SERVERS) { runtime = SERVERS.get(event.getServer()); }
         if (runtime == null || runtime.closed) return;
+        runtime.physics.tick();
         NativeStructureChestSessions.tick(event.getServer());
         for (var handle : List.copyOf(runtime.loaded.values())) handle.updateProjection();
         NativeStructureMiningSessions.tick(event.getServer());
@@ -655,10 +830,18 @@ public final class NativeStructureRuntime implements StructureBackend {
         NativeStructureRuntime runtime;
         synchronized (SERVERS) { runtime = SERVERS.get(event.getServer()); }
         if (runtime != null) {
+            runtime.stopping = true;
+            // Seal the whole cohort before any menu-close callback can invoke another control.
+            for (var handle : runtime.loaded.values()) handle.closing = true;
             for (var handle : List.copyOf(runtime.loaded.values())) {
-                handle.closing = true;
                 NativeStructureChestSessions.closeStructure(event.getServer(), handle.reference);
                 NativeStructureMiningSessions.closeStructure(event.getServer(), handle.reference);
+            }
+            // Manager shutdown releases native resources without discarding persisted attachments.
+            // Their last coherent pose/motion pairs were published together before this boundary.
+            try { runtime.physics.close(); }
+            catch (RuntimeException | AssertionError | LinkageError failure) {
+                AcademyCraft.LOGGER.error("Native physics shutdown failed; retaining ownership for the final close", failure);
             }
             if (runtime.manifest.healthy()) runtime.persistIndex();
         }
@@ -669,13 +852,19 @@ public final class NativeStructureRuntime implements StructureBackend {
         synchronized (SERVERS) { runtime = SERVERS.remove(event.getServer()); }
         if (runtime != null) {
             // Vanilla's final chunk/entity flush happens after ServerStoppingEvent.
+            try { runtime.physics.close(); }
+            catch (RuntimeException | AssertionError | LinkageError failure) {
+                AcademyCraft.LOGGER.error("Native physics final close failed", failure);
+            }
             // Retain any failure it reported before disposing the session latch.
             for (var handle : runtime.loaded.values()) handle.refresh();
             // A deactivated slot can still be included in vanilla's final flush.
             for (var entry : runtime.manifest.entries()) {
                 var level = event.getServer().getLevel(NativeStructureDimensions.slotKey(entry.slot()));
                 if (!entry.quarantined() && level != null && NativeStructureStorageErrors.failed(level)) {
-                    runtime.manifest.put(new Entry(entry.reference(), entry.slot(), entry.pose(), entry.active(), true));
+                    var attachment = entry.physicsAttachment();
+                    runtime.manifest.put(entry.withAvailability(entry.active(), true).withPhysicsAttachment(
+                            attachment == null ? null : attachment.withResumeAllowed(false)));
                     var evidence = new CompoundTag();
                     evidence.putString("reason", "vanilla_storage_failure_after_deactivation");
                     evidence.putString("structure_id", entry.reference().id().toString());

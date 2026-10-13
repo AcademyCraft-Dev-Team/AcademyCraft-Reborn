@@ -4,8 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
-import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
+import net.minecraft.network.Connection;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
@@ -26,15 +25,18 @@ import org.academy.internal.common.world.entity.structure.NativeStructureProject
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 
+import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.Map;
 
 /** Main-hand intent and server-authored cracks. Never predicts a block removal in either world. */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class NativeStructureMiningClient {
-    private static final boolean SMOKE = Boolean.getBoolean("academy.nativeStructureMiningSmoke");
+    private static final boolean SMOKE = Boolean.getBoolean("academy.nativeStructureMiningSmoke")
+            || Boolean.getBoolean("academy.nativeStructureMultiplayerSmoke");
     private static final NativeStructureMiningUpdates UPDATES = new NativeStructureMiningUpdates();
     private static @Nullable ClientLevel level;
+    private static WeakReference<Connection> connection = new WeakReference<>(null);
     private static @Nullable Session session;
     private static long nextRequestId = 1, ticks, lastInputTick = -1, cooldownUntil;
     private static long lastStartedRequest;
@@ -54,6 +56,8 @@ public final class NativeStructureMiningClient {
         if (ticks < cooldownUntil || lastInputTick == ticks) return true;
         lastInputTick = ticks;
         if (!click(mc)) { abort(mc); return true; }
+        picked = pick(mc);
+        if (picked == null) { abort(mc); return true; }
         if (!allowed(mc, missTime) || !eligible(mc, picked)) { abort(mc); return true; }
         if (session != null && matches(mc, picked)) return true;
         begin(mc, picked);
@@ -72,15 +76,18 @@ public final class NativeStructureMiningClient {
         if (ticks < cooldownUntil || lastInputTick == ticks) return true;
         lastInputTick = ticks;
         if (!click(mc)) { abort(mc); return true; }
+        picked = pick(mc);
+        if (picked == null) { abort(mc); return true; }
         if (!allowed(mc, missTime) || !eligible(mc, picked)) { abort(mc); return true; }
+        if (session != null && !matches(mc, picked)) abort(mc);
         if (session == null) {
             begin(mc, picked);
         } else if (!session.stopSent) {
             if (session.ready) {
-                send(mc, NativeStructureMinePacket.Action.STOP, session.requestId, null);
+                send(mc, NativeStructureMinePacket.Action.STOP, session.requestId, picked.structureHit());
                 session.stopSent = true;
             } else {
-                send(mc, NativeStructureMinePacket.Action.HOLD, session.requestId, null);
+                send(mc, NativeStructureMinePacket.Action.HOLD, session.requestId, picked.structureHit());
             }
         }
         return true;
@@ -113,13 +120,7 @@ public final class NativeStructureMiningClient {
     }
 
     private static void send(Minecraft mc, NativeStructureMinePacket.Action action, long requestId, @Nullable StructureHit hit) {
-        if (action != NativeStructureMinePacket.Action.ABORT) {
-            var player = mc.player;
-            player.connection.send(new ServerboundSetCarriedItemPacket(player.getInventory().getSelectedSlot()));
-            // Key processing precedes LocalPlayer.sendPosition; publish this frame's actual view.
-            player.connection.send(new ServerboundMovePlayerPacket.Rot(player.getYRot(), player.getXRot(),
-                    player.onGround(), player.horizontalCollision));
-        }
+        if (action != NativeStructureMinePacket.Action.ABORT && !NativeStructureInputSync.send(mc)) return;
         MisakaNetworkClient.send(new NativeStructureMinePacket(action, requestId, hit));
         if (SMOKE) AcademyCraft.LOGGER.info("NATIVE_STRUCTURE_MINING_CLIENT_INPUT action={} request={} tick={}", action, requestId, ticks);
     }
@@ -160,6 +161,8 @@ public final class NativeStructureMiningClient {
 
     public static void accept(NativeStructureMiningProgressPacket packet) {
         var mc = Minecraft.getInstance();
+        // Old queued callbacks must not seed the replacement connection's ordering watermarks.
+        if (mc.getConnection() == null || packet.getPacketListener() != mc.getConnection()) return;
         synchronizeLevel(mc);
         if (mc.level == null || mc.player == null
                 || !packet.reference().dimension().equals(mc.level.dimension().identifier())
@@ -216,7 +219,7 @@ public final class NativeStructureMiningClient {
     private static boolean allowed(Minecraft mc, int missTime) {
         if (mc.player == null || mc.level == null || mc.gameMode == null || mc.gui.screen() != null
                 || missTime > 0 || mc.getCameraEntity() != mc.player || !mc.player.isAlive()
-                || mc.player.isSpectator() || !mc.player.getAbilities().mayBuild || mc.player.isHandsBusy()
+                || mc.player.isSpectator() || mc.player.isPassenger() || !mc.player.getAbilities().mayBuild || mc.player.isHandsBusy()
                 || mc.player.isUsingItem() || MentalIntrusionClientState.blocksWorldInteraction()
                 || PlayerControlClientState.blocksWorldInteraction(false)) return false;
         var held = mc.player.getMainHandItem();
@@ -234,8 +237,11 @@ public final class NativeStructureMiningClient {
     }
 
     private static void synchronizeLevel(Minecraft mc) {
-        if (level == mc.level) return;
+        var listener = mc.getConnection();
+        var current = listener == null ? null : listener.getConnection();
+        if (level == mc.level && connection.get() == current) return;
         level = mc.level;
+        connection = new WeakReference<>(current);
         session = null;
         UPDATES.clear();
         lastInputTick = -1;

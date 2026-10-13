@@ -148,6 +148,7 @@ public final class AcademyCraftClient {
         org.academy.internal.common.network.MagneticSupportPacket.initClient();
         org.academy.internal.common.network.DarkmatterVisualPacket.initClient();
         org.academy.internal.common.network.NativeStructureMiningProgressPacket.initClient();
+        org.academy.internal.common.network.NativeStructureUseResultPacket.initClient();
         ShockwaveVfx.register();
         GlowCircleVfx.register();
         ProficiencyPolicy.initClient();

@@ -184,7 +184,7 @@ public final class NativeStructurePlacementClientSmoke {
             }
         } else if (phase == Phase.FINISHED && view == null && ++stableTicks >= 15) {
             AcademyCraft.LOGGER.info("NATIVE_STRUCTURE_PLACEMENT_SMOKE_PASSED ref={} actual_client=true main_stairs=true "
-                    + "off_slab_merge=true lever_support=true interact_before_place=true stale_packet=true conserved_units=8 "
+                    + "off_slab_merge=true lever_support=true interact_before_place=true nonce_replay=true conserved_units=8 "
                     + "server_direct_protection=true server_direct_collision=true post_write_quarantine=true fault_units=2 save_reload=true screenshot={}", reference, screenshot);
             finished = true;
             mc.stop();
@@ -219,7 +219,7 @@ public final class NativeStructurePlacementClientSmoke {
                     }
                 }
                 case REPLAY -> {
-                    require(markedCount(Items.OAK_STAIRS) == 1 && storage.getBlockState(STAIRS.above()).isAir(), "Old packet consumed/placed twice");
+                    require(markedCount(Items.OAK_STAIRS) == 1 && storage.getBlockState(STAIRS.above()).isAir(), "Replayed use nonce consumed/placed twice");
                     if (replaySent && replayObserved < 0) replayObserved = serverTicks;
                     if (replayObserved >= 0 && serverTicks - replayObserved >= 15) { aimTop(player, SLAB.below(), 1); advance(Phase.SLAB); }
                 }

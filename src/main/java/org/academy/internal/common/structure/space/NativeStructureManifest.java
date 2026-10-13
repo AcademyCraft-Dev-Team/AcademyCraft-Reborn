@@ -6,9 +6,12 @@ import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.structure.StructurePose;
 import org.academy.api.common.structure.StructureRef;
+import org.academy.internal.common.structure.physics.NativeStructurePhysicsAttachment;
+import org.jspecify.annotations.Nullable;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -25,6 +28,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,11 +45,15 @@ import java.util.zip.GZIPOutputStream;
 public final class NativeStructureManifest {
     public static final int SLOT_COUNT = 4;
     public static final int MAX_PAYLOAD_BYTES = 1024 * 1024;
-    private static final int VERSION = 1;
+    private static final int VERSION = 2;
     private static final Identifier BACKEND = Identifier.fromNamespaceAndPath("academy", "native_level");
 
     public record Entry(StructureRef reference, int slot, StructurePose pose,
-                        boolean active, boolean quarantined) {
+                        boolean active, boolean quarantined, @Nullable NativeStructurePhysicsAttachment physicsAttachment) {
+        public Entry(StructureRef reference, int slot, StructurePose pose, boolean active, boolean quarantined) {
+            this(reference, slot, pose, active, quarantined, null);
+        }
+
         public Entry {
             Objects.requireNonNull(reference, "reference");
             Objects.requireNonNull(pose, "pose");
@@ -56,6 +64,18 @@ public final class NativeStructureManifest {
             if (isStorageDimension(reference.dimension())) {
                 throw new IllegalArgumentException("A storage dimension cannot be the visible host");
             }
+        }
+
+        public Entry withPose(StructurePose replacement) {
+            return new Entry(reference, slot, replacement, active, quarantined, physicsAttachment);
+        }
+
+        public Entry withAvailability(boolean active, boolean quarantined) {
+            return new Entry(reference, slot, pose, active, quarantined, physicsAttachment);
+        }
+
+        public Entry withPhysicsAttachment(@Nullable NativeStructurePhysicsAttachment replacement) {
+            return new Entry(reference, slot, pose, active, quarantined, replacement);
         }
     }
 
@@ -100,18 +120,27 @@ public final class NativeStructureManifest {
 
     /** Updates an existing identity or adds one previously unindexed identity. */
     public void put(Entry entry) {
+        putAll(List.of(Objects.requireNonNull(entry, "entry")));
+    }
+
+    /** Validates the complete candidate index before publishing any member of a checkpoint. */
+    public void putAll(List<Entry> replacements) {
         if (!healthy) throw new IllegalStateException("Native structure metadata requires recovery");
-        Objects.requireNonNull(entry, "entry");
-        var prior = entries.get(entry.reference().id());
-        if (prior != null && (!prior.reference().equals(entry.reference()) || prior.slot() != entry.slot())) {
-            throw new IllegalArgumentException("An existing structure cannot change its identity or slot");
-        }
-        for (var other : entries.values()) {
-            if (other.slot() == entry.slot() && !other.reference().id().equals(entry.reference().id())) {
-                throw new IllegalArgumentException("Native structure slot is already indexed");
+        Objects.requireNonNull(replacements, "replacements");
+        var candidate = new LinkedHashMap<>(entries);
+        var replacedIds = new HashSet<UUID>();
+        for (var entry : replacements) {
+            Objects.requireNonNull(entry, "entry");
+            if (!replacedIds.add(entry.reference().id())) throw new IllegalArgumentException("Duplicate checkpoint replacement");
+            var prior = entries.get(entry.reference().id());
+            if (prior != null && (!prior.reference().equals(entry.reference()) || prior.slot() != entry.slot())) {
+                throw new IllegalArgumentException("An existing structure cannot change its identity or slot");
             }
+            candidate.put(entry.reference().id(), entry);
         }
-        entries.put(entry.reference().id(), entry);
+        validateEntries(candidate.values());
+        entries.clear();
+        entries.putAll(candidate);
     }
 
     public boolean healthy() {
@@ -120,6 +149,7 @@ public final class NativeStructureManifest {
 
     public void persist() throws IOException {
         requireHealthy();
+        validateEntries(entries.values());
         var root = new CompoundTag();
         root.putInt("version", VERSION);
         var values = new ListTag();
@@ -234,12 +264,16 @@ public final class NativeStructureManifest {
         pose.putDouble("rotation_z", entry.pose().rotationZ());
         pose.putDouble("rotation_w", entry.pose().rotationW());
         tag.put("pose", pose);
+        if (entry.physicsAttachment() != null) {
+            tag.put("physics", NativeStructurePhysicsAttachmentCodec.encode(entry.physicsAttachment()));
+        }
         return tag;
     }
 
     private static Map<UUID, Entry> decode(CompoundTag root) throws IOException {
         requireType(root, "version", Tag.TAG_INT);
-        if (root.getInt("version").orElseThrow() != VERSION) throw new IOException("Unknown manifest version");
+        int version = root.getInt("version").orElseThrow();
+        if (version != 1 && version != VERSION) throw new IOException("Unknown manifest version");
         requireType(root, "entries", Tag.TAG_LIST);
         var values = root.getList("entries").orElseThrow();
         if (values.size() > SLOT_COUNT) throw new IOException("Too many native structures");
@@ -251,6 +285,12 @@ public final class NativeStructureManifest {
             requireType(tag, "generation", Tag.TAG_LONG);
             requireType(tag, "slot", Tag.TAG_INT);
             requireType(tag, "pose", Tag.TAG_COMPOUND);
+            NativeStructurePhysicsAttachment attachment = null;
+            if (tag.get("physics") != null) {
+                if (version == 1) throw new IOException("Legacy manifests cannot contain physics checkpoints");
+                requireType(tag, "physics", Tag.TAG_COMPOUND);
+                attachment = NativeStructurePhysicsAttachmentCodec.decode(tag.getCompound("physics").orElseThrow());
+            }
             var reference = new StructureRef(UUID.fromString(tag.getString("id").orElseThrow()),
                     Identifier.parse(tag.getString("dimension").orElseThrow()),
                     Identifier.parse(tag.getString("backend").orElseThrow()),
@@ -264,13 +304,32 @@ public final class NativeStructureManifest {
                             pose.getDouble("z").orElseThrow()),
                     pose.getDouble("rotation_x").orElseThrow(), pose.getDouble("rotation_y").orElseThrow(),
                     pose.getDouble("rotation_z").orElseThrow(), pose.getDouble("rotation_w").orElseThrow()),
-                    readFlag(tag, "active"), readFlag(tag, "quarantined"));
+                    readFlag(tag, "active"), readFlag(tag, "quarantined"), attachment);
             if (decoded.putIfAbsent(reference.id(), entry) != null || usedSlots[entry.slot()]) {
                 throw new IOException("Duplicate native structure identity or slot");
             }
             usedSlots[entry.slot()] = true;
         }
+        validateEntries(decoded.values());
         return decoded;
+    }
+
+    private static void validateEntries(Iterable<Entry> candidates) {
+        var usedSlots = new HashSet<Integer>();
+        var usedIds = new HashSet<UUID>();
+        var regions = new LinkedHashMap<Identifier, AABB>();
+        for (var entry : candidates) {
+            if (!usedSlots.add(entry.slot()) || !usedIds.add(entry.reference().id())) {
+                throw new IllegalArgumentException("Duplicate native structure identity or slot");
+            }
+            var physics = entry.physicsAttachment();
+            if (physics == null) continue;
+            var prior = regions.putIfAbsent(entry.reference().dimension(), physics.bounds());
+            if (prior != null && !prior.equals(physics.bounds())) {
+                throw new IllegalArgumentException("One host cannot persist multiple physics region bounds");
+            }
+            if (regions.size() > 3) throw new IllegalArgumentException("Too many saved physics hosts");
+        }
     }
 
     private static boolean readFlag(CompoundTag tag, String key) throws IOException {

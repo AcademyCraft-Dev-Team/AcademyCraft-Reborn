@@ -131,6 +131,7 @@ runs/
 
 # Local
 *.py
+!/validation/native_structure/tcp_delay.py
 *.txt
 !src/main/resources/assets/academy/gui/ability_developer_gui_layout.txt
 !/thirdparty/licenses/native_physics/**/*.txt

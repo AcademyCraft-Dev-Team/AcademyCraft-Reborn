@@ -4,9 +4,11 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.structure.StructurePose;
 import org.academy.api.common.structure.StructureRef;
+import org.academy.internal.common.structure.physics.NativeStructurePhysicsAttachment;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -134,7 +136,7 @@ class NativeStructureManifestTest {
     @Test
     void rejectsMissingFieldsInvalidIdentityBoundsAndCoercedNumericTypesOnDisk() throws IOException {
         var mutations = List.<Consumer<CompoundTag>>of(
-                root -> root.putInt("version", 2),
+                root -> root.putInt("version", 3),
                 root -> root.putDouble("version", 1.0),
                 root -> savedEntry(root).remove("active"),
                 root -> savedEntry(root).putByte("quarantined", (byte) 2),
@@ -285,6 +287,169 @@ class NativeStructureManifestTest {
             assertEquals(List.of("metadata.dat"), files.map(path -> path.getFileName().toString()).toList());
         }
     }
+
+    @Test
+    void physicsCheckpointsRoundTripWithPoseWithoutPersistingRuntimeIdentity() throws IOException {
+        var manifest = new NativeStructureManifest(directory);
+        var moving = entry(1, 0, true, false).withPhysicsAttachment(attachment(true));
+        var blocked = entry(2, 1, false, true).withPhysicsAttachment(attachment(false));
+        var awaiting = entry(3, 2, true, false).withPhysicsAttachment(
+                new NativeStructurePhysicsAttachment(attachment(true).bounds(), null, true));
+        manifest.putAll(List.of(moving, blocked, awaiting));
+        manifest.persist();
+        var root = read(directory.resolve("metadata.dat"));
+        assertEquals(2, root.getInt("version").orElseThrow());
+        var physics = savedEntry(root).getCompound("physics").orElseThrow();
+        assertEquals(java.util.Set.of("bounds", "motion", "resume_allowed"), physics.keySet());
+        assertEquals(java.util.Set.of("linear_velocity", "angular_velocity", "local_center_of_mass", "sleeping", "geometry_digest"),
+                physics.getCompound("motion").orElseThrow().keySet());
+        assertEquals(List.of(moving, blocked, awaiting), new NativeStructureManifest(directory).entries());
+        assertEquals(moving.physicsAttachment(), moving.withPose(StructurePose.identity(Vec3.ZERO)).physicsAttachment());
+        assertEquals(moving.physicsAttachment(), moving.withAvailability(false, true).physicsAttachment());
+    }
+
+    @Test
+    void legacyVersionOneLoadsStationaryAndUpgradesWithoutInventingPhysics() throws IOException {
+        var manifest = new NativeStructureManifest(directory);
+        var original = entry(1, 0, true, false);
+        manifest.put(original);
+        manifest.persist();
+        var path = directory.resolve("metadata.dat");
+        var root = read(path);
+        root.putInt("version", 1);
+        NbtIo.writeCompressed(root, path);
+        var reopened = new NativeStructureManifest(directory);
+        assertTrue(reopened.healthy());
+        assertEquals(List.of(original), reopened.entries());
+        assertNull(reopened.entries().getFirst().physicsAttachment());
+        reopened.persist();
+        var upgraded = read(path);
+        assertEquals(2, upgraded.getInt("version").orElseThrow());
+        assertNull(savedEntry(upgraded).get("physics"));
+    }
+
+    @Test
+    void legacyVersionCannotSmuggleAnOptionalPhysicsCheckpoint() throws IOException {
+        var manifest = new NativeStructureManifest(directory);
+        manifest.put(entry(1, 0, true, false).withPhysicsAttachment(attachment(true)));
+        manifest.persist();
+        var path = directory.resolve("metadata.dat");
+        var root = read(path);
+        root.putInt("version", 1);
+        NbtIo.writeCompressed(root, path);
+        var previous = Files.readAllBytes(path);
+        assertUnhealthyAndUnwritable(new NativeStructureManifest(directory));
+        assertArrayEquals(previous, Files.readAllBytes(path));
+    }
+
+    @Test
+    void malformedPhysicsFieldsDisableWritesWithoutDiscardingSavedBytes() throws IOException {
+        var mutations = List.<Consumer<CompoundTag>>of(
+                tag -> tag.putString("physics", "wrong type"),
+                tag -> physics(tag).remove("bounds"),
+                tag -> physics(tag).putInt("resume_allowed", 1),
+                tag -> physics(tag).putByte("resume_allowed", (byte) -1),
+                tag -> physics(tag).putLong("runtime_revision", 7),
+                tag -> physics(tag).putString("motion", "wrong type"),
+                tag -> savedBounds(tag).putDouble("min_x", 13),
+                tag -> savedBounds(tag).putInt("max_y", 88),
+                tag -> savedBounds(tag).putDouble("max_z", Double.NaN),
+                tag -> savedBounds(tag).putDouble("max_z", 12.001),
+                tag -> savedMotion(tag).putInt("sleeping", 1),
+                tag -> savedMotion(tag).putByte("sleeping", (byte) 2),
+                tag -> savedMotion(tag).remove("geometry_digest"),
+                tag -> savedMotion(tag).putString("geometry_digest", "F".repeat(64)),
+                tag -> savedMotion(tag).putString("geometry_digest", "0".repeat(63)),
+                tag -> savedMotion(tag).getCompound("linear_velocity").orElseThrow().putFloat("x", 1),
+                tag -> savedMotion(tag).getCompound("angular_velocity").orElseThrow().putDouble("y", 10_000.1),
+                tag -> savedMotion(tag).getCompound("local_center_of_mass").orElseThrow().putDouble("z", Double.NEGATIVE_INFINITY),
+                tag -> savedMotion(tag).getCompound("local_center_of_mass").orElseThrow().putDouble("z", 1_000_000.1),
+                tag -> savedMotion(tag).getCompound("linear_velocity").orElseThrow().putDouble("w", 0)
+        );
+        for (int index = 0; index < mutations.size(); index++) {
+            var location = directory.resolve("physics_invalid_" + index);
+            var manifest = new NativeStructureManifest(location);
+            manifest.put(entry(1, 0, true, false).withPhysicsAttachment(attachment(true)));
+            manifest.persist();
+            var path = location.resolve("metadata.dat");
+            var root = read(path);
+            mutations.get(index).accept(savedEntry(root));
+            NbtIo.writeCompressed(root, path);
+            var previous = Files.readAllBytes(path);
+            assertUnhealthyAndUnwritable(new NativeStructureManifest(location));
+            assertArrayEquals(previous, Files.readAllBytes(path), "scenario " + index);
+        }
+    }
+
+    @Test
+    void checkpointBatchIsAtomicAcrossRegionConsistencyIdentityAndSlotFailures() throws IOException {
+        var manifest = new NativeStructureManifest(directory);
+        var first = entry(1, 0, true, false).withPhysicsAttachment(attachment(true));
+        var second = entry(2, 1, true, false).withPhysicsAttachment(attachment(true));
+        manifest.putAll(List.of(first, second));
+        manifest.persist();
+        var previous = Files.readAllBytes(directory.resolve("metadata.dat"));
+        var moved = first.withPose(StructurePose.identity(new Vec3(1, 80, 1)));
+        var otherBounds = new NativeStructurePhysicsAttachment(new AABB(-11, 64, -12, 13, 88, 12), null, true);
+        for (var invalid : List.of(second.withPhysicsAttachment(otherBounds), entry(2, 2, true, false),
+                entry(3, 0, true, false))) {
+            assertThrows(IllegalArgumentException.class, () -> manifest.putAll(List.of(moved, invalid)));
+            assertEquals(List.of(first, second), manifest.entries());
+            assertArrayEquals(previous, Files.readAllBytes(directory.resolve("metadata.dat")));
+        }
+        assertThrows(IllegalArgumentException.class, () -> manifest.putAll(List.of(moved, moved)));
+        assertEquals(List.of(first, second), manifest.entries());
+        assertThrows(IllegalArgumentException.class, () -> manifest.put(first.withPhysicsAttachment(otherBounds)));
+        manifest.putAll(List.of(moved.withPhysicsAttachment(otherBounds), second.withPhysicsAttachment(otherBounds)));
+        manifest.persist();
+        assertEquals(manifest.entries(), new NativeStructureManifest(directory).entries());
+    }
+
+    @Test
+    void savedIndexRejectsConflictingRegionsAndMoreThanThreePhysicsHosts() throws IOException {
+        var manifest = new NativeStructureManifest(directory);
+        var first = entry(1, 0, true, false).withPhysicsAttachment(attachment(true));
+        var second = entry(2, 1, true, false).withPhysicsAttachment(attachment(true));
+        manifest.putAll(List.of(first, second));
+        manifest.persist();
+        var path = directory.resolve("metadata.dat");
+        var root = read(path);
+        savedBounds(root.getList("entries").orElseThrow().getCompound(1).orElseThrow()).putDouble("min_x", -11);
+        NbtIo.writeCompressed(root, path);
+        assertUnhealthyAndUnwritable(new NativeStructureManifest(directory));
+
+        var location = directory.resolve("hosts");
+        var hosts = new NativeStructureManifest(location);
+        for (int slot = 0; slot < 3; slot++) hosts.put(hostEntry(slot).withPhysicsAttachment(attachment(true)));
+        var before = hosts.entries();
+        assertThrows(IllegalArgumentException.class, () -> hosts.put(hostEntry(3).withPhysicsAttachment(attachment(true))));
+        assertEquals(before, hosts.entries());
+        hosts.put(hostEntry(3));
+        hosts.persist();
+        var hostPath = location.resolve("metadata.dat");
+        var hostRoot = read(hostPath);
+        var entries = hostRoot.getList("entries").orElseThrow();
+        entries.getCompound(3).orElseThrow().put("physics", entries.getCompound(0).orElseThrow().getCompound("physics").orElseThrow().copy());
+        NbtIo.writeCompressed(hostRoot, hostPath);
+        assertUnhealthyAndUnwritable(new NativeStructureManifest(location));
+    }
+
+    private static NativeStructureManifest.Entry hostEntry(int slot) {
+        var source = entry(slot + 1, slot, true, false);
+        return new NativeStructureManifest.Entry(new StructureRef(source.reference().id(),
+                Identifier.parse("test:host_" + slot), source.reference().backend(), source.reference().generation()),
+                slot, source.pose(), true, false);
+    }
+
+    private static NativeStructurePhysicsAttachment attachment(boolean allowed) {
+        return new NativeStructurePhysicsAttachment(new AABB(-12, 64, -12, 12, 88, 12),
+                new NativeStructurePhysicsAttachment.Motion(new Vec3(1.25, -0.5, 0), new Vec3(0, 0.2, 0.1),
+                        new Vec3(-0.5, 2.25, 0.75), true, "0123456789abcdef".repeat(4)), allowed);
+    }
+
+    private static CompoundTag physics(CompoundTag entry) { return entry.getCompound("physics").orElseThrow(); }
+    private static CompoundTag savedBounds(CompoundTag entry) { return physics(entry).getCompound("bounds").orElseThrow(); }
+    private static CompoundTag savedMotion(CompoundTag entry) { return physics(entry).getCompound("motion").orElseThrow(); }
 
     private static NativeStructureManifest.Entry entry(long id, int slot, boolean active, boolean quarantined) {
         return new NativeStructureManifest.Entry(new StructureRef(new UUID(0, id),

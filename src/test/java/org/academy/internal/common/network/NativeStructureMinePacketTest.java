@@ -18,26 +18,27 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class NativeStructureMinePacketTest {
     @Test
-    void actionsRoundTripWithoutClientTimingOrRepeatedHitPayloads() {
+    void everyActiveIntentCarriesAFreshObservationWithoutClientTiming() {
         for (var action : NativeStructureMinePacket.Action.values()) {
-            var packet = new NativeStructureMinePacket(action, 91, action == NativeStructureMinePacket.Action.START ? hit() : null);
+            var packet = new NativeStructureMinePacket(action, 91, action == NativeStructureMinePacket.Action.ABORT ? null : hit());
             var buffer = Unpooled.buffer();
             try {
                 NativeStructureMinePacket.CODEC.encode(buffer, packet);
                 assertTrue(buffer.readableBytes() < 512);
-                if (action != NativeStructureMinePacket.Action.START) assertEquals(9, buffer.readableBytes());
+                if (action == NativeStructureMinePacket.Action.ABORT) assertEquals(9, buffer.readableBytes());
                 var copy = NativeStructureMinePacket.CODEC.decode(buffer);
                 assertEquals(action, copy.action());
                 assertEquals(91, copy.requestId());
-                if (packet.startHit() == null) assertNull(copy.startHit());
+                if (action != NativeStructureMinePacket.Action.START) assertNull(copy.startHit());
+                if (packet.observation() == null) assertNull(copy.observation());
                 else {
-                    assertEquals(packet.startHit().block(), copy.startHit().block());
-                    assertEquals(packet.startHit().runtimeId(), copy.startHit().runtimeId());
-                    assertEquals(packet.startHit().geometryRevision(), copy.startHit().geometryRevision());
-                    assertEquals(packet.startHit().localPoint(), copy.startHit().localPoint());
-                    assertEquals(packet.startHit().worldPoint(), copy.startHit().worldPoint());
-                    assertTrue(copy.startHit().pose().localToWorldPoint(copy.startHit().localPoint())
-                            .distanceTo(copy.startHit().worldPoint()) < 1.0e-10);
+                    assertEquals(packet.observation().block(), copy.observation().block());
+                    assertEquals(packet.observation().runtimeId(), copy.observation().runtimeId());
+                    assertEquals(packet.observation().geometryRevision(), copy.observation().geometryRevision());
+                    assertEquals(packet.observation().localPoint(), copy.observation().localPoint());
+                    assertEquals(packet.observation().worldPoint(), copy.observation().worldPoint());
+                    assertTrue(copy.observation().pose().localToWorldPoint(copy.observation().localPoint())
+                            .distanceTo(copy.observation().worldPoint()) < 1.0e-10);
                 }
                 assertEquals(0, buffer.readableBytes());
             } finally { buffer.release(); }
@@ -45,12 +46,12 @@ class NativeStructureMinePacketTest {
     }
 
     @Test
-    void startCannotSmuggleAnOffhandOrInvalidHandThroughTheSharedObservationCodec() {
+    void miningHasNoHandFieldAndRejectsAnyAppendedHand() {
         for (int hand : new int[]{1, 2, 255}) {
             var buffer = Unpooled.buffer();
             try {
                 NativeStructureMinePacket.CODEC.encode(buffer, new NativeStructureMinePacket(NativeStructureMinePacket.Action.START, 1, hit()));
-                buffer.setByte(buffer.writerIndex() - 1, hand);
+                buffer.writeByte(hand);
                 assertThrows(IllegalArgumentException.class, () -> NativeStructureMinePacket.CODEC.decode(buffer));
             } finally { buffer.release(); }
         }
@@ -68,29 +69,35 @@ class NativeStructureMinePacketTest {
         for (long id : new long[]{0, -1, Long.MIN_VALUE}) {
             var buffer = Unpooled.buffer();
             try {
-                buffer.writeByte(NativeStructureMinePacket.Action.HOLD.ordinal()).writeLong(id);
+                buffer.writeByte(NativeStructureMinePacket.Action.ABORT.ordinal()).writeLong(id);
                 assertThrows(IllegalArgumentException.class, () -> NativeStructureMinePacket.CODEC.decode(buffer));
             } finally { buffer.release(); }
         }
         var buffer = Unpooled.buffer();
         try {
-            NativeStructureMinePacket.CODEC.encode(buffer, new NativeStructureMinePacket(NativeStructureMinePacket.Action.HOLD, 1, null));
+            NativeStructureMinePacket.CODEC.encode(buffer, new NativeStructureMinePacket(NativeStructureMinePacket.Action.HOLD, 1, hit()));
             buffer.writeLong(1_000_000); // A forged "elapsed ticks" value is not part of the contract.
             assertThrows(IllegalArgumentException.class, () -> NativeStructureMinePacket.CODEC.decode(buffer));
         } finally { buffer.release(); }
     }
 
     @Test
-    void startNeedsAnObservationAndContinuationMustNotContainOne() {
-        assertThrows(IllegalArgumentException.class, () -> new NativeStructureMinePacket(NativeStructureMinePacket.Action.START, 1, null));
-        for (var action : new NativeStructureMinePacket.Action[]{NativeStructureMinePacket.Action.HOLD,
-                NativeStructureMinePacket.Action.STOP, NativeStructureMinePacket.Action.ABORT}) {
-            assertThrows(IllegalArgumentException.class, () -> new NativeStructureMinePacket(action, 1, hit()));
+    void allActiveActionsNeedObservationsWhileAbortForbidsOne() {
+        for (var action : new NativeStructureMinePacket.Action[]{NativeStructureMinePacket.Action.START,
+                NativeStructureMinePacket.Action.HOLD, NativeStructureMinePacket.Action.STOP}) {
+            assertThrows(IllegalArgumentException.class, () -> new NativeStructureMinePacket(action, 1, null));
+            var buffer = Unpooled.buffer();
+            try {
+                buffer.writeByte(action.ordinal()).writeLong(1);
+                assertThrows(IndexOutOfBoundsException.class, () -> NativeStructureMinePacket.CODEC.decode(buffer));
+            } finally { buffer.release(); }
         }
+        assertThrows(IllegalArgumentException.class, () -> new NativeStructureMinePacket(NativeStructureMinePacket.Action.ABORT, 1, hit()));
         var buffer = Unpooled.buffer();
         try {
-            buffer.writeByte(NativeStructureMinePacket.Action.START.ordinal()).writeLong(1);
-            assertThrows(IndexOutOfBoundsException.class, () -> NativeStructureMinePacket.CODEC.decode(buffer));
+            buffer.writeByte(NativeStructureMinePacket.Action.ABORT.ordinal()).writeLong(1);
+            NativeStructureHitCodec.CODEC.encode(buffer, hit());
+            assertThrows(IllegalArgumentException.class, () -> NativeStructureMinePacket.CODEC.decode(buffer));
         } finally { buffer.release(); }
     }
 

@@ -143,7 +143,7 @@ public final class NativeStructureMiningClientSmoke {
             if (++stableTicks < 8) return;
             require(firstRequest > 0 && firstHit != null, "A real first request is needed for replay");
             MisakaNetworkClient.send(new NativeStructureMinePacket(NativeStructureMinePacket.Action.START, firstRequest, firstHit));
-            MisakaNetworkClient.send(new NativeStructureMinePacket(NativeStructureMinePacket.Action.STOP, firstRequest, null));
+            MisakaNetworkClient.send(new NativeStructureMinePacket(NativeStructureMinePacket.Action.STOP, firstRequest, firstHit));
             replaySent = true;
             return;
         }

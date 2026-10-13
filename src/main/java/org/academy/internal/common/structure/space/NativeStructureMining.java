@@ -37,9 +37,20 @@ public final class NativeStructureMining {
 
     public static boolean destroy(ServerPlayer player, StructureHit hit,
                                   Supplier<@Nullable StructureHit> revalidate) {
+        return destroy(player, hit, revalidate, () -> strictTarget(player, hit));
+    }
+
+    /**
+     * The session supplies a pinned, player-bound target receipt separately from its unchanged-tool
+     * guard. The receipt remains valid to consult after vanilla has legitimately worn the tool.
+     */
+    public static boolean destroy(ServerPlayer player, StructureHit hit,
+                                  Supplier<@Nullable StructureHit> revalidate,
+                                  Supplier<@Nullable StructureHit> targetReceipt) {
         Objects.requireNonNull(player);
         Objects.requireNonNull(hit);
         Objects.requireNonNull(revalidate);
+        Objects.requireNonNull(targetReceipt);
         var host = player.level();
         if (!host.getServer().isSameThread()) throw new IllegalStateException("Native mining requires the server thread");
         var runtime = NativeStructureRuntime.backend(host.getServer());
@@ -54,7 +65,7 @@ public final class NativeStructureMining {
         boolean guarded;
         try {
             guarded = runtime.runInteraction(handle.reference(), () -> StructureContexts.run(handle, context -> {
-                if (!hit.equals(revalidate.get()) || !allowedActor(player, host)) return;
+                if (!hit.equals(revalidate.get()) || !hit.equals(targetReceipt.get()) || !allowedActor(player, host)) return;
                 var before = handle.world().read(position);
                 var blockEntity = storage.getBlockEntity(position);
                 var tool = player.getMainHandItem();
@@ -66,7 +77,7 @@ public final class NativeStructureMining {
                 outcome.storage = storage;
                 var event = new StructureMiningEvent(player, hit, context, StructureMiningEvent.Phase.FINISH, before, tool);
                 if (NeoForge.EVENT_BUS.post(event).isCanceled()) return;
-                if (!authorized(player, host, storage, runtime, handle, hit, initial, true)
+                if (!authorized(player, host, storage, runtime, handle, hit, initial, true, targetReceipt)
                         || !hit.equals(revalidate.get())) return;
 
                 // Construct the actual 26.2 event without CommonHooks' local-coordinate
@@ -75,14 +86,14 @@ public final class NativeStructureMining {
                 breakEvent.setCanceled(!tool.isEmpty() && !tool.canDestroyBlock(before.state(), storage, position, player)
                         || player.blockActionRestricted(storage, position, initial.gameType));
                 NeoForge.EVENT_BUS.post(breakEvent);
-                if (breakEvent.isCanceled() || !authorized(player, host, storage, runtime, handle, hit, initial, true)
+                if (breakEvent.isCanceled() || !authorized(player, host, storage, runtime, handle, hit, initial, true, targetReceipt)
                         || !hit.equals(revalidate.get())) return;
 
                 // Closing returns carried items through the real player's inventory exactly once.
                 // Close callbacks run before final validation and before any inventory is split.
                 if (blockEntity != null) NativeStructureChestSessions.closeBlock(host.getServer(), handle.reference(),
                         handle.runtimeId(), position);
-                if (!authorized(player, host, storage, runtime, handle, hit, initial, true)
+                if (!authorized(player, host, storage, runtime, handle, hit, initial, true, targetReceipt)
                         || !hit.equals(revalidate.get())) return;
 
                 try (var drops = NativeStructureBreakDrops.open(host, storage, hit, before, blockEntity)) {
@@ -90,19 +101,20 @@ public final class NativeStructureMining {
                     drops.recoveryEvidence();
                     var block = before.state().getBlock();
                     var adjusted = block.playerWillDestroy(storage, position, before.state(), player);
-                    if (adjusted != before.state() || !authorized(player, host, storage, runtime, handle, hit, initial, true)
+                    if (adjusted != before.state() || !authorized(player, host, storage, runtime, handle, hit, initial, true, targetReceipt)
                             || !hit.equals(revalidate.get())) {
                         throw new IllegalStateException("Native mining changed during will-destroy callbacks");
                     }
                     boolean harvest = !player.preventsBlockDrops() && adjusted.canHarvestBlock(storage, position, player);
-                    if (!authorized(player, host, storage, runtime, handle, hit, initial, true)
+                    if (!authorized(player, host, storage, runtime, handle, hit, initial, true, targetReceipt)
                             || !hit.equals(revalidate.get())) {
                         throw new IllegalStateException("Native mining changed during harvest callbacks");
                     }
                     if (!player.preventsBlockDrops()) tool.mineBlock(storage, adjusted, position, player);
                     // Session validation includes the original tool components. Durability has now
-                    // legitimately changed, so use an independent fresh ray and ownership check.
-                    if (!authorized(player, host, storage, runtime, handle, hit, initial, false)) {
+                    // legitimately changed. The independent pinned target receipt still verifies
+                    // actor, motion history and current visibility without rejecting that wear.
+                    if (!authorized(player, host, storage, runtime, handle, hit, initial, false, targetReceipt)) {
                         throw new IllegalStateException("Native mining changed during tool callbacks");
                     }
                     outcome.writeAttempted = true;
@@ -142,33 +154,42 @@ public final class NativeStructureMining {
 
     private static boolean authorized(ServerPlayer player, ServerLevel host, ServerLevel storage,
                                       NativeStructureRuntime runtime, StructureHandle handle, StructureHit hit,
-                                      Ownership initial, boolean unchangedTool) {
+                                      Ownership initial, boolean unchangedTool,
+                                      Supplier<@Nullable StructureHit> targetReceipt) {
         if (!owns(player, host, initial, unchangedTool) || !runtime.isPresented(handle.reference())
                 || storage.getBlockEntity(hit.block().localPosition()) != initial.blockEntity
                 || !initial.before.equals(handle.world().read(hit.block().localPosition()))
                 || player.blockActionRestricted(storage, hit.block().localPosition(), initial.gameType)
                 || !hostMayBreak(player, host, handle, hit.block().localPosition())) return false;
-        var distance = player.blockInteractionRange();
-        if (!Double.isFinite(distance) || distance <= 0 || distance > StructureQueries.MAX_RAY_LENGTH) return false;
+        if (!hit.equals(targetReceipt.get())) return false;
         var from = player.getEyePosition();
-        var to = from.add(player.getLookAngle().scale(distance));
-        var current = StructureQueries.validate(host, from, to, hit).currentHit().orElse(null);
-        if (!hit.equals(current)) return false;
+        // A historical view ray selected a local face which has since moved. Current obstacles
+        // are checked along the authorized face's current world segment, not the old look line.
+        var to = hit.worldPoint();
         double targetDistance = from.distanceToSqr(hit.worldPoint());
         int visited = 0;
         for (var entity : host.getEntities(player, new AABB(from, to).inflate(1),
                 candidate -> !candidate.isSpectator() && candidate.isPickable())) {
             if (++visited > 256) return false;
-            var bounds = entity.getBoundingBox().inflate(entity.getPickRadius());
-            if (bounds.contains(from) || bounds.clip(from, to).filter(point -> from.distanceToSqr(point) < targetDistance).isPresent()) return false;
+            if (NativeStructurePlayerTarget.occludes(entity.getBoundingBox(), entity.getPickRadius(),
+                    from, to, targetDistance)) return false;
         }
         // Shapes and entity predicates may call mod code. Recheck host protection before
-        // the final plain ownership/version checks, without invoking a second ray.
+        // the final receipt and plain ownership/version checks. Never adopt a different hit.
         return hostMayBreak(player, host, handle, hit.block().localPosition())
+                && hit.equals(targetReceipt.get())
                 && runtime.isPresented(handle.reference())
                 && storage.getBlockEntity(hit.block().localPosition()) == initial.blockEntity
                 && initial.before.equals(handle.world().read(hit.block().localPosition()))
                 && owns(player, host, initial, unchangedTool);
+    }
+
+    private static @Nullable StructureHit strictTarget(ServerPlayer player, StructureHit hit) {
+        double distance = player.blockInteractionRange();
+        if (!Double.isFinite(distance) || distance <= 0 || distance > StructureQueries.MAX_RAY_LENGTH) return null;
+        var from = player.getEyePosition();
+        var to = from.add(player.getLookAngle().scale(distance));
+        return StructureQueries.validate(player.level(), from, to, hit).currentHit().orElse(null);
     }
 
     private static boolean owns(ServerPlayer player, ServerLevel host, Ownership initial, boolean unchangedTool) {

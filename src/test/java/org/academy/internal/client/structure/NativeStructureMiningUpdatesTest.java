@@ -73,6 +73,18 @@ class NativeStructureMiningUpdatesTest {
         assertFalse(updates.acceptOwn(packet(1001, 2, 11, 4, false), 5, true));
     }
 
+    @Test
+    void changingLevelOrConnectionClearsBothVisualsAndOldSequenceWatermarks() {
+        var updates = new NativeStructureMiningUpdates();
+        assertTrue(updates.acceptOwn(packet(1, 5, 100, 6, false), 1, true));
+        assertTrue(updates.accept(packet(2, 7, 200, 4, false), 1, true));
+        updates.clear();
+        assertTrue(updates.active(2).isEmpty());
+        assertTrue(updates.acceptOwn(packet(1, 1, 1, 0, false), 3, true));
+        assertTrue(updates.accept(packet(2, 1, 1, 0, false), 3, true));
+        assertEquals(2, updates.active(3).size());
+    }
+
     private static NativeStructureMiningProgressPacket packet(int breaker, long request, long sequence, int stage, boolean terminal) {
         var reference = new StructureRef(new UUID(1, 2), Identifier.withDefaultNamespace("overworld"),
                 Identifier.fromNamespaceAndPath("academy", "native_level"), 0);

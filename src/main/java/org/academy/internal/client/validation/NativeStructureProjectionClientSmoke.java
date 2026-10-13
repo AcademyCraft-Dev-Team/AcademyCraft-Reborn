@@ -135,7 +135,7 @@ public final class NativeStructureProjectionClientSmoke {
             }
             if (++absentTicks < 20) return;
             require(screenshotSaved, "Rendered screenshot must finish before successful shutdown");
-            AcademyCraft.LOGGER.info("NATIVE_STRUCTURE_PROJECTION_SMOKE_PASSED ref={} protections=true packet=true stale_replay=true "
+            AcademyCraft.LOGGER.info("NATIVE_STRUCTURE_PROJECTION_SMOKE_PASSED ref={} protections=true packet=true nonce_replay=true "
                     + "furnace_state=true rotated_render=true unload=true inventory_retained=true screenshot={}",
                     reference, screenshotPath);
             finished = true;
@@ -172,7 +172,7 @@ public final class NativeStructureProjectionClientSmoke {
                     || stamp.revision() == originalHit.geometryRevision()) return;
             replaySent = true;
             MisakaNetworkClient.send(new NativeStructureUsePacket(originalHit));
-            AcademyCraft.LOGGER.info("NATIVE_STRUCTURE_PROJECTION_CLIENT_STALE_REPLAY_SENT old={} current={}",
+            AcademyCraft.LOGGER.info("NATIVE_STRUCTURE_PROJECTION_CLIENT_NONCE_REPLAY_SENT old={} current={}",
                     originalHit.geometryRevision(), stamp.revision());
             return;
         }
@@ -235,7 +235,7 @@ public final class NativeStructureProjectionClientSmoke {
                 acceptedAt = serverTicks;
                 AcademyCraft.LOGGER.info("NATIVE_STRUCTURE_PROJECTION_SERVER_LEVER_ACCEPTED ref={} lamp=true", reference);
             }
-            require(powered && lit, "Stale replay must never toggle the lever or lamp back off");
+            require(powered && lit, "Replayed use nonce must never toggle the lever or lamp back off");
             if (serverTicks - acceptedAt >= 8) replayReady = true;
             if (replaySent && replayAt < 0) replayAt = serverTicks;
             if (replayAt >= 0 && serverTicks - replayAt >= 20 && !visualReady) rotateForScreenshot(player);
@@ -294,7 +294,7 @@ public final class NativeStructureProjectionClientSmoke {
         handle.setPose(expectedPose);
         positionPlayer(player, worldPivot.add(0, 0.4 - player.getEyeHeight(), 5.5), worldPivot);
         visualReady = true;
-        AcademyCraft.LOGGER.info("NATIVE_STRUCTURE_PROJECTION_SERVER_ROTATED ref={} stale_replay_observed_ticks=20 pose={}",
+        AcademyCraft.LOGGER.info("NATIVE_STRUCTURE_PROJECTION_SERVER_ROTATED ref={} nonce_replay_observed_ticks=20 pose={}",
                 reference, expectedPose);
     }
 

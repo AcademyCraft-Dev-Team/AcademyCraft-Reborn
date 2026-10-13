@@ -677,6 +677,10 @@ public final class PacketTypes {
             NATIVE_STRUCTURE_MINE = PACKET_TYPES.register("native_structure_mine",
             () -> new PacketType<>(NativeStructureMinePacket.class, NativeStructureMinePacket.CODEC));
 
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, NativeStructureUseResultPacket>>
+            NATIVE_STRUCTURE_USE_RESULT = PACKET_TYPES.register("native_structure_use_result",
+            () -> new PacketType<>(NativeStructureUseResultPacket.class, NativeStructureUseResultPacket.CODEC));
+
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, NativeStructureMiningProgressPacket>>
             NATIVE_STRUCTURE_MINING_PROGRESS = PACKET_TYPES.register("native_structure_mining_progress",
             () -> new PacketType<>(NativeStructureMiningProgressPacket.class, NativeStructureMiningProgressPacket.CODEC));

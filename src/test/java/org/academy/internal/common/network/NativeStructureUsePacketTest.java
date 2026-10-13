@@ -38,9 +38,10 @@ class NativeStructureUsePacketTest {
                 Direction.WEST, localPoint, pose.localToWorldPoint(localPoint), false);
         var buffer = Unpooled.buffer();
         try {
-            NativeStructureUsePacket.CODEC.encode(buffer, new NativeStructureUsePacket(hit));
+            NativeStructureUsePacket.CODEC.encode(buffer, new NativeStructureUsePacket(37, hit, InteractionHand.MAIN_HAND));
             assertTrue(buffer.readableBytes() < 512);
             var packet = NativeStructureUsePacket.CODEC.decode(buffer);
+            assertEquals(37, packet.requestId());
             assertEquals(InteractionHand.MAIN_HAND, packet.hand());
             var copy = packet.hit();
             assertEquals(0, buffer.readableBytes());
@@ -98,6 +99,7 @@ class NativeStructureUsePacketTest {
         for (var oversizedBackend : new boolean[]{false, true}) {
             var buffer = new FriendlyByteBuf(Unpooled.buffer());
             try {
+                buffer.writeLong(1);
                 buffer.writeUUID(STRUCTURE_ID);
                 if (oversizedBackend) buffer.writeUtf("minecraft:overworld");
                 buffer.writeUtf("a".repeat(257));
@@ -147,6 +149,20 @@ class NativeStructureUsePacketTest {
         }
     }
 
+    @Test
+    void requestIdentityAndEnvelopeMustBeExact() {
+        for (long id : new long[]{0, -1, Long.MIN_VALUE}) {
+            assertRejected(buffer -> {
+                writeObservation(buffer, 0, 1, POSITION, Direction.UP.ordinal(), Vec3.ZERO, Vec3.ZERO, Vec3.ZERO);
+                buffer.setLong(0, id);
+            });
+        }
+        assertRejected(buffer -> {
+            writeObservation(buffer, 0, 1, POSITION, Direction.UP.ordinal(), Vec3.ZERO, Vec3.ZERO, Vec3.ZERO);
+            buffer.writeByte(0);
+        });
+    }
+
     private static void assertRejected(Consumer<FriendlyByteBuf> payload) {
         var buffer = new FriendlyByteBuf(Unpooled.buffer());
         try {
@@ -160,6 +176,7 @@ class NativeStructureUsePacketTest {
     private static void writeObservation(FriendlyByteBuf buffer, long generation, long revision,
                                          BlockPos position, int face, Vec3 origin,
                                          Vec3 localPoint, Vec3 worldPoint) {
+        buffer.writeLong(1);
         buffer.writeUUID(STRUCTURE_ID);
         buffer.writeUtf("minecraft:overworld");
         buffer.writeUtf("academy:native_level");

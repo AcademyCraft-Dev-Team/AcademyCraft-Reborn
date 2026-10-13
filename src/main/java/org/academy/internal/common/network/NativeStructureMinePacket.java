@@ -4,7 +4,6 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.InteractionHand;
 import org.academy.api.common.structure.StructureHit;
 import org.academy.internal.common.structure.space.NativeStructureMiningSessions;
 import org.jspecify.annotations.Nullable;
@@ -29,11 +28,7 @@ public final class NativeStructureMinePacket extends Packet<ServerGamePacketList
             if (action >= Action.values().length) throw new IllegalArgumentException("Invalid mining action");
             long requestId = buffer.readLong();
             StructureHit hit = null;
-            if (action == Action.START.ordinal()) {
-                var observation = NativeStructureUsePacket.CODEC.decode(buffer);
-                if (observation.hand() != InteractionHand.MAIN_HAND) throw new IllegalArgumentException("Mining requires main hand");
-                hit = observation.hit();
-            }
+            if (action != Action.ABORT.ordinal()) hit = NativeStructureHitCodec.CODEC.decode(buffer);
             if (buffer.isReadable()) throw new IllegalArgumentException("Unexpected mining payload");
             return new NativeStructureMinePacket(Action.values()[action], requestId, hit);
         }
@@ -41,26 +36,28 @@ public final class NativeStructureMinePacket extends Packet<ServerGamePacketList
         @Override public void encode(ByteBuf output, NativeStructureMinePacket packet) {
             output.writeByte(packet.action.ordinal());
             output.writeLong(packet.requestId);
-            if (packet.startHit != null) NativeStructureUsePacket.CODEC.encode(output, new NativeStructureUsePacket(packet.startHit));
+            if (packet.observation != null) NativeStructureHitCodec.CODEC.encode(output, packet.observation);
         }
     };
     private static boolean initialized;
     private final Action action;
     private final long requestId;
-    private final @Nullable StructureHit startHit;
+    private final @Nullable StructureHit observation;
 
-    public NativeStructureMinePacket(Action action, long requestId, @Nullable StructureHit startHit) {
+    public NativeStructureMinePacket(Action action, long requestId, @Nullable StructureHit observation) {
         this.action = Objects.requireNonNull(action, "action");
-        if (requestId <= 0 || (action == Action.START) != (startHit != null)) {
+        if (requestId <= 0 || (action != Action.ABORT) != (observation != null)) {
             throw new IllegalArgumentException("Invalid mining request identity or observation");
         }
         this.requestId = requestId;
-        this.startHit = startHit;
+        this.observation = observation;
     }
 
     public Action action() { return action; }
     public long requestId() { return requestId; }
-    public @Nullable StructureHit startHit() { return startHit; }
+    public @Nullable StructureHit observation() { return observation; }
+    /** Compatibility accessor; continuation observations are available through observation(). */
+    public @Nullable StructureHit startHit() { return action == Action.START ? observation : null; }
 
     public static synchronized void initServer() {
         if (initialized) return;
@@ -76,9 +73,9 @@ public final class NativeStructureMinePacket extends Packet<ServerGamePacketList
         @SubscribePacket public static void handle(NativeStructureMinePacket packet) {
             var player = packet.getPacketListener().getPlayer();
             switch (packet.action) {
-                case START -> NativeStructureMiningSessions.start(player, packet.requestId, Objects.requireNonNull(packet.startHit));
-                case HOLD -> NativeStructureMiningSessions.hold(player, packet.requestId);
-                case STOP -> NativeStructureMiningSessions.stop(player, packet.requestId);
+                case START -> NativeStructureMiningSessions.start(player, packet.requestId, Objects.requireNonNull(packet.observation));
+                case HOLD -> NativeStructureMiningSessions.hold(player, packet.requestId, Objects.requireNonNull(packet.observation));
+                case STOP -> NativeStructureMiningSessions.stop(player, packet.requestId, Objects.requireNonNull(packet.observation));
                 case ABORT -> NativeStructureMiningSessions.abort(player, packet.requestId);
             }
         }

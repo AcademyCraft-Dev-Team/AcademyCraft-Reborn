@@ -1,0 +1,79 @@
+allprojects {
+    afterEvaluate {
+        def stage = providers.gradleProperty('academyStructurePhysicsPersistence').orNull
+        if (!(stage in ['prepare', 'unavailable', 'resume'])) {
+            throw new GradleException('Choose -PacademyStructurePhysicsPersistence=prepare, unavailable, or resume')
+        }
+        def runRoot = rootProject.file('run').canonicalFile
+        def directory = rootProject.file(providers.gradleProperty('academyStructurePhysicsPersistenceDirectory')
+                .getOrElse('run/native-structure-physics-persistence-server')).canonicalFile
+        if (!directory.isDirectory() || !directory.toPath().startsWith(runRoot.toPath())
+                || !directory.name.startsWith('native-structure-physics-persistence-')) {
+            throw new GradleException('Prepare a dedicated run/native-structure-physics-persistence-* directory')
+        }
+        def exists = { File file -> java.nio.file.Files.exists(file.toPath(), java.nio.file.LinkOption.NOFOLLOW_LINKS) }
+        def result = { String value -> new File(directory, "native-physics-persistence-${value}-result.txt") }
+        def exit = { String value -> new File(directory, "native-physics-persistence-${value}-exit.txt") }
+        if (exists(result(stage)) || exists(exit(stage))) throw new GradleException('Each persistence stage requires fresh immutable result/exit paths')
+        def world = new File(directory, 'native-structure-physics-persistence-smoke')
+        if (world.canonicalFile.toPath() != world.toPath()) throw new GradleException('Persistence world must not resolve through links')
+        if (stage == 'prepare') {
+            if (exists(world) || exists(new File(directory, 'checkpoint.nbt')) || exists(new File(directory, 'unavailable.nbt'))) {
+                throw new GradleException('Prepare requires a previously nonexistent world and checkpoint paths')
+            }
+            for (def value : ['prepare', 'unavailable', 'resume']) {
+                if (exists(result(value)) || exists(exit(value))) throw new GradleException('Prepare requires a fresh experiment directory')
+            }
+        } else {
+            if (!new File(world, 'level.dat').isFile() || !new File(directory, 'checkpoint.nbt').isFile()) {
+                throw new GradleException('Continue with the same isolated world produced by prepare')
+            }
+            def previous = stage == 'unavailable' ? 'prepare' : 'unavailable'
+            if (!result(previous).isFile() || !exit(previous).isFile()
+                    || !result(previous).text.startsWith('PASSED\n') || !exit(previous).text.contains('exit_status=0\n')) {
+                throw new GradleException('The preceding JVM must pass and terminate after normal world saving')
+            }
+            if (stage == 'unavailable' && exists(new File(directory, 'unavailable.nbt'))) {
+                throw new GradleException('Unavailable stage requires a fresh evidence path')
+            }
+            if (stage == 'resume' && !new File(directory, 'unavailable.nbt').isFile()) {
+                throw new GradleException('Resume requires the missing-engine JVM evidence')
+            }
+        }
+        def eula = new File(directory, 'eula.txt')
+        def settingsFile = new File(directory, 'server.properties')
+        if (!eula.isFile() || !(eula.text =~ /(?m)^eula=true\s*$/).find() || !settingsFile.isFile()) {
+            throw new GradleException('Prepare accepted EULA and isolated server.properties before launching')
+        }
+        def settings = new Properties()
+        settingsFile.withInputStream { settings.load(it) }
+        if (settings.getProperty('level-name') != 'native-structure-physics-persistence-smoke'
+                || settings.getProperty('server-ip') != '127.0.0.1'
+                || settings.getProperty('pause-when-empty-seconds') != '0') {
+            throw new GradleException('Use level-name=native-structure-physics-persistence-smoke, server-ip=127.0.0.1, pause-when-empty-seconds=0')
+        }
+        def library = providers.gradleProperty('academyNativePhysicsLibrary').orNull
+        def manifest = providers.gradleProperty('academyNativePhysicsManifest').orNull
+        if (stage == 'unavailable') {
+            if (library != null || manifest != null) throw new GradleException('Unavailable stage must omit both native artifact properties')
+        } else if (library == null || manifest == null || !new File(library).isAbsolute() || !new File(manifest).isAbsolute()) {
+            throw new GradleException('Enabled stages require explicit absolute academyNativePhysicsLibrary and academyNativePhysicsManifest')
+        }
+        neoForge.runs.named('serverCompat') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.nativeStructurePhysicsPersistenceSmoke', 'true'
+            systemProperty 'academy.nativeStructurePhysicsPersistenceStage', stage
+            systemProperty 'academy.nativeStructurePhysicsPersistenceDirectory', directory.absolutePath
+            systemProperty 'academy.nativeStructurePhysicsPersistenceRunRoot', runRoot.absolutePath
+            if (stage != 'unavailable') {
+                systemProperty 'academy.nativePhysics.library', library
+                systemProperty 'academy.nativePhysics.manifest', manifest
+                jvmArgument '--enable-native-access=ALL-UNNAMED'
+            }
+        }
+        tasks.named('runServerCompat') {
+            notCompatibleWithConfigurationCache('Persistence probe must revalidate isolated stage/world paths on every launch')
+            if (stage != 'unavailable') dependsOn 'prepareNativePhysics'
+        }
+    }
+}

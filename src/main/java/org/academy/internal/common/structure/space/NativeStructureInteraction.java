@@ -1,13 +1,11 @@
 package org.academy.internal.common.structure.space;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LeverBlock;
-import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.common.damage.AbilityHitEffects;
 import org.academy.api.common.structure.*;
@@ -20,7 +18,6 @@ import org.academy.mixin.common.MixinServerGamePacketListenerNativeStructureAcce
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
-import java.util.Optional;
 import java.util.Set;
 import java.util.WeakHashMap;
 
@@ -58,8 +55,9 @@ public final class NativeStructureInteraction {
         if (handle == null || !runtime.isPresented(handle.reference())) return Result.STALE;
         synchronized (ACTING) { if (!ACTING.add(handle)) return Result.BUSY; }
         try {
-            var initial = valid(player, proposed).orElse(null);
-            if (initial == null) return Result.STALE;
+            var observation = NativeStructurePlayerTarget.capture(player, proposed);
+            if (observation == null) return Result.STALE;
+            var initial = observation.hit();
             var storage = runtime.storageLevel(handle.reference()).orElseThrow();
             var initialState = storage.getBlockState(initial.block().localPosition());
             var selection = NativeStructurePlacementPolicy.selectAction(player.getMainHandItem(),
@@ -67,7 +65,7 @@ public final class NativeStructureInteraction {
             if (selection == null || selection.hand() != hand) return Result.UNSUPPORTED;
             if (!leverOnly && selection.action() == NativeStructurePlacementPolicy.Action.PLACE) {
                 return NativeStructurePlacement.place(player, initial, hand,
-                        () -> valid(player, proposed).orElse(null)) ? Result.APPLIED : Result.DENIED;
+                        observation::revalidate) ? Result.APPLIED : Result.DENIED;
             }
             var action = initialState.is(Blocks.LEVER) ? StructureInteractionEvent.Action.USE_LEVER
                     : !leverOnly && initialState.is(Blocks.CHEST) ? StructureInteractionEvent.Action.OPEN_CONTAINER : null;
@@ -76,9 +74,9 @@ public final class NativeStructureInteraction {
                     NeoForge.EVENT_BUS.post(new StructureInteractionEvent(player, initial, context, action)).isCanceled());
             if (denied || !canUseMenu(player) || leverOnly && !emptyHands(player)) return Result.DENIED;
             // Protection listeners may move the actor/structure or change blocks synchronously.
-            // The original version remains the expectation: a listener cannot replace the target.
+            // The accepted current hit remains pinned: a listener cannot adopt another pose or target.
             if (!runtime.isPresented(handle.reference())) return Result.STALE;
-            var current = valid(player, proposed).orElse(null);
+            var current = observation.revalidate();
             if (current == null) return Result.STALE;
             var position = current.block().localPosition();
             var state = storage.getBlockState(position);
@@ -113,7 +111,7 @@ public final class NativeStructureInteraction {
         // Custom payloads bypass the vanilla packet injections. Keep the same control,
         // paralysis and temporal action-tick gates as MixinServerGamePacketListenerImpl.
         // Vanilla also refuses block use before client loading/teleport acknowledgement.
-        if (!player.isAlive() || player.isRemoved() || player.isSpectator() || !player.getAbilities().mayBuild
+        if (!player.isAlive() || player.isRemoved() || player.isSpectator() || player.isPassenger() || !player.getAbilities().mayBuild
                 || player.connection == null || !player.connection.hasClientLoaded()
                 || ((MixinServerGamePacketListenerNativeStructureAccess) player.connection)
                         .academy$awaitingPositionFromClient() != null
@@ -127,26 +125,5 @@ public final class NativeStructureInteraction {
         var context = (MinecraftServerContext) player.level().getServer();
         return !context.hasAcademyCraftServer() || ((TemporalRuntime) context.getAcademyCraftServer()
                 .getTemporalService()).isPlayerActionTick(player);
-    }
-
-    private static Optional<StructureHit> valid(ServerPlayer player, StructureHit proposed) {
-        double range = player.blockInteractionRange();
-        if (!Double.isFinite(range) || range <= 0 || range > StructureQueries.MAX_RAY_LENGTH) return Optional.empty();
-        var from = player.getEyePosition();
-        var to = from.add(player.getLookAngle().scale(range));
-        var host = player.level();
-        var hit = StructureQueries.validate(host, from, to, proposed).currentHit().orElse(null);
-        if (hit == null) return Optional.empty();
-        if (!host.mayInteract(player, BlockPos.containing(hit.worldPoint()))
-                || !host.getWorldBorder().isWithinBounds(BlockPos.containing(hit.worldPoint()))) return Optional.empty();
-        double distance = from.distanceToSqr(hit.worldPoint());
-        for (var entity : host.getEntities(player, new AABB(from, to).inflate(1),
-                candidate -> !candidate.isSpectator() && candidate.isPickable())) {
-            var box = entity.getBoundingBox().inflate(entity.getPickRadius());
-            if (box.contains(from) || box.clip(from, to).filter(point -> from.distanceToSqr(point) <= distance).isPresent()) {
-                return Optional.empty();
-            }
-        }
-        return Optional.of(hit);
     }
 }

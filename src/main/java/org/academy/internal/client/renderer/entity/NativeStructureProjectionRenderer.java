@@ -31,7 +31,9 @@ public final class NativeStructureProjectionRenderer
     private static final boolean SMOKE_DIAGNOSTICS = Boolean.getBoolean("academy.nativeStructureProjectionSmoke")
             || Boolean.getBoolean("academy.nativeStructureChestSmoke")
             || Boolean.getBoolean("academy.nativeStructurePlacementSmoke")
-            || Boolean.getBoolean("academy.nativeStructureMiningSmoke");
+            || Boolean.getBoolean("academy.nativeStructureMiningSmoke")
+            || Boolean.getBoolean("academy.nativeStructurePhysicsSmoke")
+            || Boolean.getBoolean("academy.nativeStructureMultiplayerSmoke");
     private static final Map<Integer, Submission> SMOKE_SUBMISSIONS = new HashMap<>();
     private final ChestModel chestModel;
     private final SpriteGetter sprites;

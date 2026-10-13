@@ -1,0 +1,102 @@
+// Explicit three-process TCP validation; never enables the older VFX scenario.
+allprojects {
+    afterEvaluate {
+        def role = providers.gradleProperty('academyStructureMultiplayerRole').orNull
+        def session = providers.gradleProperty('academyStructureMultiplayerSession').orNull
+        if (!(role in ['server', 'actor', 'observer']) || session == null || !(session ==~ /[a-zA-Z0-9_-]{1,64}/)) {
+            throw new GradleException('Pass academyStructureMultiplayerRole=server|actor|observer and a fresh academyStructureMultiplayerSession')
+        }
+        def runRoot = rootProject.file('run').canonicalFile
+        def directory = new File(runRoot, "native-structure-multiplayer-${session}")
+        if (!directory.isDirectory() || directory.canonicalFile != directory
+                || !new File(directory, 'coord').isDirectory()
+                || new File(directory, 'coord').canonicalFile != new File(directory, 'coord')) {
+            throw new GradleException('Prepare a fresh unlinked run/native-structure-multiplayer-' + session + '/{server,actor,observer,coord}')
+        }
+        def game = new File(directory, role)
+        if (!game.isDirectory() || game.canonicalFile != game) throw new GradleException('Missing or linked role directory')
+        for (def marker : ["${role}-result.txt", role == 'server' ? 'server-exit.txt' : "coord/${role}.ready"]) {
+            if (java.nio.file.Files.exists(new File(directory, marker).toPath(), java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+                throw new GradleException('Multiplayer probe requires fresh role marker paths: ' + marker)
+            }
+        }
+        if (role == 'server') {
+            if (java.nio.file.Files.exists(new File(game, 'native-structure-multiplayer-smoke').toPath(), java.nio.file.LinkOption.NOFOLLOW_LINKS)
+                    || java.nio.file.Files.exists(new File(directory, 'coord/phase.properties').toPath(), java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+                throw new GradleException('Dedicated multiplayer probe requires a nonexistent world and fresh coordination session')
+            }
+            def phases = new File(directory, 'coord/phases')
+            if (java.nio.file.Files.exists(phases.toPath(), java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+                if (!phases.isDirectory() || phases.canonicalFile != phases) {
+                    throw new GradleException('Phase directory must be an ordinary unlinked directory')
+                }
+                def entries = java.nio.file.Files.list(phases.toPath())
+                try {
+                    if (entries.findAny().isPresent()) throw new GradleException('Multiplayer probe rejects old immutable phase files')
+                } finally { entries.close() }
+            }
+            def eula = new File(game, 'eula.txt')
+            def propertiesFile = new File(game, 'server.properties')
+            if (!eula.isFile() || !(eula.text =~ /(?m)^eula=true\s*$/).find() || !propertiesFile.isFile()) {
+                throw new GradleException('Prepare accepted EULA and isolated server.properties')
+            }
+            def properties = new Properties()
+            propertiesFile.withInputStream { properties.load(it) }
+            if (properties.getProperty('server-ip') != '127.0.0.1' || properties.getProperty('server-port') != '25575'
+                    || properties.getProperty('online-mode') != 'false'
+                    || properties.getProperty('level-name') != 'native-structure-multiplayer-smoke') {
+                throw new GradleException('Server must be offline loopback :25575 with level-name=native-structure-multiplayer-smoke')
+            }
+        }
+        def library = providers.gradleProperty('academyNativePhysicsLibrary').orNull
+        def manifest = providers.gradleProperty('academyNativePhysicsManifest').orNull
+        if (library == null || manifest == null || !new File(library).isAbsolute() || !new File(manifest).isAbsolute()) {
+            throw new GradleException('Pass absolute academyNativePhysicsLibrary and academyNativePhysicsManifest')
+        }
+        def port = providers.gradleProperty('academyStructureMultiplayerPort').getOrElse('25575')
+        if (!(port in ['25575', '25576'])) throw new GradleException('Only direct or shaped loopback ports are allowed')
+        def username = role == 'actor' ? 'StructureActor' : 'StructureWatch'
+        if (username.length() > 16 || !(username ==~ /[a-zA-Z0-9_]{1,16}/)) {
+            throw new GradleException('Multiplayer test usernames must contain 1-16 ASCII letters, digits, or underscores')
+        }
+        def runName = role == 'server' ? 'serverVfxValidation' : role == 'actor' ? 'clientVfxCaster' : 'clientVfxObserver'
+        neoForge.runs.named(runName) {
+            gameDirectory.set(game)
+            systemProperty 'academy.vfxValidation.server', 'false'
+            systemProperty 'academy.vfxValidation.role', ''
+            systemProperty 'academy.nativeStructureMultiplayerSmoke', 'true'
+            systemProperty 'academy.nativeStructureMultiplayerRole', role
+            systemProperty 'academy.nativeStructureMultiplayerSession', session
+            systemProperty 'academy.nativeStructureMultiplayerRoot', directory.absolutePath
+            systemProperty 'academy.nativeStructureMultiplayerRunRoot', runRoot.absolutePath
+            systemProperty 'academy.nativePhysics.library', library
+            systemProperty 'academy.nativePhysics.manifest', manifest
+            jvmArgument '--enable-native-access=ALL-UNNAMED'
+            if (role == 'server') programArguments.set(['--nogui'])
+            else programArguments.set(['--username', username,
+                    '--quickPlayMultiplayer', "127.0.0.1:${port}", '--width', '1280', '--height', '720'])
+        }
+        tasks.named('run' + runName.capitalize()) {
+            notCompatibleWithConfigurationCache('Multiplayer validation must recheck its isolated world and role markers on every launch')
+            dependsOn 'prepareNativePhysics'
+        }
+        def selectedRun = tasks.named('run' + runName.capitalize())
+        tasks.register('exportNativeStructureMultiplayerLaunch') {
+            notCompatibleWithConfigurationCache('Exports one validated isolated Java launch without starting the game')
+            dependsOn selectedRun.get().taskDependencies.getDependencies(selectedRun.get())
+            doLast {
+                def launch = selectedRun.get()
+                def output = new File(directory, "${role}-launch.json")
+                // RunGameTask materializes these providers only inside exec(), so JavaExec's
+                // ordinary classpath/workingDir/environment fields are not the launch values yet.
+                def value = [executable: launch.javaLauncher.get().executablePath.asFile.absolutePath,
+                        allJvmArgs: launch.allJvmArgs, classpath: launch.classpathProvider.asPath,
+                        mainClass: launch.mainClass.get(), args: launch.args,
+                        workingDir: launch.gameDirectory.get().asFile.absolutePath,
+                        environment: launch.environmentProperty.get()]
+                output.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(value))
+                logger.lifecycle('Exported isolated multiplayer launch: ' + output.absolutePath)
+            }
+        }
+    }
+}
