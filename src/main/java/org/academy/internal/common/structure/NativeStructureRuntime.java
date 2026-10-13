@@ -412,6 +412,48 @@ public final class NativeStructureRuntime implements StructureBackend {
         dirty = true;
     }
 
+    /**
+     * Atomically rebases every saved attachment of one region onto new bounds before a live
+     * region adopts them. A diverged attachment, an unavailable member or a failed persist
+     * refuses the whole change: the on-disk checkpoint and the in-memory index keep the
+     * previous bounds.
+     */
+    public boolean rebindPhysicsAttachments(ServerLevel host, UUID regionId, AABB oldBounds, AABB newBounds) {
+        requireThread();
+        requireRunning();
+        if (host.getServer() != server || server.getLevel(host.dimension()) != host
+                || NativeStructureDimensions.isStorageLevel(host.dimension())) {
+            throw new IllegalArgumentException("Physics requires a live non-storage host");
+        }
+        Objects.requireNonNull(regionId, "regionId");
+        Objects.requireNonNull(oldBounds, "oldBounds");
+        Objects.requireNonNull(newBounds, "newBounds");
+        if (!manifest.healthy()) return false;
+        var entries = savedPhysicsEntries(host, regionId);
+        if (entries.isEmpty()) return true;
+        var rebased = new ArrayList<Entry>(entries.size());
+        for (var entry : entries) {
+            requirePhysicsMetadataMutable(entry);
+            var attachment = Objects.requireNonNull(entry.physicsAttachment());
+            if (!attachment.bounds().equals(oldBounds)) {
+                throw new IllegalStateException("Region attachments diverged before a rebase");
+            }
+            rebased.add(entry.withPhysicsAttachment(new NativeStructurePhysicsAttachment(
+                    regionId, newBounds, attachment.motion(), attachment.resumeAllowed())));
+        }
+        manifest.putAll(rebased);
+        try {
+            manifest.persist();
+            dirty = false;
+            return true;
+        } catch (IOException | RuntimeException failure) {
+            // The atomic replace leaves the previous checkpoint intact on disk.
+            manifest.putAll(entries);
+            AcademyCraft.LOGGER.error("Physics region rebase persistence failed; previous bounds retained", failure);
+            return false;
+        }
+    }
+
     /** Validate every member before changing any record, including unloaded members. */
     public void clearPhysicsAttachments(ServerLevel host, UUID regionId) {
         requireRunning();

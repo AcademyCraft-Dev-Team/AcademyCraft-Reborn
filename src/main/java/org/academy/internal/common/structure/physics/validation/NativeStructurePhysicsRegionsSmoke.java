@@ -52,12 +52,13 @@ public final class NativeStructurePhysicsRegionsSmoke {
     private static final BlockPos CELL = new BlockPos(0, 80, 0), STONE = CELL.east();
     private static final Vec3 CENTER = Vec3.atCenterOf(CELL);
     private static final AABB BOUNDS_A = new AABB(-2, 108, -2, 14, 128, 14);
+    private static final AABB BOUNDS_A_MIGRATED = new AABB(-2, 106, -2, 14, 126, 14);
     private static final AABB BOUNDS_B = new AABB(16, 108, -2, 32, 128, 14);
     private static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS;
     private static final long PID = ProcessHandle.current().pid();
     private static final long PROCESS_START = ManagementFactory.getRuntimeMXBean().getStartTime();
     private static NativeStructurePhysicsRegionsSmoke active;
-    private enum Phase { ACTIVATE, INITIAL, PARKED, RELOADED, SETTLE, LIFT, KICK, SAVED,
+    private enum Phase { ACTIVATE, INITIAL, PARKED, RELOADED, SETTLE, MIGRATE, AFTER_MIGRATE, LIFT, KICK, SAVED,
         RESUME_A, A_ONLY, MISMATCH_B, RESUME_B, BOTH, CLOSE_A, CLEAR, FINISHED }
 
     private final MinecraftServer server;
@@ -73,7 +74,7 @@ public final class NativeStructurePhysicsRegionsSmoke {
     private Phase phase = Phase.ACTIVATE;
     private int ticks, age, sleepingTicks;
     private long stepsA, stepsB;
-    private StructurePose poseA, poseB;
+    private StructurePose poseA, poseB, migrationPose;
     private boolean complete, failed, frozen, stopping, stoppingGuardsVerified, watching;
 
     private NativeStructurePhysicsRegionsSmoke(MinecraftServer server) {
@@ -160,7 +161,9 @@ public final class NativeStructurePhysicsRegionsSmoke {
                     require(!StructurePhysics.discardSavedRegion(host, absentId), "Unknown UUID discarded another saved region");
                     require(runtime.savedPhysicsEntries(host).equals(before), "Unknown UUID calls changed another region");
                     regionA = StructurePhysics.resumeRegion(host, idA); require(regionA.id().equals(idA), "Explicit recovery replaced region A's stable UUID");
-                    report.append("region_ids_retained=true\nambiguous_singular_calls_rejected=true\nunknown_uuid_isolated=true\n");
+                    require(regionA.bounds().equals(readBounds(oracle.getCompoundOrEmpty("a").getCompoundOrEmpty("bounds"))),
+                            "Resumed region lost its rebased bounds");
+                    report.append("region_ids_retained=true\nambiguous_singular_calls_rejected=true\nunknown_uuid_isolated=true\nresumed_rebased_bounds=true\n");
                     next(Phase.RESUME_A);
                 }
             }
@@ -197,6 +200,44 @@ public final class NativeStructurePhysicsRegionsSmoke {
                 // vertically first, then measure checkpoint restoration only after both shapes clear it.
                 setAndObserveVelocity(a, regionA, new Vec3(0, 6, 0), Vec3.ZERO, "lift_a");
                 setAndObserveVelocity(b, regionB, new Vec3(0, 6, 0), Vec3.ZERO, "lift_b");
+                next(Phase.MIGRATE);
+            }
+            case MIGRATE -> {
+                ready(regionA); ready(regionB);
+                var nativeRegionA = (NativeStructurePhysics.Region) regionA;
+                var original = regionA.bounds();
+                require(!nativeRegionA.rebind(BOUNDS_B), "A rebase overlapping the other region was accepted");
+                require(regionA.bounds().equals(original) && regionA.status() == StructurePhysicsRegion.Status.READY,
+                        "A rejected rebase changed the live region");
+                var migrated = BOUNDS_A_MIGRATED;
+                migrationPose = a.pose();
+                require(nativeRegionA.rebind(migrated), "A separated rebase was refused");
+                require(regionA.bounds().equals(migrated) && regionA.diagnostic().equals("awaiting_rebound_geometry"),
+                        "The live region did not adopt its rebased bounds");
+                require(StructurePhysics.savedRegions(host).stream().filter(info -> info.id().equals(idA))
+                                .allMatch(info -> info.bounds().equals(migrated)),
+                        "Rebased bounds were not persisted before adoption");
+                require(regionB.bounds().equals(BOUNDS_B) && regionB.status() == StructurePhysicsRegion.Status.READY,
+                        "A region rebase disturbed the other region");
+                report.append("region_rebase_conflict_rejected=true\nregion_rebase_adopted_and_persisted=true\n");
+                stepsA = diagnostics(regionA).steps();
+                next(Phase.AFTER_MIGRATE);
+            }
+            case AFTER_MIGRATE -> {
+                if (regionA.status() != StructurePhysicsRegion.Status.READY || regionA.motion(a.reference()).isEmpty()) {
+                    require(age < 250, "Region A did not resume after its rebase: " + regionA.diagnostic());
+                    return;
+                }
+                ready(regionB);
+                require(diagnostics(regionA).steps() > stepsA, "The rebased region did not step again");
+                require(a.pose().worldOrigin().distanceTo(migrationPose.worldOrigin()) < 0.5,
+                        "A region rebase teleported its member instead of preserving the pose");
+                var infoA = StructurePhysics.savedRegions(host).stream().filter(info -> info.id().equals(idA))
+                        .findFirst().orElseThrow();
+                require(infoA.bounds().equals(BOUNDS_A_MIGRATED) && infoA.structures() == 1 && infoA.resumeAllowed(),
+                        "The rebased region summary lost membership or bounds");
+                assertContents();
+                report.append("region_rebase_resumed=true\nregion_rebase_pose_preserved=true\n");
                 next(Phase.LIFT);
             }
             case LIFT -> {
@@ -335,7 +376,9 @@ public final class NativeStructurePhysicsRegionsSmoke {
 
     private void verifyRegionInfo() {
         var values = StructurePhysics.savedRegions(host); require(values.size() == 2 && !idA.equals(idB), "Expected exactly two distinct saved regions");
-        for (var pair : List.of(new RegionBounds(idA, BOUNDS_A), new RegionBounds(idB, BOUNDS_B))) {
+        // The resume stage reads the checkpoint written after region A's verified rebase.
+        var expectedA = STAGE.equals("resume") ? BOUNDS_A_MIGRATED : BOUNDS_A;
+        for (var pair : List.of(new RegionBounds(idA, expectedA), new RegionBounds(idB, BOUNDS_B))) {
             var info = values.stream().filter(value -> value.id().equals(pair.id())).findFirst().orElseThrow();
             require(info.bounds().equals(pair.bounds()) && info.structures() == 1 && info.resumeAllowed(), "Saved region summary changed membership or bounds");
             require(runtime.savedPhysicsEntries(host, pair.id()).size() == 1, "UUID-scoped manifest lookup crossed region membership");
@@ -419,6 +462,7 @@ public final class NativeStructurePhysicsRegionsSmoke {
         tag.putString("region", id.toString()); tag.putString("runtime", handle.runtimeId().toString()); tag.putInt("slot", entry.slot());
         tag.putString("session", diagnostics(handle == a ? regionA : regionB).sessionId().toString());
         tag.put("pose", writePose(handle.pose())); tag.put("motion", writeMotion(entry.physicsAttachment().motion()));
+        tag.put("bounds", writeBounds(entry.physicsAttachment().bounds()));
         if (handle == a) tag.put("chest", handle.world().read(CELL).blockEntityData()); return tag;
     }
 
@@ -505,6 +549,8 @@ public final class NativeStructurePhysicsRegionsSmoke {
     private static CompoundTag writeMotion(NativeStructurePhysicsAttachment.Motion motion) { require(motion != null, "No coherent saved motion"); var tag = new CompoundTag(); tag.put("linear", writeVector(motion.linearVelocity())); tag.put("angular", writeVector(motion.angularVelocity())); tag.put("com", writeVector(motion.localCenterOfMass())); tag.putBoolean("sleeping", motion.sleeping()); tag.putString("digest", motion.geometryDigest()); return tag; }
     private static CompoundTag writeVector(Vec3 value) { var tag = new CompoundTag(); tag.putDouble("x", value.x); tag.putDouble("y", value.y); tag.putDouble("z", value.z); return tag; }
     private static Vec3 readVector(CompoundTag tag) { return new Vec3(tag.getDoubleOr("x", Double.NaN), tag.getDoubleOr("y", Double.NaN), tag.getDoubleOr("z", Double.NaN)); }
+    private static CompoundTag writeBounds(AABB bounds) { var tag = writeVector(bounds.getMinPosition()); tag.put("max", writeVector(bounds.getMaxPosition())); return tag; }
+    private static AABB readBounds(CompoundTag tag) { return new AABB(readVector(tag), readVector(tag.getCompoundOrEmpty("max"))); }
     private static CompoundTag writePose(StructurePose pose) { var tag = writeVector(pose.worldOrigin()); tag.putDouble("qx", pose.rotationX()); tag.putDouble("qy", pose.rotationY()); tag.putDouble("qz", pose.rotationZ()); tag.putDouble("qw", pose.rotationW()); return tag; }
     private static StructurePose readPose(CompoundTag tag) { return new StructurePose(readVector(tag), tag.getDoubleOr("qx", Double.NaN), tag.getDoubleOr("qy", Double.NaN), tag.getDoubleOr("qz", Double.NaN), tag.getDoubleOr("qw", Double.NaN)); }
     private static StructureRef readRef(CompoundTag tag) { return new StructureRef(UUID.fromString(tag.getStringOr("id", "")), Identifier.parse(tag.getStringOr("dimension", "")), Identifier.parse(tag.getStringOr("backend", "")), tag.getLongOr("generation", -1)); }

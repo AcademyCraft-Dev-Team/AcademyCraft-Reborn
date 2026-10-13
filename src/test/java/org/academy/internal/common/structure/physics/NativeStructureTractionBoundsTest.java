@@ -65,6 +65,41 @@ class NativeStructureTractionBoundsTest {
         }
     }
 
+    @Test
+    void recenteringKeepsSizesAndAcceptsATargetBeyondTheCurrentEdge() {
+        var limits = new AABB(-40, -40, -40, 40, 40, 40);
+        var target = new Vec3(6, 0, 0);
+        assertFalse(accepts(BODY, Vec3.ZERO, target, Vec3.ZERO));
+        var candidate = NativeStructureTractionBounds.recentered(REGION, BODY, Vec3.ZERO, target, Vec3.ZERO,
+                limits.minY, limits.maxY, limits);
+        assertNotNull(candidate);
+        assertEquals(REGION.getXsize(), candidate.getXsize(), 1.0E-9);
+        assertEquals(REGION.getYsize(), candidate.getYsize(), 1.0E-9);
+        assertEquals(REGION.getZsize(), candidate.getZsize(), 1.0E-9);
+        assertTrue(NativeStructureTractionBounds.accepts(candidate, BODY, Vec3.ZERO, target, Vec3.ZERO));
+    }
+
+    @Test
+    void recenteringClampsToHostLimitsAndRefusesImpossibleRequests() {
+        var limits = new AABB(-20, -20, -20, 20, 20, 20);
+        var nearEdge = BODY.move(15, 0, 0);
+        var candidate = NativeStructureTractionBounds.recentered(REGION, nearEdge, new Vec3(15, 0, 0),
+                new Vec3(17, 0, 0), Vec3.ZERO, limits.minY, limits.maxY, limits);
+        assertNotNull(candidate);
+        assertTrue(candidate.maxX <= limits.maxX + 1.0E-9);
+        assertTrue(NativeStructureTractionBounds.accepts(candidate, nearEdge, new Vec3(15, 0, 0),
+                new Vec3(17, 0, 0), Vec3.ZERO));
+        assertNull(NativeStructureTractionBounds.recentered(REGION, BODY, Vec3.ZERO, new Vec3(6, 0, 0),
+                        Vec3.ZERO, limits.minY, limits.maxY, new AABB(-1, -20, -1, 1, 20, 1)),
+                "A host narrower than the region must be refused");
+        assertNull(NativeStructureTractionBounds.recentered(REGION, BODY, Vec3.ZERO, new Vec3(100, 0, 0),
+                        Vec3.ZERO, limits.minY, limits.maxY, limits),
+                "A target no same-size box can accept must be refused");
+        assertNull(NativeStructureTractionBounds.recentered(REGION, BODY, Vec3.ZERO, new Vec3(9, 0, 0),
+                        Vec3.ZERO, limits.minY, limits.maxY, limits),
+                "Travel spanning the whole region cannot fit the safety margin");
+    }
+
     private static boolean accepts(AABB body, Vec3 point, Vec3 target, Vec3 velocity) {
         return NativeStructureTractionBounds.accepts(REGION, body, point, target, velocity);
     }

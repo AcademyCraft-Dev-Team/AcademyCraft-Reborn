@@ -32,6 +32,7 @@
 | `StructureTransactions`/`StructureCaptureCoordinator` | P19 新增：后端无关的分阶段捕获事务；预检、WAL 日志、目标预留、复制校验、提交决定、源移除、发布回收与重启恢复；Sable 捕获仍显式返回不可用 |
 | `NativeStructureManifest.removeEntry/releaseSlot`、`NativeStructureRuntime.discardEmpty` | P20 新增：空结构槽位回收；仅未加载、空、未隔离、无恢复证据、无物理附件的结构可释放；P19 回滚不再永久烧槽 |
 | `NativePhysicsArtifact` 解析 | P21 更新：显式属性 → 显式环境 → home（属性/环境）→ 游戏目录 `academy/native_physics/` 固定布局；部分配置显式失败；物理打开异常统一为 `IllegalStateException` 并保留原因 |
+| `NativeStructurePhysics.Region.rebind`/`rebindPhysicsAttachments` | P22 新增：物理区域重绑（成员全体必须容纳、布局分离校验、附件先原子持久化再采纳、控制保留、下一 tick 重建）；牵引目标越界时自动重绑一次；初次抓取仍严格要求盒内 |
 | `NativeCaptureWhitelist` | P19 新增：普通无 BE 正质量满方块的起步白名单；BE/流体/waterlogged/随机或计划 tick/重力和非满形状在首次写入前显式拒绝，不静默丢弃 |
 | 三类 `Server*ProgramRuntime` | 仍存在 Entity/宿主 BlockPos、FallingBlock、直接赋速及回滚旧速度路径；不能把 Sable plot 地址当宿主格 |
 
@@ -61,7 +62,7 @@
 ### 动能搬运的后续顺序（最高优先级）
 
 1. **公共捕获事务**：预检选择、权限、内容与几何预算；目标预留、持久化日志、复制校验、源移除、目标提交；每个阶段提供异常及重启恢复证据。先明确普通块范围，BE/计划 tick 不得静默丢弃。**P19 已交付机制与原生后端接入（见下节）；Sable 生产捕获与真实跨 JVM 强杀恢复仍属后续。**
-2. **独立后端可供技能使用**：制品部署、容器容量/回收、活动物理区域跟随与恢复，以及真实玩家碰撞/承载。不能让玩家每四次使用便耗尽永久槽，也不能发布仅在测试 JVM 外部属性下可运行的默认技能。**P20 已交付空结构槽位回收，P21 已交付制品部署约定（见下节）；物理区域跟随与真实玩家承载仍待做。**
+2. **独立后端可供技能使用**：制品部署、容器容量/回收、活动物理区域跟随与恢复，以及真实玩家碰撞/承载。不能让玩家每四次使用便耗尽永久槽，也不能发布仅在测试 JVM 外部属性下可运行的默认技能。**P20 已交付空结构槽位回收，P21 已交付制品部署约定，P22 已交付物理区域重绑与牵引跟随（见下节）；真实玩家承载仍待做。**
 3. **双后端捕获接入**：未装 Sable 创建独立结构，兼容混装创建 Sable 结构；未知版本/不可用时给出失败并保留源方块，不降级为旧实体。外部 assembly helper 仍只作测试工具，不能代替生产事务。
 4. **迁移 `KineticThrow`**：保持区域选择和能力预算；HeldStructure 改为公共引用/租约；抬升、投掷、终止遵守有限力、单位、惯性契约；接触伤害只结算一次，不在世界碰撞时自动变回方块。
 5. **承载验收**：独立和完整混装各测静止、升降、行走、跳跃、边缘、顶墙和旋转，之后测真实双端延迟。旧实体对照测试不能替代这些结果。
@@ -102,6 +103,15 @@
 - 验证（最终修订版）：单元 2551 项（新增 3 项解析顺序/部分配置/未配置用例）与 Sable 11 项零失败/错误/跳过（`build/p21-tests-final.log`）；原生 JVM 专项 20 项通过（`nativePhysicsTest`，显式属性路径回归）；`build -DisDev=true` 36 秒、`-DisDev=false` 57 秒通过（`build/p21-build-dev-final.log`、`build/p21-build-release-final.log`）；部署专服探针 `run/native-physics-smoke-server-deploy1` 退出 0：真实求解器 720 步、`binding_native_access=true`、`height=0.4999`、结果 `native-physics-server-result.txt` 为 PASSED，证明仅凭游戏目录约定即可发现并加载原生库（日志 `build/p21-deploy-probe.log`）。
 - 未验边界：Linux `.so` 布局仅由同一代码路径覆盖，未在本机实跑；`--enable-native-access` 仍需启动器/部署方提供，模组无法在运行时添加 JVM 参数（仅在缺失时给出可操作诊断）；未在整合包/真实玩家环境验证。
 - 当前构建（含 P19/P20/P21，不含技能迁移）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `0899E1505E8BCB1FB26CC5169197F1E9185411D499A9FFD215BD77726EAEB962`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `6C2429DCC682E2F7D64D8458814839510C4F8251B86B5990B97F55C3CF5B756B`。未复制到整合包，未操作用户存档。
+
+### P22 物理区域重绑与牵引跟随（2026-10-13）
+
+- `NativeStructurePhysics.Region.rebind(AABB)`：显式把活动区域重绑到同宿主新边界。前置校验新边界尺寸、与其他活动/存档区域的 1 格分离、以及**所有当前成员**（不只发起者）在新盒内的实际占用（避免多成员编队跟随导致同伴出界终态失败）；随后 `NativeStructureRuntime.rebindPhysicsAttachments` 先整体校验并按候选索引 `putAll` + 持久化全部成员附件（失败恢复内存与磁盘旧值），再采纳新边界与原点、重建地形缓存并就地释放原生世界（**保留瞬时控制**），状态置 PAUSED 由下一 tick 重建发布。被拒绝的重绑不改变任何一侧。`bounds/origin/terrainCache` 因此改为可变字段（原先 final）。
+- 牵引跟随：`NativeStructureTraction.Session.update` 在目标仅因当前盒边界被拒时，用纯函数 `NativeStructureTractionBounds.recentered` 计算同尺寸、按宿主边界与高度夹取的候选盒，重绑成功后复检并按原有限力路径推进；每次 update 最多重绑一次。初次 `acquire` 仍要求身体与目标都必须在当前盒内，不自动迁移。恢复一致性：重绑先持久化附件，重启 `resumeRegion` 直接使用重绑后的边界。
+- 验证（最终修订版）：单元 2553 项（新增 2 项 `recentered` 纯函数用例）与 Sable 11 项零失败/错误/跳过（`build/p22-tests-final2.log`）；区域两阶段真实专服探针 `run/native-structure-physics-regions-20261013-p22-r3`：prepare 与 resume 均 PASSED、退出 0，证据含 `region_rebase_conflict_rejected`、`region_rebase_adopted_and_persisted`、`region_rebase_resumed`、`region_rebase_pose_preserved`，新 JVM 恢复后 `resumed_rebased_bounds=true`（日志 `build/p22-regions-prepare-r3.log`、`build/p22-regions-resume-r3.log`）；含真实抓取技能路径的世界烟测 `run/native-structure-physics-smoke-server-p22-r2` 退出 0（`build/p22-world-smoke-r2.log`）；事务 gametest `academy:structure_transactions` r7 沿用通过；`build -DisDev=true` 38 秒、`-DisDev=false` 58 秒通过（`build/p22-build-dev-final2.log`、`build/p22-build-release-final2.log`）。
+- 失败轨迹：首次 prepare（p22-r1）在迁移后的 `verifyRegionInfo` 失败——该断言与 resume 阶段都硬编码原始边界；改为阶段感知期望（resume 阶段预期迁移后边界）并为迁移后摘要增加专用断言。
+- 未验边界：跟随目标必须能放进同尺寸重绑盒（含 0.25 安全内边距），因此长距离牵引需要技能逐 tick 更新较近目标，一次越界远目标仍以 `OUT_OF_BOUNDS` 结束；`rebind` 目前是具体 `NativeStructurePhysics.Region` 的公开方法而非 `StructurePhysicsRegion` 接口成员，尚未接入技能/命令显式入口；重绑不改变成员内容与存档；真实玩家承载仍未实现。
+- 当前构建（含 P19/P20/P21/P22，不含技能迁移）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `E8BDA66804D06917EBE22A3C08AB0EAD840D00A41CA062087F2AB25FEE34B6B0`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `21A77CD5AB884A2E1414E90BB81D02B0589280FE1FD9B7D81BFC22F4307AB399`。未复制到整合包，未操作用户存档。
 
 ### P18 最终结果（2026-10-13）
 

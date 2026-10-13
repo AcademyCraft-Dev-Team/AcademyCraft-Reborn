@@ -163,7 +163,19 @@ public final class NativeStructureTraction {
                 if (motion.mass() > settings.maxMass()) return finish(TOO_HEAVY);
                 var body = bodyBounds(region, handle).orElse(null);
                 if (body == null) return finish(NOT_AVAILABLE);
-                if (!acceptsTarget(host, region, body, point, targetPosition, targetVelocity)) return finish(OUT_OF_BOUNDS);
+                if (!acceptsTarget(host, region, body, point, targetPosition, targetVelocity)) {
+                    // One bounded rebase per update: a pull whose target crosses the current box
+                    // follows it instead of forcing every long-range move to end at the edge.
+                    var border = host.getWorldBorder();
+                    var limits = new AABB(border.getMinX(), host.getMinY(), border.getMinZ(),
+                            border.getMaxX(), host.getMaxY(), border.getMaxZ());
+                    var candidate = NativeStructureTractionBounds.recentered(region.bounds(), body, point,
+                            targetPosition, targetVelocity, host.getMinY(), host.getMaxY(), limits);
+                    if (candidate == null || !region.rebind(candidate)
+                            || !acceptsTarget(host, region, body, point, targetPosition, targetVelocity)) {
+                        return finish(OUT_OF_BOUNDS);
+                    }
+                }
                 var control = anchor(localPoint, targetPosition, targetVelocity, settings);
                 try {
                     lease.setControl(control);

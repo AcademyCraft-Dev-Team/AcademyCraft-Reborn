@@ -283,9 +283,9 @@ public final class NativeStructurePhysics implements AutoCloseable {
     public final class Region implements StructurePhysicsRegion {
         private final ServerLevel host;
         private final UUID id;
-        private final AABB bounds;
-        private final PhysicsVector origin;
-        private final NativeStructureTerrainCache terrainCache;
+        private AABB bounds;
+        private PhysicsVector origin;
+        private NativeStructureTerrainCache terrainCache;
         private final UUID sessionId = UUID.randomUUID();
         private final Map<StructureRef, Member> members = new LinkedHashMap<>();
         private Status status = Status.READY;
@@ -313,6 +313,62 @@ public final class NativeStructurePhysics implements AutoCloseable {
         @Override public AABB bounds() { requireThread(); return bounds; }
         @Override public Status status() { requireThread(); return status; }
         @Override public String diagnostic() { requireThread(); return diagnostic; }
+
+        /**
+         * Re-bases this live region onto different host bounds of a valid size. Persisted
+         * attachments of every member are rebound atomically on disk before the live region
+         * adopts the new box; the next tick rebuilds the native world around the new origin.
+         * Returns false for invalid, conflicting or unavailable targets without changing either
+         * side. Transient controls are preserved, so an ongoing bounded pull can continue
+         * across the migration; other regions and their checkpoints are untouched.
+         */
+        public boolean rebind(AABB newBounds) {
+            requireThread();
+            Objects.requireNonNull(newBounds, "newBounds");
+            if (newBounds.equals(bounds)) return false;
+            if (closed || closing || status == Status.CLOSED || status == Status.FAILED) return false;
+            if (regions.values().stream().anyMatch(region -> region.busy)) return false;
+            try {
+                requireBounds(newBounds);
+            } catch (IllegalArgumentException invalid) {
+                return false;
+            }
+            var layout = new ArrayList<NativeStructurePhysicsRegionLayout.Region>();
+            for (var reservation : reservations()) {
+                if (!reservation.id().equals(id)) layout.add(reservation);
+            }
+            layout.add(new NativeStructurePhysicsRegionLayout.Region(id, host.dimension().identifier(), newBounds));
+            try {
+                NativeStructurePhysicsRegionLayout.validate(layout);
+            } catch (IllegalArgumentException conflict) {
+                return false;
+            }
+            // Every current member, not only the one requesting the move, must fit the new box:
+            // stranding a cohort member would terminally fail the whole region on the next step.
+            for (var member : members.values()) {
+                if (member.geometry == null || member.geometry.boxes().isEmpty()) continue;
+                var pose = member.published != null ? member.published.pose() : member.handle.pose();
+                var occupied = BlockStructureOrientedBox.transform(member.geometry.bounds(), pose).bounds();
+                if (!contains(newBounds, occupied) || occupied.minY < host.getMinY() || occupied.maxY > host.getMaxY()
+                        || !host.getWorldBorder().isWithinBounds(BlockPos.containing(occupied.minX, occupied.minY, occupied.minZ))
+                        || !host.getWorldBorder().isWithinBounds(BlockPos.containing(occupied.maxX, occupied.maxY, occupied.maxZ))) {
+                    return false;
+                }
+            }
+            disposeWorldForRebind();
+            try {
+                if (!runtime.rebindPhysicsAttachments(host, id, bounds, newBounds)) return false;
+            } catch (IllegalStateException unavailable) {
+                AcademyCraft.LOGGER.warn("Physics region {} rebase refused: {}", id, unavailable.getMessage());
+                return false;
+            }
+            bounds = newBounds;
+            origin = vector(bounds.getCenter());
+            terrainCache = new NativeStructureTerrainCache(host, bounds, origin);
+            status = Status.PAUSED;
+            diagnostic = "awaiting_rebound_geometry";
+            return true;
+        }
 
         public Diagnostics diagnostics() {
             requireThread();
@@ -874,6 +930,16 @@ public final class NativeStructurePhysics implements AutoCloseable {
         private void disposeWorld() {
             clearControls();
             // A released or parked world must not retain references to host chunks through its cache.
+            terrainCache.clear();
+            terrain = null;
+            terrainBoxes = List.of();
+            if (world != null) { world.close(); world = null; }
+            for (var member : members.values()) member.body = null;
+            rebuildRequired = true;
+        }
+
+        /** Rebase disposal keeps transient controls: only geometry and native resources change. */
+        private void disposeWorldForRebind() {
             terrainCache.clear();
             terrain = null;
             terrainBoxes = List.of();
