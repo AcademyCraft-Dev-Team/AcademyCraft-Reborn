@@ -156,6 +156,27 @@ class BlockStructureSelectionTest {
     }
 
     @Test
+    void nonFullBlocksAreCroppedAndDuplicatesCollapseInFirstSeenOrder() {
+        var grass = new BlockPos(0, 0, 0);
+        var flower = new BlockPos(1, 0, 0);
+        var dirt = new BlockPos(0, 0, 1);
+        var full = Set.of(grass, dirt);
+
+        var cropped = BlockStructureManager.cropNonFullBlocks(
+                List.of(grass, flower, dirt, grass), full::contains);
+
+        assertEquals(List.of(grass, dirt), cropped);
+    }
+
+    @Test
+    void fullBlockCropKeepsNothingWhenThePredicateRejectsEverything() {
+        var candidates = List.of(new BlockPos(0, 0, 0), new BlockPos(1, 0, 0));
+
+        assertTrue(BlockStructureManager.cropNonFullBlocks(candidates, position -> false).isEmpty());
+        assertTrue(BlockStructureManager.cropNonFullBlocks(List.of(), position -> true).isEmpty());
+    }
+
+    @Test
     void forwardPlaneLeavesOneBlockOfPlayerClearance() {
         var candidates = List.of(
                 new BlockPos(0, 0, -2),

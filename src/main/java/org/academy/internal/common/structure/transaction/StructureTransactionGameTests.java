@@ -21,6 +21,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.ticks.ScheduledTick;
@@ -69,6 +70,7 @@ public final class StructureTransactionGameTests {
     private static final BlockPos SCHEDULED_CELL = new BlockPos(7, 2, 2);
     private static final BlockPos ROLLBACK_BASE = new BlockPos(2, 2, 6);
     private static final BlockPos FORWARD_BASE = new BlockPos(6, 2, 6);
+    private static final BlockPos RANDOM_TICK_BASE = new BlockPos(10, 2, 10);
 
     private StructureTransactionGameTests() {
     }
@@ -103,6 +105,10 @@ public final class StructureTransactionGameTests {
         private StructureRef forwardRef;
         private final List<BlockPos> forwardCells = new ArrayList<>();
         private UUID forwardId;
+        private UUID randomTickId;
+        private StructureRef randomTickRef;
+        private final List<BlockPos> randomTickCells = new ArrayList<>();
+        private final List<BlockState> randomTickStates = new ArrayList<>();
         private StructureRef probeA;
         private StructureRef probeB;
         private StructureRef probeC;
@@ -160,11 +166,17 @@ public final class StructureTransactionGameTests {
         private void verifyRejections() {
             verifyRejected(Blocks.CHEST.defaultBlockState(), StructureCaptureRequest.ALLOW,
                     StructureCaptureResult.Status.REJECTED, "block_entity_not_supported");
-            verifyRejected(Blocks.GRASS_BLOCK.defaultBlockState(), StructureCaptureRequest.ALLOW,
-                    StructureCaptureResult.Status.REJECTED, "random_tick_not_supported");
+            // Randomly ticking alone is admitted now; non-whitelisted farmland and vegetation
+            // still fail closed on the curated set.
+            verifyRejected(Blocks.FARMLAND.defaultBlockState(), StructureCaptureRequest.ALLOW,
+                    StructureCaptureResult.Status.REJECTED, "not_in_plain_block_whitelist");
+            verifyRejected(Blocks.SHORT_GRASS.defaultBlockState(), StructureCaptureRequest.ALLOW,
+                    StructureCaptureResult.Status.REJECTED, "not_in_plain_block_whitelist");
             verifyRejected(Blocks.OAK_STAIRS.defaultBlockState()
                             .setValue(BlockStateProperties.WATERLOGGED, true), StructureCaptureRequest.ALLOW,
                     StructureCaptureResult.Status.REJECTED, "waterlogged_not_supported");
+            verifyRejected(Blocks.WATER.defaultBlockState(), StructureCaptureRequest.ALLOW,
+                    StructureCaptureResult.Status.REJECTED, "fluid_not_supported");
             verifyRejected(Blocks.BEDROCK.defaultBlockState(), StructureCaptureRequest.ALLOW,
                     StructureCaptureResult.Status.REJECTED, "not_in_plain_block_whitelist");
             verifyRejected(Blocks.OAK_PLANKS.defaultBlockState(), (level, position) -> false,
@@ -183,6 +195,63 @@ public final class StructureTransactionGameTests {
                     16, 2, StructureCaptureRequest.ALLOW));
             require(span.status() == StructureCaptureResult.Status.SPAN_TOO_LARGE,
                     "Span budgets must be enforced before any write");
+        }
+
+        /**
+         * Randomly ticking surface land is admitted by policy: the fixture commits grass over
+         * dirt through the real staged transaction, then releases the slot again so the later
+         * capacity fixture still sees exactly one free container slot.
+         */
+        private void beginRandomTickCapture() {
+            // Random growth could mutate the source between snapshot and copy; the fixture's own
+            // isolation makes the disabled rule safe to keep.
+            require(Blocks.GRASS_BLOCK.defaultBlockState().isRandomlyTicking(),
+                    "Random-tick fixture must use a randomly ticking block");
+            host.getGameRules().set(GameRules.RANDOM_TICK_SPEED, 0, server);
+            var grass = hostPos(RANDOM_TICK_BASE);
+            var dirt = hostPos(RANDOM_TICK_BASE.below());
+            host.setBlock(grass, Blocks.GRASS_BLOCK.defaultBlockState(), QUIET_FLAGS);
+            host.setBlock(dirt, Blocks.DIRT.defaultBlockState(), QUIET_FLAGS);
+            randomTickCells.add(dirt);
+            randomTickCells.add(grass);
+            randomTickStates.add(host.getBlockState(dirt));
+            randomTickStates.add(host.getBlockState(grass));
+            var result = StructureTransactions.capture(host,
+                    new StructureCaptureRequest(randomTickCells, 16, 8, StructureCaptureRequest.ALLOW));
+            require(result.pending(), "Random-tick land capture must start a staged transaction: "
+                    + result.status() + "/" + result.detail());
+            randomTickId = result.transactionId();
+        }
+
+        private void randomTickCaptureCommitted() {
+            var result = captureResult(randomTickId);
+            require(result.succeeded(), "Random-tick land capture still in flight: "
+                    + result.status() + "/" + result.detail());
+            randomTickRef = orFail(result.structure(),
+                    "Committed random-tick capture must expose its structure");
+        }
+
+        private void verifyRandomTickCapture() {
+            var handle = orFail(backend.resolve(randomTickRef), "Random-tick target must stay resolvable");
+            require(handle.lifecycle() == StructureLifecycle.ACTIVE, "Random-tick target must stay active");
+            var origin = origin(randomTickCells);
+            for (int index = 0; index < randomTickCells.size(); index++) {
+                var position = randomTickCells.get(index);
+                require(host.getBlockState(position).isAir(),
+                        "Committed random-tick capture must remove its source block at " + position);
+                require(handle.world().read(position.subtract(origin)).state().equals(randomTickStates.get(index)),
+                        "Random-tick target cell must match the captured source state at " + position);
+            }
+            require(!journalExists(randomTickId), "Committed random-tick capture must recycle its journal record");
+            for (int index = 0; index < randomTickCells.size(); index++) {
+                var offset = randomTickCells.get(index).subtract(origin);
+                require(handle.world().compareAndSet(offset, new StructureBlockData(randomTickStates.get(index)),
+                                new StructureBlockData(Blocks.AIR.defaultBlockState())) == StructureWriteResult.APPLIED,
+                        "Random-tick fixture must empty its committed target");
+            }
+            require(runtime.unload(randomTickRef), "Random-tick fixture must unload its emptied target");
+            require(runtime.discardEmpty(randomTickRef), "Random-tick fixture must release its permanent slot");
+            host.getGameRules().set(GameRules.RANDOM_TICK_SPEED, 3, server);
         }
 
         private void verifyScheduledTickRejection() {
@@ -426,6 +495,9 @@ public final class StructureTransactionGameTests {
                     .thenWaitUntil(scenario::captureCommitted)
                     .thenExecute(scenario::verifyCaptureCommit)
                     .thenExecute(scenario::verifyRejections)
+                    .thenExecute(scenario::beginRandomTickCapture)
+                    .thenWaitUntil(scenario::randomTickCaptureCommitted)
+                    .thenExecute(scenario::verifyRandomTickCapture)
                     .thenExecute(scenario::allocateRollbackTarget)
                     .thenWaitUntil(scenario::rollbackTargetActive)
                     .thenExecute(scenario::seedRollbackJournal)

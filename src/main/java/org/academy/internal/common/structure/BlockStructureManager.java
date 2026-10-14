@@ -295,6 +295,24 @@ public final class BlockStructureManager {
         });
     }
 
+    /**
+     * Selection crop that keeps only full-block cells. Unloaded and out-of-world positions are
+     * kept so the owning component can still surface them as explicit errors; this is a selection
+     * policy, not a silent content drop.
+     */
+    public static List<BlockPos> cropNonFullBlocks(
+            ServerLevel level,
+            Iterable<BlockPos> candidates
+    ) {
+        if (level == null || candidates == null) {
+            throw new IllegalArgumentException("level and candidates cannot be null");
+        }
+        return cropNonFullBlocks(candidates, position -> {
+            if (!level.isInWorldBounds(position) || !level.isLoaded(position)) return true;
+            return level.getBlockState(position).isCollisionShapeFullBlock(level, position);
+        });
+    }
+
     static List<BlockPos> positionsInSphere(BlockPos center, double radius) {
         var extent = (int) Math.ceil(radius);
         var radiusSquared = radius * radius + 1.0e-9;
@@ -421,6 +439,22 @@ public final class BlockStructureManager {
             });
         } while (changed && !movable.isEmpty());
         return List.copyOf(movable);
+    }
+
+    /**
+     * Pure full-block crop: keeps candidates accepted by {@code fullBlock} in first-seen order
+     * and drops duplicates. The predicate decides every edge case; this method never inspects
+     * the world.
+     */
+    static List<BlockPos> cropNonFullBlocks(
+            Iterable<BlockPos> candidates,
+            Predicate<BlockPos> fullBlock
+    ) {
+        var kept = new LinkedHashSet<BlockPos>();
+        for (var position : candidates) {
+            if (position != null && fullBlock.test(position)) kept.add(position.immutable());
+        }
+        return List.copyOf(kept);
     }
 
     public static List<BlockPos> cropToForwardHalfSpace(

@@ -244,6 +244,21 @@ public final class BlockStructureApi {
     }
 
     /**
+     * Deterministically drops non-full-block decoration such as grass tufts and flowers from a
+     * selection. This is a selection policy, not a silent content drop: any non-full cell that
+     * still reaches a content transaction is rejected by its fail-closed preflight. Unloaded and
+     * out-of-world positions are kept so they surface as explicit selection errors, and air is
+     * never part of a selection.
+     */
+    public static List<BlockPos> cropNonFullBlocks(
+            ServerLevel level,
+            Iterable<BlockPos> candidates
+    ) {
+        return BlockStructureManager.cropNonFullBlocks(
+                level, candidates);
+    }
+
+    /**
      * Keeps positions whose block centers lie at least the requested distance in front of a
      * plane origin. This prevents captured structures from enclosing their controller.
      */

@@ -382,6 +382,10 @@ public final class VectorStructureService {
                 selection.positions(), player.position(), forward, KineticThrow.PLAYER_CLEARANCE);
         var positions = BlockStructureApi.cropImmediatelyBlocked(
                 level, playerSafeSelection, Direction.UP);
+        // Selection policy: non-full decoration (grass tufts, flowers) is excluded here so the
+        // fail-closed content preflight sees only full structural blocks. The seed must survive
+        // the crop; otherwise the selection is rejected instead of silently re-anchored.
+        positions = BlockStructureApi.cropNonFullBlocks(level, positions);
         if (positions.isEmpty() || !positions.contains(seed)) {
             return new PlanOutcome(null, "selection_blocked_or_seed_missing");
         }
