@@ -160,12 +160,28 @@ public final class VectorStructureService {
     public static boolean beginCapture(ServerPlayer player, CapturePlan plan) {
         requireThread(player);
         Objects.requireNonNull(plan, "plan");
+        if (sableLiftMassRejected(player, plan)) return false;
         var result = startCapture(player, plan, true, false);
         if (result.pending()) return true;
         if (!result.succeeded()) {
             rejectCapture(player, result.status() + ":" + result.detail());
             return false;
         }
+        return true;
+    }
+
+    /**
+     * Sable skill lifts pull through the traction mass gate, which previously ran only after
+     * the capture had already built a ship. The source cells' mass is exact and
+     * backend-predictable, so an over-budget lift is refused before any structure exists.
+     */
+    private static boolean sableLiftMassRejected(ServerPlayer player, CapturePlan plan) {
+        if (!(player.level() instanceof ServerLevel level) || !sableMode(level)) return false;
+        var backend = StructureBackendRouter.captureTarget(level.getServer()).orElse(null);
+        if (backend == null) return false;
+        var mass = backend.estimateMass(level, plan.positions());
+        if (!Double.isFinite(mass) || mass <= KineticStructureControl.massBudget(plan.tier())) return false;
+        rejectCapture(player, "sable_traction_too_heavy");
         return true;
     }
 
@@ -889,12 +905,14 @@ public final class VectorStructureService {
         var handle = StructureSpaces.resolve(level.getServer(), reference).orElse(null);
         var motion = StructureDynamics.motion(level, reference).orElse(null);
         if (handle == null || motion == null) {
+            discardSableCapture(level, reference, "sable_structure_unavailable");
             rejectCapture(player, "sable_structure_unavailable", report);
             return;
         }
         var range = Skills.KINETIC_THROW.get().scaledRange(player, KineticThrow.TARGET_RANGE + KineticThrow.liftHeight(tier));
         var hit = lookedAtStructure(player, reference, range);
         if (hit == null) {
+            discardSableCapture(level, reference, "sable_target_not_visible");
             rejectCapture(player, "sable_target_not_visible", report);
             return;
         }
@@ -903,7 +921,9 @@ public final class VectorStructureService {
         var acquired = StructureTraction.tryAcquire(player, UUID.randomUUID(), hit, settings,
                 (actor, candidate) -> actor == player && !player.isSpectator() && player.getAbilities().mayBuild);
         if (acquired.status() != StructureTraction.Status.ACTIVE) {
-            rejectCapture(player, "sable_traction_" + acquired.status().name().toLowerCase(java.util.Locale.ROOT), report);
+            var detail = "sable_traction_" + acquired.status().name().toLowerCase(java.util.Locale.ROOT);
+            discardSableCapture(level, reference, detail);
+            rejectCapture(player, detail, report);
             return;
         }
         var session = acquired.session().orElseThrow();
@@ -911,6 +931,7 @@ public final class VectorStructureService {
         var target = point.add(0, KineticThrow.liftHeight(tier), 0);
         if (session.update(target, Vec3.ZERO) != StructureTraction.Status.ACTIVE) {
             session.close();
+            discardSableCapture(level, reference, "sable_lift_target_rejected");
             rejectCapture(player, "sable_lift_target_rejected", report);
             return;
         }
@@ -924,6 +945,18 @@ public final class VectorStructureService {
     }
 
     /**
+     * A capture that committed but cannot be adopted must not stay behind: remove the just-built
+     * structure through its backend before the caller reports the rejection.
+     */
+    private static void discardSableCapture(ServerLevel level, StructureRef reference, String detail) {
+        AcademyCraft.LOGGER.error("Kinetic Throw Sable lift was rejected after the capture ({}); discarding {}",
+                detail, reference);
+        if (!StructureTransactions.discard(level.getServer(), reference)) {
+            AcademyCraft.LOGGER.error("Kinetic Throw could not discard the just-created structure {}", reference);
+        }
+    }
+
+    /**
      * Program extraction on a Sable world retains the captured body without a skill lift or a
      * traction session. The following control node issues the lightweight direct-velocity lease;
      * an unavailable body rejects and the structure stays retained.
@@ -932,6 +965,7 @@ public final class VectorStructureService {
         if (!(player.level() instanceof ServerLevel level)) return;
         var handle = StructureSpaces.resolve(level.getServer(), reference).orElse(null);
         if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) {
+            discardSableCapture(level, reference, "sable_structure_unavailable");
             rejectCapture(player, "sable_structure_unavailable", false);
             return;
         }

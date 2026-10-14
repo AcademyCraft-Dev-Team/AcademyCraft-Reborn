@@ -4,6 +4,7 @@ import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
 import dev.ryanhcode.sable.companion.math.BoundingBox3i;
 import dev.ryanhcode.sable.companion.math.Pose3d;
+import dev.ryanhcode.sable.physics.config.block_properties.PhysicsBlockPropertyHelper;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import dev.ryanhcode.sable.sublevel.plot.LevelPlot;
 import dev.ryanhcode.sable.sublevel.storage.SubLevelRemovalReason;
@@ -22,13 +23,18 @@ import org.academy.api.common.structure.StructureHandle;
 import org.academy.api.common.structure.StructureRef;
 import org.academy.api.common.structure.StructureWriteResult;
 import org.academy.internal.common.structure.StructureBackendRouter;
+import org.academy.internal.common.structure.transaction.CaptureCheckpointPolicy;
 import org.academy.internal.common.structure.transaction.CaptureTarget;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
 import org.jspecify.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Sable capture executor for the neutral staged coordinator. It allocates a real sub-level,
@@ -56,9 +62,11 @@ public final class SableStructureTransactions implements CaptureTarget {
     }
 
     @Override
-    public Optional<StructureRef> allocate(ServerLevel host, BlockPos origin) {
+    public Optional<StructureRef> allocate(ServerLevel host, BlockPos origin, BlockPos seedOffset, BlockState seedState) {
         Objects.requireNonNull(host, "host");
         Objects.requireNonNull(origin, "origin");
+        Objects.requireNonNull(seedOffset, "seedOffset");
+        Objects.requireNonNull(seedState, "seedState");
         SableStructureAccess.requireThread(server);
         var container = SubLevelContainer.getContainer(host);
         if (container == null) return Optional.empty();
@@ -80,13 +88,33 @@ public final class SableStructureTransactions implements CaptureTarget {
             ship.logicalPose().rotationPoint().set(plotOrigin.getX() + 0.5, plotOrigin.getY() + 0.5,
                     plotOrigin.getZ() + 0.5);
             prepareChunks(plot, plotOrigin);
-            return Optional.of(new StructureRef(ship.getUniqueId(), host.dimension().identifier(),
-                    StructureBackendRouter.SABLE_ID, 0));
+            var reference = new StructureRef(ship.getUniqueId(), host.dimension().identifier(),
+                    StructureBackendRouter.SABLE_ID, 0);
+            // Sable removes a zero-mass body on its own sweep; the seed must land before this
+            // call chain returns or the ship is destroyed before the copy stage can fill it.
+            if (writeCell(reference, seedOffset, seedState) != StructureWriteResult.APPLIED) {
+                AcademyCraft.LOGGER.error("Sable capture could not seed its allocated ship for origin {}", origin);
+                removeQuietly(container, ship);
+                return Optional.empty();
+            }
+            return Optional.of(reference);
         } catch (RuntimeException | LinkageError failure) {
             AcademyCraft.LOGGER.error("Sable capture allocation failed for origin {}", origin, failure);
             if (ship != null) removeQuietly(container, ship);
             return Optional.empty();
         }
+    }
+
+    @Override
+    public double estimateMass(ServerLevel host, List<BlockPos> positions) {
+        Objects.requireNonNull(host, "host");
+        Objects.requireNonNull(positions, "positions");
+        SableStructureAccess.requireThread(server);
+        double mass = 0.0;
+        for (var position : positions) {
+            mass += PhysicsBlockPropertyHelper.getMass(host, position, host.getBlockState(position));
+        }
+        return Double.isFinite(mass) ? mass : Double.NaN;
     }
 
     @Override
@@ -155,8 +183,10 @@ public final class SableStructureTransactions implements CaptureTarget {
 
     /**
      * Best-effort checkpoint through Sable's own holding chunk map. Sable does not expose a
-     * transactional save result and reports its own failures through its logs; this adapter
-     * treats any thrown failure as an unconfirmed checkpoint so the coordinator retains the
+     * transactional or per-ship save result, and its removal sweep can leave a removed or
+     * zero-mass child inside the container, which makes {@code saveAll} throw while serializing;
+     * those invalid children are pruned, except this transaction's target, and the checkpoint is
+     * retried once. Any remaining failure stays unconfirmed so the coordinator retains the
      * transaction instead of publishing it.
      */
     @Override
@@ -168,8 +198,20 @@ public final class SableStructureTransactions implements CaptureTarget {
             container.getHoldingChunkMap().saveAll();
             return true;
         } catch (RuntimeException | LinkageError failure) {
-            AcademyCraft.LOGGER.error("Sable capture checkpoint failed for {}", target.id(), failure);
-            return false;
+            if (!removeInvalidBodies(container, target.id())) {
+                AcademyCraft.LOGGER.error("Sable capture checkpoint failed for {}", target.id(), failure);
+                return false;
+            }
+            AcademyCraft.LOGGER.warn("Sable capture checkpoint pruned invalid sub-levels and retries for {}",
+                    target.id());
+            try {
+                container.getHoldingChunkMap().saveAll();
+                return true;
+            } catch (RuntimeException | LinkageError retry) {
+                retry.addSuppressed(failure);
+                AcademyCraft.LOGGER.error("Sable capture checkpoint failed for {}", target.id(), retry);
+                return false;
+            }
         }
     }
 
@@ -262,6 +304,40 @@ public final class SableStructureTransactions implements CaptureTarget {
                 AcademyCraft.LOGGER.error("Sable capture could not remove a failed allocation", failure);
             }
         });
+    }
+
+    /**
+     * Prunes container children whose body Sable already removed or that carry no mass, exactly
+     * mirroring its own removal sweep; the capture target is protected because a checkpoint may
+     * observe it while its content is still being settled. Returns true when at least one child
+     * was removed so the caller may retry the checkpoint once.
+     */
+    private static boolean removeInvalidBodies(ServerSubLevelContainer container, UUID targetId) {
+        var bodies = new ArrayList<CaptureCheckpointPolicy.Body>();
+        var ships = new HashMap<UUID, ServerSubLevel>();
+        for (var subLevel : List.copyOf(container.getAllSubLevels())) {
+            if (subLevel.getUniqueId().equals(targetId)) continue;
+            var tracker = subLevel.getMassTracker();
+            bodies.add(new CaptureCheckpointPolicy.Body(subLevel.getUniqueId(), subLevel.isRemoved(),
+                    tracker != null && !tracker.isInvalid()));
+            ships.put(subLevel.getUniqueId(), subLevel);
+        }
+        var removed = false;
+        for (var id : CaptureCheckpointPolicy.invalidBodies(targetId, bodies)) {
+            var ship = ships.get(id);
+            if (ship == null) continue;
+            try {
+                if (!ship.isRemoved()) {
+                    ship.getPlot().destroyAllBlocks();
+                    ship.markRemoved();
+                }
+                container.removeSubLevel(ship, SubLevelRemovalReason.REMOVED);
+                removed = true;
+            } catch (RuntimeException | LinkageError failure) {
+                AcademyCraft.LOGGER.error("Sable capture could not prune an invalid sub-level {}", id, failure);
+            }
+        }
+        return removed;
     }
 
     private @Nullable ServerSubLevel ship(StructureRef target) {

@@ -101,6 +101,12 @@ public final class MagneticStructureService {
             reject(player, "selection_empty");
             return Optional.empty();
         }
+        // The skill path has no calibrated Sable pull entry; reject before creating anything
+        // so a refused pull never leaves a captured ship behind.
+        if (sableMode(level)) {
+            reject(player, "sable_pull_unavailable");
+            return Optional.empty();
+        }
         var seed = positions.getFirst().immutable();
         var admission = admit(player, seed);
         if (admission != null) {
@@ -958,10 +964,17 @@ public final class MagneticStructureService {
             if (stage == Stage.CAPTURING) {
                 if (sable(reference)) {
                     if (!program) {
-                        // The skill path has no calibrated Sable pull entry; the captured
-                        // structure is retained instead of being mutated through a legacy entity.
-                        AcademyCraft.LOGGER.info("Magnetic pull sable control is not implemented; retaining {}",
+                        // Fallback only: the entry path pre-rejects Sable, so a captured ship
+                        // here means the backend changed mid-flight; discard it instead of
+                        // retaining an orphan.
+                        AcademyCraft.LOGGER.error(
+                                "Magnetic pull Sable control is unavailable after the capture; discarding {}",
                                 reference);
+                        if (!(player.level() instanceof ServerLevel level)
+                                || !StructureTransactions.discard(level.getServer(), reference)) {
+                            AcademyCraft.LOGGER.error(
+                                    "Magnetic pull could not discard the just-created structure {}", reference);
+                        }
                         fail(player, "sable_pull_unavailable");
                         close();
                         return false;

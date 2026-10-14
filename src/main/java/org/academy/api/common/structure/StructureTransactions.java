@@ -35,4 +35,15 @@ public final class StructureTransactions {
         Objects.requireNonNull(transactionId, "transactionId");
         return StructureCaptureCoordinator.poll(server, transactionId);
     }
+
+    /**
+     * Removes a structure a capture created but that no controller adopted. Fallback skill
+     * rejections use this so a failed adoption never leaves an orphan unit; false means the
+     * backend could not remove it and the caller must report the retained structure.
+     */
+    public static boolean discard(MinecraftServer server, StructureRef reference) {
+        Objects.requireNonNull(server, "server");
+        Objects.requireNonNull(reference, "reference");
+        return StructureCaptureCoordinator.discard(server, reference);
+    }
 }

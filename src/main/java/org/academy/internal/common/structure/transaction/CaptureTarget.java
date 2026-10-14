@@ -8,6 +8,7 @@ import org.academy.api.common.structure.StructureHandle;
 import org.academy.api.common.structure.StructureRef;
 import org.academy.api.common.structure.StructureWriteResult;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -16,8 +17,21 @@ import java.util.Optional;
  * geometry and persistence step through it; the coordinator itself never addresses a backend.
  */
 public interface CaptureTarget {
-    /** Allocates an empty target for the selected origin, or empty when this backend cannot serve it. */
-    Optional<StructureRef> allocate(ServerLevel host, BlockPos origin);
+    /**
+     * Allocates a target for the selected origin and accepts the first content cell in capture
+     * order. A backend that can make the target non-empty in the same call chain writes that
+     * seed before returning so a zero-mass allocation window never exists; a backend that
+     * ignores it lets the coordinator fill the cell during the copy stage instead.
+     */
+    Optional<StructureRef> allocate(ServerLevel host, BlockPos origin, BlockPos seedOffset, BlockState seedState);
+
+    /**
+     * Exact mass the given source cells will have as a target body when this backend can predict
+     * it before allocating; NaN tells the caller to keep its own post-capture gate.
+     */
+    default double estimateMass(ServerLevel host, List<BlockPos> positions) {
+        return Double.NaN;
+    }
 
     /** Maximum number of structure cells this backend can hold for one target. */
     int cellBudget();
@@ -43,7 +57,11 @@ public interface CaptureTarget {
     /** Persists a checkpoint; false keeps the transaction retained for recovery. */
     boolean save(StructureRef target);
 
-    /** Releases the capacity of an unloaded empty target; false keeps the slot consumed. */
+    /**
+     * Releases an uncommitted target during rollback or capacity reclamation; true means the
+     * target no longer exists, so the coordinator must not clear its cells. The Sable backend
+     * removes the whole ship because per-cell clearing trips its zero-mass removal.
+     */
     boolean releaseEmpty(StructureRef target);
 
     /**

@@ -65,6 +65,7 @@ import org.academy.internal.common.structure.NativeStructureRuntime;
 import org.academy.internal.common.structure.sable.SableContainerGuard;
 import org.academy.internal.common.structure.sable.SableStructureAccess;
 import org.academy.internal.common.structure.sable.SableStaffCompatibility;
+import org.academy.internal.common.structure.sable.SableStructureTransactions;
 import org.academy.internal.common.structure.transaction.StructureTransactionJournal;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
@@ -76,6 +77,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.BiPredicate;
 
 /** Explicitly registered only by the verified optional bridge in an isolated opt-in run. */
 public final class SableStructureSmoke {
@@ -86,7 +88,7 @@ public final class SableStructureSmoke {
     private static volatile int clientMotionSamples;
     private static SableStructureSmoke active;
     private static boolean initialized;
-    private enum Phase { SKILL, COAST, CAPTURE, HEAVY_THROW, PROGRAM, NPC, ACTOR_REMOVED, CALLBACK_WAIT, CALLBACK_COAST, CALLBACK_REACQUIRE, FINISH }
+    private enum Phase { SKILL, COAST, CAPTURE, LIFECYCLE, HEAVY_THROW, PROGRAM, NPC, ACTOR_REMOVED, CALLBACK_WAIT, CALLBACK_COAST, CALLBACK_REACQUIRE, FINISH }
     private static final BlockPos BASE = new BlockPos(8, 200, 8);
     private static final Vec3 CELL_CENTER = new Vec3(0.5, 0.5, 0.5);
     private static final StructureTraction.Settings SETTINGS = new StructureTraction.Settings(32, 32, 120, 36, 1000, 3);
@@ -380,6 +382,95 @@ public final class SableStructureSmoke {
         evidence.append("sable_capture_rejected_be_preserved=true\n");
     }
 
+    /**
+     * The allocation must write the first content cell in its own call chain: immediately after
+     * {@code allocate} returns, the ship has real mass and a center of mass, so Sable's zero-mass
+     * sweep can never destroy it before the copy stage.
+     */
+    private void verifySeedSameChain() {
+        var target = new SableStructureTransactions(server);
+        var origin = BASE.offset(-4, 0, 10);
+        require(host.getBlockState(origin).isAir() && host.getBlockEntity(origin) == null,
+                "Sable seed probe origin must start empty: " + origin);
+        var reference = target.allocate(host, origin, BlockPos.ZERO, Blocks.STONE.defaultBlockState())
+                .orElseThrow(() -> new IllegalStateException("Sable seed probe allocation failed"));
+        var ship = container.getSubLevel(reference.id());
+        require(ship instanceof ServerSubLevel seeded, "Sable seed probe lost its ship");
+        var tracker = ((ServerSubLevel) ship).getMassTracker();
+        require(tracker != null && tracker.getMass() > 0 && tracker.getCenterOfMass() != null,
+                "Sable allocation returned an empty ship: "
+                        + (tracker == null ? "no mass tracker" : "mass=" + tracker.getMass()));
+        require(target.releaseEmpty(reference), "Sable seed probe ship could not be released");
+        require(container.getSubLevel(reference.id()) == null, "Sable seed probe ship survived its release");
+        evidence.append("sable_capture_seed_same_chain=true\n");
+    }
+
+    /**
+     * A rollback before the commit decision must remove the whole ship instead of clearing it
+     * cell by cell, which would trip Sable's zero-mass removal mid-clear and leave an orphan.
+     */
+    private void verifyRollbackRemoval() {
+        var origin = BASE.offset(-4, 0, 8);
+        var cells = new ArrayList<BlockPos>();
+        for (int x = 0; x < 2; x++) for (int z = 0; z < 2; z++) cells.add(origin.offset(x, 0, z));
+        for (var cell : cells) {
+            require(host.getBlockState(cell).isAir() && host.getBlockEntity(cell) == null,
+                    "Sable rollback source must start empty: " + cell);
+            host.setBlockAndUpdate(cell, Blocks.STONE.defaultBlockState());
+        }
+        var before = container.getAllSubLevels().size();
+        var tested = new int[]{0};
+        BiPredicate<ServerLevel, BlockPos> permission = (level, position) -> {
+            // Pass the preflight and the first copy check; revoke before the commit decision.
+            tested[0]++;
+            return tested[0] <= cells.size();
+        };
+        var result = StructureTransactions.capture(host, new StructureCaptureRequest(
+                cells, StructureCaptureRequest.MAXIMUM_BLOCKS, StructureCaptureRequest.MAXIMUM_SPAN, permission));
+        require(!result.pending() && result.status() == StructureCaptureResult.Status.PERMISSION_DENIED
+                        && result.detail().equals("permission_revoked_before_commit"),
+                "Sable rollback capture reached an unexpected result: " + result.status() + "/" + result.detail());
+        require(container.getAllSubLevels().size() == before,
+                "Sable rollback left an orphan ship: " + (container.getAllSubLevels().size() - before));
+        for (var cell : cells) {
+            require(host.getBlockState(cell).is(Blocks.STONE), "Rollback must preserve its source: " + cell);
+        }
+        require(!captureJournalExists(result.transactionId()), "Rolled-back Sable capture must recycle its journal");
+        evidence.append("sable_capture_rollback_removed=true\n");
+    }
+
+    /**
+     * A child that Sable marked removed but has not swept yet makes {@code saveAll} throw while
+     * serializing. The checkpoint must prune that invalid child, protect its own target, and
+     * commit on the retry so no body-removed failure escapes.
+     */
+    private void verifyCheckpointPrune() {
+        var abandonedOrigin = BASE.offset(2, 0, -4);
+        var abandoned = container.allocateNewSubLevel(new Pose3d(
+                new Vector3d(abandonedOrigin.getX() + 0.5, abandonedOrigin.getY() + 0.5, abandonedOrigin.getZ() + 0.5),
+                new Quaterniond(), new Vector3d(), new Vector3d(1.0, 1.0, 1.0)));
+        abandoned.markRemoved();
+        var cells = new ArrayList<BlockPos>();
+        for (int x = 0; x < 2; x++) for (int z = 0; z < 2; z++) cells.add(abandonedOrigin.offset(x, 0, z));
+        for (var cell : cells) {
+            require(host.getBlockState(cell).isAir() && host.getBlockEntity(cell) == null,
+                    "Sable checkpoint source must start empty: " + cell);
+            host.setBlockAndUpdate(cell, Blocks.STONE.defaultBlockState());
+        }
+        var result = StructureTransactions.capture(host, StructureCaptureRequest.of(cells));
+        require(result.succeeded(), "Sable capture over a removed child did not commit: "
+                + result.status() + "/" + result.detail());
+        require(container.getSubLevel(abandoned.getUniqueId()) == null,
+                "The invalid sub-level survived the checkpoint prune");
+        for (var cell : cells) {
+            require(host.getBlockState(cell).isAir(), "Pruned checkpoint retained its source: " + cell);
+        }
+        var captured = container.getSubLevel(result.structure().orElseThrow().id());
+        require(captured instanceof ServerSubLevel, "Pruned checkpoint lost its own capture target");
+        if (captured instanceof ServerSubLevel ship) fixtures.add(ship);
+        evidence.append("sable_checkpoint_no_body_removed=true\n");
+    }
+
     private BlockPos captureOrigin() {
         int x = Integer.MAX_VALUE, y = Integer.MAX_VALUE, z = Integer.MAX_VALUE;
         for (var cell : captureCells) {
@@ -465,6 +556,15 @@ public final class SableStructureSmoke {
                         new IllegalStateException("Committed Sable capture must expose its target"));
                 verifyCaptureCommit();
                 verifyCaptureRejection();
+                next(Phase.LIFECYCLE);
+            }
+            case LIFECYCLE -> {
+                require(session != null && session.update(session.targetPosition(), Vec3.ZERO)
+                                == StructureTraction.Status.ACTIVE,
+                        "NPC traction ended during the Sable capture lifecycle phase");
+                verifySeedSameChain();
+                verifyRollbackRemoval();
+                verifyCheckpointPrune();
                 next(Phase.HEAVY_THROW);
             }
             case HEAVY_THROW -> {

@@ -127,6 +127,27 @@ public final class StructureCaptureCoordinator {
         coordinator(server).recoverPending();
     }
 
+    /**
+     * Removes a structure a capture created but that no controller adopted. Fallback skill
+     * rejections use this so a failed adoption never leaves an orphan; the selected capture
+     * backend performs the removal and unavailable states return false without side effects.
+     */
+    public static boolean discard(MinecraftServer server, StructureRef reference) {
+        Objects.requireNonNull(server, "server");
+        Objects.requireNonNull(reference, "reference");
+        if (!server.isSameThread()) {
+            throw new IllegalStateException("Structure capture requires the server thread");
+        }
+        var backend = targetFor(server, reference.backend());
+        if (backend == null) return false;
+        try {
+            return backend.releaseEmpty(reference);
+        } catch (RuntimeException | LinkageError failure) {
+            AcademyCraft.LOGGER.error("Cannot discard the uncommitted structure {}", reference, failure);
+            return false;
+        }
+    }
+
     private StructureCaptureResult begin(ServerLevel host, StructureCaptureRequest request) {
         requireRunning();
         var transactionId = UUID.randomUUID();
@@ -218,7 +239,12 @@ public final class StructureCaptureCoordinator {
                 return StructureCaptureResult.failure(transactionId,
                         StructureCaptureResult.Status.JOURNAL_WRITE_FAILED, "journal_prepare_failed");
             }
-            var allocated = backend.allocate(host, origin);
+            // The first content cell in capture order seeds the allocation in the same call
+            // chain so a backend that destroys zero-mass bodies never sees an empty target.
+            var seedIndex = firstContentIndex(states);
+            var seedOffset = ordered.get(seedIndex).subtract(origin);
+            var seedState = states.get(seedIndex);
+            var allocated = backend.allocate(host, origin, seedOffset, seedState);
             if (allocated.isEmpty()) {
                 recycleQuietly(transactionId);
                 claims.release(transactionId);
@@ -235,8 +261,9 @@ public final class StructureCaptureCoordinator {
                 return StructureCaptureResult.failure(transactionId,
                         StructureCaptureResult.Status.JOURNAL_WRITE_FAILED, "journal_allocation_failed");
             }
+            var seeded = seededAllocation(backend, target, seedOffset, seedState);
             var capture = new PendingCapture(record, host, origin, target, backend, ordered, cells, states,
-                    request.permission(), false);
+                    request.permission(), false, seedIndex, seeded);
             pending.put(transactionId, capture);
             try {
                 drive(capture);
@@ -321,6 +348,7 @@ public final class StructureCaptureCoordinator {
             return;
         }
         for (int index = 0; index < capture.positions.size(); index++) {
+            if (capture.seeded && index == capture.seedIndex) continue;
             var offset = capture.positions.get(index).subtract(capture.origin);
             var write = capture.backend.writeCell(capture.target, offset, capture.states.get(index));
             if (write == StructureWriteResult.RECOVERY_REQUIRED) {
@@ -332,7 +360,7 @@ public final class StructureCaptureCoordinator {
                         "target_write_" + write.name().toLowerCase(Locale.ROOT));
                 return;
             }
-            capture.copyProgress = index + 1;
+            capture.copyProgress = Math.max(capture.copyProgress, index + 1);
         }
         for (int index = 0; index < capture.positions.size(); index++) {
             var offset = capture.positions.get(index).subtract(capture.origin);
@@ -397,43 +425,48 @@ public final class StructureCaptureCoordinator {
             retain(capture, "source_changed_before_recovery_rollback", null);
             return;
         }
-        if (capture.copyProgress > 0) {
-            if (resolveHandle(capture) == null || !capture.backend.ready(capture.target)) {
-                if (++capture.waited > ACTIVATION_TIMEOUT_TICKS) {
-                    retain(capture, "rollback_target_unavailable", null);
-                }
-                return;
-            }
-            for (int index = 0; index < capture.copyProgress; index++) {
-                var offset = capture.positions.get(index).subtract(capture.origin);
-                var expected = capture.states.get(index);
-                var current = capture.backend.readCell(capture.target, offset);
-                if (current.isPresent() && current.get().isAir()) continue;
-                if (current.isEmpty() || !current.get().equals(expected)) {
-                    retain(capture, "rollback_found_unknown_target_content", null);
+        // A whole-target release runs before any per-cell clearing: Sable removes the whole ship
+        // because its own zero-mass sweep would otherwise invalidate the target mid-clear.
+        var releasedWholeTarget = capture.backend.releaseEmpty(capture.target);
+        if (!releasedWholeTarget) {
+            if (capture.copyProgress > 0) {
+                if (resolveHandle(capture) == null || !capture.backend.ready(capture.target)) {
+                    if (++capture.waited > ACTIVATION_TIMEOUT_TICKS) {
+                        retain(capture, "rollback_target_unavailable", null);
+                    }
                     return;
                 }
-                var cleared = capture.backend.clearCell(capture.target, offset, expected);
-                if (cleared != StructureWriteResult.APPLIED) {
-                    retain(capture, "rollback_target_clear_failed:" + cleared.name().toLowerCase(Locale.ROOT), null);
-                    return;
+                for (int index = 0; index < capture.copyProgress; index++) {
+                    var offset = capture.positions.get(index).subtract(capture.origin);
+                    var expected = capture.states.get(index);
+                    var current = capture.backend.readCell(capture.target, offset);
+                    if (current.isPresent() && current.get().isAir()) continue;
+                    if (current.isEmpty() || !current.get().equals(expected)) {
+                        retain(capture, "rollback_found_unknown_target_content", null);
+                        return;
+                    }
+                    var cleared = capture.backend.clearCell(capture.target, offset, expected);
+                    if (cleared != StructureWriteResult.APPLIED) {
+                        retain(capture, "rollback_target_clear_failed:" + cleared.name().toLowerCase(Locale.ROOT), null);
+                        return;
+                    }
+                }
+                for (int index = 0; index < capture.copyProgress; index++) {
+                    var offset = capture.positions.get(index).subtract(capture.origin);
+                    var current = capture.backend.readCell(capture.target, offset);
+                    if (current.isEmpty() || !current.get().isAir()) {
+                        retain(capture, "rollback_target_clear_verify_failed", null);
+                        return;
+                    }
                 }
             }
-            for (int index = 0; index < capture.copyProgress; index++) {
-                var offset = capture.positions.get(index).subtract(capture.origin);
-                var current = capture.backend.readCell(capture.target, offset);
-                if (current.isEmpty() || !current.get().isAir()) {
-                    retain(capture, "rollback_target_clear_verify_failed", null);
-                    return;
-                }
-            }
+            unloadQuietly(capture.backend, capture.target);
         }
-        unloadQuietly(capture.backend, capture.target);
         if (!recycleQuietly(capture.transactionId)) {
             retain(capture, "rollback_journal_recycle_failed", null);
             return;
         }
-        discardEmptyQuietly(capture.backend, capture.target);
+        if (!releasedWholeTarget) discardEmptyQuietly(capture.backend, capture.target);
         if (capture.recovery) {
             finishRecovery(capture);
             return;
@@ -712,7 +745,7 @@ public final class StructureCaptureCoordinator {
         }
         var target = new StructureRef(record.targetStructure(), record.hostDimension(), record.backend(), 0);
         var capture = new PendingCapture(record, host, record.origin(), target, backend, positions,
-                record.cells(), states, null, true);
+                record.cells(), states, null, true, 0, false);
         capture.copyProgress = record.stage() == StructureTransactionJournal.Stage.TARGET_ALLOCATED
                 || record.stage() == StructureTransactionJournal.Stage.COPIED ? positions.size() : 0;
         capture.phase = record.stage() == StructureTransactionJournal.Stage.COMMIT_DECIDED
@@ -741,6 +774,26 @@ public final class StructureCaptureCoordinator {
             return StructureBackendRouter.captureTarget(server).orElse(null);
         }
         return null;
+    }
+
+    /** Index of the first non-air cell in capture order; every admitted cell is non-air. */
+    private static int firstContentIndex(List<BlockState> states) {
+        for (int index = 0; index < states.size(); index++) {
+            if (!states.get(index).isAir()) return index;
+        }
+        return 0;
+    }
+
+    /** Whether the backend wrote the seed cell during allocation, checked against the target. */
+    private static boolean seededAllocation(CaptureTarget backend, StructureRef target, BlockPos seedOffset,
+                                            BlockState seedState) {
+        try {
+            return backend.readCell(target, seedOffset).filter(seedState::equals).isPresent();
+        } catch (RuntimeException | LinkageError failure) {
+            AcademyCraft.LOGGER.error("Structure capture could not verify the allocation seed for {}",
+                    target, failure);
+            return false;
+        }
     }
 
     private static List<BlockState> decodeStates(ServerLevel host, StructureTransactionJournal.Record record) {
@@ -845,6 +898,8 @@ public final class StructureCaptureCoordinator {
         private final @Nullable BiPredicate<ServerLevel, BlockPos> permission;
         private final boolean recovery;
         private final boolean reportResults;
+        private final int seedIndex;
+        private final boolean seeded;
         private StructureTransactionJournal.Record record;
         private Phase phase = Phase.AWAIT_ACTIVATION;
         private int copyProgress;
@@ -857,7 +912,8 @@ public final class StructureCaptureCoordinator {
         private PendingCapture(StructureTransactionJournal.Record record, ServerLevel host, BlockPos origin,
                                StructureRef target, CaptureTarget backend, List<BlockPos> positions,
                                List<StructureTransactionJournal.Cell> cells, List<BlockState> states,
-                               @Nullable BiPredicate<ServerLevel, BlockPos> permission, boolean recovery) {
+                               @Nullable BiPredicate<ServerLevel, BlockPos> permission, boolean recovery,
+                               int seedIndex, boolean seeded) {
             this.record = record;
             this.host = host;
             this.origin = origin;
@@ -869,6 +925,9 @@ public final class StructureCaptureCoordinator {
             this.permission = permission;
             this.recovery = recovery;
             this.reportResults = !recovery;
+            this.seedIndex = seedIndex;
+            this.seeded = seeded;
+            this.copyProgress = seeded ? seedIndex + 1 : 0;
             this.transactionId = record.transactionId();
         }
     }

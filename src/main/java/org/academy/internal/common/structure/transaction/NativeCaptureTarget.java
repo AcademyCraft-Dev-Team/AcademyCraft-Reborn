@@ -39,7 +39,8 @@ public final class NativeCaptureTarget implements CaptureTarget {
     }
 
     @Override
-    public Optional<StructureRef> allocate(ServerLevel host, BlockPos origin) {
+    public Optional<StructureRef> allocate(ServerLevel host, BlockPos origin, BlockPos seedOffset, BlockState seedState) {
+        // The native slot has no zero-mass body window; the seed travels through the copy stage.
         return runtime().createEmpty(host, StructurePose.identity(Vec3.atLowerCornerOf(origin)))
                 .map(StructureHandle::reference);
     }
