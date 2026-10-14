@@ -338,6 +338,10 @@ final class NativeStructurePhysicsHighSpeedJetSmokeChecks implements AutoCloseab
             }
             region = null;
         }
+        if (reference != null) {
+            NativeStructurePhysicsSmokeCleanup.releaseCapturedSlot(host, reference, sourceCells);
+            reference = null;
+        }
         while (!tickets.isEmpty()) {
             var chunk = tickets.removeFirst();
             host.setChunkForced(chunk.x(), chunk.z(), false);

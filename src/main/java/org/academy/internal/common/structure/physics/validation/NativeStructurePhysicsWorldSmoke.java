@@ -55,7 +55,7 @@ public final class NativeStructurePhysicsWorldSmoke {
     private static volatile ClientState clientState = new ClientState("WAITING", List.of(), null, null, "", false, false, null);
     private static volatile String capturedStage = "";
     private static volatile String capturePath = "";
-    private enum Phase { ACTIVATE, BEFORE, FALL, LANDED, CONTROL, SUPPORT, LEASE, ENTITY_ARM, ENTITY_CONTROL, ENTITY_CLEANUP, GRASP, GRASP_CLEANUP, KINETIC, HIGH_SPEED_JET, CONTROL_RAW_SOLID, CONTROL_RAW_RESET,
+    private enum Phase { ACTIVATE, BEFORE, FALL, LANDED, CONTROL, SUPPORT, LEASE, ENTITY_ARM, ENTITY_CONTROL, ENTITY_CLEANUP, GRASP, GRASP_CLEANUP, KINETIC, HIGH_SPEED_JET, MAGNET, CONTROL_RAW_SOLID, CONTROL_RAW_RESET,
         CONTROL_RAW_AIR, CONTROL_RAW_FINISH, HOST_UNSUPPORTED, HOST_RESTORED, TERRAIN_FALL, TERRAIN_LAND,
         LOCAL_ADD, LOCAL_REMOVE, UNSUPPORTED, SUPPORTED_AGAIN, FROZEN, THAWED,
         PAIR_ARM, PAIR, EMPTY, UNLOAD, RELOAD, BOUNDARY, FINISHED }
@@ -83,6 +83,7 @@ public final class NativeStructurePhysicsWorldSmoke {
     private NativeStructurePhysicsGraspSmokeChecks graspChecks;
     private NativeStructurePhysicsKineticThrowSmokeChecks kineticChecks;
     private NativeStructurePhysicsHighSpeedJetSmokeChecks jetChecks;
+    private NativeStructurePhysicsMagnetManipulationSmokeChecks magnetChecks;
     private StructurePhysicsLease lifecycleLease;
     private AABB bounds;
     private BlockPos base;
@@ -194,7 +195,7 @@ public final class NativeStructurePhysicsWorldSmoke {
         if (manual) manualTicks++;
         require(ticks - manualTicks < 3500, "Structure physics smoke exceeded its automatic deadline at " + phase);
         require(manual || phaseTicks < (phase == Phase.GRASP ? 750 : phase == Phase.KINETIC ? 900
-                : phase == Phase.HIGH_SPEED_JET ? 900 : 650),
+                : phase == Phase.HIGH_SPEED_JET ? 900 : phase == Phase.MAGNET ? 900 : 650),
                 "Structure physics smoke phase timed out: " + phase + diagnostic());
         if (playerId != null) {
             var player = server.getPlayerList().getPlayer(playerId);
@@ -344,11 +345,26 @@ public final class NativeStructurePhysicsWorldSmoke {
                     next(Phase.HIGH_SPEED_JET);
                     return;
                 }
+                if (Boolean.getBoolean("academy.nativeStructurePhysicsMagnetManipulationSmoke")) {
+                    magnetChecks = new NativeStructurePhysicsMagnetManipulationSmokeChecks(host, base, evidence);
+                    next(Phase.MAGNET);
+                    return;
+                }
                 beginRawControlChecks();
             }
             case HIGH_SPEED_JET -> {
                 if (!jetChecks.advance()) return;
                 jetChecks.close(); jetChecks = null;
+                if (Boolean.getBoolean("academy.nativeStructurePhysicsMagnetManipulationSmoke")) {
+                    magnetChecks = new NativeStructurePhysicsMagnetManipulationSmokeChecks(host, base, evidence);
+                    next(Phase.MAGNET);
+                    return;
+                }
+                beginRawControlChecks();
+            }
+            case MAGNET -> {
+                if (!magnetChecks.advance()) return;
+                magnetChecks.close(); magnetChecks = null;
                 beginRawControlChecks();
             }
             case CONTROL_RAW_SOLID -> {
@@ -819,6 +835,7 @@ public final class NativeStructurePhysicsWorldSmoke {
             try { if (graspChecks != null) graspChecks.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
             try { if (kineticChecks != null) kineticChecks.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
             try { if (jetChecks != null) jetChecks.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
+            try { if (magnetChecks != null) magnetChecks.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
             try { if (region != null) region.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
             try { if (loadedRegion != null) loadedRegion.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
             try { restoreControlSection(); } catch (Throwable restoring) { error.addSuppressed(restoring); }
@@ -864,6 +881,7 @@ public final class NativeStructurePhysicsWorldSmoke {
             if (scenario.graspChecks != null) scenario.graspChecks.close();
             if (scenario.kineticChecks != null) scenario.kineticChecks.close();
             if (scenario.jetChecks != null) scenario.jetChecks.close();
+            if (scenario.magnetChecks != null) scenario.magnetChecks.close();
             scenario.restoreControlSection();
             scenario.restoreHostTerrainProbe();
             scenario.releaseFixtureFreeze();

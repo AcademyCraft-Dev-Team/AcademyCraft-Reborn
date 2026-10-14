@@ -800,6 +800,7 @@
   "message.academy.jukebox.vote_started": "A skip vote has started",
   "message.academy.kinetic_throw.block_target_required": "Aim at a block within 24 blocks before charging Kinetic Throw.",
   "message.academy.kinetic_throw.capture_rejected": "Kinetic Throw could not lift a movable, upward-clear structure from that area.",
+  "message.academy.magnet_manipulation.structure_pull_rejected": "Magnetic pull could not lift that structure.",
   "message.academy.mentalout.batch_applied": "Applied to %s targets; skipped %s, failed %s.",
   "message.academy.mentalout.break_free.controller": "%s broke free from your Mentalout effects.",
   "message.academy.mentalout.break_free.success": "You broke free and gained mental resistance for %s seconds.",

@@ -800,6 +800,7 @@
   "message.academy.jukebox.vote_started": "已发起切歌投票",
   "message.academy.kinetic_throw.block_target_required": "蓄力动能投掷前，请瞄准二十四格内的方块。",
   "message.academy.kinetic_throw.capture_rejected": "动能投掷无法从该区域拉起可移动且上方无阻挡的方块结构。",
+  "message.academy.magnet_manipulation.structure_pull_rejected": "磁场牵引无法搬起该结构。",
   "message.academy.mentalout.batch_applied": "已对 %s 个目标生效，跳过 %s 个，失败 %s 个。",
   "message.academy.mentalout.break_free.controller": "%s 已挣脱你的心理掌握。",
   "message.academy.mentalout.break_free.success": "已挣脱心理掌握，并获得 %s 秒精神抗性。",

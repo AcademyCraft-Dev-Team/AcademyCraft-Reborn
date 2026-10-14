@@ -20,7 +20,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.entity.player.Player;
@@ -39,6 +38,9 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
@@ -56,12 +58,14 @@ import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.ability.electromaster.MagneticallyManipulable;
 import org.academy.api.common.ability.electromaster.MagneticMovement;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.common.structure.StructureRef;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.electromaster.magnet.MagneticStructureService;
 import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
@@ -79,6 +83,8 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
 public class MagnetManipulation extends Skill {
     static final double MOVE_RANGE = 48.0;
@@ -292,6 +298,16 @@ public class MagnetManipulation extends Skill {
             return org.academy.internal.common.ability.electromaster.field.MagneticFieldRuntime.isHovering(player);
         }
 
+        /** Public stage observation for integrations and validation; it cannot drive the skill. */
+        public record Diagnostic(MagneticStructureService.Stage stage,
+                                 @Nullable StructureRef reference, int blockCount, boolean controlActive) {}
+
+        public static Optional<Diagnostic> diagnostic(ServerPlayer player) {
+            requireThread(player);
+            var context = ACTIVE_MOVEMENT.get(player);
+            return context == null ? Optional.empty() : context.diagnostic();
+        }
+
         @SubscribePacket
         public static void handleMoveStart(MoveStartPacket packet) {
             var player = packet.getPacketListener().getPlayer();
@@ -303,23 +319,43 @@ public class MagnetManipulation extends Skill {
                 org.academy.internal.common.ability.electromaster.field.MagneticFieldRuntime.toggle(player);
                 return;
             }
+            startTargetPull(player);
+        }
+
+        /**
+         * Same server-owned entry point used by the skill packet; it grants no extra capability.
+         * Repeating the call refreshes the client heartbeat of an existing pull.
+         */
+        public static boolean startTargetPull(ServerPlayer player) {
+            requireThread(player);
+            if (!Skills.MAGNET_MANIPULATION.get().isEnabled(player)) return false;
             var previous = ACTIVE_MOVEMENT.get(player);
             if (previous != null) {
                 previous.heartbeat = player.level().getServer().getTickCount();
-                return;
+                return true;
             }
-            if (!org.academy.api.server.ability.SkillAvailability.requestExecution(player, Skills.MAGNET_MANIPULATION.get(), false)) return;
+            if (!org.academy.api.server.ability.SkillAvailability.requestExecution(
+                    player, Skills.MAGNET_MANIPULATION.get(), false)) return false;
 
-            var context = new MoveContext(player, packet.getMode());
+            var context = new MoveContext(player, PullMode.TARGET_TO_PLAYER);
             ACTIVE_MOVEMENT.put(player, context);
             setVisualState(player, true);
             AbilitySystemServer.registerContext(context);
+            return true;
         }
 
         @SubscribePacket
         public static void handleMoveStop(MoveStopPacket packet) {
-            var context = ACTIVE_MOVEMENT.get(packet.getPacketListener().getPlayer());
-            if (context != null) context.end();
+            stopTargetPull(packet.getPacketListener().getPlayer());
+        }
+
+        /** Same server-owned entry point used by the skill packet. */
+        public static boolean stopTargetPull(ServerPlayer player) {
+            requireThread(player);
+            var context = ACTIVE_MOVEMENT.get(player);
+            if (context == null) return false;
+            context.end();
+            return true;
         }
 
         @SubscribePacket
@@ -332,6 +368,31 @@ public class MagnetManipulation extends Skill {
             player.setData(AttachmentTypes.MAGNET_MANIPULATION_ACTIVE.get(), active);
             player.syncData(AttachmentTypes.MAGNET_MANIPULATION_ACTIVE.get());
         }
+
+        /** Silent lifecycle cleanup; the captured structure, inertia and physics region are retained. */
+        private static void clear(ServerPlayer player) {
+            var context = ACTIVE_MOVEMENT.get(player);
+            if (context == null) return;
+            context.releaseControlledTarget();
+        }
+
+        private static void clearAll() {
+            for (var context : List.copyOf(ACTIVE_MOVEMENT.values())) {
+                try {
+                    context.releaseControlledTarget();
+                } catch (RuntimeException failure) {
+                    AcademyCraft.LOGGER.warn("Magnetic pull shutdown cleanup failed", failure);
+                }
+            }
+            ACTIVE_MOVEMENT.clear();
+        }
+
+        private static void requireThread(ServerPlayer player) {
+            Objects.requireNonNull(player, "player");
+            if (!player.level().getServer().isSameThread()) {
+                throw new IllegalStateException("Magnetic manipulation requires the owning server thread");
+            }
+        }
     }
 
     public static final class MoveContext extends ServerContext {
@@ -339,7 +400,7 @@ public class MagnetManipulation extends Skill {
         private long heartbeat;
         private final PullMode mode;
         private @Nullable Entity controlledTarget;
-        private boolean controlsFallingBlock;
+        private MagneticStructureService.@Nullable Session structure;
         private int movingTicks;
         private double holdDistance = TARGET_FRONT_DISTANCE;
         private boolean ended;
@@ -386,14 +447,17 @@ public class MagnetManipulation extends Skill {
         }
 
         private boolean pullTargetToPlayer() {
+            if (structure != null) return tickStructureControl();
             if (controlledTarget == null || !controlledTarget.isAlive()) {
                 releaseControlledTarget();
                 var target = findCrosshairTarget();
                 if (target == null) return false;
-                controlledTarget = target.entity() != null
-                        ? target.entity()
-                        : createFallingBlockTarget(target.blockPos());
-                if (controlledTarget == null) return false;
+                if (target.entity() != null) {
+                    controlledTarget = target.entity();
+                } else {
+                    if (!beginStructureTarget(target.blockPos())) return false;
+                    return tickStructureControl();
+                }
             }
 
             var look = player.getLookAngle();
@@ -421,20 +485,32 @@ public class MagnetManipulation extends Skill {
             return true;
         }
 
-        private @Nullable FallingBlockEntity createFallingBlockTarget(@Nullable BlockPos pos) {
-            if (org.academy.api.server.ability.AbilityEffectPolicy.blockDestruction(level()) == org.academy.api.server.ability.AbilityEffectPolicy.Decision.DENY
-                    || pos == null || !level().hasChunkAt(pos) || !level().mayInteract(player, pos)
-                    || !org.academy.api.server.ability.SkillTuning.allowBlockDestruction(player, Skills.MAGNET_MANIPULATION.get())) return null;
-            var state = level().getBlockState(pos);
-            if (!isMagnetic(state)
-                    || state.hasBlockEntity()
-                    || state.getDestroySpeed(level(), pos) < 0.0f) {
-                return null;
-            }
-            var fallingBlock = FallingBlockEntity.fall(level(), pos, state);
-            org.academy.api.server.ability.GravityControl.set(fallingBlock, Skills.MAGNET_MANIPULATION.get().getKey(), true);
-            controlsFallingBlock = true;
-            return fallingBlock;
+        private boolean beginStructureTarget(@Nullable BlockPos pos) {
+            if (pos == null) return false;
+            structure = MagneticStructureService.begin(level(), player, List.of(pos)).orElse(null);
+            return structure != null;
+        }
+
+        private boolean tickStructureControl() {
+            var session = structure;
+            if (session == null) return false;
+            var look = player.getLookAngle();
+            var destination = player.getEyePosition().add(look.scale(holdDistance));
+            var milestone = skillMilestone();
+            var range = Skills.MAGNET_MANIPULATION.get().scaledRange(player,
+                    org.academy.api.common.ability.electromaster.MagneticFieldTuning.targetPullRange(milestone));
+            var alive = session.tick(player, destination, look,
+                    org.academy.api.common.ability.electromaster.MagneticFieldTuning.targetPullSpeed(milestone),
+                    TARGET_STOP_DISTANCE, range, milestone);
+            if (!alive) structure = null;
+            return alive;
+        }
+
+        private Optional<Server.Diagnostic> diagnostic() {
+            var session = structure;
+            return session == null ? Optional.empty()
+                    : Optional.of(new Server.Diagnostic(session.stage(), session.reference(), session.blockCount(),
+                    session.controlActive()));
         }
 
         private @Nullable MagneticTarget findCrosshairTarget() {
@@ -480,11 +556,11 @@ public class MagnetManipulation extends Skill {
         }
 
         private void releaseControlledTarget() {
-            if (controlledTarget != null && controlsFallingBlock && controlledTarget.isAlive()) {
-                org.academy.api.server.ability.GravityControl.set(controlledTarget, Skills.MAGNET_MANIPULATION.get().getKey(), false);
-            }
             controlledTarget = null;
-            controlsFallingBlock = false;
+            if (structure != null) {
+                structure.close();
+                structure = null;
+            }
         }
 
         private int skillMilestone() {
@@ -507,6 +583,32 @@ public class MagnetManipulation extends Skill {
             releaseControlledTarget();
             Server.ACTIVE_MOVEMENT.remove(player, this);
             Server.setVisualState(player, false);
+        }
+    }
+
+    @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
+    public static final class Events {
+        private Events() {
+        }
+
+        @SubscribeEvent
+        public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+            if (event.getEntity() instanceof ServerPlayer player) Server.clear(player);
+        }
+
+        @SubscribeEvent
+        public static void onPlayerChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+            if (event.getEntity() instanceof ServerPlayer player) Server.clear(player);
+        }
+
+        @SubscribeEvent
+        public static void onLivingDeath(LivingDeathEvent event) {
+            if (event.getEntity() instanceof ServerPlayer player) Server.clear(player);
+        }
+
+        @SubscribeEvent
+        public static void onServerStopped(ServerStoppedEvent event) {
+            Server.clearAll();
         }
     }
 
