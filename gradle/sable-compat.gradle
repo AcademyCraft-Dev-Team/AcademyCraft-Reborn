@@ -81,7 +81,8 @@ def sableCompatTest = tasks.register('sableCompatTest', Test) {
 tasks.named('check') { dependsOn sableCompatTest }
 
 def bridgeEntries = ['org/academy/internal/common/structure/sable/SableStructureAccess.class',
-                     'org/academy/internal/common/structure/sable/SableStructureTraction.class']
+                     'org/academy/internal/common/structure/sable/SableStructureTraction.class',
+                     'org/academy/internal/common/structure/sable/SableStructureTransactions.class']
 def externalPrefixes = ['dev/ryanhcode/sable/', 'foundry/veil/', 'foundry/imguimc/']
 Closure inspectArchive
 inspectArchive = { byte[] bytes, String label, Set<String> rootEntries, int depth ->
@@ -154,6 +155,8 @@ def runtimeMode = providers.gradleProperty('academySableRuntime').getOrElse('non
 def smokeEnabled = providers.gradleProperty('academySableSmoke').getOrElse('false') == 'true'
 def compoundSmoke = providers.gradleProperty('academySableCompound').getOrElse('false') == 'true'
 if (compoundSmoke && !smokeEnabled) throw new GradleException('academySableCompound requires academySableSmoke')
+def captureSmoke = providers.gradleProperty('academySableCapture').getOrElse('false') == 'true'
+if (captureSmoke && !smokeEnabled) throw new GradleException('academySableCapture requires academySableSmoke')
 def retentionEnabled = providers.gradleProperty('academySableRetention').getOrElse('false') == 'true'
 if (smokeEnabled && retentionEnabled) throw new GradleException('academySableSmoke and academySableRetention are mutually exclusive')
 if ((smokeEnabled || retentionEnabled) && runtimeMode == 'none') throw new GradleException('Sable validation requires an explicit academySableRuntime')
@@ -219,6 +222,7 @@ if (runtimeMode != 'none') {
                 systemProperty 'academy.sable.smoke', 'true'
                 systemProperty 'academy.sable.smoke.side', 'client'
                 systemProperty 'academy.sable.smoke.compound', compoundSmoke.toString()
+                systemProperty 'academy.sable.smoke.capture', captureSmoke.toString()
                 systemProperty 'academy.sable.smoke.root', runRoot.absolutePath
                 systemProperty 'academy.sable.smoke.directory', new File(runBase, 'client').absolutePath
                 programArguments.addAll('--quickPlaySingleplayer', 'Academy Sable Smoke', '--width', '1280', '--height', '720')
@@ -239,6 +243,7 @@ if (runtimeMode != 'none') {
                 systemProperty 'academy.sable.smoke', 'true'
                 systemProperty 'academy.sable.smoke.side', 'server'
                 systemProperty 'academy.sable.smoke.compound', compoundSmoke.toString()
+                systemProperty 'academy.sable.smoke.capture', captureSmoke.toString()
                 systemProperty 'academy.sable.smoke.root', runRoot.absolutePath
                 systemProperty 'academy.sable.smoke.directory', new File(runBase, 'server').absolutePath
             }

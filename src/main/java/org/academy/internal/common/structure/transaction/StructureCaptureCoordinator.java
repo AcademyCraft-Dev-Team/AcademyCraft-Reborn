@@ -131,16 +131,22 @@ public final class StructureCaptureCoordinator {
         requireRunning();
         var transactionId = UUID.randomUUID();
         var status = StructureBackendRouter.status(server);
-        if (status.mode() != StructureBackendStatus.Mode.NATIVE) {
+        if (status.mode() != StructureBackendStatus.Mode.NATIVE
+                && status.mode() != StructureBackendStatus.Mode.SABLE) {
             return StructureCaptureResult.failure(transactionId, StructureCaptureResult.Status.BACKEND_UNAVAILABLE,
                     switch (status.mode()) {
-                        case SABLE -> "sable_capture_unavailable";
                         case MIGRATION_REQUIRED -> "native_migration_required";
                         case INCOMPATIBLE -> "sable_incompatible_backend_disabled";
-                        case NATIVE -> "native_unavailable";
+                        case NATIVE, SABLE -> "backend_unavailable";
                     });
         }
-        var backend = new NativeCaptureTarget(server);
+        var backend = status.mode() == StructureBackendStatus.Mode.NATIVE
+                ? new NativeCaptureTarget(server)
+                : StructureBackendRouter.captureTarget(server).orElse(null);
+        if (backend == null) {
+            return StructureCaptureResult.failure(transactionId, StructureCaptureResult.Status.BACKEND_UNAVAILABLE,
+                    "sable_capture_unavailable");
+        }
         var journal = journal();
         if (journal == null || !journal.healthy()) {
             return StructureCaptureResult.failure(transactionId,
@@ -652,7 +658,8 @@ public final class StructureCaptureCoordinator {
 
     private void recoverPending() {
         requireRunning();
-        if (!StructureBackendRouter.nativeEnabled(server)) return;
+        var mode = StructureBackendRouter.status(server).mode();
+        if (mode != StructureBackendStatus.Mode.NATIVE && mode != StructureBackendStatus.Mode.SABLE) return;
         var journal = journal();
         if (journal == null || !journal.healthy()) {
             AcademyCraft.LOGGER.error("Structure transaction journal unavailable; pending records cannot be recovered");
@@ -729,7 +736,11 @@ public final class StructureCaptureCoordinator {
     }
 
     private static @Nullable CaptureTarget targetFor(MinecraftServer server, Identifier backendId) {
-        return NativeCaptureTarget.ID.equals(backendId) ? new NativeCaptureTarget(server) : null;
+        if (NativeCaptureTarget.ID.equals(backendId)) return new NativeCaptureTarget(server);
+        if (StructureBackendRouter.SABLE_ID.equals(backendId)) {
+            return StructureBackendRouter.captureTarget(server).orElse(null);
+        }
+        return null;
     }
 
     private static List<BlockState> decodeStates(ServerLevel host, StructureTransactionJournal.Record record) {
@@ -781,7 +792,8 @@ public final class StructureCaptureCoordinator {
     @SubscribeEvent
     public static void started(ServerStartedEvent event) {
         var server = event.getServer();
-        if (!StructureBackendRouter.nativeEnabled(server)) return;
+        var mode = StructureBackendRouter.status(server).mode();
+        if (mode != StructureBackendStatus.Mode.NATIVE && mode != StructureBackendStatus.Mode.SABLE) return;
         coordinator(server).recoverPending();
     }
 

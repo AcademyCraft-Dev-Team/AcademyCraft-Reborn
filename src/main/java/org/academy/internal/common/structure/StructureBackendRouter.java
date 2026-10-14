@@ -16,6 +16,7 @@ import org.academy.api.common.structure.*;
 import org.academy.internal.common.structure.physics.NativeStructureTraction;
 import org.academy.internal.common.structure.space.NativeStructureManifest;
 import org.academy.internal.common.structure.space.NativeStructureQueries;
+import org.academy.internal.common.structure.transaction.CaptureTarget;
 import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
@@ -53,12 +54,27 @@ public final class StructureBackendRouter {
                 StructureTraction.Settings settings, BiPredicate<Entity, StructureHandle> permission);
         void onBlockChanged(ServerLevel host, BlockPos position);
         void shutdown(MinecraftServer server);
+
+        /** Neutral capture executor for this backend; empty when it has no capture path. */
+        default Optional<CaptureTarget> captureTarget(MinecraftServer server) {
+            return Optional.empty();
+        }
     }
 
     public static StructureBackendStatus status(MinecraftServer server) { return selection(server).status; }
 
     public static boolean nativeEnabled(MinecraftServer server) {
         return status(server).mode() == StructureBackendStatus.Mode.NATIVE;
+    }
+
+    /** Returns the selected Sable capture executor, or empty when capture is unavailable. */
+    public static Optional<CaptureTarget> captureTarget(MinecraftServer server) {
+        Objects.requireNonNull(server, "server");
+        var selected = selection(server);
+        if (selected.bridge == null || selected.status.mode() != StructureBackendStatus.Mode.SABLE) {
+            return Optional.empty();
+        }
+        return selected.bridge.captureTarget(server);
     }
 
     public static StructureBackend backend(MinecraftServer server) {

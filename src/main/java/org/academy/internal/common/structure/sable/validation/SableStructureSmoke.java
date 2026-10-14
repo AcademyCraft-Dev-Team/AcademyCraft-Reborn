@@ -27,13 +27,16 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.LevelResource;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -57,6 +60,7 @@ import org.academy.internal.common.ability.aeromanip.skills.lv2.PneumaticGrasp;
 import org.academy.internal.common.structure.NativeStructureRuntime;
 import org.academy.internal.common.structure.sable.SableStructureAccess;
 import org.academy.internal.common.structure.sable.SableStaffCompatibility;
+import org.academy.internal.common.structure.transaction.StructureTransactionJournal;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
 
@@ -77,7 +81,7 @@ public final class SableStructureSmoke {
     private static volatile int clientMotionSamples;
     private static SableStructureSmoke active;
     private static boolean initialized;
-    private enum Phase { SKILL, COAST, NPC, ACTOR_REMOVED, CALLBACK_WAIT, CALLBACK_COAST, CALLBACK_REACQUIRE, FINISH }
+    private enum Phase { SKILL, COAST, CAPTURE, NPC, ACTOR_REMOVED, CALLBACK_WAIT, CALLBACK_COAST, CALLBACK_REACQUIRE, FINISH }
     private static final BlockPos BASE = new BlockPos(8, 200, 8);
     private static final Vec3 CELL_CENTER = new Vec3(0.5, 0.5, 0.5);
     private static final StructureTraction.Settings SETTINGS = new StructureTraction.Settings(32, 32, 120, 36, 1000, 3);
@@ -100,6 +104,11 @@ public final class SableStructureSmoke {
     private Object staff;
     private UUID staffActor;
     private Vec3 fixtureEye, initialCenter, releaseVelocity, releasePosition, preVelocity;
+    private final List<BlockPos> captureCells = new ArrayList<>();
+    private final List<BlockState> captureStates = new ArrayList<>();
+    private UUID captureTransaction;
+    private StructureRef captureRef;
+    private boolean captureStarted;
     private Phase phase = Phase.SKILL;
     private int ticks, age, impulseSubsteps, closedSubsteps;
     private int callbackStops, callbackClosedSubsteps;
@@ -299,6 +308,82 @@ public final class SableStructureSmoke {
                 target.pose().localToWorldPoint(local.add(0, 0, -1))).orElseThrow(() -> new IllegalStateException("Real transformed ray missed"));
     }
 
+    private void startCapture() {
+        captureStarted = true;
+        var cells = List.of(BASE.offset(-4, 0, -4), BASE.offset(-3, 0, -4), BASE.offset(-4, 0, -3));
+        for (var cell : cells) {
+            require(host.getBlockState(cell).isAir() && host.getBlockEntity(cell) == null,
+                    "Sable capture source must start empty: " + cell);
+            host.setBlockAndUpdate(cell, Blocks.STONE.defaultBlockState());
+            require(host.getBlockState(cell).is(Blocks.STONE), "Sable capture source write failed: " + cell);
+            captureCells.add(cell);
+            captureStates.add(host.getBlockState(cell));
+        }
+        var result = StructureTransactions.capture(host, StructureCaptureRequest.of(captureCells));
+        require(result.pending() || result.succeeded(),
+                "Sable capture did not start: " + result.status() + "/" + result.detail());
+        captureTransaction = result.transactionId();
+        if (result.succeeded()) {
+            captureRef = result.structure().orElseThrow(() ->
+                    new IllegalStateException("Committed Sable capture must expose its target"));
+        }
+    }
+
+    private void verifyCaptureCommit() {
+        var handle = StructureSpaces.resolve(server, captureRef)
+                .orElseThrow(() -> new IllegalStateException("Committed Sable capture must stay resolvable"));
+        require(handle.lifecycle() == StructureLifecycle.ACTIVE, "Committed Sable capture must stay active");
+        var origin = captureOrigin();
+        for (int index = 0; index < captureCells.size(); index++) {
+            var cell = captureCells.get(index);
+            require(host.getBlockState(cell).isAir(), "Sable capture retained its source: " + cell);
+            require(handle.world().read(cell.subtract(origin)).state().equals(captureStates.get(index)),
+                    "Sable capture target lost the captured state: " + cell);
+        }
+        require(!captureJournalExists(captureTransaction), "Committed Sable capture did not recycle its journal");
+        var area = new AABB(Vec3.atLowerCornerOf(origin), Vec3.atLowerCornerOf(origin.offset(4, 2, 4)));
+        require(host.getEntitiesOfClass(ItemEntity.class, area).isEmpty(), "Sable capture left item drops");
+        var captured = container.getSubLevel(captureRef.id());
+        require(captured instanceof ServerSubLevel, "Committed Sable capture lost its ship");
+        if (captured instanceof ServerSubLevel ship) fixtures.add(ship);
+        evidence.append("sable_capture_committed=true\n");
+    }
+
+    private void verifyCaptureRejection() {
+        var cell = BASE.offset(-2, 0, -4);
+        require(host.getBlockState(cell).isAir() && host.getBlockEntity(cell) == null,
+                "Sable rejection fixture must start empty: " + cell);
+        host.setBlockAndUpdate(cell, Blocks.CHEST.defaultBlockState());
+        require(host.getBlockEntity(cell) instanceof ChestBlockEntity,
+                "Sable rejection fixture lost its block entity");
+        var result = StructureTransactions.capture(host, StructureCaptureRequest.of(List.of(cell)));
+        require(result.status() == StructureCaptureResult.Status.REJECTED
+                        && result.detail().equals("block_entity_not_supported"),
+                "Sable block-entity capture must be rejected: " + result.status() + "/" + result.detail());
+        require(host.getBlockState(cell).is(Blocks.CHEST) && host.getBlockEntity(cell) != null,
+                "Rejected Sable capture must preserve its source");
+        require(!captureJournalExists(result.transactionId()), "Rejected Sable capture must not journal");
+        host.removeBlockEntity(cell);
+        host.setBlockAndUpdate(cell, Blocks.AIR.defaultBlockState());
+        evidence.append("sable_capture_rejected_be_preserved=true\n");
+    }
+
+    private BlockPos captureOrigin() {
+        int x = Integer.MAX_VALUE, y = Integer.MAX_VALUE, z = Integer.MAX_VALUE;
+        for (var cell : captureCells) {
+            x = Math.min(x, cell.getX());
+            y = Math.min(y, cell.getY());
+            z = Math.min(z, cell.getZ());
+        }
+        return new BlockPos(x, y, z);
+    }
+
+    private boolean captureJournalExists(UUID transactionId) {
+        return Files.exists(server.getWorldPath(LevelResource.ROOT)
+                .resolve("data/academy/" + StructureTransactionJournal.DIRECTORY_NAME)
+                .resolve(transactionId + ".dat"));
+    }
+
     private void advance() {
         ticks++; age++;
         require(ticks < 600, "Sable smoke timed out at " + phase);
@@ -343,6 +428,25 @@ public final class SableStructureSmoke {
                 initialCenter = center();
                 require(session.update(session.worldPoint().add(0, 1, 1), Vec3.ZERO) == StructureTraction.Status.ACTIVE,
                         "NPC could not update the public Sable session");
+                next(Boolean.getBoolean("academy.sable.smoke.capture") ? Phase.CAPTURE : Phase.NPC);
+            }
+            case CAPTURE -> {
+                // The NPC traction lease is short; keep it alive while capture spans ticks.
+                require(session.update(session.targetPosition(), Vec3.ZERO) == StructureTraction.Status.ACTIVE,
+                        "NPC traction ended during Sable capture");
+                if (!captureStarted) {
+                    startCapture();
+                    break;
+                }
+                require(age < 200, "Sable capture transaction did not settle in time");
+                var result = StructureTransactions.poll(server, captureTransaction)
+                        .orElseThrow(() -> new IllegalStateException("Sable capture result vanished: " + captureTransaction));
+                if (result.status() == StructureCaptureResult.Status.PENDING) break;
+                require(result.succeeded(), "Sable capture failed: " + result.status() + "/" + result.detail());
+                captureRef = result.structure().orElseThrow(() ->
+                        new IllegalStateException("Committed Sable capture must expose its target"));
+                verifyCaptureCommit();
+                verifyCaptureRejection();
                 next(Phase.NPC);
             }
             case NPC -> {

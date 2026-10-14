@@ -7,6 +7,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.structure.*;
 import org.academy.internal.common.structure.StructureBackendRouter;
+import org.academy.internal.common.structure.transaction.CaptureTarget;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -57,6 +58,10 @@ public final class SableStructureBridge implements StructureBackendRouter.Bridge
     @Override public void onBlockChanged(ServerLevel host, BlockPos position) {
         SableStructureAccess.onBlockChanged(host, position);
         SableStructureTraction.onBlockChanged(host, position);
+    }
+
+    @Override public Optional<CaptureTarget> captureTarget(MinecraftServer server) {
+        return Optional.of(new SableStructureTransactions(server));
     }
 
     @Override public void shutdown(MinecraftServer server) {
