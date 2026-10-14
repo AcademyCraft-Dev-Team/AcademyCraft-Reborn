@@ -55,7 +55,7 @@ public final class NativeStructurePhysicsWorldSmoke {
     private static volatile ClientState clientState = new ClientState("WAITING", List.of(), null, null, "", false, false, null);
     private static volatile String capturedStage = "";
     private static volatile String capturePath = "";
-    private enum Phase { ACTIVATE, BEFORE, FALL, LANDED, CONTROL, SUPPORT, LEASE, ENTITY_ARM, ENTITY_CONTROL, ENTITY_CLEANUP, GRASP, GRASP_CLEANUP, KINETIC, CONTROL_RAW_SOLID, CONTROL_RAW_RESET,
+    private enum Phase { ACTIVATE, BEFORE, FALL, LANDED, CONTROL, SUPPORT, LEASE, ENTITY_ARM, ENTITY_CONTROL, ENTITY_CLEANUP, GRASP, GRASP_CLEANUP, KINETIC, HIGH_SPEED_JET, CONTROL_RAW_SOLID, CONTROL_RAW_RESET,
         CONTROL_RAW_AIR, CONTROL_RAW_FINISH, HOST_UNSUPPORTED, HOST_RESTORED, TERRAIN_FALL, TERRAIN_LAND,
         LOCAL_ADD, LOCAL_REMOVE, UNSUPPORTED, SUPPORTED_AGAIN, FROZEN, THAWED,
         PAIR_ARM, PAIR, EMPTY, UNLOAD, RELOAD, BOUNDARY, FINISHED }
@@ -82,6 +82,7 @@ public final class NativeStructurePhysicsWorldSmoke {
     private NativeStructurePhysicsEntityControlSmokeChecks entityChecks;
     private NativeStructurePhysicsGraspSmokeChecks graspChecks;
     private NativeStructurePhysicsKineticThrowSmokeChecks kineticChecks;
+    private NativeStructurePhysicsHighSpeedJetSmokeChecks jetChecks;
     private StructurePhysicsLease lifecycleLease;
     private AABB bounds;
     private BlockPos base;
@@ -192,7 +193,8 @@ public final class NativeStructurePhysicsWorldSmoke {
         boolean manual = graspChecks != null && graspChecks.manualWindow();
         if (manual) manualTicks++;
         require(ticks - manualTicks < 3500, "Structure physics smoke exceeded its automatic deadline at " + phase);
-        require(manual || phaseTicks < (phase == Phase.GRASP ? 750 : phase == Phase.KINETIC ? 900 : 650),
+        require(manual || phaseTicks < (phase == Phase.GRASP ? 750 : phase == Phase.KINETIC ? 900
+                : phase == Phase.HIGH_SPEED_JET ? 900 : 650),
                 "Structure physics smoke phase timed out: " + phase + diagnostic());
         if (playerId != null) {
             var player = server.getPlayerList().getPlayer(playerId);
@@ -337,6 +339,16 @@ public final class NativeStructurePhysicsWorldSmoke {
             case KINETIC -> {
                 if (!kineticChecks.advance()) return;
                 kineticChecks.close(); kineticChecks = null;
+                if (Boolean.getBoolean("academy.nativeStructurePhysicsHighSpeedJetSmoke")) {
+                    jetChecks = new NativeStructurePhysicsHighSpeedJetSmokeChecks(host, base, evidence);
+                    next(Phase.HIGH_SPEED_JET);
+                    return;
+                }
+                beginRawControlChecks();
+            }
+            case HIGH_SPEED_JET -> {
+                if (!jetChecks.advance()) return;
+                jetChecks.close(); jetChecks = null;
                 beginRawControlChecks();
             }
             case CONTROL_RAW_SOLID -> {
@@ -806,6 +818,7 @@ public final class NativeStructurePhysicsWorldSmoke {
             try { if (entityChecks != null) entityChecks.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
             try { if (graspChecks != null) graspChecks.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
             try { if (kineticChecks != null) kineticChecks.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
+            try { if (jetChecks != null) jetChecks.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
             try { if (region != null) region.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
             try { if (loadedRegion != null) loadedRegion.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
             try { restoreControlSection(); } catch (Throwable restoring) { error.addSuppressed(restoring); }
@@ -850,6 +863,7 @@ public final class NativeStructurePhysicsWorldSmoke {
             if (scenario.entityChecks != null) scenario.entityChecks.close();
             if (scenario.graspChecks != null) scenario.graspChecks.close();
             if (scenario.kineticChecks != null) scenario.kineticChecks.close();
+            if (scenario.jetChecks != null) scenario.jetChecks.close();
             scenario.restoreControlSection();
             scenario.restoreHostTerrainProbe();
             scenario.releaseFixtureFreeze();

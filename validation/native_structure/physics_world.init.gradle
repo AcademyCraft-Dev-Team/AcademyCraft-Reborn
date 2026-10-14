@@ -6,6 +6,8 @@ allprojects {
         if (!(graspSmoke in ['true', 'false'])) throw new GradleException('academyStructurePhysicsGraspSmoke must be true or false')
         def kineticThrowSmoke = providers.gradleProperty('academyStructurePhysicsKineticThrowSmoke').getOrElse('false')
         if (!(kineticThrowSmoke in ['true', 'false'])) throw new GradleException('academyStructurePhysicsKineticThrowSmoke must be true or false')
+        def highSpeedJetSmoke = providers.gradleProperty('academyStructurePhysicsHighSpeedJetSmoke').getOrElse('false')
+        if (!(highSpeedJetSmoke in ['true', 'false'])) throw new GradleException('academyStructurePhysicsHighSpeedJetSmoke must be true or false')
         def runRoot = rootProject.file('run').canonicalFile
         def directory = rootProject.file(providers.gradleProperty('academyStructurePhysicsSmokeDirectory')
                 .getOrElse("run/native-structure-physics-smoke-${mode}")).canonicalFile
@@ -48,6 +50,7 @@ allprojects {
             systemProperty 'academy.nativeStructurePhysicsSmoke', 'true'
             systemProperty 'academy.nativeStructurePhysicsGraspSmoke', graspSmoke
             systemProperty 'academy.nativeStructurePhysicsKineticThrowSmoke', kineticThrowSmoke
+            systemProperty 'academy.nativeStructurePhysicsHighSpeedJetSmoke', highSpeedJetSmoke
             systemProperty 'academy.nativeStructurePhysicsSmokeMode', mode
             systemProperty 'academy.nativeStructurePhysicsSmokeDirectory', directory.absolutePath
             systemProperty 'academy.nativeStructurePhysicsSmokeRunRoot', runRoot.absolutePath

@@ -5,6 +5,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
@@ -18,8 +19,10 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.common.structure.BlockStructure;
-import org.academy.api.common.structure.BlockStructureGridAlignment;
+import org.academy.api.common.structure.StructureLifecycle;
+import org.academy.api.common.structure.StructurePose;
+import org.academy.api.common.structure.StructureRef;
+import org.academy.api.common.structure.StructureSpaces;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.config.AeromanipConfig;
@@ -50,6 +53,7 @@ public final class HighSpeedJetNozzle extends Entity {
     private UUID ownerUuid;
     private BlockPos supportPos = BlockPos.ZERO;
     private UUID supportEntityUuid;
+    private StructureRef structureSupport;
     private BlockPos structureSupportOffset;
     private Direction structureSupportFace;
     private int missingSupportTicks;
@@ -74,6 +78,7 @@ public final class HighSpeedJetNozzle extends Entity {
         this.ownerUuid = ownerUuid;
         this.supportPos = supportPos.immutable();
         supportEntityUuid = null;
+        structureSupport = null;
         structureSupportOffset = null;
         structureSupportFace = null;
         entityData.set(OWNER_UUID, ownerUuid == null ? "" : ownerUuid.toString());
@@ -90,6 +95,7 @@ public final class HighSpeedJetNozzle extends Entity {
         if (support == null) throw new IllegalArgumentException("support entity cannot be null");
         this.ownerUuid = ownerUuid;
         supportEntityUuid = support.getUUID();
+        structureSupport = null;
         structureSupportOffset = null;
         structureSupportFace = null;
         entityData.set(OWNER_UUID, ownerUuid == null ? "" : ownerUuid.toString());
@@ -101,20 +107,20 @@ public final class HighSpeedJetNozzle extends Entity {
 
     public void attachToStructure(
             UUID ownerUuid,
-            BlockStructure support,
+            StructureRef support,
             BlockPos supportOffset,
             Direction face
     ) {
-        if (support == null || support.asEntity().isRemoved()
-                || supportOffset == null || face == null) {
+        if (support == null || supportOffset == null || face == null) {
             throw new IllegalArgumentException("Invalid block structure nozzle support");
         }
         this.ownerUuid = ownerUuid;
-        supportEntityUuid = support.asEntity().getUUID();
+        supportEntityUuid = null;
+        structureSupport = support;
         structureSupportOffset = supportOffset.immutable();
         structureSupportFace = face;
         entityData.set(OWNER_UUID, ownerUuid == null ? "" : ownerUuid.toString());
-        entityData.set(SUPPORT_ENTITY_ID, support.asEntity().getId());
+        entityData.set(SUPPORT_ENTITY_ID, -1);
         entityData.set(FACE, face.get3DDataValue());
         setDirection(Vec3.atLowerCornerOf(face.getUnitVec3i()));
         snapToSurface();
@@ -158,6 +164,15 @@ public final class HighSpeedJetNozzle extends Entity {
     public boolean isAttachedTo(Entity entity) {
         return entity != null && supportEntityUuid != null
                 && supportEntityUuid.equals(entity.getUUID());
+    }
+
+    public boolean isAttachedTo(StructureRef support) {
+        return support != null && support.equals(structureSupport);
+    }
+
+    /** True while this nozzle rides a captured structure instead of a host block or entity. */
+    public boolean isStructureMounted() {
+        return structureSupport != null;
     }
 
     public int activeTicks() {
@@ -226,7 +241,7 @@ public final class HighSpeedJetNozzle extends Entity {
         if (isEntityMounted()) {
             support = supportEntity();
             if (support == null || !support.isAlive()) return;
-            if (support != owner && structureSupportOffset == null) {
+            if (support != owner && !isStructureMounted()) {
                 accelerateTarget(
                         owner,
                         support,
@@ -301,42 +316,55 @@ public final class HighSpeedJetNozzle extends Entity {
             }
             return false;
         }
+        if (structureSupport != null) {
+            if (level() instanceof ServerLevel serverLevel) {
+                var handle = StructureSpaces.resolve(serverLevel.getServer(), structureSupport)
+                        .orElse(null);
+                if (handle != null && handle.lifecycle() == StructureLifecycle.ACTIVE) return true;
+            }
+            if (hasBlockSupport()) {
+                structureSupport = null;
+                structureSupportOffset = null;
+                structureSupportFace = null;
+                return true;
+            }
+            return false;
+        }
+        return hasBlockSupport();
+    }
+
+    private boolean hasBlockSupport() {
         return !level().getBlockState(supportPos).isAir()
                 && level().getBlockState(supportPos)
                 .isFaceSturdy(level(), supportPos, face());
     }
 
     private void snapToSurface() {
-        var support = supportEntity();
-        if (support instanceof BlockStructure structure
+        if (structureSupport != null
                 && structureSupportOffset != null
                 && structureSupportFace != null) {
-            var direction = rotateHorizontal(
-                    Vec3.atLowerCornerOf(structureSupportFace.getUnitVec3i()),
-                    structure.yawDegrees()
-            ).normalize();
+            var pose = structurePose();
+            if (pose == null) return;
+            var direction = pose.localToWorldDirection(
+                    Vec3.atLowerCornerOf(structureSupportFace.getUnitVec3i()));
+            if (!Double.isFinite(direction.x) || direction.lengthSqr() <= 1.0e-8) {
+                direction = new Vec3(0.0, 1.0, 0.0);
+            }
+            direction = direction.normalize();
             setDirection(direction);
             entityData.set(FACE, HighSpeedJet.nearestFace(direction).get3DDataValue());
-            var snapshot = structure.snapshot();
-            var localCenter = new Vec3(
+            var rotatedCenter = pose.localToWorldPoint(new Vec3(
                     structureSupportOffset.getX() + 0.5,
                     structureSupportOffset.getY() + 0.5,
                     structureSupportOffset.getZ() + 0.5
-            );
-            var rotatedCenter = rotateHorizontal(
-                    localCenter,
-                    snapshot.pivotX(),
-                    snapshot.pivotZ(),
-                    structure.yawDegrees()
-            );
-            var center = structure.position().add(rotatedCenter).add(direction.scale(0.535));
-            var alignment = BlockStructureGridAlignment.nearest(
-                    snapshot, structure.position(), structure.yawDegrees());
-            supportPos = alignment.target(structureSupportOffset);
+            ));
+            supportPos = BlockPos.containing(rotatedCenter);
             entityData.set(SUPPORT_POS, supportPos);
+            var center = rotatedCenter.add(direction.scale(0.535));
             setPos(center.x, center.y, center.z);
             return;
         }
+        var support = supportEntity();
         var direction = direction();
         var center = support == null
                 ? Vec3.atCenterOf(supportPos).add(direction.scale(0.535))
@@ -344,26 +372,15 @@ public final class HighSpeedJetNozzle extends Entity {
         setPos(center.x, center.y, center.z);
     }
 
-    private static Vec3 rotateHorizontal(Vec3 value, float yawDegrees) {
-        return rotateHorizontal(value, 0.0, 0.0, yawDegrees);
-    }
-
-    private static Vec3 rotateHorizontal(
-            Vec3 value,
-            double pivotX,
-            double pivotZ,
-            float yawDegrees
-    ) {
-        var radians = Math.toRadians(yawDegrees);
-        var sine = Math.sin(radians);
-        var cosine = Math.cos(radians);
-        var offsetX = value.x - pivotX;
-        var offsetZ = value.z - pivotZ;
-        return new Vec3(
-                pivotX + offsetX * cosine - offsetZ * sine,
-                value.y,
-                pivotZ + offsetX * sine + offsetZ * cosine
-        );
+    private StructurePose structurePose() {
+        if (structureSupport == null || !(level() instanceof ServerLevel serverLevel)) return null;
+        var handle = StructureSpaces.resolve(serverLevel.getServer(), structureSupport).orElse(null);
+        if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) return null;
+        try {
+            return handle.pose();
+        } catch (IllegalStateException unavailable) {
+            return null;
+        }
     }
 
     private Entity supportEntity() {
@@ -430,7 +447,8 @@ public final class HighSpeedJetNozzle extends Entity {
         supportEntityUuid = input.getString("academy_support_entity")
                 .map(HighSpeedJetNozzle::parseUuid)
                 .orElse(null);
-        if (input.getBooleanOr("academy_has_structure_support", false)) {
+        structureSupport = readStructureSupport(input);
+        if (structureSupport != null) {
             structureSupportOffset = new BlockPos(
                     input.getIntOr("academy_structure_support_x", 0),
                     input.getIntOr("academy_structure_support_y", 0),
@@ -465,8 +483,14 @@ public final class HighSpeedJetNozzle extends Entity {
         if (supportEntityUuid != null) {
             output.putString("academy_support_entity", supportEntityUuid.toString());
         }
-        if (structureSupportOffset != null && structureSupportFace != null) {
+        if (structureSupport != null && structureSupportOffset != null && structureSupportFace != null) {
             output.putBoolean("academy_has_structure_support", true);
+            output.putString("academy_structure_support_id", structureSupport.id().toString());
+            output.putString("academy_structure_support_dimension",
+                    structureSupport.dimension().toString());
+            output.putString("academy_structure_support_backend",
+                    structureSupport.backend().toString());
+            output.putLong("academy_structure_support_generation", structureSupport.generation());
             output.putInt("academy_structure_support_x", structureSupportOffset.getX());
             output.putInt("academy_structure_support_y", structureSupportOffset.getY());
             output.putInt("academy_structure_support_z", structureSupportOffset.getZ());
@@ -477,6 +501,20 @@ public final class HighSpeedJetNozzle extends Entity {
         output.putInt("academy_active_ticks", activeTicks());
         output.putFloat("academy_direction_yaw", getYRot());
         output.putFloat("academy_direction_pitch", getXRot());
+    }
+
+    private static StructureRef readStructureSupport(ValueInput input) {
+        var id = input.getString("academy_structure_support_id")
+                .map(HighSpeedJetNozzle::parseUuid)
+                .orElse(null);
+        if (id == null) return null;
+        var dimension = input.getString("academy_structure_support_dimension")
+                .map(Identifier::tryParse).orElse(null);
+        var backend = input.getString("academy_structure_support_backend")
+                .map(Identifier::tryParse).orElse(null);
+        if (dimension == null || backend == null) return null;
+        var generation = input.getLongOr("academy_structure_support_generation", 0L);
+        return generation < 0 ? null : new StructureRef(id, dimension, backend, generation);
     }
 
     private static UUID parseUuid(String value) {

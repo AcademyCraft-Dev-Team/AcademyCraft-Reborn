@@ -22,6 +22,12 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -572,6 +578,45 @@ public final class HighSpeedJet extends Skill {
                 throw new IllegalArgumentException("Program cost multiplier must be positive");
             }
             return multiplier;
+        }
+    }
+
+    @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
+    public static final class Events {
+        private Events() {
+        }
+
+        @SubscribeEvent
+        public static void onPlayerTick(PlayerTickEvent.Post event) {
+            if (event.getEntity() instanceof ServerPlayer player) {
+                HighSpeedJetStructureService.tick(player);
+            }
+        }
+
+        @SubscribeEvent
+        public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+            if (event.getEntity() instanceof ServerPlayer player) {
+                HighSpeedJetStructureService.clear(player);
+            }
+        }
+
+        @SubscribeEvent
+        public static void onPlayerChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+            if (event.getEntity() instanceof ServerPlayer player) {
+                HighSpeedJetStructureService.clear(player);
+            }
+        }
+
+        @SubscribeEvent
+        public static void onLivingDeath(LivingDeathEvent event) {
+            if (event.getEntity() instanceof ServerPlayer player) {
+                HighSpeedJetStructureService.clear(player);
+            }
+        }
+
+        @SubscribeEvent
+        public static void onServerStopped(ServerStoppedEvent event) {
+            HighSpeedJetStructureService.clearAll();
         }
     }
 
