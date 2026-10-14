@@ -35,6 +35,7 @@ import org.academy.api.common.structure.StructureSpaces;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.movement.VectorStructureService;
 import org.academy.internal.common.ability.accelerator.skills.lv3.KineticThrow;
 
 import java.util.ArrayList;
@@ -146,7 +147,7 @@ final class NativeStructurePhysicsKineticThrowSmokeChecks implements AutoCloseab
                     require(age < 300, "Kinetic throw capture never started");
                     return false;
                 }
-                if (current.stage() == KineticThrow.Server.Stage.CAPTURING) {
+                if (current.stage() == VectorStructureService.Stage.CAPTURING) {
                     sawPending = true;
                     return false;
                 }

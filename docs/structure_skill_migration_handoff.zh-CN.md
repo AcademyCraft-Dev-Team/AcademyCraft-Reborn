@@ -192,6 +192,102 @@
 - 未验边界：Sable 的磁场牵引（捕获提交后保留结构；本批未跑 Sable 专服烟测，`sableCompatTest` 11 项零失败）；真实双端与真实 TCP/键盘输入；多格或连通磁力结构（本节点只迁移旧有的单格语义）；旧 `FallingBlockEntity` 的落地磨损/伤害/变回方块表现未逐一对照；每次使用最多新开一个物理区域（上限 3）且长期回收未实现（同 P25/P27）；`ServerElectromasterProgramRuntime` 的磁力行动节点仍走旧实体路径。
 - 当前构建（含 P19–P28）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `091B56C01D7778A48B9DE3FE557FD6094024D71DE3F29D53B8110F4005775706`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `8BFDC79DD0BA0523C34EDC2C4ECB04C354D204CE4F6393796C35DDB1215A5063`。未复制到整合包，未操作用户存档。
 
+## 精密操作节点阶段设计（P29 起）
+
+本节把计划书“精密操作节点的数据流与版本迁移”与三类能力职责表（`docs/block_structure_physics_and_sable_compat_plan.zh-CN.md` 第 571–603 行）落成阶段、节点、value types、迁移与验收计划。节点未实现前不得提前发布到编辑器、模板或翻译；未完成前置必须以明确拒绝返回，不得虚假交付，也不得用旧实体或静默成功顶替。
+
+### 阶段划分
+
+| 阶段 | 范围 | 出口条件 |
+| --- | --- | --- |
+| P29（本批） | 公共契约落点与矢量结构服务抽取：`VectorStructureService` 承接动能投掷全部结构逻辑；不新增节点 | 抽取后行为逐值等价，单测、烟测与双构建通过 |
+| P30 | 矢量操作节点族：创建/提取、获取控制、移动、旋转、发射、终止控制、安全静态化 | 每类“创建 → 移动 → 旋转 → 终止”与“发射/静态化失败”图，玩家/程序/非玩家入口同服务 |
+| P31 | 电击使节点族：磁性提取、显式强制磁化、磁性牵引/旋转/发射；`ServerElectromasterProgramRuntime.magneticMove` 从 `FallingBlockEntity` + 直接赋速 + `damageAlongTrajectory` 旧路径迁移 | 磁性参与质量、作用点与真实接触结算；旧路径删除或显式拒绝 |
+| P32 | 空力使节点族：喷口锚点、局部方向逐物理子步、力偶旋转、停喷保留线角速度；把现有 `action/launch_block_structure` 纳入统一节点族 | 喷口破坏/卸载重映射、共享资源预算、对称喷口抵消验收 |
+| P33 | 收尾：安全静态化拒绝路径、图版本迁移器、编辑器 palette/模板/翻译/剪贴板、全矩阵图验收 | 旧图不因 `schemaVersion` 被拒；静态化失败保留内容与恢复证据 |
+
+### 节点职责与三套 ID
+
+节点 ID 沿用各能力 `program/<ability>/action/...` 命名空间与 `action/` 前缀；三类能力采用同一路径形状，便于公共 value types、编辑器和迁移器复用。
+
+| 职责 | 必需输入 | 输出与规则（含拒绝） | 三类路径（accelerator/electromaster/aeromanip 同形） |
+| --- | --- | --- | --- |
+| 创建/提取 | flow、选区或宿主格、能力配置、预算 | structure、result、flow；完成内容事务后才发布结构引用；选区空/被占/超预算/权限不足显式拒绝并保留源方块 | `action/structure/extract` |
+| 获取控制 | flow、structure/anchor、能力控制配置 | control、result、flow；权限/占用/质量/范围拒绝均有明确结果，不抢占继任控制 | `action/structure/control` |
+| 移动 | flow、control、世界目标或显式跟随锚点、持续时长 | result、flow；矢量动量修正、磁性牵引、气动受力保持不同约束；越界/失联安全结束并保留结构 | `action/structure/move` |
+| 旋转 | flow、control、目标姿态或角运动、作用点/喷口配置 | result、flow；能力无法形成所需力矩时拒绝或返回有限结果，不无条件赋姿态 | `action/structure/rotate` |
+| 发射 | flow、control、方向及冲量/能力强度 | result、flow；交接为有界发射操作，不能提前对整条预设轨迹结算伤害 | `action/structure/launch` |
+| 终止控制 | flow、control | result、flow；幂等撤销自己的后续命令，保留结构与运动，不触及继任控制 | `action/structure/release` |
+| 安全静态化 | flow、structure、目标网格姿态、放置策略 | result、flow；与终止分开，失败保留内容和恢复证据，不先 discard 再补方块 | `action/structure/staticize` |
+
+- 公共查询节点 `program/core/query/look_structure`、`program/core/query/structure_motion`（P18）语义不变；行动节点不得按“该玩家最近控制的结构”隐式寻址，必须经显式 structure/control 端口。
+- 空力使现有 `action/launch_block_structure`（P27 已走 `HighSpeedJetStructureService`）在 P32 映射到统一族；旧 ID 通过迁移器保留端口语义，避免旧图失效。
+- 电击使的强制磁化是显式、付费、有期限的覆盖效果，与控制令牌分别授权与计费；一格铁不得给予整船无限推力。
+- 安全静态化独立于终止：终止保留结构、惯性与重力；静态化必须先验证完整目标 footprint、加载、权限、占用和可支持的方块状态旋转，全部接纳后才撤销来源。
+
+### value types 计划
+
+只新增 P30–P32 真正需要的最小集合，避免过度设计；其余继续使用既有世界点/格/实体/向量类型：
+
+| 类型 | 用途 | 约束 |
+| --- | --- | --- |
+| `structure_control` | 绑定 actor、runtime 与 invocation 的运行期控制令牌 | 不持久化、不可保存后自动恢复；失效后不重获权限 |
+| `structure_operation_result` | 结构操作结果（status/detail/reference） | 机器可读拒绝原因，程序分支不解析文本日志 |
+| `structure_anchor` | 结构局部格/作用点（磁性点、喷口支撑点、旋转作用点） | 运行时解析到世界位置；结构卸载/拆分后失效不猜测 |
+| `structure_anchor_set` | 多作用点有限力组（力偶/旋转） | 合成总力与 `Σ(r × F)`，节点数/锚点数/拆分碎片不得复制预算 |
+| `structure_pose` | 目标姿态或角运动输入 | 未具备有限力矩控制前旋转节点显式拒绝 |
+
+- `structure_reference` 已有；`ACTION_RESULT` 保留通用动作语义，结构操作结果单独成类型以携带 reference 与拒绝码。
+- 编辑器 palette/options、模板、中英翻译、剪贴板和导入导出随类型发布同步更新；未实现类型不得提前出现在可选列表。
+
+### 控制令牌
+
+- 获取控制成功后签发，绑定 actor（玩家/非玩家资源提供方）、runtime 与 invocation；同一结构同一时刻只有一个独占令牌。
+- 不写入存档、不跨会话恢复；持久保存的结构身份在运行时重新解析和授权，失效令牌不得重获权限。
+- 终止幂等：重复终止是空操作；只撤销本令牌自己下发的后续命令与持续力，保留结构、区域与惯性；绝不夺取或影响继任者的控制。
+- 令牌不是权限：reach、保护、资源仍由 actor context 逐次校验；使用公共 API 不产生无限预算。
+
+### 版本迁移
+
+- 三套能力图、节点 schema 与二进制 envelope 分别迁移；旧图保留原端口语义，由显式迁移器补齐新类型端口并保留原数据。
+- 不得直接把 catalog `schemaVersion` 改成 2 导致当前严格版本检查拒绝旧图；迁移器必须能回读旧 action 节点并保留其端口。
+- 控制令牌不可持久恢复；迁移后的图在运行时重新获取控制并再次授权。
+- 编辑器元数据、翻译键、模板、剪贴板与 `*ProgramExecutionBridge` 的 stage/undo 补偿同步迁移，`ProgramActionTransaction` 补偿按计划书第 603 行区分未提交内容与已参与物理的效果。
+
+### 验收计划与未实现前置
+
+- 每类能力验收两张图：“创建 → 移动 → 旋转 → 终止”与“发射/安全静态化失败”；玩家、程序、非玩家入口必须复用同一能力服务，不新增旁路。
+- 内容守恒、资源预算、伤害去重与停止控制后的自由运动按计划书“后续迁移清单与验收”第 6 项执行；真实接触才结算伤害，不提前对预设轨迹结算。
+- **未实现前置，不得虚假交付**：有限力矩姿态控制（角速度反馈、最短四元数误差、有限力矩与角冲量预算）与安全静态化（完整 footprint/加载/权限/占用/方块状态旋转）尚未实现。P30 前 `action/structure/rotate` 与 `action/structure/staticize` 必须返回明确的 `unavailable` 结果，发射节点不得预结算整条轨迹，普通移动/旋转不得用 `detach → setPose → attach` 顶替。
+- 安全静态化失败图：目标 footprint 被占、未加载、权限不足或不可放置时拒绝并保留唯一内容所有者；成功结束明确释放控制或移交有期限操作。
+
+### 现状（P29 开始时）
+
+- P29 抽取前 `KineticThrow` 的结构逻辑全部在技能类内（`cropToBudget`、`StructureTransactions.capture/poll`、区域挂载、Anchor 抬升、冲量发射、逐 tick 跟随、接触伤害/击退、释放清理）；P29 已抽到 `VectorStructureService`，抽取前后对照与验证见下节。
+- 三套 `Server*ProgramRuntime` 尚无任何结构行动节点：只有公共查询节点 `query/look_structure`、`query/structure_motion`，以及空力使 `action/launch_block_structure`（P27 已走 `HighSpeedJetStructureService`）。
+- `ServerElectromasterProgramRuntime.magneticMove` 仍走 `FallingBlockEntity` + 直接赋速 + `damageAlongTrajectory` 预设轨迹伤害旧路径（P31 迁移）。
+- Sable 侧只有 P24 捕获与 P18 查询/牵引；Sable 的发射、飞行与静态化必须显式拒绝，不回退旧实体、不静默成功。
+
+### P29 矢量结构服务抽取（2026-10-14）
+
+- 改动/新增文件：
+  - 新增 `src/main/java/org/academy/internal/common/ability/accelerator/movement/VectorStructureService.java`（967 行）：捕获选区/预裁/事务、区域挂载与 Anchor 抬升、Sable 牵引抬升、冲量发射、逐 tick 跟随 rebind、接触伤害/击退、释放清理，以及 `Stage`/`Diagnostic`/`CapturePlan`/`Session`。
+  - 重写 `src/main/java/org/academy/internal/common/ability/accelerator/skills/lv3/KineticThrow.java`（1268 → 428 行）：保留 HUD/按键/网络包/蓄力/资源执行/入口/生命周期清理；`releaseCharge` 的选区改为服务 `planCapture`，扣费仍在 `executeActive` 内，随后 `beginCapture` 启动事务；`throwHeld`/`stopHeld`/`diagnostic` 委托服务（Diagnostic 使用服务类型）。技能几何、每格伤害与投掷方向公式保留为公开静态配置，与 P27 服务读取 `HighSpeedJet.*` 同构。
+  - 新增 `src/test/java/org/academy/internal/common/ability/accelerator/movement/VectorStructureServiceTest.java`：从 `KineticThrowTest` 原样迁移 `cropToBudget`/`regionBounds`/`followBounds`/`edgeDistance` 四个用例，断言与期望值一字未改。
+  - `KineticThrowTest.java`：保留蓄力几何（`chargeTier`+半径表）、每格伤害、投掷方向三个用例；删去的四个用例在服务测试中等价存在，测试总数不变。
+  - `NativeStructurePhysicsKineticThrowSmokeChecks.java`：仅把 `KineticThrow.Server.Stage.CAPTURING` 引用改为 `VectorStructureService.Stage.CAPTURING`（与 P27/P28 烟测引用各自服务 `Stage` 一致），所有证据与断言未改。
+- 抽取前后对照：
+  - 技能内 `CHARGES`/`CAPTURES`/`HELD_STRUCTURES` 三表：`CHARGES`（蓄力输入）留在技能；`CAPTURES`/`HELD_STRUCTURES` 原样变为服务 `CAPTURES`/`SESSIONS`，键仍为玩家 UUID，pending 事务与已持结构并存的既有语义保留。
+  - `captureAndLift` 的选区、前方半空间裁剪、上方安全裁剪与确定性预算预裁成为服务 `planCapture`（只读，拒绝日志与 actionbar 文案不变）；`StructureTransactions.capture/poll` 与跨 tick `CaptureState` 成为服务 `beginCapture`/`tickCapture`。
+  - `HeldStructure` → 服务 `Session`：stage/anchor 控制/Sable 牵引/expiry/impact latch/不可用宽限逐字段迁移；`releaseHeld` → `terminate`（幂等关闭 lease 与牵引，保留结构与物理区域及惯性）。
+  - `followRegion`/`tryRebind`/`applyImpacts`/`settleImpact`、`projection`/`union`、`lookedAtStructure`/`aimedAtHeld`/`viewerInsideStructure`、`playKineticCue`/`playImpactCue`、`capturePolicy`/`capturePermission`/`cellBudget`/`sableMode`，以及 `cropToBudget`/`regionBounds`/`edgeDistance`/`followBounds` 与私有几何工具全部逐行搬迁。
+- 服务入口（本批只留入口，不接节点）：`planCapture`/`beginCapture`/`session`/`tick`/`launch`/`terminate`/`clear`/`clearAll`；`Session` 暴露 stage/reference/blockCount/lifted/controlActive/flying/sable/impacts，供 P30 程序节点与查询复用；`CapturePlan` 携带 seed/tier/positions。
+- 行为等价：专服烟测 `run/native-structure-physics-smoke-server-p29-r1` PASSED、`exit_status=0`（903 tick）；结果文件 258 行中 `kinetic_*`、`hsjet_*`、`mag_*`、`support_*`、`grasp_*`、`terrain_*` 等全部证据与 P28 r6 逐行一致，仅 `first_ref`/`second_ref`/`shared_session` 三个随机 UUID 不同（`kinetic_lift_rise=3.2498730230960433`、`kinetic_throw_speed=50.0`、`kinetic_impact_damage=45.0`、`kinetic_follow_rebinds=10` 等未变）。
+- 验证：单测 2580 项 + Sable 11 项零失败/错误/跳过（`build/p29-tests-r1.log`）；`build -DisDev=true` 22 秒、`-DisDev=false` 35 秒通过（`build/p29-build-dev.log`、`build/p29-build-release.log`）；编译日志 `build/p29-compile.log`；烟测日志 `build/p29-world-smoke-r1.log`。
+- 失败轨迹：本轮烟测首轮（也是唯一一轮）即通过，无失败目录需要保留；服务初稿中 `edgeDistance` 曾有一处转录笔误，在首次编译前人工复核修正，未进入任何构建、测试或世界运行。
+- 未验边界：Sable 的矢量发射与飞行仍未实现（捕获提交后保留结构，同 P25）；悬停 10 秒/飞行 30 秒超时只释放控制；每次使用最多新开一个物理区域（上限 3）且长期回收未实现；真实双端与真实 TCP/键盘输入未验；程序节点、非玩家施术者、旋转与安全静态化不在本批。
+- 当前构建（含 P19–P29）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `E29EB6C03BC1448714C7876E805CB23B0EEE88F919E2190C1299D465610BC774`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `D529315355B5725E2A1F24437D309619196B6049252662FA96A0DCFBFE4B7DF3`。未复制到整合包，未操作用户存档。
+
 <!-- P24 第一步历史记录（保留供核对）
 - 新增 `CaptureTarget`（transaction 包内接口）：`allocate/cellBudget/ready/writeCell/readCell/clearCell/quarantined/deactivate/save/releaseEmpty/resolve(recovery)/verifyCopy/backendId`；新增 `NativeCaptureTarget` 独占全部 `NativeStructureRuntime`/`StructureHandle`/几何预算调用。`StructureCaptureCoordinator` 不再直接接触任何后端类型，恢复路径经 `targetFor(server, record.backend())` 按日志 `Record.backend` 分派（目前仅原生，非原生仍保留记录并报错）。公共 API、状态/明细/日志文本、journal 阶段与保留/回滚语义均未改变。
 - 验证（行为等价）：单元 2558 + Sable 11 零失败（`build/p24a-tests-final.log`）；事务 gametest `run/native-structure-transaction-gametest-r9` 通过（完整提交、拒绝、回滚/前向恢复、容量回收，`All 1 required tests passed`）；`build -DisDev=true/-DisDev=false` 均通过。
