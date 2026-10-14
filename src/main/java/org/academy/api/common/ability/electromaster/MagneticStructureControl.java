@@ -26,6 +26,17 @@ public final class MagneticStructureControl {
     }
 
     /**
+     * Bounded magnetic participation of one captured structure: natively magnetic cells over all
+     * captured cells, clamped to [0, 1]. An empty selection reports full participation because no
+     * mass estimate exists; a structure with one magnetic cell and many inert cells reports the
+     * same ratio, so a single magnetic cell cannot accelerate the whole body.
+     */
+    public static double magneticParticipation(int magneticCells, int totalCells) {
+        if (totalCells <= 0) return 1.0;
+        return Math.clamp((double) Math.max(0, magneticCells) / totalCells, 0.0, 1.0);
+    }
+
+    /**
      * Force for exactly one outer physics step that reproduces the legacy per-tick pull
      * velocity in converted units. The legacy profile runs in blocks per tick, the solver
      * uses blocks per second, and the full force vector is clamped to the shared absolute
@@ -34,6 +45,18 @@ public final class MagneticStructureControl {
     public static Vec3 pullForce(Vec3 currentVelocityPerSecond, Vec3 origin, Vec3 target,
                                  Vec3 fallbackDirection, double maxSpeedPerTick, double stopDistance,
                                  double mass) {
+        return pullForce(currentVelocityPerSecond, origin, target, fallbackDirection,
+                maxSpeedPerTick, stopDistance, mass, 1.0);
+    }
+
+    /**
+     * Same converted pull profile scaled by the structure's magnetic participation. The whole
+     * body's total mass still sets the acceleration through {@code mass}, but only the magnetic
+     * share of it can be driven; a participation of zero produces no force at all.
+     */
+    public static Vec3 pullForce(Vec3 currentVelocityPerSecond, Vec3 origin, Vec3 target,
+                                 Vec3 fallbackDirection, double maxSpeedPerTick, double stopDistance,
+                                 double mass, double participation) {
         requireMass(mass);
         var desiredPerTick = MagneticMovement.calculatePullVelocity(
                 LegacyMotionUnits.velocityPerTick(currentVelocityPerSecond),
@@ -43,7 +66,9 @@ public final class MagneticStructureControl {
                 .scale(mass / PHYSICS_STEP_SECONDS);
         var limit = StructurePhysicsControl.MAX_FORCE - 1.0e-6;
         var length = force.length();
-        return length > limit ? force.scale(limit / length) : force;
+        if (length > limit) force = force.scale(limit / length);
+        var bounded = Math.clamp(participation, 0.0, 1.0);
+        return bounded >= 1.0 ? force : force.scale(bounded);
     }
 
     private static void requireMass(double value) {

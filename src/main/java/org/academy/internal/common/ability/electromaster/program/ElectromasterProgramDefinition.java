@@ -43,7 +43,14 @@ public final class ElectromasterProgramDefinition {
                 configuration.addProperty("power", 1.0f);
                 configuration.addProperty("maximum_jumps", 4);
             }
-            if (id.equals(ElectromasterProgramNodeIds.MAGNETIC_MOVE)) {
+            if (id.equals(ElectromasterProgramNodeIds.STRUCTURE_LAUNCH)) {
+                configuration.addProperty("power", 1.0f);
+            } else if (id.equals(ElectromasterProgramNodeIds.STRUCTURE_EXTRACT)) {
+                configuration.addProperty("budget", 0);
+                configuration.addProperty("force_magnetize", false);
+            } else if (id.equals(ElectromasterProgramNodeIds.STRUCTURE_MOVE)) {
+                configuration.addProperty("duration_seconds", 1.0f);
+            } else if (id.equals(ElectromasterProgramNodeIds.MAGNETIC_MOVE)) {
                 configuration.addProperty("target_type", "entity");
                 configuration.addProperty("mode", "pull");
                 configuration.addProperty("force_magnetize", false);

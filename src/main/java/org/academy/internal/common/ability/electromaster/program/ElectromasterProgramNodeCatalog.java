@@ -65,6 +65,30 @@ public final class ElectromasterProgramNodeCatalog implements ProgramNodeLookup 
                 configuration -> currentRechargeSchema(configuration.targetType()),
                 ProgramNodeRole.ACTION, ProgramNodePurity.ACTION,
                 capabilityScope(ElectromasterProgramCapabilities.CURRENT_RECHARGE)));
+        put(result, ElectromasterProgramNodeIds.STRUCTURE_EXTRACT, structureExtractType());
+        put(result, ElectromasterProgramNodeIds.STRUCTURE_CONTROL, unitType(
+                structureControlSchema(),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(ElectromasterProgramCapabilities.STRUCTURE)));
+        put(result, ElectromasterProgramNodeIds.STRUCTURE_MOVE, structureMoveType());
+        put(result, ElectromasterProgramNodeIds.STRUCTURE_ROTATE, unitType(
+                structureRotateSchema(),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(ElectromasterProgramCapabilities.STRUCTURE)));
+        put(result, ElectromasterProgramNodeIds.STRUCTURE_LAUNCH, powerType(
+                structureLaunchSchema(), ElectromasterProgramCapabilities.STRUCTURE));
+        put(result, ElectromasterProgramNodeIds.STRUCTURE_RELEASE, unitType(
+                structureReleaseSchema(),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(ElectromasterProgramCapabilities.STRUCTURE)));
+        put(result, ElectromasterProgramNodeIds.STRUCTURE_STATICIZE, unitType(
+                structureStaticizeSchema(),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(ElectromasterProgramCapabilities.STRUCTURE)));
         types = Map.copyOf(result);
     }
 
@@ -176,6 +200,145 @@ public final class ElectromasterProgramNodeCatalog implements ProgramNodeLookup 
         );
     }
 
+    private static ProgramNodeSchema structureExtractSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput("host", ProgramValueTypes.BLOCK_POSITION)
+                ),
+                List.of(
+                        ProgramPortDefinition.output(
+                                "structure", ProgramValueTypes.STRUCTURE_REFERENCE),
+                        ProgramPortDefinition.output(
+                                "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                        ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)
+                )
+        );
+    }
+
+    private static ProgramNodeSchema structureControlSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput(
+                                "structure", ProgramValueTypes.STRUCTURE_REFERENCE)
+                ),
+                List.of(
+                        ProgramPortDefinition.output(
+                                "control", ProgramValueTypes.STRUCTURE_CONTROL),
+                        ProgramPortDefinition.output(
+                                "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                        ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)
+                )
+        );
+    }
+
+    private static ProgramNodeSchema structureMoveSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput(
+                                "control", ProgramValueTypes.STRUCTURE_CONTROL),
+                        ProgramPortDefinition.optionalInput(
+                                "target", ProgramValueTypes.WORLD_POSITION),
+                        ProgramPortDefinition.optionalInput(
+                                "anchor", ProgramValueTypes.STRUCTURE_ANCHOR),
+                        ProgramPortDefinition.optionalInput("seconds", ProgramValueTypes.FLOAT)
+                ),
+                List.of(
+                        ProgramPortDefinition.output(
+                                "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                        ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)
+                )
+        );
+    }
+
+    private static ProgramNodeSchema structureRotateSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput(
+                                "control", ProgramValueTypes.STRUCTURE_CONTROL),
+                        ProgramPortDefinition.optionalInput(
+                                "pose", ProgramValueTypes.STRUCTURE_POSE)
+                ),
+                List.of(
+                        ProgramPortDefinition.output(
+                                "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                        ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)
+                )
+        );
+    }
+
+    private static ProgramNodeSchema structureLaunchSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput(
+                                "control", ProgramValueTypes.STRUCTURE_CONTROL),
+                        ProgramPortDefinition.requiredInput(
+                                "direction", ProgramValueTypes.DIRECTION)
+                ),
+                List.of(
+                        ProgramPortDefinition.output(
+                                "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                        ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)
+                )
+        );
+    }
+
+    private static ProgramNodeSchema structureReleaseSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput(
+                                "control", ProgramValueTypes.STRUCTURE_CONTROL)
+                ),
+                List.of(
+                        ProgramPortDefinition.output(
+                                "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                        ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)
+                )
+        );
+    }
+
+    private static ProgramNodeSchema structureStaticizeSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput(
+                                "structure", ProgramValueTypes.STRUCTURE_REFERENCE),
+                        ProgramPortDefinition.optionalInput(
+                                "target", ProgramValueTypes.BLOCK_POSITION)
+                ),
+                List.of(
+                        ProgramPortDefinition.output(
+                                "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                        ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)
+                )
+        );
+    }
+
+    private static ProgramNodeType<ExtractStructureConfiguration> structureExtractType() {
+        return new FixedNodeType<>(
+                ExtractStructureConfiguration.CODEC,
+                structureExtractSchema(),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(ElectromasterProgramCapabilities.STRUCTURE)
+        );
+    }
+
+    private static ProgramNodeType<MoveStructureConfiguration> structureMoveType() {
+        return new FixedNodeType<>(
+                MoveStructureConfiguration.CODEC,
+                structureMoveSchema(),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(ElectromasterProgramCapabilities.STRUCTURE)
+        );
+    }
+
     private static <C> ProgramNodeType<C> dynamicType(
             Codec<C> codec,
             Function<C, ProgramNodeSchema> schema,
@@ -247,6 +410,29 @@ public final class ElectromasterProgramNodeCatalog implements ProgramNodeLookup 
                 .fieldOf("power")
                 .xmap(PowerConfiguration::new, PowerConfiguration::power)
                 .codec();
+    }
+
+    /**
+     * Magnetic extraction configuration: a positive budget further caps the backend's own cell
+     * limit, and force magnetization explicitly requests the paid, time-limited overlay.
+     */
+    public record ExtractStructureConfiguration(int budget, boolean forceMagnetize) {
+        public static final Codec<ExtractStructureConfiguration> CODEC =
+                RecordCodecBuilder.create(instance -> instance.group(
+                        Codec.intRange(0, 256).optionalFieldOf("budget", 0)
+                                .forGetter(ExtractStructureConfiguration::budget),
+                        Codec.BOOL.optionalFieldOf("force_magnetize", false)
+                                .forGetter(ExtractStructureConfiguration::forceMagnetize)
+                ).apply(instance, ExtractStructureConfiguration::new));
+    }
+
+    public record MoveStructureConfiguration(float durationSeconds) {
+        public static final Codec<MoveStructureConfiguration> CODEC =
+                Codec.floatRange(0.1f, 10.0f)
+                        .optionalFieldOf("duration_seconds", 1.0f)
+                        .xmap(MoveStructureConfiguration::new,
+                                MoveStructureConfiguration::durationSeconds)
+                        .codec();
     }
 
     public record EnergyDetectionConfiguration(

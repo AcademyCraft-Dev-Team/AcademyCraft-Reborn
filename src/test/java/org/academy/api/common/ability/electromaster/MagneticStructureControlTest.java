@@ -51,4 +51,30 @@ class MagneticStructureControlTest {
                 () -> MagneticStructureControl.pullForce(Vec3.ZERO, Vec3.ZERO, new Vec3(1, 0, 0),
                         new Vec3(1, 0, 0), 1.0, 0.5, 0.0));
     }
+
+    @Test
+    void magneticParticipationIsTheBoundedMagneticCellRatio() {
+        assertEquals(0.75, MagneticStructureControl.magneticParticipation(3, 4), 1.0e-9);
+        assertEquals(0.125, MagneticStructureControl.magneticParticipation(1, 8), 1.0e-9);
+        assertEquals(1.0, MagneticStructureControl.magneticParticipation(4, 4), 1.0e-9);
+        assertEquals(1.0, MagneticStructureControl.magneticParticipation(0, 0), 1.0e-9);
+        assertEquals(0.0, MagneticStructureControl.magneticParticipation(0, 8), 1.0e-9);
+        assertEquals(1.0, MagneticStructureControl.magneticParticipation(99, 8), 1.0e-9);
+        assertEquals(0.0, MagneticStructureControl.magneticParticipation(-3, 8), 1.0e-9);
+    }
+
+    @Test
+    void programPullForceScalesTheConvertedProfileByParticipation() {
+        var full = MagneticStructureControl.pullForce(Vec3.ZERO, Vec3.ZERO, new Vec3(20, 0, 0),
+                new Vec3(1, 0, 0), MagneticFieldTuning.TARGET_PULL_SPEED_PER_TICK, 0.65, 2.25);
+        var quarter = MagneticStructureControl.pullForce(Vec3.ZERO, Vec3.ZERO, new Vec3(20, 0, 0),
+                new Vec3(1, 0, 0), MagneticFieldTuning.TARGET_PULL_SPEED_PER_TICK, 0.65, 2.25, 0.25);
+        var none = MagneticStructureControl.pullForce(Vec3.ZERO, Vec3.ZERO, new Vec3(20, 0, 0),
+                new Vec3(1, 0, 0), MagneticFieldTuning.TARGET_PULL_SPEED_PER_TICK, 0.65, 2.25, 0.0);
+
+        assertEquals(full.x, quarter.x * 4.0, 1.0e-9);
+        assertEquals(0.0, none.lengthSqr(), 1.0e-12);
+        assertEquals(full, MagneticStructureControl.pullForce(Vec3.ZERO, Vec3.ZERO, new Vec3(20, 0, 0),
+                new Vec3(1, 0, 0), MagneticFieldTuning.TARGET_PULL_SPEED_PER_TICK, 0.65, 2.25, 1.0));
+    }
 }

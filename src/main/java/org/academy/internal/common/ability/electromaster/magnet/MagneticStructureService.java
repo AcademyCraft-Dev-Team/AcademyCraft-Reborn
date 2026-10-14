@@ -1,7 +1,9 @@
 package org.academy.internal.common.ability.electromaster.magnet;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
@@ -9,8 +11,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
+import org.academy.api.common.ability.electromaster.MagneticFieldTuning;
 import org.academy.api.common.ability.electromaster.MagneticStructureControl;
 import org.academy.api.common.ability.electromaster.MagneticTargets;
+import org.academy.api.common.structure.LegacyMotionUnits;
 import org.academy.api.common.structure.StructureBackendStatus;
 import org.academy.api.common.structure.StructureCaptureRequest;
 import org.academy.api.common.structure.StructureLifecycle;
@@ -29,10 +33,14 @@ import org.academy.internal.common.structure.StructureBackendRouter;
 import org.academy.internal.common.world.entity.structure.NativeStructureProjectionEntity;
 import org.jspecify.annotations.Nullable;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -54,9 +62,23 @@ public final class MagneticStructureService {
     public static final double FOLLOW_LOOKAHEAD_SECONDS = 0.5;
     public static final double FOLLOW_TRAILING_MARGIN = 2.0;
     public static final double ANGULAR_MARGIN_SECONDS = 0.05;
+    /** Program extraction budget ceiling; zero keeps the backend default. */
+    public static final int MAXIMUM_PROGRAM_BUDGET = 256;
+    /** Bounded distance between the body center and a program move target. */
+    public static final double MAXIMUM_PROGRAM_MOVE_RANGE = 32.0;
+    /** A program move or an idle control window never extends beyond this many ticks. */
+    public static final long MAXIMUM_PROGRAM_MOVE_TICKS = 600L;
+    /** Explicit, paid forced-magnetization overlay duration in ticks. */
+    public static final int MAGNETIZATION_TICKS = 200;
+    public static final double PROGRAM_STOP_DISTANCE = 0.65;
+    public static final double PROGRAM_CONTROL_RANGE = 32.0;
+    /** Legacy magnetic launch speed in blocks per tick before per-program scaling. */
+    public static final double LAUNCH_SPEED_PER_TICK = 1.4;
 
     private static final long CAPTURE_TIMEOUT_TICKS = 600;
     private static final int REGION_UNAVAILABLE_GRACE_TICKS = 40;
+
+    private static final Map<UUID, ProgramControl> PROGRAM_CONTROLS = new HashMap<>();
 
     private MagneticStructureService() {
     }
@@ -113,6 +135,15 @@ public final class MagneticStructureService {
 
     /** Legacy admission for one block target; {@code null} means the cell may be captured. */
     static @Nullable String admit(ServerPlayer player, BlockPos pos) {
+        return admit(player, pos, false);
+    }
+
+    /**
+     * Same admission with an explicit forced-magnetization switch: a caller that paid for the
+     * bounded overlay may also admit otherwise non-magnetic editable cells. Every other gate
+     * (destruction policy, chunk, permission, block entity, indestructible) still applies.
+     */
+    static @Nullable String admit(ServerPlayer player, BlockPos pos, boolean allowNonMagnetic) {
         var level = player.level();
         if (AbilityEffectPolicy.blockDestruction(level) == AbilityEffectPolicy.Decision.DENY) {
             return "destruction_denied";
@@ -123,10 +154,60 @@ public final class MagneticStructureService {
             return "destruction_disabled";
         }
         var state = level.getBlockState(pos);
-        if (!MagneticTargets.isMagnetic(state)) return "not_magnetic";
+        if (!MagneticTargets.isMagnetic(state) && !allowNonMagnetic) return "not_magnetic";
         if (state.hasBlockEntity()) return "block_entity_not_supported";
         if (state.getDestroySpeed(level, pos) < 0.0f) return "indestructible";
         return null;
+    }
+
+    /**
+     * Bounded program extraction selection: deterministic breadth-first over admitted direct
+     * neighbours. Natively magnetic cells always qualify; forced magnetization additionally
+     * admits non-magnetic editable cells for the lifetime of its overlay. Deterministic
+     * direction order and the budget cap keep identical requests reproducible.
+     */
+    static List<BlockPos> magneticSelection(ServerPlayer player, BlockPos seed, int budget,
+                                            boolean forceMagnetize) {
+        Objects.requireNonNull(player, "player");
+        Objects.requireNonNull(seed, "seed");
+        if (budget < 1) return List.of();
+        var immutableSeed = seed.immutable();
+        if (admit(player, immutableSeed, forceMagnetize) != null) return List.of();
+        var kept = new ArrayList<BlockPos>(Math.min(budget, 64));
+        var seen = new HashSet<BlockPos>();
+        var queue = new ArrayDeque<BlockPos>();
+        seen.add(immutableSeed);
+        queue.addLast(immutableSeed);
+        kept.add(immutableSeed);
+        while (!queue.isEmpty() && kept.size() < budget) {
+            var current = queue.removeFirst();
+            for (var direction : Direction.values()) {
+                if (kept.size() >= budget) break;
+                var next = current.relative(direction).immutable();
+                if (!seen.add(next)) continue;
+                if (admit(player, next, forceMagnetize) != null) continue;
+                kept.add(next);
+                queue.addLast(next);
+            }
+        }
+        return List.copyOf(kept);
+    }
+
+    static int countMagnetic(ServerLevel level, List<BlockPos> positions) {
+        var count = 0;
+        for (var position : positions) {
+            if (MagneticTargets.isMagnetic(level.getBlockState(position))) count++;
+        }
+        return count;
+    }
+
+    private static Vec3 selectionCenter(List<BlockPos> positions) {
+        AABB bounds = null;
+        for (var position : positions) {
+            var cell = new AABB(position);
+            bounds = bounds == null ? cell : bounds.minmax(cell);
+        }
+        return bounds == null ? Vec3.ZERO : bounds.getCenter();
     }
 
     /**
@@ -217,6 +298,374 @@ public final class MagneticStructureService {
         return StructureBackendRouter.SABLE_ID.equals(reference.backend());
     }
 
+    /** Explicit program outcome codes; the caller never parses log text. */
+    public enum ProgramStatus {
+        COMPLETED, PENDING, REJECTED, UNAVAILABLE
+    }
+
+    public record ProgramResult(ProgramStatus status, String detail, @Nullable StructureRef reference) {
+        public static ProgramResult completed(String detail, @Nullable StructureRef reference) {
+            return new ProgramResult(ProgramStatus.COMPLETED, detail, reference);
+        }
+
+        public static ProgramResult pending(String detail) {
+            return new ProgramResult(ProgramStatus.PENDING, detail, null);
+        }
+
+        public static ProgramResult rejected(String detail) {
+            return new ProgramResult(ProgramStatus.REJECTED, detail, null);
+        }
+
+        public static ProgramResult unavailable(String detail) {
+            return new ProgramResult(ProgramStatus.UNAVAILABLE, detail, null);
+        }
+    }
+
+    /**
+     * Program extraction entry: bounded magnetic-neighbourhood capture through the same staged
+     * content transaction as the skill path without skill messages. A pending capture publishes
+     * no structure reference; the source blocks stay untouched on every rejection. Forced
+     * magnetization is a separately authorized, paid and time-limited overlay recorded on the
+     * program session, never a permanent grant.
+     */
+    public static ProgramResult programExtract(ServerPlayer player, BlockPos seed, int budget,
+                                               boolean forceMagnetize) {
+        requireThread(player);
+        Objects.requireNonNull(seed, "seed");
+        if (budget < 0 || budget > MAXIMUM_PROGRAM_BUDGET) {
+            return ProgramResult.rejected("invalid_budget");
+        }
+        if (!(player.level() instanceof ServerLevel level)) {
+            return ProgramResult.rejected("host_unavailable");
+        }
+        var immutableSeed = seed.immutable();
+        var admission = admit(player, immutableSeed, forceMagnetize);
+        if (admission != null) return ProgramResult.rejected(admission);
+        var limit = cellBudget(level);
+        if (budget > 0) limit = Math.min(limit, budget);
+        var selection = magneticSelection(player, immutableSeed, limit, forceMagnetize);
+        if (selection.isEmpty()) return ProgramResult.rejected("selection_empty");
+        var magneticCells = countMagnetic(level, selection);
+        var result = StructureTransactions.capture(level, new StructureCaptureRequest(
+                selection, limit, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player)));
+        var reference = result.structure().orElse(null);
+        if (result.pending()) {
+            if (reference == null) return ProgramResult.rejected("pending_without_reference");
+            var pendingSession = new Session(reference, result.transactionId(), selection, level.getGameTime());
+            pendingSession.report = false;
+            registerProgram(player, pendingSession, magneticCells, forceMagnetize);
+            return ProgramResult.pending(result.status() + ":" + result.detail());
+        }
+        if (!result.succeeded()) return ProgramResult.rejected(result.status() + ":" + result.detail());
+        if (reference == null) return ProgramResult.rejected("committed_without_reference");
+        var session = new Session(reference, null, selection, level.getGameTime());
+        session.report = false;
+        registerProgram(player, session, magneticCells, forceMagnetize);
+        return ProgramResult.completed("committed", reference);
+    }
+
+    /**
+     * Program control entry. An existing session of the same structure is reused; otherwise one
+     * active, unleased physics region of the requested epoch is adopted under a new exclusive
+     * session. Another actor's program control or occupied lease is rejected instead of stolen.
+     * Sable has no calibrated magnetic program control entry and is rejected explicitly.
+     */
+    public static ProgramResult programControl(ServerPlayer player, StructureRef reference, UUID runtimeId) {
+        requireThread(player);
+        Objects.requireNonNull(reference, "reference");
+        Objects.requireNonNull(runtimeId, "runtimeId");
+        var playerId = player.getUUID();
+        var existing = PROGRAM_CONTROLS.get(playerId);
+        if (existing != null && existing.session.reference().equals(reference)) {
+            if (!programControlUsable(player, existing.session, runtimeId)) {
+                return ProgramResult.rejected("structure_unavailable");
+            }
+            return ProgramResult.completed("control_active", reference);
+        }
+        for (var entry : PROGRAM_CONTROLS.entrySet()) {
+            if (!entry.getKey().equals(playerId) && entry.getValue().session.reference().equals(reference)) {
+                return ProgramResult.rejected("structure_controlled");
+            }
+        }
+        if (!(player.level() instanceof ServerLevel level)) {
+            return ProgramResult.rejected("host_unavailable");
+        }
+        if (sableMode(level)) return ProgramResult.unavailable("sable_program_control");
+        var handle = StructureSpaces.resolve(level.getServer(), reference).orElse(null);
+        if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) {
+            return ProgramResult.rejected("structure_unavailable");
+        }
+        if (!handle.runtimeId().equals(runtimeId)) {
+            return ProgramResult.rejected("stale_structure_epoch");
+        }
+        var region = StructurePhysics.activeRegion(level, reference).orElse(null);
+        if (region == null) return ProgramResult.rejected("no_active_region");
+        if (region.status() == StructurePhysicsRegion.Status.FAILED) {
+            return ProgramResult.rejected("region_failed");
+        }
+        if (region.control(reference).isPresent()) {
+            return ProgramResult.rejected("structure_controlled");
+        }
+        var motion = region.motion(reference).orElse(null);
+        if (motion == null) return ProgramResult.rejected("motion_unavailable");
+        var captured = new Session(reference, List.of(), level.getGameTime(), region);
+        captured.report = false;
+        // Adopting another structure first ends the previous session while retaining that
+        // structure, its region and its inertia.
+        releaseProgram(playerId, "replaced");
+        PROGRAM_CONTROLS.put(playerId, new ProgramControl(player, captured,
+                motion.pose().localToWorldPoint(motion.localCenterOfMass()), 0, 0, 0L));
+        return ProgramResult.completed("control_acquired", reference);
+    }
+
+    /**
+     * Program move entry: a bounded anchor correction toward an explicit world target while the
+     * program session keeps its converted pull profile. Force is scaled by magnetic
+     * participation, and the optional local force point becomes the application point. Expired
+     * magnetization, lost regions and range violations end the action while retaining the body.
+     */
+    public static ProgramResult programMove(ServerPlayer player, StructureRef reference, UUID controlId,
+                                            Vec3 target, long durationTicks,
+                                            @Nullable BlockPos localForcePoint) {
+        requireThread(player);
+        var control = matchingProgram(player, reference, controlId);
+        if (control == null) return ProgramResult.rejected("no_matching_control");
+        var session = control.session;
+        if (session.stage() == Stage.CAPTURING) {
+            return ProgramResult.rejected("not_movable:capturing");
+        }
+        if (!isFiniteVector(target)) return ProgramResult.rejected("invalid_target");
+        if (!(player.level() instanceof ServerLevel level)) {
+            return ProgramResult.rejected("host_unavailable");
+        }
+        var block = BlockPos.containing(target);
+        if (!level.hasChunkAt(block) || !level.getWorldBorder().isWithinBounds(block)) {
+            return ProgramResult.rejected("target_unavailable");
+        }
+        var motion = session.region == null ? null : session.region.motion(reference).orElse(null);
+        var referencePoint = motion != null
+                ? motion.pose().localToWorldPoint(motion.localCenterOfMass())
+                : session.positions.isEmpty() ? null : selectionCenter(session.positions);
+        if (referencePoint != null && referencePoint.distanceTo(target) > MAXIMUM_PROGRAM_MOVE_RANGE) {
+            return ProgramResult.rejected("target_out_of_range");
+        }
+        if (control.participation(level.getGameTime()) <= 0.0) {
+            return ProgramResult.rejected("no_magnetic_participation");
+        }
+        control.target = target;
+        control.localForcePoint = localForcePoint == null ? null : localForcePoint.immutable();
+        control.moveExpiresAt = level.getGameTime()
+                + Mth.clamp(durationTicks, 1L, MAXIMUM_PROGRAM_MOVE_TICKS);
+        return ProgramResult.completed("move", reference);
+    }
+
+    /**
+     * Program launch entry: one bounded impulse along an explicit direction from the control
+     * that already holds the body. Damage is never pre-settled along a preset trajectory; the
+     * session's field and magnetization overlay are withdrawn afterwards while the structure,
+     * its region and its new inertia are retained.
+     */
+    public static ProgramResult programLaunch(ServerPlayer player, StructureRef reference, UUID controlId,
+                                              Vec3 direction, double speedScale) {
+        requireThread(player);
+        var control = matchingProgram(player, reference, controlId);
+        if (control == null) return ProgramResult.rejected("no_matching_control");
+        var session = control.session;
+        if (session.stage() != Stage.PULLING) {
+            return ProgramResult.rejected("not_launchable:" + session.stage().name().toLowerCase(Locale.ROOT));
+        }
+        if (!isFiniteVector(direction) || direction.lengthSqr() <= 1.0e-8) {
+            return ProgramResult.rejected("invalid_direction");
+        }
+        if (!Double.isFinite(speedScale) || speedScale < 0.1 || speedScale > 2.0) {
+            return ProgramResult.rejected("invalid_strength");
+        }
+        var region = session.region;
+        if (region == null) return ProgramResult.rejected("motion_unavailable");
+        var motion = region.motion(reference).orElse(null);
+        if (motion == null) return ProgramResult.rejected("motion_unavailable");
+        var speed = LegacyMotionUnits.velocityPerSecond(LAUNCH_SPEED_PER_TICK) * speedScale;
+        var mass = motion.mass();
+        var center = motion.pose().localToWorldPoint(motion.localCenterOfMass());
+        var directionUnit = direction.normalize();
+        session.close();
+        try {
+            // Clear any residual pull momentum first so this single impulse defines the launch
+            // velocity exactly; contact effects belong to the flight, not to this request.
+            region.setVelocity(reference, Vec3.ZERO, Vec3.ZERO);
+            region.applyImpulse(reference, directionUnit.scale(speed * mass), center);
+        } catch (RuntimeException | AssertionError failure) {
+            AcademyCraft.LOGGER.error("Magnetic program launch was rejected for {}", reference, failure);
+            PROGRAM_CONTROLS.remove(player.getUUID());
+            return ProgramResult.rejected("launch_rejected");
+        }
+        PROGRAM_CONTROLS.remove(player.getUUID());
+        return ProgramResult.completed("launched", reference);
+    }
+
+    /**
+     * Program release entry: idempotent and token-scoped. A stale or foreign token is a no-op
+     * and never terminates a successor's control; the structure, its region and its inertia
+     * are retained and this session's field and magnetization overlay are withdrawn.
+     */
+    public static ProgramResult programRelease(ServerPlayer player, StructureRef reference, UUID controlId) {
+        requireThread(player);
+        var control = PROGRAM_CONTROLS.get(player.getUUID());
+        if (control == null || !control.session.reference().equals(reference)
+                || !control.session.controllerId().equals(controlId)) {
+            return ProgramResult.completed("release_noop", null);
+        }
+        releaseProgram(player.getUUID(), "released");
+        return ProgramResult.completed("released", reference);
+    }
+
+    /** The current program session for this player, if any. It is a view, not a lease. */
+    public static Optional<Session> programSession(ServerPlayer player) {
+        requireThread(player);
+        var control = PROGRAM_CONTROLS.get(player.getUUID());
+        return control == null ? Optional.empty() : Optional.of(control.session);
+    }
+
+    /** Silent lifecycle cleanup; the captured structure, inertia and physics region are retained. */
+    public static void releasePrograms(ServerPlayer player) {
+        if (player == null) return;
+        releaseProgram(player.getUUID(), "controller_unavailable");
+    }
+
+    /** Server shutdown cleanup; never throws into the stopping server. */
+    public static void clearProgramsAll() {
+        for (var playerId : List.copyOf(PROGRAM_CONTROLS.keySet())) {
+            try {
+                releaseProgram(playerId, "shutdown");
+            } catch (RuntimeException failure) {
+                AcademyCraft.LOGGER.warn("Magnetic program shutdown cleanup failed for {}", playerId, failure);
+            }
+        }
+    }
+
+    /** Drives every program-controlled magnetic session once on the owning server thread. */
+    public static void tickPrograms(MinecraftServer server) {
+        if (server == null) return;
+        for (var playerId : List.copyOf(PROGRAM_CONTROLS.keySet())) {
+            var control = PROGRAM_CONTROLS.get(playerId);
+            if (control == null) continue;
+            var player = control.controller;
+            if (player.hasDisconnected() || !player.isAlive()
+                    || !(player.level() instanceof ServerLevel level)
+                    || level.getServer() != server) {
+                releaseProgram(playerId, "controller_unavailable");
+                continue;
+            }
+            var session = control.session;
+            var gameTime = level.getGameTime();
+            if (control.magnetizeExpiresAt != 0L && gameTime > control.magnetizeExpiresAt) {
+                control.magnetizeExpiresAt = 0L;
+                AcademyCraft.LOGGER.info(
+                        "Forced magnetization expired for {}; magnetic participation is now {}",
+                        session.reference(), control.participation(gameTime));
+                if (control.participation(gameTime) <= 0.0) {
+                    releaseProgram(playerId, "magnetization_expired");
+                    continue;
+                }
+            }
+            if (control.moveExpiresAt == 0L) {
+                if (session.stage() != Stage.CAPTURING) {
+                    control.moveExpiresAt = gameTime + MAXIMUM_PROGRAM_MOVE_TICKS;
+                }
+            } else if (gameTime > control.moveExpiresAt) {
+                releaseProgram(playerId, "move_window_ended");
+                continue;
+            }
+            session.participation = control.participation(gameTime);
+            session.forcePoint = control.localForcePoint;
+            var milestone = Skills.MAGNET_MANIPULATION.get().getEffectiveProficiencyMilestone(player);
+            var speed = MagneticFieldTuning.targetPullSpeed(milestone);
+            if (!session.tick(player, control.target, Vec3.ZERO, speed,
+                    PROGRAM_STOP_DISTANCE, PROGRAM_CONTROL_RANGE, milestone)) {
+                releaseProgram(playerId, "session_ended");
+            }
+        }
+    }
+
+    private static void registerProgram(ServerPlayer player, Session session, int magneticCells,
+                                        boolean forceMagnetize) {
+        var gameTime = player.level().getGameTime();
+        releaseProgram(player.getUUID(), "replaced");
+        var overlay = forceMagnetize && magneticCells < session.blockCount()
+                ? gameTime + MAGNETIZATION_TICKS : 0L;
+        PROGRAM_CONTROLS.put(player.getUUID(), new ProgramControl(player, session,
+                selectionCenter(session.positions), magneticCells, session.blockCount(), overlay));
+    }
+
+    private static @Nullable ProgramControl matchingProgram(ServerPlayer player, StructureRef reference,
+                                                            UUID controlId) {
+        Objects.requireNonNull(reference, "reference");
+        Objects.requireNonNull(controlId, "controlId");
+        var control = PROGRAM_CONTROLS.get(player.getUUID());
+        if (control == null || !control.session.reference().equals(reference)
+                || !control.session.controllerId().equals(controlId)) {
+            return null;
+        }
+        return control;
+    }
+
+    private static boolean programControlUsable(ServerPlayer player, Session session, UUID runtimeId) {
+        if (session.stage() == Stage.CAPTURING) return false;
+        if (!(player.level() instanceof ServerLevel level)) return false;
+        var handle = StructureSpaces.resolve(level.getServer(), session.reference()).orElse(null);
+        return handle != null && handle.lifecycle() == StructureLifecycle.ACTIVE
+                && handle.runtimeId().equals(runtimeId);
+    }
+
+    private static void releaseProgram(UUID playerId, String detail) {
+        var control = PROGRAM_CONTROLS.remove(playerId);
+        if (control == null) return;
+        AcademyCraft.LOGGER.info("Magnetic program session {} for {} on {}",
+                detail, playerId, control.session.reference());
+        control.session.close();
+    }
+
+    private static boolean isFiniteVector(Vec3 value) {
+        return value != null
+                && Double.isFinite(value.x)
+                && Double.isFinite(value.y)
+                && Double.isFinite(value.z);
+    }
+
+    private static void requireThread(ServerPlayer player) {
+        Objects.requireNonNull(player, "player");
+        if (!player.level().getServer().isSameThread()) {
+            throw new IllegalStateException("Magnetic structure service requires the owning server thread");
+        }
+    }
+
+    /** One program-driven magnetic session; never persisted and never revived across sessions. */
+    private static final class ProgramControl {
+        private final ServerPlayer controller;
+        private final Session session;
+        private final int magneticCells;
+        private final int totalCells;
+        private Vec3 target;
+        private long moveExpiresAt;
+        private long magnetizeExpiresAt;
+        private @Nullable BlockPos localForcePoint;
+
+        private ProgramControl(ServerPlayer controller, Session session, Vec3 target,
+                               int magneticCells, int totalCells, long magnetizeExpiresAt) {
+            this.controller = controller;
+            this.session = session;
+            this.target = target;
+            this.magneticCells = magneticCells;
+            this.totalCells = totalCells;
+            this.magnetizeExpiresAt = magnetizeExpiresAt;
+        }
+
+        private double participation(long gameTime) {
+            if (magnetizeExpiresAt != 0L && gameTime <= magnetizeExpiresAt) return 1.0;
+            return MagneticStructureControl.magneticParticipation(magneticCells, totalCells);
+        }
+    }
+
     private static BiPredicate<ServerLevel, BlockPos> capturePermission(ServerPlayer player) {
         return (level, position) -> level.mayInteract(player, position);
     }
@@ -257,9 +706,15 @@ public final class MagneticStructureService {
     }
 
     private static void reject(ServerPlayer player, String detail) {
+        reject(player, detail, true);
+    }
+
+    private static void reject(ServerPlayer player, String detail, boolean report) {
         AcademyCraft.LOGGER.info("Magnetic pull rejected for {}: {}", player.getUUID(), detail);
-        player.sendOverlayMessage(Component.translatable(
-                "message.academy.magnet_manipulation.structure_pull_rejected"));
+        if (report) {
+            player.sendOverlayMessage(Component.translatable(
+                    "message.academy.magnet_manipulation.structure_pull_rejected"));
+        }
     }
 
     /**
@@ -277,6 +732,9 @@ public final class MagneticStructureService {
         private Stage stage = Stage.CAPTURING;
         private int unavailableTicks;
         private boolean closed;
+        private boolean report = true;
+        private double participation = 1.0;
+        private @Nullable BlockPos forcePoint;
 
         private Session(StructureRef reference, @Nullable UUID transactionId,
                         List<BlockPos> positions, long startedAt) {
@@ -284,6 +742,16 @@ public final class MagneticStructureService {
             this.transactionId = transactionId;
             this.positions = List.copyOf(positions);
             this.startedAt = startedAt;
+        }
+
+        private Session(StructureRef reference, List<BlockPos> positions, long startedAt,
+                        StructurePhysicsRegion region) {
+            this.reference = reference;
+            this.transactionId = null;
+            this.positions = List.copyOf(positions);
+            this.startedAt = startedAt;
+            this.region = region;
+            this.stage = Stage.AWAITING_PHYSICS;
         }
 
         public Stage stage() {
@@ -298,8 +766,21 @@ public final class MagneticStructureService {
             return positions.size();
         }
 
+        /** Runtime-facing exclusive control identity; it is never persisted. */
+        public UUID controllerId() {
+            return controllerId;
+        }
+
         public boolean controlActive() {
             return lease != null && lease.state() == StructurePhysicsLease.State.ACTIVE;
+        }
+
+        private void fail(ServerPlayer player, String detail) {
+            reject(player, detail, report);
+        }
+
+        private Vec3 localForcePoint(StructureMotionState motion) {
+            return forcePoint == null ? motion.localCenterOfMass() : Vec3.atCenterOf(forcePoint);
         }
 
         /** Returns true while the pull should continue; a false return has already released control. */
@@ -313,7 +794,7 @@ public final class MagneticStructureService {
                 }
                 var result = StructureTransactions.poll(level.getServer(), transactionId);
                 if (result.isEmpty()) {
-                    reject(player, "transaction_evicted");
+                    fail(player, "transaction_evicted");
                     close();
                     return false;
                 }
@@ -323,7 +804,7 @@ public final class MagneticStructureService {
                         AcademyCraft.LOGGER.warn(
                                 "Magnetic pull capture {} exceeded its tracking window; structure retained",
                                 transactionId);
-                        reject(player, "transaction_tracking_timeout");
+                        fail(player, "transaction_tracking_timeout");
                         close();
                         return false;
                     }
@@ -331,7 +812,7 @@ public final class MagneticStructureService {
                 }
                 transactionId = null;
                 if (!current.succeeded()) {
-                    reject(player, current.status() + ":" + current.detail());
+                    fail(player, current.status() + ":" + current.detail());
                     close();
                     return false;
                 }
@@ -342,7 +823,7 @@ public final class MagneticStructureService {
                     // structure is retained instead of being mutated through a legacy entity.
                     AcademyCraft.LOGGER.info("Magnetic pull sable control is not implemented; retaining {}",
                             reference);
-                    reject(player, "sable_pull_unavailable");
+                    fail(player, "sable_pull_unavailable");
                     close();
                     return false;
                 }
@@ -366,14 +847,14 @@ public final class MagneticStructureService {
         private boolean openRegion(ServerLevel level, ServerPlayer player) {
             var handle = StructureSpaces.resolve(level.getServer(), reference).orElse(null);
             if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) {
-                reject(player, "captured_handle_unavailable");
+                fail(player, "captured_handle_unavailable");
                 return false;
             }
             var limits = new AABB(level.getWorldBorder().getMinX(), level.getMinY(), level.getWorldBorder().getMinZ(),
                     level.getWorldBorder().getMaxX(), level.getMaxY(), level.getWorldBorder().getMaxZ());
             var bounds = regionBounds(positions, level.getMinY(), level.getMaxY(), limits);
             if (bounds == null) {
-                reject(player, "region_cannot_fit_structure");
+                fail(player, "region_cannot_fit_structure");
                 return false;
             }
             StructurePhysicsRegion opened;
@@ -381,7 +862,7 @@ public final class MagneticStructureService {
                 opened = StructurePhysics.openRegion(level, bounds);
             } catch (RuntimeException | AssertionError failure) {
                 AcademyCraft.LOGGER.error("Magnetic pull could not open a physics region for {}", reference, failure);
-                reject(player, "region_open_failed");
+                fail(player, "region_open_failed");
                 return false;
             }
             try {
@@ -393,7 +874,7 @@ public final class MagneticStructureService {
                 } catch (RuntimeException cleanup) {
                     failure.addSuppressed(cleanup);
                 }
-                reject(player, "region_attach_failed");
+                fail(player, "region_attach_failed");
                 return false;
             }
             region = opened;
@@ -423,14 +904,14 @@ public final class MagneticStructureService {
             if (motion.mass() > MagneticStructureControl.massBudget(milestone)) {
                 AcademyCraft.LOGGER.warn("Magnetic pull mass {} exceeds the milestone budget for {}",
                         motion.mass(), reference);
-                reject(player, "mass_over_budget");
+                fail(player, "mass_over_budget");
                 close();
                 return false;
             }
-            var control = new StructurePhysicsControl.Force(motion.localCenterOfMass(),
+            var control = new StructurePhysicsControl.Force(localForcePoint(motion),
                     MagneticStructureControl.pullForce(motion.linearVelocity(),
                             motion.pose().localToWorldPoint(motion.localCenterOfMass()), destination, fallback,
-                            maxSpeedPerTick, stopDistance, motion.mass()));
+                            maxSpeedPerTick, stopDistance, motion.mass(), participation));
             Optional<StructurePhysicsLease> acquired;
             try {
                 acquired = region.acquireEntityControl(reference, player, controllerId, control,
@@ -481,9 +962,9 @@ public final class MagneticStructureService {
                 return false;
             }
             try {
-                lease.setControl(new StructurePhysicsControl.Force(motion.localCenterOfMass(),
+                lease.setControl(new StructurePhysicsControl.Force(localForcePoint(motion),
                         MagneticStructureControl.pullForce(motion.linearVelocity(), center, destination, fallback,
-                                maxSpeedPerTick, stopDistance, motion.mass())));
+                                maxSpeedPerTick, stopDistance, motion.mass(), participation)));
                 lease.renew(MagneticStructureControl.TRACTION_LEASE_TICKS);
             } catch (IllegalStateException | IllegalArgumentException rejection) {
                 AcademyCraft.LOGGER.warn("Magnetic pull lease ended for {}", reference, rejection);
