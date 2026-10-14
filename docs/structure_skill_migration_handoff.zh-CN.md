@@ -518,3 +518,44 @@
   - `.\gradlew.bat build -DisDev=true`
   - `.\gradlew.bat build -DisDev=false`
 - 当前构建（含本修复）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `9EB1550644CEF53714FF84109856D399E86D390A8F671C12270FFA5C93FA2BFB`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `A9F3372640C726FDBCACD80FB175B79C23F99CB4FE7EB6600FD6261B9BCBA3F4`。未复制到整合包，未操作用户存档，未创建本地 Git 提交。
+
+### 实现：Sable 结构程序控制与发射（矢量/电击使）（2026-10-14）
+
+- 审计结论（改动前行号，改动前工作区 `git status` 仅有 `docs/vfx/...` 未跟踪项，未触碰）：
+  - `VectorStructureService.programControl` 第 257 行对 Sable 显式 `unavailable("sable_program_control")`；`programLaunch` 第 348 行对 `held.traction != null` 显式 `unavailable("sable_launch")`；`beginLift` 第 706–708 行对 Sable 一律调用技能路径 `beginSableLift`（需要瞄准、`StructureTraction` 会话与质量预算），程序提取得到的会话因此带活动牵引，控制节点既无法签发令牌、发射也被显式拒绝。
+  - `MagneticStructureService.programControl` 第 393 行对 Sable 显式 `unavailable("sable_program_control")`；`programLaunch` 第 468–504 行只有原生区域冲量分支；`Session.tick` 第 820–829 行在捕获提交后走 `sable_pull_unavailable` 并 `close()` —— 即用户真实日志中的 `Magnetic pull rejected …: sable_pull_unavailable` 与图表“获取结构控制”失败链。
+  - `SableStructureTraction.launch`（fixp31，第 66–93 行）已按 `addLinearAndAngularVelocity(目标速度−当前速度, −角速度)` 精确赋速、不查质量、有活动牵引会话时拒绝，可复用为直接置速入口；`StructureBackendRouter.launch`（第 186–197 行）是中性路由。
+- 改动文件：
+  - 新增 `src/main/java/org/academy/api/common/structure/StructureDirectControl.java`：轻量直接控制租约的公共入口与进程内注册表（`acquire/validate/release/clearAll`、`Probe`、`Lease`、`Status`，以及可单测的纯判定 `decideAcquire/decideValidate`）。
+  - 新增 `src/main/java/org/academy/internal/common/structure/sable/SableStructureDirectControl.java`：Sable 后端探测（已加载船、rapier 管线未暂停、单位缩放、刚体有效、无活动 Academy 牵引会话、Suite 手杖 FREE）。
+  - `StructureBackendRouter.java`：`Bridge.probeDirectControl` 默认拒绝 + 路由静态方法（仅 SABLE 且有桥时转发；非 Sable 返回 `direct_control_unsupported`）。
+  - `SableStructureBridge.java`：实现探针；`shutdown` 清空租约注册表。
+  - `SableStructureTraction.java`：抽出包内 `controllable(SableStructureHandle)`，供会话门禁与直接控制共用（原 `available` 语义逐值不变）。
+  - `MagneticStructureService.java`、`VectorStructureService.java`：程序控制/发射的 Sable 分支（见下）。
+  - `SableStructureSmoke.java`：新增 PROGRAM 相位（两能力的程序控制/发射/幂等释放证据）。
+  - `gradle/sable-compat.gradle`：打包必检清单加入 `SableStructureDirectControl.class`。
+  - 测试：新增 `StructureDirectControlTest`（3 项）；`MagneticStructureServiceTest` +1；`AcceleratorProgramStructureNodesTest` +1；`ElectromasterProgramStructureNodesTest` +1。
+- 租约与置速设计：
+  - **公共层**：租约以 `StructureRef` 为键，绑定 actor UUID、服务 controlId 与探测返回的结构 runtimeId；不同 actor 的既有租约返回 `OCCUPIED`（不抢占），同一 actor 可用新 controlId 取代自身；绑定 epoch 变化时旧令牌 `UNAVAILABLE` 且不重获；`release(ref, controlId)` 幂等且只撤销本令牌；租约不落盘、不跨会话恢复。服务侧继续持有各自的 `ProgramControl`/`Session`（`controllerId` 即租约 controlId），玩家退出/换维/死亡/停服经既有清理调用 `releaseProgram`。
+  - **电击使**：新增 `Stage.SABLE_RETAINED`；程序捕获提交后不再走 `sable_pull_unavailable`，而是保留等待控制节点；`programControl` 对 Sable 只签发租约（不建区域、不建实体、不做质量门），他人控制/无结构分别返回 `structure_controlled`/`structure_unavailable`（epoch 不符为 `stale_structure_epoch`）；`programLaunch` 校验租约后按原生标定直接置速（`StructureBackendRouter.launch` → `SableStructureTraction.launch`），**绕过质量预算与 `sable_traction_too_heavy`**，发射前 `releaseProgram` 撤销本次磁场与磁化覆盖、不预结算轨迹伤害；`programMove` 对 Sable 恒 `unavailable:sable_move`；`tickPrograms` 对直接租约会话只做租约复验（磁化覆盖到期不再强制终止），空闲窗口沿用 600 tick。
+  - **矢量**：新增 `Session.directControl` 与 `controlSableFresh/controlSableExisting`（轻量租约，窗口沿用 `HOVER_TICKS`=200）；`programLaunch` 的 Sable 分支 `launchSableDirect` 用技能侧标定直接置速、无质量门，成功后进入 FLYING 观察（`tickSableFlight`）；`programMove` 对 Sable 恒 `unavailable:sable_move`；程序提取（`programExtract`）在 Sable 世界不再调用 `beginSableLift`（避免瞄准/牵引/质量门），改为 `beginSableProgramExtract` 保留会话，控制节点再签发租约；`tickLifting` 对直接租约与保留会话分别复验，失效即安全结束并保留结构；技能 Sable 路径（牵引升举/技能投掷）逐值不变。
+  - 原生路径行为逐值不变：两服务的原生 `programControl/programLaunch/programMove` 仅插入 `isSable`/`sable` 分支；`beginLift`/`startCapture` 新增 `program` 标志，技能调用恒为 `false`。
+- 标定依据：
+  - 电击使直接置速与原生程序发射共用纯函数 `MagneticStructureService.launchSpeed(scale) = LegacyMotionUnits.velocityPerSecond(1.4) × scale`（0.5/1.0/1.5 → 14/28/42 m/s），实测标准强度 28.0。
+  - 矢量直接置速与技能侧共用 `KineticThrow.throwSpeed(milestone3) × speedScale`（50 m/s，三级熟练 60），实测 50.0；两者均与结构质量无关（烟测夹具质量 288 > tier-0 预算 128）。
+- 验证（最终修订）：
+  - `.\gradlew.bat test sableCompatTest -DisDev=true`：普通单测 2615 项（基线 2609，本轮 +6）+ Sable 16 项零失败/错误/跳过（`build/sablefp-tests-final.log`；`build/test-results` 汇总 failures=0 errors=0 skipped=0）。
+  - 单元级图验收（真实目录/编译器/VM/`*ProgramExecutionBridge`，runtime 为脚本化实现）：accelerator 与 electromaster 各新增“extract→control→launch→release×2”图，断言全链 COMPLETED、重结构绕过质量门（脚本在非 Sable 路径返回 `sable_traction_too_heavy` 对照）、置速等于标定值、无轨迹伤害结算、release 幂等（`released`→`noop`）、控制令牌未破坏。
+  - Sable 专服烟测新隔离目录 `run/sable-compat/sablefp-server-r4`（`-PacademySableRuntime=sable -PacademySableSmoke=true -PacademySableCapture=true`）PASSED、`exit_status=0`（`build/sablefp-server-r4.log`）：新增 `sable_program_control=true`、`sable_program_release_idempotent=true`、`sable_program_heavy_mass=288.0`、`sable_program_launch_speed=50.0`、`sable_magnetic_program_control=true`、`sable_magnetic_program_launch_speed=28.0`；既有 `sable_capture_committed`、`sable_capture_rejected_be_preserved`、`sable_container_tick_guard_active`、`sable_hpressed_heavy_throw=true`、`sable_h_throw_speed=49.999999319218475`、`pneumatic_*`、`npc_*`、`resource_callback_*`、`fixture_cleanup_complete` 全部保留（ticks=45）。
+  - 世界烟测新隔离目录 `run/native-structure-physics-smoke-server-sablefp-r2` PASSED、`exit_status=0`（`build/sablefp-world-smoke-r2.log`）；结果文件与 `fixp32-r9` 逐行 diff 仅 `first_ref`/`second_ref`/`shared_session` 三个随机 UUID 与 `ticks=908→906`，`kinetic_*`、`hsjet_*`、`mag_*`、`support_*`、`grasp_*`、`terrain_*` 全部逐值无回归。
+  - `build -DisDev=true` 21 秒、`-DisDev=false` 34 秒通过（`build/sablefp-build-dev-final.log`、`build/sablefp-build-release-final.log`），含 `verifySableCompatPackaging`（新增桥类存在、无嵌套外部 Sable 依赖）。
+- 失败轨迹（目录与日志保留）：
+  - `sablefp-server-r1`：新 PROGRAM 证据全部通过，但既有 NPC 相位在 age=1 失败 `NPC traction ended unexpectedly: NOT_VISIBLE`——H 键重投后 288 质量船体沿 -z 飞向 NPC 夹具，遮挡了 `StructureTraction` 的验证射线（`run/sable-compat/sablefp-server-r1`、`build/sablefp-server-r1.log` 保留）。
+  - `sablefp-server-r2`：跨相位续租后仍在 PROGRAM 起点失败（船体仍在上一条飞行路径上；结果与日志保留）。
+  - 修复：H 投掷改从 -z 侧瞄准、把船体投离夹具（+z 方向），并在 HEAVY_THROW 与 PROGRAM 相位续租 NPC 会话；`sablefp-server-r3` 与最终 `r4` 通过。
+- 未验边界：真实客户端/键盘输入需用户复测；程序图在真实 Sable 世界的“提取→控制→发射”单次执行仍受跨 tick 捕获提交限制（extract 为 PENDING 时不发布引用，与原生 P30 同一边界；烟测对已提交捕获直接执行控制/发射）；`StructureDirectControl` 为进程内注册表、不持久（跨服务互斥由该表保证，玩家退出/换维/死亡/停服走各自服务清理）；非玩家施术者入口未验；Suite 手杖锁定/被他人牵引时的 `OCCUPIED` 拒绝未在 Suite 运行时跑专项夹具（纯 Sable 运行时手杖缺失为 FREE）；无活动物理管线/非单位缩放/结构卸载后的租约失效率由纯判定单测与 probe 代码路径保证，未逐一构造现场；矢量与电击使的 rotate/staticize 仍按设计 `unavailable`（有限力矩与安全静态化未实现前置不变）；`docs/vfx/...` 未触碰。
+- 复现命令（每次使用全新隔离目录，替换 `NEW`，不要复用成功/失败产物）：
+  - `.\gradlew.bat test sableCompatTest -DisDev=true`
+  - `.\gradlew.bat runServerSable -DisDev=true -PacademySableRuntime=sable -PacademySableSmoke=true -PacademySableCapture=true -PacademySableRunDirectory=run/sable-compat/NEW`（需按既有约定预置 `server/eula.txt` 与 `server/server.properties`）
+  - `.\gradlew.bat runServerCompat -I validation/native_structure/physics_world.init.gradle -PacademyStructurePhysicsSmoke=server -PacademyStructurePhysicsGraspSmoke=true -PacademyStructurePhysicsKineticThrowSmoke=true -PacademyStructurePhysicsHighSpeedJetSmoke=true -PacademyStructurePhysicsMagnetManipulationSmoke=true -PacademyStructurePhysicsSmokeDirectory=run/native-structure-physics-smoke-server-NEW @physicsNativeArgs -DisDev=true`
+- 当前构建（含本实现）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `0A2D8FA08E492CA954C8E05CBD431B509F524D391FB5978AA18992E3993138FA`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `CB8CAB6D618C12D2A7AF1FEEFA727BEFC20F1A87E5CCE4283BE4345B4D5845ED`。未复制到整合包，未操作用户存档，未创建本地 Git 提交。

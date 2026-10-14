@@ -81,6 +81,7 @@ def sableCompatTest = tasks.register('sableCompatTest', Test) {
 tasks.named('check') { dependsOn sableCompatTest }
 
 def bridgeEntries = ['org/academy/internal/common/structure/sable/SableStructureAccess.class',
+                     'org/academy/internal/common/structure/sable/SableStructureDirectControl.class',
                      'org/academy/internal/common/structure/sable/SableStructureTraction.class',
                      'org/academy/internal/common/structure/sable/SableStructureTransactions.class']
 def externalPrefixes = ['dev/ryanhcode/sable/', 'foundry/veil/', 'foundry/imguimc/']

@@ -342,8 +342,15 @@ public final class SableStructureTraction {
     }
 
     private static boolean available(SableStructureHandle handle, SableControlActor guard, SubLevelPhysicsSystem system) {
-        if (!guard.available() || !handle.isCurrent() || system == null || system.getPaused()
-                || SubLevelPhysicsSystem.get(handle.host()) != system
+        if (!guard.available() || !handle.isCurrent() || system == null
+                || SubLevelPhysicsSystem.get(handle.host()) != system) return false;
+        return controllable(handle);
+    }
+
+    /** Non-mutating solver/pipeline/body readiness shared by session gates and direct control. */
+    static boolean controllable(SableStructureHandle handle) {
+        var system = SubLevelPhysicsSystem.get(handle.host());
+        if (system == null || system.getPaused()
                 || !RAPIER_PIPELINE.equals(system.getPipeline().getClass().getName())) return false;
         var body = handle.subLevel();
         var mass = body.getMassTracker();

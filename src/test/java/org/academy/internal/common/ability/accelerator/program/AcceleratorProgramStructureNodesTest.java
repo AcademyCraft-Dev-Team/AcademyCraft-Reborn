@@ -3,8 +3,10 @@ package org.academy.internal.common.ability.accelerator.program;
 import com.google.gson.JsonObject;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
+import org.academy.api.common.ability.accelerator.KineticStructureControl;
 import org.academy.api.common.ability.program.*;
 import org.academy.api.common.structure.StructureRef;
+import org.academy.internal.common.ability.accelerator.skills.lv3.KineticThrow;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
 import org.academy.internal.common.ability.program.ProgramVmDiagnostic;
 import org.academy.internal.common.ability.program.ProgramVmResult;
@@ -216,6 +218,62 @@ class AcceleratorProgramStructureNodesTest {
     }
 
     @Test
+    void sableDirectControlChainExtractsControlsLaunchesAndReleasesIdempotently() {
+        var runtime = new ScriptedRuntime();
+        runtime.sableDirect = true;
+        runtime.heavyMass = 4_096.0;
+        var graph = graph(
+                List.of(
+                        node(0, BaseAbilityProgramDefinition.entryId(
+                                AcceleratorProgramNodeCatalog.ACCELERATOR), new JsonObject()),
+                        blockPositionNode(1, 10, 64, 10),
+                        node(2, AcceleratorProgramNodeIds.STRUCTURE_EXTRACT, extractConfiguration(2, 0)),
+                        node(3, AcceleratorProgramNodeIds.STRUCTURE_CONTROL, new JsonObject()),
+                        node(4, AcceleratorProgramNodeIds.STRUCTURE_LAUNCH, strengthConfiguration(1)),
+                        node(5, AcceleratorProgramNodeIds.STRUCTURE_RELEASE, new JsonObject()),
+                        node(6, AcceleratorProgramNodeIds.STRUCTURE_RELEASE, new JsonObject()),
+                        directionNode(7, 0.0, 1.0, 0.0)
+                ),
+                List.of(
+                        edge(0, "flow", 2, "flow"),
+                        edge(2, "flow", 3, "flow"),
+                        edge(3, "flow", 4, "flow"),
+                        edge(4, "flow", 5, "flow"),
+                        edge(5, "flow", 6, "flow"),
+                        edge(1, "position", 2, "host"),
+                        edge(2, "structure", 3, "structure"),
+                        edge(3, "control", 4, "control"),
+                        edge(7, "direction", 4, "direction"),
+                        edge(3, "control", 5, "control"),
+                        edge(3, "control", 6, "control")
+                )
+        );
+        var compiled = AbilityProgramDefinitions.require(
+                        AcceleratorProgramNodeCatalog.ACCELERATOR)
+                .compile(graph, Set.of(AcceleratorProgramCapabilities.STRUCTURE));
+        assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
+
+        var result = AcceleratorProgramExecutionBridge.execute(
+                compiled.program(), 430L, runtime, new ProgramActionTransaction());
+
+        assertEquals(ProgramVmResult.Status.COMPLETED, result.status(),
+                () -> String.valueOf(result.diagnostic()));
+        assertEquals(List.of(
+                "extract:BlockPos{x=10, y=64, z=10}:2:0",
+                "control:" + STRUCTURE + ":sable-direct",
+                "launch:" + STRUCTURE + ":0.0,1.0,0.0:STANDARD:sable-direct=50.0",
+                "release:" + STRUCTURE + ":released",
+                "release:" + STRUCTURE + ":noop"
+        ), runtime.applied);
+        assertTrue(runtime.massGateBypassed,
+                "a heavy Sable body must bypass the traction mass gate");
+        assertEquals(50.0, runtime.directSpeed, 1.0e-9,
+                "Sable direct launch speed must keep the skill-side calibration");
+        assertTrue(runtime.structureRetained, "release must retain the structure");
+        assertFalse(runtime.controlBroken, "release must not break the active control");
+    }
+
+    @Test
     void launchAndStaticizeGraphReportsBoundedImpulseAndUnavailableStaticization() {
         var runtime = new ScriptedRuntime();
         var graph = graph(
@@ -316,6 +374,10 @@ class AcceleratorProgramStructureNodesTest {
         private boolean structureRetained = true;
         private boolean trajectoryDamageSettled;
         private boolean contentOwnerRetained = true;
+        private boolean sableDirect;
+        private boolean massGateBypassed;
+        private double heavyMass;
+        private double directSpeed;
         private double launchImpulse;
 
         @Override
@@ -417,8 +479,13 @@ class AcceleratorProgramStructureNodesTest {
                 applied.add("control:" + target.reference() + ":unavailable");
                 return StructureOperation.unavailable("sable_program_control");
             }
-            applied.add("control:" + target.reference());
+            if (!sableDirect && heavyMass > KineticStructureControl.massBudget(0)) {
+                applied.add("control:" + target.reference() + ":too-heavy");
+                return StructureOperation.rejected("sable_traction_too_heavy");
+            }
+            applied.add("control:" + target.reference() + (sableDirect ? ":sable-direct" : ""));
             controlActive = true;
+            massGateBypassed = sableDirect && heavyMass > KineticStructureControl.massBudget(0);
             return StructureOperation.control(control,
                     ProgramStructureOperationResult.completed("control_acquired", STRUCTURE));
         }
@@ -459,14 +526,21 @@ class AcceleratorProgramStructureNodesTest {
                 AcceleratorProgramStrength strength
         ) {
             requireControl(token);
-            launchImpulse = switch (strength) {
-                case CONTROLLED -> 25.0;
-                case STANDARD -> 50.0;
-                case MAXIMUM -> 75.0;
-            };
-            applied.add("launch:" + token.reference() + ":"
-                    + direction.x() + "," + direction.y() + "," + direction.z()
-                    + ":" + strength + ":impulse=" + launchImpulse);
+            if (sableDirect) {
+                directSpeed = KineticThrow.throwSpeed(false);
+                applied.add("launch:" + token.reference() + ":"
+                        + direction.x() + "," + direction.y() + "," + direction.z()
+                        + ":" + strength + ":sable-direct=" + directSpeed);
+            } else {
+                launchImpulse = switch (strength) {
+                    case CONTROLLED -> 25.0;
+                    case STANDARD -> 50.0;
+                    case MAXIMUM -> 75.0;
+                };
+                applied.add("launch:" + token.reference() + ":"
+                        + direction.x() + "," + direction.y() + "," + direction.z()
+                        + ":" + strength + ":impulse=" + launchImpulse);
+            }
             return StructureOperation.result(
                     ProgramStructureOperationResult.completed("launched", token.reference()));
         }

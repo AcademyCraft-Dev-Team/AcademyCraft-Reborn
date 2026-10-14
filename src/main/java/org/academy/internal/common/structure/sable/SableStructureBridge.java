@@ -68,6 +68,10 @@ public final class SableStructureBridge implements StructureBackendRouter.Bridge
         return SableStructureTraction.launch(host, reference, direction, speed);
     }
 
+    @Override public StructureDirectControl.Probe probeDirectControl(ServerLevel host, StructureRef reference) {
+        return SableStructureDirectControl.probe(host, reference);
+    }
+
     @Override public Optional<CaptureTarget> captureTarget(MinecraftServer server) {
         return Optional.of(new SableStructureTransactions(server));
     }
@@ -76,5 +80,6 @@ public final class SableStructureBridge implements StructureBackendRouter.Bridge
         SableStructureTraction.shutdown(server);
         SableStaffCompatibility.shutdown(server);
         SableStructureAccess.shutdown(server);
+        StructureDirectControl.clearAll();
     }
 }

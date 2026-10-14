@@ -57,8 +57,10 @@ import org.academy.api.common.structure.*;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.movement.VectorStructureService;
 import org.academy.internal.common.ability.accelerator.skills.lv3.KineticThrow;
 import org.academy.internal.common.ability.aeromanip.skills.lv2.PneumaticGrasp;
+import org.academy.internal.common.ability.electromaster.magnet.MagneticStructureService;
 import org.academy.internal.common.structure.NativeStructureRuntime;
 import org.academy.internal.common.structure.sable.SableContainerGuard;
 import org.academy.internal.common.structure.sable.SableStructureAccess;
@@ -84,7 +86,7 @@ public final class SableStructureSmoke {
     private static volatile int clientMotionSamples;
     private static SableStructureSmoke active;
     private static boolean initialized;
-    private enum Phase { SKILL, COAST, CAPTURE, HEAVY_THROW, NPC, ACTOR_REMOVED, CALLBACK_WAIT, CALLBACK_COAST, CALLBACK_REACQUIRE, FINISH }
+    private enum Phase { SKILL, COAST, CAPTURE, HEAVY_THROW, PROGRAM, NPC, ACTOR_REMOVED, CALLBACK_WAIT, CALLBACK_COAST, CALLBACK_REACQUIRE, FINISH }
     private static final BlockPos BASE = new BlockPos(8, 200, 8);
     private static final Vec3 CELL_CENTER = new Vec3(0.5, 0.5, 0.5);
     private static final StructureTraction.Settings SETTINGS = new StructureTraction.Settings(32, 32, 120, 36, 1000, 3);
@@ -475,7 +477,9 @@ public final class SableStructureSmoke {
                 createKineticPlayer();
                 var origin = captureOrigin();
                 var shipCenter = new Vec3(origin.getX() + 3.0, origin.getY() + 2.0, origin.getZ() + 3.0);
-                aim(player, shipCenter.add(0, 2, 6), shipCenter);
+                // Throwing away from the NPC fixture keeps the flying heavy body clear of the
+                // fixture's validation sightline while the later program phase runs.
+                aim(player, shipCenter.add(0, 2, -6), shipCenter);
                 var hit = StructureQueries.raycast(host, player.getEyePosition(),
                         player.getEyePosition().add(player.getLookAngle().scale(32)))
                         .orElseThrow(() -> new IllegalStateException(
@@ -495,6 +499,76 @@ public final class SableStructureSmoke {
                         .append("\nsable_traction_too_heavy_bypassed=true\nsable_h_throw_speed=")
                         .append(launched.linearVelocity().length()).append('\n');
                 KineticThrow.Server.stopHeld(player);
+                // The NPC traction lease is short; keep the fixture body held across the extra phase.
+                require(session != null && session.update(session.targetPosition(), Vec3.ZERO)
+                                == StructureTraction.Status.ACTIVE,
+                        "NPC traction ended during the Sable heavy throw phase");
+                next(Phase.PROGRAM);
+            }
+            case PROGRAM -> {
+                require(session != null && session.update(session.targetPosition(), Vec3.ZERO)
+                                == StructureTraction.Status.ACTIVE,
+                        "NPC traction ended during the Sable program phase");
+                require(captureRef != null, "Sable program phase requires the committed capture");
+                var ship = container.getSubLevel(captureRef.id());
+                require(ship instanceof ServerSubLevel, "Sable program capture lost its ship");
+                var handle = StructureSpaces.resolve(server, captureRef).orElseThrow(() ->
+                        new IllegalStateException("Sable program capture is not resolvable"));
+                var motion = StructureDynamics.motion(host, captureRef).orElseThrow(() ->
+                        new IllegalStateException("Sable program capture lost its motion"));
+                require(motion.mass() > KineticStructureControl.massBudget(0),
+                        "Sable program fixture is not heavier than the tier-0 budget: " + motion.mass());
+                var direction = new Vec3(0.0, 1.0, 0.0);
+                var vectorControl = VectorStructureService.programControl(player, captureRef, handle.runtimeId());
+                require(vectorControl.status() == VectorStructureService.ProgramStatus.COMPLETED,
+                        "Sable vector program control was rejected: " + vectorControl.detail());
+                var vectorSession = VectorStructureService.session(player).orElseThrow(() ->
+                        new IllegalStateException("Sable vector program control has no session"));
+                var vectorRelease = VectorStructureService.programRelease(
+                        player, captureRef, vectorSession.controllerId());
+                require(vectorRelease.status() == VectorStructureService.ProgramStatus.COMPLETED
+                                && vectorRelease.detail().equals("released"),
+                        "Sable vector program release was not a real release: " + vectorRelease.detail());
+                var vectorNoop = VectorStructureService.programRelease(
+                        player, captureRef, vectorSession.controllerId());
+                require(vectorNoop.status() == VectorStructureService.ProgramStatus.COMPLETED
+                                && vectorNoop.detail().equals("release_noop"),
+                        "Sable vector program release was not idempotent: " + vectorNoop.detail());
+                var vectorControlAgain = VectorStructureService.programControl(player, captureRef, handle.runtimeId());
+                require(vectorControlAgain.status() == VectorStructureService.ProgramStatus.COMPLETED,
+                        "Sable vector program re-control was rejected: " + vectorControlAgain.detail());
+                var vectorSessionAgain = VectorStructureService.session(player).orElseThrow();
+                var vectorLaunch = VectorStructureService.programLaunch(player, captureRef,
+                        vectorSessionAgain.controllerId(), direction, 1.0);
+                require(vectorLaunch.status() == VectorStructureService.ProgramStatus.COMPLETED,
+                        "Sable vector program launch was rejected: " + vectorLaunch.detail());
+                var vectorMotion = StructureDynamics.motion(host, captureRef).orElseThrow(() ->
+                        new IllegalStateException("Sable vector program launch lost its motion"));
+                var vectorExpected = KineticThrow.throwSpeed(false);
+                require(Math.abs(vectorMotion.linearVelocity().length() - vectorExpected) < 0.5,
+                        "Sable vector program launch speed is not calibrated: " + vectorMotion.linearVelocity());
+                evidence.append("sable_program_control=true\nsable_program_release_idempotent=true\n")
+                        .append("sable_program_heavy_mass=").append(motion.mass())
+                        .append("\nsable_program_launch_speed=").append(vectorMotion.linearVelocity().length())
+                        .append('\n');
+                KineticThrow.Server.stopHeld(player);
+                var magneticControl = MagneticStructureService.programControl(player, captureRef, handle.runtimeId());
+                require(magneticControl.status() == MagneticStructureService.ProgramStatus.COMPLETED,
+                        "Sable magnetic program control was rejected: " + magneticControl.detail());
+                var magneticSession = MagneticStructureService.programSession(player).orElseThrow(() ->
+                        new IllegalStateException("Sable magnetic program control has no session"));
+                var magneticLaunch = MagneticStructureService.programLaunch(player, captureRef,
+                        magneticSession.controllerId(), direction, 1.0);
+                require(magneticLaunch.status() == MagneticStructureService.ProgramStatus.COMPLETED,
+                        "Sable magnetic program launch was rejected: " + magneticLaunch.detail());
+                var magneticMotion = StructureDynamics.motion(host, captureRef).orElseThrow(() ->
+                        new IllegalStateException("Sable magnetic program launch lost its motion"));
+                var magneticExpected = MagneticStructureService.launchSpeed(1.0);
+                require(Math.abs(magneticMotion.linearVelocity().length() - magneticExpected) < 0.5,
+                        "Sable magnetic program launch speed is not calibrated: " + magneticMotion.linearVelocity());
+                evidence.append("sable_magnetic_program_control=true\n")
+                        .append("sable_magnetic_program_launch_speed=")
+                        .append(magneticMotion.linearVelocity().length()).append('\n');
                 closePlayer();
                 remove((ServerSubLevel) ship);
                 next(Phase.NPC);

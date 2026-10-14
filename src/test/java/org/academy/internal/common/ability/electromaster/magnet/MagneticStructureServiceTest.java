@@ -11,6 +11,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MagneticStructureServiceTest {
@@ -84,5 +85,14 @@ class MagneticStructureServiceTest {
 
         assertEquals(2.0, MagneticStructureService.edgeDistance(region, new AABB(2, 2, 2, 11, 11, 11)), 1.0e-9);
         assertTrue(MagneticStructureService.edgeDistance(region, new AABB(-1, 2, 2, 11, 11, 11)) < 0);
+    }
+
+    @Test
+    void programLaunchSpeedMatchesTheNativeLegacyCalibrationAtEveryStrength() {
+        assertEquals(14.0, MagneticStructureService.launchSpeed(0.5), 1.0e-9);
+        assertEquals(28.0, MagneticStructureService.launchSpeed(1.0), 1.0e-9);
+        assertEquals(42.0, MagneticStructureService.launchSpeed(1.5), 1.0e-9);
+        assertThrows(IllegalArgumentException.class, () -> MagneticStructureService.launchSpeed(0.0));
+        assertThrows(IllegalArgumentException.class, () -> MagneticStructureService.launchSpeed(2.5));
     }
 }

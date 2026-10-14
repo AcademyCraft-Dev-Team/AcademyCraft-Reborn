@@ -221,6 +221,64 @@ class ElectromasterProgramStructureNodesTest {
     }
 
     @Test
+    void sableDirectControlChainExtractsControlsLaunchesAndReleasesIdempotently() {
+        var runtime = new ScriptedRuntime();
+        runtime.sableDirect = true;
+        runtime.heavyMass = 4_096.0;
+        var graph = graph(
+                List.of(
+                        node(0, BaseAbilityProgramDefinition.entryId(
+                                ElectromasterProgramNodeCatalog.ELECTROMASTER), new JsonObject()),
+                        blockPositionNode(1, 10, 64, 10),
+                        node(2, ElectromasterProgramNodeIds.STRUCTURE_EXTRACT, extractConfiguration(0, true)),
+                        node(3, ElectromasterProgramNodeIds.STRUCTURE_CONTROL, new JsonObject()),
+                        node(4, ElectromasterProgramNodeIds.STRUCTURE_LAUNCH, powerConfiguration(1.0f)),
+                        node(5, ElectromasterProgramNodeIds.STRUCTURE_RELEASE, new JsonObject()),
+                        node(6, ElectromasterProgramNodeIds.STRUCTURE_RELEASE, new JsonObject()),
+                        directionNode(7, 0.0, 1.0, 0.0)
+                ),
+                List.of(
+                        edge(0, "flow", 2, "flow"),
+                        edge(2, "flow", 3, "flow"),
+                        edge(3, "flow", 4, "flow"),
+                        edge(4, "flow", 5, "flow"),
+                        edge(5, "flow", 6, "flow"),
+                        edge(1, "position", 2, "host"),
+                        edge(2, "structure", 3, "structure"),
+                        edge(3, "control", 4, "control"),
+                        edge(7, "direction", 4, "direction"),
+                        edge(3, "control", 5, "control"),
+                        edge(3, "control", 6, "control")
+                )
+        );
+        var compiled = AbilityProgramDefinitions.require(
+                        ElectromasterProgramNodeCatalog.ELECTROMASTER)
+                .compile(graph, Set.of(ElectromasterProgramCapabilities.STRUCTURE));
+        assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
+
+        var result = ElectromasterProgramExecutionBridge.execute(
+                compiled.program(), 430L, runtime, new ProgramActionTransaction());
+
+        assertEquals(ProgramVmResult.Status.COMPLETED, result.status(),
+                () -> String.valueOf(result.diagnostic()));
+        assertEquals(List.of(
+                "extract:BlockPos{x=10, y=64, z=10}:0:true",
+                "control:" + STRUCTURE + ":sable-direct",
+                "launch:" + STRUCTURE + ":0.0,1.0,0.0:1.0:speed=" + expectedLaunchSpeed(1.0f),
+                "release:" + STRUCTURE + ":released",
+                "release:" + STRUCTURE + ":noop"
+        ), runtime.applied);
+        assertTrue(runtime.massGateBypassed,
+                "a heavy Sable body must bypass the magnetic traction mass gate");
+        assertEquals(expectedLaunchSpeed(1.0f), runtime.launchSpeed, 1.0e-9,
+                "Sable direct launch speed must keep the legacy magnetic calibration");
+        assertFalse(runtime.trajectoryDamageSettled,
+                "launch must not settle preset-trajectory damage");
+        assertTrue(runtime.structureRetained, "release must retain the structure");
+        assertFalse(runtime.controlBroken, "release must not break the active control");
+    }
+
+    @Test
     void nonMagneticExtractWithoutTheOverlayFailsAtTheExtractNodeAndKeepsTheSource() {
         var runtime = new ScriptedRuntime();
         runtime.rejectExtraction = true;
@@ -363,6 +421,9 @@ class ElectromasterProgramStructureNodesTest {
         private boolean trajectoryDamageSettled;
         private boolean contentOwnerRetained = true;
         private boolean sourceRetained = true;
+        private boolean sableDirect;
+        private boolean massGateBypassed;
+        private double heavyMass;
         private double launchSpeed;
 
         @Override
@@ -453,8 +514,13 @@ class ElectromasterProgramStructureNodesTest {
                 applied.add("control:" + target.reference() + ":unavailable");
                 return StructureOperation.unavailable("sable_program_control");
             }
-            applied.add("control:" + target.reference());
+            if (!sableDirect && heavyMass > MagneticStructureControl.massBudget(0)) {
+                applied.add("control:" + target.reference() + ":too-heavy");
+                return StructureOperation.rejected("sable_traction_too_heavy");
+            }
+            applied.add("control:" + target.reference() + (sableDirect ? ":sable-direct" : ""));
             controlActive = true;
+            massGateBypassed = sableDirect && heavyMass > MagneticStructureControl.massBudget(0);
             return StructureOperation.control(control,
                     ProgramStructureOperationResult.completed("control_acquired", STRUCTURE));
         }

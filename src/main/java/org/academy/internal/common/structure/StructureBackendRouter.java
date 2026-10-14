@@ -66,6 +66,11 @@ public final class StructureBackendRouter {
             return false;
         }
 
+        /** Non-mutating probe behind {@link StructureDirectControl}; unsupported backends refuse. */
+        default StructureDirectControl.Probe probeDirectControl(ServerLevel host, StructureRef reference) {
+            return StructureDirectControl.Probe.unavailable("direct_control_unsupported");
+        }
+
         /** Neutral capture executor for this backend; empty when it has no capture path. */
         default Optional<CaptureTarget> captureTarget(MinecraftServer server) {
             return Optional.empty();
@@ -194,6 +199,22 @@ public final class StructureBackendRouter {
             return selected.bridge.launch(host, reference, direction, speed);
         }
         return false;
+    }
+
+    /** Routes one direct-control probe to the selected backend without mutating any state. */
+    public static StructureDirectControl.Probe probeDirectControl(ServerLevel host, StructureRef reference) {
+        Objects.requireNonNull(host, "host");
+        Objects.requireNonNull(reference, "reference");
+        requireThread(host.getServer());
+        if (host.getServer().getLevel(host.dimension()) != host
+                || !host.dimension().identifier().equals(reference.dimension())) {
+            return StructureDirectControl.Probe.unavailable("host_mismatch");
+        }
+        var selected = selection(host.getServer());
+        if (selected.bridge != null && SABLE_ID.equals(reference.backend())) {
+            return selected.bridge.probeDirectControl(host, reference);
+        }
+        return StructureDirectControl.Probe.unavailable("direct_control_unsupported");
     }
 
     private static StructureTraction.Acquisition unavailable() {

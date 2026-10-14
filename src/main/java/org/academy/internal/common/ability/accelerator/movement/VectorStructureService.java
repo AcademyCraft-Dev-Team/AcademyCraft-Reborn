@@ -23,6 +23,7 @@ import org.academy.api.common.structure.BlockStructureCaptureOptions;
 import org.academy.api.common.structure.StructureBackendStatus;
 import org.academy.api.common.structure.StructureCaptureRequest;
 import org.academy.api.common.structure.StructureCaptureResult;
+import org.academy.api.common.structure.StructureDirectControl;
 import org.academy.api.common.structure.StructureDynamics;
 import org.academy.api.common.structure.StructureHit;
 import org.academy.api.common.structure.StructureLifecycle;
@@ -159,7 +160,7 @@ public final class VectorStructureService {
     public static boolean beginCapture(ServerPlayer player, CapturePlan plan) {
         requireThread(player);
         Objects.requireNonNull(plan, "plan");
-        var result = startCapture(player, plan, true);
+        var result = startCapture(player, plan, true, false);
         if (result.pending()) return true;
         if (!result.succeeded()) {
             rejectCapture(player, result.status() + ":" + result.detail());
@@ -206,7 +207,7 @@ public final class VectorStructureService {
         var outcome = planCaptureInternal(player, seed, tier, budget);
         if (outcome.plan() == null) return ProgramResult.rejected(outcome.rejection());
         var plan = outcome.plan();
-        var result = startCapture(player, plan, false);
+        var result = startCapture(player, plan, false, true);
         if (result.pending()) {
             return ProgramResult.pending(result.status() + ":" + result.detail());
         }
@@ -225,7 +226,8 @@ public final class VectorStructureService {
     /**
      * Program control entry. An existing session of the same structure is reused; otherwise the
      * structure's active physics region is adopted under a new exclusive session. A structure
-     * controlled or captured by another actor is rejected instead of being stolen.
+     * controlled or captured by another actor is rejected instead of being stolen. Sable bodies
+     * receive a lightweight direct-velocity lease: no force, no mass gate, and no physics region.
      */
     public static ProgramResult programControl(ServerPlayer player, StructureRef reference, UUID runtimeId) {
         requireThread(player);
@@ -234,6 +236,7 @@ public final class VectorStructureService {
         var playerId = player.getUUID();
         var held = SESSIONS.get(playerId);
         if (held != null && held.reference.equals(reference)) {
+            if (isSable(reference)) return controlSableExisting(player, held, runtimeId);
             if (!programControlUsable(player, held, runtimeId)) {
                 return ProgramResult.rejected("structure_unavailable");
             }
@@ -254,7 +257,9 @@ public final class VectorStructureService {
         if (!(player.level() instanceof ServerLevel level)) {
             return ProgramResult.rejected("host_unavailable");
         }
-        if (sableMode(level)) return ProgramResult.unavailable("sable_program_control");
+        if (isSable(reference)) {
+            return controlSableFresh(player, level, reference, runtimeId);
+        }
         var handle = StructureSpaces.resolve(level.getServer(), reference).orElse(null);
         if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) {
             return ProgramResult.rejected("structure_unavailable");
@@ -299,6 +304,76 @@ public final class VectorStructureService {
         return ProgramResult.completed("control_acquired", reference);
     }
 
+    private static ProgramResult controlSableExisting(ServerPlayer player, Session held, UUID runtimeId) {
+        if (!(player.level() instanceof ServerLevel level)) {
+            return ProgramResult.rejected("host_unavailable");
+        }
+        var handle = StructureSpaces.resolve(level.getServer(), held.reference).orElse(null);
+        if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) {
+            terminate(player.getUUID());
+            return ProgramResult.rejected("structure_unavailable");
+        }
+        if (!handle.runtimeId().equals(runtimeId)) {
+            // The bound body epoch is gone; the stale token must not regain authority.
+            terminate(player.getUUID());
+            return ProgramResult.rejected("stale_structure_epoch");
+        }
+        if (held.traction != null) return ProgramResult.rejected("structure_controlled");
+        if (held.directControl) {
+            var status = StructureDirectControl.validate(level, held.reference, player, held.controllerId);
+            if (status == StructureDirectControl.Status.ACTIVE) {
+                return ProgramResult.completed("control_active", held.reference);
+            }
+            terminate(player.getUUID());
+            return ProgramResult.rejected(status == StructureDirectControl.Status.OCCUPIED
+                    ? "structure_controlled" : "structure_unavailable");
+        }
+        var status = StructureDirectControl.acquire(level, held.reference, player, held.controllerId);
+        if (status == StructureDirectControl.Status.OCCUPIED) {
+            return ProgramResult.rejected("structure_controlled");
+        }
+        if (status != StructureDirectControl.Status.ACTIVE) {
+            terminate(player.getUUID());
+            return ProgramResult.rejected("structure_unavailable");
+        }
+        held.directControl = true;
+        held.sableBody = true;
+        held.stage = Stage.LIFTING;
+        held.expiresAt = level.getGameTime() + KineticThrow.HOVER_TICKS;
+        return ProgramResult.completed("control_acquired", held.reference);
+    }
+
+    private static ProgramResult controlSableFresh(ServerPlayer player, ServerLevel level,
+                                                   StructureRef reference, UUID runtimeId) {
+        var handle = StructureSpaces.resolve(level.getServer(), reference).orElse(null);
+        if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) {
+            return ProgramResult.rejected("structure_unavailable");
+        }
+        if (!handle.runtimeId().equals(runtimeId)) {
+            return ProgramResult.rejected("stale_structure_epoch");
+        }
+        if (StructureDynamics.motion(level, reference).isEmpty()) {
+            return ProgramResult.rejected("motion_unavailable");
+        }
+        var session = new Session(reference, level.dimension(), PROGRAM_CONTROL_TIER, 0, null, null);
+        var status = StructureDirectControl.acquire(level, reference, player, session.controllerId);
+        if (status == StructureDirectControl.Status.OCCUPIED) {
+            return ProgramResult.rejected("structure_controlled");
+        }
+        if (status != StructureDirectControl.Status.ACTIVE) {
+            return ProgramResult.rejected("structure_unavailable");
+        }
+        session.directControl = true;
+        session.sableBody = true;
+        session.stage = Stage.LIFTING;
+        session.expiresAt = level.getGameTime() + KineticThrow.HOVER_TICKS;
+        // The service keeps one session per player; adopting a second structure first ends
+        // the previous session while retaining that structure, its region and its inertia.
+        terminate(player.getUUID());
+        SESSIONS.put(player.getUUID(), session);
+        return ProgramResult.completed("control_acquired", reference);
+    }
+
     /**
      * Program move entry: bounded anchor correction toward a world target. The body keeps its
      * inertia; range violations and lost regions end the action while retaining the structure.
@@ -311,7 +386,7 @@ public final class VectorStructureService {
         if (held.stage != Stage.LIFTING) {
             return ProgramResult.rejected("not_movable:" + held.stage.name().toLowerCase(java.util.Locale.ROOT));
         }
-        if (held.traction != null) return ProgramResult.unavailable("sable_move");
+        if (isSable(held.reference)) return ProgramResult.unavailable("sable_move");
         if (!isFiniteVector(target)) return ProgramResult.rejected("invalid_target");
         if (!(player.level() instanceof ServerLevel level)) {
             return ProgramResult.rejected("host_unavailable");
@@ -345,18 +420,52 @@ public final class VectorStructureService {
         if (held.stage != Stage.LIFTING) {
             return ProgramResult.rejected("not_launchable:" + held.stage.name().toLowerCase(java.util.Locale.ROOT));
         }
-        if (held.traction != null) return ProgramResult.unavailable("sable_launch");
         if (!isFiniteVector(direction) || direction.lengthSqr() <= 1.0e-8) {
             return ProgramResult.rejected("invalid_direction");
         }
         if (!Double.isFinite(speedScale) || speedScale < 0.1 || speedScale > 2.0) {
             return ProgramResult.rejected("invalid_strength");
         }
+        if (held.directControl) {
+            return launchSableDirect(player, held, direction.normalize(), speedScale);
+        }
+        if (held.traction != null) return ProgramResult.unavailable("sable_launch");
         if (!(player.level() instanceof ServerLevel)) return ProgramResult.rejected("host_unavailable");
         if (!launchNative(player, held, direction.normalize(), speedScale)) {
             return ProgramResult.rejected("launch_rejected");
         }
         return ProgramResult.completed("launched", reference);
+    }
+
+    /**
+     * Direct-velocity program launch for a Sable body under a lightweight lease. The calibrated
+     * skill-side throw speed is applied without any mass gate; the lease and this session's
+     * control are withdrawn before the hand-off, and the body remains observed in free flight.
+     */
+    private static ProgramResult launchSableDirect(ServerPlayer player, Session held, Vec3 direction,
+                                                   double speedScale) {
+        if (!(player.level() instanceof ServerLevel level)) {
+            return ProgramResult.rejected("host_unavailable");
+        }
+        var status = StructureDirectControl.validate(level, held.reference, player, held.controllerId);
+        if (status != StructureDirectControl.Status.ACTIVE) {
+            terminate(player.getUUID());
+            return ProgramResult.rejected(status == StructureDirectControl.Status.OCCUPIED
+                    ? "structure_controlled" : "structure_unavailable");
+        }
+        var skill = Skills.KINETIC_THROW.get();
+        var speed = KineticThrow.throwSpeed(skill.hasProficiencyMilestone(player, 3)) * speedScale;
+        held.closeControl();
+        if (!StructureBackendRouter.launch(level, held.reference, direction, speed)) {
+            terminate(player.getUUID());
+            return ProgramResult.rejected("sable_launch_rejected");
+        }
+        held.sableBody = true;
+        held.stage = Stage.FLYING;
+        held.lifted = true;
+        held.expiresAt = level.getGameTime() + KineticThrow.MAXIMUM_FLIGHT_TICKS;
+        held.velocity = direction.scale(speed);
+        return ProgramResult.completed("launched", held.reference);
     }
 
     /**
@@ -541,7 +650,8 @@ public final class VectorStructureService {
         return new PlanOutcome(new CapturePlan(seed.immutable(), tier, cropped), "");
     }
 
-    private static StructureCaptureResult startCapture(ServerPlayer player, CapturePlan plan, boolean report) {
+    private static StructureCaptureResult startCapture(ServerPlayer player, CapturePlan plan,
+                                                       boolean report, boolean program) {
         var level = player.level();
         var budget = cellBudget(level);
         var result = StructureTransactions.capture(level, new StructureCaptureRequest(
@@ -553,7 +663,7 @@ public final class VectorStructureService {
                         StructureCaptureResult.Status.RECOVERY_REQUIRED, "pending_without_reference");
             }
             CAPTURES.put(player.getUUID(), new CaptureState(reference, level.dimension(), plan.tier(),
-                    plan.positions(), result.transactionId(), level.getGameTime(), sableMode(level), report));
+                    plan.positions(), result.transactionId(), level.getGameTime(), sableMode(level), report, program));
             return result;
         }
         if (!result.succeeded()) return result;
@@ -561,7 +671,7 @@ public final class VectorStructureService {
             return StructureCaptureResult.failure(result.transactionId(),
                     StructureCaptureResult.Status.RECOVERY_REQUIRED, "committed_without_reference");
         }
-        beginLift(player, reference, plan.tier(), plan.positions(), report);
+        beginLift(player, reference, plan.tier(), plan.positions(), report, program);
         return result;
     }
 
@@ -701,9 +811,13 @@ public final class VectorStructureService {
     }
 
     private static void beginLift(ServerPlayer player, StructureRef reference, int tier,
-                                  List<BlockPos> positions, boolean report) {
+                                  List<BlockPos> positions, boolean report, boolean program) {
         terminate(player.getUUID());
         if (sableMode(player.level())) {
+            if (program) {
+                beginSableProgramExtract(player, reference, positions.size());
+                return;
+            }
             beginSableLift(player, reference, tier, positions.size(), report);
             return;
         }
@@ -809,6 +923,25 @@ public final class VectorStructureService {
         playKineticCue(level, point);
     }
 
+    /**
+     * Program extraction on a Sable world retains the captured body without a skill lift or a
+     * traction session. The following control node issues the lightweight direct-velocity lease;
+     * an unavailable body rejects and the structure stays retained.
+     */
+    private static void beginSableProgramExtract(ServerPlayer player, StructureRef reference, int blockCount) {
+        if (!(player.level() instanceof ServerLevel level)) return;
+        var handle = StructureSpaces.resolve(level.getServer(), reference).orElse(null);
+        if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) {
+            rejectCapture(player, "sable_structure_unavailable", false);
+            return;
+        }
+        var held = new Session(reference, level.dimension(), 0, blockCount, null, null);
+        held.sableBody = true;
+        held.stage = Stage.LIFTING;
+        held.expiresAt = level.getGameTime() + KineticThrow.HOVER_TICKS;
+        SESSIONS.put(player.getUUID(), held);
+    }
+
     private static boolean launchNative(ServerPlayer player, Session held, Vec3 direction, double speedScale) {
         if (!(player.level() instanceof ServerLevel level) || held.region == null) return false;
         if (!isFiniteVector(direction) || direction.lengthSqr() <= 1.0e-8) return false;
@@ -865,7 +998,7 @@ public final class VectorStructureService {
         CAPTURES.remove(playerId);
         if (current.succeeded()) {
             beginLift(player, current.structure().orElse(capture.reference), capture.tier,
-                    capture.positions, capture.report);
+                    capture.positions, capture.report, capture.program);
         } else {
             rejectCapture(player, current.status() + ":" + current.detail(), capture.report);
         }
@@ -917,8 +1050,21 @@ public final class VectorStructureService {
     }
 
     private static void tickLifting(ServerPlayer player, Session held) {
+        if (held.directControl) {
+            if (!directControlActive(player, held)) terminate(player.getUUID());
+            return;
+        }
         if (held.traction != null) {
             tickSableLift(player, held);
+            return;
+        }
+        if (held.region == null && isSable(held.reference)) {
+            // A program-extracted Sable body is retained until its control node issues the lease.
+            if (!(player.level() instanceof ServerLevel level)
+                    || StructureSpaces.resolve(level.getServer(), held.reference)
+                    .filter(handle -> handle.lifecycle() == StructureLifecycle.ACTIVE).isEmpty()) {
+                terminate(player.getUUID());
+            }
             return;
         }
         var region = held.region;
@@ -960,6 +1106,12 @@ public final class VectorStructureService {
             held.expiresAt = hoverDeadline(player.level().getGameTime());
         }
         applyImpacts(player, held);
+    }
+
+    private static boolean directControlActive(ServerPlayer player, Session held) {
+        if (!(player.level() instanceof ServerLevel level)) return false;
+        return StructureDirectControl.validate(level, held.reference, player, held.controllerId)
+                == StructureDirectControl.Status.ACTIVE;
     }
 
     private static void tickSableLift(ServerPlayer player, Session held) {
@@ -1144,6 +1296,10 @@ public final class VectorStructureService {
 
     private static boolean sableMode(Level level) {
         return StructureBackendRouter.status(level.getServer()).mode() == StructureBackendStatus.Mode.SABLE;
+    }
+
+    private static boolean isSable(StructureRef reference) {
+        return StructureBackendRouter.SABLE_ID.equals(reference.backend());
     }
 
     private static StructureHit lookedAtStructure(ServerPlayer player, StructureRef reference, double range) {
@@ -1406,6 +1562,7 @@ public final class VectorStructureService {
         private int unavailableTicks;
         private boolean programMove;
         private boolean sableBody;
+        private boolean directControl;
         private Vec3 velocity = Vec3.ZERO;
 
         private Session(StructureRef reference, ResourceKey<Level> dimension, int tier, int blockCount,
@@ -1477,6 +1634,10 @@ public final class VectorStructureService {
             } catch (RuntimeException failure) {
                 AcademyCraft.LOGGER.warn("Kinetic Throw traction cleanup failed for {}", reference, failure);
             }
+            if (directControl) {
+                directControl = false;
+                StructureDirectControl.release(reference, controllerId);
+            }
         }
     }
 
@@ -1488,7 +1649,8 @@ public final class VectorStructureService {
             UUID transactionId,
             long startedAt,
             boolean sable,
-            boolean report
+            boolean report,
+            boolean program
     ) {
         private int blockCount() {
             return positions.size();
