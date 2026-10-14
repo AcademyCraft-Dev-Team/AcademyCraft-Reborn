@@ -52,10 +52,12 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.ability.event.SkillExecutionFinishEvent;
 import org.academy.api.common.ability.aeromanip.PneumaticStructureControl;
+import org.academy.api.common.ability.accelerator.KineticStructureControl;
 import org.academy.api.common.structure.*;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.skills.lv3.KineticThrow;
 import org.academy.internal.common.ability.aeromanip.skills.lv2.PneumaticGrasp;
 import org.academy.internal.common.structure.NativeStructureRuntime;
 import org.academy.internal.common.structure.sable.SableContainerGuard;
@@ -82,7 +84,7 @@ public final class SableStructureSmoke {
     private static volatile int clientMotionSamples;
     private static SableStructureSmoke active;
     private static boolean initialized;
-    private enum Phase { SKILL, COAST, CAPTURE, NPC, ACTOR_REMOVED, CALLBACK_WAIT, CALLBACK_COAST, CALLBACK_REACQUIRE, FINISH }
+    private enum Phase { SKILL, COAST, CAPTURE, HEAVY_THROW, NPC, ACTOR_REMOVED, CALLBACK_WAIT, CALLBACK_COAST, CALLBACK_REACQUIRE, FINISH }
     private static final BlockPos BASE = new BlockPos(8, 200, 8);
     private static final Vec3 CELL_CENTER = new Vec3(0.5, 0.5, 0.5);
     private static final StructureTraction.Settings SETTINGS = new StructureTraction.Settings(32, 32, 120, 36, 1000, 3);
@@ -312,7 +314,13 @@ public final class SableStructureSmoke {
 
     private void startCapture() {
         captureStarted = true;
-        var cells = List.of(BASE.offset(-4, 0, -4), BASE.offset(-3, 0, -4), BASE.offset(-4, 0, -3));
+        // A heavy real fixture (>128 mass) proves the H-press throw bypasses the traction mass gate.
+        // It sits outside the default spawn protection radius so the permission check stays real.
+        var origin = BASE.offset(0, 0, 7);
+        var cells = new ArrayList<BlockPos>();
+        for (int x = 0; x < 6; x++) for (int z = 0; z < 6; z++) for (int y = 0; y < 4; y++) {
+            cells.add(origin.offset(x, y, z));
+        }
         for (var cell : cells) {
             require(host.getBlockState(cell).isAir() && host.getBlockEntity(cell) == null,
                     "Sable capture source must start empty: " + cell);
@@ -343,7 +351,7 @@ public final class SableStructureSmoke {
                     "Sable capture target lost the captured state: " + cell);
         }
         require(!captureJournalExists(captureTransaction), "Committed Sable capture did not recycle its journal");
-        var area = new AABB(Vec3.atLowerCornerOf(origin), Vec3.atLowerCornerOf(origin.offset(4, 2, 4)));
+        var area = new AABB(Vec3.atLowerCornerOf(origin), Vec3.atLowerCornerOf(origin.offset(6, 4, 6)));
         require(host.getEntitiesOfClass(ItemEntity.class, area).isEmpty(), "Sable capture left item drops");
         var captured = container.getSubLevel(captureRef.id());
         require(captured instanceof ServerSubLevel, "Committed Sable capture lost its ship");
@@ -455,6 +463,40 @@ public final class SableStructureSmoke {
                         new IllegalStateException("Committed Sable capture must expose its target"));
                 verifyCaptureCommit();
                 verifyCaptureRejection();
+                next(Phase.HEAVY_THROW);
+            }
+            case HEAVY_THROW -> {
+                require(captureRef != null, "Sable heavy throw requires the committed capture");
+                var ship = container.getSubLevel(captureRef.id());
+                require(ship instanceof ServerSubLevel, "Sable heavy capture lost its ship");
+                var mass = ((ServerSubLevel) ship).getMassTracker().getMass();
+                require(mass > KineticStructureControl.massBudget(0),
+                        "Sable heavy fixture mass " + mass + " does not exceed the tier-0 traction budget");
+                createKineticPlayer();
+                var origin = captureOrigin();
+                var shipCenter = new Vec3(origin.getX() + 3.0, origin.getY() + 2.0, origin.getZ() + 3.0);
+                aim(player, shipCenter.add(0, 2, 6), shipCenter);
+                var hit = StructureQueries.raycast(host, player.getEyePosition(),
+                        player.getEyePosition().add(player.getLookAngle().scale(32)))
+                        .orElseThrow(() -> new IllegalStateException(
+                                "Sable heavy throw aim does not hit the captured ship"));
+                require(hit.block().structure().equals(captureRef), "Sable heavy throw aimed at a foreign structure");
+                var budgetSettings = KineticStructureControl.settings(mass, 0, 0, 32);
+                require(StructureTraction.tryAcquire(player, UUID.randomUUID(), hit, budgetSettings, (_, _) -> true)
+                                .status() == StructureTraction.Status.TOO_HEAVY,
+                        "Sable heavy fixture was not rejected by the traction mass gate");
+                require(KineticThrow.Server.pressHeld(player), "Sable H-press heavy throw was rejected");
+                var launched = StructureDynamics.motion(host, captureRef).orElseThrow(() ->
+                        new IllegalStateException("Sable heavy throw lost its motion"));
+                var expected = player.getLookAngle().normalize().scale(KineticThrow.throwSpeed(false));
+                require(launched.linearVelocity().distanceTo(expected) < 0.5,
+                        "Sable heavy throw speed is not the calibrated value: " + launched.linearVelocity());
+                evidence.append("sable_hpressed_heavy_throw=true\nsable_heavy_mass=").append(mass)
+                        .append("\nsable_traction_too_heavy_bypassed=true\nsable_h_throw_speed=")
+                        .append(launched.linearVelocity().length()).append('\n');
+                KineticThrow.Server.stopHeld(player);
+                closePlayer();
+                remove((ServerSubLevel) ship);
                 next(Phase.NPC);
             }
             case NPC -> {
@@ -590,6 +632,40 @@ public final class SableStructureSmoke {
             actor.getEyePosition().add(actor.getLookAngle().scale(32))).orElseThrow(); }
 
     private void createSkillPlayer() {
+        openEmbeddedPlayer();
+        var system = AbilitySystemServer.getSystem(player); var id = player.getUUID();
+        system.setPlayerAbilityCategory(id, AbilityCategories.AEROMANIP.get()); system.setPlayerLevel(id, 5);
+        system.setPlayerStatus(id, AbilityData.Status.NORMAL);
+        system.setPlayerBaseMaxCP(id, 100_000); system.setPlayerAvailableCP(id, 100_000);
+        for (var skill : new org.academy.api.common.ability.Skill[]{Skills.FLOW_SENSE.get(), Skills.PNEUMATIC_GRASP.get()}) {
+            system.addPlayerSkill(player, skill.getKeyString());
+            if (!skill.isEnabled(player)) system.toggleSkill(id, skill.getKeyString());
+        }
+        system.getAeromanipResourceManager().onPlayerLogin(player);
+        system.setPlayerCurrMP(id, system.getAeromanipResourceManager().getCapacity(player));
+    }
+
+    private void createKineticPlayer() {
+        openEmbeddedPlayer();
+        var system = AbilitySystemServer.getSystem(player); var id = player.getUUID();
+        system.setPlayerAbilityCategory(id, AbilityCategories.ACCELERATOR.get()); system.setPlayerLevel(id, 5);
+        system.setPlayerStatus(id, AbilityData.Status.NORMAL);
+        system.setPlayerBaseMaxCP(id, 100_000); system.setPlayerAvailableCP(id, 100_000);
+        for (var skill : new org.academy.api.common.ability.Skill[]{
+                Skills.KINETIC_ENERGY_APPLIED.get(), Skills.KINETIC_THROW.get()}) {
+            system.addPlayerSkill(player, skill.getKeyString());
+        }
+        if (Skills.KINETIC_ENERGY_APPLIED.get().isEnabled(player)) {
+            system.toggleSkill(id, Skills.KINETIC_ENERGY_APPLIED.get().getKeyString());
+        }
+        if (!Skills.KINETIC_THROW.get().isEnabled(player)) {
+            system.toggleSkill(id, Skills.KINETIC_THROW.get().getKeyString());
+        }
+        require(Skills.KINETIC_THROW.get().isEnabled(player),
+                "Kinetic throw is not enabled for the Sable probe player");
+    }
+
+    private void openEmbeddedPlayer() {
         var profile = new GameProfile(UUID.randomUUID(), "sable-probe");
         var cookie = new CommonListenerCookie(profile, 0, ClientInformation.createDefault(), false, ConnectionType.NEOFORGE);
         player = new ServerPlayer(server, host, profile, cookie.clientInformation());
@@ -614,16 +690,6 @@ public final class SableStructureSmoke {
         require(connection.getPacketListener() == player.connection && player.connection.getConnectionType().isNeoForge(),
                 "Embedded configuration did not transition to its real NeoForge PLAY listener");
         player.connection.markClientLoaded(); player.setGameMode(GameType.SURVIVAL); player.setNoGravity(true);
-        var system = AbilitySystemServer.getSystem(player); var id = player.getUUID();
-        system.setPlayerAbilityCategory(id, AbilityCategories.AEROMANIP.get()); system.setPlayerLevel(id, 5);
-        system.setPlayerStatus(id, AbilityData.Status.NORMAL);
-        system.setPlayerBaseMaxCP(id, 100_000); system.setPlayerAvailableCP(id, 100_000);
-        for (var skill : new org.academy.api.common.ability.Skill[]{Skills.FLOW_SENSE.get(), Skills.PNEUMATIC_GRASP.get()}) {
-            system.addPlayerSkill(player, skill.getKeyString());
-            if (!skill.isEnabled(player)) system.toggleSkill(id, skill.getKeyString());
-        }
-        system.getAeromanipResourceManager().onPlayerLogin(player);
-        system.setPlayerCurrMP(id, system.getAeromanipResourceManager().getCapacity(player));
     }
 
     private static void aim(Entity entity, Vec3 eye, Vec3 point) {

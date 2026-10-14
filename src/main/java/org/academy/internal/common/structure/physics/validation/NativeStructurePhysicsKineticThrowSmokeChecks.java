@@ -37,6 +37,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.movement.VectorStructureService;
 import org.academy.internal.common.ability.accelerator.skills.lv3.KineticThrow;
+import org.academy.internal.common.world.entity.structure.NativeStructureProjectionEntity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,7 +54,7 @@ final class NativeStructurePhysicsKineticThrowSmokeChecks implements AutoCloseab
     private static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS;
     private static final int FLIGHT_OBSERVE_TICKS = 30;
     private static final double EXPECTED_THROW_SPEED = 50.0;
-    private static final BlockPos SOURCE_OFFSET = new BlockPos(17, 4, 0);
+    private static final BlockPos SOURCE_OFFSET = new BlockPos(20, 4, 0);
 
     private final ServerLevel host;
     private final BlockPos base;
@@ -71,9 +72,15 @@ final class NativeStructurePhysicsKineticThrowSmokeChecks implements AutoCloseab
     private double initialZombieHealth;
     private double damageDrop = -1;
     private double initialComY;
+    private double selectionMinY;
+    private double firstPhysicsMinY = Double.NaN;
+    private double liftMinY = Double.MAX_VALUE;
+    private int capturedBlockCount;
+    private Vec3 captureOriginPose;
     private AABB previousBounds;
     private int rebinds;
     private int impactTick = -1;
+    private int firstImpactTick = -1;
     private int flightTicks;
     private int age, ticks;
     private float initialCp;
@@ -115,23 +122,33 @@ final class NativeStructurePhysicsKineticThrowSmokeChecks implements AutoCloseab
                 source = base.offset(SOURCE_OFFSET);
                 seed = source.offset(1, 0, 1);
                 forceChunks();
-                for (int x = 0; x < 3; x++) {
-                    for (int z = 0; z < 3; z++) {
-                        var position = source.offset(x, 0, z);
-                        require(host.getBlockState(position).isAir() && host.getBlockEntity(position) == null,
-                                "Kinetic throw fixture refuses existing host content at " + position);
-                        require(host.setBlock(position, Blocks.STONE.defaultBlockState(), FLAGS),
-                                "Cannot place kinetic throw source block at " + position);
-                        sourceCells.add(position);
+                // A real ground platform embeds the 3x3 source in surrounding terrain. The
+                // capture removes only the selection lens down to offset -2, so the deeper
+                // ground stays as a real floor under the fresh body. The total lens stays
+                // inside the 64-box-per-body physics budget.
+                for (int x = -1; x <= 3; x++) {
+                    for (int z = -1; z <= 3; z++) {
+                        for (int y = -5; y <= 0; y++) {
+                            var position = source.offset(x, y, z);
+                            require(host.getBlockState(position).isAir() && host.getBlockEntity(position) == null,
+                                    "Kinetic throw fixture refuses existing host content at " + position);
+                            require(host.setBlock(position, Blocks.STONE.defaultBlockState(), FLAGS),
+                                    "Cannot place kinetic throw ground at " + position);
+                            if (y == 0 && x >= 0 && x < 3 && z >= 0 && z < 3) sourceCells.add(position);
+                        }
                     }
                 }
-                evidence.append("kinetic_source_cells=").append(sourceCells.size()).append('\n');
+                selectionMinY = seed.getY() - KineticThrow.verticalRadius(0);
+                evidence.append("kinetic_source_cells=").append(sourceCells.size())
+                        .append("\nkinetic_ground_cells=").append(5 * 5 * 6).append('\n');
                 aimAt(Vec3.atCenterOf(seed));
                 initialCp = AbilitySystemServer.getSystem(player).getPlayerAvailableCP(player.getUUID());
                 next(Phase.CHARGE);
             }
             case CHARGE -> {
-                require(KineticThrow.Server.startCharge(player), "Kinetic throw charge entry was rejected");
+                require(KineticThrow.Server.pressHeld(player),
+                        "Kinetic throw H press did not start the charge flow");
+                evidence.append("kinetic_hpressed_miss_charging=true\n");
                 next(Phase.RELEASE);
             }
             case RELEASE -> {
@@ -159,8 +176,10 @@ final class NativeStructurePhysicsKineticThrowSmokeChecks implements AutoCloseab
                 for (var position : sourceCells) {
                     require(host.getBlockState(position).isAir(), "Captured source cell was not cleared at " + position);
                 }
-                require(current.blockCount() == sourceCells.size(),
-                        "Kinetic throw block count " + current.blockCount() + " differs from the source");
+                require(current.blockCount() > sourceCells.size(),
+                        "Kinetic throw did not capture the embedded ground: " + current.blockCount());
+                capturedBlockCount = current.blockCount();
+                captureOriginPose = handle.pose().worldOrigin();
                 evidence.append("kinetic_capture_committed=true\nkinetic_capture_pending_observed=")
                         .append(sawPending).append("\nkinetic_source_cleared=true\nkinetic_block_count=")
                         .append(current.blockCount()).append('\n');
@@ -177,12 +196,30 @@ final class NativeStructurePhysicsKineticThrowSmokeChecks implements AutoCloseab
                 previousBounds = region.bounds();
                 var motion = region.motion(reference).orElseThrow();
                 initialComY = motion.pose().localToWorldPoint(motion.localCenterOfMass()).y;
-                evidence.append("kinetic_region_ready=true\nkinetic_motion_present=true\n");
+                var origin = motion.pose().worldOrigin();
+                require(Math.abs(origin.x - captureOriginPose.x) <= 1.0e-3
+                                && Math.abs(origin.z - captureOriginPose.z) <= 1.0e-3,
+                        "Kinetic throw capture is not horizontally aligned: " + origin
+                                + " vs " + captureOriginPose);
+                require(motion.mass() > 32.0, "Kinetic throw heavy fixture mass is too light: " + motion.mass());
+                firstPhysicsMinY = structureMinY();
+                require(firstPhysicsMinY >= selectionMinY - 1.0e-3,
+                        "Kinetic throw structure sank below the source selection on its first physics tick: "
+                                + firstPhysicsMinY + " < " + selectionMinY);
+                evidence.append("kinetic_region_ready=true\nkinetic_motion_present=true\n")
+                        .append("kinetic_capture_horizontal_aligned=true\n")
+                        .append("kinetic_first_physics_min_y=").append(firstPhysicsMinY)
+                        .append("\nkinetic_selection_min_y=").append(selectionMinY)
+                        .append("\nkinetic_throw_mass=").append(motion.mass()).append('\n');
                 next(Phase.LIFT);
             }
             case LIFT -> {
                 require(region.status() != StructurePhysicsRegion.Status.FAILED,
                         "Lift region failed: " + region.diagnostic());
+                liftMinY = Math.min(liftMinY, structureMinY());
+                require(liftMinY >= selectionMinY - 1.0e-3,
+                        "Kinetic throw structure sank below the source selection while lifting: "
+                                + liftMinY + " < " + selectionMinY);
                 if (region.control(reference).orElse(null) instanceof StructurePhysicsControl.Anchor) {
                     sawAnchor = true;
                 }
@@ -196,7 +233,8 @@ final class NativeStructurePhysicsKineticThrowSmokeChecks implements AutoCloseab
                 var raise = motion.pose().localToWorldPoint(motion.localCenterOfMass()).y - initialComY;
                 require(sawAnchor, "Kinetic throw lift never installed the shared PD anchor");
                 require(raise > 2.5, "Kinetic throw lift only raised the body by " + raise);
-                evidence.append("kinetic_lift_anchor=true\nkinetic_lift_rise=").append(raise).append('\n');
+                evidence.append("kinetic_lift_anchor=true\nkinetic_lift_rise=").append(raise)
+                        .append("\nkinetic_lift_min_y=").append(liftMinY).append('\n');
                 next(Phase.THROW);
             }
             case THROW -> {
@@ -209,15 +247,19 @@ final class NativeStructurePhysicsKineticThrowSmokeChecks implements AutoCloseab
                         .orElse(null);
                 require(hit != null && hit.block().structure().equals(reference),
                         "Kinetic throw launch aim does not hit the held structure");
-                require(KineticThrow.Server.throwHeld(player), "Kinetic throw launch entry was rejected");
+                require(KineticThrow.Server.pressHeld(player), "Kinetic throw H-press launch entry was rejected");
                 var launched = StructureDynamics.motion(host, reference).orElseThrow();
                 require(Math.abs(launched.linearVelocity().x - EXPECTED_THROW_SPEED) < 0.5
                                 && Math.abs(launched.linearVelocity().y) < 0.5
                                 && Math.abs(launched.linearVelocity().z) < 0.5,
                         "Kinetic throw launch velocity is not the converted per-second value: "
                                 + launched.linearVelocity());
+                require(launched.mass() > 32.0, "Kinetic throw heavy fixture lost its mass before launch");
                 require(region.control(reference).isEmpty(), "Kinetic throw retained a control after launch");
-                evidence.append("kinetic_throw_speed=").append(launched.linearVelocity().x)
+                evidence.append("kinetic_hpressed_structure_throw=true\n")
+                        .append("kinetic_throw_speed_mass_independent=true\n")
+                        .append("kinetic_throw_speed=").append(launched.linearVelocity().x)
+                        .append("\nkinetic_throw_mass=").append(launched.mass())
                         .append("\nkinetic_throw_control_cleared=true\n");
                 next(Phase.FLIGHT);
             }
@@ -230,22 +272,27 @@ final class NativeStructurePhysicsKineticThrowSmokeChecks implements AutoCloseab
                     previousBounds = region.bounds();
                     AcademyCraft.LOGGER.info("NATIVE_STRUCTURE_KINETIC_REBIND tick={} bounds={}", ticks, previousBounds);
                 }
-                if (damageDrop < 0 && zombie.getHealth() < initialZombieHealth) {
-                    damageDrop = initialZombieHealth - zombie.getHealth();
-                    require(Math.abs(damageDrop - KineticThrow.structureDamage(sourceCells.size())) < 0.01,
-                            "Kinetic throw contact damage was " + damageDrop);
-                    require(diagnostic.orElseThrow().impacts() == 1,
-                            "Kinetic throw settled one contact more than once");
+                var pendingDrop = initialZombieHealth - zombie.getHealth();
+                if (damageDrop < 0 && pendingDrop > 0.01) {
+                    damageDrop = pendingDrop;
+                    require(Math.abs(pendingDrop - KineticThrow.structureDamage(capturedBlockCount)) < 0.01,
+                            "Kinetic throw contact damage was " + pendingDrop);
+                    require(diagnostic.orElseThrow().impacts() >= 1,
+                            "Kinetic throw settled a contact without recording it");
+                    firstImpactTick = flightTicks;
                     impactTick = flightTicks;
-                    evidence.append("kinetic_impact_damage=").append(damageDrop).append('\n');
+                    evidence.append("kinetic_impact_damage=").append(pendingDrop).append('\n');
+                } else if (damageDrop >= 0 && pendingDrop > damageDrop + 0.01) {
+                    // The service contract is one settlement per target per impact cooldown;
+                    // a heavy body still overlapping the same target must respect it.
+                    require(flightTicks - impactTick >= 10,
+                            "Kinetic throw settled one target twice within its impact cooldown");
+                    evidence.append("kinetic_impact_repeat_ticks=").append(flightTicks - impactTick)
+                            .append('\n');
+                    damageDrop = pendingDrop;
+                    impactTick = flightTicks;
                 }
-                if (damageDrop >= 0 && zombie.getHealth() < initialZombieHealth - damageDrop - 0.01) {
-                    var source = zombie.getLastDamageSource();
-                    throw new IllegalStateException("Kinetic throw settled one contact more than once: hp="
-                            + zombie.getHealth() + " lastSource=" + (source == null ? "none" : source.getMsgId())
-                            + " lastHurtBy=" + zombie.getLastHurtByMob() + " tick=" + ticks);
-                }
-                if (damageDrop >= 0 && impactTick >= 0 && flightTicks == impactTick + 2) {
+                if (damageDrop >= 0 && firstImpactTick >= 0 && flightTicks == firstImpactTick + 2) {
                     var moved = zombie.position().distanceToSqr(source.getX() + 11.5, source.getY() + 3.0,
                             source.getZ() + 1.5) > 0.04;
                     require(moved || zombie.getDeltaMovement().lengthSqr() > 0.01,
@@ -316,6 +363,20 @@ final class NativeStructurePhysicsKineticThrowSmokeChecks implements AutoCloseab
         require(host.addFreshEntity(zombie), "Cannot register the kinetic throw target fixture");
         initialZombieHealth = zombie.getHealth();
         evidence.append("kinetic_target_health=").append(initialZombieHealth).append('\n');
+    }
+
+    /** Lowest world collision box of the captured structure, from its live projection. */
+    private double structureMinY() {
+        for (var entity : host.getEntitiesOfClass(NativeStructureProjectionEntity.class,
+                new AABB(source).inflate(32.0))) {
+            if (entity.isRemoved() || !entity.viewState().reference().equals(reference)) continue;
+            var boxes = entity.worldCollisionBoxes();
+            require(!boxes.isEmpty(), "Kinetic throw structure has no collision boxes");
+            double minY = Double.MAX_VALUE;
+            for (var box : boxes) minY = Math.min(minY, box.minY);
+            return minY;
+        }
+        throw new IllegalStateException("Kinetic throw structure projection is unavailable");
     }
 
     private void configure(ServerPlayer target) {

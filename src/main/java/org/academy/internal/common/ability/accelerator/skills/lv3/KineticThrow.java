@@ -143,7 +143,7 @@ public final class KineticThrow extends Skill {
                         Client.KEY_NAME_CHARGE,
                         InputSystem.combo(InputSystem.InputType.KEYBOARD,
                                 InputConstants.KEY_H, InputConstants.PRESS, 0)),
-                _ -> Client.startCharge()
+                _ -> Client.pressHeld()
         );
         InputSystem.addKeyBinding(
                 Client.KEY_NAME_RELEASE,
@@ -152,14 +152,6 @@ public final class KineticThrow extends Skill {
                         InputSystem.combo(InputSystem.InputType.KEYBOARD,
                                 InputConstants.KEY_H, InputConstants.RELEASE, 0)),
                 _ -> Client.releaseCharge()
-        );
-        InputSystem.addKeyBinding(
-                Client.KEY_NAME_THROW,
-                Client.CONFIG.getKeyBinding(
-                        Client.KEY_NAME_THROW,
-                        InputSystem.combo(InputSystem.InputType.MOUSE,
-                                InputConstants.MOUSE_BUTTON_LEFT, InputConstants.PRESS, 0)),
-                _ -> Client.throwLookedAtStructure()
         );
     }
 
@@ -181,32 +173,24 @@ public final class KineticThrow extends Skill {
         );
         public static final String KEY_NAME_CHARGE = SkillNames.KINETIC_THROW + "_charge";
         public static final String KEY_NAME_RELEASE = SkillNames.KINETIC_THROW + "_release";
-        public static final String KEY_NAME_THROW = SkillNames.KINETIC_THROW + "_throw";
         public static Config CONFIG = new Config();
-        private static boolean charging;
+        private static boolean pressed;
 
         private Client() {
         }
 
-        private static void startCharge() {
+        private static void pressHeld() {
             var minecraft = Minecraft.getInstance();
-            if (charging || minecraft.gui.screen() != null
+            if (pressed || minecraft.gui.screen() != null
                     || !AbilitySystemClient.canUseSkill(Skills.KINETIC_THROW.get())) return;
-            charging = true;
-            MisakaNetworkClient.send(StartPacket.INSTANCE);
+            pressed = true;
+            MisakaNetworkClient.send(PressPacket.INSTANCE);
         }
 
         private static void releaseCharge() {
-            if (!charging) return;
-            charging = false;
+            if (!pressed) return;
+            pressed = false;
             MisakaNetworkClient.send(ReleasePacket.INSTANCE);
-        }
-
-        private static void throwLookedAtStructure() {
-            var minecraft = Minecraft.getInstance();
-            var player = minecraft.player;
-            if (player == null || minecraft.gui.screen() != null) return;
-            MisakaNetworkClient.send(ThrowPacket.INSTANCE);
         }
 
         public static class Config extends KeyBindingConfig {
@@ -244,6 +228,33 @@ public final class KineticThrow extends Skill {
         @SubscribePacket
         public static void handleStart(StartPacket packet) {
             startCharge(packet.getPacketListener().getPlayer());
+        }
+
+        @SubscribePacket
+        public static void handlePress(PressPacket packet) {
+            pressHeld(packet.getPacketListener().getPlayer());
+        }
+
+        /**
+         * Unified H-press entry: the server owns the whole decision. A looked-at physicalized
+         * structure is thrown directly (any owner, no mass gate); no hit starts the existing
+         * charge flow. {@link #throwHeld} remains the programmatic launch entry.
+         */
+        public static boolean pressHeld(ServerPlayer player) {
+            requireThread(player);
+            if (!Skills.KINETIC_THROW.get().isEnabled(player)) return false;
+            var outcome = VectorStructureService.press(player);
+            return switch (outcome.status()) {
+                case CHARGING -> startCharge(player);
+                case THROWN -> true;
+                case REJECTED -> {
+                    AcademyCraft.LOGGER.info("Kinetic Throw H press was rejected for {}: {}",
+                            player.getUUID(), outcome.detail());
+                    player.sendOverlayMessage(Component.translatable(
+                            "message.academy.kinetic_throw.throw_rejected"));
+                    yield false;
+                }
+            };
         }
 
         /** Same server-owned entry point used by the skill packet; it grants no extra capability. */
@@ -401,6 +412,20 @@ public final class KineticThrow extends Skill {
         @Override
         public PacketType<ServerGamePacketListenerImpl, StartPacket> getPacketType() {
             return PacketTypes.KINETIC_THROW_START.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class PressPacket extends Packet<ServerGamePacketListenerImpl, PressPacket> {
+        public static final PressPacket INSTANCE = new PressPacket();
+        public static final StreamCodec<ByteBuf, PressPacket> CODEC = StreamCodec.unit(INSTANCE);
+
+        private PressPacket() {
+        }
+
+        @Override
+        public PacketType<ServerGamePacketListenerImpl, PressPacket> getPacketType() {
+            return PacketTypes.KINETIC_THROW_PRESS.get();
         }
     }
 

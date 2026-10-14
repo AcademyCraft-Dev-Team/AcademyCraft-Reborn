@@ -618,6 +618,9 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, KineticThrow.StartPacket>>
             KINETIC_THROW_START = PACKET_TYPES.register("kinetic_throw_start",
             () -> new PacketType<>(KineticThrow.StartPacket.class, KineticThrow.StartPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, KineticThrow.PressPacket>>
+            KINETIC_THROW_PRESS = PACKET_TYPES.register("kinetic_throw_press",
+            () -> new PacketType<>(KineticThrow.PressPacket.class, KineticThrow.PressPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, KineticThrow.ReleasePacket>>
             KINETIC_THROW_RELEASE = PACKET_TYPES.register("kinetic_throw_release",
             () -> new PacketType<>(KineticThrow.ReleasePacket.class, KineticThrow.ReleasePacket.CODEC));

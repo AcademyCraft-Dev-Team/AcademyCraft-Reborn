@@ -24,14 +24,30 @@ final class NativeStructurePhysicsSmokeCleanup {
         var runtime = NativeStructureRuntime.backend(host.getServer());
         var handle = runtime.resolve(reference).orElse(null);
         if (handle == null) return;
-        var origin = minimumCorner(cells);
+        var storage = runtime.storageLevel(reference).orElse(null);
+        if (storage == null) return;
         try {
-            for (var position : cells) {
-                var local = position.subtract(origin);
-                var before = handle.world().read(local);
-                if (before.state().isAir()) continue;
-                handle.world().compareAndSet(local, before,
-                        new StructureBlockData(Blocks.AIR.defaultBlockState()));
+            // The captured set is not always the fixture's source cells; empty every stored cell.
+            for (int chunkX = -2; chunkX < 2; chunkX++) {
+                for (int chunkZ = -2; chunkZ < 2; chunkZ++) {
+                    var chunk = storage.getChunk(chunkX, chunkZ);
+                    var sections = chunk.getSections();
+                    for (int index = 0; index < sections.length; index++) {
+                        if (sections[index].hasOnlyAir()) continue;
+                        int baseY = storage.getMinY() + index * 16;
+                        for (int y = 0; y < 16; y++) {
+                            for (int x = 0; x < 16; x++) {
+                                for (int z = 0; z < 16; z++) {
+                                    if (sections[index].getBlockState(x, y, z).isAir()) continue;
+                                    var local = new BlockPos(chunkX * 16 + x, baseY + y, chunkZ * 16 + z);
+                                    var before = handle.world().read(local);
+                                    handle.world().compareAndSet(local, before,
+                                            new StructureBlockData(Blocks.AIR.defaultBlockState()));
+                                }
+                            }
+                        }
+                    }
+                }
             }
         } catch (RuntimeException failure) {
             AcademyCraft.LOGGER.warn("Structure smoke cleanup could not empty {}", reference, failure);
@@ -41,15 +57,5 @@ final class NativeStructurePhysicsSmokeCleanup {
         if (!runtime.discardEmpty(reference)) {
             AcademyCraft.LOGGER.warn("Structure smoke cleanup could not release the slot of {}", reference);
         }
-    }
-
-    private static BlockPos minimumCorner(List<BlockPos> cells) {
-        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
-        for (var position : cells) {
-            minX = Math.min(minX, position.getX());
-            minY = Math.min(minY, position.getY());
-            minZ = Math.min(minZ, position.getZ());
-        }
-        return new BlockPos(minX, minY, minZ);
     }
 }

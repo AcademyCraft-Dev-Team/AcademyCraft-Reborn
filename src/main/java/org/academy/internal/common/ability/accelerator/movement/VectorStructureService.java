@@ -27,10 +27,12 @@ import org.academy.api.common.structure.StructureDynamics;
 import org.academy.api.common.structure.StructureHit;
 import org.academy.api.common.structure.StructureLifecycle;
 import org.academy.api.common.structure.StructureMotionState;
+import org.academy.api.common.structure.StructureHandle;
 import org.academy.api.common.structure.StructurePhysics;
 import org.academy.api.common.structure.StructurePhysicsControl;
 import org.academy.api.common.structure.StructurePhysicsLease;
 import org.academy.api.common.structure.StructurePhysicsRegion;
+import org.academy.api.common.structure.StructurePose;
 import org.academy.api.common.structure.StructureQueries;
 import org.academy.api.common.structure.StructureRef;
 import org.academy.api.common.structure.StructureSpaces;
@@ -41,6 +43,7 @@ import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.skills.lv3.KineticThrow;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+import org.academy.internal.common.structure.NativeStructureRuntime;
 import org.academy.internal.common.structure.StructureBackendRouter;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.world.entity.structure.NativeStructureProjectionEntity;
@@ -79,6 +82,12 @@ public final class VectorStructureService {
     private static final double SUPPORT_TOLERANCE = 0.5;
     private static final double PROGRAM_CONTROL_RANGE = 32.0;
     private static final int PROGRAM_CONTROL_TIER = 1;
+    /**
+     * Initial-generation vertical clearance. The first physics step runs before the hover
+     * anchor exists; this bounded gap keeps the fresh body out of its own terrain socket so
+     * that step can never settle it below the source selection bottom.
+     */
+    private static final double INITIAL_GROUND_CLEARANCE = 0.25;
     /** Program capture budget ceiling; zero keeps the backend default. */
     public static final int MAXIMUM_PROGRAM_BUDGET = 256;
     /** Bounded distance between the body center and a program move target. */
@@ -364,6 +373,141 @@ public final class VectorStructureService {
         return ProgramResult.completed("released", reference);
     }
 
+    /** H-press routing outcomes; only {@link #THROW} changes world state. */
+    public enum PressRoute {
+        CHARGE, THROW, REJECT
+    }
+
+    public enum PressStatus {
+        CHARGING, THROWN, REJECTED
+    }
+
+    public record PressResult(PressStatus status, String detail) {
+        static PressResult charging() {
+            return new PressResult(PressStatus.CHARGING, "charge");
+        }
+
+        static PressResult thrown(String detail) {
+            return new PressResult(PressStatus.THROWN, detail);
+        }
+
+        static PressResult rejected(String detail) {
+            return new PressResult(PressStatus.REJECTED, detail);
+        }
+    }
+
+    /**
+     * Pure H-press routing: a visible, permitted structure is always thrown directly and its
+     * mass never participates in the decision; no structure keeps the existing charge flow.
+     */
+    public static PressRoute pressRoute(boolean structureHit, boolean permitted, boolean physical) {
+        if (!structureHit) return PressRoute.CHARGE;
+        if (!permitted || !physical) return PressRoute.REJECT;
+        return PressRoute.THROW;
+    }
+
+    /**
+     * Direct-press throw speed. The calibrated response is deliberately independent of the
+     * body's mass so a heavy structure cannot be filtered out by a traction budget.
+     */
+    public static double directThrowSpeed(double mass, boolean speedMilestone) {
+        if (!Double.isFinite(mass) || mass <= 0) {
+            throw new IllegalArgumentException("Structure mass must be finite and positive");
+        }
+        return KineticThrow.throwSpeed(speedMilestone);
+    }
+
+    /**
+     * H-press decision entry. A held structure the caster is aiming at is launched through its
+     * normal session; otherwise any looked-at physicalized structure of any owner is thrown
+     * directly along the view. No hit reports {@link PressStatus#CHARGING} so the caller keeps
+     * the existing charge/capture flow; every refusal carries a machine-readable detail.
+     */
+    public static PressResult press(ServerPlayer player) {
+        requireThread(player);
+        if (!(player.level() instanceof ServerLevel level)) return PressResult.rejected("host_unavailable");
+        var look = player.getLookAngle();
+        if (look.lengthSqr() <= 1.0e-8) return PressResult.rejected("invalid_look");
+        var held = SESSIONS.get(player.getUUID());
+        if (held != null && held.stage == Stage.LIFTING && held.usableBy(player)
+                && (aimedAtHeld(player, held, level) || viewerInsideStructure(player, held))) {
+            return launchHeld(player, held) ? PressResult.thrown("held")
+                    : PressResult.rejected("held_launch_rejected");
+        }
+        var range = Skills.KINETIC_THROW.get().scaledRange(player, KineticThrow.TARGET_RANGE);
+        var eye = player.getEyePosition();
+        var end = eye.add(look.normalize().scale(range));
+        var hit = StructureQueries.raycast(level, eye, end).orElse(null);
+        if (hit == null) return PressResult.charging();
+        var validation = StructureQueries.validate(level, eye, end, hit);
+        if (!validation.succeeded()) {
+            return PressResult.rejected("ray_" + validation.status().name().toLowerCase(java.util.Locale.ROOT));
+        }
+        var current = validation.currentHit().orElseThrow();
+        var permitted = level.mayInteract(player, BlockPos.containing(current.worldPoint()));
+        var physical = isPhysical(level, current.block().structure());
+        return switch (pressRoute(true, permitted, physical)) {
+            case CHARGE -> PressResult.charging();
+            case REJECT -> PressResult.rejected(permitted ? "structure_not_physical" : "permission_denied");
+            case THROW -> directThrow(player, level, current, look.normalize());
+        };
+    }
+
+    private static boolean isPhysical(ServerLevel level, StructureRef reference) {
+        if (StructureBackendRouter.SABLE_ID.equals(reference.backend())) {
+            return StructureDynamics.motion(level, reference).isPresent();
+        }
+        return StructurePhysics.activeRegion(level, reference)
+                .flatMap(region -> region.motion(reference)).isPresent();
+    }
+
+    /** Direct velocity hand-off; mass, force and traction budgets do not gate this path. */
+    private static PressResult directThrow(ServerPlayer player, ServerLevel level,
+                                           StructureHit hit, Vec3 direction) {
+        var reference = hit.block().structure();
+        var motion = StructureDynamics.motion(level, reference).orElse(null);
+        if (motion == null) return PressResult.rejected("motion_unavailable");
+        var skill = Skills.KINETIC_THROW.get();
+        var speed = directThrowSpeed(motion.mass(), skill.hasProficiencyMilestone(player, 3));
+        var sable = StructureBackendRouter.SABLE_ID.equals(reference.backend());
+        StructurePhysicsRegion region = null;
+        if (sable) {
+            if (!StructureBackendRouter.launch(level, reference, direction, speed)) {
+                return PressResult.rejected("sable_launch_rejected");
+            }
+        } else {
+            region = StructurePhysics.activeRegion(level, reference).orElse(null);
+            if (region == null) return PressResult.rejected("structure_not_physical");
+            try {
+                // A foreign lease still refuses instead of being stolen; a stale unleased
+                // control is cleared inside setVelocity.
+                region.setVelocity(reference, direction.scale(speed), Vec3.ZERO);
+            } catch (IllegalStateException | IllegalArgumentException rejection) {
+                AcademyCraft.LOGGER.info("Kinetic Throw direct throw was rejected for {}: {}",
+                        reference, rejection.getMessage());
+                return PressResult.rejected("structure_controlled");
+            }
+        }
+        terminate(player.getUUID());
+        var session = new Session(reference, level.dimension(), 0,
+                presentedCellCount(level, reference), region, null);
+        session.sableBody = sable;
+        session.stage = Stage.FLYING;
+        session.lifted = true;
+        session.expiresAt = level.getGameTime() + KineticThrow.MAXIMUM_FLIGHT_TICKS;
+        session.velocity = direction.scale(speed);
+        SESSIONS.put(player.getUUID(), session);
+        AcademyCraft.LOGGER.info("KINETIC_STRUCTURE_DIRECT_THROW tick={} structure={} mass={} speed={} sable={}",
+                level.getGameTime(), reference, motion.mass(), speed, sable);
+        return PressResult.thrown(sable ? "sable_direct" : "native_direct");
+    }
+
+    private static int presentedCellCount(ServerLevel level, StructureRef reference) {
+        return NativeStructureRuntime.existing(level.getServer())
+                .map(runtime -> runtime.presentedCellCount(reference))
+                .filter(count -> count > 0).orElse(1);
+    }
+
     private static PlanOutcome planCaptureInternal(ServerPlayer player, BlockPos seed, int tier, int budgetOverride) {
         var level = player.level();
         var selection = BlockStructureApi.selectLowerEllipsoidWithUpperCylinder(
@@ -564,11 +708,33 @@ public final class VectorStructureService {
             return;
         }
         if (!(player.level() instanceof ServerLevel level)) return;
+        var handle = StructureSpaces.resolve(level.getServer(), reference).orElse(null);
+        if (handle == null) {
+            rejectCapture(player, "captured_handle_unavailable", report);
+            return;
+        }
+        var originalPose = handle.pose();
+        try {
+            // Initial generation only (no physics attachment exists yet): a bounded vertical
+            // clearance keeps the fresh body out of its own socket so the first uncontrolled
+            // solver step can never settle it below the source selection bottom. It is not a
+            // substitute for post-attachment movement, which stays anchored or detached-first.
+            handle.setPose(new StructurePose(
+                    originalPose.worldOrigin().add(0.0, INITIAL_GROUND_CLEARANCE, 0.0),
+                    originalPose.rotationX(), originalPose.rotationY(),
+                    originalPose.rotationZ(), originalPose.rotationW()));
+        } catch (IllegalStateException | IllegalArgumentException rejection) {
+            AcademyCraft.LOGGER.error("Kinetic Throw could not apply initial ground clearance to {}",
+                    reference, rejection);
+            rejectCapture(player, "initial_clearance_rejected", report);
+            return;
+        }
         var limits = new AABB(level.getWorldBorder().getMinX(), level.getMinY(), level.getWorldBorder().getMinZ(),
                 level.getWorldBorder().getMaxX(), level.getMaxY(), level.getWorldBorder().getMaxZ());
-        var bounds = regionBounds(positions, KineticThrow.liftHeight(tier),
+        var bounds = regionBounds(positions, KineticThrow.liftHeight(tier), INITIAL_GROUND_CLEARANCE,
                 level.getMinY(), level.getMaxY(), limits);
         if (bounds == null) {
+            restoreInitialPose(handle, originalPose);
             rejectCapture(player, "region_cannot_fit_structure", report);
             return;
         }
@@ -577,19 +743,15 @@ public final class VectorStructureService {
             region = StructurePhysics.openRegion(level, bounds);
         } catch (RuntimeException | AssertionError failure) {
             AcademyCraft.LOGGER.error("Kinetic Throw could not open a physics region for {}", reference, failure);
+            restoreInitialPose(handle, originalPose);
             rejectCapture(player, "region_open_failed", report);
-            return;
-        }
-        var handle = StructureSpaces.resolve(level.getServer(), reference).orElse(null);
-        if (handle == null) {
-            region.close();
-            rejectCapture(player, "captured_handle_unavailable", report);
             return;
         }
         try {
             region.attach(handle);
         } catch (RuntimeException | AssertionError failure) {
             AcademyCraft.LOGGER.error("Kinetic Throw could not attach {}", reference, failure);
+            restoreInitialPose(handle, originalPose);
             try {
                 region.close();
             } catch (RuntimeException cleanup) {
@@ -821,7 +983,7 @@ public final class VectorStructureService {
     }
 
     private static void tickFlight(ServerPlayer player, Session held) {
-        if (held.traction != null) {
+        if (held.sableBody) {
             tickSableFlight(player, held);
             return;
         }
@@ -1075,6 +1237,15 @@ public final class VectorStructureService {
         rejectCapture(player, detail, true);
     }
 
+    /** Pre-attachment rollback only; an attached structure must never have its pose written here. */
+    private static void restoreInitialPose(StructureHandle handle, StructurePose pose) {
+        try {
+            handle.setPose(pose);
+        } catch (RuntimeException failure) {
+            AcademyCraft.LOGGER.warn("Kinetic Throw could not restore the initial pose", failure);
+        }
+    }
+
     private static void rejectCapture(ServerPlayer player, String detail, boolean report) {
         AcademyCraft.LOGGER.info("Kinetic Throw capture rejected for {}: {}", player.getUUID(), detail);
         if (report) {
@@ -1130,8 +1301,20 @@ public final class VectorStructureService {
 
     /** Smallest usable physics region around the captured cells and their vertical lift. */
     static AABB regionBounds(List<BlockPos> positions, int lift, double minimumY, double maximumY, AABB limits) {
+        return regionBounds(positions, lift, 0.0, minimumY, maximumY, limits);
+    }
+
+    /**
+     * Same region sizing with an initial vertical clearance: the body starts and finishes
+     * {@code clearance} higher, so the whole lift path shifts up by that bounded amount.
+     */
+    static AABB regionBounds(List<BlockPos> positions, int lift, double clearance,
+                             double minimumY, double maximumY, AABB limits) {
         Objects.requireNonNull(positions, "positions");
         if (positions.isEmpty()) return null;
+        if (!Double.isFinite(clearance) || clearance < 0) {
+            throw new IllegalArgumentException("Initial clearance must be finite and non-negative");
+        }
         int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
         int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
         for (var position : positions) {
@@ -1139,7 +1322,8 @@ public final class VectorStructureService {
             minY = Math.min(minY, position.getY()); maxY = Math.max(maxY, position.getY());
             minZ = Math.min(minZ, position.getZ()); maxZ = Math.max(maxZ, position.getZ());
         }
-        var required = new AABB(minX, minY, minZ, maxX + 1.0, maxY + 1.0 + lift, maxZ + 1.0);
+        var required = new AABB(minX, minY + clearance, minZ,
+                maxX + 1.0, maxY + 1.0 + lift + clearance, maxZ + 1.0);
         double marginX = Math.min(REGION_MARGIN, (StructurePhysics.MAX_REGION_AXIS - required.getXsize()) / 2.0);
         double marginY = Math.min(REGION_MARGIN, (StructurePhysics.MAX_REGION_AXIS - required.getYsize()) / 2.0);
         double marginZ = Math.min(REGION_MARGIN, (StructurePhysics.MAX_REGION_AXIS - required.getZsize()) / 2.0);
@@ -1221,6 +1405,7 @@ public final class VectorStructureService {
         private int impactCount;
         private int unavailableTicks;
         private boolean programMove;
+        private boolean sableBody;
         private Vec3 velocity = Vec3.ZERO;
 
         private Session(StructureRef reference, ResourceKey<Level> dimension, int tier, int blockCount,
@@ -1231,6 +1416,7 @@ public final class VectorStructureService {
             this.blockCount = blockCount;
             this.region = region;
             this.traction = traction;
+            this.sableBody = traction != null;
         }
 
         public Stage stage() {
@@ -1259,7 +1445,7 @@ public final class VectorStructureService {
         }
 
         public boolean sable() {
-            return traction != null;
+            return sableBody;
         }
 
         public int impacts() {

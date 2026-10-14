@@ -78,4 +78,42 @@ class VectorStructureServiceTest {
         assertEquals(KineticThrow.HOVER_TICKS, VectorStructureService.hoverDeadline(0));
         assertEquals(1234L + KineticThrow.HOVER_TICKS, VectorStructureService.hoverDeadline(1234));
     }
+
+    @Test
+    void pressRouteChargesOnMissAndThrowsVisiblePermittedStructures() {
+        assertEquals(VectorStructureService.PressRoute.CHARGE,
+                VectorStructureService.pressRoute(false, false, false));
+        assertEquals(VectorStructureService.PressRoute.THROW,
+                VectorStructureService.pressRoute(true, true, true));
+    }
+
+    @Test
+    void pressRouteRejectsForbiddenOrUnphysicalStructures() {
+        assertEquals(VectorStructureService.PressRoute.REJECT,
+                VectorStructureService.pressRoute(true, false, true));
+        assertEquals(VectorStructureService.PressRoute.REJECT,
+                VectorStructureService.pressRoute(true, true, false));
+    }
+
+    @Test
+    void directPressThrowSpeedNeverDependsOnStructureMass() {
+        assertEquals(50.0, VectorStructureService.directThrowSpeed(2.25, false), 1.0e-9);
+        assertEquals(50.0, VectorStructureService.directThrowSpeed(4_096.0, false), 1.0e-9);
+        assertEquals(60.0, VectorStructureService.directThrowSpeed(4_096.0, true), 1.0e-9);
+    }
+
+    @Test
+    void regionBoundsShiftUpByTheInitialGroundClearance() {
+        var positions = List.of(new BlockPos(10, 100, 20), new BlockPos(12, 100, 22));
+        var limits = new AABB(-100, -64, -100, 100, 320, 100);
+        var plain = VectorStructureService.regionBounds(positions, 4, -64, 320, limits);
+        var cleared = VectorStructureService.regionBounds(positions, 4, 0.25, -64, 320, limits);
+
+        assertNotNull(plain);
+        assertNotNull(cleared);
+        assertEquals(plain.getYsize(), cleared.getYsize(), 1.0e-9);
+        assertEquals(plain.minY + 0.25, cleared.minY, 1.0e-9);
+        assertEquals(plain.maxY + 0.25, cleared.maxY, 1.0e-9);
+        assertTrue(cleared.minY <= 100.25 && cleared.maxY >= 105.25);
+    }
 }
