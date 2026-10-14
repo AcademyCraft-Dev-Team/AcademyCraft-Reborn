@@ -9,6 +9,7 @@
     "common.compat.MixinBetterEndWorldConfig",
     "common.compat.MixinSablePhysicsStaffHandler",
     "common.compat.MixinSablePhysicsStaffDragSession",
+    "common.compat.MixinSableSubLevelContainerTick",
     "common.MixinCommonHooksDamageComposition",
     "common.ItemCooldownsAccess",
     "common.CooldownInstanceAccess",

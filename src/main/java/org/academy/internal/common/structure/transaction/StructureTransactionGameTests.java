@@ -71,6 +71,7 @@ public final class StructureTransactionGameTests {
     private static final BlockPos ROLLBACK_BASE = new BlockPos(2, 2, 6);
     private static final BlockPos FORWARD_BASE = new BlockPos(6, 2, 6);
     private static final BlockPos RANDOM_TICK_BASE = new BlockPos(10, 2, 10);
+    private static final BlockPos RESOURCE_BASE = new BlockPos(10, 2, 2);
 
     private StructureTransactionGameTests() {
     }
@@ -109,6 +110,10 @@ public final class StructureTransactionGameTests {
         private StructureRef randomTickRef;
         private final List<BlockPos> randomTickCells = new ArrayList<>();
         private final List<BlockState> randomTickStates = new ArrayList<>();
+        private UUID resourceId;
+        private StructureRef resourceRef;
+        private final List<BlockPos> resourceCells = new ArrayList<>();
+        private final List<BlockState> resourceStates = new ArrayList<>();
         private StructureRef probeA;
         private StructureRef probeB;
         private StructureRef probeC;
@@ -178,6 +183,10 @@ public final class StructureTransactionGameTests {
             verifyRejected(Blocks.WATER.defaultBlockState(), StructureCaptureRequest.ALLOW,
                     StructureCaptureResult.Status.REJECTED, "fluid_not_supported");
             verifyRejected(Blocks.BEDROCK.defaultBlockState(), StructureCaptureRequest.ALLOW,
+                    StructureCaptureResult.Status.REJECTED, "not_in_plain_block_whitelist");
+            // A gravity block outside the curated set is rejected by the set itself; gravity no
+            // longer carries a separate gate.
+            verifyRejected(Blocks.ANVIL.defaultBlockState(), StructureCaptureRequest.ALLOW,
                     StructureCaptureResult.Status.REJECTED, "not_in_plain_block_whitelist");
             verifyRejected(Blocks.OAK_PLANKS.defaultBlockState(), (level, position) -> false,
                     StructureCaptureResult.Status.PERMISSION_DENIED, "permission_denied");
@@ -252,6 +261,56 @@ public final class StructureTransactionGameTests {
             require(runtime.unload(randomTickRef), "Random-tick fixture must unload its emptied target");
             require(runtime.discardEmpty(randomTickRef), "Random-tick fixture must release its permanent slot");
             host.getGameRules().set(GameRules.RANDOM_TICK_SPEED, 3, server);
+        }
+
+        /**
+         * Sand-family gravity blocks and the expanded leaf family commit through the same staged
+         * transaction as ordinary plain blocks and release their slot again afterwards.
+         */
+        private void beginResourceCapture() {
+            var states = List.of(Blocks.SAND.defaultBlockState(), Blocks.RED_SAND.defaultBlockState(),
+                    Blocks.GRAVEL.defaultBlockState(), Blocks.OAK_LEAVES.defaultBlockState(),
+                    Blocks.FLOWERING_AZALEA_LEAVES.defaultBlockState());
+            for (int index = 0; index < states.size(); index++) {
+                var position = hostPos(RESOURCE_BASE.offset(index, 0, 0));
+                host.setBlock(position, states.get(index), QUIET_FLAGS);
+                resourceCells.add(position);
+                resourceStates.add(host.getBlockState(position));
+            }
+            var result = StructureTransactions.capture(host,
+                    new StructureCaptureRequest(resourceCells, 16, 8, StructureCaptureRequest.ALLOW));
+            require(result.pending(), "Resource capture must start a staged transaction: "
+                    + result.status() + "/" + result.detail());
+            resourceId = result.transactionId();
+        }
+
+        private void resourceCaptureCommitted() {
+            var result = captureResult(resourceId);
+            require(result.succeeded(), "Resource capture still in flight: "
+                    + result.status() + "/" + result.detail());
+            resourceRef = orFail(result.structure(), "Committed resource capture must expose its structure");
+        }
+
+        private void verifyResourceCapture() {
+            var handle = orFail(backend.resolve(resourceRef), "Resource target must stay resolvable");
+            require(handle.lifecycle() == StructureLifecycle.ACTIVE, "Resource target must stay active");
+            var origin = origin(resourceCells);
+            for (int index = 0; index < resourceCells.size(); index++) {
+                var position = resourceCells.get(index);
+                require(host.getBlockState(position).isAir(),
+                        "Committed resource capture must remove its source block at " + position);
+                require(handle.world().read(position.subtract(origin)).state().equals(resourceStates.get(index)),
+                        "Resource target cell must match the captured source state at " + position);
+            }
+            require(!journalExists(resourceId), "Committed resource capture must recycle its journal record");
+            for (int index = 0; index < resourceCells.size(); index++) {
+                var offset = resourceCells.get(index).subtract(origin);
+                require(handle.world().compareAndSet(offset, new StructureBlockData(resourceStates.get(index)),
+                                new StructureBlockData(Blocks.AIR.defaultBlockState())) == StructureWriteResult.APPLIED,
+                        "Resource fixture must empty its committed target");
+            }
+            require(runtime.unload(resourceRef), "Resource fixture must unload its emptied target");
+            require(runtime.discardEmpty(resourceRef), "Resource fixture must release its permanent slot");
         }
 
         private void verifyScheduledTickRejection() {
@@ -498,6 +557,9 @@ public final class StructureTransactionGameTests {
                     .thenExecute(scenario::beginRandomTickCapture)
                     .thenWaitUntil(scenario::randomTickCaptureCommitted)
                     .thenExecute(scenario::verifyRandomTickCapture)
+                    .thenExecute(scenario::beginResourceCapture)
+                    .thenWaitUntil(scenario::resourceCaptureCommitted)
+                    .thenExecute(scenario::verifyResourceCapture)
                     .thenExecute(scenario::allocateRollbackTarget)
                     .thenWaitUntil(scenario::rollbackTargetActive)
                     .thenExecute(scenario::seedRollbackJournal)

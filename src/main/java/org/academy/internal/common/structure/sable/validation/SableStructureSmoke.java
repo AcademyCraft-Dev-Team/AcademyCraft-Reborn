@@ -58,6 +58,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.skills.lv2.PneumaticGrasp;
 import org.academy.internal.common.structure.NativeStructureRuntime;
+import org.academy.internal.common.structure.sable.SableContainerGuard;
 import org.academy.internal.common.structure.sable.SableStructureAccess;
 import org.academy.internal.common.structure.sable.SableStaffCompatibility;
 import org.academy.internal.common.structure.transaction.StructureTransactionJournal;
@@ -115,6 +116,7 @@ public final class SableStructureSmoke {
     private double observedImpulseDelta;
     private float initialAir;
     private boolean complete, orderlyStop, cleaned;
+    private boolean guardObserved;
     private String failure;
     private volatile String checkpointEvidence = "fixture_initialized=false\n";
 
@@ -388,6 +390,12 @@ public final class SableStructureSmoke {
         ticks++; age++;
         require(ticks < 600, "Sable smoke timed out at " + phase);
         noNativeRuntime();
+        if (!guardObserved) {
+            require(SableContainerGuard.enteredCallbacks() > 0,
+                    "Sable container tick never entered the guarded callback; the compatibility mixin is inactive");
+            guardObserved = true;
+            evidence.append("sable_container_tick_guard_active=true\n");
+        }
         require(body != null && !body.isRemoved(), "Physical fixture disappeared");
         require(center().y > BASE.getY() - 25, "Physical fixture left its verified empty flight volume");
         switch (phase) {

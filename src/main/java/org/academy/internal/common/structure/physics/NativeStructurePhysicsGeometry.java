@@ -39,7 +39,9 @@ public final class NativeStructurePhysicsGeometry {
             SnowyBlock.class, MyceliumBlock.class, SandBlock.class, ColoredFallingBlock.class,
             FarmlandBlock.class, DirtPathBlock.class, MudBlock.class, DropExperienceBlock.class, RedStoneOreBlock.class,
             RedstoneLampBlock.class, FurnaceBlock.class, BlastFurnaceBlock.class, SmokerBlock.class,
-            DispenserBlock.class, DropperBlock.class, HopperBlock.class, LeverBlock.class);
+            DispenserBlock.class, DropperBlock.class, HopperBlock.class, LeverBlock.class,
+            LeavesBlock.class, TintedParticleLeavesBlock.class, UntintedParticleLeavesBlock.class,
+            MangroveLeavesBlock.class);
 
     private NativeStructurePhysicsGeometry() {}
 

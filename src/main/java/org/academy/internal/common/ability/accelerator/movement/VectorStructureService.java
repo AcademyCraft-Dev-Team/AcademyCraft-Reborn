@@ -20,7 +20,6 @@ import org.academy.api.common.ability.accelerator.KineticStructureControl;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.structure.BlockStructureApi;
 import org.academy.api.common.structure.BlockStructureCaptureOptions;
-import org.academy.api.common.structure.LegacyMotionUnits;
 import org.academy.api.common.structure.StructureBackendStatus;
 import org.academy.api.common.structure.StructureCaptureRequest;
 import org.academy.api.common.structure.StructureCaptureResult;
@@ -456,6 +455,18 @@ public final class VectorStructureService {
         var held = SESSIONS.get(player.getUUID());
         if (held == null) return;
         if (!held.usableBy(player) || player.level().getGameTime() > held.expiresAt) {
+            // A completed hover never drops silently: when the caster is still aiming at the
+            // body, the deadline throws it along the view; otherwise control ends safely with
+            // the structure, its region and its inertia retained.
+            if (held.usableBy(player) && held.stage == Stage.LIFTING && held.lifted
+                    && launchHeld(player, held)) {
+                return;
+            }
+            if (held.stage == Stage.LIFTING && held.lifted) {
+                AcademyCraft.LOGGER.info(
+                        "Kinetic Throw hover expired without a launchable aim; releasing control for {}",
+                        held.reference);
+            }
             terminate(player.getUUID());
             return;
         }
@@ -467,6 +478,14 @@ public final class VectorStructureService {
         }
     }
 
+    /**
+     * The hover window begins when the lift completes, so the hold lasts the full
+     * {@link KineticThrow#HOVER_TICKS} instead of sharing that budget with the lift itself.
+     */
+    public static long hoverDeadline(long liftedAt) {
+        return liftedAt + KineticThrow.HOVER_TICKS;
+    }
+
     /** Launches the lifted session along the caster's view. False keeps the current session. */
     public static boolean launch(ServerPlayer player) {
         requireThread(player);
@@ -475,19 +494,39 @@ public final class VectorStructureService {
                 || player.level().getGameTime() > held.expiresAt) {
             return false;
         }
-        if (held.traction != null) {
-            // Sable launch and free flight are explicitly not implemented yet. The captured
-            // structure is retained instead of being mutated through an unsupported path.
-            AcademyCraft.LOGGER.info("Kinetic Throw sable launch is not implemented; retaining {}",
-                    held.reference);
-            terminate(player.getUUID());
-            return false;
-        }
+        return launchHeld(player, held);
+    }
+
+    /**
+     * Shared launch validation. The hover deadline may auto-throw through this path even though
+     * the hold window itself has ended.
+     */
+    private static boolean launchHeld(ServerPlayer player, Session held) {
         if (!(player.level() instanceof ServerLevel level)) return false;
         var direction = KineticThrow.throwDirection(player.getLookAngle());
         if (direction.lengthSqr() <= 1.0e-8) return false;
         if (!aimedAtHeld(player, held, level) && !viewerInsideStructure(player, held)) return false;
+        if (held.traction != null) return launchSable(player, held, level, direction);
         return launchNative(player, held, direction, 1.0);
+    }
+
+    /**
+     * Sable owns the body's physics; the launch replaces its velocity through the pipeline and
+     * releases Academy control. Sable also owns contact handling, so no region follows here.
+     */
+    private static boolean launchSable(ServerPlayer player, Session held, ServerLevel level, Vec3 direction) {
+        var skill = Skills.KINETIC_THROW.get();
+        var speed = KineticThrow.throwSpeed(skill.hasProficiencyMilestone(player, 3));
+        held.closeControl();
+        if (!StructureBackendRouter.launch(level, held.reference, direction, speed)) {
+            terminate(player.getUUID());
+            return false;
+        }
+        held.stage = Stage.FLYING;
+        held.lifted = true;
+        held.expiresAt = level.getGameTime() + KineticThrow.MAXIMUM_FLIGHT_TICKS;
+        held.velocity = direction.scale(speed);
+        return true;
     }
 
     /** Releases this session's transient control; the structure, region and inertia are retained. */
@@ -603,6 +642,7 @@ public final class VectorStructureService {
         held.stage = Stage.LIFTING;
         held.liftStartY = point.y;
         held.liftTarget = target;
+        held.expiresAt = level.getGameTime() + KineticThrow.HOVER_TICKS;
         SESSIONS.put(player.getUUID(), held);
         playKineticCue(level, point);
     }
@@ -613,8 +653,7 @@ public final class VectorStructureService {
         var motion = held.region.motion(held.reference).orElse(null);
         if (motion == null) return false;
         var skill = Skills.KINETIC_THROW.get();
-        var speed = LegacyMotionUnits.velocityPerSecond(KineticThrow.BASE_THROW_SPEED)
-                * (skill.hasProficiencyMilestone(player, 3) ? 1.2 : 1.0) * speedScale;
+        var speed = KineticThrow.throwSpeed(skill.hasProficiencyMilestone(player, 3)) * speedScale;
         var mass = motion.mass();
         var center = motion.pose().localToWorldPoint(motion.localCenterOfMass());
         held.programMove = false;
@@ -756,6 +795,7 @@ public final class VectorStructureService {
             followRegion(player, held, motion);
         } else if (!held.lifted && com.y >= held.liftStartY + KineticThrow.liftHeight(held.tier) - 0.6) {
             held.lifted = true;
+            held.expiresAt = hoverDeadline(player.level().getGameTime());
         }
         applyImpacts(player, held);
     }
@@ -774,10 +814,17 @@ public final class VectorStructureService {
         }
         var point = session.worldPoint();
         held.velocity = Vec3.ZERO;
-        if (!held.lifted && point.y >= held.liftStartY + KineticThrow.liftHeight(held.tier) - 0.6) held.lifted = true;
+        if (!held.lifted && point.y >= held.liftStartY + KineticThrow.liftHeight(held.tier) - 0.6) {
+            held.lifted = true;
+            held.expiresAt = hoverDeadline(player.level().getGameTime());
+        }
     }
 
     private static void tickFlight(ServerPlayer player, Session held) {
+        if (held.traction != null) {
+            tickSableFlight(player, held);
+            return;
+        }
         var region = held.region;
         if (region == null) {
             terminate(player.getUUID());
@@ -797,6 +844,21 @@ public final class VectorStructureService {
         held.velocity = motion.linearVelocity();
         if (region.status() == StructurePhysicsRegion.Status.READY) followRegion(player, held, motion);
         applyImpacts(player, held);
+    }
+
+    /** Sable owns contact and collision; this only observes inertia until the window ends. */
+    private static void tickSableFlight(ServerPlayer player, Session held) {
+        if (!(player.level() instanceof ServerLevel level)) {
+            terminate(player.getUUID());
+            return;
+        }
+        var motion = StructureDynamics.motion(level, held.reference).orElse(null);
+        if (motion == null) {
+            if (++held.unavailableTicks > REGION_UNAVAILABLE_GRACE_TICKS * 2) terminate(player.getUUID());
+            return;
+        }
+        held.unavailableTicks = 0;
+        held.velocity = motion.linearVelocity();
     }
 
     private static void followRegion(ServerPlayer player, Session held, StructureMotionState motion) {
@@ -931,7 +993,12 @@ public final class VectorStructureService {
         var hit = StructureQueries.raycast(level, eye, end)
                 .filter(candidate -> candidate.block().structure().equals(reference)).orElse(null);
         if (hit == null) return null;
-        return StructureQueries.validate(level, eye, end, hit).currentHit().orElse(null);
+        var validation = StructureQueries.validate(level, eye, end, hit);
+        if (!validation.succeeded()) {
+            AcademyCraft.LOGGER.info("Kinetic Throw structure ray was rejected: {}", validation.status());
+            return null;
+        }
+        return validation.currentHit().orElseThrow();
     }
 
     private static boolean aimedAtHeld(ServerPlayer player, Session held, ServerLevel level) {

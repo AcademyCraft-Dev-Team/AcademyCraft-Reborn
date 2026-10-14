@@ -207,6 +207,16 @@ public final class SableStructureAccess {
         if (hosts != null) hosts.values().forEach(HostState::invalidate);
     }
 
+    /**
+     * Eagerly installs this host's observer so the lazy first-access path stays a fallback.
+     * Registration always runs through {@link SableContainerGuard}, never inside container
+     * tick iteration.
+     */
+    public static void observe(ServerLevel host) {
+        requireThread(host.getServer());
+        state(host);
+    }
+
     static void requireThread(MinecraftServer server) {
         Objects.requireNonNull(server, "server");
         if (!server.isSameThread()) throw new IllegalStateException("Sable structure access requires the server thread");
@@ -221,9 +231,10 @@ public final class SableStructureAccess {
         var state = hosts.get(host);
         if (state != null && state.container != container) { state.invalidate(); state = null; }
         if (state == null) {
-            state = new HostState(host, container);
-            hosts.put(host, state);
-            container.addObserver(state);
+            var created = new HostState(host, container);
+            hosts.put(host, created);
+            SableContainerGuard.containerMutation("sable.observer.add", () -> container.addObserver(created));
+            state = created;
         }
         return state;
     }

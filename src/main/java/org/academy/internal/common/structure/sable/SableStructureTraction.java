@@ -58,6 +58,40 @@ public final class SableStructureTraction {
                 vector(rigidBody.getAngularVelocity(new Vector3d())), center, mass.getMass()));
     }
 
+    /**
+     * Replaces a free body's linear velocity with one exact launch velocity and clears its spin.
+     * The caller owns exclusivity; a live foreign traction session keeps the body untouched, and
+     * no pose is written here.
+     */
+    public static boolean launch(ServerLevel host, StructureRef reference, Vec3 direction, double speed) {
+        SableStructureAccess.requireThread(host.getServer());
+        if (!finite(direction) || direction.lengthSqr() <= 1.0E-12 || !Double.isFinite(speed) || speed <= 0) {
+            return false;
+        }
+        var handle = SableStructureAccess.resolveHandle(host.getServer(), reference).orElse(null);
+        if (handle == null || handle.host() != host) return false;
+        var system = SubLevelPhysicsSystem.get(host);
+        if (system == null || system.getPaused()
+                || !RAPIER_PIPELINE.equals(system.getPipeline().getClass().getName())) return false;
+        var subLevel = handle.subLevel();
+        var mass = subLevel.getMassTracker();
+        if (subLevel.getRuntimeId() == PhysicsPipelineBody.NULL_RUNTIME_ID
+                || !SableStructureTransforms.unitScale(subLevel.logicalPose()) || mass == null
+                || !Double.isFinite(mass.getMass()) || mass.getMass() <= 0 || mass.getCenterOfMass() == null) {
+            return false;
+        }
+        var slots = SERVERS.get(host.getServer());
+        var session = slots == null ? null : slots.get(subLevel);
+        if (session != null && session.available()) return false;
+        var rigidBody = system.getPhysicsHandle(subLevel);
+        if (rigidBody == null) return false;
+        var current = rigidBody.getLinearVelocity(new Vector3d());
+        var angular = rigidBody.getAngularVelocity(new Vector3d());
+        var launch = new Vector3d(direction.x * speed, direction.y * speed, direction.z * speed);
+        rigidBody.addLinearAndAngularVelocity(launch.sub(current), angular.negate());
+        return true;
+    }
+
     /** Called only after the optional bridge's exact version/hash compatibility gate succeeds. */
     public static synchronized void initialize() {
         if (initialized) return;

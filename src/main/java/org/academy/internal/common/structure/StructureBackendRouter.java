@@ -10,6 +10,8 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.level.LevelEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.structure.*;
@@ -54,6 +56,15 @@ public final class StructureBackendRouter {
                 StructureTraction.Settings settings, BiPredicate<Entity, StructureHandle> permission);
         void onBlockChanged(ServerLevel host, BlockPos position);
         void shutdown(MinecraftServer server);
+
+        /** Eager per-level observer registration; also used as the lazy fallback channel. */
+        default void observeLevel(ServerLevel host) {
+        }
+
+        /** One bounded launch impulse; unsupported backends keep the structure untouched. */
+        default boolean launch(ServerLevel host, StructureRef reference, Vec3 direction, double speed) {
+            return false;
+        }
 
         /** Neutral capture executor for this backend; empty when it has no capture path. */
         default Optional<CaptureTarget> captureTarget(MinecraftServer server) {
@@ -167,6 +178,24 @@ public final class StructureBackendRouter {
         if (selected != null && selected.bridge != null) selected.bridge.onBlockChanged(host, position);
     }
 
+    /**
+     * Routes one launch impulse to the selected backend. Sable bodies receive an exact velocity
+     * replacement through their own physics pipeline; unavailable backends report failure so the
+     * caller can release its control safely.
+     */
+    public static boolean launch(ServerLevel host, StructureRef reference, Vec3 direction, double speed) {
+        Objects.requireNonNull(host, "host");
+        Objects.requireNonNull(reference, "reference");
+        requireThread(host.getServer());
+        if (host.getServer().getLevel(host.dimension()) != host
+                || !host.dimension().identifier().equals(reference.dimension())) return false;
+        var selected = selection(host.getServer());
+        if (selected.bridge != null && SABLE_ID.equals(reference.backend())) {
+            return selected.bridge.launch(host, reference, direction, speed);
+        }
+        return false;
+    }
+
     private static StructureTraction.Acquisition unavailable() {
         return new StructureTraction.Acquisition(StructureTraction.Status.NOT_AVAILABLE, Optional.empty());
     }
@@ -263,6 +292,22 @@ public final class StructureBackendRouter {
         Selection selected;
         synchronized (SERVERS) { selected = SERVERS.remove(event.getServer()); }
         if (selected != null && selected.bridge != null) selected.bridge.shutdown(event.getServer());
+    }
+
+    /**
+     * Installs the backend observer as soon as each server level exists. The lazy first-access
+     * registration inside the bridge remains as a fallback for levels created before this fires.
+     */
+    @SubscribeEvent public static void levelLoaded(LevelEvent.Load event) {
+        if (!(event.getLevel() instanceof ServerLevel host)) return;
+        var selected = selection(host.getServer());
+        if (selected.bridge != null) selected.bridge.observeLevel(host);
+    }
+
+    @SubscribeEvent public static void started(ServerStartedEvent event) {
+        var selected = selection(event.getServer());
+        if (selected.bridge == null) return;
+        for (var level : event.getServer().getAllLevels()) selected.bridge.observeLevel(level);
     }
 
     private static final class Selection {

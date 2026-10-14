@@ -1,6 +1,7 @@
 package org.academy.mixin.plugin;
 
 import org.academy.api.client.compatibility.IrisIntegration;
+import org.academy.internal.common.compat.SableContainerMixinGate;
 import org.academy.internal.common.compat.SableStaffMixinGate;
 import org.jspecify.annotations.Nullable;
 import org.objectweb.asm.tree.ClassNode;
@@ -26,6 +27,9 @@ public class MixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.equals("org.academy.mixin.common.compat.MixinSablePhysicsStaffHandler")
                 || mixinClassName.equals("org.academy.mixin.common.compat.MixinSablePhysicsStaffDragSession")) {
             return SableStaffMixinGate.state() == SableStaffMixinGate.State.VERIFIED;
+        }
+        if (mixinClassName.equals("org.academy.mixin.common.compat.MixinSableSubLevelContainerTick")) {
+            return SableContainerMixinGate.state() == SableContainerMixinGate.State.VERIFIED;
         }
         return true;
     }

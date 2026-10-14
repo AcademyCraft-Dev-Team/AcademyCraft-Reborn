@@ -33,6 +33,7 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.common.structure.LegacyMotionUnits;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -124,6 +125,11 @@ public final class KineticThrow extends Skill {
         return viewDirection != null && viewDirection.lengthSqr() > 1.0e-8
                 ? viewDirection.normalize()
                 : Vec3.ZERO;
+    }
+
+    /** Shared per-second launch calibration; the tier-3 milestone adds its documented 20%. */
+    public static double throwSpeed(boolean speedMilestone) {
+        return LegacyMotionUnits.velocityPerSecond(BASE_THROW_SPEED) * (speedMilestone ? 1.2 : 1.0);
     }
 
     @Override

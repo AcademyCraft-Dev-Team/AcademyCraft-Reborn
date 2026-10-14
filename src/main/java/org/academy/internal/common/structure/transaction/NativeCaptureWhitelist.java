@@ -4,7 +4,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -19,9 +18,11 @@ import java.util.Set;
  * structural gates. Randomly ticking land and vegetation-family full cubes are admitted as a
  * deliberate policy change: a captured structure space does not run random ticks, so the copied
  * content stays inert. The safety boundary is this curated set itself, not a blanket random-tick
- * semantic gate. Block entities, fluids, waterlogging, pending scheduled ticks, gravity blocks
- * and non-full shapes are still rejected with an explicit reason instead of being silently
- * dropped. Expanding the set remains a deliberate data change, not an automatic tag rule.
+ * semantic gate. Block entities, fluids, waterlogging, pending scheduled ticks and non-full
+ * shapes are still rejected with an explicit reason instead of being silently dropped. Gravity
+ * blocks are admitted through the same curated set: whitelisted sand, red sand and gravel may
+ * fall while unlisted gravity blocks fail the whitelist gate itself. Expanding the set remains a
+ * deliberate data change, not an automatic tag rule.
  */
 public final class NativeCaptureWhitelist {
     /**
@@ -47,9 +48,10 @@ public final class NativeCaptureWhitelist {
             Collections.addAll(blocks, Blocks.DIRT, Blocks.COARSE_DIRT, Blocks.ROOTED_DIRT, Blocks.PODZOL,
                     Blocks.MUD, Blocks.PACKED_MUD, Blocks.MUD_BRICKS);
             // Surface land and vegetation-family full cubes. Grass and mycelium spread by random
-            // tick in a live world; a captured structure space does not tick.
+            // tick in a live world; a captured structure space does not tick. Sand-family and
+            // gravel gravity blocks are ordinary terrain once the structure space stops ticking.
             Collections.addAll(blocks, Blocks.GRASS_BLOCK, Blocks.MYCELIUM, Blocks.MOSS_BLOCK,
-                    Blocks.SNOW_BLOCK, Blocks.CLAY, Blocks.GRAVEL);
+                    Blocks.SNOW_BLOCK, Blocks.CLAY, Blocks.GRAVEL, Blocks.SAND, Blocks.RED_SAND);
             // Sandstone families.
             Collections.addAll(blocks, Blocks.SANDSTONE, Blocks.CUT_SANDSTONE, Blocks.CHISELED_SANDSTONE,
                     Blocks.SMOOTH_SANDSTONE, Blocks.RED_SANDSTONE, Blocks.CUT_RED_SANDSTONE,
@@ -82,6 +84,11 @@ public final class NativeCaptureWhitelist {
                     Blocks.SPRUCE_PLANKS, Blocks.BIRCH_PLANKS, Blocks.JUNGLE_PLANKS, Blocks.ACACIA_PLANKS,
                     Blocks.DARK_OAK_PLANKS, Blocks.MANGROVE_PLANKS, Blocks.CHERRY_PLANKS,
                     Blocks.PALE_OAK_PLANKS, Blocks.BAMBOO_PLANKS, Blocks.CRIMSON_PLANKS, Blocks.WARPED_PLANKS);
+            // Whole leaf family; a captured structure space runs neither decay nor random ticks.
+            Collections.addAll(blocks, Blocks.OAK_LEAVES, Blocks.SPRUCE_LEAVES, Blocks.BIRCH_LEAVES,
+                    Blocks.JUNGLE_LEAVES, Blocks.ACACIA_LEAVES, Blocks.DARK_OAK_LEAVES,
+                    Blocks.MANGROVE_LEAVES, Blocks.CHERRY_LEAVES, Blocks.PALE_OAK_LEAVES,
+                    Blocks.AZALEA_LEAVES, Blocks.FLOWERING_AZALEA_LEAVES);
             // Color collections: plain concrete and dyed terracotta are stable full cubes.
             blocks.addAll(Blocks.CONCRETE.asList());
             blocks.addAll(Blocks.DYED_TERRACOTTA.asList());
@@ -110,7 +117,6 @@ public final class NativeCaptureWhitelist {
                 level.getBlockTicks().hasScheduledTick(position, state.getBlock()),
                 CuratedSet.BLOCKS.contains(state.getBlock()),
                 state.isCollisionShapeFullBlock(level, position),
-                state.getBlock() instanceof FallingBlock,
                 state.getDestroySpeed(level, position));
     }
 
@@ -123,17 +129,17 @@ public final class NativeCaptureWhitelist {
      */
     static @Nullable String classifyAdmission(boolean blockEntity, boolean waterlogged, boolean fluid,
                                               boolean scheduledTickPending, boolean whitelisted,
-                                              boolean fullBlock, boolean gravityBlock, float destroySpeed) {
+                                              boolean fullBlock, float destroySpeed) {
         if (blockEntity) return "block_entity_not_supported";
         if (waterlogged) return "waterlogged_not_supported";
         if (fluid) return "fluid_not_supported";
         // A pending scheduled tick means the cell is mid-behavior and may mutate right after the
         // copy; random ticks are admitted because the structure space does not tick.
         if (scheduledTickPending) return "scheduled_tick_pending";
+        // The curated set is the complete content boundary, including for gravity blocks.
         if (!whitelisted) return "not_in_plain_block_whitelist";
         if (!fullBlock) return "not_full_block";
         if (destroySpeed < 0.0f) return "unbreakable";
-        if (gravityBlock) return "gravity_block_not_supported";
         return null;
     }
 }

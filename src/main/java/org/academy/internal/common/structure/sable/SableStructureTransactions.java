@@ -71,7 +71,8 @@ public final class SableStructureTransactions implements CaptureTarget {
             // maps exactly onto the world origin of the native capture grid.
             var position = new Vector3d(origin.getX() + 0.5, origin.getY() + 0.5, origin.getZ() + 0.5);
             var pose = new Pose3d(position, new Quaterniond(), new Vector3d(), new Vector3d(1.0, 1.0, 1.0));
-            var allocated = container.allocateNewSubLevel(pose);
+            var allocated = SableContainerGuard.containerAllocation("sable.capture.allocate",
+                    () -> container.allocateNewSubLevel(pose)).orElse(null);
             if (!(allocated instanceof ServerSubLevel serverSubLevel)) return Optional.empty();
             ship = serverSubLevel;
             var plot = ship.getPlot();
@@ -184,12 +185,13 @@ public final class SableStructureTransactions implements CaptureTarget {
         var subLevel = container.getSubLevel(target.id());
         if (subLevel == null) return true;
         try {
-            container.removeSubLevel(subLevel, SubLevelRemovalReason.REMOVED);
+            var executed = SableContainerGuard.containerMutation("sable.capture.release",
+                    () -> container.removeSubLevel(subLevel, SubLevelRemovalReason.REMOVED));
+            return executed ? container.getSubLevel(target.id()) == null : true;
         } catch (RuntimeException | LinkageError failure) {
             AcademyCraft.LOGGER.error("Sable capture could not remove target {}", target.id(), failure);
             return false;
         }
-        return container.getSubLevel(target.id()) == null;
     }
 
     @Override
@@ -253,11 +255,13 @@ public final class SableStructureTransactions implements CaptureTarget {
     }
 
     private void removeQuietly(ServerSubLevelContainer container, ServerSubLevel ship) {
-        try {
-            container.removeSubLevel(ship, SubLevelRemovalReason.REMOVED);
-        } catch (RuntimeException | LinkageError failure) {
-            AcademyCraft.LOGGER.error("Sable capture could not remove a failed allocation", failure);
-        }
+        SableContainerGuard.containerMutation("sable.capture.rollback", () -> {
+            try {
+                container.removeSubLevel(ship, SubLevelRemovalReason.REMOVED);
+            } catch (RuntimeException | LinkageError failure) {
+                AcademyCraft.LOGGER.error("Sable capture could not remove a failed allocation", failure);
+            }
+        });
     }
 
     private @Nullable ServerSubLevel ship(StructureRef target) {

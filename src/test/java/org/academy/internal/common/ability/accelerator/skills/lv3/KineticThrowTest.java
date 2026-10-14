@@ -50,4 +50,10 @@ class KineticThrowTest {
         assertEquals(1.0, direction.length(), 1.0e-9);
         assertEquals(1.0, direction.dot(view.normalize()), 1.0e-9);
     }
+
+    @Test
+    void sharedThrowSpeedKeepsTheCalibratedFiftyBlocksPerSecond() {
+        assertEquals(50.0, KineticThrow.throwSpeed(false), 1.0e-9);
+        assertEquals(60.0, KineticThrow.throwSpeed(true), 1.0e-9);
+    }
 }

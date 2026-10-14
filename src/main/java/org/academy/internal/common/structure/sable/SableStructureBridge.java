@@ -60,6 +60,14 @@ public final class SableStructureBridge implements StructureBackendRouter.Bridge
         SableStructureTraction.onBlockChanged(host, position);
     }
 
+    @Override public void observeLevel(ServerLevel host) {
+        SableStructureAccess.observe(host);
+    }
+
+    @Override public boolean launch(ServerLevel host, StructureRef reference, Vec3 direction, double speed) {
+        return SableStructureTraction.launch(host, reference, direction, speed);
+    }
+
     @Override public Optional<CaptureTarget> captureTarget(MinecraftServer server) {
         return Optional.of(new SableStructureTransactions(server));
     }

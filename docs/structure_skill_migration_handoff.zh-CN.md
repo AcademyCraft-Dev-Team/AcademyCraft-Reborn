@@ -393,3 +393,46 @@
   - `.\gradlew.bat runGameTestServer -I validation/native_structure/transaction.init.gradle -PacademyGameTests=academy:structure_transactions -PacademyStructureTransactionDirectory=run/native-structure-transaction-gametest-fixwl-r1 -DisDev=true`
   - `.\gradlew.bat runServerCompat -I validation/native_structure/physics_world.init.gradle -PacademyStructurePhysicsSmoke=server -PacademyStructurePhysicsGraspSmoke=true -PacademyStructurePhysicsKineticThrowSmoke=true -PacademyStructurePhysicsHighSpeedJetSmoke=true -PacademyStructurePhysicsMagnetManipulationSmoke=true -PacademyStructurePhysicsSmokeDirectory=run/native-structure-physics-smoke-server-fixwl-r1 @physicsNativeArgs -DisDev=true`（目录需预置 `eula.txt`、`server-ip=127.0.0.1`、`level-name=native-structure-physics-smoke` 的 `server.properties`，且世界目录尚不存在）
 - 当前构建（含本修复）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `A9DABD667B2359BB43E45C60029B4825872CBAABC2AA758825249A9EBDB8C4C1`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `B4F8A121B2085853F36B0DA5194316AA4852D017B19FA1256D836C27B4D04456`。未复制到整合包，未操作用户存档，未创建本地 Git 提交。
+
+### 修复：Sable 容器重入崩溃与投掷/悬浮/内容扩展（2026-10-14）
+
+- 崩溃机制判定（证据等级：字节码级，可复核）：
+  - 崩溃报告 `crash-2026-10-14_19.23.25-server.txt`：`ArrayIndexOutOfBoundsException: Index 10 out of bounds for length 10` 栈顶 `ReferenceArrayList.forEach:726` ← `SubLevelContainer.tick:144`。`javap -p -c -l` 复核该 Sable 制品（SHA-256 与 `docs/sable_compat_artifacts.json` 锁定值一致）：`tick()` 第 144 行是 `allSubLevels.forEach(SubLevel::tick)`，第 147 行才是 `observers.forEach`。
+  - fastutil 8.5.18 `ReferenceArrayList.forEach` 在循环开始时缓存底层数组引用、每次迭代读取实时 `size`；迭代期间任何 `add` 导致底层数组扩容后，旧数组仍被按下标读取，`size` 超过旧容量即抛该异常。
+  - 增删来自 Sable 自身：`ServerSubLevel.tick()` → `SubLevelHeatMapManager.tick/step`（热图分裂）→ `split()` → `SubLevelAssemblyHelper.assembleBlocks` → `SubLevelContainer.allocateNewSubLevel`（`allSubLevels.add`，`javap` 可见该调用链；`SableCommonEvents.handleBlockChange` 在真实 `chunk.setBlockState` 路径上以 `onSolidAdded` 播种热图，我们的捕获写入与玩家编辑都会进入）。崩溃发生在 `ServerLevel.tick` 的 HEAD（`sable$tickPlotContainer` 注入点），实体 tick 在其之后，故“实体 tick 重入”假设被排除；用户设置的仓库集成侧风险仍是惰性 `addObserver` 与捕获提交/回滚可在迭代中改容器。
+  - 16 秒前的 `sable_target_not_visible` 与"崩溃前最后一次捕获"同源，但不是本次崩溃的增删来源；证据强度：崩溃机制字节码级确证，具体触发方块变化无法从日志逐格复原。
+- 修复设计：
+  - 版本门控兼容补丁：新增 `SableContainerMixinGate`（只校验 Sable 版本与 SHA-256）与 `MixinSableSubLevelContainerTick`（`@Pseudo`，仅对锁定制品应用，`require = 1`）。`tick()` 两个 `List.forEach` 改为快照迭代——迭代中新增的子级从下一 tick 开始 tick，删除仍由 `processSubLevelRemovals` 负责；每个回调包在 `SableContainerGuard.enter/exitContainerTick` 的 try/finally 内。不同 Sable 制品自动不应用而不是启动失败。
+  - 延迟队列与守卫：新增 `SableContainerGuard`（无任何可选 mod 类型引用）。容器回调内的 `addObserver`/`removeSubLevel` 一律入队，`ServerTickEvent.Post`（所有等级 tick 完成后）统一 drain，单项失败只记日志不阻断后续；`allocateNewSubLevel` 是同步契约无法延迟，检测到重入时 fail-closed 返回空并记录错误，交易以 `no_free_native_slot` 干净失败、不产生半成品。守卫带不平衡 exit / tick 内 drain 断言与 `enteredCallbacks()` 校验计数。
+  - 观察者急切注册：`StructureBackendRouter` 在 `LevelEvent.Load`（每个 `ServerLevel`）与 `ServerStartedEvent` 调 `Bridge.observeLevel`；`SableStructureAccess.observe` 立即注册。`state()` 惰性兜底保留，但注册走同一守卫通道。
+  - 改动协作：`SableStructureTransactions.allocate/releaseEmpty/removeQuietly`、`SableStructureAccess.state` 接入守卫/队列；`SableStructureSmoke` 断言 `sable_container_tick_guard_active=true`（真实容器 tick 至少进入过一次被守卫的回调，证明 mixin 生效）。
+- 左击投掷链审计与修复：
+  - 真实失败点 1（Sable 会话必然秒退）：`beginSableLift` 创建 `Session` 时漏设 `expiresAt`（默认 0），下一个玩家 tick 的 `tick()` 即判定超时并终止——即使抬升成功，左击时也没有会话。修复：`beginSableLift` 设 `expiresAt = gameTime + HOVER_TICKS`。
+  - 真实失败点 2（显式未实现）：`VectorStructureService.launch` 对 `held.traction != null` 直接记录"not implemented"并终止。修复：新增中性 `StructureBackendRouter.launch` + `Bridge.launch` 默认拒绝，Sable 桥实现 `SableStructureTraction.launch`：锁定制品物理管线上以 `addLinearAndAngularVelocity(目标速度−当前速度, −角速度)` 精确赋速（同原生 `setVelocity(ZERO)` + 质心冲量的语义），有独占会话占用时拒绝；随后会话进入 `FLYING`，`tickSableFlight` 只观察惯性（Sable 自管接触），到期释放控制保留结构。
+  - 客户端链审计结论：`InputSystem` 的 `KEY_NAME_THROW` 绑定 `MOUSE_BUTTON_LEFT/PRESS`，`MixinMouseHandler` 仅在 `MouseButtonEvent` 被取消时 `ci.cancel()`，本技能从不取消；因此按住悬浮时左击同时保留原版攻击行为，非持有时左击只是发一个被服务器拒绝的包，不吞攻击、无客户端状态门。瞄准门保留（必须瞄住本结构或身处其中），与旧实现一致。
+- 悬浮 10 秒语义：抬升完成（`lifted` 置真）时 `expiresAt = hoverDeadline(gameTime) = gameTime + HOVER_TICKS`（10 秒完整悬浮窗口，不再与抬升时间共享预算；新增 `VectorStructureService.hoverDeadline` 单测）。超时行为（旧实现考古：`git show 6751ce92:KineticThrow.java` 的 `holdAt` 到期 `releaseHeld` 只关句柄、结构回落到重力）选择为：仍瞄准本结构时沿视角自动投掷（同一 `launchHeld` 通道），否则安全结束并记录日志，结构与惯性保留——不走静默掉落，符合任务允许的两种语义之一。
+- 内容扩展（`NativeCaptureWhitelist`）：
+  - 新增 `SAND`、`RED_SAND`（`GRAVEL` 原已在集合）与 11 种树叶：oak/spruce/birch/jungle/acacia/dark_oak/mangrove/cherry/pale_oak/azalea/flowering_azalea。
+  - `FallingBlock` 独立门删除，白名单即边界：`classifyAdmission` 移除 gravity 参数；沙/红沙/砂砾作为已列重力方块直接准入，未列重力方块（如 gametest 用的铁砧）以 `not_in_plain_block_whitelist` 拒绝。BE、流体、waterlogged、scheduled tick、非全块、不可破坏门保持。
+  - 原生碰撞几何补齐树叶：gametest 首轮暴露 `NativeStructurePhysicsGeometry` 拒绝 `oak_leaves`（`target_geometry_budget` 回滚）；`STATE_SHAPES` 增加 `LeavesBlock`/`TintedParticleLeavesBlock`/`UntintedParticleLeavesBlock`/`MangroveLeavesBlock`（四类精确类，花瓣粒子子类全覆盖；树叶碰撞形状只依赖方块状态，不含 BE/tick/实体条件）。
+- 验证结果：
+  - `.\gradlew.bat test sableCompatTest -DisDev=true`：普通单测 2592 项（基线 2589，本轮 +3：白名单重力语义、投掷速度标定、悬浮窗口）+ Sable 16 项（基线 11，+5：新增 `SableContainerGuardTest`）零失败/错误/跳过（`build/fixp31-tests-final.log`）。
+  - 事务 gametest 新隔离目录 `run/native-structure-transaction-gametest-fixp31-r2`：`All 1 required tests passed`（`build/fixp31-gametest-r2.log`）。新增沙/红沙/砂砾/橡树叶/杜鹃树叶提交用例（目标内容与源一致、源移除、journal 回收、释放槽位）与铁砧 `not_in_plain_block_whitelist` 用例。
+  - 世界烟测新隔离目录 `run/native-structure-physics-smoke-server-fixp31-r1` PASSED、`exit_status=0`（904 tick，`build/fixp31-world-smoke-r1.log`）；结果文件与 `fixwl-r1` 逐行 diff 仅 `first_ref`/`second_ref`/`shared_session` 随机 UUID 与 `ticks=903→904`，`kinetic_lift_rise=3.2498730230960433`、`kinetic_throw_speed=50.0`、`kinetic_impact_damage=45.0`、`kinetic_follow_rebinds=10`、`hsjet_launch_speed=115.37633965527773`、`mag_pull_speed=45.57584523660533` 全部逐值无回归。
+  - Sable 专服烟测新隔离目录 `run/sable-compat/fixp31-server-r1`（`-PacademySableRuntime=sable -PacademySableSmoke=true -PacademySableCapture=true`，目录按 P27 约定预置）PASSED、`exit_status=0`（`build/fixp31-sable-server-r1.log`），证据含新断言 `sable_container_tick_guard_active=true` 与既有 `sable_capture_committed=true`、`sable_capture_rejected_be_preserved=true`、`pneumatic_real_server_entry_selects_sable=true` 等全部保持。
+  - `build -DisDev=true` 25 秒、`-DisDev=false` 39 秒通过（`build/fixp31-build-dev.log`、`build/fixp31-build-release.log`），`verifySableCompatPackaging`（桥接类存在、无嵌套外部 Sable 依赖）通过。
+- 失败轨迹：gametest `fixp31-r1` 在新增树叶用例失败（`Structure capture target geometry was rejected ... Unsupported collision state ... oak_leaves`，`build/fixp31-gametest-r1.log`），按上述几何补齐后 `fixp31-r2` 通过；中途一次 `compileJava` 失败（`SableStructureTraction.launch` 误用不存在的本地 `requireThread`）与一次 mixin 文件格式手误均在提交任何运行前修复；无其他失败运行目录。
+- 未验边界：真实客户端需用户复测（步骤见下）；Sable 热图分裂本身未在烟测中直接复现（mixin 只以 `sable_container_tick_guard_active` 证明真实容器 tick 被守卫，快照迭代的正确性由字节码判定与单测覆盖）；Sable 端 Kinetic Throw 的投掷速度/悬浮未跑专用夹具（现有 Sable 烟测不执行动能投掷，Sable 发射路径仅由编译、守卫单测与本体烟测无回归保护）；Sable 质量预算（`sable_traction_too_heavy`）与 `sable_target_not_visible` 的具体现场未再复现（诊断已细化为打印 `StructureHitValidation.Status`，便于用户复测定位）；悬浮 10 秒自动投掷未在自动化中触发；`docs/vfx/...` 未触碰。
+- 用户复测步骤（真实客户端，Sable 后端）：
+  1. 进入 Sable 存档，学习动能投掷并按住 H 蓄力，瞄准石质地表松开，观察结构抬升后**至少 10 秒**悬停且位置保持。
+  2. 悬停期间正对结构左击：结构应沿视线以约 50 格/秒抛出；左击同时不应丢失原版攻击反馈。
+  3. 不瞄准结构左击/空手左击：应有正常原版攻击，不出现异常。
+  4. 悬停 10 秒内不操作：结构应沿当时视角自动抛出；若未瞄准则记录 `hover expired without a launchable aim` 并释放控制（结构保留，不凭空消失）。
+  5. 捕获含沙/砂砾/树叶与新增白名单方块的区域：应提交成功；含 BE/流体/水logged/不可破坏/未列方块时应有明确 `capture_rejected` 且源方块不变。
+  6. 目标为过重结构（`sable_traction_too_heavy`）或不可见（`sable_target_not_visible`）时，日志应给出精确状态，便于回传。
+- 复现命令（每次全新隔离目录）：
+  - `.\gradlew.bat test sableCompatTest -DisDev=true`
+  - `.\gradlew.bat runGameTestServer -I validation/native_structure/transaction.init.gradle -PacademyGameTests=academy:structure_transactions -PacademyStructureTransactionDirectory=run/native-structure-transaction-gametest-fixp31-r2 -DisDev=true`
+  - `.\gradlew.bat runServerCompat -I validation/native_structure/physics_world.init.gradle -PacademyStructurePhysicsSmoke=server -PacademyStructurePhysicsGraspSmoke=true -PacademyStructurePhysicsKineticThrowSmoke=true -PacademyStructurePhysicsHighSpeedJetSmoke=true -PacademyStructurePhysicsMagnetManipulationSmoke=true -PacademyStructurePhysicsSmokeDirectory=run/native-structure-physics-smoke-server-fixp31-r1 @physicsNativeArgs -DisDev=true`
+  - `.\gradlew.bat runServerSable -PacademySableRuntime=sable -PacademySableSmoke=true -PacademySableCapture=true -PacademySableRunDirectory=run/sable-compat/fixp31-server-r1 -DisDev=true`
+- 当前构建（含本修复）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `5798E3C77B99E8472BA0F37891838A173D4B826FECEC0D8E6996931D1A5B817F`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `89207934F8DC9DD198A940E9A7D625CF92C2315057787F048C10302454C73A29`。未复制到整合包，未操作用户存档，未创建本地 Git 提交。

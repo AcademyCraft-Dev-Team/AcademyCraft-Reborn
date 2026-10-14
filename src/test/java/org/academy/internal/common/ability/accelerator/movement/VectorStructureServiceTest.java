@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.accelerator.movement;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.academy.internal.common.ability.accelerator.skills.lv3.KineticThrow;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -69,5 +70,12 @@ class VectorStructureServiceTest {
 
         assertEquals(2.0, VectorStructureService.edgeDistance(region, new AABB(2, 2, 2, 8, 8, 8)), 1.0e-9);
         assertTrue(VectorStructureService.edgeDistance(region, new AABB(-1, 2, 2, 8, 8, 8)) < 0);
+    }
+
+    @Test
+    void hoverDeadlineStartsTheFullHoldWindowWhenLiftCompletes() {
+        assertEquals(200, KineticThrow.HOVER_TICKS);
+        assertEquals(KineticThrow.HOVER_TICKS, VectorStructureService.hoverDeadline(0));
+        assertEquals(1234L + KineticThrow.HOVER_TICKS, VectorStructureService.hoverDeadline(1234));
     }
 }
