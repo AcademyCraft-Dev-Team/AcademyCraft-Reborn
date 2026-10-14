@@ -151,6 +151,18 @@
 - 未验边界：Sable 的动能投掷发射与飞行；10 秒悬停超时后仅释放控制、结构与已开区域继续保留（每技能使用最多新增一个区域，长期回收未实现）；原生投掷损伤沿用加速器回退的玩家攻击类型，受常规护甲/减伤结算；真实双端与真实 TCP 客户端未验；静态化操作、载荷重新落回方块不在本节点。
 - 当前构建（含 P19–P25）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `B9E72F45CAC4CC0E3F785E4C570EB9219659E56A5AA002917536C30B03CA9804`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `C192909C00F0BD1B0782340D4380F9E321DCA4E574F315793D0A56F1CAB21839`。未复制到整合包，未操作用户存档。
 
+### P26 原生承载验收矩阵扩展（2026-10-14）
+
+- 改动文件：仅 `NativeStructurePhysicsSupportSmokeChecks.java`（+270/-1；DESCEND 后新增 ROTATE/JUMP/EDGE/CEILING 相位，DONE 前清理临时物；既有 ARM/SETTLE/LIFT/DESCEND 语义不变）。Sable 后端与真实双端不在本节点。
+- ROTATE：Anchor 抬离地板 0.9 → `setVelocity(ZERO, (0, 1.5, 0))`；旋转累计 60.13° 期间每 tick 断言支撑面存在且 |feet−surface|<0.05；rider 随转（世界位移 0.290、结构本地漂移 2.6e-4）；停转后回落稳定（feet=112.00000427）。证据 `support_rotation_supported/rider_followed=true`。
+- JUMP：`setDeltaMovement(0, 0.55, 0)` 后连续 5 tick 离面 >0.5 且未被承载拉回，峰值 2.03 格，落回后重新被支撑。夹具 rider 为 noAI：`aiStep` 对非有效 AI 跳过 `travel`，夹具每 tick 显式调用 `rider.travel(Vec3.ZERO)` 推进原版积分（模拟跳跃，非键盘输入）。证据 `support_jump_leaves_surface/relands=true`。
+- EDGE：水平 Anchor +2.0（静止摩擦下实际滑移 1.752），滑动期每 tick 支撑对齐、|Δrider.x−Δcom.x| 最大 0.043；再给 rider 每 tick +0.15 水平速度走出边缘，支撑消失后自然下落并落到真实地板（landing_feet=111.0=floorTop），region 保持 READY。证据 `support_edge_translation_follows/walk_off_falls/region_ready=true`。
+- CEILING：rider 头顶 2 格放 3 块真实 STONE；Anchor 抬升 +2 全程 rider.maxY ≤ 天花板底面+1e-3（不穿透、无异常），rider 仅升 1.05 后被顶住；清理后回落稳定。当前无结构推挤能力：结构最终穿过 rider（`support_ceiling_structure_through_rider=true`，夹具只按“不穿透/不崩溃”断言并注明该限制）。证据 `support_ceiling_blocks_rider/no_clip=true`。
+- 失败轨迹（目录与日志保留）：r1 JUMP 卡死（noAI 不积分 `setDeltaMovement`，显式 `travel` 修复）；r2 CEILING 放块后当 tick 挂 Anchor 被拒（宿主地形快照失效，需隔一个服务端 tick 重抓）。`build/p26-world-smoke-r1.log`、`r2`、`r3` 均保留。
+- 验证：世界烟测 `run/native-structure-physics-smoke-server-p26-r3` PASSED、exit_status=0（858 tick；既有 `support_*`、`grasp_*`、`kinetic_*` 证据无回归，日志 `build/p26-world-smoke-r3.log`）；单测 2562 + Sable 11 零失败（`build/p26-tests-final.log`）；双构建通过（`build/p26-build-dev-final.log`、`build/p26-build-release-final.log`）。Sable 专服烟测未重跑（本改动仅在原生世界烟测夹具内，Sable 烟测不执行该相位）。
+- 未验边界：Sable 后端承载；真实双端（真实客户端+服务端观察）与真实键盘行走/跳跃；EDGE 锚目标 +2.0 与摩擦实际滑移 1.752 属环境性质；CEILING 无推挤（结构穿 rider）。
+- 当前构建（含 P19–P26）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `359243C796BC7D68EE6052441BAC312FD4AD695D4247A20AAE348CCC154AB0C8`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `266E1CAFEB39ECBB00E9DD36A21C482E378DB9237381E377FCBDB2F9906E10A6`。未复制到整合包，未操作用户存档。
+
 <!-- P24 第一步历史记录（保留供核对）
 - 新增 `CaptureTarget`（transaction 包内接口）：`allocate/cellBudget/ready/writeCell/readCell/clearCell/quarantined/deactivate/save/releaseEmpty/resolve(recovery)/verifyCopy/backendId`；新增 `NativeCaptureTarget` 独占全部 `NativeStructureRuntime`/`StructureHandle`/几何预算调用。`StructureCaptureCoordinator` 不再直接接触任何后端类型，恢复路径经 `targetFor(server, record.backend())` 按日志 `Record.backend` 分派（目前仅原生，非原生仍保留记录并报错）。公共 API、状态/明细/日志文本、journal 阶段与保留/回滚语义均未改变。
 - 验证（行为等价）：单元 2558 + Sable 11 零失败（`build/p24a-tests-final.log`）；事务 gametest `run/native-structure-transaction-gametest-r9` 通过（完整提交、拒绝、回滚/前向恢复、容量回收，`All 1 required tests passed`）；`build -DisDev=true/-DisDev=false` 均通过。
