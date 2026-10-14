@@ -18,11 +18,20 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.program.ForwardingProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
+import org.academy.api.common.ability.program.ProgramStructureAnchor;
+import org.academy.api.common.ability.program.ProgramStructureControl;
+import org.academy.api.common.ability.program.ProgramStructureOperationResult;
+import org.academy.api.common.ability.program.ProgramStructurePose;
+import org.academy.api.common.ability.program.ProgramStructureReference;
 import org.academy.api.common.ability.program.ProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.academy.api.common.ability.program.ProgramVector;
+import org.academy.api.common.structure.StructureDynamics;
+import org.academy.api.common.structure.StructureRef;
+import org.academy.api.common.structure.StructureSpaces;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.movement.VectorStructureService;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileStateAdapter;
 import org.academy.internal.common.ability.accelerator.skills.lv2.KineticEnergyApplied;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
@@ -33,6 +42,7 @@ import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
@@ -43,11 +53,18 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
             AcceleratorProgramNodeCatalog.ACCELERATOR).actionRange();
     public static final int MAX_QUERY_RESULTS = 128;
     private static final double PROJECTILE_QUERY_RANGE = 16.0;
+    private static final float STRUCTURE_EXTRACT_COST = 30.0f;
+    private static final float STRUCTURE_CONTROL_COST = 10.0f;
+    private static final float STRUCTURE_MOVE_COST = 5.0f;
+    private static final float STRUCTURE_LAUNCH_COST = 15.0f;
+    private static final double MAXIMUM_MOVE_SECONDS = 10.0;
 
     private final ServerPlayer player;
     private final float costMultiplier;
     private final ImpactBatch impactBatch = new ImpactBatch();
     private final ServerProgramTargetResolver targets;
+    private final UUID runtimeToken = UUID.randomUUID();
+    private final Map<UUID, ProgramStructureControl> issuedControls = new HashMap<>();
 
     @Override
     public ProgramTargetResolver targetResolver() {
@@ -366,6 +383,102 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
     }
 
     @Override
+    public StructureOperation extractStructure(ProgramBlockPosition host, int tier, int budget) {
+        requireCasterReady(Skills.KINETIC_THROW.get());
+        var seed = requireStructureHost(host);
+        var result = VectorStructureService.programExtract(player, seed, tier, budget);
+        if (result.status() != VectorStructureService.ProgramStatus.COMPLETED) {
+            return StructureOperation.result(operationResult(result));
+        }
+        var reference = result.reference();
+        if (reference == null) return StructureOperation.rejected("committed_without_reference");
+        charge(Skills.KINETIC_THROW.get(), STRUCTURE_EXTRACT_COST);
+        return StructureOperation.structure(programReference(reference),
+                ProgramStructureOperationResult.completed(result.detail(), reference));
+    }
+
+    @Override
+    public StructureOperation controlStructure(ProgramStructureReference structure) {
+        requireCasterReady(Skills.KINETIC_THROW.get());
+        Objects.requireNonNull(structure, "structure");
+        var result = VectorStructureService.programControl(
+                player, structure.reference(), structure.runtimeId());
+        if (result.status() != VectorStructureService.ProgramStatus.COMPLETED) {
+            return StructureOperation.result(operationResult(result));
+        }
+        var session = VectorStructureService.session(player).orElse(null);
+        if (session == null || !session.reference().equals(structure.reference())) {
+            return StructureOperation.rejected("control_session_unavailable");
+        }
+        var token = new ProgramStructureControl(structure.reference(), structure.runtimeId(),
+                session.controllerId(), player.getUUID(), runtimeToken);
+        issuedControls.put(token.controlId(), token);
+        charge(Skills.KINETIC_THROW.get(), STRUCTURE_CONTROL_COST);
+        return StructureOperation.control(token,
+                ProgramStructureOperationResult.completed(result.detail(), structure.reference()));
+    }
+
+    @Override
+    public StructureOperation moveStructure(ProgramStructureControl control,
+                                            @Nullable ProgramWorldPosition target,
+                                            @Nullable ProgramStructureAnchor anchor,
+                                            double seconds) {
+        requireCasterReady(Skills.KINETIC_THROW.get());
+        var rejection = validateControl(control);
+        if (rejection != null) return StructureOperation.rejected(rejection);
+        var destination = resolveMoveTarget(control, target, anchor);
+        if (destination == null) return StructureOperation.rejected("move_target_unavailable");
+        if (!Double.isFinite(seconds) || seconds < 0.1 || seconds > MAXIMUM_MOVE_SECONDS) {
+            return StructureOperation.rejected("invalid_duration");
+        }
+        var result = VectorStructureService.programMove(player, control.reference(),
+                control.controlId(), destination, (long) Math.ceil(seconds * 20.0));
+        if (result.status() == VectorStructureService.ProgramStatus.COMPLETED) {
+            charge(Skills.KINETIC_THROW.get(), STRUCTURE_MOVE_COST);
+        }
+        return StructureOperation.result(operationResult(result));
+    }
+
+    @Override
+    public StructureOperation rotateStructure(ProgramStructureControl control,
+                                              @Nullable ProgramStructurePose pose) {
+        var rejection = validateControl(control);
+        if (rejection != null) return StructureOperation.rejected(rejection);
+        return StructureOperation.unavailable("finite_torque_control_unavailable");
+    }
+
+    @Override
+    public StructureOperation launchStructure(ProgramStructureControl control,
+                                              ProgramDirection direction,
+                                              AcceleratorProgramStrength strength) {
+        requireCasterReady(Skills.KINETIC_THROW.get());
+        var rejection = validateControl(control);
+        if (rejection != null) return StructureOperation.rejected(rejection);
+        var normalized = normalized(direction);
+        var result = VectorStructureService.programLaunch(player, control.reference(),
+                control.controlId(), normalized, launchSpeedScale(strength));
+        if (result.status() == VectorStructureService.ProgramStatus.COMPLETED) {
+            charge(Skills.KINETIC_THROW.get(), STRUCTURE_LAUNCH_COST);
+        }
+        return StructureOperation.result(operationResult(result));
+    }
+
+    @Override
+    public StructureOperation releaseStructure(ProgramStructureControl control) {
+        var rejection = validateControl(control);
+        if (rejection != null) return StructureOperation.rejected(rejection);
+        var result = VectorStructureService.programRelease(player, control.reference(), control.controlId());
+        return StructureOperation.result(operationResult(result));
+    }
+
+    @Override
+    public StructureOperation staticizeStructure(ProgramStructureReference structure,
+                                                 @Nullable ProgramBlockPosition target) {
+        Objects.requireNonNull(structure, "structure");
+        return StructureOperation.unavailable("safe_staticization_unavailable");
+    }
+
+    @Override
     public Optional<ProgramWorldPosition> positionOf(Object entityReference) {
         if (!(entityReference instanceof Entity entity)
                 || !sameUsableLevel(entity)
@@ -626,6 +739,85 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
             throw new IllegalArgumentException("Block is in another dimension");
         }
         return new BlockPos(position.x(), position.y(), position.z());
+    }
+
+    private BlockPos requireStructureHost(ProgramBlockPosition block) {
+        if (block == null) {
+            throw new IllegalArgumentException("Structure host block is missing");
+        }
+        var center = targets.requireLocalPosition(new ProgramWorldPosition(
+                block.dimension(), block.x() + 0.5, block.y() + 0.5, block.z() + 0.5));
+        if (center.distanceToSqr(player.position()) > MAX_ACTION_RANGE * MAX_ACTION_RANGE) {
+            throw new IllegalArgumentException("Structure host block is outside program range");
+        }
+        var position = new BlockPos(block.x(), block.y(), block.z());
+        if (!level().hasChunkAt(position) || !level().isInWorldBounds(position)) {
+            throw new IllegalArgumentException("Structure host block is unavailable");
+        }
+        return position;
+    }
+
+    private ProgramStructureReference programReference(StructureRef reference) {
+        var handle = StructureSpaces.resolve(level().getServer(), reference).orElseThrow(() ->
+                new IllegalStateException("Committed structure handle is unavailable"));
+        return new ProgramStructureReference(reference, handle.runtimeId());
+    }
+
+    private static ProgramStructureOperationResult operationResult(VectorStructureService.ProgramResult result) {
+        return switch (result.status()) {
+            case COMPLETED -> result.reference() == null
+                    ? ProgramStructureOperationResult.completed(result.detail())
+                    : ProgramStructureOperationResult.completed(result.detail(), result.reference());
+            case PENDING -> ProgramStructureOperationResult.pending(result.detail());
+            case REJECTED -> ProgramStructureOperationResult.rejected(result.detail());
+            case UNAVAILABLE -> ProgramStructureOperationResult.unavailable(result.detail());
+        };
+    }
+
+    private @Nullable String validateControl(ProgramStructureControl control) {
+        if (control == null) return "missing_structure_control";
+        if (!control.actorId().equals(player.getUUID())) return "control_actor_mismatch";
+        if (!control.runtimeToken().equals(runtimeToken)) return "control_runtime_expired";
+        var issued = issuedControls.get(control.controlId());
+        if (issued == null || !issued.equals(control)) return "control_token_stale";
+        return null;
+    }
+
+    private @Nullable Vec3 resolveMoveTarget(ProgramStructureControl control,
+                                             @Nullable ProgramWorldPosition target,
+                                             @Nullable ProgramStructureAnchor anchor) {
+        Vec3 point = null;
+        Vec3 anchorWorld = null;
+        if (anchor != null) {
+            if (!anchor.structure().reference().equals(control.reference())
+                    || !anchor.structure().runtimeId().equals(control.structureRuntimeId())) {
+                return null;
+            }
+            var state = StructureDynamics.motion(level(), control.reference()).orElse(null);
+            if (state == null) return null;
+            anchorWorld = state.pose().localToWorldPoint(Vec3.atCenterOf(anchor.localPosition()));
+            point = anchorWorld;
+        }
+        if (target != null) {
+            point = targets.requireLocalPosition(target);
+        }
+        if (point == null) return null;
+        if (anchorWorld != null && target != null) {
+            var state = StructureDynamics.motion(level(), control.reference()).orElse(null);
+            if (state == null) return null;
+            var center = state.pose().localToWorldPoint(state.localCenterOfMass());
+            point = point.add(center.subtract(anchorWorld));
+        }
+        if (point.distanceToSqr(player.position()) > MAX_ACTION_RANGE * MAX_ACTION_RANGE) return null;
+        return point;
+    }
+
+    private static double launchSpeedScale(AcceleratorProgramStrength strength) {
+        return switch (Objects.requireNonNull(strength, "strength")) {
+            case CONTROLLED -> 0.5;
+            case STANDARD -> 1.0;
+            case MAXIMUM -> 1.5;
+        };
     }
 
     private ProgramWorldPosition worldPosition(Vec3 position) {

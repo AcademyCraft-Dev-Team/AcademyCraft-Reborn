@@ -563,6 +563,56 @@ class AcceleratorProgramExecutionBridgeTest {
         }
 
         @Override
+        public StructureOperation extractStructure(ProgramBlockPosition host, int tier, int budget) {
+            return StructureOperation.unavailable("not_used_by_this_fixture");
+        }
+
+        @Override
+        public StructureOperation controlStructure(ProgramStructureReference structure) {
+            return StructureOperation.unavailable("not_used_by_this_fixture");
+        }
+
+        @Override
+        public StructureOperation moveStructure(
+                ProgramStructureControl control,
+                ProgramWorldPosition target,
+                ProgramStructureAnchor anchor,
+                double seconds
+        ) {
+            return StructureOperation.unavailable("not_used_by_this_fixture");
+        }
+
+        @Override
+        public StructureOperation rotateStructure(
+                ProgramStructureControl control,
+                ProgramStructurePose pose
+        ) {
+            return StructureOperation.unavailable("not_used_by_this_fixture");
+        }
+
+        @Override
+        public StructureOperation launchStructure(
+                ProgramStructureControl control,
+                ProgramDirection direction,
+                AcceleratorProgramStrength strength
+        ) {
+            return StructureOperation.unavailable("not_used_by_this_fixture");
+        }
+
+        @Override
+        public StructureOperation releaseStructure(ProgramStructureControl control) {
+            return StructureOperation.unavailable("not_used_by_this_fixture");
+        }
+
+        @Override
+        public StructureOperation staticizeStructure(
+                ProgramStructureReference structure,
+                ProgramBlockPosition target
+        ) {
+            return StructureOperation.unavailable("not_used_by_this_fixture");
+        }
+
+        @Override
         public Optional<ProgramWorldPosition> positionOf(Object entityReference) {
             return Optional.empty();
         }

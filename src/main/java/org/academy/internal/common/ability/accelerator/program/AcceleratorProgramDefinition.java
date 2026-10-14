@@ -39,7 +39,8 @@ public final class AcceleratorProgramDefinition {
             if (id.equals(AcceleratorProgramNodeIds.APPLY_VECTOR)
                     || id.equals(AcceleratorProgramNodeIds.KINETIC_IMPACT)
                     || id.equals(AcceleratorProgramNodeIds.DISPLACE_ENTITY)
-                    || id.equals(AcceleratorProgramNodeIds.DISPLACE_BLOCK)) {
+                    || id.equals(AcceleratorProgramNodeIds.DISPLACE_BLOCK)
+                    || id.equals(AcceleratorProgramNodeIds.STRUCTURE_LAUNCH)) {
                 configuration.addProperty(
                         "strength", AcceleratorProgramStrength.STANDARD.wireId());
             } else if (id.equals(AcceleratorProgramNodeIds.REWRITE_MOTION)) {
@@ -48,6 +49,11 @@ public final class AcceleratorProgramDefinition {
                 configuration.addProperty("power", 1.0f);
                 configuration.addProperty("destroy_blocks", false);
                 configuration.addProperty("radius", KineticEnergyApplied.DEFAULT_PROGRAM_RADIUS);
+            } else if (id.equals(AcceleratorProgramNodeIds.STRUCTURE_EXTRACT)) {
+                configuration.addProperty("tier", 1);
+                configuration.addProperty("budget", 0);
+            } else if (id.equals(AcceleratorProgramNodeIds.STRUCTURE_MOVE)) {
+                configuration.addProperty("duration_seconds", 1.0f);
             }
             var suffix = id.getPath().substring(id.getPath().lastIndexOf('/') + 1);
             editor.add(

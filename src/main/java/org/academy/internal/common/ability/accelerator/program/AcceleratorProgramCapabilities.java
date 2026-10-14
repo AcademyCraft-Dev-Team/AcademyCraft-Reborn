@@ -18,6 +18,8 @@ public final class AcceleratorProgramCapabilities {
             AcademyCraft.academy(SkillNames.VECTOR_REFLECTION);
     public static final Identifier DISPLACE_ENTITY = APPLY_VECTOR;
     public static final Identifier DISPLACE_BLOCK = KINETIC_IMPACT;
+    public static final Identifier STRUCTURE =
+            AcademyCraft.academy(SkillNames.KINETIC_THROW);
 
     private AcceleratorProgramCapabilities() {
     }

@@ -29,6 +29,11 @@ public final class ProgramValueTypes {
     public static final ProgramValueType ENTITY_SET = type("entity_set");
     public static final ProgramValueType LIVING_ENTITY_SET = type("living_entity_set");
     public static final ProgramValueType ACTION_RESULT = type("action_result");
+    public static final ProgramValueType STRUCTURE_CONTROL = type("structure_control");
+    public static final ProgramValueType STRUCTURE_OPERATION_RESULT =
+            type("structure_operation_result");
+    public static final ProgramValueType STRUCTURE_ANCHOR = type("structure_anchor");
+    public static final ProgramValueType STRUCTURE_POSE = type("structure_pose");
 
     private ProgramValueTypes() {
     }

@@ -12,6 +12,7 @@ import org.academy.internal.common.ability.program.registry.AbilityProgramDefini
 import org.academy.internal.common.ability.program.registry.ProgramExecutorLookup;
 import org.academy.internal.common.ability.program.registry.ProgramNodeExecutor;
 import org.academy.internal.server.world.level.storage.Player;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.LongSupplier;
@@ -43,6 +44,7 @@ public final class AcceleratorProgramExecutionBridge {
         addLearnedCapability(data, capabilities,
                 Skills.KINETIC_ENERGY_APPLIED.get().getKeyString());
         addLearnedCapability(data, capabilities, Skills.VECTOR_REFLECTION.get().getKeyString());
+        addLearnedCapability(data, capabilities, Skills.KINETIC_THROW.get().getKeyString());
         return AbilityProgramDefinitions.require(AcceleratorProgramNodeCatalog.ACCELERATOR)
                 .compile(graph, Set.copyOf(capabilities));
     }
@@ -242,7 +244,88 @@ public final class AcceleratorProgramExecutionBridge {
                     ));
                     return ProgramNodeStep.next("flow");
                 });
+        put(result, AcceleratorProgramNodeIds.STRUCTURE_EXTRACT,
+                (ProgramVmContext context,
+                 AcceleratorProgramNodeCatalog.ExtractStructureConfiguration configuration,
+                 ProgramInputView inputs) -> structureResult(
+                        runtime(context).extractStructure(
+                                blockPosition(inputs, "host"),
+                                configuration.tier(),
+                                configuration.budget()),
+                        true,
+                        false));
+        put(result, AcceleratorProgramNodeIds.STRUCTURE_CONTROL,
+                (context, _, inputs) -> structureResult(
+                        runtime(context).controlStructure(
+                                structureReference(inputs, "structure")),
+                        false,
+                        true));
+        put(result, AcceleratorProgramNodeIds.STRUCTURE_MOVE,
+                (ProgramVmContext context,
+                 AcceleratorProgramNodeCatalog.MoveStructureConfiguration configuration,
+                 ProgramInputView inputs) -> structureResult(
+                        runtime(context).moveStructure(
+                                structureControl(inputs),
+                                optionalWorldPosition(inputs, "target"),
+                                optionalStructureAnchor(inputs, "anchor"),
+                                optionalFloat(inputs, "seconds", configuration.durationSeconds())),
+                        false,
+                        false));
+        put(result, AcceleratorProgramNodeIds.STRUCTURE_ROTATE,
+                (context, _, inputs) -> structureResult(
+                        runtime(context).rotateStructure(
+                                structureControl(inputs),
+                                optionalStructurePose(inputs, "pose")),
+                        false,
+                        false));
+        put(result, AcceleratorProgramNodeIds.STRUCTURE_LAUNCH,
+                (ProgramVmContext context,
+                 AcceleratorProgramNodeCatalog.StrengthConfiguration configuration,
+                 ProgramInputView inputs) -> structureResult(
+                        runtime(context).launchStructure(
+                                structureControl(inputs),
+                                direction(inputs),
+                                configuration.tier()),
+                        false,
+                        false));
+        put(result, AcceleratorProgramNodeIds.STRUCTURE_RELEASE,
+                (context, _, inputs) -> structureResult(
+                        runtime(context).releaseStructure(structureControl(inputs)),
+                        false,
+                        false));
+        put(result, AcceleratorProgramNodeIds.STRUCTURE_STATICIZE,
+                (context, _, inputs) -> structureResult(
+                        runtime(context).staticizeStructure(
+                                structureReference(inputs, "structure"),
+                                optionalBlockPosition(inputs, "target")),
+                        false,
+                        false));
         return Map.copyOf(result);
+    }
+
+    private static ProgramNodeStep structureResult(
+            AcceleratorProgramRuntime.StructureOperation operation,
+            boolean includeStructure,
+            boolean includeControl
+    ) {
+        var outputs = new HashMap<String, ProgramValue<?>>();
+        outputs.put("result", new ProgramValue<>(
+                ProgramValueTypes.STRUCTURE_OPERATION_RESULT,
+                operation.result()
+        ));
+        if (includeStructure && operation.structure() != null) {
+            outputs.put("structure", new ProgramValue<>(
+                    ProgramValueTypes.STRUCTURE_REFERENCE,
+                    operation.structure()
+            ));
+        }
+        if (includeControl && operation.control() != null) {
+            outputs.put("control", new ProgramValue<>(
+                    ProgramValueTypes.STRUCTURE_CONTROL,
+                    operation.control()
+            ));
+        }
+        return ProgramNodeStep.next("flow", outputs);
     }
 
     private static AcceleratorProgramRuntime runtime(ProgramVmContext context) {
@@ -287,6 +370,66 @@ public final class AcceleratorProgramExecutionBridge {
     private static ProgramBlockPosition blockPosition(ProgramInputView inputs, String port) {
         return (ProgramBlockPosition) inputs.requireCompatible(
                 port, ProgramValueTypes.BLOCK_POSITION).value();
+    }
+
+    private static ProgramStructureReference structureReference(ProgramInputView inputs, String port) {
+        return (ProgramStructureReference) inputs.requireCompatible(
+                port, ProgramValueTypes.STRUCTURE_REFERENCE).value();
+    }
+
+    private static ProgramStructureControl structureControl(ProgramInputView inputs) {
+        return (ProgramStructureControl) inputs.requireCompatible(
+                "control", ProgramValueTypes.STRUCTURE_CONTROL).value();
+    }
+
+    private static @Nullable ProgramWorldPosition optionalWorldPosition(
+            ProgramInputView inputs,
+            String port
+    ) {
+        return inputs.first(port)
+                .filter(value -> ProgramValueTypes.canConnect(
+                        value.type(), ProgramValueTypes.WORLD_POSITION))
+                .map(value -> (ProgramWorldPosition) value.value())
+                .orElse(null);
+    }
+
+    private static @Nullable ProgramBlockPosition optionalBlockPosition(
+            ProgramInputView inputs,
+            String port
+    ) {
+        return inputs.first(port)
+                .filter(value -> ProgramValueTypes.canConnect(
+                        value.type(), ProgramValueTypes.BLOCK_POSITION))
+                .map(value -> (ProgramBlockPosition) value.value())
+                .orElse(null);
+    }
+
+    private static @Nullable ProgramStructureAnchor optionalStructureAnchor(
+            ProgramInputView inputs,
+            String port
+    ) {
+        return inputs.first(port)
+                .filter(value -> value.type().equals(ProgramValueTypes.STRUCTURE_ANCHOR))
+                .map(value -> (ProgramStructureAnchor) value.value())
+                .orElse(null);
+    }
+
+    private static @Nullable ProgramStructurePose optionalStructurePose(
+            ProgramInputView inputs,
+            String port
+    ) {
+        return inputs.first(port)
+                .filter(value -> value.type().equals(ProgramValueTypes.STRUCTURE_POSE))
+                .map(value -> (ProgramStructurePose) value.value())
+                .orElse(null);
+    }
+
+    private static double optionalFloat(ProgramInputView inputs, String port, double fallback) {
+        return inputs.first(port)
+                .filter(value -> ProgramValueTypes.canConnect(
+                        value.type(), ProgramValueTypes.FLOAT))
+                .map(value -> ((Number) value.value()).doubleValue())
+                .orElse(fallback);
     }
 
     private static <T> ProgramNodeStep data(

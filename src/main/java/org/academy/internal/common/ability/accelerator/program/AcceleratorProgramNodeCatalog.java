@@ -69,6 +69,30 @@ public final class AcceleratorProgramNodeCatalog implements ProgramNodeLookup {
                 entityDisplacementSchema(), AcceleratorProgramCapabilities.DISPLACE_ENTITY));
         put(result, AcceleratorProgramNodeIds.DISPLACE_BLOCK, strengthType(
                 blockDisplacementSchema(), AcceleratorProgramCapabilities.DISPLACE_BLOCK));
+        put(result, AcceleratorProgramNodeIds.STRUCTURE_EXTRACT, extractStructureType());
+        put(result, AcceleratorProgramNodeIds.STRUCTURE_CONTROL, unitType(
+                structureControlSchema(),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(AcceleratorProgramCapabilities.STRUCTURE)));
+        put(result, AcceleratorProgramNodeIds.STRUCTURE_MOVE, moveStructureType());
+        put(result, AcceleratorProgramNodeIds.STRUCTURE_ROTATE, unitType(
+                structureRotateSchema(),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(AcceleratorProgramCapabilities.STRUCTURE)));
+        put(result, AcceleratorProgramNodeIds.STRUCTURE_LAUNCH, strengthType(
+                structureLaunchSchema(), AcceleratorProgramCapabilities.STRUCTURE));
+        put(result, AcceleratorProgramNodeIds.STRUCTURE_RELEASE, unitType(
+                structureReleaseSchema(),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(AcceleratorProgramCapabilities.STRUCTURE)));
+        put(result, AcceleratorProgramNodeIds.STRUCTURE_STATICIZE, unitType(
+                structureStaticizeSchema(),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(AcceleratorProgramCapabilities.STRUCTURE)));
         types = Map.copyOf(result);
     }
 
@@ -175,6 +199,145 @@ public final class AcceleratorProgramNodeCatalog implements ProgramNodeLookup {
         );
     }
 
+    private static ProgramNodeSchema structureExtractSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput("host", ProgramValueTypes.BLOCK_POSITION)
+                ),
+                List.of(
+                        ProgramPortDefinition.output(
+                                "structure", ProgramValueTypes.STRUCTURE_REFERENCE),
+                        ProgramPortDefinition.output(
+                                "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                        ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)
+                )
+        );
+    }
+
+    private static ProgramNodeSchema structureControlSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput(
+                                "structure", ProgramValueTypes.STRUCTURE_REFERENCE)
+                ),
+                List.of(
+                        ProgramPortDefinition.output(
+                                "control", ProgramValueTypes.STRUCTURE_CONTROL),
+                        ProgramPortDefinition.output(
+                                "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                        ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)
+                )
+        );
+    }
+
+    private static ProgramNodeSchema structureMoveSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput(
+                                "control", ProgramValueTypes.STRUCTURE_CONTROL),
+                        ProgramPortDefinition.optionalInput(
+                                "target", ProgramValueTypes.WORLD_POSITION),
+                        ProgramPortDefinition.optionalInput(
+                                "anchor", ProgramValueTypes.STRUCTURE_ANCHOR),
+                        ProgramPortDefinition.optionalInput("seconds", ProgramValueTypes.FLOAT)
+                ),
+                List.of(
+                        ProgramPortDefinition.output(
+                                "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                        ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)
+                )
+        );
+    }
+
+    private static ProgramNodeSchema structureRotateSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput(
+                                "control", ProgramValueTypes.STRUCTURE_CONTROL),
+                        ProgramPortDefinition.optionalInput(
+                                "pose", ProgramValueTypes.STRUCTURE_POSE)
+                ),
+                List.of(
+                        ProgramPortDefinition.output(
+                                "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                        ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)
+                )
+        );
+    }
+
+    private static ProgramNodeSchema structureLaunchSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput(
+                                "control", ProgramValueTypes.STRUCTURE_CONTROL),
+                        ProgramPortDefinition.requiredInput(
+                                "direction", ProgramValueTypes.DIRECTION)
+                ),
+                List.of(
+                        ProgramPortDefinition.output(
+                                "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                        ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)
+                )
+        );
+    }
+
+    private static ProgramNodeSchema structureReleaseSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput(
+                                "control", ProgramValueTypes.STRUCTURE_CONTROL)
+                ),
+                List.of(
+                        ProgramPortDefinition.output(
+                                "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                        ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)
+                )
+        );
+    }
+
+    private static ProgramNodeSchema structureStaticizeSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput(
+                                "structure", ProgramValueTypes.STRUCTURE_REFERENCE),
+                        ProgramPortDefinition.optionalInput(
+                                "target", ProgramValueTypes.BLOCK_POSITION)
+                ),
+                List.of(
+                        ProgramPortDefinition.output(
+                                "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                        ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)
+                )
+        );
+    }
+
+    private static ProgramNodeType<ExtractStructureConfiguration> extractStructureType() {
+        return new FixedNodeType<>(
+                ExtractStructureConfiguration.CODEC,
+                structureExtractSchema(),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(AcceleratorProgramCapabilities.STRUCTURE)
+        );
+    }
+
+    private static ProgramNodeType<MoveStructureConfiguration> moveStructureType() {
+        return new FixedNodeType<>(
+                MoveStructureConfiguration.CODEC,
+                structureMoveSchema(),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(AcceleratorProgramCapabilities.STRUCTURE)
+        );
+    }
+
     private static ProgramNodeType<StrengthConfiguration> strengthType(
             ProgramNodeSchema schema,
             Identifier capability
@@ -260,6 +423,29 @@ public final class AcceleratorProgramNodeCatalog implements ProgramNodeLookup {
                 .fieldOf("power")
                 .xmap(PowerConfiguration::new, PowerConfiguration::power)
                 .codec();
+    }
+
+    /**
+     * Capture configuration: the charge tier selects geometry and mass budget, and a positive
+     * explicit budget further caps the backend's own cell limit. Zero keeps the backend default.
+     */
+    public record ExtractStructureConfiguration(int tier, int budget) {
+        public static final Codec<ExtractStructureConfiguration> CODEC =
+                RecordCodecBuilder.create(instance -> instance.group(
+                        Codec.intRange(0, 2).optionalFieldOf("tier", 1)
+                                .forGetter(ExtractStructureConfiguration::tier),
+                        Codec.intRange(0, 256).optionalFieldOf("budget", 0)
+                                .forGetter(ExtractStructureConfiguration::budget)
+                ).apply(instance, ExtractStructureConfiguration::new));
+    }
+
+    public record MoveStructureConfiguration(float durationSeconds) {
+        public static final Codec<MoveStructureConfiguration> CODEC =
+                Codec.floatRange(0.1f, 10.0f)
+                        .optionalFieldOf("duration_seconds", 1.0f)
+                        .xmap(MoveStructureConfiguration::new,
+                                MoveStructureConfiguration::durationSeconds)
+                        .codec();
     }
 
     /**

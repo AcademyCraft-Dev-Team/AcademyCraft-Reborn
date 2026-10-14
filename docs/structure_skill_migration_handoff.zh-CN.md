@@ -347,3 +347,29 @@
 外部固定依赖由 `docs/sable_compat_artifacts.json` 与 `gradle/sable-compat.gradle` 锁定。不要为了启动未知 JAR 放宽哈希门禁。新游戏验证使用新的隔离目录，不覆盖成功或失败结果，不操作用户存档。
 
 后续每完成一个节点在此增加：修改文件、行为改变、验证命令及结果、失败轨迹、未验边界和紧接着应做的工作。已有完整架构设计位于 `docs/block_structure_physics_and_sable_compat_plan.zh-CN.md`。
+
+### P30 矢量操作节点族（2026-10-14）
+
+- 改动/新增文件：
+  - 新增 api value types：`ProgramStructureControl.java`（绑定 actor、结构代次、服务 controlId 与运行实例令牌；不持久、失效不重获）、`ProgramStructureOperationResult.java`（status/detail/reference）、`ProgramStructureAnchor.java`（结构代次 + 局部格）、`ProgramStructurePose.java`（轴 + 弧度目标姿态）；`ProgramValueTypes` 增加 `structure_control`、`structure_operation_result`、`structure_anchor`、`structure_pose`。未新增 `structure_anchor_set`（本批无节点端口需要）。
+  - `AcceleratorProgramNodeIds.java` / `AcceleratorProgramNodeCatalog.java`：新增 `program/accelerator/action/structure/{extract,control,move,rotate,launch,release,staticize}` 七个节点。extract 配置 `tier`(0–2)/`budget`(0=后端默认)，move 配置 `duration_seconds`(0.1–10)，launch 复用 `strength`；extract 输出 `structure`/`result`，control 输出 `control`/`result`，其余输出 `result` + flow；rotate 可选 `pose`、staticize 可选 `target`，节点本身明确 unavailable。
+  - `AcceleratorProgramRuntime.java`：新增 7 个结构方法与嵌套 `StructureOperation(structure/control/result)`；结构效果直接落入长期会话，不进入动作事务补偿（与设计“已参与物理的效果不按未提交内容回滚”一致）。
+  - `ServerAcceleratorProgramRuntime.java`：extract/control 同步调用 `VectorStructureService` 程序入口，只有内容事务提交后才返回结构引用；move/launch/release 走服务程序入口并逐次计费（extract 30/control 10/move 5/launch 15 CP × 倍率）；rotate/staticize 不校验技能开关、直接返回 `unavailable`，不触碰控制。控制令牌绑定 player UUID、结构 runtimeId、服务 controllerId 与本次 runtime 实例（`runtimeToken`，不落盘），跨调用/跨程序失效即拒绝。
+  - `AcceleratorProgramExecutionBridge.java`：装配 7 个执行器与可选输入（target/anchor/seconds/pose）和结果端口；`compileFor` 增加已学习的 `kinetic_throw` 能力。
+  - `AcceleratorProgramCapabilities.java`：新增 `STRUCTURE = academy:kinetic_throw`，7 个节点统一使用。
+  - `AcceleratorProgramDefinition.java`：新节点默认配置（tier 1/budget 0、duration 1.0s、strength standard）与编辑器条目；rotate/staticize 可见但描述明确 unavailable，未进入任何模板（`ProgramStarterTemplates` 只使用入口/输出/文本三个节点）。
+  - `VectorStructureService.java`（改动物理路径）：`planCapture`/`beginCapture` 拆出无副作用 `planCaptureInternal`/`startCapture` 并加 `report` 标志（程序路径不发送技能 actionbar，日志与拒绝语义不变）；新增程序入口 `programExtract`（显式 `COMPLETED/PENDING/REJECTED`，PENDING 不发布引用、失败保留源方块）、`programControl`（复用同结构会话，或接管已有活跃物理区域并签发独占会话；他人控制/捕获中的结构拒绝；替代旧会话时保留旧结构、区域与惯性；Sable 明确 unavailable）、`programMove`（有界锚点修正 + 时长上限 600 tick，越界/失联安全结束并保留结构，program move 时 `tickLifting` 复用 `followRegion` 重绑区域）、`programLaunch`（显式方向有界冲量，`launchNative` 增加方向与强度倍率参数，技能路径仍传视角方向与 1.0，逐值不变）、`programRelease`（幂等、仅匹配本令牌时终止，绝不触碰继任会话）；`Session.controllerId()` 访问器与 `programMove` 标志。
+  - 翻译：en_us/zh_cn 各新增 7 个节点名与说明、5 个端口键（anchor/control/host/pose/seconds）与 3 个配置字段端口键（tier/budget/duration_seconds），均按自然排序插入。
+  - 测试：新增 `AcceleratorProgramStructureNodesTest`（4 项）；`AcceleratorProgramExecutionBridgeTest.FakeRuntime` 补齐新接口桩。
+- 两张图验收（真实性级别：目录、schema、编译器、程序 VM、`AcceleratorProgramExecutionBridge`、节点执行器与动作计数为生产实现；accelerator runtime 为脚本化接口实现，不落地真实方块捕获/物理，真实世界程序图执行列为未验边界）：
+  - 图一“创建→获取控制→移动→旋转→终止”：`extract(host,1,0)` → `control(structure)` → `move(control,target=12.5,70,10.5,1.0s)` → `rotate` 返回 `unavailable` 且同一令牌随后仍可终止（控制未被破坏）→ `release` 两次（第一次 `released`、第二次 `noop`，结构保留）。VM `COMPLETED`，调用顺序与参数逐字断言。
+  - 图二“发射/静态化失败”：`extract(host,2,64)` → `control` → `launch(direction=+Y,MAXIMUM)` 记录有界冲量 75 且无任何轨迹伤害结算 → `staticize` 返回 `unavailable` 且唯一内容所有者保留。
+  - 另加 PENDING 提取图：extract 返回 PENDING 时不发布 `structure` 输出，程序仍完成（机器可读 result 为 PENDING）。
+- 回归验证：
+  - 单测 2584 项 + Sable 11 项零失败/错误/跳过（`build/p30-tests-r2.log`、`build/p30-sable-r2.log`；基线 2580，本轮 +4）。
+  - `build -DisDev=true` 22 秒、`-DisDev=false` 35 秒通过（`build/p30-build-dev-final.log`、`build/p30-build-release-final.log`）。
+  - 因改动 `VectorStructureService`，专服烟测新隔离目录 `run/native-structure-physics-smoke-server-p30-r2` PASSED、`exit_status=0`（903 tick，`build/p30-world-smoke-r2.log`）；结果文件 258 行与 P29 r1 逐行一致，仅 `first_ref`/`second_ref`/`shared_session` 三个随机 UUID 不同；关键证据 `kinetic_capture_pending_observed=true`、`kinetic_lift_rise=3.2498730230960433`、`kinetic_throw_speed=50.0`、`kinetic_impact_damage=45.0`、`kinetic_follow_rebinds=10`、`hsjet_launch_speed=115.37633965527773`、`mag_pull_speed=45.57584523660533`，grasp/support/terrain 全部逐值无回归。p30-r1 同配置先行通过，r2 为最终修订（仅 import 整理）复跑。
+- 失败轨迹：本轮首轮 `compileJava` 即失败（`StructureCaptureResult` 漏导入、桥接 lambda 需显式参数类型才能推断配置泛型），未进入任何运行；首轮全量单测 2 失败：`ProgramEditorDocumentTest` 缺 `port.tier/budget/duration_seconds` 翻译、`SkillProficiencyCoverageTest` 语言键未按自然序（节点键插入位置），修复后通过。世界烟测 p30-r1/r2 无失败目录保留。
+- 未实现前置（仍 unavailable）：`action/structure/rotate` 缺有限力矩姿态控制（角速度反馈、最短四元数误差、有界力矩与角冲量），`action/structure/staticize` 缺安全静态化（完整 footprint/加载/权限/占用/可旋转方块状态）；两者均返回明确 `unavailable`，不无条件赋姿态、不用 `detach → setPose → attach` 顶替、不先 discard 再补方块，失败保留内容与唯一所有者。
+- 未验边界：程序真实世界图验收（原生 extract 跨 tick 捕获，单次程序执行无法在提交前取得引用，故“创建→移动”同图只做脚本运行时验证；真实世界仅验证服务与技能回归）；非玩家施术者入口；真实双端与真实键盘输入；Sable 的程序控制/移动/发射（显式拒绝，未跑专服）；`programControl` 只接管已有活跃物理区域或既有会话的结构，不会为无区域结构新开区域；每玩家同时只有一个程序会话，程序移动上限 600 tick，物理区域长期回收同 P25–P29。
+- 当前构建（含 P19–P30）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `E14EBC9E39220D2D98E40C168D5FB0BEE6E84B6A9683293AD6765FECCD0DE88D`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `E616D3E42D950B6CB651A161F4F876048E2114D7A2A2399F5784C647F593AC27`。未复制到整合包，未操作用户存档，未创建本地 Git 提交。
