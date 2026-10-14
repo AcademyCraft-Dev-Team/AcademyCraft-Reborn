@@ -322,6 +322,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
          * side. Transient controls are preserved, so an ongoing bounded pull can continue
          * across the migration; other regions and their checkpoints are untouched.
          */
+        @Override
         public boolean rebind(AABB newBounds) {
             requireThread();
             Objects.requireNonNull(newBounds, "newBounds");

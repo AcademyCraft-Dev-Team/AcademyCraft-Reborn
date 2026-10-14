@@ -55,7 +55,7 @@ public final class NativeStructurePhysicsWorldSmoke {
     private static volatile ClientState clientState = new ClientState("WAITING", List.of(), null, null, "", false, false, null);
     private static volatile String capturedStage = "";
     private static volatile String capturePath = "";
-    private enum Phase { ACTIVATE, BEFORE, FALL, LANDED, CONTROL, SUPPORT, LEASE, ENTITY_ARM, ENTITY_CONTROL, ENTITY_CLEANUP, GRASP, GRASP_CLEANUP, CONTROL_RAW_SOLID, CONTROL_RAW_RESET,
+    private enum Phase { ACTIVATE, BEFORE, FALL, LANDED, CONTROL, SUPPORT, LEASE, ENTITY_ARM, ENTITY_CONTROL, ENTITY_CLEANUP, GRASP, GRASP_CLEANUP, KINETIC, CONTROL_RAW_SOLID, CONTROL_RAW_RESET,
         CONTROL_RAW_AIR, CONTROL_RAW_FINISH, HOST_UNSUPPORTED, HOST_RESTORED, TERRAIN_FALL, TERRAIN_LAND,
         LOCAL_ADD, LOCAL_REMOVE, UNSUPPORTED, SUPPORTED_AGAIN, FROZEN, THAWED,
         PAIR_ARM, PAIR, EMPTY, UNLOAD, RELOAD, BOUNDARY, FINISHED }
@@ -81,6 +81,7 @@ public final class NativeStructurePhysicsWorldSmoke {
     private NativeStructurePhysicsLeaseSmokeChecks leaseChecks;
     private NativeStructurePhysicsEntityControlSmokeChecks entityChecks;
     private NativeStructurePhysicsGraspSmokeChecks graspChecks;
+    private NativeStructurePhysicsKineticThrowSmokeChecks kineticChecks;
     private StructurePhysicsLease lifecycleLease;
     private AABB bounds;
     private BlockPos base;
@@ -191,7 +192,8 @@ public final class NativeStructurePhysicsWorldSmoke {
         boolean manual = graspChecks != null && graspChecks.manualWindow();
         if (manual) manualTicks++;
         require(ticks - manualTicks < 3500, "Structure physics smoke exceeded its automatic deadline at " + phase);
-        require(manual || phaseTicks < (phase == Phase.GRASP ? 750 : 650), "Structure physics smoke phase timed out: " + phase + diagnostic());
+        require(manual || phaseTicks < (phase == Phase.GRASP ? 750 : phase == Phase.KINETIC ? 900 : 650),
+                "Structure physics smoke phase timed out: " + phase + diagnostic());
         if (playerId != null) {
             var player = server.getPlayerList().getPlayer(playerId);
             require(player != null && player.level() == host, "Camera player left its host world");
@@ -325,6 +327,16 @@ public final class NativeStructurePhysicsWorldSmoke {
                 next(Phase.GRASP_CLEANUP);
             }
             case GRASP_CLEANUP -> {
+                if (Boolean.getBoolean("academy.nativeStructurePhysicsKineticThrowSmoke")) {
+                    kineticChecks = new NativeStructurePhysicsKineticThrowSmokeChecks(host, base, evidence);
+                    next(Phase.KINETIC);
+                    return;
+                }
+                beginRawControlChecks();
+            }
+            case KINETIC -> {
+                if (!kineticChecks.advance()) return;
+                kineticChecks.close(); kineticChecks = null;
                 beginRawControlChecks();
             }
             case CONTROL_RAW_SOLID -> {
@@ -793,6 +805,7 @@ public final class NativeStructurePhysicsWorldSmoke {
             AcademyCraft.LOGGER.error("NATIVE_STRUCTURE_PHYSICS_WORLD_SMOKE_FAILED role={} phase={}", role, phase, error);
             try { if (entityChecks != null) entityChecks.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
             try { if (graspChecks != null) graspChecks.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
+            try { if (kineticChecks != null) kineticChecks.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
             try { if (region != null) region.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
             try { if (loadedRegion != null) loadedRegion.close(); } catch (Throwable closing) { error.addSuppressed(closing); }
             try { restoreControlSection(); } catch (Throwable restoring) { error.addSuppressed(restoring); }
@@ -836,6 +849,7 @@ public final class NativeStructurePhysicsWorldSmoke {
             scenario.orderlyStop = true;
             if (scenario.entityChecks != null) scenario.entityChecks.close();
             if (scenario.graspChecks != null) scenario.graspChecks.close();
+            if (scenario.kineticChecks != null) scenario.kineticChecks.close();
             scenario.restoreControlSection();
             scenario.restoreHostTerrainProbe();
             scenario.releaseFixtureFreeze();

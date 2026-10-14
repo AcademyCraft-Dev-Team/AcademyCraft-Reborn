@@ -158,6 +158,14 @@ public interface StructurePhysicsRegion extends AutoCloseable {
     Optional<StructurePhysicsLease> acquireEntityControl(StructureRef reference, Entity actor, UUID controllerId,
                                                         StructurePhysicsControl control, int durationTicks);
 
+    /**
+     * Re-bases this live region onto different host bounds of a valid size. All current members
+     * and the host limits must fit the new box. Returns false for invalid, conflicting or
+     * unavailable targets without changing either side. Follow callers that cannot rebase must
+     * end their action safely instead of letting a body leave the region and fail terminally.
+     */
+    boolean rebind(AABB bounds);
+
     /** Idempotent after successful release; a failed native release remains an explicit error. */
     @Override
     void close();
