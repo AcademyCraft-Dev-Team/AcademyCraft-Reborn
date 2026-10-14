@@ -99,6 +99,8 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     private var serverCompileDiagnostic: ProgramDiagnostic? = null
     private var transientDetail: Component? = null
     private var serverVmDiagnostic: ProgramVmDiagnostic = ProgramVmDiagnostic.NONE
+    private var serverVmPort: String? = null
+    private var serverVmDetail: String? = null
     private var serverDiagnosticNode = -1
     private var runTrace: List<ProgramRunTrace.Step> = emptyList()
     private var runTraceTruncated = false
@@ -213,7 +215,8 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         nodeId: Int,
         vmDiagnostic: ProgramVmDiagnostic?,
         clearDiagnostic: Boolean,
-        diagnosticPort: String?
+        diagnosticPort: String?,
+        diagnosticDetail: String?
     ) {
         revision = maxOf(revision, serverRevision)
         if (slot != resultSlot) return
@@ -222,16 +225,22 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         if (diagnostic != null) {
             serverDiagnostic = mapDiagnostic(diagnostic)
             serverVmDiagnostic = ProgramVmDiagnostic.NONE
+            serverVmPort = null
+            serverVmDetail = null
             serverDiagnosticNode = nodeId
             transientUntil = 0L
         } else if (vmDiagnostic != null && vmDiagnostic != ProgramVmDiagnostic.NONE) {
             serverDiagnostic = PrecisionGraph.Diagnostic.ACTION_FAILED
             serverVmDiagnostic = vmDiagnostic
+            serverVmPort = diagnosticPort
+            serverVmDetail = diagnosticDetail
             serverDiagnosticNode = nodeId
             transientUntil = 0L
         } else if (clearDiagnostic) {
             serverDiagnostic = PrecisionGraph.Diagnostic.OK
             serverVmDiagnostic = ProgramVmDiagnostic.NONE
+            serverVmPort = null
+            serverVmDetail = null
             serverDiagnosticNode = -1
         }
     }
@@ -255,6 +264,8 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         if (type == PrecisionOperationManager.FeedbackType.ERROR) {
             serverDiagnostic = result
             serverVmDiagnostic = ProgramVmDiagnostic.NONE
+            serverVmPort = null
+            serverVmDetail = null
             serverDiagnosticNode = nodeId
             showTransient(result)
         } else if (type == PrecisionOperationManager.FeedbackType.STARTED
@@ -263,6 +274,8 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         ) {
             serverDiagnostic = PrecisionGraph.Diagnostic.OK
             serverVmDiagnostic = ProgramVmDiagnostic.NONE
+            serverVmPort = null
+            serverVmDetail = null
             serverDiagnosticNode = -1
         }
     }
@@ -2190,6 +2203,8 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         transientUntil = 0L
         serverDiagnostic = session.diagnostic(slot)
         serverVmDiagnostic = ProgramVmDiagnostic.NONE
+        serverVmPort = null
+        serverVmDetail = null
         serverDiagnosticNode = session.diagnosticNode(slot)
         session.restoreDiagnostic(this, slot)
         session.updateLocalProgram(slot, document.program())
@@ -2203,6 +2218,8 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
             serverCompileDiagnostic = null
             serverDiagnostic = PrecisionGraph.Diagnostic.OK
             serverVmDiagnostic = ProgramVmDiagnostic.NONE
+            serverVmPort = null
+            serverVmDetail = null
             serverDiagnosticNode = -1
         }
     }
@@ -2212,8 +2229,8 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         else serverVmDiagnostic.translationKey()
         return if (serverCompileDiagnostic != null)
             ProgramDiagnosticText.describe(document.program(), catalog, serverCompileDiagnostic!!).string
-        else ProgramDiagnosticText.locate(
-            document.program(), catalog, serverDiagnosticNode, null,
+        else ProgramDiagnosticText.locateRuntimeFailure(
+            document.program(), catalog, serverDiagnosticNode, serverVmPort, serverVmDetail,
             Component.translatable(key)
         ).string
     }

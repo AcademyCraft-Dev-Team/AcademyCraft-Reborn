@@ -39,11 +39,13 @@ class AbilityProgramManagerTest {
             var packet = new AbilityProgramManager.ResultPacket("academy:teleport", 2,
                     AbilityProgramManager.FeedbackType.ERROR, 4,
                     AbilityProgramManager.ResultCode.INVALID_PROGRAM,
-                    ProgramDiagnosticCode.TYPE_MISMATCH, 17, ProgramVmDiagnostic.NONE, "direction");
+                    ProgramDiagnosticCode.TYPE_MISMATCH, 17, ProgramVmDiagnostic.NONE,
+                    "direction", "rejected:not_magnetic");
             AbilityProgramManager.ResultPacket.CODEC.encode(buffer, packet);
             var decoded = AbilityProgramManager.ResultPacket.CODEC.decode(buffer);
             assertEquals(17, decoded.nodeId());
             assertEquals("direction", decoded.port());
+            assertEquals("rejected:not_magnetic", decoded.detail());
             assertEquals(ProgramDiagnosticCode.TYPE_MISMATCH, decoded.diagnostic());
         } finally {
             buffer.release();
@@ -59,7 +61,7 @@ class AbilityProgramManagerTest {
             var packet = new AbilityProgramManager.ResultPacket("academy:mentalout", 0,
                     AbilityProgramManager.FeedbackType.TRACE, 8,
                     AbilityProgramManager.ResultCode.OK, null, -1,
-                    ProgramVmDiagnostic.NONE, null, trace, true);
+                    ProgramVmDiagnostic.NONE, null, null, trace, true);
             AbilityProgramManager.ResultPacket.CODEC.encode(buffer, packet);
             var decoded = AbilityProgramManager.ResultPacket.CODEC.decode(buffer);
             assertEquals(trace, decoded.trace());

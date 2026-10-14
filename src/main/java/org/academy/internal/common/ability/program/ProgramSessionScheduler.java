@@ -117,7 +117,8 @@ public final class ProgramSessionScheduler<K> {
             case FAILED -> terminate(
                     key,
                     running,
-                    Termination.failed(result.nodeId(), result.diagnostic())
+                    Termination.failed(result.nodeId(), result.diagnostic(),
+                            result.port(), result.detail())
             );
             case FUEL_EXHAUSTED, SUSPENDED -> {
             }
@@ -174,22 +175,29 @@ public final class ProgramSessionScheduler<K> {
     public record Termination(
             TerminationKind kind,
             int nodeId,
-            ProgramVmDiagnostic diagnostic
+            ProgramVmDiagnostic diagnostic,
+            @Nullable String port,
+            @Nullable String detail
     ) {
         private static Termination completed(int nodeId) {
-            return new Termination(TerminationKind.COMPLETED, nodeId, ProgramVmDiagnostic.NONE);
+            return new Termination(TerminationKind.COMPLETED, nodeId, ProgramVmDiagnostic.NONE, null, null);
         }
 
-        private static Termination failed(int nodeId, ProgramVmDiagnostic diagnostic) {
-            return new Termination(TerminationKind.FAILED, nodeId, diagnostic);
+        private static Termination failed(
+                int nodeId,
+                ProgramVmDiagnostic diagnostic,
+                @Nullable String port,
+                @Nullable String detail
+        ) {
+            return new Termination(TerminationKind.FAILED, nodeId, diagnostic, port, detail);
         }
 
         private static Termination expired(int nodeId) {
-            return new Termination(TerminationKind.EXPIRED, nodeId, ProgramVmDiagnostic.NONE);
+            return new Termination(TerminationKind.EXPIRED, nodeId, ProgramVmDiagnostic.NONE, null, null);
         }
 
         private static Termination cancelled(int nodeId) {
-            return new Termination(TerminationKind.CANCELLED, nodeId, ProgramVmDiagnostic.NONE);
+            return new Termination(TerminationKind.CANCELLED, nodeId, ProgramVmDiagnostic.NONE, null, null);
         }
     }
 

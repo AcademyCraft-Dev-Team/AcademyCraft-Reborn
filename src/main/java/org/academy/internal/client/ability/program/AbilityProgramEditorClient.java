@@ -344,6 +344,7 @@ public final class AbilityProgramEditorClient {
             int nodeId,
             ProgramVmDiagnostic vmDiagnostic,
             String diagnosticPort,
+            String diagnosticDetail,
             List<ProgramRunTrace.Step> trace,
             boolean traceTruncated
     ) {
@@ -358,7 +359,8 @@ public final class AbilityProgramEditorClient {
         if (type == AbilityProgramManager.FeedbackType.TRACE) {
             if (state != null) {
                 if (code == AbilityProgramManager.ResultCode.EXECUTION_FAILED) {
-                    state.failures.put(slot, new FailureFeedback(null, nodeId, vmDiagnostic, diagnosticPort));
+                    state.failures.put(slot, new FailureFeedback(
+                            null, nodeId, vmDiagnostic, diagnosticPort, diagnosticDetail));
                 } else {
                     state.failures.remove(slot);
                 }
@@ -370,7 +372,8 @@ public final class AbilityProgramEditorClient {
                 screen.applyProgramResult(slot, revision, null, nodeId,
                         code == AbilityProgramManager.ResultCode.EXECUTION_FAILED
                                 ? vmDiagnostic : ProgramVmDiagnostic.NONE,
-                        code != AbilityProgramManager.ResultCode.EXECUTION_FAILED, diagnosticPort);
+                        code != AbilityProgramManager.ResultCode.EXECUTION_FAILED,
+                        diagnosticPort, diagnosticDetail);
             }
             return;
         }
@@ -380,7 +383,8 @@ public final class AbilityProgramEditorClient {
         }
         if (state != null) {
             if (type == AbilityProgramManager.FeedbackType.ERROR) {
-                state.failures.put(slot, new FailureFeedback(diagnostic, nodeId, vmDiagnostic, diagnosticPort));
+                state.failures.put(slot, new FailureFeedback(
+                        diagnostic, nodeId, vmDiagnostic, diagnosticPort, diagnosticDetail));
             } else {
                 state.failures.remove(slot);
             }
@@ -418,7 +422,8 @@ public final class AbilityProgramEditorClient {
             var program = state == null ? null : state.saved.slot(slot).program();
             var catalog = AbilityProgramDefinitions.require(category).editorCatalog();
             var detail = diagnostic == null
-                    ? ProgramDiagnosticText.locate(program, catalog, nodeId, diagnosticPort,
+                    ? ProgramDiagnosticText.locateRuntimeFailure(program, catalog, nodeId,
+                            diagnosticPort, diagnosticDetail,
                             Component.translatable(vmDiagnostic.translationKey()))
                     : ProgramDiagnosticText.describe(program, catalog,
                             new ProgramDiagnostic(diagnostic, nodeId, diagnosticPort));
@@ -442,7 +447,7 @@ public final class AbilityProgramEditorClient {
                     nodeId,
                     type == AbilityProgramManager.FeedbackType.ERROR
                             ? vmDiagnostic : ProgramVmDiagnostic.NONE,
-                    type != AbilityProgramManager.FeedbackType.ERROR, diagnosticPort
+                    type != AbilityProgramManager.FeedbackType.ERROR, diagnosticPort, diagnosticDetail
             );
             if (type == AbilityProgramManager.FeedbackType.SAVE) {
                 screen.applyRunTrace(slot, List.of(), false);
@@ -518,7 +523,7 @@ public final class AbilityProgramEditorClient {
         public void restoreDiagnostic(ModularProgramScreen screen, int slot) {
             var failure = state.failures.get(slot);
             if (failure != null) screen.applyProgramResult(slot, revision(), failure.diagnostic(),
-                    failure.nodeId(), failure.vmDiagnostic(), false, failure.port());
+                    failure.nodeId(), failure.vmDiagnostic(), false, failure.port(), failure.detail());
         }
 
         @Override
@@ -632,7 +637,7 @@ public final class AbilityProgramEditorClient {
 
     private record FailureFeedback(
             @Nullable ProgramDiagnosticCode diagnostic, int nodeId,
-            ProgramVmDiagnostic vmDiagnostic, String port
+            ProgramVmDiagnostic vmDiagnostic, String port, String detail
     ) {
     }
 

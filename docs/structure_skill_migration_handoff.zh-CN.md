@@ -488,3 +488,33 @@
 - 未实现前置（仍 unavailable）：`action/structure/rotate` 缺有限力矩姿态控制，`action/structure/staticize` 缺安全静态化；两者均返回明确 `unavailable`，不无条件赋姿态、不用 `detach → setPose → attach` 顶替、不先 discard 再补方块，失败保留内容与唯一所有者。
 - 未验边界：真实世界程序图（原生 extract 跨 tick 捕获，单次程序执行无法在提交前取得引用，故“创建→移动”同图只做脚本运行时验证；真实世界仅验证服务与技能回归）；非玩家施术者入口；真实双端与真实键盘输入；Sable 的程序提取/控制/移动/发射（`programControl` 显式 `sable_program_control`，程序提取仍经路由捕获，未跑 Sable 程序图专用夹具）；磁性结构发射后的真实接触伤害未实现（本批只保证不预结算，接触结算仍由物理求解器/既有区域表现承担）；强制磁化覆盖到期仅在 `tickPrograms` 判定（到期且参与质量为 0 时安全终止，否则降为原生磁性参与比例继续）；`programControl` 只接管已有活跃物理区域的结构，不会为无区域结构新开区域；每玩家同时只有一个程序会话，程序移动/空闲窗口上限 600 tick，物理区域长期回收同 P25–P30；节点暂无可产生 `structure_anchor`/`structure_pose` 的公共输入节点（端口为后续扩展预留）。
 - 当前构建（含 P19–P31）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `2ECA357DDF2F77C818C66A91DBBA0528EBC689FC09AEA40F8669070E8409C87A`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `0A271C035779828F9BF472DFCC73A8A1B90A8DCEA37B5A12D26ACE9AA2BC9CD4`。未复制到整合包，未操作用户存档，未创建本地 Git 提交。
+
+### 修复：程序动作失败呈现与缺值端口诊断（2026-10-14）
+
+- 机制（用户真实客户端日志已定位）：客户端 `latest.log` 5336–5342 报“节点未产生所需数据…节点 发射结构 [#4]”，服务器真实原因是 `获取结构控制` 的 Sable 程序控制被拒（`Magnetic pull sable control is not implemented; retaining StructureRef[... backend=academy:sable]` + `Magnetic pull rejected …: sable_pull_unavailable`）。两个桥的 `structureResult(...)`（`ElectromasterProgramExecutionBridge.java` / `AcceleratorProgramExecutionBridge.java`）对 `REJECTED/UNAVAILABLE` 结果仍调用 `next("flow")` 且只在非空时输出 `structure`/`control`，控制被拒后流程静默继续；下游发射结构解析 `control` 输入失败，`ProgramVm` 在消费节点抛 `MISSING_INPUT_VALUE`，失败归属与原因都被替换成“缺数据”，根因被掩盖。
+- 失败语义审计：`ProgramNodeStep` 没有失败指令；`ProgramActionTransaction` 的顺序结算失败已通过 `SettlementException` → VM 通用异常通道按执行节点归属；VM 缺值只带枚举、不带端口。因此新增专用异常通道 `ProgramActionFailure`（`org.academy.internal.common.ability.program`，携带 `ProgramVmDiagnostic` 与机器可读 `detail`），由 VM 在动作节点转换为带原因失败，不新增静默路径。
+- 改动文件：
+  - `ProgramActionFailure.java`（新增）：动作已执行但未成功时抛出，携带诊断与 `detail`。
+  - `ProgramVm.java`：`ExecutionFailure` 增加 `port`/`detail`；缺值抛出点补端口名（`resolveInputs` 用消费节点的输入名覆盖上游输出端口名，`resolveValue` 用源输出端口）；`ProgramActionFailure` 转为节点失败；`FAILED` 结果携带两者。
+  - `ProgramVmResult.java`：新增 `@Nullable String port` 与 `@Nullable String detail`（保留三参构造，旧调用不破）。
+  - `ProgramVmDiagnostic.java`：追加 `ACTION_UNAVAILABLE`（序列化按 ordinal，追加在末尾）。
+  - 两个桥 `structureResult`：`REJECTED` → `ACTION_REJECTED`、`UNAVAILABLE` → `ACTION_UNAVAILABLE`，`detail = 小写status + ":" + result.detail()`（如 `unavailable:sable_program_control`、`rejected:not_magnetic`）并在该动作节点失败；`COMPLETED` 但 structure/control 输出缺失 → 该节点失败并给出 `completed:structure_missing`/`completed:control_missing`；`PENDING` 保持现状（不输出 structure/control、流程继续，交由图的 result 分支处理，见未验边界）。
+  - `ProgramSessionScheduler.Termination`、`ServerProgramExecution.finishDeferred`、`AbilityProgramManager`（`ExecutionOutcome`、`failureOutcome`、`ResultPacket` 新增 `detail` 字段、自动/手动/延迟失败路径）逐层转发 port/detail。
+  - 客户端：`ProgramDiagnosticText.locateRuntimeFailure`（新格式）+ `AbilityProgramEditorClient`/`ModularProgramScreen.kt` 保存并显示 VM 失败端口与详情；旧 `ProgramDiagnosticText.locate` 与旧消息键保留不动。
+  - lang（en_us/zh_cn，按自然序插入）：`message.academy.program.execution.diagnostic.action_unavailable`、`screen.academy.program.diagnostic.missing_input_port`、`screen.academy.program.diagnostic.detail`。
+  - 失败呈现对照（旧 → 新）：
+    - 控制被拒（Sable）：旧 = 发射结构 [#4] `节点未产生所需数据；请检查…`；新 = 获取结构控制 [#3] `该操作在当前环境下不可用；节点 获取结构控制 [#3]；详情：unavailable:sable_program_control`，发射结构不再执行。
+    - 提取被拒：旧 = 同名图继续、下游缺值；新 = 提取节点 [#2] `ACTION_REJECTED` + `rejected:not_magnetic`，源方块保留断言不变。
+    - 旋转/静态化 unavailable：旧 = 图继续到终止/下一节点；新 = 该节点失败 + `unavailable:finite_torque_control_unavailable` / `unavailable:safe_staticization_unavailable`，控制不被破坏、内容所有者保留断言不变。
+    - 真缺值：旧 = `节点未产生所需数据…节点 发射结构 [#4]`；新 = 追加 `缺少输入 结构控制令牌` 端口信息（中英键均新增）。
+- 验证：
+  - `.\gradlew.bat test sableCompatTest -DisDev=true`：普通单测 2609 项（基线 2603，本轮 +6：ProgramVm 缺值端口/动作详情 +2，电击使旋转失败/控制被拒 +2，矢量旋转失败/控制被拒 +2）+ Sable 16 项零失败/错误/跳过（`build/fixprog-tests.log`；`build/test-results/test` 汇总 599 文件 failures=0 errors=0 skipped=0）。
+  - `build -DisDev=true` 通过（`build/fixprog-build-dev.log`，24 秒）、`build -DisDev=false` 通过（`build/fixprog-build-release.log`，34 秒），含 Sable 打包/依赖门禁。
+  - 未改动 `MagneticStructureService`/`VectorStructureService` 的 Sable 拒绝行为与任何物理路径，因此世界烟测未复跑（条件不触发）；测试期望仅从“静默完成”改为“正确节点失败 + 正确原因”，未放宽断言；PENDING 用例仍断言程序 `COMPLETED`。
+- 失败轨迹（日志均保留）：首轮 `compileJava` 失败两次——`ProgramDiagnosticText` 对嵌套类型的 `@Nullable` 位置不合法（改为 `ProgramEditorNodeCatalog.@Nullable Entry`）、`AbilityProgramManager` 缺 `(…, port)` 旧重载（补回）；首轮定向单测 2 失败——旋转失败图仍断言 `applied` 缺 `move` 行（`build/fixprog-tests-focused.log`），补齐后 `build/fixprog-tests-focused2.log` 全绿。无失败运行目录产生。
+- 未验边界：真实客户端与真实键盘输入需用户复测（本轮只有用户日志定位；`runClientDev` 未启动）；Sable 磁力/矢量 `programControl/programLaunch` 的实现（含绕过质量门）由后续任务完成，本棒只改呈现；`PENDING` 结构操作仍按原语义继续流程，引用该输出的下游节点会在自身节点报告缺值端口（图的 result 分支应自行处理 PENDING）；precision/mentalout 等非结构动作的 detail 转发为空（沿用既有诊断）；`docs/vfx/...` 未触碰。
+- 复现命令：
+  - `.\gradlew.bat test sableCompatTest -DisDev=true`
+  - `.\gradlew.bat build -DisDev=true`
+  - `.\gradlew.bat build -DisDev=false`
+- 当前构建（含本修复）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `9EB1550644CEF53714FF84109856D399E86D390A8F671C12270FFA5C93FA2BFB`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `A9F3372640C726FDBCACD80FB175B79C23F99CB4FE7EB6600FD6261B9BCBA3F4`。未复制到整合包，未操作用户存档，未创建本地 Git 提交。

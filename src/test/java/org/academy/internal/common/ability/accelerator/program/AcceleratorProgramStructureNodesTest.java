@@ -6,6 +6,7 @@ import net.minecraft.resources.Identifier;
 import org.academy.api.common.ability.program.*;
 import org.academy.api.common.structure.StructureRef;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
+import org.academy.internal.common.ability.program.ProgramVmDiagnostic;
 import org.academy.internal.common.ability.program.ProgramVmResult;
 import org.academy.internal.common.ability.program.registry.AbilityProgramDefinitions;
 import org.academy.internal.common.ability.program.registry.BaseAbilityProgramDefinition;
@@ -71,7 +72,7 @@ class AcceleratorProgramStructureNodesTest {
     }
 
     @Test
-    void createMoveRotateReleaseGraphRunsThroughTheRealBridge() {
+    void createMoveReleaseGraphRunsThroughTheRealBridge() {
         var runtime = new ScriptedRuntime();
         var graph = graph(
                 List.of(
@@ -81,7 +82,6 @@ class AcceleratorProgramStructureNodesTest {
                         node(2, AcceleratorProgramNodeIds.STRUCTURE_EXTRACT, extractConfiguration(1, 0)),
                         node(3, AcceleratorProgramNodeIds.STRUCTURE_CONTROL, new JsonObject()),
                         node(4, AcceleratorProgramNodeIds.STRUCTURE_MOVE, moveConfiguration(1.0f)),
-                        node(5, AcceleratorProgramNodeIds.STRUCTURE_ROTATE, new JsonObject()),
                         node(6, AcceleratorProgramNodeIds.STRUCTURE_RELEASE, new JsonObject()),
                         node(7, AcceleratorProgramNodeIds.STRUCTURE_RELEASE, new JsonObject()),
                         worldPositionNode(8, 12.5, 70.0, 10.5)
@@ -90,14 +90,12 @@ class AcceleratorProgramStructureNodesTest {
                         edge(0, "flow", 2, "flow"),
                         edge(2, "flow", 3, "flow"),
                         edge(3, "flow", 4, "flow"),
-                        edge(4, "flow", 5, "flow"),
-                        edge(5, "flow", 6, "flow"),
+                        edge(4, "flow", 6, "flow"),
                         edge(6, "flow", 7, "flow"),
                         edge(1, "position", 2, "host"),
                         edge(2, "structure", 3, "structure"),
                         edge(3, "control", 4, "control"),
                         edge(8, "position", 4, "target"),
-                        edge(3, "control", 5, "control"),
                         edge(3, "control", 6, "control"),
                         edge(3, "control", 7, "control")
                 )
@@ -117,13 +115,104 @@ class AcceleratorProgramStructureNodesTest {
                 "extract:BlockPos{x=10, y=64, z=10}:1:0",
                 "control:" + STRUCTURE,
                 "move:" + STRUCTURE + ":target=12.5,70.0,10.5:anchor=null:1.0s",
-                "rotate:" + STRUCTURE + ":unavailable",
                 "release:" + STRUCTURE + ":released",
                 "release:" + STRUCTURE + ":noop"
         ), runtime.applied);
         assertTrue(runtime.structureRetained, "release must retain the structure");
-        assertFalse(runtime.controlBroken, "rotate must not break the active control");
+        assertFalse(runtime.controlBroken, "release must not break the active control");
         assertEquals(0, transaction.size());
+    }
+
+    @Test
+    void unavailableRotateFailsAtTheRotateNodeAndPreservesTheControl() {
+        var runtime = new ScriptedRuntime();
+        var graph = graph(
+                List.of(
+                        node(0, BaseAbilityProgramDefinition.entryId(
+                                AcceleratorProgramNodeCatalog.ACCELERATOR), new JsonObject()),
+                        blockPositionNode(1, 10, 64, 10),
+                        node(2, AcceleratorProgramNodeIds.STRUCTURE_EXTRACT, extractConfiguration(1, 0)),
+                        node(3, AcceleratorProgramNodeIds.STRUCTURE_CONTROL, new JsonObject()),
+                        node(4, AcceleratorProgramNodeIds.STRUCTURE_MOVE, moveConfiguration(1.0f)),
+                        node(5, AcceleratorProgramNodeIds.STRUCTURE_ROTATE, new JsonObject()),
+                        node(8, AcceleratorProgramNodeIds.STRUCTURE_RELEASE, new JsonObject())
+                ),
+                List.of(
+                        edge(0, "flow", 2, "flow"),
+                        edge(2, "flow", 3, "flow"),
+                        edge(3, "flow", 4, "flow"),
+                        edge(4, "flow", 5, "flow"),
+                        edge(5, "flow", 8, "flow"),
+                        edge(1, "position", 2, "host"),
+                        edge(2, "structure", 3, "structure"),
+                        edge(3, "control", 4, "control"),
+                        edge(3, "control", 5, "control"),
+                        edge(3, "control", 8, "control")
+                )
+        );
+        var compiled = AbilityProgramDefinitions.require(
+                        AcceleratorProgramNodeCatalog.ACCELERATOR)
+                .compile(graph, Set.of(AcceleratorProgramCapabilities.STRUCTURE));
+        assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
+
+        var result = AcceleratorProgramExecutionBridge.execute(
+                compiled.program(), 410L, runtime, new ProgramActionTransaction());
+
+        assertEquals(ProgramVmResult.Status.FAILED, result.status());
+        assertEquals(5, result.nodeId());
+        assertEquals(ProgramVmDiagnostic.ACTION_UNAVAILABLE, result.diagnostic());
+        assertEquals("unavailable:finite_torque_control_unavailable", result.detail());
+        assertEquals(List.of(
+                "extract:BlockPos{x=10, y=64, z=10}:1:0",
+                "control:" + STRUCTURE,
+                "move:" + STRUCTURE + ":target=null:anchor=null:1.0s",
+                "rotate:" + STRUCTURE + ":unavailable"
+        ), runtime.applied);
+        assertTrue(runtime.structureRetained, "an unavailable rotate must retain the structure");
+        assertFalse(runtime.controlBroken, "an unavailable rotate must not break the active control");
+    }
+
+    @Test
+    void unavailableSableControlFailsAtTheControlNodeInsteadOfStarvingTheLaunch() {
+        var runtime = new ScriptedRuntime();
+        runtime.controlUnavailable = true;
+        var graph = graph(
+                List.of(
+                        node(0, BaseAbilityProgramDefinition.entryId(
+                                AcceleratorProgramNodeCatalog.ACCELERATOR), new JsonObject()),
+                        blockPositionNode(1, 10, 64, 10),
+                        node(2, AcceleratorProgramNodeIds.STRUCTURE_EXTRACT, extractConfiguration(1, 0)),
+                        node(3, AcceleratorProgramNodeIds.STRUCTURE_CONTROL, new JsonObject()),
+                        node(4, AcceleratorProgramNodeIds.STRUCTURE_LAUNCH, strengthConfiguration(1)),
+                        directionNode(6, 0.0, 1.0, 0.0)
+                ),
+                List.of(
+                        edge(0, "flow", 2, "flow"),
+                        edge(2, "flow", 3, "flow"),
+                        edge(3, "flow", 4, "flow"),
+                        edge(1, "position", 2, "host"),
+                        edge(2, "structure", 3, "structure"),
+                        edge(3, "control", 4, "control"),
+                        edge(6, "direction", 4, "direction")
+                )
+        );
+        var compiled = AbilityProgramDefinitions.require(
+                        AcceleratorProgramNodeCatalog.ACCELERATOR)
+                .compile(graph, Set.of(AcceleratorProgramCapabilities.STRUCTURE));
+        assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
+
+        var result = AcceleratorProgramExecutionBridge.execute(
+                compiled.program(), 420L, runtime, new ProgramActionTransaction());
+
+        assertEquals(ProgramVmResult.Status.FAILED, result.status());
+        assertEquals(3, result.nodeId(),
+                "the rejected control, not the downstream launch, must own the failure");
+        assertEquals(ProgramVmDiagnostic.ACTION_UNAVAILABLE, result.diagnostic());
+        assertEquals("unavailable:sable_program_control", result.detail());
+        assertEquals(List.of(
+                "extract:BlockPos{x=10, y=64, z=10}:1:0",
+                "control:" + STRUCTURE + ":unavailable"
+        ), runtime.applied);
     }
 
     @Test
@@ -160,8 +249,10 @@ class AcceleratorProgramStructureNodesTest {
         var result = AcceleratorProgramExecutionBridge.execute(
                 compiled.program(), 500L, runtime, new ProgramActionTransaction());
 
-        assertEquals(ProgramVmResult.Status.COMPLETED, result.status(),
-                () -> String.valueOf(result.diagnostic()));
+        assertEquals(ProgramVmResult.Status.FAILED, result.status());
+        assertEquals(5, result.nodeId());
+        assertEquals(ProgramVmDiagnostic.ACTION_UNAVAILABLE, result.diagnostic());
+        assertEquals("unavailable:safe_staticization_unavailable", result.detail());
         assertEquals(List.of(
                 "extract:BlockPos{x=10, y=64, z=10}:2:64",
                 "control:" + STRUCTURE,
@@ -176,7 +267,7 @@ class AcceleratorProgramStructureNodesTest {
     }
 
     @Test
-    void pendingExtractPublishesNoStructureReference() {
+    void pendingExtractKeepsTheFlowAndPublishesNoStructureReference() {
         var runtime = new ScriptedRuntime();
         runtime.extractPending = true;
         var graph = graph(
@@ -199,7 +290,8 @@ class AcceleratorProgramStructureNodesTest {
         var result = AcceleratorProgramExecutionBridge.execute(
                 compiled.program(), 600L, runtime, new ProgramActionTransaction());
 
-        assertEquals(ProgramVmResult.Status.COMPLETED, result.status());
+        assertEquals(ProgramVmResult.Status.COMPLETED, result.status(),
+                "a pending capture must not be reported as a failure");
         assertEquals(List.of("extract-pending:BlockPos{x=10, y=64, z=10}"), runtime.applied);
         assertFalse(runtime.publishedReference,
                 "a pending capture must not publish a structure reference");
@@ -217,6 +309,7 @@ class AcceleratorProgramStructureNodesTest {
                 UUID.fromString("fedcba98-7654-3210-fedc-ba9876543210"),
                 UUID.fromString("01234567-89ab-cdef-0123-456789abcdef"));
         private boolean extractPending;
+        private boolean controlUnavailable;
         private boolean publishedReference;
         private boolean controlActive;
         private boolean controlBroken;
@@ -320,6 +413,10 @@ class AcceleratorProgramStructureNodesTest {
 
         @Override
         public StructureOperation controlStructure(ProgramStructureReference target) {
+            if (controlUnavailable) {
+                applied.add("control:" + target.reference() + ":unavailable");
+                return StructureOperation.unavailable("sable_program_control");
+            }
             applied.add("control:" + target.reference());
             controlActive = true;
             return StructureOperation.control(control,

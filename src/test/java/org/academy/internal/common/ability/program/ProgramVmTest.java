@@ -21,6 +21,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ProgramVmTest {
@@ -117,6 +118,60 @@ class ProgramVmTest {
         assertEquals(ProgramVmResult.Status.FAILED, result.status());
         assertEquals(2, result.nodeId());
         assertEquals(ProgramVmDiagnostic.DIVISION_BY_ZERO, result.diagnostic());
+    }
+
+    @Test
+    void missingRequiredInputValueNamesThePortAndTheConsumingNode() {
+        var sourceId = AcademyCraft.academy("test/starved_source");
+        var consumerId = AcademyCraft.academy("test/starved_consumer");
+        var types = nodeTypes();
+        types.put(sourceId, type(ProgramNodeRole.ACTION, new ProgramNodeSchema(
+                List.of(ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW)),
+                List.of(flowOutput("flow"),
+                        ProgramPortDefinition.output("control", ProgramValueTypes.STRUCTURE_CONTROL)))));
+        types.put(consumerId, type(ProgramNodeRole.ACTION, new ProgramNodeSchema(
+                List.of(ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput("control", ProgramValueTypes.STRUCTURE_CONTROL)),
+                List.of(flowOutput("flow")))));
+        var graph = new ProgramGraph(
+                List.of(node(1, ENTRY), node(2, sourceId), node(3, consumerId)),
+                List.of(edge(1, "flow", 2, "flow"),
+                        edge(2, "flow", 3, "flow"),
+                        edge(2, "control", 3, "control")));
+        var compiled = ProgramCompiler.compile(graph,
+                new ProgramCompileContext(CATEGORY, Set.of(), ProgramLimits.DEFAULT), types::get);
+        assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
+        var executors = executors();
+        executors.put(sourceId, (context, configuration, inputs) -> ProgramNodeStep.next("flow"));
+        executors.put(consumerId, (context, configuration, inputs) -> ProgramNodeStep.next("flow"));
+
+        var result = new ProgramVm.Session(compiled.program()).run(0, 10, executors::get, null);
+
+        assertEquals(ProgramVmResult.Status.FAILED, result.status());
+        assertEquals(3, result.nodeId());
+        assertEquals(ProgramVmDiagnostic.MISSING_INPUT_VALUE, result.diagnostic());
+        assertEquals("control", result.port());
+        assertNull(result.detail());
+    }
+
+    @Test
+    void actionFailureKeepsTheFailingNodeAndItsDetail() {
+        var session = new ProgramVm.Session(compile(new ProgramGraph(
+                List.of(node(1, ENTRY), node(2, INCREMENT)),
+                List.of(edge(1, "flow", 2, "flow")))));
+        var executors = executors();
+        executors.put(INCREMENT, (context, configuration, inputs) -> {
+            throw new ProgramActionFailure(ProgramVmDiagnostic.ACTION_UNAVAILABLE,
+                    "unavailable:sable_program_control");
+        });
+
+        var result = session.run(0, 10, executors::get, null);
+
+        assertEquals(ProgramVmResult.Status.FAILED, result.status());
+        assertEquals(2, result.nodeId());
+        assertEquals(ProgramVmDiagnostic.ACTION_UNAVAILABLE, result.diagnostic());
+        assertEquals("unavailable:sable_program_control", result.detail());
+        assertNull(result.port());
     }
 
     @Test

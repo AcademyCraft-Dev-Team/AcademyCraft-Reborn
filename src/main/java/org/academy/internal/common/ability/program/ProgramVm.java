@@ -211,7 +211,8 @@ public final class ProgramVm {
                             "error", "");
                     failed = true;
                     return new ProgramVmResult(ProgramVmResult.Status.FAILED,
-                            exception.nodeId < 0 ? currentNodeId : exception.nodeId, exception.diagnostic);
+                            exception.nodeId < 0 ? currentNodeId : exception.nodeId,
+                            exception.diagnostic, exception.port, exception.detail);
                 } catch (RuntimeException exception) {
                     if (trace != null) trace.record(currentNodeId, "error", "");
                     return fail(ProgramVmDiagnostic.EXECUTOR_ERROR);
@@ -256,17 +257,27 @@ public final class ProgramVm {
                 if (input.type().equals(ProgramValueTypes.FLOW)) continue;
                 var resolved = new ArrayList<ProgramValue<?>>();
                 for (var output : program.inputs(node.id(), input.name())) {
-                    resolved.add(resolveValue(
-                            output,
-                            context,
-                            executors,
-                            dataCache,
-                            evaluated,
-                            fuel
-                    ));
+                    try {
+                        resolved.add(resolveValue(
+                                output,
+                                context,
+                                executors,
+                                dataCache,
+                                evaluated,
+                                fuel
+                        ));
+                    } catch (ExecutionFailure failure) {
+                        if (failure.diagnostic == ProgramVmDiagnostic.MISSING_INPUT_VALUE
+                                && failure.nodeId < 0) {
+                            throw new ExecutionFailure(
+                                    failure.diagnostic, -1, input.name(), null);
+                        }
+                        throw failure;
+                    }
                 }
                 if (input.required() && resolved.isEmpty()) {
-                    throw new ExecutionFailure(ProgramVmDiagnostic.MISSING_INPUT_VALUE);
+                    throw new ExecutionFailure(
+                            ProgramVmDiagnostic.MISSING_INPUT_VALUE, node.id(), input.name(), null);
                 }
                 if (!resolved.isEmpty()) values.put(input.name(), resolved);
             }
@@ -287,7 +298,8 @@ public final class ProgramVm {
             if (cached != null) return cached;
             var source = program.nodes().get(output.nodeId());
             if (source == null || source.role().requiresFlow() || source.role() == ProgramNodeRole.ENTRY) {
-                throw new ExecutionFailure(ProgramVmDiagnostic.MISSING_INPUT_VALUE);
+                throw new ExecutionFailure(
+                        ProgramVmDiagnostic.MISSING_INPUT_VALUE, -1, output.port(), null);
             }
             if (!evaluated.contains(source.id())) {
                 if (!fuel.tryConsume()) throw new FuelExhausted();
@@ -305,7 +317,10 @@ public final class ProgramVm {
                 evaluated.add(source.id());
             }
             var result = dataCache.get(output);
-            if (result == null) throw new ExecutionFailure(ProgramVmDiagnostic.MISSING_INPUT_VALUE, output.nodeId());
+            if (result == null) {
+                throw new ExecutionFailure(
+                        ProgramVmDiagnostic.MISSING_INPUT_VALUE, output.nodeId(), output.port(), null);
+            }
             return result;
         }
 
@@ -376,6 +391,9 @@ public final class ProgramVm {
             );
         } catch (ExecutionFailure failure) {
             throw failure;
+        } catch (ProgramActionFailure failure) {
+            throw new ExecutionFailure(
+                    failure.diagnostic(), node.id(), null, failure.detail());
         } catch (RuntimeException exception) {
             var diagnostic = AbilityProgramManager.actionDiagnostic(exception);
             if (diagnostic == ProgramVmDiagnostic.ACTION_REJECTED) {
@@ -446,14 +464,27 @@ public final class ProgramVm {
     private static final class ExecutionFailure extends RuntimeException {
         private final ProgramVmDiagnostic diagnostic;
         private final int nodeId;
+        private final @Nullable String port;
+        private final @Nullable String detail;
 
         private ExecutionFailure(ProgramVmDiagnostic diagnostic) {
-            this(diagnostic, -1);
+            this(diagnostic, -1, null, null);
         }
 
         private ExecutionFailure(ProgramVmDiagnostic diagnostic, int nodeId) {
+            this(diagnostic, nodeId, null, null);
+        }
+
+        private ExecutionFailure(
+                ProgramVmDiagnostic diagnostic,
+                int nodeId,
+                @Nullable String port,
+                @Nullable String detail
+        ) {
             this.diagnostic = diagnostic;
             this.nodeId = nodeId;
+            this.port = port;
+            this.detail = detail;
         }
     }
 }

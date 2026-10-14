@@ -90,7 +90,8 @@ public final class ServerProgramExecution {
                         termination.nodeId(), termination.kind() == ProgramSessionScheduler.TerminationKind.EXPIRED
                                 ? ProgramVmDiagnostic.EXECUTION_EXPIRED
                                 : aborted.successful() ? termination.diagnostic()
-                                : AbilityProgramManager.actionDiagnostic(aborted.cause()));
+                                : AbilityProgramManager.actionDiagnostic(aborted.cause()),
+                        termination.port(), termination.detail());
             }
             return;
         }
@@ -100,7 +101,8 @@ public final class ServerProgramExecution {
             return;
         }
         AbilityProgramManager.reportDeferredFailure(player, category, invocation,
-                committed.nodeId(), AbilityProgramManager.actionDiagnostic(committed.cause()));
+                committed.nodeId(), AbilityProgramManager.actionDiagnostic(committed.cause()),
+                null, null);
         AcademyCraft.LOGGER.warn(
                 "Deferred ability program action failed in category {} at node {}",
                 category,

@@ -239,8 +239,8 @@ public final class AbilityProgramManager {
                     MisakaNetworkServer.send(player, new ResultPacket(category.toString(), slot,
                             FeedbackType.TRACE, current.revision(),
                             outcome.successful() ? ResultCode.OK : ResultCode.EXECUTION_FAILED,
-                            null, outcome.nodeId(), outcome.vmDiagnostic(), null,
-                            invocation.runTrace().steps(), invocation.runTrace().truncated()));
+                            null, outcome.nodeId(), outcome.vmDiagnostic(), outcome.port(),
+                            outcome.detail(), invocation.runTrace().steps(), invocation.runTrace().truncated()));
                 }
             }
             if (trigger == ProgramTriggers.Type.LOOP && outcome.successful()) {
@@ -278,7 +278,7 @@ public final class AbilityProgramManager {
                 FeedbackType.TRACE, revision,
                 result.status() == ProgramVmResult.Status.FAILED
                         ? ResultCode.EXECUTION_FAILED : ResultCode.OK,
-                null, result.nodeId(), result.diagnostic(), null,
+                null, result.nodeId(), result.diagnostic(), result.port(), result.detail(),
                 invocation.runTrace().steps(), invocation.runTrace().truncated()));
     }
 
@@ -468,13 +468,7 @@ public final class AbilityProgramManager {
                 program, player, costMultiplier, invocation);
         if (execution.successful()) return ExecutionOutcome.success(
                 execution.vmResult().status() != ProgramVmResult.Status.COMPLETED);
-        var transaction = execution.transactionResult().orElse(null);
-        return new ExecutionOutcome(
-                false,
-                false,
-                transaction == null ? execution.vmResult().nodeId() : transaction.nodeId(),
-                transactionDiagnostic(transaction, execution.vmResult().diagnostic())
-        );
+        return failureOutcome(execution.vmResult(), execution.transactionResult());
     }
 
     private static ExecutionOutcome executeAeromanip(
@@ -488,13 +482,7 @@ public final class AbilityProgramManager {
                 program, player, costMultiplier, invocation);
         if (execution.successful()) return ExecutionOutcome.success(
                 execution.vmResult().status() != ProgramVmResult.Status.COMPLETED);
-        var transaction = execution.transactionResult().orElse(null);
-        return new ExecutionOutcome(
-                false,
-                false,
-                transaction == null ? execution.vmResult().nodeId() : transaction.nodeId(),
-                transactionDiagnostic(transaction, execution.vmResult().diagnostic())
-        );
+        return failureOutcome(execution.vmResult(), execution.transactionResult());
     }
 
     private static ExecutionOutcome executeDarkmatter(
@@ -508,13 +496,7 @@ public final class AbilityProgramManager {
                 program, player, costMultiplier, invocation);
         if (execution.successful()) return ExecutionOutcome.success(
                 execution.vmResult().status() != ProgramVmResult.Status.COMPLETED);
-        var transaction = execution.transactionResult().orElse(null);
-        return new ExecutionOutcome(
-                false,
-                false,
-                transaction == null ? execution.vmResult().nodeId() : transaction.nodeId(),
-                transactionDiagnostic(transaction, execution.vmResult().diagnostic())
-        );
+        return failureOutcome(execution.vmResult(), execution.transactionResult());
     }
 
     private static CategoryExecutionAdapter executionAdapter(Identifier category) {
@@ -529,10 +511,7 @@ public final class AbilityProgramManager {
                     definition.executors(), frame, transaction, invocation);
             if (execution.accepted()) return ExecutionOutcome.success(
                     execution.vmResult().status() != ProgramVmResult.Status.COMPLETED);
-            var result = execution.transactionResult().orElse(null);
-            return new ExecutionOutcome(false, false,
-                    result == null ? execution.vmResult().nodeId() : result.nodeId(),
-                    transactionDiagnostic(result, execution.vmResult().diagnostic()));
+            return failureOutcome(execution.vmResult(), execution.transactionResult());
         };
     }
 
@@ -547,13 +526,7 @@ public final class AbilityProgramManager {
                 program, player, costMultiplier, invocation);
         if (execution.successful()) return ExecutionOutcome.success(
                 execution.vmResult().status() != ProgramVmResult.Status.COMPLETED);
-        var transaction = execution.transactionResult().orElse(null);
-        return new ExecutionOutcome(
-                false,
-                false,
-                transaction == null ? execution.vmResult().nodeId() : transaction.nodeId(),
-                transactionDiagnostic(transaction, execution.vmResult().diagnostic())
-        );
+        return failureOutcome(execution.vmResult(), execution.transactionResult());
     }
 
     private static ExecutionOutcome executeTeleport(
@@ -567,13 +540,7 @@ public final class AbilityProgramManager {
                 program, player, costMultiplier, invocation);
         if (execution.successful()) return ExecutionOutcome.success(
                 execution.vmResult().status() != ProgramVmResult.Status.COMPLETED);
-        var transaction = execution.transactionResult().orElse(null);
-        return new ExecutionOutcome(
-                false,
-                false,
-                transaction == null ? execution.vmResult().nodeId() : transaction.nodeId(),
-                transactionDiagnostic(transaction, execution.vmResult().diagnostic())
-        );
+        return failureOutcome(execution.vmResult(), execution.transactionResult());
     }
 
     private static ExecutionOutcome executeMeltdowner(
@@ -587,12 +554,21 @@ public final class AbilityProgramManager {
                 program, player, costMultiplier, invocation);
         if (execution.successful()) return ExecutionOutcome.success(
                 execution.vmResult().status() != ProgramVmResult.Status.COMPLETED);
-        var transaction = execution.transactionResult().orElse(null);
+        return failureOutcome(execution.vmResult(), execution.transactionResult());
+    }
+
+    private static ExecutionOutcome failureOutcome(
+            ProgramVmResult vmResult,
+            Optional<ProgramActionTransaction.Result> transactionResult
+    ) {
+        var transaction = transactionResult.orElse(null);
         return new ExecutionOutcome(
                 false,
                 false,
-                transaction == null ? execution.vmResult().nodeId() : transaction.nodeId(),
-                transactionDiagnostic(transaction, execution.vmResult().diagnostic())
+                transaction == null ? vmResult.nodeId() : transaction.nodeId(),
+                transactionDiagnostic(transaction, vmResult.diagnostic()),
+                transaction == null ? vmResult.port() : null,
+                transaction == null ? vmResult.detail() : null
         );
     }
 
@@ -620,7 +596,9 @@ public final class AbilityProgramManager {
                 false,
                 false,
                 execution.nodeId(),
-                precisionDiagnostic(execution.diagnostic())
+                precisionDiagnostic(execution.diagnostic()),
+                null,
+                null
         );
     }
 
@@ -645,13 +623,15 @@ public final class AbilityProgramManager {
 
     static void reportDeferredFailure(
             ServerPlayer player, Identifier category, ProgramInvocationContext invocation,
-            int nodeId, ProgramVmDiagnostic diagnostic
+            int nodeId, ProgramVmDiagnostic diagnostic,
+            @Nullable String port, @Nullable String detail
     ) {
         if (player.connection == null || invocation.trigger().isPresent()) return;
         var playerData = AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID());
         var current = book(playerData, category, player.getUUID());
         Server.result(player, category.toString(), invocation.slot(), FeedbackType.ERROR,
-                current.revision(), ResultCode.EXECUTION_FAILED, null, nodeId, diagnostic);
+                current.revision(), ResultCode.EXECUTION_FAILED, null, nodeId, diagnostic,
+                port, detail);
     }
 
     private static ProgramVmDiagnostic transactionDiagnostic(
@@ -1113,7 +1093,7 @@ public final class AbilityProgramManager {
                             : FeedbackType.ERROR,
                     current.revision(),
                     outcome.successful ? ResultCode.OK : ResultCode.EXECUTION_FAILED,
-                    null, outcome.nodeId, outcome.vmDiagnostic, null,
+                    null, outcome.nodeId, outcome.vmDiagnostic, outcome.port(), outcome.detail(),
                     invocation.runTrace().steps(), invocation.runTrace().truncated());
         }
 
@@ -1128,7 +1108,8 @@ public final class AbilityProgramManager {
                 int nodeId,
                 ProgramVmDiagnostic vmDiagnostic
         ) {
-            result(player, category, slot, type, revision, code, diagnostic, nodeId, vmDiagnostic, null);
+            result(player, category, slot, type, revision, code, diagnostic, nodeId,
+                    vmDiagnostic, null, null);
         }
 
         private static void result(
@@ -1137,14 +1118,24 @@ public final class AbilityProgramManager {
                 int nodeId, ProgramVmDiagnostic vmDiagnostic, @Nullable String port
         ) {
             result(player, category, slot, type, revision, code, diagnostic, nodeId,
-                    vmDiagnostic, port, List.of(), false);
+                    vmDiagnostic, port, null);
         }
 
         private static void result(
                 ServerPlayer player, String category, int slot, FeedbackType type,
                 long revision, ResultCode code, @Nullable ProgramDiagnosticCode diagnostic,
                 int nodeId, ProgramVmDiagnostic vmDiagnostic, @Nullable String port,
-                List<ProgramRunTrace.Step> trace, boolean traceTruncated
+                @Nullable String detail
+        ) {
+            result(player, category, slot, type, revision, code, diagnostic, nodeId,
+                    vmDiagnostic, port, detail, List.of(), false);
+        }
+
+        private static void result(
+                ServerPlayer player, String category, int slot, FeedbackType type,
+                long revision, ResultCode code, @Nullable ProgramDiagnosticCode diagnostic,
+                int nodeId, ProgramVmDiagnostic vmDiagnostic, @Nullable String port,
+                @Nullable String detail, List<ProgramRunTrace.Step> trace, boolean traceTruncated
         ) {
             MisakaNetworkServer.send(player, new ResultPacket(
                     category,
@@ -1154,7 +1145,7 @@ public final class AbilityProgramManager {
                     code,
                     diagnostic,
                     nodeId,
-                    vmDiagnostic, port, trace, traceTruncated
+                    vmDiagnostic, port, detail, trace, traceTruncated
             ));
         }
     }
@@ -1186,7 +1177,8 @@ public final class AbilityProgramManager {
                     packet.code,
                     packet.diagnostic,
                     packet.nodeId,
-                    packet.vmDiagnostic, packet.port, packet.trace, packet.traceTruncated
+                    packet.vmDiagnostic, packet.port, packet.detail,
+                    packet.trace, packet.traceTruncated
             );
         }
     }
@@ -1457,6 +1449,7 @@ public final class AbilityProgramManager {
                     ByteBufCodecs.VAR_INT.encode(buf, packet.nodeId);
                     ByteBufCodecs.VAR_INT.encode(buf, packet.vmDiagnostic.ordinal());
                     ByteBufCodecs.STRING_UTF8.encode(buf, packet.port);
+                    ByteBufCodecs.STRING_UTF8.encode(buf, packet.detail);
                     ByteBufCodecs.VAR_INT.encode(buf, packet.trace.size());
                     for (var step : packet.trace) {
                         ByteBufCodecs.VAR_INT.encode(buf, step.nodeId());
@@ -1475,6 +1468,7 @@ public final class AbilityProgramManager {
                     var nodeId = ByteBufCodecs.VAR_INT.decode(buf);
                     var vmDiagnostic = AbilityProgramManager.vmDiagnostic(ByteBufCodecs.VAR_INT.decode(buf));
                     var port = ByteBufCodecs.STRING_UTF8.decode(buf);
+                    var detail = ByteBufCodecs.STRING_UTF8.decode(buf);
                     var count = ByteBufCodecs.VAR_INT.decode(buf);
                     if (count < 0 || count > ProgramRunTrace.MAX_STEPS) {
                         throw new DecoderException("Invalid program trace length");
@@ -1485,7 +1479,7 @@ public final class AbilityProgramManager {
                                 ByteBufCodecs.STRING_UTF8.decode(buf), ByteBufCodecs.STRING_UTF8.decode(buf)));
                     }
                     return new ResultPacket(category, slot, type, revision, code,
-                            diagnostic, nodeId, vmDiagnostic, port, trace, buf.readBoolean());
+                            diagnostic, nodeId, vmDiagnostic, port, detail, trace, buf.readBoolean());
                 }
         );
         private final String category;
@@ -1497,6 +1491,7 @@ public final class AbilityProgramManager {
         private final int nodeId;
         private final ProgramVmDiagnostic vmDiagnostic;
         private final String port;
+        private final String detail;
         private final List<ProgramRunTrace.Step> trace;
         private final boolean traceTruncated;
 
@@ -1510,7 +1505,7 @@ public final class AbilityProgramManager {
                 int nodeId,
                 ProgramVmDiagnostic vmDiagnostic
         ) {
-            this(category, slot, type, revision, code, diagnostic, nodeId, vmDiagnostic, null);
+            this(category, slot, type, revision, code, diagnostic, nodeId, vmDiagnostic, null, null);
         }
 
         public ResultPacket(
@@ -1519,16 +1514,26 @@ public final class AbilityProgramManager {
                 ProgramVmDiagnostic vmDiagnostic, @Nullable String port
         ) {
             this(category, slot, type, revision, code, diagnostic, nodeId,
-                    vmDiagnostic, port, List.of(), false);
+                    vmDiagnostic, port, null);
         }
 
         public ResultPacket(
                 String category, int slot, FeedbackType type, long revision, ResultCode code,
                 @Nullable ProgramDiagnosticCode diagnostic, int nodeId,
-                ProgramVmDiagnostic vmDiagnostic, @Nullable String port,
+                ProgramVmDiagnostic vmDiagnostic, @Nullable String port, @Nullable String detail
+        ) {
+            this(category, slot, type, revision, code, diagnostic, nodeId,
+                    vmDiagnostic, port, detail, List.of(), false);
+        }
+
+        public ResultPacket(
+                String category, int slot, FeedbackType type, long revision, ResultCode code,
+                @Nullable ProgramDiagnosticCode diagnostic, int nodeId,
+                ProgramVmDiagnostic vmDiagnostic, @Nullable String port, @Nullable String detail,
                 List<ProgramRunTrace.Step> trace, boolean traceTruncated
         ) {
             this.port = port == null ? "" : port;
+            this.detail = detail == null ? "" : detail;
             this.category = category == null ? "" : category;
             this.slot = slot;
             this.type = type == null ? FeedbackType.ERROR : type;
@@ -1572,6 +1577,10 @@ public final class AbilityProgramManager {
 
         String port() {
             return port;
+        }
+
+        String detail() {
+            return detail;
         }
 
         ProgramVmDiagnostic vmDiagnostic() {
@@ -1620,10 +1629,12 @@ public final class AbilityProgramManager {
             boolean successful,
             boolean deferred,
             int nodeId,
-            ProgramVmDiagnostic vmDiagnostic
+            ProgramVmDiagnostic vmDiagnostic,
+            @Nullable String port,
+            @Nullable String detail
     ) {
         private static ExecutionOutcome success(boolean deferred) {
-            return new ExecutionOutcome(true, deferred, -1, ProgramVmDiagnostic.NONE);
+            return new ExecutionOutcome(true, deferred, -1, ProgramVmDiagnostic.NONE, null, null);
         }
     }
 }

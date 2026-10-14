@@ -40,7 +40,8 @@ public enum ProgramVmDiagnostic {
     TARGET_LIMIT,
     CLIENT_TIMEOUT,
     PLANNING_BUDGET_EXHAUSTED,
-    UNSUPPORTED_MOVEMENT_MODE;
+    UNSUPPORTED_MOVEMENT_MODE,
+    ACTION_UNAVAILABLE;
 
     public String translationKey() {
         var prefix = switch (this) {

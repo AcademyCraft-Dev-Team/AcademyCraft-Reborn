@@ -308,10 +308,29 @@ public final class AcceleratorProgramExecutionBridge {
             boolean includeStructure,
             boolean includeControl
     ) {
+        var result = operation.result();
+        if (result.status() != ProgramStructureOperationResult.Status.COMPLETED
+                && result.status() != ProgramStructureOperationResult.Status.PENDING) {
+            throw new ProgramActionFailure(
+                    result.status() == ProgramStructureOperationResult.Status.UNAVAILABLE
+                            ? ProgramVmDiagnostic.ACTION_UNAVAILABLE
+                            : ProgramVmDiagnostic.ACTION_REJECTED,
+                    statusDetail(result));
+        }
+        if (result.status() == ProgramStructureOperationResult.Status.COMPLETED) {
+            if (includeStructure && operation.structure() == null) {
+                throw new ProgramActionFailure(ProgramVmDiagnostic.ACTION_REJECTED,
+                        statusDetail(result, "structure_missing"));
+            }
+            if (includeControl && operation.control() == null) {
+                throw new ProgramActionFailure(ProgramVmDiagnostic.ACTION_REJECTED,
+                        statusDetail(result, "control_missing"));
+            }
+        }
         var outputs = new HashMap<String, ProgramValue<?>>();
         outputs.put("result", new ProgramValue<>(
                 ProgramValueTypes.STRUCTURE_OPERATION_RESULT,
-                operation.result()
+                result
         ));
         if (includeStructure && operation.structure() != null) {
             outputs.put("structure", new ProgramValue<>(
@@ -326,6 +345,14 @@ public final class AcceleratorProgramExecutionBridge {
             ));
         }
         return ProgramNodeStep.next("flow", outputs);
+    }
+
+    private static String statusDetail(ProgramStructureOperationResult result) {
+        return statusDetail(result, result.detail());
+    }
+
+    private static String statusDetail(ProgramStructureOperationResult result, String detail) {
+        return result.status().name().toLowerCase(Locale.ROOT) + ":" + detail;
     }
 
     private static AcceleratorProgramRuntime runtime(ProgramVmContext context) {
