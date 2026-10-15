@@ -1,12 +1,15 @@
 package org.academy.internal.common.ability.aeromanip.program;
 
+import com.google.gson.JsonObject;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.program.*;
 import org.academy.internal.common.ability.AbilityCategoryNames;
+import org.academy.internal.common.ability.aeromanip.movement.HighSpeedJetStructureService;
 import org.academy.internal.common.ability.program.registry.ProgramNodeLookup;
 
 import java.util.ArrayList;
@@ -62,6 +65,29 @@ public final class AeromanipProgramNodeCatalog implements ProgramNodeLookup {
                 BlockStructureLaunchConfiguration.CODEC,
                 launchBlockStructureSchema(),
                 AeromanipProgramCapabilities.HIGH_SPEED_JET));
+        put(result, AeromanipProgramNodeIds.STRUCTURE_EXTRACT, structureExtractType());
+        put(result, AeromanipProgramNodeIds.STRUCTURE_CONTROL, unitType(
+                structureControlSchema(),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(AeromanipProgramCapabilities.STRUCTURE)));
+        put(result, AeromanipProgramNodeIds.STRUCTURE_MOVE, structureMoveType());
+        put(result, AeromanipProgramNodeIds.STRUCTURE_ROTATE, unitType(
+                structureRotateSchema(),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(AeromanipProgramCapabilities.STRUCTURE)));
+        put(result, AeromanipProgramNodeIds.STRUCTURE_LAUNCH, structureLaunchType());
+        put(result, AeromanipProgramNodeIds.STRUCTURE_RELEASE, unitType(
+                structureReleaseSchema(),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(AeromanipProgramCapabilities.STRUCTURE)));
+        put(result, AeromanipProgramNodeIds.STRUCTURE_STATICIZE, unitType(
+                structureStaticizeSchema(),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(AeromanipProgramCapabilities.STRUCTURE)));
         types = Map.copyOf(result);
     }
 
@@ -169,6 +195,198 @@ public final class AeromanipProgramNodeCatalog implements ProgramNodeLookup {
                 ),
                 List.of(ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW))
         );
+    }
+
+    private static ProgramNodeSchema structureExtractSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput("host", ProgramValueTypes.BLOCK_POSITION)
+                ),
+                List.of(
+                        ProgramPortDefinition.output(
+                                "structure", ProgramValueTypes.STRUCTURE_REFERENCE),
+                        ProgramPortDefinition.output(
+                                "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                        ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)
+                )
+        );
+    }
+
+    private static ProgramNodeSchema structureControlSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput(
+                                "structure", ProgramValueTypes.STRUCTURE_REFERENCE)
+                ),
+                List.of(
+                        ProgramPortDefinition.output(
+                                "control", ProgramValueTypes.STRUCTURE_CONTROL),
+                        ProgramPortDefinition.output(
+                                "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                        ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)
+                )
+        );
+    }
+
+    private static ProgramNodeSchema structureMoveSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput(
+                                "control", ProgramValueTypes.STRUCTURE_CONTROL),
+                        ProgramPortDefinition.optionalInput(
+                                "target", ProgramValueTypes.WORLD_POSITION),
+                        ProgramPortDefinition.optionalInput(
+                                "anchor", ProgramValueTypes.STRUCTURE_ANCHOR),
+                        ProgramPortDefinition.optionalInput("seconds", ProgramValueTypes.FLOAT)
+                ),
+                List.of(
+                        ProgramPortDefinition.output(
+                                "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                        ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)
+                )
+        );
+    }
+
+    private static ProgramNodeSchema structureRotateSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput(
+                                "control", ProgramValueTypes.STRUCTURE_CONTROL),
+                        ProgramPortDefinition.optionalInput(
+                                "pose", ProgramValueTypes.STRUCTURE_POSE)
+                ),
+                List.of(
+                        ProgramPortDefinition.output(
+                                "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                        ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)
+                )
+        );
+    }
+
+    private static ProgramNodeSchema structureLaunchSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput(
+                                "control", ProgramValueTypes.STRUCTURE_CONTROL),
+                        ProgramPortDefinition.requiredInput(
+                                "direction", ProgramValueTypes.DIRECTION)
+                ),
+                List.of(
+                        ProgramPortDefinition.output(
+                                "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                        ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)
+                )
+        );
+    }
+
+    private static ProgramNodeSchema structureReleaseSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput(
+                                "control", ProgramValueTypes.STRUCTURE_CONTROL)
+                ),
+                List.of(
+                        ProgramPortDefinition.output(
+                                "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                        ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)
+                )
+        );
+    }
+
+    private static ProgramNodeSchema structureStaticizeSchema() {
+        return new ProgramNodeSchema(
+                List.of(
+                        ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                        ProgramPortDefinition.requiredInput(
+                                "structure", ProgramValueTypes.STRUCTURE_REFERENCE),
+                        ProgramPortDefinition.optionalInput(
+                                "target", ProgramValueTypes.BLOCK_POSITION)
+                ),
+                List.of(
+                        ProgramPortDefinition.output(
+                                "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                        ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)
+                )
+        );
+    }
+
+    private static ProgramNodeType<ExtractStructureConfiguration> structureExtractType() {
+        return new FixedNodeType<>(
+                ExtractStructureConfiguration.CODEC,
+                structureExtractSchema(),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(AeromanipProgramCapabilities.STRUCTURE)
+        );
+    }
+
+    private static ProgramNodeType<MoveStructureConfiguration> structureMoveType() {
+        return new FixedNodeType<>(
+                MoveStructureConfiguration.CODEC,
+                structureMoveSchema(),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(AeromanipProgramCapabilities.STRUCTURE)
+        );
+    }
+
+    private static ProgramNodeType<LaunchStructureConfiguration> structureLaunchType() {
+        return new FixedNodeType<>(
+                LaunchStructureConfiguration.CODEC,
+                structureLaunchSchema(),
+                ProgramNodeRole.ACTION,
+                ProgramNodePurity.ACTION,
+                capabilityScope(AeromanipProgramCapabilities.STRUCTURE)
+        );
+    }
+
+    /**
+     * Unified-family id of a legacy action id; other ids map to themselves. The legacy
+     * {@code action/launch_block_structure} node itself stays registered so old graphs keep
+     * compiling and running with their original ports and configuration fields.
+     */
+    public static Identifier unifiedIdForLegacy(Identifier legacy) {
+        return AeromanipProgramNodeIds.LAUNCH_BLOCK_STRUCTURE.equals(legacy)
+                ? AeromanipProgramNodeIds.STRUCTURE_LAUNCH : legacy;
+    }
+
+    /**
+     * Reads a legacy {@code launch_block_structure} configuration into the unified extract
+     * configuration; the legacy structure radius becomes the capture radius and the cell budget
+     * keeps the backend default.
+     */
+    public static JsonObject legacyExtractConfiguration(JsonObject legacy) {
+        var parsed = BlockStructureLaunchConfiguration.CODEC
+                .parse(JsonOps.INSTANCE, legacy)
+                .result().orElse(null);
+        var configuration = new JsonObject();
+        configuration.addProperty("radius", parsed == null
+                ? (int) HighSpeedJetStructureService.DEFAULT_STRUCTURE_RADIUS
+                : parsed.structureRadius());
+        configuration.addProperty("budget", 0);
+        return configuration;
+    }
+
+    /**
+     * Reads a legacy {@code launch_block_structure} configuration into the unified launch
+     * configuration; power, duration and the inert restore flag are preserved for readback.
+     */
+    public static JsonObject legacyLaunchConfiguration(JsonObject legacy) {
+        var parsed = BlockStructureLaunchConfiguration.CODEC
+                .parse(JsonOps.INSTANCE, legacy)
+                .result().orElse(null);
+        var configuration = new JsonObject();
+        configuration.addProperty("power", parsed == null ? 1.0f : parsed.power());
+        configuration.addProperty("duration_seconds", parsed == null ? 8.0f : parsed.duration());
+        configuration.addProperty("restore_when_settled",
+                parsed == null || parsed.restoreWhenSettled());
+        return configuration;
     }
 
     private static ProgramNodeType<PowerConfiguration> powerType(
@@ -311,6 +529,50 @@ public final class AeromanipProgramNodeCatalog implements ProgramNodeLookup {
                         Codec.BOOL.optionalFieldOf("restore_when_settled", true)
                                 .forGetter(BlockStructureLaunchConfiguration::restoreWhenSettled)
                 ).apply(instance, BlockStructureLaunchConfiguration::new));
+    }
+
+    /**
+     * Nozzle-hosted extraction: the legacy structure radius plus an optional explicit cell budget
+     * (0 keeps the backend default). The nozzle support cell must resolve to a captured cell.
+     */
+    public record ExtractStructureConfiguration(int radius, int budget) {
+        public static final Codec<ExtractStructureConfiguration> CODEC =
+                RecordCodecBuilder.create(instance -> instance.group(
+                        Codec.intRange(2, 8).optionalFieldOf("radius", 2)
+                                .forGetter(ExtractStructureConfiguration::radius),
+                        Codec.intRange(0, HighSpeedJetStructureService.MAXIMUM_PROGRAM_BUDGET)
+                                .optionalFieldOf("budget", 0)
+                                .forGetter(ExtractStructureConfiguration::budget)
+                ).apply(instance, ExtractStructureConfiguration::new));
+    }
+
+    public record MoveStructureConfiguration(float durationSeconds) {
+        public static final Codec<MoveStructureConfiguration> CODEC =
+                Codec.floatRange(0.1f, 10.0f)
+                        .optionalFieldOf("duration_seconds", 1.0f)
+                        .xmap(MoveStructureConfiguration::new,
+                                MoveStructureConfiguration::durationSeconds)
+                        .codec();
+    }
+
+    /**
+     * Bounded launch along an explicit direction. {@code restore_when_settled} is preserved for
+     * legacy readback only: no path restores or deletes the structure on settlement.
+     */
+    public record LaunchStructureConfiguration(
+            float power,
+            float durationSeconds,
+            boolean restoreWhenSettled
+    ) {
+        public static final Codec<LaunchStructureConfiguration> CODEC =
+                RecordCodecBuilder.create(instance -> instance.group(
+                        Codec.floatRange(0.0f, 2.0f).optionalFieldOf("power", 1.0f)
+                                .forGetter(LaunchStructureConfiguration::power),
+                        Codec.floatRange(0.1f, 60.0f).optionalFieldOf("duration_seconds", 8.0f)
+                                .forGetter(LaunchStructureConfiguration::durationSeconds),
+                        Codec.BOOL.optionalFieldOf("restore_when_settled", true)
+                                .forGetter(LaunchStructureConfiguration::restoreWhenSettled)
+                ).apply(instance, LaunchStructureConfiguration::new));
     }
 
     public enum ChargeTier {

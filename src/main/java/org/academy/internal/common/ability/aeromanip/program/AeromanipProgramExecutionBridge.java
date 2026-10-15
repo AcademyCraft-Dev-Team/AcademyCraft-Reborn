@@ -9,9 +9,11 @@ import org.academy.internal.common.ability.program.compile.CompiledProgram;
 import org.academy.internal.common.ability.program.registry.AbilityProgramDefinitions;
 import org.academy.internal.common.ability.program.registry.ProgramExecutorLookup;
 import org.academy.internal.common.ability.program.registry.ProgramNodeExecutor;
+import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -206,7 +208,116 @@ public final class AeromanipProgramExecutionBridge {
                     ));
                     return ProgramNodeStep.next("flow");
                 });
+        put(result, AeromanipProgramNodeIds.STRUCTURE_EXTRACT,
+                (ProgramVmContext context,
+                 AeromanipProgramNodeCatalog.ExtractStructureConfiguration configuration,
+                 ProgramInputView inputs) -> structureResult(
+                        runtime(context).extractStructure(
+                                blockPosition(inputs, "host"),
+                                configuration.radius(),
+                                configuration.budget()),
+                        true,
+                        false));
+        put(result, AeromanipProgramNodeIds.STRUCTURE_CONTROL,
+                (context, _, inputs) -> structureResult(
+                        runtime(context).controlStructure(
+                                structureReference(inputs, "structure")),
+                        false,
+                        true));
+        put(result, AeromanipProgramNodeIds.STRUCTURE_MOVE,
+                (ProgramVmContext context,
+                 AeromanipProgramNodeCatalog.MoveStructureConfiguration configuration,
+                 ProgramInputView inputs) -> structureResult(
+                        runtime(context).moveStructure(
+                                structureControl(inputs),
+                                optionalWorldPosition(inputs, "target"),
+                                optionalStructureAnchor(inputs, "anchor"),
+                                optionalFloat(inputs, "seconds", configuration.durationSeconds())),
+                        false,
+                        false));
+        put(result, AeromanipProgramNodeIds.STRUCTURE_ROTATE,
+                (context, _, inputs) -> structureResult(
+                        runtime(context).rotateStructure(
+                                structureControl(inputs),
+                                optionalStructurePose(inputs, "pose")),
+                        false,
+                        false));
+        put(result, AeromanipProgramNodeIds.STRUCTURE_LAUNCH,
+                (ProgramVmContext context,
+                 AeromanipProgramNodeCatalog.LaunchStructureConfiguration configuration,
+                 ProgramInputView inputs) -> structureResult(
+                        runtime(context).launchStructure(
+                                structureControl(inputs),
+                                direction(inputs, "direction"),
+                                configuration.power(),
+                                configuration.durationSeconds()),
+                        false,
+                        false));
+        put(result, AeromanipProgramNodeIds.STRUCTURE_RELEASE,
+                (context, _, inputs) -> structureResult(
+                        runtime(context).releaseStructure(structureControl(inputs)),
+                        false,
+                        false));
+        put(result, AeromanipProgramNodeIds.STRUCTURE_STATICIZE,
+                (context, _, inputs) -> structureResult(
+                        runtime(context).staticizeStructure(
+                                structureReference(inputs, "structure"),
+                                optionalBlockPosition(inputs, "target")),
+                        false,
+                        false));
         return Map.copyOf(result);
+    }
+
+    private static ProgramNodeStep structureResult(
+            AeromanipProgramRuntime.StructureOperation operation,
+            boolean includeStructure,
+            boolean includeControl
+    ) {
+        var result = operation.result();
+        if (result.status() != ProgramStructureOperationResult.Status.COMPLETED
+                && result.status() != ProgramStructureOperationResult.Status.PENDING) {
+            throw new ProgramActionFailure(
+                    result.status() == ProgramStructureOperationResult.Status.UNAVAILABLE
+                            ? ProgramVmDiagnostic.ACTION_UNAVAILABLE
+                            : ProgramVmDiagnostic.ACTION_REJECTED,
+                    statusDetail(result));
+        }
+        if (result.status() == ProgramStructureOperationResult.Status.COMPLETED) {
+            if (includeStructure && operation.structure() == null) {
+                throw new ProgramActionFailure(ProgramVmDiagnostic.ACTION_REJECTED,
+                        statusDetail(result, "structure_missing"));
+            }
+            if (includeControl && operation.control() == null) {
+                throw new ProgramActionFailure(ProgramVmDiagnostic.ACTION_REJECTED,
+                        statusDetail(result, "control_missing"));
+            }
+        }
+        var outputs = new HashMap<String, ProgramValue<?>>();
+        outputs.put("result", new ProgramValue<>(
+                ProgramValueTypes.STRUCTURE_OPERATION_RESULT,
+                result
+        ));
+        if (includeStructure && operation.structure() != null) {
+            outputs.put("structure", new ProgramValue<>(
+                    ProgramValueTypes.STRUCTURE_REFERENCE,
+                    operation.structure()
+            ));
+        }
+        if (includeControl && operation.control() != null) {
+            outputs.put("control", new ProgramValue<>(
+                    ProgramValueTypes.STRUCTURE_CONTROL,
+                    operation.control()
+            ));
+        }
+        return ProgramNodeStep.next("flow", outputs);
+    }
+
+    private static String statusDetail(ProgramStructureOperationResult result) {
+        return statusDetail(result, result.detail());
+    }
+
+    private static String statusDetail(ProgramStructureOperationResult result, String detail) {
+        return result.status().name().toLowerCase(Locale.ROOT) + ":" + detail;
     }
 
     private static AeromanipProgramRuntime runtime(ProgramVmContext context) {
@@ -278,6 +389,58 @@ public final class AeromanipProgramExecutionBridge {
         return inputs.first(port)
                 .map(value -> (ProgramWorldPosition) value.value())
                 .orElse(null);
+    }
+
+    private static ProgramStructureReference structureReference(
+            ProgramInputView inputs,
+            String port
+    ) {
+        return (ProgramStructureReference) inputs.requireCompatible(
+                port, ProgramValueTypes.STRUCTURE_REFERENCE).value();
+    }
+
+    private static ProgramStructureControl structureControl(ProgramInputView inputs) {
+        return (ProgramStructureControl) inputs.requireCompatible(
+                "control", ProgramValueTypes.STRUCTURE_CONTROL).value();
+    }
+
+    private static @Nullable ProgramStructureAnchor optionalStructureAnchor(
+            ProgramInputView inputs,
+            String port
+    ) {
+        return inputs.first(port)
+                .filter(value -> value.type().equals(ProgramValueTypes.STRUCTURE_ANCHOR))
+                .map(value -> (ProgramStructureAnchor) value.value())
+                .orElse(null);
+    }
+
+    private static @Nullable ProgramStructurePose optionalStructurePose(
+            ProgramInputView inputs,
+            String port
+    ) {
+        return inputs.first(port)
+                .filter(value -> value.type().equals(ProgramValueTypes.STRUCTURE_POSE))
+                .map(value -> (ProgramStructurePose) value.value())
+                .orElse(null);
+    }
+
+    private static @Nullable ProgramBlockPosition optionalBlockPosition(
+            ProgramInputView inputs,
+            String port
+    ) {
+        return inputs.first(port)
+                .filter(value -> ProgramValueTypes.canConnect(
+                        value.type(), ProgramValueTypes.BLOCK_POSITION))
+                .map(value -> (ProgramBlockPosition) value.value())
+                .orElse(null);
+    }
+
+    private static double optionalFloat(ProgramInputView inputs, String port, double fallback) {
+        return inputs.first(port)
+                .filter(value -> ProgramValueTypes.canConnect(
+                        value.type(), ProgramValueTypes.FLOAT))
+                .map(value -> ((Number) value.value()).doubleValue())
+                .orElse(fallback);
     }
 
     static long chargeDelayTicks(

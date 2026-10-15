@@ -1,6 +1,7 @@
 package org.academy.internal.common.ability.aeromanip.movement;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
@@ -63,6 +64,38 @@ class HighSpeedJetStructureServiceTest {
         assertTrue(bounds.minX < 0.5 && bounds.maxX > 0.5);
         assertTrue(bounds.minY < 64.5 && bounds.maxY > 64.5);
         assertTrue(bounds.minZ < 0.0 && bounds.maxZ > 1.0);
+    }
+
+    @Test
+    void localThrustDirectionPointsAwayFromTheSupportFace() {
+        var north = HighSpeedJetStructureService.localThrustDirection(Direction.NORTH);
+        assertEquals(0.0, north.x, 1.0e-9);
+        assertEquals(0.0, north.y, 1.0e-9);
+        assertEquals(1.0, north.z, 1.0e-9);
+        var up = HighSpeedJetStructureService.localThrustDirection(Direction.UP);
+        assertEquals(-1.0, up.y, 1.0e-9);
+    }
+
+    @Test
+    void supportFallbackNeverGuessesWhileTheStructureIsLive() {
+        assertEquals(HighSpeedJetStructureService.SupportFallback.STRUCTURE,
+                HighSpeedJetStructureService.supportFallback(true, true, true));
+        assertEquals(HighSpeedJetStructureService.SupportFallback.NONE,
+                HighSpeedJetStructureService.supportFallback(true, false, true),
+                "a live structure with a missing support cell must not fall back to the host block");
+        assertEquals(HighSpeedJetStructureService.SupportFallback.BLOCK,
+                HighSpeedJetStructureService.supportFallback(false, false, true));
+        assertEquals(HighSpeedJetStructureService.SupportFallback.NONE,
+                HighSpeedJetStructureService.supportFallback(false, false, false));
+    }
+
+    @Test
+    void programWindowsStayInsideTheLegacyDurationBudget() {
+        assertEquals(600, HighSpeedJetStructureService.PROGRAM_SESSION_TICKS);
+        assertEquals(600L, HighSpeedJetStructureService.MAXIMUM_PROGRAM_MOVE_TICKS);
+        assertEquals(1200L, HighSpeedJetStructureService.MAXIMUM_PROGRAM_LAUNCH_TICKS,
+                "the legacy launch duration range of sixty seconds must stay representable");
+        assertEquals(256, HighSpeedJetStructureService.MAXIMUM_PROGRAM_BUDGET);
     }
 
     @Test

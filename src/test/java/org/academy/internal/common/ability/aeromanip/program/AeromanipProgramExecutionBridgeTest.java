@@ -6,6 +6,10 @@ import net.minecraft.resources.Identifier;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramGraph;
+import org.academy.api.common.ability.program.ProgramStructureAnchor;
+import org.academy.api.common.ability.program.ProgramStructureControl;
+import org.academy.api.common.ability.program.ProgramStructurePose;
+import org.academy.api.common.ability.program.ProgramStructureReference;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.academy.internal.common.ability.program.registry.AbilityProgramDefinitions;
 import org.academy.internal.common.ability.program.registry.CommonProgramNodeIds;
@@ -487,6 +491,61 @@ class AeromanipProgramExecutionBridgeTest {
                     + ":" + configuration.structureRadius()
                     + ":" + configuration.duration()
                     + ":" + configuration.restoreWhenSettled());
+        }
+
+        @Override
+        public StructureOperation extractStructure(
+                ProgramBlockPosition host,
+                int radius,
+                int budget
+        ) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public StructureOperation controlStructure(ProgramStructureReference structure) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public StructureOperation moveStructure(
+                ProgramStructureControl control,
+                ProgramWorldPosition target,
+                ProgramStructureAnchor anchor,
+                double seconds
+        ) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public StructureOperation rotateStructure(
+                ProgramStructureControl control,
+                ProgramStructurePose pose
+        ) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public StructureOperation launchStructure(
+                ProgramStructureControl control,
+                ProgramDirection direction,
+                float power,
+                double seconds
+        ) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public StructureOperation releaseStructure(ProgramStructureControl control) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public StructureOperation staticizeStructure(
+                ProgramStructureReference structure,
+                ProgramBlockPosition target
+        ) {
+            throw new UnsupportedOperationException();
         }
 
         @Override

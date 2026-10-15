@@ -15,6 +15,7 @@ public final class AeromanipProgramCapabilities {
             AcademyCraft.academy(SkillNames.LAMINAR_CUTTER);
     public static final Identifier HIGH_SPEED_JET =
             AcademyCraft.academy(SkillNames.HIGH_SPEED_JET);
+    public static final Identifier STRUCTURE = HIGH_SPEED_JET;
 
     private AeromanipProgramCapabilities() {
     }

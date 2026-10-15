@@ -5,6 +5,8 @@ import org.academy.api.common.structure.LegacyMotionUnits;
 import org.academy.api.common.structure.StructurePhysicsControl;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
 
+import java.util.List;
+
 /**
  * Shared high-speed jet propulsion calibration for skills, precision programs and non-player
  * ability actors. Every value converts the audited legacy per-tick motion: the legacy thruster
@@ -40,23 +42,128 @@ public final class JetStructureControl {
     }
 
     /**
-     * World-space thrust force for the solver in solver mass units times blocks/second squared.
-     * The legacy whole-body acceleration is converted with {@link LegacyMotionUnits} and scaled
-     * by the audited milestone factor; the level's absolute force ceiling still applies.
+     * Magnitude of the shared whole-body thrust budget in solver mass units times
+     * blocks/second squared. The legacy whole-body acceleration is converted with
+     * {@link LegacyMotionUnits} and scaled by the audited milestone factor; the level's
+     * absolute force ceiling still applies.
      */
-    public static Vec3 thrustForce(Vec3 thrustDirection, double mass, float power, int milestone) {
+    public static double thrustForceMagnitude(double mass, float power, int milestone) {
         requireMass(mass);
-        if (thrustDirection == null || thrustDirection.lengthSqr() <= 1.0e-8) {
-            throw new IllegalArgumentException("Jet thrust direction must be finite and non-zero");
-        }
         var legacyThrust = BASE_THRUST_PER_TICK
                 * ProgramPowerScale.effectMultiplier(power) * milestoneScale(milestone);
-        var force = thrustDirection.normalize().scale(
-                LegacyMotionUnits.accelerationPerSecondSquared(legacyThrust) * mass);
-        var length = force.length();
-        return length > StructurePhysicsControl.MAX_FORCE
-                ? force.scale(StructurePhysicsControl.MAX_FORCE / length)
-                : force;
+        var force = LegacyMotionUnits.accelerationPerSecondSquared(legacyThrust) * mass;
+        return Math.min(force, StructurePhysicsControl.MAX_FORCE);
+    }
+
+    /**
+     * World-space thrust force for the solver in solver mass units times blocks/second squared.
+     */
+    public static Vec3 thrustForce(Vec3 thrustDirection, double mass, float power, int milestone) {
+        if (!finiteNonZero(thrustDirection)) {
+            throw new IllegalArgumentException("Jet thrust direction must be finite and non-zero");
+        }
+        return thrustDirection.normalize().scale(thrustForceMagnitude(mass, power, milestone));
+    }
+
+    /**
+     * Combined force of one finite force group. The shared whole-body budget is divided across
+     * the supplied thrust directions, so more anchors, nozzles or fragments never multiply it and
+     * opposed directions cancel exactly. A direction list that is empty or entirely degenerate
+     * produces zero force.
+     */
+    public static Vec3 combinedThrustForce(
+            List<Vec3> thrustDirections,
+            double mass,
+            float power,
+            int milestone
+    ) {
+        var magnitude = thrustForceMagnitude(mass, power, milestone);
+        if (thrustDirections == null || thrustDirections.isEmpty()) return Vec3.ZERO;
+        var active = 0;
+        for (var direction : thrustDirections) {
+            if (finiteNonZero(direction)) active++;
+        }
+        if (active == 0) return Vec3.ZERO;
+        var share = magnitude / active;
+        var total = Vec3.ZERO;
+        for (var direction : thrustDirections) {
+            if (!finiteNonZero(direction)) continue;
+            total = total.add(direction.normalize().scale(share));
+        }
+        return total;
+    }
+
+    /**
+     * Force for exactly one outer physics step that reproduces the legacy integration
+     * {@code velocity = clamp(velocity + thrust, per-tick ceiling)} in converted units for a
+     * combined force group. The ceiling applies to the whole vector, exactly like the audited
+     * legacy clamp, and the shared budget is never multiplied by the anchor count.
+     */
+    public static Vec3 limitedCombinedThrustForce(
+            List<Vec3> thrustDirections,
+            Vec3 velocityPerSecond,
+            double mass,
+            float power,
+            int milestone
+    ) {
+        requireMass(mass);
+        requireFiniteVelocity(velocityPerSecond);
+        var force = combinedThrustForce(thrustDirections, mass, power, milestone);
+        return limitToCeiling(force, velocityPerSecond, mass, power);
+    }
+
+    /** One world-space action point with a world-space thrust direction. */
+    public record ThrustAnchor(Vec3 point, Vec3 direction) {
+    }
+
+    /**
+     * Accounting of one finite force group: the combined force and the {@code Σ(r × F)} torque
+     * with {@code r} measured from the center of mass. The shared budget caps the combined force
+     * only; the torque is derived from that same group and is never billed as a second budget.
+     */
+    public record ThrustGroup(Vec3 totalForce, Vec3 totalTorque) {
+    }
+
+    /**
+     * Shared-budget accounting for a multi-anchor force group. Each anchor contributes an equal
+     * share of the one thrust budget along its direction; symmetric anchors therefore cancel in
+     * both the combined force and the derived torque.
+     */
+    public static ThrustGroup thrustGroup(
+            List<ThrustAnchor> anchors,
+            Vec3 centerOfMass,
+            double mass,
+            float power,
+            int milestone
+    ) {
+        requireMass(mass);
+        if (centerOfMass == null
+                || !Double.isFinite(centerOfMass.x)
+                || !Double.isFinite(centerOfMass.y)
+                || !Double.isFinite(centerOfMass.z)) {
+            throw new IllegalArgumentException("Jet center of mass must be finite");
+        }
+        var directions = anchors == null
+                ? List.<Vec3>of()
+                : anchors.stream().map(ThrustAnchor::direction).toList();
+        var totalForce = combinedThrustForce(directions, mass, power, milestone);
+        var totalTorque = Vec3.ZERO;
+        if (anchors != null) {
+            var active = 0;
+            for (var anchor : anchors) {
+                if (anchor != null && finiteNonZero(anchor.direction())) active++;
+            }
+            if (active > 0) {
+                var share = thrustForceMagnitude(mass, power, milestone) / active;
+                for (var anchor : anchors) {
+                    if (anchor == null || !finiteNonZero(anchor.direction())
+                            || !finite(anchor.point())) continue;
+                    var force = anchor.direction().normalize().scale(share);
+                    totalTorque = totalTorque.add(anchor.point().subtract(centerOfMass).cross(force));
+                }
+            }
+        }
+        return new ThrustGroup(totalForce, totalTorque);
     }
 
     /**
@@ -72,13 +179,17 @@ public final class JetStructureControl {
             int milestone
     ) {
         requireMass(mass);
-        if (velocityPerSecond == null
-                || !Double.isFinite(velocityPerSecond.x)
-                || !Double.isFinite(velocityPerSecond.y)
-                || !Double.isFinite(velocityPerSecond.z)) {
-            throw new IllegalArgumentException("Jet velocity must be finite");
-        }
+        requireFiniteVelocity(velocityPerSecond);
         var force = thrustForce(thrustDirection, mass, power, milestone);
+        return limitToCeiling(force, velocityPerSecond, mass, power);
+    }
+
+    private static Vec3 limitToCeiling(
+            Vec3 force,
+            Vec3 velocityPerSecond,
+            double mass,
+            float power
+    ) {
         var next = velocityPerSecond.add(force.scale(PHYSICS_STEP_SECONDS / mass));
         var maximum = maximumSpeed(power);
         if (next.lengthSqr() > maximum * maximum) {
@@ -91,5 +202,22 @@ public final class JetStructureControl {
         if (!Double.isFinite(value) || value <= 0) {
             throw new IllegalArgumentException("Body mass must be finite and positive");
         }
+    }
+
+    private static void requireFiniteVelocity(Vec3 velocity) {
+        if (!finite(velocity)) {
+            throw new IllegalArgumentException("Jet velocity must be finite");
+        }
+    }
+
+    private static boolean finite(Vec3 value) {
+        return value != null
+                && Double.isFinite(value.x)
+                && Double.isFinite(value.y)
+                && Double.isFinite(value.z);
+    }
+
+    private static boolean finiteNonZero(Vec3 value) {
+        return finite(value) && value.lengthSqr() > 1.0e-8;
     }
 }

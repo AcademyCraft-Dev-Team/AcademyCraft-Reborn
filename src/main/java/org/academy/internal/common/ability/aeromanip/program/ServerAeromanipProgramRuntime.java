@@ -9,8 +9,16 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.program.ForwardingProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
+import org.academy.api.common.ability.program.ProgramStructureAnchor;
+import org.academy.api.common.ability.program.ProgramStructureControl;
+import org.academy.api.common.ability.program.ProgramStructureOperationResult;
+import org.academy.api.common.ability.program.ProgramStructurePose;
+import org.academy.api.common.ability.program.ProgramStructureReference;
 import org.academy.api.common.ability.program.ProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
+import org.academy.api.common.structure.StructureDynamics;
+import org.academy.api.common.structure.StructureRef;
+import org.academy.api.common.structure.StructureSpaces;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.charge.AeromanipChargeTier;
@@ -27,10 +35,13 @@ import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.world.entity.skill.HighSpeedJetNozzle;
 import org.jspecify.annotations.Nullable;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Authoritative Minecraft-server adapter for Aeromanip programs.
@@ -41,10 +52,18 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     public static final double MAX_ACTION_RANGE = AbilityProgramSpatialRanges.forCategory(
             AeromanipProgramNodeCatalog.AEROMANIP).actionRange();
     public static final int MAX_QUERY_RESULTS = 128;
+    private static final float STRUCTURE_EXTRACT_COST = 30.0f;
+    private static final float STRUCTURE_CONTROL_COST = 10.0f;
+    private static final float STRUCTURE_MOVE_COST = 5.0f;
+    private static final float STRUCTURE_LAUNCH_COST = 15.0f;
+    private static final double MAXIMUM_MOVE_SECONDS = 10.0;
+    private static final double MAXIMUM_LAUNCH_SECONDS = 60.0;
 
     private final ServerPlayer player;
     private final float costMultiplier;
     private final ServerProgramTargetResolver targets;
+    private final UUID runtimeToken = UUID.randomUUID();
+    private final Map<UUID, ProgramStructureControl> issuedControls = new HashMap<>();
     @Override
     public ProgramTargetResolver targetResolver() {
         return targets;
@@ -295,6 +314,117 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     }
 
     @Override
+    public StructureOperation extractStructure(ProgramBlockPosition host, int radius, int budget) {
+        requireCasterReady(Skills.HIGH_SPEED_JET.get());
+        var seed = requireLaunchSeed(host);
+        var result = HighSpeedJetStructureService.programExtract(player, seed, radius, budget);
+        if (result.status() != HighSpeedJetStructureService.ProgramStatus.COMPLETED) {
+            return StructureOperation.result(operationResult(result));
+        }
+        var reference = result.reference();
+        if (reference == null) return StructureOperation.rejected("committed_without_reference");
+        charge(Skills.HIGH_SPEED_JET.get(), STRUCTURE_EXTRACT_COST);
+        return StructureOperation.structure(programReference(reference),
+                ProgramStructureOperationResult.completed(result.detail(), reference));
+    }
+
+    @Override
+    public StructureOperation controlStructure(ProgramStructureReference structure) {
+        requireCasterReady(Skills.HIGH_SPEED_JET.get());
+        Objects.requireNonNull(structure, "structure");
+        var result = HighSpeedJetStructureService.programControl(
+                player, structure.reference(), structure.runtimeId());
+        if (result.status() != HighSpeedJetStructureService.ProgramStatus.COMPLETED) {
+            return StructureOperation.result(operationResult(result));
+        }
+        var session = HighSpeedJetStructureService.programSession(player).orElse(null);
+        if (session == null || !session.reference().equals(structure.reference())) {
+            return StructureOperation.rejected("control_session_unavailable");
+        }
+        var token = new ProgramStructureControl(structure.reference(), structure.runtimeId(),
+                session.controllerId(), player.getUUID(), runtimeToken);
+        issuedControls.put(token.controlId(), token);
+        charge(Skills.HIGH_SPEED_JET.get(), STRUCTURE_CONTROL_COST);
+        return StructureOperation.control(token,
+                ProgramStructureOperationResult.completed(result.detail(), structure.reference()));
+    }
+
+    @Override
+    public StructureOperation moveStructure(ProgramStructureControl control,
+                                            @Nullable ProgramWorldPosition target,
+                                            @Nullable ProgramStructureAnchor anchor,
+                                            double seconds) {
+        requireCasterReady(Skills.HIGH_SPEED_JET.get());
+        var rejection = validateControl(control);
+        if (rejection != null) return StructureOperation.rejected(rejection);
+        if (!Double.isFinite(seconds) || seconds < 0.1 || seconds > MAXIMUM_MOVE_SECONDS) {
+            return StructureOperation.rejected("invalid_duration");
+        }
+        if (anchor != null && resolveAnchorWorld(control, anchor) == null) {
+            return StructureOperation.rejected("anchor_unavailable");
+        }
+        Vec3 destination = null;
+        if (target != null) {
+            destination = targets.requireLocalPosition(target);
+            if (destination.distanceToSqr(player.position()) > MAX_ACTION_RANGE * MAX_ACTION_RANGE) {
+                return StructureOperation.rejected("target_out_of_range");
+            }
+        }
+        var result = HighSpeedJetStructureService.programMove(player, control.reference(),
+                control.controlId(), destination,
+                anchor == null ? null : anchor.localPosition(),
+                (long) Math.ceil(seconds * 20.0));
+        if (result.status() == HighSpeedJetStructureService.ProgramStatus.COMPLETED) {
+            charge(Skills.HIGH_SPEED_JET.get(), STRUCTURE_MOVE_COST);
+        }
+        return StructureOperation.result(operationResult(result));
+    }
+
+    @Override
+    public StructureOperation rotateStructure(ProgramStructureControl control,
+                                              @Nullable ProgramStructurePose pose) {
+        var rejection = validateControl(control);
+        if (rejection != null) return StructureOperation.rejected(rejection);
+        return StructureOperation.unavailable("finite_torque_control_unavailable");
+    }
+
+    @Override
+    public StructureOperation launchStructure(ProgramStructureControl control,
+                                              ProgramDirection direction,
+                                              float power,
+                                              double seconds) {
+        requireCasterReady(Skills.HIGH_SPEED_JET.get());
+        var rejection = validateControl(control);
+        if (rejection != null) return StructureOperation.rejected(rejection);
+        if (!Double.isFinite(seconds) || seconds < 0.1 || seconds > MAXIMUM_LAUNCH_SECONDS) {
+            return StructureOperation.rejected("invalid_duration");
+        }
+        var normalized = normalizedVector(direction);
+        var result = HighSpeedJetStructureService.programLaunch(player, control.reference(),
+                control.controlId(), normalized, power, (long) Math.ceil(seconds * 20.0));
+        if (result.status() == HighSpeedJetStructureService.ProgramStatus.COMPLETED) {
+            charge(Skills.HIGH_SPEED_JET.get(), STRUCTURE_LAUNCH_COST);
+        }
+        return StructureOperation.result(operationResult(result));
+    }
+
+    @Override
+    public StructureOperation releaseStructure(ProgramStructureControl control) {
+        var rejection = validateControl(control);
+        if (rejection != null) return StructureOperation.rejected(rejection);
+        var result = HighSpeedJetStructureService.programRelease(
+                player, control.reference(), control.controlId());
+        return StructureOperation.result(operationResult(result));
+    }
+
+    @Override
+    public StructureOperation staticizeStructure(ProgramStructureReference structure,
+                                                 @Nullable ProgramBlockPosition target) {
+        Objects.requireNonNull(structure, "structure");
+        return StructureOperation.unavailable("safe_staticization_unavailable");
+    }
+
+    @Override
     public Optional<ProgramWorldPosition> positionOf(Object entityReference) {
         return targets.positionOf(entityReference);
     }
@@ -493,6 +623,45 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
             throw new IllegalArgumentException("Jet duration must be between 1 and 60 seconds");
         }
         return durationSeconds * 20;
+    }
+
+    private ProgramStructureReference programReference(StructureRef reference) {
+        var handle = StructureSpaces.resolve(targets.level().getServer(), reference).orElseThrow(() ->
+                new IllegalStateException("Committed structure handle is unavailable"));
+        return new ProgramStructureReference(reference, handle.runtimeId());
+    }
+
+    private static ProgramStructureOperationResult operationResult(
+            HighSpeedJetStructureService.ProgramResult result) {
+        return switch (result.status()) {
+            case COMPLETED -> result.reference() == null
+                    ? ProgramStructureOperationResult.completed(result.detail())
+                    : ProgramStructureOperationResult.completed(result.detail(), result.reference());
+            case PENDING -> ProgramStructureOperationResult.pending(result.detail());
+            case REJECTED -> ProgramStructureOperationResult.rejected(result.detail());
+            case UNAVAILABLE -> ProgramStructureOperationResult.unavailable(result.detail());
+        };
+    }
+
+    private @Nullable String validateControl(ProgramStructureControl control) {
+        if (control == null) return "missing_structure_control";
+        if (!control.actorId().equals(player.getUUID())) return "control_actor_mismatch";
+        if (!control.runtimeToken().equals(runtimeToken)) return "control_runtime_expired";
+        var issued = issuedControls.get(control.controlId());
+        if (issued == null || !issued.equals(control)) return "control_token_stale";
+        return null;
+    }
+
+    /** World point of an explicit local anchor; an unloaded or replaced epoch is rejected. */
+    private @Nullable Vec3 resolveAnchorWorld(ProgramStructureControl control,
+                                              ProgramStructureAnchor anchor) {
+        if (!anchor.structure().reference().equals(control.reference())
+                || !anchor.structure().runtimeId().equals(control.structureRuntimeId())) {
+            return null;
+        }
+        var state = StructureDynamics.motion(targets.level(), control.reference()).orElse(null);
+        if (state == null) return null;
+        return state.pose().localToWorldPoint(Vec3.atCenterOf(anchor.localPosition()));
     }
 
     private static Vec3 normalizedVector(ProgramDirection direction) {

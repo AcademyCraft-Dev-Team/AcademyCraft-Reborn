@@ -45,10 +45,15 @@ import java.util.UUID;
  * and a termination that clears control while retaining the captured structure.
  */
 final class NativeStructurePhysicsHighSpeedJetSmokeChecks implements AutoCloseable {
-    private enum Phase { PLACE, NOZZLE, LAUNCH, CAPTURE, PHYSICS, THRUST, STOP, VERIFY, DONE }
+    private enum Phase {
+        PLACE, NOZZLE, LAUNCH, CAPTURE, PHYSICS, THRUST, STOP, VERIFY,
+        PROGRAM_SETUP, PROGRAM_EXTRACT, PROGRAM_CAPTURE, PROGRAM_MOVE, PROGRAM_MOVE_WAIT,
+        PROGRAM_LAUNCH, PROGRAM_LAUNCH_WAIT, PROGRAM_STOP, PROGRAM_VERIFY, DONE
+    }
 
     private static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS;
     private static final BlockPos SOURCE_OFFSET = new BlockPos(0, 4, 32);
+    private static final BlockPos PROGRAM_SOURCE_OFFSET = new BlockPos(0, 4, 44);
     private static final float POWER = 1.0f;
     private static final double EXPECTED_SPEED = JetStructureControl.maximumSpeed(POWER);
 
@@ -56,6 +61,7 @@ final class NativeStructurePhysicsHighSpeedJetSmokeChecks implements AutoCloseab
     private final BlockPos base;
     private final StringBuilder evidence;
     private final List<BlockPos> sourceCells = new ArrayList<>();
+    private final List<BlockPos> programSourceCells = new ArrayList<>();
     private final List<ChunkPos> tickets = new ArrayList<>();
     private final ServerPlayer player;
     private final Connection connection;
@@ -69,8 +75,12 @@ final class NativeStructurePhysicsHighSpeedJetSmokeChecks implements AutoCloseab
     private Vec3 initialCenter;
     private double initialCp;
     private double initialMp;
+    private BlockPos programSeed;
+    private StructureRef programReference;
+    private StructurePhysicsRegion programRegion;
+    private double programInitialZ;
     private int age, ticks;
-    private boolean sawPending, closed;
+    private boolean sawPending, programSawPending, closed;
     private Phase phase = Phase.PLACE;
 
     NativeStructurePhysicsHighSpeedJetSmokeChecks(ServerLevel host, BlockPos base, StringBuilder evidence) {
@@ -246,6 +256,174 @@ final class NativeStructurePhysicsHighSpeedJetSmokeChecks implements AutoCloseab
                         "High-speed jet fell back to a legacy structure entity");
                 evidence.append("hsjet_terminal_structure_active=true\n")
                         .append("hsjet_source_not_restored=true\nhsjet_no_drops=true\nhsjet_no_legacy_entity=true\n");
+                next(Phase.PROGRAM_SETUP);
+            }
+            case PROGRAM_SETUP -> {
+                // The first capture already asserted its retention; return its permanent slot and
+                // stand up a second nozzle fixture for the precision program entry points.
+                var first = reference;
+                reference = null;
+                NativeStructurePhysicsSmokeCleanup.releaseCapturedSlot(host, first, sourceCells);
+                if (nozzle != null && !nozzle.isRemoved()) nozzle.discard();
+                nozzle = null;
+                programSeed = base.offset(PROGRAM_SOURCE_OFFSET);
+                forceChunks();
+                require(host.getBlockState(programSeed).isAir()
+                                && host.getBlockEntity(programSeed) == null,
+                        "Program fixture refuses existing host content at " + programSeed);
+                require(host.setBlock(programSeed, Blocks.STONE.defaultBlockState(), FLAGS),
+                        "Cannot place the program source block at " + programSeed);
+                programSourceCells.add(programSeed);
+                nozzle = new HighSpeedJetNozzle(EntityTypes.HIGH_SPEED_JET_NOZZLE.get(), host);
+                nozzle.attach(player.getUUID(), programSeed, Direction.NORTH);
+                require(host.addFreshEntity(nozzle),
+                        "Cannot register the program jet nozzle fixture");
+                next(Phase.PROGRAM_EXTRACT);
+            }
+            case PROGRAM_EXTRACT -> {
+                var result = HighSpeedJetStructureService.programExtract(
+                        player,
+                        programSeed,
+                        HighSpeedJetStructureService.DEFAULT_STRUCTURE_RADIUS,
+                        0
+                );
+                require(result.status() == HighSpeedJetStructureService.ProgramStatus.PENDING
+                                || result.status() == HighSpeedJetStructureService.ProgramStatus.COMPLETED,
+                        "Program extraction was rejected: " + result.status() + ":" + result.detail());
+                programSawPending = result.status()
+                        == HighSpeedJetStructureService.ProgramStatus.PENDING;
+                if (result.status() == HighSpeedJetStructureService.ProgramStatus.COMPLETED) {
+                    programReference = result.reference();
+                    require(programReference != null,
+                            "Committed program extraction published no reference");
+                }
+                next(Phase.PROGRAM_CAPTURE);
+            }
+            case PROGRAM_CAPTURE -> {
+                var session = HighSpeedJetStructureService.programSession(player).orElse(null);
+                if (session == null) {
+                    require(age < 300, "Program capture never committed a session");
+                    return false;
+                }
+                programReference = session.reference();
+                var structureHandle = StructureSpaces.resolve(host.getServer(), programReference)
+                        .orElseThrow(() -> new IllegalStateException(
+                                "Program capture handle is not resolvable"));
+                require(structureHandle.lifecycle() == StructureLifecycle.ACTIVE,
+                        "Program capture handle is not ACTIVE");
+                require(NativeStructureRuntime.ID.equals(programReference.backend()),
+                        "Program capture did not use the native structure backend");
+                require(host.getBlockState(programSeed).isAir(),
+                        "Program capture left its source block at " + programSeed);
+                require(HighSpeedJetStructureService.resolvesSupportCell(
+                                player, programReference, BlockPos.ZERO),
+                        "Program nozzle support cell does not resolve to a captured structure cell");
+                var control = HighSpeedJetStructureService.programControl(
+                        player, programReference, structureHandle.runtimeId());
+                require(control.status() == HighSpeedJetStructureService.ProgramStatus.COMPLETED,
+                        "Program control was rejected: " + control.detail());
+                programRegion = StructurePhysics.activeRegion(host, programReference).orElseThrow(() ->
+                        new IllegalStateException("Program session has no active physics region"));
+                evidence.append("hsjet_program_extract_pending=").append(programSawPending)
+                        .append("\nhsjet_program_session_committed=true")
+                        .append("\nhsjet_program_support_resolved=true")
+                        .append("\nhsjet_program_control=true\n");
+                next(Phase.PROGRAM_MOVE);
+            }
+            case PROGRAM_MOVE -> {
+                var session = HighSpeedJetStructureService.programSession(player).orElseThrow(() ->
+                        new IllegalStateException("Program session vanished before its move"));
+                var move = HighSpeedJetStructureService.programMove(
+                        player, programReference, session.controllerId(), null, null, 60L);
+                require(move.status() == HighSpeedJetStructureService.ProgramStatus.COMPLETED,
+                        "Program move was rejected: " + move.detail());
+                var motion = programRegion.motion(programReference).orElseThrow(() ->
+                        new IllegalStateException("Program move has no motion"));
+                programInitialZ = motion.pose().localToWorldPoint(motion.localCenterOfMass()).z;
+                next(Phase.PROGRAM_MOVE_WAIT);
+            }
+            case PROGRAM_MOVE_WAIT -> {
+                require(programRegion.status() != StructurePhysicsRegion.Status.FAILED,
+                        "Program region failed during its move: " + programRegion.diagnostic());
+                var current = HighSpeedJetStructureService.diagnostic(player).orElse(null);
+                if (current == null || current.stage()
+                        != HighSpeedJetStructureService.Stage.THRUSTING) {
+                    require(age < 240, "Program move never engaged thrust: " + current);
+                    return false;
+                }
+                require(current.controlActive(), "Program move lost its control lease");
+                var motion = programRegion.motion(programReference).orElse(null);
+                if (motion == null) return false;
+                var center = motion.pose().localToWorldPoint(motion.localCenterOfMass());
+                if (center.z - programInitialZ < 0.25) {
+                    require(age < 240, "Program move did not thrust along the local nozzle direction");
+                    return false;
+                }
+                evidence.append("hsjet_program_move_engaged=true\n")
+                        .append("hsjet_program_move_shared_direction=true\n");
+                next(Phase.PROGRAM_LAUNCH);
+            }
+            case PROGRAM_LAUNCH -> {
+                var session = HighSpeedJetStructureService.programSession(player).orElseThrow(() ->
+                        new IllegalStateException("Program session vanished before its launch"));
+                var launch = HighSpeedJetStructureService.programLaunch(player, programReference,
+                        session.controllerId(), new Vec3(0.0, 0.0, 1.0), POWER, 100L);
+                require(launch.status() == HighSpeedJetStructureService.ProgramStatus.COMPLETED,
+                        "Program launch was rejected: " + launch.detail());
+                next(Phase.PROGRAM_LAUNCH_WAIT);
+            }
+            case PROGRAM_LAUNCH_WAIT -> {
+                require(programRegion.status() != StructurePhysicsRegion.Status.FAILED,
+                        "Program region failed during its launch: " + programRegion.diagnostic());
+                var current = HighSpeedJetStructureService.diagnostic(player).orElseThrow(() ->
+                        new IllegalStateException("Program launch context ended early"));
+                if (current.speed() < EXPECTED_SPEED * 0.95 && age < 240) return false;
+                require(current.controlActive(), "Program launch lost its control lease");
+                require(Math.abs(current.speed() - EXPECTED_SPEED) <= EXPECTED_SPEED * 0.05,
+                        "Program launch speed " + current.speed()
+                                + " is not the shared calibrated ceiling " + EXPECTED_SPEED);
+                evidence.append("hsjet_program_launch_speed=").append(current.speed()).append('\n');
+                next(Phase.PROGRAM_STOP);
+            }
+            case PROGRAM_STOP -> {
+                var session = HighSpeedJetStructureService.programSession(player).orElseThrow(() ->
+                        new IllegalStateException("Program session vanished before release"));
+                var released = HighSpeedJetStructureService.programRelease(
+                        player, programReference, session.controllerId());
+                require(released.status() == HighSpeedJetStructureService.ProgramStatus.COMPLETED
+                                && released.detail().equals("released"),
+                        "Program release was not a real release: " + released.detail());
+                var noop = HighSpeedJetStructureService.programRelease(
+                        player, programReference, session.controllerId());
+                require(noop.status() == HighSpeedJetStructureService.ProgramStatus.COMPLETED
+                                && noop.detail().equals("release_noop"),
+                        "Program release was not idempotent: " + noop.detail());
+                require(HighSpeedJetStructureService.programSession(player).isEmpty(),
+                        "Program session survived its release");
+                require(programRegion.control(programReference).isEmpty(),
+                        "Program release retained its physics control");
+                programRegion.close();
+                require(programRegion.status() == StructurePhysicsRegion.Status.CLOSED,
+                        "Program region did not close after release");
+                evidence.append("hsjet_program_release_idempotent=true\n")
+                        .append("hsjet_program_control_cleared=true\n");
+                next(Phase.PROGRAM_VERIFY);
+            }
+            case PROGRAM_VERIFY -> {
+                var structureHandle = StructureSpaces.resolve(host.getServer(), programReference)
+                        .orElseThrow(() -> new IllegalStateException(
+                                "Retained program structure is no longer active"));
+                require(structureHandle.lifecycle() == StructureLifecycle.ACTIVE,
+                        "Program release staticized or removed the retained structure");
+                require(host.getBlockState(programSeed).isAir(),
+                        "Program release restored source blocks at " + programSeed);
+                var area = new AABB(programSeed).inflate(8.0);
+                require(host.getEntitiesOfClass(ItemEntity.class, area).isEmpty(),
+                        "Program release dropped items instead of retaining the structure");
+                require(host.getEntitiesOfClass(BlockStructureEntity.class, area).isEmpty(),
+                        "Program release fell back to a legacy structure entity");
+                evidence.append("hsjet_program_retained=true\n")
+                        .append("hsjet_program_source_not_restored=true\n");
                 next(Phase.DONE);
                 return finish();
             }
@@ -338,9 +516,24 @@ final class NativeStructurePhysicsHighSpeedJetSmokeChecks implements AutoCloseab
             }
             region = null;
         }
+        if (programRegion != null) {
+            try {
+                if (programRegion.status() != StructurePhysicsRegion.Status.CLOSED) {
+                    programRegion.close();
+                }
+            } catch (RuntimeException failure) {
+                AcademyCraft.LOGGER.warn("High-speed jet program region cleanup failed", failure);
+            }
+            programRegion = null;
+        }
         if (reference != null) {
             NativeStructurePhysicsSmokeCleanup.releaseCapturedSlot(host, reference, sourceCells);
             reference = null;
+        }
+        if (programReference != null) {
+            NativeStructurePhysicsSmokeCleanup.releaseCapturedSlot(
+                    host, programReference, programSourceCells);
+            programReference = null;
         }
         while (!tickets.isEmpty()) {
             var chunk = tickets.removeFirst();

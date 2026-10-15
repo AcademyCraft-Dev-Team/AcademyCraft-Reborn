@@ -21,6 +21,8 @@ import org.academy.api.common.structure.BlockStructureKinetics;
 import org.academy.api.common.structure.LegacyMotionUnits;
 import org.academy.api.common.structure.StructureBackendStatus;
 import org.academy.api.common.structure.StructureCaptureRequest;
+import org.academy.api.common.structure.StructureDirectControl;
+import org.academy.api.common.structure.StructureDynamics;
 import org.academy.api.common.structure.StructureMotionState;
 import org.academy.api.common.structure.StructureLifecycle;
 import org.academy.api.common.structure.StructurePhysics;
@@ -66,6 +68,12 @@ public final class HighSpeedJetStructureService {
     private static final long CAPTURE_TIMEOUT_TICKS = 600;
     private static final int TRACTION_LEASE_TICKS = 20;
     private static final int REGION_UNAVAILABLE_GRACE_TICKS = 40;
+    /** Shared idle/engagement window of one precision program session in server ticks. */
+    public static final int PROGRAM_SESSION_TICKS = 600;
+    public static final long MAXIMUM_PROGRAM_MOVE_TICKS = 600L;
+    public static final long MAXIMUM_PROGRAM_LAUNCH_TICKS = 1200L;
+    public static final int MAXIMUM_PROGRAM_BUDGET = 256;
+    public static final double MAXIMUM_PROGRAM_MOVE_RANGE = 32.0;
     private static final double REGION_MARGIN = 6.0;
     private static final double FOLLOW_TRIGGER = 2.0;
     private static final double FOLLOW_LOOKAHEAD_SECONDS = 0.5;
@@ -90,7 +98,7 @@ public final class HighSpeedJetStructureService {
 
     /** Public stage observation for integrations and validation; it cannot drive the skill. */
     public enum Stage {
-        CAPTURING, AWAITING_PHYSICS, THRUSTING
+        CAPTURING, AWAITING_PHYSICS, THRUSTING, SABLE_DIRECT
     }
 
     public record Diagnostic(
@@ -115,6 +123,429 @@ public final class HighSpeedJetStructureService {
         if (session == null) return Optional.empty();
         return Optional.of(new Diagnostic(session.stage, session.reference, session.blockCount,
                 session.controlActive(), sable(session.reference), session.launchSpeed, session.impactCount));
+    }
+
+    /** Explicit program outcome codes; callers branch on status/detail, never on log text. */
+    public enum ProgramStatus {
+        COMPLETED, PENDING, REJECTED, UNAVAILABLE
+    }
+
+    public record ProgramResult(ProgramStatus status, String detail, @Nullable StructureRef reference) {
+        public static ProgramResult completed(String detail, @Nullable StructureRef reference) {
+            return new ProgramResult(ProgramStatus.COMPLETED, detail, reference);
+        }
+
+        public static ProgramResult pending(String detail) {
+            return new ProgramResult(ProgramStatus.PENDING, detail, null);
+        }
+
+        public static ProgramResult rejected(String detail) {
+            return new ProgramResult(ProgramStatus.REJECTED, detail, null);
+        }
+
+        public static ProgramResult unavailable(String detail) {
+            return new ProgramResult(ProgramStatus.UNAVAILABLE, detail, null);
+        }
+    }
+
+    /**
+     * Program extraction entry: the same nozzle-hosted capture transaction as the skill path
+     * without skill messages or session resource charging. The nozzle support cell must resolve
+     * to a captured structure cell; a pending capture publishes no reference and every rejection
+     * keeps the source blocks. The committed session waits for an explicit program control.
+     */
+    public static ProgramResult programExtract(
+            ServerPlayer player,
+            BlockPos seed,
+            double radius,
+            int budget
+    ) {
+        requireThread(player);
+        Objects.requireNonNull(seed, "seed");
+        if (!Double.isFinite(radius)
+                || radius < DEFAULT_STRUCTURE_RADIUS || radius > MAXIMUM_STRUCTURE_RADIUS) {
+            return ProgramResult.rejected("invalid_radius");
+        }
+        if (budget < 0 || budget > MAXIMUM_PROGRAM_BUDGET) {
+            return ProgramResult.rejected("invalid_budget");
+        }
+        if (!(player.level() instanceof ServerLevel level)
+                || !Skills.HIGH_SPEED_JET.get().isEnabled(player)) {
+            return ProgramResult.rejected("host_unavailable");
+        }
+        var request = new LaunchRequest(seed, null, null, radius, 1.0f,
+                PROGRAM_SESSION_TICKS, false);
+        var plan = plan(player, request).orElse(null);
+        if (plan == null) return ProgramResult.rejected("plan_unavailable");
+        var effectiveBudget = budget == 0
+                ? cellBudget(level) : Math.min(budget, cellBudget(level));
+        var positions = cropToBudget(plan.positions, seed, effectiveBudget);
+        if (positions.isEmpty() || !positions.contains(seed)) {
+            return ProgramResult.rejected("budget_excludes_seed");
+        }
+        var origin = minimumCorner(positions);
+        var nozzles = new ArrayList<NozzleMount>();
+        for (var nozzle : plan.nozzles) {
+            if (positions.contains(nozzle.supportPos())) {
+                nozzles.add(new NozzleMount(nozzle,
+                        nozzle.supportPos().subtract(origin), nozzle.face()));
+            }
+        }
+        if (nozzles.stream().noneMatch(mount -> mount.nozzle == plan.targetNozzle)) {
+            return ProgramResult.rejected("support_unresolved");
+        }
+        var playerId = player.getUUID();
+        var abandoned = CAPTURES.remove(playerId);
+        if (abandoned != null) {
+            AcademyCraft.LOGGER.info(
+                    "High-Speed Jet capture {} was abandoned for a newer program extract",
+                    abandoned.transactionId);
+        }
+        stopSession(playerId, null, "replaced_by_program_extract");
+        var result = StructureTransactions.capture(level, new StructureCaptureRequest(
+                positions, effectiveBudget, StructureCaptureRequest.MAXIMUM_SPAN,
+                capturePermission(player)));
+        if (result.pending()) {
+            var reference = result.structure().orElse(null);
+            if (reference == null) return ProgramResult.rejected("pending_without_reference");
+            CAPTURES.put(playerId, new CaptureState(reference, result.transactionId(),
+                    level.dimension(), level.getGameTime(), request, List.copyOf(nozzles),
+                    plan.targetNozzle, plan.launchDirection, List.copyOf(positions), 1.0f, true));
+            return ProgramResult.pending(result.status() + ":" + result.detail());
+        }
+        if (!result.succeeded()) {
+            return ProgramResult.rejected(result.status() + ":" + result.detail());
+        }
+        var reference = result.structure().orElse(null);
+        if (reference == null) return ProgramResult.rejected("committed_without_reference");
+        if (!beginProgramSession(player, reference, request, nozzles, plan.targetNozzle,
+                plan.launchDirection, positions, level)) {
+            return ProgramResult.rejected("session_start_failed");
+        }
+        return ProgramResult.completed("committed", reference);
+    }
+
+    /**
+     * Program control entry. An existing program session of this player for the same structure is
+     * activated; a committed Sable body without a session receives the lightweight direct-velocity
+     * lease instead of a physics region. Another actor's session is rejected, never stolen, and a
+     * replaced body epoch or an unavailable region is reported explicitly.
+     */
+    public static ProgramResult programControl(
+            ServerPlayer player,
+            StructureRef reference,
+            UUID runtimeId
+    ) {
+        requireThread(player);
+        Objects.requireNonNull(reference, "reference");
+        Objects.requireNonNull(runtimeId, "runtimeId");
+        var playerId = player.getUUID();
+        var held = SESSIONS.get(playerId);
+        if (held != null && !held.reference.equals(reference)) {
+            // One structure action per player; adopting a new body first ends the previous
+            // session while retaining that structure, its region and its inertia.
+            stopSession(playerId, null, "replaced_by_program_control");
+            held = null;
+        }
+        for (var entry : SESSIONS.entrySet()) {
+            if (!entry.getKey().equals(playerId) && entry.getValue().reference.equals(reference)) {
+                return ProgramResult.rejected("structure_controlled");
+            }
+        }
+        for (var other : CAPTURES.values()) {
+            if (other.reference.equals(reference)) return ProgramResult.rejected("structure_capturing");
+        }
+        if (held != null) {
+            // A skill session thrusts with its own fixed direction and window; a program taking it
+            // over could only partially honor move/launch, so it is rejected explicitly instead of
+            // silently sharing semantics.
+            if (!held.program) return ProgramResult.rejected("skill_session_active");
+            if (held.directControl) {
+                if (!(player.level() instanceof ServerLevel level)) {
+                    return ProgramResult.rejected("host_unavailable");
+                }
+                var status = StructureDirectControl.validate(
+                        level, reference, player, held.controllerId);
+                if (status == StructureDirectControl.Status.ACTIVE) {
+                    return ProgramResult.completed("control_active", reference);
+                }
+                stopSession(playerId, held.launchId, "control_lease_lost");
+                return ProgramResult.rejected(status == StructureDirectControl.Status.OCCUPIED
+                        ? "structure_controlled" : "structure_unavailable");
+            }
+            if (!(player.level() instanceof ServerLevel level)) {
+                return ProgramResult.rejected("host_unavailable");
+            }
+            var handle = StructureSpaces.resolve(level.getServer(), reference).orElse(null);
+            if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) {
+                return ProgramResult.rejected("structure_unavailable");
+            }
+            if (!handle.runtimeId().equals(runtimeId)) {
+                return ProgramResult.rejected("stale_structure_epoch");
+            }
+            if (held.region == null
+                    || held.region.status() == StructurePhysicsRegion.Status.FAILED) {
+                return ProgramResult.rejected("region_unavailable");
+            }
+            if (held.region.motion(reference).isEmpty()) {
+                return ProgramResult.rejected("motion_unavailable");
+            }
+            if (held.controlled) return ProgramResult.completed("control_active", reference);
+            held.controlled = true;
+            return ProgramResult.completed("control_acquired", reference);
+        }
+        if (!(player.level() instanceof ServerLevel level)) {
+            return ProgramResult.rejected("host_unavailable");
+        }
+        if (!sable(reference)) return ProgramResult.rejected("no_matching_session");
+        var handle = StructureSpaces.resolve(level.getServer(), reference).orElse(null);
+        if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) {
+            return ProgramResult.rejected("structure_unavailable");
+        }
+        if (!handle.runtimeId().equals(runtimeId)) {
+            return ProgramResult.rejected("stale_structure_epoch");
+        }
+        if (StructureDynamics.motion(level, reference).isEmpty()) {
+            return ProgramResult.rejected("motion_unavailable");
+        }
+        var session = Session.programSable(reference, level.dimension(), null, List.of(), null,
+                Vec3.ZERO, 0);
+        var status = StructureDirectControl.acquire(
+                level, reference, player, session.controllerId);
+        if (status == StructureDirectControl.Status.OCCUPIED) {
+            return ProgramResult.rejected("structure_controlled");
+        }
+        if (status != StructureDirectControl.Status.ACTIVE) {
+            return ProgramResult.rejected("structure_unavailable");
+        }
+        session.directControl = true;
+        session.controlled = true;
+        SESSIONS.put(playerId, session);
+        return ProgramResult.completed("control_acquired", reference);
+    }
+
+    /**
+     * Program move entry: bounded nozzle/pressure force at the captured local anchors. The world
+     * thrust direction of every anchor is re-derived from the live full pose each step; a world
+     * target turns the group into a bounded follow. The shared whole-body budget is split across
+     * the active anchors, so more nozzles or fragments never multiply it. The explicit anchor
+     * input must resolve to an actual captured support cell, and every rejection keeps the
+     * structure and its inertia. Sable bodies have no per-step force entry and are unavailable.
+     */
+    public static ProgramResult programMove(
+            ServerPlayer player,
+            StructureRef reference,
+            UUID controlId,
+            @Nullable Vec3 target,
+            @Nullable BlockPos moveAnchorOffset,
+            long durationTicks
+    ) {
+        requireThread(player);
+        var held = controlledSession(player, reference, controlId);
+        if (held == null) return ProgramResult.rejected("no_matching_control");
+        if (held.directControl || held.sableBody) return ProgramResult.unavailable("sable_move");
+        if (held.region == null || held.region.status() == StructurePhysicsRegion.Status.FAILED) {
+            return ProgramResult.rejected("region_unavailable");
+        }
+        if (target != null) {
+            if (!finite(target)) return ProgramResult.rejected("invalid_target");
+            var motion = held.region.motion(reference).orElse(null);
+            if (motion == null) return ProgramResult.rejected("motion_unavailable");
+            var center = motion.pose().localToWorldPoint(motion.localCenterOfMass());
+            if (center.distanceTo(target) > MAXIMUM_PROGRAM_MOVE_RANGE) {
+                return ProgramResult.rejected("target_out_of_range");
+            }
+        }
+        if (moveAnchorOffset != null
+                && held.mounts.stream().noneMatch(
+                        mount -> mount.supportOffset.equals(moveAnchorOffset))) {
+            return ProgramResult.rejected("anchor_unresolved");
+        }
+        if (!mountsResolve(player, held)) {
+            return ProgramResult.rejected("support_unresolved");
+        }
+        held.programMove = true;
+        held.engaged = true;
+        held.moveTarget = target;
+        held.moveAnchorOffset = moveAnchorOffset;
+        held.remainingTicks = (int) Mth.clamp(
+                durationTicks, 1L, MAXIMUM_PROGRAM_MOVE_TICKS);
+        engageNozzle(held);
+        return ProgramResult.completed("move", reference);
+    }
+
+    /**
+     * Program launch entry: one bounded launch along an explicit direction for the requested
+     * window. Native bodies keep the calibrated thrust ceiling and settle damage only at real
+     * contacts; a Sable body under the direct lease receives one exact bounded velocity instead,
+     * then coasts. No preset-trajectory damage is ever settled.
+     */
+    public static ProgramResult programLaunch(
+            ServerPlayer player,
+            StructureRef reference,
+            UUID controlId,
+            Vec3 direction,
+            float power,
+            long durationTicks
+    ) {
+        requireThread(player);
+        var held = controlledSession(player, reference, controlId);
+        if (held == null) return ProgramResult.rejected("no_matching_control");
+        if (!finite(direction) || direction.lengthSqr() <= 1.0e-8) {
+            return ProgramResult.rejected("invalid_direction");
+        }
+        if (!ProgramPowerScale.isAccepted(power)) {
+            return ProgramResult.rejected("invalid_power");
+        }
+        if (held.directControl) {
+            return launchSableDirect(player, held, direction.normalize(), power);
+        }
+        if (held.region == null || held.region.status() == StructurePhysicsRegion.Status.FAILED) {
+            return ProgramResult.rejected("region_unavailable");
+        }
+        if (!mountsResolve(player, held)) {
+            return ProgramResult.rejected("support_unresolved");
+        }
+        held.programMove = false;
+        held.engaged = true;
+        held.moveTarget = null;
+        held.moveAnchorOffset = null;
+        held.programPower = power;
+        held.launchDirection = direction.normalize();
+        held.remainingTicks = (int) Mth.clamp(
+                durationTicks, 1L, MAXIMUM_PROGRAM_LAUNCH_TICKS);
+        engageNozzle(held);
+        return ProgramResult.completed("launched", reference);
+    }
+
+    /**
+     * Program release entry: idempotent and token-scoped. It stops the sustained jet force and
+     * retains the structure with its linear and angular velocity; a stale or foreign token is a
+     * no-op and never terminates a successor's control.
+     */
+    public static ProgramResult programRelease(
+            ServerPlayer player,
+            StructureRef reference,
+            UUID controlId
+    ) {
+        requireThread(player);
+        var held = SESSIONS.get(player.getUUID());
+        if (held == null
+                || !held.reference.equals(reference)
+                || !held.controllerId.equals(controlId)) {
+            return ProgramResult.completed("release_noop", null);
+        }
+        stopSession(player.getUUID(), held.launchId, "program_release");
+        return ProgramResult.completed("released", reference);
+    }
+
+    /** The current session for this player, if any. It is a view, not a lease. */
+    public static Optional<Session> programSession(ServerPlayer player) {
+        requireThread(player);
+        return Optional.ofNullable(SESSIONS.get(player.getUUID()));
+    }
+
+    /**
+     * One-shot direct-velocity program launch for a Sable body under the lightweight lease: the
+     * calibrated per-power ceiling is applied without a mass gate, the lease and this session's
+     * control are withdrawn, and the body is observed in free flight until release or expiry.
+     */
+    private static ProgramResult launchSableDirect(
+            ServerPlayer player,
+            Session held,
+            Vec3 direction,
+            float power
+    ) {
+        if (!(player.level() instanceof ServerLevel level)) {
+            return ProgramResult.rejected("host_unavailable");
+        }
+        var status = StructureDirectControl.validate(
+                level, held.reference, player, held.controllerId);
+        if (status != StructureDirectControl.Status.ACTIVE) {
+            stopSession(player.getUUID(), held.launchId, "control_lease_lost");
+            return ProgramResult.rejected(status == StructureDirectControl.Status.OCCUPIED
+                    ? "structure_controlled" : "structure_unavailable");
+        }
+        var speed = JetStructureControl.maximumSpeed(ProgramPowerScale.require(power));
+        held.closeControl();
+        if (!StructureBackendRouter.launch(level, held.reference, direction, speed)) {
+            stopSession(player.getUUID(), held.launchId, "sable_launch_rejected");
+            return ProgramResult.rejected("sable_launch_rejected");
+        }
+        held.stage = Stage.SABLE_DIRECT;
+        held.engaged = true;
+        held.remainingTicks = PROGRAM_SESSION_TICKS;
+        held.launchSpeed = speed;
+        return ProgramResult.completed("launched", held.reference);
+    }
+
+    private static @Nullable Session controlledSession(
+            ServerPlayer player,
+            StructureRef reference,
+            UUID controlId
+    ) {
+        var held = SESSIONS.get(player.getUUID());
+        if (held == null
+                || !held.reference.equals(reference)
+                || !held.controllerId.equals(controlId)
+                || !held.controlled) {
+            return null;
+        }
+        return held;
+    }
+
+    private static boolean mountsResolve(ServerPlayer player, Session session) {
+        if (session.mounts.isEmpty()) return false;
+        return session.mounts.stream().allMatch(mount -> supportCellResolves(player, session, mount));
+    }
+
+    private static boolean supportCellResolves(ServerPlayer player, Session session, NozzleMount mount) {
+        return resolvesSupportCell(player, session.reference, mount.supportOffset);
+    }
+
+    /**
+     * Whether one local support offset still resolves to a live structure cell. A structure that
+     * cannot be resolved (unloaded, split away or replaced) is never guessed back to a host block;
+     * callers end the operation while retaining the unique content owner.
+     */
+    public static boolean resolvesSupportCell(
+            ServerPlayer player,
+            StructureRef reference,
+            BlockPos offset
+    ) {
+        if (!(player.level() instanceof ServerLevel level)) return false;
+        var handle = StructureSpaces.resolve(level.getServer(), reference).orElse(null);
+        if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) return false;
+        try {
+            return !handle.world().read(offset).state().isAir();
+        } catch (IllegalArgumentException | IllegalStateException failure) {
+            return false;
+        }
+    }
+
+    /**
+     * Pure fallback decision for a nozzle whose support can no longer be resolved: the structure
+     * stays the content owner whenever it is still live; a host-block fallback is only allowed
+     * after the structure itself is gone and the host block is still structurally solid.
+     */
+    public enum SupportFallback {
+        STRUCTURE, BLOCK, NONE
+    }
+
+    public static SupportFallback supportFallback(
+            boolean structureActive,
+            boolean supportCellPresent,
+            boolean blockSupportResolvable
+    ) {
+        if (structureActive) return supportCellPresent
+                ? SupportFallback.STRUCTURE : SupportFallback.NONE;
+        return blockSupportResolvable ? SupportFallback.BLOCK : SupportFallback.NONE;
+    }
+
+    private static void engageNozzle(Session session) {
+        if (session.targetNozzle == null || session.targetNozzle.isRemoved()) return;
+        session.targetNozzle.activate((int) Mth.clamp(
+                session.remainingTicks, 1L, MAXIMUM_PROGRAM_LAUNCH_TICKS));
     }
 
     /**
@@ -164,7 +595,7 @@ public final class HighSpeedJetStructureService {
             if (reference == null) return Optional.empty();
             CAPTURES.put(playerId, new CaptureState(reference, result.transactionId(), level.dimension(),
                     level.getGameTime(), request, List.copyOf(nozzles), plan.targetNozzle,
-                    plan.launchDirection, List.copyOf(positions), costMultiplier));
+                    plan.launchDirection, List.copyOf(positions), costMultiplier, false));
             return Optional.of(new LaunchHandle(playerId, result.transactionId()));
         }
         if (!result.succeeded()) {
@@ -340,10 +771,70 @@ public final class HighSpeedJetStructureService {
             stopSession(playerId, session.launchId, "duration_elapsed");
             return;
         }
+        if (session.stage == Stage.SABLE_DIRECT) {
+            tickSableDirect(player, session);
+            return;
+        }
+        if (session.program && (!session.controlled || !session.engaged)) {
+            tickProgramIdle(player, session);
+            return;
+        }
         switch (session.stage) {
             case AWAITING_PHYSICS -> tickAwait(player, session);
             case THRUSTING -> tickThrust(player, session);
+            case SABLE_DIRECT -> tickSableDirect(player, session);
             case CAPTURING -> throw new IllegalStateException("A held session cannot be capturing");
+        }
+    }
+
+    /**
+     * A program session before control and before its first move/launch only watches the region
+     * and the direct lease; it never acquires thrust control on its own and expires with the
+     * shared window while retaining the structure.
+     */
+    private static void tickProgramIdle(ServerPlayer player, Session session) {
+        if (session.directControl) {
+            if (!(player.level() instanceof ServerLevel level)) return;
+            var status = StructureDirectControl.validate(
+                    level, session.reference, player, session.controllerId);
+            if (status != StructureDirectControl.Status.ACTIVE) {
+                stopSession(player.getUUID(), session.launchId,
+                        status == StructureDirectControl.Status.OCCUPIED
+                                ? "control_occupied" : "control_unavailable");
+            }
+            return;
+        }
+        var region = session.region;
+        if (region == null) return;
+        if (region.status() == StructurePhysicsRegion.Status.FAILED) {
+            stopSession(player.getUUID(), session.launchId, "region_failed");
+            return;
+        }
+        if (region.status() != StructurePhysicsRegion.Status.READY) {
+            if (++session.graceTicks > REGION_UNAVAILABLE_GRACE_TICKS) {
+                stopSession(player.getUUID(), session.launchId, "region_unavailable");
+            }
+            return;
+        }
+        if (region.motion(session.reference).isEmpty()) {
+            if (++session.graceTicks > REGION_UNAVAILABLE_GRACE_TICKS) {
+                stopSession(player.getUUID(), session.launchId, "motion_unavailable");
+            }
+            return;
+        }
+        session.graceTicks = 0;
+    }
+
+    /** Coast observation for a directly launched Sable body; the lease is already withdrawn. */
+    private static void tickSableDirect(ServerPlayer player, Session session) {
+        if (!session.directControl) return;
+        if (!(player.level() instanceof ServerLevel level)) return;
+        var status = StructureDirectControl.validate(
+                level, session.reference, player, session.controllerId);
+        if (status != StructureDirectControl.Status.ACTIVE) {
+            stopSession(player.getUUID(), session.launchId,
+                    status == StructureDirectControl.Status.OCCUPIED
+                            ? "control_occupied" : "control_unavailable");
         }
     }
 
@@ -404,10 +895,93 @@ public final class HighSpeedJetStructureService {
             reject(player, current.status() + ":" + current.detail());
             return;
         }
+        var reference = current.structure().orElse(capture.reference);
+        if (capture.program) {
+            if (!beginProgramSession(player, reference, capture.request, capture.nozzles,
+                    capture.targetNozzle, capture.launchDirection, capture.positions,
+                    (ServerLevel) player.level())) {
+                AcademyCraft.LOGGER.warn(
+                        "High-Speed Jet program session could not start for {}; structure retained",
+                        reference);
+            }
+            return;
+        }
         beginSession(player, capture.transactionId,
-                current.structure().orElse(capture.reference), capture.request,
+                reference, capture.request,
                 capture.nozzles, capture.targetNozzle, capture.launchDirection,
                 capture.positions, capture.costMultiplier);
+    }
+
+    /**
+     * Program session start: the captured nozzle-hosted structure opens its shared physics region
+     * and waits for explicit program control. No skill message and no session-level resource
+     * charge happens here; the program charges per node. Sable bodies skip the region and wait
+     * for the direct lease.
+     */
+    private static boolean beginProgramSession(
+            ServerPlayer player,
+            StructureRef reference,
+            LaunchRequest request,
+            List<NozzleMount> nozzles,
+            HighSpeedJetNozzle targetNozzle,
+            Vec3 launchDirection,
+            List<BlockPos> positions,
+            ServerLevel level
+    ) {
+        if (sable(reference)) {
+            attachNozzles(player.getUUID(), reference, nozzles);
+            SESSIONS.put(player.getUUID(), Session.programSable(reference, level.dimension(),
+                    request, List.copyOf(nozzles), targetNozzle, launchDirection, positions.size()));
+            AcademyCraft.LOGGER.info(
+                    "High-Speed Jet program capture {} waits for program control", reference);
+            return true;
+        }
+        var handle = StructureSpaces.resolve(level.getServer(), reference).orElse(null);
+        if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) {
+            AcademyCraft.LOGGER.warn(
+                    "High-Speed Jet program capture {} lost its handle; structure retained", reference);
+            return false;
+        }
+        var limits = new AABB(level.getWorldBorder().getMinX(), level.getMinY(),
+                level.getWorldBorder().getMinZ(), level.getWorldBorder().getMaxX(),
+                level.getMaxY(), level.getWorldBorder().getMaxZ());
+        var bounds = regionBounds(positions, launchDirection, level.getMinY(), level.getMaxY(), limits);
+        if (bounds == null) {
+            AcademyCraft.LOGGER.warn(
+                    "High-Speed Jet program region cannot fit {}; structure retained", reference);
+            return false;
+        }
+        StructurePhysicsRegion region;
+        try {
+            region = StructurePhysics.openRegion(level, bounds);
+        } catch (RuntimeException | AssertionError failure) {
+            AcademyCraft.LOGGER.error(
+                    "High-Speed Jet program could not open a physics region for {}", reference, failure);
+            return false;
+        }
+        try {
+            region.attach(handle);
+        } catch (RuntimeException | AssertionError failure) {
+            AcademyCraft.LOGGER.error("High-Speed Jet program could not attach {}", reference, failure);
+            try {
+                region.close();
+            } catch (RuntimeException cleanup) {
+                failure.addSuppressed(cleanup);
+            }
+            return false;
+        }
+        attachNozzles(player.getUUID(), reference, nozzles);
+        var previousTicks = new HashMap<HighSpeedJetNozzle, Integer>();
+        for (var mount : nozzles) {
+            previousTicks.put(mount.nozzle, mount.nozzle.activeTicks());
+        }
+        SESSIONS.put(player.getUUID(), Session.programNative(reference, level.dimension(),
+                request, previousTicks, List.copyOf(nozzles), targetNozzle, launchDirection,
+                positions.size(), region));
+        AcademyCraft.LOGGER.info(
+                "High-Speed Jet program session started for {} with {} blocks",
+                reference, positions.size());
+        return true;
     }
 
     private static void beginSession(
@@ -491,7 +1065,8 @@ public final class HighSpeedJetStructureService {
         }
         targetNozzle.activate(request.durationTicks);
         var session = new Session(launchId, reference, level.dimension(), request,
-                previousTicks, targetNozzle, launchDirection, blockCount, region);
+                previousTicks, List.copyOf(nozzles), targetNozzle, launchDirection,
+                blockCount, region, false);
         SESSIONS.put(player.getUUID(), session);
         AcademyCraft.LOGGER.info("High-Speed Jet launch started for {} with {} blocks", reference, blockCount);
     }
@@ -517,12 +1092,15 @@ public final class HighSpeedJetStructureService {
             return;
         }
         session.graceTicks = 0;
-        var force = JetStructureControl.limitedThrustForce(session.launchDirection,
-                motion.linearVelocity(), motion.mass(), session.request.power(), milestone(player));
+        var command = thrustCommand(player, session, motion);
+        if (command == null) {
+            stopSession(player.getUUID(), session.launchId, "support_unresolved");
+            return;
+        }
         Optional<StructurePhysicsLease> acquired;
         try {
             acquired = region.acquireEntityControl(session.reference, player, session.controllerId,
-                    new StructurePhysicsControl.Force(motion.localCenterOfMass(), force),
+                    new StructurePhysicsControl.Force(command.localPoint(), command.force()),
                     TRACTION_LEASE_TICKS);
         } catch (IllegalStateException | IllegalArgumentException rejection) {
             AcademyCraft.LOGGER.warn("High-Speed Jet thrust control was rejected for {}",
@@ -570,9 +1148,13 @@ public final class HighSpeedJetStructureService {
             return;
         }
         try {
-            var force = JetStructureControl.limitedThrustForce(session.launchDirection,
-                    motion.linearVelocity(), motion.mass(), session.request.power(), milestone(player));
-            lease.setControl(new StructurePhysicsControl.Force(motion.localCenterOfMass(), force));
+            var command = thrustCommand(player, session, motion);
+            if (command == null) {
+                stopSession(player.getUUID(), session.launchId, "support_unresolved");
+                return;
+            }
+            lease.setControl(new StructurePhysicsControl.Force(
+                    command.localPoint(), command.force()));
             lease.renew(TRACTION_LEASE_TICKS);
         } catch (IllegalStateException | IllegalArgumentException rejection) {
             AcademyCraft.LOGGER.warn("High-Speed Jet thrust lease ended for {}", session.reference, rejection);
@@ -584,8 +1166,96 @@ public final class HighSpeedJetStructureService {
         applyImpacts(player, session, motion);
     }
 
+    /**
+     * World-space force anchors for one program step. Every anchor's local support cell was
+     * verified against the captured structure; its thrust direction is re-derived from the live
+     * full pose each step (or toward the explicit follow target), so roll and pitch rotate the
+     * force exactly with the body.
+     */
+    private static List<JetStructureControl.ThrustAnchor> programAnchors(
+            Session session,
+            StructureMotionState motion
+    ) {
+        var result = new ArrayList<JetStructureControl.ThrustAnchor>();
+        for (var mount : session.mounts) {
+            if (session.moveAnchorOffset != null
+                    && !mount.supportOffset.equals(session.moveAnchorOffset)) continue;
+            if (mount.nozzle.isRemoved()) continue;
+            var localCenter = new Vec3(
+                    mount.supportOffset.getX() + 0.5,
+                    mount.supportOffset.getY() + 0.5,
+                    mount.supportOffset.getZ() + 0.5);
+            var world = motion.pose().localToWorldPoint(localCenter);
+            Vec3 direction;
+            if (session.moveTarget != null) {
+                direction = session.moveTarget.subtract(world);
+                if (direction.lengthSqr() <= 1.0e-8) continue;
+                direction = direction.normalize();
+            } else {
+                direction = motion.pose().localToWorldDirection(localThrustDirection(mount.face));
+            }
+            result.add(new JetStructureControl.ThrustAnchor(world, direction));
+        }
+        return List.copyOf(result);
+    }
+
+    /** The local application point of one program force group: the centroid of its anchors. */
+    private static Vec3 localAnchorCentroid(Session session) {
+        double x = 0.0, y = 0.0, z = 0.0;
+        var count = 0;
+        for (var mount : session.mounts) {
+            if (session.moveAnchorOffset != null
+                    && !mount.supportOffset.equals(session.moveAnchorOffset)) continue;
+            if (mount.nozzle.isRemoved()) continue;
+            x += mount.supportOffset.getX() + 0.5;
+            y += mount.supportOffset.getY() + 0.5;
+            z += mount.supportOffset.getZ() + 0.5;
+            count++;
+        }
+        if (count == 0) return Vec3.ZERO;
+        return new Vec3(x / count, y / count, z / count);
+    }
+
+    /**
+     * One outer-step thrust command: the limited force (single calibrated vector for a skill
+     * launch, the shared-budget force group for a program move) and its local application point.
+     * A null result means no program anchor still resolves and the caller ends the action safely.
+     */
+    private static @Nullable ThrustCommand thrustCommand(
+            ServerPlayer player,
+            Session session,
+            StructureMotionState motion
+    ) {
+        var milestone = milestone(player);
+        var power = session.thrustPower();
+        if (session.program && session.programMove) {
+            var anchors = programAnchors(session, motion);
+            if (anchors.isEmpty()) return null;
+            var directions = anchors.stream()
+                    .map(JetStructureControl.ThrustAnchor::direction)
+                    .toList();
+            return new ThrustCommand(
+                    JetStructureControl.limitedCombinedThrustForce(directions,
+                            motion.linearVelocity(), motion.mass(), power, milestone),
+                    localAnchorCentroid(session));
+        }
+        return new ThrustCommand(
+                JetStructureControl.limitedThrustForce(session.launchDirection,
+                        motion.linearVelocity(), motion.mass(), power, milestone),
+                motion.localCenterOfMass());
+    }
+
+    /** Captured-frame thrust direction of one nozzle: away from its support face. */
+    static Vec3 localThrustDirection(Direction face) {
+        return Vec3.atLowerCornerOf(face.getUnitVec3i()).scale(-1.0);
+    }
+
+    private record ThrustCommand(Vec3 force, Vec3 localPoint) {
+    }
+
     private static boolean nozzleGate(ServerPlayer player, Session session) {
         var nozzle = session.targetNozzle;
+        if (nozzle == null) return !session.program;
         return !nozzle.isRemoved()
                 && nozzle.activeTicks() > 0
                 && nozzle.isOwnedBy(player)
@@ -673,7 +1343,7 @@ public final class HighSpeedJetStructureService {
             closingPerTick = LegacyMotionUnits.velocityPerTick(
                     Math.max(0.0, relative.dot(offset.normalize())));
         }
-        var damage = impactDamage(session.blockCount, closingPerTick, session.request.power());
+        var damage = impactDamage(session.blockCount, closingPerTick, session.thrustPower());
         var system = AbilitySystemServer.getSystem(player);
         damage *= system.getPlayerAbilityPowerMultiplier(player.getUUID())
                 * system.getPlayerDamageMultiplier(player.getUUID());
@@ -686,7 +1356,7 @@ public final class HighSpeedJetStructureService {
             Skills.HIGH_SPEED_JET.get().onHurt(player, living, damage);
         }
         var forceMultiplier = AeromanipTargeting.forceMultiplier(player, target);
-        var knockback = knockbackStrength(session.blockCount, closingPerTick, session.request.power())
+        var knockback = knockbackStrength(session.blockCount, closingPerTick, session.thrustPower())
                 * forceMultiplier;
         var movement = motion.linearVelocity();
         if (knockback > 0.0 && movement.lengthSqr() > 1.0e-8) {
@@ -947,6 +1617,7 @@ public final class HighSpeedJetStructureService {
         private final Vec3 launchDirection;
         private final List<BlockPos> positions;
         private final float costMultiplier;
+        private final boolean program;
 
         private CaptureState(
                 StructureRef reference,
@@ -958,7 +1629,8 @@ public final class HighSpeedJetStructureService {
                 HighSpeedJetNozzle targetNozzle,
                 Vec3 launchDirection,
                 List<BlockPos> positions,
-                float costMultiplier
+                float costMultiplier,
+                boolean program
         ) {
             this.reference = reference;
             this.transactionId = transactionId;
@@ -970,6 +1642,7 @@ public final class HighSpeedJetStructureService {
             this.launchDirection = launchDirection;
             this.positions = positions;
             this.costMultiplier = costMultiplier;
+            this.program = program;
         }
     }
 
@@ -1007,50 +1680,119 @@ public final class HighSpeedJetStructureService {
         }
     }
 
-    private static final class Session {
+    public static final class Session {
         private final UUID launchId;
         private final StructureRef reference;
         private final ResourceKey<Level> dimension;
-        private final LaunchRequest request;
+        private final @Nullable LaunchRequest request;
         private final Map<HighSpeedJetNozzle, Integer> previousNozzleTicks;
+        private final List<NozzleMount> mounts;
         private final HighSpeedJetNozzle targetNozzle;
-        private final Vec3 launchDirection;
         private final int blockCount;
         private final UUID controllerId = UUID.randomUUID();
-        private final StructurePhysicsRegion region;
+        private final @Nullable StructurePhysicsRegion region;
         private final Map<UUID, Long> impactTicks = new HashMap<>();
+        private final boolean program;
         private Stage stage = Stage.AWAITING_PHYSICS;
         private StructurePhysicsLease lease;
         private int remainingTicks;
         private int graceTicks;
         private int impactCount;
         private double launchSpeed;
+        private Vec3 launchDirection;
+        private boolean controlled;
+        private boolean engaged;
+        private boolean programMove;
+        private boolean directControl;
+        private boolean sableBody;
+        private @Nullable Vec3 moveTarget;
+        private @Nullable BlockPos moveAnchorOffset;
+        private float programPower = 1.0f;
 
         private Session(
                 UUID launchId,
                 StructureRef reference,
                 ResourceKey<Level> dimension,
-                LaunchRequest request,
+                @Nullable LaunchRequest request,
                 Map<HighSpeedJetNozzle, Integer> previousNozzleTicks,
+                List<NozzleMount> mounts,
                 HighSpeedJetNozzle targetNozzle,
                 Vec3 launchDirection,
                 int blockCount,
-                StructurePhysicsRegion region
+                @Nullable StructurePhysicsRegion region,
+                boolean program
         ) {
             this.launchId = launchId;
             this.reference = reference;
             this.dimension = dimension;
             this.request = request;
             this.previousNozzleTicks = Map.copyOf(previousNozzleTicks);
+            this.mounts = List.copyOf(mounts);
             this.targetNozzle = targetNozzle;
             this.launchDirection = launchDirection;
             this.blockCount = blockCount;
             this.region = region;
-            remainingTicks = request.durationTicks();
+            this.program = program;
+            remainingTicks = request == null ? PROGRAM_SESSION_TICKS : request.durationTicks();
         }
 
-        private boolean controlActive() {
-            return lease != null && lease.state() == StructurePhysicsLease.State.ACTIVE;
+        private static Session programNative(
+                StructureRef reference,
+                ResourceKey<Level> dimension,
+                LaunchRequest request,
+                Map<HighSpeedJetNozzle, Integer> previousNozzleTicks,
+                List<NozzleMount> mounts,
+                HighSpeedJetNozzle targetNozzle,
+                Vec3 launchDirection,
+                int blockCount,
+                StructurePhysicsRegion region
+        ) {
+            var session = new Session(UUID.randomUUID(), reference, dimension, request,
+                    previousNozzleTicks, mounts, targetNozzle, launchDirection, blockCount,
+                    region, true);
+            session.remainingTicks = PROGRAM_SESSION_TICKS;
+            session.controlled = false;
+            return session;
+        }
+
+        private static Session programSable(
+                StructureRef reference,
+                ResourceKey<Level> dimension,
+                @Nullable LaunchRequest request,
+                List<NozzleMount> mounts,
+                @Nullable HighSpeedJetNozzle targetNozzle,
+                Vec3 launchDirection,
+                int blockCount
+        ) {
+            var session = new Session(UUID.randomUUID(), reference, dimension, request,
+                    Map.of(), mounts, targetNozzle, launchDirection, blockCount, null, true);
+            session.remainingTicks = PROGRAM_SESSION_TICKS;
+            session.sableBody = true;
+            session.stage = Stage.SABLE_DIRECT;
+            session.controlled = false;
+            return session;
+        }
+
+        public StructureRef reference() {
+            return reference;
+        }
+
+        /** Program launches honor their explicit power; skill sessions keep the request power. */
+        private float thrustPower() {
+            return program ? programPower : request == null ? 1.0f : request.power();
+        }
+
+        public UUID controllerId() {
+            return controllerId;
+        }
+
+        public Stage stage() {
+            return stage;
+        }
+
+        public boolean controlActive() {
+            return directControl
+                    || lease != null && lease.state() == StructurePhysicsLease.State.ACTIVE;
         }
 
         private boolean usable(ServerPlayer player) {
@@ -1071,6 +1813,16 @@ public final class HighSpeedJetStructureService {
                 AcademyCraft.LOGGER.warn("High-Speed Jet lease cleanup failed for {}", reference, failure);
             } finally {
                 lease = null;
+            }
+            if (directControl) {
+                try {
+                    StructureDirectControl.release(reference, controllerId);
+                } catch (RuntimeException failure) {
+                    AcademyCraft.LOGGER.warn(
+                            "High-Speed Jet direct lease cleanup failed for {}", reference, failure);
+                } finally {
+                    directControl = false;
+                }
             }
         }
     }

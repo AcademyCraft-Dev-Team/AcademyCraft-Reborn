@@ -4,6 +4,8 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.structure.StructurePhysicsControl;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -42,6 +44,65 @@ class JetStructureControlTest {
         var overCeiling = JetStructureControl.limitedThrustForce(
                 new Vec3(0.0, 0.0, 1.0), new Vec3(0.0, 0.0, 130.0), 1.0, 1.0f, 0);
         assertEquals(-200.0, overCeiling.z, 1.0e-6);
+    }
+
+    @Test
+    void combinedGroupSplitsOneSharedBudgetAndCancelsSymmetricDirections() {
+        var one = JetStructureControl.combinedThrustForce(
+                List.of(new Vec3(0.0, 0.0, 1.0)), 1.0, 1.0f, 0);
+        assertEquals(192.0, one.length(), 1.0e-9);
+        var parallel = JetStructureControl.combinedThrustForce(
+                List.of(new Vec3(0.0, 0.0, 1.0), new Vec3(0.0, 0.0, 1.0)), 1.0, 1.0f, 0);
+        assertEquals(192.0, parallel.length(), 1.0e-9,
+                "two parallel anchors must not multiply the shared budget");
+        var cancelled = JetStructureControl.combinedThrustForce(
+                List.of(new Vec3(0.0, 0.0, 1.0), new Vec3(0.0, 0.0, -1.0)), 1.0, 1.0f, 0);
+        assertEquals(0.0, cancelled.length(), 1.0e-9,
+                "symmetric anchors must cancel exactly");
+        var orthogonal = JetStructureControl.combinedThrustForce(
+                List.of(new Vec3(0.0, 0.0, 1.0), new Vec3(1.0, 0.0, 0.0)), 1.0, 1.0f, 0);
+        assertEquals(96.0 * Math.sqrt(2.0), orthogonal.length(), 1.0e-9);
+        assertEquals(0.0, JetStructureControl.combinedThrustForce(
+                List.of(), 1.0, 1.0f, 0).length(), 0.0);
+        assertEquals(0.0, JetStructureControl.combinedThrustForce(
+                List.of(Vec3.ZERO), 1.0, 1.0f, 0).length(), 0.0);
+    }
+
+    @Test
+    void combinedGroupReproducesTheCeilingIntegrationExactlyOnce() {
+        var launch = JetStructureControl.limitedCombinedThrustForce(
+                List.of(new Vec3(0.0, 0.0, 1.0), new Vec3(0.0, 0.0, 1.0)),
+                Vec3.ZERO, 1.0, 1.0f, 0);
+        assertEquals(192.0, launch.z, 1.0e-9);
+        var cancelled = JetStructureControl.limitedCombinedThrustForce(
+                List.of(new Vec3(0.0, 0.0, 1.0), new Vec3(0.0, 0.0, -1.0)),
+                Vec3.ZERO, 1.0, 1.0f, 0);
+        assertEquals(0.0, cancelled.length(), 1.0e-9);
+        var overCeiling = JetStructureControl.limitedCombinedThrustForce(
+                List.of(new Vec3(0.0, 0.0, 1.0), new Vec3(0.0, 0.0, 1.0)),
+                new Vec3(0.0, 0.0, 130.0), 1.0, 1.0f, 0);
+        assertEquals(-200.0, overCeiling.z, 1.0e-6);
+    }
+
+    @Test
+    void thrustGroupAccountsTorqueWithoutASecondBudget() {
+        var origin = new Vec3(0.0, 0.0, 0.0);
+        var symmetric = JetStructureControl.thrustGroup(List.of(
+                new JetStructureControl.ThrustAnchor(new Vec3(0.0, 0.0, -1.0), new Vec3(0.0, 0.0, 1.0)),
+                new JetStructureControl.ThrustAnchor(new Vec3(0.0, 0.0, 1.0), new Vec3(0.0, 0.0, -1.0))
+        ), origin, 1.0, 1.0f, 0);
+        assertEquals(0.0, symmetric.totalForce().length(), 1.0e-9);
+        assertEquals(0.0, symmetric.totalTorque().length(), 1.0e-9,
+                "symmetric anchors must cancel their torque as well");
+        var single = JetStructureControl.thrustGroup(List.of(
+                new JetStructureControl.ThrustAnchor(new Vec3(1.0, 0.0, 0.0), new Vec3(0.0, 0.0, 1.0))
+        ), origin, 1.0, 1.0f, 0);
+        assertEquals(192.0, single.totalForce().length(), 1.0e-9,
+                "one anchor receives the full shared budget");
+        assertEquals(0.0, single.totalTorque().x, 1.0e-9);
+        assertEquals(-192.0, single.totalTorque().y, 1.0e-9,
+                "torque must be the derived Sigma(r x F), not a second budget");
+        assertEquals(0.0, single.totalTorque().z, 1.0e-9);
     }
 
     @Test

@@ -51,6 +51,7 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.academy.AcademyCraft;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.ability.event.SkillExecutionFinishEvent;
+import org.academy.api.common.ability.aeromanip.JetStructureControl;
 import org.academy.api.common.ability.aeromanip.PneumaticStructureControl;
 import org.academy.api.common.ability.accelerator.KineticStructureControl;
 import org.academy.api.common.structure.*;
@@ -59,6 +60,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.movement.VectorStructureService;
 import org.academy.internal.common.ability.accelerator.skills.lv3.KineticThrow;
+import org.academy.internal.common.ability.aeromanip.movement.HighSpeedJetStructureService;
 import org.academy.internal.common.ability.aeromanip.skills.lv2.PneumaticGrasp;
 import org.academy.internal.common.ability.electromaster.magnet.MagneticStructureService;
 import org.academy.internal.common.structure.NativeStructureRuntime;
@@ -669,6 +671,45 @@ public final class SableStructureSmoke {
                 evidence.append("sable_magnetic_program_control=true\n")
                         .append("sable_magnetic_program_launch_speed=")
                         .append(magneticMotion.linearVelocity().length()).append('\n');
+                var jetControl = HighSpeedJetStructureService.programControl(
+                        player, captureRef, handle.runtimeId());
+                require(jetControl.status() == HighSpeedJetStructureService.ProgramStatus.COMPLETED
+                                && jetControl.detail().equals("control_acquired"),
+                        "Sable aeromanip program control was rejected: " + jetControl.detail());
+                var jetSession = HighSpeedJetStructureService.programSession(player).orElseThrow(() ->
+                        new IllegalStateException("Sable aeromanip program control has no session"));
+                var jetMove = HighSpeedJetStructureService.programMove(
+                        player, captureRef, jetSession.controllerId(), direction, null, 40L);
+                require(jetMove.status() == HighSpeedJetStructureService.ProgramStatus.UNAVAILABLE
+                                && jetMove.detail().equals("sable_move"),
+                        "Sable aeromanip program move must be explicitly unavailable: "
+                                + jetMove.status() + ":" + jetMove.detail());
+                var jetLaunch = HighSpeedJetStructureService.programLaunch(
+                        player, captureRef, jetSession.controllerId(), direction, 1.0f, 60L);
+                require(jetLaunch.status() == HighSpeedJetStructureService.ProgramStatus.COMPLETED,
+                        "Sable aeromanip program launch was rejected: " + jetLaunch.detail());
+                var jetMotion = StructureDynamics.motion(host, captureRef).orElseThrow(() ->
+                        new IllegalStateException("Sable aeromanip program launch lost its motion"));
+                var jetExpected = JetStructureControl.maximumSpeed(1.0f);
+                require(Math.abs(jetMotion.linearVelocity().length() - jetExpected) < 0.5,
+                        "Sable aeromanip program launch speed is not the shared ceiling: "
+                                + jetMotion.linearVelocity());
+                var jetReleased = HighSpeedJetStructureService.programRelease(
+                        player, captureRef, jetSession.controllerId());
+                require(jetReleased.status() == HighSpeedJetStructureService.ProgramStatus.COMPLETED
+                                && jetReleased.detail().equals("released"),
+                        "Sable aeromanip program release was not a real release: "
+                                + jetReleased.detail());
+                var jetNoop = HighSpeedJetStructureService.programRelease(
+                        player, captureRef, jetSession.controllerId());
+                require(jetNoop.status() == HighSpeedJetStructureService.ProgramStatus.COMPLETED
+                                && jetNoop.detail().equals("release_noop"),
+                        "Sable aeromanip program release was not idempotent: " + jetNoop.detail());
+                evidence.append("sable_aeromanip_program_control=true\n")
+                        .append("sable_aeromanip_program_move_unavailable=true\n")
+                        .append("sable_aeromanip_program_launch_speed=")
+                        .append(jetMotion.linearVelocity().length()).append('\n')
+                        .append("sable_aeromanip_program_release_idempotent=true\n");
                 closePlayer();
                 remove((ServerSubLevel) ship);
                 next(Phase.NPC);

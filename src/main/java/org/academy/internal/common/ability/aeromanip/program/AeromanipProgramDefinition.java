@@ -56,6 +56,15 @@ public final class AeromanipProgramDefinition {
                 configuration.addProperty("radius", 2);
                 configuration.addProperty("duration", 8);
                 configuration.addProperty("restore_when_settled", true);
+            } else if (id.equals(AeromanipProgramNodeIds.STRUCTURE_EXTRACT)) {
+                configuration.addProperty("radius", 2);
+                configuration.addProperty("budget", 0);
+            } else if (id.equals(AeromanipProgramNodeIds.STRUCTURE_MOVE)) {
+                configuration.addProperty("duration_seconds", 1.0f);
+            } else if (id.equals(AeromanipProgramNodeIds.STRUCTURE_LAUNCH)) {
+                configuration.addProperty("power", 1.0f);
+                configuration.addProperty("duration_seconds", 8.0f);
+                configuration.addProperty("restore_when_settled", true);
             }
             var suffix = id.getPath().substring(id.getPath().lastIndexOf('/') + 1);
             editor.add(
