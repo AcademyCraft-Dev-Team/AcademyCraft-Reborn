@@ -891,6 +891,7 @@ public final class VectorStructureService {
             return;
         }
         var held = new Session(reference, level.dimension(), tier, positions.size(), region, null);
+        held.capturedCells = List.copyOf(positions);
         held.stage = Stage.AWAITING_PHYSICS;
         held.expiresAt = level.getGameTime() + KineticThrow.HOVER_TICKS;
         SESSIONS.put(player.getUUID(), held);
@@ -1598,6 +1599,7 @@ public final class VectorStructureService {
         private boolean sableBody;
         private boolean directControl;
         private Vec3 velocity = Vec3.ZERO;
+        private @Nullable List<BlockPos> capturedCells;
 
         private Session(StructureRef reference, ResourceKey<Level> dimension, int tier, int blockCount,
                         @Nullable StructurePhysicsRegion region, @Nullable StructureTractionSession traction) {
@@ -1646,6 +1648,14 @@ public final class VectorStructureService {
         /** Runtime-facing exclusive control identity; it is never persisted. */
         public UUID controllerId() {
             return controllerId;
+        }
+
+        /**
+         * Capture-time world cells of this session in capture order; empty for adopted or
+         * Sable sessions whose local content was not captured by this service.
+         */
+        public List<BlockPos> capturedCells() {
+            return capturedCells == null ? List.of() : capturedCells;
         }
 
         private boolean usableBy(ServerPlayer player) {

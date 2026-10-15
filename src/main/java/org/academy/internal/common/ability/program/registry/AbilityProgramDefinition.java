@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.program.registry;
 
 import org.academy.internal.common.ability.program.CommonProgramExecutors;
 import org.academy.internal.common.ability.program.ProgramNodeExtensionIndex;
+import org.academy.internal.common.ability.program.migrate.ProgramGraphMigrations;
 
 
 import org.academy.internal.common.ability.program.compile.ProgramCompileResult;
@@ -142,13 +143,14 @@ public final class AbilityProgramDefinition {
 
     public ProgramCompileResult compile(AbilityProgram program, Set<Identifier> capabilities) {
         Objects.requireNonNull(program, "program");
-        if (program.schemaVersion() != AbilityProgram.CURRENT_SCHEMA_VERSION) {
+        var migrated = ProgramGraphMigrations.migrate(program, nodeLookup).program();
+        if (migrated.schemaVersion() != AbilityProgram.CURRENT_SCHEMA_VERSION) {
             return failure(ProgramDiagnosticCode.INVALID_CONFIGURATION);
         }
-        if (!program.category().equals(category)) {
+        if (!migrated.category().equals(category)) {
             return failure(ProgramDiagnosticCode.CATEGORY_MISMATCH);
         }
-        return compile(program.graph(), capabilities);
+        return compile(migrated.graph(), capabilities);
     }
 
     public ProgramCompileResult compile(ProgramGraph graph, Set<Identifier> capabilities) {

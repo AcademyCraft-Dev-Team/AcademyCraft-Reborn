@@ -5,6 +5,8 @@ import org.academy.api.common.ability.program.AbilityProgram;
 import org.academy.api.common.ability.program.ProgramEditorLayout;
 import org.academy.api.common.ability.program.ProgramGraph;
 import org.academy.internal.common.ability.program.compile.ProgramBookCodec;
+import org.academy.internal.common.ability.program.migrate.ProgramGraphMigrations;
+import org.academy.internal.common.ability.program.registry.AbilityProgramDefinitions;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Base64;
@@ -75,8 +77,12 @@ public final class ProgramClipboardCodec {
             var encoded = Base64.getDecoder().decode(clipboard.substring(prefix.length()).strip());
             var result = ProgramBookCodec.decodeProgram(encoded);
             var program = result.program();
-            return result.valid() && program != null && category.equals(program.category())
-                    ? program : null;
+            if (!result.valid() || program == null || !category.equals(program.category())) {
+                return null;
+            }
+            var definition = AbilityProgramDefinitions.find(category);
+            return definition == null ? program
+                    : ProgramGraphMigrations.migrate(program, definition.nodeLookup()).program();
         } catch (IllegalArgumentException exception) {
             return null;
         }

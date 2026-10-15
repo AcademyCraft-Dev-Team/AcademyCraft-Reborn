@@ -25,6 +25,7 @@ import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.program.*;
 import org.academy.internal.common.ability.program.compile.ProgramBookCodec;
 import org.academy.internal.common.ability.program.editor.ProgramEditorDocument;
+import org.academy.internal.common.ability.program.migrate.ProgramGraphMigrations;
 import org.academy.internal.common.ability.program.registry.AbilityProgramDefinitions;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
@@ -224,7 +225,10 @@ public final class AbilityProgramEditorClient {
                         && book.slots().stream().allMatch(slot -> slot.empty()
                         || slot.program().schemaVersion() == AbilityProgram.CURRENT_SCHEMA_VERSION
                         && slot.program().category().equals(category))) {
-                    return book.resize(SLOT_COUNT);
+                    var definition = AbilityProgramDefinitions.find(category);
+                    return (definition == null ? book
+                            : ProgramGraphMigrations.migrateBook(
+                            book, category, definition.nodeLookup())).resize(SLOT_COUNT);
                 }
             }
         } catch (IllegalArgumentException ignored) {

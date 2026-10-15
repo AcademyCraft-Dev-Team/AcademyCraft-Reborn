@@ -178,6 +178,93 @@ class ElectromasterProgramStructureNodesTest {
     }
 
     @Test
+    void matrixCreateMoveRotateUnavailableThenTerminateKeepsTheSessionReleasable() {
+        var runtime = new ScriptedRuntime();
+        var rotateGraph = graph(
+                List.of(
+                        node(0, BaseAbilityProgramDefinition.entryId(
+                                ElectromasterProgramNodeCatalog.ELECTROMASTER), new JsonObject()),
+                        blockPositionNode(1, 10, 64, 10),
+                        node(2, ElectromasterProgramNodeIds.STRUCTURE_EXTRACT, extractConfiguration(64, true)),
+                        node(3, ElectromasterProgramNodeIds.STRUCTURE_CONTROL, new JsonObject()),
+                        node(4, ElectromasterProgramNodeIds.STRUCTURE_MOVE, moveConfiguration(1.0f)),
+                        node(5, ElectromasterProgramNodeIds.STRUCTURE_ROTATE, new JsonObject()),
+                        worldPositionNode(8, 12.5, 70.0, 10.5)
+                ),
+                List.of(
+                        edge(0, "flow", 2, "flow"),
+                        edge(2, "flow", 3, "flow"),
+                        edge(3, "flow", 4, "flow"),
+                        edge(4, "flow", 5, "flow"),
+                        edge(1, "position", 2, "host"),
+                        edge(2, "structure", 3, "structure"),
+                        edge(3, "control", 4, "control"),
+                        edge(8, "position", 4, "target"),
+                        edge(3, "control", 5, "control")
+                )
+        );
+        var rotateCompiled = AbilityProgramDefinitions.require(
+                        ElectromasterProgramNodeCatalog.ELECTROMASTER)
+                .compile(rotateGraph, Set.of(ElectromasterProgramCapabilities.STRUCTURE));
+        assertTrue(rotateCompiled.valid(), () -> rotateCompiled.diagnostics().toString());
+
+        var rotated = ElectromasterProgramExecutionBridge.execute(
+                rotateCompiled.program(), 430L, runtime, new ProgramActionTransaction());
+
+        assertEquals(ProgramVmResult.Status.FAILED, rotated.status());
+        assertEquals(5, rotated.nodeId());
+        assertEquals(ProgramVmDiagnostic.ACTION_UNAVAILABLE, rotated.diagnostic());
+        assertEquals("unavailable:finite_torque_control_unavailable", rotated.detail());
+        assertEquals(List.of(
+                "extract:BlockPos{x=10, y=64, z=10}:64:true",
+                "control:" + STRUCTURE,
+                "move:" + STRUCTURE + ":target=12.5,70.0,10.5:anchor=null:1.0s:participation=0.75",
+                "rotate:" + STRUCTURE + ":unavailable"
+        ), runtime.applied);
+
+        var terminateGraph = graph(
+                List.of(
+                        node(0, BaseAbilityProgramDefinition.entryId(
+                                ElectromasterProgramNodeCatalog.ELECTROMASTER), new JsonObject()),
+                        blockPositionNode(1, 10, 64, 10),
+                        node(2, ElectromasterProgramNodeIds.STRUCTURE_EXTRACT, extractConfiguration(64, true)),
+                        node(3, ElectromasterProgramNodeIds.STRUCTURE_CONTROL, new JsonObject()),
+                        node(6, ElectromasterProgramNodeIds.STRUCTURE_RELEASE, new JsonObject()),
+                        node(7, ElectromasterProgramNodeIds.STRUCTURE_RELEASE, new JsonObject())
+                ),
+                List.of(
+                        edge(0, "flow", 2, "flow"),
+                        edge(2, "flow", 3, "flow"),
+                        edge(3, "flow", 6, "flow"),
+                        edge(6, "flow", 7, "flow"),
+                        edge(1, "position", 2, "host"),
+                        edge(2, "structure", 3, "structure"),
+                        edge(3, "control", 6, "control"),
+                        edge(3, "control", 7, "control")
+                )
+        );
+        var terminateCompiled = AbilityProgramDefinitions.require(
+                        ElectromasterProgramNodeCatalog.ELECTROMASTER)
+                .compile(terminateGraph, Set.of(ElectromasterProgramCapabilities.STRUCTURE));
+        assertTrue(terminateCompiled.valid(), () -> terminateCompiled.diagnostics().toString());
+
+        var terminated = ElectromasterProgramExecutionBridge.execute(
+                terminateCompiled.program(), 431L, runtime, new ProgramActionTransaction());
+
+        assertEquals(ProgramVmResult.Status.COMPLETED, terminated.status(),
+                () -> String.valueOf(terminated.diagnostic()));
+        assertEquals(List.of(
+                "extract:BlockPos{x=10, y=64, z=10}:64:true",
+                "control:" + STRUCTURE,
+                "release:" + STRUCTURE + ":released",
+                "release:" + STRUCTURE + ":noop"
+        ), runtime.applied.subList(4, runtime.applied.size()),
+                "the failed rotate must not break the same session's idempotent terminate");
+        assertTrue(runtime.structureRetained, "terminate must retain the structure");
+        assertFalse(runtime.controlBroken, "terminate after a failed rotate must not see a stale token");
+    }
+
+    @Test
     void unavailableSableControlFailsAtTheControlNodeInsteadOfStarvingTheLaunch() {
         var runtime = new ScriptedRuntime();
         runtime.controlUnavailable = true;
@@ -365,6 +452,52 @@ class ElectromasterProgramStructureNodesTest {
     }
 
     @Test
+    void rejectedStaticizeFailsAtTheStaticizeNodeAndPreservesTheContentOwner() {
+        var runtime = new ScriptedRuntime();
+        runtime.staticizeRejected = true;
+        var graph = graph(
+                List.of(
+                        node(0, BaseAbilityProgramDefinition.entryId(
+                                ElectromasterProgramNodeCatalog.ELECTROMASTER), new JsonObject()),
+                        blockPositionNode(1, 10, 64, 10),
+                        node(2, ElectromasterProgramNodeIds.STRUCTURE_EXTRACT,
+                                extractConfiguration(0, true)),
+                        node(3, ElectromasterProgramNodeIds.STRUCTURE_CONTROL, new JsonObject()),
+                        node(5, ElectromasterProgramNodeIds.STRUCTURE_STATICIZE, new JsonObject())
+                ),
+                List.of(
+                        edge(0, "flow", 2, "flow"),
+                        edge(2, "flow", 3, "flow"),
+                        edge(3, "flow", 5, "flow"),
+                        edge(1, "position", 2, "host"),
+                        edge(2, "structure", 3, "structure"),
+                        edge(2, "structure", 5, "structure")
+                )
+        );
+        var compiled = AbilityProgramDefinitions.require(
+                        ElectromasterProgramNodeCatalog.ELECTROMASTER)
+                .compile(graph, Set.of(ElectromasterProgramCapabilities.STRUCTURE));
+        assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
+
+        var result = ElectromasterProgramExecutionBridge.execute(
+                compiled.program(), 520L, runtime, new ProgramActionTransaction());
+
+        assertEquals(ProgramVmResult.Status.FAILED, result.status());
+        assertEquals(5, result.nodeId());
+        assertEquals(ProgramVmDiagnostic.ACTION_REJECTED, result.diagnostic());
+        assertEquals("rejected:target_occupied", result.detail());
+        assertEquals(List.of(
+                "extract:BlockPos{x=10, y=64, z=10}:0:true",
+                "control:" + STRUCTURE,
+                "staticize:" + STRUCTURE + ":rejected"
+        ), runtime.applied);
+        assertTrue(runtime.contentOwnerRetained,
+                "a rejected staticization must preserve the unique content owner");
+        assertFalse(runtime.controlBroken,
+                "a rejected staticization must not break the active control");
+    }
+
+    @Test
     void pendingExtractKeepsTheFlowAndPublishesNoStructureReference() {
         var runtime = new ScriptedRuntime();
         runtime.extractPending = true;
@@ -420,6 +553,7 @@ class ElectromasterProgramStructureNodesTest {
         private boolean structureRetained = true;
         private boolean trajectoryDamageSettled;
         private boolean contentOwnerRetained = true;
+        private boolean staticizeRejected;
         private boolean sourceRetained = true;
         private boolean sableDirect;
         private boolean massGateBypassed;
@@ -592,6 +726,11 @@ class ElectromasterProgramStructureNodesTest {
                 ProgramStructureReference target,
                 ProgramBlockPosition destination
         ) {
+            if (staticizeRejected) {
+                applied.add("staticize:" + target.reference() + ":rejected");
+                contentOwnerRetained = true;
+                return StructureOperation.rejected("target_occupied");
+            }
             applied.add("staticize:" + target.reference() + ":unavailable");
             contentOwnerRetained = true;
             return StructureOperation.unavailable("safe_staticization_unavailable");

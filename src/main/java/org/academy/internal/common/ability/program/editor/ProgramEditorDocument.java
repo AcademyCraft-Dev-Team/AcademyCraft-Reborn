@@ -52,7 +52,10 @@ public final class ProgramEditorDocument {
         if (!program.category().equals(catalog.category())) {
             throw new IllegalArgumentException("Program editor catalog category does not match the program");
         }
-        this.program = applyEditorDefaults(program, catalog);
+        this.program = applyEditorDefaults(
+                org.academy.internal.common.ability.program.migrate.ProgramGraphMigrations
+                        .migrate(program, catalog).program(),
+                catalog);
         this.catalog = catalog;
         context = new ProgramCompileContext(
                 this.program.category(),

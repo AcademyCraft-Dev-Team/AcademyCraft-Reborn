@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.program;
 
 import org.academy.internal.common.ability.program.compile.CompiledProgram;
 import org.academy.internal.common.ability.program.compile.ProgramBookCodec;
+import org.academy.internal.common.ability.program.migrate.ProgramGraphMigrations;
 import org.academy.internal.common.ability.program.registry.AbilityProgramDefinitions;
 import org.academy.internal.common.ability.program.registry.CommonProgramNodeCatalog;
 import org.academy.internal.common.ability.program.registry.PrecisionProgramNodeCatalog;
@@ -142,7 +143,10 @@ public final class AbilityProgramManager {
                         && book.slots().stream().allMatch(slot -> slot.empty()
                         || slot.program().schemaVersion() == AbilityProgram.CURRENT_SCHEMA_VERSION
                         && slot.program().category().equals(category))) {
-                    return book.resize(SLOT_COUNT);
+                    var definition = AbilityProgramDefinitions.find(category);
+                    return (definition == null ? book
+                            : ProgramGraphMigrations.migrateBook(
+                            book, category, definition.nodeLookup())).resize(SLOT_COUNT);
                 }
             }
         } catch (IllegalArgumentException ignored) {
@@ -886,11 +890,13 @@ public final class AbilityProgramManager {
                 return;
             }
             var capabilities = learnedCapabilities(playerData);
+            var definition = AbilityProgramDefinitions.require(category);
+            var migrated = ProgramGraphMigrations.migrateBook(
+                    decoded.book(), category, definition.nodeLookup());
             for (var slot = 0; slot < SLOT_COUNT; slot++) {
-                var program = decoded.book().slot(slot).program();
+                var program = migrated.slot(slot).program();
                 if (program == null) continue;
-                var compiled = AbilityProgramDefinitions.require(category)
-                        .compile(program, capabilities);
+                var compiled = definition.compile(program, capabilities);
                 if (!compiled.valid()) {
                     var diagnostic = compiled.diagnostics().getFirst();
                     result(player, packet.category, slot, FeedbackType.ERROR,
@@ -902,8 +908,8 @@ public final class AbilityProgramManager {
             var imported = new ProgramBook(
                     ProgramBook.CURRENT_SCHEMA_VERSION,
                     current.revision() + 1L,
-                    decoded.book().selectedSlot(),
-                    decoded.book().slots()
+                    migrated.selectedSlot(),
+                    migrated.slots()
             );
             for (var slot = 0; slot < current.slots().size(); slot++) {
                 var previousProgram = current.slot(slot).program();
@@ -961,7 +967,9 @@ public final class AbilityProgramManager {
                             ProgramVmDiagnostic.NONE);
                     return;
                 }
-                var compiled = AbilityProgramDefinitions.require(category).compile(
+                var definition = AbilityProgramDefinitions.require(category);
+                program = ProgramGraphMigrations.migrate(program, definition.nodeLookup()).program();
+                var compiled = definition.compile(
                         program, learnedCapabilities(playerData));
                 if (!compiled.valid()) {
                     var diagnostic = compiled.diagnostics().getFirst();

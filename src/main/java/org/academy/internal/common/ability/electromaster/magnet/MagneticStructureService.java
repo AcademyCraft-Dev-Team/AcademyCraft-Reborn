@@ -901,6 +901,14 @@ public final class MagneticStructureService {
             return positions.size();
         }
 
+        /**
+         * Capture-time world cells of this session in capture order; empty for sessions whose
+         * local content was not captured by this service.
+         */
+        public List<BlockPos> capturedCells() {
+            return positions;
+        }
+
         /** Runtime-facing exclusive control identity; it is never persisted. */
         public UUID controllerId() {
             return controllerId;

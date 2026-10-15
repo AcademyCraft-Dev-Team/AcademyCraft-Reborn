@@ -175,6 +175,93 @@ class AcceleratorProgramStructureNodesTest {
     }
 
     @Test
+    void matrixCreateMoveRotateUnavailableThenTerminateKeepsTheSessionReleasable() {
+        var runtime = new ScriptedRuntime();
+        var rotateGraph = graph(
+                List.of(
+                        node(0, BaseAbilityProgramDefinition.entryId(
+                                AcceleratorProgramNodeCatalog.ACCELERATOR), new JsonObject()),
+                        blockPositionNode(1, 10, 64, 10),
+                        node(2, AcceleratorProgramNodeIds.STRUCTURE_EXTRACT, extractConfiguration(1, 0)),
+                        node(3, AcceleratorProgramNodeIds.STRUCTURE_CONTROL, new JsonObject()),
+                        node(4, AcceleratorProgramNodeIds.STRUCTURE_MOVE, moveConfiguration(1.0f)),
+                        node(5, AcceleratorProgramNodeIds.STRUCTURE_ROTATE, new JsonObject()),
+                        worldPositionNode(8, 12.5, 70.0, 10.5)
+                ),
+                List.of(
+                        edge(0, "flow", 2, "flow"),
+                        edge(2, "flow", 3, "flow"),
+                        edge(3, "flow", 4, "flow"),
+                        edge(4, "flow", 5, "flow"),
+                        edge(1, "position", 2, "host"),
+                        edge(2, "structure", 3, "structure"),
+                        edge(3, "control", 4, "control"),
+                        edge(8, "position", 4, "target"),
+                        edge(3, "control", 5, "control")
+                )
+        );
+        var rotateCompiled = AbilityProgramDefinitions.require(
+                        AcceleratorProgramNodeCatalog.ACCELERATOR)
+                .compile(rotateGraph, Set.of(AcceleratorProgramCapabilities.STRUCTURE));
+        assertTrue(rotateCompiled.valid(), () -> rotateCompiled.diagnostics().toString());
+
+        var rotated = AcceleratorProgramExecutionBridge.execute(
+                rotateCompiled.program(), 430L, runtime, new ProgramActionTransaction());
+
+        assertEquals(ProgramVmResult.Status.FAILED, rotated.status());
+        assertEquals(5, rotated.nodeId());
+        assertEquals(ProgramVmDiagnostic.ACTION_UNAVAILABLE, rotated.diagnostic());
+        assertEquals("unavailable:finite_torque_control_unavailable", rotated.detail());
+        assertEquals(List.of(
+                "extract:BlockPos{x=10, y=64, z=10}:1:0",
+                "control:" + STRUCTURE,
+                "move:" + STRUCTURE + ":target=12.5,70.0,10.5:anchor=null:1.0s",
+                "rotate:" + STRUCTURE + ":unavailable"
+        ), runtime.applied);
+
+        var terminateGraph = graph(
+                List.of(
+                        node(0, BaseAbilityProgramDefinition.entryId(
+                                AcceleratorProgramNodeCatalog.ACCELERATOR), new JsonObject()),
+                        blockPositionNode(1, 10, 64, 10),
+                        node(2, AcceleratorProgramNodeIds.STRUCTURE_EXTRACT, extractConfiguration(1, 0)),
+                        node(3, AcceleratorProgramNodeIds.STRUCTURE_CONTROL, new JsonObject()),
+                        node(6, AcceleratorProgramNodeIds.STRUCTURE_RELEASE, new JsonObject()),
+                        node(7, AcceleratorProgramNodeIds.STRUCTURE_RELEASE, new JsonObject())
+                ),
+                List.of(
+                        edge(0, "flow", 2, "flow"),
+                        edge(2, "flow", 3, "flow"),
+                        edge(3, "flow", 6, "flow"),
+                        edge(6, "flow", 7, "flow"),
+                        edge(1, "position", 2, "host"),
+                        edge(2, "structure", 3, "structure"),
+                        edge(3, "control", 6, "control"),
+                        edge(3, "control", 7, "control")
+                )
+        );
+        var terminateCompiled = AbilityProgramDefinitions.require(
+                        AcceleratorProgramNodeCatalog.ACCELERATOR)
+                .compile(terminateGraph, Set.of(AcceleratorProgramCapabilities.STRUCTURE));
+        assertTrue(terminateCompiled.valid(), () -> terminateCompiled.diagnostics().toString());
+
+        var terminated = AcceleratorProgramExecutionBridge.execute(
+                terminateCompiled.program(), 431L, runtime, new ProgramActionTransaction());
+
+        assertEquals(ProgramVmResult.Status.COMPLETED, terminated.status(),
+                () -> String.valueOf(terminated.diagnostic()));
+        assertEquals(List.of(
+                "extract:BlockPos{x=10, y=64, z=10}:1:0",
+                "control:" + STRUCTURE,
+                "release:" + STRUCTURE + ":released",
+                "release:" + STRUCTURE + ":noop"
+        ), runtime.applied.subList(4, runtime.applied.size()),
+                "the failed rotate must not break the same session's idempotent terminate");
+        assertTrue(runtime.structureRetained, "terminate must retain the structure");
+        assertFalse(runtime.controlBroken, "terminate after a failed rotate must not see a stale token");
+    }
+
+    @Test
     void unavailableSableControlFailsAtTheControlNodeInsteadOfStarvingTheLaunch() {
         var runtime = new ScriptedRuntime();
         runtime.controlUnavailable = true;
@@ -325,6 +412,51 @@ class AcceleratorProgramStructureNodesTest {
     }
 
     @Test
+    void rejectedStaticizeFailsAtTheStaticizeNodeAndPreservesTheContentOwner() {
+        var runtime = new ScriptedRuntime();
+        runtime.staticizeRejected = true;
+        var graph = graph(
+                List.of(
+                        node(0, BaseAbilityProgramDefinition.entryId(
+                                AcceleratorProgramNodeCatalog.ACCELERATOR), new JsonObject()),
+                        blockPositionNode(1, 10, 64, 10),
+                        node(2, AcceleratorProgramNodeIds.STRUCTURE_EXTRACT, extractConfiguration(2, 64)),
+                        node(3, AcceleratorProgramNodeIds.STRUCTURE_CONTROL, new JsonObject()),
+                        node(5, AcceleratorProgramNodeIds.STRUCTURE_STATICIZE, new JsonObject())
+                ),
+                List.of(
+                        edge(0, "flow", 2, "flow"),
+                        edge(2, "flow", 3, "flow"),
+                        edge(3, "flow", 5, "flow"),
+                        edge(1, "position", 2, "host"),
+                        edge(2, "structure", 3, "structure"),
+                        edge(2, "structure", 5, "structure")
+                )
+        );
+        var compiled = AbilityProgramDefinitions.require(
+                        AcceleratorProgramNodeCatalog.ACCELERATOR)
+                .compile(graph, Set.of(AcceleratorProgramCapabilities.STRUCTURE));
+        assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
+
+        var result = AcceleratorProgramExecutionBridge.execute(
+                compiled.program(), 520L, runtime, new ProgramActionTransaction());
+
+        assertEquals(ProgramVmResult.Status.FAILED, result.status());
+        assertEquals(5, result.nodeId());
+        assertEquals(ProgramVmDiagnostic.ACTION_REJECTED, result.diagnostic());
+        assertEquals("rejected:target_occupied", result.detail());
+        assertEquals(List.of(
+                "extract:BlockPos{x=10, y=64, z=10}:2:64",
+                "control:" + STRUCTURE,
+                "staticize:" + STRUCTURE + ":rejected"
+        ), runtime.applied);
+        assertTrue(runtime.contentOwnerRetained,
+                "a rejected staticization must preserve the unique content owner");
+        assertFalse(runtime.controlBroken,
+                "a rejected staticization must not break the active control");
+    }
+
+    @Test
     void pendingExtractKeepsTheFlowAndPublishesNoStructureReference() {
         var runtime = new ScriptedRuntime();
         runtime.extractPending = true;
@@ -374,6 +506,7 @@ class AcceleratorProgramStructureNodesTest {
         private boolean structureRetained = true;
         private boolean trajectoryDamageSettled;
         private boolean contentOwnerRetained = true;
+        private boolean staticizeRejected;
         private boolean sableDirect;
         private boolean massGateBypassed;
         private double heavyMass;
@@ -567,6 +700,11 @@ class AcceleratorProgramStructureNodesTest {
                 ProgramStructureReference target,
                 ProgramBlockPosition destination
         ) {
+            if (staticizeRejected) {
+                applied.add("staticize:" + target.reference() + ":rejected");
+                contentOwnerRetained = true;
+                return StructureOperation.rejected("target_occupied");
+            }
             applied.add("staticize:" + target.reference() + ":unavailable");
             contentOwnerRetained = true;
             return StructureOperation.unavailable("safe_staticization_unavailable");

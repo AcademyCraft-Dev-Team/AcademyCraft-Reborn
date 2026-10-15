@@ -35,6 +35,7 @@ import org.academy.internal.common.ability.accelerator.movement.VectorStructureS
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileStateAdapter;
 import org.academy.internal.common.ability.accelerator.skills.lv2.KineticEnergyApplied;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
+import org.academy.internal.common.ability.program.StructureStaticizationRunner;
 import org.academy.internal.common.ability.program.registry.AbilityProgramSpatialRanges;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.ability.program.ServerProgramTargetResolver;
@@ -475,7 +476,12 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
     public StructureOperation staticizeStructure(ProgramStructureReference structure,
                                                  @Nullable ProgramBlockPosition target) {
         Objects.requireNonNull(structure, "structure");
-        return StructureOperation.unavailable("safe_staticization_unavailable");
+        var cells = VectorStructureService.session(player)
+                .filter(session -> session.reference().equals(structure.reference()))
+                .map(VectorStructureService.Session::capturedCells)
+                .orElse(List.of());
+        return StructureOperation.result(StructureStaticizationRunner.staticize(
+                player, structure, target, cells));
     }
 
     @Override

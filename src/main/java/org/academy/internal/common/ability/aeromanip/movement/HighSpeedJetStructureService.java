@@ -930,8 +930,10 @@ public final class HighSpeedJetStructureService {
     ) {
         if (sable(reference)) {
             attachNozzles(player.getUUID(), reference, nozzles);
-            SESSIONS.put(player.getUUID(), Session.programSable(reference, level.dimension(),
-                    request, List.copyOf(nozzles), targetNozzle, launchDirection, positions.size()));
+            var sableSession = Session.programSable(reference, level.dimension(),
+                    request, List.copyOf(nozzles), targetNozzle, launchDirection, positions.size());
+            sableSession.positions = List.copyOf(positions);
+            SESSIONS.put(player.getUUID(), sableSession);
             AcademyCraft.LOGGER.info(
                     "High-Speed Jet program capture {} waits for program control", reference);
             return true;
@@ -975,9 +977,11 @@ public final class HighSpeedJetStructureService {
         for (var mount : nozzles) {
             previousTicks.put(mount.nozzle, mount.nozzle.activeTicks());
         }
-        SESSIONS.put(player.getUUID(), Session.programNative(reference, level.dimension(),
+        var nativeSession = Session.programNative(reference, level.dimension(),
                 request, previousTicks, List.copyOf(nozzles), targetNozzle, launchDirection,
-                positions.size(), region));
+                positions.size(), region);
+        nativeSession.positions = List.copyOf(positions);
+        SESSIONS.put(player.getUUID(), nativeSession);
         AcademyCraft.LOGGER.info(
                 "High-Speed Jet program session started for {} with {} blocks",
                 reference, positions.size());
@@ -1067,6 +1071,7 @@ public final class HighSpeedJetStructureService {
         var session = new Session(launchId, reference, level.dimension(), request,
                 previousTicks, List.copyOf(nozzles), targetNozzle, launchDirection,
                 blockCount, region, false);
+        session.positions = List.copyOf(positions);
         SESSIONS.put(player.getUUID(), session);
         AcademyCraft.LOGGER.info("High-Speed Jet launch started for {} with {} blocks", reference, blockCount);
     }
@@ -1708,6 +1713,7 @@ public final class HighSpeedJetStructureService {
         private @Nullable Vec3 moveTarget;
         private @Nullable BlockPos moveAnchorOffset;
         private float programPower = 1.0f;
+        private List<BlockPos> positions = List.of();
 
         private Session(
                 UUID launchId,
@@ -1784,6 +1790,14 @@ public final class HighSpeedJetStructureService {
 
         public UUID controllerId() {
             return controllerId;
+        }
+
+        /**
+         * Capture-time world cells of this session in capture order; empty for sessions whose
+         * local content was not captured by this service (adopted or Sable bodies).
+         */
+        public List<BlockPos> capturedCells() {
+            return positions;
         }
 
         public Stage stage() {

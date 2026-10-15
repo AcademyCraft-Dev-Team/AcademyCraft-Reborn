@@ -28,6 +28,7 @@ import org.academy.internal.common.ability.aeromanip.movement.HighSpeedJetStruct
 import org.academy.internal.common.ability.aeromanip.skills.lv3.LaminarCutter;
 import org.academy.internal.common.ability.aeromanip.skills.lv4.HighSpeedJet;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
+import org.academy.internal.common.ability.program.StructureStaticizationRunner;
 import org.academy.internal.common.ability.program.registry.AbilityProgramSpatialRanges;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.ability.program.ServerProgramTargetResolver;
@@ -421,7 +422,12 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     public StructureOperation staticizeStructure(ProgramStructureReference structure,
                                                  @Nullable ProgramBlockPosition target) {
         Objects.requireNonNull(structure, "structure");
-        return StructureOperation.unavailable("safe_staticization_unavailable");
+        var cells = HighSpeedJetStructureService.programSession(player)
+                .filter(session -> session.reference().equals(structure.reference()))
+                .map(HighSpeedJetStructureService.Session::capturedCells)
+                .orElse(List.of());
+        return StructureOperation.result(StructureStaticizationRunner.staticize(
+                player, structure, target, cells));
     }
 
     @Override

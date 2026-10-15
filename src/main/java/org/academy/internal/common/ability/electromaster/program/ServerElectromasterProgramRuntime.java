@@ -36,6 +36,7 @@ import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
 import org.academy.internal.common.ability.electromaster.skills.lv3.CurrentRecharge;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagnetManipulation;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
+import org.academy.internal.common.ability.program.StructureStaticizationRunner;
 import org.academy.internal.common.ability.program.registry.AbilityProgramSpatialRanges;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.ability.program.ServerProgramTargetResolver;
@@ -344,7 +345,12 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     public StructureOperation staticizeStructure(ProgramStructureReference structure,
                                                  @Nullable ProgramBlockPosition target) {
         Objects.requireNonNull(structure, "structure");
-        return StructureOperation.unavailable("safe_staticization_unavailable");
+        var cells = MagneticStructureService.programSession(player)
+                .filter(session -> session.reference().equals(structure.reference()))
+                .map(MagneticStructureService.Session::capturedCells)
+                .orElse(List.of());
+        return StructureOperation.result(StructureStaticizationRunner.staticize(
+                player, structure, target, cells));
     }
 
     @Override
