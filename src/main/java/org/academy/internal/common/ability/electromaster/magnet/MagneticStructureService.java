@@ -12,6 +12,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.electromaster.MagneticFieldTuning;
+import org.academy.api.common.ability.electromaster.MagneticMovement;
 import org.academy.api.common.ability.electromaster.MagneticStructureControl;
 import org.academy.api.common.ability.electromaster.MagneticTargets;
 import org.academy.api.common.structure.LegacyMotionUnits;
@@ -31,6 +32,7 @@ import org.academy.api.server.ability.AbilityEffectPolicy;
 import org.academy.api.server.ability.SkillTuning;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.structure.StructureBackendRouter;
+import org.academy.internal.common.structure.sable.SableStructureTraction;
 import org.academy.internal.common.world.entity.structure.NativeStructureProjectionEntity;
 import org.jspecify.annotations.Nullable;
 
@@ -99,12 +101,6 @@ public final class MagneticStructureService {
         Objects.requireNonNull(positions, "positions");
         if (positions.isEmpty()) {
             reject(player, "selection_empty");
-            return Optional.empty();
-        }
-        // The skill path has no calibrated Sable pull entry; reject before creating anything
-        // so a refused pull never leaves a captured ship behind.
-        if (sableMode(level)) {
-            reject(player, "sable_pull_unavailable");
             return Optional.empty();
         }
         var seed = positions.getFirst().immutable();
@@ -911,7 +907,7 @@ public final class MagneticStructureService {
         }
 
         public boolean controlActive() {
-            return lease != null && lease.state() == StructurePhysicsLease.State.ACTIVE;
+            return directControl || lease != null && lease.state() == StructurePhysicsLease.State.ACTIVE;
         }
 
         /** True while the capture transaction has not committed yet. */
@@ -964,23 +960,8 @@ public final class MagneticStructureService {
             if (stage == Stage.CAPTURING) {
                 if (sable(reference)) {
                     if (!program) {
-                        // Fallback only: the entry path pre-rejects Sable, so a captured ship
-                        // here means the backend changed mid-flight; discard it instead of
-                        // retaining an orphan.
-                        AcademyCraft.LOGGER.error(
-                                "Magnetic pull Sable control is unavailable after the capture; discarding {}",
-                                reference);
-                        if (!(player.level() instanceof ServerLevel level)
-                                || !StructureTransactions.discard(level.getServer(), reference)) {
-                            AcademyCraft.LOGGER.error(
-                                    "Magnetic pull could not discard the just-created structure {}", reference);
-                        }
-                        fail(player, "sable_pull_unavailable");
-                        close();
-                        return false;
+                        return startSableSkillPull(player, destination, fallback, maxSpeedPerTick, stopDistance, range);
                     }
-                    // A committed program capture is retained until its control node issues the
-                    // lightweight direct-velocity lease.
                     stage = Stage.SABLE_RETAINED;
                     return true;
                 }
@@ -1003,7 +984,61 @@ public final class MagneticStructureService {
             if (stage == Stage.AWAITING_PHYSICS) {
                 return tickAwaitingPhysics(player, destination, fallback, maxSpeedPerTick, stopDistance, milestone);
             }
+            if (sable(reference)) {
+                return tickSablePull(player, destination, fallback, maxSpeedPerTick, stopDistance, range);
+            }
             return tickPulling(player, destination, fallback, maxSpeedPerTick, stopDistance, range);
+        }
+
+        private boolean startSableSkillPull(ServerPlayer player, Vec3 destination, Vec3 fallback,
+                                            double maxSpeedPerTick, double stopDistance, double range) {
+            if (!(player.level() instanceof ServerLevel level)) {
+                close();
+                return false;
+            }
+            var status = StructureDirectControl.acquire(level, reference, player, controllerId);
+            if (status != StructureDirectControl.Status.ACTIVE) {
+                AcademyCraft.LOGGER.warn("Magnetic pull could not lease Sable body {}: {}", reference, status);
+                if (!StructureTransactions.discard(level.getServer(), reference)) {
+                    AcademyCraft.LOGGER.error("Magnetic pull could not discard unleased structure {}", reference);
+                }
+                fail(player, status == StructureDirectControl.Status.OCCUPIED
+                        ? "structure_controlled" : "sable_pull_unavailable");
+                close();
+                return false;
+            }
+            directControl = true;
+            stage = Stage.PULLING;
+            return tickSablePull(player, destination, fallback, maxSpeedPerTick, stopDistance, range);
+        }
+
+        private boolean tickSablePull(ServerPlayer player, Vec3 destination, Vec3 fallback,
+                                      double maxSpeedPerTick, double stopDistance, double range) {
+            if (!(player.level() instanceof ServerLevel level)) {
+                close();
+                return false;
+            }
+            if (StructureDirectControl.validate(level, reference, player, controllerId)
+                    != StructureDirectControl.Status.ACTIVE) {
+                close();
+                return false;
+            }
+            var motion = SableStructureTraction.motion(level, reference).orElse(null);
+            if (motion == null) return continueOrGiveUp();
+            unavailableTicks = 0;
+            var center = motion.pose().localToWorldPoint(motion.localCenterOfMass());
+            if (player.getEyePosition().distanceToSqr(center) > range * range) {
+                close();
+                return false;
+            }
+            var desired = MagneticMovement.calculatePullVelocity(
+                    LegacyMotionUnits.velocityPerTick(motion.linearVelocity()),
+                    center, destination, fallback, maxSpeedPerTick, stopDistance);
+            if (!SableStructureTraction.setLinearVelocity(level, reference,
+                    LegacyMotionUnits.velocityPerSecond(desired))) {
+                return continueOrGiveUp();
+            }
+            return true;
         }
 
         private boolean openRegion(ServerLevel level, ServerPlayer player) {
@@ -1198,6 +1233,10 @@ public final class MagneticStructureService {
                 AcademyCraft.LOGGER.warn("Magnetic pull lease cleanup failed for {}", reference, failure);
             } finally {
                 lease = null;
+            }
+            if (directControl) {
+                StructureDirectControl.release(reference, controllerId);
+                directControl = false;
             }
         }
     }

@@ -92,6 +92,37 @@ public final class SableStructureTraction {
         return true;
     }
 
+    /**
+     * Replaces a free body's linear velocity with an absolute world velocity in blocks per second
+     * and clears its spin. Mass is not a gate: the caller already owns exclusivity.
+     */
+    public static boolean setLinearVelocity(ServerLevel host, StructureRef reference, Vec3 velocity) {
+        SableStructureAccess.requireThread(host.getServer());
+        if (!finite(velocity)) return false;
+        var handle = SableStructureAccess.resolveHandle(host.getServer(), reference).orElse(null);
+        if (handle == null || handle.host() != host) return false;
+        var system = SubLevelPhysicsSystem.get(host);
+        if (system == null || system.getPaused()
+                || !RAPIER_PIPELINE.equals(system.getPipeline().getClass().getName())) return false;
+        var subLevel = handle.subLevel();
+        var mass = subLevel.getMassTracker();
+        if (subLevel.getRuntimeId() == PhysicsPipelineBody.NULL_RUNTIME_ID
+                || !SableStructureTransforms.unitScale(subLevel.logicalPose()) || mass == null
+                || !Double.isFinite(mass.getMass()) || mass.getMass() <= 0 || mass.getCenterOfMass() == null) {
+            return false;
+        }
+        var slots = SERVERS.get(host.getServer());
+        var session = slots == null ? null : slots.get(subLevel);
+        if (session != null && session.available()) return false;
+        var rigidBody = system.getPhysicsHandle(subLevel);
+        if (rigidBody == null) return false;
+        var current = rigidBody.getLinearVelocity(new Vector3d());
+        var angular = rigidBody.getAngularVelocity(new Vector3d());
+        rigidBody.addLinearAndAngularVelocity(
+                new Vector3d(velocity.x, velocity.y, velocity.z).sub(current), angular.negate());
+        return true;
+    }
+
     /** Called only after the optional bridge's exact version/hash compatibility gate succeeds. */
     public static synchronized void initialize() {
         if (initialized) return;
