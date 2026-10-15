@@ -1,0 +1,59 @@
+// Opt-in launcher injection for the structure-system client stress baseline.
+// Lives in the repository validation tree; pass it with -I and it is never part of a normal build.
+//
+// Usage (run from the repository root; replace rN with a fresh directory):
+//   .\gradlew.bat runClientSable -PacademySableRuntime=suite ^
+//     -PacademySableRunDirectory=run/sable-compat/stress-client-rN ^
+//     -PacademyStressJavaLauncher=jbr ^
+//     -I validation/structure_stress/client_stress.init.gradle --console=plain --no-configuration-cache
+//
+// The injected run:
+//   * binds the run to the isolated run/sable-compat/stress-client-*/client directory,
+//   * requires a copied save named by academyStressWorld (never the user's live save),
+//   * opts the client stress probe in through academy.structureStress=client,
+//   * quick-plays straight into that save so the PowerShell driver only has to
+//     dismiss the startup dialog and sample the client.
+allprojects {
+    afterEvaluate {
+        sourceSets.main.java.srcDir(file('validation/structure_stress/java'))
+        def runName = providers.gradleProperty('academyStressClientRun').getOrElse('clientSable')
+        def runRoot = rootProject.file('run').canonicalFile
+        def world = providers.gradleProperty('academyStressWorld').getOrElse('新的世界 (32)')
+        def launcherMode = providers.gradleProperty('academyStressJavaLauncher').getOrElse('jbr')
+        def width = providers.gradleProperty('academyStressWidth').getOrElse('1280')
+        def height = providers.gradleProperty('academyStressHeight').getOrElse('720')
+        def sampleSeconds = providers.gradleProperty('academyStressSampleSeconds').getOrElse('60')
+        def structureCount = providers.gradleProperty('academyStressStructures').getOrElse('1')
+        neoForge.runs.named(runName) {
+            def game = gameDirectory.get().asFile.canonicalFile
+            if (!game.toPath().startsWith(runRoot.toPath()) || game.name != 'client'
+                    || !game.parentFile.name.startsWith('stress-client-')) {
+                throw new GradleException('Structure stress client requires an isolated run/sable-compat/stress-client-*/client directory; ' +
+                        'selected ' + game.absolutePath)
+            }
+            if (!new File(game, "saves/${world}/level.dat").isFile()) {
+                throw new GradleException("Copy the stress save into the isolated directory first: ${game}/saves/${world}")
+            }
+            systemProperty 'academy.structureStress', 'client'
+            systemProperty 'academy.structureStressDirectory', game.absolutePath
+            systemProperty 'academy.structureStressSampleSeconds', sampleSeconds
+            systemProperty 'academy.structureStressStructures', structureCount
+            programArguments.addAll('--quickPlaySingleplayer', world, '--width', width, '--height', height)
+            logger.lifecycle("academy-stress: client run=${runName} world='${world}' sample=${sampleSeconds}s structures=${structureCount} dir=${game.absolutePath}")
+        }
+        def toolchainService = project.extensions.getByType(org.gradle.jvm.toolchain.JavaToolchainService)
+        def taskName = 'run' + runName.substring(0, 1).toUpperCase() + runName.substring(1)
+        tasks.named(taskName).configure { task ->
+            if (launcherMode == 'jbr') {
+                task.javaLauncher.set(toolchainService.launcherFor { spec ->
+                    spec.vendor.set(org.gradle.jvm.toolchain.JvmVendorSpec.JETBRAINS)
+                    spec.languageVersion.set(org.gradle.jvm.toolchain.JavaLanguageVersion.of(25))
+                })
+            } else if (launcherMode == 'shell') {
+                // Keep the default launcher from the build; useful for quick inspections.
+            } else {
+                throw new GradleException("Unknown academyStressJavaLauncher=${launcherMode}")
+            }
+        }
+    }
+}

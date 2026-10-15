@@ -670,3 +670,55 @@
   - `.\gradlew.bat runServerSable -DisDev=true -PacademySableRuntime=sable -PacademySableSmoke=true -PacademySableCapture=true -PacademySableRunDirectory=run/sable-compat/NEW`（预置 `server/eula.txt` 与 `server/server.properties`；run 任务需 JBR 25）
   - `.\gradlew.bat build -DisDev=true` / `.\gradlew.bat build -DisDev=false`
 - 当前构建（含 P19–P33）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `6F90D498E886E13944BC7C26283D185B6BF39D14790AC2D9CBF2B8DD84A6C8BE`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `A633086FE163079D50DB54EBBBB988045D7EEBE4AA5DDBF88A1DEC256449D8C4`。未复制到整合包，未操作用户存档，未创建本地 Git 提交。
+
+### 性能压力测试工具与基线（2026-10-15）
+
+- 工具位置（全部 opt-in；只有显式 `-I validation/structure_stress/<场景>.init.gradle` 才把探针临时加入 `sourceSets.main`，普通构建与发布产物不受影响）：
+  - `validation/structure_stress/README.zh-CN.md`：目录说明、前置条件、指标口径与已知边界。
+  - `close-startup-dialogs.ps1`：可复用模块，等待游戏窗口并自动关闭启动警告弹窗（Escape/Enter 投递 + 真实系统点击），以 `latest.log` 出现世界继续标志为成功判定，驱动日志记录 `DIALOG_SCAN/DIALOG_ACTION/DIALOG_RESULT`。
+  - `run-server-native-stress.ps1` + `server_native_stress.init.gradle`：原生专服基线（隔离 `run/stress-server-native-rN`；需 `. ./build/native-physics-p16-env.ps1`，脚本内部自动加载）。
+  - `run-server-sable-stress.ps1` + `server_sable_stress.init.gradle`：Sable 专服基线（隔离 `run/sable-compat/stress-server-sable-rN/server`；run 任务固定 JBR 25）。
+  - `run-client-stress.ps1` + `client_stress.init.gradle`：客户端基线（隔离 `run/sable-compat/stress-client-rN`、存档副本、quickPlay、自动弹窗关闭）。
+  - `java/org/academy/validation/structure/`：原生 / Sable / 客户端三个探针；启动时校验隔离目录、拒绝已有结果与旧世界，失败写 `FAILED` 结果文件并由 shutdown hook 兜底。
+- 场景与规模（每档 60 秒采样；每次运行必须使用全新隔离目录，失败产物一律保留）：
+  - 服务端原生：3 个物理区域并发、各 1 个驻留结构，第 4 个区域开放被拒绝（`region_cap_probe=rejected`）；循环执行“捕获→挂接→升力→发射→脱离→清格→槽位回收”，规模 30 与 60 次操作。
+  - 服务端 Sable：创建 10 / 20 个真实子级（走生产捕获事务），对子级循环“直控租约获取→置速发射→运动采样→释放”，每 10 次插入一次容器 `saveAll`。
+  - 客户端：quickPlay 进入隔离存档副本并自动关闭启动弹窗；在集成服务器上用生产捕获事务创建 1 / 3 个结构，200 tick 预热后采样 60 秒。
+- 指标口径：
+  - 服务端：`tick_ms_avg/p50/p95/p99/max`（ServerTick 全程）、`mspt_avg`、`tps_avg`、`heap_used_mb_avg/max`（每 20 tick 采样）、事务阶段耗时（原生 `capture_ms`/`recycle_ms`；Sable `capture_ms`/`lease_ms`/`release_ms`/`launch_ms`/`save_ms`，其中 lease/release/launch 是轻量 API 调用本身、不含阶段等待）、区域/槽位/子级计数。
+  - 客户端：`load_ms`（JVM 启动→可操作）、`frame_ms_*`（相邻 `RenderFrameEvent.Pre` 间隔，即真实帧节奏）、`render_ms_*`（渲染段事件耗时）、`tick_ms_*`、`fps_avg`、`heap_used_mb_avg/max`。
+  - 口径变更：客户端 r1 的 `frame_ms_*`/`fps_avg` 为旧口径（渲染段耗时而非帧间隔），已被 r3 取代；Sable r3 的 `lease_ms`/`launch_ms` 为旧口径（含 4–5 tick 阶段等待），已被 r4 取代。
+- 基线数据（通过运行；摘要 `build/stress-*-summary.txt`，原始日志 `build/stress-*.log`）：
+  - 原生 r4（30 次操作 / 3 区域 / 60 秒）：`tick_ms_avg=3.2155`、`p95=4.9002`、`p99=31.6592`、`max=75.6327`、`mspt_avg=3.2155`、`tps_avg=20.0000`；`capture_ms_avg=81.6387`、`p99=214.9783`；`recycle_ms_avg=110.3733`、`p99=264.9250`；槽位回收 30/30；`heap_used_mb_avg=452.5710`、`max=610.6183`；`lift_rise_max=1.0383`、`launch_travel_max=3.6033`。
+  - 原生 r6（60 次操作 / 3 区域 / 60 秒）：`tick_ms_avg=3.9039`、`p95=5.7421`、`p99=31.3982`、`max=134.9836`、`tps_avg=20.0000`；`capture_ms_avg=83.2880`、`p99=180.7290`；`recycle_ms_avg=101.1634`、`p99=120.7477`；槽位回收 60/60、`cleared_cells=1620`、`capture_retries=0`；`heap_used_mb_avg=421.8564`、`max=577.2995`；`launch_samples=60`。
+  - Sable r4（20 子级 / 30 次循环 / 60 秒）：`children_created=20/20`、`save_children_min=max=20`、`operations_completed=30/30`、`leases_acquired=30`、`launches_ok=30`、`motion_samples=30`；`capture_ms_avg=35.4119`、`p99=67.2360`（20 次样本）；`lease_ms_avg=0.1437`、`release_ms_avg=0.0097`、`launch_ms_avg=0.0348`；`save_ms_avg=18.1386`、`max=25.2572`（6 次样本）；`tick_ms_avg=2.0333`、`p95=3.7320`、`max=49.4370`、`tps_avg=20.0000`；`heap_used_mb_avg=420.7663`、`max=584.2428`。
+  - Sable r3（10 子级，旧计时口径）：`save_ms_avg=14.4637`、`save_children_min=max=10`、`tick_ms_avg=1.7425`、`heap_used_mb_avg=380.2222`、`max=572.0787`；本轮 `capture_ms_count=0`（探针当时未采集捕获耗时），其余阶段数为 30。
+  - 客户端 r3（3 结构 / 60 秒 / 1024x576）：`structures_created=3/3`、`load_ms=28596`、`operable_ms=28596`、`sample_ticks=1200`、`warmup_ticks=200`；`frame_ms_avg=18.4786`、`p95=33.3227`、`p99=34.9818`、`max=47.1133`（≈54 fps）、`render_ms_avg=1.7484`；`tick_ms_avg=1.0832`、`p95=1.3323`、`max=6.8972`；`heap_used_mb_avg=1174.2776`、`max=1584.2418`。
+  - 客户端 r4（1 结构 / 60 秒 / 1024x576）：`structures_created=1/1`、`load_ms=28647`、`operable_ms=28647`、`sample_ticks=1200`；`frame_ms_avg=18.4098`、`p95=33.4156`、`p99=34.8980`、`max=45.7273`（≈54 fps）、`render_ms_avg=1.7231`；`tick_ms_avg=1.0198`、`p95=1.2728`、`max=4.9422`；`heap_used_mb_avg=1185.8216`、`max=1658.4684`。单/多结构两档的帧节奏与 tick 耗时在噪声范围内一致，结构数量（1→3）未拉开可辨差异。
+  - 客户端 r1（1 结构，旧帧口径）：结构 1/1、`load_ms=306504`（弹窗关闭耗时计入）、`tick_ms_avg=0.2880`、`heap_used_mb_avg=1096.6200`、`max=1480.8653`。
+- 启动弹窗自动关闭（用户可复现步骤）：
+  - 现象：NeoForge 启动后显示列出未来/废弃变更警告的 `LoadingErrorScreen`，quickPlay 停在警告屏、世界创建/载入不再前进。
+  - 手动处理：点击屏幕中下偏左的“继续（Proceed）”按钮，或按 Escape/Enter 即可继续；不修改任何游戏选项。
+  - 自动处理：脚本轮询游戏窗口，先在左下候选区发送真实系统点击（`SetForegroundWindow` + `SetCursorPos` + `mouse_event`；GLFW 不响应 `PostMessage` 的鼠标消息），并叠加 Escape/Enter 投递；每轮记 `DIALOG_ACTION`，`latest.log` 出现 `Preparing spawn area|logged in with entity id|joined the game|Saving chunks for level` 之一即记 `DIALOG_RESULT dialog dismissed=true attempts=N evidence='<命中行>'`，超时则 `dismissed=false`。
+  - 证据（客户端 r3/r4 各 attempts=8 且 dismissed=true）：`DIALOG_RESULT dialog dismissed=true attempts=8 evidence='... [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: Saving chunks for level 'ServerLevel[新的世界]'/minecraft:overworld'`（`build/stress-client-r3-driver.log`、`build/stress-client-r4-driver.log`；r1 另有 attempts=103 的早期证据）。
+  - 单独使用：`. validation/structure_stress/close-startup-dialogs.ps1; Invoke-StartupDialogDismissal -ClientDir <客户端目录> -DriverLog <日志路径> -JoinWaitSeconds 600`；`-NoDialogAutomation` 可做对照。
+- 失败轨迹（目录、结果文件与日志全部保留）：
+  - Sable r1：探针隔离目录校验把 `<run>/server` 的文件名 `server` 当 run 基名比对，`ServerStartedEvent` 抛 `IllegalStateException` 使专服崩溃（`run/sable-compat/stress-server-sable-r1`、`build/stress-server-sable-r1.log`）；修复为接受 `stress-server-sable-*/server` 后 r2 才真正进入探针。
+  - Sable r2：探针创建循环在“同步成功捕获”路径未推进 `createIndex`，产生 24 次连续同点捕获，暴露出生产 `StructureTransactionJournal.writeAtomically` 的 Windows `AccessDeniedException`（`TARGET_WRITE_FAILED/journal_copied_persist_failed`，`build/stress-server-sable-r2.log`）；修复循环推进并加入“仅 journal 类失败、每操作≤3 次”的有界捕获重试（r3/r4 均 `capture_retries=0`）。
+  - 原生 r1：`RESIDENT_ATTACH` 抛 `Structure handle is not active: LOADING`、0 次操作（`build/stress-server-native-r1-summary.txt`）。
+  - 原生 r2 / r3：分别在 `LIFT` / `DETACH` 抛 `Structure left the bounded physics domain; last published pose retained`（`build/stress-server-native-r2-summary.txt`、`r3-summary.txt`）。
+  - 原生 r5（60 次）：第 20 次捕获在 `COMMIT` 阶段 `TARGET_WRITE_FAILED/journal_decision_persist_failed`（同一 `AccessDeniedException`，`build/stress-server-native-r5.log`）；加入有界重试后 r6 复跑 60 次全通过且 `capture_retries=0`。
+  - 客户端 r2：弹窗脚本坐标表达式在 PowerShell 中因逗号优先级被解析为“数组减 28”，所有点击失败、600 秒超时 `NO_WORLD`（`build/stress-client-r2-driver.log`）；修正为显式括号后 r3 通过。
+- 本批发现（生产代码未改，供后续修复）：`StructureTransactionJournal.writeAtomically` 在 Windows 上用 `Files.move(..., ATOMIC_MOVE, REPLACE_EXISTING)` 原子替换同一 `.dat`，在连续捕获压力下偶发 `java.nio.file.AccessDeniedException`（观测约 2/108 次捕获；Sable r2 与原生 r5 的完整栈分别在 `build/stress-server-sable-r2.log`、`build/stress-server-native-r5.log`）。本轮仅在 validation 探针层做有界重试与计数，生产语义未变。
+- 未验边界：
+  - 服务端“程序图运行”相位未纳入本轮压测：真实 `extract` 在专服走跨 tick PENDING 且不发布结构引用，跑通结构节点族程序需要喷口/技能能量与玩家夹具；结构节点族在程序侧的覆盖仍是 P30–P33 的单测图验收与专服程序入口烟测，本批探针未实现该相位。
+  - 客户端结构为“后端持有”（捕获提交后存放于结构空间），未在视野内物理化/渲染；帧数据反映“后端存在结构 + 玩家静置”。
+  - 客户端无 vsync/画质对照，未跑低配/核显；GUI 自动化只关闭弹窗，未驱动结构操作（真实键盘结构操作仍未验）。
+  - Sable 探针无法分离 Rapier 内部步进耗时（`saveAll` 是唯一可计时的原生库接口）；未跑长稳（>60 秒）与内存泄漏曲线（仅均值/峰值）。
+  - 所有数字为本机一次性基线，非产品硬性指标；区域并发上限 3、Sable 子级上限 20 之外的规模未测。
+- 复现命令（每次使用全新隔离目录，替换 `rN`；客户端需先复制存档副本，见 README）：
+  - `powershell -ExecutionPolicy Bypass -File validation/structure_stress/run-server-native-stress.ps1 -RunSuffix rN -Operations 60 -Regions 3 -Seconds 60`
+  - `powershell -ExecutionPolicy Bypass -File validation/structure_stress/run-server-sable-stress.ps1 -RunSuffix rN -Children 20 -Operations 30 -Seconds 60`
+  - `powershell -ExecutionPolicy Bypass -File validation/structure_stress/run-client-stress.ps1 -RunSuffix rN -SampleSeconds 60 -Structures 3`
+  - 产物：`build/stress-server-native-rN-summary.txt`、`build/stress-server-sable-rN-summary.txt`、`build/stress-client-rN-summary.txt` 与对应 `build/stress-*.log`、客户端驱动日志 `build/stress-client-rN-driver.log`；探针原始结果保存在各自的隔离运行目录。
+- 本批未改动生产代码（探针与脚本仅位于 `validation/structure_stress/`，通过 init 脚本临时注入）；未操作用户存档（客户端只使用存档副本），未创建本地 Git 提交。

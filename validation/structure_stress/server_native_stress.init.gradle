@@ -1,0 +1,86 @@
+// Opt-in dedicated-server launcher injection for the native structure stress baseline.
+// Lives in the repository validation tree; pass it with -I and it is never part of a normal build.
+//
+// Usage (run from the repository root; replace rN with a fresh directory):
+//   . .\build\native-physics-p16-env.ps1
+//   .\gradlew.bat runServerCompat -DisDev=true ^
+//     -I validation/structure_stress/server_native_stress.init.gradle ^
+//     -PacademyStressServerNativeDirectory=run/stress-server-native-rN ^
+//     -PacademyStressOperations=30 -PacademyStressRegions=2 -PacademyStressSeconds=60 ^
+//     @physicsNativeArgs
+//
+// The isolated server directory must already contain eula.txt (eula=true) and a
+// server.properties with server-ip=127.0.0.1 and level-name=native-structure-stress;
+// the world directory itself must not exist yet.
+allprojects {
+    afterEvaluate {
+        sourceSets.main.java.srcDir(file('validation/structure_stress/java'))
+        def runRoot = rootProject.file('run').canonicalFile
+        def configured = providers.gradleProperty('academyStressServerNativeDirectory').orNull
+        if (configured == null) {
+            throw new GradleException('Pass -PacademyStressServerNativeDirectory=run/stress-server-native-rN')
+        }
+        def game = rootProject.file(configured).canonicalFile
+        if (!game.toPath().startsWith(runRoot.toPath()) || !game.name.startsWith('stress-server-native-')) {
+            throw new GradleException('Native stress server requires an isolated run/stress-server-native-* directory')
+        }
+        for (def marker : ['stress-server-native-result.txt', 'stress-server-native-exit.txt']) {
+            if (java.nio.file.Files.exists(new File(game, marker).toPath(), java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+                throw new GradleException('Native stress requires a fresh result and exit path: ' + marker)
+            }
+        }
+        def world = new File(game, 'native-structure-stress')
+        if (java.nio.file.Files.exists(world.toPath(), java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+            throw new GradleException('Native stress requires a previously nonexistent world directory')
+        }
+        def eula = new File(game, 'eula.txt')
+        def settingsFile = new File(game, 'server.properties')
+        if (!eula.isFile() || !(eula.text =~ /(?m)^eula=true\s*$/).find() || !settingsFile.isFile()) {
+            throw new GradleException('Prepare the isolated server with accepted EULA and server.properties')
+        }
+        def settings = new Properties()
+        settingsFile.withInputStream { settings.load(it) }
+        if (settings.getProperty('level-name') != 'native-structure-stress'
+                || settings.getProperty('server-ip') != '127.0.0.1') {
+            throw new GradleException('Native stress server must bind 127.0.0.1 and use level-name=native-structure-stress')
+        }
+        def library = providers.gradleProperty('academyNativePhysicsLibrary').orNull
+        def manifest = providers.gradleProperty('academyNativePhysicsManifest').orNull
+        if (library == null || manifest == null || !new File(library).isAbsolute() || !new File(manifest).isAbsolute()) {
+            throw new GradleException('Pass explicit absolute academyNativePhysicsLibrary and academyNativePhysicsManifest')
+        }
+        def launcherMode = providers.gradleProperty('academyStressJavaLauncher').getOrElse('jbr')
+        neoForge.runs.named('serverCompat') {
+            gameDirectory.set(game)
+            systemProperty 'academy.structureStress', 'server-native'
+            systemProperty 'academy.structureStressDirectory', game.absolutePath
+            systemProperty 'academy.structureStressRunRoot', runRoot.absolutePath
+            systemProperty 'academy.structureStressOperations',
+                    providers.gradleProperty('academyStressOperations').getOrElse('30')
+            systemProperty 'academy.structureStressRegions',
+                    providers.gradleProperty('academyStressRegions').getOrElse('2')
+            systemProperty 'academy.structureStressSeconds',
+                    providers.gradleProperty('academyStressSeconds').getOrElse('60')
+            systemProperty 'academy.nativePhysics.library', library
+            systemProperty 'academy.nativePhysics.manifest', manifest
+            jvmArgument '--enable-native-access=ALL-UNNAMED'
+            programArguments.add('--nogui')
+        }
+        tasks.named('runServerCompat') {
+            notCompatibleWithConfigurationCache('Native stress must revalidate its isolated directory and fresh world before every launch')
+            dependsOn 'prepareNativePhysics'
+        }
+        def toolchainService = project.extensions.getByType(org.gradle.jvm.toolchain.JavaToolchainService)
+        tasks.named('runServerCompat').configure { task ->
+            if (launcherMode == 'jbr') {
+                task.javaLauncher.set(toolchainService.launcherFor { spec ->
+                    spec.vendor.set(org.gradle.jvm.toolchain.JvmVendorSpec.JETBRAINS)
+                    spec.languageVersion.set(org.gradle.jvm.toolchain.JavaLanguageVersion.of(25))
+                })
+            } else if (launcherMode != 'shell') {
+                throw new GradleException("Unknown academyStressJavaLauncher=${launcherMode}")
+            }
+        }
+        logger.lifecycle("academy-stress: native server dir=${game.absolutePath} launcher=${launcherMode}")
+    }
+}

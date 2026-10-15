@@ -1,0 +1,71 @@
+// Opt-in dedicated-server launcher injection for the Sable structure stress baseline.
+// Lives in the repository validation tree; pass it with -I and it is never part of a normal build.
+//
+// Usage (run from the repository root; replace rN with a fresh directory):
+//   .\gradlew.bat runServerSable -DisDev=true -PacademySableRuntime=sable ^
+//     -PacademySableRunDirectory=run/sable-compat/stress-server-sable-rN ^
+//     -I validation/structure_stress/server_sable_stress.init.gradle ^
+//     -PacademyStressChildren=10 -PacademyStressOperations=30 -PacademyStressSeconds=60
+//
+// The isolated server/client pair directory must already contain
+// server/eula.txt (eula=true) and server/server.properties with
+// server-ip=127.0.0.1 and level-name=academy-sable-stress; the world directory
+// itself must not exist yet.
+allprojects {
+    afterEvaluate {
+        sourceSets.main.java.srcDir(file('validation/structure_stress/java'))
+        def runRoot = rootProject.file('run/sable-compat').canonicalFile
+        def runBase = rootProject.file(providers.gradleProperty('academySableRunDirectory')
+                .getOrElse('run/sable-compat/stress-server-sable')).canonicalFile
+        if (!runBase.toPath().startsWith(runRoot.toPath()) || !runBase.name.startsWith('stress-server-sable-')) {
+            throw new GradleException('Sable stress server requires an isolated run/sable-compat/stress-server-sable-* directory')
+        }
+        def game = new File(runBase, 'server').canonicalFile
+        for (def marker : ['stress-server-sable-result.txt', 'stress-server-sable-exit.txt']) {
+            if (java.nio.file.Files.exists(new File(game, marker).toPath(), java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+                throw new GradleException('Sable stress requires a fresh result and exit path: ' + marker)
+            }
+        }
+        def world = new File(game, 'academy-sable-stress')
+        if (java.nio.file.Files.exists(world.toPath(), java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+            throw new GradleException('Sable stress requires a previously nonexistent world directory')
+        }
+        def eula = new File(game, 'eula.txt')
+        def settingsFile = new File(game, 'server.properties')
+        if (!eula.isFile() || !(eula.text =~ /(?m)^eula=true\s*$/).find() || !settingsFile.isFile()) {
+            throw new GradleException('Prepare the isolated server with accepted EULA and server.properties')
+        }
+        def settings = new Properties()
+        settingsFile.withInputStream { settings.load(it) }
+        if (settings.getProperty('level-name') != 'academy-sable-stress'
+                || settings.getProperty('server-ip') != '127.0.0.1') {
+            throw new GradleException('Sable stress server must bind 127.0.0.1 and use level-name=academy-sable-stress')
+        }
+        def launcherMode = providers.gradleProperty('academyStressJavaLauncher').getOrElse('jbr')
+        neoForge.runs.named('serverSable') {
+            gameDirectory.set(game)
+            systemProperty 'academy.structureStress', 'server-sable'
+            systemProperty 'academy.structureStressRoot', runRoot.absolutePath
+            systemProperty 'academy.structureStressDirectory', game.absolutePath
+            systemProperty 'academy.structureStressChildren',
+                    providers.gradleProperty('academyStressChildren').getOrElse('10')
+            systemProperty 'academy.structureStressOperations',
+                    providers.gradleProperty('academyStressOperations').getOrElse('30')
+            systemProperty 'academy.structureStressSeconds',
+                    providers.gradleProperty('academyStressSeconds').getOrElse('60')
+            programArguments.add('--nogui')
+        }
+        def toolchainService = project.extensions.getByType(org.gradle.jvm.toolchain.JavaToolchainService)
+        tasks.named('runServerSable').configure { task ->
+            if (launcherMode == 'jbr') {
+                task.javaLauncher.set(toolchainService.launcherFor { spec ->
+                    spec.vendor.set(org.gradle.jvm.toolchain.JvmVendorSpec.JETBRAINS)
+                    spec.languageVersion.set(org.gradle.jvm.toolchain.JavaLanguageVersion.of(25))
+                })
+            } else if (launcherMode != 'shell') {
+                throw new GradleException("Unknown academyStressJavaLauncher=${launcherMode}")
+            }
+        }
+        logger.lifecycle("academy-stress: sable server dir=${game.absolutePath} launcher=${launcherMode}")
+    }
+}
