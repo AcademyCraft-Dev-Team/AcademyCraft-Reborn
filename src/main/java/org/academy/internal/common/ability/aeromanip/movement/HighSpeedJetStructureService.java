@@ -283,6 +283,16 @@ public final class HighSpeedJetStructureService {
             if (!handle.runtimeId().equals(runtimeId)) {
                 return ProgramResult.rejected("stale_structure_epoch");
             }
+            if (held.sableBody) {
+                var status = StructureDirectControl.acquire(level, reference, player, held.controllerId);
+                if (status != StructureDirectControl.Status.ACTIVE) {
+                    return ProgramResult.rejected(status == StructureDirectControl.Status.OCCUPIED
+                            ? "structure_controlled" : "structure_unavailable");
+                }
+                held.directControl = true;
+                held.controlled = true;
+                return ProgramResult.completed("control_acquired", reference);
+            }
             if (held.region == null
                     || held.region.status() == StructurePhysicsRegion.Status.FAILED) {
                 return ProgramResult.rejected("region_unavailable");
@@ -330,7 +340,7 @@ public final class HighSpeedJetStructureService {
      * target turns the group into a bounded follow. The shared whole-body budget is split across
      * the active anchors, so more nozzles or fragments never multiply it. The explicit anchor
      * input must resolve to an actual captured support cell, and every rejection keeps the
-     * structure and its inertia. Sable bodies have no per-step force entry and are unavailable.
+     * structure and its inertia. Sable applies the same bounded command at its physics step.
      */
     public static ProgramResult programMove(
             ServerPlayer player,
@@ -343,13 +353,12 @@ public final class HighSpeedJetStructureService {
         requireThread(player);
         var held = controlledSession(player, reference, controlId);
         if (held == null) return ProgramResult.rejected("no_matching_control");
-        if (held.directControl || held.sableBody) return ProgramResult.unavailable("sable_move");
-        if (held.region == null || held.region.status() == StructurePhysicsRegion.Status.FAILED) {
+        if (!held.sableBody && (held.region == null || held.region.status() == StructurePhysicsRegion.Status.FAILED)) {
             return ProgramResult.rejected("region_unavailable");
         }
         if (target != null) {
             if (!finite(target)) return ProgramResult.rejected("invalid_target");
-            var motion = held.region.motion(reference).orElse(null);
+            var motion = StructureDynamics.motion((ServerLevel) player.level(), reference).orElse(null);
             if (motion == null) return ProgramResult.rejected("motion_unavailable");
             var center = motion.pose().localToWorldPoint(motion.localCenterOfMass());
             if (center.distanceTo(target) > MAXIMUM_PROGRAM_MOVE_RANGE) {
@@ -514,6 +523,11 @@ public final class HighSpeedJetStructureService {
             BlockPos offset
     ) {
         if (!(player.level() instanceof ServerLevel level)) return false;
+        return resolvesSupportCell(level, reference, offset);
+    }
+
+    /** Actor-independent support validation, also used by persistent nozzle entities. */
+    public static boolean resolvesSupportCell(ServerLevel level, StructureRef reference, BlockPos offset) {
         var handle = StructureSpaces.resolve(level.getServer(), reference).orElse(null);
         if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) return false;
         try {
@@ -759,6 +773,7 @@ public final class HighSpeedJetStructureService {
     /** Per-player driver; must run once on the owning server thread. */
     public static void tick(ServerPlayer player) {
         requireThread(player);
+        MountedJetStructureControls.tick(player);
         var playerId = player.getUUID();
         tickCapture(player);
         var session = SESSIONS.get(playerId);
@@ -827,21 +842,49 @@ public final class HighSpeedJetStructureService {
 
     /** Coast observation for a directly launched Sable body; the lease is already withdrawn. */
     private static void tickSableDirect(ServerPlayer player, Session session) {
-        if (!session.directControl) return;
         if (!(player.level() instanceof ServerLevel level)) return;
+        if (!session.directControl) {
+            if (session.program) return;
+            var acquired = StructureDirectControl.acquire(level, session.reference, player, session.controllerId);
+            if (acquired != StructureDirectControl.Status.ACTIVE) {
+                if (++session.graceTicks > REGION_UNAVAILABLE_GRACE_TICKS) {
+                    stopSession(player.getUUID(), session.launchId, "control_unavailable");
+                }
+                return;
+            }
+            session.directControl = true;
+        }
         var status = StructureDirectControl.validate(
                 level, session.reference, player, session.controllerId);
         if (status != StructureDirectControl.Status.ACTIVE) {
             stopSession(player.getUUID(), session.launchId,
                     status == StructureDirectControl.Status.OCCUPIED
                             ? "control_occupied" : "control_unavailable");
+            return;
         }
+        if (session.program && !session.engaged) return;
+        if (!nozzleGate(player, session) || !mountsResolve(player, session)) {
+            stopSession(player.getUUID(), session.launchId, "nozzle_ended");
+            return;
+        }
+        var state = StructureDynamics.motion(level, session.reference).orElse(null);
+        if (state == null) return;
+        var motion = new StructureMotionState(state.pose(), state.linearVelocity(), state.angularVelocity(),
+                state.localCenterOfMass(), state.mass(), false, 0, 0);
+        var command = thrustCommand(player, session, motion);
+        if (command == null || !StructureDirectControl.submit(level, session.reference, player, session.controllerId,
+                new StructurePhysicsControl.Force(command.localPoint(), command.force()))) {
+            stopSession(player.getUUID(), session.launchId, "control_unavailable");
+            return;
+        }
+        session.launchSpeed = Math.max(session.launchSpeed, state.linearVelocity().length());
     }
 
     /** Silent lifecycle cleanup; the captured structure, inertia and region are retained. */
     public static void clear(ServerPlayer player) {
         if (player == null) return;
         var playerId = player.getUUID();
+        MountedJetStructureControls.clear(playerId);
         var capture = CAPTURES.remove(playerId);
         if (capture != null) {
             AcademyCraft.LOGGER.info("High-Speed Jet capture {} tracking cleared at a player lifecycle boundary",
@@ -852,6 +895,7 @@ public final class HighSpeedJetStructureService {
 
     /** Server shutdown cleanup; never throws into the stopping server. */
     public static void clearAll() {
+        MountedJetStructureControls.clearAll();
         for (var playerId : List.copyOf(SESSIONS.keySet())) {
             try {
                 stopSession(playerId, null, "server_stopped");
@@ -861,6 +905,11 @@ public final class HighSpeedJetStructureService {
         }
         CAPTURES.clear();
         SESSIONS.clear();
+    }
+
+    static boolean manages(ServerPlayer player, StructureRef reference) {
+        var session = SESSIONS.get(player.getUUID());
+        return session != null && session.reference.equals(reference);
     }
 
     private static void tickCapture(ServerPlayer player) {
@@ -1001,11 +1050,24 @@ public final class HighSpeedJetStructureService {
     ) {
         if (!(player.level() instanceof ServerLevel level)) return;
         if (sable(reference)) {
-            // The shared service has no Sable launch/flight entry yet. The captured structure is
-            // retained instead of being mutated through an unsupported path or a legacy entity.
+            var powerCost = ProgramPowerScale.costMultiplier(request.power);
+            var cpCost = (HighSpeedJet.activationCpCost(1) + positions.size() * 0.25f)
+                    * powerCost * costMultiplier;
+            var airCost = (HighSpeedJet.activationAirCost(1) + positions.size() * 0.5f) * powerCost;
+            if (!HighSpeedJet.Server.executeWithResources(player, cpCost, airCost, () -> {})) {
+                reject(player, "activation_rejected");
+                return;
+            }
             attachNozzles(player.getUUID(), reference, nozzles);
-            AcademyCraft.LOGGER.info("High-Speed Jet sable launch is not implemented; retaining {}", reference);
-            reject(player, "sable_launch_unavailable");
+            var previousTicks = new HashMap<HighSpeedJetNozzle, Integer>();
+            for (var mount : nozzles) previousTicks.put(mount.nozzle, mount.nozzle.activeTicks());
+            targetNozzle.activate(request.durationTicks);
+            var session = new Session(launchId, reference, level.dimension(), request,
+                    previousTicks, nozzles, targetNozzle, launchDirection, positions.size(), null, false);
+            session.sableBody = true;
+            session.stage = Stage.SABLE_DIRECT;
+            session.positions = List.copyOf(positions);
+            SESSIONS.put(player.getUUID(), session);
             return;
         }
         var handle = StructureSpaces.resolve(level.getServer(), reference).orElse(null);
@@ -1269,18 +1331,25 @@ public final class HighSpeedJetStructureService {
 
     private static void followRegion(ServerPlayer player, Session session, StructureMotionState motion) {
         if (!(player.level() instanceof ServerLevel level)) return;
-        var region = session.region;
-        var projection = projection(level, session.reference, region.bounds().inflate(16.0));
-        if (projection == null) return;
+        if (!followRegion(level, session.reference, session.region, motion)) {
+            stopSession(player.getUUID(), session.launchId, "follow_rebase_failed");
+        }
+    }
+
+    /** Shared by capture sessions and later activations of their retained nozzles. */
+    static boolean followRegion(ServerLevel level, StructureRef reference,
+                                StructurePhysicsRegion region, StructureMotionState motion) {
+        var projection = projection(level, reference, region.bounds().inflate(16.0));
+        if (projection == null) return true;
         var occupied = union(projection.worldCollisionBoxes());
-        if (occupied == null) return;
+        if (occupied == null) return true;
         var halfDiagonal = Math.sqrt(occupied.getXsize() * occupied.getXsize()
                 + occupied.getYsize() * occupied.getYsize()
                 + occupied.getZsize() * occupied.getZsize()) / 2.0;
         var predicted = occupied.move(motion.linearVelocity().scale(0.05))
                 .inflate(motion.angularVelocity().length() * halfDiagonal * ANGULAR_MARGIN_SECONDS);
         var bounds = region.bounds();
-        if (edgeDistance(bounds, predicted) >= FOLLOW_TRIGGER) return;
+        if (edgeDistance(bounds, predicted) >= FOLLOW_TRIGGER) return true;
         var limits = new AABB(level.getWorldBorder().getMinX(), level.getMinY(), level.getWorldBorder().getMinZ(),
                 level.getWorldBorder().getMaxX(), level.getMaxY(), level.getWorldBorder().getMaxZ());
         var candidate = followBounds(bounds, predicted, motion.linearVelocity(), FOLLOW_LOOKAHEAD_SECONDS,
@@ -1292,10 +1361,11 @@ public final class HighSpeedJetStructureService {
                     FOLLOW_TRAILING_MARGIN, level.getMinY(), level.getMaxY(), limits);
             if (conservative == null || conservative.equals(bounds) || !tryRebind(region, conservative)) {
                 AcademyCraft.LOGGER.warn("High-Speed Jet region follow could not rebase {}; ending thrust safely",
-                        session.reference);
-                stopSession(player.getUUID(), session.launchId, "follow_rebase_failed");
+                        reference);
+                return false;
             }
         }
+        return true;
     }
 
     private static boolean tryRebind(StructurePhysicsRegion region, AABB candidate) {

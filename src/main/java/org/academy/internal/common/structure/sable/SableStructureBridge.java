@@ -72,12 +72,18 @@ public final class SableStructureBridge implements StructureBackendRouter.Bridge
         return SableStructureDirectControl.probe(host, reference);
     }
 
+    @Override public boolean submitDirectControl(ServerLevel host, StructureRef reference, Entity actor,
+                                                 UUID controlId, StructurePhysicsControl control) {
+        return SableStructureDirectControl.submit(host, reference, actor, controlId, control);
+    }
+
     @Override public Optional<CaptureTarget> captureTarget(MinecraftServer server) {
         return Optional.of(new SableStructureTransactions(server));
     }
 
     @Override public void shutdown(MinecraftServer server) {
         SableStructureTraction.shutdown(server);
+        SableStructureDirectControl.shutdown(server);
         SableStaffCompatibility.shutdown(server);
         SableStructureAccess.shutdown(server);
         StructureDirectControl.clearAll();

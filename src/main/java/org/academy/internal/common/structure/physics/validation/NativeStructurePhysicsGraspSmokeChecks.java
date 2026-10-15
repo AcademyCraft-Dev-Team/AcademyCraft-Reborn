@@ -319,9 +319,11 @@ final class NativeStructurePhysicsGraspSmokeChecks implements AutoCloseable {
                 require(diagnostic(camera).nativeControlActive(), "Actual G input did not retain native control");
                 sawCpOccupation |= resources(camera).getPlayerOccupiedCP(camera.getUUID()) > 0;
                 if (diagnostic(camera).controlActiveTicks() < 20) return false;
-                require(worldCom(motion()).distanceTo(initialCom) > 0.25 && sawCpOccupation
-                                && resources(camera).getPlayerCurrMP(camera.getUUID()) < initialAir,
-                        "Actual input did not produce native motion and real resource charges");
+                require(sawCpOccupation && resources(camera).getPlayerCurrMP(camera.getUUID()) < initialAir,
+                        "Actual hold did not charge resources: cp=" + sawCpOccupation
+                                + " air=" + resources(camera).getPlayerCurrMP(camera.getUUID()) + "/" + initialAir);
+                // A valid hold may already be settled. Require motion after an actual target change.
+                initialCom = worldCom(motion());
                 previousTarget = anchor().targetPosition(); baseline = inputs; next(Phase.CUSTOM_SCROLL);
                 status("CUSTOM_SCROLL", "Scroll one notch while G-started control remains active", true);
             }
@@ -329,6 +331,7 @@ final class NativeStructurePhysicsGraspSmokeChecks implements AutoCloseable {
                 require(diagnostic(camera).nativeControlActive(), "Control ended before actual scroll");
                 if (inputs.scrolls() <= baseline.scrolls()) return false;
                 if (anchor().targetPosition().distanceTo(previousTarget) < 0.4) return false;
+                if (worldCom(motion()).distanceTo(initialCom) <= 0.25) return false;
                 if (!freeFallRoom()) return false;
                 evidence.append("grasp_client_actual_scroll_events=").append(inputs.scrolls() - baseline.scrolls()).append('\n');
                 baseline = inputs; next(Phase.CUSTOM_RELEASE);

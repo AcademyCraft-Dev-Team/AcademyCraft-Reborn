@@ -457,7 +457,7 @@ class AcceleratorProgramStructureNodesTest {
     }
 
     @Test
-    void pendingExtractKeepsTheFlowAndPublishesNoStructureReference() {
+    void pendingExtractSuspendsAndResumesTheSameNodeWithoutIncompleteOutputs() {
         var runtime = new ScriptedRuntime();
         runtime.extractPending = true;
         var graph = graph(
@@ -477,14 +477,22 @@ class AcceleratorProgramStructureNodesTest {
                 .compile(graph, Set.of(AcceleratorProgramCapabilities.STRUCTURE));
         assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
 
-        var result = AcceleratorProgramExecutionBridge.execute(
-                compiled.program(), 600L, runtime, new ProgramActionTransaction());
+        var session = new org.academy.internal.common.ability.program.ProgramVm.Session(compiled.program());
+        var frame = new org.academy.internal.common.ability.program.ProgramExecutionFrame(
+                new ProgramActionTransaction(), runtime);
+        var executors = AbilityProgramDefinitions.require(AcceleratorProgramNodeCatalog.ACCELERATOR).executors();
+        var result = session.run(600L, 1000, executors, frame);
 
-        assertEquals(ProgramVmResult.Status.COMPLETED, result.status(),
-                "a pending capture must not be reported as a failure");
+        assertEquals(ProgramVmResult.Status.SUSPENDED, result.status());
+        assertEquals(2, result.nodeId(), "wait at extraction, not its downstream consumer");
         assertEquals(List.of("extract-pending:BlockPos{x=10, y=64, z=10}"), runtime.applied);
         assertFalse(runtime.publishedReference,
                 "a pending capture must not publish a structure reference");
+        session.run(600L, 1000, executors, frame);
+        assertEquals(1, runtime.applied.size(), "do not busy-retry in the same tick");
+        runtime.extractPending = false;
+        assertEquals(ProgramVmResult.Status.COMPLETED, session.run(601L, 1000, executors, frame).status());
+        assertTrue(runtime.publishedReference);
     }
 
     private static final class ScriptedRuntime implements AcceleratorProgramRuntime {

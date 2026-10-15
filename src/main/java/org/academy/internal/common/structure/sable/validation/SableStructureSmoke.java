@@ -90,7 +90,7 @@ public final class SableStructureSmoke {
     private static volatile int clientMotionSamples;
     private static SableStructureSmoke active;
     private static boolean initialized;
-    private enum Phase { SKILL, COAST, CAPTURE, LIFECYCLE, HEAVY_THROW, PROGRAM, NPC, ACTOR_REMOVED, CALLBACK_WAIT, CALLBACK_COAST, CALLBACK_REACQUIRE, FINISH }
+    private enum Phase { SKILL, COAST, CAPTURE, LIFECYCLE, HEAVY_THROW, PROGRAM, GRAPH, JET_SKILL, NPC, ACTOR_REMOVED, CALLBACK_WAIT, CALLBACK_COAST, CALLBACK_REACQUIRE, FINISH }
     private static final BlockPos BASE = new BlockPos(8, 200, 8);
     private static final Vec3 CELL_CENTER = new Vec3(0.5, 0.5, 0.5);
     private static final StructureTraction.Settings SETTINGS = new StructureTraction.Settings(32, 32, 120, 36, 1000, 3);
@@ -118,6 +118,11 @@ public final class SableStructureSmoke {
     private UUID captureTransaction;
     private StructureRef captureRef;
     private boolean captureStarted;
+    private org.academy.internal.common.structure.physics.validation.StructureProgramWorldSmoke worldGraph;
+    private int graphIndex;
+    private HighSpeedJetStructureService.LaunchHandle jetLaunch;
+    private org.academy.internal.common.world.entity.skill.HighSpeedJetNozzle jetNozzle;
+    private StructureRef jetReference;
     private Phase phase = Phase.SKILL;
     private int ticks, age, impulseSubsteps, closedSubsteps;
     private int callbackStops, callbackClosedSubsteps;
@@ -679,10 +684,11 @@ public final class SableStructureSmoke {
                 var jetSession = HighSpeedJetStructureService.programSession(player).orElseThrow(() ->
                         new IllegalStateException("Sable aeromanip program control has no session"));
                 var jetMove = HighSpeedJetStructureService.programMove(
-                        player, captureRef, jetSession.controllerId(), direction, null, 40L);
-                require(jetMove.status() == HighSpeedJetStructureService.ProgramStatus.UNAVAILABLE
-                                && jetMove.detail().equals("sable_move"),
-                        "Sable aeromanip program move must be explicitly unavailable: "
+                        player, captureRef, jetSession.controllerId(),
+                        motion.pose().localToWorldPoint(motion.localCenterOfMass()), null, 40L);
+                require(jetMove.status() == HighSpeedJetStructureService.ProgramStatus.REJECTED
+                                && jetMove.detail().equals("support_unresolved"),
+                        "A structure without jet mounts must reject nozzle-driven movement: "
                                 + jetMove.status() + ":" + jetMove.detail());
                 var jetLaunch = HighSpeedJetStructureService.programLaunch(
                         player, captureRef, jetSession.controllerId(), direction, 1.0f, 60L);
@@ -706,12 +712,89 @@ public final class SableStructureSmoke {
                                 && jetNoop.detail().equals("release_noop"),
                         "Sable aeromanip program release was not idempotent: " + jetNoop.detail());
                 evidence.append("sable_aeromanip_program_control=true\n")
-                        .append("sable_aeromanip_program_move_unavailable=true\n")
+                        .append("sable_aeromanip_program_missing_support_rejected=true\n")
                         .append("sable_aeromanip_program_launch_speed=")
                         .append(jetMotion.linearVelocity().length()).append('\n')
                         .append("sable_aeromanip_program_release_idempotent=true\n");
                 closePlayer();
                 remove((ServerSubLevel) ship);
+                next(Phase.GRAPH);
+            }
+            case GRAPH -> {
+                require(session.update(session.targetPosition(), Vec3.ZERO) == StructureTraction.Status.ACTIVE,
+                        "NPC traction ended during graph checks");
+                var category = List.of("accelerator", "electromaster", "aeromanip").get(graphIndex);
+                if (worldGraph == null) {
+                    openEmbeddedPlayer();
+                    var ability = AbilitySystemServer.getSystem(player);
+                    var abilityCategory = switch (category) {
+                        case "accelerator" -> AbilityCategories.ACCELERATOR.get();
+                        case "electromaster" -> AbilityCategories.ELECTROMASTER.get();
+                        default -> AbilityCategories.AEROMANIP.get();
+                    };
+                    ability.setPlayerAbilityCategory(player.getUUID(), abilityCategory);
+                    ability.setPlayerLevel(player.getUUID(), 5);
+                    ability.setPlayerStatus(player.getUUID(), AbilityData.Status.NORMAL);
+                    ability.setPlayerBaseMaxCP(player.getUUID(), 100_000);
+                    ability.setPlayerAvailableCP(player.getUUID(), 100_000);
+                    var skill = switch (category) {
+                        case "accelerator" -> Skills.KINETIC_THROW.get();
+                        case "electromaster" -> Skills.MAGNET_MANIPULATION.get();
+                        default -> Skills.HIGH_SPEED_JET.get();
+                    };
+                    ability.addPlayerSkill(player, skill.getKeyString());
+                    if (!skill.isEnabled(player)) ability.toggleSkill(player.getUUID(), skill.getKeyString());
+                    if (category.equals("aeromanip")) {
+                        ability.getAeromanipResourceManager().onPlayerLogin(player);
+                        ability.setPlayerCurrMP(player.getUUID(), ability.getAeromanipResourceManager().getCapacity(player));
+                    }
+                    worldGraph = new org.academy.internal.common.structure.physics.validation.StructureProgramWorldSmoke(
+                            player, category, BASE.offset(24, 8, 24 + graphIndex * 4));
+                }
+                if (worldGraph.advance(evidence)) {
+                    var graphRef = worldGraph.reference();
+                    worldGraph.verifyMissingSupport(() -> {
+                        if (container.getSubLevel(graphRef.id()) instanceof ServerSubLevel ship) remove(ship);
+                    }, evidence);
+                    worldGraph.close();
+                    worldGraph = null;
+                    if (container.getSubLevel(graphRef.id()) instanceof ServerSubLevel graphShip) remove(graphShip);
+                    if (++graphIndex == 3) next(Phase.JET_SKILL);
+                    else closePlayer();
+                }
+            }
+            case JET_SKILL -> {
+                require(session.update(session.targetPosition(), Vec3.ZERO) == StructureTraction.Status.ACTIVE,
+                        "NPC traction ended during jet skill check");
+                if (jetLaunch == null) {
+                    var seed = BASE.offset(24, 8, 40);
+                    host.getChunkAt(seed);
+                    require(host.getBlockState(seed).isAir(), "Jet fixture source occupied");
+                    host.setBlock(seed, Blocks.IRON_BLOCK.defaultBlockState(), 3);
+                    player.connection.teleport(seed.getX() + 4.5, seed.getY() + 1, seed.getZ() - 4.5, 0, 0);
+                    jetNozzle = new org.academy.internal.common.world.entity.skill.HighSpeedJetNozzle(
+                            org.academy.internal.common.world.entity.EntityTypes.HIGH_SPEED_JET_NOZZLE.get(), host);
+                    jetNozzle.attach(player.getUUID(), seed, net.minecraft.core.Direction.DOWN);
+                    require(host.addFreshEntity(jetNozzle), "Cannot create jet skill nozzle");
+                    jetLaunch = HighSpeedJetStructureService.launch(player,
+                            new HighSpeedJetStructureService.LaunchRequest(seed, net.minecraft.core.Direction.DOWN,
+                                    new Vec3(0, 1, 0), 2, 1, 120, false), 1).orElseThrow();
+                }
+                var jet = HighSpeedJetStructureService.diagnostic(player).orElseThrow();
+                jetReference = jet.reference();
+                if (age < 12) break;
+                var motion = StructureDynamics.motion(host, jetReference).orElseThrow();
+                require(jet.sable() && jet.controlActive() && motion.linearVelocity().y > 1,
+                        "Real Sable jet skill did not thrust upward: " + motion.linearVelocity());
+                jetLaunch.close();
+                require(StructureSpaces.resolve(server, jetReference).isPresent(), "Jet stop deleted its structure");
+                evidence.append("sable_jet_skill_capture_thrust_release=true\n")
+                        .append("sable_jet_skill_upward_speed=").append(motion.linearVelocity().y).append('\n');
+                jetNozzle.discard();
+                if (container.getSubLevel(jetReference.id()) instanceof ServerSubLevel jetShip) remove(jetShip);
+                jetLaunch = null;
+                jetReference = null;
+                closePlayer();
                 next(Phase.NPC);
             }
             case NPC -> {
@@ -1003,6 +1086,17 @@ public final class SableStructureSmoke {
 
     private void cleanup() {
         if (cleaned) return;
+        if (jetLaunch != null) jetLaunch.close();
+        if (jetNozzle != null) jetNozzle.discard();
+        if (jetReference != null && container.getSubLevel(jetReference.id()) instanceof ServerSubLevel jetShip) remove(jetShip);
+        if (worldGraph != null) {
+            var graphRef = worldGraph.reference();
+            worldGraph.close();
+            worldGraph = null;
+            if (graphRef != null) {
+                if (container.getSubLevel(graphRef.id()) instanceof ServerSubLevel graphBody) remove(graphBody);
+            }
+        }
         if (session != null) session.close();
         if (staff != null && body != null && !body.isRemoved()) {
             callStaff("stopDragging", new Class<?>[]{UUID.class}, staffActor);

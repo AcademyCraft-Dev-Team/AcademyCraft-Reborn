@@ -166,6 +166,7 @@ public final class SableStructureTraction {
         if (!available(handle, guard, system)) return failure(NOT_AVAILABLE);
         var hit = validated.currentHit().orElseThrow();
         var subLevel = handle.subLevel();
+        if (StructureDirectControl.occupied(handle.reference(), handle.runtimeId())) return failure(OCCUPIED);
         staff = staffStatus(host, subLevel);
         if (staff != ACTIVE) return failure(staff);
         if (subLevel.getMassTracker().getMass() > settings.maxMass()) return failure(TOO_HEAVY);
@@ -203,6 +204,14 @@ public final class SableStructureTraction {
 
     /** Non-mutating exact-instance probe used by the isolated physics-staff entry gates. */
     public static boolean exclusiveOwner(ServerLevel host, ServerSubLevel ship) {
+        if (tractionOwner(host, ship)) return true;
+        var handle = SableStructureAccess.resolveHandle(host.getServer(),
+                new StructureRef(ship.getUniqueId(), host.dimension().identifier(),
+                        org.academy.internal.common.structure.StructureBackendRouter.SABLE_ID, 0)).orElse(null);
+        return handle != null && StructureDirectControl.occupied(handle.reference(), handle.runtimeId());
+    }
+
+    static boolean tractionOwner(ServerLevel host, ServerSubLevel ship) {
         SableStructureAccess.requireThread(host.getServer());
         var slots = SERVERS.get(host.getServer());
         var session = slots == null ? null : slots.get(ship);
@@ -210,6 +219,7 @@ public final class SableStructureTraction {
     }
 
     private static void beforePhysics(ForgeSablePrePhysicsTickEvent event) {
+        SableStructureDirectControl.beforePhysics(event);
         var system = event.getPhysicsSystem();
         var slots = SERVERS.get(system.getLevel().getServer());
         if (slots == null || slots.isEmpty()) return;

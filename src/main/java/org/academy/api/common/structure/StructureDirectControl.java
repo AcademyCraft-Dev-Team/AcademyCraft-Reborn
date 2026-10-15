@@ -11,10 +11,10 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Lightweight, non-force direct-velocity control for backends that own their own solver.
+ * Exclusive control for backends that own their own solver, supporting launch and bounded force.
  *
  * <p>A lease binds exactly one actor, one body epoch and one service control token. It never
- * applies force, never gates on mass and is never persisted. Once invalidated a token cannot
+ * gates on mass and is never persisted. Force submission is explicit. Once invalidated a token cannot
  * regain authority: acquisition revalidates the live body and refuses a foreign controller.
  * Release is idempotent and scoped to its own token, so it never terminates a successor.</p>
  */
@@ -89,10 +89,24 @@ public final class StructureDirectControl {
         Objects.requireNonNull(controlId, "controlId");
         var probe = StructureBackendRouter.probeDirectControl(host, reference);
         synchronized (LEASES) {
-            var standing = LEASES.get(reference);
-            var status = decideValidate(probe, standing, actor.getUUID(), controlId);
-            if (status != Status.ACTIVE && status != Status.OCCUPIED) LEASES.remove(reference);
-            return status;
+            return validateLease(LEASES, reference, probe, actor.getUUID(), controlId);
+        }
+    }
+
+    static Status validateLease(Map<StructureRef, Lease> leases, StructureRef reference,
+                                Probe probe, UUID actorId, UUID controlId) {
+        var standing = leases.get(reference);
+        var status = decideValidate(probe, standing, actorId, controlId);
+        if (status != Status.ACTIVE && status != Status.OCCUPIED
+                && owns(standing, actorId, controlId)) leases.remove(reference, standing);
+        return status;
+    }
+
+    /** Exact activation occupancy for cooperative external tool/traction arbitration. */
+    public static boolean occupied(StructureRef reference, UUID runtimeId) {
+        synchronized (LEASES) {
+            var lease = LEASES.get(reference);
+            return lease != null && lease.runtimeId().equals(runtimeId);
         }
     }
 
@@ -104,6 +118,15 @@ public final class StructureDirectControl {
             var standing = LEASES.get(reference);
             if (standing != null && standing.controlId().equals(controlId)) LEASES.remove(reference);
         }
+    }
+
+    /** Submits one outer tick of bounded force; the backend consumes it at physics substeps. */
+    public static boolean submit(ServerLevel host, StructureRef reference, Entity actor, UUID controlId,
+                                 StructurePhysicsControl control) {
+        Objects.requireNonNull(control, "control");
+        if (!actor.isAlive() || actor.isRemoved() || actor.level() != host
+                || validate(host, reference, actor, controlId) != Status.ACTIVE) return false;
+        return StructureBackendRouter.submitDirectControl(host, reference, actor, controlId, control);
     }
 
     /** Drops every lease; called when the owning server stops. */
@@ -125,6 +148,11 @@ public final class StructureDirectControl {
         }
         if (probe.state() == Probe.State.OCCUPIED) return Status.OCCUPIED;
         return Status.ACTIVE;
+    }
+
+    static boolean owns(@Nullable Lease standing, UUID actorId, UUID controlId) {
+        return standing != null && standing.actorId().equals(actorId)
+                && standing.controlId().equals(controlId);
     }
 
     static Status decideValidate(Probe probe, @Nullable Lease standing, UUID actorId, UUID controlId) {

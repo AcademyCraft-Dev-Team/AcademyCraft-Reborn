@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.aeromanip.program;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.ability.Skill;
@@ -28,6 +29,7 @@ import org.academy.internal.common.ability.aeromanip.movement.HighSpeedJetStruct
 import org.academy.internal.common.ability.aeromanip.skills.lv3.LaminarCutter;
 import org.academy.internal.common.ability.aeromanip.skills.lv4.HighSpeedJet;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
+import org.academy.internal.common.ability.program.StructureProgramActions;
 import org.academy.internal.common.ability.program.StructureStaticizationRunner;
 import org.academy.internal.common.ability.program.registry.AbilityProgramSpatialRanges;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
@@ -64,6 +66,8 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     private final float costMultiplier;
     private final ServerProgramTargetResolver targets;
     private final UUID runtimeToken = UUID.randomUUID();
+    private @Nullable StructureRef pendingExtraction;
+    private long extractionDeadline;
     private final Map<UUID, ProgramStructureControl> issuedControls = new HashMap<>();
     @Override
     public ProgramTargetResolver targetResolver() {
@@ -317,24 +321,48 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     @Override
     public StructureOperation extractStructure(ProgramBlockPosition host, int radius, int budget) {
         requireCasterReady(Skills.HIGH_SPEED_JET.get());
-        var seed = requireLaunchSeed(host);
-        var result = HighSpeedJetStructureService.programExtract(player, seed, radius, budget);
-        if (result.status() != HighSpeedJetStructureService.ProgramStatus.COMPLETED) {
-            return StructureOperation.result(operationResult(result));
+        if (pendingExtraction == null) {
+            var seed = requireLaunchSeed(host);
+            var result = StructureProgramActions.execute(player, Skills.HIGH_SPEED_JET.get(),
+                STRUCTURE_EXTRACT_COST * costMultiplier,
+                () -> HighSpeedJetStructureService.programExtract(player, seed, radius, budget),
+                value -> value.status() == HighSpeedJetStructureService.ProgramStatus.COMPLETED
+                            || value.status() == HighSpeedJetStructureService.ProgramStatus.PENDING);
+            if (result.status() != HighSpeedJetStructureService.ProgramStatus.COMPLETED
+                    && result.status() != HighSpeedJetStructureService.ProgramStatus.PENDING) {
+                return StructureOperation.result(operationResult(result));
+            }
+            pendingExtraction = HighSpeedJetStructureService.diagnostic(player)
+                    .map(state -> state.reference()).orElse(null);
+            extractionDeadline = player.level().getGameTime() + 400;
+            if (pendingExtraction == null) return StructureOperation.rejected("capture_session_unavailable");
         }
-        var reference = result.reference();
-        if (reference == null) return StructureOperation.rejected("committed_without_reference");
-        charge(Skills.HIGH_SPEED_JET.get(), STRUCTURE_EXTRACT_COST);
+        var reference = pendingExtraction;
+        var state = HighSpeedJetStructureService.diagnostic(player).orElse(null);
+        if (state == null || !state.reference().equals(reference)
+                || player.level().getGameTime() > extractionDeadline) {
+            pendingExtraction = null;
+            return StructureOperation.rejected("capture_session_ended");
+        }
+        if (state.stage() == HighSpeedJetStructureService.Stage.CAPTURING
+                || org.academy.api.common.structure.StructureDynamics.motion(
+                        (ServerLevel) player.level(), reference).isEmpty()) {
+            return StructureOperation.result(ProgramStructureOperationResult.pending("capture_pending"));
+        }
+        pendingExtraction = null;
         return StructureOperation.structure(programReference(reference),
-                ProgramStructureOperationResult.completed(result.detail(), reference));
+                ProgramStructureOperationResult.completed("committed", reference));
     }
 
     @Override
     public StructureOperation controlStructure(ProgramStructureReference structure) {
         requireCasterReady(Skills.HIGH_SPEED_JET.get());
         Objects.requireNonNull(structure, "structure");
-        var result = HighSpeedJetStructureService.programControl(
-                player, structure.reference(), structure.runtimeId());
+        var result = StructureProgramActions.execute(player, Skills.HIGH_SPEED_JET.get(),
+                STRUCTURE_CONTROL_COST * costMultiplier,
+                () -> HighSpeedJetStructureService.programControl(
+                player, structure.reference(), structure.runtimeId()),
+                value -> value.status() == HighSpeedJetStructureService.ProgramStatus.COMPLETED);
         if (result.status() != HighSpeedJetStructureService.ProgramStatus.COMPLETED) {
             return StructureOperation.result(operationResult(result));
         }
@@ -345,7 +373,6 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
         var token = new ProgramStructureControl(structure.reference(), structure.runtimeId(),
                 session.controllerId(), player.getUUID(), runtimeToken);
         issuedControls.put(token.controlId(), token);
-        charge(Skills.HIGH_SPEED_JET.get(), STRUCTURE_CONTROL_COST);
         return StructureOperation.control(token,
                 ProgramStructureOperationResult.completed(result.detail(), structure.reference()));
     }
@@ -371,13 +398,14 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
                 return StructureOperation.rejected("target_out_of_range");
             }
         }
-        var result = HighSpeedJetStructureService.programMove(player, control.reference(),
-                control.controlId(), destination,
+        var moveTarget = destination;
+        var result = StructureProgramActions.execute(player, Skills.HIGH_SPEED_JET.get(),
+                STRUCTURE_MOVE_COST * costMultiplier,
+                () -> HighSpeedJetStructureService.programMove(player, control.reference(),
+                control.controlId(), moveTarget,
                 anchor == null ? null : anchor.localPosition(),
-                (long) Math.ceil(seconds * 20.0));
-        if (result.status() == HighSpeedJetStructureService.ProgramStatus.COMPLETED) {
-            charge(Skills.HIGH_SPEED_JET.get(), STRUCTURE_MOVE_COST);
-        }
+                (long) Math.ceil(seconds * 20.0)),
+                value -> value.status() == HighSpeedJetStructureService.ProgramStatus.COMPLETED);
         return StructureOperation.result(operationResult(result));
     }
 
@@ -401,11 +429,11 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
             return StructureOperation.rejected("invalid_duration");
         }
         var normalized = normalizedVector(direction);
-        var result = HighSpeedJetStructureService.programLaunch(player, control.reference(),
-                control.controlId(), normalized, power, (long) Math.ceil(seconds * 20.0));
-        if (result.status() == HighSpeedJetStructureService.ProgramStatus.COMPLETED) {
-            charge(Skills.HIGH_SPEED_JET.get(), STRUCTURE_LAUNCH_COST);
-        }
+        var result = StructureProgramActions.execute(player, Skills.HIGH_SPEED_JET.get(),
+                STRUCTURE_LAUNCH_COST * costMultiplier,
+                () -> HighSpeedJetStructureService.programLaunch(player, control.reference(),
+                control.controlId(), normalized, power, (long) Math.ceil(seconds * 20.0)),
+                value -> value.status() == HighSpeedJetStructureService.ProgramStatus.COMPLETED);
         return StructureOperation.result(operationResult(result));
     }
 

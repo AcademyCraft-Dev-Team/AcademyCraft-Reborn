@@ -49,7 +49,7 @@ import java.util.UUID;
  * damage. It drives the same public skill entry points used by packets.
  */
 final class NativeStructurePhysicsKineticThrowSmokeChecks implements AutoCloseable {
-    private enum Phase { PLACE, CHARGE, RELEASE, CAPTURE, PHYSICS, LIFT, THROW, FLIGHT, VERIFY, DONE }
+    private enum Phase { PLACE, CHARGE, RELEASE, CAPTURE, PHYSICS, LIFT, THROW, FLIGHT, VERIFY, GRAPH, DONE }
 
     private static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS;
     private static final int FLIGHT_OBSERVE_TICKS = 30;
@@ -62,6 +62,7 @@ final class NativeStructurePhysicsKineticThrowSmokeChecks implements AutoCloseab
     private final List<BlockPos> sourceCells = new ArrayList<>();
     private final List<ChunkPos> tickets = new ArrayList<>();
     private final ServerPlayer player;
+    private StructureProgramWorldSmoke worldGraph;
     private final Connection connection;
     private final EmbeddedChannel channel;
     private BlockPos source;
@@ -325,8 +326,15 @@ final class NativeStructurePhysicsKineticThrowSmokeChecks implements AutoCloseab
                         "Kinetic throw dropped items instead of retaining the structure");
                 evidence.append("kinetic_terminal_structure_active=true\n")
                         .append("kinetic_source_not_restored=true\nkinetic_no_drops=true\n");
-                next(Phase.DONE);
-                return finish();
+                next(Phase.GRAPH);
+            }
+            case GRAPH -> {
+                if (worldGraph == null) {
+                    NativeStructurePhysicsSmokeCleanup.releaseCapturedSlot(host, reference, sourceCells);
+                    reference = null;
+                    worldGraph = new StructureProgramWorldSmoke(player, "accelerator", source.above(12));
+                }
+                if (worldGraph.advance(evidence)) return finish();
             }
             case DONE -> {
                 return true;
@@ -442,6 +450,7 @@ final class NativeStructurePhysicsKineticThrowSmokeChecks implements AutoCloseab
     public void close() {
         if (closed) return;
         closed = true;
+        if (worldGraph != null) worldGraph.close();
         KineticThrow.Server.stopHeld(player);
         if (zombie != null && !zombie.isRemoved()) {
             zombie.discard();

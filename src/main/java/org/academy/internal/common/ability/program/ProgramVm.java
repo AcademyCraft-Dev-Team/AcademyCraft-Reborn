@@ -135,6 +135,11 @@ public final class ProgramVm {
                     step.outputs().forEach((port, value) ->
                             latchedOutputs.put(new CompiledProgram.OutputKey(node.id(), port), value));
                     switch (step.directive()) {
+                        case RETRY -> {
+                            wakeAt = gameTime + step.delayTicks();
+                            return new ProgramVmResult(ProgramVmResult.Status.SUSPENDED,
+                                    currentNodeId, ProgramVmDiagnostic.NONE);
+                        }
                         case DATA -> {
                             return fail(ProgramVmDiagnostic.INVALID_FLOW_OUTPUT);
                         }

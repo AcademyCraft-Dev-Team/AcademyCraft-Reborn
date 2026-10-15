@@ -66,6 +66,12 @@ public final class StructureBackendRouter {
             return false;
         }
 
+        /** Queues one bounded control command; unsupported backends refuse. */
+        default boolean submitDirectControl(ServerLevel host, StructureRef reference, Entity actor,
+                                            UUID controlId, StructurePhysicsControl control) {
+            return false;
+        }
+
         /** Non-mutating probe behind {@link StructureDirectControl}; unsupported backends refuse. */
         default StructureDirectControl.Probe probeDirectControl(ServerLevel host, StructureRef reference) {
             return StructureDirectControl.Probe.unavailable("direct_control_unsupported");
@@ -201,7 +207,15 @@ public final class StructureBackendRouter {
         return false;
     }
 
-    /** Routes one direct-control probe to the selected backend without mutating any state. */
+    /** Queues one bounded control command in the selected backend. */
+    public static boolean submitDirectControl(ServerLevel host, StructureRef reference, Entity actor,
+                                              UUID controlId, StructurePhysicsControl control) {
+        var selected = selection(host.getServer());
+        return selected.bridge != null
+                && selected.bridge.submitDirectControl(host, reference, actor, controlId, control);
+    }
+
+    /** Routes one direct-control probe without mutating world state. */
     public static StructureDirectControl.Probe probeDirectControl(ServerLevel host, StructureRef reference) {
         Objects.requireNonNull(host, "host");
         Objects.requireNonNull(reference, "reference");

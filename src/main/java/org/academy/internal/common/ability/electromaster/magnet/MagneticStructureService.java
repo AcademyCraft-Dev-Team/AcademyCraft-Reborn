@@ -19,6 +19,7 @@ import org.academy.api.common.structure.LegacyMotionUnits;
 import org.academy.api.common.structure.StructureBackendStatus;
 import org.academy.api.common.structure.StructureCaptureRequest;
 import org.academy.api.common.structure.StructureDirectControl;
+import org.academy.api.common.structure.StructureDynamics;
 import org.academy.api.common.structure.StructureLifecycle;
 import org.academy.api.common.structure.StructureMotionState;
 import org.academy.api.common.structure.StructurePhysics;
@@ -505,7 +506,6 @@ public final class MagneticStructureService {
         var control = matchingProgram(player, reference, controlId);
         if (control == null) return ProgramResult.rejected("no_matching_control");
         var session = control.session;
-        if (sable(reference)) return ProgramResult.unavailable("sable_move");
         if (session.stage() == Stage.CAPTURING) {
             return ProgramResult.rejected("not_movable:capturing");
         }
@@ -517,7 +517,7 @@ public final class MagneticStructureService {
         if (!level.hasChunkAt(block) || !level.getWorldBorder().isWithinBounds(block)) {
             return ProgramResult.rejected("target_unavailable");
         }
-        var motion = session.region == null ? null : session.region.motion(reference).orElse(null);
+        var motion = StructureDynamics.motion(level, reference).orElse(null);
         var referencePoint = motion != null
                 ? motion.pose().localToWorldPoint(motion.localCenterOfMass())
                 : session.positions.isEmpty() ? null : selectionCenter(session.positions);
@@ -528,6 +528,7 @@ public final class MagneticStructureService {
             return ProgramResult.rejected("no_magnetic_participation");
         }
         control.target = target;
+        control.moving = true;
         control.localForcePoint = localForcePoint == null ? null : localForcePoint.immutable();
         control.moveExpiresAt = level.getGameTime()
                 + Mth.clamp(durationTicks, 1L, MAXIMUM_PROGRAM_MOVE_TICKS);
@@ -703,6 +704,22 @@ public final class MagneticStructureService {
                 if (StructureDirectControl.validate(level, session.reference(), player, session.controllerId())
                         != StructureDirectControl.Status.ACTIVE) {
                     releaseProgram(playerId, "structure_unavailable");
+                    continue;
+                }
+                if (!control.moving) continue;
+                var motion = StructureDynamics.motion(level, session.reference()).orElse(null);
+                if (motion == null) continue;
+                var point = control.localForcePoint == null
+                        ? motion.localCenterOfMass() : Vec3.atCenterOf(control.localForcePoint);
+                var origin = motion.pose().localToWorldPoint(point);
+                var speed = MagneticFieldTuning.targetPullSpeed(
+                        Skills.MAGNET_MANIPULATION.get().getEffectiveProficiencyMilestone(player));
+                var force = MagneticStructureControl.pullForce(motion.linearVelocity(), origin,
+                        control.target, Vec3.ZERO, speed, PROGRAM_STOP_DISTANCE,
+                        motion.mass(), control.participation(gameTime));
+                if (!StructureDirectControl.submit(level, session.reference(), player, session.controllerId(),
+                        new StructurePhysicsControl.Force(point, force))) {
+                    releaseProgram(playerId, "control_unavailable");
                 }
                 continue;
             }
@@ -779,6 +796,7 @@ public final class MagneticStructureService {
         private final int magneticCells;
         private final int totalCells;
         private Vec3 target;
+        private boolean moving;
         private long moveExpiresAt;
         private long magnetizeExpiresAt;
         private @Nullable BlockPos localForcePoint;
@@ -1007,9 +1025,7 @@ public final class MagneticStructureService {
             var status = StructureDirectControl.acquire(level, reference, player, controllerId);
             if (status != StructureDirectControl.Status.ACTIVE) {
                 AcademyCraft.LOGGER.warn("Magnetic pull could not lease Sable body {}: {}", reference, status);
-                if (!StructureTransactions.discard(level.getServer(), reference)) {
-                    AcademyCraft.LOGGER.error("Magnetic pull could not discard unleased structure {}", reference);
-                }
+                // Capture already transferred ownership. Failed control must retain that content.
                 fail(player, status == StructureDirectControl.Status.OCCUPIED
                         ? "structure_controlled" : "sable_pull_unavailable");
                 close();

@@ -21,6 +21,24 @@ class StructureDirectControlTest {
     private static final UUID RUNTIME = UUID.fromString("00000000-0000-0000-0000-000000000004");
 
     @Test
+    void staleValidationCannotEraseTheSuccessorRegistryEntry() {
+        var reference = new StructureRef(UUID.randomUUID(),
+                net.minecraft.resources.Identifier.parse("minecraft:overworld"),
+                net.minecraft.resources.Identifier.parse("academy:sable"), 0);
+        var successor = new Lease(OTHER, UUID.randomUUID(), RUNTIME);
+        var leases = new java.util.HashMap<StructureRef, Lease>();
+        leases.put(reference, successor);
+        assertEquals(Status.UNAVAILABLE, StructureDirectControl.validateLease(
+                leases, reference, Probe.ready(RUNTIME), ACTOR, CONTROL));
+        assertEquals(successor, leases.get(reference));
+        assertEquals(Status.ACTIVE, StructureDirectControl.validateLease(
+                leases, reference, Probe.ready(RUNTIME), OTHER, successor.controlId()));
+        assertEquals(Status.UNAVAILABLE, StructureDirectControl.validateLease(
+                leases, reference, Probe.ready(UUID.randomUUID()), OTHER, successor.controlId()));
+        assertEquals(0, leases.size(), "the matching expired activation is still removed");
+    }
+
+    @Test
     void acquireGrantsReadyBodiesAndRefusesForeignTokens() {
         var probe = Probe.ready(RUNTIME);
         assertEquals(Status.ACTIVE, StructureDirectControl.decideAcquire(probe, null, ACTOR, CONTROL));

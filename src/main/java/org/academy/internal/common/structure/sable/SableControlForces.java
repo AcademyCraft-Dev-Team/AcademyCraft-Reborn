@@ -10,7 +10,7 @@ import org.academy.api.common.structure.StructurePhysicsControls;
 final class SableControlForces {
     private SableControlForces() {}
 
-    static Vec3 localImpulse(StructurePhysicsControl.Anchor control, StructureMotionState motion, double seconds) {
+    static Vec3 localImpulse(StructurePhysicsControl control, StructureMotionState motion, double seconds) {
         if (!Double.isFinite(seconds) || seconds <= 0 || seconds > 0.05) {
             throw new IllegalArgumentException("Physics substep must be finite and in (0, 0.05] seconds");
         }

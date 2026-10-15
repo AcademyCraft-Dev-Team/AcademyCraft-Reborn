@@ -16,7 +16,7 @@ public record ProgramNodeStep(
     public ProgramNodeStep {
         outputs = Map.copyOf(outputs);
         if (delayTicks < 0) throw new IllegalArgumentException("Program delay cannot be negative");
-        if (directive == Directive.YIELD && delayTicks < 1) {
+        if ((directive == Directive.YIELD || directive == Directive.RETRY) && delayTicks < 1) {
             throw new IllegalArgumentException("Yielding program node must delay at least one tick");
         }
     }
@@ -38,6 +38,11 @@ public record ProgramNodeStep(
 
     public static ProgramNodeStep yield(String flowOutput, long delayTicks) {
         return new ProgramNodeStep(Directive.YIELD, Map.of(), flowOutput, delayTicks);
+    }
+
+    /** Suspends at this node; no downstream flow or incomplete outputs are published. */
+    public static ProgramNodeStep retry(long delayTicks) {
+        return new ProgramNodeStep(Directive.RETRY, Map.of(), null, delayTicks);
     }
 
     /**
@@ -71,6 +76,7 @@ public record ProgramNodeStep(
         YIELD,
         LOOP_CONTINUE,
         LOOP_BREAK,
-        STOP
+        STOP,
+        RETRY
     }
 }

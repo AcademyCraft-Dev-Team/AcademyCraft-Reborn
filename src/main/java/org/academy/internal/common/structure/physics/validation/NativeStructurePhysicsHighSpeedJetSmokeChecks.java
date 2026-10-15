@@ -48,7 +48,7 @@ final class NativeStructurePhysicsHighSpeedJetSmokeChecks implements AutoCloseab
     private enum Phase {
         PLACE, NOZZLE, LAUNCH, CAPTURE, PHYSICS, THRUST, STOP, VERIFY,
         PROGRAM_SETUP, PROGRAM_EXTRACT, PROGRAM_CAPTURE, PROGRAM_MOVE, PROGRAM_MOVE_WAIT,
-        PROGRAM_LAUNCH, PROGRAM_LAUNCH_WAIT, PROGRAM_STOP, PROGRAM_VERIFY, DONE
+        PROGRAM_LAUNCH, PROGRAM_LAUNCH_WAIT, PROGRAM_STOP, PROGRAM_VERIFY, GRAPH, DONE
     }
 
     private static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS;
@@ -64,6 +64,7 @@ final class NativeStructurePhysicsHighSpeedJetSmokeChecks implements AutoCloseab
     private final List<BlockPos> programSourceCells = new ArrayList<>();
     private final List<ChunkPos> tickets = new ArrayList<>();
     private final ServerPlayer player;
+    private StructureProgramWorldSmoke worldGraph;
     private final Connection connection;
     private final EmbeddedChannel channel;
     private BlockPos source;
@@ -424,8 +425,16 @@ final class NativeStructurePhysicsHighSpeedJetSmokeChecks implements AutoCloseab
                         "Program release fell back to a legacy structure entity");
                 evidence.append("hsjet_program_retained=true\n")
                         .append("hsjet_program_source_not_restored=true\n");
-                next(Phase.DONE);
-                return finish();
+                next(Phase.GRAPH);
+            }
+            case GRAPH -> {
+                if (worldGraph == null) {
+                    if (programRegion != null) programRegion.close();
+                    NativeStructurePhysicsSmokeCleanup.releaseCapturedSlot(host, programReference, programSourceCells);
+                    programReference = null;
+                    worldGraph = new StructureProgramWorldSmoke(player, "aeromanip", source.above(12));
+                }
+                if (worldGraph.advance(evidence)) return finish();
             }
             case DONE -> {
                 return true;
@@ -495,6 +504,7 @@ final class NativeStructurePhysicsHighSpeedJetSmokeChecks implements AutoCloseab
     public void close() {
         if (closed) return;
         closed = true;
+        if (worldGraph != null) worldGraph.close();
         if (handle != null) {
             try {
                 handle.close();

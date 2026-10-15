@@ -1096,6 +1096,18 @@ public final class AbilitySystemServer {
         return tryTimedOccupation(player.getUUID(), adjusted, skill, skill.getIterationTicks(player));
     }
 
+    /** Checks the program cost before invoking an action, charging only an accepted action. */
+    public boolean tryTimedOccupationIf(ServerPlayer player, float amount, Skill skill, BooleanSupplier action) {
+        if (!Float.isFinite(amount) || amount < 0) return false;
+        var adjusted = skill.adjustProficiencyCost(player, SkillProficiencyProfile.CostKind.DYNAMIC, amount);
+        var scaled = adjusted * SkillTuning.costMultiplier(minecraftServer, skill);
+        if (!Float.isFinite(scaled) || scaled < 0) return false;
+        var actual = Math.max(0, scaled * playerCPManager.getCalculationIntensity(player.getUUID()));
+        return playerCPManager.tryOccupationIf(player.getUUID(), actual, skill,
+                resolveIterationPoints(skill.getIterationTicks(player), scaled),
+                () -> EntityMotionGuard.callWithMotionSource(player, action::getAsBoolean));
+    }
+
     public boolean tryTimedOccupation(UUID uuid, float amount, Skill skill, int iterationPoints) {
         return tryTimedOccupation(uuid, amount, skill, iterationPoints, false);
     }

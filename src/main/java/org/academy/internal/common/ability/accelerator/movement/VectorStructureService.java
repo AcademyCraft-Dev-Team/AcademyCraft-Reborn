@@ -402,7 +402,6 @@ public final class VectorStructureService {
         if (held.stage != Stage.LIFTING) {
             return ProgramResult.rejected("not_movable:" + held.stage.name().toLowerCase(java.util.Locale.ROOT));
         }
-        if (isSable(held.reference)) return ProgramResult.unavailable("sable_move");
         if (!isFiniteVector(target)) return ProgramResult.rejected("invalid_target");
         if (!(player.level() instanceof ServerLevel level)) {
             return ProgramResult.rejected("host_unavailable");
@@ -411,7 +410,7 @@ public final class VectorStructureService {
         if (!level.hasChunkAt(block) || !level.getWorldBorder().isWithinBounds(block)) {
             return ProgramResult.rejected("target_unavailable");
         }
-        var motion = held.region == null ? null : held.region.motion(held.reference).orElse(null);
+        var motion = StructureDynamics.motion(level, held.reference).orElse(null);
         if (motion == null) return ProgramResult.rejected("motion_unavailable");
         var com = motion.pose().localToWorldPoint(motion.localCenterOfMass());
         if (com.distanceTo(target) > MAXIMUM_PROGRAM_MOVE_RANGE) {
@@ -1086,7 +1085,20 @@ public final class VectorStructureService {
 
     private static void tickLifting(ServerPlayer player, Session held) {
         if (held.directControl) {
-            if (!directControlActive(player, held)) terminate(player.getUUID());
+            if (!directControlActive(player, held)) {
+                terminate(player.getUUID());
+                return;
+            }
+            if (held.programMove && player.level() instanceof ServerLevel level) {
+                var motion = StructureDynamics.motion(level, held.reference).orElse(null);
+                if (motion == null) return;
+                var settings = KineticStructureControl.settings(motion.mass(), held.tier, 0, PROGRAM_CONTROL_RANGE);
+                if (!StructureDirectControl.submit(level, held.reference, player, held.controllerId,
+                        new StructurePhysicsControl.Anchor(motion.localCenterOfMass(), held.liftTarget, Vec3.ZERO,
+                                settings.stiffness(), settings.damping(), settings.maxForce()))) {
+                    terminate(player.getUUID());
+                }
+            }
             return;
         }
         if (held.traction != null) {

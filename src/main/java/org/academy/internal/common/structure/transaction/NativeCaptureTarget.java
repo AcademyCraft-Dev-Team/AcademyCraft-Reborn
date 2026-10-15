@@ -67,6 +67,7 @@ public final class NativeCaptureTarget implements CaptureTarget {
 
     @Override
     public Optional<BlockState> readCell(StructureRef target, BlockPos localOffset) {
+        if (!ready(target)) return Optional.empty();
         return Optional.of(access(target).read(localOffset).state());
     }
 

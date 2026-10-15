@@ -35,6 +35,7 @@ import org.academy.internal.common.ability.accelerator.movement.VectorStructureS
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorProjectileStateAdapter;
 import org.academy.internal.common.ability.accelerator.skills.lv2.KineticEnergyApplied;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
+import org.academy.internal.common.ability.program.StructureProgramActions;
 import org.academy.internal.common.ability.program.StructureStaticizationRunner;
 import org.academy.internal.common.ability.program.registry.AbilityProgramSpatialRanges;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
@@ -65,6 +66,8 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
     private final ImpactBatch impactBatch = new ImpactBatch();
     private final ServerProgramTargetResolver targets;
     private final UUID runtimeToken = UUID.randomUUID();
+    private @Nullable StructureRef pendingExtraction;
+    private long extractionDeadline;
     private final Map<UUID, ProgramStructureControl> issuedControls = new HashMap<>();
 
     @Override
@@ -386,24 +389,49 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
     @Override
     public StructureOperation extractStructure(ProgramBlockPosition host, int tier, int budget) {
         requireCasterReady(Skills.KINETIC_THROW.get());
-        var seed = requireStructureHost(host);
-        var result = VectorStructureService.programExtract(player, seed, tier, budget);
-        if (result.status() != VectorStructureService.ProgramStatus.COMPLETED) {
-            return StructureOperation.result(operationResult(result));
+        if (pendingExtraction == null) {
+            var seed = requireStructureHost(host);
+            var result = StructureProgramActions.execute(player, Skills.KINETIC_THROW.get(),
+                STRUCTURE_EXTRACT_COST * costMultiplier,
+                () -> VectorStructureService.programExtract(player, seed, tier, budget),
+                value -> value.status() == VectorStructureService.ProgramStatus.COMPLETED
+                            || value.status() == VectorStructureService.ProgramStatus.PENDING);
+            if (result.status() != VectorStructureService.ProgramStatus.COMPLETED
+                    && result.status() != VectorStructureService.ProgramStatus.PENDING) {
+                return StructureOperation.result(operationResult(result));
+            }
+            pendingExtraction = VectorStructureService.diagnostic(player)
+                    .map(state -> state.reference()).orElse(null);
+            extractionDeadline = player.level().getGameTime() + 400;
+            if (pendingExtraction == null) return StructureOperation.rejected("capture_session_unavailable");
         }
-        var reference = result.reference();
-        if (reference == null) return StructureOperation.rejected("committed_without_reference");
-        charge(Skills.KINETIC_THROW.get(), STRUCTURE_EXTRACT_COST);
+        var reference = pendingExtraction;
+        var state = VectorStructureService.diagnostic(player).orElse(null);
+        if (state == null || !state.reference().equals(reference)
+                || player.level().getGameTime() > extractionDeadline) {
+            pendingExtraction = null;
+            return StructureOperation.rejected("capture_session_ended");
+        }
+        if (state.stage() == VectorStructureService.Stage.CAPTURING
+                || state.stage() == VectorStructureService.Stage.AWAITING_PHYSICS
+                || org.academy.api.common.structure.StructureDynamics.motion(
+                        (ServerLevel) player.level(), reference).isEmpty()) {
+            return StructureOperation.result(ProgramStructureOperationResult.pending("capture_pending"));
+        }
+        pendingExtraction = null;
         return StructureOperation.structure(programReference(reference),
-                ProgramStructureOperationResult.completed(result.detail(), reference));
+                ProgramStructureOperationResult.completed("committed", reference));
     }
 
     @Override
     public StructureOperation controlStructure(ProgramStructureReference structure) {
         requireCasterReady(Skills.KINETIC_THROW.get());
         Objects.requireNonNull(structure, "structure");
-        var result = VectorStructureService.programControl(
-                player, structure.reference(), structure.runtimeId());
+        var result = StructureProgramActions.execute(player, Skills.KINETIC_THROW.get(),
+                STRUCTURE_CONTROL_COST * costMultiplier,
+                () -> VectorStructureService.programControl(
+                player, structure.reference(), structure.runtimeId()),
+                value -> value.status() == VectorStructureService.ProgramStatus.COMPLETED);
         if (result.status() != VectorStructureService.ProgramStatus.COMPLETED) {
             return StructureOperation.result(operationResult(result));
         }
@@ -414,7 +442,6 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
         var token = new ProgramStructureControl(structure.reference(), structure.runtimeId(),
                 session.controllerId(), player.getUUID(), runtimeToken);
         issuedControls.put(token.controlId(), token);
-        charge(Skills.KINETIC_THROW.get(), STRUCTURE_CONTROL_COST);
         return StructureOperation.control(token,
                 ProgramStructureOperationResult.completed(result.detail(), structure.reference()));
     }
@@ -432,11 +459,11 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
         if (!Double.isFinite(seconds) || seconds < 0.1 || seconds > MAXIMUM_MOVE_SECONDS) {
             return StructureOperation.rejected("invalid_duration");
         }
-        var result = VectorStructureService.programMove(player, control.reference(),
-                control.controlId(), destination, (long) Math.ceil(seconds * 20.0));
-        if (result.status() == VectorStructureService.ProgramStatus.COMPLETED) {
-            charge(Skills.KINETIC_THROW.get(), STRUCTURE_MOVE_COST);
-        }
+        var result = StructureProgramActions.execute(player, Skills.KINETIC_THROW.get(),
+                STRUCTURE_MOVE_COST * costMultiplier,
+                () -> VectorStructureService.programMove(player, control.reference(),
+                control.controlId(), destination, (long) Math.ceil(seconds * 20.0)),
+                value -> value.status() == VectorStructureService.ProgramStatus.COMPLETED);
         return StructureOperation.result(operationResult(result));
     }
 
@@ -456,11 +483,11 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
         var rejection = validateControl(control);
         if (rejection != null) return StructureOperation.rejected(rejection);
         var normalized = normalized(direction);
-        var result = VectorStructureService.programLaunch(player, control.reference(),
-                control.controlId(), normalized, launchSpeedScale(strength));
-        if (result.status() == VectorStructureService.ProgramStatus.COMPLETED) {
-            charge(Skills.KINETIC_THROW.get(), STRUCTURE_LAUNCH_COST);
-        }
+        var result = StructureProgramActions.execute(player, Skills.KINETIC_THROW.get(),
+                STRUCTURE_LAUNCH_COST * costMultiplier,
+                () -> VectorStructureService.programLaunch(player, control.reference(),
+                control.controlId(), normalized, launchSpeedScale(strength)),
+                value -> value.status() == VectorStructureService.ProgramStatus.COMPLETED);
         return StructureOperation.result(operationResult(result));
     }
 

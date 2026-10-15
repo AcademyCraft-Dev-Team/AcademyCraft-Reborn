@@ -274,6 +274,9 @@ public final class AeromanipProgramExecutionBridge {
             boolean includeControl
     ) {
         var result = operation.result();
+        if (result.status() == ProgramStructureOperationResult.Status.PENDING) {
+            return ProgramNodeStep.retry(1);
+        }
         if (result.status() != ProgramStructureOperationResult.Status.COMPLETED
                 && result.status() != ProgramStructureOperationResult.Status.PENDING) {
             throw new ProgramActionFailure(

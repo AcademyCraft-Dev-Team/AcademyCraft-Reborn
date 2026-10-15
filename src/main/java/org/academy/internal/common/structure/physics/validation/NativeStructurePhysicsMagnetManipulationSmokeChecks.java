@@ -46,7 +46,7 @@ import java.util.UUID;
  * control while retaining the captured structure.
  */
 final class NativeStructurePhysicsMagnetManipulationSmokeChecks implements AutoCloseable {
-    private enum Phase { PLACE, FILTER, START, CAPTURE, PHYSICS, PULL, FOLLOW, STOP, VERIFY, DONE }
+    private enum Phase { PLACE, FILTER, START, CAPTURE, PHYSICS, PULL, FOLLOW, STOP, VERIFY, GRAPH, DONE }
 
     private static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS;
     private static final BlockPos SOURCE_OFFSET = new BlockPos(33, 4, 0);
@@ -59,6 +59,7 @@ final class NativeStructurePhysicsMagnetManipulationSmokeChecks implements AutoC
     private final StringBuilder evidence;
     private final List<ChunkPos> tickets = new ArrayList<>();
     private final ServerPlayer player;
+    private StructureProgramWorldSmoke worldGraph;
     private final Connection connection;
     private final EmbeddedChannel channel;
     private BlockPos source;
@@ -294,8 +295,15 @@ final class NativeStructurePhysicsMagnetManipulationSmokeChecks implements AutoC
                         "Magnetic pull fell back to a legacy structure entity");
                 evidence.append("mag_terminal_structure_active=true\nmag_source_not_restored=true\n")
                         .append("mag_no_drops=true\nmag_no_legacy_entity=true\n");
-                next(Phase.DONE);
-                return finish();
+                next(Phase.GRAPH);
+            }
+            case GRAPH -> {
+                if (worldGraph == null) {
+                    NativeStructurePhysicsSmokeCleanup.releaseCapturedSlot(host, reference, List.of(seed));
+                    reference = null;
+                    worldGraph = new StructureProgramWorldSmoke(player, "electromaster", source.above(12));
+                }
+                if (worldGraph.advance(evidence)) return finish();
             }
             case DONE -> {
                 return true;
@@ -385,6 +393,7 @@ final class NativeStructurePhysicsMagnetManipulationSmokeChecks implements AutoC
     public void close() {
         if (closed) return;
         closed = true;
+        if (worldGraph != null) worldGraph.close();
         MagnetManipulation.Server.stopTargetPull(player);
         if (region != null) {
             try {

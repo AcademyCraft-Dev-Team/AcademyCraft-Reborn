@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.electromaster.program;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.FallingBlockEntity;
@@ -36,6 +37,7 @@ import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
 import org.academy.internal.common.ability.electromaster.skills.lv3.CurrentRecharge;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagnetManipulation;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
+import org.academy.internal.common.ability.program.StructureProgramActions;
 import org.academy.internal.common.ability.program.StructureStaticizationRunner;
 import org.academy.internal.common.ability.program.registry.AbilityProgramSpatialRanges;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
@@ -70,6 +72,8 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     private final float costMultiplier;
     private final ServerProgramTargetResolver targets;
     private final UUID runtimeToken = UUID.randomUUID();
+    private @Nullable StructureRef pendingExtraction;
+    private long extractionDeadline;
     private final Map<UUID, ProgramStructureControl> issuedControls = new HashMap<>();
     @Override
     public ProgramTargetResolver targetResolver() {
@@ -249,28 +253,49 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     public StructureOperation extractStructure(ProgramBlockPosition host, int budget,
                                                boolean forceMagnetize) {
         requireCasterReady(Skills.MAGNET_MANIPULATION.get());
-        var seed = requireStructureHost(host);
-        var result = MagneticStructureService.programExtract(player, seed, budget, forceMagnetize);
-        if (result.status() != MagneticStructureService.ProgramStatus.COMPLETED) {
-            return StructureOperation.result(operationResult(result));
+        if (pendingExtraction == null) {
+            var seed = requireStructureHost(host);
+            var result = StructureProgramActions.execute(player, Skills.MAGNET_MANIPULATION.get(),
+                (STRUCTURE_EXTRACT_COST + (forceMagnetize ? FORCED_MAGNETIZATION_COST : 0)) * costMultiplier,
+                () -> MagneticStructureService.programExtract(player, seed, budget, forceMagnetize),
+                value -> value.status() == MagneticStructureService.ProgramStatus.COMPLETED
+                            || value.status() == MagneticStructureService.ProgramStatus.PENDING);
+            if (result.status() != MagneticStructureService.ProgramStatus.COMPLETED
+                    && result.status() != MagneticStructureService.ProgramStatus.PENDING) {
+                return StructureOperation.result(operationResult(result));
+            }
+            pendingExtraction = MagneticStructureService.programSession(player)
+                    .map(state -> state.reference()).orElse(null);
+            extractionDeadline = player.level().getGameTime() + 400;
+            if (pendingExtraction == null) return StructureOperation.rejected("capture_session_unavailable");
         }
-        var reference = result.reference();
-        if (reference == null) return StructureOperation.rejected("committed_without_reference");
-        charge(Skills.MAGNET_MANIPULATION.get(), STRUCTURE_EXTRACT_COST);
-        // Forced magnetization is authorized and paid separately from the control token.
-        if (forceMagnetize) {
-            charge(Skills.MAGNET_MANIPULATION.get(), FORCED_MAGNETIZATION_COST);
+        var reference = pendingExtraction;
+        var state = MagneticStructureService.programSession(player).orElse(null);
+        if (state == null || !state.reference().equals(reference)
+                || player.level().getGameTime() > extractionDeadline) {
+            pendingExtraction = null;
+            return StructureOperation.rejected("capture_session_ended");
         }
+        if (state.stage() == MagneticStructureService.Stage.CAPTURING
+                || state.stage() == MagneticStructureService.Stage.AWAITING_PHYSICS
+                || org.academy.api.common.structure.StructureDynamics.motion(
+                        (ServerLevel) player.level(), reference).isEmpty()) {
+            return StructureOperation.result(ProgramStructureOperationResult.pending("capture_pending"));
+        }
+        pendingExtraction = null;
         return StructureOperation.structure(programReference(reference),
-                ProgramStructureOperationResult.completed(result.detail(), reference));
+                ProgramStructureOperationResult.completed("committed", reference));
     }
 
     @Override
     public StructureOperation controlStructure(ProgramStructureReference structure) {
         requireCasterReady(Skills.MAGNET_MANIPULATION.get());
         Objects.requireNonNull(structure, "structure");
-        var result = MagneticStructureService.programControl(
-                player, structure.reference(), structure.runtimeId());
+        var result = StructureProgramActions.execute(player, Skills.MAGNET_MANIPULATION.get(),
+                STRUCTURE_CONTROL_COST * costMultiplier,
+                () -> MagneticStructureService.programControl(
+                player, structure.reference(), structure.runtimeId()),
+                value -> value.status() == MagneticStructureService.ProgramStatus.COMPLETED);
         if (result.status() != MagneticStructureService.ProgramStatus.COMPLETED) {
             return StructureOperation.result(operationResult(result));
         }
@@ -281,7 +306,6 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
         var token = new ProgramStructureControl(structure.reference(), structure.runtimeId(),
                 session.controllerId(), player.getUUID(), runtimeToken);
         issuedControls.put(token.controlId(), token);
-        charge(Skills.MAGNET_MANIPULATION.get(), STRUCTURE_CONTROL_COST);
         return StructureOperation.control(token,
                 ProgramStructureOperationResult.completed(result.detail(), structure.reference()));
     }
@@ -299,12 +323,12 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
         if (!Double.isFinite(seconds) || seconds < 0.1 || seconds > MAXIMUM_MOVE_SECONDS) {
             return StructureOperation.rejected("invalid_duration");
         }
-        var result = MagneticStructureService.programMove(player, control.reference(),
+        var result = StructureProgramActions.execute(player, Skills.MAGNET_MANIPULATION.get(),
+                STRUCTURE_MOVE_COST * costMultiplier,
+                () -> MagneticStructureService.programMove(player, control.reference(),
                 control.controlId(), destination, (long) Math.ceil(seconds * 20.0),
-                anchor == null ? null : anchor.localPosition());
-        if (result.status() == MagneticStructureService.ProgramStatus.COMPLETED) {
-            charge(Skills.MAGNET_MANIPULATION.get(), STRUCTURE_MOVE_COST);
-        }
+                anchor == null ? null : anchor.localPosition()),
+                value -> value.status() == MagneticStructureService.ProgramStatus.COMPLETED);
         return StructureOperation.result(operationResult(result));
     }
 
@@ -325,11 +349,11 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
         if (rejection != null) return StructureOperation.rejected(rejection);
         var normalized = normalized(direction);
         var speedScale = ProgramPowerScale.interpolate(ProgramPowerScale.require(power), 0.5, 1.0, 1.5);
-        var result = MagneticStructureService.programLaunch(player, control.reference(),
-                control.controlId(), normalized, speedScale);
-        if (result.status() == MagneticStructureService.ProgramStatus.COMPLETED) {
-            charge(Skills.MAGNET_MANIPULATION.get(), STRUCTURE_LAUNCH_COST);
-        }
+        var result = StructureProgramActions.execute(player, Skills.MAGNET_MANIPULATION.get(),
+                STRUCTURE_LAUNCH_COST * costMultiplier,
+                () -> MagneticStructureService.programLaunch(player, control.reference(),
+                control.controlId(), normalized, speedScale),
+                value -> value.status() == MagneticStructureService.ProgramStatus.COMPLETED);
         return StructureOperation.result(operationResult(result));
     }
 

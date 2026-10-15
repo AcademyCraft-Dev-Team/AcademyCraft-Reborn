@@ -157,7 +157,7 @@ public final class HighSpeedJetNozzle extends Entity {
     }
 
     public boolean isAttachedTo(BlockPos pos, Direction face) {
-        return supportEntityUuid == null && entityData.get(SUPPORT_ENTITY_ID) < 0
+        return structureSupport == null && supportEntityUuid == null && entityData.get(SUPPORT_ENTITY_ID) < 0
                 && supportPos.equals(pos) && face() == face;
     }
 
@@ -173,6 +173,16 @@ public final class HighSpeedJetNozzle extends Entity {
     /** True while this nozzle rides a captured structure instead of a host block or entity. */
     public boolean isStructureMounted() {
         return structureSupport != null;
+    }
+
+    /** Stable local mount for shared whole-structure thrust; host positions are only projections. */
+    public record StructureMount(StructureRef reference, BlockPos offset, Direction face) {
+    }
+
+    public java.util.Optional<StructureMount> structureMount() {
+        return structureSupport == null || structureSupportOffset == null || structureSupportFace == null
+                ? java.util.Optional.empty()
+                : java.util.Optional.of(new StructureMount(structureSupport, structureSupportOffset, structureSupportFace));
     }
 
     public int activeTicks() {
@@ -204,8 +214,9 @@ public final class HighSpeedJetNozzle extends Entity {
         if (hasSupport()) {
             missingSupportTicks = 0;
             snapToSurface();
-        } else if (++missingSupportTicks > 100) {
-            discard();
+        } else {
+            entityData.set(ACTIVE_TICKS, 0);
+            if (++missingSupportTicks > 100) discard();
             return;
         }
         var owner = ownerUuid == null ? null
@@ -317,18 +328,10 @@ public final class HighSpeedJetNozzle extends Entity {
             return false;
         }
         if (structureSupport != null) {
-            if (level() instanceof ServerLevel serverLevel) {
-                var handle = StructureSpaces.resolve(serverLevel.getServer(), structureSupport)
-                        .orElse(null);
-                if (handle != null && handle.lifecycle() == StructureLifecycle.ACTIVE) return true;
-            }
-            if (hasBlockSupport()) {
-                structureSupport = null;
-                structureSupportOffset = null;
-                structureSupportFace = null;
-                return true;
-            }
-            return false;
+            // A missing/unloaded local cell never changes the nozzle's content owner.
+            return structureSupportOffset != null && level() instanceof ServerLevel serverLevel
+                    && org.academy.internal.common.ability.aeromanip.movement.HighSpeedJetStructureService
+                    .resolvesSupportCell(serverLevel, structureSupport, structureSupportOffset);
         }
         return hasBlockSupport();
     }
