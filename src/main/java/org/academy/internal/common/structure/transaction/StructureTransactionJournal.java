@@ -8,19 +8,16 @@ import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.Identifier;
 import org.academy.api.common.structure.StructureCaptureRequest;
+import org.academy.internal.common.structure.DurableFile;
 import org.jspecify.annotations.Nullable;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -38,6 +35,12 @@ import java.util.zip.GZIPOutputStream;
  * persisted before the first world write of its stage and retained until the outcome is
  * confirmed. Cell payloads are opaque; the journal validates identity, stage order and geometry
  * but never interprets block content. Corrupt files are isolated and retained, never guessed.
+ *
+ * <p>Every record is committed through {@link DurableFile}, which bounds transient Windows
+ * sharing denials with retries before a non-atomic delete-and-move fallback; that fallback
+ * briefly leaves the record file absent and only runs after every atomic attempt failed. A
+ * failure past the fallback retains the temporary record as evidence and is always rethrown.
+ * Temporary files that survive a crash are never read as records.</p>
  */
 public final class StructureTransactionJournal {
     public static final String DIRECTORY_NAME = "structure_transactions";
@@ -148,12 +151,18 @@ public final class StructureTransactionJournal {
     }
 
     private final Path directory;
+    private final DurableFile.FileOperations fileOperations;
     private final Map<UUID, Record> records = new LinkedHashMap<>();
     private final List<String> corrupt = new ArrayList<>();
     private final boolean healthy;
 
     public StructureTransactionJournal(Path directory) throws IOException {
+        this(directory, DurableFile.FileOperations.DEFAULT);
+    }
+
+    StructureTransactionJournal(Path directory, DurableFile.FileOperations fileOperations) throws IOException {
         this.directory = Objects.requireNonNull(directory, "directory").toAbsolutePath().normalize();
+        this.fileOperations = Objects.requireNonNull(fileOperations, "fileOperations");
         Files.createDirectories(this.directory);
         healthy = scan();
     }
@@ -335,7 +344,7 @@ public final class StructureTransactionJournal {
         }
     }
 
-    private static void writeAtomically(Path target, CompoundTag payload) throws IOException {
+    private void writeAtomically(Path target, CompoundTag payload) throws IOException {
         var size = payload.sizeInBytes();
         if (size < 0 || size > MAX_PAYLOAD_BYTES) {
             throw new IOException("Structure transaction payload is too large");
@@ -357,16 +366,6 @@ public final class StructureTransactionJournal {
         } catch (RuntimeException invalid) {
             throw new IOException("Structure transaction payload exceeds decoding limits", invalid);
         }
-        var temporary = Files.createTempFile(target.getParent(), target.getFileName().toString(), ".tmp");
-        try {
-            try (var channel = FileChannel.open(temporary, StandardOpenOption.WRITE)) {
-                var bytes = ByteBuffer.wrap(data);
-                while (bytes.hasRemaining()) channel.write(bytes);
-                channel.force(true);
-            }
-            Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-        } finally {
-            Files.deleteIfExists(temporary);
-        }
+        DurableFile.writeAtomically(target, data, fileOperations);
     }
 }

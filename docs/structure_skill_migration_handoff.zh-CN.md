@@ -722,3 +722,21 @@
   - `powershell -ExecutionPolicy Bypass -File validation/structure_stress/run-client-stress.ps1 -RunSuffix rN -SampleSeconds 60 -Structures 3`
   - 产物：`build/stress-server-native-rN-summary.txt`、`build/stress-server-sable-rN-summary.txt`、`build/stress-client-rN-summary.txt` 与对应 `build/stress-*.log`、客户端驱动日志 `build/stress-client-rN-driver.log`；探针原始结果保存在各自的隔离运行目录。
 - 本批未改动生产代码（探针与脚本仅位于 `validation/structure_stress/`，通过 init 脚本临时注入）；未操作用户存档（客户端只使用存档副本），未创建本地 Git 提交。
+
+### 修复：事务日志原子替换偶发 AccessDeniedException（2026-10-15）
+
+- 根因：`StructureTransactionJournal.writeAtomically` 与 `NativeStructureManifest.writeAtomically` 都用“临时文件 + `Files.move(ATOMIC_MOVE, REPLACE_EXISTING)`”提交 `.dat`；临时文件本身已 `channel.force(true)`，但 Windows 的 `MoveFileEx` 替换目标时若目标被文件过滤器（杀毒/搜索索引）或未共享 delete 的并发句柄短暂持有，就会以 `java.nio.file.AccessDeniedException` 失败，旧实现没有重试：journal 失败即 `TARGET_WRITE_FAILED/journal_*_persist_failed`，manifest 失败即 `Native structure unload refused after save failure`。旧 `finally` 无条件删除临时文件，在兜底已删除目标后还可能丢掉唯一副本。
+- 修复（不改变 journal 文件格式与阶段语义）：
+  - 新增 `internal/common/structure/DurableFile`：临时文件写入 + `force(true)`，替换失败时有界重试（5 次尝试，10/20/40/80 ms 退避，总 ≤150 ms；仅重试 `FileSystemException`，`AtomicMoveNotSupportedException` 立即走兜底）；重试耗尽后兜底为非原子“先删后移”（`REPLACE_EXISTING` 语义）。重试前本进程读路径均已关闭流（`NbtIo.readCompressed(Path)`/`readAttributes`/`Files.list` 均为即开即关）。
+  - 失败从不吞掉：兜底已删除目标（临时文件成唯一副本）时保留临时文件并把路径以 suppressed 形式附在抛出的异常上；否则清理临时文件。崩溃遗留的孤儿 `.tmp` 不会被当作记录读取（journal 只扫描 `.dat`，manifest 只读 `metadata.dat`）。
+  - `StructureTransactionJournal` 增加包内可注入 `DurableFile.FileOperations` 构造器（单测 seam），公开构造器、`persist`/`delete` 行为与记录内容均未变；类注释已注明兜底窗口与保留语义。
+  - `NativeStructureManifest` 是同一缺陷的第二处站点，且正是它（而非 journal）让修复后首轮压测在 `RECYCLE` 失败，故一并改走共享工具；其余 `ATOMIC_MOVE` 站点（`WorldDataStore`、音乐缓存、validation 烟测）不在本压测路径，未改动。
+- 单测（`StructureTransactionJournalTest` 8 → 12 项）：首次 `AccessDeniedException` 后重试成功（3 次尝试、0 次兜底）；5 次原子尝试耗尽后兜底成功（6 次原子尝试、1 次兜底）；`AtomicMoveNotSupportedException` 一次失败即兜底；兜底删除目标后仍失败时显式抛出、`.dat` 缺失、`.tmp` 保留且 suppressed 带临时路径。全套 2654 项普通单测（P33 基线 2650，本轮 +4）+ Sable 16 项，失败/错误/跳过均为 0（`build/jnl-tests-full2.log`；定向 `build/jnl-tests-targeted.log`、`jnl-tests-targeted2.log`）。
+- 压测对照（修复前 2/108 次捕获失败 → 本轮 0/N）：
+  - 基线：Sable r2 `TARGET_WRITE_FAILED/journal_copied_persist_failed`（`build/stress-server-sable-r2.log:24247`）；原生 r5 第 20 次捕获 `TARGET_WRITE_FAILED/journal_decision_persist_failed`（`build/stress-server-native-r5.log:24427`）。
+  - 本轮原生 r8（120 次操作 / 3 区域 / 60 秒，新目录 `run/stress-server-native-r8`）：PASSED，`operations_completed=120/120`、`capture_retries=0`、`slot_recycle_ok=120`、`cleared_cells=3240`、`ticks=3310`；日志中 `AccessDeniedException`/`journal_*`/`writeAtomically` 计数为 0（`build/stress-server-native-r8.log`、`build/stress-server-native-r8-summary.txt`、`build/jnl-stress-native-r8-driver.log`）。
+  - 本轮 Sable r5（20 子级 / 30 次循环 / 60 秒，新目录 `run/sable-compat/stress-server-sable-r5`）：PASSED，`children_created=20/20`、`operations_completed=30/30`、`capture_retries=0`、`ticks=1197`；日志 0 次同类失败（`build/stress-server-sable-r5.log`、`build/stress-server-sable-r5-summary.txt`、`build/jnl-stress-sable-r5-driver.log`）。
+- 失败轨迹（目录、日志与结果全部保留）：修复后首轮原生 r7 仍在 `RECYCLE` 第 5 次操作抛出 `NativeStructureManifest.writeAtomically` 的同一 `AccessDeniedException`（`build/stress-server-native-r7.log:23943`、`build/jnl-stress-native-r7-driver.log`、`run/stress-server-native-r7`）；第二处站点改走共享工具后 r8 全通过。另：首轮编译失败为测试里 `AccessDeniedException(String,String)` 构造器不存在（JDK 只有单参或三参），改用三参构造器后重跑（`build/jnl-tests-targeted.log` 保留失败原文）。
+- 回归：`.\gradlew.bat test sableCompatTest -DisDev=true`（如上）；`build -DisDev=true`（`build/jnl-build-dev.log`）、`build -DisDev=false`（`build/jnl-build-release.log`）通过，含 `verifySableCompatPackaging` 等 Sable 门禁。
+- 未验边界：真实断电/拔盘下的兜底窗口（先删后移导致目标短暂缺失）未做断电注入，仅按崩溃安全语义推进；杀毒/索引器长期强占导致重试与兜底全部失败时只保证“显式抛出 + 保留临时副本”，自动恢复未实现（孤儿 `.tmp` 不参与扫描，需人工按 suppressed 路径取证）；`WorldDataStore` 等其余 `ATOMIC_MOVE` 站点保持原样；`run/stress-server-native-r7` 的失败世界目录保留未清理。
+- 当前构建（含本修复）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `7808724F3E12C7A1B4336F94F20B47E21E8DF2AE17EA74552CCC79D5F6EE5F30`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `A6A4F01AE3B578AD62903AD19BFCBBDF66462B79A896A43AB00399085CD9D94A`。未复制到整合包，未操作用户存档，未创建本地 Git 提交。

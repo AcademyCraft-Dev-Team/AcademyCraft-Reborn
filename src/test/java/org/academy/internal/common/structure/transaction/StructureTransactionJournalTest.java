@@ -7,11 +7,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -31,6 +36,21 @@ class StructureTransactionJournalTest {
     private static StructureTransactionJournal.Record prepared(UUID id, List<StructureTransactionJournal.Cell> cells) {
         return new StructureTransactionJournal.Record(id, BACKEND, DIMENSION, new BlockPos(1, 2, 3),
                 StructureTransactionJournal.Stage.PREPARED, null, cells, null);
+    }
+
+    private static void defaultMove(Path source, Path target, boolean atomic) throws IOException {
+        if (atomic) {
+            Files.move(source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            return;
+        }
+        Files.deleteIfExists(target);
+        Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    private static long countFiles(Path directory, String suffix) throws IOException {
+        try (var files = Files.list(directory)) {
+            return files.filter(file -> file.getFileName().toString().endsWith(suffix)).count();
+        }
     }
 
     @Test
@@ -146,6 +166,94 @@ class StructureTransactionJournalTest {
         try (var files = Files.list(directory)) {
             assertEquals(0, files.filter(file -> file.getFileName().toString().endsWith(".tmp")).count());
         }
+    }
+
+    @Test
+    void retriesTransientAtomicReplaceDenialsWithoutFallingBack() throws IOException {
+        var attempts = new AtomicInteger();
+        var fallbacks = new AtomicInteger();
+        var journal = new StructureTransactionJournal(directory, (source, target, atomic) -> {
+            if (attempts.incrementAndGet() == 2) {
+                throw new AccessDeniedException(source.toString(), target.toString(), "transient sharing violation");
+            }
+            if (!atomic) fallbacks.incrementAndGet();
+            defaultMove(source, target, atomic);
+        });
+        var id = UUID.randomUUID();
+        journal.persist(prepared(id, List.of(cell(0, 0, 0, "minecraft:dirt"))));
+        var allocated = prepared(id, List.of(cell(0, 0, 0, "minecraft:dirt"))).withTarget(UUID.randomUUID());
+        journal.persist(allocated);
+        assertEquals(3, attempts.get());
+        assertEquals(0, fallbacks.get());
+        assertEquals(allocated.targetStructure(), new StructureTransactionJournal(directory).find(id)
+                .orElseThrow().targetStructure());
+        assertEquals(0, countFiles(directory, ".tmp"));
+    }
+
+    @Test
+    void fallsBackToNonAtomicReplacementAfterAtomicAttemptsAreExhausted() throws IOException {
+        var atomicAttempts = new AtomicInteger();
+        var fallbacks = new AtomicInteger();
+        var journal = new StructureTransactionJournal(directory, (source, target, atomic) -> {
+            if (atomic) {
+                atomicAttempts.incrementAndGet();
+                if (Files.exists(target)) {
+                    throw new AccessDeniedException(source.toString(), target.toString(), "transient sharing violation");
+                }
+                defaultMove(source, target, true);
+                return;
+            }
+            fallbacks.incrementAndGet();
+            defaultMove(source, target, false);
+        });
+        var id = UUID.randomUUID();
+        journal.persist(prepared(id, List.of(cell(0, 0, 0, "minecraft:dirt"))));
+        var allocated = prepared(id, List.of(cell(0, 0, 0, "minecraft:dirt"))).withTarget(UUID.randomUUID());
+        journal.persist(allocated);
+        assertEquals(6, atomicAttempts.get());
+        assertEquals(1, fallbacks.get());
+        assertEquals(allocated.targetStructure(), new StructureTransactionJournal(directory).find(id)
+                .orElseThrow().targetStructure());
+        assertEquals(0, countFiles(directory, ".tmp"));
+    }
+
+    @Test
+    void replacesNonAtomicallyWhenAtomicMovesAreUnsupported() throws IOException {
+        var atomicAttempts = new AtomicInteger();
+        var journal = new StructureTransactionJournal(directory, (source, target, atomic) -> {
+            if (atomic) {
+                atomicAttempts.incrementAndGet();
+                throw new AtomicMoveNotSupportedException(source.toString(), target.toString(), "simulated");
+            }
+            defaultMove(source, target, false);
+        });
+        var id = UUID.randomUUID();
+        journal.persist(prepared(id, List.of(cell(0, 0, 0, "minecraft:dirt"))));
+        assertEquals(1, atomicAttempts.get());
+        assertTrue(new StructureTransactionJournal(directory).exists(id));
+        assertEquals(0, countFiles(directory, ".tmp"));
+    }
+
+    @Test
+    void retainsTheTemporaryRecordWhenTheFallbackReplacementAlsoFails() throws IOException {
+        var failReplacements = new AtomicBoolean();
+        var journal = new StructureTransactionJournal(directory, (source, target, atomic) -> {
+            if (!failReplacements.get()) {
+                defaultMove(source, target, atomic);
+                return;
+            }
+            if (!atomic) Files.deleteIfExists(target);
+            throw new AccessDeniedException(source.toString(), target.toString(), "transient sharing violation");
+        });
+        var id = UUID.randomUUID();
+        journal.persist(prepared(id, List.of(cell(0, 0, 0, "minecraft:dirt"))));
+        failReplacements.set(true);
+        var allocated = prepared(id, List.of(cell(0, 0, 0, "minecraft:dirt"))).withTarget(UUID.randomUUID());
+        var failure = assertThrows(IOException.class, () -> journal.persist(allocated));
+        assertFalse(Files.exists(directory.resolve(id + ".dat")));
+        assertEquals(1, countFiles(directory, ".tmp"));
+        assertTrue(List.of(failure.getSuppressed()).stream()
+                .anyMatch(suppressed -> suppressed.getMessage().contains(".tmp")));
     }
 
     @Test

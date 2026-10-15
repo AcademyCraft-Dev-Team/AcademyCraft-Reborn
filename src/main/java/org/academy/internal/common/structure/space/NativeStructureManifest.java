@@ -10,6 +10,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.structure.StructurePose;
 import org.academy.api.common.structure.StructureRef;
+import org.academy.internal.common.structure.DurableFile;
 import org.academy.internal.common.structure.physics.NativeStructurePhysicsAttachment;
 import org.academy.internal.common.structure.physics.NativeStructurePhysicsRegionLayout;
 import org.jspecify.annotations.Nullable;
@@ -26,7 +27,6 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
@@ -456,16 +456,6 @@ public final class NativeStructureManifest {
         } catch (RuntimeException invalid) {
             throw new IOException("Native structure payload exceeds decoding limits", invalid);
         }
-        var temporary = Files.createTempFile(target.getParent(), target.getFileName().toString(), ".tmp");
-        try {
-            try (var channel = FileChannel.open(temporary, StandardOpenOption.WRITE)) {
-                var bytes = ByteBuffer.wrap(data);
-                while (bytes.hasRemaining()) channel.write(bytes);
-                channel.force(true);
-            }
-            Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-        } finally {
-            Files.deleteIfExists(temporary);
-        }
+        DurableFile.writeAtomically(target, data, DurableFile.FileOperations.DEFAULT);
     }
 }

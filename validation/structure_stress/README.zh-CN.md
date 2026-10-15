@@ -88,5 +88,5 @@ NeoForge 在启动时会显示一个列出废弃/未来变更警告的 `LoadingE
 - 客户端探针在集成服务器上用生产捕获事务创建真实结构（提交后由后端持有，未在视野内物理化/渲染）；不发送合成键盘输入。
 - Sable 专服探针的 Rapier 内部步进无法从外部单独计时，`save_ms_*` 是唯一可分的 Sable 原生库接口耗时（容器子级保存）。
 - 服务端“程序图运行”（结构节点族）相位未纳入本探针：真实 `extract` 在专服走跨 tick PENDING 且不发布结构引用，跑通需要喷口/技能能量与玩家夹具；程序侧覆盖见 P30–P33 单测图验收与专服程序入口烟测。
-- 已知生产问题（本批发现、未改生产代码）：`StructureTransactionJournal.writeAtomically` 在 Windows 上原子替换 `.dat` 时偶发 `AccessDeniedException`（连续捕获压力下约 2/108 次；Sable r2 与原生 r5 日志保留）。探针仅对 journal 类捕获失败做每操作 ≤3 次的有界重试并计数 `capture_retries`。
+- 已知生产问题（2026-10-15 已修复，根因/对照见 `docs/structure_skill_migration_handoff.zh-CN.md`《修复：事务日志原子替换偶发 AccessDeniedException》）：`StructureTransactionJournal` 与 `NativeStructureManifest` 的原子替换在 Windows 上偶发 `AccessDeniedException`（修复前连续捕获压力下约 2/108 次；Sable r2、原生 r5 及修复中间轮原生 r7 的日志保留）。生产侧现为 `DurableFile` 的 5 次有界重试 + 非原子兜底；修复后原生 r8（120 次操作）与 Sable r5 均通过且 `capture_retries=0`。探针仍保留“仅 journal 类捕获失败、每操作 ≤3 次”的有界重试与 `capture_retries` 计数作为观测项。
 - 原始日志与失败运行目录一律保留，复核时可对照 `docs/structure_skill_migration_handoff.zh-CN.md` 的《性能压力测试工具与基线（2026-10-15）》章节。
