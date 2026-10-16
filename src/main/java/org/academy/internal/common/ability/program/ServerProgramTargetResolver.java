@@ -8,6 +8,7 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.academy.api.server.ability.WorldBlockTargets;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramTargetResolver;
@@ -203,10 +204,7 @@ public final class ServerProgramTargetResolver implements ProgramTargetResolver 
         var start = requireLocalPosition(origin);
         var distance = requireRange(maximumDistance);
         var fullEnd = start.add(normalized(direction).scale(distance));
-        var blockHit = level().clip(new ClipContext(
-                start, fullEnd, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-        var end = blockHit.getType() == HitResult.Type.MISS
-                ? fullEnd : blockHit.getLocation();
+        var end = WorldBlockTargets.clip(player, start, fullEnd, ClipContext.Block.COLLIDER).position();
         var hit = ProjectileUtil.getEntityHitResult(
                 level(),
                 player,

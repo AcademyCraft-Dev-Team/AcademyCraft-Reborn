@@ -168,6 +168,7 @@ public final class StructureProgramWorldSmoke implements AutoCloseable {
                 .filter(handle -> handle.lifecycle() == StructureLifecycle.ACTIVE).isPresent(), "Release lost content");
         require(frame.transaction().commit().successful(), "Graph transaction failed");
         frame.transaction().release();
+        StructureAimWorldSmoke.check(player, StructureSpaces.resolve(host.getServer(), reference).orElseThrow(), evidence);
         evidence.append(category).append("_real_graph_capture_move_release=true\n")
                 .append(category).append("_insufficient_cp_keeps_source_and_session_empty=true\n")
                 .append(category).append("_real_graph_capture_suspended=").append(suspended).append('\n')

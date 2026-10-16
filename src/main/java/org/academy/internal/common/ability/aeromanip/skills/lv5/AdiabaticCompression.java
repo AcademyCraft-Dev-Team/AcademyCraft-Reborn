@@ -15,11 +15,11 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import org.academy.api.server.ability.WorldBlockTargets;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -274,9 +274,7 @@ public final class AdiabaticCompression extends Skill {
                 if (target != null) return target.getBoundingBox().getCenter();
                 var distance = BloodflowReverse.targetRange(owner, 0.0);
                 var end = eye.add(look.normalize().scale(distance));
-                var hit = owner.level().clip(new ClipContext(
-                        eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, owner));
-                return hit.getType() == HitResult.Type.MISS ? end : hit.getLocation();
+                return WorldBlockTargets.clip(owner, eye, end, ClipContext.Block.COLLIDER).position();
             }
 
             private void affectArea(AdiabaticCompression skill, Vec3 center, int milestone) {

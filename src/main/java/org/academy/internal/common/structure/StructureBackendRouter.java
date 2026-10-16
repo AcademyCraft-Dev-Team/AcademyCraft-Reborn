@@ -49,6 +49,7 @@ public final class StructureBackendRouter {
         Optional<StructureHandle> resolve(MinecraftServer server, StructureRef reference);
         Optional<StructureDynamics.State> motion(ServerLevel host, StructureRef reference);
         Optional<StructureHit> raycast(ServerLevel host, Vec3 from, Vec3 to);
+        Optional<StructureHit> raycast(ServerLevel host, Vec3 from, Vec3 to, net.minecraft.world.level.ClipContext.Block shape);
         boolean clearSightline(ServerLevel host, Vec3 from, Vec3 to);
         StructureHitValidation validate(ServerLevel host, Vec3 from, Vec3 to, StructureHit proposed);
         StructurePresentationStatus presentationStatus(MinecraftServer server, StructureRef reference);
@@ -138,11 +139,16 @@ public final class StructureBackendRouter {
     }
 
     public static Optional<StructureHit> raycast(ServerLevel host, Vec3 from, Vec3 to) {
+        return raycast(host, from, to, net.minecraft.world.level.ClipContext.Block.OUTLINE);
+    }
+
+    public static Optional<StructureHit> raycast(ServerLevel host, Vec3 from, Vec3 to,
+                                                net.minecraft.world.level.ClipContext.Block shape) {
         validateRay(host, from, to);
         var selected = selection(host.getServer());
-        if (selected.bridge != null) return selected.bridge.raycast(host, from, to);
+        if (selected.bridge != null) return selected.bridge.raycast(host, from, to, shape);
         return selected.status.mode() == StructureBackendStatus.Mode.NATIVE
-                ? NativeStructureQueries.raycast(host, from, to) : Optional.empty();
+                ? NativeStructureQueries.raycast(host, from, to, shape) : Optional.empty();
     }
 
     public static StructureHitValidation validate(ServerLevel host, Vec3 from, Vec3 to, StructureHit proposed) {

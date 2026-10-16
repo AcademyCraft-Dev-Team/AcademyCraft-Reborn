@@ -8,11 +8,11 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import org.academy.api.server.ability.WorldBlockTargets;
 import org.academy.api.common.ability.VortexAttackPattern;
 import org.academy.api.common.ability.WingControlIntent;
 import org.academy.api.common.ability.VortexAttackTargets;
@@ -308,17 +308,15 @@ public final class BlackWing extends Skill {
 
         private static Vec3 groundTarget(ServerPlayer player, Vec3 corner) {
             var top = corner.add(0, 16, 0);
-            var ground = player.level().clip(new ClipContext(top,
-                    new Vec3(corner.x, player.level().getMinY(), corner.z),
-                    ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-            return ground.getType() == HitResult.Type.MISS ? corner : ground.getLocation().add(0, 0.05, 0);
+            var ground = WorldBlockTargets.clip(player, top,
+                    new Vec3(corner.x, player.level().getMinY(), corner.z), ClipContext.Block.COLLIDER);
+            return ground.hit() ? ground.position().add(0, 0.05, 0) : corner;
         }
 
         private static Vec3 aimTarget(ServerPlayer player) {
             var origin = player.getEyePosition();
-            var hit = player.pick(
-                    Skills.BLACK_WING.get().scaledRange(player, WingFlightSupport.ATTACK_RANGE), 1f, false);
-            var target = hit.getLocation();
+            var target = WorldBlockTargets.aimedPoint(player,
+                    Skills.BLACK_WING.get().scaledRange(player, WingFlightSupport.ATTACK_RANGE));
             double distance = origin.distanceToSqr(target);
             // Use the nearest entity along the aim ray, stopping at the first block.
             var rayBounds = player.getBoundingBox().expandTowards(target.subtract(origin)).inflate(1.0);

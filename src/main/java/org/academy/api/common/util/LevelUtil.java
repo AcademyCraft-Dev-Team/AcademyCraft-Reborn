@@ -27,6 +27,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
+import org.academy.api.server.ability.WorldBlockTargets;
 import org.academy.api.server.ability.AbilityBlockDrops;
 import org.academy.api.server.ability.AbilityEffectPolicy;
 import org.academy.internal.common.ability.meltdowner.skills.lv2.MiningBeam;
@@ -46,6 +47,10 @@ public class LevelUtil {
         var startPos = entity.getEyePosition();
         var direction = Vec3.directionFromRotation(entity.getXRot(), entity.getYRot()).scale(targetDistance);
         var targetPos = startPos.add(direction);
+        if (entity.level() instanceof ServerLevel) {
+            return WorldBlockTargets.clip(entity, startPos, targetPos, ClipContext.Block.COLLIDER)
+                    .position().distanceTo(startPos);
+        }
         var hitResult = entity.level().clip(new ClipContext(startPos, targetPos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, entity));
         return (hitResult.getType() != HitResult.Type.MISS) ? hitResult.getLocation().distanceTo(startPos) : targetDistance;
     }

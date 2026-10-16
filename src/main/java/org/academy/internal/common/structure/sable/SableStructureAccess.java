@@ -76,17 +76,21 @@ public final class SableStructureAccess {
     }
 
     public static Optional<StructureHit> raycast(ServerLevel host, Vec3 worldFrom, Vec3 worldTo) {
-        var trace = trace(host, worldFrom, worldTo);
+        return raycast(host, worldFrom, worldTo, ClipContext.Block.OUTLINE);
+    }
+
+    public static Optional<StructureHit> raycast(ServerLevel host, Vec3 worldFrom, Vec3 worldTo, ClipContext.Block shape) {
+        var trace = trace(host, worldFrom, worldTo, shape);
         return trace.complete ? Optional.ofNullable(trace.hit) : Optional.empty();
     }
 
     /** Missing data or unsupported foreground geometry never counts as an unobstructed ray. */
     public static boolean clearSightline(ServerLevel host, Vec3 worldFrom, Vec3 worldTo) {
-        var trace = trace(host, worldFrom, worldTo);
+        var trace = trace(host, worldFrom, worldTo, ClipContext.Block.OUTLINE);
         return trace.complete && trace.hit == null && trace.hostDistance == Double.POSITIVE_INFINITY;
     }
 
-    private static Trace trace(ServerLevel host, Vec3 worldFrom, Vec3 worldTo) {
+    private static Trace trace(ServerLevel host, Vec3 worldFrom, Vec3 worldTo, ClipContext.Block shape) {
         validateRay(host, worldFrom, worldTo);
         var state = state(host);
         if (state == null) return Trace.UNAVAILABLE;
@@ -120,13 +124,13 @@ public final class SableStructureAccess {
             // Even with no structure candidate, a complete sightline needs loaded host data.
             long epoch = state.epoch;
             var observations = new Observations(host, state.container);
-            var hostHit = new LoadedGetter(observations, null).clip(context(worldFrom, worldTo));
+            var hostHit = new LoadedGetter(observations, null).clip(context(worldFrom, worldTo, shape));
             double hostDistance = hostHit.getType() == HitResult.Type.MISS ? Double.POSITIVE_INFINITY
                     : worldFrom.distanceTo(hostHit.getLocation());
             StructureHit nearest = null;
             double nearestDistance = Double.POSITIVE_INFINITY;
             for (var snapshot : snapshots) {
-                var hit = new LoadedGetter(observations, snapshot.handle).clip(context(snapshot.from, snapshot.to));
+                var hit = new LoadedGetter(observations, snapshot.handle).clip(context(snapshot.from, snapshot.to, shape));
                 if (hit.getType() == HitResult.Type.MISS) continue;
                 var localPoint = hit.getLocation().subtract(Vec3.atLowerCornerOf(snapshot.handle.plotOrigin()));
                 var worldPoint = snapshot.pose.localToWorldPoint(localPoint);
@@ -247,8 +251,8 @@ public final class SableStructureAccess {
         return box.contains(from) || box.clip(from, to).isPresent();
     }
 
-    private static ClipContext context(Vec3 from, Vec3 to) {
-        return new ClipContext(from, to, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, CollisionContext.empty());
+    private static ClipContext context(Vec3 from, Vec3 to, ClipContext.Block shape) {
+        return new ClipContext(from, to, shape, ClipContext.Fluid.NONE, CollisionContext.empty());
     }
 
     private static void validateRay(ServerLevel host, Vec3 from, Vec3 to) {

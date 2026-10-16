@@ -47,8 +47,12 @@ public final class NativeStructureQueries {
         return raycast(host, worldFrom, worldTo, null, null, new HostObservations(host));
     }
 
+    public static Optional<StructureHit> raycast(ServerLevel host, Vec3 worldFrom, Vec3 worldTo, ClipContext.Block shape) {
+        return observe(host, worldFrom, worldTo, null, null, new HostObservations(host), shape).hit;
+    }
+
     public static boolean clearSightline(ServerLevel host, Vec3 worldFrom, Vec3 worldTo) {
-        var observation = observe(host, worldFrom, worldTo, null, null, new HostObservations(host));
+        var observation = observe(host, worldFrom, worldTo, null, null, new HostObservations(host), ClipContext.Block.OUTLINE);
         return observation.complete && observation.hostClear && observation.hit.isEmpty();
     }
 
@@ -59,12 +63,12 @@ public final class NativeStructureQueries {
     private static Optional<StructureHit> raycast(ServerLevel host, Vec3 worldFrom, Vec3 worldTo,
                                                   @Nullable StructureRef rewind, @Nullable StructurePose oldPose,
                                                   HostObservations observations) {
-        return observe(host, worldFrom, worldTo, rewind, oldPose, observations).hit;
+        return observe(host, worldFrom, worldTo, rewind, oldPose, observations, ClipContext.Block.OUTLINE).hit;
     }
 
     private static RayObservation observe(ServerLevel host, Vec3 worldFrom, Vec3 worldTo,
                                                   @Nullable StructureRef rewind, @Nullable StructurePose oldPose,
-                                                  HostObservations observations) {
+                                                  HostObservations observations, ClipContext.Block shape) {
         validateRay(host, worldFrom, worldTo);
         var backend = NativeStructureRuntime.backend(host.getServer());
         try {
@@ -76,7 +80,7 @@ public final class NativeStructureQueries {
                         currentPose, backend.storageLevel(handle.reference()).orElseThrow(UnavailableRay::new)));
             }
             // This getter refuses missing chunks before touching their states or block entities.
-            var hostHit = new LoadedBlockGetter(host, false, observations).clip(context(worldFrom, worldTo));
+            var hostHit = new LoadedBlockGetter(host, false, observations).clip(context(worldFrom, worldTo, shape));
             var hostDistance = hostHit.getType() == HitResult.Type.MISS ? Double.POSITIVE_INFINITY
                     : worldFrom.distanceTo(hostHit.getLocation());
             StructureHit nearest = null;
@@ -89,7 +93,7 @@ public final class NativeStructureQueries {
                         snapshot.level.getMaxY() + 1.0, NativeStructureDimensions.MAX_COORDINATE_EXCLUSIVE);
                 if (!bounds.contains(localFrom) && bounds.clip(localFrom, localTo).isEmpty()) continue;
                 var hit = StructureContexts.call(snapshot.handle, ignored ->
-                        new LoadedBlockGetter(snapshot.level, true, null).clip(context(localFrom, localTo)));
+                        new LoadedBlockGetter(snapshot.level, true, null).clip(context(localFrom, localTo, shape)));
                 if (hit.getType() == HitResult.Type.MISS) continue;
                 var worldPoint = snapshot.pose.localToWorldPoint(hit.getLocation());
                 var distance = worldFrom.distanceTo(worldPoint);
@@ -246,8 +250,8 @@ public final class NativeStructureQueries {
                 && Math.abs(az - bz) <= POSE_TOLERANCE && Math.abs(aw - bw) <= POSE_TOLERANCE;
     }
 
-    private static ClipContext context(Vec3 from, Vec3 to) {
-        return new ClipContext(from, to, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, CollisionContext.empty());
+    private static ClipContext context(Vec3 from, Vec3 to, ClipContext.Block shape) {
+        return new ClipContext(from, to, shape, ClipContext.Fluid.NONE, CollisionContext.empty());
     }
 
     private static void validateRay(ServerLevel host, Vec3 from, Vec3 to) {

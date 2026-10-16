@@ -18,6 +18,7 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.academy.api.server.ability.WorldBlockTargets;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -251,7 +252,8 @@ public final class VectorBlast extends Skill {
             var skill = Skills.VECTOR_BLAST.get();
             var abyssTargetRange = skill.scaledRange(player, ABYSS_TARGET_RANGE);
             var abyssRadius = skill.scaledRange(player, ABYSS_RADIUS);
-            var end = origin.add(direction.scale(abyssTargetRange));
+            var end = WorldBlockTargets.clip(player, origin, origin.add(direction.scale(abyssTargetRange)),
+                    ClipContext.Block.COLLIDER).position();
             var entityHit = ProjectileUtil.getEntityHitResult(
                     level, player, origin, end,
                     player.getBoundingBox().expandTowards(direction.scale(abyssTargetRange)).inflate(1.0),
@@ -265,9 +267,7 @@ public final class VectorBlast extends Skill {
             if (entityHit != null && entityHit.getType() != HitResult.Type.MISS) {
                 center = entityHit.getLocation();
             } else {
-                var blockHit = level.clip(new ClipContext(
-                        origin, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-                center = blockHit.getType() == HitResult.Type.MISS ? end : blockHit.getLocation();
+                center = end;
             }
 
             var area = new AABB(center, center).inflate(abyssRadius);

@@ -13,12 +13,12 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import org.academy.api.server.ability.WorldBlockTargets;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -413,9 +413,7 @@ public final class AirflowJet extends Skill {
             if (look.lengthSqr() <= 1.0e-8) return null;
             var end = eye.add(look.normalize().scale(INSTANT_RANGE
                     * AeromanipConfig.rangeMultiplier(player, SkillNames.AIRFLOW_JET)));
-            var blockHit = player.level().clip(new ClipContext(
-                    eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-            var rayEnd = blockHit.getType() == HitResult.Type.MISS ? end : blockHit.getLocation();
+            var rayEnd = WorldBlockTargets.clip(player, eye, end, ClipContext.Block.COLLIDER).position();
             var entityHit = ProjectileUtil.getEntityHitResult(
                     player.level(), player, eye, rayEnd,
                     new AABB(eye, rayEnd).inflate(0.8),

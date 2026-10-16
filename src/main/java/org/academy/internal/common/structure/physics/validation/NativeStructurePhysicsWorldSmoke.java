@@ -234,6 +234,7 @@ public final class NativeStructurePhysicsWorldSmoke {
                 if (!runtime.isPresented(a.reference())) return;
                 if (!captureReady("before")) return;
                 recordCapture("before");
+                StructureAimWorldSmoke.checkShapes(host, a, CELL, SLAB, evidence);
                 region.attach(a);
                 beforeContent = NativeStructurePhysicsGeometry.captureStructure(storage(a)).sourceRevision();
                 next(Phase.FALL);
@@ -321,7 +322,7 @@ public final class NativeStructurePhysicsWorldSmoke {
                     next(Phase.GRASP);
                     return;
                 }
-                beginRawControlChecks();
+                next(Phase.GRASP_CLEANUP);
             }
             case GRASP -> {
                 if (!graspChecks.advance()) return;

@@ -2,9 +2,9 @@ package org.academy.internal.common.ability.accelerator.reflection.compat;
 
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.phys.HitResult;
 import org.academy.api.common.util.LevelUtil;
 import org.academy.api.common.util.ViewTargetScanner;
+import org.academy.api.server.ability.WorldBlockTargets;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
@@ -40,14 +40,7 @@ public final class VectorRedirectExecutor {
             );
             end = start.add(direction.scale(blockResult.getRight()));
         } else if (blockPolicy != VectorBlockPolicy.PASS_THROUGH) {
-            var blockHit = level.clip(new ClipContext(
-                    start,
-                    end,
-                    ClipContext.Block.COLLIDER,
-                    ClipContext.Fluid.NONE,
-                    plan.redirector()
-            ));
-            if (blockHit.getType() != HitResult.Type.MISS) end = blockHit.getLocation();
+            end = WorldBlockTargets.clip(plan.redirector(), start, end, ClipContext.Block.COLLIDER).position();
         }
 
         if (!plan.kind().dealsRedirectedEntityDamage()) {

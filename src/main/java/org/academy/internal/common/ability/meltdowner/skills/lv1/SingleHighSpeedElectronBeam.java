@@ -10,8 +10,8 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.academy.api.server.ability.WorldBlockTargets;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -308,16 +308,7 @@ public final class SingleHighSpeedElectronBeam extends Skill {
             var look = player.getLookAngle();
             if (!isFiniteDirection(look)) return eye;
             var end = eye.add(look.normalize().scale(range));
-            var blockHit = level.clip(new ClipContext(
-                    eye,
-                    end,
-                    ClipContext.Block.COLLIDER,
-                    ClipContext.Fluid.NONE,
-                    player
-            ));
-            var entityRayEnd = blockHit.getType() == HitResult.Type.MISS
-                    ? end
-                    : blockHit.getLocation();
+            var entityRayEnd = WorldBlockTargets.clip(player, eye, end, ClipContext.Block.COLLIDER).position();
             var entityHit = ProjectileUtil.getEntityHitResult(
                     level,
                     player,

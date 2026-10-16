@@ -38,6 +38,11 @@ public final class SableStructureBridge implements StructureBackendRouter.Bridge
         return SableStructureAccess.raycast(host, from, to);
     }
 
+    @Override public Optional<StructureHit> raycast(ServerLevel host, Vec3 from, Vec3 to,
+                                                   net.minecraft.world.level.ClipContext.Block shape) {
+        return SableStructureAccess.raycast(host, from, to, shape);
+    }
+
     @Override public boolean clearSightline(ServerLevel host, Vec3 from, Vec3 to) {
         return SableStructureAccess.clearSightline(host, from, to);
     }

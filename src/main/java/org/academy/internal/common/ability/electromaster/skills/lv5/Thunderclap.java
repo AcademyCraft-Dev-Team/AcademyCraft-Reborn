@@ -16,8 +16,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.academy.api.server.ability.WorldBlockTargets;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -230,14 +230,8 @@ public class Thunderclap extends Skill {
             var start = player.getEyePosition();
             var range = Skills.THUNDERCLAP.get().scaledRange(player, milestone >= 2 ? 80.0 : RANGE);
             var end = start.add(player.getLookAngle().scale(range));
-            var blockHit = level.clip(new ClipContext(
-                    start,
-                    end,
-                    ClipContext.Block.COLLIDER,
-                    ClipContext.Fluid.NONE,
-                    player
-            ));
-            var blockPos = blockHit.getType() == HitResult.Type.MISS ? null : blockHit.getLocation();
+            var blockHit = WorldBlockTargets.clip(player, start, end, ClipContext.Block.COLLIDER);
+            var blockPos = blockHit.hit() ? blockHit.position() : null;
             var entityHit = ProjectileUtil.getEntityHitResult(
                     player,
                     start,

@@ -10,8 +10,8 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.academy.api.server.ability.WorldBlockTargets;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -261,11 +261,8 @@ public final class VortexPull extends Skill {
             var eye = player.getEyePosition();
             var look = player.getLookAngle().normalize();
             var end = eye.add(look.scale(TARGET_RANGE));
-            var hit = level.clip(new ClipContext(
-                    eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-            return hit.getType() == HitResult.Type.MISS
-                    ? eye.add(look.scale(12.0))
-                    : hit.getLocation().subtract(look.scale(0.35));
+            var hit = WorldBlockTargets.clip(player, eye, end, ClipContext.Block.COLLIDER);
+            return hit.hit() ? hit.position().subtract(look.scale(0.35)) : eye.add(look.scale(12.0));
         }
 
         private static void pull(

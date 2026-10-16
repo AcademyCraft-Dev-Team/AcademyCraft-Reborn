@@ -13,13 +13,13 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import org.academy.api.server.ability.WorldBlockTargets;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
@@ -239,12 +239,13 @@ public class PlasmaGeneration extends Skill {
             );
         }
 
-        private static Vec3 findTarget(ServerPlayer player) {
+        public static Vec3 findTarget(ServerPlayer player) {
             var targetRange = Skills.PLASMA_GENERATION.get().scaledRange(player, MAX_TARGET_RANGE);
             var start = player.getEyePosition();
             var look = player.getLookAngle();
             var end = start.add(look.scale(targetRange));
-            var searchBox = player.getBoundingBox().expandTowards(look.scale(targetRange)).inflate(1.0);
+            end = WorldBlockTargets.clip(player, start, end, ClipContext.Block.OUTLINE).position();
+            var searchBox = player.getBoundingBox().expandTowards(end.subtract(start)).inflate(1.0);
             var entityHit = ProjectileUtil.getEntityHitResult(
                     player.level(), player, start, end, searchBox,
                     entity -> entity != player && !entity.isSpectator()
@@ -255,10 +256,7 @@ public class PlasmaGeneration extends Skill {
             if (entityHit != null) {
                 return entityHit.getEntity().getBoundingBox().getCenter();
             }
-            var blockHit = player.level().clip(new ClipContext(
-                    start, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player
-            ));
-            return blockHit.getType() == HitResult.Type.MISS ? end : blockHit.getLocation();
+            return end;
         }
 
         private static void tick(ServerPlayer player) {

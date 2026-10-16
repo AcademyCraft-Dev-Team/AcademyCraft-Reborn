@@ -15,6 +15,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import org.academy.api.server.ability.WorldBlockTargets;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -193,7 +194,7 @@ public class LightningStorm extends Skill {
             var player = packet.getPacketListener().getPlayer();
             var skill = Skills.LIGHTNING_STORM.get();
             var milestone = skill.getEffectiveProficiencyMilestone(player);
-            var center = player.pick(milestone >= 2 ? 60.0 : 50.0, 1.0f, false).getLocation();
+            var center = WorldBlockTargets.aimedPoint(player, milestone >= 2 ? 60.0 : 50.0);
             if (!player.level().hasChunkAt(BlockPos.containing(center))) return;
             skill.executeActive(player,
                     (context, _) -> AbilitySystemServer.registerContext(new Context(player, center, context.milestone())));

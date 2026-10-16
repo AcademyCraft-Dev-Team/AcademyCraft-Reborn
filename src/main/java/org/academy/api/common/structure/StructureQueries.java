@@ -1,6 +1,7 @@
 package org.academy.api.common.structure;
 
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.structure.StructureBackendRouter;
 
@@ -25,6 +26,12 @@ public final class StructureQueries {
      */
     public static Optional<StructureHit> raycast(ServerLevel host, Vec3 worldFrom, Vec3 worldTo) {
         return StructureBackendRouter.raycast(host, worldFrom, worldTo);
+    }
+
+    /** Skill targeting may request collision shapes; ordinary interactions still use outlines. */
+    public static Optional<StructureHit> raycast(ServerLevel host, Vec3 worldFrom, Vec3 worldTo,
+                                                ClipContext.Block shape) {
+        return StructureBackendRouter.raycast(host, worldFrom, worldTo, shape);
     }
 
     /**

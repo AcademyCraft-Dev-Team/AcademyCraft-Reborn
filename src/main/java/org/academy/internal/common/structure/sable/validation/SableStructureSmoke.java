@@ -180,6 +180,16 @@ public final class SableStructureSmoke {
         evidence.append("actions=server_fixture\nactual_keyboard_actions=false\nembedded_player_is_real_tcp=false\n")
                 .append("runtime_group=").append(System.getProperty("academy.sableCompat.runtime")).append('\n');
         noNativeRuntime();
+        if (side.equals("client")) {
+            // Fresh smoke worlds can spawn the real viewer 260 blocks below this fixture.
+            // Place the observer explicitly so Sable sends the structure and pose samples.
+            for (var observer : List.copyOf(host.players())) {
+                observer.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
+                observer.connection.teleport(BASE.getX() + 0.5, BASE.getY() + 3.0,
+                        BASE.getZ() + 9.5, 180, 15);
+            }
+            evidence.append("client_observer_positioned_by_server_fixture=true\n");
+        }
         // The full 32-block validation ray must stay in explicitly prepared host chunks.
         for (int x = -2; x <= 2; x++) for (int z = -2; z <= 2; z++) {
             if (host.setChunkForced(x, z, true)) tickets.add(new ChunkPos(x, z));
@@ -273,6 +283,11 @@ public final class SableStructureSmoke {
         require(second.worldPoint().distanceTo(expected) < 1.0E-7, "COM or plot origin was applied twice");
         var from = old.pose().localToWorldPoint(localTarget.add(0, 0, 5));
         var to = old.pose().localToWorldPoint(localTarget.add(0, 0, -1));
+        var worldAim = org.academy.api.server.ability.WorldBlockTargets.clip(
+                host, null, from, to, net.minecraft.world.level.ClipContext.Block.OUTLINE);
+        require(worldAim.hit() && worldAim.position().distanceTo(second.worldPoint()) < 1.0E-7,
+                "Rotated Sable skill aim escaped to private plot coordinates");
+        evidence.append("rotated_sable_skill_world_target=true\n");
         require(StructureQueries.clearSightline(host, from, from.lerp(second.worldPoint(), 0.5))
                         && !StructureQueries.clearSightline(host, from, to),
                 "Clear sightline confused empty foreground with a farther structure");
@@ -289,6 +304,10 @@ public final class SableStructureSmoke {
             host.setBlockAndUpdate(obstruction, Blocks.STONE.defaultBlockState());
             require(StructureQueries.raycast(host, from, to).isEmpty(), "Host solid failed to obscure Sable ray");
             require(!StructureQueries.clearSightline(host, from, to), "Host solid was reported as clear");
+            var blockedAim = org.academy.api.server.ability.WorldBlockTargets.clip(
+                    host, null, from, to, net.minecraft.world.level.ClipContext.Block.OUTLINE);
+            require(blockedAim.hit() && from.distanceTo(blockedAim.position()) < from.distanceTo(second.worldPoint()),
+                    "Skill targeting ignored the host wall in front of a structure");
         } finally { host.setBlockAndUpdate(obstruction, Blocks.AIR.defaultBlockState()); }
         var uuid = compound.getUniqueId();
         var origin = container.getOrigin();

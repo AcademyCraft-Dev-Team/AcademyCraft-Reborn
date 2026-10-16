@@ -2,7 +2,33 @@
 
 更新日期：2026-10-16。此文件随每个实现/验证节点更新；状态以实际代码和结果文件为准。
 
-## 当前接续入口：后续迁移核查与操作回归
+## 当前接续入口：物理结构的技能世界坐标瞄准
+
+- 基线：`df036f5a 修复物理结构技能控制与程序续跑`（上一批 34 个文件已按用户授权提交）。当前任务是修复电浆炮等位置锁定技能攻击物理结构时飞向远方。
+- 根因：Sable 的 `Level.clip` 可以返回远端 plot 内的命中位置；普通射线又不能覆盖独立后端的结构局部世界。技能不能直接把这些命中位置或局部格坐标当宿主世界坐标。
+- 公共入口 `WorldBlockTargets` 分别查询宿主地形与所选结构后端，选择最近的世界坐标表面。只返回瞄准位置，不伪造宿主 `BlockPos`；实际内容读写仍须使用结构引用和局部地址。`StructureQueries` 新增形状类型重载，原交互查询继续默认 OUTLINE。
+- 已接入电浆炮、雷霆、雷暴、黑翼、矢量冲击、涡流牵引、绝热压缩、高速电子束、气流喷射、矢量反射的阻挡式重定向，以及公共视距/两处程序实体射线截断。电浆炮先确定地形/结构遮挡，再选择前方实体；保留施放时锁定位置，不新增追踪制导。
+- 新增 `StructureAimWorldSmoke`：真实电浆实体的目标与飞行落点、结构前后实体遮挡，以及旋转结构/半砖形状查询。接入既有真实图 fixture。普通宿主方块仍按原模式查形状，未知区块保守阻挡，不主动加载；长射线分段查询，每段小于 256 格，总长度上限 4096 格。
+- 用户已于 2026-10-16 明确授权本批 25 个相关文件的本地提交，提交信息为 `修复物理结构技能瞄准与世界坐标落点`；本记录随该批一并提交。既有 VFX 文件与外部 fork 不纳入本批。
+
+### 本批验证与产物
+
+- `test sableCompatTest -DisDev=true`、`build -DisDev=true`、`build -DisDev=false` 全部通过。普通 JUnit 2662 项、Sable 专用 16 项、编辑器 104 项，共 2782 项，失败/错误/跳过均为 0。日志：`build/world-target-tests-final.log`、`build/world-target-build-dev.log`、`build/world-target-build-release.log`。
+- 独立客户端：`run/native-structure-physics-smoke-client-world-target-r2/native-structure-physics-client-result.txt`，PASSED，803 tick。验证真实旋转结构及半砖空隙、动能投掷捕获后的电浆炮目标/落点、前后实体遮挡。截图 `screenshots/native-structure-physics-before-60788.png` 已查看。对应命令为 `. ./build/native-physics-p16-env.ps1` 后运行 `./gradlew.bat runClientDev -DisDev=true -I validation/native_structure/physics_world.init.gradle -PacademyStructurePhysicsSmoke=client -PacademyStructurePhysicsKineticThrowSmoke=true -PacademyStructurePhysicsSmokeDirectory=run/native-structure-physics-smoke-client-world-target-r2 @physicsNativeArgs`；再次运行须换全新目录。
+- 四模组混装客户端：`run/sable-compat/world-target-suite-client-r3/client/sable-structure-client-result.txt`，PASSED，120 tick。三类真实程序图产生的结构均通过电浆目标/落点与实体遮挡断言；90 度旋转和宿主墙体遮挡也通过。截图时 26 个移动样本，最终客户端观察记录 110 个样本；截图 `screenshots/academy-sable-structure-80076.png` 已查看。命令：`./gradlew.bat runClientSable -DisDev=true -PacademySableRuntime=suite -PacademySableSmoke=true -PacademySableCapture=true -PacademySableRunDirectory=run/sable-compat/world-target-suite-client-r3`；再次运行须换全新目录。
+- 本轮客户端操作属于服务端自动 fixture；只通过窗口点击继续启动警告页，没有人工键鼠施放全套技能。电浆落点测试使用零伤害、关闭方块破坏的真实 `Plasma.tick`，验证到达与终止，不代表完整爆炸破坏策略或多人网络验收。逐格内容操作仍需走各后端真实地址与权限链，不能拿世界命中点直接替代结构局部地址。
+- 原生客户端通过后，仅补充了不参与该 fixture 的矢量重定向调用点、Sable 观察者定位和喷口测试瞄准点；核心查询未再变化，复用原生结果。上述最终改动已进入混装客户端运行与最终全量测试/两种构建。
+- 开发版：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar`，SHA-256 `4670BC02404BCDB8252720E8D40A856558AE80D91026158B3D4838D76AE96678`。
+- 发布版：`build/libs/academy-26.2.0-0.0.4-alpha-release.jar`，SHA-256 `B25BF0E9062A3E2AB063C19A7B569492267E15FEE0F3B62CD66A33AE57FF83B3`。未复制至用户整合包；测试只使用隔离存档。
+
+### 保留的中间验证记录
+
+- 原生服务端 `world-target-r1` 基础物理通过，但旧入口在未开启 grasp 时跳过 kinetic，不能算作电浆回归。已让测试入口独立进入 kinetic 阶段；后续客户端 r2 确认执行了新断言。
+- 原生客户端 r1 的无施法实体查询触发 `CollisionContext.of(null)`；公共入口现已对无实体使用 `CollisionContext.empty()`，r2 通过。
+- 混装客户端 r1 观察者出生在 y=-60，测试结构在 y=200，未收到可截图的结构；现由隔离 fixture 自动将真实观察者置于结构旁，r2/r3 均收到真实移动结构。
+- 混装客户端 r2 的矢量/电击图电浆断言已通过，空力图命中了底部可单独选取的喷口，原断言误要求方块表面。r3 将测试射线移到方块上部，保留喷口正常可选行为，三类均通过。全部失败目录与日志保留，不计为通过。
+
+## 上一批：后续迁移核查与操作回归
 
 - 本轮基线为 `ac3ea5ea 修复结构文件原子替换偶发AccessDeniedException`。P19–P33、压力测试及持久化重试已在该基线历史中；下方早期进度仅供追溯，不代表当前待办。
 - 本轮修复、真实后端证据、复现命令、失败记录和仍未完成的操作，集中记录在 [2026-10-16 结构操作核查](structure_control_audit_20261016.zh-CN.md)。接手时先读该文，再读相关批次。
@@ -24,7 +50,7 @@
 - 仓库 `D:/mcmodtest/AcademyCraft-Reborn-26.2`，分支 `26.2`。早期基线 `05935f82 接入Sable结构牵引与整结构精密查询` 已被后续提交推进；本轮基线见文首。
 - P19 公共捕获事务等后续批次已进入提交历史；本轮待提交范围以当前 diff 和核查记录为准。
 - `docs/vfx/darkmatter_reconstruction_v3/runtime/multiplayer/` 中既有未跟踪记录与本任务无关，不能混入提交。
-- `AGENTS.md` 要求完整功能与必要验证结束后，先获得该批本地提交确认；本批 34 个相关文件已完成验证并获得用户明确授权。
+- `AGENTS.md` 要求完整功能与必要验证结束后，先获得该批本地提交确认；上一批 34 个文件已提交为 `df036f5a`，当前批次已完成验证并获得用户明确授权。
 - 外部 `D:/mcmodtest/create-fork` 有大量既有改动。Suite 专服模型注册补丁保存在 `validation/sable_compat/`，尚未套用；先前跨仓库范围问题仍待答复，不能当作已修复。
 
 ## 已知实现与定位
