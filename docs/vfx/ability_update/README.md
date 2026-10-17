@@ -8,9 +8,9 @@
 | --- | --- |
 | 等离子体 | 总蓄力仍为 240 tick；第 6 tick 起出现汇聚，60 tick 完成。之后继续增长至 240 tick。`PlasmaChargeVisuals` 共用形成曲线；发射快照携带 `launchScale`，刚汇聚时为 0.62。核心、外晕、表面电弧采用与汇聚图完全相同的尺寸插值和材质，迟到观察者同样获得发射时尺寸。 |
 | 矢量冲击 | 删除 Alt/Ctrl 拉推绑定与服务端状态机，初始化时清理旧配置键。Shift+左键远程冲击使用 `vector_blast`，局部 +Y 沿真实视线旋转。视觉已按新要求重做为白灰色云雾漏斗：`cloud_vortex` 生成翻卷云壁及外缘散雾，中央保留贯通风眼；第一人称云层不透明度为原值的 22%，第三人称保持原值，F5 切换实时生效。透明云材质表现明暗层次，不再生成螺旋线或音爆环，保留原爆炸音。伤害（含熟练度终点爆点及跨越深渊分支）使用既有 `HostileTargets.isDetectable`；光束内生物沿射线强击退并略向上，近端速度 3.2、末端 1.44，上抛 0.35，受已有运动防护约束。 |
-| 未元干涉 | `darkmatter_interference` 将原版女巫／传送门粒子替换成半透明白色光束；命中反馈使用白色解构云。伤害范围与脉冲周期保持原实现。 |
-| 未元修复 | `darkmatter_repair` 为贴身白色有机丝束。只有实际结算成功才触发，每个实体每 5 tick 至多一次，单次 0.3 秒，跟随实体插值位置；不改变 MP 规则。 |
-| 未元解构 | `darkmatter_disassemble` 使用不规则白色丝束和扩张粒子云，替换 CLOUD 粒子；实体目标跟随目标，成功方块解构在结算点播放。丝束泛光，云层使用正确的透明混合以保留层次。 |
+| 未元干涉 | `darkmatter_interference` 将原版女巫／传送门粒子替换成半透明白色光束；命中反馈使用白色解构云。伤害范围与脉冲周期保持原实现（该版表现已被 `darkmatter_redesign` → `darkmatter_interference_field` → `darkmatter_concept_v2` 取代，见后者验证记录）。 |
+| 未元修复 | `darkmatter_repair` 为贴身白色有机丝束。只有实际结算成功才触发，每个实体每 5 tick 至多一次，单次 0.3 秒，跟随实体插值位置；不改变 MP 规则（该版表现已被 `darkmatter_redesign` → `darkmatter_interference_field` → `darkmatter_concept_v2` 取代，见后者验证记录）。 |
+| 未元解构 | `darkmatter_disassemble` 使用不规则白色丝束和扩张粒子云，替换 CLOUD 粒子；实体目标跟随目标，成功方块解构在结算点播放。丝束泛光，云层使用正确的透明混合以保留层次（该版表现已被 `darkmatter_redesign` → `darkmatter_interference_field` → `darkmatter_concept_v2` 取代，见后者验证记录）。 |
 | 空力使 | 六种 `aeromanip_mist_*` 的频率 ×1.75、噪声／湍流幅度 ×1.5、初速度 ×1.45、旋涡强度／吸力 ×1.4、阻力 ×0.85。技能时长、粒子 lifetime、透明度与尺寸曲线均保持不变。 |
 | 磁场悬浮 | 服务端每 2 tick 同步实际解算的 `closestPoint/face`，以地面参照优先、侧壁或天花板支撑回退。`magnetic_levitation_support` 从腿部两锚点接向表面；每帧更新角色挂点，使用蓝白双层电弧。关闭／失去支撑发送停止状态，丢失更新 6 tick、移除实体或切换世界时清理。 |
 
@@ -76,4 +76,4 @@ node tools/vfxgraph-editor/scripts/ability-vfx-baseline.mjs <修改前的提交>
 
 风眼与视角透明度记录：`build/vector-eye-tests-capture.log`、`build/vector-eye-client.log`、`build/vector-eye-dev-build.log`、`build/vector-eye-release-build.log`。
 
-未元物质后续改为表面薄片与解构烟雾；本目录中的旧未元截图仅保留历史对照，当前效果见 [未元物质重做验收记录](../darkmatter_redesign/README.md)。
+未元物质后续改为表面薄片与解构烟雾；本目录中的旧未元截图仅保留历史对照，中间版本的重做验收是本地归档 `../darkmatter_redesign/README.md`（不随仓库分发）；当前实现（`darkmatter_concept_v2`）的验证记录是本地归档 `../darkmatter_concept_v2/VALIDATION.md`（不随仓库分发）。

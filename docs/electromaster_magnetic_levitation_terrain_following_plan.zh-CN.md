@@ -1,6 +1,6 @@
 # 磁悬浮地形跟随与支撑参照优化方案
 
-针对「高低不平表面悬浮前进时经常直接坠落」的问题，本文先给出根因，再给出可实施的设计、参数与验证计划。本轮仅产出方案，未修改生产代码。
+针对「高低不平表面悬浮前进时经常直接坠落」的问题，本文先给出根因，再给出可实施的设计、参数与验证计划。方案已实施，§10 为实施结果记录。
 
 ## 1. 结论
 
@@ -238,7 +238,7 @@ public @Nullable SupportReference groundBelow(ServerLevel level, AABB bounds, do
 | 边界裁剪判据 | 用「黏滞参照 + 距离余量」在同一参照上比较 | **在目标位置重新探测是否存在支撑**（`probeAt`，无状态、不碰缓存） | 关键缺陷：在单个记忆参照上比较距离，会因为角色「远离了那个方块」而触发裁剪。GameTest 实测移动 3.75 格后前进被冻结，即「前进被吞掉」。改为询问「目标位置还有没有支撑」才是正确的场约束语义 |
 | `supportMargin` 参数 | 有 | **删除** | 改为直探目标位置后不再需要，留着会变成误导性的死配置 |
 | 参照迟滞 | 黏滞倍率 `radius × hysteresis` | **取消倍率：包络按 `radius` 硬校验后复用；地面参照每 tick 重新探测** | 1.15 倍迟滞会把超出有效半径的旧参照判为有效，与「准入必须确定」冲突。地面参照若缓存，走上更高地形时旧的低面仍被复用，间隙被读大、解法器会把角色压进新地面——恰是要修复的缺陷类型 |
-| 失去支撑时的垂直操控 | 下沉速度 + 受限操控 | 下沉速度 + **保留完整上行权限** | 若上行也被按 0.6 比例削弱，玩家更难飞出包络恢复；保留上行权限才符合「可恢复」语义 |
+| 失去支撑时的垂直操控 | 下沉速度 + 受限操控 | 下沉速度 + **只保留水平操控 ×0.60，并进入动量衰减，无上行升力**（初版曾「保留完整上行权限」，已由 `424824c2`，2026-10-11 反转） | 无支撑时上行升力等于凭空爬升，破坏「离开场即失去悬浮」（G6）。`MagneticMovement.degradedVertical`（`:65-74`）按 “Without support, upward input cannot generate lift” 返回 ≤0，`MagneticFieldRuntime`（`:140-142`）只采用降级速度；进入降级时另捕获进入动量并在窗口内衰减（`MagneticMovement.java:76-89`） |
 | 消抖实现 | 依赖参照迟滞 | 依赖「目标位置重探 + 近场穷举」后的判据确定性 | 原抖动来自「布尔在 radius 边界翻转」，改为对目标位置直接判定后，边界反复通过／失败的前提消失 |
 
 ### 10.2 实际改动文件
@@ -246,14 +246,14 @@ public @Nullable SupportReference groundBelow(ServerLevel level, AABB bounds, do
 | 文件 | 改动 |
 | --- | --- |
 | `api/server/ability/electromaster/SupportReference.java` | 新增。支撑参照记录，含 `isGround()` / `surfaceY()` |
-| `api/server/ability/electromaster/MagneticSupportQuery.java` | 重写。分层查询、射线探测、地面柱状探测、`revalidate` 静态入口 |
+| `api/server/ability/electromaster/MagneticSupportQuery.java` | 重写。分层查询、射线探测、地面柱状探测；目标位置重探为 `probeAt`，缓存判据为 `holds`，复用结果为 `adopt`（`:81`、`:122`、`:111`），没有 `revalidate` 入口 |
 | `api/server/ability/electromaster/MagneticLevitation.java` | 重写为有状态解法器：`step()` 一次解析参照并解算，`degradedVelocity()` 提供降级速度 |
 | `api/common/ability/electromaster/LevitationTuning.java` | 新增。悬浮调参记录与逐字段校验 |
 | `api/common/ability/electromaster/MagneticMovement.java` | 删除孤儿 `hoverVelocity` / `adjustHoverHeight` / `GROUND_REACH` 等，新增 `hoverVertical()`、`degradedVertical()`、`approachHorizontal()` |
 | `api/server/ability/electromaster/MagneticFieldEffects.java` | 新增 `levitationTuning()` 解析服务端配置 |
-| `internal/common/ability/electromaster/MagneticFieldRuntime.java` | 降级窗口取代 4 tick 锁定；每 tick 只探测一次 |
+| `internal/common/ability/electromaster/field/MagneticFieldRuntime.java` | 降级窗口取代 4 tick 锁定；每 tick 只探测一次 |
 | `internal/common/attachment/AttachmentTypes.java` | 新增 `MAGNETIC_LEVITATION_DEGRADED` |
-| `internal/server/config/AbilityConfig.java` | `ElectromasterSettings` 新增 11 项悬浮调参 |
+| `internal/server/config/AbilityConfig.java` | `ElectromasterSettings` 新增 10 项悬浮调参（`:271-299`；记录定义与默认值见 `LevitationTuning.java:24-42`） |
 | `internal/common/ability/electromaster/skills/lv3/MagnetManipulation.java` | HUD 三态显示 |
 | `resources/assets/academy/lang/{en_us,zh_cn}.json` | 新增 `hud.academy.magnetic_field.losing_support` |
 | 测试 | `MagneticMovementTest` 重写并新增地形跟随回归；`ElectromasterReworkTuningTest`、`ElectromasterGeometryTest` 扩充；`ElectromasterReworkGameTests.support` 拆为重力租约、地面参照、地形跟随三组 |
@@ -335,4 +335,4 @@ public @Nullable SupportReference groundBelow(ServerLevel level, AABB bounds, do
 
 ### 10.9 尚未执行
 
-客户端实测（台阶／楼梯／墙顶／沟壑前进、跳跃与潜行升降、HUD 三态、联机观察者）按 §7 计划仍需在真实客户端进行；本次未启动客户端，因此手感（尤其地形跟随与沿边界飞行的观感）尚未经人眼确认。未创建 Git 提交。
+客户端实测（台阶／楼梯／墙顶／沟壑前进、跳跃与潜行升降、HUD 三态、联机观察者）按 §7 计划仍需在真实客户端进行；本次未启动客户端，因此手感（尤其地形跟随与沿边界飞行的观感）尚未经人眼确认（仓库无受控脚本，需运行验证）。未创建 Git 提交。

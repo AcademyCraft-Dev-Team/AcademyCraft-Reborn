@@ -93,7 +93,7 @@ skill.updateState(player, COUNT, count + 1);
 
 `MentalControlTags.RESISTANCE`（`academy:mental_control_resistance`）使带标签的实体在连续心灵影响超过 400 tick 后自动挣脱并阻断 100 tick；心灵介入清单关系除外。`MentalControlApi.resistanceRemainingTicks(subject)` 查询剩余阻断。三种心理标签都是实体类型标签，默认抗性列表为空。叠加、重施、玩家按键机制及清理边界以 [设计方案第 8.1 节](addon_registration_api_design.md#81-心理掌握精神保护目标反馈与精神抗性) 为准。
 
-通用非玩家施术上下文、资源授权账户、分类运行 SPI 和全内容协议清单尚未开放，不要通过内部类或方法注入提前实现这些契约。
+非玩家施术边界已部分公开：`AbilityActorContext`（`api/server/ability/AbilityActorContext.java:10-31`）承载主体、技能、能力强度、伤害倍率、熟练度与资源账户；`AbilityResourceAccount`（`api/server/ability/AbilityResourceAccount.java:3-15`）由调用方实现账本；`AbilityDamageService.apply(LivingEntity controller, ...)`（`AbilityDamageService.java:68-84`）接受非玩家施术者，`IronSandActions.java:17,59` 即以此形态调用。仍未开放的是非玩家程序动作服务（分类运行 SPI）、全内容协议清单，以及上下文中的目标／方块操作权限与 AI 输入提供器；不要通过内部类或方法注入提前实现这些契约。
 
 
 ## 本轮验证记录（2026-09-08）
@@ -103,5 +103,7 @@ skill.updateState(player, COUNT, count + 1);
 - `academy:mental_defense` 回归通过，覆盖已确定的精神保护、目标反馈和标签抗性。
 - `build -DisDev=true`、`build -DisDev=false`、`apiExampleJar`、`verifyApiExample` 通过；`-p examples/addon build --offline` 仅依赖主 MOD JAR 编译并打包成功。
 - 隔离 `runClientDev -PacademyApiExample=true` 成功校验 9 个分类、100 个技能并加载附属资源，随后正常退出。本项是客户端加载检查；未声称已完成开发机逐项交互或双客户端联机验收。
+
+当前示例 `examples/addon` 已注册 2 个技能（`frost_bolt`、`focus`）；以上是当日记录，复跑数字以实际结果为准。
 
 没有新增或修改 Mixin 来实现本轮 API。运行日志和制品位于已忽略的 `build/`、`run/`，不会随源码提交。

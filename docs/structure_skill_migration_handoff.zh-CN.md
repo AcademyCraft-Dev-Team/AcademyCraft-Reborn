@@ -31,7 +31,7 @@
 ## 上一批：后续迁移核查与操作回归
 
 - 本轮基线为 `ac3ea5ea 修复结构文件原子替换偶发AccessDeniedException`。P19–P33、压力测试及持久化重试已在该基线历史中；下方早期进度仅供追溯，不代表当前待办。
-- 本轮修复、真实后端证据、复现命令、失败记录和仍未完成的操作，集中记录在 [2026-10-16 结构操作核查](structure_control_audit_20261016.zh-CN.md)。接手时先读该文，再读相关批次。
+- 本轮修复、真实后端证据、复现命令、失败记录和仍未完成的操作，集中记录在 `structure_control_audit_20261016.zh-CN.md`（本地归档，不随仓库分发）。接手时先读该归档，再读相关批次。
 - 已修复的关键流程包括跨 tick 捕获节点续跑、Sable 三类移动、Sable 高速喷流技能推力、保留结构的喷口再次激活、控制令牌隔离、失效喷口支撑和动作前 CP 检查。旋转成功路径、安全静态化成功路径仍不能宣称完成。
 - 用户已于 2026-10-16 明确授权本批本地提交，提交信息为 `修复物理结构技能控制与程序续跑`。本记录随该批一并提交；保留既有 VFX 未跟踪文件，不修改 `create-fork` 的既有工作区。
 
@@ -57,30 +57,35 @@
 
 | 路径 | 当前情况 |
 | --- | --- |
-| `KineticThrow.captureAndLift` | 仍调用 `BlockStructureApi.capture` 与 `BlockStructureKinetics.holdAt`，创建旧 `BlockStructureEntity`；混装时也没有转成 Sable 船 |
-| `BlockStructureEntity.tick/maintainStandingEntities` | 两端各自推进结构运动，但承载仅服务端执行；每个受支撑实体每 tick 设置 `hurtMarked=true`；需复现客户端/服务端纠正及跳跃/边缘行为 |
-| `MixinEntityGetter` | 用旧结构复合形状替换宽相 AABB，另有空间索引补充；不能删除其它模组提供的碰撞形状 |
-| `PneumaticGrasp` | 定位时固定质量上限为 32，且 Sable 烟测只有一格；P18 已改为公共整质量预算，并通过 25 格质量 50 的混装牵引。旧实体分支仍按 Entity 获取和写速度 |
-| `StructureQueries/StructureTraction` | 已接入固定哈希 Sable 查询及真实 prePhysics 有限力；旧 `BlockStructureEntity` 尚未统一进入该后端控制契约 |
-| `StructureTransactions`/`StructureCaptureCoordinator` | P19 新增：后端无关的分阶段捕获事务；预检、WAL 日志、目标预留、复制校验、提交决定、源移除、发布回收与重启恢复；Sable 捕获仍显式返回不可用 |
-| `NativeStructureManifest.removeEntry/releaseSlot`、`NativeStructureRuntime.discardEmpty` | P20 新增：空结构槽位回收；仅未加载、空、未隔离、无恢复证据、无物理附件的结构可释放；P19 回滚不再永久烧槽 |
-| `NativePhysicsArtifact` 解析 | P21 更新：显式属性 → 显式环境 → home（属性/环境）→ 游戏目录 `academy/native_physics/` 固定布局；部分配置显式失败；物理打开异常统一为 `IllegalStateException` 并保留原因 |
-| `NativeStructurePhysics.Region.rebind`/`rebindPhysicsAttachments` | P22 新增：物理区域重绑（成员全体必须容纳、布局分离校验、附件先原子持久化再采纳、控制保留、下一 tick 重建）；牵引目标越界时自动重绑一次；初次抓取仍严格要求盒内 |
-| `NativeStructureProjectionEntity` 碰撞/承载、`NativeStructureCollisionBoxes` | P23 新增：投影按同步视图提供双方同源的实体碰撞（轴对齐精确、任意姿态有界细分），`canBeCollidedWith` 有内容时为真；服务端按“脚底接触点经旧/新姿态映射”搬运站立的实体，平移与旋转都正确 |
-| `NativeCaptureWhitelist` | P19 新增：普通无 BE 正质量满方块的起步白名单；BE/流体/waterlogged/随机或计划 tick/重力和非满形状在首次写入前显式拒绝，不静默丢弃 |
-| 三类 `Server*ProgramRuntime` | 仍存在 Entity/宿主 BlockPos、FallingBlock、直接赋速及回滚旧速度路径；不能把 Sable plot 地址当宿主格 |
+| `KineticThrow` / `VectorStructureService` | `captureAndLift` 已不存在。`KineticThrow.java:292/295/308/314` 只保留按键、网络与蓄力入口，捕获/抬升/发射/终止委托 `VectorStructureService`；捕获经 `StructureTransactions.capture/poll`（`VectorStructureService.java:672,1017`） |
+| `HighSpeedJet` / `HighSpeedJetStructureService` | `HighSpeedJet.java:365` 调服务 `launch`；P27 起捕获、区域控制、推力与释放走公共服务。Sable 捕获提交后保留结构并明确 `sable_launch_unavailable`；技能的 Sable 发射/飞行仍未实现，程序节点的一次性发射已由 P32 接入 |
+| `MagnetManipulation` / `MagneticStructureService` | 方块路径由 `MagnetManipulation.java:490` 调 `MagneticStructureService.begin`；P31 起程序结构节点走服务，Sable 技能拖动经 `MagneticStructureService.java:989` 的轻量直接控制租约。实体分支与磁悬浮保留旧路径 |
+| `NativeStructureRuntime.carryStandingEntities` | P23/P26 的真实承载：`NativeStructureRuntime.java:980,992,1013` 每 tick 把脚底接触点经旧/新姿态映射后搬运；平移、旋转、跳跃、边缘与低顶矩阵已验。站立抖动真实客户端仍待复测 |
+| `BlockStructureEntity.tick/maintainStandingEntities` | 仅旧快照实体保留；两端推进与 `hurtMarked=true` 为旧路径，不再承载新独立后端。新后端承载见上一行 |
+| `NativeStructureProjectionEntity` 碰撞/承载、`NativeStructureCollisionBoxes` | P23：投影按同步视图提供双方同源碰撞（轴对齐精确、任意姿态有界细分），`canBeCollidedWith` 有内容时为真 |
+| `MixinEntityGetter` | 只包裹实现 `BlockStructureCollision` 的结构外包框，替换为复合形状并补入空间索引遗漏；保留原查询与其他模组形状（`MixinEntityGetter.java:42,66`） |
+| `PneumaticGrasp` | 结构目标走 `StructureTraction.tryAcquire`，P18 起按整结构质量预算；旧 `BlockStructure` 实体分支与普通实体路径保留（`PneumaticGrasp.java:298,465`） |
+| `StructureQueries` / `StructureTraction` | 已有真实射线、固定哈希 Sable 查询与 prePhysics 有限力（P17）、P24 捕获，以及 P30–P32 的 `StructureDirectControl` Sable 程序控制/发射；旧 `BlockStructureEntity` 尚未统一进入该后端控制契约 |
+| `StructureTransactions` / `StructureCaptureCoordinator` | P19 后端无关分阶段捕获事务，含 journal、claims、coordinator 与 `NativeCaptureTarget`；P20 槽位回收；P24 Sable 执行器（`SableStructureTransactions.java:47`），Sable 捕获已可用。跨 JVM 强杀恢复与跨存储 WAL 未验/未实现 |
+| `NativeStructureManifest.removeEntry/releaseSlot`、`NativeStructureRuntime.discardEmpty` | P20：空结构槽位回收；仅未加载、空、未隔离、无恢复证据、无物理附件的结构可释放；`NativeStructureRuntime.java:283`、`NativeStructureManifest.java:218,236` |
+| `NativePhysicsArtifact` 解析 | P21：显式属性 → 显式环境 → home（属性/环境）→ 游戏目录 `academy/native_physics/` 固定布局；部分配置显式失败；物理打开异常统一为 `IllegalStateException` 并保留原因 |
+| `NativeStructurePhysics.Region.rebind`/`rebindPhysicsAttachments` | P22 新增并在 P25 提升为接口方法：成员全体容纳、布局分离校验、附件先原子持久化再采纳、控制保留、下一 tick 重建；牵引越界自动重绑一次，初次抓取仍严格要求盒内 |
+| `NativeCaptureWhitelist` | P19 起步白名单，后续扩集草/菌丝/苔藓/雪/黏土/砂砾/沙/红沙/树叶；随机刻不再作为拒绝门（结构空间不跑随机刻），保留 BE、流体、waterlogged、计划 tick、非全块、不可破坏与未列方块门；已列重力方块准入 |
+| 三类 `Server*ProgramRuntime` | P30–P32 各注册 7 个 `action/structure/*`；extract/control/move/launch/release 接公共能力服务，rotate/staticize 明确 `unavailable`；电击使 `magnetic_move` 的方块目标改为显式 `magnetic_block_target_moved_to_structure_nodes` 拒绝，结构节点族另含 staticize 的显式拒绝路径 |
 
-以上为代码观察，尚未把“可能原因”写成已复现的结论。
+以上为 HEAD 782d935b 的代码观察；仍待运行验证的项已在各处显式标注，不把“可能原因”写成已复现结论。
 
 ## 本次进度
 
 1. **完成**：读取工作区、既有计划和关键技能/碰撞入口；确认用户复现组合。
-2. **进行中**：动能抬升站立抖动的混装复现与两端承载检查。
+2. **已完成（P23/P26）**：独立后端真实碰撞与承载，以及平移/旋转/跳跃/边缘/低顶矩阵；站立抖动是否完全解决仍须真实客户端运行验证。
 3. **部分完成**：公共整结构质量/运动查询、气流牵引质量预算及 25 格 Sable 混装场景；多材料/更大规模矩阵待验。
-4. **部分完成**：公共精密查询节点及结构引用；三类行动节点、捕获/终止/旋转/移动/静态化待迁移。
-5. 最终验证见下表；独立客户端、承载及节点编辑器人工操作仍待验。
+4. **已完成（P30–P33）**：三类能力各注册 7 个 `action/structure/*` 行动节点；extract/control/move/launch/release 已接入，rotate/staticize 成功路径仍未实现。
+5. 最终验证见下表；真实客户端输入与节点编辑器人工操作仍需复测。
 
 ### P18 当前编辑与验证进度
+
+> 历史批次（P18，2026-10-13）：以下记录仅代表该批范围，当前状态见文首“当前接续入口”。
 
 - 新增 `StructureDynamics.motion`：读取真实整刚体质量、质心和运动；不加载结构或启动求解器，不伪造外部后端的碰撞 epoch/睡眠状态。
 - 新增公共 `PneumaticStructureControl`，按整结构质量设置 PD 增益、按技能等级限制总质量（128/256/512）与有限力（2000/4000/8000），资源倍率为质量/32、范围 1–16；气流牵引接入。已有内容变更会撤销控制，不能扩大结构后沿用低消耗。
@@ -91,20 +96,22 @@
 - 独立专服 `p18-r1` 已通过整结构程序查询、真实技能资源/释放/NPC 控制，但最后自由下落偏离固定区域，失败保留。按总质量直接放大轻型增益改变了旧落点，已改为质量不超过 2.25 时保留原 120/144 刚度、36 阻尼和 1000 力限，较重结构按质量/2.25 扩展并受等级绝对上限约束。
 - 独立专服 r2 被随机生成高地占用夹具空间而拒绝启动，未修改世界；r3 改用新固定种子超平坦隔离世界重跑。失败日志/结果均保留。
 - `StructureSupportClientSmoke` 为旧实体的真实集成玩家移动对照夹具，输入是合成 `ClientInput`，不是人工键盘；尚未运行。不能把它的结果当新独立后端玩家承载验证。
-- 必须先补齐的生产差距：独立后端现为 4 个永久容器槽、最多 3 个固定 24 格物理区域、显式外部 DLL/native-access 配置；投影实体没有承载。Sable 也尚缺生产捕获事务。不能只把 `capture` 的返回类型换名就宣称完成技能迁移。
+- P18 当时的生产差距：独立后端为 4 个永久容器槽、最多 3 个固定 24 格物理区域、显式外部 DLL/native-access 配置，投影实体没有承载；Sable 也尚缺生产捕获事务。后续 P23 已接入真实碰撞与承载，P24 已交付 Sable 生产捕获；仍待真实跨 JVM 强杀恢复、完整生命周期和长期区域回收。不能只把 `capture` 的返回类型换名就宣称完成技能迁移。
 
 ### 动能搬运的后续顺序（最高优先级）
 
-1. **公共捕获事务**：预检选择、权限、内容与几何预算；目标预留、持久化日志、复制校验、源移除、目标提交；每个阶段提供异常及重启恢复证据。先明确普通块范围，BE/计划 tick 不得静默丢弃。**P19 已交付机制与原生后端接入（见下节）；Sable 生产捕获与真实跨 JVM 强杀恢复仍属后续。**
+1. **公共捕获事务**：预检选择、权限、内容与几何预算；目标预留、持久化日志、复制校验、源移除、目标提交；每个阶段提供异常及重启恢复证据。先明确普通块范围，BE/计划 tick 不得静默丢弃。**P19 已交付机制与原生后端接入（见下节）；P24 已交付 Sable 生产捕获；真实跨 JVM 强杀恢复仍属后续。**
 2. **独立后端可供技能使用**：制品部署、容器容量/回收、活动物理区域跟随与恢复，以及真实玩家碰撞/承载。不能让玩家每四次使用便耗尽永久槽，也不能发布仅在测试 JVM 外部属性下可运行的默认技能。**全部子项已交付：P20 槽位回收、P21 制品部署约定、P22 区域重绑与跟随、P23 真实碰撞与承载（见下节）。**
 3. **双后端捕获接入**：未装 Sable 创建独立结构，兼容混装创建 Sable 结构；未知版本/不可用时给出失败并保留源方块，不降级为旧实体。外部 assembly helper 仍只作测试工具，不能代替生产事务。**P24 已交付执行器抽象与 Sable 执行器（见下节）；恢复方向与长期行为边界见 P24 未验项。**
 4. **迁移 `KineticThrow`**：保持区域选择和能力预算；HeldStructure 改为公共引用/租约；抬升、投掷、终止遵守有限力、单位、惯性契约；接触伤害只结算一次，不在世界碰撞时自动变回方块。
 5. **承载验收**：独立和完整混装各测静止、升降、行走、跳跃、边缘、顶墙和旋转，之后测真实双端延迟。旧实体对照测试不能替代这些结果。
 6. 再迁移高速喷流/磁场操作和三类行动节点；矢量改变运动、磁力筛选材料、空气通过受力锚点控制，共用结构身份、质量、资源和释放契约。
 
-**当前不能对用户声称：动能搬运已改用新独立后端、站立抖动已修复、三个能力的行动节点已迁移完成。** 事务机制与原生后端接入口已就绪，但技能生产路径尚未改动，以上是接续工作的实现依赖，并非已交付功能。
+**当前状态（HEAD 782d935b）：动能搬运在未装 Sable 时已改用新独立后端（P25），P23/P26 已接入承载并覆盖平移/旋转/跳跃/边缘/低顶，站立抖动仍需真实客户端运行复测；三个能力中 extract/control/move/launch/release 已完成，rotate/staticize 的成功路径未实现，不能声称全部行动节点迁移完成。** 原“事务机制已就绪但技能生产路径尚未改动”的描述不再适用。
 
 ### P19 公共捕获事务（2026-10-13）
+
+> 历史批次（P19，2026-10-13）：以下记录仅代表该批范围，当前状态见文首“当前接续入口”。
 
 - 新增公共入口 `StructureTransactions.capture/poll`；请求为 `StructureCaptureRequest`（位置集合、格数与跨度预算、逐格权限谓词），结果为 `StructureCaptureResult`（PENDING/SUCCESS、显式拒绝原因与 `RECOVERY_REQUIRED`、交易 ID 与结构引用）。公共签名不含 Sable 类型。
 - 新增后端无关事务实现 `internal/common/structure/transaction`：
@@ -121,6 +128,8 @@
 
 ### P20 空结构槽位回收（2026-10-13）
 
+> 历史批次（P20，2026-10-13）：以下记录仅代表该批范围，当前状态见文首“当前接续入口”。
+
 - 新增 `NativeStructureManifest.removeEntry(UUID)` 与 `releaseSlot(int, UUID)`：候选索引先整体校验再原子写入并发布；存在恢复证据或仍被索引引用的槽位拒绝释放；owner 标记最后删除，中断只会泄漏认领，不会复活已删内容。
 - 新增 `NativeStructureRuntime.discardEmpty(StructureRef)`：仅接纳未加载、内容为空、未隔离、无恢复证据、无物理附件且存储维正常的结构；先确认空并清理该槽位区域计划/流体 tick、保存存储层并复核，再移除索引，最后删除 owner 标记。成功即释放一个永久槽位。
 - P19 集成：事务回滚（含重启恢复回滚）与分配日志失败路径在「清理目标 → 回收日志 → 停用」后调用 `discardEmpty`；日志删除在前、槽位释放在后，崩溃时最坏只是空占位泄漏。
@@ -131,6 +140,8 @@
 
 ### P21 制品部署解析与统一异常（2026-10-13）
 
+> 历史批次（P21，2026-10-13）：以下记录仅代表该批范围，当前状态见文首“当前接续入口”。
+
 - `NativePhysicsArtifact` 新增纯解析 `resolve(properties, environment, conventionalDirectory)`：显式属性对 → 显式环境对 → `academy.nativePhysics.home`/`ACADEMY_NATIVE_PHYSICS_HOME` → 游戏目录固定布局 `academy/native_physics/`（平台库文件名 + `academy_physics.properties`）。部分配置（只设一项）或显式 home 缺件均显式失败，不再回退到更弱来源；空白值按未设置处理；哈希/版本校验与私有副本逻辑不变，仍不打包、不下载二进制。
 - `NativeStructurePhysics.createRegion` 打开物理的统一失败面：`IOException` 与 `RuntimeException` 一律转为携带原始消息与原因的 `IllegalStateException`，权限缺失等诊断保持可读。
 - 新增验证脚本 `validation/native_structure/physics_deploy.init.gradle`：隔离专服目录内按固定布局放置 `prepareNativePhysics` 制品、清空原生环境变量、不设任何 `-Dacademy.nativePhysics.*`，仅保留 `--enable-native-access=ALL-UNNAMED` 运行既有 `nativePhysicsSmoke=server` 探针。
@@ -139,6 +150,8 @@
 - 当前构建（含 P19/P20/P21，不含技能迁移）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `0899E1505E8BCB1FB26CC5169197F1E9185411D499A9FFD215BD77726EAEB962`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `6C2429DCC682E2F7D64D8458814839510C4F8251B86B5990B97F55C3CF5B756B`。未复制到整合包，未操作用户存档。
 
 ### P22 物理区域重绑与牵引跟随（2026-10-13）
+
+> 历史批次（P22，2026-10-13）：以下记录仅代表该批范围，当前状态见文首“当前接续入口”。
 
 - `NativeStructurePhysics.Region.rebind(AABB)`：显式把活动区域重绑到同宿主新边界。前置校验新边界尺寸、与其他活动/存档区域的 1 格分离、以及**所有当前成员**（不只发起者）在新盒内的实际占用（避免多成员编队跟随导致同伴出界终态失败）；随后 `NativeStructureRuntime.rebindPhysicsAttachments` 先整体校验并按候选索引 `putAll` + 持久化全部成员附件（失败恢复内存与磁盘旧值），再采纳新边界与原点、重建地形缓存并就地释放原生世界（**保留瞬时控制**），状态置 PAUSED 由下一 tick 重建发布。被拒绝的重绑不改变任何一侧。`bounds/origin/terrainCache` 因此改为可变字段（原先 final）。
 - 牵引跟随：`NativeStructureTraction.Session.update` 在目标仅因当前盒边界被拒时，用纯函数 `NativeStructureTractionBounds.recentered` 计算同尺寸、按宿主边界与高度夹取的候选盒，重绑成功后复检并按原有限力路径推进；每次 update 最多重绑一次。初次 `acquire` 仍要求身体与目标都必须在当前盒内，不自动迁移。恢复一致性：重绑先持久化附件，重启 `resumeRegion` 直接使用重绑后的边界。
@@ -149,6 +162,8 @@
 
 ### P23 真实玩家碰撞与承载（2026-10-13）
 
+> 历史批次（P23，2026-10-13）：以下记录仅代表该批范围，当前状态见文首“当前接续入口”。
+
 - `NativeStructureProjectionEntity` 实现 `BlockStructureCollision`：碰撞盒由同步视图推导（`NativeStructureCollisionBoxes.localBoxes` 以视图自身作为 BlockGetter 解析邻接状态），轴对齐姿态精确变换，任意四元数姿态按输出预算（2048 盒）做 3³→2³→整盒 的均匀细分近似；服务端与客户端从同一发布状态导出同源形状。投影在加入/同步数据/姿态视图更新时注册进 `BlockStructureCollisionRuntime`，移除时注销；`canBeCollidedWith` 仅在当前内容有碰撞时为真，`isPushable=false`、`isPickable=false` 不变。
 - 服务端承载：`NativeStructureRuntime` 每 tick 在投影更新后，对脚底落在结构表面容差内（站立 0.18 / 恢复 0.5）的实体执行搬运——把脚底接触点经**上一姿态**映射到局部网格坐标、再经**新姿态**映射回世界（平移与旋转都正确），随后对齐表面、保留落地状态与 `hurtMarked=true`；带物理附件与非附件结构同样适用（非附件结构姿态不变则自然无操作）。
 - 集成修复（P22 缺陷）：牵引跟随重绑后区域处于 PAUSED 待下一 tick 重建，技能若同一 tick 继续 `lease.setControl` 会被 `controllable` 判定不可用而结束会话；现在重绑当 tick 保留会话并延后一 tick 下发新指令。
@@ -158,6 +173,8 @@
 - 当前构建（含 P19–P23，不含技能迁移）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `2197C2B2211B737ADA5E7B756BEDE0D3540D87D31A7E2E435C3D8791EB096AFB`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `D66097FB72A76F53312FB932998891C13207BAD06677820BDAD5C2352997D932`。未复制到整合包，未操作用户存档。
 
 ### P24 双后端捕获接入（2026-10-14）
+
+> 历史批次（P24，2026-10-14）：以下记录仅代表该批范围，当前状态见文首“当前接续入口”。
 
 - **第一步（已提交 `b4c6dd79`）**：新增 `CaptureTarget` 执行器边界与 `NativeCaptureTarget`，协调器完全后端无关；行为等价通过全套验证。
 - **第二步（本批）**：新增 `SableStructureTransactions implements CaptureTarget`：
@@ -171,6 +188,8 @@
 - 当前构建（含 P19–P24）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `856CF4988B7E4B2AA52E104456FB1362CE65386DA6A7764EF4DF5FBE0C770474`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `4B3924482CA545822B6F807487AC332FC0ECEE7713B6DADFC78B17D622A1E799`。未复制到整合包，未操作用户存档。
 
 ### P25 动能投掷迁移到公共结构服务（2026-10-14）
+
+> 历史批次（P25，2026-10-14）：以下记录仅代表该批范围，当前状态见文首“当前接续入口”。
 
 - 改动/新增文件：`KineticThrow.java`（Server 全路径重写）、`KineticStructureControl.java`（新增公共能力加速器控制预算）、`StructurePhysicsRegion.java`（`rebind` 提升为接口方法）、`NativeStructurePhysics.java`（`@Override`）、`NativeStructurePhysicsKineticThrowSmokeChecks.java`（新增专服烟测）、`NativeStructurePhysicsWorldSmoke.java`（新 `KINETIC` 相位与开关）、`physics_world.init.gradle`（`academyStructurePhysicsKineticThrowSmoke` 透传）、`KineticThrowTest.java`（纯函数用例）、中英文 `kinetic_throw.desc`（描述与实际行为对齐：无世界碰撞爆炸结算、不再变回方块）。
 - 捕获：选区（下半椭球+上圆柱、前方半空间裁剪、立即阻挡裁剪）保持；新增确定性预算预裁 `cropToBudget`（按到 seed 距离平方升序、坐标 tie-break、seed 优先保留；NATIVE 128 / SABLE 256，经 `StructureBackendRouter.status().mode()` 判定；`maximumSpan=24`）。`executeActive` 扣费时机与不退款语义不变；改走 `StructureTransactions.capture/poll` 跨 tick `CaptureState` 驱动，失败以 `status:detail` 走日志+actionbar（沿用 `capture_rejected` 文案）。
@@ -186,6 +205,8 @@
 
 ### P26 原生承载验收矩阵扩展（2026-10-14）
 
+> 历史批次（P26，2026-10-14）：以下记录仅代表该批范围，当前状态见文首“当前接续入口”。
+
 - 改动文件：仅 `NativeStructurePhysicsSupportSmokeChecks.java`（+270/-1；DESCEND 后新增 ROTATE/JUMP/EDGE/CEILING 相位，DONE 前清理临时物；既有 ARM/SETTLE/LIFT/DESCEND 语义不变）。Sable 后端与真实双端不在本节点。
 - ROTATE：Anchor 抬离地板 0.9 → `setVelocity(ZERO, (0, 1.5, 0))`；旋转累计 60.13° 期间每 tick 断言支撑面存在且 |feet−surface|<0.05；rider 随转（世界位移 0.290、结构本地漂移 2.6e-4）；停转后回落稳定（feet=112.00000427）。证据 `support_rotation_supported/rider_followed=true`。
 - JUMP：`setDeltaMovement(0, 0.55, 0)` 后连续 5 tick 离面 >0.5 且未被承载拉回，峰值 2.03 格，落回后重新被支撑。夹具 rider 为 noAI：`aiStep` 对非有效 AI 跳过 `travel`，夹具每 tick 显式调用 `rider.travel(Vec3.ZERO)` 推进原版积分（模拟跳跃，非键盘输入）。证据 `support_jump_leaves_surface/relands=true`。
@@ -197,6 +218,8 @@
 - 当前构建（含 P19–P26）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `359243C796BC7D68EE6052441BAC312FD4AD695D4247A20AAE348CCC154AB0C8`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `266E1CAFEB39ECBB00E9DD36A21C482E378DB9237381E377FCBDB2F9906E10A6`。未复制到整合包，未操作用户存档。
 
 ### P27 高速喷流迁移到公共结构服务（2026-10-14）
+
+> 历史批次（P27，2026-10-14）：以下记录仅代表该批范围，当前状态见文首“当前接续入口”。
 
 - 改动/新增文件：新增公共 `JetStructureControl.java`（喷流推力与速度标定）；重写 `HighSpeedJetStructureService.java`（捕获/控制/发射/释放全路径）；`HighSpeedJetNozzle.java`（结构支持由旧 `BlockStructure` 实体改为公共 `StructureRef`，方块/实体支持不变，新增 ref 存档键）；`HighSpeedJet.java`（新增 `Events`：`PlayerTickEvent.Post` 驱动、登录/换维/死亡/停服清理）；新增 `NativeStructurePhysicsHighSpeedJetSmokeChecks.java` 与 `JetStructureControlTest.java`；扩展 `HighSpeedJetStructureServiceTest.java`（预算预裁/区域盒）；`NativeStructurePhysicsWorldSmoke.java`（新 `HIGH_SPEED_JET` 相位与开关、失败清理）；`physics_world.init.gradle`（`academyStructurePhysicsHighSpeedJetSmoke` 透传）。
 - 捕获：选区（半径 2 球形，沿推力方向 `cropImmediatelyBlocked`）与喷嘴选择保持；新增确定性预算预裁 `cropToBudget`（NATIVE 128 / SABLE 256，经 `StructureBackendRouter.status().mode()` 判定，seed 优先保留，其余按 seed 距离平方 + 坐标 tie-break）；改走 `StructureTransactions.capture/poll` 跨 tick `CaptureState` 驱动。扣费时机与旧实现一致：**捕获提交并 attach 成功后**才扣 `(activationCpCost(1)+0.25/格)·成本曲线·costMultiplier` CP 与 `(activationAirCost(1)+0.5/格)·成本曲线` 压缩空气，之后不退款；捕获拒绝/超时以 `status:detail` 走日志 + actionbar（沿用 `structure_launch_rejected` 文案），失败保留源方块。
@@ -212,6 +235,8 @@
 
 ### P28 磁场操作迁移到公共结构服务（2026-10-14）
 
+> 历史批次（P28，2026-10-14）：以下记录仅代表该批范围，当前状态见文首“当前接续入口”。
+
 - 改动/新增文件：新增公共 `MagneticStructureControl.java`（磁场牵引控制预算与旧速度曲线到原生力的换算）；新增内部 `MagneticStructureService.java`（吸附方块跨 tick 捕获、原生区域控制、P25 同构跟随、Sable 边界与释放契约）；重写 `MagnetManipulation.java` 的 Server/MoveContext 方块路径（实体路径、悬浮开关与资源/心跳语义不变；新增 `Events` 生命周期清理与 `Server.diagnostic/startTargetPull/stopTargetPull` 公共入口）；新增 `NativeStructurePhysicsMagnetManipulationSmokeChecks.java`、`MagneticStructureControlTest.java`、`MagneticStructureServiceTest.java`、`NativeStructurePhysicsSmokeCleanup.java`；扩展 `NativeStructurePhysicsWorldSmoke.java`（新 `MAGNET` 相位与开关）、`physics_world.init.gradle`（`academyStructurePhysicsMagnetManipulationSmoke` 透传）、中英文 `message.academy.magnet_manipulation.structure_pull_rejected`。
 - 审计结论（迁移依据）：旧 `MagnetManipulation` **没有整结构/方块组路径**，也不引用 `BlockStructureApi/BlockStructureEntity/BlockStructureKinetics/beginGravitySettlement/asEntity`（全仓检索只命中旧实体自身与验证夹具）。旧方块路径仅把准星命中的**单格磁力方块**转为 `FallingBlockEntity`（`createFallingBlockTarget`，旧第 424–438 行），随后每 tick 直接赋速（`pullTargetToPlayer`，旧第 388–422 行），释放时清除 `GravityControl`（`releaseControlledTarget`，旧第 482–488 行）；筛选在 `findCrosshairTarget`（旧第 440–480 行）与 `createFallingBlockTarget`（`isMagnetic(state)`、无 BE、可破坏）；资源为 `movingTicks % 20 == 0` 时 `tryTimedOccupation(... MOVE_CP_COST=10 ...)`（旧第 372–377 行），无捕获费且不退款。据此范围收缩为“磁力筛选出的单格方块操纵”最小正确切片：只迁移这一条方块路径，不虚构多格结构捕获、旋转、静态化等旧实现不存在的语义；实体路径、悬浮（`MagneticFieldRuntime`）与全部筛选谓词保持不变。
 - 捕获：`MagneticStructureService.begin` 复用旧入场谓词（`AbilityEffectPolicy.blockDestruction`、区块已载、`mayInteract`、`SkillTuning.allowBlockDestruction`、`MagneticTargets.isMagnetic`、无 BE、`getDestroySpeed ≥ 0`），随后确定性预算预裁 `cropToBudget`（NATIVE 128 / SABLE 256，经 `StructureBackendRouter.status().mode()` 判定；seed 优先）并走 `StructureTransactions.capture/poll` 跨 tick；`status:detail` 走日志 + 新 actionbar 文案，失败保留源方块。扣费时机沿用旧语义：捕获/牵引本身不收费，CP 仍是移动期间每 20 tick 10 点，捕获失败不退款。
@@ -222,7 +247,7 @@
 - 夹具槽位回收：原生容器仅 4 个永久槽，P25/P27/P28 三个捕获相位链式运行会耗尽；`NativeStructurePhysicsSmokeCleanup` 在 KINETIC/HSJ/MAGNET 各自 VERIFY 证据落盘后清空捕获内容并 `unload` + `discardEmpty`（仅测试夹具，保留断言先于释放；非生产路径）。r6 日志含 3 次 `Released empty native structure slot`。
 - 复现命令：`. ./build/native-physics-p16-env.ps1; .\gradlew.bat runServerCompat -I validation/native_structure/physics_world.init.gradle -PacademyStructurePhysicsSmoke=server -PacademyStructurePhysicsGraspSmoke=true -PacademyStructurePhysicsKineticThrowSmoke=true -PacademyStructurePhysicsHighSpeedJetSmoke=true -PacademyStructurePhysicsMagnetManipulationSmoke=true -PacademyStructurePhysicsSmokeDirectory=run/native-structure-physics-smoke-server-NEW @physicsNativeArgs -DisDev=true`（新隔离目录并预置 `eula.txt`/`server.properties`；不要复用 r1–r6）。
 - 失败轨迹（目录与日志保留）：`p28-r1` 在 MAGNET 因 `BACKEND_UNAVAILABLE:no_free_native_slot`（4 槽被 a/b/kinetic/hsjet 占满）失败（`build/p28-world-smoke-r1.log`）；`p28-r2` 加入槽位回收后仍失败，因清理误按宿主世界坐标清空而捕获目标以最小角为局部偏移（`build/p28-world-smoke-r2.log`）；`p28-r3` 修正偏移后失败于 `region.control` 在 Post 时因一步 Force 已被消耗而读空（`build/p28-world-smoke-r3.log`）；`p28-r4` 改为租约/阶段断言后通过（`build/p28-world-smoke-r4.log`）；`p28-r5` 收紧速度门限后通过（`build/p28-world-smoke-r5.log`）；`p28-r6` 为最终修订（仅 actionbar 文案措辞变化）全量复跑（`build/p28-world-smoke-r6.log`）。
-- 未验边界：Sable 的磁场牵引（捕获提交后保留结构；本批未跑 Sable 专服烟测，`sableCompatTest` 11 项零失败）；真实双端与真实 TCP/键盘输入；多格或连通磁力结构（本节点只迁移旧有的单格语义）；旧 `FallingBlockEntity` 的落地磨损/伤害/变回方块表现未逐一对照；每次使用最多新开一个物理区域（上限 3）且长期回收未实现（同 P25/P27）；`ServerElectromasterProgramRuntime` 的磁力行动节点仍走旧实体路径。
+- 未验边界（P28 当时；**P31 已迁移方块路径与程序节点，实体分支保留**）：Sable 的磁场牵引当时捕获提交后保留结构（本批未跑 Sable 专服烟测，`sableCompatTest` 11 项零失败）；真实双端与真实 TCP/键盘输入；多格或连通磁力结构（本节点只迁移旧有的单格语义）；旧 `FallingBlockEntity` 的落地磨损/伤害/变回方块表现未逐一对照；每次使用最多新开一个物理区域（上限 3）且长期回收未实现（同 P25/P27）。`ServerElectromasterProgramRuntime.magneticMove` 的方块目标已改为显式拒绝并走结构节点（P31），实体路径保留；Sable 技能拖动另于 2026-10-15 修复，真实客户端表现仍待复测。
 - 当前构建（含 P19–P28）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `091B56C01D7778A48B9DE3FE557FD6094024D71DE3F29D53B8110F4005775706`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `8BFDC79DD0BA0523C34EDC2C4ECB04C354D204CE4F6393796C35DDB1215A5063`。未复制到整合包，未操作用户存档。
 
 ## 精密操作节点阶段设计（P29 起）
@@ -303,6 +328,8 @@
 
 ### P29 矢量结构服务抽取（2026-10-14）
 
+> 历史批次（P29，2026-10-14）：以下记录仅代表该批范围，当前状态见文首“当前接续入口”。
+
 - 改动/新增文件：
   - 新增 `src/main/java/org/academy/internal/common/ability/accelerator/movement/VectorStructureService.java`（967 行）：捕获选区/预裁/事务、区域挂载与 Anchor 抬升、Sable 牵引抬升、冲量发射、逐 tick 跟随 rebind、接触伤害/击退、释放清理，以及 `Stage`/`Diagnostic`/`CapturePlan`/`Session`。
   - 重写 `src/main/java/org/academy/internal/common/ability/accelerator/skills/lv3/KineticThrow.java`（1268 → 428 行）：保留 HUD/按键/网络包/蓄力/资源执行/入口/生命周期清理；`releaseCharge` 的选区改为服务 `planCapture`，扣费仍在 `executeActive` 内，随后 `beginCapture` 启动事务；`throwHeld`/`stopHeld`/`diagnostic` 委托服务（Diagnostic 使用服务类型）。技能几何、每格伤害与投掷方向公式保留为公开静态配置，与 P27 服务读取 `HighSpeedJet.*` 同构。
@@ -327,6 +354,8 @@
 -->
 
 ### P18 最终结果（2026-10-13）
+
+> 历史批次（P18，2026-10-13）：以下记录仅代表该批范围，当前状态见文首“当前接续入口”。
 
 | 验证 | 结果 / 证据 |
 | --- | --- |
@@ -364,7 +393,7 @@
 - 固定 Suite 专服在外部模组构造时加载客户端模型类而失败；`build/sable-p17-suite-server-r1.log`。客户端通过不代表专服通过。
 - `run/sable-compat/p17-retention-r1` 完整旧世界副本运行 120 tick 的内容保护断言通过，但退出夹具竞争写入 FAILED；外部核验失败，不能计为通过。夹具修复/新副本重跑尚未完成，原失败文件必须保留。
 - `SableStructureHandle.read` 已修复 bbox 内缺 holder 不得返回 AIR；编译/基础测试通过，专项真实缺 holder 场景尚未运行。
-- Sable 生产捕获、可恢复静态化、跨后端迁移、通用拆分/接触仍未完成。公开装配 helper 仅用于隔离测试，不可直接作为生产内容事务。
+- Sable 生产捕获已完成（P24，`SableStructureTransactions.java:47` 接入 P19 协调器）；可恢复静态化成功路径、跨后端迁移、通用拆分/接触仍未完成。公开装配 helper 仅用于隔离测试，不可直接作为生产内容事务。
 
 ## 接续操作入口
 
@@ -382,6 +411,8 @@
 后续每完成一个节点在此增加：修改文件、行为改变、验证命令及结果、失败轨迹、未验边界和紧接着应做的工作。已有完整架构设计位于 `docs/block_structure_physics_and_sable_compat_plan.zh-CN.md`。
 
 ### P30 矢量操作节点族（2026-10-14）
+
+> 历史批次（P30，2026-10-14）：以下记录仅代表该批范围，当前状态见文首“当前接续入口”。
 
 - 改动/新增文件：
   - 新增 api value types：`ProgramStructureControl.java`（绑定 actor、结构代次、服务 controlId 与运行实例令牌；不持久、失效不重获）、`ProgramStructureOperationResult.java`（status/detail/reference）、`ProgramStructureAnchor.java`（结构代次 + 局部格）、`ProgramStructurePose.java`（轴 + 弧度目标姿态）；`ProgramValueTypes` 增加 `structure_control`、`structure_operation_result`、`structure_anchor`、`structure_pose`。未新增 `structure_anchor_set`（本批无节点端口需要）。
@@ -496,6 +527,8 @@
 - 当前构建（含本修复）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `91E714EF38A4996C5513BB57A798E58D418F6C1E4F8A9A9C86DCABD358A84FF3`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `AEB9493FE061B73B15C08DF29EE03B05A494A9F139914BAA008DB4908EDD6B8D`。未复制到整合包，未操作用户存档，未创建本地 Git 提交。
 
 ### P31 电击使结构操作节点族（2026-10-14）
+
+> 历史批次（P31，2026-10-14）：以下记录仅代表该批范围，当前状态见文首“当前接续入口”。
 
 - 审计发现（改动前行号）：
   - `ServerElectromasterProgramRuntime.magneticMove` 的方块分支是旧物理路径：`validate` 第 162–179 行把方块转成受控清单键，`apply` 第 200–207 行以 `FallingBlockEntity.fall`（旧第 204 行）+ `setNoGravity(true)` 创建临时实体，第 226 行沿 `origin→destination` 调用 `damageAlongTrajectory` 预结算轨迹伤害，第 228 行直接 `setVelocity`；旧第 249–255 行在撤销时 `discard` 实体并补回源方块（先丢弃后补的路径）。`damageAlongTrajectory`（旧第 438–470 行）同时服务实体与方块发射。
@@ -633,6 +666,8 @@
 
 ### P32 空力使结构操作节点族（2026-10-15）
 
+> 历史批次（P32，2026-10-15）：以下记录仅代表该批范围，当前状态见文首“当前接续入口”。
+
 - 审计发现（改动前行号）：
   - `ServerAeromanipProgramRuntime.launchBlockStructure` 旧第 255–295 行是唯一结构入口：直接构造 `HighSpeedJetStructureService.LaunchRequest` 并作为动作事务走技能服务 `launch`，没有 extract/control/move/release 粒度，也与技能共用同一会话窗口。
   - `HighSpeedJetStructureService`（改动前 1077 行）只有技能/旧节点入口：`launch`(126)、`plan`(183)、`cropToBudget`(227)、`regionBounds`(257)、`tick`(329)、`tickCapture`(375)、`beginSession`(413)、`tickAwait`(499)、`tickThrust`(542)（单一 `launchDirection` + 质心单点力）、`stopSession`(778)、`Session`(1010)、`closeControl`(1067)；无 program 状态、无多锚点力组、无 Sable 直控分支。
@@ -670,6 +705,8 @@
 - 当前构建（含 P19–P32）：`build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` SHA-256 `EC04B43E4ED7D8DA1916FA9EBC0202F3CF5AA120DF96D256301C8004CE0CE0D6`；`academy-26.2.0-0.0.4-alpha-release.jar` SHA-256 `B0CA55A386F6C096F67CFAD92BFD829B8532C3DC4FD50456A105BABCAA2CC0EC`。未复制到整合包，未操作用户存档，未创建本地 Git 提交。
 
 ### P33 收尾：图迁移器、静态化拒绝路径与全矩阵验收（2026-10-15）
+
+> 历史批次（P33，2026-10-15）：以下记录仅代表该批范围，当前状态见文首“当前接续入口”。
 
 - 改动/新增文件：
   - 迁移器公共层：新增 `src/main/java/org/academy/internal/common/ability/program/migrate/ProgramGraphMigrator.java`（显式重写/审计/schema 升级三段式；重写按占位槽分配新节点 id、重接端口边、迁移编辑器布局并保持幂等；不可迁移节点保留原样并给 per-node 诊断；诊断按（code,nodeId,detail）去重）与 `ProgramGraphMigrations.java`（按能力分类注册迁移器、`migrate`/`migrateBook`、`registeredCategories`）。
