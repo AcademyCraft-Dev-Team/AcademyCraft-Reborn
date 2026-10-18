@@ -27,6 +27,11 @@ public final class NativeStructureDimensions {
             .mapToObj(slot -> ResourceKey.create(Registries.DIMENSION,
                     AcademyCraft.academy("structure_space_" + slot)))
             .toList();
+    /** One shared plot dimension replaces per-structure storage levels for the SubLevel backend. */
+    public static final ResourceKey<Level> PLOT_KEY = ResourceKey.create(Registries.DIMENSION,
+            AcademyCraft.academy("sublevel_plots"));
+    private static final List<ResourceKey<Level>> STORAGE_KEYS = java.util.stream.Stream.concat(
+            SLOT_KEYS.stream(), java.util.stream.Stream.of(PLOT_KEY)).toList();
 
     private NativeStructureDimensions() {
     }
@@ -36,7 +41,11 @@ public final class NativeStructureDimensions {
     }
 
     public static boolean isStorageLevel(ResourceKey<Level> dimension) {
-        return SLOT_KEYS.contains(dimension);
+        return STORAGE_KEYS.contains(dimension);
+    }
+
+    public static boolean isPlotLevel(ResourceKey<Level> dimension) {
+        return PLOT_KEY.equals(dimension);
     }
 
     /** Y is deliberately checked against the actual level's build height by the caller. */

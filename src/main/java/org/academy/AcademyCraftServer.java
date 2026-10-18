@@ -104,6 +104,7 @@ public final class AcademyCraftServer {
         PlayerLeftClickSwingPacket.initServer();
         org.academy.internal.common.network.NativeStructureUsePacket.initServer();
         org.academy.internal.common.network.NativeStructureMinePacket.initServer();
+        org.academy.internal.common.network.SubLevelInteractPacket.initServer();
         org.academy.internal.common.world.item.CoinItem.initServer();
         MagneticHookActionPacket.initServer();
         AbilityProgramManager.initServer();

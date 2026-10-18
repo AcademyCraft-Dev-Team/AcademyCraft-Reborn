@@ -68,6 +68,15 @@ public record StructurePose(
                 rotation.rotationZ, rotation.rotationW);
     }
 
+    /** Linear origin + shortest-arc quaternion interpolation, clamped to [0, 1]. */
+    public StructurePose lerp(StructurePose other, double delta) {
+        Objects.requireNonNull(other, "other");
+        double t = Math.max(0.0, Math.min(1.0, delta));
+        var origin = worldOrigin.lerp(other.worldOrigin, t);
+        var rotation = rotation().slerp(other.rotation(), t);
+        return new StructurePose(origin, rotation);
+    }
+
     /** Returns a mutable copy; changing it never changes this pose. */
     public Quaterniond rotation() {
         return new Quaterniond(rotationX, rotationY, rotationZ, rotationW);

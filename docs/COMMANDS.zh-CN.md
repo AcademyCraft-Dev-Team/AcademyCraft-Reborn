@@ -66,6 +66,14 @@
 │  │  ├─ list
 │  │  ├─ clear
 │  │  └─ help
+│  ├─ structure
+│  │  ├─ status
+│  │  └─ cleanup
+│  ├─ sublevel
+│  │  ├─ status
+│  │  ├─ probe
+│  │  ├─ capture
+│  │  └─ remove
 │  ├─ skillgui [on|off|toggle|reset|export]                 （客户端）
 │  ├─ textdump <px> <text>                                 （客户端）
 │  ├─ atlasdump [all|bitmap|msdf]                          （客户端）
@@ -224,6 +232,26 @@
 | `/academy debug tick list` / `clear` / `help` | 列出全部调试控制、清空全部调试控制、打印参数说明。 |
 
 `<scale>` 为 `0`～`TemporalScale.DEFAULT_MAX_SCALE` 的浮点数，`0` 表示完全暂停。`<channels>` 与 `<pause_source>` 均带补全：前者可选 `integrated`、`spatial`、`world`、`all` 或单个通道名，后者可选 `all` 或单个暂停来源名。
+
+### 原生结构投影调试
+
+| 命令 | 作用 |
+| --- | --- |
+| `/academy debug structure status` | 列出当前已加载的原生结构数、已 attach/已准备物理区域数与无区域影子数，并给出影子结构 ID 样例。 |
+| `/academy debug structure cleanup` | 只卸载没有活动或已准备物理区域的影子结构投影，保留其独立存储内容；不会还原或删除方块。 |
+
+旧世界残留的无刚体结构可先用 `status` 确认，再执行 `cleanup` 消除其不可见碰撞与投影；需要恢复方块时仍应使用后续的结构还原入口，不能把 `cleanup` 当作还原。
+
+### SubLevel Phase 1 调试
+
+| 命令 | 作用 |
+| --- | --- |
+| `/academy debug sublevel status` | 查看共享 plot 维度是否就绪、已分配 plot 数、活跃 SubLevel 数与物理刚体数。 |
+| `/academy debug sublevel probe` | 在 `academy:sublevel_plots` 分配一个 plot，写入一个石头方块，并创建一个真实 SubLevel 刚体；用于验证 plot/几何/统一物理链路。 |
+| `/academy debug sublevel capture` | 在玩家上方 5 格写入 2×2×2 石头，复制到 plot、创建 SubLevel 并移除源方块；用于验证 capture → plot → physics。 |
+| `/academy debug sublevel remove` | 移除 probe 创建的子结构并释放 plot。 |
+
+`probe` 只用于开发验证；Phase 1 完成后由捕获事务自动创建 SubLevel。
 
 ## 性能分析
 

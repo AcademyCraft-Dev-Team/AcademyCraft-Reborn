@@ -56,6 +56,10 @@ public final class NativeStructureProjectionEntity extends Entity implements Blo
     private long cachedRevision = Long.MIN_VALUE;
     private @Nullable StructurePose cachedPose;
     private List<AABB> cachedWorldBoxes = List.of();
+    private boolean clientOnly;
+    private @Nullable StructurePose clientLastPose;
+    private @Nullable StructurePose clientPreviousPose;
+    private long clientPoseTick;
 
     public NativeStructureProjectionEntity(EntityType<? extends NativeStructureProjectionEntity> type, Level level) {
         super(type, level);
@@ -84,6 +88,33 @@ public final class NativeStructureProjectionEntity extends Entity implements Blo
         builder.define(STATE, NativeStructureViewState.EMPTY);
         builder.define(VIEW, NativeStructureView.EMPTY);
         builder.define(LIDS, NativeStructureLidTargets.EMPTY);
+    }
+
+    /** A render-only projection created from a Phase 4 client snapshot. */
+    public void markClientOnly() {
+        if (!level().isClientSide()) throw new IllegalStateException("Client-only projections require a client level");
+        clientOnly = true;
+    }
+
+    public boolean isClientOnly() {
+        return clientOnly;
+    }
+
+    /** Applies one client snapshot without the server-side revision gate. */
+    public void applyClientSnapshot(NativeStructureView view, StructurePose pose, long revision) {
+        if (!level().isClientSide()) throw new IllegalStateException("Client snapshots require a client level");
+        var previous = viewState();
+        if (clientOnly) {
+            if (clientLastPose != null && !clientLastPose.equals(pose)) {
+                clientPreviousPose = clientLastPose;
+                clientPoseTick = level().getGameTime();
+            }
+            clientLastPose = pose;
+        }
+        entityData.set(VIEW, Objects.requireNonNull(view, "view"));
+        entityData.set(STATE, new NativeStructureViewState(previous.reference(), previous.runtimeId(),
+                Math.max(revision, previous.revision()), Objects.requireNonNull(pose, "pose")));
+        refreshAnchorAndBounds();
     }
 
     public NativeStructureView view() {
@@ -117,9 +148,18 @@ public final class NativeStructureProjectionEntity extends Entity implements Blo
                 Float.isFinite(partialTick) ? Math.clamp(partialTick, 0.0f, 1.0f) : 1.0f);
     }
 
-    /** P0 deliberately uses the same current transform for model submission and exact ray tests. */
+    /** Client snapshots interpolate over the five-tick transport interval; server projections stay exact. */
     public StructurePose renderPose(float partialTick) {
-        return viewState().pose();
+        var current = viewState().pose();
+        if (!clientOnly || clientPreviousPose == null) return current;
+        double elapsed = (level() == null ? 0.0 : level().getGameTime() - clientPoseTick)
+                + Math.clamp(partialTick, 0.0f, 1.0f);
+        double delta = elapsed / 5.0;
+        if (delta >= 1.0) {
+            clientPreviousPose = null;
+            return current;
+        }
+        return clientPreviousPose.lerp(current, delta);
     }
 
     /** Entity tracking follows the visible cells, independently of the local grid's origin. */
@@ -175,7 +215,7 @@ public final class NativeStructureProjectionEntity extends Entity implements Blo
     @Override
     public void onAddedToLevel() {
         super.onAddedToLevel();
-        BlockStructureCollisionRuntime.update(this);
+        if (!clientOnly) BlockStructureCollisionRuntime.update(this);
     }
 
     @Override
@@ -218,21 +258,10 @@ public final class NativeStructureProjectionEntity extends Entity implements Blo
     @Override
     protected AABB makeBoundingBox(Vec3 position) {
         if (entityData == null || view().isEmpty()) return AABB.ofSize(position, 0.01, 0.01, 0.01);
-        var local = view().bounds();
-        var pose = viewState().pose();
-        AABB result = null;
-        for (var x = 0; x < 2; x++) {
-            for (var y = 0; y < 2; y++) {
-                for (var z = 0; z < 2; z++) {
-                    var corner = pose.localToWorldPoint(new Vec3(x == 0 ? local.minX : local.maxX,
-                            y == 0 ? local.minY : local.maxY, z == 0 ? local.minZ : local.maxZ));
-                    var point = new AABB(corner, corner);
-                    result = result == null ? point : result.minmax(point);
-                }
-            }
-        }
-        // Some outline/model shapes extend beyond their unit cell (for example fences).
-        return Objects.requireNonNull(result).inflate(1.0);
+        // The broad-phase box is the union of the actual collision shapes, not the model bounds
+        // inflated by one block. A single full block therefore occupies exactly 1x1x1, while a
+        // fence or wall still exposes the parts that protrude outside their cell.
+        return NativeStructureCollisionBoxes.union(worldCollisionBoxes(), position);
     }
 
     @Override
@@ -247,7 +276,7 @@ public final class NativeStructureProjectionEntity extends Entity implements Blo
 
     @Override
     public boolean canBeCollidedWith(@Nullable Entity other) {
-        return other != this && !isRemoved() && hasCollision();
+        return !clientOnly && other != this && !isRemoved() && hasCollision();
     }
 
     /** Whether the current published content has any entity collision boxes. */
@@ -268,7 +297,7 @@ public final class NativeStructureProjectionEntity extends Entity implements Blo
 
     @Override
     public void collectCollisionShapes(AABB bounds, Consumer<VoxelShape> output) {
-        if (bounds == null || output == null || isRemoved()) return;
+        if (clientOnly || bounds == null || output == null || isRemoved()) return;
         var query = bounds.inflate(SHAPE_MERGE_EPSILON);
         for (var box : worldCollisionBoxes()) {
             if (box.intersects(query)) output.accept(Shapes.create(box));

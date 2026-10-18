@@ -11,6 +11,7 @@ import org.academy.internal.client.ability.mentalout.MentalResistanceClientState
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
 import org.academy.internal.common.network.PlayerLeftClickSwingPacket;
 import org.academy.internal.client.structure.NativeStructureMiningClient;
+import org.academy.internal.client.sublevel.SubLevelClientInteraction;
 import org.misaka.MisakaNetworkClient;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -33,6 +34,10 @@ public abstract class MixinMinecraft {
         if (MentalIntrusionClientState.blocksWorldInteraction()
                 || PlayerControlClientState.blocksWorldInteraction(true)) {
             NativeStructureMiningClient.abort((Minecraft) (Object) this);
+            cir.setReturnValue(false);
+            return;
+        }
+        if (SubLevelClientInteraction.attack((Minecraft) (Object) this)) {
             cir.setReturnValue(false);
             return;
         }
@@ -82,6 +87,10 @@ public abstract class MixinMinecraft {
         }
         if (MentalIntrusionClientState.blocksWorldInteraction()
                 || PlayerControlClientState.blocksWorldInteraction(true)) {
+            ci.cancel();
+            return;
+        }
+        if (SubLevelClientInteraction.use((Minecraft) (Object) this)) {
             ci.cancel();
             return;
         }

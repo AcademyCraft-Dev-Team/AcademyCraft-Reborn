@@ -60,6 +60,13 @@ public final class NativeStructureCollisionBoxes {
         return List.copyOf(result);
     }
 
+    /** Tight union of world-space boxes; a structure with no collision keeps a near-point box. */
+    public static AABB union(List<AABB> boxes, Vec3 fallback) {
+        AABB result = null;
+        for (var box : boxes) result = result == null ? box : result.minmax(box);
+        return result == null ? AABB.ofSize(fallback, 0.01, 0.01, 0.01) : result;
+    }
+
     /** Exact for axis-aligned poses; the tight world AABB of every corner otherwise. */
     public static AABB transformBox(AABB box, StructurePose pose) {
         AABB transformed = null;

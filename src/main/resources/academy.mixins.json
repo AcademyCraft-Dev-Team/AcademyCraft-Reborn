@@ -41,6 +41,8 @@
     "common.MixinEntity",
     "common.MixinEntityTemporalOrientation",
     "common.MixinEntityGetter",
+    "common.MixinCollisionGetter",
+    "common.PathNavigationRegionAccessor",
     "common.MixinExperienceOrbNativeStructureDrops",
     "common.MixinFoodData",
     "common.MixinFlowingFluidWaterSuppression",
