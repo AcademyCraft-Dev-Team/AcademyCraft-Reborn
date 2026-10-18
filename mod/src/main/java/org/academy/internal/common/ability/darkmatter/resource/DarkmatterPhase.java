@@ -2,14 +2,14 @@ package org.academy.internal.common.ability.darkmatter.resource;
 
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.darkmatter.DarkmatterPhaseSnapshot;
-import org.academy.internal.server.ability.AbilitySystemServer;
+import org.academy.internal.common.ability.darkmatter.Darkmatter;
 
 public final class DarkmatterPhase {
     private DarkmatterPhase() {
     }
 
     public static DarkmatterPhaseSnapshot snapshot(ServerPlayer player) {
-        return AbilitySystemServer.getSystem(player).getDarkmatterResourceManager().getPhaseSnapshot(player);
+        return Darkmatter.resourceService().getPhaseSnapshot(player);
     }
 
     public static float alpha(ServerPlayer player) {

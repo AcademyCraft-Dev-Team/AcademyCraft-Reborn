@@ -19,7 +19,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -33,12 +32,14 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.structure.BlockStructure;
+import org.academy.api.server.ability.AbilityResourceUsage;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.ability.aeromanip.AeromanipChargeHud;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.aeromanip.Aeromanip;
 import org.academy.internal.common.ability.aeromanip.charge.AeromanipChargeContext;
 import org.academy.internal.common.ability.aeromanip.charge.AeromanipChargeSync;
 import org.academy.internal.common.ability.aeromanip.charge.AeromanipChargeTier;
@@ -52,7 +53,7 @@ import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.entity.projectile.PaperAirplane;
 import org.academy.internal.server.ability.AbilitySystemServer;
-import org.academy.internal.server.ability.AeromanipResourceManager;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -286,7 +287,6 @@ public final class AirflowJet extends Skill {
 
         static double accumulateMaceMomentum(double current, double fallDistance, Vec3 velocity) {
             var baseline = Math.max(0.0, Math.max(current, fallDistance));
-            if (velocity == null) return baseline;
             var speed = velocity.length();
             if (!Double.isFinite(speed) || speed <= 0.0) return baseline;
             return Math.min(Double.MAX_VALUE, baseline + speed);
@@ -407,7 +407,7 @@ public final class AirflowJet extends Skill {
                     SoundSource.PLAYERS, 0.65f, 1.25f);
         }
 
-        private static Entity rayTarget(ServerPlayer player) {
+        private static @Nullable Entity rayTarget(ServerPlayer player) {
             var eye = player.getEyePosition();
             var look = player.getLookAngle();
             if (look.lengthSqr() <= 1.0e-8) return null;
@@ -482,7 +482,7 @@ public final class AirflowJet extends Skill {
         private static final class PropulsionContext extends ServerContext {
             private final ServerLevel initialLevel;
             private final AirflowJet skill;
-            private final AeromanipResourceManager.UsageLease usageLease;
+            private final AbilityResourceUsage usageLease;
             private final int durationTicks;
             private int ticks;
             private boolean ended;
@@ -492,8 +492,7 @@ public final class AirflowJet extends Skill {
                 super(player);
                 this.skill = skill;
                 initialLevel = player.level();
-                usageLease = AbilitySystemServer.getSystem(player)
-                        .getAeromanipResourceManager().beginUse(player);
+                usageLease = Aeromanip.resourceService().beginUse(player);
                 durationTicks = fullPropulsionDuration(skill.hasProficiencyMilestone(player, 2));
             }
 

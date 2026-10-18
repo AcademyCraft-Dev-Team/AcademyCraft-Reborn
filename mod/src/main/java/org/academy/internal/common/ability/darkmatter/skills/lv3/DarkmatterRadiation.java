@@ -15,7 +15,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -35,6 +34,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.darkmatter.Darkmatter;
 import org.academy.internal.common.ability.darkmatter.damage.DarkmatterLawMark;
 import org.academy.internal.common.ability.darkmatter.resource.DarkmatterPhase;
 import org.academy.internal.common.ability.darkmatter.skills.lv2.DarkmatterPhaseTuning;
@@ -169,7 +169,6 @@ public final class DarkmatterRadiation extends Skill {
         }
 
         public static boolean beginChannel(ServerPlayer player) {
-            if (player == null) return false;
             var skill = Skills.DARKMATTER_RADIATION.get();
             if (!skill.isEnabled(player)) return false;
             var now = player.level().getGameTime();
@@ -192,17 +191,15 @@ public final class DarkmatterRadiation extends Skill {
         }
 
         public static void endChannel(ServerPlayer player) {
-            if (player == null) return;
             ACTIVE.remove(player.getUUID());
             DarkmatterGraphEffects.stopInterference(player);
         }
 
         public static boolean isChanneling(ServerPlayer player) {
-            return player != null && ACTIVE.containsKey(player.getUUID());
+            return ACTIVE.containsKey(player.getUUID());
         }
 
         public static int getExposureTicks(ServerPlayer player, LivingEntity target) {
-            if (player == null || target == null) return 0;
             var state = ACTIVE.get(player.getUUID());
             return state == null ? 0 : state.exposure.getOrDefault(target.getUUID(), 0);
         }
@@ -474,7 +471,7 @@ public final class DarkmatterRadiation extends Skill {
             }
             skill.reportActivity(player, false);
             if (now >= state.nextCostTick) {
-                var manager = AbilitySystemServer.getSystem(player).getDarkmatterResourceManager();
+                var manager = Darkmatter.resourceService();
                 var paid = new boolean[1];
                 var executed = skill.executeContinuous(player, _ -> 0.0f, (context, _) -> {
                     paid[0] = manager.consume(

@@ -9,7 +9,6 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.vfx.PlasmaChargeVisuals;
 import org.academy.api.common.vfx.SkillVfxState;
 import org.academy.internal.client.render.vfxgraph.SkillVfxStates;
-import org.academy.api.client.render.vfxgraph.SmokeVolumes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.api.common.network.ThreadType;
 import org.misaka.api.common.network.annotation.PacketTarget;

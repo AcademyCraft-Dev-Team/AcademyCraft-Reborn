@@ -3,10 +3,6 @@ package org.academy.internal.server.config;
 import com.google.gson.annotations.SerializedName;
 import org.academy.api.common.gson.TypeHandler;
 
-/**
- * 音乐系统服务端配置（academy-server.json 的 "music" 段），
- * 音乐室/全服点播/预设歌单的限额与开关均在此配置喵。
- */
 public class MusicConfig {
     public static final String KEY = "music";
 

@@ -19,11 +19,11 @@ import org.academy.api.common.ability.event.AbilityRecoveryEvent;
 import org.academy.api.common.ability.pakcet.SyncAbilityDataPacket;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
+import org.academy.api.server.world.level.storage.PlayerData;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.world.level.block.AbilityDeveloperSleep;
 import org.academy.internal.server.config.AbilityConfig;
-import org.academy.internal.server.world.level.storage.Player;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 
@@ -67,7 +67,7 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     static boolean advanceTimedOccupationIterations(
-            List<AbilityData.CpOccupationData> occupations,
+            @Nullable List<AbilityData.@Nullable CpOccupationData> occupations,
             int recoverySteps
     ) {
         if (occupations == null || occupations.isEmpty() || recoverySteps <= 0) return false;
@@ -143,7 +143,7 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     private static int getSkillLevel(
-            Player playerData,
+            PlayerData playerData,
             Skill skill
     ) {
         var data = playerData.getSkillDataMap().get(skill.getKeyString());
@@ -161,7 +161,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         return Float.isFinite(maxCP) ? Math.max(0.0f, maxCP) : 0.0f;
     }
 
-    static float resolveEffectiveMaxCP(float naturalMaxCP, Float debugOverride) {
+    static float resolveEffectiveMaxCP(float naturalMaxCP, @Nullable Float debugOverride) {
         return debugOverride == null
                 ? normalizeDebugMaxCP(naturalMaxCP)
                 : normalizeDebugMaxCP(debugOverride);
@@ -447,7 +447,7 @@ public class PlayerCPManager implements AbilitySubsystem {
             int stackLimit
     ) {
         var playerData = playerDataManager.getData(uuid);
-        if (playerData == null || skill == null
+        if (playerData == null
                 || !Float.isFinite(cpAmount) || cpAmount < 0.0f
                 || !Float.isFinite(mpAmount) || mpAmount < 0.0f) return false;
 
@@ -508,7 +508,7 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     static long countTimedStacks(List<AbilityData.CpOccupationData> occupations, String stackGroup) {
-        if (occupations == null || stackGroup == null || stackGroup.isBlank()) return 0;
+        if (stackGroup.isBlank()) return 0;
         return occupations.stream()
                 .filter(occupation -> !occupation.isPermanent())
                 .filter(occupation -> stackGroup.equals(occupation.getStackGroup()))
@@ -658,7 +658,7 @@ public class PlayerCPManager implements AbilitySubsystem {
             List<TimedOccupationCharge> timedCharges
     ) {
         var playerData = playerDataManager.getData(uuid);
-        if (playerData == null || skill == null || timedCharges == null) return false;
+        if (playerData == null) return false;
         var permanentAmount = playerData.getMutableCpOccupations().stream()
                 .filter(AbilityData.CpOccupationData::isPermanent)
                 .filter(occupation -> skill.getKeyString().equals(occupation.getSkillId()))
@@ -685,7 +685,7 @@ public class PlayerCPManager implements AbilitySubsystem {
             List<TimedOccupationCharge> timedCharges
     ) {
         var playerData = playerDataManager.getData(uuid);
-        if (playerData == null || skill == null || timedCharges == null
+        if (playerData == null
                 || !Float.isFinite(permanentAmount) || permanentAmount < 0.0f) return null;
         var cpData = playerData.getCpData();
         if (cpData.getStatus() == AbilityData.Status.OVERLOAD || enterOverloadIfDepleted(uuid, cpData)) return null;
@@ -693,7 +693,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         var normalizedCharges = new ArrayList<TimedOccupationCharge>(timedCharges.size());
         var timedTotal = 0.0f;
         for (var charge : timedCharges) {
-            if (charge == null || !Float.isFinite(charge.amount()) || charge.amount() < 0.0f) return null;
+            if (!Float.isFinite(charge.amount()) || charge.amount() < 0.0f) return null;
             if (charge.amount() <= 0.0f) continue;
             var iterationTicks = charge.iterationTicks() > 0
                     ? charge.iterationTicks()
@@ -741,7 +741,7 @@ public class PlayerCPManager implements AbilitySubsystem {
             int iterationTicks
     ) {
         var playerData = playerDataManager.getData(uuid);
-        if (playerData == null || permanentAmounts == null) return null;
+        if (playerData == null) return null;
 
         var cpData = playerData.getCpData();
         if (cpData.getStatus() == AbilityData.Status.OVERLOAD) return null;
@@ -754,7 +754,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         for (var entry : permanentAmounts.entrySet()) {
             var skill = entry.getKey();
             var amount = entry.getValue();
-            if (skill == null || amount == null || !Float.isFinite(amount) || amount < 0) return null;
+            if (!Float.isFinite(amount) || amount < 0) return null;
             if (!replacementIds.add(skill.getKeyString())) return null;
             replacementTotal += amount;
             if (!Float.isFinite(replacementTotal)) return null;
@@ -812,7 +812,7 @@ public class PlayerCPManager implements AbilitySubsystem {
             BooleanSupplier action
     ) {
         var playerData = playerDataManager.getData(uuid);
-        if (playerData == null || action == null || !Float.isFinite(amount) || amount < 0) return false;
+        if (playerData == null || !Float.isFinite(amount) || amount < 0) return false;
         var cpData = playerData.getCpData();
         if (cpData.getStatus() == AbilityData.Status.OVERLOAD
                 || enterOverloadIfDepleted(uuid, cpData)
@@ -906,7 +906,6 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     public void setMaxCP(UUID uuid, float newMaxCP) {
-        if (uuid == null) return;
         var safeMaxCP = normalizeDebugMaxCP(newMaxCP);
         debugMaxCpOverrides.put(uuid, safeMaxCP);
         modify(uuid, cpData -> cpData.setAvailableCP(cpData.getAvailableCP(), safeMaxCP));
@@ -930,6 +929,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         if (playerData == null) return 1f;
 
         var categoryId = playerData.getAbilityCategory();
+        if (categoryId == null) return 1f;
 
         var categoryRef = Registries.ABILITY_CATEGORIES.get(Identifier.parse(categoryId));
         if (categoryRef.isEmpty()) return 1f;
@@ -951,9 +951,11 @@ public class PlayerCPManager implements AbilitySubsystem {
 
             var mul = 1.0f;
             var categoryId = playerData.getAbilityCategory();
-            var categoryRef = Registries.ABILITY_CATEGORIES.get(Identifier.parse(categoryId));
-            if (categoryRef.isPresent()) {
-                mul = categoryRef.get().value().getProgIncrRate();
+            if (categoryId != null) {
+                var categoryRef = Registries.ABILITY_CATEGORIES.get(Identifier.parse(categoryId));
+                if (categoryRef.isPresent()) {
+                    mul = categoryRef.get().value().getProgIncrRate();
+                }
             }
             cpData.setAbilityExp(Math.min(getAbilityExpMax(uuid), cpData.getAbilityExp() + amount * mul));
         });
@@ -1103,14 +1105,14 @@ public class PlayerCPManager implements AbilitySubsystem {
         if (changed) syncManager.schedulePlayerSync(uuid, SyncTypes.CP_DATA);
     }
 
-    static float academyMaxCp(Player playerData) {
+    static float academyMaxCp(PlayerData playerData) {
         var recorded = playerData.getAcademyMaxCp();
         var baseline = Float.isFinite(recorded) && recorded >= BASE_MAX_CP
                 ? recorded : playerData.getCpData().getMaxCP();
         return initialPersistentMaxCp(baseline, playerData.getAppliedCommonSkillMaxCpBonus());
     }
 
-    static boolean updateAcademyMaxCp(Player playerData, float desiredBonus) {
+    static boolean updateAcademyMaxCp(PlayerData playerData, float desiredBonus) {
         var applied = normalizeDebugMaxCP(playerData.getAppliedCommonSkillMaxCpBonus());
         var desired = normalizeDebugMaxCP(desiredBonus);
         var previous = academyMaxCp(playerData);
@@ -1127,7 +1129,7 @@ public class PlayerCPManager implements AbilitySubsystem {
         return changed;
     }
 
-    static boolean restoreAcademyMaxCp(Player playerData, Float debugOverride) {
+    static boolean restoreAcademyMaxCp(PlayerData playerData, @Nullable Float debugOverride) {
         var cpData = playerData.getCpData();
         var restored = academyMaxCp(playerData);
         var changed = Float.compare(playerData.getAcademyMaxCp(), restored) != 0;
@@ -1148,7 +1150,7 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     static boolean releaseInvalidOccupations(
-            AbilityData cpData, List<AbilityData.CpOccupationData> occupations,
+            AbilityData cpData, List<AbilityData.@Nullable CpOccupationData> occupations,
             Predicate<String> availableSkill, float maximum
     ) {
         var changed = false;
@@ -1158,9 +1160,8 @@ public class PlayerCPManager implements AbilitySubsystem {
             var occupation = iterator.next();
             if (occupation != null) {
                 var amount = occupation.getAmount();
-                var skillId = occupation.getSkillId();
                 if (Float.isFinite(amount) && amount > 0.0f
-                        && skillId != null && availableSkill.test(skillId)) continue;
+                        && availableSkill.test(occupation.getSkillId())) continue;
                 if (Float.isFinite(amount) && amount > 0.0f) released += amount;
             }
             iterator.remove();
@@ -1251,7 +1252,7 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     private record AtomicOccupationPlan(
-            Player playerData,
+            PlayerData playerData,
             Map<Skill, Float> permanentAmounts,
             Set<String> replacementIds,
             @Nullable Skill timedSkill,
@@ -1266,7 +1267,7 @@ public class PlayerCPManager implements AbilitySubsystem {
     }
 
     private record MixedOccupationPlan(
-            Player playerData,
+            PlayerData playerData,
             Skill skill,
             float permanentAmount,
             List<TimedOccupationCharge> timedCharges,

@@ -10,7 +10,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -26,9 +25,10 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.darkmatter.Darkmatter;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.common.network.PacketTypes;
-import org.academy.internal.server.ability.AbilitySystemServer;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -177,7 +177,7 @@ public final class DarkmatterGeneration extends Skill {
         public static final String KEY_CREATE = SkillNames.DARKMATTER_GENERATION + "_create";
         public static final String KEY_ERASE = SkillNames.DARKMATTER_GENERATION + "_erase";
         public static Config CONFIG = new Config();
-        private static Mode activeMode;
+        private static @Nullable Mode activeMode;
 
         private Client() {
         }
@@ -266,7 +266,7 @@ public final class DarkmatterGeneration extends Skill {
             var elapsedTicks = now - state.lastProcessedAt;
             if (elapsedTicks <= 0) return;
             state.lastProcessedAt = now;
-            var resource = AbilitySystemServer.getSystem(player).getDarkmatterResourceManager();
+            var resource = Darkmatter.resourceService();
             var snapshot = resource.getPhaseSnapshot(player);
             var milestone = skill.getEffectiveProficiencyMilestone(player);
             var phasePower = state.mode == Mode.CREATE

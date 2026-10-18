@@ -6,11 +6,8 @@ import org.academy.api.client.render.graph.registry.NodeRegistry;
 import org.academy.api.client.render.graph.registry.NodeType;
 import org.academy.api.client.render.graph.registry.PortSpec;
 import org.academy.api.client.render.graph.registry.PropertySpec;
-
-
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.type.ValueType;
-import org.academy.api.client.render.vfxgraph.model.VfxBlock;
 
 import java.util.ArrayList;
 import java.util.List;

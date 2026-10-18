@@ -5,7 +5,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import org.academy.AcademyCraft;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.server.ability.SkillTuning;
 import org.academy.internal.server.config.AbilityConfig;
@@ -136,10 +135,8 @@ public final class SkillTuningCore implements SkillTuning.Provider {
         if (config == null) return new SkillTuning.SyncPacket(Map.of(), 1.0f);
         var resolved = new HashMap<String, SkillTuning.Entry>();
         for (var group : config.skills.values()) {
-            if (group == null) continue;
             for (var entry : group.entrySet()) {
                 var settings = entry.getValue();
-                if (settings == null) continue;
                 resolved.put(entry.getKey(), new SkillTuning.Entry(
                         settings.enabled,
                         clampMultiplier(settings.damageMultiplier),
@@ -194,7 +191,7 @@ public final class SkillTuningCore implements SkillTuning.Provider {
     private static @Nullable AbilityConfig config(@Nullable MinecraftServer server) {
         if (server == null) return null;
         var academyServer = server.getAcademyCraftServer();
-        return academyServer == null ? null : academyServer.getAbilityConfig();
+        return academyServer.getAbilityConfig();
     }
 
     private static @Nullable String path(@Nullable Skill skill) {

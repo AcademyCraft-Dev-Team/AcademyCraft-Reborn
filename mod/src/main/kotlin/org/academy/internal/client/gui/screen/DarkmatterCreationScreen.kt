@@ -124,9 +124,15 @@ class DarkmatterCreationScreen : UiScreen(Component.translatable("screen.academy
                             spacing = 6f
 
                             for (slot in 0 until 4) {
-                                add("button_slot_$slot", createRadioButton((slot + 1).toString(), slot == selectedSlot)) {
+                                add(
+                                    "button_slot_$slot",
+                                    createRadioButton((slot + 1).toString(), slot == selectedSlot)
+                                ) {
                                     lp {
-                                        size(R.ui.darkmatter_creation.slot_button_width, R.ui.darkmatter_creation.slot_button_height)
+                                        size(
+                                            R.ui.darkmatter_creation.slot_button_width,
+                                            R.ui.darkmatter_creation.slot_button_height
+                                        )
                                     }
 
                                     onClick {
@@ -147,7 +153,10 @@ class DarkmatterCreationScreen : UiScreen(Component.translatable("screen.academy
                         spacing = R.ui.darkmatter_creation.tab_gap
 
                         for (value in Tab.entries) {
-                            add("button_tab_" + value.name.lowercase(), createRadioButton(tr(value.key), value === tab)) {
+                            add(
+                                "button_tab_" + value.name.lowercase(),
+                                createRadioButton(tr(value.key), value === tab)
+                            ) {
                                 lp {
                                     width(0f)
                                     heightMode(SizeMode.MATCH_PARENT)
@@ -213,7 +222,8 @@ class DarkmatterCreationScreen : UiScreen(Component.translatable("screen.academy
 
                             add(
                                 "button_save",
-                                createControlButton(tr("screen.academy.darkmatter_creation.save"), false,
+                                createControlButton(
+                                    tr("screen.academy.darkmatter_creation.save"), false,
                                     danger = false
                                 ) { save() }
                             ) {
@@ -320,11 +330,20 @@ class DarkmatterCreationScreen : UiScreen(Component.translatable("screen.academy
         val background = StateListDrawable()
         background.setDefault(ColorDrawable(if (danger) R.ui.darkmatter_creation.danger_base else R.ui.darkmatter_creation.control))
         background.addState(Widget.SELECTED, ColorDrawable(R.ui.darkmatter_creation.control_active))
-        background.addState(Widget.HOVERED, ColorDrawable(if (danger) R.ui.darkmatter_creation.danger else R.ui.darkmatter_creation.control_hover))
-        background.addState(Widget.PRESSED, ColorDrawable(if (danger) R.ui.darkmatter_creation.danger_pressed else R.ui.darkmatter_creation.control_active))
+        background.addState(
+            Widget.HOVERED,
+            ColorDrawable(if (danger) R.ui.darkmatter_creation.danger else R.ui.darkmatter_creation.control_hover)
+        )
+        background.addState(
+            Widget.PRESSED,
+            ColorDrawable(if (danger) R.ui.darkmatter_creation.danger_pressed else R.ui.darkmatter_creation.control_active)
+        )
         button.background = background
         button.isSelected = selected
-        button.add("rail", FillWidget(if (selected) R.ui.darkmatter_creation.accent else R.ui.darkmatter_creation.rail_idle)) {
+        button.add(
+            "rail",
+            FillWidget(if (selected) R.ui.darkmatter_creation.accent else R.ui.darkmatter_creation.rail_idle)
+        ) {
             lp {
                 width(if (selected) 2f else 1f)
                 heightMode(SizeMode.MATCH_PARENT)
@@ -468,7 +487,12 @@ class DarkmatterCreationScreen : UiScreen(Component.translatable("screen.academy
         addCycleRow("limbs", "screen.academy.darkmatter_creation.part.limbs", editing.limbs(), LIMBS) {
             replaceParts(editing.head(), editing.torso(), it, editing.additional())
         }
-        addCycleRow("additional", "screen.academy.darkmatter_creation.part.additional", editing.additional(), ADDITIONAL) {
+        addCycleRow(
+            "additional",
+            "screen.academy.darkmatter_creation.part.additional",
+            editing.additional(),
+            ADDITIONAL
+        ) {
             replaceParts(editing.head(), editing.torso(), editing.limbs(), it)
         }
     }
@@ -520,7 +544,12 @@ class DarkmatterCreationScreen : UiScreen(Component.translatable("screen.academy
         addPhaseRow("head", tr("screen.academy.darkmatter_creation.part.head"), editing.headAlpha(), 0)
         addPhaseRow("torso", tr("screen.academy.darkmatter_creation.part.torso"), editing.torsoAlpha(), 1)
         addPhaseRow("limbs", tr("screen.academy.darkmatter_creation.part.limbs"), editing.limbsAlpha(), 2)
-        addPhaseRow("additional", tr("screen.academy.darkmatter_creation.part.additional"), editing.additionalAlpha(), 3)
+        addPhaseRow(
+            "additional",
+            tr("screen.academy.darkmatter_creation.part.additional"),
+            editing.additionalAlpha(),
+            3
+        )
 
         text(tr("screen.academy.darkmatter_creation.phase_pool", snapshot.abilityLevel * 50), "text_phase_pool") {
             lp {
@@ -764,7 +793,8 @@ class DarkmatterCreationScreen : UiScreen(Component.translatable("screen.academy
 
                 add(
                     "button_dismantle_$position",
-                    createControlButton(tr("screen.academy.darkmatter_creation.dismantle"),
+                    createControlButton(
+                        tr("screen.academy.darkmatter_creation.dismantle"),
                         selected = false,
                         danger = true
                     ) {

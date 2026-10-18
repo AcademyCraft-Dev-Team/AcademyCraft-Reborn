@@ -11,7 +11,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -176,7 +175,6 @@ public final class WhiteWing extends Skill {
         }
 
         public static void forceDeactivate(ServerPlayer player) {
-            if (player == null) return;
             WingFlightSupport.forceDeactivateSkill(player, Skills.WHITE_WING.get());
             WingFlightRuntime.clear(player, Skills.WHITE_WING.get());
             WingFlightSupport.sync(player, AttachmentTypes.ACTIVATED_WHITE_WING.get(), false);

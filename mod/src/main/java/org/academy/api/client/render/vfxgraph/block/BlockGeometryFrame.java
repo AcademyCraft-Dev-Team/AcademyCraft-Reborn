@@ -1,8 +1,10 @@
 package org.academy.api.client.render.vfxgraph.block;
 
+import org.jspecify.annotations.Nullable;
+
 import java.nio.ByteBuffer;
 
-public record BlockGeometryFrame(ByteBuffer[] layerVertices, int[] layerVertexCounts) {
+public record BlockGeometryFrame(@Nullable ByteBuffer[] layerVertices, int[] layerVertexCounts) {
     public BlockGeometryFrame {
         if (layerVertices.length != layerVertexCounts.length) {
             throw new IllegalArgumentException("Block geometry layer mismatch");

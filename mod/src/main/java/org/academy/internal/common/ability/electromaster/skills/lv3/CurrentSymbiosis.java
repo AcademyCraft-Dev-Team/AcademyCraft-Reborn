@@ -8,7 +8,6 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -132,7 +131,7 @@ public final class CurrentSymbiosis extends Skill {
         }
 
         public static float adjustNextCastCost(ServerPlayer player, Skill castSkill, float amount) {
-            if (player == null || castSkill == null || castSkill.getCategory() != AbilityCategories.ELECTROMASTER.get()) {
+            if (castSkill.getCategory() != AbilityCategories.ELECTROMASTER.get()) {
                 return amount;
             }
             var sourceSkill = Skills.CURRENT_SYMBIOSIS.get();

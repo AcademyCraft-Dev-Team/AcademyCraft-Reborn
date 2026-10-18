@@ -1,7 +1,7 @@
 package org.academy.api.client.render.vfxgraph.render;
 
-import net.minecraft.resources.Identifier;
 import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
+import net.minecraft.resources.Identifier;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
 import org.academy.api.client.resources.R;

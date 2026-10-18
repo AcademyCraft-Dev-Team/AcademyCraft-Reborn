@@ -1,9 +1,8 @@
-
+import org.academy.internal.common.ability.accelerator.Accelerator;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.academy.internal.common.ability.accelerator.Accelerator;
 
 class FirstPersonSweepGeometryTest {
     @Test

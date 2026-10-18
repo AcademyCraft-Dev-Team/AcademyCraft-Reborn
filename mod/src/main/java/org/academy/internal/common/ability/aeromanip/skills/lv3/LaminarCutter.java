@@ -68,6 +68,7 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.WeakHashMap;
 
 public final class LaminarCutter extends Skill {
@@ -108,7 +109,7 @@ public final class LaminarCutter extends Skill {
                 AbilityCategories.AEROMANIP.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.LAMINAR_CUTTER.get(),
-                        List.of(PneumaticGrasp.Client.SKILL_INFO),
+                        List.of(Objects.requireNonNull(PneumaticGrasp.Client.SKILL_INFO)),
                         R.textures.laminar_cutter_icon, 75, 104));
     }
 

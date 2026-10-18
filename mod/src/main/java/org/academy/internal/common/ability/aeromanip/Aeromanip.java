@@ -10,14 +10,21 @@ import net.neoforged.neoforge.common.damagesource.DamageContainer;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilityResourceSpec;
+import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.damage.DamageComposition;
 import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.api.server.ability.aeromanip.AeromanipResourceService;
+import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.development.AbilityDevelopmentProfiles;
 import org.academy.internal.common.world.damagesource.DamageTypes;
+import org.academy.internal.server.ability.AbilitySystemServer;
+import org.academy.internal.server.ability.AeromanipResourceManager;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
 public final class Aeromanip extends AbilityCategory {
+    private static @Nullable AeromanipResourceService resourceService;
     private static final EquipmentSlot[] ARMOR = {
             EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET
     };
@@ -36,8 +43,8 @@ public final class Aeromanip extends AbilityCategory {
     }
 
     public void damageEquipment(LivingEntity target, int amount, boolean includeHands) {
-        if (!(target.level() instanceof ServerLevel) || !target.isAlive() || amount <= 0) return;
-        var now = target.level().getServer().getTickCount();
+        if (!(target.level() instanceof ServerLevel level) || !target.isAlive() || amount <= 0) return;
+        var now = level.getServer().getTickCount();
         var state = wear.computeIfAbsent(target.getUUID(), ignored -> new WearState());
         if (now >= state.expires) {
             state.used.clear();
@@ -105,5 +112,19 @@ public final class Aeromanip extends AbilityCategory {
     @Override
     public Optional<AbilityResourceSpec> getResourceSpec() {
         return Optional.of(COMPRESSED_AIR_RESOURCE);
+    }
+
+    @Override
+    public void initServer(MinecraftServerContext context) {
+        var system = context.getAcademyCraftServer().getAbilitySystemServer();
+        var ledger = new AeromanipResourceManager(system.getPlayerDataManager(), system.getPlayerCPManager(),
+                system.getSyncManager());
+        AbilitySystemServer.SubsystemRegistry.registerSubsystem(ledger, SyncTypes.AEROMANIP_RESOURCE);
+        system.registerResourceLedger(this, ledger);
+        resourceService = ledger;
+    }
+
+    public static AeromanipResourceService resourceService() {
+        return Objects.requireNonNull(resourceService);
     }
 }

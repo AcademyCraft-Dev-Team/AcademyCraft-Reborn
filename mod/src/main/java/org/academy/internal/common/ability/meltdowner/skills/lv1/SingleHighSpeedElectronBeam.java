@@ -27,6 +27,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.meltdowner.Meltdowner;
 import org.academy.internal.common.ability.meltdowner.targeting.MeltdownerTargeting;
 import org.academy.internal.common.ability.proficiency.ProficiencyPolicy;
 import org.academy.internal.common.entitycontrol.MultipartEntityTargeting;
@@ -45,7 +46,6 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
-import org.academy.internal.common.ability.meltdowner.Meltdowner;
 
 public final class SingleHighSpeedElectronBeam extends Skill {
     public static final String CONFIG_ATTACK_DELAY_TICKS = "attackDelayTicks";
@@ -73,9 +73,7 @@ public final class SingleHighSpeedElectronBeam extends Skill {
             Vec3 aimPoint,
             float proficiency
     ) {
-        if (!isFiniteDirection(originalDirection)
-                || spawnPosition == null
-                || aimPoint == null) {
+        if (!isFiniteDirection(originalDirection)) {
             return Vec3.ZERO;
         }
         var forward = originalDirection.normalize();
@@ -103,7 +101,7 @@ public final class SingleHighSpeedElectronBeam extends Skill {
                 || !isFiniteDirection(originalDirection)
                 || !isFinitePosition(randomSpawnPosition)
                 || !isFinitePosition(aimPoint)) {
-            return randomSpawnPosition == null ? Vec3.ZERO : randomSpawnPosition;
+            return randomSpawnPosition;
         }
         var forward = originalDirection.normalize();
         var aimOffset = aimPoint.subtract(viewOrigin);
@@ -141,8 +139,7 @@ public final class SingleHighSpeedElectronBeam extends Skill {
     }
 
     private static boolean isFinitePosition(Vec3 position) {
-        return position != null
-                && Double.isFinite(position.x)
+        return Double.isFinite(position.x)
                 && Double.isFinite(position.y)
                 && Double.isFinite(position.z);
     }
@@ -162,14 +159,9 @@ public final class SingleHighSpeedElectronBeam extends Skill {
 
     public static int getConfiguredAttackDelayTicks(ServerPlayer player) {
         var server = player.level().getServer();
-        if (server == null || server.getAcademyCraftServer() == null) {
-            return DEFAULT_ATTACK_DELAY_TICKS;
-        }
         var settings = server.getAcademyCraftServer().getAbilityConfig()
                 .skillSettings(SkillNames.SINGLE_HIGH_SPEED_ELECTRON_BEAM);
-        var configuredDelay = settings == null
-                ? DEFAULT_ATTACK_DELAY_TICKS
-                : settings.floatMap.getOrDefault(
+        var configuredDelay = settings.floatMap.getOrDefault(
                 CONFIG_ATTACK_DELAY_TICKS,
                 (float) DEFAULT_ATTACK_DELAY_TICKS
         );

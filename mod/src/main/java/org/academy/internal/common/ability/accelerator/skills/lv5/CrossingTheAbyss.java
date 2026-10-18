@@ -16,7 +16,6 @@ import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -43,6 +42,7 @@ import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
 import org.academy.internal.server.ability.AbilitySystemServer;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -155,14 +155,13 @@ public final class CrossingTheAbyss extends Skill {
             if (!skill.isEnabled(player)) clearForAttacker(player);
         }
 
-        public static boolean isActive(ServerPlayer player) {
+        public static boolean isActive(@Nullable ServerPlayer player) {
             return player != null
                     && Skills.CROSSING_THE_ABYSS.get().isEnabled(player)
                     && player.getData(AttachmentTypes.CROSSING_THE_ABYSS_ACTIVE.get());
         }
 
         public static void forceDeactivate(ServerPlayer player) {
-            if (player == null) return;
             var skill = Skills.CROSSING_THE_ABYSS.get();
             var data = skill.getRuntimeData(player).orElse(null);
             if (data != null && data.isEnabled()) {
@@ -202,7 +201,7 @@ public final class CrossingTheAbyss extends Skill {
             if (ReflectedSkillDamageSource.isReflected(event.getSource())) return;
             var attacker = resolvePlayer(event.getSource());
             var target = event.getEntity();
-            if (attacker == null || !isActive(attacker) || target == attacker
+            if (!isActive(attacker) || target == attacker
                     || CtaFriendlyFireWhitelist.shouldProtect(attacker, target)) return;
             var trueHealth = CTAEntityActuallyHurt.readTrueHealth(target);
             if (!Float.isFinite(trueHealth) || trueHealth <= 0.0f) return;
@@ -280,12 +279,11 @@ public final class CrossingTheAbyss extends Skill {
         }
 
         public static boolean handleHeal(LivingEntity target, float amount) {
-            if (target == null || target.level().isClientSide() || amount <= 0) return false;
+            if (target.level().isClientSide() || amount <= 0) return false;
             var lock = HEAL_LOCKS.get(target.getUUID());
             if (lock == null) return false;
-            var attacker = target.level().getServer() == null
-                    ? null
-                    : target.level().getServer().getPlayerList().getPlayer(lock.attackerId);
+            var server = target.level().getServer();
+            var attacker = server == null ? null : server.getPlayerList().getPlayer(lock.attackerId);
             if (!isActive(attacker)) {
                 HEAL_LOCKS.remove(target.getUUID(), lock);
                 return false;
@@ -297,7 +295,7 @@ public final class CrossingTheAbyss extends Skill {
         }
 
         public static void onLivingTick(LivingEntity target) {
-            if (target == null || target.level().isClientSide()) return;
+            if (target.level().isClientSide()) return;
             var pending = PENDING_HITS.get(target.getUUID());
             if (pending != null && target.level().getGameTime() - pending.gameTime > 2
                     && PENDING_HITS.remove(target.getUUID(), pending)) {
@@ -319,8 +317,7 @@ public final class CrossingTheAbyss extends Skill {
             }
         }
 
-        private static ServerPlayer resolvePlayer(DamageSource source) {
-            if (source == null) return null;
+        private static @Nullable ServerPlayer resolvePlayer(DamageSource source) {
             if (source.getEntity() instanceof ServerPlayer player) return player;
             if (source.getDirectEntity() instanceof ServerPlayer player) return player;
             if (source.getDirectEntity() instanceof Projectile projectile
@@ -341,7 +338,6 @@ public final class CrossingTheAbyss extends Skill {
                     .toList());
             HEAL_LOCKS.entrySet().removeIf(entry -> entry.getValue().attackerId.equals(attackerId));
             var server = attacker.level().getServer();
-            if (server == null) return;
             for (var level : server.getAllLevels()) {
                 for (var targetId : targetIds) {
                     if (level.getEntity(targetId) instanceof LivingEntity living) {

@@ -32,6 +32,7 @@ import org.academy.api.common.ability.darkmatter.DarkmatterShape;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.darkmatter.Darkmatter;
 import org.academy.internal.common.ability.darkmatter.equipment.DarkmatterEnchantments;
 import org.academy.internal.common.ability.darkmatter.modifier.DarkmatterModifierRuntime;
 import org.academy.internal.common.ability.darkmatter.resource.DarkmatterAbsorption;
@@ -165,7 +166,7 @@ public final class DarkmatterEquipmentEvents {
                     != AbilityCategories.DARKMATTER.get()) return;
             var level = system.getPlayerLevel(player.getUUID());
             var rawDamage = event.getAmount();
-            var manager = system.getDarkmatterResourceManager();
+            var manager = Darkmatter.resourceService();
             var target = matterConversionTarget(rawDamage, level);
             var requested = Float.isInfinite(target)
                     ? manager.getView(player).totalMatter() : target;

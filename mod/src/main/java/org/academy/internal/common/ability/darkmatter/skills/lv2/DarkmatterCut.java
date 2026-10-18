@@ -24,6 +24,9 @@ import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.render.graph.type.Value;
+import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
+import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.api.client.resources.R;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.AbilityLevel;
@@ -32,10 +35,13 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.ViewTargetScanner;
+import org.academy.api.common.vfx.SkillVfxState;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.client.render.vfxgraph.SkillVfxStates;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.darkmatter.Darkmatter;
 import org.academy.internal.common.ability.darkmatter.damage.DarkmatterLawMark;
 import org.academy.internal.common.ability.darkmatter.resource.DarkmatterPhase;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisassemble;
@@ -45,6 +51,7 @@ import org.academy.internal.common.ability.effect.TimedSkillEffectRuntime;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.server.ability.AbilitySystemServer;
 import org.academy.internal.server.vfx.SkillVfxService;
+import org.joml.Vector3f;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -56,12 +63,6 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import org.academy.api.client.render.graph.type.Value;
-import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
-import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
-import org.academy.api.common.vfx.SkillVfxState;
-import org.academy.internal.client.render.vfxgraph.SkillVfxStates;
-import org.joml.Vector3f;
 
 public final class DarkmatterCut extends Skill {
     static final double RADIUS = 5.0;
@@ -123,6 +124,7 @@ public final class DarkmatterCut extends Skill {
 
         private Client() {
         }
+
         private static final Identifier DARKMATTER_SLASH_ASSET =
                 Identifier.fromNamespaceAndPath("academy", "vfxgraph/darkmatter_slash");
 
@@ -215,9 +217,7 @@ public final class DarkmatterCut extends Skill {
                 float damageScale,
                 float baseCost
         ) {
-            if (player == null
-                    || direction == null
-                    || !Double.isFinite(direction.x)
+            if (!Double.isFinite(direction.x)
                     || !Double.isFinite(direction.y)
                     || !Double.isFinite(direction.z)
                     || direction.lengthSqr() < 1.0E-12
@@ -259,7 +259,7 @@ public final class DarkmatterCut extends Skill {
             );
             var requestedBaseCost = baseCost < 0.0f ? MATTER_COST : baseCost;
             var cost = matterCost(requestedBaseCost, milestone);
-            var manager = AbilitySystemServer.getSystem(player).getDarkmatterResourceManager();
+            var manager = Darkmatter.resourceService();
             if (manager.getView(player).totalMatter() + 1.0e-5f < cost) return false;
             var applied = new boolean[1];
             var executed = skill.executeActive(

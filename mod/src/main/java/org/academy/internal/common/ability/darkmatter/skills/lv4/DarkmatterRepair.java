@@ -15,7 +15,6 @@ import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -33,6 +32,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.darkmatter.Darkmatter;
 import org.academy.internal.common.ability.darkmatter.resource.DarkmatterAbsorption;
 import org.academy.internal.common.ability.darkmatter.resource.DarkmatterPhase;
 import org.academy.internal.common.ability.darkmatter.skills.lv3.DarkmatterRadiation;
@@ -142,7 +142,6 @@ public final class DarkmatterRepair extends Skill {
         }
 
         public static boolean toggle(ServerPlayer player) {
-            if (player == null) return false;
             var skill = Skills.DARKMATTER_REPAIR.get();
             var before = skill.isEnabled(player);
             skill.toggle(player);
@@ -191,7 +190,6 @@ public final class DarkmatterRepair extends Skill {
         }
 
         public static boolean tryPulse(ServerPlayer player) {
-            if (player == null) return false;
             var skill = Skills.DARKMATTER_REPAIR.get();
             if (!skill.isEnabled(player) || !player.isAlive()) return false;
             var phase = DarkmatterPhase.weights(player);
@@ -210,7 +208,7 @@ public final class DarkmatterRepair extends Skill {
 
             var system = AbilitySystemServer.getSystem(player);
             var cost = matterCost(snapshot.betaRatio(), milestone);
-            if (system.getDarkmatterResourceManager().getView(player).totalMatter() + 1.0e-5f < cost) {
+            if (Darkmatter.resourceService().getView(player).totalMatter() + 1.0e-5f < cost) {
                 return false;
             }
             var productive = new boolean[1];
@@ -262,7 +260,7 @@ public final class DarkmatterRepair extends Skill {
                 // Charge once per productive pulse after the work actually landed: idle ticks and
                 // rejected heal/repair attempts must not drain MP, and repairing equipment while
                 // also restoring health still costs a single payment.
-                if (!system.getDarkmatterResourceManager().consume(
+                if (!Darkmatter.resourceService().consume(
                         player, cost, skill, skill.getIterationTicks(player))) {
                     productive[0] = false;
                     return;

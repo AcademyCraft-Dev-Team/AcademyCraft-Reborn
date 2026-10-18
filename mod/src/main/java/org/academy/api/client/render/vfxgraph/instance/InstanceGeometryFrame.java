@@ -1,11 +1,11 @@
 package org.academy.api.client.render.vfxgraph.instance;
 
-import java.nio.ByteBuffer;
-
 import org.jspecify.annotations.Nullable;
 
-public record InstanceGeometryFrame(ByteBuffer vertices, int vertexCount,
-                                    ByteBuffer instances, int instanceCount) {
+import java.nio.ByteBuffer;
+
+public record InstanceGeometryFrame(@Nullable ByteBuffer vertices, int vertexCount,
+                                    @Nullable ByteBuffer instances, int instanceCount) {
     public InstanceGeometryFrame {
         if (vertexCount < 0 || instanceCount < 0) {
             throw new IllegalArgumentException("Negative instance geometry counts");

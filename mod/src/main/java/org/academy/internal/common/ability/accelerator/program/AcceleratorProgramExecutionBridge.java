@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.accelerator.program;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.program.*;
+import org.academy.api.server.world.level.storage.PlayerData;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.program.*;
 import org.academy.internal.common.ability.program.compile.CompiledProgram;
@@ -11,11 +12,9 @@ import org.academy.internal.common.ability.program.registry.AbilityProgramDefini
 import org.academy.internal.common.ability.program.registry.ProgramExecutorLookup;
 import org.academy.internal.common.ability.program.registry.ProgramNodeExecutor;
 import org.academy.internal.server.ability.AbilitySystemServer;
-import org.academy.internal.server.world.level.storage.Player;
 import org.jspecify.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.LongSupplier;
 
 /**
  * Shared-VM execution gateway for vector-manipulation programs.
@@ -104,17 +103,6 @@ public final class AcceleratorProgramExecutionBridge {
             AcceleratorProgramRuntime runtime,
             ProgramActionTransaction transaction
     ) {
-        return execute(program, gameTime, runtime, transaction, null, null);
-    }
-
-    private static ProgramVmResult execute(
-            CompiledProgram program,
-            long gameTime,
-            AcceleratorProgramRuntime runtime,
-            ProgramActionTransaction transaction,
-            @Nullable ProgramInvocationContext invocation,
-            @Nullable LongSupplier worldGameTime
-    ) {
         Objects.requireNonNull(program, "program");
         Objects.requireNonNull(runtime, "runtime");
         Objects.requireNonNull(transaction, "transaction");
@@ -123,7 +111,7 @@ public final class AcceleratorProgramExecutionBridge {
                 MAX_FUEL,
                 AbilityProgramDefinitions.require(
                         AcceleratorProgramNodeCatalog.ACCELERATOR).executors(),
-                new ProgramExecutionFrame(transaction, runtime, invocation, worldGameTime)
+                new ProgramExecutionFrame(transaction, runtime, null, null)
         );
     }
 
@@ -312,11 +300,11 @@ public final class AcceleratorProgramExecutionBridge {
     }
 
     private static void addLearnedCapability(
-            Player data,
+            PlayerData data,
             Set<Identifier> capabilities,
             String skillId
     ) {
-        if (data != null && data.isSkillLearned(skillId)) {
+        if (data.isSkillLearned(skillId)) {
             capabilities.add(Identifier.parse(skillId));
         }
     }

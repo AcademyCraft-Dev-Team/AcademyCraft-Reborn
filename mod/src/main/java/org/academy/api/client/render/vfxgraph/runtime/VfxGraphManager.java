@@ -255,7 +255,7 @@ public final class VfxGraphManager {
             sources.add(new VfxGraphRenderer.ScreenFlashSource(
                     effect.effect().buffer(), specs, effectFlashCap(effect, specs)));
         }
-        if (renderer != null && sources != null) {
+        if (renderer != null) {
             renderer.renderScreenFlash(target, sources);
         }
     }
@@ -295,7 +295,7 @@ public final class VfxGraphManager {
     }
 
     private static void submitBlockGeometry(PoseStack poseStack, SubmitNodeCollector output,
-                                             Vector3f cameraPos, BlockGeometryFrame frame) {
+                                            Vector3f cameraPos, BlockGeometryFrame frame) {
         var worldPose = new PoseStack();
         worldPose.last().set(poseStack.last());
         worldPose.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
@@ -322,7 +322,7 @@ public final class VfxGraphManager {
     }
 
     private static void putShaderPackVertices(PoseStack.Pose pose, VertexConsumer output,
-                                               java.nio.ByteBuffer vertices, int vertexCount) {
+                                              java.nio.ByteBuffer vertices, int vertexCount) {
         var stream = vertices.duplicate().order(vertices.order());
         stream.limit(stream.position() + vertexCount * BLOCK_VERTEX_STRIDE);
         for (var index = 0; index < vertexCount; index++) {

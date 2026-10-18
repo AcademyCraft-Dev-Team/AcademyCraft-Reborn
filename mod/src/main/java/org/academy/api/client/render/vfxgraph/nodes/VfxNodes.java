@@ -1,6 +1,5 @@
 package org.academy.api.client.render.vfxgraph.nodes;
 
-import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.registry.NodeRegistry;
 import org.academy.api.client.render.graph.registry.NodeType;
 import org.academy.api.client.render.graph.registry.PropertySpec;

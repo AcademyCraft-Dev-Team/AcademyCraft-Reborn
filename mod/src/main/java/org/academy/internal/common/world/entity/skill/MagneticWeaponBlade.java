@@ -7,7 +7,6 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.InterpolationHandler;
 import net.minecraft.world.entity.LinearInterpolationHandler;
@@ -166,7 +165,8 @@ public final class MagneticWeaponBlade extends RenderOnlyEntity {
         entityData.set(SWEEP_SIDE, sweep.side());
         entityData.set(SWEEP_DIAGONAL, sweep.diagonal());
         entityData.set(SWEEP_SWING, sweep.swing());
-        entityData.set(PATH, path == null ? new byte[0] : MagneticWeaponBladeMotion.packPath(path));
+        var packedPath = MagneticWeaponBladeMotion.packPath(path);
+        entityData.set(PATH, packedPath == null ? new byte[0] : packedPath);
         entityData.set(STRIKE_TICKS, strikeTicks);
         entityData.set(RETURN_TICKS, returnTicks);
         entityData.set(TARGET_ID, targetId);

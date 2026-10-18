@@ -15,7 +15,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -175,7 +174,6 @@ public final class StormWing extends Skill {
         }
 
         public static void forceDeactivate(ServerPlayer player) {
-            if (player == null) return;
             var skill = Skills.STORM_WING.get();
             var data = skill.getRuntimeData(player).orElse(null);
             var system = AbilitySystemServer.getSystem(player);

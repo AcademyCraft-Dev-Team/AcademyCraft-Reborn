@@ -1,14 +1,13 @@
-
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.arc.modifier.ColorModifier;
 import org.academy.api.common.arc.modifier.JaggedModifier;
 import org.academy.api.common.arc.modifier.TaperModifier;
+import org.academy.internal.common.ability.electromaster.skills.lv3.magneticweapon.MagneticWeapon;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayDeque;
 
 import static org.junit.jupiter.api.Assertions.*;
-import org.academy.internal.common.ability.electromaster.skills.lv3.magneticweapon.MagneticWeapon;
 
 class MagneticWeaponTrailBuilderTest {
     @Test

@@ -35,11 +35,12 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.attribute.AbilityFactor;
 import org.academy.api.common.attribute.PlayerAttributes;
+import org.academy.api.common.attribute.PropsMath;
+import org.academy.api.server.world.level.storage.PlayerData;
+import org.academy.api.server.world.level.storage.PropsData;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
-import org.academy.internal.common.attribute.PropsMath;
 import org.academy.internal.common.attribute.PropsPackets;
-import org.academy.internal.server.world.level.storage.Player;
-import org.academy.internal.server.world.level.storage.PropsData;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 
 import java.util.*;
@@ -417,20 +418,19 @@ public final class PropsManager implements AbilitySubsystem {
         syncNow(player);
     }
 
-    private static Milestone specialMilestone(EntityType<?> type) {
+    private static @Nullable Milestone specialMilestone(EntityType<?> type) {
         if (type == EntityTypes.ELDER_GUARDIAN) return new Milestone(ELDER_GUARDIAN_MILESTONE, 100.0);
         if (type == EntityTypes.WITHER) return new Milestone(WITHER_MILESTONE, 500.0);
         if (type == EntityTypes.ENDER_DRAGON) return new Milestone(ENDER_DRAGON_MILESTONE, 300.0);
         return null;
     }
 
-    private static ServerPlayer resolvePlayer(DamageSource source) {
-        if (source == null) return null;
+    private static @Nullable ServerPlayer resolvePlayer(DamageSource source) {
         var player = resolvePlayer(source.getEntity());
         return player != null ? player : resolvePlayer(source.getDirectEntity());
     }
 
-    private static ServerPlayer resolvePlayer(Entity entity) {
+    private static @Nullable ServerPlayer resolvePlayer(@Nullable Entity entity) {
         if (entity instanceof ServerPlayer player) return player;
         if (entity instanceof Projectile projectile) return resolvePlayer(projectile.getOwner());
         if (entity instanceof TamableAnimal tamable) return resolvePlayer(tamable.getOwner());
@@ -447,7 +447,7 @@ public final class PropsManager implements AbilitySubsystem {
         foodBeforeConsumption.put(player.getUUID(), player.getFoodData().getFoodLevel());
     }
 
-    private Float popHealthBeforeDamage(ServerPlayer player) {
+    private @Nullable Float popHealthBeforeDamage(ServerPlayer player) {
         var stack = healthBeforeDamage.get(player.getUUID());
         if (stack == null || stack.isEmpty()) return null;
         var health = stack.pop();
@@ -467,13 +467,13 @@ public final class PropsManager implements AbilitySubsystem {
 
     private void mirrorAttributes(
             ServerPlayer player,
-            Player storedPlayer
+            PlayerData storedPlayerData
     ) {
-        var data = storedPlayer.getPropsData();
+        var data = storedPlayerData.getPropsData();
         var category = playerDataManager.getPlayerAbilityCategory(player.getUUID());
         var bonuses = CommonSkillBonuses.calculate(
-                storedPlayer.getSkillDataMap(),
-                storedPlayer.getCpData().getLevel().getLevelCode(),
+                storedPlayerData.getSkillDataMap(),
+                storedPlayerData.getCpData().getLevel().getLevelCode(),
                 category.supportsCommonSkills()
         );
         for (var factor : AbilityFactor.values()) {

@@ -2,11 +2,6 @@ package org.academy.internal.common.ability.accelerator.skills.lv5.wing;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.particles.ParticleTypes;
@@ -26,7 +21,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -70,6 +64,7 @@ import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.academy.internal.server.ability.AbilitySystemServer;
 import org.joml.Vector3f;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -79,7 +74,11 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 import org.slf4j.Logger;
 
-
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 public final class PlatinumWing extends Skill {
@@ -142,6 +141,7 @@ public final class PlatinumWing extends Skill {
 
         private Client() {
         }
+
         public static final class PlatinumExecutionVfxClient {
             private static final Logger LOGGER = AcademyCraft.getLogger();
             public static final int DURATION_TICKS = 40;
@@ -156,7 +156,7 @@ public final class PlatinumWing extends Skill {
                                        float yRot, float width, float height, int durationTicks) {
                 var minecraft = Minecraft.getInstance();
                 var level = minecraft.level;
-                if (level == null || executionId == null) return;
+                if (level == null) return;
                 var target = level.getEntity(entityId);
                 if (target != null) target.setInvisible(true);
 
@@ -318,7 +318,7 @@ public final class PlatinumWing extends Skill {
     public static final class Server {
         private static final Map<UUID, ExecutionTombstone> EXECUTIONS = new ConcurrentHashMap<>();
         private static final long SIGNATURE_SUPPRESSION_TICKS = 200L;
-        private static volatile MinecraftServer currentServer;
+        private static volatile @Nullable MinecraftServer currentServer;
 
         private Server() {
         }
@@ -349,7 +349,6 @@ public final class PlatinumWing extends Skill {
         }
 
         public static void forceDeactivate(ServerPlayer player) {
-            if (player == null) return;
             WingFlightSupport.forceDeactivateSkill(player, Skills.PLATINUM_WING.get());
             WingFlightRuntime.clear(player, Skills.PLATINUM_WING.get());
             WingFlightSupport.sync(player, AttachmentTypes.ACTIVATED_PLATINUM_WING.get(), false);
@@ -457,7 +456,7 @@ public final class PlatinumWing extends Skill {
             }
         }
 
-        private static Entity pickTarget(ServerPlayer player) {
+        private static @Nullable Entity pickTarget(ServerPlayer player) {
             var reach = Skills.PLATINUM_WING.get().scaledRange(player, EXECUTION_REACH);
             var start = player.getEyePosition();
             var end = start.add(player.getLookAngle().scale(reach));

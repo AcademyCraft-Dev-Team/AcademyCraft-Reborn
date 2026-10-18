@@ -14,7 +14,6 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 
-
 @PacketTarget(ThreadType.CLIENT)
 public final class AdvancedWingTransitionPacket extends Packet<ClientPacketListener, AdvancedWingTransitionPacket> {
     public static final StreamCodec<ByteBuf, AdvancedWingTransitionPacket> CODEC = StreamCodec.of(

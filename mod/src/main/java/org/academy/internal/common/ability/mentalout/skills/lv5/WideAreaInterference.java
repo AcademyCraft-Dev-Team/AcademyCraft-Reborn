@@ -21,7 +21,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -405,7 +404,7 @@ public final class WideAreaInterference extends Skill {
         }
 
         private static boolean available(ServerPlayer player) {
-            return player != null && player.isAlive()
+            return player.isAlive()
                     && Skills.WIDE_AREA_INTERFERENCE.get().isEnabled(player);
         }
 
@@ -429,7 +428,7 @@ public final class WideAreaInterference extends Skill {
             POSITIONING_HANDLES.clear();
         }
 
-        private static void close(AutoCloseable handle) {
+        private static void close(@Nullable AutoCloseable handle) {
             if (handle == null) return;
             try {
                 handle.close();
@@ -632,7 +631,7 @@ public final class WideAreaInterference extends Skill {
 
         public CommandPacket(long sequence, Action action, List<UUID> targets, BlockPos first,
                              BlockPos second, @Nullable UUID entityTarget, String workData) {
-            this.workData = workData == null ? "" : workData;
+            this.workData = workData;
             if (this.workData.length() > 8192) throw new IllegalArgumentException("Work configuration too large");
             this.sequence = sequence;
             this.action = Objects.requireNonNull(action, "action");
@@ -677,7 +676,7 @@ public final class WideAreaInterference extends Skill {
             this.applied = Math.max(0, applied);
             this.skipped = Math.max(0, skipped);
             this.failed = Math.max(0, failed);
-            this.detail = detail == null ? "" : detail.substring(0, Math.min(16384, detail.length()));
+            this.detail = detail.substring(0, Math.min(16384, detail.length()));
         }
 
         @Override

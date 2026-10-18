@@ -23,6 +23,7 @@ import org.academy.internal.common.ability.mentalout.targeting.MentaloutTargetin
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.server.ability.AbilitySystemServer;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
@@ -53,7 +54,7 @@ public final class MentaloutControlContext extends ServerContext {
     private final LinkedHashMap<UUID, Entry> entries = new LinkedHashMap<>();
     private boolean stuporEnabled;
     private boolean impressionEnabled;
-    private UUID misidentificationTargetUuid;
+    private @Nullable UUID misidentificationTargetUuid;
     private boolean misidentificationAutoTransferred;
     private boolean ended;
     private int syncTicker;
@@ -63,7 +64,7 @@ public final class MentaloutControlContext extends ServerContext {
         super(player);
     }
 
-    public static MentaloutControlContext get(ServerPlayer player) {
+    public static @Nullable MentaloutControlContext get(ServerPlayer player) {
         return BY_CONTROLLER.get(player.getUUID());
     }
 
@@ -74,7 +75,7 @@ public final class MentaloutControlContext extends ServerContext {
     }
 
     public static void releaseInterventionSubjects(ServerPlayer controller, Set<UUID> subjectIds) {
-        if (controller == null || subjectIds == null || subjectIds.isEmpty()) return;
+        if (subjectIds.isEmpty()) return;
         var context = get(controller);
         if (context == null) return;
         var released = subjectIds.stream()
@@ -115,7 +116,6 @@ public final class MentaloutControlContext extends ServerContext {
     }
 
     public static void onMisidentificationTargetDeath(LivingEntity target) {
-        if (target == null) return;
         var contexts = BY_MISIDENTIFICATION_TARGET.get(target.getUUID());
         if (contexts == null) return;
         List.copyOf(contexts).forEach(context -> context.transferMisidentificationTarget(target));
@@ -131,7 +131,7 @@ public final class MentaloutControlContext extends ServerContext {
 
     public static ToggleResult toggleTarget(ServerPlayer player, LivingEntity target) {
         var existing = get(player);
-        if (existing != null && target != null && existing.entries.containsKey(target.getUUID())) {
+        if (existing != null && existing.entries.containsKey(target.getUUID())) {
             MentalControlMemory.forget(player, target);
             existing.remove(target.getUUID());
             return ToggleResult.REMOVED;
@@ -154,7 +154,7 @@ public final class MentaloutControlContext extends ServerContext {
      */
     public static ToggleResult addTarget(ServerPlayer player, LivingEntity target) {
         var existing = get(player);
-        if (existing != null && target != null && existing.entries.containsKey(target.getUUID())) {
+        if (existing != null && existing.entries.containsKey(target.getUUID())) {
             return ToggleResult.INVALID;
         }
         if (!MentaloutTargetValidation.isValidRosterTarget(player, target)) {
@@ -170,7 +170,6 @@ public final class MentaloutControlContext extends ServerContext {
     }
 
     public static ToggleResult recallTarget(ServerPlayer player, Mob mob) {
-        if (player == null || mob == null) return ToggleResult.INVALID;
         var existing = get(player);
         if (existing != null && existing.entries.containsKey(mob.getUUID())) return ToggleResult.INVALID;
         if (!MentaloutTargetValidation.isValidRosterTarget(player, mob)) return ToggleResult.INVALID;
@@ -195,7 +194,6 @@ public final class MentaloutControlContext extends ServerContext {
     }
 
     public static boolean isImpressionAlly(UUID controllerUuid, UUID subjectUuid, UUID otherUuid) {
-        if (controllerUuid == null || subjectUuid == null || otherUuid == null) return false;
         var context = BY_CONTROLLER.get(controllerUuid);
         if (context == null || !context.impressionEnabled) return false;
         var subject = context.entries.get(subjectUuid);
@@ -251,7 +249,7 @@ public final class MentaloutControlContext extends ServerContext {
     private static boolean isOverridden(
             LivingEntity subject,
             ControlCapability capability,
-            ControlHandle handle
+            @Nullable ControlHandle handle
     ) {
         if (handle == null || handle.isClosed()) return false;
         return MentalControlApi.inspect(subject, capability)
@@ -269,7 +267,7 @@ public final class MentaloutControlContext extends ServerContext {
         return REVISIONS.getOrDefault(controllerUuid, 0L);
     }
 
-    private static void close(ControlHandle handle) {
+    private static void close(@Nullable ControlHandle handle) {
         if (handle != null) handle.close();
     }
 
@@ -278,7 +276,7 @@ public final class MentaloutControlContext extends ServerContext {
     }
 
     public boolean contains(UUID subjectId) {
-        return subjectId != null && entries.containsKey(subjectId);
+        return entries.containsKey(subjectId);
     }
 
     public boolean isStuporEnabled() {
@@ -290,7 +288,7 @@ public final class MentaloutControlContext extends ServerContext {
     }
 
     public boolean isTargetMisidentificationTarget(LivingEntity target) {
-        return target != null && target.getUUID().equals(misidentificationTargetUuid);
+        return target.getUUID().equals(misidentificationTargetUuid);
     }
 
     public BatchResult applyTargetMisidentification(LivingEntity forcedTarget) {
@@ -316,10 +314,10 @@ public final class MentaloutControlContext extends ServerContext {
             Set<UUID> subjectIds,
             boolean globalTarget
     ) {
-        if (ended || forcedTarget == null || !MentaloutTargetValidation.isValidForcedTarget(player, forcedTarget)) {
+        if (ended || !MentaloutTargetValidation.isValidForcedTarget(player, forcedTarget)) {
             return BatchResult.NONE;
         }
-        var requested = subjectIds == null ? Set.<UUID>of() : Set.copyOf(subjectIds);
+        var requested = Set.copyOf(subjectIds);
         var candidates = entries.values().stream()
                 .filter(entry -> requested.contains(entry.subject.getUUID()))
                 .filter(entry -> entry.subject != forcedTarget)
@@ -472,7 +470,7 @@ public final class MentaloutControlContext extends ServerContext {
      * Toggles Mental Stupor only for a selected subset without changing the global auto-apply mode.
      */
     public BatchResult toggleStupor(Set<UUID> subjectIds) {
-        if (ended || subjectIds == null || subjectIds.isEmpty()) return BatchResult.NONE;
+        if (ended || subjectIds.isEmpty()) return BatchResult.NONE;
         var requested = Set.copyOf(subjectIds);
         var candidates = entries.values().stream()
                 .filter(entry -> requested.contains(entry.subject.getUUID()))
@@ -607,7 +605,7 @@ public final class MentaloutControlContext extends ServerContext {
      * Toggles Impression Manipulation only for a selected subset.
      */
     public BatchResult toggleImpression(Set<UUID> subjectIds) {
-        if (ended || subjectIds == null || subjectIds.isEmpty()) return BatchResult.NONE;
+        if (ended || subjectIds.isEmpty()) return BatchResult.NONE;
         var requested = Set.copyOf(subjectIds);
         var candidates = entries.values().stream()
                 .filter(entry -> requested.contains(entry.subject.getUUID()))
@@ -1172,9 +1170,9 @@ public final class MentaloutControlContext extends ServerContext {
     private static final class Entry {
         private final LivingEntity subject;
         private final float costWeight;
-        private ControlHandle stupor;
-        private ControlHandle impression;
-        private ControlHandle misidentification;
+        private @Nullable ControlHandle stupor;
+        private @Nullable ControlHandle impression;
+        private @Nullable ControlHandle misidentification;
         private boolean globalMisidentification;
         private long stuporStartedAt = Long.MAX_VALUE;
         private long impressionBuffUntil;
@@ -1226,7 +1224,7 @@ public final class MentaloutControlContext extends ServerContext {
         }
 
         private static boolean isValidRosterTarget(ServerPlayer player, LivingEntity subject) {
-            if (player == null || subject == null || subject == player) return false;
+            if (subject == player) return false;
             if (subject instanceof ServerPlayer targetPlayer) {
                 if (!MentaloutConfig.allowPlayerRoster(player)
                         || targetPlayer.isSpectator()

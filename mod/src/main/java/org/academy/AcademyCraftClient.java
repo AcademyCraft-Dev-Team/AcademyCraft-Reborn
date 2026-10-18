@@ -5,12 +5,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.math.Axis;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.function.BiConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.ClientAvatarEntity;
 import net.minecraft.client.model.EntityModel;
@@ -112,20 +106,15 @@ import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.function.BiConsumer;
+
 import static org.academy.AcademyCraft.academy;
 import static org.academy.AcademyCraft.vanilla;
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 @EventBusSubscriber(Dist.CLIENT)

@@ -1,19 +1,15 @@
 package org.academy.internal.client.gui.screen
 
 import net.minecraft.network.chat.Component
-import org.academy.api.client.gui.dsl.*
 import org.academy.api.client.gui.drawable.ColorDrawable
 import org.academy.api.client.gui.drawable.StateListDrawable
+import org.academy.api.client.gui.dsl.*
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.screen.UiScreen
 import org.academy.api.client.gui.text.model.Ellipsize
-import org.academy.api.client.gui.widget.LinearLayoutWidget
-import org.academy.api.client.gui.widget.ScrollPanelWidget
-import org.academy.api.client.gui.widget.TextInputWidget
-import org.academy.api.client.gui.widget.TextWidget
-import org.academy.api.client.gui.widget.Widget
+import org.academy.api.client.gui.widget.*
 import org.academy.api.client.resources.R
 import org.academy.internal.common.ability.teleport.skills.lv3.LocationTeleport
 import org.academy.internal.common.skilldata.LocationTeleportData.Mark

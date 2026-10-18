@@ -1,6 +1,7 @@
 package org.academy.internal.server.ability;
 
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
@@ -161,6 +162,21 @@ public final class IronSandResourceManager implements AbilitySubsystem, IronSand
                 return Math.max(0, after - before);
             }
         };
+    }
+
+    @Override
+    public float getCurrent(ServerPlayer player) {
+        return (float) account(player).current();
+    }
+
+    @Override
+    public boolean adjustsCost() {
+        return false;
+    }
+
+    @Override
+    public Component insufficientResource(ServerPlayer player, float required) {
+        return Component.translatable("message.academy.iron_sand.insufficient_mass", required, getCurrent(player));
     }
 
     public boolean tryCast(ServerPlayer player, Skill skill, float cpCost, float massCost,

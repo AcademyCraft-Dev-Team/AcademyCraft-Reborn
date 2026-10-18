@@ -5,6 +5,7 @@ import net.minecraft.world.entity.LivingEntity;
 import org.academy.api.server.ability.AbilityResourceAccount;
 import org.academy.internal.common.entitycontrol.HealthOffsetAccess;
 import org.academy.internal.common.entitycontrol.TrueHealthOffsetRuntime;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -145,7 +146,7 @@ public final class HealthLossGuards {
     /**
      * Internal maintenance/reconciliation; callers must not use this to submit a new attack.
      */
-    public static <T> T maintenance(LivingEntity subject, Supplier<T> action) {
+    public static <T extends @Nullable Object> T maintenance(LivingEntity subject, Supplier<T> action) {
         var added = WRITING.get().add(subject);
         try {
             return action.get();

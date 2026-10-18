@@ -4,14 +4,6 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.QuadInstance;
 import io.netty.buffer.ByteBuf;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.builders.UVPair;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -86,7 +78,9 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-
+import java.nio.ByteBuffer;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 public class DirStrike extends Skill {
@@ -162,6 +156,7 @@ public class DirStrike extends Skill {
 
         private Client() {
         }
+
         public static final class DirStrikeGroundEffect implements EffectBlockGeometrySource {
             private static final int MIN_Y_OFFSET = -3;
             private static final int MAX_Y_OFFSET = 5;
@@ -193,7 +188,7 @@ public class DirStrike extends Skill {
             ) {
                 var minecraft = Minecraft.getInstance();
                 var level = minecraft.level;
-                if (level == null || center == null || origin == null || radius <= 0) return;
+                if (level == null || radius <= 0) return;
 
                 var modelRenderer = new ModelBlockRenderer(
                         minecraft.options.ambientOcclusion().get(), false, minecraft.getBlockColors());
@@ -534,7 +529,7 @@ public class DirStrike extends Skill {
                 }
             }
 
-            private static BlockPos findSurface(ClientLevel level, BlockPos origin,
+            private static @Nullable BlockPos findSurface(ClientLevel level, BlockPos origin,
                                                 int xOffset, int zOffset) {
                 for (var yOffset = MAX_Y_OFFSET; yOffset >= MIN_Y_OFFSET; yOffset--) {
                     var pos = origin.offset(xOffset, yOffset, zOffset);

@@ -21,7 +21,6 @@ import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -88,17 +87,17 @@ public final class LocationTeleport extends Skill {
     }
 
     static boolean addDeathMark(
-            LocationTeleportData data,
+            @Nullable LocationTeleportData data,
             String dimension,
             BlockPos position,
             LocalDateTime deathTime
     ) {
-        if (data == null || dimension == null || position == null || deathTime == null) return false;
+        if (data == null) return false;
         while (data.getMarks().size() >= MAX_MARKS) {
             var oldestDeathMark = -1;
             for (var index = 0; index < data.getMarks().size(); index++) {
                 var name = data.getMarks().get(index).name();
-                if (name != null && name.startsWith(DEATH_MARK_PREFIX)) {
+                if (name.startsWith(DEATH_MARK_PREFIX)) {
                     oldestDeathMark = index;
                     break;
                 }
@@ -306,7 +305,7 @@ public final class LocationTeleport extends Skill {
         }
 
         @Deprecated(forRemoval = false)
-        public static Mark getSelectedMark(ServerPlayer player) {
+        public static @Nullable Mark getSelectedMark(ServerPlayer player) {
             return getQuickMark(player);
         }
 
@@ -351,7 +350,7 @@ public final class LocationTeleport extends Skill {
         private static void dirtyAndSync(ServerPlayer player, LocationTeleportData data) {
             var system = AbilitySystemServer.getSystem(player);
             var playerData = system.getPlayerData(player.getUUID());
-            if (playerData != null) playerData.markDirty();
+            playerData.markDirty();
             system.schedulePlayerSync(player.getUUID(), SyncTypes.SKILL_DATA);
             sync(player, data);
         }
@@ -401,7 +400,7 @@ public final class LocationTeleport extends Skill {
 
         public SaveMarkPacket(boolean useCurrent, String name, int x, int y, int z) {
             this.useCurrent = useCurrent;
-            this.name = name == null ? "" : name;
+            this.name = name;
             this.x = x;
             this.y = y;
             this.z = z;

@@ -108,7 +108,7 @@ public final class GlowEffect {
         return input;
     }
 
-    private static boolean hasSameDepthFormat(RenderTarget target,@Nullable GpuFormat depthFormat) {
+    private static boolean hasSameDepthFormat(RenderTarget target, @Nullable GpuFormat depthFormat) {
         var depth = target.getDepthTexture();
         if (depth == null) {
             return depthFormat == null;

@@ -27,10 +27,10 @@ class SkyStrikeFeedbackTest {
         var now = 1_000_000_000L;
         for (var i = 0; i < 21; i++) {
             CameraShakeManager.add(new CameraShakeManager.Shake(
-                i,
-                SkyStrikeProfile.LIGHTNING_STORM.shakeDegrees(),
-                SkyStrikeProfile.LIGHTNING_STORM.shakeDurationTicks(),
-                SkyStrikeProfile.LIGHTNING_STORM.shakeCapDegrees()), now);
+                    i,
+                    SkyStrikeProfile.LIGHTNING_STORM.shakeDegrees(),
+                    SkyStrikeProfile.LIGHTNING_STORM.shakeDurationTicks(),
+                    SkyStrikeProfile.LIGHTNING_STORM.shakeCapDegrees()), now);
         }
 
         var offset = CameraShakeManager.sample(now + 25_000_000L);

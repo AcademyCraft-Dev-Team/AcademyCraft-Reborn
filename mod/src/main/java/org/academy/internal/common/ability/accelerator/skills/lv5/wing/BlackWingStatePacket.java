@@ -14,7 +14,6 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 
-
 /**
  * Activation/cancellation and tracking baseline; no periodic animation progress traffic.
  */

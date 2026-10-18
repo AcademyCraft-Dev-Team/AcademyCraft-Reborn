@@ -19,6 +19,7 @@ import org.academy.api.common.ability.program.AbilityProgram;
 import org.academy.api.common.ability.program.ProgramBook;
 import org.academy.api.common.ability.program.ProgramDiagnosticCode;
 import org.academy.api.server.ability.program.AbilityProgramService;
+import org.academy.api.server.world.level.storage.PlayerData;
 import org.academy.internal.client.ability.program.AbilityProgramEditorClient;
 import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.accelerator.program.AcceleratorProgramExecutionBridge;
@@ -45,7 +46,6 @@ import org.academy.internal.common.ability.teleport.program.TeleportProgramExecu
 import org.academy.internal.common.ability.teleport.program.TeleportProgramNodeCatalog;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.server.ability.AbilitySystemServer;
-import org.academy.internal.server.world.level.storage.Player;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -135,14 +135,13 @@ public final class AbilityProgramManager {
             if (decoded.valid()) {
                 var book = Objects.requireNonNull(decoded.book());
                 if (book.schemaVersion() == ProgramBook.CURRENT_SCHEMA_VERSION
-                        && book.slots().size() > 0
+                        && !book.slots().isEmpty()
                         && book.slots().size() <= SLOT_COUNT
                         && book.slots().stream().allMatch(slot -> matchesCategory(slot, category))) {
                     return book.resize(SLOT_COUNT);
                 }
             }
         } catch (IllegalArgumentException ignored) {
-            // A corrupt category book is isolated and replaced when the player next saves it.
         }
         return ProgramBook.empty(SLOT_COUNT);
     }
@@ -151,8 +150,7 @@ public final class AbilityProgramManager {
         return Base64.getEncoder().encodeToString(ProgramBookCodec.encode(book));
     }
 
-    static Set<Identifier> learnedCapabilities(Player playerData) {
-        if (playerData == null) return Set.of();
+    static Set<Identifier> learnedCapabilities(PlayerData playerData) {
         var capabilities = new HashSet<Identifier>();
         for (var skillId : playerData.getSkillDataMap().keySet()) {
             var parsed = Identifier.tryParse(skillId);
@@ -169,10 +167,9 @@ public final class AbilityProgramManager {
         if (!unlocked(player)) return;
         var currentCategory = AbilitySystemServer.getSystem(player)
                 .getPlayerAbilityCategory(player.getUUID());
-        if (currentCategory == null || !isSupportedCategory(currentCategory.getKey())) return;
+        if (!isSupportedCategory(currentCategory.getKey())) return;
         var category = currentCategory.getKey();
         var playerData = AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID());
-        if (playerData == null) return;
         var current = book(playerData, category, player.getUUID());
         var definition = AbilityProgramDefinitions.require(category);
         var adapter = executionAdapter(category);
@@ -271,7 +268,7 @@ public final class AbilityProgramManager {
         }
     }
 
-    private static ProgramBook book(Player playerData, Identifier category, UUID ownerId) {
+    private static ProgramBook book(PlayerData playerData, Identifier category, UUID ownerId) {
         var current = decodeStoredBook(
                 category, playerData.getAbilityProgramBook(category.toString()));
         if (!category.equals(PrecisionProgramNodeCatalog.MENTALOUT)) {
@@ -308,12 +305,12 @@ public final class AbilityProgramManager {
         return book.revision() == 0L && book.slots().stream().allMatch(ProgramBook.Slot::empty);
     }
 
-    private static void store(Player playerData, Identifier category, ProgramBook book) {
+    private static void store(PlayerData playerData, Identifier category, ProgramBook book) {
         playerData.setAbilityProgramBook(category.toString(), encodeStoredBook(book));
     }
 
     private static @Nullable Identifier parseCategory(String raw) {
-        if (raw == null || raw.isBlank() || raw.length() > MAX_CATEGORY_LENGTH) return null;
+        if (raw.isBlank() || raw.length() > MAX_CATEGORY_LENGTH) return null;
         return Identifier.tryParse(raw);
     }
 
@@ -400,7 +397,7 @@ public final class AbilityProgramManager {
     private static boolean ownsCategory(ServerPlayer player, Identifier category) {
         var current = AbilitySystemServer.getSystem(player)
                 .getPlayerAbilityCategory(player.getUUID());
-        return current != null && current.getKey().equals(category);
+        return current.getKey().equals(category);
     }
 
     private static boolean unlocked(ServerPlayer player) {
@@ -614,7 +611,7 @@ public final class AbilityProgramManager {
             ServerPlayer player, Identifier category, ProgramInvocationContext invocation,
             int nodeId, ProgramVmDiagnostic diagnostic
     ) {
-        if (player.connection == null || invocation.trigger().isPresent()) return;
+        if (invocation.trigger().isPresent()) return;
         var playerData = AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID());
         var current = book(playerData, category, player.getUUID());
         Server.result(player, category.toString(), invocation.slot(), FeedbackType.ERROR,
@@ -1181,7 +1178,7 @@ public final class AbilityProgramManager {
         }
 
         private RequestPacket(String category) {
-            this.category = category == null ? "" : category;
+            this.category = category;
         }
 
         String category() {
@@ -1217,9 +1214,9 @@ public final class AbilityProgramManager {
         }
 
         private ImportPacket(String category, long expectedRevision, byte[] book) {
-            this.category = category == null ? "" : category;
+            this.category = category;
             this.expectedRevision = expectedRevision;
-            this.book = book == null ? new byte[0] : book.clone();
+            this.book = book.clone();
         }
 
         String category() {
@@ -1272,10 +1269,10 @@ public final class AbilityProgramManager {
         }
 
         private SavePacket(String category, int slot, long expectedRevision, byte[] program) {
-            this.category = category == null ? "" : category;
+            this.category = category;
             this.slot = slot;
             this.expectedRevision = expectedRevision;
-            this.program = program == null ? new byte[0] : program.clone();
+            this.program = program.clone();
         }
 
         String category() {
@@ -1323,7 +1320,7 @@ public final class AbilityProgramManager {
         }
 
         private ExecutePacket(String category, int slot, long sequence) {
-            this.category = category == null ? "" : category;
+            this.category = category;
             this.slot = slot;
             this.sequence = sequence;
         }
@@ -1376,10 +1373,9 @@ public final class AbilityProgramManager {
         }
 
         private SyncPacket(String category, String extensionFingerprint, byte[] book, boolean starterDismissed) {
-            this.category = category == null ? "" : category;
-            this.extensionFingerprint = extensionFingerprint == null
-                    ? "" : extensionFingerprint;
-            this.book = book == null ? new byte[0] : book.clone();
+            this.category = category;
+            this.extensionFingerprint = extensionFingerprint;
+            this.book = book.clone();
             this.starterDismissed = starterDismissed;
         }
 
@@ -1497,15 +1493,14 @@ public final class AbilityProgramManager {
                 List<ProgramRunTrace.Step> trace, boolean traceTruncated
         ) {
             this.port = port == null ? "" : port;
-            this.category = category == null ? "" : category;
+            this.category = category;
             this.slot = slot;
-            this.type = type == null ? FeedbackType.ERROR : type;
+            this.type = type;
             this.revision = Math.max(0L, revision);
-            this.code = code == null ? ResultCode.INVALID_PROGRAM : code;
+            this.code = code;
             this.diagnostic = diagnostic;
             this.nodeId = nodeId;
-            this.vmDiagnostic = vmDiagnostic == null
-                    ? ProgramVmDiagnostic.NONE : vmDiagnostic;
+            this.vmDiagnostic = vmDiagnostic;
             this.trace = List.copyOf(trace.subList(0, Math.min(trace.size(), ProgramRunTrace.MAX_STEPS)));
             this.traceTruncated = traceTruncated || trace.size() > ProgramRunTrace.MAX_STEPS;
         }

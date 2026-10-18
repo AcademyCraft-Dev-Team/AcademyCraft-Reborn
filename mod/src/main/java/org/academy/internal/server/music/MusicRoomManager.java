@@ -16,24 +16,18 @@ import org.academy.internal.common.music.provider.MusicProviders;
 import org.academy.internal.common.network.MusicRoomPackets;
 import org.academy.internal.server.config.MusicConfig;
 import org.academy.internal.server.util.ChatConfirmLinks;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 
 import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * 音乐室服务端管理器：房间的创建/加入/退出与权威播放轴同步。
- * 客户端操作（App UI/命令/聊天点击）统一走 {@link #handleAction}，服务端校验后广播房间状态喵。
- */
 @EventBusSubscriber
 public final class MusicRoomManager {
     private static final int MAX_QUEUE_PER_ROOM = 64;
     private static final long TOKEN_TTL_MILLIS = 60_000L;
     private static final int HEARTBEAT_INTERVAL_TICKS = 200;
-    /**
-     * 崩溃兜底的定期落盘间隔（5 分钟）喵。
-     */
     private static final int AUTOSAVE_INTERVAL_TICKS = 6000;
     private static final int ROOM_NAME_MAX_LENGTH = 24;
     private static final String CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -44,15 +38,12 @@ public final class MusicRoomManager {
     private static final Map<String, PendingAction> PENDING_ACTIONS = new ConcurrentHashMap<>();
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    private static MinecraftServer server;
+    private static @Nullable MinecraftServer server;
     private static volatile boolean roomEnabled = true;
     private static volatile int maxRooms = 16;
     private static volatile int maxMembers = 16;
     private static long lastHeartbeatTick = Long.MIN_VALUE;
     private static long lastAutosaveTick = Long.MIN_VALUE;
-    /**
-     * 关服落盘后置位：此后的登出事件不再解散房间，避免覆盖已保存的状态喵。
-     */
     private static volatile boolean shuttingDown = false;
 
     private MusicRoomManager() {
@@ -73,9 +64,6 @@ public final class MusicRoomManager {
         restoreRooms();
     }
 
-    /**
-     * 服务端关服前落盘（由 ServerStoppingEvent 调用）喵。
-     */
     public static void saveState() {
         persist(true);
     }
@@ -84,7 +72,6 @@ public final class MusicRoomManager {
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (server == null || shuttingDown) return;
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        // 恢复自磁盘的房间在关服时保留了成员表: 原成员重新登录即自动回到房间喵.
         var code = PLAYER_ROOMS.get(player.getUUID());
         if (code == null) return;
         var room = ROOMS.get(code);
@@ -94,7 +81,6 @@ public final class MusicRoomManager {
         }
         boolean hostTransferred;
         room.members.put(player.getUUID(), player.getGameProfile().name());
-        // 原房主未回到服务器时，把房主交给第一个回归的成员，避免房间被离线房主锁死喵.
         hostTransferred = !room.host.equals(player.getUUID())
                 && server.getPlayerList().getPlayer(room.host) == null;
         if (hostTransferred) {
@@ -112,7 +98,6 @@ public final class MusicRoomManager {
     @SubscribeEvent
     public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         if (server != null && !server.isRunning()) {
-            // 服务端正在停止: 落盘一次（关服事件未覆盖的关闭路径兜底），且不再删成员/解散喵.
             if (!shuttingDown) saveState();
             return;
         }
@@ -125,7 +110,6 @@ public final class MusicRoomManager {
         var now = cleanupTokens();
         for (var room : ROOMS.values()) {
             room.channel.advanceIfEnded(now);
-            // 房间里没有在播曲目但队列非空时（加入/恢复/清空后）自动续播，避免房间静默喵.
             if (room.channel.timeline().isEmpty()) {
                 room.channel.skipToNext(now);
             }
@@ -167,7 +151,6 @@ public final class MusicRoomManager {
             }
             case QUEUE_REMOVE -> queueRemove(player, packet.queueIndex());
             case REQUEST_LIST -> {
-                // App 内交互: 只同步数据包, 不向聊天框打印房间列表喵.
                 MisakaNetworkServer.send(player, buildListPacket());
                 pushPendingNotices(player.getUUID());
                 var room = roomOf(player);
@@ -214,6 +197,7 @@ public final class MusicRoomManager {
     }
 
     public static void apply(ServerPlayer player, String rawCode) {
+        if (server == null) return;
         if (roomOf(player) != null) {
             sendError(player, "message.academy.music_room.already_in_room");
             return;
@@ -250,6 +234,7 @@ public final class MusicRoomManager {
     }
 
     public static void invite(ServerPlayer player, String targetName) {
+        if (server == null) return;
         var room = requireHostRoom(player, "invite");
         if (room == null) return;
         var target = server.getPlayerList().getPlayerByName(targetName);
@@ -287,6 +272,7 @@ public final class MusicRoomManager {
     }
 
     public static void accept(ServerPlayer player, String token) {
+        if (server == null) return;
         var pending = PENDING_ACTIONS.remove(token);
         if (pending == null || isExpired(pending)) {
             sendError(player, "message.academy.music_room.token_invalid");
@@ -324,6 +310,7 @@ public final class MusicRoomManager {
     }
 
     public static void reject(ServerPlayer player, String token) {
+        if (server == null) return;
         var pending = PENDING_ACTIONS.remove(token);
         if (pending == null || isExpired(pending)) {
             sendError(player, "message.academy.music_room.token_invalid");
@@ -341,8 +328,7 @@ public final class MusicRoomManager {
         } else {
             var room = ROOMS.get(pending.roomCode());
             if (room != null) {
-                ServerPlayer inviter = null;
-                inviter = server.getPlayerList().getPlayer(room.host);
+                var inviter = server.getPlayerList().getPlayer(room.host);
                 if (inviter != null) {
                     inviter.sendSystemMessage(Component.translatable(
                             "message.academy.music_room.invite_declined", player.getGameProfile().name()
@@ -393,6 +379,7 @@ public final class MusicRoomManager {
     }
 
     public static void kick(ServerPlayer player, String targetName) {
+        if (server == null) return;
         var room = requireHostRoom(player, "kick");
         if (room == null) return;
         ServerPlayer target;
@@ -410,7 +397,6 @@ public final class MusicRoomManager {
             return;
         }
         target = server.getPlayerList().getPlayer(targetUuid);
-        // 重新加锁移除，避免与退出流程竞争
         room.members.remove(targetUuid);
         PLAYER_ROOMS.remove(targetUuid);
         if (target != null) {
@@ -486,7 +472,6 @@ public final class MusicRoomManager {
             return;
         }
         room.channel.enqueue(new QueueSnapshot.QueueEntry(entry, player.getGameProfile().name()));
-        // 房间空闲时加入即开播，符合"加歌进房间就播"的直觉喵.
         if (room.channel.timeline().isEmpty()) {
             room.channel.skipToNext(gameTime());
         }
@@ -500,18 +485,11 @@ public final class MusicRoomManager {
         broadcastRoom(room);
     }
 
-    /**
-     * 只读查询：玩家所在房间的当前播放时间线（未入房或房间空闲时为空）。
-     * 供诊断/测试与后续精密操作接口查询房间播放状态喵。
-     */
     public static Optional<PlaybackTimeline> timelineOf(ServerPlayer player) {
         var room = roomOf(player);
         return room == null ? Optional.empty() : room.channel.timeline();
     }
 
-    /**
-     * 只读查询：玩家所在房间的待播队列快照（未入房时为空队列）喵。
-     */
     public static QueueSnapshot queueOf(ServerPlayer player) {
         var room = roomOf(player);
         return room == null ? new QueueSnapshot(List.of(), 0) : room.channel.queueSnapshot();
@@ -538,11 +516,8 @@ public final class MusicRoomManager {
         }
     }
 
-    /**
-     * 把目标玩家当前待处理的申请/邀请完整推送到客户端（App 音乐室内渲染确认卡片）喵。
-     */
     private static void pushPendingNotices(UUID receiverUuid) {
-        if (server == null || receiverUuid == null) return;
+        if (server == null) return;
         var receiver = server.getPlayerList().getPlayer(receiverUuid);
         if (receiver == null) return;
         var items = new ArrayList<MusicRoomPackets.PendingNoticePacket.PendingItem>();
@@ -586,7 +561,7 @@ public final class MusicRoomManager {
         broadcastRoomList();
     }
 
-    private static Room requireRoom(ServerPlayer player, String operation) {
+    private static @Nullable Room requireRoom(ServerPlayer player, String operation) {
         var room = roomOf(player);
         if (room == null) {
             sendError(player, "message.academy.music_room.not_in_room");
@@ -595,7 +570,7 @@ public final class MusicRoomManager {
         return room;
     }
 
-    private static Room requireHostRoom(ServerPlayer player, String operation) {
+    private static @Nullable Room requireHostRoom(ServerPlayer player, String operation) {
         var room = requireRoom(player, operation);
         if (room == null) return null;
         if (!room.host.equals(player.getUUID())) {
@@ -605,7 +580,7 @@ public final class MusicRoomManager {
         return room;
     }
 
-    private static Room roomOf(ServerPlayer player) {
+    private static @Nullable Room roomOf(ServerPlayer player) {
         var code = PLAYER_ROOMS.get(player.getUUID());
         return code == null ? null : ROOMS.get(code);
     }
@@ -626,12 +601,11 @@ public final class MusicRoomManager {
         return builder.toString();
     }
 
-    private static String normalizeCode(String raw) {
+    private static String normalizeCode(@Nullable String raw) {
         return raw == null ? "" : raw.trim().toUpperCase(Locale.ROOT);
     }
 
     static String sanitizeName(String raw) {
-        if (raw == null) return "";
         var cleaned = new StringBuilder();
         for (var ch : raw.toCharArray()) {
             if (ch == '§' || Character.isISOControl(ch)) continue;
@@ -641,11 +615,10 @@ public final class MusicRoomManager {
         return result.length() > ROOM_NAME_MAX_LENGTH ? result.substring(0, ROOM_NAME_MAX_LENGTH) : result;
     }
 
-    public static SharedTrackEntry sanitizeEntry(SharedTrackEntry entry) {
+    public static @Nullable SharedTrackEntry sanitizeEntry(@Nullable SharedTrackEntry entry) {
         if (entry == null) return null;
         if (entry.trackId().isBlank()) return null;
         if ("local".equals(entry.provider())) {
-            // 资源包曲目：trackId 为资源定位符，由各客户端本地解析，无凭证/下载一说喵.
             return new SharedTrackEntry(
                     "local",
                     clamp(entry.trackId(), 256),
@@ -704,16 +677,11 @@ public final class MusicRoomManager {
 
     private static long gameTime() {
         if (server == null) return 0L;
-        var overworld = server.overworld();
-        return overworld == null ? 0L : overworld.getGameTime();
+        return server.overworld().getGameTime();
     }
 
-    /**
-     * 把当前内存中的房间写成快照落盘；[finalSave] 为真时同时进入关服态（停止后续登出解散）喵。
-     */
     private static void persist(boolean finalSave) {
         if (finalSave) shuttingDown = true;
-        // 房间功能被关闭时不落盘，避免清空既有存档喵.
         if (!roomEnabled) return;
         var snapshots = new ArrayList<MusicRoomStore.Snapshot>();
         for (var room : ROOMS.values()) {
@@ -735,7 +703,6 @@ public final class MusicRoomManager {
             queue.add(new MusicRoomStore.QueueEntry(queueEntry.entry(), queueEntry.requesterName()));
         }
         var timeline = room.channel.timeline().orElse(null);
-        // 播放中的曲目按当前tick折算进度后再落盘，恢复时以暂停态呈现喵.
         var position = timeline == null ? 0f : timeline.expectedPositionSeconds(gameTime());
         return new MusicRoomStore.Snapshot(
                 room.code,
@@ -750,9 +717,6 @@ public final class MusicRoomManager {
         );
     }
 
-    /**
-     * 启动时从磁盘恢复房间；房主不在成员表、编号非法或与已恢复房间成员冲突的房间会被丢弃喵。
-     */
     private static void restoreRooms() {
         if (!roomEnabled) return;
         var snapshots = MusicRoomStore.load();
@@ -783,8 +747,7 @@ public final class MusicRoomManager {
         }
     }
 
-    private static Room buildRestoredRoom(MusicRoomStore.Snapshot snapshot) {
-        if (snapshot == null) return null;
+    private static @Nullable Room buildRestoredRoom(MusicRoomStore.Snapshot snapshot) {
         var code = normalizeCode(snapshot.code());
         var name = sanitizeName(snapshot.name());
         if (code.isBlank() || name.isEmpty()) return null;
@@ -794,7 +757,6 @@ public final class MusicRoomManager {
         var members = new LinkedHashMap<UUID, String>();
         if (snapshot.members() != null) {
             for (var member : snapshot.members()) {
-                if (member == null) continue;
                 var uuid = parseUuid(member.id());
                 if (uuid == null) continue;
                 var memberName = member.name() == null || member.name().isBlank() ? "?" : member.name();
@@ -811,7 +773,6 @@ public final class MusicRoomManager {
         var queue = new ArrayList<QueueSnapshot.QueueEntry>();
         if (snapshot.queue() != null) {
             for (var stored : snapshot.queue()) {
-                if (stored == null) continue;
                 var entry = sanitizeEntry(stored.entry());
                 if (entry == null) continue;
                 queue.add(new QueueSnapshot.QueueEntry(entry, stored.requesterName()));
@@ -840,8 +801,8 @@ public final class MusicRoomManager {
         return false;
     }
 
-    private static UUID parseUuid(String raw) {
-        if (raw == null || raw.isBlank()) return null;
+    private static @Nullable UUID parseUuid(String raw) {
+        if (raw.isBlank()) return null;
         try {
             return UUID.fromString(raw.trim());
         } catch (IllegalArgumentException exception) {
@@ -849,7 +810,8 @@ public final class MusicRoomManager {
         }
     }
 
-    private static String nameOf(MinecraftServer server, UUID uuid) {
+    private static String nameOf(@Nullable MinecraftServer server, UUID uuid) {
+        if (server == null) return "?";
         var player = server.getPlayerList().getPlayer(uuid);
         if (player != null) return player.getGameProfile().name();
         return "?";
@@ -861,6 +823,7 @@ public final class MusicRoomManager {
     }
 
     private static void announce(Room room, Component message) {
+        if (server == null) return;
         for (var uuid : room.memberUuids()) {
             var member = server.getPlayerList().getPlayer(uuid);
             if (member != null) {
@@ -879,7 +842,6 @@ public final class MusicRoomManager {
         host = room.host;
         hostName = hostNameOf(room);
         var stored = room.channel.timeline().orElse(null);
-        // 广播前按当前tick重锚，接收端直接以锚点秒为基准，避免中途加入时误从头播放喵.
         packet = new MusicRoomPackets.SyncPacket(
                 true,
                 room.code,

@@ -7,7 +7,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
-
+import org.academy.internal.common.ability.electromaster.Electromaster;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -16,7 +16,6 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-import org.academy.internal.common.ability.electromaster.Electromaster;
 
 @PacketTarget(ThreadType.CLIENT)
 public final class SkyStrikeVisualPacket extends Packet<ClientPacketListener, SkyStrikeVisualPacket> {
@@ -42,7 +41,7 @@ public final class SkyStrikeVisualPacket extends Packet<ClientPacketListener, Sk
     public SkyStrikeVisualPacket(Vec3 impact, long seed, SkyStrikeProfile profile) {
         this.impact = impact;
         this.seed = seed;
-        this.profile = profile == null ? SkyStrikeProfile.LIGHTNING_STORM : profile;
+        this.profile = profile;
     }
 
     public static void initClient() {
@@ -86,8 +85,7 @@ public final class SkyStrikeVisualPacket extends Packet<ClientPacketListener, Sk
 
         @SubscribePacket
         public static void handle(SkyStrikeVisualPacket packet) {
-            if (packet.impact == null
-                    || !Double.isFinite(packet.impact.x)
+            if (!Double.isFinite(packet.impact.x)
                     || !Double.isFinite(packet.impact.y)
                     || !Double.isFinite(packet.impact.z)) {
                 return;

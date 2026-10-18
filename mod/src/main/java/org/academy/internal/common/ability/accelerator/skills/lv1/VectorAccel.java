@@ -26,7 +26,6 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -435,8 +434,7 @@ public final class VectorAccel extends Skill {
         }
 
         public static Vec3 normalizeDashDirection(Vec3 direction) {
-            if (direction == null
-                    || !Double.isFinite(direction.x)
+            if (!Double.isFinite(direction.x)
                     || !Double.isFinite(direction.y)
                     || !Double.isFinite(direction.z)
                     || direction.lengthSqr() < 1.0e-8) {

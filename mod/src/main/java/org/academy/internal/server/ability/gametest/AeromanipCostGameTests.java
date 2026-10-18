@@ -27,6 +27,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.aeromanip.Aeromanip;
 import org.academy.internal.common.ability.aeromanip.charge.AeromanipChargeTier;
 import org.academy.internal.common.ability.aeromanip.program.AeromanipProgramNodeCatalog;
 import org.academy.internal.common.ability.aeromanip.program.ServerAeromanipProgramRuntime;
@@ -87,8 +88,8 @@ public final class AeromanipCostGameTests {
             var output = (OutputControlData) system.getPlayerData(player.getUUID()).getSkillDataMap()
                     .get(Skills.OUTPUT_CONTROL.get().getKeyString());
             output.setEnabled(true);
-            system.getAeromanipResourceManager().onPlayerLogin(player);
-            var capacity = system.getAeromanipResourceManager().getCapacity(player);
+            Aeromanip.resourceService().reconcile(player);
+            var capacity = Aeromanip.resourceService().getCapacity(player);
 
             for (var tier : AeromanipChargeTier.values()) {
                 var baseAir = switch (tier) {
@@ -102,7 +103,7 @@ public final class AeromanipCostGameTests {
                     helper.assertTrue(LaminarCutter.Server.tryProgramCast(
                                     player, new Vec3(0, 1, 0), -1, 1, -1, tier),
                             "Shared manual/default cast must succeed: " + tier + " power=" + power);
-                    closeTo(helper, capacity - system.getAeromanipResourceManager().getCurrent(player),
+                    closeTo(helper, capacity - Aeromanip.resourceService().getCurrent(player),
                             baseAir * ProgramPowerScale.costMultiplier(power),
                             "Shared cast uses halved air cost and global output: " + tier);
                 }
@@ -122,7 +123,7 @@ public final class AeromanipCostGameTests {
                             throw new IllegalStateException("Precision node execution failed", error);
                         }
                     });
-                    closeTo(helper, capacity - system.getAeromanipResourceManager().getCurrent(player),
+                    closeTo(helper, capacity - Aeromanip.resourceService().getCurrent(player),
                             baseAir * ProgramPowerScale.costMultiplier(power),
                             "Node uses its own output once: " + tier + " power=" + power);
                 }
@@ -133,7 +134,7 @@ public final class AeromanipCostGameTests {
             helper.assertTrue(system.castContinuousCpAndMpIfPossible(player, Skills.ADIABATIC_COMPRESSION.get(),
                     _ -> 0, _ -> 10, (_, _) -> {
                     }, true), "Continuous damage payment must succeed");
-            closeTo(helper, capacity - system.getAeromanipResourceManager().getCurrent(player), 1,
+            closeTo(helper, capacity - Aeromanip.resourceService().getCurrent(player), 1,
                     "Continuous damage skills receive the same output air reduction");
 
             system.setPlayerCurrMP(player.getUUID(), capacity);
@@ -142,7 +143,7 @@ public final class AeromanipCostGameTests {
             helper.assertTrue(system.castContinuousCpAndMpIfPossible(player, Skills.BREATHING_BUBBLE.get(),
                     _ -> 0, _ -> 10, (_, _) -> {
                     }, true), "Utility payment must succeed");
-            closeTo(helper, capacity - system.getAeromanipResourceManager().getCurrent(player), 10,
+            closeTo(helper, capacity - Aeromanip.resourceService().getCurrent(player), 10,
                     "Utility air costs must not receive damage-skill output reduction");
 
             output.setEnabled(false);
@@ -150,7 +151,7 @@ public final class AeromanipCostGameTests {
             helper.assertTrue(LaminarCutter.Server.tryProgramCast(
                             player, new Vec3(0, 1, 0), -1, 1, -1, AeromanipChargeTier.INSTANT),
                     "Cast without output control must succeed");
-            closeTo(helper, capacity - system.getAeromanipResourceManager().getCurrent(player), 10,
+            closeTo(helper, capacity - Aeromanip.resourceService().getCurrent(player), 10,
                     "Disabled output control retains the halved base air cost");
 
             output.setEnabled(true);
@@ -160,7 +161,7 @@ public final class AeromanipCostGameTests {
             helper.assertTrue(!LaminarCutter.Server.tryProgramCast(
                             player, new Vec3(0, 1, 0), -1, 1, -1, AeromanipChargeTier.INSTANT),
                     "Insufficient discounted air must reject the cast");
-            closeTo(helper, system.getAeromanipResourceManager().getCurrent(player), 0.5f,
+            closeTo(helper, Aeromanip.resourceService().getCurrent(player), 0.5f,
                     "Failed cast must not consume partial air");
             closeTo(helper, system.getPlayerAvailableCP(player.getUUID()), beforeCp,
                     "Failed cast must not occupy CP");

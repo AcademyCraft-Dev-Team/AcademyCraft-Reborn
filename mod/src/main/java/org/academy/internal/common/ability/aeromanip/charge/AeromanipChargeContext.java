@@ -5,9 +5,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.server.ability.AbilityResourceUsage;
 import org.academy.api.server.ability.ServerContext;
-import org.academy.internal.server.ability.AbilitySystemServer;
-import org.academy.internal.server.ability.AeromanipResourceManager;
+import org.academy.internal.common.ability.aeromanip.Aeromanip;
 
 /**
  * Server-authoritative base context for maintained charge gestures.
@@ -17,7 +17,7 @@ public abstract class AeromanipChargeContext extends ServerContext {
     private final Skill skill;
     private final ServerLevel initialLevel;
     private final long startGameTime;
-    private final AeromanipResourceManager.UsageLease usageLease;
+    private final AbilityResourceUsage usageLease;
     private final ChargeTickListener chargeTickListener = new ChargeTickListener();
     private AeromanipChargeTier lastTier = AeromanipChargeTier.INSTANT;
     private final long gesture;
@@ -34,8 +34,7 @@ public abstract class AeromanipChargeContext extends ServerContext {
         gesture = AeromanipChargeSync.takeGesture(player, skill);
         initialLevel = player.level();
         this.startGameTime = Math.min(startGameTime, initialLevel.getGameTime());
-        usageLease = AbilitySystemServer.getSystem(player)
-                .getAeromanipResourceManager()
+        usageLease = Aeromanip.resourceService()
                 .beginUse(player);
         AeromanipChargeSync.send(player, gesture, chargeTier(), false);
     }

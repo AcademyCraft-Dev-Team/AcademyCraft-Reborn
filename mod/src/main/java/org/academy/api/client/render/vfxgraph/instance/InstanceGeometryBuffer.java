@@ -1,8 +1,8 @@
 package org.academy.api.client.render.vfxgraph.instance;
 
-import java.nio.ByteBuffer;
-
 import org.jspecify.annotations.Nullable;
+
+import java.nio.ByteBuffer;
 
 public final class InstanceGeometryBuffer {
     private @Nullable ByteBuffer vertices;

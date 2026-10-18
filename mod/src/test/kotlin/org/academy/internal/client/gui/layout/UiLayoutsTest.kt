@@ -5,7 +5,8 @@ import org.academy.api.client.gui.widget.BlendQuadWidget
 import org.academy.api.client.gui.widget.FillWidget
 import org.academy.api.client.gui.widget.Widget
 import org.academy.api.client.gui.widget.WidgetContainer
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class UiLayoutsTest {

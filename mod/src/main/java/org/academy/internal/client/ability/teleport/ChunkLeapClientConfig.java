@@ -28,7 +28,7 @@ public class ChunkLeapClientConfig extends KeyBindingConfig {
     private boolean autoLoadMap = true;
     private int viewRadiusChunks = 12;
     private boolean showEntities = true;
-    private int entityRefreshTicks = 10;
+    private final int entityRefreshTicks = 10;
     private boolean confirmSwap = true;
     private boolean seamlessTransition = true;
 

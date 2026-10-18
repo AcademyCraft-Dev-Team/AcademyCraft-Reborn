@@ -350,7 +350,7 @@ public final class ChunkLeapScreen extends UiScreen {
     }
 
     private int panelWidth() {
-        return Math.clamp(width * 28 / 100, 150, 210);
+        return Math.clamp(width * 28L / 100, 150, 210);
     }
 
     /**
@@ -729,7 +729,7 @@ public final class ChunkLeapScreen extends UiScreen {
 
         // Cost
         var cost = page == Page.BLOCKS
-                ? ChunkLeapCost.forSwap(selection.sourceCount(), selection.hasTarget() ? 0 : 0)
+                ? ChunkLeapCost.forSwap(selection.sourceCount(), 0)
                 : ChunkLeapCost.forEntityTeleport();
         graphics.text(font, Component.translatable("chunk_leap.side.cost", cost), x + 6, cursorY, TEXT);
         cursorY += 12;

@@ -1,4 +1,4 @@
-/**
- * Level 5 mentalout skills.
- */
+@NullMarked
 package org.academy.internal.common.ability.mentalout.skills.lv5;
+
+import org.jspecify.annotations.NullMarked;

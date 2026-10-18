@@ -51,6 +51,7 @@ import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -101,7 +102,7 @@ public class BloodflowReverse extends Skill {
                 + Math.max(0.0, additionalRange);
     }
 
-    public static LivingEntity findTarget(
+    public static @Nullable LivingEntity findTarget(
             LivingEntity observer,
             Vec3 eyePosition,
             Vec3 viewDirection,
@@ -110,7 +111,7 @@ public class BloodflowReverse extends Skill {
         return findTarget(observer, eyePosition, viewDirection, additionalRange, _ -> true);
     }
 
-    public static LivingEntity findTarget(
+    public static @Nullable LivingEntity findTarget(
             LivingEntity observer,
             Vec3 eyePosition,
             Vec3 viewDirection,
@@ -127,7 +128,7 @@ public class BloodflowReverse extends Skill {
      * {@link Skill#scaledRange} result so the configured range multiplier applies to the
      * whole reach instead of only {@link #targetRange}'s additional-range term.
      */
-    public static LivingEntity findTargetWithinRange(
+    public static @Nullable LivingEntity findTargetWithinRange(
             LivingEntity observer,
             Vec3 eyePosition,
             Vec3 viewDirection,
@@ -180,7 +181,7 @@ public class BloodflowReverse extends Skill {
         );
         public static final String KEY_NAME = SkillNames.BLOODFLOW_REVERSE + "_use";
         public static Config CONFIG = new Config();
-        private static TargetContext currentContext;
+        private static @Nullable TargetContext currentContext;
 
         private static void start() {
             if (ClientUtil.hasScreen()
@@ -206,7 +207,7 @@ public class BloodflowReverse extends Skill {
 
         private static final class TargetContext extends ClientContext {
             private final LocalPlayer player;
-            private LivingEntity target;
+            private @Nullable LivingEntity target;
 
             private TargetContext(LocalPlayer player) {
                 this.player = player;
@@ -238,7 +239,7 @@ public class BloodflowReverse extends Skill {
                 matrices.popPose();
             }
 
-            private LivingEntity updateTarget(float partialTick) {
+            private @Nullable LivingEntity updateTarget(float partialTick) {
                 target = findTarget(player, partialTick);
                 return target;
             }
@@ -255,7 +256,7 @@ public class BloodflowReverse extends Skill {
             }
         }
 
-        private static LivingEntity findTarget(LocalPlayer player, float partialTick) {
+        private static @Nullable LivingEntity findTarget(LocalPlayer player, float partialTick) {
             var eyePosition = player.getEyePosition(partialTick);
             return BloodflowReverse.findTarget(
                     player,
@@ -382,7 +383,7 @@ public class BloodflowReverse extends Skill {
             };
         }
 
-        private static LivingEntity findTarget(ServerPlayer player) {
+        private static @Nullable LivingEntity findTarget(ServerPlayer player) {
             var skill = Skills.BLOODFLOW_REVERSE.get();
             var additionalRange = skill.hasProficiencyMilestone(player, 2)
                     ? 4.0 : 0.0;
@@ -411,7 +412,7 @@ public class BloodflowReverse extends Skill {
             data.putInt(EFFECT_KEY, stacks);
         }
 
-        public static float adjustHealing(LivingEntity entity, float amount) {
+        public static float adjustHealing(@Nullable LivingEntity entity, float amount) {
             if (entity == null || !(amount > 0.0f) || entity.level().isClientSide()) return amount;
             var reduction = TimedSkillEffectRuntime.maxValueForTarget(
                     entity.getUUID(),

@@ -15,31 +15,26 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.*;
-import org.academy.api.common.ability.darkmatter.DarkmatterResourceService;
 import org.academy.api.common.ability.data.SkillData;
-import org.academy.api.common.ability.event.AbilityOverloadEvent;
-import org.academy.api.common.ability.event.AbilityRecoveryEvent;
+import org.academy.api.common.ability.event.*;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.profiler.AcademyProfiler;
 import org.academy.api.common.registries.AcademyKeys;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.wireless.WirelessUser;
-import org.academy.api.server.ability.AbilityServerAccess;
+import org.academy.api.server.ability.AbilityResourceLedger;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.ability.SkillTuning;
-import org.academy.api.server.ability.electromaster.IronSandResourceService;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.api.server.world.level.storage.PlayerData;
+import org.academy.api.server.world.level.storage.WorldData;
 import org.academy.internal.common.ability.development.AbilityDevelopmentAccess;
 import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.ability.proficiency.ProficiencyPolicy;
-import org.academy.internal.common.advancement.AbilityAdvancements;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.server.config.AbilityConfig;
-import org.academy.internal.server.world.level.storage.Player;
-import org.academy.internal.server.world.level.storage.WorldData;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.annotation.SubscribePacket;
@@ -53,7 +48,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
-public final class AbilitySystemServer implements AbilityServerAccess.Backend {
+public final class AbilitySystemServer {
     private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final StackWalker STATE_STACK_WALKER = StackWalker.getInstance(
             StackWalker.Option.RETAIN_CLASS_REFERENCE
@@ -64,9 +59,7 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
     private final SkillDataManager skillDataManager;
     private final PlayerDataManager playerDataManager;
     private final PlayerCPManager playerCPManager;
-    private final DarkmatterResourceManager darkmatterResourceManager;
-    private final AeromanipResourceManager aeromanipResourceManager;
-    private final IronSandResourceManager ironSandResourceManager;
+    private final Map<AbilityCategory, AbilityResourceLedger> resourceLedgers = new HashMap<>();
     private final PropsManager propsManager;
     private final SyncManager syncManager;
     private final MinecraftServer minecraftServer;
@@ -84,23 +77,13 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
         NeoForge.EVENT_BUS.register(playerCPManager);
         SubsystemRegistry.registerSubsystem(playerCPManager, SyncTypes.CP_DATA);
 
-        darkmatterResourceManager = new DarkmatterResourceManager(
-                playerDataManager, playerCPManager, syncManager);
-        SubsystemRegistry.registerSubsystem(darkmatterResourceManager, SyncTypes.DARKMATTER_STATE);
-
-        aeromanipResourceManager = new AeromanipResourceManager(
-                playerDataManager, playerCPManager, syncManager);
-        SubsystemRegistry.registerSubsystem(aeromanipResourceManager, SyncTypes.AEROMANIP_RESOURCE);
-
         propsManager = new PropsManager(playerDataManager, syncManager);
         NeoForge.EVENT_BUS.register(propsManager);
         SubsystemRegistry.registerSubsystem(propsManager, SyncTypes.PROPS_DATA);
 
         skillDataManager = new SkillDataManager(playerDataManager, syncManager);
         SubsystemRegistry.registerSubsystem(skillDataManager, SyncTypes.SKILL_DATA);
-        ironSandResourceManager = new IronSandResourceManager(playerDataManager, playerCPManager, syncManager);
-        SubsystemRegistry.registerSubsystem(ironSandResourceManager, SyncTypes.IRON_SAND_RESOURCE);
-        skillDataManager.setOnSkillLevelUp((uuid, levelsGained) ->
+        skillDataManager.setOnSkillLevelUp((uuid, _) ->
                 playerCPManager.refreshCommonSkillBonuses(uuid));
         skillDataManager.setOnSkillSetChanged(playerCPManager::refreshCommonSkillBonuses);
         skillDataManager.setOnProficiencyGain((uuid, amount) -> {
@@ -108,19 +91,16 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
             playerCPManager.refreshCommonSkillBonuses(uuid);
         });
 
-        for (var category : Registries.ABILITY_CATEGORIES) {
-            category.initServer(context);
-        }
-
-        for (var skill : Registries.SKILLS) {
-            skill.initServer(context);
-        }
-
         activeContexts = new ConcurrentHashMap<>();
         NeoForge.EVENT_BUS.register(this);
 
         MisakaNetworkServer.FUTURE_MANAGER.register(AbilitySystemServer.class);
         MisakaNetworkServer.NETWORK_MANAGER.register(AbilitySystemServer.class);
+    }
+
+    public void init() {
+        for (var category : Registries.ABILITY_CATEGORIES) category.initServer(minecraftServer);
+        for (var skill : Registries.SKILLS) skill.initServer(minecraftServer);
     }
 
     public static boolean isDevMode() {
@@ -151,7 +131,6 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
 
     @HandleFuture
     public static LearnSkillPacket.Response handleLearnSkill(LearnSkillPacket payload) {
-        // Legacy instant-learning requests are deliberately rejected. Learning must use StartSkillDevPacket.
         return new LearnSkillPacket.Response(false);
     }
 
@@ -230,7 +209,7 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
         var started = developData.start(new DevelopAction() {
             @Override
             public int getTotalTicks() {
-                return 200; // 10 seconds at 20 ticks/sec
+                return 200;
             }
 
             @Override
@@ -291,8 +270,6 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
             return new StartLevelDevPacket.Response(false, "Ability exp not full");
         }
 
-        // A missing category is always the initial Level 0 development, even if a legacy save
-        // contains an inconsistent CP level. Completing it repairs the player to category Level 1.
         var plan = LevelDevelopmentPlan.create(initialDevelopment, currentLevel);
         if (!AbilityDevelopmentAccess.canDevelopAbilityLevel(source, plan.targetLevel())) {
             return new StartLevelDevPacket.Response(
@@ -499,7 +476,6 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
         MisakaNetworkServer.NETWORK_MANAGER.register(serverContext);
     }
 
-    @Override
     public void unregisterContext(ServerContext serverContext) {
         removeContext(serverContext);
     }
@@ -587,22 +563,18 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
         }
     }
 
-    @Override
     public boolean proficiencyEnabled(ServerPlayer player) {
         return ProficiencyPolicy.server(player).enabled();
     }
 
-    @Override
     public boolean isSkillLearned(UUID uuid, String skillKey) {
         return getPlayerData(uuid).isSkillLearned(skillKey);
     }
 
-    @Override
     public Optional<SkillData> skillData(UUID uuid, String skillKey) {
         return Optional.ofNullable(getPlayerData(uuid).getSkillDataMap().get(skillKey));
     }
 
-    @Override
     public void markPlayerDirty(UUID uuid) {
         getPlayerData(uuid).markDirty();
     }
@@ -620,33 +592,26 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
         return propsManager.reset(player);
     }
 
-    public DarkmatterResourceManager getDarkmatterResourceManager() {
-        return darkmatterResourceManager;
+    public void registerResourceLedger(AbilityCategory category, AbilityResourceLedger ledger) {
+        resourceLedgers.put(Objects.requireNonNull(category), Objects.requireNonNull(ledger));
     }
 
-    public DarkmatterResourceService getDarkmatterResourceService() {
-        return darkmatterResourceManager;
+    public Optional<AbilityResourceLedger> resourceLedger(AbilityCategory category) {
+        return Optional.ofNullable(resourceLedgers.get(category));
     }
 
-    public AeromanipResourceManager getAeromanipResourceManager() {
-        return aeromanipResourceManager;
+    public PlayerDataManager getPlayerDataManager() {
+        return playerDataManager;
     }
 
-    public IronSandResourceManager getIronSandResourceManager() {
-        return ironSandResourceManager;
+    public PlayerCPManager getPlayerCPManager() {
+        return playerCPManager;
     }
 
-    public IronSandResourceService getIronSandResourceService() {
-        return ironSandResourceManager;
-    }
-
-    public Player getPlayerData(UUID uuid) {
+    public PlayerData getPlayerData(UUID uuid) {
         return Objects.requireNonNull(playerDataManager.getData(uuid));
     }
 
-    /**
-     * Interrupts current skill contexts once, without changing learned skills or cooldowns.
-     */
     public void interruptActiveSkills(ServerPlayer player) {
         var contexts = activeContexts.get(player.getUUID());
         if (contexts != null) List.copyOf(contexts).forEach(ServerContext::unregister);
@@ -749,7 +714,6 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
         }
         if (categoryChanged) {
             playerDataManager.setPlayerAbilityCategory(uuid, abilityCategory);
-            // Resource managers reinitialize the pool for the new category on the next tick.
             playerCPManager.setCurrMP(uuid, 0.0f);
             playerCPManager.setMaxMP(uuid, 0.0f);
         }
@@ -760,12 +724,8 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
         playerCPManager.refreshCommonSkillBonuses(uuid);
         playerCPManager.releaseAllOccupations(uuid);
         var onlinePlayer = minecraftServer.getPlayerList().getPlayer(uuid);
-        if (onlinePlayer != null) {
-            if (clearCategorySkills) {
-                AbilityAdvancements.revokeAll(onlinePlayer);
-            } else if (categoryChanged) {
-                AbilityAdvancements.onCategoryChanged(onlinePlayer, abilityCategory);
-            }
+        if (onlinePlayer != null && (clearCategorySkills || categoryChanged)) {
+            NeoForge.EVENT_BUS.post(new AbilityCategoryChangedEvent(onlinePlayer, abilityCategory, clearCategorySkills));
         }
     }
 
@@ -786,14 +746,6 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
 
     public float getPlayerSkillExp(UUID uuid, String skillKey) {
         return getPlayerSkillProficiency(uuid, skillKey);
-    }
-
-    /**
-     * @deprecated Use {@link #addPlayerSkillProficiency(UUID, Skill, ProficiencyEvent)}.
-     */
-    @Deprecated
-    public void addPlayerSkillExp(UUID uuid, Skill skill, SkillDataManager.ExpEvent expEvent) {
-        skillDataManager.addSkillExp(uuid, skill, expEvent);
     }
 
     public float getPlayerSkillProficiency(UUID uuid, String skillKey) {
@@ -829,11 +781,11 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
         var wasLearned = getPlayerData(serverPlayer.getUUID()).isSkillLearned(skillKey);
         skillDataManager.addSkill(serverPlayer, skillKey);
         if (!wasLearned && getPlayerData(serverPlayer.getUUID()).isSkillLearned(skillKey)) {
-            AbilityAdvancements.onSkillLearned(
+            NeoForge.EVENT_BUS.post(new SkillLearnedEvent(
                     serverPlayer,
                     getPlayerAbilityCategory(serverPlayer.getUUID()),
                     skillKey
-            );
+            ));
         }
     }
 
@@ -848,7 +800,7 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
         skillDataManager.removeSkill(uuid, skillKey);
         var player = minecraftServer.getPlayerList().getPlayer(uuid);
         if (wasLearned && player != null) {
-            AbilityAdvancements.onSkillRemoved(player, skillKey);
+            NeoForge.EVENT_BUS.post(new SkillRemovedEvent(player, skillKey));
         }
     }
 
@@ -896,9 +848,6 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
         return playerCPManager.getLevel(uuid);
     }
 
-    /**
-     * 请求CP占用，cost为动态计算
-     */
     public boolean castCpIfPossible(ServerPlayer player, Skill skill,
                                     Skill.CostCalculator calculator,
                                     Skill.SkillAction action) {
@@ -1023,24 +972,23 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
         );
 
         var baseCpCost = cpCalculator.calculate(ctx) * SkillTuning.costMultiplier(player, skill);
-        var compressedAirCost = mpCalculator.calculate(ctx);
+        var resourceCost = mpCalculator.calculate(ctx);
         if (!Float.isFinite(baseCpCost) || baseCpCost < 0.0f
-                || !Float.isFinite(compressedAirCost) || compressedAirCost < 0.0f) return false;
-        var ironSand = getPlayerAbilityCategory(uuid) == AbilityCategories.ELECTROMASTER.get();
-        if (!ironSand) compressedAirCost = OutputControl.adjustResourceCost(this, uuid, skill, compressedAirCost);
+                || !Float.isFinite(resourceCost) || resourceCost < 0.0f) return false;
+        var ledger = resourceLedgers.get(getPlayerAbilityCategory(uuid));
+        if (ledger == null) return false;
+        if (ledger.adjustsCost()) resourceCost = OutputControl.adjustResourceCost(this, uuid, skill, resourceCost);
         var actualCpCost = Math.max(0.0f,
                 OutputControl.adjustCpCost(this, uuid, skill, baseCpCost)
                         * playerCPManager.getCalculationIntensity(uuid));
         var iterationPoints = resolveIterationPoints(skill.getIterationTicks(player), baseCpCost);
-        var paid = ironSand
-                ? ironSandResourceManager.tryCast(player, skill, actualCpCost, compressedAirCost, iterationPoints, stackGroup, stackLimit)
-                : aeromanipResourceManager.tryCast(player, skill, actualCpCost, compressedAirCost, iterationPoints, stackGroup, stackLimit);
+        var paid = ledger.tryCast(player, skill, actualCpCost, resourceCost, iterationPoints, stackGroup, stackLimit);
         if (!paid) {
             if (discreteTrigger) {
-                var availableAir = aeromanipResourceManager.getCurrent(player);
+                var availableResource = ledger.getCurrent(player);
                 var availableCp = playerCPManager.getAvailableCP(uuid);
-                var message = availableAir + 1.0e-4f < compressedAirCost
-                        ? Component.translatable(ironSand ? "message.academy.iron_sand.insufficient_mass" : "message.academy.aeromanip.insufficient_air", compressedAirCost, availableAir)
+                var message = availableResource + 1.0e-4f < resourceCost
+                        ? ledger.insufficientResource(player, resourceCost)
                         : availableCp + 1.0e-4f < actualCpCost
                         ? Component.translatable("message.academy.aeromanip.insufficient_cp", actualCpCost, availableCp)
                         : Component.translatable("message.academy.aeromanip.cast_restricted");
@@ -1055,9 +1003,6 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
         return true;
     }
 
-    /**
-     * 请求CP占用，cost为静态值
-     */
     public boolean castCpIfPossible(ServerPlayer player, Skill skill,
                                     float cost,
                                     Skill.SkillAction action) {
@@ -1093,7 +1038,6 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
 
     public boolean tryPermanentOccupation(UUID uuid, float amount, Skill skill) {
         if (!Float.isFinite(amount) || amount < 0) return false;
-        // Single authority for the server's per-skill CP cost multiplier.
         var scaled = Math.max(0, amount * SkillTuning.costMultiplier(minecraftServer, skill));
         var actualAmount = Math.max(
                 0, scaled * playerCPManager.getCalculationIntensity(uuid));
@@ -1108,9 +1052,6 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
         return tryTimedOccupation(uuid, amount, skill, iterationTicks);
     }
 
-    /**
-     * Read-only cost quote matching the dynamic program charge, including proficiency and calculation efficiency.
-     */
     public float quoteTimedOccupation(ServerPlayer player, float amount, Skill skill) {
         if (!Float.isFinite(amount) || amount < 0) throw new IllegalArgumentException("Invalid occupation cost");
         var adjusted = skill.adjustProficiencyCost(player, SkillProficiencyProfile.CostKind.DYNAMIC, amount);
@@ -1130,9 +1071,6 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
         return tryTimedOccupation(uuid, amount, skill, iterationPoints, false);
     }
 
-    /**
-     * Reserves the independently paid attack portion of a maintained damage skill.
-     */
     public boolean tryTimedAttackOccupation(
             UUID uuid,
             float amount,
@@ -1150,7 +1088,6 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
             boolean outputAdjustable
     ) {
         if (!Float.isFinite(amount) || amount < 0) return false;
-        // Single authority for the server's per-skill CP cost multiplier.
         var scaled = amount * SkillTuning.costMultiplier(minecraftServer, skill);
         if (!Float.isFinite(scaled) || scaled < 0) return false;
         var adjusted = outputAdjustable
@@ -1167,9 +1104,6 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
         );
     }
 
-    /**
-     * Atomically reserves every timed charge, or reserves none of them.
-     */
     public boolean tryTimedOccupations(
             UUID uuid,
             Skill skill,
@@ -1191,7 +1125,6 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
 
     public boolean ensurePermanentOccupation(UUID uuid, float amount, Skill skill) {
         if (!Float.isFinite(amount) || amount < 0) return false;
-        // Single authority for the server's per-skill CP cost multiplier.
         var scaled = Math.max(0, amount * SkillTuning.costMultiplier(minecraftServer, skill));
         var actualAmount = Math.max(
                 0, scaled * playerCPManager.getCalculationIntensity(uuid));
@@ -1333,7 +1266,7 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
         playerCPManager.setLevel(uuid, level);
         var player = minecraftServer.getPlayerList().getPlayer(uuid);
         if (player != null) {
-            AbilityAdvancements.onLevelChanged(player, getPlayerAbilityCategory(uuid), level);
+            NeoForge.EVENT_BUS.post(new AbilityLevelChangedEvent(player, getPlayerAbilityCategory(uuid), level));
         }
     }
 
@@ -1555,7 +1488,6 @@ public final class AbilitySystemServer implements AbilityServerAccess.Backend {
                 });
 
                 AcademyProfiler.runZone("academy.server.dev.sync", () -> {
-                    // Send DevSyncPacket for all developing/completed players
                     var devMap = DEVELOP_DATA_MAP;
                     var keys = List.copyOf(devMap.keySet());
                     for (var uuid : keys) {

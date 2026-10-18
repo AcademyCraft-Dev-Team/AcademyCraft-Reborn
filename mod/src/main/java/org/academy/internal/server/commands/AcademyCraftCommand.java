@@ -38,6 +38,7 @@ import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatProfileRegistry;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatibilityDiagnostics;
 import org.academy.internal.common.ability.accelerator.reflection.compat.VectorCompatibilityMode;
+import org.academy.internal.common.ability.darkmatter.Darkmatter;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.server.ability.AbilitySystemServer;
 import org.academy.internal.server.vfx.SkillVfxRuntime;
@@ -571,7 +572,7 @@ public final class AcademyCraftCommand {
         }
 
         private static int info(CommandContext<CommandSourceStack> ctx, ServerPlayer player) {
-            var manager = CommandUtils.getSystem(ctx).getDarkmatterResourceManager();
+            var manager = Darkmatter.resourceService();
             var phase = manager.getPhaseSnapshot(player);
             var mp = manager.getView(player);
             var message = Component.literal(String.format(Locale.ROOT,
@@ -588,12 +589,12 @@ public final class AcademyCraftCommand {
 
         private static int level(CommandContext<CommandSourceStack> ctx, ServerPlayer player, int value) {
             CommandUtils.getSystem(ctx).setPlayerLevel(player.getUUID(), value);
-            CommandUtils.getSystem(ctx).getDarkmatterResourceManager().requestSync(player);
+            Darkmatter.resourceService().requestSync(player);
             return info(ctx, player);
         }
 
         private static int phase(CommandContext<CommandSourceStack> ctx, ServerPlayer player, int points) {
-            if (!CommandUtils.getSystem(ctx).getDarkmatterResourceManager().setAlphaPoints(player, points)) {
+            if (!Darkmatter.resourceService().setAlphaPoints(player, points)) {
                 ctx.getSource().sendFailure(Component.literal("Unable to set darkmatter phase points."));
                 return 0;
             }
@@ -602,7 +603,7 @@ public final class AcademyCraftCommand {
 
         private static int pools(CommandContext<CommandSourceStack> ctx, ServerPlayer player,
                                  float natural, float created, float debt, float reserved) {
-            if (!CommandUtils.getSystem(ctx).getDarkmatterResourceManager()
+            if (!Darkmatter.resourceService()
                     .debugSetPools(player, natural, created, debt, reserved)) {
                 ctx.getSource().sendFailure(Component.literal(
                         "Unable to apply pools; check category, learned generation, CP and base capacity."));

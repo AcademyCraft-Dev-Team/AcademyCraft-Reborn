@@ -7,6 +7,7 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.program.*;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.darkmatter.Darkmatter;
 import org.academy.internal.common.ability.darkmatter.resource.DarkmatterPhase;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisassemble;
 import org.academy.internal.common.ability.darkmatter.skills.lv2.DarkmatterCut;
@@ -15,7 +16,7 @@ import org.academy.internal.common.ability.program.ProgramActionTransaction;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.ability.program.ServerProgramTargetResolver;
 import org.academy.internal.common.ability.program.registry.AbilityProgramSpatialRanges;
-import org.academy.internal.server.ability.AbilitySystemServer;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Objects;
@@ -63,8 +64,7 @@ public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRu
     @Override
     public PhaseState phaseState() {
         var phase = DarkmatterPhase.snapshot(player);
-        var matter = AbilitySystemServer.getSystem(player)
-                .getDarkmatterResourceManager().getView(player);
+        var matter = Darkmatter.resourceService().getView(player);
         return new PhaseState(
                 phase.alphaPower(),
                 phase.betaPower(),
@@ -85,7 +85,7 @@ public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRu
             float power
     ) {
         return new ProgramActionTransaction.ProgramAction() {
-            private BlockPos target;
+            private @Nullable BlockPos target;
 
             @Override
             public void validate() {
@@ -118,7 +118,7 @@ public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRu
             float power
     ) {
         return new ProgramActionTransaction.ProgramAction() {
-            private Vec3 normalizedDirection;
+            private @Nullable Vec3 normalizedDirection;
 
             @Override
             public void validate() {
@@ -150,7 +150,7 @@ public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRu
             float power
     ) {
         return new ProgramActionTransaction.ProgramAction() {
-            private LivingEntity target;
+            private @Nullable LivingEntity target;
 
             @Override
             public void validate() {
@@ -183,7 +183,7 @@ public final class ServerDarkmatterProgramRuntime implements DarkmatterProgramRu
             float power
     ) {
         return new ProgramActionTransaction.ProgramAction() {
-            private Vec3 spawn;
+            private @Nullable Vec3 spawn;
 
             @Override
             public void validate() {

@@ -28,7 +28,7 @@ public final class MusicRoomStore {
     private MusicRoomStore() {
     }
 
-    public record Member(String id, String name) {
+    public record Member(String id, @Nullable String name) {
     }
 
     public record QueueEntry(SharedTrackEntry entry, String requesterName) {
@@ -38,12 +38,12 @@ public final class MusicRoomStore {
      * 单个房间的快照。当前曲目只存播放位置，恢复时以暂停态落盘，避免重启后自动续播喵。
      */
     public record Snapshot(
-            String code,
+            @Nullable String code,
             String name,
             String hostId,
             String hostName,
-            List<Member> members,
-            List<QueueEntry> queue,
+            @Nullable List<Member> members,
+            @Nullable List<QueueEntry> queue,
             @Nullable SharedTrackEntry currentEntry,
             String currentRequester,
             float currentPositionSeconds
@@ -63,7 +63,7 @@ public final class MusicRoomStore {
             if (roomsElement == null || roomsElement.isJsonNull()) return List.of();
             var type = new TypeToken<List<Snapshot>>() {
             }.getType();
-            List<Snapshot> loaded = GSON.fromJson(roomsElement, type);
+            List<@Nullable Snapshot> loaded = GSON.fromJson(roomsElement, type);
             if (loaded == null) return List.of();
             List<Snapshot> valid = new ArrayList<>();
             for (var snapshot : loaded) {

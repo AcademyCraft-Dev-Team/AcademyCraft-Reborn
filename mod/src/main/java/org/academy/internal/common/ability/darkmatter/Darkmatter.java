@@ -1,12 +1,5 @@
 package org.academy.internal.common.ability.darkmatter;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.IdentityHashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
@@ -36,23 +29,29 @@ import org.academy.api.client.render.vfxgraph.shape.SurfaceSampler;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilityResourceSpec;
+import org.academy.api.common.ability.SyncTypes;
+import org.academy.api.common.ability.darkmatter.DarkmatterResourceService;
 import org.academy.api.common.vfx.DirectionalArea;
 import org.academy.api.common.vfx.RepairVisualParts;
+import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.accelerator.Accelerator;
 import org.academy.internal.common.ability.development.AbilityDevelopmentProfiles;
-import org.academy.internal.common.network.DarkmatterVisualPacket.Kind;
 import org.academy.internal.common.network.DarkmatterVisualPacket;
+import org.academy.internal.common.network.DarkmatterVisualPacket.Kind;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.entity.projectile.DarkmatterFeatherProjectile;
+import org.academy.internal.server.ability.AbilitySystemServer;
+import org.academy.internal.server.ability.DarkmatterResourceManager;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 
-
+import java.util.*;
 
 
 public final class Darkmatter extends AbilityCategory {
+    private static @Nullable DarkmatterResourceService resourceService;
     public static final AbilityResourceSpec MATTER_RESOURCE = new AbilityResourceSpec(0.20f, 2.0f);
 
     public Darkmatter() {
@@ -79,9 +78,23 @@ public final class Darkmatter extends AbilityCategory {
         return Optional.of(MATTER_RESOURCE);
     }
 
+    @Override
+    public void initServer(MinecraftServerContext context) {
+        var system = context.getAcademyCraftServer().getAbilitySystemServer();
+        var ledger = new DarkmatterResourceManager(system.getPlayerDataManager(), system.getPlayerCPManager(),
+                system.getSyncManager());
+        AbilitySystemServer.SubsystemRegistry.registerSubsystem(ledger, SyncTypes.DARKMATTER_STATE);
+        resourceService = ledger;
+    }
+
+    public static DarkmatterResourceService resourceService() {
+        return Objects.requireNonNull(resourceService);
+    }
+
     public static final class Client {
         private Client() {
         }
+
         /**
          * One bounded graph per actor/target and kind, with explicit stop, leases and world identity checks.
          */
@@ -92,7 +105,7 @@ public final class Darkmatter extends AbilityCategory {
 
             private static final int MAX_EFFECTS = 64;
             private static final Map<Key, Visual> EFFECTS = new LinkedHashMap<>();
-            private static ClientLevel world;
+            private static @Nullable ClientLevel world;
 
             private DarkmatterVfxClient() {
             }
@@ -169,21 +182,21 @@ public final class Darkmatter extends AbilityCategory {
             }
 
             private static final class Visual {
-                final LivingEntity subject;
+                final @Nullable LivingEntity subject;
                 final ActiveEffect effect;
                 final ClientLevel level;
                 final long[] partTicks = new long[7];
                 DarkmatterVisualPacket state;
                 long updated;
                 Vec3 origin;
-                GraphCamera camera;
+                @Nullable GraphCamera camera;
                 boolean firstPerson;
-                Matrix4f[] bones;
-                Matrix4f modelRoot;
+                Matrix4f @Nullable [] bones;
+                @Nullable Matrix4f modelRoot;
 
-                Visual(DarkmatterVisualPacket packet, LivingEntity subject) {
+                Visual(DarkmatterVisualPacket packet, @Nullable LivingEntity subject) {
                     this.subject = subject;
-                    level = world;
+                    level = Objects.requireNonNull(world);
                     state = packet;
                     origin = packet.position;
                     Arrays.fill(partTicks, Long.MIN_VALUE / 2);
@@ -196,7 +209,8 @@ public final class Darkmatter extends AbilityCategory {
                 void refresh(DarkmatterVisualPacket packet) {
                     state = packet;
                     updated = level.getGameTime();
-                    for (int i = 0; i < partTicks.length; i++) if ((packet.parts & (1 << i)) != 0) partTicks[i] = updated;
+                    for (int i = 0; i < partTicks.length; i++)
+                        if ((packet.parts & (1 << i)) != 0) partTicks[i] = updated;
                 }
 
                 boolean valid() {
@@ -321,6 +335,7 @@ public final class Darkmatter extends AbilityCategory {
                 }
 
                 boolean sampleHand(int index, float u, float v, Vector3f p, Vector3f n) {
+                    if (subject == null || camera == null) return false;
                     int parts = parts();
                     boolean body = (parts & RepairVisualParts.BODY) != 0;
                     boolean main = (parts & RepairVisualParts.MAIN_HAND) != 0, off = (parts & RepairVisualParts.OFF_HAND) != 0;
@@ -389,7 +404,7 @@ public final class Darkmatter extends AbilityCategory {
             }
 
             private static final Map<Integer, Entry> FIELDS = new LinkedHashMap<>();
-            private static ClientLevel world;
+            private static @Nullable ClientLevel world;
             private static List<DirectionalArea> frame = List.of();
 
             private InterferenceFieldClient() {

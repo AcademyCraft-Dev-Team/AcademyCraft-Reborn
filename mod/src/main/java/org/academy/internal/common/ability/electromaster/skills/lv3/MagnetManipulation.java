@@ -2,10 +2,6 @@ package org.academy.internal.common.ability.electromaster.skills.lv3;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.resources.sounds.SoundInstance;
@@ -84,7 +80,10 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 
 public class MagnetManipulation extends Skill {
@@ -249,7 +248,7 @@ public class MagnetManipulation extends Skill {
         @EventBusSubscriber(Dist.CLIENT)
         public static final class MagneticLevitationVfxClient {
             private static final Map<Integer, SupportEffect> EFFECTS = new HashMap<>();
-            private static ClientLevel world;
+            private static @Nullable ClientLevel world;
 
             private MagneticLevitationVfxClient() {
             }
@@ -372,7 +371,7 @@ public class MagnetManipulation extends Skill {
         private static final String OLD_KEY_NAME_MOVE_START = SkillNames.MAGNET_MANIPULATION + "_move_start";
         private static final String OLD_KEY_NAME_MOVE_STOP = SkillNames.MAGNET_MANIPULATION + "_move_stop";
         public static Config CONFIG = new Config();
-        private static SoundInstance loopSound;
+        private static @Nullable SoundInstance loopSound;
         private static @Nullable PullMode activeMode;
         private static int activeTicks;
 
@@ -557,8 +556,9 @@ public class MagnetManipulation extends Skill {
                     MagneticFieldTuning.targetPullSpeed(skillMilestone()),
                     TARGET_STOP_DISTANCE
             );
+            var motionTarget = controlledTarget;
             EntityMotionGuard.runWithMotionSource(player,
-                    () -> controlledTarget.setDeltaMovement(velocity));
+                    () -> motionTarget.setDeltaMovement(velocity));
             controlledTarget.resetFallDistance();
             if (controlledTarget instanceof ServerPlayer targetPlayer) {
                 targetPlayer.connection.send(new ClientboundSetEntityMotionPacket(targetPlayer));

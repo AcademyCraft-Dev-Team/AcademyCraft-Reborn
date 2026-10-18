@@ -15,8 +15,8 @@ import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.render.RenderSpec;
 import org.academy.api.client.resources.R;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
-import org.lwjgl.BufferUtils;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -33,14 +33,18 @@ class BlockGeometryGraphVfxTest {
         var solid = ByteBuffer.allocateDirect(100).order(ByteOrder.nativeOrder());
         var cutout = ByteBuffer.allocateDirect(64).order(ByteOrder.nativeOrder());
         buffer.setFrame(new BlockGeometryFrame(
-                new ByteBuffer[]{solid, cutout, null}, new int[]{5, 3, 0}));
+                new @Nullable ByteBuffer[]{solid, cutout, null}, new int[]{5, 3, 0}));
         assertFalse(buffer.isEmpty());
         assertEquals(8, buffer.vertexCount());
-        assertSame(solid, buffer.layerVertices()[0]);
-        assertSame(cutout, buffer.layerVertices()[1]);
-        assertEquals(5, buffer.layerVertexCounts()[0]);
+        var layers = buffer.layerVertices();
+        var counts = buffer.layerVertexCounts();
+        assertNotNull(layers);
+        assertNotNull(counts);
+        assertSame(solid, layers[0]);
+        assertSame(cutout, layers[1]);
+        assertEquals(5, counts[0]);
         buffer.setFrame(new BlockGeometryFrame(
-                new ByteBuffer[]{solid, cutout, null}, new int[]{4, 0, 0}));
+                new @Nullable ByteBuffer[]{solid, cutout, null}, new int[]{4, 0, 0}));
         assertEquals(4, buffer.vertexCount());
     }
 
@@ -49,7 +53,7 @@ class BlockGeometryGraphVfxTest {
         var buffer = new BlockGeometryBuffer();
         var solid = ByteBuffer.allocateDirect(100).order(ByteOrder.nativeOrder());
         buffer.setFrame(new BlockGeometryFrame(
-                new ByteBuffer[]{solid, null, null}, new int[]{5, 0, 0}));
+                new @Nullable ByteBuffer[]{solid, null, null}, new int[]{5, 0, 0}));
         buffer.setFrame(null);
         assertTrue(buffer.isEmpty());
         assertNull(buffer.layerVertices());
@@ -95,7 +99,7 @@ class BlockGeometryGraphVfxTest {
         var solid = ByteBuffer.allocateDirect(20 * 44).order(ByteOrder.nativeOrder());
         var cutout = ByteBuffer.allocateDirect(8 * 44).order(ByteOrder.nativeOrder());
         var frame = new BlockGeometryFrame(
-                new ByteBuffer[]{solid, cutout, null}, new int[]{20, 8, 0});
+                new @Nullable ByteBuffer[]{solid, cutout, null}, new int[]{20, 8, 0});
         var sampled = new int[1];
         effect.setBlockGeometrySource(_ -> {
             sampled[0]++;
@@ -119,6 +123,6 @@ class BlockGeometryGraphVfxTest {
         assertThrows(IllegalArgumentException.class,
                 () -> new BlockGeometryFrame(new ByteBuffer[]{vertices}, new int[]{-1}));
         assertThrows(IllegalArgumentException.class,
-                () -> new BlockGeometryFrame(new ByteBuffer[]{null}, new int[]{1}));
+                () -> new BlockGeometryFrame(new @Nullable ByteBuffer[]{null}, new int[]{1}));
     }
 }

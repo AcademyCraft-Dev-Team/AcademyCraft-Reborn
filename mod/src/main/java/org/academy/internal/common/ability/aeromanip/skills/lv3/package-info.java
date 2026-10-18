@@ -1,4 +1,4 @@
-/**
- * Level 3 aeromanipulation skills.
- */
+@NullMarked
 package org.academy.internal.common.ability.aeromanip.skills.lv3;
+
+import org.jspecify.annotations.NullMarked;

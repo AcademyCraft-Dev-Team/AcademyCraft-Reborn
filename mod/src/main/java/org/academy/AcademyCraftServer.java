@@ -1,6 +1,5 @@
 package org.academy;
 
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.storage.LevelResource;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -11,9 +10,10 @@ import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.api.common.profiler.AcademyProfiler;
 import org.academy.api.common.util.FileUtil;
-import org.academy.api.server.ability.AbilityServerAccess;
 import org.academy.api.server.time.TemporalService;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.api.server.world.level.storage.PlayerData;
+import org.academy.api.server.world.level.storage.WorldData;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionOperationRuntime;
 import org.academy.internal.common.ability.proficiency.ProficiencySkillSettings;
 import org.academy.internal.common.ability.program.AbilityProgramManager;
@@ -39,8 +39,6 @@ import org.academy.internal.server.music.ServerJukeboxManager;
 import org.academy.internal.server.music.SharedAccountService;
 import org.academy.internal.server.time.TemporalRuntime;
 import org.academy.internal.server.wireless.WirelessManager;
-import org.academy.internal.server.world.level.storage.Player;
-import org.academy.internal.server.world.level.storage.WorldData;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -66,12 +64,11 @@ public final class AcademyCraftServer {
     private final MusicConfig musicConfig;
     private final DimensionEffectsConfig dimensionEffectsConfig;
     private final TemporalRuntime temporalRuntime;
-    private final MinecraftServer server;
     private long lastSaveTick = 0;
 
     private AcademyCraftServer(MinecraftServerContext context) {
         context.setAcademyCraftServer(this);
-        server = context.getMinecraftServer();
+        var server = context.getMinecraftServer();
         dimensionEffectsConfig = DimensionEffectsConfig.load(server.getServerDirectory()
                 .resolve("config").resolve(DimensionEffectsConfig.FILE_NAME));
 
@@ -92,8 +89,8 @@ public final class AcademyCraftServer {
         worldData = WorldData.getWorldData(worldDataFile);
         temporalRuntime = new TemporalRuntime(server);
         abilitySystemServer = new AbilitySystemServer(context, worldData, abilityConfig);
+        abilitySystemServer.init();
         damageCompletionTracker = new DamageCompletionTracker();
-        AbilityServerAccess.register(server, abilitySystemServer);
         WirelessManager.initServer();
         PvpSetting.initServer();
         FriendlyFireSetting.initServer();
@@ -141,7 +138,6 @@ public final class AcademyCraftServer {
         ServerProgramScheduler.clear(event.getServer());
         AbilityProgramManager.clear();
         PrecisionOperationRuntime.clear(event.getServer());
-        AbilityServerAccess.unregister(context);
         instance.abilitySystemServer.onServerStopping();
         SurvivalDefenseRuntime.shutdown();
         instance.temporalRuntime.shutdown();
@@ -214,12 +210,9 @@ public final class AcademyCraftServer {
         writeToFile(snapshot);
     }
 
-    /**
-     * @return JSON快照，没有脏数据则返回null
-     */
     private @Nullable String createSnapshotAndClean() {
         var hasDirtyData = worldData.getPlayers().values().stream()
-                .anyMatch(Player::isDirty);
+                .anyMatch(PlayerData::isDirty);
         if (!hasDirtyData) return null;
 
         String jsonSnapshot;
@@ -231,7 +224,7 @@ public final class AcademyCraftServer {
             return null;
         }
 
-        worldData.getPlayers().values().forEach(Player::clean);
+        worldData.getPlayers().values().forEach(PlayerData::clean);
         return jsonSnapshot;
     }
 

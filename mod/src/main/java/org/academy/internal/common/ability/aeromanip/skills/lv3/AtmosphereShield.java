@@ -38,6 +38,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.aeromanip.Aeromanip;
 import org.academy.internal.common.ability.aeromanip.config.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.skills.lv2.BreathingBubble;
 import org.academy.internal.common.ability.aeromanip.vfx.AeromanipVfx;
@@ -46,6 +47,7 @@ import org.academy.internal.common.ability.proficiency.ProficiencyPolicy;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.server.ability.AbilitySystemServer;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -160,7 +162,7 @@ public final class AtmosphereShield extends Skill {
         }
 
         public static boolean isActive(ServerPlayer player) {
-            return player != null && ACTIVE.contains(player)
+            return ACTIVE.contains(player)
                     && Skills.ATMOSPHERE_SHIELD.get().isEnabled(player);
         }
 
@@ -327,12 +329,12 @@ public final class AtmosphereShield extends Skill {
 
         private static boolean canAffordEffectAir(ServerPlayer player) {
             var cost = configuredEffectAirCost(player);
-            return AbilitySystemServer.getSystem(player).getAeromanipResourceManager()
+            return Aeromanip.resourceService()
                     .getCurrent(player) + 1.0e-4f >= cost;
         }
 
         private static boolean tryConsumeEffectAir(ServerPlayer player) {
-            var consumed = AbilitySystemServer.getSystem(player).getAeromanipResourceManager()
+            var consumed = Aeromanip.resourceService()
                     .tryConsume(player, configuredEffectAirCost(player));
             if (consumed) Skills.ATMOSPHERE_SHIELD.get().reportActivity(player, true);
             return consumed;
@@ -393,7 +395,7 @@ public final class AtmosphereShield extends Skill {
         }
 
         private static void syncModifier(
-                AttributeInstance attribute,
+                @Nullable AttributeInstance attribute,
                 Identifier id,
                 double amount,
                 boolean enabled

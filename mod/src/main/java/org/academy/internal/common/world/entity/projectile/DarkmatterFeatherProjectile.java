@@ -24,6 +24,7 @@ import org.academy.internal.common.ability.darkmatter.damage.DarkmatterLawMark;
 import org.academy.internal.common.ability.darkmatter.targeting.DarkmatterTargeting;
 import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.world.item.Items;
+import org.jspecify.annotations.Nullable;
 
 import java.util.UUID;
 
@@ -33,7 +34,7 @@ import java.util.UUID;
 public final class DarkmatterFeatherProjectile extends AbstractArrow implements ItemSupplier {
     private static final EntityDataAccessor<Boolean> PASSED_TARGET = SynchedEntityData.defineId(
             DarkmatterFeatherProjectile.class, EntityDataSerializers.BOOLEAN);
-    private UUID targetId;
+    private @Nullable UUID targetId;
     private float damage = 1.0f;
     private float exposureBurstDamage;
     private int maximumLifetime = 40;
@@ -64,7 +65,7 @@ public final class DarkmatterFeatherProjectile extends AbstractArrow implements 
 
     public void configure(
             ServerPlayer owner,
-            LivingEntity target,
+            @Nullable LivingEntity target,
             Vec3 direction,
             float damage,
             float exposureBurstDamage
@@ -74,7 +75,7 @@ public final class DarkmatterFeatherProjectile extends AbstractArrow implements 
 
     public void configure(
             ServerPlayer owner,
-            LivingEntity target,
+            @Nullable LivingEntity target,
             Vec3 direction,
             float damage,
             float exposureBurstDamage,
@@ -93,7 +94,7 @@ public final class DarkmatterFeatherProjectile extends AbstractArrow implements 
         var initial = target == null
                 ? direction
                 : target.getBoundingBox().getCenter().subtract(position());
-        if (initial == null || initial.lengthSqr() < 1.0e-8) {
+        if (initial.lengthSqr() < 1.0e-8) {
             initial = owner.getLookAngle();
         }
         var velocity = initial.normalize().scale(1.65);

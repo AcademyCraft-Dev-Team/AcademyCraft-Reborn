@@ -1,17 +1,7 @@
 package org.academy.internal.common.ability.accelerator;
 
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.ByteBufferBuilder;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.*;
 import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.*;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
@@ -34,10 +24,7 @@ import org.academy.api.client.util.VertexUtil;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.VortexAttackPattern;
 import org.academy.api.common.util.ImprovedNoise;
-import org.academy.internal.client.render.vfxgraph.BoundedAnimationTimeline;
-import org.academy.internal.client.render.vfxgraph.FrameContext;
-import org.academy.internal.client.render.vfxgraph.SweepAnimationTimeline;
-import org.academy.internal.client.render.vfxgraph.TickingVfx;
+import org.academy.internal.client.render.vfxgraph.*;
 import org.academy.internal.common.ability.development.AbilityDevelopmentProfiles;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.joml.FrustumIntersection;
@@ -47,8 +34,11 @@ import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.BufferUtils;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.*;
+
 import static org.academy.api.client.render.Render.RenderTypes.*;
-import org.academy.internal.client.render.vfxgraph.VfxContexts;
 
 public final class Accelerator extends AbilityCategory {
     public Accelerator() {
@@ -334,9 +324,10 @@ public final class Accelerator extends AbilityCategory {
                     // permanently tombstone an otherwise valid epoch; pending events expire independently.
                     return false;
                 });
+                var level = minecraft.level;
                 for (var timeline : SWEEP_ANIMATIONS.values()) {
                     timeline.prune(currentTick, SWEEP_DURATION_TICKS,
-                            entityId -> minecraft.level.getEntity(entityId) != null);
+                            entityId -> level.getEntity(entityId) != null);
                 }
                 BLACK_TO_WHITE_TRANSITIONS.entrySet().removeIf(entry ->
                         !WingTransitionAnimation.isActive(currentTick - entry.getValue())
@@ -437,7 +428,8 @@ public final class Accelerator extends AbilityCategory {
                     double radius = Math.max(blackBoundsRadius(current, position), blackBoundsRadius(pending, position));
                     double distance = position.distanceTo(new Vec3(camera.x, camera.y, camera.z));
                     if (distance - radius > 128 || !frustum.testSphere((float) (position.x - camera.x),
-                            (float) (position.y - camera.y + 1.4), (float) (position.z - camera.z), (float) radius)) continue;
+                            (float) (position.y - camera.y + 1.4), (float) (position.z - camera.z), (float) radius))
+                        continue;
                     double projectedDistance = distance * 1.428 / Math.max(0.1, Math.abs(ctx.projectionMatrix().m11()));
                     visual.requestedTier = player == minecraft.player ? 0
                             : VortexRenderBudget.preferred(projectedDistance, visual.requestedTier);
@@ -527,14 +519,15 @@ public final class Accelerator extends AbilityCategory {
                 }
                 BLACK_GRAPHS.entrySet().removeIf(entry -> {
                     var visual = BLACK_VISUALS.get(entry.getKey());
-                    if (retained.contains(entry.getKey()) && visual != null && now - visual.lastVisible <= 0.75) return false;
+                    if (retained.contains(entry.getKey()) && visual != null && now - visual.lastVisible <= 0.75)
+                        return false;
                     entry.getValue().stop();
                     return true;
                 });
                 BLACK_VISUALS.keySet().removeIf(id -> !retained.contains(id));
             }
 
-            private static double blackBoundsRadius(BlackAttack attack, Vec3 origin) {
+            private static double blackBoundsRadius(@Nullable BlackAttack attack, Vec3 origin) {
                 if (attack == null) return 10;
                 double radius = 18;
                 for (var target : attack.targets) radius = Math.max(radius, target.distanceTo(origin) + 16);
@@ -555,7 +548,7 @@ public final class Accelerator extends AbilityCategory {
                 return count;
             }
 
-            static WingTransitionAnimation.Projection transitionProjection(int entityId, double currentTick) {
+            static WingTransitionAnimation.@Nullable Projection transitionProjection(int entityId, double currentTick) {
                 var startTick = BLACK_TO_WHITE_TRANSITIONS.get(entityId);
                 if (startTick == null) return null;
                 var elapsedTicks = currentTick - startTick;
@@ -564,7 +557,7 @@ public final class Accelerator extends AbilityCategory {
                         : null;
             }
 
-            static boolean isTransitionWing(WingKind kind, WingTransitionAnimation.Projection transition) {
+            static boolean isTransitionWing(WingKind kind, WingTransitionAnimation.@Nullable Projection transition) {
                 return transition != null && (kind == WingKind.BLACK || kind == WingKind.WHITE);
             }
 
@@ -631,7 +624,7 @@ public final class Accelerator extends AbilityCategory {
             }
 
             static void buildSweepAnimations(ByteBuffer target, Matrix4f modelRoot, WingKind kind,
-                                                     int entityId, double currentTick, float effectTime) {
+                                             int entityId, double currentTick, float effectTime) {
                 if (entityId < 0) return;
                 var animations = SWEEP_ANIMATIONS.get(kind).entries(entityId);
                 for (var entry : animations) {
@@ -660,7 +653,7 @@ public final class Accelerator extends AbilityCategory {
             }
 
             private static void renderTornado(ByteBuffer target, Matrix4f tornadoBase,
-                                               float effectiveTime, float ringWidthScale) {
+                                              float effectiveTime, float ringWidthScale) {
                 var tPosBase = effectiveTime * TIME_POS_BASE;
                 var tWarp = effectiveTime * TIME_POS_WARP;
                 var tGap = effectiveTime * TIME_GAP;
@@ -1157,7 +1150,7 @@ public final class Accelerator extends AbilityCategory {
                 }
 
                 @Override
-                public InstanceGeometryFrame sample(float timeSeconds) {
+                public @Nullable InstanceGeometryFrame sample(float timeSeconds) {
                     var level = Minecraft.getInstance().level;
                     if (level == null) return null;
                     var roots = WingAvatarRegistry.entries();

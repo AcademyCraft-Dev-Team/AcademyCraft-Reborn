@@ -48,10 +48,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.WeakHashMap;
+import java.util.*;
 
 /**
  * Three-stage flow field: placed directional, following directional, or following radial.
@@ -112,7 +109,7 @@ public final class TailwindField extends Skill {
                 AbilityCategories.AEROMANIP.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.TAILWIND_FIELD.get(),
-                        List.of(PneumaticGrasp.Client.SKILL_INFO),
+                        List.of(Objects.requireNonNull(PneumaticGrasp.Client.SKILL_INFO)),
                         R.textures.tailwind_field_icon,
                         20,
                         104));

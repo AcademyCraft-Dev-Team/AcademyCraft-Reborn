@@ -22,6 +22,8 @@ public interface DarkmatterResourceService {
 
     boolean create(ServerPlayer player, float requestedUnits, float cpPerUnit);
 
+    boolean erase(ServerPlayer player, float requestedUnits, int iterationTicks);
+
     boolean consume(ServerPlayer player, float requestedUnits, Skill consumer, int iterationTicks);
 
     float consumeUpTo(ServerPlayer player, float requestedUnits, Skill consumer, int iterationTicks);
@@ -34,6 +36,10 @@ public interface DarkmatterResourceService {
     boolean reserve(ServerPlayer player, float units, Skill consumer, int iterationTicks);
 
     float releaseReservation(ServerPlayer player, float units);
+
+    void reconcile(ServerPlayer player);
+
+    boolean debugSetPools(ServerPlayer player, float natural, float created, float cpDebt, float reserved);
 
     void requestSync(ServerPlayer player);
 }

@@ -11,24 +11,11 @@ import com.mojang.renderpearl.api.GpuFormat;
 import com.mojang.renderpearl.api.buffers.GpuBuffer;
 import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
 import com.mojang.renderpearl.api.device.GpuDevice;
-import com.mojang.renderpearl.api.pipeline.BindGroupLayout;
-import com.mojang.renderpearl.api.pipeline.BlendFunction;
-import com.mojang.renderpearl.api.pipeline.ColorTargetState;
-import com.mojang.renderpearl.api.pipeline.CompareOp;
-import com.mojang.renderpearl.api.pipeline.DepthStencilState;
-import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
-import com.mojang.renderpearl.api.pipeline.RenderPipeline;
-import com.mojang.renderpearl.api.pipeline.UniformType;
+import com.mojang.renderpearl.api.pipeline.*;
 import com.mojang.renderpearl.api.textures.FilterMode;
 import com.mojang.renderpearl.api.textures.GpuTextureView;
 import com.mojang.renderpearl.api.vertex.VertexFormat;
 import io.netty.buffer.ByteBuf;
-import java.lang.Math;
-import java.nio.ByteBuffer;
-import java.util.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -58,7 +45,6 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.config.KeyBindingConfig;
@@ -67,6 +53,7 @@ import org.academy.api.client.render.Render;
 import org.academy.api.client.render.TextureBinding;
 import org.academy.api.client.render.UniformBinding;
 import org.academy.api.client.render.post.PostEffect;
+import org.academy.api.client.render.vfxgraph.render.VfxGlowHooks;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
@@ -75,6 +62,9 @@ import org.academy.api.common.ability.event.SkillExecutionStartEvent;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.client.render.vfxgraph.FrameContext;
+import org.academy.internal.client.render.vfxgraph.FrameProjectionContext;
+import org.academy.internal.client.render.vfxgraph.VfxContexts;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -87,9 +77,6 @@ import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.academy.internal.server.ability.AbilitySystemServer;
 import org.academy.internal.server.team.TeamRelations;
 import org.joml.*;
-import org.joml.Matrix4f;
-import org.joml.Vector3f;
-import org.joml.Vector4f;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.system.MemoryStack;
@@ -101,14 +88,12 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.lang.Math;
+import java.nio.ByteBuffer;
+import java.util.*;
+
 import static com.mojang.renderpearl.api.pipeline.RenderPipeline.builder;
 import static org.academy.AcademyCraft.academy;
-import org.academy.api.client.render.vfxgraph.render.VfxGlowHooks;
-import org.academy.internal.client.render.vfxgraph.FrameContext;
-import org.academy.internal.client.render.vfxgraph.FrameProjectionContext;
-import org.academy.internal.client.render.vfxgraph.VfxContexts;
-
-
 
 
 public final class SpacialExcision extends Skill {
@@ -189,7 +174,6 @@ public final class SpacialExcision extends Skill {
 
         @SubscribePacket
         public static void handleEnd(EndPacket packet) {
-            if (packet.sessionId() == null) return;
             Vfx.endSession(packet.sessionId());
         }
 
@@ -231,7 +215,7 @@ public final class SpacialExcision extends Skill {
             private RenderMath() {
             }
 
-            static WorldOrientationWeights worldOrientationWeights(Vector3fc tangent) {
+            static WorldOrientationWeights worldOrientationWeights(@Nullable Vector3fc tangent) {
                 if (tangent == null || !tangent.isFinite()) return WorldOrientationWeights.NONE;
                 var length = tangent.length();
                 if (!Float.isFinite(length) || length <= SCREEN_DIRECTION_EPSILON) {
@@ -248,8 +232,8 @@ public final class SpacialExcision extends Skill {
             }
 
             static Vector3f worldDisplacement(
-                    Vector3fc tangent,
-                    Vector3fc planeUp,
+                    @Nullable Vector3fc tangent,
+                    @Nullable Vector3fc planeUp,
                     float horizontalDistance,
                     float verticalDistance,
                     float progress
@@ -310,9 +294,9 @@ public final class SpacialExcision extends Skill {
             }
 
             static @Nullable AffineCutMapping regularizedAffineCutMapping(
-                    Vector3fc supportViewPosition,
-                    Vector3fc displacementView,
-                    Matrix4fc projection,
+                    @Nullable Vector3fc supportViewPosition,
+                    @Nullable Vector3fc displacementView,
+                    @Nullable Matrix4fc projection,
                     int viewportWidth,
                     int viewportHeight
             ) {
@@ -438,8 +422,7 @@ public final class SpacialExcision extends Skill {
             }
 
             private static boolean validCandidate(BackgroundCandidate candidate) {
-                return candidate != null
-                        && Double.isFinite(candidate.projectedArea())
+                return Double.isFinite(candidate.projectedArea())
                         && candidate.projectedArea() > 0.0
                         && Double.isFinite(candidate.distanceSquared())
                         && candidate.distanceSquared() >= 0.0;
@@ -579,7 +562,7 @@ public final class SpacialExcision extends Skill {
                 return new BreathParams(speed, unitFloat(phaseHash), amplitude);
             }
 
-            static float breathScale(BreathParams params, float gameTime) {
+            static float breathScale(@Nullable BreathParams params, float gameTime) {
                 if (params == null) return 1.0f;
                 if (!Float.isFinite(gameTime)) return 1.0f;
                 var angle = gameTime * params.speed() * (float) (2.0 * Math.PI)
@@ -2915,14 +2898,14 @@ public final class SpacialExcision extends Skill {
         }
 
         private boolean isOwnerTeleportExecution(Skill.ActiveExecutionContext context) {
-            if (context == null || context.player() != player || context.skill() == null) return false;
+            if (context.player() != player) return false;
             var skill = context.skill();
             return skill != Skills.SPACIAL_EXCISION.get()
                     && skill.getCategory() == AbilityCategories.TELEPORT.get();
         }
 
         private void recordSuccessfulTeleport(TeleportCompletedEvent event) {
-            if (ended || event.sourceLevel() == null || event.destinationLevel() == null
+            if (ended
                     || !event.sourceLevel().dimension().equals(event.destinationLevel().dimension())
                     || !SpacialExcisionMath.isFinite(event.origin())
                     || !SpacialExcisionMath.isFinite(event.destination())
@@ -3199,12 +3182,12 @@ public final class SpacialExcision extends Skill {
         }
 
         static boolean isFinite(Vec3 value) {
-            return value != null && Double.isFinite(value.x)
+            return Double.isFinite(value.x)
                     && Double.isFinite(value.y) && Double.isFinite(value.z);
         }
 
         private static boolean isFinite(AABB bounds) {
-            return bounds != null && Double.isFinite(bounds.minX)
+            return Double.isFinite(bounds.minX)
                     && Double.isFinite(bounds.minY) && Double.isFinite(bounds.minZ)
                     && Double.isFinite(bounds.maxX) && Double.isFinite(bounds.maxY)
                     && Double.isFinite(bounds.maxZ);
@@ -3259,7 +3242,7 @@ public final class SpacialExcision extends Skill {
                         ByteBufCodecs.LONG.decode(buffer),
                         ByteBufCodecs.LONG.decode(buffer),
                         ByteBufCodecs.LONG.decode(buffer),
-                        parseIdentifier(ByteBufCodecs.STRING_UTF8.decode(buffer)),
+                        Objects.requireNonNull(parseIdentifier(ByteBufCodecs.STRING_UTF8.decode(buffer))),
                         Vec3.STREAM_CODEC.decode(buffer),
                         Vec3.STREAM_CODEC.decode(buffer),
                         ByteBufCodecs.FLOAT.decode(buffer),
@@ -3364,7 +3347,7 @@ public final class SpacialExcision extends Skill {
         return new UUID(buffer.readLong(), buffer.readLong());
     }
 
-    private static Identifier parseIdentifier(String value) {
+    private static @Nullable Identifier parseIdentifier(String value) {
         return Identifier.tryParse(value);
     }
 }

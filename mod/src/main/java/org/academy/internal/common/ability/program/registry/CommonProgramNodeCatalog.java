@@ -6,7 +6,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 import org.academy.api.common.ability.program.*;
 import org.academy.internal.common.ability.program.ProgramChatHistory;
-import org.academy.internal.common.ability.program.ProgramSharedVariables;
 
 import java.math.BigInteger;
 import java.util.*;
@@ -1998,7 +1997,7 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         }
 
         public boolean matches(String message, boolean ownMessage) {
-            if (message == null || (sender.equals("self") && !ownMessage)
+            if ((sender.equals("self") && !ownMessage)
                     || (sender.equals("others") && ownMessage)) return false;
             if (mode.equals("any")) return true;
             if (keyword.isEmpty()) return false;

@@ -1,16 +1,6 @@
 package org.academy.api.client.render.vfxgraph.nodes;
 
-import org.academy.api.client.render.vfxgraph.shape.BoxShape;
-import org.academy.api.client.render.vfxgraph.shape.CircleEdgeShape;
-import org.academy.api.client.render.vfxgraph.shape.ConeShape;
-import org.academy.api.client.render.vfxgraph.shape.CylinderShape;
-import org.academy.api.client.render.vfxgraph.shape.DiscShape;
-import org.academy.api.client.render.vfxgraph.shape.EmitterShape;
-import org.academy.api.client.render.vfxgraph.shape.MeshAssets;
-import org.academy.api.client.render.vfxgraph.shape.MeshShape;
-import org.academy.api.client.render.vfxgraph.shape.PointShape;
-import org.academy.api.client.render.vfxgraph.shape.SphereShape;
-import org.academy.api.client.render.vfxgraph.shape.TorusShape;
+import org.academy.api.client.render.vfxgraph.shape.*;
 
 import java.util.Map;
 

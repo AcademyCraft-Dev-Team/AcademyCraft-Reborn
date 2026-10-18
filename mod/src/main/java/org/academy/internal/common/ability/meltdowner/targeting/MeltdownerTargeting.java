@@ -6,6 +6,7 @@ import net.minecraft.world.entity.player.Player;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.server.team.TeamRelations;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Centralizes Meltdowner target eligibility without bypassing the friendly-fire setting.
@@ -14,8 +15,8 @@ public final class MeltdownerTargeting {
     private MeltdownerTargeting() {
     }
 
-    public static boolean canAffectNegatively(ServerPlayer attacker, Entity target) {
-        if (attacker == null || target == null || target == attacker) return false;
+    public static boolean canAffectNegatively(ServerPlayer attacker, @Nullable Entity target) {
+        if (target == null || target == attacker) return false;
         if (PvpSetting.shouldPrevent(attacker, target)) return false;
         return allowsTarget(
                 TeamRelations.areAllied(attacker, target),

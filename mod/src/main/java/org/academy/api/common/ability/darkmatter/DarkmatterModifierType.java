@@ -1,5 +1,7 @@
 package org.academy.api.common.ability.darkmatter;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.Set;
 
 /**
@@ -30,7 +32,7 @@ public record DarkmatterModifierType(
         this(id, maxLevel, pointCost, 1, compatibleShapes, conflicts);
     }
 
-    public boolean supports(DarkmatterShape shape) {
+    public boolean supports(@Nullable DarkmatterShape shape) {
         return compatibleShapes.contains(shape);
     }
 

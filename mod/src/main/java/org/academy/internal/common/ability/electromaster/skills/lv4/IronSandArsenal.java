@@ -50,6 +50,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.Accelerator;
+import org.academy.internal.common.ability.electromaster.Electromaster;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.server.ability.AbilitySystemServer;
@@ -148,7 +149,7 @@ public class IronSandArsenal extends Skill {
             private static final Map<Integer, ActiveEffect> RINGS = new HashMap<>();
             private static final Map<Integer, ActiveEffect> CLOUDS = new HashMap<>();
             private static final ArrayDeque<ActiveEffect> TRANSIENTS = new ArrayDeque<>();
-            private static ClientLevel level;
+            private static @Nullable ClientLevel level;
 
             private IronSandVfxClient() {
             }
@@ -167,13 +168,16 @@ public class IronSandArsenal extends Skill {
                     if (!player.isAlive() || player.isRemoved()) continue;
                     var state = player.getData(AttachmentTypes.IRON_SAND_DATA.get());
                     if (state.defense()) RINGS.computeIfAbsent(player.getId(), _ -> attached("defense", player, false));
-                    if (state.cloudRadius() > 0) CLOUDS.computeIfAbsent(player.getId(), _ -> attached("cloud", player, true));
+                    if (state.cloudRadius() > 0)
+                        CLOUDS.computeIfAbsent(player.getId(), _ -> attached("cloud", player, true));
                 }
             }
 
             private static void prune(Map<Integer, ActiveEffect> effects, boolean cloud) {
+                var currentLevel = level;
+                if (currentLevel == null) return;
                 effects.entrySet().removeIf(entry -> {
-                    var entity = level.getEntity(entry.getKey());
+                    var entity = currentLevel.getEntity(entry.getKey());
                     var state = entity == null ? null : entity.getData(AttachmentTypes.IRON_SAND_DATA.get());
                     boolean remove = entity == null || !entity.isAlive() || entity.isRemoved()
                             || (cloud ? state.cloudRadius() <= 0 : !state.defense());
@@ -387,13 +391,13 @@ public class IronSandArsenal extends Skill {
         }
 
         public static boolean isActive(ServerPlayer player) {
-            return AbilitySystemServer.getSystem(player).getIronSandResourceService().isDefenseActive(player) || CONTEXTS.containsKey(player);
+            return Electromaster.resourceService().isDefenseActive(player) || CONTEXTS.containsKey(player);
         }
 
         public static void forceDisable(ServerPlayer player) {
             var context = CONTEXTS.get(player);
             if (context != null) context.unregister();
-            AbilitySystemServer.getSystem(player).getIronSandResourceService().setDefense(player, false);
+            Electromaster.resourceService().setDefense(player, false);
         }
 
         /**
@@ -405,13 +409,13 @@ public class IronSandArsenal extends Skill {
 
         public static AbilityActorContext actor(ServerPlayer player) {
             return AbilityActorContext.of(player, Skills.IRON_SAND_ARSENAL.get(),
-                    AbilitySystemServer.getSystem(player).getIronSandResourceService().account(player));
+                    Electromaster.resourceService().account(player));
         }
 
         @SubscribePacket
         public static void handleToggle(TogglePacket packet) {
             var player = packet.getPacketListener().getPlayer();
-            var service = AbilitySystemServer.getSystem(player).getIronSandResourceService();
+            var service = Electromaster.resourceService();
             service.setDefense(player, !service.isDefenseActive(player));
         }
 
@@ -440,7 +444,7 @@ public class IronSandArsenal extends Skill {
 
         public static void syncData(ServerPlayer player) {
             var context = CONTEXTS.get(player);
-            var defense = AbilitySystemServer.getSystem(player).getIronSandResourceService().isDefenseActive(player);
+            var defense = Electromaster.resourceService().isDefenseActive(player);
             var swing = Math.max(0, (int) (SWING_UNTIL.getOrDefault(player, 0L) - player.level().getServer().getTickCount()));
             var cloud = context != null && context.cloud;
             var milestone = Skills.IRON_SAND_ARSENAL.get().getEffectiveProficiencyMilestone(player);
@@ -455,7 +459,7 @@ public class IronSandArsenal extends Skill {
         }
 
         public static boolean intercept(ServerPlayer player, Projectile projectile) {
-            var service = AbilitySystemServer.getSystem(player).getIronSandResourceService();
+            var service = Electromaster.resourceService();
             if (!service.isDefenseActive(player) || !player.isAlive()) return false;
             var cost = IronSandTuning.massCost(10, Skills.IRON_SAND_ARSENAL.get().getEffectiveProficiencyMilestone(player));
             var impact = HostileProjectiles.sphereEntry(projectile.position(), projectile.position().add(projectile.getDeltaMovement()),

@@ -11,26 +11,18 @@ import net.minecraft.client.renderer.state.level.LevelRenderState;
 import net.neoforged.neoforge.common.NeoForge;
 import org.academy.api.client.render.LevelRenderEvent;
 import org.academy.api.client.render.MatrixStack;
-import org.academy.api.client.render.post.DirectionalFieldRenderer;
-import org.academy.api.client.render.post.GlowEffect;
-import org.academy.api.client.render.post.PostEffect;
-import org.academy.api.client.render.vfxgraph.render.GraphCamera;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.internal.client.ability.aeromanip.HighSpeedJetHighlightClient;
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
 import org.academy.internal.client.ability.mentalout.WideAreaInterferenceClientState;
 import org.academy.internal.client.render.vfxgraph.VfxContexts;
 import org.academy.internal.common.ability.darkmatter.Darkmatter;
-import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-
-
-
 
 
 @Mixin(LevelRenderer.class)

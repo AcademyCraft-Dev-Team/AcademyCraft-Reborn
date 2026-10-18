@@ -10,7 +10,6 @@ import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import org.academy.AcademyCraft;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.server.ability.SkillTuning;
 import org.academy.internal.common.attachment.AttachmentTypes;
@@ -57,7 +56,7 @@ public final class DestroyBlocksSetting {
     }
 
     public static boolean isDestroyBlocksEnabled(Player player) {
-        return player == null || player.getData(AttachmentTypes.DESTROY_BLOCKS_ENABLED.get());
+        return player.getData(AttachmentTypes.DESTROY_BLOCKS_ENABLED.get());
     }
 
     public static boolean canDestroyBlocks(ServerPlayer player) {
@@ -73,7 +72,7 @@ public final class DestroyBlocksSetting {
     public static boolean isServerBlockDestructionAllowed(Level level) {
         try {
             var server = level.getServer();
-            if (server == null || server.getAcademyCraftServer() == null) return true;
+            if (server == null) return true;
             return server.getAcademyCraftServer().getGenericConfig().general.blockDestruction;
         } catch (Throwable ignored) {
             return true;
@@ -81,13 +80,12 @@ public final class DestroyBlocksSetting {
     }
 
     public static boolean isSkillDestroyBlocksEnabled(Player player, Skill skill) {
-        if (player == null || skill == null) return true;
         return player.getData(AttachmentTypes.SKILL_DESTROY_BLOCKS_ENABLED.get())
                 .getOrDefault(skill.getKeyString(), true);
     }
 
     public static boolean supportsSkillBlockDestruction(Skill skill) {
-        return skill != null && BLOCK_DESTRUCTIVE_SKILLS.contains(skill.getKeyString());
+        return BLOCK_DESTRUCTIVE_SKILLS.contains(skill.getKeyString());
     }
 
     public static boolean canDestroyBlocks(ServerPlayer player, Skill skill) {
@@ -113,13 +111,12 @@ public final class DestroyBlocksSetting {
      */
     public static boolean isSkillBlockDestructionAvailable(Player player, Skill skill) {
         if (!supportsSkillBlockDestruction(skill)) return false;
-        if (player == null) return true;
         if (player.level().isClientSide()) {
             return SkillTuning.clientBlockDestructionAllowed(skill);
         }
         try {
             var server = player.level().getServer();
-            if (server == null || server.getAcademyCraftServer() == null) return true;
+            if (server == null) return true;
             return SkillTuningCore.allowBlockDestruction(
                     server.getAcademyCraftServer().getAbilityConfig(), skill);
         } catch (Throwable ignored) {
@@ -128,15 +125,14 @@ public final class DestroyBlocksSetting {
     }
 
     public static boolean usesIndependentBlockDestructionSetting(Skill skill) {
-        return skill != null && usesIndependentBlockDestructionSetting(skill.getKeyString());
+        return usesIndependentBlockDestructionSetting(skill.getKeyString());
     }
 
     static boolean usesIndependentBlockDestructionSetting(String skillId) {
-        return skillId != null && GLOBAL_SETTING_INDEPENDENT_SKILLS.contains(skillId);
+        return GLOBAL_SETTING_INDEPENDENT_SKILLS.contains(skillId);
     }
 
     public static void setDestroyBlocksEnabled(Player player, boolean enabled) {
-        if (player == null) return;
         player.setData(AttachmentTypes.DESTROY_BLOCKS_ENABLED.get(), enabled);
         if (player instanceof ServerPlayer serverPlayer) {
             serverPlayer.syncData(AttachmentTypes.DESTROY_BLOCKS_ENABLED.get());
@@ -144,7 +140,7 @@ public final class DestroyBlocksSetting {
     }
 
     public static void setSkillDestroyBlocksEnabled(Player player, Skill skill, boolean enabled) {
-        if (player == null || !supportsSkillBlockDestruction(skill)) return;
+        if (!supportsSkillBlockDestruction(skill)) return;
         // The server gate wins: a client may turn its own switch off, never on past the gate.
         if (enabled && !isSkillBlockDestructionAvailable(player, skill)) return;
         var settings = new HashMap<>(player.getData(AttachmentTypes.SKILL_DESTROY_BLOCKS_ENABLED.get()));

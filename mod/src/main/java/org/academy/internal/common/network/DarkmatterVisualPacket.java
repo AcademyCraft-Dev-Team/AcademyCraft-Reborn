@@ -20,9 +20,6 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 
-
-
-
 /**
  * Upserts bounded presentation state; camera and environmental lighting stay client-side.
  */

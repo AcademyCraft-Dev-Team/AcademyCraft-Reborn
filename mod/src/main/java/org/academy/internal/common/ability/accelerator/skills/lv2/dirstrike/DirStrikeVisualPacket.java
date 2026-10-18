@@ -8,7 +8,6 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
-import org.academy.internal.common.ability.accelerator.skills.lv2.dirstrike.DirStrike;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -17,9 +16,6 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-
-
-
 
 
 @PacketTarget(ThreadType.CLIENT)
@@ -113,9 +109,7 @@ public final class DirStrikeVisualPacket extends Packet<ClientPacketListener, Di
         }
 
         private static boolean valid(DirStrikeVisualPacket packet) {
-            return packet.center != null
-                    && packet.origin != null
-                    && packet.radius > 0
+            return packet.radius > 0
                     && packet.radius <= MAX_RADIUS
                     && Double.isFinite(packet.center.x)
                     && Double.isFinite(packet.center.y)

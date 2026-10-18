@@ -35,18 +35,20 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.structure.BlockStructure;
+import org.academy.api.server.ability.AbilityResourceUsage;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.aeromanip.Aeromanip;
 import org.academy.internal.common.ability.aeromanip.config.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.targeting.AeromanipTargeting;
 import org.academy.internal.common.ability.aeromanip.vfx.AeromanipVfx;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.server.ability.AbilitySystemServer;
-import org.academy.internal.server.ability.AeromanipResourceManager;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -57,6 +59,7 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.WeakHashMap;
 
 
@@ -85,7 +88,8 @@ public final class PneumaticGrasp extends Skill {
         InputSystem.addKeyBinding(Client.KEY_NAME_STOP, Client.CONFIG.getKeyBinding(Client.KEY_NAME_STOP,
                 InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_G, InputConstants.RELEASE, 0)), _ -> Client.stop());
         Client.SKILL_INFO = AbilitySystemClient.addSkillInfo(AbilityCategories.AEROMANIP.get(),
-                new AbilitySystemClient.SkillInfo(Skills.PNEUMATIC_GRASP.get(), List.of(FlowSense.Client.SKILL_INFO),
+                new AbilitySystemClient.SkillInfo(Skills.PNEUMATIC_GRASP.get(),
+                        List.of(Objects.requireNonNull(FlowSense.Client.SKILL_INFO)),
                         R.textures.pneumatic_grasp_icon, 75, 72));
     }
 
@@ -97,9 +101,9 @@ public final class PneumaticGrasp extends Skill {
     public static final class Client {
         public static final String KEY_NAME_START = SkillNames.PNEUMATIC_GRASP + "_start";
         public static final String KEY_NAME_STOP = SkillNames.PNEUMATIC_GRASP + "_stop";
-        public static AbilitySystemClient.SkillInfo SKILL_INFO;
+        public static AbilitySystemClient.@Nullable SkillInfo SKILL_INFO;
         public static Config CONFIG = new Config();
-        private static ControlContext currentContext;
+        private static @Nullable ControlContext currentContext;
 
         private static void start() {
             if (currentContext != null || !AbilitySystemClient.canUseSkill(Skills.PNEUMATIC_GRASP.get())) return;
@@ -175,8 +179,8 @@ public final class PneumaticGrasp extends Skill {
 
         private static final class Context extends ServerContext {
             private final ResourceKey<Level> dimension;
-            private final AeromanipResourceManager.UsageLease usageLease;
-            private Entity controlledTarget;
+            private final AbilityResourceUsage usageLease;
+            private @Nullable Entity controlledTarget;
             private double controlledSpeedCap;
             private double holdDistance = DEFAULT_CONTROL_DISTANCE;
             private int activeTicks;
@@ -185,8 +189,7 @@ public final class PneumaticGrasp extends Skill {
             private Context(ServerPlayer player) {
                 super(player);
                 dimension = player.level().dimension();
-                usageLease = AbilitySystemServer.getSystem(player)
-                        .getAeromanipResourceManager().beginUse(player);
+                usageLease = Aeromanip.resourceService().beginUse(player);
             }
 
             private void end() {
@@ -243,13 +246,14 @@ public final class PneumaticGrasp extends Skill {
                     end();
                     return;
                 }
+                var target = controlledTarget;
                 EntityMotionGuard.runWithMotionSource(
                         player,
-                        () -> moveTarget(controlledTarget, eye, look, skillLevel));
+                        () -> moveTarget(target, eye, look, skillLevel));
                 skill.reportActivity(player, true);
             }
 
-            private Entity findTarget(Vec3 eye, Vec3 look,
+            private @Nullable Entity findTarget(Vec3 eye, Vec3 look,
                                       int skillLevel, double range) {
                 var end = eye.add(look.scale(range));
                 var blockHit = player.level().clip(new ClipContext(
@@ -266,7 +270,8 @@ public final class PneumaticGrasp extends Skill {
                 return hit.getEntity();
             }
 
-            private boolean isValidTarget(Entity target, int skillLevel, double range) {
+            private boolean isValidTarget(@Nullable Entity target, int skillLevel, double range) {
+                if (target == null) return false;
                 return isControllable(target, skillLevel)
                         && target.level() == player.level()
                         && target.distanceToSqr(player) <= (range + 2.0) * (range + 2.0)
@@ -274,7 +279,7 @@ public final class PneumaticGrasp extends Skill {
             }
 
             private boolean isControllable(Entity entity, int skillLevel) {
-                if (entity == null || entity == player || !entity.isAlive() || entity.isSpectator()) return false;
+                if (entity == player || !entity.isAlive() || entity.isSpectator()) return false;
                 if (entity instanceof ItemEntity || entity instanceof ExperienceOrb || entity instanceof Projectile) {
                     return true;
                 }

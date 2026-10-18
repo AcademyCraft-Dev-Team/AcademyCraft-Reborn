@@ -48,11 +48,11 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.common.ability.teleport.Teleport;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.proficiency.ProficiencySkillSettings;
+import org.academy.internal.common.ability.teleport.Teleport;
 import org.academy.internal.common.ability.teleport.skills.lv3.LocationTeleport;
 import org.academy.internal.common.ability.teleport.targeting.TeleportSafety;
 import org.academy.internal.common.ability.teleport.targeting.TeleportSync;
@@ -329,12 +329,11 @@ public final class Flashing extends Skill {
         }
 
         public static boolean isDashInvulnerable(ServerPlayer player) {
-            return player != null
-                    && isDashInvulnerable(player.getUUID(), player.level().getGameTime());
+            return isDashInvulnerable(player.getUUID(), player.level().getGameTime());
         }
 
         public static boolean blocksNegativeHealthWrite(ServerPlayer player, float requestedHealth) {
-            return player != null && blocksNegativeHealthWrite(
+            return blocksNegativeHealthWrite(
                     player.getUUID(),
                     player.level().getGameTime(),
                     player.getHealth(),
@@ -351,8 +350,8 @@ public final class Flashing extends Skill {
             return isDashInvulnerable(playerId, now) && requestedHealth < currentHealth;
         }
 
-        static boolean tryAutoEscape(ServerPlayer player, DamageSource source) {
-            if (player == null || source == null || !player.isAlive() || player.hasDisconnected()) return false;
+        static boolean tryAutoEscape(ServerPlayer player, @Nullable DamageSource source) {
+            if (source == null || !player.isAlive() || player.hasDisconnected()) return false;
             var attacker = source.getEntity();
             var directAttacker = source.getDirectEntity();
             if ((attacker == null && directAttacker == null)
@@ -369,7 +368,7 @@ public final class Flashing extends Skill {
             var now = player.level().getGameTime();
             if (!isAutoEscapeReady(playerId, now)) return false;
             var sourcePosition = attacker != null ? attacker.position() : source.getSourcePosition();
-            if (sourcePosition == null && directAttacker != null) {
+            if (sourcePosition == null) {
                 sourcePosition = directAttacker.position();
             }
             var destination = findAutoEscapeDestination(player, sourcePosition);
@@ -420,10 +419,8 @@ public final class Flashing extends Skill {
         }
 
         static Vec3 autoEscapeDirection(Vec3 origin, Vec3 sourcePosition, double fallbackAngle) {
-            if (origin != null && sourcePosition != null) {
-                var away = origin.subtract(sourcePosition).multiply(1.0, 0.0, 1.0);
-                if (away.lengthSqr() >= 1.0e-6) return away.normalize();
-            }
+            var away = origin.subtract(sourcePosition).multiply(1.0, 0.0, 1.0);
+            if (away.lengthSqr() >= 1.0e-6) return away.normalize();
             return new Vec3(Math.cos(fallbackAngle), 0.0, Math.sin(fallbackAngle));
         }
 
@@ -524,7 +521,7 @@ public final class Flashing extends Skill {
         }
 
         private static final class DashInvulnerabilityState {
-            private WeakReference<ServerPlayer> player;
+            private @Nullable WeakReference<ServerPlayer> player;
             private int pendingDashes;
             private long graceEndTick = Long.MIN_VALUE;
         }

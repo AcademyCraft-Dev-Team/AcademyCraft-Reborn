@@ -29,7 +29,6 @@ import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -137,7 +136,7 @@ public final class KineticThrow extends Skill {
     }
 
     public static Vec3 throwDirection(Vec3 viewDirection) {
-        return viewDirection != null && viewDirection.lengthSqr() > 1.0e-8
+        return viewDirection.lengthSqr() > 1.0e-8
                 ? viewDirection.normalize()
                 : Vec3.ZERO;
     }
@@ -591,8 +590,7 @@ public final class KineticThrow extends Skill {
             }
 
             private boolean usableBy(ServerPlayer player) {
-                return structure != null
-                        && !structure.asEntity().isRemoved()
+                return !structure.asEntity().isRemoved()
                         && dimension.equals(player.level().dimension())
                         && structure.asEntity().level() == player.level();
             }

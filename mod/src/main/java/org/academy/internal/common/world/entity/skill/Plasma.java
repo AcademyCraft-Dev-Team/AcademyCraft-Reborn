@@ -51,8 +51,8 @@ public class Plasma extends RenderOnlyEntity {
     private boolean destroyBlocks;
     private int proficiencyMilestone;
     private int launchDelayTicks;
-    private Vec3 visualChargeOrigin;
-    private SkillVfxState.Plasma visualSnapshot;
+    private @Nullable Vec3 visualChargeOrigin;
+    private SkillVfxState.@Nullable Plasma visualSnapshot;
     private long visualReceivedAt;
 
     public Plasma(EntityType<?> entityType, Level level) {
@@ -226,7 +226,7 @@ public class Plasma extends RenderOnlyEntity {
         return launchScale;
     }
 
-    public Vec3 visualChargeOrigin() {
+    public @Nullable Vec3 visualChargeOrigin() {
         return visualChargeOrigin;
     }
 

@@ -1,14 +1,5 @@
 package org.academy.internal.common.ability.electromaster;
 
-import java.lang.ref.WeakReference;
-import java.util.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
@@ -32,12 +23,9 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.common.damagesource.DamageContainer;
-import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.client.render.graph.type.Value;
@@ -48,6 +36,7 @@ import org.academy.api.client.render.vfxgraph.shape.SurfaceProjector;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilityResourceSpec;
+import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.arc.ArcPath;
 import org.academy.api.common.arc.modifier.ColorModifier;
 import org.academy.api.common.arc.modifier.JaggedModifier;
@@ -60,6 +49,7 @@ import org.academy.api.common.arc.property.Knot;
 import org.academy.api.common.damage.DamageComposition;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.damage.TrueHealthDamageSource;
+import org.academy.api.server.ability.electromaster.IronSandResourceService;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.render.vfxgraph.CameraShakeManager;
 import org.academy.internal.client.render.vfxgraph.FrameContext;
@@ -76,8 +66,8 @@ import org.academy.internal.common.world.damagesource.CTAEntityActuallyHurt;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.academy.internal.common.world.entity.skill.ArcEffect;
-import org.academy.internal.common.world.entity.skill.MagneticWeaponBlade;
 import org.academy.internal.server.ability.AbilitySystemServer;
+import org.academy.internal.server.ability.IronSandResourceManager;
 import org.academy.internal.server.entity.SurvivalDefense;
 import org.academy.mixin.common.CooldownInstanceAccess;
 import org.academy.mixin.common.ItemCooldownsAccess;
@@ -85,9 +75,11 @@ import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 
-
+import java.lang.ref.WeakReference;
+import java.util.*;
 
 public final class Electromaster extends AbilityCategory {
+    private static @Nullable IronSandResourceService resourceService;
     public static final int PARALYSIS_TICKS = 10;
     public static final int INTERRUPTION_MIN_TICKS = 10;
     public static final int INTERRUPTION_MAX_TICKS = 20;
@@ -97,7 +89,8 @@ public final class Electromaster extends AbilityCategory {
     private final Map<UUID, ChargeState> charges = new HashMap<>();
 
     public static long now(LivingEntity target) {
-        return target.level().getServer().getTickCount();
+        if (!(target.level() instanceof ServerLevel level)) return 0L;
+        return level.getServer().getTickCount();
     }
 
     public static int chargePoints(String skill) {
@@ -337,6 +330,20 @@ public final class Electromaster extends AbilityCategory {
     }
 
     @Override
+    public void initServer(MinecraftServerContext context) {
+        var system = context.getAcademyCraftServer().getAbilitySystemServer();
+        var ledger = new IronSandResourceManager(system.getPlayerDataManager(), system.getPlayerCPManager(),
+                system.getSyncManager());
+        AbilitySystemServer.SubsystemRegistry.registerSubsystem(ledger, SyncTypes.IRON_SAND_RESOURCE);
+        system.registerResourceLedger(this, ledger);
+        resourceService = ledger;
+    }
+
+    public static IronSandResourceService resourceService() {
+        return Objects.requireNonNull(resourceService);
+    }
+
+    @Override
     public Optional<ResourceKey<DamageType>> getDefaultDamageType() {
         return Optional.of(DamageTypes.ELECTRO_DAMAGE);
     }
@@ -356,6 +363,7 @@ public final class Electromaster extends AbilityCategory {
 
         private Client() {
         }
+
         public static final class ArcEffectGraphVfx {
             private static final float CULLING_RADIUS = 10.0f;
             private static final float RENDER_DISTANCE = 64.0f;
@@ -487,7 +495,7 @@ public final class Electromaster extends AbilityCategory {
             private boolean released;
 
             public SkyStrikeEffect(Vec3 impact, long seed, SkyStrikeProfile profile,
-                                SkyStrikeGeometry.Detail requestedDetail, float flashIntensity, float feedbackAttenuation) {
+                                   SkyStrikeGeometry.Detail requestedDetail, float flashIntensity, float feedbackAttenuation) {
                 this.profile = profile;
                 this.flashIntensity = clamp01(flashIntensity);
                 this.feedbackAttenuation = clamp01(feedbackAttenuation);

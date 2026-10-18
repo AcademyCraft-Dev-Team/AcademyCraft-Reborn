@@ -1,8 +1,9 @@
 package org.academy.internal.server.ability;
 
 import org.academy.api.common.data.AbilityData;
-import org.academy.internal.server.world.level.storage.Player;
-import org.academy.internal.server.world.level.storage.WorldData;
+import org.academy.api.server.world.level.storage.PlayerData;
+import org.academy.api.server.world.level.storage.WorldData;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -13,8 +14,8 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NativeCpRecoveryTest {
-    private static Player grownPlayer(float maximum, float applied) {
-        var player = new Player();
+    private static PlayerData grownPlayer(float maximum, float applied) {
+        var player = new PlayerData();
         player.getCpData().setMaxCP(maximum);
         player.getCpData().setAvailableCP(maximum);
         player.setAppliedCommonSkillMaxCpBonus(applied);
@@ -81,7 +82,7 @@ class NativeCpRecoveryTest {
 
     @Test
     void migratesUninitializedSavesWithoutDoubleApplyingDerivedGrowth() {
-        var player = new Player();
+        var player = new PlayerData();
         PlayerCPManager.updateAcademyMaxCp(player, 300);
         PlayerCPManager.restoreAcademyMaxCp(player, null);
         assertEquals(400, player.getCpData().getMaxCP());
@@ -123,7 +124,7 @@ class NativeCpRecoveryTest {
     void removesMalformedEntriesWithoutCreatingNonFiniteCpOrRefundingTwice() {
         var data = new AbilityData();
         data.setAvailableCP(10);
-        var occupations = new ArrayList<AbilityData.CpOccupationData>();
+        var occupations = new ArrayList<AbilityData.@Nullable CpOccupationData>();
         occupations.add(null);
         occupations.add(new AbilityData.CpOccupationData(Float.NaN, 0, "unknown", true));
         occupations.add(new AbilityData.CpOccupationData(-20, 0, "unknown", true));

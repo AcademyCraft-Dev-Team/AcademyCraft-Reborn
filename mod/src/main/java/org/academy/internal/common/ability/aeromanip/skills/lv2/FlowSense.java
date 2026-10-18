@@ -12,7 +12,6 @@ import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -34,6 +33,7 @@ import org.academy.internal.common.ability.aeromanip.skills.lv1.AirflowJet;
 import org.academy.internal.common.ability.aeromanip.vfx.AeromanipVfx;
 import org.academy.internal.common.ability.proficiency.ProficiencyPolicy;
 import org.academy.internal.common.network.PacketTypes;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -111,7 +111,7 @@ public final class FlowSense extends Skill {
 
     public static final class Client {
         public static final String KEY_NAME_TOGGLE = SkillNames.FLOW_SENSE + "_toggle";
-        public static AbilitySystemClient.SkillInfo SKILL_INFO;
+        public static AbilitySystemClient.@Nullable SkillInfo SKILL_INFO;
         public static Config CONFIG = new Config();
 
         private Client() {

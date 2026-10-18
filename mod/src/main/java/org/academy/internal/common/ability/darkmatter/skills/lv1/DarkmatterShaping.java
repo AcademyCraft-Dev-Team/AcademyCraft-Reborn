@@ -31,12 +31,14 @@ import org.academy.internal.client.gui.screen.DarkmatterShapingScreen;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.darkmatter.Darkmatter;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.item.DarkmatterBlockItem;
 import org.academy.internal.common.world.item.DarkmatterItemUtil;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.server.ability.AbilitySystemServer;
 import org.academy.mixin.client.AbstractContainerScreenAccessor;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -204,7 +206,7 @@ public final class DarkmatterShaping extends Skill {
                     level, alpha, total - alpha, validation.modifiers());
             var cost = shapingCost(shape.baseMatterCost()
                     + validation.usedPoints() * 0.5f, milestone);
-            var resource = system.getDarkmatterResourceManager();
+            var resource = Darkmatter.resourceService();
             if (!resource.consume(player, cost, skill, skill.getIterationTicks(player))) {
                 return Result.INSUFFICIENT_MP;
             }
@@ -257,7 +259,7 @@ public final class DarkmatterShaping extends Skill {
         }
 
         public static ModifierValidation validateModifiers(
-                DarkmatterShape shape, Map<String, Integer> requested,
+                @Nullable DarkmatterShape shape, Map<String, Integer> requested,
                 int abilityLevel, int milestone
         ) {
             DarkmatterModifiers.bootstrap();
@@ -270,9 +272,9 @@ public final class DarkmatterShaping extends Skill {
             } else if (!shape.isUnlockedAt(level)) {
                 errors.add("locked_shape:" + shape.id() + ":" + shape.requiredAbilityLevel());
             }
-            if (requested != null) for (var entry : requested.entrySet()) {
+            for (var entry : requested.entrySet()) {
                 var type = DarkmatterShapingRegistries.modifier(entry.getKey()).orElse(null);
-                var requestedLevel = entry.getValue() == null ? 0 : entry.getValue();
+                var requestedLevel = entry.getValue();
                 if (type == null || requestedLevel < 0 || requestedLevel > type.maxLevel()) {
                     errors.add("modifier:" + entry.getKey());
                     continue;
@@ -313,7 +315,7 @@ public final class DarkmatterShaping extends Skill {
             if (!isMaterialInventorySlot(slotIndex)
                     || !inventory.getItem(slotIndex).isEmpty()) return Result.INVALID_SLOT;
             var stack = new ItemStack(Items.DARKMATTER.get());
-            var resource = AbilitySystemServer.getSystem(player).getDarkmatterResourceManager();
+            var resource = Darkmatter.resourceService();
             if (!resource.consume(player, shapingCost(MATERIAL_MATTER_COST,
                             skill.getEffectiveProficiencyMilestone(player)), skill,
                     skill.getIterationTicks(player))) return Result.INSUFFICIENT_MP;
@@ -530,8 +532,7 @@ public final class DarkmatterShaping extends Skill {
             this.shape = shape;
             this.alphaPercent = alphaPercent;
             this.modifiers = Map.copyOf(modifiers);
-            this.blockProfile = blockProfile == null
-                    ? DarkmatterBlockProfile.DEFAULT : blockProfile;
+            this.blockProfile = blockProfile;
             this.slotIndex = slotIndex;
         }
 

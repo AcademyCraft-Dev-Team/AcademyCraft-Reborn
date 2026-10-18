@@ -14,6 +14,7 @@ import org.academy.api.common.ability.darkmatter.DarkmatterShape;
 import org.academy.api.common.ability.darkmatter.DarkmatterShapingProfile;
 import org.academy.internal.common.ability.darkmatter.equipment.DarkmatterEnchantments;
 import org.academy.internal.common.ability.darkmatter.resource.DarkmatterIntegrityCurve;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Set;
 
@@ -255,7 +256,7 @@ public final class DarkmatterItemUtil {
     }
 
     public static ItemStack createAnvilUpgradeResult(RegistryAccess access, ItemStack left,
-                                                     String renameText) {
+                                                     @Nullable String renameText) {
         if (left.isEmpty()) return ItemStack.EMPTY;
         var result = left.copy();
         var changed = repairDurability(result)

@@ -1,11 +1,12 @@
 package org.academy.api.client.render.vfxgraph.block;
 
-import java.nio.ByteBuffer;
 import org.jspecify.annotations.Nullable;
 
+import java.nio.ByteBuffer;
+
 public final class BlockGeometryBuffer {
-    private @Nullable ByteBuffer[] layerVertices;
-    private @Nullable int[] layerVertexCounts;
+    private @Nullable ByteBuffer @Nullable [] layerVertices;
+    private int @Nullable [] layerVertexCounts;
 
     public void setFrame(@Nullable BlockGeometryFrame frame) {
         if (frame == null) {
@@ -17,11 +18,11 @@ public final class BlockGeometryBuffer {
         layerVertexCounts = frame.layerVertexCounts();
     }
 
-    public @Nullable ByteBuffer[] layerVertices() {
+    public @Nullable ByteBuffer @Nullable [] layerVertices() {
         return layerVertices;
     }
 
-    public @Nullable int[] layerVertexCounts() {
+    public int @Nullable [] layerVertexCounts() {
         return layerVertexCounts;
     }
 

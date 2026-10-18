@@ -8,11 +8,11 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import org.academy.AcademyCraft;
 import org.academy.api.common.ability.Skill;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.server.config.AbilityConfig;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -31,10 +31,6 @@ public final class ProficiencyPolicy {
     }
 
     public static Snapshot server(ServerPlayer player) {
-        if (player == null || player.level().getServer() == null
-                || player.level().getServer().getAcademyCraftServer() == null) {
-            return Snapshot.DEFAULT;
-        }
         return sanitize(player.level().getServer().getAcademyCraftServer()
                 .getAbilityConfig().proficiency);
     }
@@ -43,7 +39,7 @@ public final class ProficiencyPolicy {
         return clientSnapshot;
     }
 
-    public static boolean clientHasRestriction(Skill skill) {
+    public static boolean clientHasRestriction(@Nullable Skill skill) {
         if (skill == null) return false;
         var policy = clientSnapshot;
         if (!policy.enabled()) return true;
@@ -60,7 +56,7 @@ public final class ProficiencyPolicy {
         MisakaNetworkClient.NETWORK_MANAGER.register(Client.class);
     }
 
-    static Snapshot sanitize(AbilityConfig.ProficiencySettings settings) {
+    static Snapshot sanitize(AbilityConfig.@Nullable ProficiencySettings settings) {
         if (settings == null) return Snapshot.DEFAULT;
         return new Snapshot(
                 settings.enabled,
@@ -124,7 +120,7 @@ public final class ProficiencyPolicy {
         private final Snapshot snapshot;
 
         public SyncPacket(Snapshot snapshot) {
-            this.snapshot = snapshot == null ? Snapshot.DEFAULT : snapshot;
+            this.snapshot = snapshot;
         }
 
         @Override

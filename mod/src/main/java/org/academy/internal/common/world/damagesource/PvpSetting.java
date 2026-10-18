@@ -19,11 +19,11 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.academy.AcademyCraft;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.server.ability.AbilityEffectPolicy;
 import org.academy.internal.server.pvp.PvpCooldownData;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -54,7 +54,7 @@ public final class PvpSetting {
     }
 
     public static boolean isPvpEnabled(Player player) {
-        return player == null || player.getData(AttachmentTypes.PVP_ENABLED.get());
+        return player.getData(AttachmentTypes.PVP_ENABLED.get());
     }
 
     private static void setPvpEnabled(ServerPlayer player, boolean enabled) {
@@ -86,18 +86,16 @@ public final class PvpSetting {
     }
 
     public static int remainingSwitchCooldownTicks(ServerPlayer player) {
-        if (player == null || player.level().getServer() == null) return 0;
         return PvpCooldownData.get(player.level().getServer()).remainingTicks(player.getUUID());
     }
 
     public static void startSwitchCooldown(ServerPlayer player) {
-        if (player == null || player.level().getServer() == null) return;
         PvpCooldownData.get(player.level().getServer()).startOrRefresh(
                 player.getUUID(), SWITCH_COOLDOWN_TICKS);
     }
 
     public static void recordSkillDamage(ServerPlayer attacker, LivingEntity target, float inflictedDamage) {
-        if (attacker == null || target == null || !shouldStartCooldown(
+        if (!shouldStartCooldown(
                 target instanceof Player, target == attacker, inflictedDamage)) return;
         startSwitchCooldown(attacker);
     }
@@ -108,7 +106,6 @@ public final class PvpSetting {
     }
 
     public static ChangeResult trySetPvpEnabled(ServerPlayer player, boolean enabled) {
-        if (player == null) return ChangeResult.UNCHANGED;
         var current = isPvpEnabled(player);
         var remainingTicks = remainingSwitchCooldownTicks(player);
         var result = changeResult(current, enabled, remainingTicks);
@@ -130,7 +127,6 @@ public final class PvpSetting {
     }
 
     public static ProtectionReason protectionReason(Player attacker, LivingEntity target) {
-        if (attacker == null || target == null) return ProtectionReason.NONE;
         var playerTarget = target instanceof Player;
         var samePlayer = target == attacker;
         if (playerTarget && !samePlayer) {
@@ -153,7 +149,7 @@ public final class PvpSetting {
     public static boolean isServerPvpAllowed(Level level) {
         try {
             var server = level.getServer();
-            if (server == null || server.getAcademyCraftServer() == null) return true;
+            if (server == null) return true;
             return server.getAcademyCraftServer().getGenericConfig().general.pvp;
         } catch (Throwable ignored) {
             return true;
@@ -187,14 +183,13 @@ public final class PvpSetting {
         return target instanceof LivingEntity living && shouldPrevent(attacker, living);
     }
 
-    public static ServerPlayer resolveAttacker(DamageSource source) {
-        if (source == null) return null;
+    public static @Nullable ServerPlayer resolveAttacker(DamageSource source) {
         if (source.getEntity() instanceof ServerPlayer player) return player;
         var direct = source.getDirectEntity();
         if (direct instanceof ServerPlayer player) return player;
         if (direct instanceof Projectile projectile
                 && projectile.getOwner() instanceof ServerPlayer player) return player;
-        var owner = FriendlyFireSetting.getOwnerEntity(direct);
+        var owner = direct == null ? null : FriendlyFireSetting.getOwnerEntity(direct);
         return owner instanceof ServerPlayer player ? player : null;
     }
 
@@ -281,8 +276,7 @@ public final class PvpSetting {
 
         @SubscribeEvent
         public static void onPlayerTick(PlayerTickEvent.Post event) {
-            if (!(event.getEntity() instanceof ServerPlayer player)
-                    || player.level().getServer() == null) return;
+            if (!(event.getEntity() instanceof ServerPlayer player)) return;
             PvpCooldownData.get(player.level().getServer()).tickOnline(player.getUUID());
         }
     }

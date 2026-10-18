@@ -7,7 +7,7 @@ import org.academy.api.common.structure.BlockStructure;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.structure.BlockStructureKinetics;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.UUID;
 
@@ -19,7 +19,7 @@ public final class VectorMotionRedirects {
         return entity.getData(AttachmentTypes.VECTOR_PROJECTILE_REDIRECT.get());
     }
 
-    public static boolean isRedirected(Entity entity) {
+    public static boolean isRedirected(@Nullable Entity entity) {
         return entity != null && get(entity).isRedirected();
     }
 

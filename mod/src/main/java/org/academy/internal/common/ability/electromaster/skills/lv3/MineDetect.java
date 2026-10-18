@@ -23,7 +23,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -43,6 +42,7 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.server.ability.AbilitySystemServer;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -141,8 +141,8 @@ public final class MineDetect extends Skill {
         };
         public static Config CONFIG = new Config();
 
-        private static ClientLevel scanLevel;
-        private static BlockPos scanCenter;
+        private static @Nullable ClientLevel scanLevel;
+        private static @Nullable BlockPos scanCenter;
         private static long nextPeriodicScan;
         private static boolean active;
         private static boolean scanning;
@@ -196,6 +196,7 @@ public final class MineDetect extends Skill {
 
             var minecraft = Minecraft.getInstance();
             if (minecraft.level == null || minecraft.player == null) return;
+            var renderLevel = minecraft.level;
 
             var renderType = Render.RenderTypes.MINE_DETECT_LINES;
             var cameraPos = minecraft.gameRenderer.mainCamera().position();
@@ -207,7 +208,7 @@ public final class MineDetect extends Skill {
             event.submitCustomGeometry(renderType, (snapshot, consumer) -> {
                 for (var iterator = ORES.iterator(); iterator.hasNext(); ) {
                     var pos = BlockPos.of(iterator.nextLong());
-                    var color = oreColor(minecraft.level.getBlockState(pos));
+                    var color = oreColor(renderLevel.getBlockState(pos));
                     renderBox(snapshot, consumer,
                             new AABB(pos).inflate(0.002), lineWidth, color);
                 }
@@ -281,7 +282,7 @@ public final class MineDetect extends Skill {
             var result = state.is(FORGE_ORES) || state.is(COMMON_ORES);
             if (!result) {
                 var id = BuiltInRegistries.BLOCK.getKey(block);
-                result = id != null && isOrePath(id.getPath());
+                result = isOrePath(id.getPath());
             }
             ORE_CACHE.put(block, result);
             return result;
@@ -293,7 +294,7 @@ public final class MineDetect extends Skill {
 
         static float[] oreColor(BlockState state) {
             var id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
-            var path = id == null ? "unknown" : id.getPath();
+            var path = id.getPath();
             if (path.contains("redstone")) return new float[]{1.0f, 0.12f, 0.08f, 0.92f};
             if (path.contains("lapis")) return new float[]{0.18f, 0.35f, 1.0f, 0.92f};
             if (path.contains("diamond")) return new float[]{0.15f, 1.0f, 0.95f, 0.92f};

@@ -2457,7 +2457,12 @@ object MusicApp : App {
                         sizeMode(SizeMode.MATCH_PARENT)
                     }
 
-                    bindState(JukeboxSessionController.jukeboxStateUi) { replace("body_jukebox", buildJukeboxContent()) }
+                    bindState(JukeboxSessionController.jukeboxStateUi) {
+                        replace(
+                            "body_jukebox",
+                            buildJukeboxContent()
+                        )
+                    }
                     bindState(SharedAccountClient.accountUi) { replace("body_jukebox", buildJukeboxContent()) }
                     bindState(viewRevisionState) { replace("body_jukebox", buildJukeboxContent()) }
 

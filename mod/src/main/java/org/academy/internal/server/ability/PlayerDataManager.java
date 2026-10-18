@@ -8,9 +8,9 @@ import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.ability.pakcet.SyncAbilityCategoryPacket;
 import org.academy.api.common.registries.Registries;
+import org.academy.api.server.world.level.storage.PlayerData;
+import org.academy.api.server.world.level.storage.WorldData;
 import org.academy.internal.common.ability.AbilityCategories;
-import org.academy.internal.server.world.level.storage.Player;
-import org.academy.internal.server.world.level.storage.WorldData;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 import org.slf4j.Logger;
@@ -25,7 +25,7 @@ public final class PlayerDataManager implements AbilitySubsystem {
             StackWalker.Option.RETAIN_CLASS_REFERENCE
     );
     private final SyncManager syncManager;
-    private final Map<UUID, Player> playerDataMap;
+    private final Map<UUID, PlayerData> playerDataMap;
 
     public PlayerDataManager(WorldData worldData, SyncManager syncManager) {
         playerDataMap = worldData.getPlayers();
@@ -49,7 +49,7 @@ public final class PlayerDataManager implements AbilitySubsystem {
 
     public AbilityCategory getPlayerAbilityCategory(UUID uuid) {
         return Optional.ofNullable(getData(uuid))
-                .map(Player::getAbilityCategory)
+                .map(PlayerData::getAbilityCategory)
                 .map(Identifier::tryParse)
                 .flatMap(Registries.ABILITY_CATEGORIES::get)
                 .map(Holder::value)
@@ -89,13 +89,13 @@ public final class PlayerDataManager implements AbilitySubsystem {
     }
 
     @Nullable
-    public Player getData(UUID playerUUID) {
+    public PlayerData getData(UUID playerUUID) {
         return playerDataMap.get(playerUUID);
     }
 
-    private Player createDefaultPlayerData(UUID uuid) {
+    private PlayerData createDefaultPlayerData(UUID uuid) {
         LOGGER.debug("Creating new data entry for player {}", uuid);
-        var player = new Player();
+        var player = new PlayerData();
         player.markDirty();
         return player;
     }

@@ -8,8 +8,6 @@ import net.minecraft.util.Util;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.ability.teleport.map.MapTileBuilder;
 
-import java.util.function.Supplier;
-
 /**
  * A single dynamic texture holding the 区块跃迁 map at {@link MapTileBuilder#DETAIL} texels per chunk.
  *
@@ -50,7 +48,7 @@ public final class ChunkMapTexture {
         this.originChunkX = originChunkX;
         this.originChunkZ = originChunkZ;
         this.image = new NativeImage(NativeImage.Format.RGBA, SIZE, SIZE, true);
-        this.texture = new DynamicTexture((Supplier<String>) () -> "academy_chunk_leap_map", image);
+        this.texture = new DynamicTexture(() -> "academy_chunk_leap_map", image);
         Minecraft.getInstance().getTextureManager().register(TEXTURE_ID, texture);
     }
 

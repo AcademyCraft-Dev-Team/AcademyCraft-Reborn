@@ -1,10 +1,6 @@
 package org.academy.api.client.render.vfxgraph.nodes;
 
-import org.academy.api.client.render.vfxgraph.arc.ArcCurve;
-import org.academy.api.client.render.vfxgraph.arc.BlenderArcCurves;
-import org.academy.api.client.render.vfxgraph.arc.CurveGenerator;
-import org.academy.api.client.render.vfxgraph.arc.MeshDistance;
-import org.academy.api.client.render.vfxgraph.arc.SurfaceDistributor;
+import org.academy.api.client.render.vfxgraph.arc.*;
 import org.academy.api.client.render.vfxgraph.model.VfxBlock;
 import org.academy.api.client.render.vfxgraph.shape.MeshAssets;
 import org.academy.api.client.render.vfxgraph.sim.SimNode;

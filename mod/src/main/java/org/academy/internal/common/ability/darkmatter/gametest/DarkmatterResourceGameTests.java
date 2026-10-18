@@ -51,6 +51,7 @@ import org.academy.api.common.damage.LawDetonationDamageSource;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.darkmatter.Darkmatter;
 import org.academy.internal.common.ability.darkmatter.damage.DarkmatterLawMark;
 import org.academy.internal.common.ability.darkmatter.equipment.DarkmatterEnchantments;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisassemble;
@@ -74,10 +75,7 @@ import org.academy.internal.common.world.item.DarkmatterNativeItemSupport;
 import org.academy.internal.server.ability.AbilitySystemServer;
 import org.academy.internal.server.entity.HealthRecovery;
 
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -164,7 +162,7 @@ public final class DarkmatterResourceGameTests {
         system.setPlayerBaseMaxCP(player.getUUID(), 500.0f);
         system.setPlayerAvailableCP(player.getUUID(), 500.0f);
         system.addPlayerSkill(player, Skills.DARKMATTER_GENERATION.get().getKeyString());
-        system.getDarkmatterResourceManager().reconcile(player);
+        Darkmatter.resourceService().reconcile(player);
         return player;
     }
 
@@ -189,7 +187,7 @@ public final class DarkmatterResourceGameTests {
             void run(GameTestHelper helper) {
                 var player = createPlayer(helper, 3);
                 var system = AbilitySystemServer.getSystem(player);
-                var manager = system.getDarkmatterResourceManager();
+                var manager = Darkmatter.resourceService();
                 helper.assertTrue(manager.debugSetPools(player, 20.0f, 0.0f, 0.0f, 0.0f),
                         "Failed to initialize the resource ledger");
                 helper.assertTrue(manager.create(player, 10.0f, 2.0f),
@@ -223,7 +221,7 @@ public final class DarkmatterResourceGameTests {
             @Override
             void run(GameTestHelper helper) {
                 var player = createPlayer(helper, 1);
-                var manager = AbilitySystemServer.getSystem(player).getDarkmatterResourceManager();
+                var manager = Darkmatter.resourceService();
                 helper.assertTrue(manager.debugSetPools(player, 99.0f, 0.0f, 0.0f, 8.0f),
                         "Failed to initialize a reservation-limited natural pool");
                 helper.runAtTickTime(25, () -> {
@@ -245,7 +243,7 @@ public final class DarkmatterResourceGameTests {
             @Override
             void run(GameTestHelper helper) {
                 var player = createPlayer(helper, 5);
-                var manager = AbilitySystemServer.getSystem(player).getDarkmatterResourceManager();
+                var manager = Darkmatter.resourceService();
                 // A freshly connected ServerPlayer has vanilla login invulnerability. Waiting for
                 // it to expire ensures this gate reaches the real incoming-damage event pipeline.
                 helper.runAfterDelay(65, () -> {
@@ -277,7 +275,7 @@ public final class DarkmatterResourceGameTests {
             @Override
             void run(GameTestHelper helper) {
                 var player = createPlayer(helper, 5);
-                var manager = AbilitySystemServer.getSystem(player).getDarkmatterResourceManager();
+                var manager = Darkmatter.resourceService();
                 helper.assertTrue(manager.debugSetPools(player, 7.0f, 3.0f, 6.0f, 0.0f),
                         "Failed to initialize mixed MP pools");
                 helper.runAfterDelay(65, () -> {
@@ -298,7 +296,7 @@ public final class DarkmatterResourceGameTests {
                 var system = AbilitySystemServer.getSystem(player);
                 system.addPlayerSkill(player, Skills.DARKMATTER_SHAPING.get().getKeyString());
                 system.addPlayerSkill(player, Skills.DARKMATTER_PHASE_TUNING.get().getKeyString());
-                var manager = system.getDarkmatterResourceManager();
+                var manager = Darkmatter.resourceService();
                 helper.assertTrue(manager.setAlphaPoints(player, 0),
                         "Failed to initialize the alpha allocation");
                 helper.assertTrue(DarkmatterPhaseTuning.Server.beginTuning(
@@ -347,7 +345,7 @@ public final class DarkmatterResourceGameTests {
             void run(GameTestHelper helper) {
                 var player = createPlayer(helper, 1);
                 var system = AbilitySystemServer.getSystem(player);
-                var manager = system.getDarkmatterResourceManager();
+                var manager = Darkmatter.resourceService();
                 helper.assertTrue(manager.setAlphaPoints(player, 40),
                         "Failed to initialize an 80% alpha allocation");
                 system.setPlayerLevel(player.getUUID(), 5);
@@ -367,7 +365,7 @@ public final class DarkmatterResourceGameTests {
                 var player = createPlayer(helper, 1);
                 var system = AbilitySystemServer.getSystem(player);
                 system.addPlayerSkill(player, Skills.DARKMATTER_SHAPING.get().getKeyString());
-                var manager = system.getDarkmatterResourceManager();
+                var manager = Darkmatter.resourceService();
                 helper.assertTrue(manager.debugSetPools(player, 20.0f, 0.0f, 0.0f, 0.0f),
                         "Failed to initialize shaping MP");
 
@@ -440,7 +438,7 @@ public final class DarkmatterResourceGameTests {
                 var player = createPlayer(helper, 3);
                 var system = AbilitySystemServer.getSystem(player);
                 system.addPlayerSkill(player, Skills.DARKMATTER_SHAPING.get().getKeyString());
-                var manager = system.getDarkmatterResourceManager();
+                var manager = Darkmatter.resourceService();
                 helper.assertTrue(manager.debugSetPools(player, 20.0f, 0.0f, 0.0f, 0.0f),
                         "Failed to initialize native-tool MP");
                 helper.assertTrue(DarkmatterShaping.Server.createShaped(
@@ -507,7 +505,7 @@ public final class DarkmatterResourceGameTests {
                 var system = AbilitySystemServer.getSystem(player);
                 system.addPlayerSkill(player, Skills.DARKMATTER_SHAPING.get().getKeyString());
                 system.addPlayerSkill(player, Skills.DARKMATTER_DISASSEMBLE.get().getKeyString());
-                var manager = system.getDarkmatterResourceManager();
+                var manager = Darkmatter.resourceService();
                 helper.assertTrue(manager.debugSetPools(player, 100.0f, 0.0f, 0.0f, 0.0f),
                         "Failed to initialize disassemble MP");
                 helper.assertTrue(manager.setAlphaPoints(player, 250),
@@ -544,7 +542,7 @@ public final class DarkmatterResourceGameTests {
                 var system = AbilitySystemServer.getSystem(player);
                 system.addPlayerSkill(player, Skills.DARKMATTER_SHAPING.get().getKeyString());
                 system.addPlayerSkill(player, Skills.DARKMATTER_DISASSEMBLE.get().getKeyString());
-                var manager = system.getDarkmatterResourceManager();
+                var manager = Darkmatter.resourceService();
                 helper.assertTrue(manager.debugSetPools(player, 100.0f, 0.0f, 0.0f, 0.0f),
                         "Failed to initialize entity-disassemble MP");
                 var fortune = player.registryAccess().lookupOrThrow(Registries.ENCHANTMENT)
@@ -586,7 +584,7 @@ public final class DarkmatterResourceGameTests {
                 var system = AbilitySystemServer.getSystem(player);
                 system.addPlayerSkill(player, Skills.DARKMATTER_SHAPING.get().getKeyString());
                 system.addPlayerSkill(player, Skills.DARKMATTER_DISASSEMBLE.get().getKeyString());
-                var manager = system.getDarkmatterResourceManager();
+                var manager = Darkmatter.resourceService();
                 helper.assertTrue(manager.debugSetPools(player, 300.0f, 0.0f, 0.0f, 0.0f),
                         "Failed to initialize uncapped deconstruction MP");
                 manager.setAlphaPoints(player, 0);
@@ -613,7 +611,7 @@ public final class DarkmatterResourceGameTests {
                 helper.assertTrue(system.setPlayerSkillProficiency(
                                 player.getUUID(), Skills.DARKMATTER_DISASSEMBLE.get(), 3_000.0f),
                         "Failed to initialize disassemble M3");
-                var manager = system.getDarkmatterResourceManager();
+                var manager = Darkmatter.resourceService();
                 helper.assertTrue(manager.debugSetPools(player, 100.0f, 0.0f, 0.0f, 0.0f),
                         "Failed to initialize M3 disassemble MP");
                 helper.assertTrue(manager.setAlphaPoints(player, 250),
@@ -654,7 +652,7 @@ public final class DarkmatterResourceGameTests {
                 system.addPlayerSkill(player, Skills.DARKMATTER_SHAPING.get().getKeyString());
                 system.addPlayerSkill(player, Skills.DARKMATTER_DISASSEMBLE.get().getKeyString());
                 system.addPlayerSkill(player, Skills.DARKMATTER_CUT.get().getKeyString());
-                var manager = system.getDarkmatterResourceManager();
+                var manager = Darkmatter.resourceService();
                 helper.assertTrue(manager.debugSetPools(player, 100.0f, 0.0f, 0.0f, 0.0f),
                         "Failed to initialize cut MP");
 
@@ -733,7 +731,7 @@ public final class DarkmatterResourceGameTests {
                 system.addPlayerSkill(player, Skills.DARKMATTER_SHAPING.get().getKeyString());
                 system.addPlayerSkill(player, Skills.DARKMATTER_PHASE_TUNING.get().getKeyString());
                 system.addPlayerSkill(player, Skills.DARKMATTER_RADIATION.get().getKeyString());
-                var manager = system.getDarkmatterResourceManager();
+                var manager = Darkmatter.resourceService();
                 helper.assertTrue(manager.debugSetPools(player, 172.0f, 0.0f, 0.0f, 0.0f),
                         "Failed to initialize interference MP");
                 player.setYRot(-90.0f);
@@ -887,11 +885,11 @@ public final class DarkmatterResourceGameTests {
                         Skills.DARKMATTER_REPAIR.get())) {
                     system.addPlayerSkill(player, skill.getKeyString());
                 }
-                var manager = system.getDarkmatterResourceManager();
+                var manager = Darkmatter.resourceService();
                 manager.debugSetPools(player, 50, 0, 0, 0);
                 manager.setAlphaPoints(player, 200);
                 helper.assertTrue(DarkmatterRepair.Server.toggle(player), "Repair toggle failed");
-                player.getAttribute(Attributes.MAX_HEALTH).setBaseValue(20);
+                Objects.requireNonNull(player.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(20);
                 player.setHealth(20);
                 var types = player.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE);
                 var cta = new DamageSource(types.getOrThrow(DamageTypes.CTA));
@@ -906,14 +904,14 @@ public final class DarkmatterResourceGameTests {
                             .applyVerifiedTrueHealth(player, dm, 8), "DM detonation failed");
                     assertClose(helper, 2, player.getHealth(), "CTA and DM must accumulate");
                     var cow = helper.spawn(EntityTypes.COW, 5, 2, 5);
-                    cow.getAttribute(Attributes.MAX_HEALTH).setBaseValue(100);
+                    Objects.requireNonNull(cow.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(100);
                     cow.setHealth(100);
                     helper.assertTrue(SkillDamageUtil.applyVerifiedTrueHealth(cow, cta, 30), "Cow CTA failed");
                     helper.assertTrue(SkillDamageUtil.applyVerifiedTrueHealth(cow, dm, 20), "Cow DM failed");
                     var projection = ((HealthOffsetAccess) cow)
                             .academy$getHealthOffset();
                     helper.assertTrue(projection != null, "Base-health entity must install projection");
-                    var projectionHit = projection.lastHit;
+                    var projectionHit = Objects.requireNonNull(projection).lastHit;
                     assertClose(helper, 9, HealthRecovery.restore(cow, 9),
                             "Accepted non-player recovery must release projection");
                     cow.setHealth(100);
@@ -931,7 +929,7 @@ public final class DarkmatterResourceGameTests {
                     var state = ((HealthOffsetAccess) player)
                             .academy$getHealthOffset();
                     helper.assertTrue(state != null, "Player must install a true-health projection");
-                    var hitTime = state.lastHit;
+                    var hitTime = Objects.requireNonNull(state).lastHit;
                     player.setHealth(20);
                     assertClose(helper, 2, player.getHealth(), "Unaccepted direct writes must remain clamped");
 
@@ -990,7 +988,7 @@ public final class DarkmatterResourceGameTests {
                 system.addPlayerSkill(player, Skills.DARKMATTER_REPAIR.get().getKeyString());
                 helper.assertTrue(DarkmatterRepair.Server.toggle(player),
                         "Server rejected the repair toggle request");
-                var manager = system.getDarkmatterResourceManager();
+                var manager = Darkmatter.resourceService();
                 helper.assertTrue(manager.debugSetPools(player, 50.0f, 0.0f, 0.0f, 0.0f),
                         "Failed to initialize repair MP");
                 helper.assertTrue(manager.setAlphaPoints(player, 200),

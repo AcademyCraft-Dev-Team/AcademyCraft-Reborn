@@ -10,7 +10,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -26,9 +25,10 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.darkmatter.Darkmatter;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterShaping;
 import org.academy.internal.common.network.PacketTypes;
-import org.academy.internal.server.ability.AbilitySystemServer;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -118,7 +118,7 @@ public final class DarkmatterPhaseTuning extends Skill {
         public static final String KEY_ALPHA = SkillNames.DARKMATTER_PHASE_TUNING + "_alpha";
         public static final String KEY_BETA = SkillNames.DARKMATTER_PHASE_TUNING + "_beta";
         public static Config CONFIG = new Config();
-        private static Direction activeDirection;
+        private static @Nullable Direction activeDirection;
 
         private Client() {
         }
@@ -224,7 +224,7 @@ public final class DarkmatterPhaseTuning extends Skill {
             var elapsedTicks = now - state.lastProcessedAt;
             if (elapsedTicks <= 0) return;
             state.lastProcessedAt = now;
-            var resource = AbilitySystemServer.getSystem(player).getDarkmatterResourceManager();
+            var resource = Darkmatter.resourceService();
             var delta = phasePointDelta(
                     resource.getPhaseSnapshot(player).totalPoints(),
                     skill.getEffectiveProficiencyMilestone(player), elapsedTicks);

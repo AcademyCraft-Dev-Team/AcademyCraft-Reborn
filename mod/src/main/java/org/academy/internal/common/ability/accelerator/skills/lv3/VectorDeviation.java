@@ -13,7 +13,6 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -37,6 +36,7 @@ import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflecti
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.VectorRedirectedDamageSourceInfo;
 import org.academy.internal.server.ability.AbilitySystemServer;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -115,13 +115,12 @@ public class VectorDeviation extends Skill {
     }
 
     private static Vec3 horizontalOrZero(Vec3 direction) {
-        if (direction == null) return Vec3.ZERO;
         var horizontal = new Vec3(direction.x, 0.0, direction.z);
         return horizontal.lengthSqr() < 1.0E-8 ? Vec3.ZERO : horizontal.normalize();
     }
 
     private static Vec3 normalizeOrZero(Vec3 value) {
-        if (value == null || !Double.isFinite(value.lengthSqr()) || value.lengthSqr() < 1.0E-8) {
+        if (!Double.isFinite(value.lengthSqr()) || value.lengthSqr() < 1.0E-8) {
             return Vec3.ZERO;
         }
         return value.normalize();
@@ -214,7 +213,7 @@ public class VectorDeviation extends Skill {
         private static final float[] DAMAGE_REDUCTION_BY_MILESTONE = {0.5f, 0.7f, 0.9f};
         private static final ThreadLocal<Integer> HEALTH_WRITE_LIMIT_BYPASS =
                 ThreadLocal.withInitial(() -> 0);
-        private static final ThreadLocal<Deque<HealthReductionContext>> HEALTH_REDUCTION_CONTEXT =
+        private static final ThreadLocal<@Nullable Deque<HealthReductionContext>> HEALTH_REDUCTION_CONTEXT =
                 new ThreadLocal<>();
 
         @SubscribePacket
@@ -241,8 +240,7 @@ public class VectorDeviation extends Skill {
         }
 
         public static boolean canMaintain(ServerPlayer player) {
-            return player != null
-                    && player.connection != null
+            return player.isAddedToLevel()
                     && !player.isSpectator()
                     && Skills.VECTOR_DEVIATION.get().isEnabled(player);
         }
@@ -294,7 +292,7 @@ public class VectorDeviation extends Skill {
             return limitedHealth;
         }
 
-        public static void pushHealthReductionContext(ServerPlayer player, DamageSource source) {
+        public static void pushHealthReductionContext(ServerPlayer player, @Nullable DamageSource source) {
             if (!usesPartialHealthProtection(player) || source == null) return;
             var contexts = HEALTH_REDUCTION_CONTEXT.get();
             if (contexts == null) {
@@ -304,8 +302,8 @@ public class VectorDeviation extends Skill {
             contexts.push(new HealthReductionContext(player.getUUID(), source));
         }
 
-        public static void popHealthReductionContext(ServerPlayer player, DamageSource source) {
-            if (player == null || source == null) return;
+        public static void popHealthReductionContext(ServerPlayer player, @Nullable DamageSource source) {
+            if (source == null) return;
             var contexts = HEALTH_REDUCTION_CONTEXT.get();
             if (contexts == null) return;
             var context = contexts.peek();
@@ -316,8 +314,7 @@ public class VectorDeviation extends Skill {
             if (contexts.isEmpty()) HEALTH_REDUCTION_CONTEXT.remove();
         }
 
-        private static DamageSource currentHealthReductionSource(ServerPlayer player) {
-            if (player == null) return null;
+        private static @Nullable DamageSource currentHealthReductionSource(ServerPlayer player) {
             var contexts = HEALTH_REDUCTION_CONTEXT.get();
             if (contexts == null) return null;
             for (var context : contexts) {
@@ -326,7 +323,7 @@ public class VectorDeviation extends Skill {
             return null;
         }
 
-        private static void emitHealthReductionFeedback(ServerPlayer player, DamageSource source) {
+        private static void emitHealthReductionFeedback(ServerPlayer player, @Nullable DamageSource source) {
             var incoming = source == null
                     ? player.getLookAngle().scale(-1.0)
                     : VectorAttackAttributionResolver.resolve(player, source)
@@ -366,7 +363,6 @@ public class VectorDeviation extends Skill {
         }
 
         public static void forceDeactivate(ServerPlayer player) {
-            if (player == null) return;
             var skill = Skills.VECTOR_DEVIATION.get();
             var data = skill.getRuntimeData(player).orElse(null);
             if (data != null && data.isEnabled()) {
@@ -387,8 +383,8 @@ public class VectorDeviation extends Skill {
             VectorDefenseFeedbackTickets.clear(player);
         }
 
-        public static boolean canRefractSource(ServerPlayer player, DamageSource source) {
-            if (player == null || source == null
+        public static boolean canRefractSource(ServerPlayer player, @Nullable DamageSource source) {
+            if (source == null
                     || VectorRedirectedDamageSourceInfo.isRedirected(source)) return false;
             var direct = source.getDirectEntity();
             if (source.getEntity() == player || direct == player) return false;
@@ -580,13 +576,12 @@ public class VectorDeviation extends Skill {
         }
 
         private static boolean isFiniteVector(Vec3 value) {
-            return value != null
-                    && Double.isFinite(value.x)
+            return Double.isFinite(value.x)
                     && Double.isFinite(value.y)
                     && Double.isFinite(value.z);
         }
 
-        public static boolean shouldRefractProjectileFor(ServerPlayer player, Projectile projectile) {
+        public static boolean shouldRefractProjectileFor(ServerPlayer player, @Nullable Projectile projectile) {
             if (!isActive(player)
                     || VectorReflection.Server.canMaintainLinearReflectionLease(player)
                     || projectile == null

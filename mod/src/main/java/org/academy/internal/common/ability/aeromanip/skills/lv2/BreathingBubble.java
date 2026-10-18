@@ -14,7 +14,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -31,6 +30,7 @@ import org.academy.api.server.world.WaterSuppression;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.aeromanip.Aeromanip;
 import org.academy.internal.common.ability.aeromanip.vfx.AeromanipVfx;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.server.ability.AbilitySystemServer;
@@ -45,6 +45,7 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.WeakHashMap;
 
 /**
@@ -90,7 +91,7 @@ public final class BreathingBubble extends Skill {
                 AbilityCategories.AEROMANIP.get(),
                 new AbilitySystemClient.SkillInfo(
                         Skills.BREATHING_BUBBLE.get(),
-                        List.of(FlowSense.Client.SKILL_INFO),
+                        List.of(Objects.requireNonNull(FlowSense.Client.SKILL_INFO)),
                         R.textures.breathing_film_icon,
                         75,
                         40
@@ -188,7 +189,7 @@ public final class BreathingBubble extends Skill {
             if (!player.isAlive() || !skill.isEnabled(player)) return;
             var system = AbilitySystemServer.getSystem(player);
             var cost = activationAirCost(skill.getEffectiveProficiencyMilestone(player));
-            var air = system.getAeromanipResourceManager();
+            var air = Aeromanip.resourceService();
             if (air.getCurrent(player) + 1.0e-4f < cost) {
                 player.sendSystemMessage(Component.translatable(
                         "message.academy.aeromanip.insufficient_air", cost, air.getCurrent(player)));

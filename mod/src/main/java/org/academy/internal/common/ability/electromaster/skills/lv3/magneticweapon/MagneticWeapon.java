@@ -474,7 +474,7 @@ public class MagneticWeapon extends Skill {
             private Routing() {
             }
 
-            public static List<Vec3> route(Level level, Vec3 start, Vec3 end, Entity owner,
+            public static List<Vec3> route(Level level, Vec3 start, Vec3 end, @Nullable Entity owner,
                                            Phase phase, Sweep sweep) {
                 var straight = start.distanceTo(end);
                 if (straight < 1.0E-4) return List.of(start, end);
@@ -486,7 +486,7 @@ public class MagneticWeapon extends Skill {
                 return playerOnly != null ? playerOnly : List.of(start, end);
             }
 
-            public static boolean hasRoute(Level level, Vec3 start, Vec3 end, Entity owner,
+            public static boolean hasRoute(Level level, Vec3 start, Vec3 end, @Nullable Entity owner,
                                            Phase phase, Sweep sweep) {
                 var straight = start.distanceTo(end);
                 if (straight < 1.0E-4) return true;
@@ -502,7 +502,7 @@ public class MagneticWeapon extends Skill {
                 return total;
             }
 
-            private static @Nullable List<Vec3> trace(Level level, Vec3 start, Vec3 end, Entity owner,
+            private static @Nullable List<Vec3> trace(Level level, Vec3 start, Vec3 end, @Nullable Entity owner,
                                                       boolean blocks, Phase phase, Sweep sweep) {
                 var waypoints = new ArrayList<Vec3>();
                 waypoints.add(start);
@@ -520,7 +520,7 @@ public class MagneticWeapon extends Skill {
                 return null;
             }
 
-            private static @Nullable Vec3 detour(Level level, Vec3 current, Vec3 end, Entity owner,
+            private static @Nullable Vec3 detour(Level level, Vec3 current, Vec3 end, @Nullable Entity owner,
                                                  boolean blocks, Phase phase, Sweep sweep) {
                 var hit = nearestHit(level, current, end, owner, blocks, phase, sweep);
                 if (hit == null) return null;
@@ -556,11 +556,11 @@ public class MagneticWeapon extends Skill {
                 return best;
             }
 
-            private static boolean collides(Level level, Vec3 point, Vec3 direction, Entity owner,
+            private static boolean collides(Level level, Vec3 point, Vec3 direction, @Nullable Entity owner,
                                             boolean blocks, Phase phase, double fraction, Sweep sweep) {
                 var blade = bladeAt(point, direction, phase, fraction, sweep);
                 if (blocks && intersectsBlocks(level, blade)) return true;
-                return intersects(blade, owner.getBoundingBox().inflate(OWNER_CLEARANCE));
+                return owner != null && intersects(blade, owner.getBoundingBox().inflate(OWNER_CLEARANCE));
             }
 
             private static Obb bladeAt(Vec3 point, Vec3 direction, Phase phase, double fraction, Sweep sweep) {
@@ -631,20 +631,20 @@ public class MagneticWeapon extends Skill {
                 return point.subtract(start).dot(axis) / lengthSqr;
             }
 
-            private static @Nullable Vec3 nearestHit(Level level, Vec3 from, Vec3 to, Entity owner,
+            private static @Nullable Vec3 nearestHit(Level level, Vec3 from, Vec3 to, @Nullable Entity owner,
                                                      boolean blocks, Phase phase, Sweep sweep) {
                 var length = from.distanceTo(to);
                 if (length < 1.0E-6) return null;
 
                 var direction = to.subtract(from).scale(1.0 / length);
                 var steps = Math.max(1, Mth.ceil(length / STEP));
-                var ownerBox = owner.getBoundingBox().inflate(OWNER_CLEARANCE);
+                var ownerBox = owner == null ? null : owner.getBoundingBox().inflate(OWNER_CLEARANCE);
                 for (var index = 0; index <= steps; index++) {
                     var fraction = index / (double) steps;
                     var point = from.lerp(to, fraction);
                     var blade = bladeAt(point, direction, phase, fraction, sweep);
                     if (blocks && intersectsBlocks(level, blade)) return point;
-                    if (fraction * length > OWNER_START_SKIP && intersects(blade, ownerBox)) return point;
+                    if (ownerBox != null && fraction * length > OWNER_START_SKIP && intersects(blade, ownerBox)) return point;
                 }
                 return null;
             }

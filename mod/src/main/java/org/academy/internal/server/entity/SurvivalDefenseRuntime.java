@@ -344,7 +344,7 @@ public final class SurvivalDefenseRuntime {
         entry.contributions.clear();
     }
 
-    static record EffectiveDefense(
+    record EffectiveDefense(
             Map<SurvivalDefenseAspect, Integer> strengths,
             float minimumHealth
     ) {
@@ -382,33 +382,21 @@ public final class SurvivalDefenseRuntime {
         }
     }
 
-    private static final class Lease implements SurvivalDefenseLease {
-        private final UUID entityId;
-        private final Contribution contribution;
-
-        private Lease(UUID entityId, Contribution contribution) {
-            this.entityId = entityId;
-            this.contribution = contribution;
-        }
+    private record Lease(UUID entityId, Contribution contribution) implements SurvivalDefenseLease {
 
         @Override
-        public UUID entityId() {
-            return entityId;
-        }
+            public SurvivalDefenseProfile profile() {
+                return contribution.profile;
+            }
 
-        @Override
-        public SurvivalDefenseProfile profile() {
-            return contribution.profile;
-        }
+            @Override
+            public boolean isActive() {
+                return contribution.active;
+            }
 
-        @Override
-        public boolean isActive() {
-            return contribution.active;
+            @Override
+            public void close() {
+                SurvivalDefenseRuntime.close(entityId, contribution);
+            }
         }
-
-        @Override
-        public void close() {
-            SurvivalDefenseRuntime.close(entityId, contribution);
-        }
-    }
 }

@@ -27,15 +27,16 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.ability.teleport.TeleportDistanceConfig;
-import org.academy.internal.common.ability.teleport.Teleport;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.effect.TimedSkillEffectRuntime;
+import org.academy.internal.common.ability.teleport.Teleport;
 import org.academy.internal.common.ability.teleport.targeting.TeleportSync;
 import org.academy.internal.common.ability.teleport.targeting.TeleportTargeting;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -104,7 +105,7 @@ public final class PiercingTeleportation extends Skill {
         public static final String KEY_NAME_START = SkillNames.PIERCING_TELEPORTATION + "_start";
         public static final String KEY_NAME_END = SkillNames.PIERCING_TELEPORTATION + "_end";
         public static Config CONFIG = new Config();
-        private static PreviewContext currentContext;
+        private static @Nullable PreviewContext currentContext;
 
         private static void start() {
             if (ClientUtil.hasScreen() || currentContext != null
@@ -129,7 +130,7 @@ public final class PiercingTeleportation extends Skill {
 
         public static final class PreviewContext extends ClientContext {
             private final LocalPlayer player;
-            private double distance = CONFIG == null ? DEFAULT_DISTANCE : CONFIG.getDefaultDistance();
+            private double distance = CONFIG.getDefaultDistance();
             private boolean useDefaultTarget = true;
             private boolean validDestination;
 

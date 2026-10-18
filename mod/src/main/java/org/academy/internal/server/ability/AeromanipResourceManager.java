@@ -1,14 +1,17 @@
 package org.academy.internal.server.ability;
 
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.SyncTypes;
+import org.academy.api.server.ability.AbilityResourceUsage;
+import org.academy.api.server.ability.aeromanip.AeromanipResourceService;
 import org.academy.api.server.world.WaterSuppression;
+import org.academy.api.server.world.level.storage.PlayerData;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.aeromanip.Aeromanip;
 import org.academy.internal.common.ability.aeromanip.config.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.targeting.AirAccessResolver;
-import org.academy.internal.server.world.level.storage.Player;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -17,7 +20,7 @@ import java.util.UUID;
 /**
  * Owns the fixed-capacity compressed-air MP pool used by Aeromanipulation.
  */
-public final class AeromanipResourceManager implements AbilitySubsystem {
+public final class AeromanipResourceManager implements AbilitySubsystem, AeromanipResourceService {
     private static final float EPSILON = 1.0e-4f;
     private static final int MAX_CONFIGURED_CAPACITY = 1_000_000;
     private static final float MAX_CONFIGURED_RECOVERY = 1_000_000.0f;
@@ -61,9 +64,23 @@ public final class AeromanipResourceManager implements AbilitySubsystem {
     }
 
     public boolean supportsCompressedAir(ServerPlayer player) {
-        return player != null
-                && playerDataManager.getPlayerAbilityCategory(player.getUUID())
+        return playerDataManager.getPlayerAbilityCategory(player.getUUID())
                 == AbilityCategories.AEROMANIP.get();
+    }
+
+    @Override
+    public boolean adjustsCost() {
+        return true;
+    }
+
+    @Override
+    public Component insufficientResource(ServerPlayer player, float required) {
+        return Component.translatable("message.academy.aeromanip.insufficient_air", required, getCurrent(player));
+    }
+
+    @Override
+    public void reconcile(ServerPlayer player) {
+        reconcile(player, false);
     }
 
     public float getCurrent(ServerPlayer player) {
@@ -99,7 +116,7 @@ public final class AeromanipResourceManager implements AbilitySubsystem {
             String stackGroup,
             int stackLimit
     ) {
-        if (skill == null || !supportsCompressedAir(player)
+        if (!supportsCompressedAir(player)
                 || !Float.isFinite(actualCpCost) || actualCpCost < 0.0f
                 || !Float.isFinite(compressedAirCost) || compressedAirCost < 0.0f) return false;
         reconcile(player, false);
@@ -166,7 +183,7 @@ public final class AeromanipResourceManager implements AbilitySubsystem {
         }
     }
 
-    private void commitUse(ServerPlayer player, Player data) {
+    private void commitUse(ServerPlayer player, PlayerData data) {
         markUsed(player);
         data.markDirty();
         syncManager.schedulePlayerSync(player.getUUID(), SyncTypes.CP_DATA);
@@ -203,7 +220,7 @@ public final class AeromanipResourceManager implements AbilitySubsystem {
         else activeUsageCounts.put(uuid, count - 1);
     }
 
-    public static final class UsageLease implements AutoCloseable {
+    public static final class UsageLease implements AbilityResourceUsage {
         private final AeromanipResourceManager manager;
         private final UUID playerId;
         private boolean closed;

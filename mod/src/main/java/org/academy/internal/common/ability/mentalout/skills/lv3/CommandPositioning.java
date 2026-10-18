@@ -36,6 +36,7 @@ import org.academy.internal.common.ability.mentalout.skills.lv1.MentalInterventi
 import org.academy.internal.common.ability.mentalout.targeting.MentaloutTargeting;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.PvpSetting;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -111,9 +112,7 @@ public final class CommandPositioning extends Skill {
         Objects.requireNonNull(source, "source");
 
         var unique = new LinkedHashMap<UUID, LivingEntity>();
-        requestedSubjects.forEach(subject -> {
-            if (subject != null) unique.putIfAbsent(subject.getUUID(), subject);
-        });
+        requestedSubjects.forEach(subject -> unique.putIfAbsent(subject.getUUID(), subject));
         var destinationEntity = destination instanceof ControlDestination.Entity(var uuid)
                 ? uuid : null;
         var eligible = new ArrayList<LivingEntity>();
@@ -170,7 +169,7 @@ public final class CommandPositioning extends Skill {
             int skipped,
             int failed,
             Map<UUID, AutoCloseable> handles,
-            LivingEntity protectedTarget
+            @Nullable LivingEntity protectedTarget
     ) {
         public PositioningResult {
             handles = Map.copyOf(handles);

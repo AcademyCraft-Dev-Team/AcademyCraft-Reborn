@@ -13,7 +13,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForgeMod;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -25,6 +24,7 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.server.ability.AbilityResourceUsage;
 import org.academy.api.server.ability.AreaEffectTargets;
 import org.academy.api.server.damage.AbilityDamageService;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -32,6 +32,7 @@ import org.academy.internal.client.hud.ability.ToggleStatusHud;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.aeromanip.Aeromanip;
 import org.academy.internal.common.ability.aeromanip.config.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.skills.lv2.BreathingBubble;
 import org.academy.internal.common.ability.aeromanip.skills.lv4.VortexPull;
@@ -41,7 +42,6 @@ import org.academy.internal.common.ability.proficiency.ProficiencyPolicy;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.server.ability.AbilitySystemServer;
-import org.academy.internal.server.ability.AeromanipResourceManager;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -175,7 +175,7 @@ public final class VacuumDomain extends Skill {
     }
 
     public static final class Server {
-        private static final Map<ServerPlayer, AeromanipResourceManager.UsageLease> ACTIVE =
+        private static final Map<ServerPlayer, AbilityResourceUsage> ACTIVE =
                 new WeakHashMap<>();
 
         private Server() {
@@ -190,8 +190,7 @@ public final class VacuumDomain extends Skill {
         }
 
         private static void start(ServerPlayer player) {
-            ACTIVE.computeIfAbsent(player, current -> AbilitySystemServer.getSystem(current)
-                    .getAeromanipResourceManager().beginUse(current));
+            ACTIVE.computeIfAbsent(player, current -> Aeromanip.resourceService().beginUse(current));
         }
 
         private static void stop(ServerPlayer player) {

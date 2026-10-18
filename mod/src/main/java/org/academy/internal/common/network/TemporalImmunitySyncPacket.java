@@ -10,7 +10,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import org.academy.AcademyCraft;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.time.TemporalClientRuntime;
 import org.academy.internal.server.time.TemporalRuntime;

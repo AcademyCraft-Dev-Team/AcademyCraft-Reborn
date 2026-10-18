@@ -2,7 +2,9 @@ package org.academy.internal.common.ability.accelerator.skills.lv4;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -28,12 +30,16 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.config.SkillSettingsRegistry;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.render.graph.type.Value;
+import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.*;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.common.vfx.SkillVfxState;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.client.render.vfxgraph.SkillVfxStates;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -50,6 +56,7 @@ import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource
 import org.academy.internal.server.ability.AbilitySystemServer;
 import org.academy.internal.server.vfx.SkillVfxService;
 import org.apache.commons.lang3.tuple.Pair;
+import org.joml.Quaternionf;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -60,13 +67,6 @@ import org.misaka.api.common.network.packet.PacketType;
 
 import java.security.CodeSource;
 import java.util.*;
-import org.academy.api.client.render.graph.type.Value;
-import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
-import org.academy.api.common.vfx.SkillVfxState;
-import org.academy.internal.client.render.vfxgraph.SkillVfxStates;
-import org.joml.Quaternionf;
-import net.minecraft.resources.Identifier;
-import net.minecraft.client.Minecraft;
 
 public class VectorReflection extends Skill {
     public VectorReflection() {
@@ -321,7 +321,6 @@ public class VectorReflection extends Skill {
         }
 
         public static void forceDeactivate(ServerPlayer player) {
-            if (player == null) return;
             if (!isTrustedLifecycleCaller("forceDeactivate")) {
                 if (usesFullInstanceProtection(player)) maintainProtection(player);
                 return;
@@ -337,7 +336,6 @@ public class VectorReflection extends Skill {
         }
 
         private static boolean canReflectSource(ServerPlayer player, DamageSource damageSource) {
-            if (player == null || damageSource == null) return false;
             if (ReflectedSkillDamageSource.isReflected(damageSource)) return false;
             if (damageSource instanceof SkillDamageSource skillSource
                     && skillSource.getSkill() == Skills.VECTOR_REFLECTION.get()) return false;
@@ -536,7 +534,7 @@ public class VectorReflection extends Skill {
         }
 
         public static Vec3 reflectedVelocity(Vec3 incoming) {
-            if (incoming == null || incoming.lengthSqr() < 1.0E-8 || !Double.isFinite(incoming.lengthSqr())) {
+            if (incoming.lengthSqr() < 1.0E-8 || !Double.isFinite(incoming.lengthSqr())) {
                 return Vec3.ZERO;
             }
             return incoming.scale(-1.2);
@@ -550,7 +548,7 @@ public class VectorReflection extends Skill {
         }
 
         private static boolean canRedirectProjectileGeometry(ServerPlayer player, Projectile projectile) {
-            if (player == null || projectile == null || projectile.isRemoved()) return false;
+            if (projectile.isRemoved()) return false;
             if (VectorProjectileRedirects.isRedirected(projectile)) return false;
             var owner = projectile.getOwner();
             if (owner == player || owner != null && owner.getUUID().equals(player.getUUID())) return false;
@@ -628,8 +626,7 @@ public class VectorReflection extends Skill {
         }
 
         private static boolean isFiniteVector(Vec3 vector) {
-            return vector != null
-                    && Double.isFinite(vector.x)
+            return Double.isFinite(vector.x)
                     && Double.isFinite(vector.y)
                     && Double.isFinite(vector.z);
         }
@@ -655,14 +652,14 @@ public class VectorReflection extends Skill {
         }
 
         public static boolean deactivateUnavailableProtection(ServerPlayer player) {
-            if (player == null || isActive(player)
+            if (isActive(player)
                     || !Skills.VECTOR_REFLECTION.get().isEnabled(player)) return false;
             forceDeactivate(player);
             return true;
         }
 
         public static void imaginebreaker(ServerPlayer player, float amount) {
-            if (player == null || !Float.isFinite(amount) || !(amount > 0.0f)) return;
+            if (!Float.isFinite(amount) || !(amount > 0.0f)) return;
             if (!isVectorDefenseActive(player)) return;
 
             VectorHealthLedger.arm(player);
@@ -689,7 +686,6 @@ public class VectorReflection extends Skill {
         }
 
         public static void forceDeactivateForDeath(ServerPlayer player) {
-            if (player == null) return;
             if (!isTrustedLifecycleCaller("forceDeactivateForDeath")) {
                 if (usesFullInstanceProtection(player)) maintainProtection(player);
                 return;
@@ -709,7 +705,6 @@ public class VectorReflection extends Skill {
         }
 
         public static void killAfterImagineBreakerDepletion(ServerPlayer player) {
-            if (player == null) return;
             forceDeactivateForDeath(player);
             player.kill(player.level());
         }
@@ -736,12 +731,13 @@ public class VectorReflection extends Skill {
                     .dropWhile(frame -> frame.getDeclaringClass() != Server.class
                             || !frame.getMethodName().equals(entryMethod))
                     .skip(1)
-                    .map(StackWalker.StackFrame::getDeclaringClass)
+                    .<Class<?>>map(StackWalker.StackFrame::getDeclaringClass)
                     .findFirst()
                     .orElse(Server.class));
             if (caller == Server.class) return true;
             try {
-                CodeSource callerSource = caller.getProtectionDomain().getCodeSource();
+                var callerDomain = Objects.requireNonNull(caller).getProtectionDomain();
+                CodeSource callerSource = callerDomain == null ? null : callerDomain.getCodeSource();
                 CodeSource academySource = AcademyCraft.class.getProtectionDomain().getCodeSource();
                 return callerSource != null && academySource != null
                         && Objects.equals(callerSource.getLocation(), academySource.getLocation());
@@ -751,7 +747,6 @@ public class VectorReflection extends Skill {
         }
 
         public static void deactivateAfterVectorChargeIfNeeded(ServerPlayer player) {
-            if (player == null) return;
             var availableCp = AbilitySystemServer.getSystem(player)
                     .getPlayerAvailableCP(player.getUUID());
             if (!isComputingPowerDepleted(availableCp)) return;

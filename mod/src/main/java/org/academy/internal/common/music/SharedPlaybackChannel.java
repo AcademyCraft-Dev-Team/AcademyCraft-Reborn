@@ -1,5 +1,7 @@
 package org.academy.internal.common.music;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +17,7 @@ public class SharedPlaybackChannel {
 
     private final ArrayDeque<QueueSnapshot.QueueEntry> queue = new ArrayDeque<>();
     private final ArrayDeque<QueueSnapshot.QueueEntry> history = new ArrayDeque<>();
-    private PlaybackTimeline timeline;
+    private @Nullable PlaybackTimeline timeline;
     private String currentRequester = "";
     private int revision;
     private Consumer<ChangeKind> changeListener = change -> {
@@ -28,8 +30,7 @@ public class SharedPlaybackChannel {
     }
 
     public void setChangeListener(Consumer<ChangeKind> listener) {
-        this.changeListener = listener == null ? change -> {
-        } : listener;
+        this.changeListener = listener;
     }
 
     public Optional<PlaybackTimeline> timeline() {
@@ -170,19 +171,17 @@ public class SharedPlaybackChannel {
      * 从持久化快照恢复通道状态（服务端重启用）。历史与重播栈不恢复，重建后从当前曲目继续喵。
      */
     public void restore(
-            PlaybackTimeline restoredTimeline,
+            @Nullable PlaybackTimeline restoredTimeline,
             String requesterName,
             List<QueueSnapshot.QueueEntry> restoredQueue
     ) {
         queue.clear();
         history.clear();
-        if (restoredQueue != null) {
-            for (var entry : restoredQueue) {
-                if (entry != null) queue.addLast(entry);
-            }
+        for (var entry : restoredQueue) {
+            queue.addLast(entry);
         }
         timeline = restoredTimeline;
-        currentRequester = requesterName == null ? "" : requesterName;
+        currentRequester = requesterName;
         revision++;
         changed(ChangeKind.QUEUE);
     }
@@ -200,7 +199,7 @@ public class SharedPlaybackChannel {
         revision++;
     }
 
-    private void pushHistory(PlaybackTimeline current) {
+    private void pushHistory(@Nullable PlaybackTimeline current) {
         if (current == null) return;
         history.addLast(new QueueSnapshot.QueueEntry(current.entry(), ""));
         while (history.size() > HISTORY_LIMIT) {

@@ -21,6 +21,7 @@ import net.neoforged.neoforge.event.enchanting.EnchantedEntityLootEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.attribute.PlayerAttributes;
+import org.academy.api.common.attribute.PropsMath;
 import org.academy.api.server.damage.HealthLossGuards;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.jspecify.annotations.Nullable;
@@ -93,7 +94,7 @@ public final class PlayerAttributeRuntime {
                 healthBeforeEnduranceSync, player.getMaxHealth()
         );
         if (healthAfterEnduranceSync < healthBeforeEnduranceSync) {
-            HealthLossGuards.maintenance(player, () -> {
+            HealthLossGuards.<@Nullable Void>maintenance(player, () -> {
                 player.setHealth(healthAfterEnduranceSync);
                 return null;
             });
@@ -222,7 +223,7 @@ public final class PlayerAttributeRuntime {
     }
 
     public static void pushDamageContext(DamageSource source) {
-        if (source != null) DAMAGE_CONTEXT.get().push(source);
+        DAMAGE_CONTEXT.get().push(source);
     }
 
     public static @Nullable DamageSource currentDamageSource() {
@@ -263,7 +264,7 @@ public final class PlayerAttributeRuntime {
         return Double.isFinite(value) ? Math.max(0.0, value) : 0.0;
     }
 
-    private static void syncModifier(AttributeInstance attribute, Identifier id, double amount,
+    private static void syncModifier(@Nullable AttributeInstance attribute, Identifier id, double amount,
                                      AttributeModifier.Operation operation, boolean permanent) {
         if (attribute == null) return;
         var current = attribute.getModifier(id);
@@ -291,8 +292,7 @@ public final class PlayerAttributeRuntime {
         }
     }
 
-    private static Player resolvePlayer(DamageSource source) {
-        if (source == null) return null;
+    private static @Nullable Player resolvePlayer(DamageSource source) {
         if (source.getEntity() instanceof Player player) return player;
         if (source.getEntity() instanceof TamableAnimal tamable
                 && tamable.getOwner() instanceof Player player) return player;

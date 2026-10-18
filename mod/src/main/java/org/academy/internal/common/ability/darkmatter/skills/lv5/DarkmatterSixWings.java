@@ -3,22 +3,11 @@ package org.academy.internal.common.ability.darkmatter.skills.lv5;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.vertex.PoseStack;
 import io.netty.buffer.ByteBuf;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
-import net.minecraft.client.model.geom.builders.CubeDeformation;
-import net.minecraft.client.model.geom.builders.CubeListBuilder;
-import net.minecraft.client.model.geom.builders.LayerDefinition;
-import net.minecraft.client.model.geom.builders.MeshDefinition;
-import net.minecraft.client.model.geom.builders.PartDefinition;
+import net.minecraft.client.model.geom.builders.*;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.network.codec.StreamCodec;
@@ -54,9 +43,14 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.client.render.vfxgraph.FrameContext;
+import org.academy.internal.client.render.vfxgraph.TickingVfx;
+import org.academy.internal.client.render.vfxgraph.VfxContexts;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.Accelerator;
+import org.academy.internal.common.ability.darkmatter.Darkmatter;
 import org.academy.internal.common.ability.darkmatter.resource.DarkmatterPhase;
 import org.academy.internal.common.ability.darkmatter.skills.lv4.DarkmatterCreation;
 import org.academy.internal.common.ability.darkmatter.targeting.DarkmatterTargeting;
@@ -77,12 +71,14 @@ import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
-import org.academy.internal.client.render.vfxgraph.FrameContext;
-import org.academy.internal.client.render.vfxgraph.TickingVfx;
-import org.academy.internal.common.ability.accelerator.Accelerator;
-import org.academy.internal.client.render.vfxgraph.VfxContexts;
 
-
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 public final class DarkmatterSixWings extends Skill {
@@ -174,6 +170,7 @@ public final class DarkmatterSixWings extends Skill {
             effectRegistered = true;
             VfxContexts.register(new DarkmatterSixWingsVfx());
         }
+
         public static final class DarkmatterSixWingsGraphVfx {
             private static final int VERTEX_STRIDE = 5 * Float.BYTES;
             private static final int INITIAL_VERTEX_CAPACITY = 4096;
@@ -275,8 +272,8 @@ public final class DarkmatterSixWings extends Skill {
                 }
 
                 private static void bakeWingPair(AvianWingsModel model, PoseStack poseStack,
-                                                  ByteBuffer target, float age, float scale,
-                                                  float zRotationDegrees) {
+                                                 ByteBuffer target, float age, float scale,
+                                                 float zRotationDegrees) {
                     poseStack.pushPose();
                     if (zRotationDegrees < 0.0f) {
                         poseStack.translate(-0.30f, 0.25f, 0.0f);
@@ -501,7 +498,7 @@ public final class DarkmatterSixWings extends Skill {
                 var activationCost = activationMatterCost(
                         skill.getEffectiveProficiencyMilestone(player));
                 if (system.getPlayerAvailableCP(player.getUUID()) + 1.0e-5f < required
-                        || !system.getDarkmatterResourceManager().consume(
+                        || !Darkmatter.resourceService().consume(
                         player,
                         activationCost,
                         skill,
@@ -510,7 +507,7 @@ public final class DarkmatterSixWings extends Skill {
             }
             skill.toggle(player);
             sync(player);
-            AbilitySystemServer.getSystem(player).getDarkmatterResourceManager().requestSync(player);
+            Darkmatter.resourceService().requestSync(player);
         }
 
         public static boolean isActive(ServerPlayer player) {
@@ -520,7 +517,7 @@ public final class DarkmatterSixWings extends Skill {
 
         public static float adjustCategoryCost(ServerPlayer player, Skill skill,
                                                float baseCost, float adjustedCost) {
-            if (player == null || skill == null || !Float.isFinite(baseCost)
+            if (!Float.isFinite(baseCost)
                     || !Float.isFinite(adjustedCost) || baseCost < 0.0f || adjustedCost < 0.0f
                     || skill == Skills.DARKMATTER_SIX_WINGS.get()
                     || skill.getCategory() != AbilityCategories.DARKMATTER.get()
@@ -539,7 +536,7 @@ public final class DarkmatterSixWings extends Skill {
             var system = AbilitySystemServer.getSystem(player);
             if (!active) system.releaseMaintenanceOccupation(player.getUUID(), skill.getKeyString());
             sync(player);
-            system.getDarkmatterResourceManager().requestSync(player);
+            Darkmatter.resourceService().requestSync(player);
             return isActive(player) == active;
         }
 

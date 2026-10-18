@@ -21,15 +21,16 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.server.ability.AbilityResourceUsage;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.aeromanip.Aeromanip;
 import org.academy.internal.common.ability.aeromanip.config.AeromanipConfig;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.server.ability.AbilitySystemServer;
-import org.academy.internal.server.ability.AeromanipResourceManager;
 import org.academy.internal.server.ability.SkillFlightController;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -70,7 +71,7 @@ public final class Flight extends Skill {
     }
 
     static boolean shouldConsumeCompressedAir(boolean flying, Vec3 movement) {
-        return flying && movement != null && movement.lengthSqr() > 1.0e-4;
+        return flying && movement.lengthSqr() > 1.0e-4;
     }
 
     @Override
@@ -136,7 +137,7 @@ public final class Flight extends Skill {
     }
 
     public static final class Server {
-        private static final Map<ServerPlayer, AeromanipResourceManager.UsageLease> USAGE_LEASES =
+        private static final Map<ServerPlayer, AbilityResourceUsage> USAGE_LEASES =
                 new WeakHashMap<>();
 
         private Server() {
@@ -150,7 +151,7 @@ public final class Flight extends Skill {
         }
 
         public static void refreshFlightPermission(ServerPlayer player) {
-            if (player != null) syncFlight(player,
+            syncFlight(player,
                     Skills.FLIGHT.get().isEnabled(player)
                             && player.isAlive() && !player.hasDisconnected());
         }
@@ -169,8 +170,7 @@ public final class Flight extends Skill {
 
         private static void openUsageLease(ServerPlayer player) {
             USAGE_LEASES.computeIfAbsent(player, current ->
-                    AbilitySystemServer.getSystem(current)
-                            .getAeromanipResourceManager().beginUse(current));
+                    Aeromanip.resourceService().beginUse(current));
         }
 
         private static void closeUsageLease(ServerPlayer player) {

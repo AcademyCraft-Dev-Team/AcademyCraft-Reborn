@@ -32,6 +32,7 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.server.ability.AbilityResourceUsage;
 import org.academy.api.server.ability.AreaEffectTargets;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -39,6 +40,7 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.skills.lv5.BloodflowReverse;
+import org.academy.internal.common.ability.aeromanip.Aeromanip;
 import org.academy.internal.common.ability.aeromanip.config.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.skills.lv4.VortexPull;
 import org.academy.internal.common.ability.aeromanip.targeting.AeromanipTargeting;
@@ -47,7 +49,7 @@ import org.academy.internal.common.ability.proficiency.ProficiencyPolicy;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.server.ability.AbilitySystemServer;
-import org.academy.internal.server.ability.AeromanipResourceManager;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -213,7 +215,7 @@ public final class AdiabaticCompression extends Skill {
 
         private static final class Context extends ServerContext {
             private final ResourceKey<Level> dimension;
-            private final AeromanipResourceManager.UsageLease usageLease;
+            private final AbilityResourceUsage usageLease;
             private final Map<UUID, DamageStack> damageStacks = new HashMap<>();
             private int activeTicks;
             private boolean ended;
@@ -221,8 +223,7 @@ public final class AdiabaticCompression extends Skill {
             private Context(ServerPlayer player) {
                 super(player);
                 dimension = player.level().dimension();
-                usageLease = AbilitySystemServer.getSystem(player)
-                        .getAeromanipResourceManager().beginUse(player);
+                usageLease = Aeromanip.resourceService().beginUse(player);
             }
 
             private void end() {
@@ -357,7 +358,7 @@ public final class AdiabaticCompression extends Skill {
                 new SlowState(new WeakReference<>(target), serverTicks + DEBUFF_DURATION_TICKS));
     }
 
-    private static void syncSlowModifier(AttributeInstance attribute, Identifier id) {
+    private static void syncSlowModifier(@Nullable AttributeInstance attribute, Identifier id) {
         if (attribute == null) return;
         var current = attribute.getModifier(id);
         var amount = movementModifierAmount();

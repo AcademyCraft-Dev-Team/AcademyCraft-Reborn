@@ -4,13 +4,13 @@ import io.netty.buffer.Unpooled;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.program.*;
+import org.academy.api.server.world.level.storage.PlayerData;
+import org.academy.api.server.world.level.storage.WorldData;
 import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.common.ability.program.compile.ProgramBookCodec;
 import org.academy.internal.common.ability.program.registry.AbilityProgramDefinitions;
-import org.academy.internal.server.world.level.storage.Player;
-import org.academy.internal.server.world.level.storage.WorldData;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -107,7 +107,7 @@ class AbilityProgramManagerTest {
                     "invalid identifier": {"proficiency": 0.0}
                   }
                 }
-                """, Player.class);
+                """, PlayerData.class);
 
         var capabilities = AbilityProgramManager.learnedCapabilities(player);
 

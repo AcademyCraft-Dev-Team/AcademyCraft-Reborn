@@ -1,6 +1,6 @@
 package org.academy.internal.common.ability.darkmatter.skills.lv2;
 
-import org.academy.internal.common.ability.darkmatter.resource.DarkmatterStateData;
+import org.academy.api.common.ability.darkmatter.DarkmatterStateData;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

@@ -18,7 +18,6 @@ import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.render.RenderSpec;
 import org.academy.api.client.resources.R;
 import org.junit.jupiter.api.Test;
-import org.lwjgl.BufferUtils;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

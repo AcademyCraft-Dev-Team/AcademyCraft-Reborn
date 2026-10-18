@@ -9,12 +9,12 @@ import org.academy.api.common.ability.darkmatter.DarkmatterPhaseSnapshot;
 import org.academy.api.common.ability.darkmatter.DarkmatterResourceService;
 import org.academy.api.common.ability.darkmatter.DarkmatterResourceView;
 import org.academy.api.common.data.AbilityData;
+import org.academy.api.server.world.level.storage.PlayerData;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.Darkmatter;
 import org.academy.internal.common.ability.darkmatter.network.SyncDarkmatterStatePacket;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
-import org.academy.internal.server.world.level.storage.Player;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 
@@ -168,7 +168,7 @@ public final class DarkmatterResourceManager implements AbilitySubsystem, Darkma
 
     public boolean consume(ServerPlayer player, float requestedUnits, Skill consumer, int iterationTicks) {
         var units = normalizeUnits(requestedUnits);
-        if (units <= 0.0f || consumer == null || !supportsMatter(player)) return false;
+        if (units <= 0.0f || !supportsMatter(player)) return false;
         reconcile(player);
         var data = playerDataManager.getData(player.getUUID());
         if (data == null) return false;
@@ -237,7 +237,7 @@ public final class DarkmatterResourceManager implements AbilitySubsystem, Darkma
     }
 
     public void requestSync(ServerPlayer player) {
-        if (player != null) scheduleAllSync(player);
+        scheduleAllSync(player);
     }
 
     public boolean debugSetPools(ServerPlayer player, float natural, float created,
@@ -321,7 +321,7 @@ public final class DarkmatterResourceManager implements AbilitySubsystem, Darkma
         commit(data, player);
     }
 
-    private boolean ensureInitialized(Player data, ServerPlayer player) {
+    private boolean ensureInitialized(PlayerData data, ServerPlayer player) {
         var state = data.getDarkmatterState();
         if (state.isResourceInitialized()) return false;
         var current = data.getCpData().getCurrMP();
@@ -336,7 +336,7 @@ public final class DarkmatterResourceManager implements AbilitySubsystem, Darkma
         return true;
     }
 
-    private boolean mirrorToAbilityData(Player data, ServerPlayer player) {
+    private boolean mirrorToAbilityData(PlayerData data, ServerPlayer player) {
         var cpData = data.getCpData();
         var state = data.getDarkmatterState();
         var effective = Math.max(0.0f, getBaseCapacity(player) - state.getReservedMatter());
@@ -352,7 +352,7 @@ public final class DarkmatterResourceManager implements AbilitySubsystem, Darkma
         return changed;
     }
 
-    private void commit(Player data, ServerPlayer player) {
+    private void commit(PlayerData data, ServerPlayer player) {
         mirrorToAbilityData(data, player);
         data.markDirty();
         scheduleAllSync(player);
@@ -377,12 +377,12 @@ public final class DarkmatterResourceManager implements AbilitySubsystem, Darkma
                 timedSkill, Math.max(0.0f, timed), Math.max(0, iterationTicks));
     }
 
-    private void removeMatterOccupation(ServerPlayer player, Player data) {
+    private void removeMatterOccupation(ServerPlayer player, PlayerData data) {
         if (matterOccupation(data) <= EPSILON) return;
         replaceMatterOccupation(player, 0.0f, null, 0.0f, 0);
     }
 
-    private static float matterOccupation(Player data) {
+    private static float matterOccupation(PlayerData data) {
         return (float) data.getCpOccupations().stream()
                 .filter(AbilityData.CpOccupationData::isPermanent)
                 .filter(occupation -> GENERATION_SKILL_ID.equals(occupation.getSkillId()))
@@ -395,7 +395,7 @@ public final class DarkmatterResourceManager implements AbilitySubsystem, Darkma
         return BASE_MATTER + level * level * MATTER_PER_LEVEL_SQUARED;
     }
 
-    static float creatableUnits(float availableCp, float requestedUnits, AbilityResourceSpec resource) {
+    static float creatableUnits(float availableCp, float requestedUnits, @Nullable AbilityResourceSpec resource) {
         if (!Float.isFinite(availableCp) || !Float.isFinite(requestedUnits)
                 || requestedUnits <= 0.0f || resource == null) return 0.0f;
         var usableCp = Math.max(0.0f, availableCp - EPSILON);
@@ -440,7 +440,7 @@ public final class DarkmatterResourceManager implements AbilitySubsystem, Darkma
     }
 
     static float affordableUnits(float availableCp, float releasedCp, float currentUnits,
-                                 AbilityResourceSpec resource) {
+                                 @Nullable AbilityResourceSpec resource) {
         if (!Float.isFinite(availableCp) || !Float.isFinite(releasedCp)
                 || !Float.isFinite(currentUnits) || resource == null) return 0.0f;
         var budget = Math.max(0.0f, availableCp) + Math.max(0.0f, releasedCp);
@@ -448,7 +448,7 @@ public final class DarkmatterResourceManager implements AbilitySubsystem, Darkma
                 Math.max(0.0f, budget / resource.occupiedCpPerUnit()));
     }
 
-    private static float unitsForOccupation(float occupiedCp, AbilityResourceSpec resource) {
+    private static float unitsForOccupation(float occupiedCp, @Nullable AbilityResourceSpec resource) {
         if (!Float.isFinite(occupiedCp) || occupiedCp <= 0.0f || resource == null) return 0.0f;
         return occupiedCp / resource.occupiedCpPerUnit();
     }

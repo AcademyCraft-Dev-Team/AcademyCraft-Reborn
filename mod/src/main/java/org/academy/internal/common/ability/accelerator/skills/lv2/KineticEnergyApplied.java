@@ -51,15 +51,19 @@ import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.config.SkillSettingsRegistry;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.input.MouseButtonEvent;
+import org.academy.api.client.render.graph.type.Value;
+import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.api.client.resources.R;
 import org.academy.api.client.util.ClientUtil;
 import org.academy.api.common.ability.*;
 import org.academy.api.common.ability.data.SkillData;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.common.vfx.SkillVfxState;
 import org.academy.api.server.ability.AreaEffectTargets;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.hud.ability.ToggleStatusHud;
+import org.academy.internal.client.render.vfxgraph.SkillVfxStates;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -74,6 +78,7 @@ import org.academy.internal.common.world.damagesource.*;
 import org.academy.internal.server.ability.AbilityEffectPolicy;
 import org.academy.internal.server.ability.AbilitySystemServer;
 import org.academy.internal.server.vfx.SkillVfxService;
+import org.joml.Quaternionf;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -84,13 +89,6 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.*;
-import org.academy.api.client.render.graph.type.Value;
-import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
-import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
-import org.academy.api.common.vfx.SkillVfxState;
-import org.academy.internal.client.render.vfxgraph.SkillVfxStates;
-import org.joml.Quaternionf;
-import org.joml.Vector3f;
 
 public class KineticEnergyApplied extends Skill {
     public static final int MIN_IMPACT_LEVEL = 1;
@@ -216,6 +214,7 @@ public class KineticEnergyApplied extends Skill {
 
         private Client() {
         }
+
         private static final Identifier KINETIC_SHOCKWAVE_ASSET =
                 Identifier.fromNamespaceAndPath("academy", "vfxgraph/kinetic_shockwave");
 
@@ -442,19 +441,17 @@ public class KineticEnergyApplied extends Skill {
         }
 
         private static boolean canCreateShockwave(ServerPlayer player) {
-            return player != null
-                    && player.isAlive()
+            return player.isAlive()
                     && !player.hasDisconnected()
                     && Skills.KINETIC_ENERGY_APPLIED.get().isEnabled(player);
         }
 
         private static boolean canCreateProgramShockwave(ServerPlayer player) {
-            if (player == null || !player.isAlive() || player.hasDisconnected()) return false;
+            if (!player.isAlive() || player.hasDisconnected()) return false;
             var skill = Skills.KINETIC_ENERGY_APPLIED.get();
             var system = AbilitySystemServer.getSystem(player);
             var category = system.getPlayerAbilityCategory(player.getUUID());
-            return category != null
-                    && LearningHelper.isSkillAvailableForCategory(category, skill)
+            return LearningHelper.isSkillAvailableForCategory(category, skill)
                     && skill.getRuntimeData(player).isPresent();
         }
 
@@ -520,10 +517,10 @@ public class KineticEnergyApplied extends Skill {
          * Atomically reserves every custom-program impact before any shockwave is emitted.
          */
         public static boolean tryReserveProgramImpacts(ServerPlayer player, List<Integer> levels) {
-            if (!canCreateProgramShockwave(player) || levels == null || levels.isEmpty()) return false;
+            if (!canCreateProgramShockwave(player) || levels.isEmpty()) return false;
             var costs = new ArrayList<Float>(levels.size());
             for (var level : levels) {
-                if (level == null || level < 1 || level > 5) return false;
+                if (level < 1 || level > 5) return false;
                 costs.add(level * 10.0f);
             }
             return tryReserveProgramImpactCosts(player, costs);
@@ -536,10 +533,10 @@ public class KineticEnergyApplied extends Skill {
                 ServerPlayer player,
                 List<Float> costs
         ) {
-            if (!canCreateProgramShockwave(player) || costs == null || costs.isEmpty()) return false;
+            if (!canCreateProgramShockwave(player) || costs.isEmpty()) return false;
             var charges = new ArrayList<AbilitySystemServer.TimedOccupationCharge>(costs.size());
             for (var cost : costs) {
-                if (cost == null || !Float.isFinite(cost) || cost < 0.0f) return false;
+                if (!Float.isFinite(cost) || cost < 0.0f) return false;
                 charges.add(new AbilitySystemServer.TimedOccupationCharge(cost, 5));
             }
             return AbilitySystemServer.getSystem(player).tryTimedOccupations(
@@ -657,10 +654,7 @@ public class KineticEnergyApplied extends Skill {
                 Vec3 center,
                 Vec3 direction
         ) {
-            return player != null
-                    && player.level() instanceof ServerLevel
-                    && center != null
-                    && direction != null
+            return player.level() instanceof ServerLevel
                     && Double.isFinite(center.x)
                     && Double.isFinite(center.y)
                     && Double.isFinite(center.z)
@@ -791,7 +785,7 @@ public class KineticEnergyApplied extends Skill {
         }
 
         private static Vec3 normalizeOrDefault(Vec3 direction) {
-            if (direction == null || !Double.isFinite(direction.x) || !Double.isFinite(direction.y)
+            if (!Double.isFinite(direction.x) || !Double.isFinite(direction.y)
                     || !Double.isFinite(direction.z) || direction.lengthSqr() < 1.0E-6) {
                 return new Vec3(0.0, 1.0, 0.0);
             }
@@ -809,7 +803,6 @@ public class KineticEnergyApplied extends Skill {
             if (MIGRATED_PLAYERS.contains(player)) return;
             var system = AbilitySystemServer.getSystem(player);
             var playerData = system.getPlayerData(player.getUUID());
-            if (playerData == null) return;
 
             var map = playerData.getMutableSkillDataMap();
             var legacySuperposition = map.remove(LEGACY_KINETIC_SUPERPOSITION);

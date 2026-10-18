@@ -2,12 +2,6 @@ package org.academy.internal.common.ability.accelerator.skills.lv5;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
@@ -46,11 +40,12 @@ import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.vfx.PlasmaChargeVisuals;
+import org.academy.api.common.vfx.SkillVfxState;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.client.render.vfxgraph.SkillVfxStates;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
-import org.academy.internal.common.ability.accelerator.skills.lv5.PlasmaGeneration;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
@@ -68,12 +63,8 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 import org.slf4j.Logger;
-import org.academy.api.common.vfx.SkillVfxState;
-import org.academy.internal.client.render.vfxgraph.SkillVfxStates;
 
-
-
-
+import java.util.*;
 
 
 public class PlasmaGeneration extends Skill {
@@ -156,6 +147,7 @@ public class PlasmaGeneration extends Skill {
 
         private Client() {
         }
+
         private static final Map<Long, PlasmaReplica> PLASMA_REPLICAS = new HashMap<>();
         private static final Map<Long, Long> PLASMA_RECEIVED_AT = new HashMap<>();
 
@@ -423,7 +415,8 @@ public class PlasmaGeneration extends Skill {
             }
 
             private static Vector3f chargeOrigin(Plasma plasma) {
-                if (plasma.visualChargeOrigin() != null) return plasma.visualChargeOrigin().toVector3f();
+                var visualOrigin = plasma.visualChargeOrigin();
+                if (visualOrigin != null) return visualOrigin.toVector3f();
                 var owner = owner(plasma);
                 if (owner != null) {
                     return worldPosition(owner);

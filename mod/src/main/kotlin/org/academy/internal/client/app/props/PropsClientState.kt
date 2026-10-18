@@ -1,7 +1,7 @@
 package org.academy.internal.client.app.props
 
 import org.academy.api.common.attribute.AbilityFactor
-import org.academy.internal.common.attribute.PropsMath
+import org.academy.api.common.attribute.PropsMath
 import org.academy.internal.common.attribute.PropsPackets
 import org.misaka.MisakaNetworkClient
 import org.misaka.api.common.network.annotation.SubscribePacket

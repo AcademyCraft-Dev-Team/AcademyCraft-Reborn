@@ -50,6 +50,7 @@ import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.darkmatter.Darkmatter;
 import org.academy.internal.common.ability.darkmatter.damage.DarkmatterLawMark;
 import org.academy.internal.common.ability.darkmatter.resource.DarkmatterPhase;
 import org.academy.internal.common.ability.darkmatter.targeting.DarkmatterTargeting;
@@ -60,6 +61,7 @@ import org.academy.internal.common.world.item.Items;
 import org.academy.internal.server.ability.AbilityBlockDrops;
 import org.academy.internal.server.ability.AbilitySystemServer;
 import org.academy.internal.server.storage.SpatialStorageService;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -183,8 +185,7 @@ public final class DarkmatterDisassemble extends Skill {
                 BlockPos position,
                 Direction hitFace
         ) {
-            if (player == null || position == null
-                    || !(player.level() instanceof ServerLevel level)) {
+            if (!(player.level() instanceof ServerLevel level)) {
                 return false;
             }
             var reach = Skills.DARKMATTER_DISASSEMBLE.get().scaledRange(player, maximumRange(player));
@@ -198,8 +199,7 @@ public final class DarkmatterDisassemble extends Skill {
                             .getEffectiveProficiencyMilestone(player))) {
                 return false;
             }
-            return disassembleAt(player, Vec3.atCenterOf(position), position,
-                    hitFace == null ? Direction.UP : hitFace);
+            return disassembleAt(player, Vec3.atCenterOf(position), position, hitFace);
         }
 
         public static boolean canProgramDestroyBlock(
@@ -216,9 +216,7 @@ public final class DarkmatterDisassemble extends Skill {
                 BlockPos position,
                 double maximumRange
         ) {
-            if (player == null
-                    || position == null
-                    || !Double.isFinite(maximumRange)
+            if (!Double.isFinite(maximumRange)
                     || maximumRange <= 0.0
                     || maximumRange > RANGE
                     || !(player.level() instanceof ServerLevel level)) {
@@ -276,7 +274,7 @@ public final class DarkmatterDisassemble extends Skill {
             return executed && destroyed[0];
         }
 
-        private static Hit pick(ServerLevel level, ServerPlayer player) {
+        private static @Nullable Hit pick(ServerLevel level, ServerPlayer player) {
             var range = Skills.DARKMATTER_DISASSEMBLE.get().scaledRange(player, RANGE);
             var start = player.getEyePosition();
             var direction = player.getLookAngle().normalize();
@@ -315,7 +313,7 @@ public final class DarkmatterDisassemble extends Skill {
         public static boolean tryAutomatedAttack(ServerPlayer player, LivingEntity target) {
             var reach = Skills.DARKMATTER_DISASSEMBLE.get().scaledRange(player, RANGE);
             if (!(player.level() instanceof ServerLevel level)
-                    || target == null || target.level() != level || !target.isAlive()
+                    || target.level() != level || !target.isAlive()
                     || player.distanceToSqr(target) > reach * reach
                     || !player.hasLineOfSight(target)) return false;
             return disassembleAt(player, target.getBoundingBox().getCenter(), null, Direction.UP);
@@ -371,9 +369,7 @@ public final class DarkmatterDisassemble extends Skill {
                 LivingEntity target,
                 double maximumRange
         ) {
-            return player != null
-                    && target != null
-                    && Double.isFinite(maximumRange)
+            return Double.isFinite(maximumRange)
                     && maximumRange > 0.0
                     && maximumRange <= RANGE
                     && player.level() instanceof ServerLevel level
@@ -467,11 +463,10 @@ public final class DarkmatterDisassemble extends Skill {
         private static boolean disassembleAt(
                 ServerPlayer player,
                 Vec3 impact,
-                BlockPos requestedSeed,
+                @Nullable BlockPos requestedSeed,
                 Direction hitFace
         ) {
-            if (player == null || impact == null
-                    || !(player.level() instanceof ServerLevel level)) {
+            if (!(player.level() instanceof ServerLevel level)) {
                 return false;
             }
             var reach = Skills.DARKMATTER_DISASSEMBLE.get().scaledRange(player, RANGE);
@@ -517,7 +512,7 @@ public final class DarkmatterDisassemble extends Skill {
                         }
                     }
                     if (wasAlive && !target.isAlive()) {
-                        system.getDarkmatterResourceManager().creditEarnedMatter(
+                        Darkmatter.resourceService().creditEarnedMatter(
                                 player, target.getMaxHealth() / 10.0f);
                     }
                     if (target.getHealth() < healthBefore || wasAlive && !target.isAlive()) {
@@ -533,7 +528,7 @@ public final class DarkmatterDisassemble extends Skill {
                     if (seed != null) {
                         var candidates = collectBlockTargets(
                                 level, player, seed,
-                                hitFace == null ? Direction.UP : hitFace,
+                                hitFace,
                                 phase.alpha(), phase.gamma(), context.milestone(),
                                 Skills.DARKMATTER_SIX_WINGS.get()
                                         .getEffectiveProficiencyMilestone(player));
@@ -561,7 +556,7 @@ public final class DarkmatterDisassemble extends Skill {
             return executed && applied[0];
         }
 
-        private static BlockPos nearestBreakableSeed(
+        private static @Nullable BlockPos nearestBreakableSeed(
                 ServerLevel level,
                 ServerPlayer player,
                 Vec3 impact,
@@ -658,7 +653,7 @@ public final class DarkmatterDisassemble extends Skill {
                 List<Direction> neighborOrder,
                 Predicate<BlockPos> matches
         ) {
-            if (neighborOrder == null || neighborOrder.size() != Direction.values().length
+            if (neighborOrder.size() != Direction.values().length
                     || new HashSet<>(neighborOrder).size() != Direction.values().length) {
                 return traverseConnected(
                         origin, limit, List.of(Direction.values()), matches);
@@ -678,8 +673,7 @@ public final class DarkmatterDisassemble extends Skill {
                 List<Direction> neighborOrder,
                 Predicate<BlockPos> matches
         ) {
-            if (origin == null || matches == null || neighborOrder == null
-                    || neighborOrder.isEmpty() || limit <= 0 || !matches.test(origin)) {
+            if (neighborOrder.isEmpty() || limit <= 0 || !matches.test(origin)) {
                 return List.of();
             }
             var result = new ArrayList<BlockPos>(limit);
@@ -701,13 +695,12 @@ public final class DarkmatterDisassemble extends Skill {
         }
 
         static List<Direction> prioritizedDirections(Direction hitFace) {
-            var face = hitFace == null ? Direction.UP : hitFace;
             var result = new ArrayList<Direction>(Direction.values().length);
             for (var direction : Direction.values()) {
-                if (direction.getAxis() != face.getAxis()) result.add(direction);
+                if (direction.getAxis() != hitFace.getAxis()) result.add(direction);
             }
-            result.add(face);
-            result.add(face.getOpposite());
+            result.add(hitFace);
+            result.add(hitFace.getOpposite());
             return List.copyOf(result);
         }
 
@@ -760,14 +753,14 @@ public final class DarkmatterDisassemble extends Skill {
         public static ItemStack createLootTool(RegistryAccess access, int fortune) {
             var tool = new ItemStack(
                     Items.DARKMATTER_TOOL.get());
-            if (access != null && fortune > 0) {
+            if (fortune > 0) {
                 DarkmatterItemUtil.setEnchantmentLevel(
                         access, tool, Enchantments.FORTUNE, fortune);
             }
             return tool;
         }
 
-        private record Hit(LivingEntity entity, BlockHitResult block, Vec3 location) {
+        private record Hit(@Nullable LivingEntity entity, @Nullable BlockHitResult block, Vec3 location) {
         }
     }
 

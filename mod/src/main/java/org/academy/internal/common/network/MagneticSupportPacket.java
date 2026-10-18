@@ -21,9 +21,6 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 
-
-
-
 /**
  * The support used by the actual motion solver, refreshed every two ticks while hovering.
  */

@@ -21,7 +21,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -254,7 +253,6 @@ public final class CurrentRecharge extends Skill {
             if (MIGRATED_PLAYERS.contains(player)) return;
             var system = AbilitySystemServer.getSystem(player);
             var playerData = system.getPlayerData(player.getUUID());
-            if (playerData == null) return;
             var map = playerData.getMutableSkillDataMap();
             var legacy = map.remove(LEGACY_PULSE_CHARGE);
             if (legacy != null) {

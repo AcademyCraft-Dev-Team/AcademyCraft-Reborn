@@ -18,7 +18,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -30,12 +29,14 @@ import org.academy.api.common.ability.AirMobility;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.server.ability.AbilityResourceUsage;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.ability.aeromanip.AeromanipChargeHud;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.aeromanip.Aeromanip;
 import org.academy.internal.common.ability.aeromanip.charge.AeromanipChargeContext;
 import org.academy.internal.common.ability.aeromanip.charge.AeromanipChargeTier;
 import org.academy.internal.common.ability.aeromanip.config.AeromanipConfig;
@@ -44,8 +45,8 @@ import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.level.block.Blocks;
 import org.academy.internal.server.ability.AbilitySystemServer;
-import org.academy.internal.server.ability.AeromanipResourceManager;
 import org.academy.internal.server.team.TeamRelations;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -84,7 +85,7 @@ public final class LaminarBuffer extends Skill {
     }
 
     static Vec3 bufferedAirVelocity(Vec3 velocity) {
-        if (velocity == null || !Double.isFinite(velocity.x)
+        if (!Double.isFinite(velocity.x)
                 || !Double.isFinite(velocity.y) || !Double.isFinite(velocity.z)) return Vec3.ZERO;
         return new Vec3(
                 velocity.x,
@@ -94,7 +95,7 @@ public final class LaminarBuffer extends Skill {
     }
 
     static Vec3 boostedJumpVelocity(Vec3 velocity) {
-        if (velocity == null || !Double.isFinite(velocity.x)
+        if (!Double.isFinite(velocity.x)
                 || !Double.isFinite(velocity.y) || !Double.isFinite(velocity.z)) return Vec3.ZERO;
         return new Vec3(velocity.x * 1.05, velocity.y + 0.12, velocity.z * 1.05);
     }
@@ -150,7 +151,7 @@ public final class LaminarBuffer extends Skill {
 
     public static final class Client {
         public static final String KEY_NAME_CAST = SkillNames.LAMINAR_BUFFER + "_cast";
-        public static AbilitySystemClient.SkillInfo SKILL_INFO;
+        public static AbilitySystemClient.@Nullable SkillInfo SKILL_INFO;
         public static Config CONFIG = new Config();
 
         private Client() {
@@ -331,7 +332,7 @@ public final class LaminarBuffer extends Skill {
         private static final class HoverContext extends ServerContext {
             private final ServerLevel initialLevel;
             private final LaminarBuffer skill;
-            private final AeromanipResourceManager.UsageLease usageLease;
+            private final AbilityResourceUsage usageLease;
             private final double targetY;
             private final int durationTicks;
             private int ticks;
@@ -343,8 +344,7 @@ public final class LaminarBuffer extends Skill {
                 this.durationTicks = durationTicks;
                 initialLevel = player.level();
                 targetY = player.getY();
-                usageLease = AbilitySystemServer.getSystem(player)
-                        .getAeromanipResourceManager().beginUse(player);
+                usageLease = Aeromanip.resourceService().beginUse(player);
             }
 
             private void stop() {
@@ -419,7 +419,7 @@ public final class LaminarBuffer extends Skill {
             if (!(living instanceof Player)) living.syncVelocity = true;
         }
 
-        private static ServerPlayer findOwner(
+        private static @Nullable ServerPlayer findOwner(
                 ServerLevel level,
                 LivingEntity target,
                 LaminarBuffer skill

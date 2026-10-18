@@ -2,9 +2,6 @@ package org.academy.internal.common.ability.teleport;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import java.util.EnumMap;
-import java.util.Map;
-import java.util.Optional;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
@@ -19,8 +16,9 @@ import org.academy.internal.common.ability.development.AbilityDevelopmentProfile
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.joml.Quaternionf;
 
-
-
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.Optional;
 
 public final class Teleport extends AbilityCategory {
     public Teleport() {

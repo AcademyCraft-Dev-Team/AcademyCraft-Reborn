@@ -2,11 +2,6 @@ package org.academy.internal.common.ability.electromaster.skills.lv4;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -56,13 +51,15 @@ import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.sync.DataSyncManager;
 import org.academy.api.server.sync.ServerSyncManager;
 import org.academy.api.server.vanilla.MinecraftServerContext;
+import org.academy.internal.client.render.vfxgraph.FrameContext;
+import org.academy.internal.client.render.vfxgraph.TickingVfx;
+import org.academy.internal.client.render.vfxgraph.VfxContexts;
 import org.academy.internal.client.renderer.entity.ReflectedBeamVisualGeometry;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.Accelerator;
 import org.academy.internal.common.ability.electromaster.skills.lv2.ThunderLance;
-import org.academy.internal.common.ability.electromaster.skills.lv4.Railgun;
 import org.academy.internal.common.ability.shared.linear.LinearAttackExecutor;
 import org.academy.internal.common.ability.shared.linear.LinearAttackPayload;
 import org.academy.internal.common.ability.shared.linear.LinearReflectionResolver;
@@ -92,19 +89,13 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static org.misaka.MisakaNetworkClient.send;
-import org.academy.internal.client.render.vfxgraph.FrameContext;
-import org.academy.internal.client.render.vfxgraph.TickingVfx;
-import org.academy.internal.client.render.vfxgraph.VfxContexts;
-
-
-
-
-
-
-
-
-
 
 
 public final class Railgun extends Skill {
@@ -295,7 +286,7 @@ public final class Railgun extends Skill {
 
             private static final class Hands {
                 final ActiveEffect charge;
-                ActiveEffect hint;
+                @Nullable ActiveEffect hint;
 
                 Hands(Player player) {
                     charge = create(player, false);
@@ -405,8 +396,8 @@ public final class Railgun extends Skill {
         static final class RailgunShotVfx implements TickingVfx {
             private static final Identifier ASSET = Identifier.fromNamespaceAndPath("academy", "vfxgraph/railgun_shot");
             private final RailgunRay ray;
-            private ActiveEffect outgoing;
-            private ActiveEffect reflected;
+            private @Nullable ActiveEffect outgoing;
+            private @Nullable ActiveEffect reflected;
             private float ageSeconds;
             private float detail = 1;
             private boolean stopped;

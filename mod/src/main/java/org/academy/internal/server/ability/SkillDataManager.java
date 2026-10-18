@@ -8,7 +8,8 @@ import org.academy.api.common.ability.data.SkillData;
 import org.academy.api.common.ability.pakcet.SyncSkillDataPacket;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
-import org.academy.internal.server.world.level.storage.Player;
+import org.academy.api.server.world.level.storage.PlayerData;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 
 import java.util.Map;
@@ -43,7 +44,7 @@ public class SkillDataManager implements AbilitySubsystem {
                 ? SkillActivity.EFFECTIVE : SkillActivity.ACTIVE;
     }
 
-    static ProficiencyEvent resolveContinuousEvent(boolean passive, SkillActivity activity) {
+    static @Nullable ProficiencyEvent resolveContinuousEvent(boolean passive, @Nullable SkillActivity activity) {
         if (passive) return ProficiencyEvent.PASSIVE_TICK;
         if (activity == SkillActivity.EFFECTIVE) return ProficiencyEvent.EFFECTIVE_TICK;
         if (activity == SkillActivity.ACTIVE) return ProficiencyEvent.ACTIVE_TICK;
@@ -59,14 +60,14 @@ public class SkillDataManager implements AbilitySubsystem {
 
     static int removeCategorySkills(
             Map<String, SkillData> skillDataMap,
-            Function<String, SkillScope> scopeResolver
+            Function<String, @Nullable SkillScope> scopeResolver
     ) {
         var previousSize = skillDataMap.size();
         skillDataMap.keySet().removeIf(skillId -> scopeResolver.apply(skillId) != SkillScope.COMMON);
         return previousSize - skillDataMap.size();
     }
 
-    private static SkillScope resolveSkillScope(String skillId) {
+    private static @Nullable SkillScope resolveSkillScope(String skillId) {
         var identifier = Identifier.tryParse(skillId);
         if (identifier == null) return null;
         return Registries.SKILLS.get(identifier)
@@ -177,12 +178,11 @@ public class SkillDataManager implements AbilitySubsystem {
     }
 
     public boolean addSkillProficiency(UUID uuid, Skill skill, ProficiencyEvent event) {
-        if (skill == null || event == null) return false;
         return addSkillProficiency(uuid, skill, event.getIncrement());
     }
 
     public boolean addSkillProficiency(UUID uuid, Skill skill, float increment) {
-        if (skill == null || !Float.isFinite(increment) || increment == 0.0f) return false;
+        if (!Float.isFinite(increment) || increment == 0.0f) return false;
         var playerData = playerDataManager.getData(uuid);
         if (playerData == null) return false;
         var data = playerData.getSkillDataMap().get(skill.getKeyString());
@@ -198,7 +198,6 @@ public class SkillDataManager implements AbilitySubsystem {
     }
 
     public boolean setSkillProficiency(UUID uuid, Skill skill, float proficiency) {
-        if (skill == null) return false;
         var playerData = playerDataManager.getData(uuid);
         if (playerData == null) return false;
         var data = playerData.getSkillDataMap().get(skill.getKeyString());
@@ -215,7 +214,6 @@ public class SkillDataManager implements AbilitySubsystem {
     }
 
     public void reportSkillActivity(UUID uuid, Skill skill, SkillActivity activity) {
-        if (uuid == null || skill == null || activity == null) return;
         pendingActivities.computeIfAbsent(uuid, _ -> new ConcurrentHashMap<>())
                 .merge(skill.getKeyString(), activity, SkillDataManager::strongestActivity);
     }
@@ -372,19 +370,18 @@ public class SkillDataManager implements AbilitySubsystem {
     }
 
     private boolean maintainSkillActivationStates(
-            Player playerData
+            PlayerData playerData
     ) {
         var changed = false;
         for (var entry : playerData.getSkillDataMap().entrySet()) {
             var data = entry.getValue();
-            if (data == null) continue;
             changed |= bindSkillActivationState(playerData, entry.getKey(), data);
         }
         return changed | playerData.consumeSkillActivationSyncDirty();
     }
 
     private boolean bindSkillActivationState(
-            Player playerData,
+            PlayerData playerData,
             String skillId,
             SkillData data
     ) {

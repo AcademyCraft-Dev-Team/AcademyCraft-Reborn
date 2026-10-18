@@ -2,8 +2,6 @@ package org.academy.internal.common.ability.accelerator.skills.lv5.wing;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import java.util.*;
-import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -22,7 +20,6 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
@@ -42,6 +39,7 @@ import org.academy.internal.common.ability.accelerator.flight.WingFlightRuntime;
 import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -50,7 +48,8 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-
+import java.util.*;
+import java.util.function.Consumer;
 
 
 public final class BlackWing extends Skill {
@@ -108,7 +107,7 @@ public final class BlackWing extends Skill {
         public static Config CONFIG = new Config();
         private static final WingControlIntent.Sender CONTROL_SENDER = new WingControlIntent.Sender();
         private static long controlEpoch = -1, controlSequence;
-        private static ClientLevel controlLevel;
+        private static @Nullable ClientLevel controlLevel;
 
         private Client() {
         }
@@ -176,7 +175,7 @@ public final class BlackWing extends Skill {
             final ServerLevel level;
             long sequence;
             final WingControlIntent.Mailbox controls = new WingControlIntent.Mailbox();
-            BlackWingAttackPacket lastAttack;
+            @Nullable BlackWingAttackPacket lastAttack;
 
             AttackSession(ServerPlayer player) {
                 level = player.level();
@@ -193,7 +192,7 @@ public final class BlackWing extends Skill {
             }
         }
 
-        private static AttackSession refreshSession(ServerPlayer player) {
+        private static @Nullable AttackSession refreshSession(ServerPlayer player) {
             var session = ATTACK_SESSIONS.get(player);
             boolean active = isActive(player) && player.isAlive() && !player.hasDisconnected();
             if (session != null && (!active || session.level != player.level())) {
@@ -271,7 +270,6 @@ public final class BlackWing extends Skill {
         }
 
         public static void forceDeactivate(ServerPlayer player) {
-            if (player == null) return;
             WingFlightSupport.forceDeactivateSkill(player, Skills.BLACK_WING.get());
             WingFlightRuntime.clear(player, Skills.BLACK_WING.get());
             WingFlightSupport.sync(player, AttachmentTypes.ACTIVATED_BLACK_WING.get(), false);

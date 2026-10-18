@@ -46,9 +46,9 @@ import net.neoforged.neoforge.network.registration.NetworkRegistry;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.attribute.PlayerAttributes;
+import org.academy.api.common.attribute.PropsMath;
 import org.academy.internal.common.attribute.BlockLootPlayerContext;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
-import org.academy.internal.common.attribute.PropsMath;
 import org.academy.internal.common.gametest.GameTestData;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.level.block.MultiBlock;
@@ -58,10 +58,7 @@ import org.academy.internal.server.ability.AbilityBlockDrops;
 import org.academy.internal.server.ability.AbilitySystemServer;
 import org.academy.internal.server.ability.PropsManager;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Real player events and ability loot tables, including controlled breakers without tools.
@@ -155,9 +152,9 @@ public final class PropsGameTests {
         }
         helper.assertTrue(developer.getEnergyStored() == 200 && table.getEnergyStored() == 200,
                 "Packet coalescing must not delay or lose energy mutations");
-        helper.assertTrue(missing.equals(developer.getConnectedNodePosition()),
+        helper.assertTrue(Objects.equals(missing, developer.getConnectedNodePosition()),
                 "A temporarily unloaded developer node must remain connected");
-        helper.assertTrue(missing.equals(table.getConnectedNodePosition()),
+        helper.assertTrue(Objects.equals(missing, table.getConnectedNodePosition()),
                 "A temporarily unloaded crafting-table node must remain connected");
         helper.assertTrue(level.getChunkSource().getChunkNow(missing.getX() >> 4, missing.getZ() >> 4) == null,
                 "Repeated device ticks must not load the endpoint chunk");
@@ -244,8 +241,8 @@ public final class PropsGameTests {
     }
 
     private static void attributes(GameTestHelper helper, ServerPlayer player) {
-        var step = player.getAttribute(Attributes.STEP_HEIGHT).getBaseValue();
-        var knockback = player.getAttribute(Attributes.ATTACK_KNOCKBACK);
+        var step = Objects.requireNonNull(player.getAttribute(Attributes.STEP_HEIGHT)).getBaseValue();
+        var knockback = Objects.requireNonNull(player.getAttribute(Attributes.ATTACK_KNOCKBACK));
         var legacyKnockback = AcademyCraft.academy("attribute_bonus.muscle_knockback");
         var otherKnockback = AcademyCraft.academy("props_test.other_knockback");
         knockback.addOrReplacePermanentModifier(new AttributeModifier(
@@ -259,8 +256,8 @@ public final class PropsGameTests {
         };
         for (var sample : cases) {
             var value = sample[0];
-            player.getAttribute(PlayerAttributes.MUSCLE_STRENGTH).setBaseValue(value);
-            player.getAttribute(PlayerAttributes.DEXTERITY).setBaseValue(value);
+            Objects.requireNonNull(player.getAttribute(PlayerAttributes.MUSCLE_STRENGTH)).setBaseValue(value);
+            Objects.requireNonNull(player.getAttribute(PlayerAttributes.DEXTERITY)).setBaseValue(value);
             PlayerAttributeRuntime.syncPlayer(player);
             close(helper, player.getAttributeValue(Attributes.ATTACK_DAMAGE),
                     1.0 + sample[1], "Melee damage cap/milestones");
@@ -273,16 +270,16 @@ public final class PropsGameTests {
             close(helper, player.getAttributeValue(Attributes.STEP_HEIGHT),
                     step + PropsMath.dexterityStepHeightBonus(value), "Step threshold/removal");
         }
-        player.getAttribute(PlayerAttributes.DEXTERITY).setBaseValue(2_000.0);
+        Objects.requireNonNull(player.getAttribute(PlayerAttributes.DEXTERITY)).setBaseValue(2_000.0);
         PlayerAttributeRuntime.syncPlayer(player);
         close(helper, player.getAttributeValue(Attributes.SAFE_FALL_DISTANCE), 6.0,
                 "Dexterity extends the safe fall distance with its jump height");
         helper.assertTrue(!player.causeFallDamage(5.1, 1.0f, player.damageSources().fall()),
                 "Landing from a full dexterity jump must not cause fall damage");
-        player.getAttribute(PlayerAttributes.ENDURANCE).setBaseValue(50.0);
+        Objects.requireNonNull(player.getAttribute(PlayerAttributes.ENDURANCE)).setBaseValue(50.0);
         PlayerAttributeRuntime.syncPlayer(player);
         close(helper, player.getMaxHealth(), 21.0, "50 endurance adds one health");
-        player.getAttribute(PlayerAttributes.NEURAL_ACTIVITY).setBaseValue(100.0);
+        Objects.requireNonNull(player.getAttribute(PlayerAttributes.NEURAL_ACTIVITY)).setBaseValue(100.0);
         close(helper, PlayerAttributeRuntime.neuralIterationMultiplier(player), 1.01, "Neural iteration");
     }
 
@@ -345,7 +342,7 @@ public final class PropsGameTests {
     private static void damage(GameTestHelper helper, ServerPlayer player) {
         var data = AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID()).getPropsData();
         var target = helper.spawn(EntityTypes.COW, new BlockPos(2, 2, 2));
-        target.getAttribute(Attributes.MAX_HEALTH).setBaseValue(100.0);
+        Objects.requireNonNull(target.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(100.0);
         target.setHealth(100.0f);
         target.hurtServer(helper.getLevel(), player.damageSources().playerAttack(player), 18.0f);
         close(helper, data.total(), 3.6, "Damage above ten is not capped");
@@ -362,7 +359,7 @@ public final class PropsGameTests {
         var pos = helper.absolutePos(new BlockPos(2, 2, 2));
         var state = Blocks.DIAMOND_ORE.defaultBlockState();
         var subject = helper.spawn(EntityTypes.COW, new BlockPos(3, 2, 2));
-        player.getAttribute(PlayerAttributes.PERCEPTION).setBaseValue(2_000.0);
+        Objects.requireNonNull(player.getAttribute(PlayerAttributes.PERCEPTION)).setBaseValue(2_000.0);
         var total = 0;
         for (var sample = 0; sample < 256; sample++) {
             total += AbilityBlockDrops.getDrops(player, state, level, pos, null, subject, ItemStack.EMPTY)
@@ -374,7 +371,7 @@ public final class PropsGameTests {
             helper.assertTrue(BlockLootPlayerContext.current() == player,
                     "Direct destruction and secondary drops inherit the caster");
         }
-        player.getAttribute(PlayerAttributes.PERCEPTION).setBaseValue(100.0);
+        Objects.requireNonNull(player.getAttribute(PlayerAttributes.PERCEPTION)).setBaseValue(100.0);
         var looting = level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.LOOTING);
         var source = new DamageSource(level.registryAccess()
                 .lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(DamageTypes.ELECTRO_DAMAGE), player);

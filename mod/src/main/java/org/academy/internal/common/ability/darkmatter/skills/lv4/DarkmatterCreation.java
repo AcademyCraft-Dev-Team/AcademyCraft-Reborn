@@ -36,6 +36,7 @@ import org.academy.internal.client.gui.screen.DarkmatterCreationScreen;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.darkmatter.Darkmatter;
 import org.academy.internal.common.ability.darkmatter.creature.DarkmatterCreatureBlueprint;
 import org.academy.internal.common.ability.darkmatter.skills.lv2.DarkmatterCut;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
@@ -44,6 +45,7 @@ import org.academy.internal.common.skilldata.DarkmatterCreationData;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
 import org.academy.internal.server.ability.AbilitySystemServer;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -250,10 +252,8 @@ public final class DarkmatterCreation extends Skill {
         public static void handle(SummonPacket packet) {
             var player = player(packet);
             var result = prepareAndSummon(player, packet.slot, packet.blueprint);
-            if (player != null) {
-                sendSnapshot(player);
-                MisakaNetworkServer.send(player, new SummonResultPacket(result));
-            }
+            sendSnapshot(player);
+            MisakaNetworkServer.send(player, new SummonResultPacket(result));
         }
 
         @SubscribePacket
@@ -270,17 +270,16 @@ public final class DarkmatterCreation extends Skill {
         }
 
         private static boolean isUsable(ServerPlayer player) {
-            return player != null && player.isAlive()
+            return player.isAlive()
                     && Skills.DARKMATTER_CREATION.get().isEnabled(player);
         }
 
         private static int abilityLevel(ServerPlayer player) {
-            return AbilitySystemServer.getSystem(player).getDarkmatterResourceManager()
+            return Darkmatter.resourceService()
                     .getPhaseSnapshot(player).abilityLevel();
         }
 
         private static void summonSelected(ServerPlayer player) {
-            if (player == null) return;
             var slot = data(player).map(DarkmatterCreationData::getSelectedSlot).orElse(0);
             var result = prepareAndSummon(player, slot, null);
             sendSnapshot(player);
@@ -288,7 +287,7 @@ public final class DarkmatterCreation extends Skill {
         }
 
         private static SummonResult prepareAndSummon(ServerPlayer player, int slot,
-                                                     DarkmatterCreatureBlueprint submitted) {
+                                                     @Nullable DarkmatterCreatureBlueprint submitted) {
             if (!isUsable(player) || !(player.level() instanceof ServerLevel level)) {
                 return SummonResult.UNAVAILABLE;
             }
@@ -312,7 +311,7 @@ public final class DarkmatterCreation extends Skill {
             var blueprint = data.getBlueprint(normalizedSlot, abilityLevel);
             if (!blueprint.validate(abilityLevel).isEmpty()) return SummonResult.INVALID_BLUEPRINT;
             var system = AbilitySystemServer.getSystem(player);
-            var resource = system.getDarkmatterResourceManager();
+            var resource = Darkmatter.resourceService();
             var investment = blueprint.investment();
             var view = resource.getView(player);
             if (data.getSummons().size() >= MAX_CREATURES
@@ -375,7 +374,7 @@ public final class DarkmatterCreation extends Skill {
             return false;
         }
 
-        private static DarkmatterBeetle createCreature(ServerLevel level, ServerPlayer player,
+        private static @Nullable DarkmatterBeetle createCreature(ServerLevel level, ServerPlayer player,
                                                        Vec3 position,
                                                        DarkmatterCreatureBlueprint blueprint,
                                                        int slot) {
@@ -406,7 +405,7 @@ public final class DarkmatterCreation extends Skill {
             var creature = createCreature(level, player, position, blueprint,
                     data(player).orElseThrow().getSelectedSlot());
             return creature != null && level.noCollision(creature)
-                    && AbilitySystemServer.getSystem(player).getDarkmatterResourceManager()
+                    && Darkmatter.resourceService()
                     .getView(player).totalMatter() + 1.0e-4f >= blueprint.investment()
                     && AbilitySystemServer.getSystem(player).getPlayerAvailableCP(player.getUUID())
                     + 1.0e-4f >= RESERVED_CP_PER_BEETLE;
@@ -423,7 +422,7 @@ public final class DarkmatterCreation extends Skill {
             if (creature == null || !level.noCollision(creature) || !level.addFreshEntity(creature)) {
                 return Optional.empty();
             }
-            var resource = AbilitySystemServer.getSystem(player).getDarkmatterResourceManager();
+            var resource = Darkmatter.resourceService();
             var desiredCount = creationData.getSummons().size() + 1;
             if (!replaceCreationOccupation(player, desiredCount)) {
                 creature.discard();
@@ -442,11 +441,10 @@ public final class DarkmatterCreation extends Skill {
         }
 
         public static void discardProgramCreated(ServerPlayer player, UUID uuid) {
-            if (player != null && uuid != null) discardOne(player, uuid);
+            discardOne(player, uuid);
         }
 
         public static void removeOwned(ServerPlayer player, UUID uuid) {
-            if (player == null || uuid == null) return;
             var removed = new boolean[1];
             updateData(player, data -> removed[0] = data.removeSummon(uuid) > 0.0f);
             if (removed[0]) replaceCreationOccupation(
@@ -455,7 +453,7 @@ public final class DarkmatterCreation extends Skill {
 
         private static void discardOne(ServerPlayer player, UUID uuid) {
             var server = player.level().getServer();
-            if (server != null) for (var level : server.getAllLevels()) {
+            for (var level : server.getAllLevels()) {
                 if (level.getEntity(uuid) instanceof DarkmatterBeetle creature
                         && creature.isOwnedBy(player)) {
                     creature.discard();
@@ -467,7 +465,6 @@ public final class DarkmatterCreation extends Skill {
         }
 
         private static void discardAll(ServerPlayer player) {
-            if (player == null) return;
             var startedAt = System.nanoTime();
             var drainedCount = new int[1];
             updateData(player, mutable ->
@@ -509,7 +506,6 @@ public final class DarkmatterCreation extends Skill {
                 return;
             }
             var server = player.level().getServer();
-            if (server == null) return;
             for (var record : records)
                 record.uuid().ifPresent(uuid -> {
                     DarkmatterBeetle loaded = null;
@@ -583,7 +579,7 @@ public final class DarkmatterCreation extends Skill {
         }
 
         private static void migrateReservedMatter(ServerPlayer player) {
-            var resource = AbilitySystemServer.getSystem(player).getDarkmatterResourceManager();
+            var resource = Darkmatter.resourceService();
             var reserved = resource.getView(player).reservedMatter();
             if (reserved <= 1.0e-4f) return;
             resource.releaseReservation(player, reserved);
@@ -594,7 +590,7 @@ public final class DarkmatterCreation extends Skill {
 
         private static boolean validProgramPosition(ServerPlayer player, Vec3 position,
                                                     double maximumRange) {
-            if (!(player.level() instanceof ServerLevel level) || position == null
+            if (!(player.level() instanceof ServerLevel level)
                     || !Double.isFinite(position.x) || !Double.isFinite(position.y)
                     || !Double.isFinite(position.z) || !Double.isFinite(maximumRange)
                     || maximumRange <= 0.0 || maximumRange > MAX_PROGRAM_RANGE
@@ -790,13 +786,13 @@ public final class DarkmatterCreation extends Skill {
                 buf -> new SummonPacket(ByteBufCodecs.VAR_INT.decode(buf),
                         buf.readBoolean() ? decodeBlueprint(buf) : null));
         public final int slot;
-        public final DarkmatterCreatureBlueprint blueprint;
+        public final @Nullable DarkmatterCreatureBlueprint blueprint;
 
         public SummonPacket(int slot) {
             this(slot, null);
         }
 
-        public SummonPacket(int slot, DarkmatterCreatureBlueprint blueprint) {
+        public SummonPacket(int slot, @Nullable DarkmatterCreatureBlueprint blueprint) {
             this.slot = Math.clamp(slot, 0, 3);
             this.blueprint = blueprint == null ? null : blueprint.copy();
         }
@@ -817,9 +813,9 @@ public final class DarkmatterCreation extends Skill {
                 },
                 buf -> new DismantlePacket(buf.readBoolean(), buf.readBoolean() ? decodeUuid(buf) : null));
         public final boolean all;
-        public final UUID uuid;
+        public final @Nullable UUID uuid;
 
-        public DismantlePacket(boolean all, UUID uuid) {
+        public DismantlePacket(boolean all, @Nullable UUID uuid) {
             this.all = all;
             this.uuid = uuid;
         }
@@ -924,7 +920,7 @@ public final class DarkmatterCreation extends Skill {
         public final SummonResult result;
 
         public SummonResultPacket(SummonResult result) {
-            this.result = result == null ? SummonResult.SPAWN_FAILED : result;
+            this.result = result;
         }
 
         @Override

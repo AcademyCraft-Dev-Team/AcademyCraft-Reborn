@@ -24,7 +24,6 @@ import org.academy.api.client.render.vfxgraph.arc.ArcCurve;
 import org.academy.api.client.render.vfxgraph.arc.BlenderArcCurves;
 import org.academy.api.client.render.vfxgraph.arc.CurveToMeshBuilder;
 import org.academy.api.client.render.vfxgraph.block.BlockGeometryBuffer;
-import org.academy.api.client.render.vfxgraph.block.BlockGeometryFrame;
 import org.academy.api.client.render.vfxgraph.instance.InstanceGeometryBuffer;
 import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
 import org.academy.api.client.resources.R;
@@ -279,7 +278,7 @@ public final class VfxGraphRenderer {
                     + "_" + s.blend().name().toLowerCase(Locale.ROOT)
                     + "_" + s.vertexShader().getPath() + "_" + s.fragmentShader().getPath()
                     + (s.geometry() == RenderSpec.Geometry.INSTANCED_TEX && topology == PrimitiveTopology.TRIANGLES
-                            ? "_tri" : "");
+                    ? "_tri" : "");
             var pipeline = buildPipeline(locationName, s.vertexShader(), s.fragmentShader(),
                     bindGroup, vertexFormat, instanceFormat, blend, topology);
             RenderSystem.getCompiledPipeline(pipeline);
@@ -357,7 +356,6 @@ public final class VfxGraphRenderer {
 
     public void renderDistortionRings(GpuTextureView target, ParticleBuffer buffer, RenderSpec spec,
                                       RenderSpec.DistortionRing ring, WorldTransform transform, GraphCamera camera) {
-        if (ring == null) return;
         int count = 0;
         for (var i = 0; i < buffer.count(); i++) {
             if (spec.matchesLayer(buffer.layer(i))) count++;
@@ -835,12 +833,12 @@ public final class VfxGraphRenderer {
     }
 
     private record PreparedInstancedTex(long vertexBytes, long instanceBytes,
-                                         int vertexCount, int instanceCount) {
+                                        int vertexCount, int instanceCount) {
     }
 
     private @Nullable PreparedInstancedTex prepareInstancedTexPass(GraphCamera camera,
-                                                                    WorldTransform transform,
-                                                                    List<RenderSpec> specs) {
+                                                                   WorldTransform transform,
+                                                                   List<RenderSpec> specs) {
         var geometry = instanceGeometry;
         if (geometry == null || geometry.isEmpty()) return null;
         if (specs.stream().noneMatch(s -> s.geometry() == RenderSpec.Geometry.INSTANCED_TEX)) return null;
@@ -848,25 +846,29 @@ public final class VfxGraphRenderer {
         var instanceCount = geometry.instanceCount();
         var vertexBytes = (long) TEX_VERTEX_FORMAT.getVertexSize() * vertexCount;
         var instanceBytes = (long) INSTANCE_MAT_FORMAT.getVertexSize() * instanceCount;
-        if (vertexBytes > instancedTexVertexBuffer.size()) growInstancedTexVertexBuffer(vertexCount);
-        if (instanceBytes > instancedTexInstanceBuffer.size()) growInstancedTexInstanceBuffer(instanceCount);
+        if (instancedTexVertexBuffer == null || vertexBytes > instancedTexVertexBuffer.size())
+            growInstancedTexVertexBuffer(vertexCount);
+        if (instancedTexInstanceBuffer == null || instanceBytes > instancedTexInstanceBuffer.size())
+            growInstancedTexInstanceBuffer(instanceCount);
+        var vertexBuffer = Objects.requireNonNull(instancedTexVertexBuffer);
+        var instanceBuffer = Objects.requireNonNull(instancedTexInstanceBuffer);
         instancedTexInstanceStaging = ensureInstancedTexStaging(
                 instancedTexInstanceStaging, Math.toIntExact(instanceBytes));
         var staging = instancedTexInstanceStaging;
-        transformInstanceMatrices(geometry.instances(), staging, instanceCount,
+        transformInstanceMatrices(Objects.requireNonNull(geometry.instances()), staging, instanceCount,
                 camera.position(), transform);
         staging.flip();
-        var vertices = geometry.vertices().duplicate();
+        var vertices = Objects.requireNonNull(geometry.vertices()).duplicate();
         vertices.position(0);
         vertices.limit((int) vertexBytes);
         var writeEncoder = RenderSystem.getDevice().createCommandEncoder();
-        writeEncoder.writeToBuffer(instancedTexVertexBuffer.slice(0, vertexBytes), vertices);
-        writeEncoder.writeToBuffer(instancedTexInstanceBuffer.slice(0, instanceBytes), staging);
+        writeEncoder.writeToBuffer(vertexBuffer.slice(0, vertexBytes), vertices);
+        writeEncoder.writeToBuffer(instanceBuffer.slice(0, instanceBytes), staging);
         return new PreparedInstancedTex(vertexBytes, instanceBytes, vertexCount, instanceCount);
     }
 
-    private Map<RenderSpec, ResolvedTexture[]> resolveInstancedTexTextures(List<RenderSpec> specs, boolean bloomPass) {
-        var textures = new IdentityHashMap<RenderSpec, ResolvedTexture[]>();
+    private Map<RenderSpec, @Nullable ResolvedTexture[]> resolveInstancedTexTextures(List<RenderSpec> specs, boolean bloomPass) {
+        var textures = new IdentityHashMap<RenderSpec, @Nullable ResolvedTexture[]>();
         var environment = UiEnvironment.get();
         for (var spec : specs) {
             if (bloomPass ? !spec.feedsBloom() : spec.bloomOnly()) continue;
@@ -879,13 +881,14 @@ public final class VfxGraphRenderer {
             if (spec.texture1() != null) {
                 secondary = environment.resolveTexture(spec.texture1());
             }
-            textures.put(spec, new ResolvedTexture[]{primary, secondary});
+            @Nullable ResolvedTexture[] resolved = {primary, secondary};
+            textures.put(spec, resolved);
         }
         return textures;
     }
 
     private void drawInstancedTex(RenderPass pass, PreparedInstancedTex prepared, RenderSpec spec,
-                                   @Nullable ResolvedTexture[] textures, GpuBufferSlice params) {
+                                  @Nullable ResolvedTexture @Nullable [] textures, GpuBufferSlice params) {
         pass.setPipeline(RenderSystem.getCompiledPipeline(pipelineFor(spec)));
         pass.setUniform("GraphCamera", cameraUbo.slice());
         pass.setUniform("InstancedParams", params);
@@ -902,8 +905,8 @@ public final class VfxGraphRenderer {
             pass.setUniform("Sampler1", noiseView, noiseSampler);
         }
         RenderSystem.bindDefaultUniforms(pass);
-        pass.setVertexBuffer(0, instancedTexVertexBuffer.slice(0, prepared.vertexBytes()));
-        pass.setVertexBuffer(1, instancedTexInstanceBuffer.slice(0, prepared.instanceBytes()));
+        pass.setVertexBuffer(0, Objects.requireNonNull(instancedTexVertexBuffer).slice(0, prepared.vertexBytes()));
+        pass.setVertexBuffer(1, Objects.requireNonNull(instancedTexInstanceBuffer).slice(0, prepared.instanceBytes()));
         var topology = spec.topology();
         var sequential = RenderSystem.getSequentialBuffer(topology);
         var indexCount = topology == PrimitiveTopology.TRIANGLES
@@ -913,7 +916,7 @@ public final class VfxGraphRenderer {
     }
 
     private void transformInstanceMatrices(ByteBuffer source, ByteBuffer target, int instanceCount,
-                                            Vector3f camPos, WorldTransform transform) {
+                                           Vector3f camPos, WorldTransform transform) {
         var identity = transform.isIdentity();
         var scratch = new float[3];
         for (var i = 0; i < instanceCount; i++) {
@@ -1042,7 +1045,7 @@ public final class VfxGraphRenderer {
     }
 
     private static void compactBlockMeshVertices(BlockGeometryBuffer geometry, ByteBuffer staging,
-                                                  Vector3f camPos) {
+                                                 Vector3f camPos) {
         staging.clear();
         var vertices = geometry.layerVertices();
         var counts = geometry.layerVertexCounts();

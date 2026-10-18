@@ -55,7 +55,7 @@ class ArcEffectGraphVfxTest {
         at(sim, 0.1f);
         var rotated = sim.arcBuffer().arc(0);
         assertTrue(Math.abs(rotated.x(rotated.size() - 1) - x) > 1.0e-4f
-                || Math.abs(rotated.y(rotated.size() - 1) - y) > 1.0e-4f,
+                        || Math.abs(rotated.y(rotated.size() - 1) - y) > 1.0e-4f,
                 "The editor preview must rotate with the presentation clock");
     }
 

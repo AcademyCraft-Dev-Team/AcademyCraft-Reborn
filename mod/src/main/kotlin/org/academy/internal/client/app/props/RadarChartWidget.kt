@@ -6,7 +6,7 @@ import org.academy.api.client.gui.command.FillRectDrawCommand
 import org.academy.api.client.gui.render.Canvas
 import org.academy.api.client.gui.widget.AbstractWidget
 import org.academy.api.common.attribute.AbilityFactor
-import org.academy.internal.common.attribute.PropsMath
+import org.academy.api.common.attribute.PropsMath
 import kotlin.math.hypot
 
 class RadarChartWidget : AbstractWidget() {
