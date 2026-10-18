@@ -20,7 +20,8 @@ import java.util.List;
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class SubLevelMultiClientSmoke {
     private static final boolean ENABLED = Boolean.getBoolean("academy.sublevelMultiSmoke");
-    private static final int STRUCTURES = 64;
+    private static final int STRUCTURES = Integer.getInteger("academy.sublevelMultiSmokeCount", 64);
+    private static final int GRID = (int) Math.ceil(Math.sqrt(STRUCTURES));
     private static volatile boolean captureRequested;
     private static volatile boolean captureDone;
     private static volatile String failure;
@@ -39,7 +40,7 @@ public final class SubLevelMultiClientSmoke {
         if (!ENABLED || failure != null) return;
         var minecraft = Minecraft.getInstance();
         if (minecraft.level == null || minecraft.player == null) return;
-        if (++ticks > 1800) {
+        if (++ticks > 3600) {
             fail("timeout");
             return;
         }
@@ -73,8 +74,8 @@ public final class SubLevelMultiClientSmoke {
             var level = player.level();
             var base = player.blockPosition().above(8);
             var captured = new ArrayList<SubLevelCaptureService.Result>(STRUCTURES);
-            for (int gridX = 0; gridX < 8; gridX++) {
-                for (int gridZ = 0; gridZ < 8; gridZ++) {
+            for (int gridX = 0; gridX < GRID; gridX++) {
+                for (int gridZ = 0; gridZ < GRID && captured.size() < STRUCTURES; gridZ++) {
                     var origin = base.offset(gridX * 3, 0, gridZ * 3);
                     var positions = new ArrayList<BlockPos>(8);
                     for (int x = 0; x < 2; x++) {

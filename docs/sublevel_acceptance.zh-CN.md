@@ -19,7 +19,7 @@ SubLevel restore verify: stored=256 active=64 entries=256
 
 结论：256 个 plot/manifest 条目和碰撞/视图可恢复；物理 universe 严格限制为 64 个活跃 body，其余保持 INACTIVE，不占用 Rapier 活跃预算。
 
-## 2. 64 活跃客户端渲染 / 60 FPS
+## 2.2 64 活跃客户端渲染 / 60 FPS
 
 集成客户端创建 64 个 2×2×2 自发光 SubLevel，稳定后测量 120 tick：
 
@@ -30,7 +30,19 @@ SUBLEVEL_MULTI_BENCHMARK structures=64 fps_avg=101.2 fps_min=89 ticks=120
 
 结论：该场景达到首版 60 FPS 目标（1280×720，开发客户端，无光影/额外模组）；这是 2×2×2 结构基准，不代表 24³ 全尺寸结构或 256 全部同时渲染。
 
-## 2.1 地形碰撞修复
+## 2.1 256 场景客户端渲染
+
+`SubLevelMultiClientSmoke` 使用 `-Dacademy.sublevelMultiSmokeCount=256` 捕获 256 个 2×2×2 自发光 SubLevel，服务端按 64 活跃预算只模拟 64 个 body，客户端渲染 256 个投影：
+
+```text
+SUBLEVEL_MULTI_CAPTURED structures=256
+SubLevel snapshots started: players=1 sublevels=256
+SUBLEVEL_MULTI_BENCHMARK structures=256 fps_avg=91.63 fps_min=61 ticks=120
+```
+
+1280×720 开发客户端下平均 91.6 FPS、最低 61 FPS，达到 60 FPS 首版线；这是 2×2×2 结构，不是 256 个 24³ 满尺寸结构。
+
+## 2.3 地形碰撞修复
 
 烟测发现结构会沉入/穿过地面。根因是地形碰撞盒使用 block-local AABB 却直接减去 section 原点，所有地面 collider 都被偏移到错误位置。
 
@@ -43,7 +55,7 @@ CLIENT_SUBLEVEL_FALL_PROBE y=64.00027164477902 initial_y=68.44266250000001 delta
 
 结构从约 68.44 下落到 64.00 后停在地形表面，不再穿地。
 
-## 2.2 24³ 空心壳客户端渲染
+## 2.4 24³ 空心壳客户端渲染
 
 `SubLevelLargeClientSmoke` 捕获 24×24×24 自发光空心壳（3,176 格），客户端测量 120 tick：
 
