@@ -168,10 +168,20 @@ val coremodJar = tasks.register<Jar>("coremodJar") {
     }
 }
 
-sourceSets.named("test") {
-    compileClasspath += sourceSets.named("main").get().compileClasspath + coremodSourceSet.output
-    runtimeClasspath += sourceSets.named("main").get().compileClasspath + coremodSourceSet.output
+// Gametest suites and runtime smoke validators live outside the shipped jar. moddev still loads
+// this source set into the mod folder, so gameTestServer and dev runs keep seeing them.
+val gametestSourceSet = sourceSets.create("gametest") {
+    java.srcDir("src/gametest/java")
+    compileClasspath += sourceSets.named("main").get().output + sourceSets.named("main").get().compileClasspath
+    runtimeClasspath += output + compileClasspath
 }
+
+sourceSets.named("test") {
+    compileClasspath += sourceSets.named("main").get().compileClasspath + coremodSourceSet.output + gametestSourceSet.output
+    runtimeClasspath += sourceSets.named("main").get().compileClasspath + coremodSourceSet.output + gametestSourceSet.output
+}
+
+tasks.named("check") { dependsOn(gametestSourceSet.compileJavaTaskName) }
 
 val apiExampleSourceSet = sourceSets.create("apiExample") {
     java.srcDir("examples/addon/src/main/java")
@@ -393,6 +403,7 @@ neoForge {
         create(modId) {
             sourceSet(sourceSets.main.get())
             sourceSet(editorSourceSet)
+            sourceSet(gametestSourceSet)
         }
     }
 }
