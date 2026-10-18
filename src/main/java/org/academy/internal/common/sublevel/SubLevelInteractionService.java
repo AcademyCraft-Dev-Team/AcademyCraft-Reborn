@@ -10,8 +10,12 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
 import org.academy.AcademyCraft;
 
 /**
@@ -20,6 +24,26 @@ import org.academy.AcademyCraft;
  */
 public final class SubLevelInteractionService {
     private SubLevelInteractionService() {
+    }
+
+    /** Server-side line-of-sight validation for a client interaction packet. */
+    public static boolean validateRay(MinecraftServer server, SubLevelId id, BlockPos local,
+                                      Vec3 point, ServerPlayer player, boolean usePoint) {
+        var runtime = SubLevelServer.runtime(server).orElse(null);
+        if (runtime == null) return false;
+        var subLevel = runtime.get(id).orElse(null);
+        if (subLevel == null) return false;
+        var eye = player.getEyePosition();
+        double reach = player.blockInteractionRange() + 1.0;
+        if (eye.distanceToSqr(point) > reach * reach) return false;
+        var pose = subLevel.pose();
+        var localPoint = pose.worldToLocalPoint(point);
+        if (!new AABB(local).inflate(0.05).contains(localPoint)) return false;
+        var localEye = pose.worldToLocalPoint(eye);
+        var rayTarget = usePoint ? localPoint : Vec3.atCenterOf(local);
+        var hit = runtime.view(id).clip(new ClipContext(localEye, rayTarget,
+                ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, CollisionContext.empty()));
+        return hit.getType() == HitResult.Type.BLOCK && hit.getBlockPos().equals(local);
     }
 
     public static boolean breakBlock(MinecraftServer server, SubLevelId id, BlockPos local,

@@ -59,7 +59,8 @@ SUBLEVEL_CLIENT_SMOKE_PASSED ... frames=865
 
 ## 3. 当前边界
 
-- 客户端破坏、放置和拉杆 `useBlock` 已实机验证；容器/多格方块菜单尚未桥接；
+- 客户端破坏、放置和拉杆 `useBlock` 已实机验证；服务端 BREAK 射线复核已接入，USE/PLACE 仍主要依赖范围/权限校验；
+- 容器/多格方块菜单尚未桥接；
 - `useBlock/placeBlock` 的 vanilla context 已实现，但尚未在带真实玩家/BlockEntity 的世界中验证；
 - 容器菜单（箱子/熔炉）和多格方块尚未桥接；
 - 交互权限目前只做 plot `mayInteract`，未接技能事务/保护事件；

@@ -135,10 +135,14 @@ public final class SubLevelClientSmoke {
             if (lever == null) return;
             aimAtCell(minecraft, projection, lever.position());
             if (!useSent) {
-                var point = projection.renderPose(1.0F).localToWorldPoint(new Vec3(
+                var center = projection.renderPose(1.0F).localToWorldPoint(new Vec3(
                         lever.position().getX() + 0.5, lever.position().getY() + 0.5, lever.position().getZ() + 0.5));
+                var toward = minecraft.player.getEyePosition().subtract(center);
+                var face = Direction.getNearest((int) Math.signum(toward.x),
+                        (int) Math.signum(toward.y), (int) Math.signum(toward.z), Direction.UP);
+                var point = center.add(face.getStepX() * 0.5, face.getStepY() * 0.5, face.getStepZ() * 0.5);
                 SubLevelInteractPacket.send(new SubLevelInteractPacket(result.id(), lever.position(),
-                        Direction.UP, point, InteractionHand.MAIN_HAND, SubLevelInteractPacket.Action.USE));
+                        face, point, InteractionHand.MAIN_HAND, SubLevelInteractPacket.Action.USE));
                 useSent = true;
                 AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_USE_SENT local={}", lever.position());
                 return;
