@@ -56,7 +56,17 @@ CLIENT_SUBLEVEL_COLLISION_PROBE inside=7
 SUBLEVEL_CLIENT_SMOKE_PASSED ... frames=865
 ```
 
-证明客户端射线命中真实 SubLevel、C2S 包到达服务端、服务端删除方块、快照降为 7 cells；随后客户端再次射线命中剩余方块，发送 PLACE，服务端通用 `BlockItem.place` 将方块放回，快照恢复 8 cells，客户端碰撞同步恢复 8 盒。截图：`run/native-sublevel-client-smoke/screenshots/sublevel-client-smoke-6308-1792343210006.png`。
+证明客户端射线命中真实 SubLevel、C2S 包到达服务端、服务端删除方块、快照降为 7 cells；随后客户端再次射线命中剩余方块，发送 PLACE，服务端通用 `BlockItem.place` 将方块放回，快照恢复 8 cells，客户端碰撞同步恢复 8 盒。
+
+单箱菜单探针：
+
+```text
+CLIENT_SUBLEVEL_CHEST_PREPARED local=BlockPos{x=0, y=0, z=0}
+CLIENT_SUBLEVEL_CHEST_SENT local=BlockPos{x=0, y=0, z=0}
+CLIENT_SUBLEVEL_CHEST_OPENED screen=ContainerScreen slots=63
+```
+
+9×3 单箱槽位 + 36 格玩家背包通过代理 `Container` 直接读写 plot 中的真实 `ChestBlockEntity`，没有复制库存。截图：`run/native-sublevel-client-smoke/screenshots/sublevel-client-smoke-6308-1792343210006.png`。
 
 ## 3. 当前边界
 

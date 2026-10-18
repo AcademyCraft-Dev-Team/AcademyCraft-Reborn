@@ -43,6 +43,17 @@ CLIENT_SUBLEVEL_FALL_PROBE y=64.00027164477902 initial_y=68.44266250000001 delta
 
 结构从约 68.44 下落到 64.00 后停在地形表面，不再穿地。
 
+## 2.2 24³ 空心壳客户端渲染
+
+`SubLevelLargeClientSmoke` 捕获 24×24×24 自发光空心壳（3,176 格），客户端测量 120 tick：
+
+```text
+SUBLEVEL_LARGE_CAPTURED side=24 blocks=3176 boxes=3176
+SUBLEVEL_LARGE_BENCHMARK side=24 cells=3176 fps_avg=116.25 fps_min=104 ticks=120
+```
+
+为支持该场景，捕获上限提升到 4,096 格、plot 几何 8,192 盒、快照 8,192 盒。24³ 实心体仍超过当前 4,096-cell 视图上限，属于后续 section 调色板工作。
+
 ## 3. 其余已验证链路
 
 - 客户端快照渲染：`SubLevelStatePacket received ... cells=8`、`SubLevel client projection ... added`

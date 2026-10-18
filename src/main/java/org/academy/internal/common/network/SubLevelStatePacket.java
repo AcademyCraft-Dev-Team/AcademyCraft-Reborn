@@ -29,7 +29,7 @@ import java.util.UUID;
 /** Phase 4 prototype snapshot: one SubLevel plot pose and its exact collision boxes. */
 @PacketTarget(ThreadType.CLIENT)
 public final class SubLevelStatePacket extends Packet<ClientPacketListener, SubLevelStatePacket> {
-    private static final int MAX_BOXES = 2_048;
+    private static final int MAX_BOXES = 8_192;
     public static final StreamCodec<ByteBuf, SubLevelStatePacket> CODEC = new StreamCodec<>() {
         @Override public SubLevelStatePacket decode(ByteBuf input) {
             var id = new SubLevelId(new UUID(input.readLong(), input.readLong()));

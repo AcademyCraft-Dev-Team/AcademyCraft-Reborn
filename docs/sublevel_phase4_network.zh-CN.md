@@ -7,7 +7,7 @@
 
 | 组件 | 作用 |
 | --- | --- |
-| `SubLevelStatePacket` | 服务端→客户端快照：UUID、plot、pose、local collision boxes、block-state view cells、removed |
+| `SubLevelStatePacket` | 服务端→客户端快照：UUID、plot、pose、local collision boxes、block-state view cells、removed、fullView |
 | `PacketTypes.SUBLEVEL_STATE` | 网络类型注册 |
 | `SubLevelClientState` | 客户端按 `ClientLevel` 保存快照；创建 client-only 投影实体复用现有投影渲染器；可选注册客户端碰撞索引 |
 | `SubLevelServer.sendSnapshots` | 每 5 tick 向宿主维度 256 格内玩家发送快照 |

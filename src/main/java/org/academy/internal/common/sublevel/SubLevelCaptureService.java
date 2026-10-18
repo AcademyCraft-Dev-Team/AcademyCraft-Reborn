@@ -25,7 +25,7 @@ import java.util.Objects;
  * This is not yet the permission-aware skill transaction; it is the first real plot writer.
  */
 public final class SubLevelCaptureService {
-    public static final int MAX_BLOCKS = 256;
+    public static final int MAX_BLOCKS = 4_096;
     public static final int MAX_SPAN = 24;
 
     private SubLevelCaptureService() {
