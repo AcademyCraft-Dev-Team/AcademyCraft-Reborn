@@ -33,6 +33,16 @@ class SubLevelStatePacketTest {
     }
 
     @Test
+    void deltaPacketKeepsFullViewFlag() {
+        var packet = new SubLevelStatePacket(SubLevelId.random(), new PlotPos(0, 0),
+                StructurePose.identity(Vec3.ZERO), List.of(),
+                org.academy.internal.common.structure.space.NativeStructureView.EMPTY, false, false);
+        var buffer = Unpooled.buffer();
+        SubLevelStatePacket.CODEC.encode(buffer, packet);
+        assertFalse(SubLevelStatePacket.CODEC.decode(buffer).fullView());
+    }
+
+    @Test
     void removalPacketIsRepresentable() {
         var packet = new SubLevelStatePacket(SubLevelId.random(), new PlotPos(0, 0),
                 StructurePose.identity(Vec3.ZERO), List.of(),

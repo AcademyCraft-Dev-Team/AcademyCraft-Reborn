@@ -50,21 +50,23 @@ public final class SubLevelClientState {
             if (index != null) index.remove(packet.id());
             return;
         }
-        states.put(packet.id(), new Snapshot(packet.plot(), packet.pose(), packet.boxes(), packet.view()));
-        org.academy.AcademyCraft.LOGGER.debug("SubLevel client snapshot id={} cells={} boxes={}",
-                packet.id().value(), packet.view().cells().size(), packet.boxes().size());
+        var existing = states.get(packet.id());
+        var view = packet.fullView() || existing == null ? packet.view() : existing.view();
+        states.put(packet.id(), new Snapshot(packet.plot(), packet.pose(), packet.boxes(), view));
+        org.academy.AcademyCraft.LOGGER.debug("SubLevel client snapshot id={} cells={} boxes={} full={}",
+                packet.id().value(), view.cells().size(), packet.boxes().size(), packet.fullView());
         var projection = entities.get(packet.id());
         if (projection == null) {
             projection = new NativeStructureProjectionEntity(EntityTypes.NATIVE_STRUCTURE_PROJECTION.get(), level);
             projection.markClientOnly();
             projection.setId(ENTITY_IDS.getAndDecrement());
-            projection.applyClientSnapshot(packet.view(), packet.pose(), 1);
+            projection.applyClientSnapshot(view, packet.pose(), 1);
             level.addEntity(projection);
             entities.put(packet.id(), projection);
             org.academy.AcademyCraft.LOGGER.info("SubLevel client projection id={} added entityId={}",
                     packet.id().value(), projection.getId());
         } else {
-            projection.applyClientSnapshot(packet.view(), packet.pose(), projection.viewState().revision() + 1);
+            projection.applyClientSnapshot(view, packet.pose(), projection.viewState().revision() + 1);
         }
         if (!COLLISION) return;
         var index = INDEXES.computeIfAbsent(level, ignored -> {

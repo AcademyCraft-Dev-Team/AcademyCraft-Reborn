@@ -28,6 +28,7 @@ import org.academy.internal.common.structure.space.NativeStructureDimensions;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
 
@@ -35,6 +36,8 @@ import java.util.WeakHashMap;
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class SubLevelServer {
     private static final Map<MinecraftServer, Runtime> RUNTIMES = new WeakHashMap<>();
+    private static final Map<net.minecraft.server.level.ServerPlayer, Map<SubLevelId, org.academy.internal.common.structure.space.NativeStructureView>> SENT_VIEWS
+            = new WeakHashMap<>();
 
     private SubLevelServer() {
     }
@@ -157,6 +160,7 @@ public final class SubLevelServer {
     public static void stopping(ServerStoppingEvent event) {
         var runtime = RUNTIMES.remove(event.getServer());
         if (runtime != null) runtime.close();
+        SENT_VIEWS.clear();
     }
 
     private static boolean snapshotLogged;
@@ -171,11 +175,14 @@ public final class SubLevelServer {
         }
         for (var subLevel : runtime.subLevels()) {
             var boxes = runtime.localCollisionBoxes(subLevel.id());
+            var view = runtime.view(subLevel.id());
             for (var player : players) {
                 if (player.level() != host) continue;
                 if (player.position().distanceToSqr(subLevel.pose().worldOrigin()) > 256.0 * 256.0) continue;
+                var sent = SENT_VIEWS.computeIfAbsent(player, ignored -> new HashMap<>());
+                boolean fullView = sent.put(subLevel.id(), view) != view;
                 SubLevelStatePacket.send(player, subLevel.id(), subLevel.plot(), subLevel.pose(), boxes,
-                        runtime.view(subLevel.id()), false);
+                        view, false, fullView);
             }
         }
     }

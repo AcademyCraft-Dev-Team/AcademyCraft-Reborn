@@ -35,6 +35,7 @@ public final class SubLevelStatePacket extends Packet<ClientPacketListener, SubL
             var id = new SubLevelId(new UUID(input.readLong(), input.readLong()));
             var plot = new PlotPos(input.readInt(), input.readInt());
             boolean removed = input.readBoolean();
+            boolean fullView = input.readBoolean();
             var pose = new StructurePose(new Vec3(input.readDouble(), input.readDouble(), input.readDouble()),
                     input.readDouble(), input.readDouble(), input.readDouble(), input.readDouble());
             int count = input.readUnsignedShort();
@@ -57,7 +58,7 @@ public final class SubLevelStatePacket extends Packet<ClientPacketListener, SubL
             }
             if (input.isReadable()) throw new IllegalArgumentException("Unexpected SubLevel state payload");
             var view = cells.isEmpty() ? NativeStructureView.EMPTY : new NativeStructureView(cells);
-            return new SubLevelStatePacket(id, plot, pose, boxes, view, removed);
+            return new SubLevelStatePacket(id, plot, pose, boxes, view, removed, fullView);
         }
 
         @Override public void encode(ByteBuf output, SubLevelStatePacket packet) {
@@ -66,6 +67,7 @@ public final class SubLevelStatePacket extends Packet<ClientPacketListener, SubL
             output.writeInt(packet.plot.x());
             output.writeInt(packet.plot.z());
             output.writeBoolean(packet.removed);
+            output.writeBoolean(packet.fullView);
             output.writeDouble(packet.pose.worldOrigin().x);
             output.writeDouble(packet.pose.worldOrigin().y);
             output.writeDouble(packet.pose.worldOrigin().z);
@@ -95,9 +97,15 @@ public final class SubLevelStatePacket extends Packet<ClientPacketListener, SubL
     private final List<AABB> boxes;
     private final NativeStructureView view;
     private final boolean removed;
+    private final boolean fullView;
 
     public SubLevelStatePacket(SubLevelId id, PlotPos plot, StructurePose pose, List<AABB> boxes,
                                NativeStructureView view, boolean removed) {
+        this(id, plot, pose, boxes, view, removed, true);
+    }
+
+    public SubLevelStatePacket(SubLevelId id, PlotPos plot, StructurePose pose, List<AABB> boxes,
+                               NativeStructureView view, boolean removed, boolean fullView) {
         this.id = Objects.requireNonNull(id, "id");
         this.plot = Objects.requireNonNull(plot, "plot");
         this.pose = Objects.requireNonNull(pose, "pose");
@@ -105,11 +113,18 @@ public final class SubLevelStatePacket extends Packet<ClientPacketListener, SubL
         this.view = Objects.requireNonNull(view, "view");
         if (this.boxes.size() > MAX_BOXES) throw new IllegalArgumentException("Too many collision boxes");
         this.removed = removed;
+        this.fullView = fullView;
     }
 
     public static void send(ServerPlayer recipient, SubLevelId id, PlotPos plot, StructurePose pose,
                             List<AABB> boxes, NativeStructureView view, boolean removed) {
-        MisakaNetworkServer.send(recipient, new SubLevelStatePacket(id, plot, pose, boxes, view, removed));
+        send(recipient, id, plot, pose, boxes, view, removed, true);
+    }
+
+    public static void send(ServerPlayer recipient, SubLevelId id, PlotPos plot, StructurePose pose,
+                            List<AABB> boxes, NativeStructureView view, boolean removed, boolean fullView) {
+        MisakaNetworkServer.send(recipient,
+                new SubLevelStatePacket(id, plot, pose, boxes, view, removed, fullView));
     }
 
     public SubLevelId id() { return id; }
@@ -118,6 +133,7 @@ public final class SubLevelStatePacket extends Packet<ClientPacketListener, SubL
     public List<AABB> boxes() { return boxes; }
     public NativeStructureView view() { return view; }
     public boolean removed() { return removed; }
+    public boolean fullView() { return fullView; }
 
     public static synchronized void initClient() {
         if (initialized) return;
