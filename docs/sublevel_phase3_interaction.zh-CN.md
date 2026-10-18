@@ -71,16 +71,16 @@ CLIENT_SUBLEVEL_DOUBLE_CHEST_OPENED screen=ContainerScreen slots=90 item0=3 mine
 
 ## 3. 当前边界
 
-- 客户端破坏、放置和拉杆 `useBlock` 已实机验证；服务端 BREAK/USE/PLACE 均用玩家视线 + 客户端命中点/目标中心三重校验，并容忍一 tick 姿态插值偏差；
+- 客户端破坏、放置和拉杆 `useBlock` 已实机验证；服务端 BREAK/PLACE 使用玩家视线 + 客户端命中点/目标中心校验，USE 的强制射线仍在稳定化，当前只做范围/权限；
 - 单箱代理菜单已实机打开（27 格容器 + 36 格玩家背包）；双箱代理菜单也已打开（54 格容器 + 36 格玩家背包），其他容器/多格方块尚未桥接；
-- `useBlock/placeBlock` 的 vanilla context 已实现，但尚未在带真实玩家/BlockEntity 的世界中验证；
+- `useBlock/placeBlock` 的 vanilla context 已用真实玩家/BlockEntity 验证；USE 的服务端射线仍需稳定化；
 - 容器菜单（箱子/熔炉）和多格方块尚未桥接；
 - 交互权限目前只做 plot `mayInteract`，未接技能事务/保护事件；
 - 掉落物仍在 plot 维度，尚未回传到宿主玩家位置。
 
 ## 4. 下一步
 
-1. 客户端 `useBlock/placeBlock` 实机验证；
+1. USE 服务端射线稳定化；
 2. 掉落物/经验/音效/粒子从 plot 映射回宿主；
 3. 容器菜单桥；
 4. 技能权限、保护事件、冷却与事务 journal。
