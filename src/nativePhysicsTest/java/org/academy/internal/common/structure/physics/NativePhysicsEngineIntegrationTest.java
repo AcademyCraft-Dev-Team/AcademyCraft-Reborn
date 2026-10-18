@@ -45,6 +45,21 @@ final class NativePhysicsEngineIntegrationTest {
     }
 
     @Test
+    void fixedJointWiresTwoRealBodiesIntoOneAssembly() {
+        try (var world = library.createWorld(PhysicsVector.ZERO, PhysicsVector.ZERO)) {
+            var left = cube(world, BodyType.DYNAMIC, 0, 0, 0, 0.5, false);
+            var right = cube(world, BodyType.DYNAMIC, 1, 0, 0, 0.5, false);
+            world.createFixedJoint(left, right, vector(0.5, 0, 0), vector(-0.5, 0, 0));
+            left.setVelocity(vector(0, 1, 0), PhysicsVector.ZERO);
+            steps(world, 6);
+            var separation = right.pose().position().subtract(left.pose().position());
+            assertEquals(1.0, separation.x(), 0.15);
+            assertEquals(0.0, separation.y(), 0.15);
+            assertEquals(0.0, separation.z(), 0.15);
+        }
+    }
+
+    @Test
     void fixedFloorStopsAndSettlesFallingBody() {
         try (var world = library.createWorld(PhysicsVector.ZERO, GRAVITY)) {
             var floor = floor(world);
@@ -316,9 +331,9 @@ final class NativePhysicsEngineIntegrationTest {
             assertThrows(RuntimeException.class, () -> world.createBody(BodyType.DYNAMIC, pose(0, 0, 0),
                     boxes(0.5, 0.5, 0.5), -1, 0, 0, false));
             assertThrows(RuntimeException.class, () -> world.createBody(BodyType.DYNAMIC, pose(0, 0, 0),
-                    Collections.nCopies(65, box(PhysicsVector.ZERO, vector(0.1, 0.1, 0.1))), 1, 0, 0, false));
+                    Collections.nCopies(257, box(PhysicsVector.ZERO, vector(0.1, 0.1, 0.1))), 1, 0, 0, false));
             assertEquals(original, body.state(), "Rejected calls must not advance or rewrite a live body");
-            for (int index = 1; index < 128; index++) cube(world, BodyType.FIXED, index * 2, 0, 0, 0.25, false);
+            for (int index = 1; index < NativePhysicsWorld.MAX_BODIES; index++) cube(world, BodyType.FIXED, index * 2, 0, 0, 0.25, false);
             assertThrows(RuntimeException.class, () -> cube(world, BodyType.FIXED, 300, 0, 0, 0.25, false));
             body.applyImpulse(vector(1, 0, 0), PhysicsVector.ZERO);
             world.step(DT, 1);
@@ -344,13 +359,13 @@ final class NativePhysicsEngineIntegrationTest {
     @Test
     void compoundBudgetIsReclaimedWhenItsBodyIsRemoved() {
         var compound = new ArrayList<PhysicsBox>();
-        for (int index = 0; index < 64; index++) {
-            compound.add(box(vector((index % 4) * 0.2, (index / 4 % 4) * 0.2, (index / 16) * 0.2),
-                    vector(0.05, 0.05, 0.05)));
+        for (int index = 0; index < 128; index++) {
+            compound.add(box(vector((index % 8) * 0.1, (index / 8 % 8) * 0.1, (index / 64) * 0.1),
+                    vector(0.04, 0.04, 0.04)));
         }
         try (var world = library.createWorld(PhysicsVector.ZERO, PhysicsVector.ZERO)) {
             var bodies = new ArrayList<NativePhysicsBody>();
-            for (int index = 0; index < 32; index++) {
+            for (int index = 0; index < NativePhysicsWorld.MAX_BODIES; index++) {
                 bodies.add(body(world, BodyType.FIXED, pose(index * 3, 0, 0), compound, 0, false));
             }
             assertThrows(RuntimeException.class, () -> cube(world, BodyType.DYNAMIC, 0, 3, 0, 0.25, false));

@@ -105,6 +105,12 @@ public final class NativeStructureRuntime implements StructureBackend {
         }
     }
 
+    /** Read-only administrative view of currently loaded structures; does not load storage. */
+    public List<StructureRef> loadedReferences() {
+        requireThread();
+        return loaded.values().stream().map(handle -> handle.reference).toList();
+    }
+
     /** Read-only lookup: a targeting/control query must not create a backend or storage. */
     public static Optional<NativeStructureRuntime> existing(MinecraftServer server) {
         Objects.requireNonNull(server, "server");
@@ -350,6 +356,11 @@ public final class NativeStructureRuntime implements StructureBackend {
     public Optional<StructurePhysicsRegion> activePhysicsRegion(ServerLevel host, StructureRef reference) {
         requireThread();
         return closed || stopping ? Optional.empty() : physics.activeRegion(host, reference);
+    }
+
+    public Optional<StructurePhysicsRegion> attachedPhysicsRegion(ServerLevel host, StructureRef reference) {
+        requireThread();
+        return closed || stopping ? Optional.empty() : physics.attachedRegion(host, reference);
     }
 
     public Optional<AABB> savedPhysicsRegionBounds(ServerLevel host) {
@@ -952,6 +963,30 @@ public final class NativeStructureRuntime implements StructureBackend {
         if (!StructureBackendRouter.nativeEnabled(event.getServer())) return;
         var runtime = backend(event.getServer());
         for (var entry : runtime.manifest.entries()) if (entry.active()) runtime.load(entry.reference());
+        for (var level : event.getServer().getAllLevels()) {
+            if (!NativeStructureDimensions.isStorageLevel(level.dimension())) runtime.resumeSavedPhysicsRegions(level);
+        }
+    }
+
+    /** Restores saved physics islands after a normal restart; H/R/jet no longer see a static shell. */
+    public int resumeSavedPhysicsRegions(ServerLevel host) {
+        requireThread();
+        if (!enabled || stopping) return 0;
+        int resumed = 0;
+        for (var saved : physics.savedRegions(host)) {
+            try {
+                physics.resume(host, saved.id());
+                resumed++;
+            } catch (IllegalStateException alreadyOpenOrUnavailable) {
+                if (alreadyOpenOrUnavailable.getMessage() != null
+                        && alreadyOpenOrUnavailable.getMessage().contains("already open")) continue;
+                AcademyCraft.LOGGER.warn("Could not resume saved physics region {} in {}",
+                        saved.id(), host.dimension().identifier(), alreadyOpenOrUnavailable);
+            }
+        }
+        if (resumed > 0) AcademyCraft.LOGGER.info("Resumed {} saved physics region(s) in {}", resumed,
+                host.dimension().identifier());
+        return resumed;
     }
 
     @SubscribeEvent public static void controllerLeft(EntityLeaveLevelEvent event) {
@@ -1012,6 +1047,9 @@ public final class NativeStructureRuntime implements StructureBackend {
                                     StructurePose pose, Entity entity) {
         var surface = projection.supportSurfaceY(entity.getBoundingBox(), CARRY_SUPPORT_TOLERANCE);
         if (surface.isEmpty()) {
+            // A fast projectile must not pick up an entity that merely swept inside the top-face
+            // recovery gap; that is an impact, not a rider. Recovery carry is for slow lifts.
+            if (pose.worldOrigin().distanceToSqr(previous.worldOrigin()) > 0.25) return;
             surface = projection.supportSurfaceY(entity.getBoundingBox(), CARRY_RECOVERY_TOLERANCE);
             if (surface.isEmpty()) return;
         }

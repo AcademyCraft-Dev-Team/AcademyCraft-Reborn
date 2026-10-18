@@ -1,9 +1,14 @@
 package org.academy.api.common.structure;
 
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.AABB;
 import org.academy.internal.common.structure.NativeStructureRuntime;
+import org.academy.internal.common.structure.StructureBackendRouter;
+import org.academy.internal.common.structure.physics.NativePhysicsArtifact;
 
+import java.io.IOException;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.List;
@@ -14,6 +19,29 @@ public final class StructurePhysics {
     public static final double MAX_REGION_AXIS = 24.0;
 
     private StructurePhysics() {}
+
+    /**
+     * Non-mutating readiness check for callers that are about to capture blocks into a body.
+     * Empty means the selected backend can open a body with the current deployment. A present
+     * value is a stable machine-readable reason and must be reported before any source block is
+     * removed; it never falls back to a different physics implementation.
+     */
+    public static Optional<String> physicalBackendProblem(MinecraftServer server) {
+        Objects.requireNonNull(server, "server");
+        var status = StructureBackendRouter.status(server);
+        return switch (status.mode()) {
+            case SABLE -> Optional.empty();
+            case NATIVE -> {
+                try {
+                    NativePhysicsArtifact.configured();
+                    yield Optional.empty();
+                } catch (IOException | RuntimeException unavailable) {
+                    yield Optional.of("native_physics_unavailable:" + unavailable.getMessage());
+                }
+            }
+            default -> Optional.of(status.mode().name().toLowerCase(Locale.ROOT) + ":" + status.diagnostic());
+        };
+    }
 
     /**
      * Finds an existing ready region containing this exact structure reference in this host.
@@ -29,15 +57,27 @@ public final class StructurePhysics {
     }
 
     /**
+     * Returns the live region that already contains this exact structure, even while that region
+     * is PAUSED during geometry rebuild. Callers that captured a body before source removal use
+     * this to adopt the prepared region instead of opening a conflicting second one.
+     */
+    public static Optional<StructurePhysicsRegion> attachedRegion(ServerLevel host, StructureRef reference) {
+        Objects.requireNonNull(host, "host");
+        Objects.requireNonNull(reference, "reference");
+        return NativeStructureRuntime.existing(host.getServer())
+                .flatMap(runtime -> runtime.attachedPhysicsRegion(host, reference));
+    }
+
+    /**
      * Opens a new independent physics region in this live host level, on its owning server thread.
      * Each region axis must have positive finite length of at most 24 blocks. Opening a region
      * does not capture host blocks, attach structures automatically, or provide entity transport.
      *
-     * <p>The native library and its verified manifest must be explicitly configured with
-     * {@code academy.nativePhysics.library} and {@code academy.nativePhysics.manifest}; the
-     * JVM must grant {@code --enable-native-access=ALL-UNNAMED}. Merely referencing this API
-     * never loads the library. Missing permission, invalid artifacts or unavailable native code
-     * fail explicitly, without another backend or simulated-success fallback.</p>
+     * <p>The solver resolves an explicit {@code academy.nativePhysics.library} / manifest pair,
+     * a game-directory deployment, or the project's signed in-JAR artifact. JDK 25 permits the
+     * FFM calls with a warning; set {@code -Dacademy.nativePhysics.requireNativeAccess=true} to
+     * enforce {@code --enable-native-access=ALL-UNNAMED}. Missing or invalid artifacts fail
+     * explicitly, without another backend or simulated-success fallback.</p>
      *
      * <p>Live and saved regions together reserve at most three distinct regions per server.
      * Two regions in the same host must be separated along at least one axis by one block.

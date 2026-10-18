@@ -8,9 +8,9 @@ import java.util.function.Supplier;
 
 /** One bounded origin-relative physics island. Not attached to Minecraft storage or entities. */
 public final class NativePhysicsWorld implements AutoCloseable {
-    public static final int MAX_BODIES = 128;
-    public static final int MAX_BOXES_PER_BODY = 64;
-    public static final int MAX_BOXES = 2048;
+    public static final int MAX_BODIES = 256;
+    public static final int MAX_BOXES_PER_BODY = 256;
+    public static final int MAX_BOXES = 32_768;
     private final NativePhysicsLibrary library;
     private final PhysicsNativeAccess access;
     private final long handle;
@@ -40,7 +40,7 @@ public final class NativePhysicsWorld implements AutoCloseable {
         Objects.requireNonNull(pose, "pose");
         Objects.requireNonNull(cuboids, "cuboids");
         int count = cuboids.size();
-        if (count == 0 || count > MAX_BOXES_PER_BODY) throw new IllegalArgumentException("Native body requires 1 to 64 cuboids");
+        if (count == 0 || count > MAX_BOXES_PER_BODY) throw new IllegalArgumentException("Native body requires 1 to 256 cuboids");
         if (bodies.size() >= MAX_BODIES || boxes + count > MAX_BOXES) {
             throw new IllegalStateException("Native physics world body/cuboid limit reached");
         }
@@ -78,6 +78,20 @@ public final class NativePhysicsWorld implements AutoCloseable {
         bodies.add(body);
         boxes += count;
         return body;
+    }
+
+    /** Welds two dynamic bodies of this world together at their local anchors. */
+    public void createFixedJoint(NativePhysicsBody first, NativePhysicsBody second,
+                                 PhysicsVector firstAnchor, PhysicsVector secondAnchor) {
+        requireOpen();
+        requireDynamic(first);
+        requireDynamic(second);
+        if (first == second) throw new IllegalArgumentException("A fixed joint requires two distinct bodies");
+        PhysicsLimits.vector(Objects.requireNonNull(firstAnchor, "firstAnchor"), 1.0E6, "first joint anchor");
+        PhysicsLimits.vector(Objects.requireNonNull(secondAnchor, "secondAnchor"), 1.0E6, "second joint anchor");
+        run(() -> access.createFixedJoint(handle, first.handle, second.handle, new double[]{
+                firstAnchor.x(), firstAnchor.y(), firstAnchor.z(),
+                secondAnchor.x(), secondAnchor.y(), secondAnchor.z()}));
     }
 
     public void step(double duration, int substeps) {

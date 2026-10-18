@@ -13,6 +13,7 @@ public interface PhysicsNativeAccess extends AutoCloseable {
     void sleep(long world, long body);
     void wake(long world, long body);
     void removeBody(long world, long body);
+    void createFixedJoint(long world, long body1, long body2, double[] anchors);
 
     @Override
     default void close() {}

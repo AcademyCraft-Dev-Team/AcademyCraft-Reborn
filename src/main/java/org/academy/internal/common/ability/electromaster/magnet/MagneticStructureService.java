@@ -104,6 +104,11 @@ public final class MagneticStructureService {
             reject(player, "selection_empty");
             return Optional.empty();
         }
+        var backendProblem = StructurePhysics.physicalBackendProblem(level.getServer());
+        if (backendProblem.isPresent()) {
+            reject(player, backendProblem.get());
+            return Optional.empty();
+        }
         var seed = positions.getFirst().immutable();
         var admission = admit(player, seed);
         if (admission != null) {
@@ -117,7 +122,7 @@ public final class MagneticStructureService {
             return Optional.empty();
         }
         var result = StructureTransactions.capture(level, new StructureCaptureRequest(
-                cropped, budget, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player)));
+                cropped, budget, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player), true));
         var reference = result.structure().orElse(null);
         if (result.pending()) {
             if (reference == null) {
@@ -342,6 +347,8 @@ public final class MagneticStructureService {
         if (!(player.level() instanceof ServerLevel level)) {
             return ProgramResult.rejected("host_unavailable");
         }
+        var backendProblem = StructurePhysics.physicalBackendProblem(level.getServer());
+        if (backendProblem.isPresent()) return ProgramResult.rejected(backendProblem.get());
         var immutableSeed = seed.immutable();
         var admission = admit(player, immutableSeed, forceMagnetize);
         if (admission != null) return ProgramResult.rejected(admission);
@@ -351,7 +358,7 @@ public final class MagneticStructureService {
         if (selection.isEmpty()) return ProgramResult.rejected("selection_empty");
         var magneticCells = countMagnetic(level, selection);
         var result = StructureTransactions.capture(level, new StructureCaptureRequest(
-                selection, limit, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player)));
+                selection, limit, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player), true));
         var reference = result.structure().orElse(null);
         if (result.pending()) {
             if (reference == null) return ProgramResult.rejected("pending_without_reference");
@@ -1070,6 +1077,11 @@ public final class MagneticStructureService {
             if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) {
                 fail(player, "captured_handle_unavailable");
                 return false;
+            }
+            var prepared = StructurePhysics.attachedRegion(level, reference).orElse(null);
+            if (prepared != null) {
+                region = prepared;
+                return true;
             }
             var limits = new AABB(level.getWorldBorder().getMinX(), level.getMinY(), level.getWorldBorder().getMinZ(),
                     level.getWorldBorder().getMaxX(), level.getMaxY(), level.getWorldBorder().getMaxZ());

@@ -104,7 +104,7 @@ class NativePhysicsLifecycleTest {
             assertThrows(IllegalArgumentException.class, () -> world.step(0.05, 0));
             assertThrows(IllegalArgumentException.class, () -> world.step(1.0E-6, 16));
             assertDoesNotThrow(() -> world.step(0.05, 3));
-            assertEquals(128, access.states.size());
+            assertEquals(NativePhysicsWorld.MAX_BODIES, access.states.size());
         }
     }
 
@@ -189,5 +189,8 @@ class NativePhysicsLifecycleTest {
         @Override public void sleep(long world, long body) { states.get(body)[24] = 1; }
         @Override public void wake(long world, long body) { states.get(body)[24] = 0; }
         @Override public void removeBody(long world, long body) { states.remove(body); }
+        @Override public void createFixedJoint(long world, long body1, long body2, double[] anchors) {
+            events.add("joint:" + body1 + ":" + body2);
+        }
     }
 }

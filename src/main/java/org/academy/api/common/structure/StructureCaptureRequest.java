@@ -19,11 +19,18 @@ public record StructureCaptureRequest(
         List<BlockPos> positions,
         int maximumBlocks,
         int maximumSpan,
-        BiPredicate<ServerLevel, BlockPos> permission
+        BiPredicate<ServerLevel, BlockPos> permission,
+        boolean physical
 ) {
     public static final int MAXIMUM_BLOCKS = 256;
     public static final int MAXIMUM_SPAN = 24;
     public static final BiPredicate<ServerLevel, BlockPos> ALLOW = (level, position) -> true;
+
+    /** Compatibility constructor for captures that do not create a moving body. */
+    public StructureCaptureRequest(List<BlockPos> positions, int maximumBlocks, int maximumSpan,
+                                   BiPredicate<ServerLevel, BlockPos> permission) {
+        this(positions, maximumBlocks, maximumSpan, permission, false);
+    }
 
     public StructureCaptureRequest {
         Objects.requireNonNull(positions, "positions");
@@ -46,6 +53,6 @@ public record StructureCaptureRequest(
         Objects.requireNonNull(positions, "positions");
         var collected = new ArrayList<BlockPos>();
         for (var position : positions) collected.add(position);
-        return new StructureCaptureRequest(collected, MAXIMUM_BLOCKS, MAXIMUM_SPAN, ALLOW);
+        return new StructureCaptureRequest(collected, MAXIMUM_BLOCKS, MAXIMUM_SPAN, ALLOW, false);
     }
 }

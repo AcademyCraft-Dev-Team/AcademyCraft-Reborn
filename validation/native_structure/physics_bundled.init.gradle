@@ -1,0 +1,58 @@
+allprojects {
+    afterEvaluate {
+        def mode = providers.gradleProperty('academyStructurePhysicsSmoke').orNull
+        if (!(mode in ['client', 'server'])) throw new GradleException('Choose -PacademyStructurePhysicsSmoke=client or =server')
+        def runRoot = rootProject.file('run').canonicalFile
+        def directory = rootProject.file(providers.gradleProperty('academyStructurePhysicsSmokeDirectory')
+                .getOrElse("run/native-structure-physics-smoke-bundled-${mode}")).canonicalFile
+        if (!directory.toPath().startsWith(runRoot.toPath()) || !directory.isDirectory()
+                || !directory.name.startsWith("native-structure-physics-smoke-${mode}")) {
+            throw new GradleException('Prepare a dedicated run/native-structure-physics-smoke-' + mode + '* directory')
+        }
+        for (def marker : ["native-structure-physics-${mode}-result.txt", 'native-structure-physics-server-exit.txt']) {
+            if (java.nio.file.Files.exists(new File(directory, marker).toPath(), java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+                throw new GradleException('Bundled physics smoke requires fresh result and exit paths')
+            }
+        }
+        def world = new File(directory, mode == 'client' ? 'saves/Native Structure Physics Smoke' : 'native-structure-physics-smoke')
+        if (mode == 'server') {
+            if (java.nio.file.Files.exists(world.toPath(), java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+                throw new GradleException('Bundled physics smoke requires a previously nonexistent world path')
+            }
+            def eula = new File(directory, 'eula.txt')
+            def settingsFile = new File(directory, 'server.properties')
+            if (!eula.isFile() || !(eula.text =~ /(?m)^eula=true\s*$/).find() || !settingsFile.isFile()) {
+                throw new GradleException('Prepare the isolated server with accepted EULA and server.properties')
+            }
+            def settings = new Properties()
+            settingsFile.withInputStream { settings.load(it) }
+            if (settings.getProperty('level-name') != 'native-structure-physics-smoke'
+                    || settings.getProperty('server-ip') != '127.0.0.1') {
+                throw new GradleException('Bundled physics server must bind 127.0.0.1 and use level-name=native-structure-physics-smoke')
+            }
+        } else if (!new File(world, 'level.dat').isFile()) {
+            throw new GradleException('Prepare a fresh isolated saves/Native Structure Physics Smoke world')
+        }
+        neoForge.runs.named(mode == 'client' ? 'clientDev' : 'serverCompat') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.nativeStructurePhysicsSmoke', 'true'
+            systemProperty 'academy.nativeStructurePhysicsGraspSmoke', providers.gradleProperty('academyStructurePhysicsGraspSmoke').getOrElse('false')
+            systemProperty 'academy.nativeStructurePhysicsKineticThrowSmoke', providers.gradleProperty('academyStructurePhysicsKineticThrowSmoke').getOrElse('false')
+            systemProperty 'academy.nativeStructurePhysicsHighSpeedJetSmoke', providers.gradleProperty('academyStructurePhysicsHighSpeedJetSmoke').getOrElse('false')
+            systemProperty 'academy.nativeStructurePhysicsMagnetManipulationSmoke', providers.gradleProperty('academyStructurePhysicsMagnetManipulationSmoke').getOrElse('false')
+            systemProperty 'academy.nativeStructurePhysicsSmokeMode', mode
+            systemProperty 'academy.nativeStructurePhysicsSmokeDirectory', directory.absolutePath
+            systemProperty 'academy.nativeStructurePhysicsSmokeRunRoot', runRoot.absolutePath
+            systemProperty 'academy.nativeStructurePhysicsSkipPlasmaAim',
+                    providers.gradleProperty('academyStructurePhysicsSkipPlasmaAim').getOrElse('false')
+            // Deliberately no academy.nativePhysics.* properties and no --enable-native-access:
+            // this fixture must prove the bundled artifact and warning-mode FFM path work alone.
+            if (mode == 'client') programArguments.addAll('--width', '1280', '--height', '720',
+                    '--quickPlaySingleplayer', 'Native Structure Physics Smoke')
+        }
+        tasks.named(mode == 'client' ? 'runClientDev' : 'runServerCompat') {
+            notCompatibleWithConfigurationCache('Bundled physics smoke must revalidate its isolated world before each launch')
+            dependsOn 'prepareNativePhysics'
+        }
+    }
+}

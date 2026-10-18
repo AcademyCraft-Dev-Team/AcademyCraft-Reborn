@@ -15,9 +15,10 @@ const WORLD_FAILED: i32 = 5;
 const PANIC: i32 = 6;
 
 const MAX_WORLDS: usize = 8;
-const MAX_BODIES: usize = 128;
-const MAX_BODY_CUBOIDS: usize = 64;
-const MAX_WORLD_CUBOIDS: usize = 2048;
+const MAX_BODIES: usize = 256;
+const MAX_BODY_CUBOIDS: usize = 256;
+const MAX_WORLD_CUBOIDS: usize = 32_768;
+const MAX_JOINTS: usize = 512;
 const MAX_COORDINATE: f64 = 1_000_000.0;
 const MAX_SPEED: f64 = 10_000.0;
 const MAX_IMPULSE: f64 = 1_000_000_000_000.0;
@@ -114,6 +115,20 @@ impl World {
         self.physics.remove_body(entry.handle).ok_or(WORLD_FAILED)?;
         self.bodies.remove(&body);
         self.cuboids -= count;
+        Ok(())
+    }
+
+    fn create_fixed_joint(&mut self, body1: u64, body2: u64, anchor1: Vector, anchor2: Vector) -> Result<()> {
+        if body1 == body2 { return Err(INVALID_ARGUMENT); }
+        if self.physics.impulse_joints.len() >= MAX_JOINTS { return Err(LIMIT_EXCEEDED); }
+        let handle1 = self.body_handle(body1)?;
+        let handle2 = self.body_handle(body2)?;
+        let joint = FixedJointBuilder::new()
+            .local_anchor1(anchor1)
+            .local_anchor2(anchor2)
+            .contacts_enabled(false)
+            .build();
+        self.physics.impulse_joints.insert(handle1, handle2, joint, true);
         Ok(())
     }
 }
@@ -455,6 +470,19 @@ pub extern "C" fn academy_physics_body_remove(world: u64, body: u64) -> i32 {
     dispatch(Some(world), false, |registry| registry.world(world)?.remove_body(body))
 }
 
+/// # Safety
+/// Anchor buffers must satisfy the lifetime, alignment and validity contract in ABI.md.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn academy_physics_fixed_joint_create(world: u64, body1: u64, body2: u64,
+        anchor_data: *const f64, anchor_len: i32) -> i32 {
+    dispatch(Some(world), false, |registry| {
+        let values = unsafe { read(anchor_data, anchor_len, 6)? };
+        let anchor1 = vector(&values[0..3], MAX_COORDINATE)?;
+        let anchor2 = vector(&values[3..6], MAX_COORDINATE)?;
+        registry.world(world)?.create_fixed_joint(body1, body2, anchor1, anchor2)
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -587,6 +615,27 @@ mod tests {
         let desc = description(0, &body_description([0.0; 3])).unwrap();
         assert_eq!(registry.create_body(second, desc, cuboids(&boxes, 1.0, false).unwrap()), Err(LIMIT_EXCEEDED));
         assert_eq!(registry.world(second).unwrap().cuboids, MAX_WORLD_CUBOIDS);
+    }
+
+    #[test]
+    fn fixed_joint_keeps_multiple_rigid_bodies_in_one_assembly() {
+        let mut registry = Registry::new();
+        let world = registry.create_world(Vector::ZERO).unwrap();
+        let left = insert(&mut registry, world, 1, [0.0, 0.0, 0.0], &box_data([0.0; 3], [0.5; 3]));
+        let right = insert(&mut registry, world, 1, [1.0, 0.0, 0.0], &box_data([0.0; 3], [0.5; 3]));
+        registry.world(world).unwrap()
+            .create_fixed_joint(left, right, Vector::new(0.5, 0.0, 0.0), Vector::new(-0.5, 0.0, 0.0))
+            .unwrap();
+        let owner = registry.world(world).unwrap();
+        let handle = owner.body_handle(left).unwrap();
+        owner.physics.bodies[handle].set_linvel(Vector::new(0.0, 1.0, 0.0), true);
+        owner.step(0.1, 6).unwrap();
+        let a = owner.snapshot(left).unwrap();
+        let b = owner.snapshot(right).unwrap();
+        near(b[0] - a[0], 1.0, 1.0e-1);
+        near(b[1] - a[1], 0.0, 1.0e-1);
+        near(b[2] - a[2], 0.0, 1.0e-1);
+        assert!(a[1] > 0.0);
     }
 
     #[test]

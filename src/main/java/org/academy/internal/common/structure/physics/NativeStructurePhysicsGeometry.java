@@ -84,11 +84,84 @@ public final class NativeStructurePhysicsGeometry {
                         throw denied(Failure.LIMIT_EXCEEDED, "Structure exceeds the physical non-air cell budget");
                     }
                     var position = new BlockPos(chunkX * 16 + x, baseY + y, chunkZ * 16 + z);
-                    captureCell(getter, position, PhysicsVector.ZERO, NativePhysicsWorld.MAX_BOXES_PER_BODY, result);
+                    captureCell(getter, position, PhysicsVector.ZERO, NativePhysicsWorld.MAX_BOXES, result);
                 }
             }
         }
-        return finish(getter, result, revision, nonAir);
+        // Complex shapes can split one cell into many cuboids. Merge adjacent full cubes first;
+        // a plain cuboid structure then fits a single dynamic body regardless of cell count.
+        var merged = mergeFullBlocks(result);
+        if (merged.size() > NativePhysicsWorld.MAX_BOXES) {
+            throw denied(Failure.LIMIT_EXCEEDED, "Structure requires more collision boxes than the world budget");
+        }
+        return finish(getter, merged, revision, nonAir);
+    }
+
+    /**
+     * Deterministically replaces adjacent full-block cuboids with larger cuboids. Only exact
+     * 1x1x1 axis-aligned cells are merged, so partial shapes, slabs, stairs and fences retain
+     * their audited geometry. The result is sorted by center to keep snapshots and digests stable.
+     */
+    static List<PhysicsBox> mergeFullBlocks(List<PhysicsBox> boxes) {
+        var remaining = new java.util.TreeSet<BlockPos>(java.util.Comparator
+                .comparingInt((BlockPos pos) -> pos.getY())
+                .thenComparingInt(pos -> pos.getX()).thenComparingInt(pos -> pos.getZ()));
+        var others = new ArrayList<PhysicsBox>();
+        for (var box : boxes) {
+            if (isFullBlock(box)) {
+                remaining.add(new BlockPos((int) Math.floor(box.center().x()),
+                        (int) Math.floor(box.center().y()), (int) Math.floor(box.center().z())));
+            } else others.add(box);
+        }
+        while (!remaining.isEmpty()) {
+            var start = remaining.first();
+            int maxX = start.getX();
+            while (remaining.contains(new BlockPos(maxX + 1, start.getY(), start.getZ()))) maxX++;
+            int maxZ = start.getZ();
+            while (columnOfFullBlocks(remaining, start.getX(), maxX, start.getY(), maxZ + 1)) maxZ++;
+            int maxY = start.getY();
+            while (slabOfFullBlocks(remaining, start.getX(), maxX, start.getZ(), maxZ, maxY + 1)) maxY++;
+            for (int y = start.getY(); y <= maxY; y++) for (int x = start.getX(); x <= maxX; x++) {
+                for (int z = start.getZ(); z <= maxZ; z++) {
+                    remaining.remove(new BlockPos(x, y, z));
+                }
+            }
+            others.add(new PhysicsBox(
+                    new PhysicsVector((start.getX() + maxX + 1) / 2.0, (start.getY() + maxY + 1) / 2.0,
+                            (start.getZ() + maxZ + 1) / 2.0), PhysicsQuaternion.IDENTITY,
+                    new PhysicsVector((maxX - start.getX() + 1) / 2.0, (maxY - start.getY() + 1) / 2.0,
+                            (maxZ - start.getZ() + 1) / 2.0)));
+        }
+        others.sort(java.util.Comparator.comparingDouble((PhysicsBox box) -> box.center().x())
+                .thenComparingDouble(box -> box.center().y()).thenComparingDouble(box -> box.center().z()));
+        return List.copyOf(others);
+    }
+
+    private static boolean columnOfFullBlocks(java.util.Set<BlockPos> remaining, int minX, int maxX, int y, int z) {
+        for (int x = minX; x <= maxX; x++) if (!remaining.contains(new BlockPos(x, y, z))) return false;
+        return true;
+    }
+
+    private static boolean slabOfFullBlocks(java.util.Set<BlockPos> remaining, int minX, int maxX,
+                                            int minZ, int maxZ, int y) {
+        for (int x = minX; x <= maxX; x++) for (int z = minZ; z <= maxZ; z++) {
+            if (!remaining.contains(new BlockPos(x, y, z))) return false;
+        }
+        return true;
+    }
+
+    private static boolean isFullBlock(PhysicsBox box) {
+        var half = box.halfExtents();
+        var center = box.center();
+        if (!box.rotation().equals(PhysicsQuaternion.IDENTITY)
+                || !near(half.x(), 0.5) || !near(half.y(), 0.5) || !near(half.z(), 0.5)) return false;
+        return near(center.x() - Math.floor(center.x()), 0.5)
+                && near(center.y() - Math.floor(center.y()), 0.5)
+                && near(center.z() - Math.floor(center.z()), 0.5);
+    }
+
+    private static boolean near(double value, double expected) {
+        return Math.abs(value - expected) <= 1.0E-9;
     }
 
     /**

@@ -73,5 +73,27 @@ public interface CaptureTarget {
     /** Verifies the copied content against the source cell count and backend physics budgets. */
     boolean verifyCopy(StructureRef target, int expectedCells);
 
+    /**
+     * Finalizes backend-owned body state after every copied cell has been verified and before the
+     * transaction commits. Implementations must be idempotent for crash recovery and must not
+     * change the copied cell values. Returning false aborts and rolls back the transaction.
+     */
+    default boolean finalizeTarget(StructureRef target, BlockPos origin, List<BlockPos> positions) {
+        return true;
+    }
+
+    /**
+     * Creates the backend body/region while the source blocks are still present. A false result
+     * aborts and rolls back before the first source cell is removed. Backends whose body is
+     * created lazily may keep the default.
+     */
+    default boolean preparePhysics(ServerLevel host, StructureRef target, BlockPos origin, List<BlockPos> positions) {
+        return true;
+    }
+
+    /** Releases any body/region created by {@link #preparePhysics} during a rollback. */
+    default void releasePhysics(ServerLevel host, StructureRef target) {
+    }
+
     Identifier backendId();
 }

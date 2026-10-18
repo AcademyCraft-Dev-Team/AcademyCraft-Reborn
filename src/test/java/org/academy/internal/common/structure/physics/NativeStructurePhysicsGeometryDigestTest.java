@@ -47,8 +47,8 @@ class NativeStructurePhysicsGeometryDigestTest {
 
     @Test
     void refusesGeometryBeyondTheNativePerBodyLimit() {
-        assertDoesNotThrow(() -> NativeStructurePhysicsGeometryDigest.of(Collections.nCopies(64, STONE)));
+        assertDoesNotThrow(() -> NativeStructurePhysicsGeometryDigest.of(Collections.nCopies(256, STONE)));
         assertThrows(IllegalArgumentException.class,
-                () -> NativeStructurePhysicsGeometryDigest.of(Collections.nCopies(65, STONE)));
+                () -> NativeStructurePhysicsGeometryDigest.of(Collections.nCopies(257, STONE)));
     }
 }

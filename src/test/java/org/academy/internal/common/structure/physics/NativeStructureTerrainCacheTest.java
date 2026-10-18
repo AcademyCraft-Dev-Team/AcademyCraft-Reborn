@@ -65,10 +65,12 @@ class NativeStructureTerrainCacheTest {
 
     @Test
     void combinedWarmAndDirtyCostsMustFitTheCurrentWholeQueryAllowance() {
-        assertDoesNotThrow(() -> NativeStructurePhysicsGeometry.requireTerrainBudget(2048, 131_072, 2048));
+        assertDoesNotThrow(() -> NativeStructurePhysicsGeometry.requireTerrainBudget(
+                NativePhysicsWorld.MAX_BOXES, 131_072, NativePhysicsWorld.MAX_BOXES));
         assertDoesNotThrow(() -> NativeStructurePhysicsGeometry.requireTerrainBudget(0, 131_072, 0));
-        for (var costs : List.of(new int[]{64, 100, 63}, new int[]{1, 131_073, 2048},
-                new int[]{2049, 100, 2048}, new int[]{0, 0, -1}, new int[]{0, 0, 2049})) {
+        for (var costs : List.of(new int[]{64, 100, 63}, new int[]{1, 131_073, NativePhysicsWorld.MAX_BOXES},
+                new int[]{NativePhysicsWorld.MAX_BOXES + 1, 100, NativePhysicsWorld.MAX_BOXES},
+                new int[]{0, 0, -1}, new int[]{0, 0, NativePhysicsWorld.MAX_BOXES + 1})) {
             var failure = assertThrows(NativeStructurePhysicsGeometry.GeometryException.class,
                     () -> NativeStructurePhysicsGeometry.requireTerrainBudget(costs[0], costs[1], costs[2]));
             assertEquals(NativeStructurePhysicsGeometry.Failure.LIMIT_EXCEEDED, failure.failure());

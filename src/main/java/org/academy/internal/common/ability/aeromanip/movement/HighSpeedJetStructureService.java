@@ -173,6 +173,8 @@ public final class HighSpeedJetStructureService {
                 || !Skills.HIGH_SPEED_JET.get().isEnabled(player)) {
             return ProgramResult.rejected("host_unavailable");
         }
+        var backendProblem = StructurePhysics.physicalBackendProblem(level.getServer());
+        if (backendProblem.isPresent()) return ProgramResult.rejected(backendProblem.get());
         var request = new LaunchRequest(seed, null, null, radius, 1.0f,
                 PROGRAM_SESSION_TICKS, false);
         var plan = plan(player, request).orElse(null);
@@ -204,7 +206,7 @@ public final class HighSpeedJetStructureService {
         stopSession(playerId, null, "replaced_by_program_extract");
         var result = StructureTransactions.capture(level, new StructureCaptureRequest(
                 positions, effectiveBudget, StructureCaptureRequest.MAXIMUM_SPAN,
-                capturePermission(player)));
+                capturePermission(player), true));
         if (result.pending()) {
             var reference = result.structure().orElse(null);
             if (reference == null) return ProgramResult.rejected("pending_without_reference");
@@ -589,6 +591,11 @@ public final class HighSpeedJetStructureService {
                     abandoned.transactionId);
         }
         stopSession(playerId, null, "replaced_by_new_launch");
+        var backendProblem = StructurePhysics.physicalBackendProblem(level.getServer());
+        if (backendProblem.isPresent()) {
+            AcademyCraft.LOGGER.info("High-Speed Jet launch rejected for {}: {}", playerId, backendProblem.get());
+            return Optional.empty();
+        }
         var plan = plan(player, request).orElse(null);
         if (plan == null) return Optional.empty();
         var budget = cellBudget(level);
@@ -603,7 +610,7 @@ public final class HighSpeedJetStructureService {
         }
         if (nozzles.stream().noneMatch(mount -> mount.nozzle == plan.targetNozzle)) return Optional.empty();
         var result = StructureTransactions.capture(level, new StructureCaptureRequest(
-                positions, budget, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player)));
+                positions, budget, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player), true));
         if (result.pending()) {
             var reference = result.structure().orElse(null);
             if (reference == null) return Optional.empty();
@@ -997,29 +1004,31 @@ public final class HighSpeedJetStructureService {
                 level.getWorldBorder().getMinZ(), level.getWorldBorder().getMaxX(),
                 level.getMaxY(), level.getWorldBorder().getMaxZ());
         var bounds = regionBounds(positions, launchDirection, level.getMinY(), level.getMaxY(), limits);
-        if (bounds == null) {
-            AcademyCraft.LOGGER.warn(
-                    "High-Speed Jet program region cannot fit {}; structure retained", reference);
-            return false;
-        }
-        StructurePhysicsRegion region;
-        try {
-            region = StructurePhysics.openRegion(level, bounds);
-        } catch (RuntimeException | AssertionError failure) {
-            AcademyCraft.LOGGER.error(
-                    "High-Speed Jet program could not open a physics region for {}", reference, failure);
-            return false;
-        }
-        try {
-            region.attach(handle);
-        } catch (RuntimeException | AssertionError failure) {
-            AcademyCraft.LOGGER.error("High-Speed Jet program could not attach {}", reference, failure);
-            try {
-                region.close();
-            } catch (RuntimeException cleanup) {
-                failure.addSuppressed(cleanup);
+        StructurePhysicsRegion region = StructurePhysics.attachedRegion(level, reference).orElse(null);
+        if (region == null) {
+            if (bounds == null) {
+                AcademyCraft.LOGGER.warn(
+                        "High-Speed Jet program region cannot fit {}; structure retained", reference);
+                return false;
             }
-            return false;
+            try {
+                region = StructurePhysics.openRegion(level, bounds);
+            } catch (RuntimeException | AssertionError failure) {
+                AcademyCraft.LOGGER.error(
+                        "High-Speed Jet program could not open a physics region for {}", reference, failure);
+                return false;
+            }
+            try {
+                region.attach(handle);
+            } catch (RuntimeException | AssertionError failure) {
+                AcademyCraft.LOGGER.error("High-Speed Jet program could not attach {}", reference, failure);
+                try {
+                    region.close();
+                } catch (RuntimeException cleanup) {
+                    failure.addSuppressed(cleanup);
+                }
+                return false;
+            }
         }
         attachNozzles(player.getUUID(), reference, nozzles);
         var previousTicks = new HashMap<HighSpeedJetNozzle, Integer>();
@@ -1078,29 +1087,31 @@ public final class HighSpeedJetStructureService {
         var limits = new AABB(level.getWorldBorder().getMinX(), level.getMinY(), level.getWorldBorder().getMinZ(),
                 level.getWorldBorder().getMaxX(), level.getMaxY(), level.getWorldBorder().getMaxZ());
         var bounds = regionBounds(positions, launchDirection, level.getMinY(), level.getMaxY(), limits);
-        if (bounds == null) {
-            reject(player, "region_cannot_fit_structure");
-            return;
-        }
-        StructurePhysicsRegion region;
-        try {
-            region = StructurePhysics.openRegion(level, bounds);
-        } catch (RuntimeException | AssertionError failure) {
-            AcademyCraft.LOGGER.error("High-Speed Jet could not open a physics region for {}", reference, failure);
-            reject(player, "region_open_failed");
-            return;
-        }
-        try {
-            region.attach(handle);
-        } catch (RuntimeException | AssertionError failure) {
-            AcademyCraft.LOGGER.error("High-Speed Jet could not attach {}", reference, failure);
-            try {
-                region.close();
-            } catch (RuntimeException cleanup) {
-                failure.addSuppressed(cleanup);
+        StructurePhysicsRegion region = StructurePhysics.attachedRegion(level, reference).orElse(null);
+        if (region == null) {
+            if (bounds == null) {
+                reject(player, "region_cannot_fit_structure");
+                return;
             }
-            reject(player, "region_attach_failed");
-            return;
+            try {
+                region = StructurePhysics.openRegion(level, bounds);
+            } catch (RuntimeException | AssertionError failure) {
+                AcademyCraft.LOGGER.error("High-Speed Jet could not open a physics region for {}", reference, failure);
+                reject(player, "region_open_failed");
+                return;
+            }
+            try {
+                region.attach(handle);
+            } catch (RuntimeException | AssertionError failure) {
+                AcademyCraft.LOGGER.error("High-Speed Jet could not attach {}", reference, failure);
+                try {
+                    region.close();
+                } catch (RuntimeException cleanup) {
+                    failure.addSuppressed(cleanup);
+                }
+                reject(player, "region_attach_failed");
+                return;
+            }
         }
         var blockCount = positions.size();
         var powerCost = ProgramPowerScale.costMultiplier(request.power);

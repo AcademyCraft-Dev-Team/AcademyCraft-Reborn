@@ -80,7 +80,9 @@ public final class VectorStructureService {
     private static final double FOLLOW_LOOKAHEAD_SECONDS = 0.5;
     private static final double FOLLOW_TRAILING_MARGIN = 2.0;
     private static final double ANGULAR_MARGIN_SECONDS = 0.05;
-    private static final double SUPPORT_TOLERANCE = 0.5;
+    // Impact settling must not skip a real side hit merely because the target's feet are
+    // within half a block of the moving top face; 0.18 matches the carrying surface tolerance.
+    private static final double SUPPORT_TOLERANCE = 0.18;
     private static final double PROGRAM_CONTROL_RANGE = 32.0;
     private static final int PROGRAM_CONTROL_TIER = 1;
     /**
@@ -634,6 +636,10 @@ public final class VectorStructureService {
 
     private static PlanOutcome planCaptureInternal(ServerPlayer player, BlockPos seed, int tier, int budgetOverride) {
         var level = player.level();
+        // The selection is free, but a capture removes the source blocks. Refuse before the
+        // first mutation when no backend can turn the result into a moving body.
+        var backendProblem = StructurePhysics.physicalBackendProblem(level.getServer());
+        if (backendProblem.isPresent()) return new PlanOutcome(null, backendProblem.get());
         var selection = BlockStructureApi.selectLowerEllipsoidWithUpperCylinder(
                 level,
                 seed,
@@ -670,7 +676,7 @@ public final class VectorStructureService {
         var level = player.level();
         var budget = cellBudget(level);
         var result = StructureTransactions.capture(level, new StructureCaptureRequest(
-                plan.positions(), budget, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player)));
+                plan.positions(), budget, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player), true));
         var reference = result.structure().orElse(null);
         if (result.pending()) {
             if (reference == null) {
@@ -842,52 +848,56 @@ public final class VectorStructureService {
             rejectCapture(player, "captured_handle_unavailable", report);
             return;
         }
-        var originalPose = handle.pose();
-        try {
-            // Initial generation only (no physics attachment exists yet): a bounded vertical
-            // clearance keeps the fresh body out of its own socket so the first uncontrolled
-            // solver step can never settle it below the source selection bottom. It is not a
-            // substitute for post-attachment movement, which stays anchored or detached-first.
-            handle.setPose(new StructurePose(
-                    originalPose.worldOrigin().add(0.0, INITIAL_GROUND_CLEARANCE, 0.0),
-                    originalPose.rotationX(), originalPose.rotationY(),
-                    originalPose.rotationZ(), originalPose.rotationW()));
-        } catch (IllegalStateException | IllegalArgumentException rejection) {
-            AcademyCraft.LOGGER.error("Kinetic Throw could not apply initial ground clearance to {}",
-                    reference, rejection);
-            rejectCapture(player, "initial_clearance_rejected", report);
-            return;
-        }
         var limits = new AABB(level.getWorldBorder().getMinX(), level.getMinY(), level.getWorldBorder().getMinZ(),
                 level.getWorldBorder().getMaxX(), level.getMaxY(), level.getWorldBorder().getMaxZ());
         var bounds = regionBounds(positions, KineticThrow.liftHeight(tier), INITIAL_GROUND_CLEARANCE,
                 level.getMinY(), level.getMaxY(), limits);
-        if (bounds == null) {
-            restoreInitialPose(handle, originalPose);
-            rejectCapture(player, "region_cannot_fit_structure", report);
-            return;
-        }
-        StructurePhysicsRegion region;
-        try {
-            region = StructurePhysics.openRegion(level, bounds);
-        } catch (RuntimeException | AssertionError failure) {
-            AcademyCraft.LOGGER.error("Kinetic Throw could not open a physics region for {}", reference, failure);
-            restoreInitialPose(handle, originalPose);
-            rejectCapture(player, "region_open_failed", report);
-            return;
-        }
-        try {
-            region.attach(handle);
-        } catch (RuntimeException | AssertionError failure) {
-            AcademyCraft.LOGGER.error("Kinetic Throw could not attach {}", reference, failure);
-            restoreInitialPose(handle, originalPose);
+        StructurePhysicsRegion region = StructurePhysics.attachedRegion(level, reference).orElse(null);
+        if (region != null) {
+            // The capture transaction already built the body before removing its source. Adopt
+            // that region and re-base it to the lift envelope; never call setPose on a body.
+            if (bounds != null) region.rebind(bounds);
+        } else {
+            var originalPose = handle.pose();
             try {
-                region.close();
-            } catch (RuntimeException cleanup) {
-                failure.addSuppressed(cleanup);
+                // Legacy path for captures without the physical flag: keep the fresh body out of
+                // its own source socket before the first uncontrolled solver step.
+                handle.setPose(new StructurePose(
+                        originalPose.worldOrigin().add(0.0, INITIAL_GROUND_CLEARANCE, 0.0),
+                        originalPose.rotationX(), originalPose.rotationY(),
+                        originalPose.rotationZ(), originalPose.rotationW()));
+            } catch (IllegalStateException | IllegalArgumentException rejection) {
+                AcademyCraft.LOGGER.error("Kinetic Throw could not apply initial ground clearance to {}",
+                        reference, rejection);
+                rejectCapture(player, "initial_clearance_rejected", report);
+                return;
             }
-            rejectCapture(player, "region_attach_failed", report);
-            return;
+            if (bounds == null) {
+                restoreInitialPose(handle, originalPose);
+                rejectCapture(player, "region_cannot_fit_structure", report);
+                return;
+            }
+            try {
+                region = StructurePhysics.openRegion(level, bounds);
+            } catch (RuntimeException | AssertionError failure) {
+                AcademyCraft.LOGGER.error("Kinetic Throw could not open a physics region for {}", reference, failure);
+                restoreInitialPose(handle, originalPose);
+                rejectCapture(player, "region_open_failed", report);
+                return;
+            }
+            try {
+                region.attach(handle);
+            } catch (RuntimeException | AssertionError failure) {
+                AcademyCraft.LOGGER.error("Kinetic Throw could not attach {}", reference, failure);
+                restoreInitialPose(handle, originalPose);
+                try {
+                    region.close();
+                } catch (RuntimeException cleanup) {
+                    failure.addSuppressed(cleanup);
+                }
+                rejectCapture(player, "region_attach_failed", report);
+                return;
+            }
         }
         var held = new Session(reference, level.dimension(), tier, positions.size(), region, null);
         held.capturedCells = List.copyOf(positions);
@@ -895,7 +905,7 @@ public final class VectorStructureService {
         held.expiresAt = level.getGameTime() + KineticThrow.HOVER_TICKS;
         SESSIONS.put(player.getUUID(), held);
         var motion = region.motion(reference).orElse(null);
-        playKineticCue(level, motion == null ? bounds.getCenter()
+        playKineticCue(level, motion == null ? region.bounds().getCenter()
                 : motion.pose().localToWorldPoint(motion.localCenterOfMass()));
     }
 
@@ -1270,6 +1280,9 @@ public final class VectorStructureService {
         var union = union(boxes);
         if (union == null) return;
         var now = level.getGameTime();
+        // A fast body can move several blocks between two published poses. Sweep the target
+        // backwards along that motion so a 50 m/s throw cannot tunnel through a narrow entity.
+        var sweep = held.velocity.scale(-0.05);
         var targets = new ArrayList<Entity>();
         for (var target : level.getEntities(player, union.inflate(1.5))) {
             if (target == projection || target.noPhysics || !canAffect(player, target)) continue;
@@ -1277,7 +1290,8 @@ public final class VectorStructureService {
             if (last != null && now - last < IMPACT_COOLDOWN_TICKS) continue;
             var targetBox = target.getBoundingBox();
             if (projection.supports(targetBox, SUPPORT_TOLERANCE)) continue;
-            if (boxes.stream().noneMatch(box -> box.intersects(targetBox))) continue;
+            var sweptTarget = targetBox.expandTowards(sweep);
+            if (boxes.stream().noneMatch(box -> box.intersects(sweptTarget))) continue;
             targets.add(target);
         }
         for (var target : targets) settleImpact(player, held, projection, target, union.getCenter());

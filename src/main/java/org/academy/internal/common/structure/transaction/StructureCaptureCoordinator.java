@@ -263,7 +263,7 @@ public final class StructureCaptureCoordinator {
             }
             var seeded = seededAllocation(backend, target, seedOffset, seedState);
             var capture = new PendingCapture(record, host, origin, target, backend, ordered, cells, states,
-                    request.permission(), false, seedIndex, seeded);
+                    request.permission(), false, seedIndex, seeded, request.physical());
             pending.put(transactionId, capture);
             try {
                 drive(capture);
@@ -374,6 +374,14 @@ public final class StructureCaptureCoordinator {
             abort(capture, StructureCaptureResult.Status.TARGET_WRITE_FAILED, "target_geometry_budget");
             return;
         }
+        if (!finalizeTarget(capture)) {
+            abort(capture, StructureCaptureResult.Status.TARGET_WRITE_FAILED, "target_finalize_failed");
+            return;
+        }
+        if (capture.physical && !preparePhysics(capture)) {
+            abort(capture, StructureCaptureResult.Status.TARGET_WRITE_FAILED, "target_physics_prepare_failed");
+            return;
+        }
         if (!persistStage(capture, StructureTransactionJournal.Stage.COPIED)) {
             abort(capture, StructureCaptureResult.Status.TARGET_WRITE_FAILED, "journal_copied_persist_failed");
             return;
@@ -421,6 +429,9 @@ public final class StructureCaptureCoordinator {
     }
 
     private void stepClearTarget(PendingCapture capture) {
+        // A prepared body owns an attachment; detach and close it before cell-level rollback or
+        // the empty-slot release would be refused and the failed capture would stay retained.
+        releasePhysics(capture);
         if (capture.recovery && !sourceMatches(capture)) {
             retain(capture, "source_changed_before_recovery_rollback", null);
             return;
@@ -653,6 +664,37 @@ public final class StructureCaptureCoordinator {
         }
     }
 
+    /** Backend-owned body finalization runs once the copied cells are verified and before commit. */
+    private boolean finalizeTarget(PendingCapture capture) {
+        try {
+            return capture.backend.finalizeTarget(capture.target, capture.origin, capture.positions);
+        } catch (RuntimeException | LinkageError failure) {
+            AcademyCraft.LOGGER.error("Structure capture target finalization failed: {}",
+                    capture.transactionId, failure);
+            return false;
+        }
+    }
+
+    /** Body creation still sees the source blocks; a failure therefore rolls back without ghosts. */
+    private boolean preparePhysics(PendingCapture capture) {
+        try {
+            return capture.backend.preparePhysics(capture.host, capture.target, capture.origin, capture.positions);
+        } catch (RuntimeException | LinkageError failure) {
+            AcademyCraft.LOGGER.error("Structure capture could not prepare physics: {}",
+                    capture.transactionId, failure);
+            return false;
+        }
+    }
+
+    private void releasePhysics(PendingCapture capture) {
+        try {
+            capture.backend.releasePhysics(capture.host, capture.target);
+        } catch (RuntimeException | LinkageError failure) {
+            AcademyCraft.LOGGER.error("Structure capture could not release prepared physics: {}",
+                    capture.transactionId, failure);
+        }
+    }
+
     private boolean permissionHolds(PendingCapture capture) {
         if (capture.permission == null) return true;
         for (var position : capture.positions) {
@@ -745,7 +787,7 @@ public final class StructureCaptureCoordinator {
         }
         var target = new StructureRef(record.targetStructure(), record.hostDimension(), record.backend(), 0);
         var capture = new PendingCapture(record, host, record.origin(), target, backend, positions,
-                record.cells(), states, null, true, 0, false);
+                record.cells(), states, null, true, 0, false, false);
         capture.copyProgress = record.stage() == StructureTransactionJournal.Stage.TARGET_ALLOCATED
                 || record.stage() == StructureTransactionJournal.Stage.COPIED ? positions.size() : 0;
         capture.phase = record.stage() == StructureTransactionJournal.Stage.COMMIT_DECIDED
@@ -900,6 +942,7 @@ public final class StructureCaptureCoordinator {
         private final boolean reportResults;
         private final int seedIndex;
         private final boolean seeded;
+        private final boolean physical;
         private StructureTransactionJournal.Record record;
         private Phase phase = Phase.AWAIT_ACTIVATION;
         private int copyProgress;
@@ -913,7 +956,7 @@ public final class StructureCaptureCoordinator {
                                StructureRef target, CaptureTarget backend, List<BlockPos> positions,
                                List<StructureTransactionJournal.Cell> cells, List<BlockState> states,
                                @Nullable BiPredicate<ServerLevel, BlockPos> permission, boolean recovery,
-                               int seedIndex, boolean seeded) {
+                               int seedIndex, boolean seeded, boolean physical) {
             this.record = record;
             this.host = host;
             this.origin = origin;
@@ -927,6 +970,7 @@ public final class StructureCaptureCoordinator {
             this.reportResults = !recovery;
             this.seedIndex = seedIndex;
             this.seeded = seeded;
+            this.physical = physical;
             this.copyProgress = seeded ? seedIndex + 1 : 0;
             this.transactionId = record.transactionId();
         }

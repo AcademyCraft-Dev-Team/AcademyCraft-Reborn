@@ -15,15 +15,33 @@ class NativePhysicsArtifactTest {
 
     @Test
     @ResourceLock("systemProperties")
-    void missingOptInNeverAttemptsNativeLoading() {
-        var previous = System.clearProperty(NativePhysicsArtifact.LIBRARY_PROPERTY);
+    void brokenExplicitConfigurationNeverFallsBackToTheBundledArtifact() {
+        var previousLibrary = System.getProperty(NativePhysicsArtifact.LIBRARY_PROPERTY);
+        var previousManifest = System.getProperty(NativePhysicsArtifact.MANIFEST_PROPERTY);
         try {
-            var failure = assertThrows(IllegalStateException.class, NativePhysicsLibrary::openConfigured);
-            assertTrue(failure.getMessage().contains("opt-in"));
-            assertTrue(failure.getMessage().contains(NativePhysicsArtifact.LIBRARY_PROPERTY));
+            System.setProperty(NativePhysicsArtifact.LIBRARY_PROPERTY,
+                    directory.resolve("missing.dll").toAbsolutePath().toString());
+            System.setProperty(NativePhysicsArtifact.MANIFEST_PROPERTY,
+                    directory.resolve("missing.properties").toAbsolutePath().toString());
+            var failure = assertThrows(IOException.class, NativePhysicsLibrary::openConfigured);
+            assertNotNull(failure.getMessage());
         } finally {
-            if (previous != null) System.setProperty(NativePhysicsArtifact.LIBRARY_PROPERTY, previous);
+            if (previousLibrary == null) System.clearProperty(NativePhysicsArtifact.LIBRARY_PROPERTY);
+            else System.setProperty(NativePhysicsArtifact.LIBRARY_PROPERTY, previousLibrary);
+            if (previousManifest == null) System.clearProperty(NativePhysicsArtifact.MANIFEST_PROPERTY);
+            else System.setProperty(NativePhysicsArtifact.MANIFEST_PROPERTY, previousManifest);
         }
+    }
+
+    @Test
+    void bundledArtifactIsDecodedAndMatchesItsManifestOnWindows() throws IOException {
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+                System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT).contains("win"));
+        var artifact = NativePhysicsArtifact.bundled();
+        assertNotNull(artifact);
+        assertEquals("windows-x86_64", artifact.platform());
+        assertTrue(Files.isRegularFile(artifact.library()));
+        assertEquals(NativePhysicsArtifact.digest(artifact.library()), artifact.sha256());
     }
 
     @Test
