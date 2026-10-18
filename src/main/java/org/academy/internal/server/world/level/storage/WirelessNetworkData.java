@@ -54,6 +54,11 @@ public final class WirelessNetworkData extends SavedData {
     );
     private static final Logger LOGGER = AcademyCraft.getLogger();
 
+    public static final String DEFAULT_PASSWORD = "";
+    public static final int DEFAULT_RADIUS = 32;
+    public static final int DEFAULT_MAX_CONNECTIONS = 8;
+    private static final int MAX_AUTO_NAME_SUFFIX = 1_000;
+
     private final DualKeyMap<BlockPos, String, NodeConfig> nodes =
             new DualKeyMap<>(nodeConfig -> nodeConfig.name);
 
@@ -81,11 +86,50 @@ public final class WirelessNetworkData extends SavedData {
         return true;
     }
 
-    public void unregisterNode(BlockPos pos, ServerLevel level) {
+    /**
+     * Registers a missing node with default settings and a position-derived name.
+     * Existing configurations are returned untouched, and the generated name is
+     * suffixed if another node already uses it.
+     */
+    @Nullable
+    public NodeConfig ensureNodeRegistered(BlockPos pos) {
+        var existing = nodes.getByPrimary(pos);
+        if (existing != null) {
+            return existing;
+        }
+
+        var baseName = defaultNodeName(pos);
+        var name = baseName;
+        var suffix = 0;
+        while (nodes.containsSecondary(name)) {
+            suffix++;
+            if (suffix > MAX_AUTO_NAME_SUFFIX) {
+                LOGGER.error("Failed to auto-register node at {}: no free name based on '{}'.", pos, baseName);
+                return null;
+            }
+            name = baseName + "_" + suffix;
+        }
+
+        var config = new NodeConfig(name, DEFAULT_PASSWORD, DEFAULT_RADIUS, DEFAULT_MAX_CONNECTIONS, new HashMap<>());
+        nodes.put(pos, config);
+        setDirty();
+        LOGGER.debug("Auto-registered node '{}' at {}", name, pos);
+        return config;
+    }
+
+    public static String defaultNodeName(BlockPos pos) {
+        return "Node_" + pos.getX() + "_" + pos.getY() + "_" + pos.getZ();
+    }
+
+    /**
+     * Removes a node configuration if it exists. Repeated calls are harmless so every
+     * block removal path can request cleanup without producing duplicate warnings.
+     */
+    public boolean unregisterNode(BlockPos pos, ServerLevel level) {
         var config = nodes.removeByPrimary(pos);
         if (config == null) {
-            LOGGER.warn("Attempted to unregister a node at {} but it was not found in configurations.", pos);
-            return;
+            LOGGER.debug("Ignoring unregister request for node at {}: no configuration exists.", pos);
+            return false;
         }
 
         setDirty();
@@ -95,6 +139,7 @@ public final class WirelessNetworkData extends SavedData {
         for (var userPos : usersToDisconnect) {
             WirelessManager.handleDisconnect(null, level, userPos);
         }
+        return true;
     }
 
     public boolean renameNode(BlockPos pos, String newName) {

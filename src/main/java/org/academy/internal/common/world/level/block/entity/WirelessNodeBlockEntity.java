@@ -38,6 +38,7 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
 
     private static final int MAX_ENERGY = 2_400_000;
     private static final int TRANSFER_RATE = 20000;
+    private static final long MISSING_CONFIG_RETRY_INTERVAL = 600L;
     public final AnimationState coreState = new AnimationState();
     public WirelessNetworkData.@Nullable NodeConfig cachedConfig = null;
     public NonNullList<ItemStack> items = NonNullList.withSize(2, ItemStack.EMPTY);
@@ -46,6 +47,7 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
     public int radius;
     public int ticks;
     private int energyStored = 5000;
+    private long nextMissingConfigRetryTick = Long.MIN_VALUE;
     @Nullable
     private BlockPos connectedNodePos = null;
 
@@ -54,13 +56,30 @@ public final class WirelessNodeBlockEntity extends BlockEntity implements Wirele
         coreState.start(ticks);
     }
 
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level instanceof ServerLevel serverLevel) {
+            WirelessNetworkData.get(serverLevel).unregisterNode(pos, serverLevel);
+        }
+    }
+
     public void serverTick(ServerLevel serverLevel, BlockPos pos) {
         energyUpdates.flush(this, energyStored);
         var networkData = WirelessNetworkData.get(serverLevel);
         if (cachedConfig == null) {
             cachedConfig = networkData.getNodeConfig(pos);
-            if (cachedConfig == null && level != null && level.getGameTime() > 1) {
-                LOGGER.warn("Wireless Node BE at {} ticking but not (yet?) registered in SavedData!", pos);
+            if (cachedConfig == null && serverLevel.getGameTime() >= nextMissingConfigRetryTick) {
+                nextMissingConfigRetryTick = serverLevel.getGameTime() + MISSING_CONFIG_RETRY_INTERVAL;
+                cachedConfig = networkData.ensureNodeRegistered(pos);
+                if (cachedConfig != null) {
+                    LOGGER.info("Wireless Node BE at {} was missing from SavedData and has been re-registered as '{}'.",
+                            pos, cachedConfig.name);
+                } else if (serverLevel.getGameTime() > 1) {
+                    LOGGER.warn("Wireless Node BE at {} ticking but not registered in SavedData; "
+                                    + "automatic registration failed, retrying in {} ticks.",
+                            pos, MISSING_CONFIG_RETRY_INTERVAL);
+                }
             }
             if (cachedConfig == null) return;
         }

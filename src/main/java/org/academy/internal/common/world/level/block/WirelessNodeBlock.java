@@ -13,7 +13,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
@@ -25,19 +24,16 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.BlockHitResult;
-import org.academy.AcademyCraft;
 import org.academy.api.server.util.ServerPlayerUtil;
 import org.academy.internal.common.world.inventory.WirelessNodeMenu;
 import org.academy.internal.common.world.level.block.entity.WirelessNodeBlockEntity;
 import org.academy.internal.server.world.level.storage.WirelessNetworkData;
 import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
 
 public final class WirelessNodeBlock extends BaseEntityBlock {
     public static final String WIRELESS_NODE_SCREEN = "wireless_node_screen";
     public static final BooleanProperty CONNECTED = BooleanProperty.create("connected");
     public static final MapCodec<WirelessNodeBlock> CODEC = simpleCodec(WirelessNodeBlock::new);
-    private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final IntegerProperty ENERGY = IntegerProperty.create("energy_cost", 0, 4);
 
     public WirelessNodeBlock(Properties properties) {
@@ -63,25 +59,9 @@ public final class WirelessNodeBlock extends BaseEntityBlock {
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
-        if (!level.isClientSide() && level instanceof ServerLevel serverLevel) {
-            var nodeName = "Node_" + pos.getX() + "_" + pos.getY() + "_" + pos.getZ();
-            var password = "";
-            var radius = 32;
-            var maxConnections = 8;
-            if (WirelessNetworkData.get(serverLevel).registerNode(pos, nodeName, password, radius, maxConnections)) {
-                LOGGER.debug("Registered wireless node at {} with name '{}'.", pos, nodeName);
-            } else {
-                LOGGER.warn("Failed to register wireless node at {} with name '{}'.", pos, nodeName);
-            }
-        }
-    }
-
-    @Override
-    public void destroy(LevelAccessor level, BlockPos pos, BlockState state) {
         if (level instanceof ServerLevel serverLevel) {
-            WirelessNetworkData.get(serverLevel).unregisterNode(pos, serverLevel);
+            WirelessNetworkData.get(serverLevel).ensureNodeRegistered(pos);
         }
-        super.destroy(level, pos, state);
     }
 
     @Override
