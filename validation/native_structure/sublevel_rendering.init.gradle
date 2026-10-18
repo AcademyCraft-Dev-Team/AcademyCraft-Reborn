@@ -8,6 +8,7 @@ allprojects {
             systemProperty 'academy.sublevel.clientBreakProbe', 'true'
             systemProperty 'academy.sublevel.clientPlaceProbe', 'true'
             systemProperty 'academy.sublevel.clientUseProbe', 'true'
+            systemProperty 'academy.sublevel.clientChestProbe', 'true'
             systemProperty 'academy.sublevel.fallProbe', 'true'
             programArguments.addAll('--width', '1280', '--height', '720',
                     '--quickPlaySingleplayer', 'Native SubLevel Smoke')

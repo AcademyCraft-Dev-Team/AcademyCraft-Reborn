@@ -11,6 +11,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LeverBlock;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.block.state.properties.AttachFace;
 import net.minecraft.world.phys.Vec3;
@@ -46,6 +47,9 @@ public final class SubLevelClientSmoke {
     private static volatile boolean leverRequested;
     private static volatile boolean useSent;
     private static volatile boolean useSeen;
+    private static volatile boolean chestRequested;
+    private static volatile boolean chestSent;
+    private static volatile boolean chestSeen;
     private static double initialPoseY = Double.NaN;
     private static int holdTicks;
     private static volatile SubLevelCaptureService.Result result;
@@ -154,6 +158,35 @@ public final class SubLevelClientSmoke {
                 return;
             }
         }
+        if (Boolean.getBoolean("academy.sublevel.clientChestProbe") && useSeen && !chestSeen) {
+            if (!chestRequested) {
+                chestRequested = true;
+                var server = minecraft.getSingleplayerServer();
+                if (server == null) return;
+                server.execute(() -> prepareChest(server, result.id()));
+                return;
+            }
+            var chest = findChest(projection);
+            if (chest == null) return;
+            if (!chestSent) {
+                var point = projection.renderPose(1.0F).localToWorldPoint(new Vec3(
+                        chest.position().getX() + 0.5, chest.position().getY() + 0.5, chest.position().getZ() + 0.5));
+                SubLevelInteractPacket.send(new SubLevelInteractPacket(result.id(), chest.position(),
+                        Direction.UP, point, InteractionHand.MAIN_HAND, SubLevelInteractPacket.Action.USE));
+                chestSent = true;
+                AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_CHEST_SENT local={}", chest.position());
+                return;
+            }
+            if (minecraft.gui.screen() instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen) {
+                chestSeen = true;
+                AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_CHEST_OPENED screen={} slots={} item0={}",
+                        screen.getClass().getSimpleName(), screen.getMenu().slots.size(),
+                        screen.getMenu().getSlot(0).getItem());
+                minecraft.player.closeContainer();
+                minecraft.gui.setScreen(null);
+            }
+            return;
+        }
         if (Boolean.getBoolean("academy.sublevel.clientCollision") && !collisionProbed) {
             collisionProbed = true;
             var center = projection.renderPose(1.0F).localToWorldPoint(new Vec3(1, 1, 1));
@@ -233,6 +266,45 @@ public final class SubLevelClientSmoke {
         } catch (Throwable error) {
             fail(error.toString());
         }
+    }
+
+    private static void prepareChest(MinecraftServer server, SubLevelId id) {
+        try {
+            var runtime = SubLevelServer.runtime(server).orElseThrow(() -> new IllegalStateException("SubLevel backend unavailable"));
+            var subLevel = runtime.get(id).orElseThrow();
+            var cells = runtime.view(id).cells();
+            if (cells.isEmpty()) throw new IllegalStateException("empty view");
+            var player = server.getPlayerList().getPlayers().getFirst();
+            var eye = player.getEyePosition();
+            var local = cells.getFirst().position();
+            double nearest = Double.POSITIVE_INFINITY;
+            for (var cell : cells) {
+                var worldCenter = subLevel.pose().localToWorldPoint(new Vec3(
+                        cell.position().getX() + 0.5, cell.position().getY() + 0.5, cell.position().getZ() + 0.5));
+                double distance = eye.distanceToSqr(worldCenter);
+                if (distance < nearest) { nearest = distance; local = cell.position(); }
+            }
+            var state = Blocks.CHEST.defaultBlockState();
+            if (!runtime.storage().setBlock(subLevel.plot(), local, state, 3)) {
+                throw new IllegalStateException("plot chest setBlock failed at " + local);
+            }
+            var chest = new ChestBlockEntity(runtime.storage().worldPosition(subLevel.plot(), local), state);
+            chest.setItem(0, new ItemStack(Items.DIAMOND, 3));
+            runtime.storage().level().setBlockEntity(chest);
+            runtime.refreshGeometry(id);
+            player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_CHEST_PREPARED local={}", local);
+        } catch (Throwable error) {
+            fail(error.toString());
+        }
+    }
+
+    private static org.academy.internal.common.structure.space.NativeStructureView.Cell findChest(
+            NativeStructureProjectionEntity projection) {
+        for (var cell : projection.view().cells()) {
+            if (cell.state().is(Blocks.CHEST)) return cell;
+        }
+        return null;
     }
 
     private static org.academy.internal.common.structure.space.NativeStructureView.Cell findLever(

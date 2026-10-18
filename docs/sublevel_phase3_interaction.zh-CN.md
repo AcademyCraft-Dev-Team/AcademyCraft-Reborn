@@ -14,6 +14,7 @@
 | `SubLevelInteractPacket` | 客户端→服务端：id、local pos、face、hit point、hand、USE/BREAK/PLACE |
 | `SubLevelClientState.raycast` | 客户端用 state-only view 做精确方块射线，不依赖投影实体 AABB |
 | `SubLevelClientInteraction` | 接入 `Minecraft.startAttack/startUseItem`，命中 SubLevel 时发送交互包 |
+| `SubLevelChestContainer` | 单箱菜单代理，槽位委托 plot 的真实 `ChestBlockEntity`，`stillValid` 用宿主玩家距离 |
 
 设计要点：
 
@@ -59,8 +60,8 @@ SUBLEVEL_CLIENT_SMOKE_PASSED ... frames=865
 
 ## 3. 当前边界
 
-- 客户端破坏、放置和拉杆 `useBlock` 已实机验证；服务端 BREAK 射线复核已接入，USE/PLACE 仍主要依赖范围/权限校验；
-- 容器/多格方块菜单尚未桥接；
+- 客户端破坏、放置和拉杆 `useBlock` 已实机验证；服务端 BREAK/PLACE 射线复核已接入，USE 射线复核暂缓（避免移动中的小型交互方块被误拒）；
+- 单箱代理菜单已实机打开（27 格容器 + 36 格玩家背包）；双箱/多格方块和其他容器尚未桥接；
 - `useBlock/placeBlock` 的 vanilla context 已实现，但尚未在带真实玩家/BlockEntity 的世界中验证；
 - 容器菜单（箱子/熔炉）和多格方块尚未桥接；
 - 交互权限目前只做 plot `mayInteract`，未接技能事务/保护事件；
