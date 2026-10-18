@@ -77,5 +77,4 @@ SUBLEVEL_LARGE_BENCHMARK side=24 cells=3176 fps_avg=116.25 fps_min=104 ticks=120
 ## 4. 已知问题
 
 - 256 探针的 `persistentProbeAndStop` 在服务器启动阶段触发原版 `halt` 时出现 shutdown StackOverflow；数据已 persist，但停止路径需要改为更安全的延迟停止。
-- 256 场景未做客户端 256 全量渲染；首版只要求 64 活跃。
-- 单箱代理菜单已打开验证；双箱/多格方块、技能事务仍未完成；服务端 BREAK/PLACE 射线复核已接入，USE 待补全。
+- 单箱/双箱代理菜单已打开验证；多格方块、技能事务仍未完成；服务端 BREAK/PLACE 射线复核已接入，USE 射线仍在稳定性处理中。

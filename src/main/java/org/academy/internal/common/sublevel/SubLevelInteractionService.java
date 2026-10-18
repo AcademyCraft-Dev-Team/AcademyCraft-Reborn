@@ -6,6 +6,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.CompoundContainer;
+import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleMenuProvider;
@@ -55,11 +57,16 @@ public final class SubLevelInteractionService {
         }
         var localEye = pose.worldToLocalPoint(eye);
         var center = Vec3.atCenterOf(local);
-        var pointHit = runtime.view(id).clip(new ClipContext(localEye, localPoint,
+        var view = runtime.view(id);
+        var look = pose.worldToLocalDirection(player.getViewVector(1.0F)).normalize();
+        var lookHit = view.clip(new ClipContext(localEye, localEye.add(look.scale(reach)),
                 ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, CollisionContext.empty()));
-        var centerHit = runtime.view(id).clip(new ClipContext(localEye, center,
+        var pointHit = view.clip(new ClipContext(localEye, localPoint,
                 ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, CollisionContext.empty()));
-        boolean valid = pointHit.getType() == HitResult.Type.BLOCK && pointHit.getBlockPos().equals(local)
+        var centerHit = view.clip(new ClipContext(localEye, center,
+                ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, CollisionContext.empty()));
+        boolean valid = lookHit.getType() == HitResult.Type.BLOCK && lookHit.getBlockPos().equals(local)
+                || pointHit.getType() == HitResult.Type.BLOCK && pointHit.getBlockPos().equals(local)
                 || centerHit.getType() == HitResult.Type.BLOCK && centerHit.getBlockPos().equals(local);
         if (!valid) {
             AcademyCraft.LOGGER.debug("SubLevel ray rejected local={} eye={} point={} pointHit={} centerHit={}",
@@ -95,13 +102,26 @@ public final class SubLevelInteractionService {
         var state = level.getBlockState(world);
         if (!level.hasChunkAt(world) || state.isAir()) return InteractionResult.FAIL;
         if (!level.mayInteract(player, world)) return InteractionResult.FAIL;
-        if (state.is(Blocks.CHEST) && state.getValue(ChestBlock.TYPE) == ChestType.SINGLE
+        if (state.is(Blocks.CHEST)
                 && runtime.storage().blockEntity(subLevel.plot(), local) instanceof ChestBlockEntity chest) {
+            Container container = chest;
+            int rows = 3;
+            var title = Component.translatable("container.chest");
+            if (state.getValue(ChestBlock.TYPE) != ChestType.SINGLE) {
+                var otherPos = ChestBlock.getConnectedBlockPos(local, state);
+                if (runtime.storage().blockEntity(subLevel.plot(), otherPos) instanceof ChestBlockEntity other) {
+                    container = new CompoundContainer(chest, other);
+                    rows = 6;
+                    title = Component.translatable("container.chestDouble");
+                }
+            }
             var center = subLevel.pose().localToWorldPoint(Vec3.atCenterOf(local));
+            final var menuContainer = new SubLevelChestContainer(runtime.host(), container, center);
+            final int menuRows = rows;
+            final var menuTitle = title;
             player.openMenu(new SimpleMenuProvider((containerId, inventory, ignored) ->
-                    new ChestMenu(MenuType.GENERIC_9x3, containerId, inventory,
-                            new SubLevelChestContainer(runtime.host(), chest, center), 3),
-                    Component.translatable("container.chest")));
+                    new ChestMenu(menuRows == 6 ? MenuType.GENERIC_9x6 : MenuType.GENERIC_9x3,
+                            containerId, inventory, menuContainer, menuRows), menuTitle));
             return InteractionResult.SUCCESS;
         }
         var result = new BlockHitResult(hit, face, world, false);

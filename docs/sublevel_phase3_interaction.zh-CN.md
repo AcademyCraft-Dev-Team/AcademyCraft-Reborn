@@ -63,15 +63,16 @@ SUBLEVEL_CLIENT_SMOKE_PASSED ... frames=865
 ```text
 CLIENT_SUBLEVEL_CHEST_PREPARED local=BlockPos{x=0, y=0, z=0}
 CLIENT_SUBLEVEL_CHEST_SENT local=BlockPos{x=0, y=0, z=0}
-CLIENT_SUBLEVEL_CHEST_OPENED screen=ContainerScreen slots=63
+CLIENT_SUBLEVEL_CHEST_OPENED screen=ContainerScreen slots=63 item0=3 minecraft:diamond
+CLIENT_SUBLEVEL_DOUBLE_CHEST_OPENED screen=ContainerScreen slots=90 item0=3 minecraft:diamond
 ```
 
 9×3 单箱槽位 + 36 格玩家背包通过代理 `Container` 直接读写 plot 中的真实 `ChestBlockEntity`，没有复制库存。截图：`run/native-sublevel-client-smoke/screenshots/sublevel-client-smoke-6308-1792343210006.png`。
 
 ## 3. 当前边界
 
-- 客户端破坏、放置和拉杆 `useBlock` 已实机验证；服务端 BREAK/PLACE 射线复核已接入，USE 射线复核暂缓（避免移动中的小型交互方块被误拒）；
-- 单箱代理菜单已实机打开（27 格容器 + 36 格玩家背包）；双箱/多格方块和其他容器尚未桥接；
+- 客户端破坏、放置和拉杆 `useBlock` 已实机验证；服务端 BREAK/USE/PLACE 均用玩家视线 + 客户端命中点/目标中心三重校验，并容忍一 tick 姿态插值偏差；
+- 单箱代理菜单已实机打开（27 格容器 + 36 格玩家背包）；双箱代理菜单也已打开（54 格容器 + 36 格玩家背包），其他容器/多格方块尚未桥接；
 - `useBlock/placeBlock` 的 vanilla context 已实现，但尚未在带真实玩家/BlockEntity 的世界中验证；
 - 容器菜单（箱子/熔炉）和多格方块尚未桥接；
 - 交互权限目前只做 plot `mayInteract`，未接技能事务/保护事件；
