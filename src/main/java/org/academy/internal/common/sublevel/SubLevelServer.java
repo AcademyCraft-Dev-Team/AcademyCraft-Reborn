@@ -82,7 +82,7 @@ public final class SubLevelServer {
                         spawn.getX() + 1, spawn.getY() + 1, spawn.getZ() + 1));
                 AcademyCraft.LOGGER.info("SubLevel terrain probe: {}", diag);
                 if (Boolean.getBoolean("academy.sublevel.terrainProbeAndStop")) {
-                    server.execute(() -> server.halt(false));
+                    requestStop(server);
                 }
             }
             if (Boolean.getBoolean("academy.sublevel.captureProbeOnStart")) {
@@ -91,7 +91,7 @@ public final class SubLevelServer {
                 var result = captureProbe(server, server.overworld(), base);
                 AcademyCraft.LOGGER.info("SubLevel capture probe: {}", result);
                 if (Boolean.getBoolean("academy.sublevel.captureProbeAndStop")) {
-                    server.execute(() -> server.halt(false));
+                    requestStop(server);
                 }
             }
             if (Boolean.getBoolean("academy.sublevel.persistentProbeOnStart")) {
@@ -99,7 +99,7 @@ public final class SubLevelServer {
                 var probe = persistentProbe(server, runtime, requested);
                 AcademyCraft.LOGGER.info("SubLevel persistent probe: {}", probe);
                 if (Boolean.getBoolean("academy.sublevel.persistentProbeAndStop")) {
-                    server.execute(() -> server.halt(false));
+                    requestStop(server);
                 }
             }
             if (Boolean.getBoolean("academy.sublevel.probeOnStart")) {
@@ -126,7 +126,7 @@ public final class SubLevelServer {
                                     ? restoredChest.getItem(0).toString() : "n/a");
                 }
                 if (Boolean.getBoolean("academy.sublevel.verifyAndStop")) {
-                    server.execute(() -> server.halt(false));
+                    requestStop(server);
                 }
             }
         } catch (IOException | RuntimeException | LinkageError failure) {
@@ -161,6 +161,25 @@ public final class SubLevelServer {
         var runtime = RUNTIMES.remove(event.getServer());
         if (runtime != null) runtime.close();
         SENT_VIEWS.clear();
+    }
+
+    /** Probe stop must not re-enter the server task queue from ServerStartedEvent. */
+    private static void requestStop(MinecraftServer server) {
+        var thread = new Thread(() -> {
+            try {
+                Thread.sleep(250L);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+            try {
+                server.halt(false);
+            } catch (RuntimeException failure) {
+                AcademyCraft.LOGGER.warn("SubLevel probe stop failed", failure);
+            }
+        }, "academy-sublevel-probe-stop");
+        thread.setDaemon(true);
+        thread.start();
     }
 
     private static boolean snapshotLogged;
