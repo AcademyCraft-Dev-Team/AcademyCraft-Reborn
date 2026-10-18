@@ -129,12 +129,14 @@ runs/
 # The embedded Vector Reflection javaagent is a release build input.
 !libs/academy-agent.jar
 
-# Local
-*.py
-!/validation/native_structure/tcp_delay.py
-*.txt
-!src/main/resources/assets/academy/gui/ability_developer_gui_layout.txt
-!/thirdparty/licenses/native_physics/**/*.txt
+# Local scratch scripts and notes: ignored only under local-only trees, so new tracked
+# files under validation/, tools/ and docs/ stay visible to git status.
+/validation/**/*.py
+/tools/**/*.py
+/docs/**/*.py
+/validation/**/*.txt
+/tools/**/*.txt
+/docs/**/*.txt
 *.exe
 
 .vscode
