@@ -166,7 +166,7 @@ CLIENT_SUBLEVEL_MOTION_PROBE delta=3.046
 - `move` 使用 `SubLevelMotionController` 连续速度控制，20 tick 实测上移约 3.05 格；
 - `rotate` 当前只支持 Y 轴 yaw；
 - `staticize` 已通过：把 plot 内容写回宿主指定原点并移除 SubLevel；
-- 直接 HighSpeedJet 已增加 SubLevel 实验路径：`academy.sublevelDirectSkills=true` 时经现有喷嘴 plan 捕获并施加一次方向冲量；独立 `sublevel_direct_skill.init.gradle` 实测 `CLIENT_SUBLEVEL_DIRECT_JET launch_id=...`；已接入持续速度推力（`SubLevelMotionController.thrust`）和 30 CP 资源扣除；尚未接入撞击结算/粒子音效。
+- 直接 HighSpeedJet 已增加 SubLevel 实验路径：`academy.sublevelDirectSkills=true` 时经现有喷嘴 plan 捕获并施加一次方向冲量；独立 `sublevel_direct_skill.init.gradle` 实测 `CLIENT_SUBLEVEL_DIRECT_JET launch_id=...`；已接入持续速度推力（`SubLevelMotionController.thrust`）和 30 CP 资源扣除；`restoreWhenSettled=true` 时 handle 关闭会事务式 staticize 回源坐标，实测 `High-Speed Jet direct restore ... true staticized`；尚未接入撞击结算/粒子音效。
 
 ## 12. Phase 5：Accelerator / Electromaster 状态
 
@@ -188,6 +188,5 @@ Electromaster 的 extract 使用 4 格半径并受预算约束；staticize 测�
 ## 13. 下一步
 
 1. 补三族 StructureProgramWorldSmoke 基线；
-2. 统一 direct skill 的 release/staticize 事务；
-3. 补 HighSpeedJet 直接路径的撞击结算/粒子音效；
-4. 清理旧 Region/Projection 兼容层的剩余调用。
+2. 补 HighSpeedJet 直接路径的撞击结算/粒子音效；
+3. 清理旧 Region/Projection 兼容层的剩余调用。

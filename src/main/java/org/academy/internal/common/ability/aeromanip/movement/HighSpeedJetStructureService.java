@@ -671,7 +671,8 @@ public final class HighSpeedJetStructureService {
         var handle = new SubLevelStructureHandle(subLevel, runtime.storage(), level.dimension().identifier());
         var launchId = UUID.randomUUID();
         SUB_LEVEL_SESSIONS.put(playerId, new SubLevelSession(launchId, id, handle.reference(),
-                level.getGameTime() + Math.max(1, request.durationTicks())));
+                level.getGameTime() + Math.max(1, request.durationTicks()), level, request.seed.immutable(),
+                request.restoreWhenSettled()));
         return Optional.of(new LaunchHandle(playerId, launchId));
     }
 
@@ -936,7 +937,13 @@ public final class HighSpeedJetStructureService {
         var playerId = player.getUUID();
         MountedJetStructureControls.clear(playerId);
         var directSession = SUB_LEVEL_SESSIONS.remove(playerId);
-        if (directSession != null) SubLevelMotionController.cancel(directSession.id());
+        if (directSession != null) {
+            SubLevelMotionController.cancel(directSession.id());
+            if (directSession.restoreWhenSettled()) {
+                SubLevelSkillSupport.staticize(directSession.level().getServer(), directSession.id(),
+                        directSession.sourceSeed());
+            }
+        }
         var capture = CAPTURES.remove(playerId);
         if (capture != null) {
             AcademyCraft.LOGGER.info("High-Speed Jet capture {} tracking cleared at a player lifecycle boundary",
@@ -1811,12 +1818,19 @@ public final class HighSpeedJetStructureService {
             if (direct != null && direct.launchId().equals(launchId)) {
                 SUB_LEVEL_SESSIONS.remove(playerId);
                 SubLevelMotionController.cancel(direct.id());
+                if (direct.restoreWhenSettled()) {
+                    var restored = SubLevelSkillSupport.staticize(direct.level().getServer(), direct.id(),
+                            direct.sourceSeed());
+                    AcademyCraft.LOGGER.info("High-Speed Jet direct restore {}: {} {}", direct.id(),
+                            restored.succeeded(), restored.detail());
+                }
             }
             stopSession(playerId, launchId, "handle_closed");
         }
     }
 
-    private record SubLevelSession(UUID launchId, SubLevelId id, StructureRef reference, long expiresAt) {
+    private record SubLevelSession(UUID launchId, SubLevelId id, StructureRef reference, long expiresAt,
+                                   ServerLevel level, BlockPos sourceSeed, boolean restoreWhenSettled) {
     }
 
     public static final class Session {

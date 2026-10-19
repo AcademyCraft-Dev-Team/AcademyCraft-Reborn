@@ -1215,7 +1215,7 @@ public final class SubLevelClientSmoke {
             level.addFreshEntity(nozzle);
             var direct = HighSpeedJetStructureService.launch(player,
                     new HighSpeedJetStructureService.LaunchRequest(directSeed, null,
-                            new Vec3(0.0, 1.0, 0.0), 2.0, 1.0f, 200, false), 1.0f);
+                            new Vec3(0.0, 1.0, 0.0), 2.0, 1.0f, 200, true), 1.0f);
             if (direct.isEmpty()) throw new IllegalStateException("direct jet launch failed");
             AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_DIRECT_JET launch_id={}", direct.get().launchId());
             direct.get().close();
