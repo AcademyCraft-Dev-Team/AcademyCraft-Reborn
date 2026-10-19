@@ -19,6 +19,8 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.program.ServerAeromanipProgramRuntime;
+import org.academy.internal.common.ability.accelerator.program.AcceleratorProgramStrength;
+import org.academy.internal.common.ability.accelerator.program.ServerAcceleratorProgramRuntime;
 import org.academy.internal.common.ability.aeromanip.movement.HighSpeedJetStructureService;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedJetNozzle;
@@ -1216,6 +1218,58 @@ public final class SubLevelClientSmoke {
             if (direct.isEmpty()) throw new IllegalStateException("direct jet launch failed");
             AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_DIRECT_JET launch_id={}", direct.get().launchId());
             direct.get().close();
+
+            system.setPlayerAbilityCategory(id, AbilityCategories.ACCELERATOR.get());
+            var kinetic = Skills.KINETIC_THROW.get();
+            system.addPlayerSkill(player, kinetic.getKeyString());
+            if (!kinetic.isEnabled(player)) system.toggleSkill(id, kinetic.getKeyString());
+            var kineticSeed = seed.offset(0, 0, 16);
+            for (int dx = 0; dx < 2; dx++) {
+                for (int dy = 0; dy < 2; dy++) {
+                    for (int dz = 0; dz < 2; dz++) {
+                        level.setBlock(kineticSeed.offset(dx, dy, dz), Blocks.IRON_BLOCK.defaultBlockState(), 3);
+                    }
+                }
+            }
+            var kineticRuntime = new ServerAcceleratorProgramRuntime(player);
+            var kineticExtract = kineticRuntime.extractStructure(new ProgramBlockPosition(
+                    level.dimension().identifier(), kineticSeed.getX(), kineticSeed.getY(), kineticSeed.getZ()), 1, 16);
+            var kineticControl = kineticExtract.structure() == null ? null
+                    : kineticRuntime.controlStructure(kineticExtract.structure());
+            var kineticMove = kineticControl == null || kineticControl.control() == null ? null
+                    : kineticRuntime.moveStructure(kineticControl.control(),
+                    new ProgramWorldPosition(level.dimension().identifier(), kineticSeed.getX() + 0.5,
+                            kineticSeed.getY() + 2.5, kineticSeed.getZ() + 0.5), null, 1.0);
+            var kineticRotate = kineticControl == null || kineticControl.control() == null ? null
+                    : kineticRuntime.rotateStructure(kineticControl.control(),
+                    new ProgramStructurePose(new ProgramDirection(0.0, 1.0, 0.0), Math.toRadians(10.0)));
+            var kineticLaunch = kineticControl == null || kineticControl.control() == null ? null
+                    : kineticRuntime.launchStructure(kineticControl.control(),
+                    new ProgramDirection(0.0, 1.0, 0.0), AcceleratorProgramStrength.STANDARD);
+            var kineticRelease = kineticControl == null || kineticControl.control() == null ? null
+                    : kineticRuntime.releaseStructure(kineticControl.control());
+            var kineticStaticize = kineticExtract.structure() == null ? null
+                    : kineticRuntime.staticizeStructure(kineticExtract.structure(),
+                    new ProgramBlockPosition(level.dimension().identifier(), kineticSeed.getX(),
+                            kineticSeed.getY(), kineticSeed.getZ()));
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_ACCELERATOR_CHAIN extract={} control={} move={} rotate={} launch={} release={} staticize={}",
+                    kineticExtract.result().status(), kineticControl == null ? "missing" : kineticControl.result().status(),
+                    kineticMove == null ? "missing" : kineticMove.result().status(),
+                    kineticRotate == null ? "missing" : kineticRotate.result().status(),
+                    kineticLaunch == null ? "missing" : kineticLaunch.result().status(),
+                    kineticRelease == null ? "missing" : kineticRelease.result().status(),
+                    kineticStaticize == null ? "missing" : kineticStaticize.result().status());
+            if (kineticControl == null || kineticMove == null || kineticRotate == null || kineticLaunch == null
+                    || kineticRelease == null || kineticStaticize == null
+                    || kineticExtract.result().status() != ProgramStructureOperationResult.Status.COMPLETED
+                    || kineticControl.result().status() != ProgramStructureOperationResult.Status.COMPLETED
+                    || kineticMove.result().status() != ProgramStructureOperationResult.Status.COMPLETED
+                    || kineticRotate.result().status() != ProgramStructureOperationResult.Status.COMPLETED
+                    || kineticLaunch.result().status() != ProgramStructureOperationResult.Status.COMPLETED
+                    || kineticRelease.result().status() != ProgramStructureOperationResult.Status.COMPLETED
+                    || kineticStaticize.result().status() != ProgramStructureOperationResult.Status.COMPLETED) {
+                throw new IllegalStateException("accelerator SubLevel chain failed");
+            }
         } catch (Throwable error) {
             fail("program chain probe: " + error);
         }
