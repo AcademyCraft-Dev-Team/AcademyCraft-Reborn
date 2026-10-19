@@ -13,16 +13,13 @@
 | BREAK/PLACE/USE | 服务端当前/上一姿态校验；USE 有收紧 + 邻近回退 |
 | 快照/插值 | view 增量、5 tick pose 插值 |
 | 实体承载 | 玩家、ArmorStand、载具 + 乘客 |
-| 技能接入面 | 权限感知 capture、pose/translate/rotate |
+| 技能事务接入 | 权限感知 capture、pose/translate/rotate/launch，权限拒绝与冲量路径实测 |
 | 64 场景 | fps_avg=98.49 fps_min=72 |
 | 256 场景 | fps_avg=96.44 fps_min=72 |
 | 24³ 空心壳 | fps_avg=116.58 fps_min=109 |
 | 24³ 实心体 | 1 个碰撞盒、3,456 quads、fps_avg=117.84 fps_min=116 |
 
 ## 未完成
-
-1. 具体技能迁移
-   - SubLevelSkillSupport 已存在，但现有技能仍调用旧 StructurePhysics / Region；没有技能实际走 SubLevel 捕获与运动控制。
 
 3. 有轨载具
    - ArmorStand 载具/乘客已通过；

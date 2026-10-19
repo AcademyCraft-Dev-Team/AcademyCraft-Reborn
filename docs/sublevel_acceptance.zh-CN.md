@@ -79,4 +79,4 @@ SUBLEVEL_LARGE_BENCHMARK side=24 cells=3176 fps_avg=116.25 fps_min=104 ticks=120
 ## 4. 已知问题
 
 - 探针 `*AndStop` 已改为独立延迟停止线程；256 探针停止不再出现 shutdown StackOverflow。
-- 单箱/陷阱箱/双箱/漏斗/发射器/投掷器/熔炉/木桶库存槽位、熔炉 cooking/lit 数据、双格门和玩家/非玩家实体/载具乘客平移+旋转承载已验证；技能事务仍未完成；服务端 BREAK/PLACE 射线复核、USE 方块点/朝向收紧校验已接入。
+- 单箱/陷阱箱/双箱/漏斗/发射器/投掷器/熔炉/木桶库存槽位、熔炉 cooking/lit 数据、双格门和玩家/非玩家实体/载具乘客平移+旋转承载已验证；技能事务接入 API 已完成，具体技能调用迁移留后续；服务端 BREAK/PLACE 射线复核、USE 方块点/朝向收紧校验已接入。
