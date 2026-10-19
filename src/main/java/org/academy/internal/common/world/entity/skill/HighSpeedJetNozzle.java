@@ -423,7 +423,9 @@ public final class HighSpeedJetNozzle extends Entity {
 
     @Override
     public boolean isPickable() {
-        return true;
+        // A nozzle is a skill attachment, not a selectable aim target; its bounding box
+        // otherwise steals entity rays aimed just above the support surface.
+        return false;
     }
 
     @Override

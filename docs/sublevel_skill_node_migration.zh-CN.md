@@ -185,7 +185,23 @@ move=COMPLETED rotate=COMPLETED launch=COMPLETED release=COMPLETED staticize=COM
 
 Electromaster 的 extract 使用 4 格半径并受预算约束；staticize 测试目标上移，避免把地下捕获块写回原地面。
 
-## 13. 下一步
+## 13. `StructureProgramWorldSmoke` 基线
+
+专服隔离世界 `run/native-structure-physics-smoke-server-sublevel-r6` 返回 `PASSED`，三族图节点均完成：
+
+```text
+accelerator_real_graph_capture_move_release=true
+aeromanip_real_graph_capture_move_release=true
+electromaster_real_graph_capture_move_release=true
+physical_structure_plasma_world_target_and_impact=academy:native_level
+```
+
+瞄准偏差的根因是 `HighSpeedJetNozzle` 作为可拾取实体被 `ProjectileUtil` 选中，
+覆盖了其后的结构表面。修复为技术附件不可拾取；`WorldBlockTargets.Target` 同时
+增加 `Source` 标记，便于技能区分地形/结构命中。
+客户端复制世界仍因原生槽位已被占用，未启动 kinetic 捕获。
+
+## 14. 下一步
 
 1. 补三族 StructureProgramWorldSmoke 基线；
 2. 补 HighSpeedJet 直接路径的撞击结算/粒子音效；

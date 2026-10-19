@@ -39,7 +39,9 @@ class WorldBlockTargetsTest {
     }
 
     @Test void insideAndExactRangeBoundaryHitsArePreserved() {
-        assertEquals(new WorldBlockTargets.Target(START, true), WorldBlockTargets.nearest(START, END, null, START));
-        assertEquals(new WorldBlockTargets.Target(END, true), WorldBlockTargets.nearest(START, END, null, END));
+        assertEquals(new WorldBlockTargets.Target(START, true, WorldBlockTargets.Source.STRUCTURE),
+                WorldBlockTargets.nearest(START, END, null, START));
+        assertEquals(new WorldBlockTargets.Target(END, true, WorldBlockTargets.Source.STRUCTURE),
+                WorldBlockTargets.nearest(START, END, null, END));
     }
 }
