@@ -21,6 +21,7 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.program.ServerAeromanipProgramRuntime;
 import org.academy.internal.common.ability.accelerator.program.AcceleratorProgramStrength;
 import org.academy.internal.common.ability.accelerator.program.ServerAcceleratorProgramRuntime;
+import org.academy.internal.common.ability.electromaster.program.ServerElectromasterProgramRuntime;
 import org.academy.internal.common.ability.aeromanip.movement.HighSpeedJetStructureService;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.skill.HighSpeedJetNozzle;
@@ -1269,6 +1270,58 @@ public final class SubLevelClientSmoke {
                     || kineticRelease.result().status() != ProgramStructureOperationResult.Status.COMPLETED
                     || kineticStaticize.result().status() != ProgramStructureOperationResult.Status.COMPLETED) {
                 throw new IllegalStateException("accelerator SubLevel chain failed");
+            }
+
+            system.setPlayerAbilityCategory(id, AbilityCategories.ELECTROMASTER.get());
+            var magnet = Skills.MAGNET_MANIPULATION.get();
+            system.addPlayerSkill(player, magnet.getKeyString());
+            if (!magnet.isEnabled(player)) system.toggleSkill(id, magnet.getKeyString());
+            var magnetSeed = seed.offset(0, 0, 24);
+            for (int dx = 0; dx < 2; dx++) {
+                for (int dy = 0; dy < 2; dy++) {
+                    for (int dz = 0; dz < 2; dz++) {
+                        level.setBlock(magnetSeed.offset(dx, dy, dz), Blocks.IRON_BLOCK.defaultBlockState(), 3);
+                    }
+                }
+            }
+            var magnetRuntime = new ServerElectromasterProgramRuntime(player);
+            var magnetExtract = magnetRuntime.extractStructure(new ProgramBlockPosition(
+                    level.dimension().identifier(), magnetSeed.getX(), magnetSeed.getY(), magnetSeed.getZ()), 16, false);
+            var magnetControl = magnetExtract.structure() == null ? null
+                    : magnetRuntime.controlStructure(magnetExtract.structure());
+            var magnetMove = magnetControl == null || magnetControl.control() == null ? null
+                    : magnetRuntime.moveStructure(magnetControl.control(),
+                    new ProgramWorldPosition(level.dimension().identifier(), magnetSeed.getX() + 0.5,
+                            magnetSeed.getY() + 2.5, magnetSeed.getZ() + 0.5), null, 1.0);
+            var magnetRotate = magnetControl == null || magnetControl.control() == null ? null
+                    : magnetRuntime.rotateStructure(magnetControl.control(),
+                    new ProgramStructurePose(new ProgramDirection(0.0, 1.0, 0.0), Math.toRadians(10.0)));
+            var magnetLaunch = magnetControl == null || magnetControl.control() == null ? null
+                    : magnetRuntime.launchStructure(magnetControl.control(),
+                    new ProgramDirection(0.0, 1.0, 0.0), 1.0f);
+            var magnetRelease = magnetControl == null || magnetControl.control() == null ? null
+                    : magnetRuntime.releaseStructure(magnetControl.control());
+            var magnetStaticize = magnetExtract.structure() == null ? null
+                    : magnetRuntime.staticizeStructure(magnetExtract.structure(),
+                    new ProgramBlockPosition(level.dimension().identifier(), magnetSeed.getX(),
+                            magnetSeed.getY() + 8, magnetSeed.getZ()));
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_ELECTROMASTER_CHAIN extract={} control={} move={} rotate={} launch={} release={} staticize={}",
+                    magnetExtract.result().status(), magnetControl == null ? "missing" : magnetControl.result().status(),
+                    magnetMove == null ? "missing" : magnetMove.result().status(),
+                    magnetRotate == null ? "missing" : magnetRotate.result().status(),
+                    magnetLaunch == null ? "missing" : magnetLaunch.result().status(),
+                    magnetRelease == null ? "missing" : magnetRelease.result().status(),
+                    magnetStaticize == null ? "missing" : magnetStaticize.result().status());
+            if (magnetControl == null || magnetMove == null || magnetRotate == null || magnetLaunch == null
+                    || magnetRelease == null || magnetStaticize == null
+                    || magnetExtract.result().status() != ProgramStructureOperationResult.Status.COMPLETED
+                    || magnetControl.result().status() != ProgramStructureOperationResult.Status.COMPLETED
+                    || magnetMove.result().status() != ProgramStructureOperationResult.Status.COMPLETED
+                    || magnetRotate.result().status() != ProgramStructureOperationResult.Status.COMPLETED
+                    || magnetLaunch.result().status() != ProgramStructureOperationResult.Status.COMPLETED
+                    || magnetRelease.result().status() != ProgramStructureOperationResult.Status.COMPLETED
+                    || magnetStaticize.result().status() != ProgramStructureOperationResult.Status.COMPLETED) {
+                throw new IllegalStateException("electromaster SubLevel chain failed");
             }
         } catch (Throwable error) {
             fail("program chain probe: " + error);

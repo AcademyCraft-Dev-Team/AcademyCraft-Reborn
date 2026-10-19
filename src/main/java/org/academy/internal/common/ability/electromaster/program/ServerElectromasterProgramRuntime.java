@@ -43,6 +43,12 @@ import org.academy.internal.common.ability.program.registry.AbilityProgramSpatia
 import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.ability.program.ServerProgramTargetResolver;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+import org.academy.internal.common.sublevel.SubLevelActivationRegistry;
+import org.academy.internal.common.sublevel.SubLevelMotionController;
+import org.academy.internal.common.sublevel.SubLevelServer;
+import org.academy.internal.common.sublevel.SubLevelSkillSupport;
+import org.academy.internal.common.sublevel.SubLevelStructureHandle;
+import org.academy.internal.common.sublevel.SubLevelStructureRefs;
 import org.academy.internal.common.util.EnergyChargeHelper;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.jspecify.annotations.Nullable;
@@ -65,6 +71,7 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     private static final float STRUCTURE_MOVE_COST = 5.0f;
     private static final float STRUCTURE_LAUNCH_COST = 15.0f;
     private static final double MAXIMUM_MOVE_SECONDS = 10.0;
+    private static final boolean SUB_LEVEL_NODES = Boolean.getBoolean("academy.sublevelProgramNodes");
     private static final Map<UUID, Map<String, Entity>> CONTROLLED = new HashMap<>();
     private static final Map<UUID, ControlDestination> CONTROL_DESTINATIONS = new HashMap<>();
 
@@ -253,6 +260,7 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     public StructureOperation extractStructure(ProgramBlockPosition host, int budget,
                                                boolean forceMagnetize) {
         requireCasterReady(Skills.MAGNET_MANIPULATION.get());
+        if (SUB_LEVEL_NODES) return extractSubLevelStructure(host, budget);
         if (pendingExtraction == null) {
             var seed = requireStructureHost(host);
             var result = StructureProgramActions.execute(player, Skills.MAGNET_MANIPULATION.get(),
@@ -291,6 +299,7 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     public StructureOperation controlStructure(ProgramStructureReference structure) {
         requireCasterReady(Skills.MAGNET_MANIPULATION.get());
         Objects.requireNonNull(structure, "structure");
+        if (SubLevelStructureRefs.isSubLevel(structure.reference())) return controlSubLevelStructure(structure);
         var result = StructureProgramActions.execute(player, Skills.MAGNET_MANIPULATION.get(),
                 STRUCTURE_CONTROL_COST * costMultiplier,
                 () -> MagneticStructureService.programControl(
@@ -318,6 +327,9 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
         requireCasterReady(Skills.MAGNET_MANIPULATION.get());
         var rejection = validateControl(control);
         if (rejection != null) return StructureOperation.rejected(rejection);
+        if (SubLevelStructureRefs.isSubLevel(control.reference())) {
+            return moveSubLevelStructure(control, target, anchor, seconds);
+        }
         var destination = resolveMoveTarget(control, target, anchor);
         if (destination == null) return StructureOperation.rejected("move_target_unavailable");
         if (!Double.isFinite(seconds) || seconds < 0.1 || seconds > MAXIMUM_MOVE_SECONDS) {
@@ -337,6 +349,9 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
                                               @Nullable ProgramStructurePose pose) {
         var rejection = validateControl(control);
         if (rejection != null) return StructureOperation.rejected(rejection);
+        if (SubLevelStructureRefs.isSubLevel(control.reference())) {
+            return rotateSubLevelStructure(control, pose);
+        }
         return StructureOperation.unavailable("finite_torque_control_unavailable");
     }
 
@@ -347,6 +362,9 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
         requireCasterReady(Skills.MAGNET_MANIPULATION.get());
         var rejection = validateControl(control);
         if (rejection != null) return StructureOperation.rejected(rejection);
+        if (SubLevelStructureRefs.isSubLevel(control.reference())) {
+            return launchSubLevelStructure(control, direction, power);
+        }
         var normalized = normalized(direction);
         var speedScale = ProgramPowerScale.interpolate(ProgramPowerScale.require(power), 0.5, 1.0, 1.5);
         var result = StructureProgramActions.execute(player, Skills.MAGNET_MANIPULATION.get(),
@@ -361,6 +379,11 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     public StructureOperation releaseStructure(ProgramStructureControl control) {
         var rejection = validateControl(control);
         if (rejection != null) return StructureOperation.rejected(rejection);
+        if (SubLevelStructureRefs.isSubLevel(control.reference())) {
+            issuedControls.remove(control.controlId());
+            return StructureOperation.result(ProgramStructureOperationResult.completed("released",
+                    control.reference()));
+        }
         var result = MagneticStructureService.programRelease(player, control.reference(), control.controlId());
         return StructureOperation.result(operationResult(result));
     }
@@ -369,6 +392,16 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     public StructureOperation staticizeStructure(ProgramStructureReference structure,
                                                  @Nullable ProgramBlockPosition target) {
         Objects.requireNonNull(structure, "structure");
+        if (SubLevelStructureRefs.isSubLevel(structure.reference())) {
+            var id = SubLevelStructureRefs.id(structure.reference()).orElse(null);
+            var targetPosition = target == null ? null : new BlockPos(target.x(), target.y(), target.z());
+            var restored = id == null ? new org.academy.internal.common.sublevel.SubLevelRestoreService.Result(0, "invalid")
+                    : SubLevelSkillSupport.staticize(targets.level().getServer(), id, targetPosition);
+            return restored.succeeded()
+                    ? StructureOperation.result(ProgramStructureOperationResult.completed(restored.detail(),
+                    structure.reference()))
+                    : StructureOperation.rejected(restored.detail());
+        }
         var cells = MagneticStructureService.programSession(player)
                 .filter(session -> session.reference().equals(structure.reference()))
                 .map(MagneticStructureService.Session::capturedCells)
@@ -458,6 +491,103 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
                 return context::unregister;
             }
         };
+    }
+
+    private StructureOperation extractSubLevelStructure(ProgramBlockPosition hostReference, int budget) {
+        var seed = requireStructureHost(hostReference);
+        int limit = Math.max(1, Math.min(budget <= 0 ? 256 : budget, 256));
+        int extent = 4;
+        var level = targets.level();
+        var positions = new ArrayList<BlockPos>();
+        for (var cursor : BlockPos.betweenClosed(seed.offset(-extent, -extent, -extent),
+                seed.offset(extent, extent, extent))) {
+            var position = cursor.immutable();
+            if (!level.hasChunkAt(position) || !level.isInWorldBounds(position)) continue;
+            if (level.getBlockState(position).isAir() || !level.mayInteract(player, position)) continue;
+            positions.add(position);
+            if (positions.size() >= limit) break;
+        }
+        if (positions.isEmpty()) return StructureOperation.rejected("capture_empty");
+        var id = SubLevelSkillSupport.capture(level, positions, (world, position) ->
+                world.mayInteract(player, position)).orElse(null);
+        if (id == null) return StructureOperation.rejected("capture_rejected");
+        var runtime = SubLevelServer.runtime(level.getServer()).orElse(null);
+        var subLevel = runtime == null ? null : runtime.get(id).orElse(null);
+        if (runtime == null || subLevel == null) return StructureOperation.rejected("sublevel_unavailable");
+        var handle = new SubLevelStructureHandle(subLevel, runtime.storage(), level.dimension().identifier());
+        var reference = handle.reference();
+        return StructureOperation.structure(new ProgramStructureReference(reference, handle.runtimeId()),
+                ProgramStructureOperationResult.completed("committed", reference));
+    }
+
+    private StructureOperation controlSubLevelStructure(ProgramStructureReference structure) {
+        var id = SubLevelStructureRefs.id(structure.reference()).orElse(null);
+        var activation = id == null ? null : SubLevelActivationRegistry.find(id).orElse(null);
+        if (id == null || activation == null || activation.generation() != structure.reference().generation()
+                || !activation.runtimeId().equals(structure.runtimeId())) {
+            return StructureOperation.rejected("structure_epoch_stale");
+        }
+        var runtime = SubLevelServer.runtime(targets.level().getServer()).orElse(null);
+        var subLevel = runtime == null ? null : runtime.get(id).orElse(null);
+        if (subLevel == null || subLevel.state() != org.academy.internal.common.sublevel.SubLevelState.ACTIVE
+                && subLevel.state() != org.academy.internal.common.sublevel.SubLevelState.SLEEPING) {
+            return StructureOperation.rejected("structure_unavailable");
+        }
+        var control = new ProgramStructureControl(structure.reference(), structure.runtimeId(), UUID.randomUUID(),
+                player.getUUID(), runtimeToken);
+        issuedControls.put(control.controlId(), control);
+        return StructureOperation.control(control,
+                ProgramStructureOperationResult.completed("controlled", structure.reference()));
+    }
+
+    private StructureOperation moveSubLevelStructure(ProgramStructureControl control,
+                                                      @Nullable ProgramWorldPosition target,
+                                                      @Nullable ProgramStructureAnchor anchor,
+                                                      double seconds) {
+        if (target == null) return StructureOperation.rejected("sublevel_move_target_required");
+        if (anchor != null) return StructureOperation.unavailable("sublevel_anchor_pending");
+        if (!Double.isFinite(seconds) || seconds < 0.1 || seconds > MAXIMUM_MOVE_SECONDS) {
+            return StructureOperation.rejected("invalid_duration");
+        }
+        var destination = targets.requireLocalPosition(target);
+        if (destination.distanceToSqr(player.position()) > MAX_ACTION_RANGE * MAX_ACTION_RANGE) {
+            return StructureOperation.rejected("target_out_of_range");
+        }
+        var id = SubLevelStructureRefs.id(control.reference()).orElse(null);
+        if (id == null || !SubLevelSkillSupport.moveTo(targets.level().getServer(), id, destination, seconds)) {
+            return StructureOperation.rejected("sublevel_move_failed");
+        }
+        return StructureOperation.result(ProgramStructureOperationResult.completed("moving", control.reference()));
+    }
+
+    private StructureOperation rotateSubLevelStructure(ProgramStructureControl control,
+                                                       @Nullable ProgramStructurePose pose) {
+        if (pose == null) return StructureOperation.rejected("sublevel_pose_required");
+        var axis = normalized(pose.axis());
+        if (Math.abs(axis.y) < 0.9) {
+            return StructureOperation.unavailable("sublevel_only_yaw_rotation_supported");
+        }
+        var id = SubLevelStructureRefs.id(control.reference()).orElse(null);
+        if (id != null) SubLevelMotionController.cancel(id);
+        if (id == null || !SubLevelSkillSupport.rotate(targets.level().getServer(), id,
+                Math.toDegrees(pose.angleRadians()))) {
+            return StructureOperation.rejected("sublevel_rotate_failed");
+        }
+        return StructureOperation.result(ProgramStructureOperationResult.completed("rotated", control.reference()));
+    }
+
+    private StructureOperation launchSubLevelStructure(ProgramStructureControl control,
+                                                       ProgramDirection direction, float power) {
+        var id = SubLevelStructureRefs.id(control.reference()).orElse(null);
+        if (id != null) SubLevelMotionController.cancel(id);
+        var speedScale = ProgramPowerScale.interpolate(ProgramPowerScale.require(power), 0.5, 1.0, 1.5);
+        var speed = Math.max(0.5, speedScale * 5.0);
+        if (id == null || !SubLevelSkillSupport.launch(targets.level().getServer(), id,
+                normalized(direction), speed)) {
+            return StructureOperation.rejected("sublevel_launch_failed");
+        }
+        return StructureOperation.result(ProgramStructureOperationResult.completed("launched",
+                control.reference()));
     }
 
     @Override

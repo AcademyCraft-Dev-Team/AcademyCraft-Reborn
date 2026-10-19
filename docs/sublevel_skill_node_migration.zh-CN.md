@@ -168,9 +168,9 @@ CLIENT_SUBLEVEL_MOTION_PROBE delta=3.046
 - `staticize` 已通过：把 plot 内容写回宿主指定原点并移除 SubLevel；
 - 直接 HighSpeedJet 已增加 SubLevel 实验路径：`academy.sublevelDirectSkills=true` 时经现有喷嘴 plan 捕获并施加一次方向冲量；独立 `sublevel_direct_skill.init.gradle` 实测 `CLIENT_SUBLEVEL_DIRECT_JET launch_id=...`；尚未接入持续推力/资源成本。
 
-## 12. Phase 5：Accelerator 状态
+## 12. Phase 5：Accelerator / Electromaster 状态
 
-`ServerAcceleratorProgramRuntime` 已增加同样的 SubLevel 分支：
+`ServerAcceleratorProgramRuntime` 与 `ServerElectromasterProgramRuntime` 均已增加同样的 SubLevel 分支：
 
 - extract/control/move/rotate/launch/release/staticize；
 - 独立 direct smoke 实测：
@@ -178,13 +178,16 @@ CLIENT_SUBLEVEL_MOTION_PROBE delta=3.046
 ```text
 CLIENT_SUBLEVEL_ACCELERATOR_CHAIN extract=COMPLETED control=COMPLETED
 move=COMPLETED rotate=COMPLETED launch=COMPLETED release=COMPLETED staticize=COMPLETED
+
+CLIENT_SUBLEVEL_ELECTROMASTER_CHAIN extract=COMPLETED control=COMPLETED
+move=COMPLETED rotate=COMPLETED launch=COMPLETED release=COMPLETED staticize=COMPLETED
 ```
 
-尚未迁移 Electromaster。
+Electromaster 的 extract 使用 4 格半径并受预算约束；staticize 测试目标上移，避免把地下捕获块写回原地面。
 
 ## 13. 下一步
 
-1. 迁移 Electromaster 程序节点；
-2. 将 HighSpeedJet 直接路径接入持续推力和资源成本；
-3. 补三族 StructureProgramWorldSmoke 基线；
-4. 统一 direct skill 的 release/staticize 事务。
+1. 将 HighSpeedJet 直接路径接入持续推力和资源成本；
+2. 补三族 StructureProgramWorldSmoke 基线；
+3. 统一 direct skill 的 release/staticize 事务；
+4. 清理旧 Region/Projection 兼容层的剩余调用。
