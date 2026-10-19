@@ -59,6 +59,12 @@ public final class SubLevelSkillSupport {
         return SubLevelMotionController.moveTo(server, id, target, seconds);
     }
 
+    /** Bounded constant-velocity thrust for direct-skill motion. */
+    public static boolean thrust(MinecraftServer server, SubLevelId id, Vec3 direction, double speed,
+                                 double seconds) {
+        return SubLevelMotionController.thrust(server, id, direction, speed, seconds);
+    }
+
     /** One bounded launch impulse for skill/program motion. */
     public static boolean launch(MinecraftServer server, SubLevelId id, Vec3 direction, double speed) {
         return SubLevelServer.runtime(server).map(runtime -> runtime.launch(id, direction, speed)).orElse(false);

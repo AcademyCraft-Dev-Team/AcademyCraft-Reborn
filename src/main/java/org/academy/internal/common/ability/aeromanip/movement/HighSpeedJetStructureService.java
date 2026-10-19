@@ -39,6 +39,7 @@ import org.academy.internal.common.ability.aeromanip.targeting.AeromanipTargetin
 import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.sublevel.SubLevelId;
+import org.academy.internal.common.sublevel.SubLevelMotionController;
 import org.academy.internal.common.sublevel.SubLevelServer;
 import org.academy.internal.common.sublevel.SubLevelSkillSupport;
 import org.academy.internal.common.sublevel.SubLevelStructureHandle;
@@ -650,6 +651,8 @@ public final class HighSpeedJetStructureService {
                 || !Float.isFinite(costMultiplier) || costMultiplier <= 0.0f) return Optional.empty();
         var playerId = player.getUUID();
         SUB_LEVEL_SESSIONS.remove(playerId);
+        if (!AbilitySystemServer.getSystem(player).tryTimedOccupation(player,
+                30.0f * costMultiplier, Skills.HIGH_SPEED_JET.get())) return Optional.empty();
         var plan = plan(player, request).orElse(null);
         if (plan == null) return Optional.empty();
         var positions = cropToBudget(plan.positions(), request.seed,
@@ -662,8 +665,9 @@ public final class HighSpeedJetStructureService {
         if (runtime == null || subLevel == null) return Optional.empty();
         var direction = request.desiredDirection == null ? plan.launchDirection() : request.desiredDirection;
         if (direction.lengthSqr() < 1.0E-8) return Optional.empty();
-        var speed = Math.max(0.5, Math.min(32.0, request.power() * 5.0));
-        if (!SubLevelSkillSupport.launch(level.getServer(), id, direction, speed)) return Optional.empty();
+        var speed = Math.max(0.5, Math.min(8.0, request.power() * 4.0));
+        if (!SubLevelSkillSupport.thrust(level.getServer(), id, direction, speed,
+                Math.max(0.1, request.durationTicks() / 20.0))) return Optional.empty();
         var handle = new SubLevelStructureHandle(subLevel, runtime.storage(), level.dimension().identifier());
         var launchId = UUID.randomUUID();
         SUB_LEVEL_SESSIONS.put(playerId, new SubLevelSession(launchId, id, handle.reference(),
@@ -931,7 +935,8 @@ public final class HighSpeedJetStructureService {
         if (player == null) return;
         var playerId = player.getUUID();
         MountedJetStructureControls.clear(playerId);
-        SUB_LEVEL_SESSIONS.remove(playerId);
+        var directSession = SUB_LEVEL_SESSIONS.remove(playerId);
+        if (directSession != null) SubLevelMotionController.cancel(directSession.id());
         var capture = CAPTURES.remove(playerId);
         if (capture != null) {
             AcademyCraft.LOGGER.info("High-Speed Jet capture {} tracking cleared at a player lifecycle boundary",
@@ -1805,6 +1810,7 @@ public final class HighSpeedJetStructureService {
             var direct = SUB_LEVEL_SESSIONS.get(playerId);
             if (direct != null && direct.launchId().equals(launchId)) {
                 SUB_LEVEL_SESSIONS.remove(playerId);
+                SubLevelMotionController.cancel(direct.id());
             }
             stopSession(playerId, launchId, "handle_closed");
         }
