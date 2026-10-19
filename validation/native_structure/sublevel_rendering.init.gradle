@@ -11,6 +11,8 @@ allprojects {
             systemProperty 'academy.sublevel.clientChestProbe', 'true'
             systemProperty 'academy.sublevel.carryProbe', 'true'
             systemProperty 'academy.sublevel.launchProbe', 'true'
+            systemProperty 'academy.sublevel.programChainProbe', 'true'
+            systemProperty 'academy.sublevelProgramNodes', 'true'
             systemProperty 'academy.sublevel.carryRotateProbe', 'true'
             systemProperty 'academy.sublevel.clientHopperProbe', 'true'
             systemProperty 'academy.sublevel.clientDispenserProbe', 'true'

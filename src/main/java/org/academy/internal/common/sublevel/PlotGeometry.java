@@ -55,7 +55,8 @@ public final class PlotGeometry {
                 }
             }
         }
-        if (full) {
+        int volume = (maxX - minX) * (maxY - minY) * (maxZ - minZ);
+        if (full && volume >= 512) {
             var center = localBounds.getCenter();
             var half = new PhysicsVector(localBounds.getXsize() / 2.0, localBounds.getYsize() / 2.0,
                     localBounds.getZsize() / 2.0);

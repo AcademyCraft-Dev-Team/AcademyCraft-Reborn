@@ -144,7 +144,14 @@
 - `release` 只释放控制 token；
 - `move`、`staticize` 对 SubLevel 返回 unavailable，作为下一步。
 
-默认关闭，旧 Aeromanip 程序路径不变。当前仅编译通过，尚未在 `StructureProgramWorldSmoke` 中实跑；验收前必须打开 flag 跑完整链路。
+默认关闭，旧 Aeromanip 程序路径不变。已在客户端烟测中打开 flag 跑通最短链路：
+
+```text
+CLIENT_SUBLEVEL_PROGRAM_CHAIN extract=COMPLETED control=COMPLETED launch=COMPLETED release=COMPLETED
+ref=StructureRef[id=..., backend=academy:sublevel, generation=1]
+```
+
+另将全填充几何合并阈值设为体积 >= 512，避免 2×2×2 小结构合并后影响承载探针；24³ 实心体仍为 boxes=1。
 
 ## 11. 下一步
 

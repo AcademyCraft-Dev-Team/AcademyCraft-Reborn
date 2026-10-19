@@ -10,6 +10,13 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.entity.decoration.ArmorStand;
+import org.academy.api.common.ability.program.ProgramBlockPosition;
+import org.academy.api.common.ability.program.ProgramDirection;
+import org.academy.api.common.ability.program.ProgramStructureOperationResult;
+import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.aeromanip.program.ServerAeromanipProgramRuntime;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.DoorBlock;
@@ -108,6 +115,7 @@ public final class SubLevelClientSmoke {
     private static int launchWait;
     private static double launchInitialY = Double.NaN;
     private static boolean launchProbed;
+    private static boolean programChainProbed;
     private static int holdTicks;
     private static volatile SubLevelCaptureService.Result result;
     private static int ticks;
@@ -608,6 +616,13 @@ public final class SubLevelClientSmoke {
                 return;
             }
         }
+        if (Boolean.getBoolean("academy.sublevel.programChainProbe") && !programChainProbed) {
+            programChainProbed = true;
+            var server = minecraft.getSingleplayerServer();
+            if (server == null) return;
+            server.execute(() -> probeProgramChain(server));
+            return;
+        }
         var frames = NativeStructureProjectionRenderer.submittedFrames(projection.getId());
         if (frames <= 0) return;
         if (++stableFrames < 20) return;
@@ -1094,6 +1109,60 @@ public final class SubLevelClientSmoke {
                     result.id().value(), result.blocks(), result.boxes());
         } catch (Throwable error) {
             fail(error.toString());
+        }
+    }
+
+    private static void probeProgramChain(MinecraftServer server) {
+        try {
+            var player = server.getPlayerList().getPlayers().getFirst();
+            var level = (net.minecraft.server.level.ServerLevel) player.level();
+            var system = AbilitySystemServer.getSystem(player);
+            var id = player.getUUID();
+            system.setPlayerAbilityCategory(id, AbilityCategories.AEROMANIP.get());
+            system.setPlayerLevel(id, 5);
+            system.setPlayerBaseMaxCP(id, 100_000);
+            system.setPlayerAvailableCP(id, 100_000);
+            player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+            system.setPlayerStatus(id, org.academy.api.common.data.AbilityData.Status.NORMAL);
+            var skill = Skills.HIGH_SPEED_JET.get();
+            system.addPlayerSkill(player, skill.getKeyString());
+            if (!skill.isEnabled(player)) system.toggleSkill(id, skill.getKeyString());
+            system.getAeromanipResourceManager().onPlayerLogin(player);
+            system.setPlayerCurrMP(id, system.getAeromanipResourceManager().getCapacity(player));
+
+            var seed = player.blockPosition().offset(8, 5, 0);
+            for (int dx = 0; dx < 2; dx++) {
+                for (int dy = 0; dy < 2; dy++) {
+                    for (int dz = 0; dz < 2; dz++) {
+                        if (!level.setBlock(seed.offset(dx, dy, dz), Blocks.IRON_BLOCK.defaultBlockState(), 3)) {
+                            throw new IllegalStateException("cannot place program source");
+                        }
+                    }
+                }
+            }
+            var runtime = new ServerAeromanipProgramRuntime(player);
+            var extract = runtime.extractStructure(new ProgramBlockPosition(
+                    level.dimension().identifier(), seed.getX(), seed.getY(), seed.getZ()), 1, 16);
+            if (extract.result().status() != ProgramStructureOperationResult.Status.COMPLETED
+                    || extract.structure() == null) {
+                throw new IllegalStateException("program extract failed: " + extract.result());
+            }
+            var control = runtime.controlStructure(extract.structure());
+            if (control.result().status() != ProgramStructureOperationResult.Status.COMPLETED
+                    || control.control() == null) {
+                throw new IllegalStateException("program control failed: " + control.result());
+            }
+            var launch = runtime.launchStructure(control.control(), new ProgramDirection(0.0, 1.0, 0.0), 5.0f, 1.0);
+            var release = runtime.releaseStructure(control.control());
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_PROGRAM_CHAIN extract={} control={} launch={} release={} ref={}",
+                    extract.result().status(), control.result().status(), launch.result().status(),
+                    release.result().status(), extract.structure().reference());
+            if (launch.result().status() != ProgramStructureOperationResult.Status.COMPLETED
+                    || release.result().status() != ProgramStructureOperationResult.Status.COMPLETED) {
+                throw new IllegalStateException("program launch/release failed");
+            }
+        } catch (Throwable error) {
+            fail("program chain probe: " + error);
         }
     }
 
