@@ -188,6 +188,17 @@ public final class SubLevelServer {
     }
 
     /** Translation-only entity carry; passengers/vehicles are moved by their owning chain. */
+    private static void carryTree(Entity root, Vec3 move) {
+        var passengers = root.getPassengers();
+        var targets = new ArrayList<Vec3>(passengers.size());
+        for (var passenger : passengers) targets.add(passenger.position().add(move));
+        root.teleportTo(root.getX() + move.x, root.getY() + move.y, root.getZ() + move.z);
+        for (int i = 0; i < passengers.size(); i++) {
+            var target = targets.get(i);
+            passengers.get(i).teleportTo(target.x, target.y, target.z);
+        }
+    }
+
     private static void carryEntities(MinecraftServer server, SubLevelRuntime runtime) {
         var host = runtime.host();
         var entities = host.getAllEntities();
@@ -201,7 +212,7 @@ public final class SubLevelServer {
             var delta = current.worldOrigin().subtract(previous.worldOrigin());
             if (delta.lengthSqr() > 4.0 || delta.lengthSqr() < 1.0E-8) continue;
             for (var entity : entities) {
-                if (entity.isPassenger() || entity.isVehicle() || entity.isSpectator()) continue;
+                if (entity.isPassenger() || entity.isSpectator()) continue;
                 var local = previous.worldToLocalPoint(entity.position());
                 double top = Double.NaN;
                 for (var box : boxes) {
@@ -214,7 +225,7 @@ public final class SubLevelServer {
                 if (Double.isNaN(top)) continue;
                 var newWorld = current.localToWorldPoint(local);
                 var move = newWorld.subtract(entity.position());
-                entity.teleportTo(entity.getX() + move.x, entity.getY() + move.y, entity.getZ() + move.z);
+                carryTree(entity, move);
                 AcademyCraft.LOGGER.debug("SubLevel carried entity {} by {}", entity.getType(), delta);
             }
         }

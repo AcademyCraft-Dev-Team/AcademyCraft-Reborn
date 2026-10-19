@@ -14,9 +14,12 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.LeverBlock;
+import net.minecraft.world.level.block.entity.BarrelBlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.entity.TrappedChestBlockEntity;
 import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 import net.minecraft.world.level.block.entity.DispenserBlockEntity;
+import net.minecraft.world.level.block.entity.DropperBlockEntity;
 import net.minecraft.world.level.block.entity.FurnaceBlockEntity;
 import net.minecraft.world.level.block.entity.HopperBlockEntity;
 import net.minecraft.world.level.block.state.properties.ChestType;
@@ -34,6 +37,7 @@ import org.academy.internal.common.network.SubLevelInteractPacket;
 import org.academy.internal.common.sublevel.SubLevelCaptureService;
 import org.academy.internal.common.sublevel.SubLevelId;
 import org.academy.internal.common.sublevel.SubLevelServer;
+import org.academy.internal.common.sublevel.SubLevelSkillSupport;
 import org.academy.internal.common.world.entity.structure.NativeStructureProjectionEntity;
 
 import java.nio.file.Files;
@@ -59,6 +63,10 @@ public final class SubLevelClientSmoke {
     private static volatile boolean chestRequested;
     private static volatile boolean chestSent;
     private static volatile boolean chestSeen;
+    private static volatile boolean trappedRequested;
+    private static volatile boolean trappedPrepared;
+    private static volatile boolean trappedSent;
+    private static volatile boolean trappedSeen;
     private static volatile boolean hopperRequested;
     private static volatile boolean hopperPrepared;
     private static volatile boolean hopperSent;
@@ -67,6 +75,10 @@ public final class SubLevelClientSmoke {
     private static volatile boolean dispenserPrepared;
     private static volatile boolean dispenserSent;
     private static volatile boolean dispenserSeen;
+    private static volatile boolean dropperRequested;
+    private static volatile boolean dropperPrepared;
+    private static volatile boolean dropperSent;
+    private static volatile boolean dropperSeen;
     private static volatile boolean furnaceRequested;
     private static volatile boolean furnacePrepared;
     private static volatile boolean furnaceSent;
@@ -75,6 +87,10 @@ public final class SubLevelClientSmoke {
     private static volatile boolean doorPrepared;
     private static volatile boolean doorSent;
     private static volatile boolean doorSeen;
+    private static volatile boolean barrelRequested;
+    private static volatile boolean barrelPrepared;
+    private static volatile boolean barrelSent;
+    private static volatile boolean barrelSeen;
     private static volatile boolean doubleChestRequested;
     private static volatile boolean doubleChestPrepared;
     private static int carryPhase;
@@ -82,6 +98,9 @@ public final class SubLevelClientSmoke {
     private static int rotatePhase;
     private static double carryBeforeY;
     private static java.util.UUID armorStandId;
+    private static java.util.UUID vehicleId;
+    private static java.util.UUID vehicleRiderId;
+    private static volatile boolean skillPermissionProbed;
     private static volatile boolean doubleChestSent;
     private static volatile boolean doubleChestSeen;
     private static double initialPoseY = Double.NaN;
@@ -106,6 +125,11 @@ public final class SubLevelClientSmoke {
         if (!requested) {
             var server = minecraft.getSingleplayerServer();
             if (server == null) return;
+            if (!skillPermissionProbed) {
+                skillPermissionProbed = true;
+                server.execute(() -> probeSkillPermission(server));
+                return;
+            }
             requested = true;
             server.execute(() -> capture(server, minecraft));
             return;
@@ -252,6 +276,37 @@ public final class SubLevelClientSmoke {
             }
             return;
         }
+        if (Boolean.getBoolean("academy.sublevel.clientTrappedChestProbe") && chestSeen && !trappedSeen) {
+            if (!trappedRequested) {
+                trappedRequested = true;
+                var server = minecraft.getSingleplayerServer();
+                if (server == null) return;
+                server.execute(() -> prepareTrappedChest(server, result.id()));
+                return;
+            }
+            if (!trappedPrepared) return;
+            var chest = findBlock(projection, Blocks.TRAPPED_CHEST);
+            if (chest == null) return;
+            if (!trappedSent) {
+                var point = projection.renderPose(1.0F).localToWorldPoint(new Vec3(
+                        chest.position().getX() + 0.5, chest.position().getY() + 0.5, chest.position().getZ() + 0.5));
+                SubLevelInteractPacket.send(new SubLevelInteractPacket(result.id(), chest.position(),
+                        Direction.UP, point, InteractionHand.MAIN_HAND, SubLevelInteractPacket.Action.USE));
+                trappedSent = true;
+                AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_TRAPPED_CHEST_SENT local={}", chest.position());
+                return;
+            }
+            if (minecraft.gui.screen() instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen
+                    && screen.getMenu().slots.size() >= 63) {
+                trappedSeen = true;
+                AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_TRAPPED_CHEST_OPENED screen={} slots={} item0={}",
+                        screen.getClass().getSimpleName(), screen.getMenu().slots.size(),
+                        screen.getMenu().getSlot(0).getItem());
+                minecraft.player.closeContainer();
+                minecraft.gui.setScreen(null);
+            }
+            return;
+        }
         if (Boolean.getBoolean("academy.sublevel.clientHopperProbe") && chestSeen && !hopperSeen) {
             if (!hopperRequested) {
                 hopperRequested = true;
@@ -307,6 +362,37 @@ public final class SubLevelClientSmoke {
                     && screen.getMenu().slots.size() >= 45) {
                 dispenserSeen = true;
                 AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_DISPENSER_OPENED screen={} slots={} item0={}",
+                        screen.getClass().getSimpleName(), screen.getMenu().slots.size(),
+                        screen.getMenu().getSlot(0).getItem());
+                minecraft.player.closeContainer();
+                minecraft.gui.setScreen(null);
+            }
+            return;
+        }
+        if (Boolean.getBoolean("academy.sublevel.clientDropperProbe") && dispenserSeen && !dropperSeen) {
+            if (!dropperRequested) {
+                dropperRequested = true;
+                var server = minecraft.getSingleplayerServer();
+                if (server == null) return;
+                server.execute(() -> prepareDropper(server, result.id()));
+                return;
+            }
+            if (!dropperPrepared) return;
+            var dropper = findBlock(projection, Blocks.DROPPER);
+            if (dropper == null) return;
+            if (!dropperSent) {
+                var point = projection.renderPose(1.0F).localToWorldPoint(new Vec3(
+                        dropper.position().getX() + 0.5, dropper.position().getY() + 0.5, dropper.position().getZ() + 0.5));
+                SubLevelInteractPacket.send(new SubLevelInteractPacket(result.id(), dropper.position(),
+                        Direction.UP, point, InteractionHand.MAIN_HAND, SubLevelInteractPacket.Action.USE));
+                dropperSent = true;
+                AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_DROPPER_SENT local={}", dropper.position());
+                return;
+            }
+            if (minecraft.gui.screen() instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen
+                    && screen.getMenu().slots.size() >= 45) {
+                dropperSeen = true;
+                AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_DROPPER_OPENED screen={} slots={} item0={}",
                         screen.getClass().getSimpleName(), screen.getMenu().slots.size(),
                         screen.getMenu().getSlot(0).getItem());
                 minecraft.player.closeContainer();
@@ -374,6 +460,37 @@ public final class SubLevelClientSmoke {
             }
             return;
         }
+        if (Boolean.getBoolean("academy.sublevel.clientBarrelProbe") && doorSeen && !barrelSeen) {
+            if (!barrelRequested) {
+                barrelRequested = true;
+                var server = minecraft.getSingleplayerServer();
+                if (server == null) return;
+                server.execute(() -> prepareBarrel(server, result.id()));
+                return;
+            }
+            if (!barrelPrepared) return;
+            var barrel = findBlock(projection, Blocks.BARREL);
+            if (barrel == null) return;
+            if (!barrelSent) {
+                var point = projection.renderPose(1.0F).localToWorldPoint(new Vec3(
+                        barrel.position().getX() + 0.5, barrel.position().getY() + 0.5, barrel.position().getZ() + 0.5));
+                SubLevelInteractPacket.send(new SubLevelInteractPacket(result.id(), barrel.position(),
+                        Direction.UP, point, InteractionHand.MAIN_HAND, SubLevelInteractPacket.Action.USE));
+                barrelSent = true;
+                AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_BARREL_SENT local={}", barrel.position());
+                return;
+            }
+            if (minecraft.gui.screen() instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen
+                    && screen.getMenu().slots.size() >= 63) {
+                barrelSeen = true;
+                AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_BARREL_OPENED screen={} slots={} item0={}",
+                        screen.getClass().getSimpleName(), screen.getMenu().slots.size(),
+                        screen.getMenu().getSlot(0).getItem());
+                minecraft.player.closeContainer();
+                minecraft.gui.setScreen(null);
+            }
+            return;
+        }
         if (Boolean.getBoolean("academy.sublevel.carryProbe") && chestSeen && carryPhase < 3) {
             if (carryPhase == 0) {
                 var server = minecraft.getSingleplayerServer();
@@ -407,6 +524,12 @@ public final class SubLevelClientSmoke {
                     var stand = server.overworld().getEntity(armorStandId);
                     AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_CARRY_ENTITY y={}",
                             stand == null ? "missing" : stand.getY());
+                    var vehicle = vehicleId == null ? null : server.overworld().getEntity(vehicleId);
+                    var rider = vehicleRiderId == null ? null : server.overworld().getEntity(vehicleRiderId);
+                    AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_CARRY_VEHICLE vehicle_y={} rider_y={} riding={}",
+                            vehicle == null ? "missing" : vehicle.getY(),
+                            rider == null ? "missing" : rider.getY(),
+                            rider != null && rider.getVehicle() == vehicle);
                 });
             }
             minecraft.getSingleplayerServer().execute(() ->
@@ -533,8 +656,18 @@ public final class SubLevelClientSmoke {
             stand.setNoGravity(true);
             server.overworld().addFreshEntity(stand);
             armorStandId = stand.getUUID();
-            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_CARRY_PLACED x={} z={} y={} stand_x={} stand_z={} stand_y={}",
-                    world.x, world.z, world.y, stand.getX(), stand.getZ(), stand.getY());
+            var vehicle = new ArmorStand(server.overworld(), world.x - 0.5, world.y, world.z - 0.5);
+            vehicle.setNoGravity(true);
+            server.overworld().addFreshEntity(vehicle);
+            var vehicleRider = new ArmorStand(server.overworld(), world.x - 0.5, world.y, world.z - 0.5);
+            vehicleRider.setNoGravity(true);
+            server.overworld().addFreshEntity(vehicleRider);
+            vehicleRider.startRiding(vehicle, true, true);
+            vehicleId = vehicle.getUUID();
+            vehicleRiderId = vehicleRider.getUUID();
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_CARRY_PLACED x={} z={} y={} stand_y={} vehicle_y={} rider_y={} riding={}",
+                    world.x, world.z, world.y, stand.getY(), vehicle.getY(), vehicleRider.getY(),
+                    vehicleRider.getVehicle() == vehicle);
         } catch (Throwable error) {
             fail(error.toString());
         }
@@ -567,6 +700,38 @@ public final class SubLevelClientSmoke {
             server.getPlayerList().getPlayers().getFirst().setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
             hopperPrepared = true;
             AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_HOPPER_PREPARED local={}", local);
+        } catch (Throwable error) {
+            fail(error.toString());
+        }
+    }
+
+    private static void prepareBarrel(MinecraftServer server, SubLevelId id) {
+        try {
+            var runtime = SubLevelServer.runtime(server).orElseThrow(() -> new IllegalStateException("SubLevel backend unavailable"));
+            var subLevel = runtime.get(id).orElseThrow();
+            var cells = runtime.view(id).cells();
+            if (cells.isEmpty()) throw new IllegalStateException("empty view");
+            var player = server.getPlayerList().getPlayers().getFirst();
+            var eye = player.getEyePosition();
+            var local = cells.getFirst().position();
+            double nearest = Double.POSITIVE_INFINITY;
+            for (var cell : cells) {
+                var worldCenter = subLevel.pose().localToWorldPoint(new Vec3(
+                        cell.position().getX() + 0.5, cell.position().getY() + 0.5, cell.position().getZ() + 0.5));
+                double distance = eye.distanceToSqr(worldCenter);
+                if (distance < nearest) { nearest = distance; local = cell.position(); }
+            }
+            var state = Blocks.BARREL.defaultBlockState();
+            if (!runtime.storage().setBlock(subLevel.plot(), local, state, 3)) {
+                throw new IllegalStateException("plot barrel setBlock failed at " + local);
+            }
+            var barrel = new BarrelBlockEntity(runtime.storage().worldPosition(subLevel.plot(), local), state);
+            barrel.setItem(0, new ItemStack(Items.DIAMOND, 3));
+            runtime.storage().level().setBlockEntity(barrel);
+            runtime.refreshGeometry(id);
+            server.getPlayerList().getPlayers().getFirst().setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            barrelPrepared = true;
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_BARREL_PREPARED local={}", local);
         } catch (Throwable error) {
             fail(error.toString());
         }
@@ -642,6 +807,38 @@ public final class SubLevelClientSmoke {
         }
     }
 
+    private static void prepareDropper(MinecraftServer server, SubLevelId id) {
+        try {
+            var runtime = SubLevelServer.runtime(server).orElseThrow(() -> new IllegalStateException("SubLevel backend unavailable"));
+            var subLevel = runtime.get(id).orElseThrow();
+            var cells = runtime.view(id).cells();
+            if (cells.isEmpty()) throw new IllegalStateException("empty view");
+            var player = server.getPlayerList().getPlayers().getFirst();
+            var eye = player.getEyePosition();
+            var local = cells.getFirst().position();
+            double nearest = Double.POSITIVE_INFINITY;
+            for (var cell : cells) {
+                var worldCenter = subLevel.pose().localToWorldPoint(new Vec3(
+                        cell.position().getX() + 0.5, cell.position().getY() + 0.5, cell.position().getZ() + 0.5));
+                double distance = eye.distanceToSqr(worldCenter);
+                if (distance < nearest) { nearest = distance; local = cell.position(); }
+            }
+            var state = Blocks.DROPPER.defaultBlockState();
+            if (!runtime.storage().setBlock(subLevel.plot(), local, state, 3)) {
+                throw new IllegalStateException("plot dropper setBlock failed at " + local);
+            }
+            var dropper = new DropperBlockEntity(runtime.storage().worldPosition(subLevel.plot(), local), state);
+            dropper.setItem(0, new ItemStack(Items.DIAMOND, 3));
+            runtime.storage().level().setBlockEntity(dropper);
+            runtime.refreshGeometry(id);
+            server.getPlayerList().getPlayers().getFirst().setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            dropperPrepared = true;
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_DROPPER_PREPARED local={}", local);
+        } catch (Throwable error) {
+            fail(error.toString());
+        }
+    }
+
     private static void prepareDispenser(MinecraftServer server, SubLevelId id) {
         try {
             var runtime = SubLevelServer.runtime(server).orElseThrow(() -> new IllegalStateException("SubLevel backend unavailable"));
@@ -708,6 +905,38 @@ public final class SubLevelClientSmoke {
             runtime.refreshGeometry(id);
             player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
             AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_CHEST_PREPARED local={}", local);
+        } catch (Throwable error) {
+            fail(error.toString());
+        }
+    }
+
+    private static void prepareTrappedChest(MinecraftServer server, SubLevelId id) {
+        try {
+            var runtime = SubLevelServer.runtime(server).orElseThrow(() -> new IllegalStateException("SubLevel backend unavailable"));
+            var subLevel = runtime.get(id).orElseThrow();
+            var cells = runtime.view(id).cells();
+            if (cells.isEmpty()) throw new IllegalStateException("empty view");
+            var player = server.getPlayerList().getPlayers().getFirst();
+            var eye = player.getEyePosition();
+            var local = cells.getFirst().position();
+            double nearest = Double.POSITIVE_INFINITY;
+            for (var cell : cells) {
+                var worldCenter = subLevel.pose().localToWorldPoint(new Vec3(
+                        cell.position().getX() + 0.5, cell.position().getY() + 0.5, cell.position().getZ() + 0.5));
+                double distance = eye.distanceToSqr(worldCenter);
+                if (distance < nearest) { nearest = distance; local = cell.position(); }
+            }
+            var state = Blocks.TRAPPED_CHEST.defaultBlockState();
+            if (!runtime.storage().setBlock(subLevel.plot(), local, state, 3)) {
+                throw new IllegalStateException("plot trapped chest setBlock failed at " + local);
+            }
+            var chest = new TrappedChestBlockEntity(runtime.storage().worldPosition(subLevel.plot(), local), state);
+            chest.setItem(0, new ItemStack(Items.DIAMOND, 3));
+            runtime.storage().level().setBlockEntity(chest);
+            runtime.refreshGeometry(id);
+            player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            trappedPrepared = true;
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_TRAPPED_CHEST_PREPARED local={}", local);
         } catch (Throwable error) {
             fail(error.toString());
         }
@@ -793,6 +1022,24 @@ public final class SubLevelClientSmoke {
         var horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
         minecraft.player.setYRot((float) Math.toDegrees(Math.atan2(-delta.x, delta.z)));
         minecraft.player.setXRot((float) Math.toDegrees(-Math.atan2(delta.y, horizontal)));
+    }
+
+    private static void probeSkillPermission(MinecraftServer server) {
+        try {
+            var level = server.overworld();
+            var player = server.getPlayerList().getPlayers().getFirst();
+            var position = player.blockPosition().below();
+            var before = level.getBlockState(position);
+            var denied = SubLevelSkillSupport.capture(level, java.util.List.of(position),
+                    (host, candidate) -> false);
+            if (denied.isPresent()) throw new IllegalStateException("denied capture returned a SubLevel");
+            if (!level.getBlockState(position).equals(before)) {
+                throw new IllegalStateException("denied capture modified the source block");
+            }
+            AcademyCraft.LOGGER.info("SUBLEVEL_SKILL_PERMISSION_DENIED position={} state={}", position, before);
+        } catch (Throwable error) {
+            fail("skill permission probe: " + error);
+        }
     }
 
     private static void capture(MinecraftServer server, Minecraft minecraft) {

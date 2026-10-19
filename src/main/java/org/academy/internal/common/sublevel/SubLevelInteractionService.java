@@ -26,6 +26,7 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
+import net.minecraft.world.level.block.entity.BarrelBlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.entity.DispenserBlockEntity;
 import net.minecraft.world.level.block.entity.HopperBlockEntity;
@@ -36,6 +37,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import org.academy.AcademyCraft;
+import org.academy.api.common.structure.StructurePose;
 import org.academy.mixin.common.AbstractFurnaceBlockEntityAccessor;
 
 /**
@@ -46,7 +48,7 @@ public final class SubLevelInteractionService {
     private SubLevelInteractionService() {
     }
 
-    /** Stable USE guard for moving small blocks: authoritative target existence + reach + hit proximity. */
+    /** Legacy proximity fallback for USE when the client/server pose gap exceeds the tight guard. */
     public static boolean validateProximity(MinecraftServer server, SubLevelId id, BlockPos local,
                                             Vec3 point, ServerPlayer player) {
         var runtime = SubLevelServer.runtime(server).orElse(null);
@@ -57,6 +59,34 @@ public final class SubLevelInteractionService {
         double reach = player.blockInteractionRange() + 1.0;
         return player.getEyePosition().distanceToSqr(center) <= reach * reach
                 && point.distanceToSqr(center) <= 4.0;
+    }
+
+    /** Tight USE guard: target block, face direction and reach, tolerant of the pose gap. */
+    public static boolean validateUse(MinecraftServer server, SubLevelId id, BlockPos local,
+                                      Vec3 point, ServerPlayer player) {
+        var runtime = SubLevelServer.runtime(server).orElse(null);
+        if (runtime == null) return false;
+        var subLevel = runtime.get(id).orElse(null);
+        if (subLevel == null) return false;
+        return validateUseAtPose(subLevel, local, point, player, subLevel.pose())
+                || validateUseAtPose(subLevel, local, point, player, subLevel.previousPose());
+    }
+
+    private static boolean validateUseAtPose(SubLevel subLevel, BlockPos local, Vec3 point,
+                                             ServerPlayer player, StructurePose pose) {
+        var eye = player.getEyePosition();
+        var center = pose.localToWorldPoint(Vec3.atCenterOf(local));
+        double reach = player.blockInteractionRange() + 0.75;
+        if (eye.distanceToSqr(center) > reach * reach) return false;
+        if (point.distanceToSqr(center) > 0.81) return false;
+        var localEye = pose.worldToLocalPoint(eye);
+        var localPoint = pose.worldToLocalPoint(point);
+        var localCenter = Vec3.atCenterOf(local);
+        if (!new AABB(local).inflate(0.55).contains(localPoint)) return false;
+        var look = localCenter.subtract(localEye);
+        var target = localPoint.subtract(localEye);
+        return look.lengthSqr() > 1.0E-8 && target.lengthSqr() > 1.0E-8
+                && look.normalize().dot(target.normalize()) >= 0.5;
     }
 
     /** Server-side line-of-sight validation for a client interaction packet. */
@@ -72,15 +102,18 @@ public final class SubLevelInteractionService {
             AcademyCraft.LOGGER.info("SubLevel ray rejected distance local={} eye={} point={} reach={}", local, eye, point, reach);
             return false;
         }
-        var pose = subLevel.pose();
+        return validateRayAtPose(player, subLevel, runtime.view(id), local, point, eye, reach, subLevel.pose())
+                || validateRayAtPose(player, subLevel, runtime.view(id), local, point, eye, reach, subLevel.previousPose());
+    }
+
+    private static boolean validateRayAtPose(ServerPlayer player, SubLevel subLevel,
+                                             org.academy.internal.common.structure.space.NativeStructureView view,
+                                             BlockPos local, Vec3 point, Vec3 eye, double reach,
+                                             StructurePose pose) {
         var localPoint = pose.worldToLocalPoint(point);
-        if (!new AABB(local).inflate(1.5).contains(localPoint)) {
-            AcademyCraft.LOGGER.debug("SubLevel ray rejected box local={} localPoint={} point={}", local, localPoint, point);
-            return false;
-        }
+        if (!new AABB(local).inflate(1.5).contains(localPoint)) return false;
         var localEye = pose.worldToLocalPoint(eye);
         var center = Vec3.atCenterOf(local);
-        var view = runtime.view(id);
         var look = pose.worldToLocalDirection(player.getViewVector(1.0F)).normalize();
         var lookHit = view.clip(new ClipContext(localEye, localEye.add(look.scale(reach)),
                 ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, CollisionContext.empty()));
@@ -88,14 +121,9 @@ public final class SubLevelInteractionService {
                 ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, CollisionContext.empty()));
         var centerHit = view.clip(new ClipContext(localEye, center,
                 ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, CollisionContext.empty()));
-        boolean valid = lookHit.getType() == HitResult.Type.BLOCK && lookHit.getBlockPos().equals(local)
+        return lookHit.getType() == HitResult.Type.BLOCK && lookHit.getBlockPos().equals(local)
                 || pointHit.getType() == HitResult.Type.BLOCK && pointHit.getBlockPos().equals(local)
                 || centerHit.getType() == HitResult.Type.BLOCK && centerHit.getBlockPos().equals(local);
-        if (!valid) {
-            AcademyCraft.LOGGER.debug("SubLevel ray rejected local={} eye={} point={} pointHit={} centerHit={}",
-                    local, eye, point, pointHit.getType(), centerHit.getType());
-        }
-        return valid;
     }
 
     public static boolean breakBlock(MinecraftServer server, SubLevelId id, BlockPos local,
@@ -125,7 +153,7 @@ public final class SubLevelInteractionService {
         var state = level.getBlockState(world);
         if (!level.hasChunkAt(world) || state.isAir()) return InteractionResult.FAIL;
         if (!level.mayInteract(player, world)) return InteractionResult.FAIL;
-        if (state.is(Blocks.CHEST)
+        if ((state.is(Blocks.CHEST) || state.is(Blocks.TRAPPED_CHEST))
                 && runtime.storage().blockEntity(subLevel.plot(), local) instanceof ChestBlockEntity chest) {
             Container container = chest;
             int rows = 3;
@@ -160,6 +188,14 @@ public final class SubLevelInteractionService {
             var proxy = new SubLevelContainer(runtime.host(), dispenser, center);
             player.openMenu(new SimpleMenuProvider((containerId, inventory, ignored) ->
                     new DispenserMenu(containerId, inventory, proxy), Component.translatable("container.dispenser")));
+            return InteractionResult.SUCCESS;
+        }
+        if (blockEntity instanceof BarrelBlockEntity barrel) {
+            var center = subLevel.pose().localToWorldPoint(Vec3.atCenterOf(local));
+            var proxy = new SubLevelContainer(runtime.host(), barrel, center);
+            player.openMenu(new SimpleMenuProvider((containerId, inventory, ignored) ->
+                    new ChestMenu(MenuType.GENERIC_9x3, containerId, inventory, proxy, 3),
+                    Component.translatable("container.barrel")));
             return InteractionResult.SUCCESS;
         }
         if (blockEntity instanceof AbstractFurnaceBlockEntity furnace) {

@@ -13,8 +13,11 @@ allprojects {
             systemProperty 'academy.sublevel.carryRotateProbe', 'true'
             systemProperty 'academy.sublevel.clientHopperProbe', 'true'
             systemProperty 'academy.sublevel.clientDispenserProbe', 'true'
+            systemProperty 'academy.sublevel.clientDropperProbe', 'true'
             systemProperty 'academy.sublevel.clientFurnaceProbe', 'true'
             systemProperty 'academy.sublevel.clientDoorProbe', 'true'
+            systemProperty 'academy.sublevel.clientTrappedChestProbe', 'true'
+            systemProperty 'academy.sublevel.clientBarrelProbe', 'true'
             systemProperty 'academy.sublevel.fallProbe', 'true'
             programArguments.addAll('--width', '1280', '--height', '720',
                     '--quickPlaySingleplayer', 'Native SubLevel Smoke')

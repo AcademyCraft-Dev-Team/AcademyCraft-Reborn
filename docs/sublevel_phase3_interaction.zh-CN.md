@@ -66,7 +66,10 @@ CLIENT_SUBLEVEL_CHEST_SENT local=BlockPos{x=0, y=0, z=0}
 CLIENT_SUBLEVEL_CHEST_OPENED screen=ContainerScreen slots=63 item0=3 minecraft:diamond
 CLIENT_SUBLEVEL_HOPPER_OPENED screen=HopperScreen slots=41 item0=3 minecraft:diamond
 CLIENT_SUBLEVEL_DISPENSER_OPENED screen=DispenserScreen slots=45 item0=3 minecraft:diamond
+CLIENT_SUBLEVEL_DROPPER_OPENED screen=DispenserScreen slots=45 item0=3 minecraft:diamond
 CLIENT_SUBLEVEL_FURNACE_OPENED screen=FurnaceScreen slots=39 item0=3 minecraft:iron_ore
+CLIENT_SUBLEVEL_TRAPPED_CHEST_OPENED screen=ContainerScreen slots=63 item0=3 minecraft:diamond
+CLIENT_SUBLEVEL_BARREL_OPENED screen=ContainerScreen slots=63 item0=3 minecraft:diamond
 CLIENT_SUBLEVEL_DOOR_PREPARED lower=BlockPos{x=0, y=0, z=0} upper=BlockPos{x=0, y=1, z=0}
 CLIENT_SUBLEVEL_DOOR_OPENED local=BlockPos{x=0, y=0, z=0}
 CLIENT_SUBLEVEL_DOUBLE_CHEST_OPENED screen=ContainerScreen slots=90 item0=3 minecraft:diamond
@@ -76,8 +79,8 @@ CLIENT_SUBLEVEL_DOUBLE_CHEST_OPENED screen=ContainerScreen slots=90 item0=3 mine
 
 ## 3. 当前边界
 
-- 客户端破坏、放置和拉杆 `useBlock` 已实机验证；服务端 BREAK/PLACE 使用玩家视线 + 客户端命中点/目标中心校验，USE 使用目标存在 + 距离 + 命中点邻近校验（避免移动中小方块误拒）；
-- 单箱 63 槽、双箱 90 槽、漏斗 41 槽、发射器 45 槽、熔炉 39 槽代理菜单均已实机打开；双格门 `OPEN` 状态已实机切换；熔炉 cooking/lit 使用真实 `ContainerData`；技能事务仍未桥接；
+- 客户端破坏、放置和拉杆 `useBlock` 已实机验证；服务端 BREAK/PLACE 使用玩家视线 + 客户端命中点/目标中心校验，并对当前/上一姿态各校验一次，USE 优先使用方块点/朝向收紧校验，姿态差过大时回退到目标存在 + 距离 + 命中点邻近；
+- 单箱 63 槽、陷阱箱 63 槽、双箱 90 槽、漏斗 41 槽、发射器 45 槽、投掷器 45 槽、熔炉 39 槽、木桶 63 槽代理菜单均已实机打开；双格门 `OPEN` 状态已实机切换；熔炉 cooking/lit 使用真实 `ContainerData`；技能事务仍未桥接；
 - `useBlock/placeBlock` 的 vanilla context 已用真实玩家/BlockEntity 验证；USE 的服务端射线仍需稳定化；
 - 箱子/漏斗/发射器/熔炉库存菜单和双格门已桥接；其他多格方块尚未覆盖；
 - 交互权限目前只做 plot `mayInteract`，未接技能事务/保护事件；
@@ -85,7 +88,7 @@ CLIENT_SUBLEVEL_DOUBLE_CHEST_OPENED screen=ContainerScreen slots=90 item0=3 mine
 
 ## 4. 下一步
 
-1. USE 服务端射线进一步收紧（当前为邻近校验）；
+1. USE 服务端射线进一步收紧（当前为方块点 + 朝向校验，完整视线仍需稳定化）；
 2. 掉落物/经验/音效/粒子从 plot 映射回宿主；
 3. 容器菜单桥；
 4. 技能权限、保护事件、冷却与事务 journal。

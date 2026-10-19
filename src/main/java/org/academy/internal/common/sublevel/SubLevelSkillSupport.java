@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
+import org.academy.AcademyCraft;
 import org.academy.api.common.structure.StructurePose;
 
 import java.util.List;
@@ -19,11 +20,18 @@ public final class SubLevelSkillSupport {
 
     /** Captures real host blocks into a new SubLevel; the source blocks are removed on success. */
     public static Optional<SubLevelId> capture(ServerLevel host, List<BlockPos> positions) {
+        return capture(host, positions, (level, position) -> true);
+    }
+
+    /** Permission-aware skill capture; every source cell is checked before plot allocation. */
+    public static Optional<SubLevelId> capture(ServerLevel host, List<BlockPos> positions,
+                                               java.util.function.BiPredicate<ServerLevel, BlockPos> permission) {
         var runtime = host.getServer() == null ? null : SubLevelServer.runtime(host.getServer()).orElse(null);
         if (runtime == null) return Optional.empty();
         try {
-            return Optional.of(SubLevelCaptureService.capture(host, runtime, positions).id());
+            return Optional.of(SubLevelCaptureService.capture(host, runtime, positions, permission).id());
         } catch (RuntimeException | LinkageError failure) {
+            AcademyCraft.LOGGER.warn("SubLevel skill capture failed for {} cells", positions.size(), failure);
             return Optional.empty();
         }
     }

@@ -25,7 +25,7 @@ SubLevel restore verify: stored=256 active=64 entries=256
 
 ```text
 SUBLEVEL_MULTI_CAPTURED structures=64
-SUBLEVEL_MULTI_BENCHMARK structures=64 fps_avg=101.2 fps_min=89 ticks=120
+SUBLEVEL_MULTI_BENCHMARK structures=64 fps_avg=98.49 fps_min=72 ticks=120
 ```
 
 结论：该场景达到首版 60 FPS 目标（1280×720，开发客户端，无光影/额外模组）；这是 2×2×2 结构基准，不代表 24³ 全尺寸结构或 256 全部同时渲染。
@@ -37,10 +37,10 @@ SUBLEVEL_MULTI_BENCHMARK structures=64 fps_avg=101.2 fps_min=89 ticks=120
 ```text
 SUBLEVEL_MULTI_CAPTURED structures=256
 SubLevel snapshots started: players=1 sublevels=256
-SUBLEVEL_MULTI_BENCHMARK structures=256 fps_avg=91.63 fps_min=61 ticks=120
+SUBLEVEL_MULTI_BENCHMARK structures=256 fps_avg=96.44 fps_min=72 ticks=120
 ```
 
-1280×720 开发客户端下平均 91.6 FPS、最低 61 FPS，达到 60 FPS 首版线；这是 2×2×2 结构，不是 256 个 24³ 满尺寸结构。
+1280×720 开发客户端下平均 96.4 FPS、最低 72 FPS，达到 60 FPS 首版线；这是 2×2×2 结构，不是 256 个 24³ 满尺寸结构。
 
 ## 2.3 地形碰撞修复
 
@@ -79,4 +79,4 @@ SUBLEVEL_LARGE_BENCHMARK side=24 cells=3176 fps_avg=116.25 fps_min=104 ticks=120
 ## 4. 已知问题
 
 - 探针 `*AndStop` 已改为独立延迟停止线程；256 探针停止不再出现 shutdown StackOverflow。
-- 单箱/双箱/漏斗/发射器/熔炉库存槽位、熔炉 cooking/lit 数据、双格门和玩家/非玩家实体平移+旋转承载已验证；技能事务仍未完成；服务端 BREAK/PLACE 射线复核、USE 邻近校验已接入。
+- 单箱/陷阱箱/双箱/漏斗/发射器/投掷器/熔炉/木桶库存槽位、熔炉 cooking/lit 数据、双格门和玩家/非玩家实体/载具乘客平移+旋转承载已验证；技能事务仍未完成；服务端 BREAK/PLACE 射线复核、USE 方块点/朝向收紧校验已接入。

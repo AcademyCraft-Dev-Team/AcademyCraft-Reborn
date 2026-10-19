@@ -92,13 +92,15 @@ public final class NativeStructureView implements BlockGetter {
         var block = state.getBlock();
         return isSingleChestState(state)
                 || block == Blocks.FURNACE || block == Blocks.BLAST_FURNACE || block == Blocks.SMOKER
-                || block == Blocks.HOPPER || block == Blocks.DISPENSER || block == Blocks.DROPPER;
+                || block == Blocks.HOPPER || block == Blocks.DISPENSER || block == Blocks.DROPPER
+                || block == Blocks.BARREL;
     }
 
     /** Only the exact, dry vanilla single chest has a dedicated inventory-free model path. */
     public static boolean isSingleChestState(BlockState state) {
         Objects.requireNonNull(state, "state");
-        return state.getBlock() == Blocks.CHEST && state.getValue(ChestBlock.TYPE) == ChestType.SINGLE
+        return (state.getBlock() == Blocks.CHEST || state.getBlock() == Blocks.TRAPPED_CHEST)
+                && state.getValue(ChestBlock.TYPE) == ChestType.SINGLE
                 && state.getFluidState().isEmpty();
     }
 

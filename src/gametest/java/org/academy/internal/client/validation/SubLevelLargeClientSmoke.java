@@ -25,7 +25,7 @@ public final class SubLevelLargeClientSmoke {
     private static volatile boolean captured;
     private static volatile SubLevelCaptureService.Result result;
     private static volatile String failure;
-    private static int ticks;
+    private static volatile int ticks;
     private static int warmup;
     private static int measured;
     private static long fpsSum;
