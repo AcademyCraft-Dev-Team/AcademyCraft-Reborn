@@ -12,6 +12,8 @@
 | `translate(MinecraftServer, SubLevelId, Vec3)` | 平移并停用物理 body，供事务/调试使用 |
 | `rotate(MinecraftServer, SubLevelId, double)` | 绕局部中心 yaw 旋转 |
 | `launch(MinecraftServer, SubLevelId, Vec3, double)` | 对活动刚体施加一次有界发射冲量 |
+| `moveTo(MinecraftServer, SubLevelId, Vec3, double)` | 有界连续移动，按 tick 设置速度直到到达/超时 |
+| `staticize(MinecraftServer, SubLevelId, BlockPos)` | 将 plot 内容事务式写回宿主并移除 SubLevel |
 
 当前状态：
 
