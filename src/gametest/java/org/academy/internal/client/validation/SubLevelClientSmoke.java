@@ -118,6 +118,10 @@ public final class SubLevelClientSmoke {
     private static double launchInitialY = Double.NaN;
     private static boolean launchProbed;
     private static boolean programChainProbed;
+    private static boolean motionProbed;
+    private static boolean motionStarted;
+    private static int motionWait;
+    private static double motionInitialY;
     private static int holdTicks;
     private static volatile SubLevelCaptureService.Result result;
     private static int ticks;
@@ -624,6 +628,24 @@ public final class SubLevelClientSmoke {
             if (server == null) return;
             server.execute(() -> probeProgramChain(server));
             return;
+        }
+        if (Boolean.getBoolean("academy.sublevel.motionProbe") && !motionProbed) {
+            if (!motionStarted) {
+                motionStarted = true;
+                motionInitialY = projection.viewState().pose().worldOrigin().y;
+                var server = minecraft.getSingleplayerServer();
+                if (server == null) return;
+                var center = projection.viewState().pose().localToWorldPoint(
+                        projection.view().bounds().getCenter());
+                server.execute(() -> AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_MOTION_START {}",
+                        SubLevelSkillSupport.moveTo(server, result.id(), center.add(0, 3, 0), 1.0)));
+                return;
+            }
+            if (++motionWait < 20) return;
+            var y = projection.viewState().pose().worldOrigin().y;
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_MOTION_PROBE y={} initial_y={} delta={}",
+                    y, motionInitialY, y - motionInitialY);
+            motionProbed = true;
         }
         var frames = NativeStructureProjectionRenderer.submittedFrames(projection.getId());
         if (frames <= 0) return;

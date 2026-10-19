@@ -144,6 +144,7 @@ public final class SubLevelServer {
         if (runtime == null) return;
         try {
             runtime.runtime.tick(1.0 / 20.0, 2);
+            SubLevelMotionController.tick(event.getServer());
             carryEntities(event.getServer(), runtime.runtime);
         } catch (RuntimeException | AssertionError failure) {
             AcademyCraft.LOGGER.error("SubLevel physics tick failed", failure);

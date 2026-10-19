@@ -160,9 +160,10 @@ Aeromanip SubLevel 程序链路已扩展并通过客户端烟测：
 ```text
 extract=COMPLETED control=COMPLETED move=COMPLETED rotate=COMPLETED
 launch=COMPLETED release=COMPLETED staticize=COMPLETED detail=staticized
+CLIENT_SUBLEVEL_MOTION_PROBE delta=3.046
 ```
 
-- `move` 当前是目标中心平移（`SubLevelSkillSupport.translate`），不是连续力控制；
+- `move` 使用 `SubLevelMotionController` 连续速度控制，20 tick 实测上移约 3.05 格；
 - `rotate` 当前只支持 Y 轴 yaw；
 - `staticize` 已通过：把 plot 内容写回宿主指定原点并移除 SubLevel；
 - 直接 HighSpeedJet 技能尚未迁移。

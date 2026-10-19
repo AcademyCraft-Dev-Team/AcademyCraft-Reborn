@@ -476,6 +476,7 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
         Objects.requireNonNull(structure, "structure");
         if (SubLevelStructureRefs.isSubLevel(structure.reference())) {
             var id = SubLevelStructureRefs.id(structure.reference()).orElse(null);
+            if (id != null) org.academy.internal.common.sublevel.SubLevelMotionController.cancel(id);
             var targetPosition = target == null ? null : new BlockPos(target.x(), target.y(), target.z());
             var restored = id == null ? new org.academy.internal.common.sublevel.SubLevelRestoreService.Result(0, "invalid")
                     : SubLevelSkillSupport.staticize(targets.level().getServer(), id, targetPosition);
@@ -542,6 +543,7 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     private StructureOperation launchSubLevelStructure(ProgramStructureControl control,
                                                        ProgramDirection direction, float power) {
         var id = SubLevelStructureRefs.id(control.reference()).orElse(null);
+        if (id != null) org.academy.internal.common.sublevel.SubLevelMotionController.cancel(id);
         if (id == null || !SubLevelSkillSupport.launch(targets.level().getServer(), id,
                 normalizedVector(direction), Math.max(0.5, power))) {
             return StructureOperation.rejected("sublevel_launch_failed");
@@ -564,14 +566,10 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
             return StructureOperation.rejected("target_out_of_range");
         }
         var id = SubLevelStructureRefs.id(control.reference()).orElse(null);
-        var runtime = id == null ? null : SubLevelServer.runtime(targets.level().getServer()).orElse(null);
-        var subLevel = runtime == null || id == null ? null : runtime.get(id).orElse(null);
-        if (subLevel == null) return StructureOperation.rejected("structure_unavailable");
-        var center = subLevel.pose().localToWorldPoint(subLevel.localBounds().getCenter());
-        if (!SubLevelSkillSupport.translate(targets.level().getServer(), id, destination.subtract(center))) {
+        if (id == null || !SubLevelSkillSupport.moveTo(targets.level().getServer(), id, destination, seconds)) {
             return StructureOperation.rejected("sublevel_move_failed");
         }
-        return StructureOperation.result(ProgramStructureOperationResult.completed("moved", control.reference()));
+        return StructureOperation.result(ProgramStructureOperationResult.completed("moving", control.reference()));
     }
 
     private StructureOperation rotateSubLevelStructure(ProgramStructureControl control,
@@ -582,6 +580,7 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
             return StructureOperation.unavailable("sublevel_only_yaw_rotation_supported");
         }
         var id = SubLevelStructureRefs.id(control.reference()).orElse(null);
+        if (id != null) org.academy.internal.common.sublevel.SubLevelMotionController.cancel(id);
         if (id == null || !SubLevelSkillSupport.rotate(targets.level().getServer(), id,
                 Math.toDegrees(pose.angleRadians()))) {
             return StructureOperation.rejected("sublevel_rotate_failed");

@@ -123,7 +123,7 @@ public final class NativePhysicsWorld implements AutoCloseable {
         run(() -> access.setPose(handle, body.handle, values));
     }
 
-    void setVelocity(NativePhysicsBody body, PhysicsVector linear, PhysicsVector angular) {
+    public void setVelocity(NativePhysicsBody body, PhysicsVector linear, PhysicsVector angular) {
         requireDynamic(body);
         PhysicsLimits.vector(Objects.requireNonNull(linear, "linear"), 1.0E4, "linear velocity");
         PhysicsLimits.vector(Objects.requireNonNull(angular, "angular"), 1.0E4, "angular velocity");

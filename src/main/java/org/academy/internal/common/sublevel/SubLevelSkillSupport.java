@@ -54,6 +54,11 @@ public final class SubLevelSkillSupport {
         return SubLevelRestoreService.staticize(runtime.host(), runtime, id, target);
     }
 
+    /** Starts a bounded continuous move toward a world target. */
+    public static boolean moveTo(MinecraftServer server, SubLevelId id, Vec3 target, double seconds) {
+        return SubLevelMotionController.moveTo(server, id, target, seconds);
+    }
+
     /** One bounded launch impulse for skill/program motion. */
     public static boolean launch(MinecraftServer server, SubLevelId id, Vec3 direction, double speed) {
         return SubLevelServer.runtime(server).map(runtime -> runtime.launch(id, direction, speed)).orElse(false);

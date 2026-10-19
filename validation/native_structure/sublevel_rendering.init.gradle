@@ -12,6 +12,7 @@ allprojects {
             systemProperty 'academy.sublevel.carryProbe', 'true'
             systemProperty 'academy.sublevel.launchProbe', 'true'
             systemProperty 'academy.sublevel.programChainProbe', 'true'
+            systemProperty 'academy.sublevel.motionProbe', 'true'
             systemProperty 'academy.sublevelProgramNodes', 'true'
             systemProperty 'academy.sublevel.carryRotateProbe', 'true'
             systemProperty 'academy.sublevel.clientHopperProbe', 'true'

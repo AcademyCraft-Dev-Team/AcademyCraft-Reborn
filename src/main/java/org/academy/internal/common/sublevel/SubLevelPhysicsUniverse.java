@@ -102,6 +102,14 @@ public final class SubLevelPhysicsUniverse {
         return true;
     }
 
+    public boolean setVelocity(SubLevelId id, PhysicsVector linear, PhysicsVector angular) {
+        var entry = entries.get(id);
+        if (entry == null) return false;
+        world.setVelocity(entry.bodies.getFirst(), linear, angular);
+        revision = Math.incrementExact(revision);
+        return true;
+    }
+
     public boolean contains(SubLevelId id) {
         return entries.containsKey(id);
     }
