@@ -12,6 +12,8 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.inventory.DispenserMenu;
+import net.minecraft.world.inventory.HopperMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
@@ -20,6 +22,8 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.entity.DispenserBlockEntity;
+import net.minecraft.world.level.block.entity.HopperBlockEntity;
 import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
@@ -129,12 +133,27 @@ public final class SubLevelInteractionService {
                 }
             }
             var center = subLevel.pose().localToWorldPoint(Vec3.atCenterOf(local));
-            final var menuContainer = new SubLevelChestContainer(runtime.host(), container, center);
+            final var menuContainer = new SubLevelContainer(runtime.host(), container, center);
             final int menuRows = rows;
             final var menuTitle = title;
             player.openMenu(new SimpleMenuProvider((containerId, inventory, ignored) ->
                     new ChestMenu(menuRows == 6 ? MenuType.GENERIC_9x6 : MenuType.GENERIC_9x3,
                             containerId, inventory, menuContainer, menuRows), menuTitle));
+            return InteractionResult.SUCCESS;
+        }
+        var blockEntity = runtime.storage().blockEntity(subLevel.plot(), local);
+        if (blockEntity instanceof HopperBlockEntity hopper) {
+            var center = subLevel.pose().localToWorldPoint(Vec3.atCenterOf(local));
+            var proxy = new SubLevelContainer(runtime.host(), hopper, center);
+            player.openMenu(new SimpleMenuProvider((containerId, inventory, ignored) ->
+                    new HopperMenu(containerId, inventory, proxy), Component.translatable("container.hopper")));
+            return InteractionResult.SUCCESS;
+        }
+        if (blockEntity instanceof DispenserBlockEntity dispenser) {
+            var center = subLevel.pose().localToWorldPoint(Vec3.atCenterOf(local));
+            var proxy = new SubLevelContainer(runtime.host(), dispenser, center);
+            player.openMenu(new SimpleMenuProvider((containerId, inventory, ignored) ->
+                    new DispenserMenu(containerId, inventory, proxy), Component.translatable("container.dispenser")));
             return InteractionResult.SUCCESS;
         }
         var result = new BlockHitResult(hit, face, world, false);

@@ -13,6 +13,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.LeverBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.entity.HopperBlockEntity;
 import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.block.state.properties.AttachFace;
@@ -52,6 +53,10 @@ public final class SubLevelClientSmoke {
     private static volatile boolean chestRequested;
     private static volatile boolean chestSent;
     private static volatile boolean chestSeen;
+    private static volatile boolean hopperRequested;
+    private static volatile boolean hopperPrepared;
+    private static volatile boolean hopperSent;
+    private static volatile boolean hopperSeen;
     private static volatile boolean doubleChestRequested;
     private static volatile boolean doubleChestPrepared;
     private static int carryPhase;
@@ -227,6 +232,37 @@ public final class SubLevelClientSmoke {
             }
             return;
         }
+        if (Boolean.getBoolean("academy.sublevel.clientHopperProbe") && chestSeen && !hopperSeen) {
+            if (!hopperRequested) {
+                hopperRequested = true;
+                var server = minecraft.getSingleplayerServer();
+                if (server == null) return;
+                server.execute(() -> prepareHopper(server, result.id()));
+                return;
+            }
+            if (!hopperPrepared) return;
+            var hopper = findBlock(projection, Blocks.HOPPER);
+            if (hopper == null) return;
+            if (!hopperSent) {
+                var point = projection.renderPose(1.0F).localToWorldPoint(new Vec3(
+                        hopper.position().getX() + 0.5, hopper.position().getY() + 0.5, hopper.position().getZ() + 0.5));
+                SubLevelInteractPacket.send(new SubLevelInteractPacket(result.id(), hopper.position(),
+                        Direction.UP, point, InteractionHand.MAIN_HAND, SubLevelInteractPacket.Action.USE));
+                hopperSent = true;
+                AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_HOPPER_SENT local={}", hopper.position());
+                return;
+            }
+            if (minecraft.gui.screen() instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen
+                    && screen.getMenu().slots.size() >= 41) {
+                hopperSeen = true;
+                AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_HOPPER_OPENED screen={} slots={} item0={}",
+                        screen.getClass().getSimpleName(), screen.getMenu().slots.size(),
+                        screen.getMenu().getSlot(0).getItem());
+                minecraft.player.closeContainer();
+                minecraft.gui.setScreen(null);
+            }
+            return;
+        }
         if (Boolean.getBoolean("academy.sublevel.carryProbe") && chestSeen && carryPhase < 3) {
             if (carryPhase == 0) {
                 var server = minecraft.getSingleplayerServer();
@@ -236,7 +272,7 @@ public final class SubLevelClientSmoke {
                 return;
             }
             if (carryPhase == 1) {
-                if (++carryWait < 15) return;
+                if (++carryWait < 5) return;
                 var server = minecraft.getSingleplayerServer();
                 if (server == null) return;
                 carryBeforeY = minecraft.player.getY();
@@ -252,6 +288,8 @@ public final class SubLevelClientSmoke {
             AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_CARRY before_y={} after_y={} delta={}",
                     carryBeforeY, afterY, afterY - carryBeforeY);
             carryPhase = 3;
+            minecraft.getSingleplayerServer().execute(() ->
+                    minecraft.getSingleplayerServer().getPlayerList().getPlayers().getFirst().setNoGravity(false));
             if (afterY - carryBeforeY < 1.0) {
                 fail("player was not carried with the SubLevel");
                 return;
@@ -347,11 +385,52 @@ public final class SubLevelClientSmoke {
                     (bounds.minZ + bounds.maxZ) / 2.0);
             var world = subLevel.pose().localToWorldPoint(local);
             var player = server.getPlayerList().getPlayers().getFirst();
+            player.setNoGravity(true);
             player.teleportTo(world.x, world.y, world.z);
             AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_CARRY_PLACED y={}", world.y);
         } catch (Throwable error) {
             fail(error.toString());
         }
+    }
+
+    private static void prepareHopper(MinecraftServer server, SubLevelId id) {
+        try {
+            var runtime = SubLevelServer.runtime(server).orElseThrow(() -> new IllegalStateException("SubLevel backend unavailable"));
+            var subLevel = runtime.get(id).orElseThrow();
+            var cells = runtime.view(id).cells();
+            if (cells.isEmpty()) throw new IllegalStateException("empty view");
+            var player = server.getPlayerList().getPlayers().getFirst();
+            var eye = player.getEyePosition();
+            var local = cells.getFirst().position();
+            double nearest = Double.POSITIVE_INFINITY;
+            for (var cell : cells) {
+                var worldCenter = subLevel.pose().localToWorldPoint(new Vec3(
+                        cell.position().getX() + 0.5, cell.position().getY() + 0.5, cell.position().getZ() + 0.5));
+                double distance = eye.distanceToSqr(worldCenter);
+                if (distance < nearest) { nearest = distance; local = cell.position(); }
+            }
+            var state = Blocks.HOPPER.defaultBlockState();
+            if (!runtime.storage().setBlock(subLevel.plot(), local, state, 3)) {
+                throw new IllegalStateException("plot hopper setBlock failed at " + local);
+            }
+            var hopper = new HopperBlockEntity(runtime.storage().worldPosition(subLevel.plot(), local), state);
+            hopper.setItem(0, new ItemStack(Items.DIAMOND, 3));
+            runtime.storage().level().setBlockEntity(hopper);
+            runtime.refreshGeometry(id);
+            server.getPlayerList().getPlayers().getFirst().setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            hopperPrepared = true;
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_HOPPER_PREPARED local={}", local);
+        } catch (Throwable error) {
+            fail(error.toString());
+        }
+    }
+
+    private static org.academy.internal.common.structure.space.NativeStructureView.Cell findBlock(
+            NativeStructureProjectionEntity projection, net.minecraft.world.level.block.Block block) {
+        for (var cell : projection.view().cells()) {
+            if (cell.state().is(block)) return cell;
+        }
+        return null;
     }
 
     private static void prepareChest(MinecraftServer server, SubLevelId id) {

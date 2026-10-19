@@ -14,7 +14,7 @@
 | `SubLevelInteractPacket` | 客户端→服务端：id、local pos、face、hit point、hand、USE/BREAK/PLACE |
 | `SubLevelClientState.raycast` | 客户端用 state-only view 做精确方块射线，不依赖投影实体 AABB |
 | `SubLevelClientInteraction` | 接入 `Minecraft.startAttack/startUseItem`，命中 SubLevel 时发送交互包 |
-| `SubLevelChestContainer` | 单箱菜单代理，槽位委托 plot 的真实 `ChestBlockEntity`，`stillValid` 用宿主玩家距离 |
+| `SubLevelContainer` | 通用容器代理，槽位委托 plot 的真实 BlockEntity，`stillValid` 用宿主玩家距离 |
 
 设计要点：
 
@@ -64,6 +64,7 @@ SUBLEVEL_CLIENT_SMOKE_PASSED ... frames=865
 CLIENT_SUBLEVEL_CHEST_PREPARED local=BlockPos{x=0, y=0, z=0}
 CLIENT_SUBLEVEL_CHEST_SENT local=BlockPos{x=0, y=0, z=0}
 CLIENT_SUBLEVEL_CHEST_OPENED screen=ContainerScreen slots=63 item0=3 minecraft:diamond
+CLIENT_SUBLEVEL_HOPPER_OPENED screen=HopperScreen slots=41 item0=3 minecraft:diamond
 CLIENT_SUBLEVEL_DOUBLE_CHEST_OPENED screen=ContainerScreen slots=90 item0=3 minecraft:diamond
 ```
 

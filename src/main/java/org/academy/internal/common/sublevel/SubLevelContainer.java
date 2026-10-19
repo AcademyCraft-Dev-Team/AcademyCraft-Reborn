@@ -7,12 +7,12 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 
 /** Delegates chest slots to the real plot BlockEntity while validating the host-space player. */
-final class SubLevelChestContainer implements Container {
+final class SubLevelContainer implements Container {
     private final ServerLevel host;
     private final Container chest;
     private final Vec3 worldCenter;
 
-    SubLevelChestContainer(ServerLevel host, Container chest, Vec3 worldCenter) {
+    SubLevelContainer(ServerLevel host, Container chest, Vec3 worldCenter) {
         this.host = host;
         this.chest = chest;
         this.worldCenter = worldCenter;
