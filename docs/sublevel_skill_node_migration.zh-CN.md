@@ -142,7 +142,7 @@
 - `control` 为 SubLevel ref 生成 `ProgramStructureControl` 并登记；
 - `launch` 调用 `SubLevelSkillSupport.launch`；
 - `release` 只释放控制 token；
-- `move`、`staticize` 对 SubLevel 返回 unavailable，作为下一步。
+- `move`、`rotate` 已进入 Phase 4；`staticize` 仍 unavailable。
 
 默认关闭，旧 Aeromanip 程序路径不变。已在客户端烟测中打开 flag 跑通最短链路：
 
@@ -164,7 +164,7 @@ launch=COMPLETED release=COMPLETED
 
 - `move` 当前是目标中心平移（`SubLevelSkillSupport.translate`），不是连续力控制；
 - `rotate` 当前只支持 Y 轴 yaw；
-- `staticize` 仍 unavailable；
+- `staticize` 仍 unavailable，未作为通过项；
 - 直接 HighSpeedJet 技能尚未迁移。
 
 ## 12. 下一步

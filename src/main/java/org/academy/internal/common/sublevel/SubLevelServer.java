@@ -218,7 +218,7 @@ public final class SubLevelServer {
                 for (var box : boxes) {
                     if (local.x < box.minX - 0.1 || local.x > box.maxX + 0.1
                             || local.z < box.minZ - 0.1 || local.z > box.maxZ + 0.1) continue;
-                    if (local.y >= box.maxY - 0.3 && local.y <= box.maxY + 0.4) {
+                    if (local.y >= box.maxY - 0.3 && local.y <= box.maxY + 0.5) {
                         top = Math.max(Double.isNaN(top) ? Double.NEGATIVE_INFINITY : top, box.maxY);
                     }
                 }
