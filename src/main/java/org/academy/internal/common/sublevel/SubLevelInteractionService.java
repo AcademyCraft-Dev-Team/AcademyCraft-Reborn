@@ -19,7 +19,6 @@ import net.minecraft.world.inventory.FurnaceMenu;
 import net.minecraft.world.inventory.HopperMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.SmokerMenu;
-import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -37,6 +36,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import org.academy.AcademyCraft;
+import org.academy.mixin.common.AbstractFurnaceBlockEntityAccessor;
 
 /**
  * Phase 3 server-side interaction bridge. It uses the real plot Level for vanilla block use,
@@ -165,7 +165,7 @@ public final class SubLevelInteractionService {
         if (blockEntity instanceof AbstractFurnaceBlockEntity furnace) {
             var center = subLevel.pose().localToWorldPoint(Vec3.atCenterOf(local));
             var proxy = new SubLevelContainer(runtime.host(), furnace, center);
-            var data = new SimpleContainerData(AbstractFurnaceMenu.DATA_COUNT);
+            var data = ((AbstractFurnaceBlockEntityAccessor) furnace).academy$dataAccess();
             var title = Component.translatable("container.furnace");
             player.openMenu(new SimpleMenuProvider((containerId, inventory, ignored) -> {
                 if (state.is(Blocks.BLAST_FURNACE)) {

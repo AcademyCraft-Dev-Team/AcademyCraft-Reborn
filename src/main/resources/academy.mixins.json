@@ -16,6 +16,7 @@
     "common.MixinMeltdownerResistance",
     "common.MixinPlayerDamageContext",
     "common.AbstractArrowVectorAccessor",
+    "common.AbstractFurnaceBlockEntityAccessor",
     "common.EntitySharedFlagInvoker",
     "common.EntityNativeStructureDropAccess",
     "common.EntityStateAccessor",
