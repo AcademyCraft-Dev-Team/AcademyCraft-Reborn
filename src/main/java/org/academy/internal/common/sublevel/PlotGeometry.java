@@ -41,6 +41,29 @@ public final class PlotGeometry {
         int blocks = 0;
         var context = CollisionContext.empty();
         var position = new BlockPos.MutableBlockPos();
+        boolean full = true;
+        for (int x = minX; x < maxX && full; x++) {
+            for (int y = minY; y < maxY && full; y++) {
+                for (int z = minZ; z < maxZ; z++) {
+                    position.set(x, y, z);
+                    var state = storage.blockState(plot, position);
+                    if (state.isAir() || !state.isCollisionShapeFullBlock(storage.level(),
+                            storage.worldPosition(plot, position))) {
+                        full = false;
+                        break;
+                    }
+                }
+            }
+        }
+        if (full) {
+            var center = localBounds.getCenter();
+            var half = new PhysicsVector(localBounds.getXsize() / 2.0, localBounds.getYsize() / 2.0,
+                    localBounds.getZsize() / 2.0);
+            return new Capture(List.of(new PhysicsBox(
+                    new PhysicsVector(center.x - localBounds.minX, center.y - localBounds.minY,
+                            center.z - localBounds.minZ),
+                    PhysicsQuaternion.IDENTITY, half)), (maxX - minX) * (maxY - minY) * (maxZ - minZ));
+        }
         for (int x = minX; x < maxX; x++) {
             for (int y = minY; y < maxY; y++) {
                 for (int z = minZ; z < maxZ; z++) {

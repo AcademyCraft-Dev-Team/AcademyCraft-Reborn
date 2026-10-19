@@ -23,6 +23,7 @@ import org.academy.internal.client.structure.NativeStructureMiningClient;
 import org.joml.Quaternionf;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /** State-only models, including an explicit single chest path, without inventory or block entities. */
@@ -80,7 +81,33 @@ public final class NativeStructureProjectionRenderer
         var pose = state.pose;
         poseStack.mulPose(new Quaternionf((float) pose.rotationX(), (float) pose.rotationY(),
                 (float) pose.rotationZ(), (float) pose.rotationW()).normalize());
+        if (state.batchedBlocks != null) {
+            var batchQuads = state.batchedBlocks.getQuads(null);
+            nodeCollector.submitCustomGeometry(poseStack,
+                    net.minecraft.client.renderer.rendertype.RenderTypes.solidMovingBlock(),
+                    (batchPose, buffer) -> {
+                        for (var quad : batchQuads) {
+                            var direction = quad.direction();
+                            float nx = direction == null ? 0 : direction.getStepX();
+                            float ny = direction == null ? 1 : direction.getStepY();
+                            float nz = direction == null ? 0 : direction.getStepZ();
+                            for (int vertex = 0; vertex < 4; vertex++) {
+                                var position = quad.position(vertex);
+                                long packed = quad.packedUV(vertex);
+                                buffer.addVertex(batchPose, position.x(), position.y(), position.z());
+                                buffer.setColor(255, 255, 255, 255);
+                                buffer.setUv(Float.intBitsToFloat((int) packed),
+                                        Float.intBitsToFloat((int) (packed >>> 32)));
+                                buffer.setUv1(OverlayTexture.NO_OVERLAY & 0xFFFF,
+                                        (OverlayTexture.NO_OVERLAY >>> 16) & 0xFFFF);
+                                buffer.setLight(state.batchLightCoords);
+                                buffer.setNormal(batchPose, nx, ny, nz);
+                            }
+                        }
+                    });
+        }
         for (var cell : state.blocks) {
+            if (state.batchedBlocks != null) break;
             var position = cell.localPosition();
             poseStack.pushPose();
             poseStack.translate(position.getX(), position.getY(), position.getZ());

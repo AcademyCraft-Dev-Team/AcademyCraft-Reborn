@@ -49,6 +49,7 @@ public final class SubLevelStatePacket extends Packet<ClientPacketListener, SubL
             if (cellCount > NativeStructureView.MAX_CELLS) {
                 throw new IllegalArgumentException("Too many SubLevel view cells");
             }
+            boolean solid = input.readBoolean();
             var cells = new ArrayList<NativeStructureView.Cell>(cellCount);
             for (int index = 0; index < cellCount; index++) {
                 var position = new BlockPos(input.readShort(), input.readShort(), input.readShort());
@@ -57,7 +58,7 @@ public final class SubLevelStatePacket extends Packet<ClientPacketListener, SubL
                 cells.add(new NativeStructureView.Cell(position, state));
             }
             if (input.isReadable()) throw new IllegalArgumentException("Unexpected SubLevel state payload");
-            var view = cells.isEmpty() ? NativeStructureView.EMPTY : new NativeStructureView(cells);
+            var view = cells.isEmpty() ? NativeStructureView.EMPTY : new NativeStructureView(cells, solid);
             return new SubLevelStatePacket(id, plot, pose, boxes, view, removed, fullView);
         }
 
@@ -81,6 +82,7 @@ public final class SubLevelStatePacket extends Packet<ClientPacketListener, SubL
                 output.writeDouble(box.maxX); output.writeDouble(box.maxY); output.writeDouble(box.maxZ);
             }
             output.writeShort(packet.view.cells().size());
+            output.writeBoolean(packet.view.solid());
             for (var cell : packet.view.cells()) {
                 output.writeShort(cell.position().getX());
                 output.writeShort(cell.position().getY());

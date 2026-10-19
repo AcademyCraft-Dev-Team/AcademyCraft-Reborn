@@ -1,6 +1,7 @@
 package org.academy.internal.client.validation;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.Screenshot;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.block.Blocks;
@@ -26,6 +27,7 @@ public final class SubLevelLargeClientSmoke {
     private static volatile SubLevelCaptureService.Result result;
     private static volatile String failure;
     private static volatile int ticks;
+    private static volatile boolean benchmarkLogged;
     private static int warmup;
     private static int measured;
     private static long fpsSum;
@@ -51,7 +53,8 @@ public final class SubLevelLargeClientSmoke {
         NativeStructureProjectionEntity projection = null;
         for (var entity : minecraft.level.entitiesForRendering()) {
             if (entity instanceof NativeStructureProjectionEntity candidate && candidate.isClientOnly()
-                    && candidate.view().cells().size() == result.blocks()) {
+                    && (candidate.view().cells().size() == result.blocks()
+                    || (SOLID && !candidate.view().cells().isEmpty()))) {
                 projection = candidate;
                 break;
             }
@@ -71,9 +74,15 @@ public final class SubLevelLargeClientSmoke {
         fpsSum += fps;
         fpsMin = Math.min(fpsMin, fps);
         if (++measured < 120) return;
-        AcademyCraft.LOGGER.info("SUBLEVEL_LARGE_BENCHMARK side={} cells={} fps_avg={} fps_min={} ticks={}",
-                SIDE, result.blocks(), fpsSum / (double) measured, fpsMin, measured);
-        minecraft.stop();
+        if (benchmarkLogged) return;
+        benchmarkLogged = true;
+        var name = "sublevel-large-" + (SOLID ? "solid" : "shell") + "-"
+                + ProcessHandle.current().pid() + "-" + System.currentTimeMillis() + ".png";
+        var path = minecraft.gameDirectory.toPath().resolve("screenshots").resolve(name).toAbsolutePath();
+        AcademyCraft.LOGGER.info("SUBLEVEL_LARGE_BENCHMARK side={} cells={} fps_avg={} fps_min={} ticks={} screenshot={}",
+                SIDE, result.blocks(), fpsSum / (double) measured, fpsMin, measured, path);
+        Screenshot.grab(minecraft.gameDirectory, name, minecraft.gameRenderer.mainRenderTarget(), 1,
+                message -> minecraft.stop());
     }
 
     private static void capture(MinecraftServer server) {

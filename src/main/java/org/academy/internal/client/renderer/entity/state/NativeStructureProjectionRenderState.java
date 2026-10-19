@@ -33,6 +33,8 @@ public final class NativeStructureProjectionRenderState extends EntityRenderStat
     public StructurePose pose = StructurePose.identity(Vec3.ZERO);
     public int projectionEntityId;
     public long runtimeRevision;
+    public BlockStateModelPart batchedBlocks;
+    public int batchLightCoords;
 
     private NativeStructureView cachedView = NativeStructureView.EMPTY;
 
@@ -41,6 +43,7 @@ public final class NativeStructureProjectionRenderState extends EntityRenderStat
         pose = currentPose;
         if (cachedView != view) {
             cachedView = view;
+            batchedBlocks = null;
             blocks.clear();
             chests.clear();
             for (var cell : view.cells()) {
@@ -52,6 +55,14 @@ public final class NativeStructureProjectionRenderState extends EntityRenderStat
                     }
                 }
             }
+        }
+        if (BatchedBlockGeometry.eligible(view)) {
+            if (batchedBlocks == null) {
+                batchedBlocks = BatchedBlockGeometry.buildCached(view, level);
+                batchLightCoords = LightCoordsUtil.getLightCoords(level, BlockPos.containing(currentPose.worldOrigin()));
+            }
+        } else {
+            batchedBlocks = null;
         }
         var lighting = rotatedLighting(level.cardinalLighting(), currentPose);
         for (var block : blocks) block.renderState().updateFrame(level, currentPose, lighting);

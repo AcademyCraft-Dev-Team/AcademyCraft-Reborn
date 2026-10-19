@@ -17,18 +17,12 @@
 | 64 场景 | fps_avg=98.49 fps_min=72 |
 | 256 场景 | fps_avg=96.44 fps_min=72 |
 | 24³ 空心壳 | fps_avg=116.58 fps_min=109 |
+| 24³ 实心体 | 1 个碰撞盒、3,456 quads、fps_avg=117.84 fps_min=116 |
 
 ## 未完成
 
 1. 具体技能迁移
    - SubLevelSkillSupport 已存在，但现有技能仍调用旧 StructurePhysics / Region；没有技能实际走 SubLevel 捕获与运动控制。
-
-2. 24³ 实心体
-   - 捕获 13,824 格成功；
-   - 逐 cell 渲染超时；
-   - 单节点 19,056 quad 批处理仍超时；
-   - 面剔除原型未完成可测的 60 FPS；
-   - 需要 section 网格、分桶和面级剔除。
 
 3. 有轨载具
    - ArmorStand 载具/乘客已通过；

@@ -24,13 +24,17 @@ public final class PlotView {
         int maxY = (int) Math.ceil(localBounds.maxY);
         int maxZ = (int) Math.ceil(localBounds.maxZ);
         var cells = new ArrayList<NativeStructureView.Cell>();
+        var allFilled = true;
         var position = new BlockPos.MutableBlockPos();
         for (int x = minX; x < maxX; x++) {
             for (int y = minY; y < maxY; y++) {
                 for (int z = minZ; z < maxZ; z++) {
                     position.set(x, y, z);
                     var state = storage.blockState(plot, position);
-                    if (state.isAir() || !NativeStructureView.isSupportedState(state)) continue;
+                    if (state.isAir() || !NativeStructureView.isSupportedState(state)) {
+                        allFilled = false;
+                        continue;
+                    }
                     if (occluded(storage, plot, position)) continue;
                     if (cells.size() >= NativeStructureView.MAX_CELLS) {
                         throw new IllegalStateException("SubLevel view exceeds " + NativeStructureView.MAX_CELLS + " cells");
@@ -39,7 +43,8 @@ public final class PlotView {
                 }
             }
         }
-        return cells.isEmpty() ? NativeStructureView.EMPTY : new NativeStructureView(List.copyOf(cells));
+        return cells.isEmpty() ? NativeStructureView.EMPTY
+                : new NativeStructureView(List.copyOf(cells), allFilled);
     }
 
     /** Drops fully enclosed opaque cells; collision geometry remains complete in PlotGeometry. */
