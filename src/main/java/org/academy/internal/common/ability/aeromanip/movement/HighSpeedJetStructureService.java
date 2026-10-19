@@ -38,6 +38,10 @@ import org.academy.internal.common.ability.aeromanip.skills.lv4.HighSpeedJet;
 import org.academy.internal.common.ability.aeromanip.targeting.AeromanipTargeting;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+import org.academy.internal.common.sublevel.SubLevelId;
+import org.academy.internal.common.sublevel.SubLevelServer;
+import org.academy.internal.common.sublevel.SubLevelSkillSupport;
+import org.academy.internal.common.sublevel.SubLevelStructureHandle;
 import org.academy.internal.common.structure.StructureBackendRouter;
 import org.academy.internal.common.world.entity.skill.HighSpeedJetNozzle;
 import org.academy.internal.common.world.entity.structure.NativeStructureProjectionEntity;
@@ -83,6 +87,8 @@ public final class HighSpeedJetStructureService {
 
     private static final Map<UUID, CaptureState> CAPTURES = new HashMap<>();
     private static final Map<UUID, Session> SESSIONS = new HashMap<>();
+    private static final Map<UUID, SubLevelSession> SUB_LEVEL_SESSIONS = new HashMap<>();
+    private static final boolean SUB_LEVEL_DIRECT = Boolean.getBoolean("academy.sublevelDirectSkills");
 
     private HighSpeedJetStructureService() {
     }
@@ -118,6 +124,10 @@ public final class HighSpeedJetStructureService {
         if (capture != null) {
             return Optional.of(new Diagnostic(Stage.CAPTURING, capture.reference,
                     capture.positions.size(), false, sable(capture.reference), 0.0, 0));
+        }
+        var direct = SUB_LEVEL_SESSIONS.get(player.getUUID());
+        if (direct != null) {
+            return Optional.of(new Diagnostic(Stage.THRUSTING, direct.reference(), 0, true, false, 0.0, 0));
         }
         var session = SESSIONS.get(player.getUUID());
         if (session == null) return Optional.empty();
@@ -576,6 +586,7 @@ public final class HighSpeedJetStructureService {
             float costMultiplier
     ) {
         requireThread(player);
+        if (SUB_LEVEL_DIRECT) return launchSubLevelDirect(player, request, costMultiplier);
         if (request == null
                 || !(player.level() instanceof ServerLevel level)
                 || !Skills.HIGH_SPEED_JET.get().isEnabled(player)
@@ -629,6 +640,35 @@ public final class HighSpeedJetStructureService {
         var launchId = UUID.randomUUID();
         beginSession(player, launchId, reference, request, List.copyOf(nozzles), plan.targetNozzle,
                 plan.launchDirection, List.copyOf(positions), costMultiplier);
+        return Optional.of(new LaunchHandle(playerId, launchId));
+    }
+
+    private static Optional<LaunchHandle> launchSubLevelDirect(ServerPlayer player, LaunchRequest request,
+                                                               float costMultiplier) {
+        if (request == null || !(player.level() instanceof ServerLevel level)
+                || !Skills.HIGH_SPEED_JET.get().isEnabled(player)
+                || !Float.isFinite(costMultiplier) || costMultiplier <= 0.0f) return Optional.empty();
+        var playerId = player.getUUID();
+        SUB_LEVEL_SESSIONS.remove(playerId);
+        var selection = BlockStructureApi.selectSphere(level, request.seed, request.structureRadius,
+                capturePolicy(player));
+        if (!selection.succeeded()) return Optional.empty();
+        var positions = cropToBudget(selection.positions(), request.seed,
+                Math.min(cellBudget(level), MAXIMUM_PROGRAM_BUDGET));
+        if (positions.isEmpty() || !positions.contains(request.seed)) return Optional.empty();
+        var id = SubLevelSkillSupport.capture(level, positions, capturePermission(player)).orElse(null);
+        if (id == null) return Optional.empty();
+        var runtime = SubLevelServer.runtime(level.getServer()).orElse(null);
+        var subLevel = runtime == null ? null : runtime.get(id).orElse(null);
+        if (runtime == null || subLevel == null) return Optional.empty();
+        var direction = request.desiredDirection == null ? player.getLookAngle() : request.desiredDirection;
+        if (direction.lengthSqr() < 1.0E-8) return Optional.empty();
+        var speed = Math.max(0.5, Math.min(32.0, request.power() * 5.0));
+        if (!SubLevelSkillSupport.launch(level.getServer(), id, direction, speed)) return Optional.empty();
+        var handle = new SubLevelStructureHandle(subLevel, runtime.storage(), level.dimension().identifier());
+        var launchId = UUID.randomUUID();
+        SUB_LEVEL_SESSIONS.put(playerId, new SubLevelSession(launchId, id, handle.reference(),
+                level.getGameTime() + Math.max(1, request.durationTicks())));
         return Optional.of(new LaunchHandle(playerId, launchId));
     }
 
@@ -892,6 +932,7 @@ public final class HighSpeedJetStructureService {
         if (player == null) return;
         var playerId = player.getUUID();
         MountedJetStructureControls.clear(playerId);
+        SUB_LEVEL_SESSIONS.remove(playerId);
         var capture = CAPTURES.remove(playerId);
         if (capture != null) {
             AcademyCraft.LOGGER.info("High-Speed Jet capture {} tracking cleared at a player lifecycle boundary",
@@ -1762,8 +1803,15 @@ public final class HighSpeedJetStructureService {
             if (capture != null && capture.transactionId.equals(launchId)) {
                 CAPTURES.remove(playerId);
             }
+            var direct = SUB_LEVEL_SESSIONS.get(playerId);
+            if (direct != null && direct.launchId().equals(launchId)) {
+                SUB_LEVEL_SESSIONS.remove(playerId);
+            }
             stopSession(playerId, launchId, "handle_closed");
         }
+    }
+
+    private record SubLevelSession(UUID launchId, SubLevelId id, StructureRef reference, long expiresAt) {
     }
 
     public static final class Session {

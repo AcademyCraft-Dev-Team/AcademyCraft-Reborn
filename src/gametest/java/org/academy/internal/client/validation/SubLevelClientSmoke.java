@@ -19,6 +19,7 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.program.ServerAeromanipProgramRuntime;
+import org.academy.internal.common.ability.aeromanip.movement.HighSpeedJetStructureService;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.DoorBlock;
@@ -1196,6 +1197,20 @@ public final class SubLevelClientSmoke {
                     || staticize.result().status() != ProgramStructureOperationResult.Status.COMPLETED) {
                 throw new IllegalStateException("program move/rotate/launch/release/staticize failed");
             }
+            var directSeed = seed.offset(0, 0, 8);
+            for (int dx = 0; dx < 2; dx++) {
+                for (int dy = 0; dy < 2; dy++) {
+                    for (int dz = 0; dz < 2; dz++) {
+                        level.setBlock(directSeed.offset(dx, dy, dz), Blocks.IRON_BLOCK.defaultBlockState(), 3);
+                    }
+                }
+            }
+            var direct = HighSpeedJetStructureService.launch(player,
+                    new HighSpeedJetStructureService.LaunchRequest(directSeed, null,
+                            new Vec3(0.0, 1.0, 0.0), 2.0, 1.0f, 200, false), 1.0f);
+            if (direct.isEmpty()) throw new IllegalStateException("direct jet launch failed");
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_DIRECT_JET launch_id={}", direct.get().launchId());
+            direct.get().close();
         } catch (Throwable error) {
             fail("program chain probe: " + error);
         }

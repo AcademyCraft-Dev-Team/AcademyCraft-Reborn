@@ -166,11 +166,11 @@ CLIENT_SUBLEVEL_MOTION_PROBE delta=3.046
 - `move` 使用 `SubLevelMotionController` 连续速度控制，20 tick 实测上移约 3.05 格；
 - `rotate` 当前只支持 Y 轴 yaw；
 - `staticize` 已通过：把 plot 内容写回宿主指定原点并移除 SubLevel；
-- 直接 HighSpeedJet 技能尚未迁移。
+- 直接 HighSpeedJet 已增加 SubLevel 实验路径：`academy.sublevelDirectSkills=true` 时捕获并施加一次方向冲量；尚未接入喷嘴/持续推力/资源成本。
 
 ## 12. 下一步
 
-1. 将 move 从 teleport 改为连续控制；
-2. 迁移 HighSpeedJet 直接技能；
-3. 再进入 Electromaster / Accelerator；
-4. 补三族 StructureProgramWorldSmoke 基线。
+1. 将 HighSpeedJet 直接路径接入喷嘴、持续推力和资源成本；
+2. 迁移 Electromaster / Accelerator；
+3. 补三族 StructureProgramWorldSmoke 基线；
+4. 把 direct skill 的释放/静态化接入统一事务。
