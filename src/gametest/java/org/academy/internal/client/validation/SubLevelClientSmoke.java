@@ -20,6 +20,8 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.program.ServerAeromanipProgramRuntime;
 import org.academy.internal.common.ability.aeromanip.movement.HighSpeedJetStructureService;
+import org.academy.internal.common.world.entity.EntityTypes;
+import org.academy.internal.common.world.entity.skill.HighSpeedJetNozzle;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.DoorBlock;
@@ -1205,6 +1207,9 @@ public final class SubLevelClientSmoke {
                     }
                 }
             }
+            var nozzle = new HighSpeedJetNozzle(EntityTypes.HIGH_SPEED_JET_NOZZLE.get(), level);
+            nozzle.attach(player.getUUID(), directSeed, Direction.DOWN);
+            level.addFreshEntity(nozzle);
             var direct = HighSpeedJetStructureService.launch(player,
                     new HighSpeedJetStructureService.LaunchRequest(directSeed, null,
                             new Vec3(0.0, 1.0, 0.0), 2.0, 1.0f, 200, false), 1.0f);

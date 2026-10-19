@@ -166,7 +166,7 @@ CLIENT_SUBLEVEL_MOTION_PROBE delta=3.046
 - `move` 使用 `SubLevelMotionController` 连续速度控制，20 tick 实测上移约 3.05 格；
 - `rotate` 当前只支持 Y 轴 yaw；
 - `staticize` 已通过：把 plot 内容写回宿主指定原点并移除 SubLevel；
-- 直接 HighSpeedJet 已增加 SubLevel 实验路径：`academy.sublevelDirectSkills=true` 时捕获并施加一次方向冲量；尚未接入喷嘴/持续推力/资源成本。
+- 直接 HighSpeedJet 已增加 SubLevel 实验路径：`academy.sublevelDirectSkills=true` 时经现有喷嘴 plan 捕获并施加一次方向冲量；尚未接入持续推力/资源成本。
 
 ## 12. 下一步
 

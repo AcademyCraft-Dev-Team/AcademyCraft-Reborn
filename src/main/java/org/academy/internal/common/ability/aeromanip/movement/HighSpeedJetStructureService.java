@@ -650,10 +650,9 @@ public final class HighSpeedJetStructureService {
                 || !Float.isFinite(costMultiplier) || costMultiplier <= 0.0f) return Optional.empty();
         var playerId = player.getUUID();
         SUB_LEVEL_SESSIONS.remove(playerId);
-        var selection = BlockStructureApi.selectSphere(level, request.seed, request.structureRadius,
-                capturePolicy(player));
-        if (!selection.succeeded()) return Optional.empty();
-        var positions = cropToBudget(selection.positions(), request.seed,
+        var plan = plan(player, request).orElse(null);
+        if (plan == null) return Optional.empty();
+        var positions = cropToBudget(plan.positions(), request.seed,
                 Math.min(cellBudget(level), MAXIMUM_PROGRAM_BUDGET));
         if (positions.isEmpty() || !positions.contains(request.seed)) return Optional.empty();
         var id = SubLevelSkillSupport.capture(level, positions, capturePermission(player)).orElse(null);
@@ -661,7 +660,7 @@ public final class HighSpeedJetStructureService {
         var runtime = SubLevelServer.runtime(level.getServer()).orElse(null);
         var subLevel = runtime == null ? null : runtime.get(id).orElse(null);
         if (runtime == null || subLevel == null) return Optional.empty();
-        var direction = request.desiredDirection == null ? player.getLookAngle() : request.desiredDirection;
+        var direction = request.desiredDirection == null ? plan.launchDirection() : request.desiredDirection;
         if (direction.lengthSqr() < 1.0E-8) return Optional.empty();
         var speed = Math.max(0.5, Math.min(32.0, request.power() * 5.0));
         if (!SubLevelSkillSupport.launch(level.getServer(), id, direction, speed)) return Optional.empty();
