@@ -138,6 +138,20 @@ public final class SubLevelRuntime {
         return true;
     }
 
+    /** Debug/test-only pose shift that removes the body so a carry probe is deterministic. */
+    public boolean shift(SubLevelId id, Vec3 delta) {
+        var managed = subLevels.get(Objects.requireNonNull(id, "id"));
+        if (managed == null) return false;
+        deactivate(id);
+        var pose = managed.subLevel.pose();
+        var shifted = new StructurePose(pose.worldOrigin().add(Objects.requireNonNull(delta, "delta")),
+                pose.rotationX(), pose.rotationY(), pose.rotationZ(), pose.rotationW());
+        managed.subLevel.setPose(shifted);
+        collision.update(id, managed.localBoxes, shifted);
+        remember(managed.subLevel);
+        return true;
+    }
+
     /** Drops the body but keeps the plot lease and content for a later reactivation. */
     public boolean deactivate(SubLevelId id) {
         var managed = subLevels.get(Objects.requireNonNull(id, "id"));

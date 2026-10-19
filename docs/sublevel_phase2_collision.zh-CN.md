@@ -62,7 +62,17 @@ CLIENT_SUBLEVEL_FALL_PROBE y=64.00027164477902 initial_y=68.44266250000001 delta
 - 客户端已同步 SubLevel 碰撞索引并通过 `CLIENT_SUBLEVEL_COLLISION_PROBE inside=7/8` 验证；
 - `SubLevelRuntime.localBoxes` 当前把 physics box 视为轴对齐；捕获几何是轴对齐的，旋转结构需要 Phase 2 后续做精确变换；
 - AI 寻路的 PathNavigationRegion 已通过 accessor 追加同一套形状；仍待验证复杂寻路/避障；
-- 实体与 SubLevel 的 entity-collision 语义（例如站在结构上的实体搬运）仍待 Phase 2/4 继续。
+- 服务器已加入玩家平移承载：结构姿态变化时，站在顶面 box 上的玩家随 origin delta 移动；仅玩家、仅平移，实体/旋转承载仍待继续。
+
+## 3.1 玩家承载探针
+
+```text
+CLIENT_SUBLEVEL_CARRY_PLACED y=69.53560468750001
+CLIENT_SUBLEVEL_CARRY_SHIFT shifted ...
+CLIENT_SUBLEVEL_CARRY before_y=66.68434687347414 after_y=68.23202656250002 delta=1.547679689025884
+```
+
+结构姿态上移 2 格后，站在顶面的服务器玩家随结构一起上移。
 
 ## 4. 下一步
 

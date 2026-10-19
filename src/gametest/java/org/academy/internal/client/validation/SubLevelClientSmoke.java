@@ -54,6 +54,9 @@ public final class SubLevelClientSmoke {
     private static volatile boolean chestSeen;
     private static volatile boolean doubleChestRequested;
     private static volatile boolean doubleChestPrepared;
+    private static int carryPhase;
+    private static int carryWait;
+    private static double carryBeforeY;
     private static volatile boolean doubleChestSent;
     private static volatile boolean doubleChestSeen;
     private static double initialPoseY = Double.NaN;
@@ -224,6 +227,36 @@ public final class SubLevelClientSmoke {
             }
             return;
         }
+        if (Boolean.getBoolean("academy.sublevel.carryProbe") && chestSeen && carryPhase < 3) {
+            if (carryPhase == 0) {
+                var server = minecraft.getSingleplayerServer();
+                if (server == null) return;
+                server.execute(() -> placeOnTop(server, result.id()));
+                carryPhase = 1;
+                return;
+            }
+            if (carryPhase == 1) {
+                if (++carryWait < 15) return;
+                var server = minecraft.getSingleplayerServer();
+                if (server == null) return;
+                carryBeforeY = minecraft.player.getY();
+                server.execute(() -> {
+                    var shifted = SubLevelServer.shiftFirst(server, 0.0, 2.0, 0.0);
+                    AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_CARRY_SHIFT {}", shifted);
+                });
+                carryPhase = 2;
+                return;
+            }
+            if (++carryWait < 35) return;
+            var afterY = minecraft.player.getY();
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_CARRY before_y={} after_y={} delta={}",
+                    carryBeforeY, afterY, afterY - carryBeforeY);
+            carryPhase = 3;
+            if (afterY - carryBeforeY < 1.0) {
+                fail("player was not carried with the SubLevel");
+                return;
+            }
+        }
         if (Boolean.getBoolean("academy.sublevel.clientCollision") && !collisionProbed) {
             collisionProbed = true;
             var center = projection.renderPose(1.0F).localToWorldPoint(new Vec3(1, 1, 1));
@@ -300,6 +333,22 @@ public final class SubLevelClientSmoke {
             runtime.refreshGeometry(id);
             server.getPlayerList().getPlayers().getFirst().setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
             AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_USE_PREPARED local={}", local);
+        } catch (Throwable error) {
+            fail(error.toString());
+        }
+    }
+
+    private static void placeOnTop(MinecraftServer server, SubLevelId id) {
+        try {
+            var runtime = SubLevelServer.runtime(server).orElseThrow(() -> new IllegalStateException("SubLevel backend unavailable"));
+            var subLevel = runtime.get(id).orElseThrow();
+            var bounds = subLevel.localBounds();
+            var local = new Vec3((bounds.minX + bounds.maxX) / 2.0, bounds.maxY + 0.1,
+                    (bounds.minZ + bounds.maxZ) / 2.0);
+            var world = subLevel.pose().localToWorldPoint(local);
+            var player = server.getPlayerList().getPlayers().getFirst();
+            player.teleportTo(world.x, world.y, world.z);
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_CARRY_PLACED y={}", world.y);
         } catch (Throwable error) {
             fail(error.toString());
         }

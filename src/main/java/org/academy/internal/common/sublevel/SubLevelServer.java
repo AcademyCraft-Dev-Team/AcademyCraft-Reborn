@@ -3,6 +3,7 @@ package org.academy.internal.common.sublevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.PathNavigationRegion;
 import net.minecraft.world.level.storage.LevelResource;
 import io.netty.buffer.Unpooled;
@@ -11,6 +12,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
@@ -140,6 +142,7 @@ public final class SubLevelServer {
         if (runtime == null) return;
         try {
             runtime.runtime.tick(1.0 / 20.0, 2);
+            carryPlayers(event.getServer(), runtime.runtime);
         } catch (RuntimeException | AssertionError failure) {
             AcademyCraft.LOGGER.error("SubLevel physics tick failed", failure);
             RUNTIMES.remove(event.getServer());
@@ -180,6 +183,37 @@ public final class SubLevelServer {
         }, "academy-sublevel-probe-stop");
         thread.setDaemon(true);
         thread.start();
+    }
+
+    /** Translation-only rider carry; rotation is handled by the player's collision update. */
+    private static void carryPlayers(MinecraftServer server, SubLevelRuntime runtime) {
+        var host = runtime.host();
+        var players = host.players();
+        if (players.isEmpty()) return;
+        for (var subLevel : runtime.subLevels()) {
+            var previous = subLevel.previousPose();
+            var current = subLevel.pose();
+            if (previous.equals(current)) continue;
+            var boxes = runtime.localCollisionBoxes(subLevel.id());
+            if (boxes.isEmpty()) continue;
+            var delta = current.worldOrigin().subtract(previous.worldOrigin());
+            if (delta.lengthSqr() > 4.0 || delta.lengthSqr() < 1.0E-8) continue;
+            for (var player : players) {
+                if (player.isSpectator()) continue;
+                var local = previous.worldToLocalPoint(player.position());
+                double top = Double.NaN;
+                for (var box : boxes) {
+                    if (local.x < box.minX - 0.1 || local.x > box.maxX + 0.1
+                            || local.z < box.minZ - 0.1 || local.z > box.maxZ + 0.1) continue;
+                    if (local.y >= box.maxY - 0.3 && local.y <= box.maxY + 0.4) {
+                        top = Math.max(Double.isNaN(top) ? Double.NEGATIVE_INFINITY : top, box.maxY);
+                    }
+                }
+                if (Double.isNaN(top)) continue;
+                player.teleportTo(player.getX() + delta.x, player.getY() + delta.y, player.getZ() + delta.z);
+                AcademyCraft.LOGGER.debug("SubLevel carried player {} by {}", player.getName().getString(), delta);
+            }
+        }
     }
 
     private static boolean snapshotLogged;
@@ -347,6 +381,16 @@ public final class SubLevelServer {
         } catch (RuntimeException failure) {
             return "capture_failed: " + failure.getMessage();
         }
+    }
+
+    /** Test hook: shifts the first SubLevel and removes its body so carry is deterministic. */
+    public static String shiftFirst(MinecraftServer server, double dx, double dy, double dz) {
+        var runtime = RUNTIMES.get(server);
+        if (runtime == null) return "unavailable";
+        var subLevel = runtime.runtime.subLevels().stream().findFirst().orElse(null);
+        if (subLevel == null) return "none";
+        boolean shifted = runtime.runtime.shift(subLevel.id(), new Vec3(dx, dy, dz));
+        return shifted ? "shifted " + subLevel.id().value() : "failed";
     }
 
     public static String removeProbe(MinecraftServer server) {

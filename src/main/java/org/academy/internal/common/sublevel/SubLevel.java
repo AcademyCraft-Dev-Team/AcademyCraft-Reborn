@@ -13,6 +13,7 @@ public final class SubLevel {
     private final PlotPos plot;
     private final AABB localBounds;
     private StructurePose pose;
+    private StructurePose previousPose;
     private SubLevelState state = SubLevelState.ALLOCATED;
     private long revision;
 
@@ -21,16 +22,19 @@ public final class SubLevel {
         this.plot = Objects.requireNonNull(plot, "plot");
         this.localBounds = Objects.requireNonNull(localBounds, "localBounds");
         this.pose = Objects.requireNonNull(pose, "pose");
+        this.previousPose = pose;
     }
 
     public SubLevelId id() { return id; }
     public PlotPos plot() { return plot; }
     public AABB localBounds() { return localBounds; }
     public StructurePose pose() { return pose; }
+    public StructurePose previousPose() { return previousPose; }
     public SubLevelState state() { return state; }
     public long revision() { return revision; }
 
     public void setPose(StructurePose pose) {
+        this.previousPose = this.pose;
         this.pose = Objects.requireNonNull(pose, "pose");
         revision = Math.incrementExact(revision);
     }
