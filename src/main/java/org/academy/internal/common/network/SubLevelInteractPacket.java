@@ -103,9 +103,12 @@ public final class SubLevelInteractPacket extends Packet<ServerGamePacketListene
             if (subLevel == null) return;
             var worldCenter = subLevel.pose().localToWorldPoint(Vec3.atCenterOf(packet.local()));
             if (player.distanceToSqr(worldCenter) > 64.0) return;
-            if (packet.action() != Action.USE
-                    && !SubLevelInteractionService.validateRay(server, packet.id(), packet.local(),
-                    packet.point(), player)) return;
+            boolean valid = packet.action() == Action.USE
+                    ? SubLevelInteractionService.validateProximity(server, packet.id(), packet.local(),
+                    packet.point(), player)
+                    : SubLevelInteractionService.validateRay(server, packet.id(), packet.local(),
+                    packet.point(), player);
+            if (!valid) return;
             switch (packet.action()) {
                 case BREAK -> SubLevelInteractionService.breakBlock(server, packet.id(), packet.local(), player);
                 case USE -> SubLevelInteractionService.useBlock(server, packet.id(), packet.local(),

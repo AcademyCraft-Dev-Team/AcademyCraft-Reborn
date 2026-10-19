@@ -36,6 +36,19 @@ public final class SubLevelInteractionService {
     private SubLevelInteractionService() {
     }
 
+    /** Stable USE guard for moving small blocks: authoritative target existence + reach + hit proximity. */
+    public static boolean validateProximity(MinecraftServer server, SubLevelId id, BlockPos local,
+                                            Vec3 point, ServerPlayer player) {
+        var runtime = SubLevelServer.runtime(server).orElse(null);
+        if (runtime == null) return false;
+        var subLevel = runtime.get(id).orElse(null);
+        if (subLevel == null) return false;
+        var center = subLevel.pose().localToWorldPoint(Vec3.atCenterOf(local));
+        double reach = player.blockInteractionRange() + 1.0;
+        return player.getEyePosition().distanceToSqr(center) <= reach * reach
+                && point.distanceToSqr(center) <= 4.0;
+    }
+
     /** Server-side line-of-sight validation for a client interaction packet. */
     public static boolean validateRay(MinecraftServer server, SubLevelId id, BlockPos local,
                                       Vec3 point, ServerPlayer player) {

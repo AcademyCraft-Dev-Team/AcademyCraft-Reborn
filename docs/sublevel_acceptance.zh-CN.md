@@ -77,4 +77,4 @@ SUBLEVEL_LARGE_BENCHMARK side=24 cells=3176 fps_avg=116.25 fps_min=104 ticks=120
 ## 4. 已知问题
 
 - 探针 `*AndStop` 已改为独立延迟停止线程；256 探针停止不再出现 shutdown StackOverflow。
-- 单箱/双箱代理菜单已打开验证；多格方块、技能事务仍未完成；服务端 BREAK/PLACE 射线复核已接入，USE 射线仍在稳定性处理中。
+- 单箱/双箱代理菜单已打开验证；多格方块、技能事务仍未完成；服务端 BREAK/PLACE 射线复核、USE 邻近校验已接入。
