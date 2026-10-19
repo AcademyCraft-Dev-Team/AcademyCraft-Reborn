@@ -329,7 +329,12 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     @Override
     public StructureOperation extractStructure(ProgramBlockPosition host, int radius, int budget) {
         requireCasterReady(Skills.HIGH_SPEED_JET.get());
-        if (SUB_LEVEL_NODES) return extractSubLevelStructure(host, radius, budget);
+        if (SUB_LEVEL_NODES) {
+            return StructureProgramActions.execute(player, Skills.HIGH_SPEED_JET.get(),
+                    STRUCTURE_EXTRACT_COST * costMultiplier,
+                    () -> extractSubLevelStructure(host, radius, budget),
+                    operation -> operation.result().status() == ProgramStructureOperationResult.Status.COMPLETED);
+        }
         if (pendingExtraction == null) {
             var seed = requireLaunchSeed(host);
             var result = StructureProgramActions.execute(player, Skills.HIGH_SPEED_JET.get(),
@@ -367,7 +372,12 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     public StructureOperation controlStructure(ProgramStructureReference structure) {
         requireCasterReady(Skills.HIGH_SPEED_JET.get());
         Objects.requireNonNull(structure, "structure");
-        if (SubLevelStructureRefs.isSubLevel(structure.reference())) return controlSubLevelStructure(structure);
+        if (SubLevelStructureRefs.isSubLevel(structure.reference())) {
+            return StructureProgramActions.execute(player, Skills.HIGH_SPEED_JET.get(),
+                    STRUCTURE_CONTROL_COST * costMultiplier,
+                    () -> controlSubLevelStructure(structure),
+                    operation -> operation.result().status() == ProgramStructureOperationResult.Status.COMPLETED);
+        }
         var result = StructureProgramActions.execute(player, Skills.HIGH_SPEED_JET.get(),
                 STRUCTURE_CONTROL_COST * costMultiplier,
                 () -> HighSpeedJetStructureService.programControl(
@@ -396,7 +406,10 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
         var rejection = validateControl(control);
         if (rejection != null) return StructureOperation.rejected(rejection);
         if (SubLevelStructureRefs.isSubLevel(control.reference())) {
-            return moveSubLevelStructure(control, target, anchor, seconds);
+            return StructureProgramActions.execute(player, Skills.HIGH_SPEED_JET.get(),
+                    STRUCTURE_MOVE_COST * costMultiplier,
+                    () -> moveSubLevelStructure(control, target, anchor, seconds),
+                    operation -> operation.result().status() == ProgramStructureOperationResult.Status.COMPLETED);
         }
         if (!Double.isFinite(seconds) || seconds < 0.1 || seconds > MAXIMUM_MOVE_SECONDS) {
             return StructureOperation.rejected("invalid_duration");
@@ -442,7 +455,10 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
         var rejection = validateControl(control);
         if (rejection != null) return StructureOperation.rejected(rejection);
         if (SubLevelStructureRefs.isSubLevel(control.reference())) {
-            return launchSubLevelStructure(control, direction, power);
+            return StructureProgramActions.execute(player, Skills.HIGH_SPEED_JET.get(),
+                    STRUCTURE_LAUNCH_COST * costMultiplier,
+                    () -> launchSubLevelStructure(control, direction, power),
+                    operation -> operation.result().status() == ProgramStructureOperationResult.Status.COMPLETED);
         }
         if (!Double.isFinite(seconds) || seconds < 0.1 || seconds > MAXIMUM_LAUNCH_SECONDS) {
             return StructureOperation.rejected("invalid_duration");

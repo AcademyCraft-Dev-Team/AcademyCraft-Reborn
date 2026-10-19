@@ -670,9 +670,10 @@ public final class HighSpeedJetStructureService {
                 Math.max(0.1, request.durationTicks() / 20.0))) return Optional.empty();
         var handle = new SubLevelStructureHandle(subLevel, runtime.storage(), level.dimension().identifier());
         var launchId = UUID.randomUUID();
+        plan.targetNozzle().activate(request.durationTicks());
         SUB_LEVEL_SESSIONS.put(playerId, new SubLevelSession(launchId, id, handle.reference(),
                 level.getGameTime() + Math.max(1, request.durationTicks()), level, request.seed.immutable(),
-                request.restoreWhenSettled()));
+                request.restoreWhenSettled(), plan.targetNozzle()));
         return Optional.of(new LaunchHandle(playerId, launchId));
     }
 
@@ -939,6 +940,7 @@ public final class HighSpeedJetStructureService {
         var directSession = SUB_LEVEL_SESSIONS.remove(playerId);
         if (directSession != null) {
             SubLevelMotionController.cancel(directSession.id());
+            directSession.nozzle().restoreActiveTicks(0);
             if (directSession.restoreWhenSettled()) {
                 SubLevelSkillSupport.staticize(directSession.level().getServer(), directSession.id(),
                         directSession.sourceSeed());
@@ -1818,6 +1820,7 @@ public final class HighSpeedJetStructureService {
             if (direct != null && direct.launchId().equals(launchId)) {
                 SUB_LEVEL_SESSIONS.remove(playerId);
                 SubLevelMotionController.cancel(direct.id());
+                direct.nozzle().restoreActiveTicks(0);
                 if (direct.restoreWhenSettled()) {
                     var restored = SubLevelSkillSupport.staticize(direct.level().getServer(), direct.id(),
                             direct.sourceSeed());
@@ -1830,7 +1833,8 @@ public final class HighSpeedJetStructureService {
     }
 
     private record SubLevelSession(UUID launchId, SubLevelId id, StructureRef reference, long expiresAt,
-                                   ServerLevel level, BlockPos sourceSeed, boolean restoreWhenSettled) {
+                                   ServerLevel level, BlockPos sourceSeed, boolean restoreWhenSettled,
+                                   HighSpeedJetNozzle nozzle) {
     }
 
     public static final class Session {

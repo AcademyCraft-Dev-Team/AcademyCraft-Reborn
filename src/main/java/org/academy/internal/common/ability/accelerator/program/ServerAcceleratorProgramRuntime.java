@@ -397,7 +397,12 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
     @Override
     public StructureOperation extractStructure(ProgramBlockPosition host, int tier, int budget) {
         requireCasterReady(Skills.KINETIC_THROW.get());
-        if (SUB_LEVEL_NODES) return extractSubLevelStructure(host, tier, budget);
+        if (SUB_LEVEL_NODES) {
+            return StructureProgramActions.execute(player, Skills.KINETIC_THROW.get(),
+                    STRUCTURE_EXTRACT_COST * costMultiplier,
+                    () -> extractSubLevelStructure(host, tier, budget),
+                    operation -> operation.result().status() == ProgramStructureOperationResult.Status.COMPLETED);
+        }
         if (pendingExtraction == null) {
             var seed = requireStructureHost(host);
             var result = StructureProgramActions.execute(player, Skills.KINETIC_THROW.get(),
@@ -436,7 +441,12 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
     public StructureOperation controlStructure(ProgramStructureReference structure) {
         requireCasterReady(Skills.KINETIC_THROW.get());
         Objects.requireNonNull(structure, "structure");
-        if (SubLevelStructureRefs.isSubLevel(structure.reference())) return controlSubLevelStructure(structure);
+        if (SubLevelStructureRefs.isSubLevel(structure.reference())) {
+            return StructureProgramActions.execute(player, Skills.KINETIC_THROW.get(),
+                    STRUCTURE_CONTROL_COST * costMultiplier,
+                    () -> controlSubLevelStructure(structure),
+                    operation -> operation.result().status() == ProgramStructureOperationResult.Status.COMPLETED);
+        }
         var result = StructureProgramActions.execute(player, Skills.KINETIC_THROW.get(),
                 STRUCTURE_CONTROL_COST * costMultiplier,
                 () -> VectorStructureService.programControl(
@@ -465,7 +475,10 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
         var rejection = validateControl(control);
         if (rejection != null) return StructureOperation.rejected(rejection);
         if (SubLevelStructureRefs.isSubLevel(control.reference())) {
-            return moveSubLevelStructure(control, target, anchor, seconds);
+            return StructureProgramActions.execute(player, Skills.KINETIC_THROW.get(),
+                    STRUCTURE_MOVE_COST * costMultiplier,
+                    () -> moveSubLevelStructure(control, target, anchor, seconds),
+                    operation -> operation.result().status() == ProgramStructureOperationResult.Status.COMPLETED);
         }
         var destination = resolveMoveTarget(control, target, anchor);
         if (destination == null) return StructureOperation.rejected("move_target_unavailable");
@@ -499,7 +512,10 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
         var rejection = validateControl(control);
         if (rejection != null) return StructureOperation.rejected(rejection);
         if (SubLevelStructureRefs.isSubLevel(control.reference())) {
-            return launchSubLevelStructure(control, direction, strength);
+            return StructureProgramActions.execute(player, Skills.KINETIC_THROW.get(),
+                    STRUCTURE_LAUNCH_COST * costMultiplier,
+                    () -> launchSubLevelStructure(control, direction, strength),
+                    operation -> operation.result().status() == ProgramStructureOperationResult.Status.COMPLETED);
         }
         var normalized = normalized(direction);
         var result = StructureProgramActions.execute(player, Skills.KINETIC_THROW.get(),

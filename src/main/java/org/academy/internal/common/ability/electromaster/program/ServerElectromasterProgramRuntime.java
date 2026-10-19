@@ -260,7 +260,12 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     public StructureOperation extractStructure(ProgramBlockPosition host, int budget,
                                                boolean forceMagnetize) {
         requireCasterReady(Skills.MAGNET_MANIPULATION.get());
-        if (SUB_LEVEL_NODES) return extractSubLevelStructure(host, budget);
+        if (SUB_LEVEL_NODES) {
+            return StructureProgramActions.execute(player, Skills.MAGNET_MANIPULATION.get(),
+                    STRUCTURE_EXTRACT_COST * costMultiplier,
+                    () -> extractSubLevelStructure(host, budget),
+                    operation -> operation.result().status() == ProgramStructureOperationResult.Status.COMPLETED);
+        }
         if (pendingExtraction == null) {
             var seed = requireStructureHost(host);
             var result = StructureProgramActions.execute(player, Skills.MAGNET_MANIPULATION.get(),
@@ -299,7 +304,12 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     public StructureOperation controlStructure(ProgramStructureReference structure) {
         requireCasterReady(Skills.MAGNET_MANIPULATION.get());
         Objects.requireNonNull(structure, "structure");
-        if (SubLevelStructureRefs.isSubLevel(structure.reference())) return controlSubLevelStructure(structure);
+        if (SubLevelStructureRefs.isSubLevel(structure.reference())) {
+            return StructureProgramActions.execute(player, Skills.MAGNET_MANIPULATION.get(),
+                    STRUCTURE_CONTROL_COST * costMultiplier,
+                    () -> controlSubLevelStructure(structure),
+                    operation -> operation.result().status() == ProgramStructureOperationResult.Status.COMPLETED);
+        }
         var result = StructureProgramActions.execute(player, Skills.MAGNET_MANIPULATION.get(),
                 STRUCTURE_CONTROL_COST * costMultiplier,
                 () -> MagneticStructureService.programControl(
@@ -328,7 +338,10 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
         var rejection = validateControl(control);
         if (rejection != null) return StructureOperation.rejected(rejection);
         if (SubLevelStructureRefs.isSubLevel(control.reference())) {
-            return moveSubLevelStructure(control, target, anchor, seconds);
+            return StructureProgramActions.execute(player, Skills.MAGNET_MANIPULATION.get(),
+                    STRUCTURE_MOVE_COST * costMultiplier,
+                    () -> moveSubLevelStructure(control, target, anchor, seconds),
+                    operation -> operation.result().status() == ProgramStructureOperationResult.Status.COMPLETED);
         }
         var destination = resolveMoveTarget(control, target, anchor);
         if (destination == null) return StructureOperation.rejected("move_target_unavailable");
@@ -363,7 +376,10 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
         var rejection = validateControl(control);
         if (rejection != null) return StructureOperation.rejected(rejection);
         if (SubLevelStructureRefs.isSubLevel(control.reference())) {
-            return launchSubLevelStructure(control, direction, power);
+            return StructureProgramActions.execute(player, Skills.MAGNET_MANIPULATION.get(),
+                    STRUCTURE_LAUNCH_COST * costMultiplier,
+                    () -> launchSubLevelStructure(control, direction, power),
+                    operation -> operation.result().status() == ProgramStructureOperationResult.Status.COMPLETED);
         }
         var normalized = normalized(direction);
         var speedScale = ProgramPowerScale.interpolate(ProgramPowerScale.require(power), 0.5, 1.0, 1.5);

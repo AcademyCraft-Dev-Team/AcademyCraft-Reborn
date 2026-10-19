@@ -166,7 +166,7 @@ CLIENT_SUBLEVEL_MOTION_PROBE delta=3.046
 - `move` 使用 `SubLevelMotionController` 连续速度控制，20 tick 实测上移约 3.05 格；
 - `rotate` 当前只支持 Y 轴 yaw；
 - `staticize` 已通过：把 plot 内容写回宿主指定原点并移除 SubLevel；
-- 直接 HighSpeedJet 已增加 SubLevel 实验路径：`academy.sublevelDirectSkills=true` 时经现有喷嘴 plan 捕获并施加一次方向冲量；独立 `sublevel_direct_skill.init.gradle` 实测 `CLIENT_SUBLEVEL_DIRECT_JET launch_id=...`；已接入持续速度推力（`SubLevelMotionController.thrust`）和 30 CP 资源扣除；`restoreWhenSettled=true` 时 handle 关闭会事务式 staticize 回源坐标，实测 `High-Speed Jet direct restore ... true staticized`；尚未接入撞击结算/粒子音效。
+- 直接 HighSpeedJet 已增加 SubLevel 实验路径：`academy.sublevelDirectSkills=true` 时经现有喷嘴 plan 捕获并施加一次方向冲量；独立 `sublevel_direct_skill.init.gradle` 实测 `CLIENT_SUBLEVEL_DIRECT_JET launch_id=...`；已接入持续速度推力（`SubLevelMotionController.thrust`）、30 CP 资源扣除和喷嘴激活/VFX；`restoreWhenSettled=true` 时 handle 关闭会事务式 staticize 回源坐标，实测 `High-Speed Jet direct restore ... true staticized`；尚未接入撞击结算/音效。
 
 ## 12. Phase 5：Accelerator / Electromaster 状态
 
@@ -185,6 +185,9 @@ move=COMPLETED rotate=COMPLETED launch=COMPLETED release=COMPLETED staticize=COM
 
 Electromaster 的 extract 使用 4 格半径并受预算约束；staticize 测试目标上移，避免把地下捕获块写回原地面。
 
+三族的 SubLevel 程序节点已补齐资源扣除：extract/control/move/launch 分别走
+`StructureProgramActions`，release/staticize 不收费；direct smoke 在全链路下通过。
+
 ## 13. `StructureProgramWorldSmoke` 基线
 
 专服隔离世界 `run/native-structure-physics-smoke-server-sublevel-r6` 返回 `PASSED`，三族图节点均完成：
@@ -199,7 +202,10 @@ physical_structure_plasma_world_target_and_impact=academy:native_level
 瞄准偏差的根因是 `HighSpeedJetNozzle` 作为可拾取实体被 `ProjectileUtil` 选中，
 覆盖了其后的结构表面。修复为技术附件不可拾取；`WorldBlockTargets.Target` 同时
 增加 `Source` 标记，便于技能区分地形/结构命中。
-客户端复制世界仍因原生槽位已被占用，未启动 kinetic 捕获。
+客户端复制世界在清除 `data/academy` 与残留 `dimensions/academy/structure_space_*`、
+`sublevel_plots` 后，`run/native-structure-physics-smoke-client-sublevel-r4` 返回
+`NATIVE_STRUCTURE_PHYSICS_CLIENT_PASSED moving_samples=40`。
+这说明此前失败是夹具世界残留数据，不是生产槽位分配逻辑。
 
 ## 14. 下一步
 
