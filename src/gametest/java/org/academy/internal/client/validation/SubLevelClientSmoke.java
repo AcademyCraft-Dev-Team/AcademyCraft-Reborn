@@ -104,6 +104,10 @@ public final class SubLevelClientSmoke {
     private static volatile boolean doubleChestSent;
     private static volatile boolean doubleChestSeen;
     private static double initialPoseY = Double.NaN;
+    private static boolean launchRequested;
+    private static int launchWait;
+    private static double launchInitialY = Double.NaN;
+    private static boolean launchProbed;
     private static int holdTicks;
     private static volatile SubLevelCaptureService.Result result;
     private static int ticks;
@@ -582,6 +586,26 @@ public final class SubLevelClientSmoke {
                 AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_FALL_PROBE y={} initial_y={} delta={}",
                         projection.viewState().pose().worldOrigin().y, initialPoseY,
                         projection.viewState().pose().worldOrigin().y - initialPoseY);
+            }
+        }
+        if (Boolean.getBoolean("academy.sublevel.launchProbe") && !launchProbed) {
+            if (!launchRequested) {
+                launchRequested = true;
+                launchInitialY = projection.viewState().pose().worldOrigin().y;
+                var server = minecraft.getSingleplayerServer();
+                if (server == null) return;
+                server.execute(() -> AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_LAUNCH {}",
+                        SubLevelServer.launchFirst(server, new Vec3(0.0, 1.0, 0.0), 5.0)));
+                return;
+            }
+            if (++launchWait < 20) return;
+            var y = projection.viewState().pose().worldOrigin().y;
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_LAUNCH_PROBE y={} initial_y={} delta={}",
+                    y, launchInitialY, y - launchInitialY);
+            launchProbed = true;
+            if (y - launchInitialY < 0.05) {
+                fail("launch impulse did not move the SubLevel");
+                return;
             }
         }
         var frames = NativeStructureProjectionRenderer.submittedFrames(projection.getId());

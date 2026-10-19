@@ -94,6 +94,14 @@ public final class SubLevelPhysicsUniverse {
         return entry == null ? Optional.empty() : Optional.of(entry.motion);
     }
 
+    public boolean impulse(SubLevelId id, PhysicsVector impulse, PhysicsVector worldPoint) {
+        var entry = entries.get(id);
+        if (entry == null) return false;
+        world.impulse(entry.bodies.getFirst(), impulse, worldPoint);
+        revision = Math.incrementExact(revision);
+        return true;
+    }
+
     public boolean contains(SubLevelId id) {
         return entries.containsKey(id);
     }

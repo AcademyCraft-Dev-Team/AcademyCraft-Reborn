@@ -155,6 +155,25 @@ public final class SubLevelRuntime {
         return true;
     }
 
+    /** Applies one bounded launch impulse through the active SubLevel body. */
+    public boolean launch(SubLevelId id, Vec3 direction, double speed) {
+        var managed = subLevels.get(Objects.requireNonNull(id, "id"));
+        if (managed == null || direction.lengthSqr() < 1.0E-8 || !Double.isFinite(speed) || speed <= 0.0) return false;
+        if (managed.subLevel.state() == SubLevelState.INACTIVE) {
+            var geometry = PlotGeometry.capture(storage, managed.subLevel.plot(), managed.subLevel.localBounds());
+            if (geometry.boxes().isEmpty()) return false;
+            if (!activate(id, physicsPose(managed.subLevel.pose()), geometry.boxes())) return false;
+        }
+        var motion = universe.motion(id).orElse(null);
+        if (motion == null) return false;
+        var unit = direction.normalize();
+        var impulse = new org.academy.internal.common.structure.physics.PhysicsVector(
+                unit.x * speed * motion.mass(), unit.y * speed * motion.mass(), unit.z * speed * motion.mass());
+        var center = managed.subLevel.pose().localToWorldPoint(managed.subLevel.localBounds().getCenter());
+        return universe.impulse(id, impulse, new org.academy.internal.common.structure.physics.PhysicsVector(
+                center.x, center.y, center.z));
+    }
+
     /** Debug/test-only pose shift that removes the body so a carry probe is deterministic. */
     public boolean shift(SubLevelId id, Vec3 delta) {
         var managed = subLevels.get(Objects.requireNonNull(id, "id"));

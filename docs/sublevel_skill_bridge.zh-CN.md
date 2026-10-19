@@ -11,6 +11,7 @@
 | `pose(MinecraftServer, SubLevelId)` | 读取当前姿态 |
 | `translate(MinecraftServer, SubLevelId, Vec3)` | 平移并停用物理 body，供事务/调试使用 |
 | `rotate(MinecraftServer, SubLevelId, double)` | 绕局部中心 yaw 旋转 |
+| `launch(MinecraftServer, SubLevelId, Vec3, double)` | 对活动刚体施加一次有界发射冲量 |
 
 当前状态：
 
@@ -27,3 +28,10 @@ SUBLEVEL_SKILL_PERMISSION_DENIED position=BlockPos{x=-203, y=66, z=133} state=Bl
 ```
 
 权限拒绝后源方块保持不变，也没有分配 plot。
+
+发射冲量已由客户端烟测覆盖：
+
+```text
+CLIENT_SUBLEVEL_LAUNCH launched ...
+CLIENT_SUBLEVEL_LAUNCH_PROBE y=68.66 initial_y=66.76 delta=1.90
+```

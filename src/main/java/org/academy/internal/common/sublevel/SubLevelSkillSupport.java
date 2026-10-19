@@ -45,6 +45,11 @@ public final class SubLevelSkillSupport {
         return SubLevelServer.runtime(server).map(runtime -> runtime.shift(id, delta)).orElse(false);
     }
 
+    /** One bounded launch impulse for skill/program motion. */
+    public static boolean launch(MinecraftServer server, SubLevelId id, Vec3 direction, double speed) {
+        return SubLevelServer.runtime(server).map(runtime -> runtime.launch(id, direction, speed)).orElse(false);
+    }
+
     /** Yaw rotation around the local bounds center for skill/program authoring. */
     public static boolean rotate(MinecraftServer server, SubLevelId id, double yawDegrees) {
         return SubLevelServer.runtime(server).map(runtime -> runtime.rotate(id, yawDegrees)).orElse(false);

@@ -131,7 +131,7 @@ public final class NativePhysicsWorld implements AutoCloseable {
                 new double[]{linear.x(), linear.y(), linear.z(), angular.x(), angular.y(), angular.z()}));
     }
 
-    void impulse(NativePhysicsBody body, PhysicsVector impulse, PhysicsVector worldPoint) {
+    public void impulse(NativePhysicsBody body, PhysicsVector impulse, PhysicsVector worldPoint) {
         requireDynamic(body);
         PhysicsLimits.vector(Objects.requireNonNull(impulse, "impulse"), 1.0E12, "impulse");
         var point = Objects.requireNonNull(worldPoint, "worldPoint").subtract(origin);

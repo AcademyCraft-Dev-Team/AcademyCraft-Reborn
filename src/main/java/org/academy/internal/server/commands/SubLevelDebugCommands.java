@@ -25,7 +25,13 @@ final class SubLevelDebugCommands {
                                                 .executes(SubLevelDebugCommands::shift)))))
                 .then(Commands.literal("rotate")
                         .then(Commands.argument("yaw", DoubleArgumentType.doubleArg(-360, 360))
-                                .executes(SubLevelDebugCommands::rotate)));
+                                .executes(SubLevelDebugCommands::rotate)))
+                .then(Commands.literal("launch")
+                        .then(Commands.argument("dx", DoubleArgumentType.doubleArg(-1, 1))
+                                .then(Commands.argument("dy", DoubleArgumentType.doubleArg(-1, 1))
+                                        .then(Commands.argument("dz", DoubleArgumentType.doubleArg(-1, 1))
+                                                .then(Commands.argument("speed", DoubleArgumentType.doubleArg(0.01, 64))
+                                                        .executes(SubLevelDebugCommands::launch))))));
     }
 
     private static int status(CommandContext<CommandSourceStack> context) {
@@ -70,6 +76,16 @@ final class SubLevelDebugCommands {
                 DoubleArgumentType.getDouble(context, "yaw"));
         context.getSource().sendSuccess(() -> Component.literal("[AC SubLevel] " + result), true);
         return result.startsWith("rotated ") ? 1 : 0;
+    }
+
+    private static int launch(CommandContext<CommandSourceStack> context) {
+        var result = SubLevelServer.launchFirst(context.getSource().getServer(),
+                new net.minecraft.world.phys.Vec3(DoubleArgumentType.getDouble(context, "dx"),
+                        DoubleArgumentType.getDouble(context, "dy"),
+                        DoubleArgumentType.getDouble(context, "dz")),
+                DoubleArgumentType.getDouble(context, "speed"));
+        context.getSource().sendSuccess(() -> Component.literal("[AC SubLevel] " + result), true);
+        return result.startsWith("launched ") ? 1 : 0;
     }
 
     private static int remove(CommandContext<CommandSourceStack> context) {

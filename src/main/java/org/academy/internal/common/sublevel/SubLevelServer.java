@@ -399,6 +399,14 @@ public final class SubLevelServer {
     }
 
     /** Test hook: shifts the first SubLevel and removes its body so carry is deterministic. */
+    public static String launchFirst(MinecraftServer server, Vec3 direction, double speed) {
+        var runtime = RUNTIMES.get(server);
+        if (runtime == null) return "unavailable";
+        var subLevel = runtime.runtime.subLevels().stream().findFirst().orElse(null);
+        if (subLevel == null) return "none";
+        return runtime.runtime.launch(subLevel.id(), direction, speed) ? "launched " + subLevel.id().value() : "failed";
+    }
+
     public static String rotateFirst(MinecraftServer server, double yawDegrees) {
         var runtime = RUNTIMES.get(server);
         if (runtime == null) return "unavailable";
