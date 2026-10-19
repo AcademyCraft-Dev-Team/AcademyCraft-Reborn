@@ -13,7 +13,9 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.LeverBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 import net.minecraft.world.level.block.entity.DispenserBlockEntity;
+import net.minecraft.world.level.block.entity.FurnaceBlockEntity;
 import net.minecraft.world.level.block.entity.HopperBlockEntity;
 import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -62,6 +64,10 @@ public final class SubLevelClientSmoke {
     private static volatile boolean dispenserPrepared;
     private static volatile boolean dispenserSent;
     private static volatile boolean dispenserSeen;
+    private static volatile boolean furnaceRequested;
+    private static volatile boolean furnacePrepared;
+    private static volatile boolean furnaceSent;
+    private static volatile boolean furnaceSeen;
     private static volatile boolean doubleChestRequested;
     private static volatile boolean doubleChestPrepared;
     private static int carryPhase;
@@ -299,6 +305,37 @@ public final class SubLevelClientSmoke {
             }
             return;
         }
+        if (Boolean.getBoolean("academy.sublevel.clientFurnaceProbe") && dispenserSeen && !furnaceSeen) {
+            if (!furnaceRequested) {
+                furnaceRequested = true;
+                var server = minecraft.getSingleplayerServer();
+                if (server == null) return;
+                server.execute(() -> prepareFurnace(server, result.id()));
+                return;
+            }
+            if (!furnacePrepared) return;
+            var furnace = findBlock(projection, Blocks.FURNACE);
+            if (furnace == null) return;
+            if (!furnaceSent) {
+                var point = projection.renderPose(1.0F).localToWorldPoint(new Vec3(
+                        furnace.position().getX() + 0.5, furnace.position().getY() + 0.5, furnace.position().getZ() + 0.5));
+                SubLevelInteractPacket.send(new SubLevelInteractPacket(result.id(), furnace.position(),
+                        Direction.UP, point, InteractionHand.MAIN_HAND, SubLevelInteractPacket.Action.USE));
+                furnaceSent = true;
+                AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_FURNACE_SENT local={}", furnace.position());
+                return;
+            }
+            if (minecraft.gui.screen() instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen
+                    && screen.getMenu().slots.size() >= 39) {
+                furnaceSeen = true;
+                AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_FURNACE_OPENED screen={} slots={} item0={}",
+                        screen.getClass().getSimpleName(), screen.getMenu().slots.size(),
+                        screen.getMenu().getSlot(0).getItem());
+                minecraft.player.closeContainer();
+                minecraft.gui.setScreen(null);
+            }
+            return;
+        }
         if (Boolean.getBoolean("academy.sublevel.carryProbe") && chestSeen && carryPhase < 3) {
             if (carryPhase == 0) {
                 var server = minecraft.getSingleplayerServer();
@@ -456,6 +493,38 @@ public final class SubLevelClientSmoke {
             server.getPlayerList().getPlayers().getFirst().setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
             hopperPrepared = true;
             AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_HOPPER_PREPARED local={}", local);
+        } catch (Throwable error) {
+            fail(error.toString());
+        }
+    }
+
+    private static void prepareFurnace(MinecraftServer server, SubLevelId id) {
+        try {
+            var runtime = SubLevelServer.runtime(server).orElseThrow(() -> new IllegalStateException("SubLevel backend unavailable"));
+            var subLevel = runtime.get(id).orElseThrow();
+            var cells = runtime.view(id).cells();
+            if (cells.isEmpty()) throw new IllegalStateException("empty view");
+            var player = server.getPlayerList().getPlayers().getFirst();
+            var eye = player.getEyePosition();
+            var local = cells.getFirst().position();
+            double nearest = Double.POSITIVE_INFINITY;
+            for (var cell : cells) {
+                var worldCenter = subLevel.pose().localToWorldPoint(new Vec3(
+                        cell.position().getX() + 0.5, cell.position().getY() + 0.5, cell.position().getZ() + 0.5));
+                double distance = eye.distanceToSqr(worldCenter);
+                if (distance < nearest) { nearest = distance; local = cell.position(); }
+            }
+            var state = Blocks.FURNACE.defaultBlockState();
+            if (!runtime.storage().setBlock(subLevel.plot(), local, state, 3)) {
+                throw new IllegalStateException("plot furnace setBlock failed at " + local);
+            }
+            var furnace = new FurnaceBlockEntity(runtime.storage().worldPosition(subLevel.plot(), local), state);
+            furnace.setItem(0, new ItemStack(Items.IRON_ORE, 3));
+            runtime.storage().level().setBlockEntity(furnace);
+            runtime.refreshGeometry(id);
+            server.getPlayerList().getPlayers().getFirst().setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            furnacePrepared = true;
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_FURNACE_PREPARED local={}", local);
         } catch (Throwable error) {
             fail(error.toString());
         }

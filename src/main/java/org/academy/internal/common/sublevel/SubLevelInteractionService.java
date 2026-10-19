@@ -11,16 +11,22 @@ import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.inventory.AbstractFurnaceMenu;
+import net.minecraft.world.inventory.BlastFurnaceMenu;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.DispenserMenu;
+import net.minecraft.world.inventory.FurnaceMenu;
 import net.minecraft.world.inventory.HopperMenu;
 import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.inventory.SmokerMenu;
+import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.entity.DispenserBlockEntity;
 import net.minecraft.world.level.block.entity.HopperBlockEntity;
@@ -154,6 +160,22 @@ public final class SubLevelInteractionService {
             var proxy = new SubLevelContainer(runtime.host(), dispenser, center);
             player.openMenu(new SimpleMenuProvider((containerId, inventory, ignored) ->
                     new DispenserMenu(containerId, inventory, proxy), Component.translatable("container.dispenser")));
+            return InteractionResult.SUCCESS;
+        }
+        if (blockEntity instanceof AbstractFurnaceBlockEntity furnace) {
+            var center = subLevel.pose().localToWorldPoint(Vec3.atCenterOf(local));
+            var proxy = new SubLevelContainer(runtime.host(), furnace, center);
+            var data = new SimpleContainerData(AbstractFurnaceMenu.DATA_COUNT);
+            var title = Component.translatable("container.furnace");
+            player.openMenu(new SimpleMenuProvider((containerId, inventory, ignored) -> {
+                if (state.is(Blocks.BLAST_FURNACE)) {
+                    return new BlastFurnaceMenu(containerId, inventory, proxy, data);
+                }
+                if (state.is(Blocks.SMOKER)) {
+                    return new SmokerMenu(containerId, inventory, proxy, data);
+                }
+                return new FurnaceMenu(containerId, inventory, proxy, data);
+            }, title));
             return InteractionResult.SUCCESS;
         }
         var result = new BlockHitResult(hit, face, world, false);
