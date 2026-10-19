@@ -153,9 +153,23 @@ ref=StructureRef[id=..., backend=academy:sublevel, generation=1]
 
 另将全填充几何合并阈值设为体积 >= 512，避免 2×2×2 小结构合并后影响承载探针；24³ 实心体仍为 boxes=1。
 
-## 11. 下一步
+## 11. Phase 4 进展
 
-1. 跑 `StructureProgramWorldSmoke` 三族旧路径基线；
-2. 用 `-Dacademy.sublevelProgramNodes=true` 跑 Aeromanip 最短链路；
-3. 迁移 move/rotate/staticize；
+Aeromanip SubLevel 程序链路已扩展并通过客户端烟测：
+
+```text
+extract=COMPLETED control=COMPLETED move=COMPLETED rotate=COMPLETED
+launch=COMPLETED release=COMPLETED
+```
+
+- `move` 当前是目标中心平移（`SubLevelSkillSupport.translate`），不是连续力控制；
+- `rotate` 当前只支持 Y 轴 yaw；
+- `staticize` 仍 unavailable；
+- 直接 HighSpeedJet 技能尚未迁移。
+
+## 12. 下一步
+
+1. 将 move 从 teleport 改为连续控制；
+2. 实现 staticize / 还原；
+3. 迁移 HighSpeedJet 直接技能；
 4. 再进入 Electromaster / Accelerator。

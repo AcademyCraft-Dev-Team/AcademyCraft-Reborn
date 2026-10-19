@@ -396,7 +396,7 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
         var rejection = validateControl(control);
         if (rejection != null) return StructureOperation.rejected(rejection);
         if (SubLevelStructureRefs.isSubLevel(control.reference())) {
-            return StructureOperation.unavailable("sublevel_move_pending");
+            return moveSubLevelStructure(control, target, anchor, seconds);
         }
         if (!Double.isFinite(seconds) || seconds < 0.1 || seconds > MAXIMUM_MOVE_SECONDS) {
             return StructureOperation.rejected("invalid_duration");
@@ -427,6 +427,9 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
                                               @Nullable ProgramStructurePose pose) {
         var rejection = validateControl(control);
         if (rejection != null) return StructureOperation.rejected(rejection);
+        if (SubLevelStructureRefs.isSubLevel(control.reference())) {
+            return rotateSubLevelStructure(control, pose);
+        }
         return StructureOperation.unavailable("finite_torque_control_unavailable");
     }
 
@@ -538,6 +541,45 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
         }
         return StructureOperation.result(ProgramStructureOperationResult.completed("launched",
                 control.reference()));
+    }
+
+    private StructureOperation moveSubLevelStructure(ProgramStructureControl control,
+                                                      @Nullable ProgramWorldPosition target,
+                                                      @Nullable ProgramStructureAnchor anchor,
+                                                      double seconds) {
+        if (target == null) return StructureOperation.rejected("sublevel_move_target_required");
+        if (anchor != null) return StructureOperation.unavailable("sublevel_anchor_pending");
+        if (!Double.isFinite(seconds) || seconds < 0.1 || seconds > MAXIMUM_MOVE_SECONDS) {
+            return StructureOperation.rejected("invalid_duration");
+        }
+        var destination = targets.requireLocalPosition(target);
+        if (destination.distanceToSqr(player.position()) > MAX_ACTION_RANGE * MAX_ACTION_RANGE) {
+            return StructureOperation.rejected("target_out_of_range");
+        }
+        var id = SubLevelStructureRefs.id(control.reference()).orElse(null);
+        var runtime = id == null ? null : SubLevelServer.runtime(targets.level().getServer()).orElse(null);
+        var subLevel = runtime == null || id == null ? null : runtime.get(id).orElse(null);
+        if (subLevel == null) return StructureOperation.rejected("structure_unavailable");
+        var center = subLevel.pose().localToWorldPoint(subLevel.localBounds().getCenter());
+        if (!SubLevelSkillSupport.translate(targets.level().getServer(), id, destination.subtract(center))) {
+            return StructureOperation.rejected("sublevel_move_failed");
+        }
+        return StructureOperation.result(ProgramStructureOperationResult.completed("moved", control.reference()));
+    }
+
+    private StructureOperation rotateSubLevelStructure(ProgramStructureControl control,
+                                                       @Nullable ProgramStructurePose pose) {
+        if (pose == null) return StructureOperation.rejected("sublevel_pose_required");
+        var axis = normalizedVector(pose.axis());
+        if (Math.abs(axis.y) < 0.9) {
+            return StructureOperation.unavailable("sublevel_only_yaw_rotation_supported");
+        }
+        var id = SubLevelStructureRefs.id(control.reference()).orElse(null);
+        if (id == null || !SubLevelSkillSupport.rotate(targets.level().getServer(), id,
+                Math.toDegrees(pose.angleRadians()))) {
+            return StructureOperation.rejected("sublevel_rotate_failed");
+        }
+        return StructureOperation.result(ProgramStructureOperationResult.completed("rotated", control.reference()));
     }
 
     @Override
