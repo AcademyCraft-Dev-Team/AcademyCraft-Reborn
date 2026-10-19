@@ -1,0 +1,15 @@
+allprojects {
+    afterEvaluate {
+        def smokeDirectory = new File(rootProject.projectDir, 'run/native-sublevel-direct-smoke').canonicalFile
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(smokeDirectory)
+            systemProperty 'academy.sublevelClientSmoke', 'true'
+            systemProperty 'academy.sublevel.clientCollision', 'false'
+            systemProperty 'academy.sublevel.programChainProbe', 'true'
+            systemProperty 'academy.sublevelProgramNodes', 'true'
+            systemProperty 'academy.sublevelDirectSkills', 'true'
+            programArguments.addAll('--width', '1280', '--height', '720',
+                    '--quickPlaySingleplayer', 'Native SubLevel Direct Smoke')
+        }
+    }
+}
