@@ -3,7 +3,7 @@ package org.academy.internal.common.sublevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.PathNavigationRegion;
 import net.minecraft.world.level.storage.LevelResource;
 import io.netty.buffer.Unpooled;
@@ -142,7 +142,7 @@ public final class SubLevelServer {
         if (runtime == null) return;
         try {
             runtime.runtime.tick(1.0 / 20.0, 2);
-            carryPlayers(event.getServer(), runtime.runtime);
+            carryEntities(event.getServer(), runtime.runtime);
         } catch (RuntimeException | AssertionError failure) {
             AcademyCraft.LOGGER.error("SubLevel physics tick failed", failure);
             RUNTIMES.remove(event.getServer());
@@ -185,11 +185,11 @@ public final class SubLevelServer {
         thread.start();
     }
 
-    /** Translation-only rider carry; rotation is handled by the player's collision update. */
-    private static void carryPlayers(MinecraftServer server, SubLevelRuntime runtime) {
+    /** Translation-only entity carry; passengers/vehicles are moved by their owning chain. */
+    private static void carryEntities(MinecraftServer server, SubLevelRuntime runtime) {
         var host = runtime.host();
-        var players = host.players();
-        if (players.isEmpty()) return;
+        var entities = host.getAllEntities();
+        if (!entities.iterator().hasNext()) return;
         for (var subLevel : runtime.subLevels()) {
             var previous = subLevel.previousPose();
             var current = subLevel.pose();
@@ -198,9 +198,9 @@ public final class SubLevelServer {
             if (boxes.isEmpty()) continue;
             var delta = current.worldOrigin().subtract(previous.worldOrigin());
             if (delta.lengthSqr() > 4.0 || delta.lengthSqr() < 1.0E-8) continue;
-            for (var player : players) {
-                if (player.isSpectator()) continue;
-                var local = previous.worldToLocalPoint(player.position());
+            for (var entity : entities) {
+                if (entity.isPassenger() || entity.isVehicle() || entity.isSpectator()) continue;
+                var local = previous.worldToLocalPoint(entity.position());
                 double top = Double.NaN;
                 for (var box : boxes) {
                     if (local.x < box.minX - 0.1 || local.x > box.maxX + 0.1
@@ -210,8 +210,8 @@ public final class SubLevelServer {
                     }
                 }
                 if (Double.isNaN(top)) continue;
-                player.teleportTo(player.getX() + delta.x, player.getY() + delta.y, player.getZ() + delta.z);
-                AcademyCraft.LOGGER.debug("SubLevel carried player {} by {}", player.getName().getString(), delta);
+                entity.teleportTo(entity.getX() + delta.x, entity.getY() + delta.y, entity.getZ() + delta.z);
+                AcademyCraft.LOGGER.debug("SubLevel carried entity {} by {}", entity.getType(), delta);
             }
         }
     }

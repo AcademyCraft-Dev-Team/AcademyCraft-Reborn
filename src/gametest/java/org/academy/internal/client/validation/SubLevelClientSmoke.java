@@ -9,6 +9,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.DoorBlock;
@@ -79,6 +80,7 @@ public final class SubLevelClientSmoke {
     private static int carryPhase;
     private static int carryWait;
     private static double carryBeforeY;
+    private static java.util.UUID armorStandId;
     private static volatile boolean doubleChestSent;
     private static volatile boolean doubleChestSeen;
     private static double initialPoseY = Double.NaN;
@@ -386,7 +388,9 @@ public final class SubLevelClientSmoke {
                 carryBeforeY = minecraft.player.getY();
                 server.execute(() -> {
                     var shifted = SubLevelServer.shiftFirst(server, 0.0, 2.0, 0.0);
-                    AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_CARRY_SHIFT {}", shifted);
+                    var stand = armorStandId == null ? null : server.overworld().getEntity(armorStandId);
+                    AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_CARRY_SHIFT {} stand_y={}",
+                            shifted, stand == null ? "missing" : stand.getY());
                 });
                 carryPhase = 2;
                 return;
@@ -396,6 +400,14 @@ public final class SubLevelClientSmoke {
             AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_CARRY before_y={} after_y={} delta={}",
                     carryBeforeY, afterY, afterY - carryBeforeY);
             carryPhase = 3;
+            var server = minecraft.getSingleplayerServer();
+            if (server != null && armorStandId != null) {
+                server.execute(() -> {
+                    var stand = server.overworld().getEntity(armorStandId);
+                    AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_CARRY_ENTITY y={}",
+                            stand == null ? "missing" : stand.getY());
+                });
+            }
             minecraft.getSingleplayerServer().execute(() ->
                     minecraft.getSingleplayerServer().getPlayerList().getPlayers().getFirst().setNoGravity(false));
             if (afterY - carryBeforeY < 1.0) {
@@ -495,7 +507,11 @@ public final class SubLevelClientSmoke {
             var player = server.getPlayerList().getPlayers().getFirst();
             player.setNoGravity(true);
             player.teleportTo(world.x, world.y, world.z);
-            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_CARRY_PLACED y={}", world.y);
+            var stand = new ArmorStand(server.overworld(), world.x + 0.5, world.y, world.z + 0.5);
+            stand.setNoGravity(true);
+            server.overworld().addFreshEntity(stand);
+            armorStandId = stand.getUUID();
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_CARRY_PLACED y={} stand_y={}", world.y, stand.getY());
         } catch (Throwable error) {
             fail(error.toString());
         }
