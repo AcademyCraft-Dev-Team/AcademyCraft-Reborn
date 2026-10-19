@@ -134,8 +134,21 @@
 
 已通过构建与全量单测；尚未跑三族 `StructureProgramWorldSmoke` 的 SubLevel 变体。
 
-## 10. 下一步
+## 10. Phase 3 状态
+
+已在 `ServerAeromanipProgramRuntime` 增加受 feature flag 保护的 SubLevel 分支：
+
+- `academy.sublevelProgramNodes=true` 时，`extract` 使用 `SubLevelSkillSupport.capture`；
+- `control` 为 SubLevel ref 生成 `ProgramStructureControl` 并登记；
+- `launch` 调用 `SubLevelSkillSupport.launch`；
+- `release` 只释放控制 token；
+- `move`、`staticize` 对 SubLevel 返回 unavailable，作为下一步。
+
+默认关闭，旧 Aeromanip 程序路径不变。当前仅编译通过，尚未在 `StructureProgramWorldSmoke` 中实跑；验收前必须打开 flag 跑完整链路。
+
+## 11. 下一步
 
 1. 跑 `StructureProgramWorldSmoke` 三族旧路径基线；
-2. 进入 Phase 3：Aeromanip 最短链路 `extract → control → launch → release`；
-3. 不要一次性改 1924 行技能服务。
+2. 用 `-Dacademy.sublevelProgramNodes=true` 跑 Aeromanip 最短链路；
+3. 迁移 move/rotate/staticize；
+4. 再进入 Electromaster / Accelerator。

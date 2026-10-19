@@ -35,9 +35,16 @@ import org.academy.internal.common.ability.program.registry.AbilityProgramSpatia
 import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.ability.program.ServerProgramTargetResolver;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+import org.academy.internal.common.sublevel.SubLevel;
+import org.academy.internal.common.sublevel.SubLevelActivationRegistry;
+import org.academy.internal.common.sublevel.SubLevelServer;
+import org.academy.internal.common.sublevel.SubLevelSkillSupport;
+import org.academy.internal.common.sublevel.SubLevelStructureHandle;
+import org.academy.internal.common.sublevel.SubLevelStructureRefs;
 import org.academy.internal.common.world.entity.skill.HighSpeedJetNozzle;
 import org.jspecify.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -61,6 +68,7 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     private static final float STRUCTURE_LAUNCH_COST = 15.0f;
     private static final double MAXIMUM_MOVE_SECONDS = 10.0;
     private static final double MAXIMUM_LAUNCH_SECONDS = 60.0;
+    private static final boolean SUB_LEVEL_NODES = Boolean.getBoolean("academy.sublevelProgramNodes");
 
     private final ServerPlayer player;
     private final float costMultiplier;
@@ -321,6 +329,7 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     @Override
     public StructureOperation extractStructure(ProgramBlockPosition host, int radius, int budget) {
         requireCasterReady(Skills.HIGH_SPEED_JET.get());
+        if (SUB_LEVEL_NODES) return extractSubLevelStructure(host, radius, budget);
         if (pendingExtraction == null) {
             var seed = requireLaunchSeed(host);
             var result = StructureProgramActions.execute(player, Skills.HIGH_SPEED_JET.get(),
@@ -358,6 +367,7 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     public StructureOperation controlStructure(ProgramStructureReference structure) {
         requireCasterReady(Skills.HIGH_SPEED_JET.get());
         Objects.requireNonNull(structure, "structure");
+        if (SubLevelStructureRefs.isSubLevel(structure.reference())) return controlSubLevelStructure(structure);
         var result = StructureProgramActions.execute(player, Skills.HIGH_SPEED_JET.get(),
                 STRUCTURE_CONTROL_COST * costMultiplier,
                 () -> HighSpeedJetStructureService.programControl(
@@ -385,6 +395,9 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
         requireCasterReady(Skills.HIGH_SPEED_JET.get());
         var rejection = validateControl(control);
         if (rejection != null) return StructureOperation.rejected(rejection);
+        if (SubLevelStructureRefs.isSubLevel(control.reference())) {
+            return StructureOperation.unavailable("sublevel_move_pending");
+        }
         if (!Double.isFinite(seconds) || seconds < 0.1 || seconds > MAXIMUM_MOVE_SECONDS) {
             return StructureOperation.rejected("invalid_duration");
         }
@@ -425,6 +438,9 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
         requireCasterReady(Skills.HIGH_SPEED_JET.get());
         var rejection = validateControl(control);
         if (rejection != null) return StructureOperation.rejected(rejection);
+        if (SubLevelStructureRefs.isSubLevel(control.reference())) {
+            return launchSubLevelStructure(control, direction, power);
+        }
         if (!Double.isFinite(seconds) || seconds < 0.1 || seconds > MAXIMUM_LAUNCH_SECONDS) {
             return StructureOperation.rejected("invalid_duration");
         }
@@ -441,6 +457,11 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     public StructureOperation releaseStructure(ProgramStructureControl control) {
         var rejection = validateControl(control);
         if (rejection != null) return StructureOperation.rejected(rejection);
+        if (SubLevelStructureRefs.isSubLevel(control.reference())) {
+            issuedControls.remove(control.controlId());
+            return StructureOperation.result(ProgramStructureOperationResult.completed("released",
+                    control.reference()));
+        }
         var result = HighSpeedJetStructureService.programRelease(
                 player, control.reference(), control.controlId());
         return StructureOperation.result(operationResult(result));
@@ -450,12 +471,73 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     public StructureOperation staticizeStructure(ProgramStructureReference structure,
                                                  @Nullable ProgramBlockPosition target) {
         Objects.requireNonNull(structure, "structure");
+        if (SubLevelStructureRefs.isSubLevel(structure.reference())) {
+            return StructureOperation.unavailable("sublevel_staticize_pending");
+        }
         var cells = HighSpeedJetStructureService.programSession(player)
                 .filter(session -> session.reference().equals(structure.reference()))
                 .map(HighSpeedJetStructureService.Session::capturedCells)
                 .orElse(List.of());
         return StructureOperation.result(StructureStaticizationRunner.staticize(
                 player, structure, target, cells));
+    }
+
+    private StructureOperation extractSubLevelStructure(ProgramBlockPosition hostReference, int radius, int budget) {
+        var seed = requireLaunchSeed(hostReference);
+        var level = targets.level();
+        int extent = Math.max(1, Math.min(radius, 8));
+        int limit = Math.max(1, Math.min(budget <= 0 ? 256 : budget, 256));
+        var positions = new ArrayList<BlockPos>();
+        for (var cursor : BlockPos.betweenClosed(seed.offset(-extent, -extent, -extent),
+                seed.offset(extent, extent, extent))) {
+            var position = cursor.immutable();
+            if (!level.hasChunkAt(position) || !level.isInWorldBounds(position)) continue;
+            if (level.getBlockState(position).isAir() || !level.mayInteract(player, position)) continue;
+            positions.add(position);
+            if (positions.size() >= limit) break;
+        }
+        if (positions.isEmpty()) return StructureOperation.rejected("capture_empty");
+        var id = SubLevelSkillSupport.capture(level, positions, (world, position) ->
+                world.mayInteract(player, position)).orElse(null);
+        if (id == null) return StructureOperation.rejected("capture_rejected");
+        var runtime = SubLevelServer.runtime(level.getServer()).orElse(null);
+        var subLevel = runtime == null ? null : runtime.get(id).orElse(null);
+        if (runtime == null || subLevel == null) return StructureOperation.rejected("sublevel_unavailable");
+        var handle = new SubLevelStructureHandle(subLevel, runtime.storage(), level.dimension().identifier());
+        var reference = handle.reference();
+        return StructureOperation.structure(new ProgramStructureReference(reference, handle.runtimeId()),
+                ProgramStructureOperationResult.completed("committed", reference));
+    }
+
+    private StructureOperation controlSubLevelStructure(ProgramStructureReference structure) {
+        var id = SubLevelStructureRefs.id(structure.reference()).orElse(null);
+        var activation = id == null ? null : SubLevelActivationRegistry.find(id).orElse(null);
+        if (id == null || activation == null || activation.generation() != structure.reference().generation()
+                || !activation.runtimeId().equals(structure.runtimeId())) {
+            return StructureOperation.rejected("structure_epoch_stale");
+        }
+        var runtime = SubLevelServer.runtime(targets.level().getServer()).orElse(null);
+        var subLevel = runtime == null ? null : runtime.get(id).orElse(null);
+        if (subLevel == null || subLevel.state() != org.academy.internal.common.sublevel.SubLevelState.ACTIVE
+                && subLevel.state() != org.academy.internal.common.sublevel.SubLevelState.SLEEPING) {
+            return StructureOperation.rejected("structure_unavailable");
+        }
+        var control = new ProgramStructureControl(structure.reference(), structure.runtimeId(), UUID.randomUUID(),
+                player.getUUID(), runtimeToken);
+        issuedControls.put(control.controlId(), control);
+        return StructureOperation.control(control,
+                ProgramStructureOperationResult.completed("controlled", structure.reference()));
+    }
+
+    private StructureOperation launchSubLevelStructure(ProgramStructureControl control,
+                                                       ProgramDirection direction, float power) {
+        var id = SubLevelStructureRefs.id(control.reference()).orElse(null);
+        if (id == null || !SubLevelSkillSupport.launch(targets.level().getServer(), id,
+                normalizedVector(direction), Math.max(0.5, power))) {
+            return StructureOperation.rejected("sublevel_launch_failed");
+        }
+        return StructureOperation.result(ProgramStructureOperationResult.completed("launched",
+                control.reference()));
     }
 
     @Override
