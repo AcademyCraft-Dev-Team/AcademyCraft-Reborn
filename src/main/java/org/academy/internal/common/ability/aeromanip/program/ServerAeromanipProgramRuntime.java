@@ -475,7 +475,14 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
                                                  @Nullable ProgramBlockPosition target) {
         Objects.requireNonNull(structure, "structure");
         if (SubLevelStructureRefs.isSubLevel(structure.reference())) {
-            return StructureOperation.unavailable("sublevel_staticize_pending");
+            var id = SubLevelStructureRefs.id(structure.reference()).orElse(null);
+            var targetPosition = target == null ? null : new BlockPos(target.x(), target.y(), target.z());
+            var restored = id == null ? new org.academy.internal.common.sublevel.SubLevelRestoreService.Result(0, "invalid")
+                    : SubLevelSkillSupport.staticize(targets.level().getServer(), id, targetPosition);
+            return restored.succeeded()
+                    ? StructureOperation.result(ProgramStructureOperationResult.completed(restored.detail(),
+                    structure.reference()))
+                    : StructureOperation.rejected(restored.detail());
         }
         var cells = HighSpeedJetStructureService.programSession(player)
                 .filter(session -> session.reference().equals(structure.reference()))

@@ -6,6 +6,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.api.common.structure.StructurePose;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Optional;
@@ -43,6 +44,14 @@ public final class SubLevelSkillSupport {
     /** Translation-only skill relocation; preserves the plot and physics body ownership. */
     public static boolean translate(MinecraftServer server, SubLevelId id, Vec3 delta) {
         return SubLevelServer.runtime(server).map(runtime -> runtime.shift(id, delta)).orElse(false);
+    }
+
+    /** Restores plot content to the host and removes the SubLevel. */
+    public static SubLevelRestoreService.Result staticize(MinecraftServer server, SubLevelId id,
+                                                           net.minecraft.core.@Nullable BlockPos target) {
+        var runtime = SubLevelServer.runtime(server).orElse(null);
+        if (runtime == null) return new SubLevelRestoreService.Result(0, "unavailable");
+        return SubLevelRestoreService.staticize(runtime.host(), runtime, id, target);
     }
 
     /** One bounded launch impulse for skill/program motion. */

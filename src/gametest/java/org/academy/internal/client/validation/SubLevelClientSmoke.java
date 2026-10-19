@@ -1161,15 +1161,18 @@ public final class SubLevelClientSmoke {
                     new ProgramStructurePose(new ProgramDirection(0.0, 1.0, 0.0), Math.toRadians(20.0)));
             var launch = runtime.launchStructure(control.control(), new ProgramDirection(0.0, 1.0, 0.0), 5.0f, 1.0);
             var release = runtime.releaseStructure(control.control());
-            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_PROGRAM_CHAIN extract={} control={} move={} rotate={} launch={} release={} ref={}",
+            var staticize = runtime.staticizeStructure(extract.structure(), new ProgramBlockPosition(
+                    level.dimension().identifier(), seed.getX(), seed.getY(), seed.getZ()));
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_PROGRAM_CHAIN extract={} control={} move={} rotate={} launch={} release={} staticize={} detail={} ref={}",
                     extract.result().status(), control.result().status(), move.result().status(),
                     rotate.result().status(), launch.result().status(), release.result().status(),
-                    extract.structure().reference());
+                    staticize.result().status(), staticize.result().detail(), extract.structure().reference());
             if (move.result().status() != ProgramStructureOperationResult.Status.COMPLETED
                     || rotate.result().status() != ProgramStructureOperationResult.Status.COMPLETED
                     || launch.result().status() != ProgramStructureOperationResult.Status.COMPLETED
-                    || release.result().status() != ProgramStructureOperationResult.Status.COMPLETED) {
-                throw new IllegalStateException("program move/rotate/launch/release failed");
+                    || release.result().status() != ProgramStructureOperationResult.Status.COMPLETED
+                    || staticize.result().status() != ProgramStructureOperationResult.Status.COMPLETED) {
+                throw new IllegalStateException("program move/rotate/launch/release/staticize failed");
             }
         } catch (Throwable error) {
             fail("program chain probe: " + error);

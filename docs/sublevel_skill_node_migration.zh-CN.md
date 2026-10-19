@@ -142,7 +142,7 @@
 - `control` 为 SubLevel ref 生成 `ProgramStructureControl` 并登记；
 - `launch` 调用 `SubLevelSkillSupport.launch`；
 - `release` 只释放控制 token；
-- `move`、`rotate` 已进入 Phase 4；`staticize` 仍 unavailable。
+- `move`、`rotate`、`staticize` 已进入 Phase 4 并通过程序链路。
 
 默认关闭，旧 Aeromanip 程序路径不变。已在客户端烟测中打开 flag 跑通最短链路：
 
@@ -159,17 +159,17 @@ Aeromanip SubLevel 程序链路已扩展并通过客户端烟测：
 
 ```text
 extract=COMPLETED control=COMPLETED move=COMPLETED rotate=COMPLETED
-launch=COMPLETED release=COMPLETED
+launch=COMPLETED release=COMPLETED staticize=COMPLETED detail=staticized
 ```
 
 - `move` 当前是目标中心平移（`SubLevelSkillSupport.translate`），不是连续力控制；
 - `rotate` 当前只支持 Y 轴 yaw；
-- `staticize` 仍 unavailable，未作为通过项；
+- `staticize` 已通过：把 plot 内容写回宿主指定原点并移除 SubLevel；
 - 直接 HighSpeedJet 技能尚未迁移。
 
 ## 12. 下一步
 
 1. 将 move 从 teleport 改为连续控制；
-2. 实现 staticize / 还原；
-3. 迁移 HighSpeedJet 直接技能；
-4. 再进入 Electromaster / Accelerator。
+2. 迁移 HighSpeedJet 直接技能；
+3. 再进入 Electromaster / Accelerator；
+4. 补三族 StructureProgramWorldSmoke 基线。
