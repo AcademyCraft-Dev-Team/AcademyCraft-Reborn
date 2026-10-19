@@ -138,6 +138,23 @@ public final class SubLevelRuntime {
         return true;
     }
 
+    /** Debug/test-only rotation around the local bounds center. */
+    public boolean rotate(SubLevelId id, double yawDegrees) {
+        var managed = subLevels.get(Objects.requireNonNull(id, "id"));
+        if (managed == null) return false;
+        deactivate(id);
+        var pose = managed.subLevel.pose();
+        var pivot = managed.subLevel.localBounds().getCenter();
+        var rotation = new org.joml.Quaterniond().rotateY(Math.toRadians(yawDegrees));
+        var rotatedPivot = rotation.transform(new org.joml.Vector3d(pivot.x, pivot.y, pivot.z));
+        var origin = pose.worldOrigin().add(pivot).subtract(rotatedPivot.x, rotatedPivot.y, rotatedPivot.z);
+        var rotated = new StructurePose(origin, rotation);
+        managed.subLevel.setPose(rotated);
+        collision.update(id, managed.localBoxes, rotated);
+        remember(managed.subLevel);
+        return true;
+    }
+
     /** Debug/test-only pose shift that removes the body so a carry probe is deterministic. */
     public boolean shift(SubLevelId id, Vec3 delta) {
         var managed = subLevels.get(Objects.requireNonNull(id, "id"));

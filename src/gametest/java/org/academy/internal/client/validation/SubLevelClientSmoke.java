@@ -79,6 +79,7 @@ public final class SubLevelClientSmoke {
     private static volatile boolean doubleChestPrepared;
     private static int carryPhase;
     private static int carryWait;
+    private static int rotatePhase;
     private static double carryBeforeY;
     private static java.util.UUID armorStandId;
     private static volatile boolean doubleChestSent;
@@ -415,6 +416,27 @@ public final class SubLevelClientSmoke {
                 return;
             }
         }
+        if (Boolean.getBoolean("academy.sublevel.carryRotateProbe") && carryPhase == 3 && rotatePhase < 2) {
+            if (rotatePhase == 0) {
+                var server = minecraft.getSingleplayerServer();
+                if (server == null) return;
+                server.execute(() -> AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_ROTATE_SHIFT {}",
+                        SubLevelServer.rotateFirst(server, 90.0)));
+                rotatePhase = 1;
+                return;
+            }
+            if (++carryWait < 20) return;
+            var server = minecraft.getSingleplayerServer();
+            if (server != null && armorStandId != null) {
+                server.execute(() -> {
+                    var stand = server.overworld().getEntity(armorStandId);
+                    AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_ROTATE_ENTITY x={} z={}",
+                            stand == null ? "missing" : stand.getX(),
+                            stand == null ? "missing" : stand.getZ());
+                });
+            }
+            rotatePhase = 2;
+        }
         if (Boolean.getBoolean("academy.sublevel.clientCollision") && !collisionProbed) {
             collisionProbed = true;
             var center = projection.renderPose(1.0F).localToWorldPoint(new Vec3(1, 1, 1));
@@ -511,7 +533,8 @@ public final class SubLevelClientSmoke {
             stand.setNoGravity(true);
             server.overworld().addFreshEntity(stand);
             armorStandId = stand.getUUID();
-            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_CARRY_PLACED y={} stand_y={}", world.y, stand.getY());
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_CARRY_PLACED x={} z={} y={} stand_x={} stand_z={} stand_y={}",
+                    world.x, world.z, world.y, stand.getX(), stand.getZ(), stand.getY());
         } catch (Throwable error) {
             fail(error.toString());
         }

@@ -212,7 +212,9 @@ public final class SubLevelServer {
                     }
                 }
                 if (Double.isNaN(top)) continue;
-                entity.teleportTo(entity.getX() + delta.x, entity.getY() + delta.y, entity.getZ() + delta.z);
+                var newWorld = current.localToWorldPoint(local);
+                var move = newWorld.subtract(entity.position());
+                entity.teleportTo(entity.getX() + move.x, entity.getY() + move.y, entity.getZ() + move.z);
                 AcademyCraft.LOGGER.debug("SubLevel carried entity {} by {}", entity.getType(), delta);
             }
         }
@@ -386,6 +388,14 @@ public final class SubLevelServer {
     }
 
     /** Test hook: shifts the first SubLevel and removes its body so carry is deterministic. */
+    public static String rotateFirst(MinecraftServer server, double yawDegrees) {
+        var runtime = RUNTIMES.get(server);
+        if (runtime == null) return "unavailable";
+        var subLevel = runtime.runtime.subLevels().stream().findFirst().orElse(null);
+        if (subLevel == null) return "none";
+        return runtime.runtime.rotate(subLevel.id(), yawDegrees) ? "rotated " + subLevel.id().value() : "failed";
+    }
+
     public static String shiftFirst(MinecraftServer server, double dx, double dy, double dz) {
         var runtime = RUNTIMES.get(server);
         if (runtime == null) return "unavailable";

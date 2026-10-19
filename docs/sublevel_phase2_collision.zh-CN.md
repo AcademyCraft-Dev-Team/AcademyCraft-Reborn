@@ -62,7 +62,7 @@ CLIENT_SUBLEVEL_FALL_PROBE y=64.00027164477902 initial_y=68.44266250000001 delta
 - 客户端已同步 SubLevel 碰撞索引并通过 `CLIENT_SUBLEVEL_COLLISION_PROBE inside=7/8` 验证；
 - `SubLevelRuntime.localBoxes` 当前把 physics box 视为轴对齐；捕获几何是轴对齐的，旋转结构需要 Phase 2 后续做精确变换；
 - AI 寻路的 PathNavigationRegion 已通过 accessor 追加同一套形状；仍待验证复杂寻路/避障；
-- 服务器已加入实体平移承载：结构姿态变化时，站在顶面 box 上的玩家和其他实体随 origin delta 移动；旋转承载、乘客链仍待继续。
+- 服务器已加入完整姿态承载：玩家和其他实体按上一局部位置到当前姿态世界位置移动，平移和 yaw 旋转均生效；乘客链/复杂实体碰撞仍待继续。
 
 ## 3.1 实体承载探针
 
@@ -70,9 +70,10 @@ CLIENT_SUBLEVEL_FALL_PROBE y=64.00027164477902 initial_y=68.44266250000001 delta
 CLIENT_SUBLEVEL_CARRY_PLACED y=66.09999894430332 stand_y=66.09999894430332
 CLIENT_SUBLEVEL_CARRY before_y=66.09999894430332 after_y=68.09999894430332 delta=2.0
 CLIENT_SUBLEVEL_CARRY_ENTITY y=68.09999894430332
+CLIENT_SUBLEVEL_ROTATE_ENTITY x=-200.50000162402463 z=134.5016413697051
 ```
 
-结构姿态上移 2 格后，玩家和顶面 ArmorStand 均从 66.10 移到 68.10。
+结构上移 2 格后，玩家和顶面 ArmorStand 均从 66.10 移到 68.10；再绕中心 yaw 90° 后，ArmorStand 从 z=135.50 移到 z=134.50。
 
 ## 4. 下一步
 
