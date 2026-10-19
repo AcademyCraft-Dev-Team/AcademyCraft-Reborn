@@ -134,6 +134,7 @@ public final class SubLevelRuntime {
         collision.remove(id);
         storage.release(managed.lease);
         managed.subLevel.setState(SubLevelState.REMOVED);
+        SubLevelActivationRegistry.invalidate(id);
         forget(id);
         return true;
     }
@@ -206,6 +207,7 @@ public final class SubLevelRuntime {
         var view = PlotView.capture(storage, managed.subLevel.plot(), managed.subLevel.localBounds());
         managed.subLevel.setPose(structurePose(pose));
         managed.subLevel.setState(SubLevelState.ACTIVE);
+        SubLevelActivationRegistry.advance(id);
         collision.update(id, localBoxes, managed.subLevel.pose());
         subLevels.put(id, new Managed(managed.subLevel, managed.lease, localBoxes, view));
         remember(managed.subLevel);
