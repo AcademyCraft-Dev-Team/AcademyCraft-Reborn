@@ -124,8 +124,18 @@
 
 尚未执行：`StructureProgramWorldSmoke` 旧路径基线；它属于 Phase 1 的下一步验收。
 
-## 9. 下一步
+## 9. Phase 2 状态
+
+已实现 `ServerProgramTargetResolver` 的 SubLevel 分支：
+
+- `look_structure` 对活动 SubLevel 做服务端 view 射线，返回合成 ref + 当前 activation runtimeId；
+- `structure_motion` 从 `SubLevelPhysicsUniverse.motion` 读取姿态、线速度、角速度、局部质心和 mass；
+- 校验 generation、宿主维度、活动状态和最大距离。
+
+已通过构建与全量单测；尚未跑三族 `StructureProgramWorldSmoke` 的 SubLevel 变体。
+
+## 10. 下一步
 
 1. 跑 `StructureProgramWorldSmoke` 三族旧路径基线；
-2. 进入 Phase 2：`look_structure` / `structure_motion`；
-3. 之后进入 Aeromanip 最短链路，避免一次性改 1924 行技能服务。
+2. 进入 Phase 3：Aeromanip 最短链路 `extract → control → launch → release`；
+3. 不要一次性改 1924 行技能服务。

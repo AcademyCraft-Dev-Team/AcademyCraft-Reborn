@@ -5,6 +5,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.ClipContext.Block;
+import net.minecraft.world.level.ClipContext.Fluid;
+import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -19,6 +22,10 @@ import org.academy.api.common.structure.StructureDynamics;
 import org.academy.api.common.structure.StructureLifecycle;
 import org.academy.api.common.structure.StructureQueries;
 import org.academy.api.common.structure.StructureSpaces;
+import org.academy.internal.common.sublevel.SubLevel;
+import org.academy.internal.common.sublevel.SubLevelActivationRegistry;
+import org.academy.internal.common.sublevel.SubLevelServer;
+import org.academy.internal.common.sublevel.SubLevelStructureRefs;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 
 import java.util.Comparator;
@@ -99,6 +106,8 @@ public final class ServerProgramTargetResolver implements ProgramTargetResolver 
         var eye = player.getEyePosition();
         var look = player.getLookAngle();
         if (!finite(eye) || !finiteNonZero(look)) return Optional.empty();
+        var subLevelHit = raycastSubLevel(eye, look.normalize());
+        if (subLevelHit.isPresent()) return subLevelHit;
         return StructureQueries.raycast(level(), eye, eye.add(look.normalize().scale(maximumRange)))
                 .map(hit -> new ProgramStructureReference(hit.block().structure(), hit.runtimeId()));
     }
@@ -106,6 +115,9 @@ public final class ServerProgramTargetResolver implements ProgramTargetResolver 
     @Override
     public Optional<StructureDynamics.State> structureMotion(ProgramStructureReference reference) {
         Objects.requireNonNull(reference, "reference");
+        if (SubLevelStructureRefs.isSubLevel(reference.reference())) {
+            return subLevelMotion(reference);
+        }
         if (!player.isAlive() || player.isRemoved()
                 || !reference.reference().dimension().equals(level().dimension().identifier())) return Optional.empty();
         var handle = StructureSpaces.resolve(level().getServer(), reference.reference()).orElse(null);
@@ -114,6 +126,57 @@ public final class ServerProgramTargetResolver implements ProgramTargetResolver 
         return StructureDynamics.motion(level(), reference.reference())
                 .filter(motion -> isWithinRadius(player.getEyePosition(),
                         motion.pose().localToWorldPoint(motion.localCenterOfMass()), maximumRange));
+    }
+
+    private Optional<ProgramStructureReference> raycastSubLevel(Vec3 eye, Vec3 look) {
+        var runtime = SubLevelServer.runtime(level().getServer()).orElse(null);
+        if (runtime == null) return Optional.empty();
+        SubLevel best = null;
+        double bestDistance = Double.POSITIVE_INFINITY;
+        for (var subLevel : runtime.subLevels()) {
+            if (subLevel.state() != org.academy.internal.common.sublevel.SubLevelState.ACTIVE
+                    && subLevel.state() != org.academy.internal.common.sublevel.SubLevelState.SLEEPING) continue;
+            var view = runtime.view(subLevel.id());
+            var localEye = subLevel.pose().worldToLocalPoint(eye);
+            var localLook = subLevel.pose().worldToLocalDirection(look).normalize();
+            var hit = view.clip(new ClipContext(localEye, localEye.add(localLook.scale(maximumRange)),
+                    Block.OUTLINE, Fluid.NONE, CollisionContext.empty()));
+            if (hit.getType() != HitResult.Type.BLOCK) continue;
+            var worldHit = subLevel.pose().localToWorldPoint(hit.getLocation());
+            double distance = eye.distanceToSqr(worldHit);
+            if (distance <= maximumRange * maximumRange && distance < bestDistance) {
+                best = subLevel;
+                bestDistance = distance;
+            }
+        }
+        if (best == null) return Optional.empty();
+        var activation = SubLevelActivationRegistry.activation(best.id());
+        return Optional.of(new ProgramStructureReference(
+                SubLevelStructureRefs.of(best, level().dimension().identifier(), activation.generation()),
+                activation.runtimeId()));
+    }
+
+    private Optional<StructureDynamics.State> subLevelMotion(ProgramStructureReference reference) {
+        if (!reference.reference().dimension().equals(level().dimension().identifier())) return Optional.empty();
+        var runtime = SubLevelServer.runtime(level().getServer()).orElse(null);
+        if (runtime == null) return Optional.empty();
+        var id = SubLevelStructureRefs.id(reference.reference()).orElse(null);
+        if (id == null) return Optional.empty();
+        var activation = SubLevelActivationRegistry.find(id).orElse(null);
+        if (activation == null || activation.generation() != reference.reference().generation()) return Optional.empty();
+        var subLevel = runtime.get(id).orElse(null);
+        if (subLevel == null || subLevel.state() != org.academy.internal.common.sublevel.SubLevelState.ACTIVE
+                && subLevel.state() != org.academy.internal.common.sublevel.SubLevelState.SLEEPING) return Optional.empty();
+        var motion = runtime.universe().motion(id).orElse(null);
+        if (motion == null) return Optional.empty();
+        var localCenter = new Vec3(motion.localCenterOfMass().x(), motion.localCenterOfMass().y(),
+                motion.localCenterOfMass().z());
+        var worldCenter = subLevel.pose().localToWorldPoint(localCenter);
+        if (!isWithinRadius(player.getEyePosition(), worldCenter, maximumRange)) return Optional.empty();
+        return Optional.of(new StructureDynamics.State(subLevel.pose(),
+                new Vec3(motion.linearVelocity().x(), motion.linearVelocity().y(), motion.linearVelocity().z()),
+                new Vec3(motion.angularVelocity().x(), motion.angularVelocity().y(), motion.angularVelocity().z()),
+                localCenter, motion.mass()));
     }
 
     @Override
