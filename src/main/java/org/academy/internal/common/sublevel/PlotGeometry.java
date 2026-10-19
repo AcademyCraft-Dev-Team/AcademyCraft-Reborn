@@ -13,7 +13,7 @@ import java.util.Objects;
 
 /** Captures real collision geometry from a loaded plot into body-local physics boxes. */
 public final class PlotGeometry {
-    public static final int MAX_BOXES = 8_192;
+    public static final int MAX_BOXES = 16_384;
 
     private PlotGeometry() {
     }

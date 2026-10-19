@@ -19,6 +19,7 @@ import java.util.ArrayList;
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class SubLevelLargeClientSmoke {
     private static final boolean ENABLED = Boolean.getBoolean("academy.sublevelLargeSmoke");
+    private static final boolean SOLID = Boolean.getBoolean("academy.sublevelLargeSolid");
     private static final int SIDE = 24;
     private static volatile boolean requested;
     private static volatile boolean captured;
@@ -85,7 +86,7 @@ public final class SubLevelLargeClientSmoke {
             for (int x = 0; x < SIDE; x++) {
                 for (int y = 0; y < SIDE; y++) {
                     for (int z = 0; z < SIDE; z++) {
-                        if (x != 0 && x != SIDE - 1 && y != 0 && y != SIDE - 1
+                        if (!SOLID && x != 0 && x != SIDE - 1 && y != 0 && y != SIDE - 1
                                 && z != 0 && z != SIDE - 1) continue;
                         var position = origin.offset(x, y, z);
                         level.setBlock(position, Blocks.GLOWSTONE.defaultBlockState(), 3);
@@ -94,17 +95,19 @@ public final class SubLevelLargeClientSmoke {
                 }
             }
             result = SubLevelCaptureService.capture(level, runtime, positions);
+            ticks = 0;
             captured = true;
-            AcademyCraft.LOGGER.info("SUBLEVEL_LARGE_CAPTURED side={} blocks={} boxes={} bodies=?",
-                    SIDE, result.blocks(), result.boxes());
+            AcademyCraft.LOGGER.info("SUBLEVEL_LARGE_CAPTURED side={} solid={} blocks={} boxes={}",
+                    SIDE, SOLID, result.blocks(), result.boxes());
         } catch (Throwable error) {
+            AcademyCraft.LOGGER.error("SUBLEVEL_LARGE_CAPTURE_FAILED", error);
             fail(error.toString());
         }
     }
 
     private static void fail(String message) {
         failure = message;
-        AcademyCraft.LOGGER.error("SUBLEVEL_LARGE_BENCHMARK_FAILED {}", message);
+        AcademyCraft.LOGGER.error("SUBLEVEL_LARGE_BENCHMARK_FAILED {}", message, new IllegalStateException(message));
         Minecraft.getInstance().stop();
     }
 }

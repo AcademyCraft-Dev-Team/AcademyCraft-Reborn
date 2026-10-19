@@ -1,0 +1,12 @@
+allprojects {
+    afterEvaluate {
+        def smokeDirectory = new File(rootProject.projectDir, 'run/native-sublevel-large-solid-smoke').canonicalFile
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(smokeDirectory)
+            systemProperty 'academy.sublevelLargeSmoke', 'true'
+            systemProperty 'academy.sublevelLargeSolid', 'true'
+            programArguments.addAll('--width', '1280', '--height', '720',
+                    '--quickPlaySingleplayer', 'Native SubLevel Large Solid Smoke')
+        }
+    }
+}

@@ -31,6 +31,7 @@ public final class PlotView {
                     position.set(x, y, z);
                     var state = storage.blockState(plot, position);
                     if (state.isAir() || !NativeStructureView.isSupportedState(state)) continue;
+                    if (occluded(storage, plot, position)) continue;
                     if (cells.size() >= NativeStructureView.MAX_CELLS) {
                         throw new IllegalStateException("SubLevel view exceeds " + NativeStructureView.MAX_CELLS + " cells");
                     }
@@ -39,5 +40,19 @@ public final class PlotView {
             }
         }
         return cells.isEmpty() ? NativeStructureView.EMPTY : new NativeStructureView(List.copyOf(cells));
+    }
+
+    /** Drops fully enclosed opaque cells; collision geometry remains complete in PlotGeometry. */
+    private static boolean occluded(PlotStorage storage, PlotPos plot, BlockPos local) {
+        int side = storage.layout().sideChunks() * 16;
+        for (var direction : net.minecraft.core.Direction.values()) {
+            var offset = local.relative(direction);
+            if (offset.getX() < 0 || offset.getZ() < 0 || offset.getX() >= side || offset.getZ() >= side) {
+                return false;
+            }
+            var neighbor = storage.blockState(plot, offset);
+            if (!neighbor.canOcclude()) return false;
+        }
+        return true;
     }
 }
