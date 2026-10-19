@@ -67,6 +67,8 @@ CLIENT_SUBLEVEL_CHEST_OPENED screen=ContainerScreen slots=63 item0=3 minecraft:d
 CLIENT_SUBLEVEL_HOPPER_OPENED screen=HopperScreen slots=41 item0=3 minecraft:diamond
 CLIENT_SUBLEVEL_DISPENSER_OPENED screen=DispenserScreen slots=45 item0=3 minecraft:diamond
 CLIENT_SUBLEVEL_FURNACE_OPENED screen=FurnaceScreen slots=39 item0=3 minecraft:iron_ore
+CLIENT_SUBLEVEL_DOOR_PREPARED lower=BlockPos{x=0, y=0, z=0} upper=BlockPos{x=0, y=1, z=0}
+CLIENT_SUBLEVEL_DOOR_OPENED local=BlockPos{x=0, y=0, z=0}
 CLIENT_SUBLEVEL_DOUBLE_CHEST_OPENED screen=ContainerScreen slots=90 item0=3 minecraft:diamond
 ```
 
@@ -75,7 +77,7 @@ CLIENT_SUBLEVEL_DOUBLE_CHEST_OPENED screen=ContainerScreen slots=90 item0=3 mine
 ## 3. 当前边界
 
 - 客户端破坏、放置和拉杆 `useBlock` 已实机验证；服务端 BREAK/PLACE 使用玩家视线 + 客户端命中点/目标中心校验，USE 使用目标存在 + 距离 + 命中点邻近校验（避免移动中小方块误拒）；
-- 单箱 63 槽、双箱 90 槽、漏斗 41 槽、发射器 45 槽、熔炉 39 槽代理菜单均已实机打开；熔炉库存槽位已桥接，cooking/lit 数据仍为占位；多格方块与技能事务仍未桥接；
+- 单箱 63 槽、双箱 90 槽、漏斗 41 槽、发射器 45 槽、熔炉 39 槽代理菜单均已实机打开；双格门 `OPEN` 状态已实机切换；熔炉 cooking/lit 数据仍为占位，技能事务仍未桥接；
 - `useBlock/placeBlock` 的 vanilla context 已用真实玩家/BlockEntity 验证；USE 的服务端射线仍需稳定化；
 - 容器菜单（箱子/熔炉）和多格方块尚未桥接；
 - 交互权限目前只做 plot `mayInteract`，未接技能事务/保护事件；

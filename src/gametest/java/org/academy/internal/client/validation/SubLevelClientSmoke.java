@@ -11,6 +11,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.LeverBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
@@ -18,6 +19,7 @@ import net.minecraft.world.level.block.entity.DispenserBlockEntity;
 import net.minecraft.world.level.block.entity.FurnaceBlockEntity;
 import net.minecraft.world.level.block.entity.HopperBlockEntity;
 import net.minecraft.world.level.block.state.properties.ChestType;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.block.state.properties.AttachFace;
 import net.minecraft.world.phys.Vec3;
@@ -68,6 +70,10 @@ public final class SubLevelClientSmoke {
     private static volatile boolean furnacePrepared;
     private static volatile boolean furnaceSent;
     private static volatile boolean furnaceSeen;
+    private static volatile boolean doorRequested;
+    private static volatile boolean doorPrepared;
+    private static volatile boolean doorSent;
+    private static volatile boolean doorSeen;
     private static volatile boolean doubleChestRequested;
     private static volatile boolean doubleChestPrepared;
     private static int carryPhase;
@@ -336,6 +342,35 @@ public final class SubLevelClientSmoke {
             }
             return;
         }
+        if (Boolean.getBoolean("academy.sublevel.clientDoorProbe") && furnaceSeen && !doorSeen) {
+            if (!doorRequested) {
+                doorRequested = true;
+                var server = minecraft.getSingleplayerServer();
+                if (server == null) return;
+                server.execute(() -> prepareDoor(server, result.id()));
+                return;
+            }
+            if (!doorPrepared) return;
+            var door = findBlock(projection, Blocks.OAK_DOOR);
+            if (door == null) return;
+            if (!doorSent) {
+                var point = projection.renderPose(1.0F).localToWorldPoint(new Vec3(
+                        door.position().getX() + 0.5, door.position().getY() + 0.5, door.position().getZ() + 0.5));
+                SubLevelInteractPacket.send(new SubLevelInteractPacket(result.id(), door.position(),
+                        Direction.UP, point, InteractionHand.MAIN_HAND, SubLevelInteractPacket.Action.USE));
+                doorSent = true;
+                AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_DOOR_SENT local={}", door.position());
+                return;
+            }
+            for (var cell : projection.view().cells()) {
+                if (cell.state().is(Blocks.OAK_DOOR) && cell.state().getValue(DoorBlock.OPEN)) {
+                    doorSeen = true;
+                    AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_DOOR_OPENED local={}", cell.position());
+                    break;
+                }
+            }
+            return;
+        }
         if (Boolean.getBoolean("academy.sublevel.carryProbe") && chestSeen && carryPhase < 3) {
             if (carryPhase == 0) {
                 var server = minecraft.getSingleplayerServer();
@@ -493,6 +528,44 @@ public final class SubLevelClientSmoke {
             server.getPlayerList().getPlayers().getFirst().setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
             hopperPrepared = true;
             AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_HOPPER_PREPARED local={}", local);
+        } catch (Throwable error) {
+            fail(error.toString());
+        }
+    }
+
+    private static void prepareDoor(MinecraftServer server, SubLevelId id) {
+        try {
+            var runtime = SubLevelServer.runtime(server).orElseThrow(() -> new IllegalStateException("SubLevel backend unavailable"));
+            var subLevel = runtime.get(id).orElseThrow();
+            var cells = runtime.view(id).cells();
+            org.academy.internal.common.structure.space.NativeStructureView.Cell lower = null;
+            org.academy.internal.common.structure.space.NativeStructureView.Cell upper = null;
+            for (var a : cells) {
+                for (var b : cells) {
+                    if (a.position().getX() == b.position().getX()
+                            && a.position().getZ() == b.position().getZ()
+                            && b.position().getY() == a.position().getY() + 1) {
+                        lower = a; upper = b; break;
+                    }
+                }
+                if (lower != null) break;
+            }
+            if (lower == null) throw new IllegalStateException("no vertical door cells");
+            var baseDoor = Blocks.OAK_DOOR.defaultBlockState()
+                    .setValue(DoorBlock.FACING, Direction.NORTH)
+                    .setValue(DoorBlock.OPEN, false)
+                    .setValue(DoorBlock.POWERED, false)
+                    .setValue(DoorBlock.HINGE, net.minecraft.world.level.block.state.properties.DoorHingeSide.LEFT);
+            var lowerState = baseDoor.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER);
+            var upperState = baseDoor.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER);
+            if (!runtime.storage().setBlock(subLevel.plot(), lower.position(), lowerState, 3)
+                    || !runtime.storage().setBlock(subLevel.plot(), upper.position(), upperState, 3)) {
+                throw new IllegalStateException("door setBlock failed");
+            }
+            runtime.refreshGeometry(id);
+            server.getPlayerList().getPlayers().getFirst().setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            doorPrepared = true;
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_DOOR_PREPARED lower={} upper={}", lower.position(), upper.position());
         } catch (Throwable error) {
             fail(error.toString());
         }
