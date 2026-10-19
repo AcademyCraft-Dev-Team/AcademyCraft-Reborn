@@ -73,6 +73,8 @@
 │  │  ├─ status
 │  │  ├─ probe
 │  │  ├─ capture
+│  │  ├─ shift <dx> <dy> <dz>
+│  │  ├─ rotate <yaw>
 │  │  └─ remove
 │  ├─ skillgui [on|off|toggle|reset|export]                 （客户端）
 │  ├─ textdump <px> <text>                                 （客户端）
@@ -249,6 +251,8 @@
 | `/academy debug sublevel status` | 查看共享 plot 维度是否就绪、已分配 plot 数、活跃 SubLevel 数与物理刚体数。 |
 | `/academy debug sublevel probe` | 在 `academy:sublevel_plots` 分配一个 plot，写入一个石头方块，并创建一个真实 SubLevel 刚体；用于验证 plot/几何/统一物理链路。 |
 | `/academy debug sublevel capture` | 在玩家上方 5 格写入 2×2×2 石头，复制到 plot、创建 SubLevel 并移除源方块；用于验证 capture → plot → physics。 |
+| `/academy debug sublevel shift <dx> <dy> <dz>` | 测试/调试：平移第一个 SubLevel，并移除其物理 body 使姿态变化确定。 |
+| `/academy debug sublevel rotate <yaw>` | 测试/调试：绕第一个 SubLevel 局部中心 yaw 旋转。 |
 | `/academy debug sublevel remove` | 移除 probe 创建的子结构并释放 plot。 |
 
 `probe` 只用于开发验证；Phase 1 完成后由捕获事务自动创建 SubLevel。

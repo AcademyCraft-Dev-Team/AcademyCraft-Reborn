@@ -1,5 +1,6 @@
 package org.academy.internal.server.commands;
 
+import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.commands.CommandSourceStack;
@@ -16,7 +17,15 @@ final class SubLevelDebugCommands {
                 .then(Commands.literal("status").executes(SubLevelDebugCommands::status))
                 .then(Commands.literal("probe").executes(SubLevelDebugCommands::probe))
                 .then(Commands.literal("capture").executes(SubLevelDebugCommands::capture))
-                .then(Commands.literal("remove").executes(SubLevelDebugCommands::remove));
+                .then(Commands.literal("remove").executes(SubLevelDebugCommands::remove))
+                .then(Commands.literal("shift")
+                        .then(Commands.argument("dx", DoubleArgumentType.doubleArg(-16, 16))
+                                .then(Commands.argument("dy", DoubleArgumentType.doubleArg(-16, 16))
+                                        .then(Commands.argument("dz", DoubleArgumentType.doubleArg(-16, 16))
+                                                .executes(SubLevelDebugCommands::shift)))))
+                .then(Commands.literal("rotate")
+                        .then(Commands.argument("yaw", DoubleArgumentType.doubleArg(-360, 360))
+                                .executes(SubLevelDebugCommands::rotate)));
     }
 
     private static int status(CommandContext<CommandSourceStack> context) {
@@ -46,6 +55,21 @@ final class SubLevelDebugCommands {
                 player.blockPosition().above(5));
         context.getSource().sendSuccess(() -> Component.literal("[AC SubLevel] " + result), true);
         return result.startsWith("captured ") ? 1 : 0;
+    }
+
+    private static int shift(CommandContext<CommandSourceStack> context) {
+        var result = SubLevelServer.shiftFirst(context.getSource().getServer(),
+                DoubleArgumentType.getDouble(context, "dx"), DoubleArgumentType.getDouble(context, "dy"),
+                DoubleArgumentType.getDouble(context, "dz"));
+        context.getSource().sendSuccess(() -> Component.literal("[AC SubLevel] " + result), true);
+        return result.startsWith("shifted ") ? 1 : 0;
+    }
+
+    private static int rotate(CommandContext<CommandSourceStack> context) {
+        var result = SubLevelServer.rotateFirst(context.getSource().getServer(),
+                DoubleArgumentType.getDouble(context, "yaw"));
+        context.getSource().sendSuccess(() -> Component.literal("[AC SubLevel] " + result), true);
+        return result.startsWith("rotated ") ? 1 : 0;
     }
 
     private static int remove(CommandContext<CommandSourceStack> context) {
