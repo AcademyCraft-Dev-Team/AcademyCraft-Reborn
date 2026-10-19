@@ -31,6 +31,7 @@ import org.academy.internal.common.structure.space.NativeStructureDimensions;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
@@ -40,6 +41,7 @@ public final class SubLevelServer {
     private static final Map<MinecraftServer, Runtime> RUNTIMES = new WeakHashMap<>();
     private static final Map<net.minecraft.server.level.ServerPlayer, Map<SubLevelId, org.academy.internal.common.structure.space.NativeStructureView>> SENT_VIEWS
             = new WeakHashMap<>();
+    private static final boolean SEND_COLLISION_BOXES = Boolean.getBoolean("academy.sublevel.clientCollision");
 
     private SubLevelServer() {
     }
@@ -227,7 +229,7 @@ public final class SubLevelServer {
             AcademyCraft.LOGGER.info("SubLevel snapshots started: players={} sublevels={}", players.size(), runtime.size());
         }
         for (var subLevel : runtime.subLevels()) {
-            var boxes = runtime.localCollisionBoxes(subLevel.id());
+            var boxes = SEND_COLLISION_BOXES ? runtime.localCollisionBoxes(subLevel.id()) : List.<AABB>of();
             var view = runtime.view(subLevel.id());
             for (var player : players) {
                 if (player.level() != host) continue;

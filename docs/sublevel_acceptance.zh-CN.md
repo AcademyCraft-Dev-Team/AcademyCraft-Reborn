@@ -66,7 +66,7 @@ SUBLEVEL_LARGE_BENCHMARK side=24 cells=3176 fps_avg=116.25 fps_min=104 ticks=120
 
 为支持该场景，捕获上限提升到 16,384 格、plot 几何/快照 16,384 盒，并在 PlotView 剔除被六个不透明邻块包围的内部格子。
 
-24³ 实心体捕获已成功：`side=24 solid=true blocks=13824 boxes=13824`，视图剔除后约 3,176 cells；但客户端实测未在 2,400 tick 内完成 120 帧采样并超时，说明逐 cell 渲染仍不足以支撑实心 24³，需要 section 批处理/调色板。
+24³ 实心体捕获已成功：`side=24 solid=true blocks=13824 boxes=13824`，视图剔除后约 3,176 cells；关闭客户端碰撞后服务端不再发送 13,824 个盒子，但逐 cell 渲染仍未在 2,400 tick 内完成 120 帧采样并超时，说明需要 section 批处理/调色板。
 
 ## 3. 其余已验证链路
 

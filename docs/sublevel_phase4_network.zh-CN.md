@@ -20,7 +20,8 @@
 - 快照同时包含碰撞盒、pose 和 state-only block view cells；
 - 客户端用这些 cells 创建 client-only `NativeStructureProjectionEntity`，复用现有投影渲染器；
 - 客户端碰撞默认 **关闭**（`-Dacademy.sublevel.clientCollision=true` 才启用），避免客户端同步/渲染验收前出现不可见屏障；
-- view cells 采用**增量快照**：首次或方块变化时发送完整 view，其余快照只发 pose/collision，`fullView=false`；客户端保留上一份 view。
+- view cells 采用**增量快照**：首次或方块变化时发送完整 view，其余快照只发 pose/collision，`fullView=false`；客户端保留上一份 view；
+- `academy.sublevel.clientCollision=false` 时服务端不发送 collision boxes，避免大结构每 5 tick 传输数万盒。
 - 后续替换为 section 调色板 + 真正的 section 差量。
 
 ## 2. 验证
