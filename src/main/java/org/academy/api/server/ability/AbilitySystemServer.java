@@ -25,6 +25,7 @@ import org.academy.api.common.util.MathUtil;
 import org.academy.api.common.wireless.WirelessUser;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
+import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.development.AbilityDevelopmentAccess;
 import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.advancement.AbilityAdvancements;
@@ -568,6 +569,9 @@ public final class AbilitySystemServer {
     }
 
     public void onPlayerLogout(ServerPlayer player) {
+        // Invoke from Academy code: injected PlayerList methods retain Minecraft's CodeSource,
+        // so the protection API correctly does not accept them as trusted skill-state callers.
+        VectorReflection.Server.clearProtection(player);
         var development = DEVELOP_DATA_MAP.remove(player.getUUID());
         if (development != null) development.abort();
         initialAbilityRecommendations.clear(player.getUUID());

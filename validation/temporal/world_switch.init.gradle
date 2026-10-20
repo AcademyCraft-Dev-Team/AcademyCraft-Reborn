@@ -1,0 +1,22 @@
+// Prepare a saves/test copy in a new run/reflection-world-switch-smoke-* directory first.
+// The probe creates saves/fresh there, exits normally and reopens test in the same JVM.
+allprojects {
+    afterEvaluate {
+        def runRoot = rootProject.file('run').canonicalFile
+        def directory = rootProject.file(providers.gradleProperty('academyReflectionWorldSwitchDirectory')
+                .getOrElse('run/reflection-world-switch-smoke-default')).canonicalFile
+        if (!directory.toPath().startsWith(runRoot.toPath())
+                || !directory.name.startsWith('reflection-world-switch-smoke-')) {
+            throw new GradleException('World switch smoke must use run/reflection-world-switch-smoke-*')
+        }
+        if (!new File(directory, 'saves/test/level.dat').isFile()
+                || new File(directory, 'saves/fresh').exists()) {
+            throw new GradleException('Prepare a test copy and leave saves/fresh absent')
+        }
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.reflectionWorldSwitchSmoke', 'true'
+            programArguments.addAll('--width', '960', '--height', '540', '--quickPlaySingleplayer', 'test')
+        }
+    }
+}

@@ -40,6 +40,7 @@ import org.academy.internal.server.config.MusicConfig;
 import org.academy.internal.server.config.DimensionEffectsConfig;
 import org.academy.internal.server.entity.SurvivalDefenseRuntime;
 import org.academy.internal.server.time.TemporalRuntime;
+import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
 import org.academy.internal.server.world.level.storage.WorldData;
 import org.academy.internal.server.world.level.storage.WorldDataStore;
 import org.slf4j.Logger;
@@ -65,6 +66,7 @@ public final class AcademyCraftServer {
     private final MusicConfig musicConfig;
     private final DimensionEffectsConfig dimensionEffectsConfig;
     private final TemporalRuntime temporalRuntime;
+    private final VectorReflectionRuntime vectorReflectionRuntime;
     private final MinecraftServer server;
     private long nextSaveTick = SAVE_INTERVAL_TICKS;
 
@@ -88,6 +90,7 @@ public final class AcademyCraftServer {
 
         worldData = WorldData.getWorldData(worldDataFile);
         temporalRuntime = new TemporalRuntime(server);
+        vectorReflectionRuntime = new VectorReflectionRuntime(server);
         abilitySystemServer = new AbilitySystemServer(context, worldData, abilityConfig);
         WirelessManager.initServer();
         PvpSetting.initServer();
@@ -139,6 +142,7 @@ public final class AcademyCraftServer {
     public static void onServerStopping(ServerStoppingEvent event) {
         var context = event.getServer();
         var instance = context.getAcademyCraftServer();
+        VectorReflectionRuntime.shutdown(event.getServer());
         ServerProgramScheduler.clear(event.getServer());
         AbilityProgramManager.clear();
         PrecisionOperationRuntime.clear(event.getServer());
@@ -157,6 +161,10 @@ public final class AcademyCraftServer {
 
     public AbilitySystemServer getAbilitySystemServer() {
         return abilitySystemServer;
+    }
+
+    public VectorReflectionRuntime getVectorReflectionRuntime() {
+        return vectorReflectionRuntime;
     }
 
     public GenericConfig getGenericConfig() {

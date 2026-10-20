@@ -824,7 +824,7 @@ public class VectorReflection extends Skill {
 
         @SubscribeEvent
         public static void onServerTick(ServerTickEvent.Post event) {
-            VectorReflectionRuntime.onServerTick();
+            VectorReflectionRuntime.onServerTick(event.getServer());
             VectorReflectedDamageAccumulator.tick();
         }
 

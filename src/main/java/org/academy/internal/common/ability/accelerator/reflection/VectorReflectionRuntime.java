@@ -1,8 +1,8 @@
 package org.academy.internal.common.ability.accelerator.reflection;
 
-import net.minecraft.world.effect.MobEffects;
-
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.api.server.entity.SurvivalDefense;
@@ -10,9 +10,11 @@ import org.academy.api.server.entity.SurvivalDefenseLease;
 import org.academy.api.server.entity.SurvivalDefenseProfile;
 import org.academy.api.server.time.TemporalApi;
 import org.academy.api.server.time.TemporalImmunityLease;
+import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.lang.ref.WeakReference;
@@ -30,18 +32,29 @@ public final class VectorReflectionRuntime {
     private static final StackWalker STATE_STACK_WALKER = StackWalker.getInstance(
             StackWalker.Option.RETAIN_CLASS_REFERENCE
     );
-    private static final Map<UUID, Anchor> ANCHORS = new ConcurrentHashMap<>();
     private static final long OBSERVER_REBUILD_COOLDOWN = 20L;
+    private final MinecraftServer server;
+    private final Map<UUID, Anchor> anchors = new ConcurrentHashMap<>();
+    private boolean stopping;
 
-    private VectorReflectionRuntime() {
+    public VectorReflectionRuntime(MinecraftServer server) {
+        this.server = Objects.requireNonNull(server);
     }
 
     public static void maintain(ServerPlayer player) {
         if (player == null) return;
-        var anchor = ANCHORS.computeIfAbsent(player.getUUID(), ignored -> new Anchor(player));
+        var runtime = existing(player.level().getServer());
+        if (runtime != null) runtime.maintainPlayer(player);
+    }
+
+    private void maintainPlayer(ServerPlayer player) {
+        requireServerThread();
+        if (stopping) return;
+        var anchor = anchors.computeIfAbsent(player.getUUID(), ignored -> new Anchor(player));
         var previous = anchor.player.get();
         if (previous != null && previous != player) {
             closeSurvivalDefense(anchor);
+            closeTemporalImmunity(anchor);
             EntityControlApi.allowExternalRemoval(previous);
             VectorHealthLedger.disarm(previous);
         }
@@ -71,7 +84,10 @@ public final class VectorReflectionRuntime {
     }
 
     private static void restoreOriginalInstance(ServerPlayer player) {
-        var anchor = ANCHORS.remove(player.getUUID());
+        var runtime = existing(player.level().getServer());
+        if (runtime == null) return;
+        runtime.requireServerThread();
+        var anchor = runtime.anchors.remove(player.getUUID());
         closeSurvivalDefense(anchor);
         closeTemporalImmunity(anchor);
         var previous = anchor == null ? null : anchor.player.get();
@@ -83,12 +99,24 @@ public final class VectorReflectionRuntime {
         VectorHealthLedger.disarm(player);
     }
 
-    public static void onServerTick() {
-        for (var entry : ANCHORS.entrySet()) {
+    public static void onServerTick(MinecraftServer server) {
+        var runtime = existing(server);
+        if (runtime == null) return;
+        runtime.tick();
+    }
+
+    private void tick() {
+        requireServerThread();
+        if (stopping) return;
+        for (var entry : anchors.entrySet()) {
             var player = entry.getValue().player.get();
             if (player == null || player.connection == null || player.hasDisconnected()) {
                 if (player != null) deactivate(player);
-                else ANCHORS.remove(entry.getKey(), entry.getValue());
+                else {
+                    closeSurvivalDefense(entry.getValue());
+                    closeTemporalImmunity(entry.getValue());
+                    anchors.remove(entry.getKey(), entry.getValue());
+                }
                 continue;
             }
             if (!VectorReflection.Server.usesFullInstanceProtection(player)) {
@@ -99,9 +127,20 @@ public final class VectorReflectionRuntime {
         }
     }
 
-    public static void shutdown() {
+    /** Called on the owning server thread before survival and temporal services are stopped. */
+    public static void shutdown(MinecraftServer server) {
         if (!isAcademyStateCaller("shutdown")) return;
-        for (var anchor : ANCHORS.values()) {
+        var runtime = existing(server);
+        if (runtime != null) runtime.stop();
+    }
+
+    private void stop() {
+        requireServerThread();
+        if (stopping) return;
+        // Logout/removal callbacks can still run after ServerStoppingEvent. They must not
+        // reacquire protection, even if persisted skill data still says reflection is enabled.
+        stopping = true;
+        for (var anchor : anchors.values()) {
             var player = anchor.player.get();
             closeSurvivalDefense(anchor);
             closeTemporalImmunity(anchor);
@@ -109,8 +148,19 @@ public final class VectorReflectionRuntime {
             EntityControlApi.allowExternalRemoval(player);
             VectorHealthLedger.disarm(player);
         }
-        ANCHORS.clear();
-        VectorHealthLedger.disarmSide(false);
+        anchors.clear();
+    }
+
+    private static @Nullable VectorReflectionRuntime existing(MinecraftServer server) {
+        var context = (MinecraftServerContext) server;
+        return context.hasAcademyCraftServer()
+                ? context.getAcademyCraftServer().getVectorReflectionRuntime() : null;
+    }
+
+    private void requireServerThread() {
+        if (!server.isSameThread()) {
+            throw new IllegalStateException("Vector reflection state belongs to its owning server thread");
+        }
     }
 
     private static void maintainSurvivalDefense(ServerPlayer player, Anchor anchor) {
