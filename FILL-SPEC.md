@@ -2,7 +2,7 @@
 
 ## 2026-10-20 新增：Sable 对照后的 v2 方案骨架
 
-**状态：DRAFT PORTS IMPLEMENTED；未接入运行路径，GAMEPLAY_ENABLED=false，玩法验收 UNVERIFIED。** 本节优先于下方历史 IMPLEMENTED 标签；不表示旧问题已修复。设计与配对数据见 [v2 方案](docs/structure_pipeline_v2_plan.zh-CN.md)。新骨架没有替换现有后端，没有变更物理 ABI、存档或网络包。Sable 主体源码没有复制进 Academy。2026-10-20 后续另落地了 capture 分阶段计时与 plot 预开池（见下表与基线文档）；它属于 live 调度优化，不改变七个 PIPE 端口仍未接入运行路径的事实。
+**状态：DRAFT PORTS IMPLEMENTED；未接入运行路径，GAMEPLAY_ENABLED=false，玩法验收 UNVERIFIED。** 本节优先于下方历史 IMPLEMENTED 标签；不表示旧问题已修复。设计与配对数据见 [v2 方案](docs/structure_pipeline_v2_plan.zh-CN.md)。新骨架没有替换现有后端，没有变更物理 ABI、存档或网络包。Sable 主体源码没有复制进 Academy。2026-10-20 后续另落地了 capture 分阶段计时、plot 预开池与局部 chunk 耐久（见下表与基线文档）；它们属于 live 调度/耐久优化，不改变七个 PIPE 端口仍未接入运行路径的事实。
 
 公开契约：`src/main/java/org/academy/api/common/structure/StructurePipeline.java`。
 实现门面：`src/main/java/org/academy/internal/common/sublevel/pipeline/SubLevelPipelineDraft.java`。
@@ -28,6 +28,7 @@
 | PIPE-02 `compileGeometry` | `PipelineGeometryCompiler` | 重复格/非法盒拒绝；O(V) 占用扫描 + 同材质满格贪心 3D 合并；非满格保留真实盒；无全局缩盒；时间/格预算返回 `complete=false` | 未接 native 体素/邻接 ABI；内部面与接触邻接仍需 native adapter；未跑 128 格真实轮廓 |
 | PIPE-02 实机热点（继续开发） | `TerrainSectionGeometry.merge` 改为三轴分组贪心合并 | 保持精确并集；4096 格实心 section 合并为 1 盒；加入 9 项单测与 5 秒上限压力用例；旧两两重启 O(n³) 路径删除 | 仍需真实 H 捕获/JFR 与 Sable 配对复测；未接 PIPE-02 草案端口，未改 native ABI |
 | 捕获热点（继续开发） | `PlotStorage` 预开池 + `CaptureTimings` 分阶段日志 + `SubLevelServer.tick` 调度 | 默认保留 2 个已加载空 plot；每 tick 最多一个预开区块；`academy.sublevel.plotPrewarm=0` 关闭；capture 363→227ms，r13/r14 两轮创建比 1.73×/1.67×（r7/r8 2.93×） | 首个预开区块 tick 1 仍约119ms（工作移出 capture，非消除）；整世界保存约107ms 未改；本地 lift 27 tick 仍 FAILED；预开无单测，靠 parity 实测；首次进服/启动延迟未测 |
+| 局部 chunk 耐久（继续开发） | `TargetedChunkDurability` + `ChunkMapAccessor`；`SubLevelRuntime.finalizeStaged` / `SubLevelCaptureTarget.save(…, positions)` | `ChunkMap.save(ChunkAccess)` + `synchronize(true)`；只保存目标 plot lease chunks 与源 host chunks；journal COPIED/COMMIT_DECIDED/PUBLISHED 顺序不变；r15 capture 227→139.5ms；r16/r17 两轮创建比 1.09×/1.20× | 仅 SubLevel live 路径；native/Sable 与无 positions 调用仍整级保存；崩溃/恢复矩阵未跑；只覆盖方块数据，实体/level.dat 未保存；本地 lift 27 tick 仍 FAILED |
 | PIPE-03 `publishTerrain` | `PipelineTerrainPublisher` | 宿主线程/维度校验；epoch/revision/coverage 代际拒绝；required section 缺失或几何不完整拒绝；原子替换已发布集合；`coverageComplete` 供未来步进门禁 | 未把 `Geometry` 写入 native world；live 门禁仍是 `TerrainColliderCache.coverageComplete`；未接 runtime/票据释放；未跑预算/卸载矩阵 |
 | PIPE-04 `controlSubstep` | `PipelineSubstepControl` | 真实子步时长校验；`StructurePhysicsControls.force` 的 PD/阻尼；力/力矩输出；力矩 = r×F；不乘外层 dt、不重复重力 | 未接 `SubLevelDirectControl`/native step 的子步循环；未验证 2/4/8 子步与累计冲量 |
 | PIPE-05 `advanceLift` | `PipelineLiftController` | 仅接受 3/5/7；原位质心；垂直/水平 0.1 容差；首次到位锁存 arrival 与 hoverDeadline；liftDeadline 返回 BLOCKED；终态不复活 | 未接 `VectorStructureService`/真实按键；三档实机高度、悬浮 200 tick、转向投掷未采 |
@@ -49,9 +50,9 @@
 
 配对测试入口：`validation/structure_parity/run-pair.ps1` 与 `server_parity.init.gradle`。完整命令、采样含义与无效样本规则见该目录 README。夹具是已实现的测量工具，不属于留给 Agent B 的玩法业务方法。它通过公开 capture/direct-control API 调用当前后端，使用全新隔离世界，不写入 `run/saves/test`。
 
-**UNVERIFIED 清单**：七个端口仍未接入生产 tick/网络/渲染路径，其实机验收全部待做；PIPE-01 后端整级保存协议仍未替换（capture 预开只改变 plot 区块调度），PIPE-02/03 native 体素/邻接 ABI 与实际地形写入、PIPE-06 包 epoch/seq 字段、PIPE-07 renderer 接线均未完成；真实 H 三档与节点、客户端渲染/可视首帧、多人网络、GC/分配/带宽、1/16/64 个结构与 256/4096 格大结构、复杂地形和 Sable 坐标/质心对齐审计、许可范围内任何后续源码复用的逐文件来源记录仍未关闭。当前服务端小样本与草案单测不能关闭这些项目。
+**UNVERIFIED 清单**：七个端口仍未接入生产 tick/网络/渲染路径，其实机验收全部待做；PIPE-01 的 SubLevel 捕获已改为局部 chunk 耐久，但 native/Sable 与无 positions 的调用仍整级保存，崩溃/恢复矩阵未跑，PIPE-02/03 native 体素/邻接 ABI 与实际地形写入、PIPE-06 包 epoch/seq 字段、PIPE-07 renderer 接线均未完成；真实 H 三档与节点、客户端渲染/可视首帧、多人网络、GC/分配/带宽、1/16/64 个结构与 256/4096 格大结构、复杂地形和 Sable 坐标/质心对齐审计、许可范围内任何后续源码复用的逐文件来源记录仍未关闭。当前服务端小样本与草案单测不能关闭这些项目。
 
-完成顺序：先修 PIPE-02/03 的真实碰撞与热点 → PIPE-04/05 控制闭环 → PIPE-01 创建停顿/可视发布 → PIPE-06/07 流畅性。2026-10-20 的 capture 剖析与 plot 预开已完成 PIPE-01 的第一步（r11–r14）；下一步是只保存受影响 chunk 并同步落盘的局部耐久协议，仍属 PIPE-01。每步先启用窄范围验收开关；旧 backend ID、保存格式、控制租约、权限与掉落路径保持原入口。所有门槛通过后另立实现校验，才允许改变 `GAMEPLAY_ENABLED`，不得把草案任务的通过当实现验收。
+完成顺序：先修 PIPE-02/03 的真实碰撞与热点 → PIPE-04/05 控制闭环 → PIPE-01 创建停顿/可视发布 → PIPE-06/07 流畅性。2026-10-20 的 capture 剖析、plot 预开与局部 chunk 耐久已完成 PIPE-01 的主要性能项（r11–r17，创建比 2.93×→1.09×/1.20×）；下一个功能目标是本地 3/5/7 与 200 tick 精度（对应 PIPE-04/05 与现有 live 控制），崩溃/恢复矩阵仍属 PIPE-01 待补。每步先启用窄范围验收开关；旧 backend ID、保存格式、控制租约、权限与掉落路径保持原入口。所有门槛通过后另立实现校验，才允许改变 `GAMEPLAY_ENABLED`，不得把草案任务的通过当实现验收。
 
 本轮骨架验证结果（2026-10-20）：
 

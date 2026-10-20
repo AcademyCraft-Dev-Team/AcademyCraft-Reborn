@@ -78,6 +78,15 @@ public interface CaptureTarget {
     boolean save(StructureRef target);
 
     /**
+     * Persists a checkpoint with the source cells when the backend can scope its durability.
+     * The default keeps the backend's whole-target save; SubLevel uses the positions to write
+     * only the source host chunks instead of the entire host level.
+     */
+    default boolean save(StructureRef target, List<BlockPos> sourcePositions) {
+        return save(target);
+    }
+
+    /**
      * Releases an uncommitted target during rollback or capacity reclamation; true means the
      * target no longer exists, so the coordinator must not clear its cells. The Sable backend
      * removes the whole ship because per-cell clearing trips its zero-mass removal.

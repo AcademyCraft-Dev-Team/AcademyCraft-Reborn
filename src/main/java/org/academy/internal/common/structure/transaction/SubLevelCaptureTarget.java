@@ -24,6 +24,7 @@ import org.academy.internal.common.sublevel.SubLevelServer;
 import org.academy.internal.common.sublevel.SubLevelState;
 import org.academy.internal.common.sublevel.SubLevelStructureHandle;
 import org.academy.internal.common.sublevel.SubLevelStructureRefs;
+import org.academy.internal.common.sublevel.TargetedChunkDurability;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
@@ -145,21 +146,35 @@ public final class SubLevelCaptureTarget implements CaptureTarget {
 
     @Override
     public boolean save(StructureRef target) {
+        return save(target, List.of());
+    }
+
+    @Override
+    public boolean save(StructureRef target, List<BlockPos> sourcePositions) {
         var runtime = runtime(target);
         if (runtime == null || resolve(target, false).isEmpty() || quarantined(target)
                 || NativeStructureStorageErrors.failed(runtime.host())) return false;
-        // Both sides must reach disk before the write-ahead record can be retired.
+        // Both sides must reach disk before the write-ahead record can be retired. Save only the
+        // target plot chunks and the host chunks containing the removed source cells; other
+        // plots/chunks remain for the normal level save.
         String owner = target.id().toString();
         long plotStarted = CaptureTimings.begin();
-        runtime.storage().level().save(null, true, false);
+        boolean plotSaved = runtime.flushPlotChunks(new SubLevelId(target.id()));
         CaptureTimings.record(owner, "save_plot_level", plotStarted);
-        if (NativeStructureStorageErrors.failed(runtime.storage().level())) return false;
+        if (!plotSaved || NativeStructureStorageErrors.failed(runtime.storage().level())) return false;
         long manifestStarted = CaptureTimings.begin();
         runtime.persist();
         CaptureTimings.record(owner, "save_manifest", manifestStarted);
         long hostStarted = CaptureTimings.begin();
-        runtime.host().save(null, true, false);
+        boolean hostSaved = sourcePositions.isEmpty()
+                ? fullHostSave(runtime)
+                : TargetedChunkDurability.saveAround(runtime.host(), sourcePositions);
         CaptureTimings.record(owner, "save_host", hostStarted);
+        return hostSaved;
+    }
+
+    private static boolean fullHostSave(SubLevelRuntime runtime) {
+        runtime.host().save(null, true, false);
         return !NativeStructureStorageErrors.failed(runtime.host());
     }
 

@@ -153,7 +153,9 @@ public final class SubLevelRuntime {
         terrainNeedsUpdate = true;
         remember(managed.subLevel);
         long flushStarted = org.academy.internal.common.structure.transaction.CaptureTimings.begin();
-        flushStorage();
+        if (!flushPlotChunks(id)) {
+            throw new IllegalStateException("SubLevel plot chunk save failed: " + id);
+        }
         org.academy.internal.common.structure.transaction.CaptureTimings.record(id.value().toString(),
                 "finalize_flush_storage", flushStarted);
         long persistStarted = org.academy.internal.common.structure.transaction.CaptureTimings.begin();
@@ -168,6 +170,13 @@ public final class SubLevelRuntime {
         if (org.academy.internal.common.structure.space.NativeStructureStorageErrors.failed(storage.level())) {
             throw new IllegalStateException("SubLevel plot save failed");
         }
+    }
+
+    /** Saves only this plot's chunks; capture durability does not require every other plot. */
+    public boolean flushPlotChunks(SubLevelId id) {
+        var managed = subLevels.get(Objects.requireNonNull(id, "id"));
+        if (managed == null) return false;
+        return TargetedChunkDurability.save(storage.level(), managed.lease.chunks());
     }
 
     /** Isolates an uncommitted copy while retaining its plot and transaction activation. */

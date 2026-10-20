@@ -123,6 +123,48 @@ r12 的预开日志：第一个区块 **119.456 ms**（tick 1，plot 维度首�
 - 本地 `lift_status` 仍 FAILED、最长连续 hover 27 tick；Sable PASSED（223/226）。创建变快没有改变 3/5/7 与 200 tick 的精度问题。
 - r13/r14 每格仍只有 2 次，环境/负载未固定；Sable 绝对值在 108–142 ms 间波动，不能用单轮小数点比较。tick 1 的 119 ms 预开尖峰需要另测首次进服/启动延迟，不能只看 capture 指标。
 
-证据：[capture-profile-2026-10-20.json](../validation/structure_parity/capture-profile-2026-10-20.json)（SHA-256 `74B072DC76B86BA92587ADF78BACBA8C660BF1C21F1AF282FCC1F23B2C9233D3`）、[prewarm-2026-10-20-r13r14.json](../validation/structure_parity/prewarm-2026-10-20-r13r14.json)（SHA-256 `591AA82F4B6D6EB203002A2B2F6F8C015714864B31BD8C424F9A08CF32D419CF`）；逐次原始结果在 `run/sable-compat/parity-*/server/result.json`，日志在 `build/parity-*.log` 与各 server `logs/latest.log`，均不纳入 Git。
+证据：[capture-profile-2026-10-20.json](../validation/structure_parity/capture-profile-2026-10-20.json)（SHA-256 `7DCF8915595D526BB1A89AFD704AEFBDFA2EAE8E28972890A3000E3B76B1A179`）、[prewarm-2026-10-20-r13r14.json](../validation/structure_parity/prewarm-2026-10-20-r13r14.json)（SHA-256 `591AA82F4B6D6EB203002A2B2F6F8C015714864B31BD8C424F9A08CF32D419CF`）；逐次原始结果在 `run/sable-compat/parity-*/server/result.json`，日志在 `build/parity-*.log` 与各 server `logs/latest.log`，均不纳入 Git。
 
-下一步：**只保存受影响的 chunk 并同步落盘**，替换 `finalize_flush_storage` 与 `save_host` 的整级保存；同时补 `saveHost` 的局部耐久崩溃恢复矩阵。完成后再考虑 journal 写入与 encode 的小头，以及预开 tick 的启动/首帧测量。
+下一步已由 r15–r17 完成：**只保存受影响的 chunk 并同步落盘**替换了 `finalize_flush_storage` 与 `save_host` 的整级保存；见下节。剩余主要功能问题转为本地 3/5/7 与 200 tick 精度。
+
+## 2026-10-20 局部 chunk 耐久（r15–r17）
+
+### 实现
+
+整级保存在 capture 里只承担“把改动落盘”的职责，实际只需要目标 plot 的 lease chunks 和源 host cells 所在 chunks。新增 `TargetedChunkDurability`：
+
+- `ChunkMapAccessor`（mixin）调用 `ChunkMap` 的私有 `save(ChunkAccess)`，再用公开的 `SimpleRegionStorage.synchronize(true)` 等待 region 异步写完成；
+- `SubLevelRuntime.finalizeStaged` 改为 `flushPlotChunks(id)`：只保存该 plot 的 4 个 lease chunks，不再 `storage.level().save(...)`；
+- `SubLevelCaptureTarget.save(target, sourcePositions)` 只保存目标 plot chunks、manifest 和源 host cells 所在 chunks；`CaptureTarget` 增加带 positions 的默认重载，native/Sable 与无 positions 的调用仍走原整级保存；
+- journal 顺序不变：目标 plot 落盘后写 COPIED/COMMIT_DECIDED，源 host 落盘后才写 PUBLISHED；`flushStorage()` 仍保留给非 capture 路径。
+
+### 结果
+
+| 阶段 | r12 仅预开 ms | r15 局部耐久 ms |
+| --- | ---: | ---: |
+| `capture_call_ms` | 227.19 | **139.53** |
+| `capture_total` | 224.44 | **137.47** |
+| `finalize_flush_storage` | 67.03 | **12.25** |
+| `save_host` | 29.64 | **6.41** |
+| `save_plot_level` | 9.97 | **4.51** |
+| `save_manifest` | 4.05 | 6.13 |
+| `step_save_target` | 51.56 | 25.58 |
+| `drive_total` | 171.01 | 86.22 |
+
+r16/r17 两轮配对（第二轮颠倒顺序）：
+
+| 场景 | 本地创建 ms | Sable 创建 ms | 创建比 | 本地 lift p95 | Sable lift p95 | p95 比 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 地面 | 145.26（158.43、132.09） | 133.68（136.85、130.51） | **1.09×** | 11.24 | 14.37 | 0.78× |
+| 悬空 | 152.51（152.26、152.76） | 127.31（123.01、131.62） | **1.20×** | 10.45 | 11.60 | 0.90× |
+
+创建比从 r13/r14 的 1.73×/1.67× 进一步降到 **1.09×/1.20×**，相对 r7/r8 的 2.93× 已接近消除；本地 capture 132–158 ms，Sable 123–137 ms。剩余大项是 journal/manifest 写入（约 14+6+5+6+4 ms）、copy 校验/写入和 finalize body/view，不再是整世界保存。
+
+### 限制
+
+- 这次只替换 **SubLevel live capture** 的保存范围；native/Sable 与 `save(target)` 无 positions 的调用仍整级保存。只保证方块数据；不保存实体/level.dat。SubLevel admission 拒绝 block entity，因此不覆盖带 BE 的捕获。
+- **崩溃/恢复矩阵尚未跑**：journal 顺序未变，目标/源 chunk 的落盘依赖 `ChunkMap.save` + `synchronize(true)`，还没有“写一半杀进程/重启后再读”的实测；这是下一步必须补的验证，不能只凭一次成功 capture 认定耐久完成。
+- r16/r17 每格仅 2 次，环境/负载未固定；Sable 绝对值 123–137 ms，本地 132–158 ms，1.09×/1.20× 不是统计承诺。tick 1 的 119 ms 预开尖峰仍在，首次进服/启动延迟未测。
+- 本地 `lift_status` 仍 FAILED、hover 27 tick；Sable PASSED（223/226）。创建性能已接近配对，**剩余的主要功能问题转为 3/5/7 与 200 tick 的本地精度**，不应继续用性能微优化掩盖。
+
+证据：[targeted-2026-10-20-r16r17.json](../validation/structure_parity/targeted-2026-10-20-r16r17.json)（SHA-256 `D39B355C8C22539B5AF715489833B2CC0502369E4786F18C7C1FE3A01A9F552D`）；分阶段数据并入 [capture-profile-2026-10-20.json](../validation/structure_parity/capture-profile-2026-10-20.json)（SHA-256 `7DCF8915595D526BB1A89AFD704AEFBDFA2EAE8E28972890A3000E3B76B1A179`）。逐次原始结果与日志路径同前，均不纳入 Git。

@@ -24,6 +24,7 @@
     "common.LevelTicksAccessor",
     "common.PersistentEntitySectionManagerAccessor",
     "common.ServerLevelEntityManagerAccessor",
+    "common.ChunkMapAccessor",
     "common.LivingEntityAttackStateAccessor",
     "common.LivingEntityDamageInvoker",
     "common.MixinAbstractArrowVectorRedirect",

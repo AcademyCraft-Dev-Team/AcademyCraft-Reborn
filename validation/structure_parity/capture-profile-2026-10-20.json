@@ -92,5 +92,55 @@
       "local_lift_status": "FAILED (hover 27)",
       "sable_lift_status": "PASSED"
     }
+  },
+  "after_targeted": {
+    "run": "local-ground-capture-r15",
+    "capture_call_ms": 139.5283,
+    "capture_total_ms": 137.473,
+    "stages_ms": {
+      "journal_prepare": 14.223,
+      "target_allocate": 13.730,
+      "finalize_flush_storage": 12.248,
+      "save_plot_level": 4.514,
+      "save_manifest": 6.127,
+      "save_host": 6.413,
+      "step_copy": 52.628,
+      "step_remove_source": 7.244,
+      "step_save_target": 25.580,
+      "drive_total": 86.220
+    },
+    "note": "ChunkMapAccessor invokes the per-chunk save and synchronize(true) waits for the region writes. Only the target plot lease chunks and the source host chunks are saved; journal order is unchanged. Full saves remain for callers without positions."
+  },
+  "pair_r16_r17": {
+    "runs_per_backend": 2,
+    "ground": {
+      "local_capture_mean_ms": 145.2589,
+      "sable_capture_mean_ms": 133.6806,
+      "capture_ratio": 1.0866,
+      "local_lift_p95_ms": 11.240,
+      "sable_lift_p95_ms": 14.36755,
+      "lift_p95_ratio": 0.7823
+    },
+    "floating": {
+      "local_capture_mean_ms": 152.50785,
+      "sable_capture_mean_ms": 127.3141,
+      "capture_ratio": 1.1979,
+      "local_lift_p95_ms": 10.44875,
+      "sable_lift_p95_ms": 11.60165,
+      "lift_p95_ratio": 0.9006
+    },
+    "previous_prewarm_r13_r14": {
+      "ground_capture_ratio": 1.726,
+      "floating_capture_ratio": 1.667
+    },
+    "original_r7_r8": {
+      "ground_capture_ratio": 2.929,
+      "floating_capture_ratio": 2.929
+    },
+    "functional": {
+      "local_lift_status": "FAILED (hover 27)",
+      "sable_lift_status": "PASSED"
+    },
+    "note": "Targeted durability applies to the SubLevel live capture path only; native/Sable and no-position callers still use the full save. Crash/recovery matrix for the scoped saves is not yet run."
   }
 }

@@ -699,7 +699,7 @@ public final class StructureCaptureCoordinator {
     }
 
     private void stepSaveTarget(PendingCapture capture) {
-        if (!capture.backend.save(capture.target)) {
+        if (!capture.backend.save(capture.target, capture.positions)) {
             if (org.academy.internal.common.sublevel.SubLevelStructureRefs.isSubLevel(capture.target)) {
                 // Plot/host storage errors are sticky for this session. A live copied body must
                 // not be edited while its source removal is still uncertain on disk.
