@@ -201,3 +201,41 @@ Sable 同一 128 格的 mass 是 256，控制 tier 0 的最大力只有 2000，�
 - 仍是 dedicated-server parity，不含真实 H 的玩家输入、相机、客户端首帧/渲染、网络和技能释放路径；local 3/5/7 的实机 H 验收仍 **UNVERIFIED**。
 - Sable 的 3 格 tier 0 对 256 mass 被 live 质量门禁拒绝；不能把 r23 的 3 格结果当成“Sable tier 0 技能可用”。
 - 证据：[lift-357-2026-10-20-r22r23.json](../validation/structure_parity/lift-357-2026-10-20-r22r23.json)（SHA-256 `E2349C929A0257018FE51600295A5CD321EAFD534FE05203104E9B44F3B58544`）；逐 tick 原始数据在 `run/sable-compat/parity-local-ground-lift357-r22` 与 `...-sable-...-r23`，不纳入 Git。
+
+## 2026-10-20 客户端 ground smoke（tier 0）
+
+用隔离的客户端副本跑真实 H 路径：
+
+```powershell
+. ./build/native-physics-p16-env.ps1
+./gradlew.bat runClientDev -DisDev=true -I validation/native_structure/sublevel_ground_skills.init.gradle -PacademySubLevelSmokeDirectory=run/native-sublevel-direct-smoke-ground4 --console=plain
+```
+
+结果 **SUBLEVEL_GROUND_SMOKE_PASSED**：9 格平台从源中心 (-124.5, 65.5, 150.5) 保持到 (-124.5, 68.564378, 150.5)，rise **3.0644**，`held_ticks=200`，客户端观察到 9 格几何，`client_frames=360`，背面 H 发射成功。
+
+测试侧修复：
+
+- smoke 旧断言要求 `hoverLaunchCenter.y > source + 3.5`，与 3.0 档设计不符；改为 `|rise - 3| <= 0.1` 后通过。这个 3.5 门槛是旧实现的残留，不是产品悬浮失败。
+- 包含 `data/academy/native_structures` 的副本中有一个 `resumeAllowed=false` 的失败存档区；`SubLevelLegacyGroundSmoke` 现在记录 `CLIENT_LEGACY_GROUND_SKIPPED reason=unresumable_saved_region` 并跳过，不再把无关的 ground/lift smoke 判失败。失败检查点仍按产品策略要求显式 discard，测试没有自动修复它；legacy 恢复本身仍待单查。
+
+证据：[client-ground-2026-10-20.json](../validation/native_structure/client-ground-2026-10-20.json)（SHA-256 `513C5275C0C4DFECE64B852BF2F2F0F6A9041EEDA2E3AAB166223FCE593371BC`）。
+
+## 2026-10-20 客户端 3/5/7 lift tiers
+
+新增 `SubLevelLiftTiersSmoke`，在真实客户端/集成服务器里用 live `KineticThrow` 的 charge/release 路径验证三档：
+
+- 每个 tier 在独立高空区域清出 21×13×21 空间，铺 9×9 石台；
+- 蓄力 4/24/44 tick 对应 tier 0/1/2；
+- 每档要求连续 **200 tick** `|rise - 3/5/7| <= 0.1`，通过后把结构 H 发射走，再建下一档。
+
+```powershell
+./gradlew.bat runClientDev -DisDev=true -I validation/native_structure/sublevel_lift_tiers.init.gradle -PacademySubLevelSmokeDirectory=run/native-sublevel-direct-smoke-lift357 --console=plain
+```
+
+| tier | 目标 | 平台中心 | rise | hover |
+| ---: | ---: | --- | ---: | ---: |
+| 0 | 3 | (-162.5, 93.5, 154.5) | 3.0644 | 200 |
+| 1 | 5 | (-82.5, 93.5, 106.5) | 5.0644 | 200 |
+| 2 | 7 | (37.5, 93.5, 97.5) | 7.0644 | 200 |
+
+结果 **SUBLEVEL_LIFT357_SMOKE_PASSED tiers=3**，三档各 200 tick。这是真实客户端/服务端路径（真实 charge/release、capture、控制、渲染），但输入是模拟 H 包，不是手动键盘/相机，也没有网络延迟和 Sable 客户端；这些仍属 UNVERIFIED。证据：[client-lift357-2026-10-20.json](../validation/native_structure/client-lift357-2026-10-20.json)（SHA-256 `ECB19252670F3EB220402F9F1A9DA6CB89E581218285FD4C3D703FEF9A7D5779`）。

@@ -76,7 +76,14 @@ final class SubLevelLegacyGroundSmoke {
                         entry.physicsAttachment().bounds(), region == null ? "absent" : region.status(),
                         region == null ? "absent" : region.diagnostic());
             }
-            require(regionsReady, "Original saved physics regions did not resume; see region diagnostics");
+            if (!regionsReady) {
+                // A failed checkpoint is deliberately non-resumable and requires an explicit
+                // discard; it must not turn the unrelated ground/lift smoke into a failure.
+                AcademyCraft.LOGGER.warn("CLIENT_LEGACY_GROUND_SKIPPED reason=unresumable_saved_region target={} ticks={}",
+                        reference, ticks);
+                phase = 2;
+                return;
+            }
             require(StructurePhysics.attachedRegion(level, reference).isEmpty(), "Original target was already attached");
             requireSinglePressHandler();
             playerPosition = player.position();

@@ -1,0 +1,16 @@
+// Dedicated client validation for the live kinetic-throw 3/5/7 lift gradients.
+allprojects {
+    afterEvaluate {
+        def smokeDirectory = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory')
+                .getOrElse('run/native-sublevel-direct-smoke-lift357')).canonicalFile
+        if (!smokeDirectory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !smokeDirectory.name.startsWith('native-sublevel-direct-smoke')) {
+            throw new GradleException('Lift tiers smoke must use an isolated run/native-sublevel-direct-smoke* directory')
+        }
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(smokeDirectory)
+            systemProperty 'academy.sublevelLiftTiersSmoke', 'true'
+            programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer', 'test')
+        }
+    }
+}

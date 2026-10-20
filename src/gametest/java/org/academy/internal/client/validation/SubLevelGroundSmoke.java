@@ -173,12 +173,15 @@ public final class SubLevelGroundSmoke {
                     if (age == 40) {
                         place(player, player.position(), player.getEyePosition().add(0, 0, -20));
                     }
-                    if (hoverLiftedAt < 0 || age - hoverLiftedAt < 199) return;
+                    if (hoverLiftedAt < 0 || age - hoverLiftedAt < 200) return;
                     require(hoverClientObserved, "client did not receive nine-cell hovering structure");
                     var motion = StructureDynamics.motion(player.level(), hovering).orElseThrow();
                     hoverLaunchCenter = SubLevelServer.runtime(player.level()).orElseThrow()
                             .get(SubLevelStructureRefs.id(hovering).orElseThrow()).orElseThrow().worldCenter();
-                    require(hoverLaunchCenter.y > hoverSourceCenter.y + 3.5, "hover did not reach original-position lift height");
+                    double hoverRise = hoverLaunchCenter.y - hoverSourceCenter.y;
+                    require(Math.abs(hoverRise - SubLevelKineticLiftProfile.HEIGHTS[0])
+                                    <= SubLevelKineticLiftProfile.ACCEPTANCE_TOLERANCE,
+                            "hover did not reach original-position 3-block lift height: rise=" + hoverRise);
                     hoverLaunchDirection = player.getLookAngle().normalize();
                     require(hoverLaunchDirection.dot(hoverLaunchCenter.subtract(player.getEyePosition()).normalize()) < -0.5,
                             "player must face away from own hovering structure before H");
@@ -225,7 +228,7 @@ public final class SubLevelGroundSmoke {
                     player.resetFallDistance();
                     AcademyCraft.LOGGER.info("SUBLEVEL_GROUND_SMOKE_PASSED cells55=true cells81_80_79=true"
                                     + " h_press=true geometry_rebuilds=2 ground_edits={} server_frames={} client_frames={}"
-                                    + " travel55={} travel81={} retained=true original_position_hover=199 back_facing_h=true",
+                                    + " travel55={} travel81={} retained=true original_position_hover=200 back_facing_h=true",
                             terrainEdits, serverFrames, clientFrames, firstTravel, secondTravel);
                     complete = true;
                 }

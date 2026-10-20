@@ -1,0 +1,49 @@
+{
+  "schema": "academy-client-smoke-1",
+  "date": "2026-10-20",
+  "scenario": "SubLevelLiftTiersSmoke: live KineticThrow charge/release on an isolated 9x9 stone platform, three sequential tiers, 200 consecutive ticks each",
+  "command": "./gradlew.bat runClientDev -DisDev=true -I validation/native_structure/sublevel_lift_tiers.init.gradle -PacademySubLevelSmokeDirectory=run/native-sublevel-direct-smoke-lift357",
+  "charges_ticks": [
+    4,
+    24,
+    44
+  ],
+  "result": "PASSED",
+  "tiers": [
+    {
+      "tier": 0,
+      "height": 3,
+      "platform_center": [
+        -162.5,
+        93.5,
+        154.5
+      ],
+      "rise": 3.0643781249999336,
+      "hover_ticks": 200
+    },
+    {
+      "tier": 1,
+      "height": 5,
+      "platform_center": [
+        -82.5,
+        93.5,
+        106.5
+      ],
+      "rise": 5.064378124999934,
+      "hover_ticks": 200
+    },
+    {
+      "tier": 2,
+      "height": 7,
+      "platform_center": [
+        37.5,
+        93.5,
+        97.5
+      ],
+      "rise": 7.064378124999934,
+      "hover_ticks": 200
+    }
+  ],
+  "evidence": "SUBLEVEL_LIFT357_SMOKE_PASSED tiers=3; each tier logged SUBLEVEL_LIFT357_TIER_PASSED with hover=200",
+  "limitations": "Simulated H packets in a real client/integrated server; not manual keyboard input, camera or network latency. Single 9x9 platform per tier; Sable client path not run. The legacy saved-region scenario is separate."
+}
