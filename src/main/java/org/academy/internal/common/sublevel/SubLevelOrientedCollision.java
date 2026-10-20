@@ -102,6 +102,11 @@ public final class SubLevelOrientedCollision {
         return new Clip(allowed, true, range.enter, contact, normal);
     }
 
+    /** Exact strict overlap; broad-phase corners and mere resting contact are excluded. */
+    public static boolean intersects(Box box, AABB bounds) {
+        return box.bounds().intersects(bounds) && penetration(box, bounds) != null;
+    }
+
     /** Minimum translation that separates an existing overlap; ZERO when already separated. */
     public static Vec3 depenetration(Box box, AABB entity) {
         var minimum = penetration(box, entity);

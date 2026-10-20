@@ -190,8 +190,10 @@ public final class SubLevelPhysicsUniverse {
         double comX = 0.0, comY = 0.0, comZ = 0.0;
         double velocityX = 0.0, velocityY = 0.0, velocityZ = 0.0;
         boolean sleeping = true;
-        for (var body : entry.bodies) {
-            var state = body.state();
+        for (int index = 0; index < entry.bodies.size(); index++) {
+            // Each state read crosses the native boundary and decodes the complete body.
+            // The primary body used for the pose is also the first mass/velocity sample.
+            var state = index == 0 ? primary : entry.bodies.get(index).state();
             if (!Double.isFinite(state.mass()) || state.mass() <= 0.0) {
                 throw new IllegalStateException("Sub-level body reported invalid mass");
             }

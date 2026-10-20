@@ -55,8 +55,7 @@ public final class PlotGeometry {
                 }
             }
         }
-        int volume = (maxX - minX) * (maxY - minY) * (maxZ - minZ);
-        if (full && volume >= 512) {
+        if (full) {
             var center = localBounds.getCenter();
             var half = new PhysicsVector(localBounds.getXsize() / 2.0, localBounds.getYsize() / 2.0,
                     localBounds.getZsize() / 2.0);
@@ -90,7 +89,9 @@ public final class PlotGeometry {
                 }
             }
         }
-        return new Capture(List.copyOf(boxes), blocks);
+        // Preserve the exact collision-shape union, while removing unnecessary
+        // partitions even for small and irregular structures.
+        return new Capture(TerrainSectionGeometry.merge(boxes), blocks);
     }
 
     public record Capture(List<PhysicsBox> boxes, int blocks) {

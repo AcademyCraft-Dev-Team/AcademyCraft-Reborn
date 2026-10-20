@@ -1,10 +1,15 @@
 package org.academy.internal.client.renderer.entity.state;
 
+import com.mojang.blaze3d.vertex.QuadInstance;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.block.MovingBlockRenderState;
+import net.minecraft.client.renderer.block.BlockModelLighter;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
 import net.minecraft.client.resources.model.ModelManager;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
+import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.LightCoordsUtil;
@@ -23,6 +28,7 @@ import org.academy.internal.common.structure.space.NativeStructureView;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.function.ToDoubleFunction;
 
 /** Local model context plus host light sampling, shared by every visible cell in one frame. */
@@ -33,17 +39,26 @@ public final class NativeStructureProjectionRenderState extends EntityRenderStat
     public StructurePose pose = StructurePose.identity(Vec3.ZERO);
     public int projectionEntityId;
     public long runtimeRevision;
-    public BlockStateModelPart batchedBlocks;
-    public int batchLightCoords;
+    public final List<BlockRenderData> unbatchedBlocks = new ArrayList<>();
+    public final List<BatchRenderData> solidBatches = new ArrayList<>();
+    public final List<BatchRenderData> cutoutBatches = new ArrayList<>();
+    public final List<BatchRenderData> translucentBatches = new ArrayList<>();
+    public CardinalLighting batchLighting = CardinalLighting.DEFAULT;
 
     private NativeStructureView cachedView = NativeStructureView.EMPTY;
+    private Object cachedModels;
+    private boolean cachedAmbientOcclusion;
+    private boolean cachedCutoutLeaves;
+    private final BlockModelLighter batchLighter =
+            net.neoforged.neoforge.client.model.ao.EnhancedBlockModelLighter.newInstance();
+    private final QuadInstance batchLightInstance = new QuadInstance();
 
     public void updateBlocks(NativeStructureView view, ClientLevel level, StructurePose currentPose,
                              ToDoubleFunction<BlockPos> chestOpenness) {
         pose = currentPose;
-        if (cachedView != view) {
+        boolean contentChanged = cachedView != view;
+        if (contentChanged) {
             cachedView = view;
-            batchedBlocks = null;
             blocks.clear();
             chests.clear();
             for (var cell : view.cells()) {
@@ -56,16 +71,41 @@ public final class NativeStructureProjectionRenderState extends EntityRenderStat
                 }
             }
         }
-        if (BatchedBlockGeometry.eligible(view)) {
-            if (batchedBlocks == null) {
-                batchedBlocks = BatchedBlockGeometry.buildCached(view, level);
-                batchLightCoords = LightCoordsUtil.getLightCoords(level, BlockPos.containing(currentPose.worldOrigin()));
-            }
-        } else {
-            batchedBlocks = null;
-        }
         var lighting = rotatedLighting(level.cardinalLighting(), currentPose);
+        batchLighting = lighting;
         for (var block : blocks) block.renderState().updateFrame(level, currentPose, lighting);
+        var minecraft = Minecraft.getInstance();
+        var models = minecraft.getModelManager().getBlockStateModelSet();
+        boolean ambientOcclusion = minecraft.options.ambientOcclusion().get();
+        boolean cutoutLeaves = minecraft.options.cutoutLeaves().get();
+        if (contentChanged || cachedModels != models || cachedAmbientOcclusion != ambientOcclusion
+                || cachedCutoutLeaves != cutoutLeaves) {
+            cachedModels = models;
+            cachedAmbientOcclusion = ambientOcclusion;
+            cachedCutoutLeaves = cutoutLeaves;
+            var batch = BatchedBlockGeometry.buildCached(view, blocks);
+            solidBatches.clear();
+            cutoutBatches.clear();
+            translucentBatches.clear();
+            unbatchedBlocks.clear();
+            var inputs = new HashMap<BlockPos, LocalMovingBlockRenderState>();
+            for (var block : blocks) {
+                inputs.put(block.localPosition(), block.renderState());
+                if (!batch.positions().contains(block.localPosition())) unbatchedBlocks.add(block);
+            }
+            for (var cell : batch.cells()) {
+                var data = new BatchRenderData(cell.quads(), cell.lightQuads(), inputs.get(cell.position()));
+                switch (cell.layer()) {
+                    case SOLID -> solidBatches.add(data);
+                    case CUTOUT -> cutoutBatches.add(data);
+                    case TRANSLUCENT -> translucentBatches.add(data);
+                }
+            }
+        }
+        long lightTime = System.nanoTime();
+        for (var cell : solidBatches) cell.updateLightAndTint(lightTime, batchLighter, batchLightInstance);
+        for (var cell : cutoutBatches) cell.updateLightAndTint(lightTime, batchLighter, batchLightInstance);
+        for (var cell : translucentBatches) cell.updateLightAndTint(lightTime, batchLighter, batchLightInstance);
         for (var chest : chests) {
             chest.openness = (float) chestOpenness.applyAsDouble(chest.localPosition);
             chest.lightCoords = LightCoordsUtil.getLightCoords(level,
@@ -116,6 +156,70 @@ public final class NativeStructureProjectionRenderState extends EntityRenderStat
     }
 
     public record BlockRenderData(BlockPos localPosition, LocalMovingBlockRenderState renderState) {
+    }
+
+    /** Immutable local models plus staggered 20 Hz vanilla vertex light samples. */
+    public static final class BatchRenderData {
+        private static final long LIGHT_INTERVAL_NANOS = 50_000_000L;
+        public final List<BakedQuad> quads;
+        /** Maximum sample, retained for opt-in diagnostics; draws use vertexLight instead. */
+        public int lightCoords;
+        private final LocalMovingBlockRenderState input;
+        private final List<BatchedBlockGeometry.LightQuad> lightQuads;
+        private final int[] vertexLights;
+        private final long refreshPhase;
+        private int[] tintColors = new int[0];
+        private long lightEpoch = Long.MIN_VALUE;
+
+        private BatchRenderData(List<BakedQuad> quads, List<BatchedBlockGeometry.LightQuad> lightQuads,
+                                LocalMovingBlockRenderState input) {
+            this.quads = quads;
+            this.lightQuads = lightQuads;
+            this.input = input;
+            vertexLights = new int[quads.size() * 4];
+            refreshPhase = Math.floorMod(input.blockPos.hashCode() * 0x9E3779B9L, LIGHT_INTERVAL_NANOS);
+        }
+
+        private void updateLightAndTint(long now, BlockModelLighter lighter, QuadInstance instance) {
+            long epoch = Math.floorDiv(now + refreshPhase, LIGHT_INTERVAL_NANOS);
+            if (lightEpoch == epoch) return;
+            lightEpoch = epoch;
+            // Host light packets can finish while the integrated world is paused. A game-time
+            // cache would permanently retain the first unlit sample. Wall time also bounds work
+            // while moving without rebuilding models or resubmitting individual blocks.
+            lighter.reset();
+            lightCoords = 0;
+            for (int index = 0; index < lightQuads.size(); index++) {
+                var source = lightQuads.get(index);
+                if (source.ambientOcclusion()) {
+                    lighter.prepareQuadAmbientOcclusion(input, input.blockState, input.blockPos,
+                            source.quad(), instance);
+                } else {
+                    int flatLight = source.flatFace() == null ? BlockModelLighter.CHECK_LIGHT
+                            : lighter.getLightCoords(input.blockState, input, input.blockPos.relative(source.flatFace()));
+                    lighter.prepareQuadFlat(input, input.blockState, input.blockPos, flatLight,
+                            source.quad(), instance);
+                }
+                for (int vertex = 0; vertex < 4; vertex++) {
+                    int sample = instance.getLightCoords(vertex);
+                    vertexLights[index * 4 + vertex] = sample;
+                    lightCoords = LightCoordsUtil.max(lightCoords, sample);
+                }
+            }
+            var sources = Minecraft.getInstance().getBlockColors().getTintSources(input.blockState);
+            if (tintColors.length != sources.size()) tintColors = new int[sources.size()];
+            for (int index = 0; index < sources.size(); index++) {
+                tintColors[index] = sources.get(index).colorInWorld(input.blockState, input, input.blockPos);
+            }
+        }
+
+        public int tint(int index) {
+            return index >= 0 && index < tintColors.length ? tintColors[index] : -1;
+        }
+
+        public int vertexLight(int quad, int vertex) {
+            return vertexLights[quad * 4 + vertex];
+        }
     }
 
     /** Only the public model inputs are retained; no inventory or client block entity is created. */

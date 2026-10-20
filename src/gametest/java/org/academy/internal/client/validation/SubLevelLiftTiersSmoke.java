@@ -6,6 +6,9 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CropBlock;
+import net.minecraft.world.level.block.FarmlandBlock;
+import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
@@ -14,6 +17,8 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.level.BlockDropsEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.structure.StructureDynamics;
 import org.academy.api.common.structure.StructureRef;
@@ -22,6 +27,8 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.movement.VectorStructureService;
 import org.academy.internal.common.ability.accelerator.skills.lv3.KineticThrow;
+import org.academy.internal.common.sublevel.SubLevelServer;
+import org.academy.internal.common.sublevel.SubLevelStructureRefs;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -30,12 +37,15 @@ import java.util.Map;
 
 /**
  * Opt-in client validation of the live kinetic-throw lift for the three design gradients.
- * A 9x9 isolated platform is captured with a 4/24/44 tick charge (tiers 0/1/2), then the
+ * A 9x9 platform, or a solid 21x21x9 soil volume with close-fitting pit walls, is captured
+ * with a 4/24/44 tick charge (tiers 0/1/2), then the
  * client keeps the actual skill session for 200 consecutive ticks within +/-0.1 blocks.
  */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class SubLevelLiftTiersSmoke {
     private static final boolean ENABLED = Boolean.getBoolean("academy.sublevelLiftTiersSmoke");
+    private static final boolean VEGETATION = Boolean.getBoolean("academy.sublevelLiftVegetation");
+    private static final boolean EMBEDDED = Boolean.getBoolean("academy.sublevelLiftEmbedded");
     private static final int[] HEIGHTS = {3, 5, 7};
     private static final int[] CHARGE_TICKS = {4, 24, 44};
     private static final double TOLERANCE = 0.1;
@@ -68,6 +78,11 @@ public final class SubLevelLiftTiersSmoke {
     private static boolean previousNoGravity;
     private static GameType previousMode;
     private static final List<Map<String, Object>> results = new ArrayList<>();
+    private static final List<BlockPos> canopy = new ArrayList<>();
+    private static int capturedPlants;
+    private static int leafBreakEvents;
+    private static int leafDropEvents;
+    private static Vec3 launchOrigin;
 
     private SubLevelLiftTiersSmoke() {
     }
@@ -126,14 +141,39 @@ public final class SubLevelLiftTiersSmoke {
         platformZ = z;
         for (int dx = -10; dx <= 10; dx++) {
             for (int dz = -10; dz <= 10; dz++) {
-                for (int dy = -2; dy <= 10; dy++) {
+                for (int dy = EMBEDDED ? -8 : -2; dy <= 10; dy++) {
                     level.setBlock(new BlockPos(x + dx, y + dy, z + dz), Blocks.AIR.defaultBlockState(), 3);
                 }
             }
         }
+        if (EMBEDDED) {
+            // A full soil volume leaves close-fitting side walls after capture. A one-layer
+            // floating platform cannot reveal rotation or budget-created overhang traps.
+            for (int dx = -10; dx <= 10; dx++) {
+                for (int dz = -10; dz <= 10; dz++) {
+                    for (int dy = -8; dy <= 0; dy++) {
+                        level.setBlock(new BlockPos(x + dx, y + dy, z + dz),
+                                dy == 0 ? Blocks.GRASS_BLOCK.defaultBlockState()
+                                        : Blocks.DIRT.defaultBlockState(), 2);
+                    }
+                }
+            }
+        }
+        if (VEGETATION && tier == 0) {
+            NativeStructureTerrainAdmissionSmoke.run(level, new BlockPos(x + 7, y + 3, z + 7));
+        }
         for (int dx = -PLATFORM_RADIUS; dx <= PLATFORM_RADIUS; dx++) {
             for (int dz = -PLATFORM_RADIUS; dz <= PLATFORM_RADIUS; dz++) {
-                level.setBlock(new BlockPos(x + dx, y, z + dz), Blocks.STONE.defaultBlockState(), 3);
+                var ground = new BlockPos(x + dx, y, z + dz);
+                boolean crop = (dx + dz) % 3 == 0;
+                level.setBlock(ground, !VEGETATION ? (EMBEDDED ? Blocks.GRASS_BLOCK : Blocks.STONE).defaultBlockState()
+                        : crop ? Blocks.FARMLAND.defaultBlockState().setValue(FarmlandBlock.MOISTURE, 7)
+                        : Blocks.GRASS_BLOCK.defaultBlockState(), 2);
+                if (VEGETATION) {
+                    level.setBlock(ground.above(), crop
+                            ? Blocks.WHEAT.defaultBlockState().setValue(CropBlock.AGE, 7)
+                            : Blocks.SHORT_GRASS.defaultBlockState(), 2);
+                }
             }
         }
         sourceCenter = new Vec3(x + 0.5, y + 0.5, z + 0.5);
@@ -168,6 +208,70 @@ public final class SubLevelLiftTiersSmoke {
         }
         if (diagnostic.reference() == null) throw new IllegalStateException("captured structure has no reference");
         reference = diagnostic.reference();
+        var capturedMotion = StructureDynamics.motion(player.level(), reference).orElseThrow();
+        var sourceCells = VectorStructureService.session(player).orElseThrow().capturedCells();
+        if (sourceCells.isEmpty()) throw new IllegalStateException("lift session lost source cells");
+        var sourceOrigin = new Vec3(sourceCells.stream().mapToInt(BlockPos::getX).min().orElseThrow(),
+                sourceCells.stream().mapToInt(BlockPos::getY).min().orElseThrow(),
+                sourceCells.stream().mapToInt(BlockPos::getZ).min().orElseThrow());
+        sourceCenter = sourceOrigin.add(capturedMotion.localCenterOfMass());
+        if (EMBEDDED) {
+            var selected = new java.util.HashSet<>(sourceCells);
+            long buried = sourceCells.stream().filter(position -> !selected.contains(position.above())
+                    && !player.level().getBlockState(position.above())
+                    .getCollisionShape(player.level(), position.above()).isEmpty()).count();
+            AcademyCraft.LOGGER.info("SUBLEVEL_EMBEDDED_SELECTION tier={} cells={} trapped_cells={} source={}",
+                    tier, sourceCells.size(), buried, sourceCenter);
+            var sections = new java.util.HashSet<net.minecraft.core.SectionPos>();
+            for (var cell : sourceCells) sections.add(net.minecraft.core.SectionPos.of(cell));
+            var terrainBoxes = new ArrayList<net.minecraft.world.phys.AABB>();
+            for (var section : sections) {
+                var geometry = org.academy.internal.common.sublevel.TerrainSectionGeometry.capture(
+                        player.level(), section.x(), section.y(), section.z());
+                for (var box : geometry.boxes()) {
+                    var center = box.center();
+                    var half = box.halfExtents();
+                    terrainBoxes.add(new net.minecraft.world.phys.AABB(
+                            section.minBlockX() + center.x() - half.x(),
+                            section.minBlockY() + center.y() - half.y(),
+                            section.minBlockZ() + center.z() - half.z(),
+                            section.minBlockX() + center.x() + half.x(),
+                            section.minBlockY() + center.y() + half.y(),
+                            section.minBlockZ() + center.z() + half.z()));
+                }
+            }
+            long overlaps = sourceCells.stream().filter(cell -> terrainBoxes.stream()
+                    .anyMatch(box -> box.intersects(new net.minecraft.world.phys.AABB(cell).deflate(1.0E-6)))).count();
+            long liftOverlaps = sourceCells.stream().filter(cell -> terrainBoxes.stream()
+                    .anyMatch(box -> box.intersects(new net.minecraft.world.phys.AABB(cell)
+                            .move(0, 0.1, 0).deflate(1.0E-6)))).count();
+            AcademyCraft.LOGGER.info("SUBLEVEL_EMBEDDED_TERRAIN tier={} boxes={} source_overlaps={} lift_overlaps={}",
+                    tier, terrainBoxes.size(), overlaps, liftOverlaps);
+            if (buried != 0 || overlaps != 0 || liftOverlaps != 0) {
+                throw new IllegalStateException("capture left blocking terrain: caps=" + buried
+                        + ", source=" + overlaps + ", lift=" + liftOverlaps);
+            }
+        }
+        if (VEGETATION) {
+            var runtime = SubLevelServer.runtime(player.level()).orElseThrow();
+            var id = SubLevelStructureRefs.id(reference).orElseThrow();
+            capturedPlants = (int) runtime.view(id).cells().stream()
+                    .filter(cell -> cell.state().is(Blocks.SHORT_GRASS) || cell.state().is(Blocks.WHEAT)).count();
+            if (capturedPlants == 0) throw new IllegalStateException("capture discarded all grass/crops");
+            canopy.clear();
+            leafBreakEvents = 0;
+            leafDropEvents = 0;
+            for (int dx = -PLATFORM_RADIUS; dx <= PLATFORM_RADIUS; dx++) {
+                for (int dz = -PLATFORM_RADIUS; dz <= PLATFORM_RADIUS; dz++) {
+                    var position = new BlockPos(platformX + dx, platformY + 2, platformZ + dz);
+                    player.level().setBlock(position,
+                            Blocks.OAK_LEAVES.defaultBlockState().setValue(LeavesBlock.DISTANCE, 1), 2);
+                    canopy.add(position);
+                }
+            }
+            AcademyCraft.LOGGER.info("SUBLEVEL_VEGETATION_CAPTURED tier={} plants={} canopy={}",
+                    tier, capturedPlants, canopy.size());
+        }
         hoverTicks = 0;
         hoverBest = 0;
         phase = 3;
@@ -182,6 +286,15 @@ public final class SubLevelLiftTiersSmoke {
         }
         var center = motion.pose().localToWorldPoint(motion.localCenterOfMass());
         double rise = center.y - sourceCenter.y;
+        if ((server.getTickCount() - releaseAt) % 20 == 0) {
+            var diagnostic = VectorStructureService.diagnostic(player).orElse(null);
+            long cleared = canopy.stream().filter(position -> player.level().getBlockState(position).isAir()).count();
+            AcademyCraft.LOGGER.info("SUBLEVEL_LIFT357_PROGRESS tier={} ticks={} center={} rise={} "
+                            + "linear={} angular={} mass={} source={} session={} cleared={} breakEvents={} dropEvents={} pose={}",
+                    tier, server.getTickCount() - releaseAt, center, rise, motion.linearVelocity(),
+                    motion.angularVelocity(), motion.mass(), sourceCenter, diagnostic, cleared,
+                    leafBreakEvents, leafDropEvents, motion.pose());
+        }
         if (Math.abs(rise - HEIGHTS[tier]) <= TOLERANCE) {
             hoverTicks++;
             hoverBest = Math.max(hoverBest, hoverTicks);
@@ -189,12 +302,21 @@ public final class SubLevelLiftTiersSmoke {
             hoverTicks = 0;
         }
         if (hoverTicks >= HOVER_TICKS) {
+            long clearedLeaves = canopy.stream().filter(position -> player.level().getBlockState(position).isAir()).count();
+            if (VEGETATION && (clearedLeaves == 0 || leafBreakEvents == 0 || leafDropEvents == 0)) {
+                throw new IllegalStateException("leaf motion destruction missed blocks or global events: "
+                        + clearedLeaves + "/" + leafBreakEvents + "/" + leafDropEvents);
+            }
             var result = new LinkedHashMap<String, Object>();
             result.put("tier", tier);
             result.put("height", HEIGHTS[tier]);
             result.put("rise", rise);
             result.put("hover_ticks", hoverTicks);
             result.put("hover_best", hoverBest);
+            result.put("captured_plants", capturedPlants);
+            result.put("cleared_leaves", clearedLeaves);
+            result.put("leaf_break_events", leafBreakEvents);
+            result.put("leaf_drop_events", leafDropEvents);
             result.put("pass", true);
             results.add(result);
             AcademyCraft.LOGGER.info("SUBLEVEL_LIFT357_TIER_PASSED tier={} height={} rise={} hover={}",
@@ -203,15 +325,22 @@ public final class SubLevelLiftTiersSmoke {
                     player.getYRot() + 180.0F, player.getXRot());
             player.setYHeadRot(player.getYRot());
             if (!VectorStructureService.launch(player)) throw new IllegalStateException("tier launch refused");
+            launchOrigin = center;
             phase = 4;
             releaseAt = server.getTickCount();
-        } else if (server.getTickCount() - releaseAt > 700) {
+        } else if (server.getTickCount() - releaseAt > (EMBEDDED && rise < HEIGHTS[tier] - TOLERANCE ? 220 : 700)) {
             throw new IllegalStateException("tier " + tier + " did not hold 200 ticks; best=" + hoverBest);
         }
     }
 
     private static void tickLaunching(MinecraftServer server) {
         if (server.getTickCount() - releaseAt < 20) return;
+        if (VEGETATION) {
+            var motion = StructureDynamics.motion(player.level(), reference).orElseThrow();
+            double distance = motion.pose().localToWorldPoint(motion.localCenterOfMass()).distanceTo(launchOrigin);
+            if (distance < 3.0) throw new IllegalStateException("vegetation launch remained stuck: " + distance);
+            AcademyCraft.LOGGER.info("SUBLEVEL_VEGETATION_LAUNCH_PASSED tier={} distance={}", tier, distance);
+        }
         tier++;
         if (tier > 2) {
             complete = true;
@@ -235,6 +364,18 @@ public final class SubLevelLiftTiersSmoke {
         if (!skill.isEnabled(player)) system.toggleSkill(actor, skill.getKeyString());
         player.setGameMode(GameType.SURVIVAL);
         player.setNoGravity(true);
+    }
+
+    @SubscribeEvent
+    public static void leafBreak(BreakBlockEvent event) {
+        if (ENABLED && VEGETATION && player != null && event.getLevel() == player.level()
+                && canopy.contains(event.getPos())) leafBreakEvents++;
+    }
+
+    @SubscribeEvent
+    public static void leafDrops(BlockDropsEvent event) {
+        if (ENABLED && VEGETATION && player != null && event.getLevel() == player.level()
+                && canopy.contains(event.getPos())) leafDropEvents++;
     }
 
     private static void place(Vec3 feet, Vec3 lookAt) {

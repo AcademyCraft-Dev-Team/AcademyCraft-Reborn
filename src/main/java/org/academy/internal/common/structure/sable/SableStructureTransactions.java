@@ -72,11 +72,9 @@ public final class SableStructureTransactions implements CaptureTarget {
         if (container == null) return Optional.empty();
         ServerSubLevel ship = null;
         try {
-            // The rotation point is only known after the plot is assigned, so the ship starts
-            // with a placeholder anchor and is re-anchored before the first cell write. The
-            // final pair below yields transform(p) = p + (origin - plotOrigin) for every plot
-            // position p with unit scale and identity rotation, so local (0,0,0) = plot origin
-            // maps exactly onto the world origin of the native capture grid.
+            // The empty body has no mass pivot yet. The first real write installs Sable's
+            // seed COM without translating the body, so this placeholder must be corrected
+            // from the resulting mass data before returning the allocation.
             var position = new Vector3d(origin.getX() + 0.5, origin.getY() + 0.5, origin.getZ() + 0.5);
             var pose = new Pose3d(position, new Quaterniond(), new Vector3d(), new Vector3d(1.0, 1.0, 1.0));
             var allocated = SableContainerGuard.containerAllocation("sable.capture.allocate",
@@ -94,6 +92,10 @@ public final class SableStructureTransactions implements CaptureTarget {
             // call chain returns or the ship is destroyed before the copy stage can fill it.
             if (writeCell(reference, seedOffset, seedState) != StructureWriteResult.APPLIED) {
                 AcademyCraft.LOGGER.error("Sable capture could not seed its allocated ship for origin {}", origin);
+                removeQuietly(container, ship);
+                return Optional.empty();
+            }
+            if (!alignCaptureGrid(ship, origin)) {
                 removeQuietly(container, ship);
                 return Optional.empty();
             }
@@ -247,6 +249,43 @@ public final class SableStructureTransactions implements CaptureTarget {
     public boolean verifyCopy(StructureRef target, int expectedCells) {
         var ship = ship(target);
         return ship != null && !emptyBounds(ship.getPlot());
+    }
+
+    @Override
+    public boolean finalizeTarget(StructureRef target, BlockPos origin, List<BlockPos> sourcePositions) {
+        Objects.requireNonNull(origin, "origin");
+        SableStructureAccess.requireThread(server);
+        var ship = ship(target);
+        return ship != null && alignCaptureGrid(ship, origin);
+    }
+
+    /**
+     * Establishes the capture grid using the actual mass pivot, including seeds away from
+     * the selection's minimum corner. Updating only logicalPose would leave Rapier's body
+     * at its old position and the first physics step would overwrite the apparent fix.
+     */
+    private static boolean alignCaptureGrid(ServerSubLevel ship, BlockPos origin) {
+        ship.updateMergedMassData(1.0f);
+        var mass = ship.getMassTracker();
+        if (mass == null || !Double.isFinite(mass.getMass()) || mass.getMass() <= 0
+                || mass.getCenterOfMass() == null) return false;
+        var center = mass.getCenterOfMass();
+        if (!Double.isFinite(center.x()) || !Double.isFinite(center.y()) || !Double.isFinite(center.z())) {
+            return false;
+        }
+        var container = SubLevelContainer.getContainer(ship.getLevel());
+        if (container == null) return false;
+        var plotOrigin = ship.getPlot().getCenterBlock();
+        var position = new Vector3d(
+                origin.getX() + (center.x() - plotOrigin.getX()),
+                origin.getY() + (center.y() - plotOrigin.getY()),
+                origin.getZ() + (center.z() - plotOrigin.getZ()));
+        var pose = ship.logicalPose();
+        pose.rotationPoint().set(center);
+        container.physicsSystem().getPipeline().teleport(ship, position, new Quaterniond());
+        ship.updateLastPose();
+        ship.updateBoundingBox();
+        return true;
     }
 
     private StructureWriteResult writeAir(StructureRef target, BlockPos localOffset) {

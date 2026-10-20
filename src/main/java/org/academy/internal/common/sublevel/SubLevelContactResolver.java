@@ -2,6 +2,7 @@ package org.academy.internal.common.sublevel;
 
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
@@ -32,7 +33,7 @@ public final class SubLevelContactResolver implements StructureContactResolver {
     private static final int DEFAULT_ITERATIONS = 2;
     private static final double DEFAULT_MAX_CORRECTION = 0.55;
     private static final double EPSILON = 1.0E-7;
-    private static final double SUPPORT_TOLERANCE = 0.35;
+    private static final double SUPPORT_TOLERANCE = 0.08;
     private static final double MAX_CARRY_DISTANCE_SQUARED = 16.0;
 
     /** Entry point for the entity movement mixin after vanilla block clipping. */
@@ -150,12 +151,13 @@ public final class SubLevelContactResolver implements StructureContactResolver {
      * Applies at most one rigid carry for an entity supported by the structure's previous pose.
      * The caller owns the per-tick applied set so two structures cannot move the same body twice.
      */
-    public static Vec3 carry(ServerLevel host, Entity entity, StructurePose previousPose, StructurePose currentPose,
+    public static Vec3 carry(Level host, Entity entity, StructurePose previousPose, StructurePose currentPose,
                              List<AABB> localBoxes, Set<Entity> applied, Limits limits) {
         if (entity == null || entity.isRemoved() || entity.noPhysics || entity.isPassenger()
                 || entity.isSpectator() || !entity.isAlive()) return Vec3.ZERO;
         if (applied.contains(entity)) return Vec3.ZERO;
         if (previousPose.equals(currentPose) || localBoxes.isEmpty()) return Vec3.ZERO;
+        if (!entity.onGround() && entity.getDeltaMovement().y > 0.0) return Vec3.ZERO;
         if (!SubLevelOrientedCollision.supports(localBoxes, previousPose, entity.getBoundingBox(), SUPPORT_TOLERANCE)) {
             return Vec3.ZERO;
         }
@@ -169,11 +171,11 @@ public final class SubLevelContactResolver implements StructureContactResolver {
         var hostShapes = Entity.collectAllColliders(entity, host, entity.getBoundingBox().expandTowards(move));
         move = clipHostMovement(entity.getBoundingBox(), move, hostShapes);
         if (move.lengthSqr() <= 1.0E-10) return Vec3.ZERO;
-        carried(host, entity, move, applied);
+        carried(entity, move, applied);
         return move;
     }
 
-    private static void carried(ServerLevel host, Entity root, Vec3 move, Set<Entity> applied) {
+    private static void carried(Entity root, Vec3 move, Set<Entity> applied) {
         if (!applied.add(root)) return;
         var passengers = List.copyOf(root.getPassengers());
         var targets = new ArrayList<Vec3>(passengers.size());
@@ -181,11 +183,18 @@ public final class SubLevelContactResolver implements StructureContactResolver {
             targets.add(passenger.position().add(move));
             applied.add(passenger);
         }
-        root.teleportTo(root.getX() + move.x, root.getY() + move.y, root.getZ() + move.z);
+        carryPosition(root, root.position().add(move));
         for (int index = 0; index < passengers.size(); index++) {
-            var target = targets.get(index);
-            passengers.get(index).teleportTo(target.x, target.y, target.z);
+            carryPosition(passengers.get(index), targets.get(index));
         }
+    }
+
+    private static void carryPosition(Entity entity, Vec3 position) {
+        // This is ordinary support movement, not a teleport. ServerPlayer.teleportTo starts a
+        // teleport-ack handshake which discards walking packets until the acknowledgement.
+        // Repeating that for a resting body's tiny solver corrections continually stalls input.
+        entity.setPos(position);
+        if (entity instanceof ServerPlayer player) player.connection.resetPosition();
     }
 
     static ClipResult clipMovement(AABB box, Vec3 movement, List<Obstacle> obstacles,
@@ -234,17 +243,27 @@ public final class SubLevelContactResolver implements StructureContactResolver {
             var groundedBox = verticalCollision ? box.move(0, resolved.y, 0) : box;
             var heights = stepHeights(obstacles, hostShapes, groundedBox, movement, maxUpStep, resolved.y);
             double horizontal = resolved.x * resolved.x + resolved.z * resolved.z;
+            ClipResult best = null;
             for (double height : heights) {
                 var step = clipMovement(groundedBox, new Vec3(movement.x, height, movement.z),
                         obstacles, hostShapes, 0, true, 0, false);
                 double candidate = step.movement().x * step.movement().x
                         + step.movement().z * step.movement().z;
                 if (candidate <= horizontal + EPSILON) continue;
+                // A rotated top is a plane, not one of the cuboid's eight corner heights.
+                // Clear the obstruction first, then land on the actual face at the new X/Z.
+                // This also prevents a small incline from producing a max-step-height bounce.
+                var landed = clipMovement(groundedBox.move(step.movement()),
+                        new Vec3(0, -step.movement().y, 0), obstacles, hostShapes,
+                        0, false, contactBudget, false);
                 double distanceToGround = box.minY - groundedBox.minY;
-                return new ClipResult(step.movement().subtract(0, distanceToGround, 0).add(push),
-                        step.contacts(), step.exhausted()
+                best = new ClipResult(step.movement().add(landed.movement())
+                        .subtract(0, distanceToGround, 0).add(push),
+                        landed.contacts(), step.exhausted() || landed.exhausted()
                         || contactBudget > 0 && contacts.size() >= contactBudget);
+                horizontal = candidate;
             }
+            if (best != null) return best;
         }
         return new ClipResult(resolved.add(push), contacts,
                 contactBudget > 0 && contacts.size() >= contactBudget);
@@ -264,6 +283,8 @@ public final class SubLevelContactResolver implements StructureContactResolver {
                                         AABB grounded, Vec3 movement, double maxUpStep,
                                         double verticalMovement) {
         var values = new TreeSet<Double>();
+        // Corner enumeration alone misses the interior of every tilted surface.
+        values.add(maxUpStep);
         double limit = grounded.minY + maxUpStep;
         var sweep = grounded.expandTowards(movement.x, maxUpStep, movement.z);
         for (var shape : hostShapes) {

@@ -19,6 +19,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.EventHooks;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.structure.SpaceBlockRef;
@@ -30,6 +31,7 @@ import org.academy.api.common.structure.StructureInteractionController;
 import org.academy.api.common.structure.StructureMiningEvent;
 import org.academy.api.common.structure.StructurePlacementEvent;
 import org.academy.api.common.structure.StructureRef;
+import org.academy.internal.common.structure.space.NativeStructureBreakDrops;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -413,50 +415,19 @@ public final class SubLevelInteractionController implements StructureInteraction
         // Protection callbacks may change the cell, the actor or the tool; never commit a
         // different block than the one the session authorized.
         if (storage.blockState(plot, session.local) != blockState
-                || storage.blockEntity(plot, session.local) != blockEntity) {
+                || storage.blockEntity(plot, session.local) != blockEntity
+                || !session.maintainable(actor) || validateTarget(actor, session.observation) == null) {
             return terminalReceipt(session, MiningStatus.REJECTED);
         }
-        var toolBefore = session.tool.copy();
-        boolean completed;
+        boolean[] completed = {false};
         try {
-            var block = blockState.getBlock();
-            var adjusted = block.playerWillDestroy(storage.level(), plotPosition, blockState, actor);
-            boolean harvest = !actor.preventsBlockDrops()
-                    && adjusted.canHarvestBlock(storage.level(), plotPosition, actor);
-            var drops = harvest
-                    ? net.minecraft.world.level.block.Block.getDrops(adjusted, storage.level(), plotPosition,
-                    blockEntity, actor, toolBefore)
-                    : List.<ItemStack>of();
-            int experience = actor.preventsBlockDrops() ? 0
-                    : adjusted.getBlock().getExpDrop(adjusted, storage.level(), plotPosition, blockEntity,
-                    actor, toolBefore);
-            if (!actor.hasInfiniteMaterials()) toolBefore.mineBlock(storage.level(), adjusted, plotPosition, actor);
-            boolean removed = adjusted.onDestroyedByPlayer(storage.level(), plotPosition, actor, toolBefore,
-                    harvest, storage.level().getFluidState(plotPosition));
-            if (!removed) {
-                AcademyCraft.LOGGER.warn("SubLevel mining could not remove {}", plotPosition);
-                completed = false;
-            } else {
-                block.destroy(storage.level(), plotPosition, adjusted);
-                actor.awardStat(Stats.BLOCK_MINED.get(block));
-                actor.causeFoodExhaustion(0.005F);
-                var center = validated.pose().localToWorldPoint(Vec3.atCenterOf(session.local));
-                if (harvest) publishDrops(session.host, center, drops);
-                if (experience > 0 && !actor.preventsBlockDrops()) {
-                    net.minecraft.world.entity.ExperienceOrb.award(session.host, center, experience);
-                }
-                var sound = adjusted.getSoundType(storage.level(), plotPosition, actor);
-                session.host.playSound(null, center.x, center.y, center.z, sound.getBreakSound(),
-                        net.minecraft.sounds.SoundSource.BLOCKS, (sound.getVolume() + 1.0F) / 2.0F,
-                        sound.getPitch() * 0.8F);
-                completed = true;
-            }
+            StructureContexts.run(handle, context ->
+                    completed[0] = destroyBlock(session, validated, blockState, blockEntity));
         } catch (RuntimeException | Error failure) {
             AcademyCraft.LOGGER.error("SubLevel mining commit failed for {} at {}", session.reference,
                     session.local, failure);
-            completed = false;
         }
-        if (completed) {
+        if (completed[0] || storage.blockState(plot, session.local) != blockState) {
             closeMenusFor(session.server, session.subLevel.id(), session.local);
             runtime.refreshGeometry(session.subLevel.id());
         }
@@ -465,14 +436,80 @@ public final class SubLevelInteractionController implements StructureInteraction
                     actor.getInventory().getSelectedSlot()));
             actor.inventoryMenu.broadcastChanges();
         }
-        return terminalReceipt(session, completed ? MiningStatus.COMPLETED : MiningStatus.REJECTED);
+        return terminalReceipt(session, completed[0] ? MiningStatus.COMPLETED : MiningStatus.REJECTED);
     }
 
-    private static void publishDrops(ServerLevel host, Vec3 center, List<ItemStack> drops) {
-        var base = BlockPos.containing(center);
-        for (var stack : drops) {
-            if (stack.isEmpty()) continue;
-            net.minecraft.world.level.block.Block.popResource(host, base, stack);
+    private boolean destroyBlock(Session session, StructureHit hit, BlockState state,
+                                 @Nullable BlockEntity blockEntity) {
+        var actor = session.actor;
+        var storage = session.runtime.storage();
+        var level = storage.level();
+        var position = storage.worldPosition(session.subLevel.plot(), session.local);
+        var origin = storage.worldPosition(session.subLevel.plot(), BlockPos.ZERO);
+        int side = storage.layout().sideChunks() * 16;
+        var bounds = new AABB(origin.getX(), level.getMinY(), origin.getZ(),
+                origin.getX() + side, level.getMaxY() + 1.0, origin.getZ() + side);
+        var tool = actor.getMainHandItem();
+        var toolBefore = tool.copy();
+        // Keep vanilla callbacks, global loot modifiers and BlockDropsEvent in one scoped path.
+        // Container contents and XP created by callbacks are captured too, then moved exactly once.
+        var drops = NativeStructureBreakDrops.open(session.host, level, hit, session.before,
+                blockEntity, origin, bounds);
+        try (drops) {
+            var block = state.getBlock();
+            var adjusted = block.playerWillDestroy(level, position, state, actor);
+            if (level.getBlockState(position) != state || level.getBlockEntity(position) != blockEntity
+                    || actor.getMainHandItem() != tool || !session.maintainable(actor)
+                    || validateTarget(actor, session.observation) == null) {
+                throw new IllegalStateException("SubLevel mining target changed during will-destroy callbacks");
+            }
+            boolean harvest = !actor.preventsBlockDrops() && adjusted.canHarvestBlock(level, position, actor);
+            if (level.getBlockState(position) != state || level.getBlockEntity(position) != blockEntity
+                    || actor.getMainHandItem() != tool || !session.maintainable(actor)
+                    || validateTarget(actor, session.observation) == null) {
+                throw new IllegalStateException("SubLevel mining target changed during harvest callbacks");
+            }
+            if (!actor.hasInfiniteMaterials()) tool.mineBlock(level, adjusted, position, actor);
+            var expectedWear = toolBefore.copy();
+            // setDamageValue also adds a DAMAGE component to seeds/blocks. Such items never
+            // wear, and adding that component makes an unchanged held stack fail equality.
+            if (expectedWear.isDamageableItem()) expectedWear.setDamageValue(tool.getDamageValue());
+            if (level.getBlockState(position) != state || level.getBlockEntity(position) != blockEntity
+                    || actor.level() != session.host || actor.isRemoved() || !actor.isAlive()
+                    || actor.gameMode.getGameModeForPlayer() != session.gameType
+                    || actor.getInventory().getSelectedSlot() != session.slot
+                    || actor.getMainHandItem() != tool || !tool.isEmpty() && !ItemStack.matches(tool, expectedWear)
+                    || !hostAllows(actor, hit.pose(), session.local)
+                    || validateTarget(actor, session.observation) == null) {
+                throw new IllegalStateException("SubLevel mining target changed during tool callbacks");
+            }
+            if (!adjusted.onDestroyedByPlayer(level, position, actor, toolBefore, harvest,
+                    level.getFluidState(position))) {
+                throw new IllegalStateException("SubLevel mining removal was refused");
+            }
+            var replacement = level.getBlockState(position);
+            if (!replacement.isAir() && !(replacement.getBlock() instanceof net.minecraft.world.level.block.LiquidBlock)) {
+                throw new IllegalStateException("SubLevel mining callback did not remove the solid block");
+            }
+            block.destroy(level, position, adjusted);
+            if (harvest) block.playerDestroy(level, actor, position, adjusted, blockEntity, toolBefore);
+            SubLevelDetachedContents.dropIfMassless(session.runtime, session.subLevel, actor);
+            if (!actor.hasInfiniteMaterials() && tool.isEmpty() && !toolBefore.isEmpty()) {
+                EventHooks.onPlayerDestroyItem(actor, toolBefore, InteractionHand.MAIN_HAND);
+            }
+            drops.publish();
+            var center = hit.pose().localToWorldPoint(Vec3.atCenterOf(session.local));
+            var sound = adjusted.getSoundType(level, position, actor);
+            session.host.playSound(null, center.x, center.y, center.z, sound.getBreakSound(),
+                    net.minecraft.sounds.SoundSource.BLOCKS, (sound.getVolume() + 1.0F) / 2.0F,
+                    sound.getPitch() * 0.8F);
+            session.host.sendParticles(new net.minecraft.core.particles.BlockParticleOption(
+                            net.minecraft.core.particles.ParticleTypes.BLOCK, adjusted),
+                    center.x, center.y, center.z, 24, 0.25, 0.25, 0.25, 0.05);
+            return true;
+        } catch (RuntimeException | Error failure) {
+            SubLevelMiningRecovery.retain(session.server, drops, failure);
+            throw failure;
         }
     }
 

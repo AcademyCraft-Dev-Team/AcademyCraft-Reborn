@@ -627,8 +627,14 @@ public final class StructureCaptureCoordinator {
             if (!transfer.matchesAfterImages(capture.host)) {
                 throw new IllegalStateException("Source batch changed during removal");
             }
+            org.academy.internal.common.structure.StructureHostBlockUpdates.publish(
+                    capture.host, capture.positions);
         } catch (RuntimeException failure) {
-            if (transfer.rollback(capture.host, HOST_UPDATE_FLAGS)) {
+            boolean restored = transfer.rollback(capture.host, HOST_UPDATE_FLAGS);
+            // Even an incomplete rollback must publish the actual surviving world state.
+            org.academy.internal.common.structure.StructureHostBlockUpdates.publish(
+                    capture.host, capture.positions);
+            if (restored) {
                 abort(capture, StructureCaptureResult.Status.SOURCE_CHANGED, "source_change_rolled_back");
             } else {
                 retain(capture, "source_rollback_blocked", failure);

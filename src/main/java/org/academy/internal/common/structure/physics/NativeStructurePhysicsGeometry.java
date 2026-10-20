@@ -51,7 +51,10 @@ public final class NativeStructurePhysicsGeometry {
     private static final Set<Class<?>> EMPTY_TERRAIN_PLANTS = Set.of(TallGrassBlock.class,
             DoublePlantBlock.class, FlowerBlock.class, TallFlowerBlock.class, SaplingBlock.class, MushroomBlock.class,
             DryVegetationBlock.class, ShortDryGrassBlock.class, TallDryGrassBlock.class,
-            BushBlock.class, FlowerBedBlock.class, LeafLitterBlock.class);
+            BushBlock.class, FlowerBedBlock.class, LeafLitterBlock.class,
+            CropBlock.class, CarrotBlock.class, PotatoBlock.class, BeetrootBlock.class, TorchflowerCropBlock.class,
+            StemBlock.class, AttachedStemBlock.class, NetherWartBlock.class, SugarCaneBlock.class,
+            SweetBerryBushBlock.class);
 
     private NativeStructurePhysicsGeometry() {}
 

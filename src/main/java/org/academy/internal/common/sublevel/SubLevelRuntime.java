@@ -257,9 +257,14 @@ public final class SubLevelRuntime {
         terrainNeedsUpdate = true;
         if (geometry.boxes().isEmpty()) {
             collision.remove(id);
-            managed.subLevel.setState(SubLevelState.INACTIVE);
+            SubLevelMotionController.cancel(id);
+            SubLevelTerrainBreaker.forget(id);
+            var remainingView = PlotView.capture(storage, managed.subLevel.plot(), managed.subLevel.localBounds());
+            // Protection may retain decoration after the last collision cell is mined. It
+            // remains selectable without manufacturing a zero-mass rigid body.
+            managed.subLevel.setState(emptyBodyState(remainingView.cells().size()));
             subLevels.put(id, new Managed(managed.subLevel, managed.lease, List.of(),
-                    PlotView.capture(storage, managed.subLevel.plot(), managed.subLevel.localBounds())));
+                    remainingView));
             remember(managed.subLevel);
             return;
         }
@@ -277,6 +282,10 @@ public final class SubLevelRuntime {
     public Optional<SubLevel> get(SubLevelId id) {
         var managed = subLevels.get(Objects.requireNonNull(id, "id"));
         return managed == null ? Optional.empty() : Optional.of(managed.subLevel);
+    }
+
+    static SubLevelState emptyBodyState(int renderedCells) {
+        return renderedCells > 0 ? SubLevelState.SLEEPING : SubLevelState.INACTIVE;
     }
 
     public boolean remove(SubLevelId id) {
@@ -430,6 +439,14 @@ public final class SubLevelRuntime {
         if (!work.isEmpty()) {
             plan = budget.plan(host, serverTick, work, BUDGET_LIMITS);
         }
+        // Commands have already published their velocities. Remove only authorized soft
+        // contacts before rebuilding terrain, otherwise leaves stop the body before a sweep.
+        for (var managed : subLevels.values()) {
+            var subLevel = managed.subLevel;
+            if (subLevel.state() != SubLevelState.ACTIVE && subLevel.state() != SubLevelState.SLEEPING) continue;
+            SubLevelTerrainBreaker.beforeStep(host, subLevel, universe.motion(subLevel.id()).orElse(null),
+                    managed.localBoxes, duration);
+        }
         long terrainStart = System.nanoTime();
         boolean terrainUpdated = false;
         if (terrain != null) {
@@ -516,6 +533,7 @@ public final class SubLevelRuntime {
         for (var managed : subLevels.values()) {
             var state = managed.subLevel.state();
             if (state != SubLevelState.ACTIVE && state != SubLevelState.SLEEPING) continue;
+            if (managed.localBoxes.isEmpty()) continue;
             var current = managed.subLevel.worldBounds();
             var motion = universe.motion(managed.subLevel.id()).orElse(null);
             var swept = motion == null ? current : sweptTerrainBounds(current,
@@ -581,7 +599,15 @@ public final class SubLevelRuntime {
                     restored++;
                     continue;
                 }
-                if (geometry.boxes().isEmpty()) throw new IllegalStateException("empty geometry");
+                if (geometry.boxes().isEmpty()) {
+                    var remaining = new SubLevel(entry.id(), entry.plot(), entry.localBounds(), entry.pose());
+                    var view = PlotView.capture(storage, entry.plot(), entry.localBounds());
+                    SubLevelActivationRegistry.activation(entry.id());
+                    remaining.setState(emptyBodyState(view.cells().size()));
+                    subLevels.put(entry.id(), new Managed(remaining, lease, List.of(), view));
+                    restored++;
+                    continue;
+                }
                 boolean shouldSimulate = entry.state() == SubLevelState.ACTIVE
                         || entry.state() == SubLevelState.SLEEPING;
                 boolean active = shouldSimulate && addBody(entry.id(), physicsPose(entry.pose()), geometry.boxes());

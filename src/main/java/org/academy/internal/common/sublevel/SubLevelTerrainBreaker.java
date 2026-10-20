@@ -4,8 +4,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.structure.StructurePose;
 import org.academy.api.common.structure.StructureTerrainBreakPolicy;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
@@ -13,7 +13,6 @@ import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.WeakHashMap;
 import java.util.function.Predicate;
@@ -25,10 +24,9 @@ import java.util.function.Predicate;
  */
 public final class SubLevelTerrainBreaker {
     private static final long GRANT_TICKS = 20L * 45L;
-    private static final long SCAN_INTERVAL_TICKS = 2L;
+    private static final long SCAN_INTERVAL_TICKS = 1L;
     private static final Map<SubLevelId, Grant> GRANTS = new HashMap<>();
     private static final Map<SubLevelId, Long> NEXT_SCAN = new HashMap<>();
-    private static final Map<SubLevelId, StructurePose> LAST_SCAN_POSE = new HashMap<>();
     private static final Map<ServerLevel, Boolean> HOSTS = new WeakHashMap<>();
     private static volatile Predicate<Entity> nonPlayerPolicy = entity -> false;
 
@@ -50,7 +48,6 @@ public final class SubLevelTerrainBreaker {
     public static void forget(SubLevelId id) {
         GRANTS.remove(id);
         NEXT_SCAN.remove(id);
-        LAST_SCAN_POSE.remove(id);
     }
 
     public static void forgetHost(ServerLevel host) {
@@ -64,7 +61,6 @@ public final class SubLevelTerrainBreaker {
     public static void clear() {
         GRANTS.clear();
         NEXT_SCAN.clear();
-        LAST_SCAN_POSE.clear();
         HOSTS.clear();
     }
 
@@ -79,7 +75,54 @@ public final class SubLevelTerrainBreaker {
                 || nonPlayerPolicy.test(actor);
     }
 
-    /** Called once per moved structure, after the whole solver step has published its pose. */
+    /** Selection hint only; the actual destruction still goes through permission and events. */
+    public static boolean canClearObstacle(ServerLevel host, Entity actor, BlockPos position) {
+        return actorAllowed(host, actor) && host.hasChunkAt(position)
+                && (!(actor instanceof Player player) || host.mayInteract(player, position))
+                && SubLevelTerrainBreakPolicy.eligible(host, position, host.getBlockState(position));
+    }
+
+    /**
+     * Clear authorized soft contacts before terrain colliders stop the body. Waiting until a
+     * post-solver pose changes cannot break a leaf directly touching a lifting structure: the
+     * solver first removes its velocity and the old sweep then sees no crossing at all.
+     */
+    public static void beforeStep(ServerLevel host, SubLevel subLevel,
+                                  SubLevelPhysicsUniverse.Motion motion, List<AABB> localBoxes,
+                                  double duration) {
+        if (motion == null || motion.sleeping() || !GRANTS.containsKey(subLevel.id())) return;
+        var linear = motion.linearVelocity();
+        var angular = motion.angularVelocity();
+        if (linear.x() * linear.x() + linear.y() * linear.y() + linear.z() * linear.z()
+                + angular.x() * angular.x() + angular.y() * angular.y() + angular.z() * angular.z()
+                < 1.0E-10) return;
+        var current = subLevel.pose();
+        var predicted = projectedPose(current, new Vec3(motion.localCenterOfMass().x(),
+                        motion.localCenterOfMass().y(), motion.localCenterOfMass().z()),
+                new Vec3(linear.x(), linear.y(), linear.z()),
+                new Vec3(angular.x(), angular.y(), angular.z()), duration);
+        sweep(host, subLevel, current, predicted, localBoxes);
+    }
+
+    /** Predict about the actual center of mass, not the lower grid corner. */
+    static StructurePose projectedPose(StructurePose pose, Vec3 localCenterOfMass, Vec3 linearVelocity,
+                                      Vec3 angularVelocity, double duration) {
+        if (!Double.isFinite(duration) || duration <= 0.0) {
+            throw new IllegalArgumentException("Terrain prediction duration must be positive and finite");
+        }
+        var rotation = pose.rotation();
+        double angularSpeed = angularVelocity.length();
+        if (angularSpeed > 1.0E-12) {
+            rotation = new org.joml.Quaterniond().rotationAxis(angularSpeed * duration,
+                    angularVelocity.x / angularSpeed, angularVelocity.y / angularSpeed,
+                    angularVelocity.z / angularSpeed).mul(rotation);
+        }
+        var orientation = new StructurePose(Vec3.ZERO, rotation);
+        var center = pose.localToWorldPoint(localCenterOfMass).add(linearVelocity.scale(duration));
+        return new StructurePose(center.subtract(orientation.localToWorldDirection(localCenterOfMass)), rotation);
+    }
+
+    /** At most one scan per tick; post-step calls remain a fallback for externally induced motion. */
     public static void sweep(ServerLevel host, SubLevel subLevel, StructurePose previous, StructurePose current,
                              List<AABB> localBoxes) {
         if (host == null || subLevel == null || previous == null || current == null || localBoxes.isEmpty()) return;
@@ -88,11 +131,6 @@ public final class SubLevelTerrainBreaker {
         long next = NEXT_SCAN.getOrDefault(subLevel.id(), 0L);
         if (now < next) return;
         NEXT_SCAN.put(subLevel.id(), now + SCAN_INTERVAL_TICKS);
-        // Sweep from the last scanned pose, not only the previous tick, so a skipped scan
-        // interval cannot hide a fast body's motion.
-        var from = LAST_SCAN_POSE.put(subLevel.id(), current);
-        if (from == null) from = previous;
-        if (from.equals(current)) return;
         var actor = resolveActor(host, subLevel.id(), now);
         if (actor == null || !actorAllowed(host, actor)) return;
         var reference = SubLevelStructureRefs.of(subLevel, host.dimension().identifier(),
@@ -104,7 +142,7 @@ public final class SubLevelTerrainBreaker {
                 Math.max(1, Integer.getInteger("academy.sublevel.softTerrainDestroyed", 48)));
         try {
             var sweep = SubLevelEnhancementBootstrap.TERRAIN_BREAKING.scan(host, reference,
-                    from, current, localBoxes, limits);
+                    previous, current, localBoxes, limits);
             if (sweep.candidates().isEmpty()) return;
             var plan = SubLevelEnhancementBootstrap.TERRAIN_BREAKING.authorize(host, actor, sweep,
                     !(actor instanceof net.minecraft.world.entity.player.Player player) || !player.hasInfiniteMaterials(),

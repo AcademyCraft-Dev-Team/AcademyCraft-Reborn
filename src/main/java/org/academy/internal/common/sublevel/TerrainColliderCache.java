@@ -44,6 +44,8 @@ public final class TerrainColliderCache implements AutoCloseable {
     private final Map<SectionKey, Integer> retryAt = new LinkedHashMap<>();
     private final java.util.Set<SectionKey> invalidated = new LinkedHashSet<>();
     private final java.util.Set<ChunkPos> collisionTickets = new LinkedHashSet<>();
+    private final CoveragePlanner coveragePlanner = new CoveragePlanner();
+    private CoveragePlan appliedPlan;
     private int chunkLoadTick = Integer.MIN_VALUE;
     private int syncChunkLoads;
     private int updates;
@@ -77,7 +79,7 @@ public final class TerrainColliderCache implements AutoCloseable {
             for (int y = (position.getY() - 1) >> 4; y <= (position.getY() + 1) >> 4; y++) {
                 for (int z = (position.getZ() - 1) >> 4; z <= (position.getZ() + 1) >> 4; z++) {
                     var key = new SectionKey(x, y, z);
-                    if (sections.containsKey(key)) invalidated.add(key);
+                    if (sections.containsKey(key) || emptySections.containsKey(key)) invalidated.add(key);
                     emptySections.remove(key);
                     // A newly placed block must not wait out the empty-section backoff.
                     retryAt.remove(key);
@@ -89,6 +91,10 @@ public final class TerrainColliderCache implements AutoCloseable {
     /** Materializes/removes sections around active world bounds; safe to call once per server tick. */
     public Diagnostics update(Collection<AABB> activeBounds) {
         Objects.requireNonNull(activeBounds, "activeBounds");
+        var plan = coveragePlanner.plan(activeBounds, host.getMinY(), host.getMaxY());
+        // Movement inside the same covered sections neither changes terrain nor its tickets.
+        // Block edits and chunk replacement still invalidate this fast path immediately.
+        if (plan == appliedPlan && !needsUpdate()) return diagnostics();
         updates = Math.incrementExact(updates);
         for (var key : List.copyOf(invalidated)) remove(key);
         invalidated.clear();
@@ -98,7 +104,6 @@ public final class TerrainColliderCache implements AutoCloseable {
         }
         emptySections.entrySet().removeIf(entry -> host.getChunkSource()
                 .getChunkNow(entry.getKey().x(), entry.getKey().z()) != entry.getValue());
-        var plan = planCoverage(activeBounds, host.getMinY(), host.getMaxY());
         var chunkPlan = planRequiredChunks(plan.required());
         updateRequiredChunks(chunkPlan, plan.bounded());
         var required = new LinkedHashSet<>(plan.required());
@@ -135,6 +140,7 @@ public final class TerrainColliderCache implements AutoCloseable {
             }
         }
         int boxes = sections.values().stream().mapToInt(entry -> entry.boxes).sum();
+        appliedPlan = plan;
         return new Diagnostics(sections.size(), boxes, created, skipped);
     }
 
@@ -172,6 +178,8 @@ public final class TerrainColliderCache implements AutoCloseable {
         invalidated.clear();
         emptySections.clear();
         coverageComplete = false;
+        appliedPlan = null;
+        coveragePlanner.clear();
         coverageFailure = "cleared";
         releaseCollisionTickets();
     }
@@ -377,6 +385,50 @@ public final class TerrainColliderCache implements AutoCloseable {
     record CoveragePlan(List<SectionKey> required, List<SectionKey> nearby, boolean bounded) {}
 
     record ChunkPlan(List<ChunkPos> required, boolean bounded) {}
+
+    /**
+     * The mandatory coverage depends on section coordinates, not sub-block pose changes. Halo
+     * ordering is only a prewarm preference, so it can share the same lifetime as that coverage.
+     */
+    static final class CoveragePlanner {
+        private List<SectionRange> footprint;
+        private int minHeight;
+        private int maxHeight;
+        private CoveragePlan cached;
+
+        CoveragePlan plan(Collection<AABB> bounds, int minHeight, int maxHeight) {
+            var next = new ArrayList<SectionRange>(bounds.size());
+            boolean valid = true;
+            for (var raw : bounds) {
+                if (raw == null || !finite(raw)) {
+                    valid = false;
+                    break;
+                }
+                if (raw.maxY <= minHeight || raw.minY >= maxHeight) continue;
+                var padded = raw.inflate(0.1);
+                next.add(new SectionRange(floorSection(padded.minX), floorSection(padded.maxX),
+                        Math.max(floorSection(minHeight), floorSection(padded.minY)),
+                        Math.min(floorSection(maxHeight - 1.0), floorSection(padded.maxY)),
+                        floorSection(padded.minZ), floorSection(padded.maxZ)));
+            }
+            if (valid && cached != null && this.minHeight == minHeight && this.maxHeight == maxHeight
+                    && next.equals(footprint)) return cached;
+            var result = planCoverage(bounds, minHeight, maxHeight);
+            // Invalid input must never reuse a previously complete coverage receipt.
+            footprint = valid ? List.copyOf(next) : null;
+            cached = valid ? result : null;
+            this.minHeight = minHeight;
+            this.maxHeight = maxHeight;
+            return result;
+        }
+
+        void clear() {
+            footprint = null;
+            cached = null;
+        }
+    }
+
+    private record SectionRange(int minX, int maxX, int minY, int maxY, int minZ, int maxZ) {}
 
     private enum CaptureResult { SOLID, EMPTY, UNLOADED, BUDGET, FAILED }
 

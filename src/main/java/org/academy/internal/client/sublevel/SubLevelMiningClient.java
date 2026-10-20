@@ -32,6 +32,9 @@ public final class SubLevelMiningClient {
     }
 
     public static void accept(SubLevelMiningProgressPacket packet) {
+        var minecraft = net.minecraft.client.Minecraft.getInstance();
+        if (minecraft.getConnection() == null || packet.getPacketListener() != minecraft.getConnection()) return;
+        SubLevelClientInteraction.accept(packet);
         if (packet.id() == null) return;
         var key = new Key(packet.actorEntityId(), packet.requestId(), packet.id(), packet.local());
         var entry = ENTRIES.get(key);

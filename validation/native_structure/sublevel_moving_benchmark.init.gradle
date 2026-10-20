@@ -1,0 +1,20 @@
+// Paired client benchmark. Prepare a fresh saves/test copy; use a new directory for each run.
+allprojects {
+    afterEvaluate {
+        def directory = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory').get()).canonicalFile
+        if (!directory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !directory.name.startsWith('native-sublevel-direct-smoke-')) {
+            throw new GradleException('Moving benchmark requires an isolated native-sublevel-direct-smoke-* directory')
+        }
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.sublevelMultiSmoke', 'true'
+            systemProperty 'academy.sublevelMultiSmoke128', 'true'
+            systemProperty 'academy.sublevelMultiSmokeMoving', 'true'
+            systemProperty 'academy.sublevelMultiSmokeCount', providers.gradleProperty('academyMultiCount').getOrElse('16')
+            systemProperty 'academy.sublevelMultiSmokeTicks', '240'
+            jvmArgument "-XX:StartFlightRecording=filename=${new File(directory, 'moving.jfr').absolutePath},settings=profile,dumponexit=true"
+            programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer', 'test')
+        }
+    }
+}

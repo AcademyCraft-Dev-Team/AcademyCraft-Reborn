@@ -18,6 +18,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.BlockDropsEvent;
 import org.academy.api.common.structure.StructureBlockData;
@@ -45,12 +46,25 @@ public final class NativeStructureBreakDrops {
 
     public static Scope open(ServerLevel host, ServerLevel storage, StructureHit hit,
                              StructureBlockData before, @Nullable BlockEntity oldBlockEntity) {
+        return open(host, storage, hit, before, oldBlockEntity, BlockPos.ZERO,
+                new AABB(NativeStructureDimensions.MIN_COORDINATE, storage.getMinY(),
+                        NativeStructureDimensions.MIN_COORDINATE, NativeStructureDimensions.MAX_COORDINATE_EXCLUSIVE,
+                        storage.getMaxY() + 1.0, NativeStructureDimensions.MAX_COORDINATE_EXCLUSIVE));
+    }
+
+    /**
+     * The event retains the real storage level/position and the original breaker/tool, like an
+     * ordinary plot block. Only the resulting entities are transformed into the visible host.
+     */
+    public static Scope open(ServerLevel host, ServerLevel storage, StructureHit hit,
+                             StructureBlockData before, @Nullable BlockEntity oldBlockEntity,
+                             BlockPos storageOrigin, AABB storageBounds) {
         if (!host.getServer().isSameThread() || host.getServer() != storage.getServer()
                 || CURRENT.get() != null || !NativeStructureDimensions.isStorageLevel(storage.dimension())
                 || NativeStructureDimensions.isStorageLevel(host.dimension())) {
             throw new IllegalStateException("Invalid or nested native mining output scope");
         }
-        var scope = new Scope(host, storage, hit, before, oldBlockEntity);
+        var scope = new Scope(host, storage, hit, before, oldBlockEntity, storageOrigin, storageBounds);
         CURRENT.set(scope);
         return scope;
     }
@@ -109,6 +123,8 @@ public final class NativeStructureBreakDrops {
         private final StructurePose pose;
         private final StructureBlockData before;
         private final @Nullable BlockEntity oldBlockEntity;
+        private final Vec3 storageOrigin;
+        private final AABB storageBounds;
         private final NativeStructureDropLedger<Output> ledger = new NativeStructureDropLedger<>(MAX_OUTPUTS);
         private final IdentityHashMap<Entity, Output> capturedEntities = new IdentityHashMap<>();
         private final List<LootStage> lootStages = new ArrayList<>();
@@ -121,13 +137,16 @@ public final class NativeStructureBreakDrops {
         private long experienceTotal;
 
         private Scope(ServerLevel host, ServerLevel storage, StructureHit hit,
-                      StructureBlockData before, @Nullable BlockEntity oldBlockEntity) {
+                      StructureBlockData before, @Nullable BlockEntity oldBlockEntity,
+                      BlockPos storageOrigin, AABB storageBounds) {
             this.host = host;
             this.storage = storage;
             this.hit = hit;
             this.pose = hit.pose();
             this.before = before;
             this.oldBlockEntity = oldBlockEntity;
+            this.storageOrigin = Vec3.atLowerCornerOf(Objects.requireNonNull(storageOrigin));
+            this.storageBounds = Objects.requireNonNull(storageBounds);
         }
 
         private void requireActive() {
@@ -253,7 +272,7 @@ public final class NativeStructureBreakDrops {
             publishing = true;
             ledger.publish(output -> {
                 if (failed) throw new IllegalStateException("Native drop scope failed during publication callbacks");
-                var world = pose.localToWorldPoint(output.position);
+                var world = pose.localToWorldPoint(output.position.subtract(storageOrigin));
                 requireHostPoint(world);
                 Entity entity = output.entity;
                 if (entity == null) {
@@ -291,7 +310,7 @@ public final class NativeStructureBreakDrops {
         private void requireLocalPoint(Vec3 point) {
             requireFinite(point);
             var cell = BlockPos.containing(point);
-            if (!NativeStructureDimensions.contains(cell) || storage.isOutsideBuildHeight(cell)
+            if (!storageBounds.contains(point) || storage.isOutsideBuildHeight(cell)
                     || !storage.hasChunkAt(cell)) throw new IllegalStateException("Native drop left its loaded storage domain");
         }
 
@@ -318,6 +337,7 @@ public final class NativeStructureBreakDrops {
             result.putString("structure_id", hit.block().structure().id().toString());
             result.putString("runtime_id", hit.runtimeId().toString());
             result.putString("host_dimension", host.dimension().identifier().toString());
+            result.put("storage_origin", vector(storageOrigin));
             result.putLong("local_position", hit.block().localPosition().asLong());
             result.putBoolean("completed", completed);
             result.putBoolean("failed", failed);

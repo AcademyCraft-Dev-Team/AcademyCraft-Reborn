@@ -105,4 +105,33 @@ class TerrainCoveragePlanTest {
         assertTrue(chunks.bounded());
         assertTrue(chunks.required().isEmpty());
     }
+
+    @Test
+    void motionWithinCoveredSectionsReusesPlanButCrossingBoundaryExpandsCoverage() {
+        var planner = new TerrainColliderCache.CoveragePlanner();
+        var first = planner.plan(List.of(new AABB(2, 66, 2, 3, 67, 3)), -64, 320);
+        assertSame(first, planner.plan(List.of(new AABB(12, 68, 10, 13, 69, 11)), -64, 320));
+        var crossed = planner.plan(List.of(new AABB(15.8, 68, 10, 16.8, 69, 11)), -64, 320);
+        assertNotSame(first, crossed);
+        assertTrue(crossed.required().contains(new TerrainColliderCache.SectionKey(1, 4, 0)));
+    }
+
+    @Test
+    void memoizedCoverageRetainsFastSweepAndDoesNotReuseInvalidOrDifferentHeightPlans() {
+        var planner = new TerrainColliderCache.CoveragePlanner();
+        var small = List.of(new AABB(8, 65, 8, 9, 66, 9));
+        var first = planner.plan(small, -64, 320);
+        var fast = planner.plan(List.of(new AABB(8, 65, 8, 29, 66, 9)), -64, 320);
+        assertNotSame(first, fast);
+        assertTrue(fast.required().contains(new TerrainColliderCache.SectionKey(1, 4, 0)));
+        var invalid = planner.plan(List.of(new AABB(Double.NaN, 65, 8, 9, 66, 9)), -64, 320);
+        assertFalse(invalid.bounded());
+        var recovered = planner.plan(small, -64, 320);
+        assertTrue(recovered.bounded());
+        assertNotSame(first, recovered);
+        var aboveWorld = planner.plan(small, -64, 64);
+        assertTrue(aboveWorld.required().isEmpty());
+        planner.clear();
+        assertNotSame(aboveWorld, planner.plan(small, -64, 64));
+    }
 }

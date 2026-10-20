@@ -1,0 +1,21 @@
+// Read and render the saved player view in an isolated test2 copy. Never targets run/saves.
+allprojects {
+    afterEvaluate {
+        def directory = rootProject.file(providers.gradleProperty('academySceneDirectory').get()).canonicalFile
+        if (!directory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !directory.name.startsWith('native-sublevel-scene-smoke-')
+                || !new File(directory, 'saves/test2/level.dat').isFile()) {
+            throw new GradleException('Prepare an isolated native-sublevel-scene-smoke-* saves/test2 copy')
+        }
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.sublevelSceneSmoke', 'true'
+            systemProperty 'academy.nativeStructureForceBlockRenderer',
+                    providers.gradleProperty('academySceneForceBlocks').getOrElse('false')
+            systemProperty 'academy.sublevelMeshDiagnostics',
+                    providers.gradleProperty('academySceneMeshDiagnostics').getOrElse('false')
+            jvmArgument "-XX:StartFlightRecording=filename=${new File(directory, 'scene.jfr').absolutePath},settings=profile,dumponexit=true"
+            programArguments.addAll('--width', '854', '--height', '480', '--quickPlaySingleplayer', 'test2')
+        }
+    }
+}

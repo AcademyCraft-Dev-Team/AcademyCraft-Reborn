@@ -418,17 +418,51 @@ public final class SableStructureSmoke {
         var origin = BASE.offset(-4, 0, 10);
         require(host.getBlockState(origin).isAir() && host.getBlockEntity(origin) == null,
                 "Sable seed probe origin must start empty: " + origin);
-        var reference = target.allocate(host, origin, BlockPos.ZERO, Blocks.STONE.defaultBlockState())
+        // The three axis minima do not identify a selected cell. Such irregular selections
+        // previously displaced every cell by minus the nonzero seed offset in the solver.
+        var offsets = List.of(new BlockPos(3, 0, 4), new BlockPos(0, 1, 3), new BlockPos(2, 2, 0));
+        var reference = target.allocate(host, origin, offsets.getFirst(), Blocks.STONE.defaultBlockState())
                 .orElseThrow(() -> new IllegalStateException("Sable seed probe allocation failed"));
         var ship = container.getSubLevel(reference.id());
-        require(ship instanceof ServerSubLevel seeded, "Sable seed probe lost its ship");
-        var tracker = ((ServerSubLevel) ship).getMassTracker();
+        require(ship instanceof ServerSubLevel, "Sable seed probe lost its ship");
+        var seeded = (ServerSubLevel) ship;
+        fixtures.add(seeded);
+        var tracker = seeded.getMassTracker();
         require(tracker != null && tracker.getMass() > 0 && tracker.getCenterOfMass() != null,
                 "Sable allocation returned an empty ship: "
                         + (tracker == null ? "no mass tracker" : "mass=" + tracker.getMass()));
+        verifyCaptureGrid(seeded, origin, List.of(offsets.getFirst()));
+        for (var offset : offsets.subList(1, offsets.size())) {
+            require(target.writeCell(reference, offset, Blocks.STONE.defaultBlockState())
+                            == StructureWriteResult.APPLIED,
+                    "Sable anchor probe could not copy " + offset);
+        }
+        var sourcePositions = offsets.stream().map(origin::offset).toList();
+        require(target.finalizeTarget(reference, origin, sourcePositions), "Sable anchor finalization failed");
+        verifyCaptureGrid(seeded, origin, offsets);
+        require(target.finalizeTarget(reference, origin, sourcePositions), "Sable anchor finalization was not repeatable");
+        verifyCaptureGrid(seeded, origin, offsets);
         require(target.releaseEmpty(reference), "Sable seed probe ship could not be released");
         require(container.getSubLevel(reference.id()) == null, "Sable seed probe ship survived its release");
         evidence.append("sable_capture_seed_same_chain=true\n");
+        evidence.append("sable_capture_nonzero_seed_solver_grid=true\n");
+    }
+
+    private void verifyCaptureGrid(ServerSubLevel ship, BlockPos origin, List<BlockPos> offsets) {
+        var logical = ship.logicalPose();
+        var solver = new Pose3d(logical);
+        container.physicsSystem().getPipeline().readPose(ship, solver);
+        require(solver.position().distanceSquared(logical.position()) < 1.0E-8,
+                "Sable capture logical pose diverged from its native solver");
+        var plotOrigin = ship.getPlot().getCenterBlock();
+        for (var offset : offsets) {
+            var plotCenter = Vec3.atCenterOf(plotOrigin.offset(offset));
+            var expected = Vec3.atCenterOf(origin.offset(offset));
+            require(logical.transformPosition(plotCenter).distanceToSqr(expected) < 1.0E-8,
+                    "Sable capture logical grid shifted at " + offset);
+            require(solver.transformPosition(plotCenter).distanceToSqr(expected) < 1.0E-8,
+                    "Sable capture native solver grid shifted at " + offset);
+        }
     }
 
     /**

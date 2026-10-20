@@ -1,5 +1,27 @@
 # 本地物理结构五项修复 — 实现记录与验收交接
 
+## 2026-10-20 后续：贴地接触、嵌地抬升与卸载设计
+
+此节属于现有 live 路径修复，不启用下方 PIPE 草案。用户补充的“运动结构原位置有不可见阻挡”尚不能仅凭存档包围盒归因；专项证据与未覆盖范围分别记录如下：
+
+- [贴地行走及幽灵阻挡审计](docs/sublevel_ground_contact_audit_2026_10_20.zh-CN.md)：普通承载不再调用服务端玩家传送确认流程；客户端承载与位置插值同 tick；斜面跨步按真实表面落地，空框角落不作为碰撞。
+- [嵌地 H 抬升](docs/sublevel_embedded_lift_repair_2026_10_20.zh-CN.md)：原生缓存相邻盒内部面并修正接触法线，保持外墙、地板、顶板；精确合并真实几何；手动选区保留顶部依赖。Sable 捕获按实际重心重锚真实求解器，手动抬升在稳定到位后开始 200 tick，超时释放而不自动投掷。
+- [源格同步](docs/structure_host_block_sync_2026_10_20.zh-CN.md)：已加载 FULL 但不 tick 的可见区块不会可靠发送普通方块更新；捕获提交和回滚按 section 显式发布当前状态。已用对照格复现并验证；它是独立确定缺陷，尚未证明就是用户所见不可见阻挡的唯一原因。
+- [挖掘补充](docs/sublevel_mining_regression_2026_10_20.zh-CN.md)：修正种子等无耐久物品被人工附加 DAMAGE 组件而误判工具改变，创意种子破铁块、生存种子破泥土与铁镐破铁块均完成实机回归。
+- [区块卸载回正方案](docs/structure_chunk_unload_restore_plan.zh-CN.md)：**DESIGN ONLY**。没有增加自动回正运行逻辑、配置或注册；需先解决排除自身票据的驻留判定、跨 chunk 耐久事务和冲突时的持久化暂停。
+
+本轮最终命令、结果和剩余限制统一见接续记录最新节；不要用先前悬空平台通过代替紧密坑壁验收，也不要把修正内部面误解为禁用物理碰撞。
+
+## 2026-10-20 晚间：live 渲染、植被与挖掘回归
+
+此节补充实际生产路径的修复，不表示下方七个 `PIPE` 草案端口已经接线，也不改变 `GAMEPLAY_ENABLED=false`。
+
+- `test2` 的 18 个结构、1,807 个视图方块已定位到逐块绘制状态比较热点。普通/cutout/透明模型按结构合批，保留原版顶点编码与逐顶点光照；最终有效同视角副本由 9.12 FPS 提升至 187.83 FPS，P50 帧时间 108.75→5.12 ms。早期 239.88 FPS 版本存在纹理坐标错误，不作为最终验收。详见 [性能诊断](docs/sublevel_render_performance_2026_10_20.zh-CN.md)。
+- 空碰撞植被不再裁掉 H 选取；前置软障碍清理修复候选范围导致的预算饥饿。真实技能入口验证 3/5/7 格、各完整 200 tick、清理叶盖及发射；旧后端新增植物准入全状态检查通过。详见 [植被回归](docs/sublevel_vegetation_lift_2026_10_20.zh-CN.md)。
+- 左键反馈、铁块挖掘会话终止、原版工具消耗及全局 `BlockDropsEvent` 已接入 live 路径。真实铁块输入烟测及默认/取消/替换掉落/经验/余草保护 GameTest 通过。详见 [挖掘回归](docs/sublevel_mining_regression_2026_10_20.zh-CN.md)。
+
+仍未覆盖新的同场景 Sable 客户端配对、大规模碰撞吞吐、全部精密节点组合、所有模组方块实体/含水格投影与掉落异常故障注入。不要由上述局部验证关闭下方整个草案的 UNVERIFIED 清单。最终构建记录统一见 [接续记录](docs/structure_skill_migration_handoff.zh-CN.md)。
+
 ## 2026-10-20 新增：Sable 对照后的 v2 方案骨架
 
 **状态：DRAFT PORTS IMPLEMENTED；未接入运行路径，GAMEPLAY_ENABLED=false，玩法验收 UNVERIFIED。** 本节优先于下方历史 IMPLEMENTED 标签；不表示旧问题已修复。设计与配对数据见 [v2 方案](docs/structure_pipeline_v2_plan.zh-CN.md)。新骨架没有替换现有后端，没有变更物理 ABI、存档或网络包。Sable 主体源码没有复制进 Academy。2026-10-20 后续另落地了 capture 分阶段计时、plot 预开池、局部 chunk 耐久与 3/5/7 悬浮 parity 验证（见下表与基线文档）；它们属于 live 调度/耐久/控制验证，不改变七个 PIPE 端口仍未接入运行路径的事实。

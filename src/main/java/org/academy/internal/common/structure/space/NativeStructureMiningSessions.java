@@ -261,7 +261,7 @@ public final class NativeStructureMiningSessions {
         }
         var state = session.before.state();
         float hardness = state.getDestroySpeed(session.storage, session.position);
-        if (!Float.isFinite(hardness) || hardness < 0) return false;
+        if (!Float.isFinite(hardness) || hardness < 0 && session.gameType != GameType.CREATIVE) return false;
         var tool = session.player.getMainHandItem();
         if (!tool.isEmpty() && !tool.canDestroyBlock(state, session.storage, session.position, session.player)) return false;
         boolean harvest = state.canHarvestBlock(session.storage, session.position, session.player);

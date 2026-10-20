@@ -250,7 +250,8 @@ public final class StructurePhysics {
      * a mismatch pauses the complete region and retains the checkpoint until geometry matches
      * again or the saved association is explicitly discarded.
      * Saved sleeping bodies resume awake so the fresh solver can establish current contacts.
-     * Failed checkpoints require discard and cannot be resumed. No offline time is simulated.
+     * Failed checkpoints cannot be resumed; use {@link #recoverFailedRegion} to rebuild them
+     * at rest after validation. No offline time is simulated.
      * This convenience overload requires exactly one saved region in this host.
      */
     public static StructurePhysicsRegion resumeRegion(ServerLevel host) {
@@ -263,6 +264,25 @@ public final class StructurePhysics {
         Objects.requireNonNull(host, "host");
         Objects.requireNonNull(regionId, "regionId");
         return NativeStructureRuntime.backend(host.getServer()).resumePhysicsRegion(host, regionId);
+    }
+
+    /**
+     * Rebuilds every member of a failed legacy region at its last published pose with zero
+     * velocity and fresh contacts. Stored blocks, structure IDs and slots remain unchanged.
+     * Requires the owning server thread and normal activation of every saved member.
+     * Validation and durable checkpoint replacement finish before the new region is published;
+     * a rejected attempt retains the old checkpoint. Callers must authorize the operation.
+     */
+    public static StructurePhysicsRecovery recoverFailedRegion(ServerLevel host, UUID regionId) {
+        Objects.requireNonNull(host, "host");
+        Objects.requireNonNull(regionId, "regionId");
+        var result = NativeStructureRuntime.backend(host.getServer()).recoverPhysicsRegion(host, regionId);
+        var status = switch (result.status()) {
+            case RECOVERED -> StructurePhysicsRecovery.Status.RECOVERED;
+            case WAITING -> StructurePhysicsRecovery.Status.WAITING;
+            case REJECTED -> StructurePhysicsRecovery.Status.REJECTED;
+        };
+        return new StructurePhysicsRecovery(status, result.region(), result.diagnostic());
     }
 
     /**

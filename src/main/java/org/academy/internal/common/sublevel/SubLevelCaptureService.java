@@ -127,6 +127,8 @@ public final class SubLevelCaptureService {
                 }
                 removed.add(entry);
             }
+            org.academy.internal.common.structure.StructureHostBlockUpdates.publish(host,
+                    copied.stream().map(Copied::position).toList());
             runtime.persist();
             SubLevelCaptureJournal.commit(journal, journalRecord);
             SubLevelStaticizeJournal.finish(journal, journalRecord.transactionId());
@@ -180,6 +182,8 @@ public final class SubLevelCaptureService {
                 AcademyCraft.LOGGER.error("Could not restore captured block {}", entry.position(), failure);
             }
         }
+        org.academy.internal.common.structure.StructureHostBlockUpdates.publish(host,
+                entries.stream().map(Copied::position).toList());
         return complete;
     }
 

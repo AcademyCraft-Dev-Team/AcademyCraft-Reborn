@@ -2,6 +2,7 @@ package org.academy.internal.client.sublevel;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.ClipContext;
@@ -15,11 +16,14 @@ import org.academy.internal.common.network.SubLevelStatePacket;
 import org.academy.internal.common.sublevel.PlotPos;
 import org.academy.internal.common.sublevel.SubLevelCollisionIndex;
 import org.academy.internal.common.sublevel.SubLevelCollisionRuntime;
+import org.academy.internal.common.sublevel.SubLevelContactResolver;
 import org.academy.internal.common.sublevel.SubLevelId;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.structure.NativeStructureProjectionEntity;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +44,8 @@ public final class SubLevelClientState {
     private static final Map<ClientLevel, Map<SubLevelId, StructurePose>> COLLISION_POSES = new WeakHashMap<>();
     private static final Map<Integer, SubLevelId> PROJECTION_IDS = new HashMap<>();
     private static final AtomicInteger ENTITY_IDS = new AtomicInteger(-1_000_000);
+    private static List<CarryFrame> pendingCarry = List.of();
+    private static ClientLevel carryLevel;
 
     private SubLevelClientState() {
     }
@@ -112,6 +118,8 @@ public final class SubLevelClientState {
      * timeline as rendering, with no frame-dependent exponential approach to the target.
      */
     public static synchronized void tick() {
+        pendingCarry = List.of();
+        carryLevel = null;
         var minecraft = Minecraft.getInstance();
         if (minecraft.isPaused()) return;
         var level = minecraft.level;
@@ -121,17 +129,39 @@ public final class SubLevelClientState {
         if (states == null) return;
         var poses = COLLISION_POSES.computeIfAbsent(level, ignored -> new HashMap<>());
         var entities = ENTITIES.getOrDefault(level, Map.of());
+        var carryFrames = new ArrayList<CarryFrame>();
         for (var entry : states.entrySet()) {
             var projection = entities.get(entry.getKey());
             var next = projection == null ? entry.getValue().pose() : projection.advanceClientPose();
             var current = poses.getOrDefault(entry.getKey(), next);
             poses.put(entry.getKey(), next);
+            if (COLLISION && !current.equals(next)) {
+                carryFrames.add(new CarryFrame(entry.getKey(), current, next, entry.getValue().boxes()));
+            }
             // Even a resting body must clear its previous movement, otherwise carrying replays it.
             if (COLLISION && index != null) {
                 index.update(entry.getKey(), entry.getValue().boxes(), next, current, 0, 0);
             }
         }
         poses.keySet().removeIf(id -> !states.containsKey(id));
+        carryLevel = level;
+        pendingCarry = List.copyOf(carryFrames);
+    }
+
+    /** Runs after vanilla records the player's previous position, so carry also interpolates. */
+    public static synchronized void carryLocalPlayer(LocalPlayer player) {
+        var level = carryLevel;
+        if (level == null || player.level() != level || player != Minecraft.getInstance().player) return;
+        var frames = pendingCarry;
+        pendingCarry = List.of(); // Extra entity ticks must not apply the same pose delta twice.
+        var states = STATES.getOrDefault(level, Map.of());
+        var carried = new HashSet<net.minecraft.world.entity.Entity>();
+        for (var frame : frames) {
+            var snapshot = states.get(frame.id());
+            if (snapshot == null || snapshot.boxes() != frame.boxes()) continue;
+            SubLevelContactResolver.carry(level, player, frame.previous(), frame.current(),
+                    frame.boxes(), carried, null);
+        }
     }
 
     /** SubLevel identity of a client projection, used by the crack overlay. */
@@ -142,6 +172,14 @@ public final class SubLevelClientState {
     public static synchronized List<Snapshot> snapshots(ClientLevel level) {
         var states = STATES.get(level);
         return states == null ? List.of() : states.values().stream().toList();
+    }
+
+    /** State-only lookup for local click feedback; the snapshot remains server authoritative. */
+    public static synchronized net.minecraft.world.level.block.state.BlockState blockState(
+            ClientLevel level, SubLevelId id, BlockPos local) {
+        var snapshot = STATES.getOrDefault(level, Map.of()).get(id);
+        return snapshot == null ? net.minecraft.world.level.block.Blocks.AIR.defaultBlockState()
+                : snapshot.view().getBlockState(local);
     }
 
     /** Exact state-only raycast; no client-only entity AABB is consulted. */
@@ -183,6 +221,9 @@ public final class SubLevelClientState {
             Objects.requireNonNull(face, "face");
             Objects.requireNonNull(worldPoint, "worldPoint");
         }
+    }
+
+    private record CarryFrame(SubLevelId id, StructurePose previous, StructurePose current, List<AABB> boxes) {
     }
 
     public record Snapshot(PlotPos plot, StructurePose pose, List<AABB> boxes,

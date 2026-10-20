@@ -1,0 +1,18 @@
+// Actual left-click, crack progress and global drop event in a disposable client world.
+allprojects {
+    afterEvaluate {
+        def directory = rootProject.file(providers.gradleProperty('academyMiningDirectory').get()).canonicalFile
+        if (!directory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !directory.name.startsWith('sublevel-mining-smoke-')
+                || !new File(directory, 'saves/test/level.dat').isFile()) {
+            throw new GradleException('Prepare an isolated sublevel-mining-smoke-* saves/test copy')
+        }
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.sublevelMiningSmoke', 'true'
+            systemProperty 'academy.sublevelMiningMode', providers.gradleProperty('academyMiningMode')
+                    .getOrElse('pickaxe')
+            programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer', 'test')
+        }
+    }
+}

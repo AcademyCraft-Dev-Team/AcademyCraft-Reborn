@@ -79,18 +79,19 @@ public final class SubLevelCaptureTarget implements CaptureTarget {
                         && state.getValue(BlockStateProperties.WATERLOGGED),
                 !state.getFluidState().isEmpty(),
                 host.getBlockTicks().hasScheduledTick(position, state.getBlock()),
-                state.getCollisionShape(host, position).isEmpty(), state.getDestroySpeed(host, position));
+                state.getDestroySpeed(host, position));
     }
 
     /** The shared transaction persists block states; richer payloads remain an explicit rejection. */
     static @Nullable String classifyAdmission(boolean blockEntity, boolean waterlogged, boolean fluid,
-                                               boolean scheduledTick, boolean emptyShape, float destroySpeed) {
+                                               boolean scheduledTick, float destroySpeed) {
         if (blockEntity) return "block_entity_not_supported";
         if (waterlogged) return "waterlogged_not_supported";
         if (fluid) return "fluid_not_supported";
         if (scheduledTick) return "scheduled_tick_pending";
         if (destroySpeed < 0.0f) return "unbreakable";
-        if (emptyShape) return "no_collision_geometry";
+        // Decorative cells move with their supporting structure and retain their render/state
+        // data. verifyCopy still rejects a wholly empty collision body before source removal.
         return null;
     }
 

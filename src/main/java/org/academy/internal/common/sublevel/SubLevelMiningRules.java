@@ -15,14 +15,16 @@ final class SubLevelMiningRules {
 
     static boolean canMine(ServerPlayer player, ServerLevel storage, BlockPos position,
                            BlockState state, @Nullable BlockEntity blockEntity) {
-        if (state.isAir() || !state.getFluidState().isEmpty()) return false;
+        if (state.isAir() || state.getBlock() instanceof net.minecraft.world.level.block.LiquidBlock) return false;
         float hardness = state.getDestroySpeed(storage, position);
-        if (!Float.isFinite(hardness) || hardness < 0.0f) return false;
+        if (!Float.isFinite(hardness) || hardness < 0.0f && !player.hasInfiniteMaterials()) return false;
+        if (player.blockActionRestricted(storage, position, player.gameMode.getGameModeForPlayer())) return false;
         var tool = player.getMainHandItem();
         // Plot structures may contain arbitrary captured blocks; any real item that can destroy
         // the state is valid, not only the audited native-structure tool list.
         if (!tool.isEmpty() && !tool.canDestroyBlock(state, storage, position, player)) return false;
-        return blockEntity == null || !blockEntity.isRemoved();
+        return state.hasBlockEntity() ? blockEntity != null && !blockEntity.isRemoved()
+                && blockEntity.getType().isValid(state) : blockEntity == null;
     }
 
     /** Vanilla per-tick break delta; the server is the only clock. */

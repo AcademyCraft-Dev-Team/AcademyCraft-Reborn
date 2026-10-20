@@ -1,5 +1,7 @@
 //! Bounded standalone Rapier binding. No Minecraft state or foreign-owned objects are retained.
 
+mod contact_surface;
+
 use rapier3d_f64::prelude::*;
 use std::collections::HashMap;
 use std::mem::{align_of, size_of};
@@ -36,6 +38,7 @@ struct BodyEntry {
 
 struct World {
     physics: PhysicsWorld,
+    surfaces: contact_surface::ContactSurfaces,
     bodies: HashMap<u64, BodyEntry>,
     cuboids: usize,
     failed: bool,
@@ -45,7 +48,8 @@ impl World {
     fn new(gravity: Vector) -> Self {
         let mut physics = PhysicsWorld::new();
         physics.gravity = gravity;
-        Self { physics, bodies: HashMap::new(), cuboids: 0, failed: false }
+        Self { physics, surfaces: contact_surface::ContactSurfaces::default(),
+               bodies: HashMap::new(), cuboids: 0, failed: false }
     }
 
     fn body_handle(&self, body: u64) -> Result<RigidBodyHandle> {
@@ -103,7 +107,7 @@ impl World {
         }
         self.physics.integration_parameters.dt = dt / f64::from(substeps);
         for _ in 0..substeps {
-            self.physics.step();
+            self.physics.step_with_events(&self.surfaces, &());
             self.check_output()?;
         }
         Ok(())
@@ -112,6 +116,7 @@ impl World {
     fn remove_body(&mut self, body: u64) -> Result<()> {
         let entry = self.bodies.get(&body).ok_or(INVALID_HANDLE)?;
         let count = entry.cuboids;
+        self.surfaces.remove_body(entry.handle, &self.physics.bodies, &self.physics.colliders);
         self.physics.remove_body(entry.handle).ok_or(WORLD_FAILED)?;
         self.bodies.remove(&body);
         self.cuboids -= count;
@@ -129,6 +134,16 @@ impl World {
             .contacts_enabled(false)
             .build();
         self.physics.impulse_joints.insert(handle1, handle2, joint, true);
+        self.surfaces.join_bodies(handle1, handle2, &self.physics.bodies, &self.physics.colliders);
+        Ok(())
+    }
+
+    fn set_pose(&mut self, body: u64, pose: Pose) -> Result<()> {
+        let handle = self.body_handle(body)?;
+        self.physics.bodies[handle].set_position(pose, true);
+        self.physics.bodies.propagate_modified_body_positions_to_colliders(&mut self.physics.colliders);
+        self.surfaces.refresh_body_pose(handle, &self.physics.bodies, &self.physics.colliders);
+        self.snapshot(body)?;
         Ok(())
     }
 }
@@ -187,11 +202,13 @@ impl Registry {
                 .position(cuboid.pose)
                 .density(description.density)
                 .friction(description.friction)
+                .active_hooks(ActiveHooks::MODIFY_SOLVER_CONTACTS)
                 .restitution(description.restitution);
             owner.physics.insert_collider(collider, Some(handle));
         }
         // Do not require a simulation step merely to obtain the initial mass/COM/inertia.
         owner.physics.bodies[handle].recompute_mass_properties_from_colliders(&owner.physics.colliders);
+        owner.surfaces.insert_body(handle, &owner.physics.bodies, &owner.physics.colliders);
         owner.bodies.insert(id, BodyEntry { handle, kind: description.kind, cuboids: cuboids.len() });
         owner.cuboids += cuboids.len();
         owner.snapshot(id)?;
@@ -403,10 +420,7 @@ pub unsafe extern "C" fn academy_physics_body_set_pose(world: u64, body: u64,
     dispatch(Some(world), false, |registry| {
         let pose = pose(&unsafe { read(pose_data, pose_len, 7)? })?;
         let world = registry.world(world)?;
-        let handle = world.body_handle(body)?;
-        world.physics.bodies[handle].set_position(pose, true);
-        world.snapshot(body)?;
-        Ok(())
+        world.set_pose(body, pose)
     })
 }
 
@@ -511,6 +525,162 @@ mod tests {
 
     fn near(actual: f64, expected: f64, tolerance: f64) {
         assert!((actual - expected).abs() <= tolerance, "actual={actual}, expected={expected}, tolerance={tolerance}");
+    }
+
+    #[test]
+    fn single_cuboid_slides_out_of_a_zero_clearance_socket() {
+        for (inset, ccd) in [(0.0, true), (0.005, true), (0.0, false)] {
+            let mut registry = Registry::new();
+            let world = registry.create_world(Vector::new(0.0, -9.81, 0.0)).unwrap();
+            insert(&mut registry, world, 0, [0.0, -0.5, 0.0], &box_data([0.0; 3], [3.0, 0.5, 3.0]));
+            for (at, half) in [
+                ([-1.0, 0.5, 0.0], [0.5, 0.5, 2.0]),
+                ([1.0, 0.5, 0.0], [0.5, 0.5, 2.0]),
+                ([0.0, 0.5, -1.0], [0.5, 0.5, 0.5]),
+                ([0.0, 0.5, 1.0], [0.5, 0.5, 0.5]),
+            ] {
+                insert(&mut registry, world, 0, at, &box_data([0.0; 3], half));
+            }
+            let mut desc = body_description([0.0, 0.5, 0.0]);
+            desc[19] = if ccd { 1.0 } else { 0.0 };
+            let desc = description(1, &desc).unwrap();
+            let boxes = cuboids(&box_data([0.0; 3], [0.5 - inset; 3]), desc.density, true).unwrap();
+            let body = registry.create_body(world, desc, boxes).unwrap();
+            for _ in 0..200 {
+                let owner = registry.world(world).unwrap();
+                let state = owner.snapshot(body).unwrap();
+                let force = ((3.5 + 9.81 / 53.333333 - state[1]) * 53.333333 - state[8] * 16.0)
+                    .clamp(-2000.0, 2000.0);
+                let handle = owner.body_handle(body).unwrap();
+                owner.physics.bodies[handle].apply_impulse(Vector::new(0.0, force * 0.05, 0.0), true);
+                owner.step(0.05, 3).unwrap();
+            }
+            let result = registry.world(world).unwrap().snapshot(body).unwrap();
+            near(result[1], 3.5, 0.1);
+        }
+    }
+
+    #[test]
+    fn voxel_union_slides_out_of_its_extraction_socket() {
+        let mut selected = Vec::new();
+        for x in -5_i32..=5 {
+            for y in -2_i32..=0 {
+                for z in -5_i32..=5 {
+                    if (x * x + z * z) as f64 / 25.0 + (y * y) as f64 / 4.0 <= 1.0 {
+                        selected.push((x, y, z));
+                    }
+                }
+            }
+        }
+        selected.sort_by_key(|&(x, y, z)| (x * x + y * y + z * z, x, y, z));
+        selected.truncate(128);
+        for (label, merge, split_terrain, split_body) in [("merged", true, false, false), ("unmerged", false, true, false), ("joint", false, true, true)] {
+            let mut registry = Registry::new();
+            let world = registry.create_world(Vector::new(0.0, -9.81, 0.0)).unwrap();
+            let mut moving = Vec::new();
+            let mut terrain = Vec::new();
+            if merge {
+                let mut remaining: std::collections::BTreeSet<_> = selected.iter().copied().collect();
+                while let Some(&(x, y, z)) = remaining.first() {
+                    let mut max_x = x;
+                    while remaining.contains(&(max_x + 1, y, z)) { max_x += 1; }
+                    let mut max_z = z;
+                    while (x..=max_x).all(|xx| remaining.contains(&(xx, y, max_z + 1))) { max_z += 1; }
+                    let mut max_y = y;
+                    while (x..=max_x).all(|xx| (z..=max_z).all(|zz| remaining.contains(&(xx, max_y + 1, zz)))) { max_y += 1; }
+                    for xx in x..=max_x { for yy in y..=max_y { for zz in z..=max_z { remaining.remove(&(xx, yy, zz)); }}}
+                    moving.extend_from_slice(&box_data(
+                        [(x + max_x + 1) as f64 / 2.0, (y + max_y + 1) as f64 / 2.0, (z + max_z + 1) as f64 / 2.0],
+                        [(max_x - x + 1) as f64 / 2.0, (max_y - y + 1) as f64 / 2.0, (max_z - z + 1) as f64 / 2.0]));
+                }
+            } else {
+                for &(x, y, z) in &selected {
+                    moving.extend_from_slice(&box_data([x as f64 + 0.5, y as f64 + 0.5, z as f64 + 0.5], [0.5; 3]));
+                }
+            }
+            for y in -2_i32..=0 {
+                for z in -6_i32..=6 {
+                    let mut x = -6;
+                    while x <= 6 {
+                        if selected.contains(&(x, y, z)) { x += 1; continue; }
+                        let start = x;
+                        while x <= 6 && !selected.contains(&(x, y, z)) { x += 1; }
+                        terrain.extend_from_slice(&box_data([(start + x) as f64 / 2.0, y as f64 + 0.5, z as f64 + 0.5],
+                                                           [(x - start) as f64 / 2.0, 0.5, 0.5]));
+                    }
+                }
+            }
+            insert(&mut registry, world, 0, [0.5, -2.5, 0.5], &box_data([0.0; 3], [8.0, 0.5, 8.0]));
+            for boxes in terrain.chunks(if split_terrain { 7 * CUBOID_LEN } else { 256 * CUBOID_LEN }) {
+                insert(&mut registry, world, 0, [0.0; 3], boxes);
+            }
+            let mut moving_bodies = Vec::new();
+            for boxes in moving.chunks(if split_body { 64 * CUBOID_LEN } else { 256 * CUBOID_LEN }) {
+                let mut description_data = body_description([0.0; 3]);
+                description_data[19] = 1.0;
+                let description = description(1, &description_data).unwrap();
+                let boxes = cuboids(boxes, description.density, true).unwrap();
+                moving_bodies.push(registry.create_body(world, description, boxes).unwrap());
+            }
+            let body = moving_bodies[0];
+            for &other in moving_bodies.iter().skip(1) {
+                registry.world(world).unwrap().create_fixed_joint(body, other, Vector::ZERO, Vector::ZERO).unwrap();
+            }
+            for _ in 0..60 {
+                let owner = registry.world(world).unwrap();
+                for &moving_body in &moving_bodies {
+                    let state = owner.snapshot(moving_body).unwrap();
+                    let mass = state[13];
+                    let max_force = 2000.0 * mass / 128.0;
+                    let force = ((3.0 + 9.81 / 53.333333 - state[1]) * 53.333333 * mass - state[8] * 16.0 * mass)
+                        .clamp(-max_force, max_force);
+                    let handle = owner.body_handle(moving_body).unwrap();
+                    owner.physics.bodies[handle].apply_impulse(Vector::new(0.0, force * 0.05, 0.0), true);
+                }
+                owner.step(0.05, 3).unwrap();
+            }
+            let result = registry.world(world).unwrap().snapshot(body).unwrap();
+            near(result[1], 3.0, 0.12);
+            near(result[0], 0.0, 0.02);
+            near(result[2], 0.0, 0.02);
+            eprintln!("SOCKET_REGRESSION {label} boxes={} y={}", moving.len() / CUBOID_LEN, result[1]);
+        }
+    }
+
+    #[test]
+    fn exposed_wall_and_ceiling_still_stop_fast_rotated_structures() {
+        for (rotation, direction) in [(Rotation::IDENTITY, Vector::X),
+                (Rotation::from_rotation_z(0.35), Vector::X), (Rotation::IDENTITY, Vector::Y)] {
+            let mut registry = Registry::new();
+            let world = registry.create_world(Vector::ZERO).unwrap();
+            let mut terrain = Vec::new();
+            for u in -3..=3 {
+                for v in -3..=3 {
+                    let center = if direction == Vector::X { [5.0, f64::from(u), f64::from(v)] }
+                                 else { [f64::from(u), 5.0, f64::from(v)] };
+                    terrain.extend_from_slice(&box_data(center, [0.5; 3]));
+                }
+            }
+            for boxes in terrain.chunks(7 * CUBOID_LEN) {
+                let mut data = body_description([0.0; 3]);
+                data[3..7].copy_from_slice(&rotation.to_array());
+                let desc = description(0, &data).unwrap();
+                let boxes = cuboids(boxes, desc.density, false).unwrap();
+                registry.create_body(world, desc, boxes).unwrap();
+            }
+            let mut data = body_description([0.0; 3]);
+            data[3..7].copy_from_slice(&rotation.to_array());
+            data[7..10].copy_from_slice(&(rotation * direction * 50.0).to_array());
+            let desc = description(1, &data).unwrap();
+            let boxes = cuboids(&box_data([0.0; 3], [0.5; 3]), desc.density, true).unwrap();
+            let moving = registry.create_body(world, desc, boxes).unwrap();
+            let owner = registry.world(world).unwrap();
+            for _ in 0..20 { owner.step(0.05, 3).unwrap(); }
+            let state = owner.snapshot(moving).unwrap();
+            let position = Vector::new(state[0], state[1], state[2]);
+            let travel = position.dot(rotation * direction);
+            assert!(travel > 2.0 && travel < 4.1, "wall/ceiling crossing: travel={travel}");
+        }
     }
 
     #[test]

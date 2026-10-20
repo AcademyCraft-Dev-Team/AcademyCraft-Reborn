@@ -27,7 +27,9 @@ public final class NativeStructureTerrainAdmissionSmoke {
     public static void run(ServerLevel host, BlockPos position) {
         require(host.getServer().isSameThread()
                         && (Boolean.getBoolean("academy.sublevelGroundSmoke")
-                        || Boolean.getBoolean("academy.sublevelClientSmoke")),
+                        || Boolean.getBoolean("academy.sublevelClientSmoke")
+                        || Boolean.getBoolean("academy.sublevelLiftTiersSmoke")
+                        && Boolean.getBoolean("academy.sublevelLiftVegetation")),
                 "Terrain admission regression requires the explicit server-thread smoke fixture");
         for (var cell : BlockPos.betweenClosed(position.offset(-2, -2, -2), position.offset(2, 3, 2))) {
             host.getChunkAt(cell);
@@ -42,28 +44,37 @@ public final class NativeStructureTerrainAdmissionSmoke {
                 Blocks.DANDELION, Blocks.POPPY, Blocks.SUNFLOWER, Blocks.LILAC, Blocks.OAK_SAPLING,
                 Blocks.BROWN_MUSHROOM, Blocks.DEAD_BUSH, Blocks.SHORT_DRY_GRASS, Blocks.TALL_DRY_GRASS,
                 Blocks.BUSH, Blocks.PINK_PETALS,
-                Blocks.WILDFLOWERS, Blocks.LEAF_LITTER);
+                Blocks.WILDFLOWERS, Blocks.LEAF_LITTER,
+                Blocks.WHEAT, Blocks.CARROTS, Blocks.POTATOES, Blocks.BEETROOTS, Blocks.TORCHFLOWER_CROP,
+                Blocks.PUMPKIN_STEM, Blocks.MELON_STEM, Blocks.ATTACHED_PUMPKIN_STEM, Blocks.ATTACHED_MELON_STEM,
+                Blocks.NETHER_WART, Blocks.SUGAR_CANE, Blocks.SWEET_BERRY_BUSH);
         try {
             put(host, position.below(), Blocks.STONE.defaultBlockState());
             var baseline = cache.capture(NativePhysicsWorld.MAX_BOXES);
             require(baseline.boxes().size() == 1, "Terrain baseline must contain only the support block");
+            int plantStates = 0;
             for (var plant : plants) {
-                var state = plant.defaultBlockState();
-                put(host, position, state);
-                boolean tall = state.hasProperty(BlockStateProperties.DOUBLE_BLOCK_HALF);
-                if (tall) put(host, position.above(), state.setValue(BlockStateProperties.DOUBLE_BLOCK_HALF, DoubleBlockHalf.UPPER));
-                var observed = cache.capture(NativePhysicsWorld.MAX_BOXES);
-                require(observed.boxes().equals(baseline.boxes()) && observed.stillValid(),
-                        "Empty plant must preserve real terrain geometry: " + state);
-                require(observed.nonAirCells() == baseline.nonAirCells() + (tall ? 2 : 1),
-                        "Ignored plant cells must remain in the terrain receipt: " + state);
-                put(host, position, Blocks.STONE.defaultBlockState());
-                require(!observed.stillValid(), "Plant-to-solid replacement reused stale terrain: " + state);
-                var solid = cache.capture(NativePhysicsWorld.MAX_BOXES);
-                require(solid.boxes().size() == baseline.boxes().size() + 1,
-                        "Plant-to-solid replacement did not add a collider: " + state);
-                put(host, position, Blocks.AIR.defaultBlockState());
-                if (tall) put(host, position.above(), Blocks.AIR.defaultBlockState());
+                for (var state : plant.getStateDefinition().getPossibleStates()) {
+                    put(host, position, state);
+                    require(state.getCollisionShape(host, position).isEmpty(),
+                            "Audited empty plant acquired a collision shape: " + state);
+                    boolean tall = state.hasProperty(BlockStateProperties.DOUBLE_BLOCK_HALF);
+                    if (tall) put(host, position.above(),
+                            state.setValue(BlockStateProperties.DOUBLE_BLOCK_HALF, DoubleBlockHalf.UPPER));
+                    var observed = cache.capture(NativePhysicsWorld.MAX_BOXES);
+                    require(observed.boxes().equals(baseline.boxes()) && observed.stillValid(),
+                            "Empty plant must preserve real terrain geometry: " + state);
+                    require(observed.nonAirCells() == baseline.nonAirCells() + (tall ? 2 : 1),
+                            "Ignored plant cells must remain in the terrain receipt: " + state);
+                    put(host, position, Blocks.STONE.defaultBlockState());
+                    require(!observed.stillValid(), "Plant-to-solid replacement reused stale terrain: " + state);
+                    var solid = cache.capture(NativePhysicsWorld.MAX_BOXES);
+                    require(solid.boxes().size() == baseline.boxes().size() + 1,
+                            "Plant-to-solid replacement did not add a collider: " + state);
+                    put(host, position, Blocks.AIR.defaultBlockState());
+                    if (tall) put(host, position.above(), Blocks.AIR.defaultBlockState());
+                    plantStates++;
+                }
             }
             for (var fluid : List.of(Blocks.WATER, Blocks.LAVA)) {
                 for (int fluidLevel : new int[]{0, 5, 8}) {
@@ -92,20 +103,27 @@ public final class NativeStructureTerrainAdmissionSmoke {
                         "Waterlogging discarded or filled in the audited solid shape: " + solid);
                 put(host, position, Blocks.AIR.defaultBlockState());
             }
-            for (var unsupported : List.of(Blocks.POWDER_SNOW, Blocks.FIRE, Blocks.COBWEB)) {
-                put(host, position, unsupported.defaultBlockState());
-                try {
-                    cache.capture(NativePhysicsWorld.MAX_BOXES);
-                    throw new IllegalStateException("Unsafe terrain shape was admitted: " + unsupported);
-                } catch (NativeStructurePhysicsGeometry.GeometryException expected) {
-                    require(expected.failure() == NativeStructurePhysicsGeometry.Failure.UNSUPPORTED_CONTENT,
-                            "Unexpected terrain rejection for " + unsupported + ": " + expected.failure());
+            int unsafeStates = 0;
+            for (var unsupported : List.of(Blocks.POWDER_SNOW, Blocks.FIRE, Blocks.COBWEB,
+                    Blocks.PITCHER_CROP, Blocks.COCOA)) {
+                for (var state : unsupported.getStateDefinition().getPossibleStates()) {
+                    put(host, position, state);
+                    try {
+                        cache.capture(NativePhysicsWorld.MAX_BOXES);
+                        throw new IllegalStateException("Unsafe terrain shape was admitted: " + state);
+                    } catch (NativeStructurePhysicsGeometry.GeometryException expected) {
+                        require(expected.failure() == NativeStructurePhysicsGeometry.Failure.UNSUPPORTED_CONTENT,
+                                "Unexpected terrain rejection for " + state + ": " + expected.failure());
+                    }
+                    put(host, position, Blocks.AIR.defaultBlockState());
+                    unsafeStates++;
                 }
-                put(host, position, Blocks.AIR.defaultBlockState());
             }
             require(cache.capture(NativePhysicsWorld.MAX_BOXES).boxes().equals(baseline.boxes()),
                     "Rejected terrain damaged the subsequent valid capture");
-            AcademyCraft.LOGGER.info("NATIVE_TERRAIN_ADMISSION_PASSED plants={} fluidStates=6 waterloggedSolids=3 unsafeRejected=3 emptyToSolid=true", plants.size());
+            AcademyCraft.LOGGER.info("NATIVE_TERRAIN_ADMISSION_PASSED plants={} plantStates={} fluidStates=6 "
+                    + "waterloggedSolids=3 unsafeBlocks=5 unsafeStates={} emptyToSolid=true",
+                    plants.size(), plantStates, unsafeStates);
         } finally {
             put(host, position.above(), Blocks.AIR.defaultBlockState());
             put(host, position, Blocks.AIR.defaultBlockState());

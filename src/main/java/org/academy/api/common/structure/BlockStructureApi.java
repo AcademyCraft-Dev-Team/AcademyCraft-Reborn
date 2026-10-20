@@ -244,11 +244,21 @@ public final class BlockStructureApi {
     }
 
     /**
+     * Retains columns next to an obstacle the caller can clear during motion. The predicate
+     * does not remove blocks; the motion backend must still check permission and break events.
+     */
+    public static List<BlockPos> cropImmediatelyBlocked(
+            ServerLevel level, Iterable<BlockPos> candidates, Direction movementDirection,
+            Predicate<BlockPos> passThrough
+    ) {
+        return BlockStructureManager.cropImmediatelyBlocked(level, candidates, movementDirection, passThrough);
+    }
+
+    /**
      * Deterministically drops non-full-block decoration such as grass tufts and flowers from a
-     * selection. This is a selection policy, not a silent content drop: any non-full cell that
-     * still reaches a content transaction is rejected by its fail-closed preflight. Unloaded and
-     * out-of-world positions are kept so they surface as explicit selection errors, and air is
-     * never part of a selection.
+     * selection. This legacy full-cell policy is optional: plot-backed physical captures can
+     * retain plants and partial shapes. Unloaded and out-of-world positions are kept so they
+     * surface as explicit selection errors, and air is never part of a selection.
      */
     public static List<BlockPos> cropNonFullBlocks(
             ServerLevel level,

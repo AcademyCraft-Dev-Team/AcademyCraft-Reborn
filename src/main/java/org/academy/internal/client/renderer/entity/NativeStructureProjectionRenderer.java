@@ -1,6 +1,8 @@
 package org.academy.internal.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.QuadInstance;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.object.chest.ChestModel;
@@ -17,6 +19,8 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.sprite.SpriteGetter;
 import net.minecraft.client.resources.model.sprite.SpriteId;
 import net.minecraft.world.level.block.state.properties.ChestType;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.LightCoordsUtil;
 import org.academy.internal.client.renderer.entity.state.NativeStructureProjectionRenderState;
 import org.academy.internal.common.world.entity.structure.NativeStructureProjectionEntity;
 import org.academy.internal.client.structure.NativeStructureMiningClient;
@@ -35,8 +39,12 @@ public final class NativeStructureProjectionRenderer
             || Boolean.getBoolean("academy.nativeStructureMiningSmoke")
             || Boolean.getBoolean("academy.nativeStructurePhysicsSmoke")
             || Boolean.getBoolean("academy.nativeStructureMultiplayerSmoke")
-            || Boolean.getBoolean("academy.sublevelClientSmoke");
+            || Boolean.getBoolean("academy.sublevelClientSmoke")
+            || Boolean.getBoolean("academy.sublevelSceneSmoke");
     private static final Map<Integer, Submission> SMOKE_SUBMISSIONS = new HashMap<>();
+    private static final boolean FORCE_BLOCK_RENDERER =
+            Boolean.getBoolean("academy.nativeStructureForceBlockRenderer");
+    private static final java.util.Set<Integer> DIAGNOSED_MESHES = new java.util.HashSet<>();
     private final ChestModel chestModel;
     private final SpriteGetter sprites;
     private final SpriteId chestSprite;
@@ -75,6 +83,10 @@ public final class NativeStructureProjectionRenderer
                 cracks.putAll(org.academy.internal.client.sublevel.SubLevelMiningClient.cracks(subLevelId, entity.view()));
             }
             state.updateCracks(cracks, Minecraft.getInstance().getModelManager());
+            if (Boolean.getBoolean("academy.sublevelMeshDiagnostics") && DIAGNOSED_MESHES.size() < 256
+                    && DIAGNOSED_MESHES.add(entity.getId())) {
+                diagnoseMesh(state);
+            }
         }
     }
 
@@ -86,33 +98,16 @@ public final class NativeStructureProjectionRenderer
         var pose = state.pose;
         poseStack.mulPose(new Quaternionf((float) pose.rotationX(), (float) pose.rotationY(),
                 (float) pose.rotationZ(), (float) pose.rotationW()).normalize());
-        if (state.batchedBlocks != null) {
-            var batchQuads = state.batchedBlocks.getQuads(null);
-            nodeCollector.submitCustomGeometry(poseStack,
-                    net.minecraft.client.renderer.rendertype.RenderTypes.solidMovingBlock(),
-                    (batchPose, buffer) -> {
-                        for (var quad : batchQuads) {
-                            var direction = quad.direction();
-                            float nx = direction == null ? 0 : direction.getStepX();
-                            float ny = direction == null ? 1 : direction.getStepY();
-                            float nz = direction == null ? 0 : direction.getStepZ();
-                            for (int vertex = 0; vertex < 4; vertex++) {
-                                var position = quad.position(vertex);
-                                long packed = quad.packedUV(vertex);
-                                buffer.addVertex(batchPose, position.x(), position.y(), position.z());
-                                buffer.setColor(255, 255, 255, 255);
-                                buffer.setUv(Float.intBitsToFloat((int) packed),
-                                        Float.intBitsToFloat((int) (packed >>> 32)));
-                                buffer.setUv1(OverlayTexture.NO_OVERLAY & 0xFFFF,
-                                        (OverlayTexture.NO_OVERLAY >>> 16) & 0xFFFF);
-                                buffer.setLight(state.batchLightCoords);
-                                buffer.setNormal(batchPose, nx, ny, nz);
-                            }
-                        }
-                    });
+        boolean blockRenderer = usesBlockRenderer(state);
+        if (!blockRenderer) {
+            submitBatch(state.solidBatches, state, poseStack, nodeCollector,
+                    net.minecraft.client.renderer.rendertype.RenderTypes.solidMovingBlock());
+            submitBatch(state.cutoutBatches, state, poseStack, nodeCollector,
+                    net.minecraft.client.renderer.rendertype.RenderTypes.cutoutMovingBlock());
+            submitBatch(state.translucentBatches, state, poseStack, nodeCollector,
+                    net.minecraft.client.renderer.rendertype.RenderTypes.translucentMovingBlock());
         }
-        for (var cell : state.blocks) {
-            if (state.batchedBlocks != null) break;
+        for (var cell : blockRenderer ? state.blocks : state.unbatchedBlocks) {
             var position = cell.localPosition();
             poseStack.pushPose();
             poseStack.translate(position.getX(), position.getY(), position.getZ());
@@ -148,12 +143,80 @@ public final class NativeStructureProjectionRenderer
         poseStack.popPose();
         if (SMOKE_DIAGNOSTICS) {
             var previous = SMOKE_SUBMISSIONS.get(state.projectionEntityId);
+            int batchCount = (state.solidBatches.isEmpty() ? 0 : 1)
+                    + (state.cutoutBatches.isEmpty() ? 0 : 1) + (state.translucentBatches.isEmpty() ? 0 : 1);
+            if (blockRenderer) batchCount = 0;
+            int quadCount = 0;
+            for (var cell : state.solidBatches) quadCount += cell.quads.size();
+            for (var cell : state.cutoutBatches) quadCount += cell.quads.size();
+            for (var cell : state.translucentBatches) quadCount += cell.quads.size();
             SMOKE_SUBMISSIONS.put(state.projectionEntityId, new Submission(
                     previous == null ? 1 : previous.frames() + 1, state.runtimeRevision,
                     (previous == null ? 0 : previous.chestFrames()) + (state.chests.isEmpty() ? 0 : 1),
                     maximumChestOpenness,
-                    (previous == null ? 0 : previous.crackFrames()) + (maximumCrackStage < 0 ? 0 : 1), maximumCrackStage));
+                    (previous == null ? 0 : previous.crackFrames()) + (maximumCrackStage < 0 ? 0 : 1), maximumCrackStage,
+                    batchCount, blockRenderer ? state.blocks.size() : state.unbatchedBlocks.size(),
+                    blockRenderer ? 0 : quadCount));
         }
+    }
+
+    static boolean usesBlockRenderer(NativeStructureProjectionRenderState state) {
+        // Preserve vanilla glowing/team outline output until the batch path has an outline pass.
+        return FORCE_BLOCK_RENDERER || state.outlineColor != 0;
+    }
+
+    private static void submitBatch(List<NativeStructureProjectionRenderState.BatchRenderData> cells,
+                                    NativeStructureProjectionRenderState state, PoseStack poseStack,
+                                    SubmitNodeCollector collector,
+                                    net.minecraft.client.renderer.rendertype.RenderType renderType) {
+        if (cells.isEmpty()) return;
+        collector.submitCustomGeometry(poseStack, renderType,
+                (batchPose, buffer) -> emitBatchGeometry(cells, state, batchPose, buffer));
+    }
+
+    /** Shared with the recording-consumer regression check; use the vanilla vertex encoder. */
+    static void emitBatchGeometry(List<NativeStructureProjectionRenderState.BatchRenderData> cells,
+                                  NativeStructureProjectionRenderState state,
+                                  PoseStack.Pose pose, VertexConsumer buffer) {
+        var instance = new QuadInstance();
+        for (var cell : cells) for (int quadIndex = 0; quadIndex < cell.quads.size(); quadIndex++) {
+            var quad = cell.quads.get(quadIndex);
+            float shade = quad.materialInfo().shade()
+                    ? state.batchLighting.byFace(quad.direction()) : state.batchLighting.up();
+            instance.setColor(ARGB.multiply(cell.tint(quad.materialInfo().tintIndex()), ARGB.gray(shade)));
+            for (int vertex = 0; vertex < 4; vertex++) {
+                instance.setLightCoords(vertex, cell.vertexLight(quadIndex, vertex));
+            }
+            // UVPair stores U in the high 32 bits and V in the low bits. Delegating the entire
+            // vertex encoding also preserves vanilla overlay, emission and baked-normal rules.
+            buffer.putBakedQuad(pose, quad, instance);
+        }
+    }
+
+    private static void diagnoseMesh(NativeStructureProjectionRenderState state) {
+        int vertices = 0, black = 0, transparent = 0, unlitCells = 0;
+        int minColor = 255, maxColor = 0, minLight = Integer.MAX_VALUE, maxLight = 0;
+        var cells = new java.util.ArrayList<>(state.solidBatches);
+        cells.addAll(state.cutoutBatches);
+        cells.addAll(state.translucentBatches);
+        for (var cell : cells) {
+            minLight = Math.min(minLight, cell.lightCoords);
+            maxLight = Math.max(maxLight, cell.lightCoords);
+            if (cell.lightCoords == 0) unlitCells++;
+            for (var quad : cell.quads) for (int vertex = 0; vertex < 4; vertex++) {
+                int color = ARGB.multiply(cell.tint(quad.materialInfo().tintIndex()), quad.bakedColors().color(vertex));
+                vertices++;
+                if ((color & 0xFFFFFF) == 0) black++;
+                if ((color >>> 24) == 0) transparent++;
+                minColor = Math.min(minColor, Math.min(ARGB.red(color), Math.min(ARGB.green(color), ARGB.blue(color))));
+                maxColor = Math.max(maxColor, Math.max(ARGB.red(color), Math.max(ARGB.green(color), ARGB.blue(color))));
+            }
+        }
+        org.academy.AcademyCraft.LOGGER.info("PROJECTION_MESH_DIAGNOSTICS entity={} origin={} cells={} "
+                        + "vertices={} black_vertices={} transparent_vertices={} color_range={}:{} "
+                        + "unlit_cells={} light_range={}:{} directional={} force_block_renderer={}",
+                state.projectionEntityId, state.pose.worldOrigin(), cells.size(), vertices, black, transparent,
+                minColor, maxColor, unlitCells, minLight, maxLight, state.batchLighting, FORCE_BLOCK_RENDERER);
     }
 
     /** Test-only evidence of actual nonempty submit calls, disabled in ordinary clients. */
@@ -187,6 +250,22 @@ public final class NativeStructureProjectionRenderer
         return submission == null ? -1 : submission.crackStage();
     }
 
-    private record Submission(long frames, long revision, long chestFrames, float chestOpenness, long crackFrames, int crackStage) {
+    public static int lastSubmittedBatchCount(int entityId) {
+        var submission = SMOKE_SUBMISSIONS.get(entityId);
+        return submission == null ? 0 : submission.batches();
+    }
+
+    public static int lastSubmittedUnbatchedCells(int entityId) {
+        var submission = SMOKE_SUBMISSIONS.get(entityId);
+        return submission == null ? 0 : submission.unbatchedCells();
+    }
+
+    public static int lastSubmittedBatchedQuads(int entityId) {
+        var submission = SMOKE_SUBMISSIONS.get(entityId);
+        return submission == null ? 0 : submission.batchedQuads();
+    }
+
+    private record Submission(long frames, long revision, long chestFrames, float chestOpenness, long crackFrames,
+                              int crackStage, int batches, int unbatchedCells, int batchedQuads) {
     }
 }

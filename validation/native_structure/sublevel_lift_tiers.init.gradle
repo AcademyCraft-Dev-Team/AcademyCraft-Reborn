@@ -7,9 +7,13 @@ allprojects {
                 || !smokeDirectory.name.startsWith('native-sublevel-direct-smoke')) {
             throw new GradleException('Lift tiers smoke must use an isolated run/native-sublevel-direct-smoke* directory')
         }
-        neoForge.runs.named('clientDev') {
+        neoForge.runs.named(providers.gradleProperty('academySubLevelLiftRun').getOrElse('clientDev')) {
             gameDirectory.set(smokeDirectory)
             systemProperty 'academy.sublevelLiftTiersSmoke', 'true'
+            systemProperty 'academy.sublevelLiftVegetation', providers.gradleProperty('academySubLevelLiftVegetation')
+                    .getOrElse('false')
+            systemProperty 'academy.sublevelLiftEmbedded', providers.gradleProperty('academySubLevelLiftEmbedded')
+                    .getOrElse('false')
             programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer', 'test')
         }
     }

@@ -14,6 +14,7 @@ import org.academy.internal.common.structure.BlockStructureOrientedBox;
 import org.academy.internal.common.structure.NativeStructureRuntime;
 import org.academy.internal.common.structure.space.NativeStructureDimensions;
 import org.academy.internal.common.structure.space.NativeStructureManifest;
+import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.*;
@@ -71,6 +72,136 @@ public final class NativeStructurePhysics implements AutoCloseable {
         region.status = StructurePhysicsRegion.Status.PAUSED;
         region.diagnostic = "awaiting_saved_geometry";
         return region;
+    }
+
+    public enum RecoveryStatus { RECOVERED, WAITING, REJECTED }
+
+    public record Recovery(RecoveryStatus status, @Nullable StructurePhysicsRegion region, String diagnostic) {}
+
+    /**
+     * Reconstructs a complete failed cohort at its last published poses, with fresh contacts and
+     * zero velocity. Preparation never changes stored blocks, identities or the old checkpoint.
+     * WAITING is retryable after ordinary storage/host chunk activation; no chunks are forced.
+     */
+    public Recovery recover(ServerLevel host, UUID id) {
+        requireHost(host);
+        Objects.requireNonNull(id, "regionId");
+        var expected = runtime.savedPhysicsEntries(host, id);
+        if (expected.isEmpty()) return new Recovery(RecoveryStatus.REJECTED, null, "unknown_saved_region");
+        var old = regions.get(id);
+        if (expected.stream().allMatch(entry -> entry.physicsAttachment().resumeAllowed())) {
+            return old != null && old.status == StructurePhysicsRegion.Status.READY
+                    ? new Recovery(RecoveryStatus.RECOVERED, old, "already_recovered")
+                    : new Recovery(RecoveryStatus.REJECTED, null, "region_does_not_require_recovery");
+        }
+        if (regions.values().stream().anyMatch(region -> region.busy || region.closing)) {
+            return new Recovery(RecoveryStatus.WAITING, null, "physics_busy");
+        }
+        if (old != null && (old.host != host || old.status != StructurePhysicsRegion.Status.FAILED)) {
+            return new Recovery(RecoveryStatus.REJECTED, null, "region_is_not_failed");
+        }
+        var handles = new ArrayList<StructureHandle>();
+        for (var entry : expected) {
+            if (!entry.active() || entry.quarantined()) {
+                return new Recovery(RecoveryStatus.REJECTED, null, "unavailable_saved_member:" + entry.reference().id());
+            }
+            var handle = runtime.resolve(entry.reference()).orElse(null);
+            if (handle == null || handle.lifecycle() == StructureLifecycle.LOADING) {
+                return new Recovery(RecoveryStatus.WAITING, null, "awaiting_structure_activation");
+            }
+            if (handle.lifecycle() != StructureLifecycle.ACTIVE) {
+                return new Recovery(RecoveryStatus.REJECTED, null, "member_requires_storage_recovery");
+            }
+            handles.add(handle);
+        }
+        if (!host.tickRateManager().runsNormally() || !runtime.beginPhysicsStep(handles)) {
+            return new Recovery(RecoveryStatus.WAITING, null, "host_or_structure_busy");
+        }
+        Region candidate = null;
+        boolean published = false;
+        try {
+            var captured = new LinkedHashMap<StructureHandle, NativeStructurePhysicsGeometry.Snapshot>();
+            var occupied = new ArrayList<AABB>();
+            int dynamicBoxes = 0;
+            for (var handle : handles) {
+                var geometry = StructureContexts.call(handle, ignored -> NativeStructurePhysicsGeometry.captureStructure(
+                        runtime.storageLevel(handle.reference()).orElseThrow()));
+                captured.put(handle, geometry);
+                dynamicBoxes = Math.addExact(dynamicBoxes, geometry.boxes().size());
+                if (!geometry.boxes().isEmpty()) {
+                    occupied.add(BlockStructureOrientedBox.transform(geometry.bounds(), handle.pose()).bounds());
+                }
+            }
+            var limits = new AABB(host.getWorldBorder().getMinX(), host.getMinY(), host.getWorldBorder().getMinZ(),
+                    host.getWorldBorder().getMaxX(), host.getMaxY(), host.getWorldBorder().getMaxZ());
+            var bounds = NativeStructureRecoveryBounds.plan(id, host.dimension().identifier(),
+                    expected.getFirst().physicsAttachment().bounds(), occupied, reservations(), limits);
+            if (library == null) library = NativePhysicsLibrary.openConfigured();
+            candidate = new Region(host, id, bounds);
+            candidate.busy = true;
+            var geometry = new LinkedHashMap<Member, NativeStructurePhysicsGeometry.Snapshot>();
+            for (var entry : captured.entrySet()) {
+                // A new Member has no published or restore motion: failed kinetic energy is never replayed.
+                var member = new Member(entry.getKey());
+                candidate.members.put(member.reference, member);
+                member.geometry = entry.getValue();
+                geometry.put(member, entry.getValue());
+            }
+            var terrain = candidate.terrainCache.capture(NativePhysicsWorld.MAX_BOXES - dynamicBoxes);
+            if (!candidate.normalTime(geometry)) return new Recovery(RecoveryStatus.WAITING, null, "temporal_scale");
+            candidate.replaceWorld(geometry, terrain);
+            candidate.terrain = terrain;
+            candidate.terrainBoxes = terrain.boxes();
+            candidate.geometryEpoch = 1;
+            candidate.terrainEpoch = 1;
+            var replacements = new ArrayList<NativeStructureManifest.Entry>();
+            for (var entry : expected) {
+                var member = candidate.members.get(entry.reference());
+                var motion = member.hasBody() ? candidate.snapshot(member) : null;
+                if (motion != null) {
+                    candidate.requireContained(member.geometry.bounds(), motion.pose());
+                    if (motion.linearVelocity().lengthSqr() != 0 || motion.angularVelocity().lengthSqr() != 0) {
+                        throw new IllegalStateException("Recovered bodies must start with zero velocity");
+                    }
+                }
+                member.published = motion;
+                replacements.add(entry.withPhysicsAttachment(candidate.attachment(member, motion)));
+            }
+            if (!terrain.stillValid() || geometry.values().stream().anyMatch(value -> !value.stillValid())
+                    || !candidate.normalTime(geometry)) {
+                return new Recovery(RecoveryStatus.WAITING, null, "geometry_changed_during_recovery");
+            }
+            // A failed cleanup must be discovered before replacing the durable checkpoint.
+            if (old != null) old.disposeWorld();
+            runtime.commitRecoveredPhysicsRegion(host, id, expected, replacements);
+            candidate.status = StructurePhysicsRegion.Status.READY;
+            candidate.diagnostic = "recovered_zero_velocity";
+            candidate.busy = false;
+            regions.put(id, candidate);
+            if (old != null) {
+                old.members.clear();
+                old.status = StructurePhysicsRegion.Status.CLOSED;
+                old.diagnostic = "replaced_by_recovery";
+            }
+            published = true;
+            return new Recovery(RecoveryStatus.RECOVERED, candidate, "recovered_zero_velocity");
+        } catch (NativeStructurePhysicsGeometry.GeometryException unavailable) {
+            boolean retry = unavailable.failure() == NativeStructurePhysicsGeometry.Failure.UNLOADED_CHUNK
+                    || unavailable.failure() == NativeStructurePhysicsGeometry.Failure.UNSTABLE_SOURCE;
+            return new Recovery(retry ? RecoveryStatus.WAITING : RecoveryStatus.REJECTED, null,
+                    unavailable.failure().name().toLowerCase(Locale.ROOT) + ": " + unavailable.getMessage());
+        } catch (IOException | RuntimeException | AssertionError | LinkageError failure) {
+            AcademyCraft.LOGGER.warn("Physics recovery {} rejected; previous checkpoint retained", id, failure);
+            return new Recovery(RecoveryStatus.REJECTED, null, failure.getClass().getSimpleName() + ": " + failure.getMessage());
+        } finally {
+            if (!published && candidate != null) {
+                try { candidate.disposeWorld(); }
+                catch (RuntimeException | AssertionError | LinkageError cleanup) {
+                    AcademyCraft.LOGGER.error("Could not release rejected recovery candidate {}", id, cleanup);
+                }
+            }
+            runtime.endPhysicsStep(handles);
+        }
     }
 
     public boolean discardSaved(ServerLevel host) {
@@ -911,7 +1042,8 @@ public final class NativeStructurePhysics implements AutoCloseable {
             if (!contains(bounds, occupied) || occupied.minY < host.getMinY() || occupied.maxY > host.getMaxY()
                     || !host.getWorldBorder().isWithinBounds(BlockPos.containing(occupied.minX, occupied.minY, occupied.minZ))
                     || !host.getWorldBorder().isWithinBounds(BlockPos.containing(occupied.maxX, occupied.maxY, occupied.maxZ))) {
-                throw new IllegalStateException("Structure left the bounded physics domain; last published pose retained");
+                throw new IllegalStateException("Structure left the bounded physics domain; last published pose retained"
+                        + "; occupied=" + occupied + "; region=" + bounds);
             }
         }
 
