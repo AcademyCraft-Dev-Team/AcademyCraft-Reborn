@@ -15,8 +15,11 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
+import org.academy.api.common.ability.accelerator.KineticLiftProfile;
+import org.academy.api.common.ability.accelerator.KineticStructureControl;
 import org.academy.api.common.structure.*;
 import org.academy.internal.common.structure.StructureBackendRouter;
+import org.academy.internal.common.sublevel.SubLevelKineticLiftProfile;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -39,6 +42,9 @@ public final class StructureParityProbe {
     private static StructurePhysicsControl anchor;
     private static long tickStart, captureStart, launchStart;
     private static int age, lastTick = -1, activeTicks, reachedAt = -1, hoverValidTicks, hoverStreak, longestHover;
+    private static int tier, tierReachedAt = -1, launchActive = -1;
+    private static final int[] TIER_HEIGHTS = {3, 5, 7};
+    private static final List<Map<String, Object>> tierResults = new ArrayList<>();
     private static boolean captured, launched, done;
 
     @SubscribeEvent public static void started(ServerStartedEvent event) {
@@ -121,11 +127,9 @@ public final class StructureParityProbe {
                     result.put("alignment_valid", baseline.distanceTo(expectedCenter) <= .01);
                     result.put("initial_pose", state.pose().toString());
                     result.put("local_center", state.localCenterOfMass().toString());
-                    // Same acceleration response and mass-normalized force ceiling in both solvers.
-                    double stiffness = state.mass() * 30;
-                    anchor = new StructurePhysicsControl.Anchor(state.localCenterOfMass(),
-                            baseline.add(0, 3 + state.mass() * 9.81 / stiffness, 0), Vec3.ZERO,
-                            stiffness, state.mass() * 36 / 2.25, state.mass() * 30);
+                    // Use the live kinetic-lift control law, not an ad-hoc probe gain: the same
+                    // plan target, gravity sag compensation and settings as VectorStructureService.
+                    anchor = liveAnchor(state, 0);
                 }
             }
             if (anchor != null) {
@@ -133,25 +137,55 @@ public final class StructureParityProbe {
                 var state = StructureDynamics.motion(host, reference).orElseThrow();
                 var center = state.pose().localToWorldPoint(state.localCenterOfMass());
                 double rise = center.y - baseline.y;
-                row.put("active_tick", activeTicks); row.put("rise", rise);
+                double targetHeight = TIER_HEIGHTS[tier];
+                row.put("active_tick", activeTicks); row.put("tier", tier);
+                row.put("target_height", targetHeight); row.put("rise", rise);
                 row.put("speed", state.linearVelocity().length());
-                if (!launched && Math.abs(rise - 3) <= .1) {
-                    if (reachedAt < 0) reachedAt = activeTicks;
-                    hoverValidTicks++;
-                    longestHover = Math.max(longestHover, ++hoverStreak);
-                } else if (!launched) hoverStreak = 0;
-                if (activeTicks == 260) {
-                    StructureDirectControl.release(reference, control);
-                    launched = StructureBackendRouter.launch(host, reference, new Vec3(1, 0, 0), 50);
-                    if (!launched) throw new IllegalStateException("launch_refused");
-                    launchPosition = center; launchStart = System.nanoTime();
-                    result.put("launch_speed", StructureDynamics.motion(host, reference).orElseThrow().linearVelocity().length());
-                    result.put("reached_tick", reachedAt);
-                    result.put("hover_valid_ticks", hoverValidTicks);
-                    result.put("longest_hover_streak", longestHover);
-                    result.put("prelaunch_rise", rise);
+                if (!launched) {
+                    if (Math.abs(rise - targetHeight) <= .1) {
+                        if (tierReachedAt < 0) {
+                            tierReachedAt = activeTicks;
+                            if (reachedAt < 0) reachedAt = activeTicks;
+                        }
+                        hoverValidTicks++;
+                        hoverStreak++;
+                        longestHover = Math.max(longestHover, hoverStreak);
+                    } else if (rise < targetHeight - .1) {
+                        hoverStreak = 0;
+                    }
+                    if (hoverStreak >= 200) {
+                        var tierResult = new LinkedHashMap<String, Object>();
+                        tierResult.put("tier", tier);
+                        tierResult.put("height", targetHeight);
+                        tierResult.put("reached_tick", tierReachedAt);
+                        tierResult.put("hover_ticks", hoverStreak);
+                        tierResult.put("rise", rise);
+                        tierResult.put("pass", true);
+                        tierResults.add(tierResult);
+                        result.put("tier_results", tierResults);
+                        if (tier < 2) {
+                            tier++;
+                            hoverStreak = 0;
+                            tierReachedAt = -1;
+                            anchor = liveAnchor(state, tier);
+                        } else {
+                            result.put("reached_tick", reachedAt);
+                            result.put("hover_valid_ticks", hoverValidTicks);
+                            result.put("longest_hover_streak", tierResults.stream()
+                                    .mapToInt(value -> ((Number) value.get("hover_ticks")).intValue())
+                                    .min().orElse(0));
+                            result.put("prelaunch_rise", rise);
+                            StructureDirectControl.release(reference, control);
+                            launched = StructureBackendRouter.launch(host, reference, new Vec3(1, 0, 0), 50);
+                            if (!launched) throw new IllegalStateException("launch_refused");
+                            launchPosition = center; launchStart = System.nanoTime();
+                            launchActive = activeTicks;
+                            result.put("launch_speed", StructureDynamics.motion(host, reference)
+                                    .orElseThrow().linearVelocity().length());
+                        }
+                    }
                 }
-                if (activeTicks == 280) {
+                if (launched && activeTicks >= launchActive + 20) {
                     result.put("flight_20tick_dx", center.x - launchPosition.x);
                     result.put("flight_20tick_seconds", (System.nanoTime() - launchStart) / 1e9);
                 }
@@ -159,9 +193,29 @@ public final class StructureParityProbe {
             row.put("server_tick_ms", (beforeProbe - tickStart) / 1e6);
             row.put("probe_ms", (System.nanoTime() - beforeProbe) / 1e6);
             samples.add(row);
-            if (activeTicks >= 280) finish(null);
-            else if (age > 600) finish(new IllegalStateException("deadline"));
+            if (launched && activeTicks >= launchActive + 20) finish(null);
+            else if (age > 1400) finish(new IllegalStateException("deadline"));
         } catch (Exception failure) { finish(failure); }
+    }
+
+    private static StructurePhysicsControl.Anchor liveAnchor(StructureDynamics.State state, int index) {
+        var sourceOrigin = new Vec3(
+                cells.stream().mapToInt(BlockPos::getX).min().orElseThrow(),
+                cells.stream().mapToInt(BlockPos::getY).min().orElseThrow(),
+                cells.stream().mapToInt(BlockPos::getZ).min().orElseThrow());
+        var plan = new SubLevelKineticLiftProfile().planTarget(index,
+                new KineticLiftProfile.SourceBaseline(StructurePose.identity(sourceOrigin),
+                        state.localCenterOfMass()));
+        // The fixture captures the same cells with backend-specific mass. Use the smallest
+        // control tier whose mass budget admits the body, independently of the height index;
+        // otherwise Sable's 256 mass at tier 0 is clamped below its own weight.
+        int controlTier = 0;
+        while (controlTier < 2 && state.mass() > KineticStructureControl.massBudget(controlTier)) controlTier++;
+        var settings = KineticStructureControl.settings(state.mass(), controlTier, 0, 64);
+        var target = KineticStructureControl.gravityCompensatedTarget(plan.targetWorldCenterOfMass(),
+                state.mass(), settings.stiffness());
+        return new StructurePhysicsControl.Anchor(state.localCenterOfMass(), target, Vec3.ZERO,
+                settings.stiffness(), settings.damping(), settings.maxForce());
     }
 
     private static void accept(StructureCaptureResult receipt) {
@@ -176,7 +230,10 @@ public final class StructureParityProbe {
         if (done) return;
         done = true;
         result.put("measurement_status", failure == null ? "COMPLETE" : "FAILED");
-        result.put("lift_status", reachedAt >= 0 && longestHover >= 200 ? "PASSED" : "FAILED");
+        boolean liftPassed = tierResults.size() == 3 && tierResults.stream()
+                .allMatch(value -> ((Number) value.get("hover_ticks")).intValue() >= 200);
+        result.put("lift_status", liftPassed ? "PASSED" : "FAILED");
+        result.put("tier_results", tierResults);
         result.put("samples", samples);
         if (failure != null) { result.put("error", failure.toString()); AcademyCraft.LOGGER.error("STRUCTURE_PARITY_FAILED", failure); }
         try { Files.writeString(Path.of("result.json"), new GsonBuilder().setPrettyPrinting().create().toJson(result)); }

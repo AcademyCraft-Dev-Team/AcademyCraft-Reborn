@@ -165,6 +165,39 @@ r16/r17 两轮配对（第二轮颠倒顺序）：
 - 这次只替换 **SubLevel live capture** 的保存范围；native/Sable 与 `save(target)` 无 positions 的调用仍整级保存。只保证方块数据；不保存实体/level.dat。SubLevel admission 拒绝 block entity，因此不覆盖带 BE 的捕获。
 - **崩溃/恢复矩阵尚未跑**：journal 顺序未变，目标/源 chunk 的落盘依赖 `ChunkMap.save` + `synchronize(true)`，还没有“写一半杀进程/重启后再读”的实测；这是下一步必须补的验证，不能只凭一次成功 capture 认定耐久完成。
 - r16/r17 每格仅 2 次，环境/负载未固定；Sable 绝对值 123–137 ms，本地 132–158 ms，1.09×/1.20× 不是统计承诺。tick 1 的 119 ms 预开尖峰仍在，首次进服/启动延迟未测。
-- 本地 `lift_status` 仍 FAILED、hover 27 tick；Sable PASSED（223/226）。创建性能已接近配对，**剩余的主要功能问题转为 3/5/7 与 200 tick 的本地精度**，不应继续用性能微优化掩盖。
+- 本地 `lift_status` 在该轮旧探针的 ad-hoc 增益下仍 FAILED、hover 27 tick；Sable PASSED（223/226）。该失败后来确认来自探针增益，不是 live 法则；live 设置下的 3/5/7 200 tick 结果见下节。创建性能已接近配对，不应继续用性能微优化掩盖功能验收。
 
 证据：[targeted-2026-10-20-r16r17.json](../validation/structure_parity/targeted-2026-10-20-r16r17.json)（SHA-256 `D39B355C8C22539B5AF715489833B2CC0502369E4786F18C7C1FE3A01A9F552D`）；分阶段数据并入 [capture-profile-2026-10-20.json](../validation/structure_parity/capture-profile-2026-10-20.json)（SHA-256 `7DCF8915595D526BB1A89AFD704AEFBDFA2EAE8E28972890A3000E3B76B1A179`）。逐次原始结果与日志路径同前，均不纳入 Git。
+
+## 2026-10-20 3/5/7 200 tick 悬浮（r20–r23）
+
+此前 parity 探针用 ad-hoc 增益（stiffness=mass*30、固定 3 格）测试悬浮，本地稳定在 3.114、刚好超出 3.0±0.1，hover 只到 27；这不是 live 控制的真实参数。把探针改为直接复用 live 法则：
+
+- `SubLevelKineticLiftProfile.planTarget` 生成源质心 +3/+5/+7；
+- `KineticStructureControl.settings` 取刚度/阻尼/最大力；
+- `gravityCompensatedTarget` 补偿重力静差；
+- `StructureDirectControl.Anchor` 每 tick 提交。
+
+只改这一处后，本地 3 格立即通过（r18：rise 3.064、hover 234）。随后把探针扩展为顺序 3/5/7，每档要求连续 **200 tick** 满足 `|rise - height| <= 0.1`，三档都通过才置 `lift_status=PASSED`。
+
+| 运行 | 档位 | 目标 | 首次到达 tick | 连续 hover | 稳态 rise |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| local r22 | 0 | 3 | 27 | 200 | 3.0644 |
+| local r22 | 1 | 5 | 247 | 200 | 5.0644 |
+| local r22 | 2 | 7 | 467 | 200 | 7.0644 |
+| sable r23 | 0 | 3 | 36 | 200 | 3.0228 |
+| sable r23 | 1 | 5 | 263 | 200 | 5.0228 |
+| sable r23 | 2 | 7 | 490 | 200 | 7.0228 |
+
+本地 r22 的 lift p95 7.56 ms、Sable r23 11.68 ms；两者 `hover_valid_ticks=600`、`prelaunch_rise` 分别 7.064/7.023。捕获耗时 r22 157.3 ms、r23 121.8 ms（同一环境的单次值）。
+
+### 质量档位与无效样本
+
+Sable 同一 128 格的 mass 是 256，控制 tier 0 的最大力只有 2000，低于自身重量 2511，因此 r21 的 rise 一直约 0 并触发 deadline。这不是控制回归：live Sable 技能本来就会在 `sableLiftMassRejected` 拒绝 256 mass 的 tier 0。探针现在按质量预算选择**控制 settings 的 tier**（local 128→0，Sable 256→1），但高度仍顺序取 3/5/7；这保证测试测的是悬浮控制，而不是一个被质量门禁拒绝的组合。真实 Sable 的 3 格 tier 0 对 256 mass 无效，5/7 档才在预算内。
+
+### 结论与边界
+
+- **服务端 parity 已证明 live 法则在 3/5/7 各保持 200 tick**；此前本地“27 tick FAILED”来自探针的 ad-hoc 增益，不是 live 技能的参数。生产 lift 代码本次没有为通过测试而改增益或放宽容差。
+- 仍是 dedicated-server parity，不含真实 H 的玩家输入、相机、客户端首帧/渲染、网络和技能释放路径；local 3/5/7 的实机 H 验收仍 **UNVERIFIED**。
+- Sable 的 3 格 tier 0 对 256 mass 被 live 质量门禁拒绝；不能把 r23 的 3 格结果当成“Sable tier 0 技能可用”。
+- 证据：[lift-357-2026-10-20-r22r23.json](../validation/structure_parity/lift-357-2026-10-20-r22r23.json)（SHA-256 `E2349C929A0257018FE51600295A5CD321EAFD534FE05203104E9B44F3B58544`）；逐 tick 原始数据在 `run/sable-compat/parity-local-ground-lift357-r22` 与 `...-sable-...-r23`，不纳入 Git。
