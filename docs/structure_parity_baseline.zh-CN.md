@@ -52,3 +52,26 @@
 - **UNVERIFIED**：客户端帧 p50/p95、首次可见延迟、GC/分配、带宽、多结构/大结构、复杂 test 地形中的同场景 Sable 对照、真实 H 三档/精密节点、同质量同惯量同材质参数的纯物理微基准。
 
 实施契约见 [FILL-SPEC.md](../FILL-SPEC.md)，方案见 [v2 设计](structure_pipeline_v2_plan.zh-CN.md)。七个 PIPE 草案端口已实现并有单元测试，但均未接入生产路径，`GAMEPLAY_ENABLED` 仍为 false；本文的功能失败与性能结论不因草案单测通过而改变。
+
+## 2026-10-20 r7/r8 复测（地形 section 合并优化后）
+
+在 `TerrainSectionGeometry.merge` 从两两重启合并改为三轴分组贪心合并后，用同一 8×2×8 `cuboid_128.csv`、同一平坦/悬空夹具和全新隔离世界复测 8 次（local/sable × ground/floating × 两轮，第二轮颠倒顺序）。所有运行 `measurement_status=COMPLETE`、`alignment_valid=true`。
+
+| 场景 | 本地创建 ms | Sable 创建 ms | 本地 / Sable | 本地 lift p95 ms | Sable lift p95 ms | p95 比 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 地面 | 407.77（329.28、486.25） | 139.22（134.42、144.02） | **2.93×** | 11.54 | 16.67 | **0.69×** |
+| 悬空 | 365.60（382.45、348.74） | 124.80（112.84、136.77） | **2.93×** | 9.74 | 11.82 | **0.82×** |
+
+对照 r5/r6：地面创建 204.82/74.16 = 2.76×，悬空 203.84/77.55 = 2.63×；地面 p95 4.35/5.32 = 0.82×，悬空 4.34/5.37 = 0.81×。本轮**两侧绝对值都明显高于上一轮**（创建约 1.6–2.0×，p95 约 2.2–3.1×），环境/负载未受控，不能把绝对值差直接归因于本轮改动；只能谨慎看同一轮的本地/Sable 比值。
+
+结论：
+
+- **创建差距没有缩小**：2.93× vs 上一轮 2.76×/2.63×。地形合并发生在 terrain section 编译，不在同步 capture 调用内，本来就不应改善 `capture_call_ms`；本轮数据与这个判断一致。
+- **lift p95 比值**地面从 0.82× 变为 0.69×、悬空 0.81× 变为 0.82×，只有地面一项变化，且绝对值同时受环境放大；128 格平坦石台地形过简单，不能把这一项单独归功于合并算法。复杂地形需另建夹具/JFR 对照。
+- **功能结果不变**：本地仍 `lift_status=FAILED`、最长连续 hover 27 tick、prelaunch rise 3.11445；Sable `PASSED`、223/226 tick、3.02972。3/5/7±0.1 与 200 tick 的本地精度问题仍未解决。
+- 首次运行 `local-ground-r7` 时，PowerShell 5.1 把 JVM 的 `-Xverify:none` stderr 警告当成终止错误，`run-pair.ps1` 在检查 `result.json` 前假失败；服务器实际已完成，结果仍为 COMPLETE。之后已在 `run-pair.ps1` 中把 Gradle 调用改为非终止并只看退出码/result.json；其余 7 次正常完成。这类假失败不应再被记成测量失败。
+
+证据：[remeasure-2026-10-20-r7r8.json](../validation/structure_parity/remeasure-2026-10-20-r7r8.json)（SHA-256 `1A66FBFCE06489A6551F3B834AC1E591366691EC3DCBF3D7B89F29F927EA5F8C`）；逐 tick 原始数据在 `run/sable-compat/parity-{local,sable}-{ground,floating}-r{7,8}/server/result.json`，日志在 `build/parity-*.log`，均不纳入 Git。原 `run/saves/test` 未被读写。
+
+下一步优先级据此调整为：**先定位 capture 的固定开销（PIPE-01/03），而不是继续只优化 merge**；merge 算法已有 9 项单测和 4096 格 1 盒/5 秒上限证据，但其真实复杂地形收益仍需专项 JFR 与 Sable 对照。
+

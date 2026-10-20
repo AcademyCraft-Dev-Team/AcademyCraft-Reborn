@@ -26,6 +26,7 @@
 | --- | --- | --- | --- |
 | PIPE-01 `advanceCapture` | `StructureCaptureCoordinator.advance` + 私有 `slice`/`copySlice`/`finishCopy`；`SubLevelPipelineDraft` 转发 | 仅服务端线程；单次最多一个阶段转换与 `maximumCells` 个复制格；源/权限/激活复核；journal COPIED/COMMIT_DECIDED 持久化屏障仍在；中途中止可由原 journal 回滚/恢复；重复推进使用独立 `sliceCursor` | 后端 `save` 仍是现有整级保存协议；未改成局部耐久协议；未跑真实捕获/崩溃恢复矩阵；正常 tick 的 `driveAll` 仍会完整驱动 pending，接入时必须切换所有权；PIPE-01 尚未降低创建尖峰；后端整级 save 未替换 |
 | PIPE-02 `compileGeometry` | `PipelineGeometryCompiler` | 重复格/非法盒拒绝；O(V) 占用扫描 + 同材质满格贪心 3D 合并；非满格保留真实盒；无全局缩盒；时间/格预算返回 `complete=false` | 未接 native 体素/邻接 ABI；内部面与接触邻接仍需 native adapter；未跑 128 格真实轮廓 |
+| PIPE-02 实机热点（继续开发） | `TerrainSectionGeometry.merge` 改为三轴分组贪心合并 | 保持精确并集；4096 格实心 section 合并为 1 盒；加入 9 项单测与 5 秒上限压力用例；旧两两重启 O(n³) 路径删除 | 仍需真实 H 捕获/JFR 与 Sable 配对复测；未接 PIPE-02 草案端口，未改 native ABI |
 | PIPE-03 `publishTerrain` | `PipelineTerrainPublisher` | 宿主线程/维度校验；epoch/revision/coverage 代际拒绝；required section 缺失或几何不完整拒绝；原子替换已发布集合；`coverageComplete` 供未来步进门禁 | 未把 `Geometry` 写入 native world；live 门禁仍是 `TerrainColliderCache.coverageComplete`；未接 runtime/票据释放；未跑预算/卸载矩阵 |
 | PIPE-04 `controlSubstep` | `PipelineSubstepControl` | 真实子步时长校验；`StructurePhysicsControls.force` 的 PD/阻尼；力/力矩输出；力矩 = r×F；不乘外层 dt、不重复重力 | 未接 `SubLevelDirectControl`/native step 的子步循环；未验证 2/4/8 子步与累计冲量 |
 | PIPE-05 `advanceLift` | `PipelineLiftController` | 仅接受 3/5/7；原位质心；垂直/水平 0.1 容差；首次到位锁存 arrival 与 hoverDeadline；liftDeadline 返回 BLOCKED；终态不复活 | 未接 `VectorStructureService`/真实按键；三档实机高度、悬浮 200 tick、转向投掷未采 |

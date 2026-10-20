@@ -9,11 +9,16 @@ import org.academy.internal.common.structure.physics.PhysicsQuaternion;
 import org.academy.internal.common.structure.physics.PhysicsVector;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /** Direct block-state collision capture for one 16x16x16 terrain section. */
 public final class TerrainSectionGeometry {
+    private static final int MAX_MERGE_PASSES = 8;
+
     private TerrainSectionGeometry() {
     }
 
@@ -51,31 +56,34 @@ public final class TerrainSectionGeometry {
                 minX + 16, maxY, minZ + 16));
     }
 
-    /** Merges exactly adjacent, identically sized cuboids to keep terrain inside the native budget. */
-    private static List<PhysicsBox> merge(List<PhysicsBox> input) {
-        var boxes = new ArrayList<AABB>(input.size());
+    /**
+     * Packs exactly adjacent cuboids with identical cross-section spans. Each axis pass groups
+     * boxes by the other two spans and merges contiguous runs, replacing the former pairwise
+     * restart merge (O(n^3) on dense sections) with O(n log n) per pass. The union is exact; only
+     * the box partition changes.
+     */
+    static List<PhysicsBox> merge(List<PhysicsBox> input) {
+        if (input.size() < 2) return List.copyOf(input);
+        List<AABB> boxes = new ArrayList<>(input.size());
         for (var box : input) {
             var center = box.center();
             var half = box.halfExtents();
             boxes.add(new AABB(center.x() - half.x(), center.y() - half.y(), center.z() - half.z(),
                     center.x() + half.x(), center.y() + half.y(), center.z() + half.z()));
         }
-        boolean changed = true;
-        while (changed) {
-            changed = false;
-            outer:
-            for (int i = 0; i < boxes.size(); i++) {
-                for (int j = i + 1; j < boxes.size(); j++) {
-                    var merged = mergeOne(boxes.get(i), boxes.get(j));
-                    if (merged != null) {
-                        boxes.set(i, merged);
-                        boxes.remove(j);
-                        changed = true;
-                        break outer;
-                    }
-                }
-            }
+        for (int pass = 0; pass < MAX_MERGE_PASSES; pass++) {
+            int before = boxes.size();
+            boxes = mergeAxis(boxes, Axis.X);
+            boxes = mergeAxis(boxes, Axis.Z);
+            boxes = mergeAxis(boxes, Axis.Y);
+            if (boxes.size() == before) break;
         }
+        boxes.sort(Comparator.comparingDouble((AABB box) -> box.minX)
+                .thenComparingDouble(box -> box.minY)
+                .thenComparingDouble(box -> box.minZ)
+                .thenComparingDouble(box -> box.maxX)
+                .thenComparingDouble(box -> box.maxY)
+                .thenComparingDouble(box -> box.maxZ));
         var result = new ArrayList<PhysicsBox>(boxes.size());
         for (var box : boxes) {
             result.add(new PhysicsBox(new PhysicsVector(box.getCenter().x, box.getCenter().y, box.getCenter().z),
@@ -85,35 +93,70 @@ public final class TerrainSectionGeometry {
         return result;
     }
 
-    private static AABB mergeOne(AABB first, AABB second) {
-        if (first.minY == second.minY && first.maxY == second.maxY
-                && first.minZ == second.minZ && first.maxZ == second.maxZ) {
-            if (first.maxX == second.minX) return new AABB(first.minX, first.minY, first.minZ,
-                    second.maxX, first.maxY, first.maxZ);
-            if (second.maxX == first.minX) return new AABB(second.minX, first.minY, first.minZ,
-                    first.maxX, first.maxY, first.maxZ);
+    private static List<AABB> mergeAxis(List<AABB> boxes, Axis axis) {
+        var groups = new HashMap<SpanKey, List<AABB>>();
+        for (var box : boxes) {
+            groups.computeIfAbsent(spanKey(box, axis), ignored -> new ArrayList<>()).add(box);
         }
-        if (first.minX == second.minX && first.maxX == second.maxX
-                && first.minY == second.minY && first.maxY == second.maxY) {
-            if (first.maxZ == second.minZ) return new AABB(first.minX, first.minY, first.minZ,
-                    first.maxX, first.maxY, second.maxZ);
-            if (second.maxZ == first.minZ) return new AABB(first.minX, first.minY, second.minZ,
-                    first.maxX, first.maxY, first.maxZ);
+        var merged = new ArrayList<AABB>(boxes.size());
+        var comparator = comparator(axis);
+        for (var group : groups.values()) {
+            group.sort(comparator);
+            AABB run = null;
+            for (var box : group) {
+                if (run != null && touches(run, box, axis)) {
+                    run = extend(run, box, axis);
+                } else {
+                    if (run != null) merged.add(run);
+                    run = box;
+                }
+            }
+            if (run != null) merged.add(run);
         }
-        if (first.minX == second.minX && first.maxX == second.maxX
-                && first.minZ == second.minZ && first.maxZ == second.maxZ) {
-            if (first.maxY == second.minY) return new AABB(first.minX, first.minY, first.minZ,
-                    first.maxX, second.maxY, first.maxZ);
-            if (second.maxY == first.minY) return new AABB(first.minX, second.minY, first.minZ,
-                    first.maxX, first.maxY, first.maxZ);
-        }
-        return null;
+        return merged;
+    }
+
+    private static SpanKey spanKey(AABB box, Axis axis) {
+        return switch (axis) {
+            case X -> new SpanKey(box.minY, box.maxY, box.minZ, box.maxZ);
+            case Y -> new SpanKey(box.minX, box.maxX, box.minZ, box.maxZ);
+            case Z -> new SpanKey(box.minX, box.maxX, box.minY, box.maxY);
+        };
+    }
+
+    private static Comparator<AABB> comparator(Axis axis) {
+        return switch (axis) {
+            case X -> Comparator.comparingDouble((AABB box) -> box.minX).thenComparingDouble(box -> box.maxX);
+            case Y -> Comparator.comparingDouble((AABB box) -> box.minY).thenComparingDouble(box -> box.maxY);
+            case Z -> Comparator.comparingDouble((AABB box) -> box.minZ).thenComparingDouble(box -> box.maxZ);
+        };
+    }
+
+    private static boolean touches(AABB run, AABB next, Axis axis) {
+        return switch (axis) {
+            case X -> run.maxX == next.minX;
+            case Y -> run.maxY == next.minY;
+            case Z -> run.maxZ == next.minZ;
+        };
+    }
+
+    private static AABB extend(AABB run, AABB next, Axis axis) {
+        return switch (axis) {
+            case X -> new AABB(run.minX, run.minY, run.minZ, next.maxX, run.maxY, run.maxZ);
+            case Y -> new AABB(run.minX, run.minY, run.minZ, run.maxX, next.maxY, run.maxZ);
+            case Z -> new AABB(run.minX, run.minY, run.minZ, run.maxX, run.maxY, next.maxZ);
+        };
     }
 
     private static PhysicsBox box(AABB box, int minX, int minY, int minZ) {
         return new PhysicsBox(new PhysicsVector(box.getCenter().x - minX, box.getCenter().y - minY,
                 box.getCenter().z - minZ), PhysicsQuaternion.IDENTITY,
                 new PhysicsVector(box.getXsize() / 2.0, box.getYsize() / 2.0, box.getZsize() / 2.0));
+    }
+
+    private enum Axis { X, Y, Z }
+
+    private record SpanKey(double first, double second, double third, double fourth) {
     }
 
     public record SectionGeometry(List<PhysicsBox> boxes, int blocks, AABB bounds) {

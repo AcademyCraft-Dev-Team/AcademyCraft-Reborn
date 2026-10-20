@@ -31,7 +31,16 @@ if (Test-Path -LiteralPath (Join-Path $repo 'build/native-physics-p16-env.ps1'))
 }
 Push-Location $repo
 try {
-    & ./gradlew.bat @arguments *> (Join-Path $repo "build/parity-$RunId.log")
+    # Native JVM/Gradle warnings go to stderr. PowerShell 5.1 turns a native stderr line into a
+    # terminating error under 'Stop' before the exit code or result.json is checked, so keep the
+    # call non-terminating and judge success from Gradle's exit code and result.json.
+    $previousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & ./gradlew.bat @arguments *> (Join-Path $repo "build/parity-$RunId.log")
+    } finally {
+        $ErrorActionPreference = $previousPreference
+    }
     if ($LASTEXITCODE -ne 0) { throw "Gradle failed for $RunId" }
     $result = Get-Content -LiteralPath (Join-Path $directory 'result.json') -Raw | ConvertFrom-Json
     if ($result.measurement_status -ne 'COMPLETE') { throw "Incomplete measurement: $($result.error)" }
