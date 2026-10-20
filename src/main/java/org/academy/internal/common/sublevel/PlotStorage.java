@@ -13,6 +13,7 @@ import org.academy.internal.common.structure.space.NativeStructureTickets;
 import org.academy.mixin.common.PersistentEntitySectionManagerAccessor;
 import org.academy.mixin.common.ServerLevelEntityManagerAccessor;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,6 +36,9 @@ public final class PlotStorage {
     private final PlotLayout layout;
     private final PlotAllocator allocator;
     private final Map<PlotPos, Lease> leases = new LinkedHashMap<>();
+    /** Empty, cleared leases kept resident so a capture does not synchronously generate chunks. */
+    private final ArrayDeque<Lease> ready = new ArrayDeque<>();
+    private PendingPrewarm pendingPrewarm;
 
     public PlotStorage(ServerLevel level) {
         this(level, new PlotLayout(LOG_SIZE, ORIGIN_CHUNK, ORIGIN_CHUNK, MAX_PLOTS));
@@ -70,12 +74,27 @@ public final class PlotStorage {
 
     /** Allocates a plot and force-loads every chunk; a partial failure releases everything. */
     public Optional<Lease> allocate() {
+        var prewarmed = ready.pollFirst();
+        if (prewarmed != null) return Optional.of(prewarmed);
+        return allocateFresh();
+    }
+
+    private Optional<Lease> allocateFresh() {
+        long allocatorStarted = org.academy.internal.common.structure.transaction.CaptureTimings.begin();
         var plot = allocator.allocate();
+        org.academy.internal.common.structure.transaction.CaptureTimings.record("plot-storage",
+                "plot_allocator", allocatorStarted);
         if (plot.isEmpty()) return Optional.empty();
+        long openStarted = org.academy.internal.common.structure.transaction.CaptureTimings.begin();
         var lease = open(plot.get());
+        org.academy.internal.common.structure.transaction.CaptureTimings.record("plot-storage",
+                "plot_open", openStarted);
         if (lease.isEmpty()) return Optional.empty();
         try {
+            long clearStarted = org.academy.internal.common.structure.transaction.CaptureTimings.begin();
             clearUnusedContent(lease.get());
+            org.academy.internal.common.structure.transaction.CaptureTimings.record("plot-storage",
+                    "plot_clear", clearStarted);
             return lease;
         } catch (RuntimeException | Error failure) {
             release(lease.get());
@@ -111,6 +130,23 @@ public final class PlotStorage {
     }
 
     private Optional<Lease> open(PlotPos plot) {
+        var lease = reserve(plot);
+        if (lease == null) return Optional.empty();
+        long chunkStarted = org.academy.internal.common.structure.transaction.CaptureTimings.begin();
+        try {
+            for (var chunk : lease.chunks()) level.getChunk(chunk.x(), chunk.z());
+        } catch (RuntimeException failure) {
+            release(lease);
+            AcademyCraft.LOGGER.error("Could not open plot {}", plot, failure);
+            return Optional.empty();
+        }
+        org.academy.internal.common.structure.transaction.CaptureTimings.record("plot-storage",
+                "plot_chunk_load", chunkStarted);
+        return Optional.of(lease);
+    }
+
+    /** Reserves tickets and the lease without loading chunks; the prewarm path fills them later. */
+    private Lease reserve(PlotPos plot) {
         var chunks = new ArrayList<ChunkPos>(layout.sideChunks() * layout.sideChunks());
         var acquired = new ArrayList<ChunkPos>(chunks.size());
         try {
@@ -122,25 +158,74 @@ public final class PlotStorage {
                         throw new IllegalStateException("Plot ticket was rejected at " + chunk);
                     }
                     acquired.add(chunk);
-                    level.getChunk(chunk.x(), chunk.z());
                 }
             }
             var lease = new Lease(SERIALS.incrementAndGet(), plot, List.copyOf(chunks));
             leases.put(plot, lease);
-            return Optional.of(lease);
+            return lease;
         } catch (RuntimeException failure) {
             for (var chunk : acquired) {
                 try { NativeStructureTickets.release(level, chunk); }
                 catch (RuntimeException releaseFailure) { failure.addSuppressed(releaseFailure); }
             }
             allocator.free(plot);
-            AcademyCraft.LOGGER.error("Could not open plot {}", plot, failure);
-            return Optional.empty();
+            AcademyCraft.LOGGER.error("Could not reserve plot {}", plot, failure);
+            return null;
         }
+    }
+
+    /**
+     * Loads one plot chunk per call until {@code target} empty leases are ready. Called from the
+     * server tick so a capture normally finds a resident, cleared plot instead of synchronously
+     * generating four chunks inside the capture call. The same total chunk work is moved into
+     * warmup/idle ticks; it is not eliminated.
+     */
+    public void prewarmTick(int target) {
+        if (target <= 0) return;
+        if (pendingPrewarm == null) {
+            if (ready.size() >= target) return;
+            var plot = allocator.allocate().orElse(null);
+            if (plot == null) return;
+            var lease = reserve(plot);
+            if (lease == null) return;
+            pendingPrewarm = new PendingPrewarm(lease);
+        }
+        var pending = pendingPrewarm;
+        if (pending.next < pending.lease.chunks().size()) {
+            var chunk = pending.lease.chunks().get(pending.next++);
+            long started = org.academy.internal.common.structure.transaction.CaptureTimings.begin();
+            try {
+                level.getChunk(chunk.x(), chunk.z());
+            } catch (RuntimeException failure) {
+                abortPrewarm();
+                AcademyCraft.LOGGER.warn("Could not prewarm plot chunk {}", chunk, failure);
+                return;
+            }
+            org.academy.internal.common.structure.transaction.CaptureTimings.record("plot-storage",
+                    "prewarm_chunk", started);
+            return;
+        }
+        try {
+            clearUnusedContent(pending.lease);
+        } catch (RuntimeException failure) {
+            abortPrewarm();
+            AcademyCraft.LOGGER.warn("Could not clear prewarmed plot {}", pending.lease.plot(), failure);
+            return;
+        }
+        ready.addLast(pending.lease);
+        pendingPrewarm = null;
+    }
+
+    private void abortPrewarm() {
+        var pending = pendingPrewarm;
+        pendingPrewarm = null;
+        if (pending != null) release(pending.lease);
     }
 
     public boolean release(Lease lease) {
         Objects.requireNonNull(lease, "lease");
+        if (pendingPrewarm != null && pendingPrewarm.lease == lease) pendingPrewarm = null;
+        ready.remove(lease);
         if (!leases.remove(lease.plot(), lease)) return false;
         for (var chunk : lease.chunks()) NativeStructureTickets.release(level, chunk);
         allocator.free(lease.plot());
@@ -188,7 +273,18 @@ public final class PlotStorage {
 
     /** Releases every outstanding plot; called only when the owning runtime stops. */
     public void close() {
+        pendingPrewarm = null;
+        ready.clear();
         for (var lease : List.copyOf(leases.values())) release(lease);
+    }
+
+    private static final class PendingPrewarm {
+        private final Lease lease;
+        private int next;
+
+        private PendingPrewarm(Lease lease) {
+            this.lease = lease;
+        }
     }
 
     public BlockState blockState(PlotPos plot, BlockPos local) {

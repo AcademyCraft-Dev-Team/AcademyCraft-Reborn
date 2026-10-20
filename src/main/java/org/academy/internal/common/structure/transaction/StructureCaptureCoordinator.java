@@ -150,6 +150,7 @@ public final class StructureCaptureCoordinator {
     }
 
     private StructureCaptureResult begin(ServerLevel host, StructureCaptureRequest request) {
+        long totalStarted = CaptureTimings.begin();
         requireRunning();
         var transactionId = UUID.randomUUID();
         var status = StructureBackendRouter.status(server);
@@ -196,6 +197,7 @@ public final class StructureCaptureCoordinator {
             }
         }
         var states = new ArrayList<BlockState>(ordered.size());
+        long validateStarted = CaptureTimings.begin();
         for (var position : ordered) {
             if (!host.isInWorldBounds(position)) {
                 return StructureCaptureResult.failure(transactionId, StructureCaptureResult.Status.OUT_OF_WORLD,
@@ -218,7 +220,11 @@ public final class StructureCaptureCoordinator {
             }
             states.add(state);
         }
-        if (!claims.tryClaim(host.dimension().identifier(), ordered, transactionId)) {
+        CaptureTimings.record(transactionId.toString(), "capture_validate_cells", validateStarted);
+        long claimStarted = CaptureTimings.begin();
+        boolean claimed = claims.tryClaim(host.dimension().identifier(), ordered, transactionId);
+        CaptureTimings.record(transactionId.toString(), "capture_claim_cells", claimStarted);
+        if (!claimed) {
             var conflict = ordered.stream()
                     .filter(position -> claims.isClaimed(host.dimension().identifier(), position))
                     .findFirst().orElse(ordered.getFirst());
@@ -227,14 +233,19 @@ public final class StructureCaptureCoordinator {
         }
         try {
             var cells = new ArrayList<StructureTransactionJournal.Cell>(ordered.size());
+            long encodeStarted = CaptureTimings.begin();
             for (int index = 0; index < ordered.size(); index++) {
                 cells.add(new StructureTransactionJournal.Cell(ordered.get(index),
                         encodeState(host, states.get(index))));
             }
+            CaptureTimings.record(transactionId.toString(), "capture_encode_cells", encodeStarted);
             var record = new StructureTransactionJournal.Record(transactionId, backend.backendId(),
                     host.dimension().identifier(), origin, StructureTransactionJournal.Stage.PREPARED, null,
                     cells, null);
-            if (!persistNew(record)) {
+            long journalStarted = CaptureTimings.begin();
+            boolean journalWritten = persistNew(record);
+            CaptureTimings.record(transactionId.toString(), "journal_prepare", journalStarted);
+            if (!journalWritten) {
                 claims.release(transactionId);
                 return StructureCaptureResult.failure(transactionId,
                         StructureCaptureResult.Status.JOURNAL_WRITE_FAILED, "journal_prepare_failed");
@@ -244,7 +255,9 @@ public final class StructureCaptureCoordinator {
             var seedIndex = firstContentIndex(states);
             var seedOffset = ordered.get(seedIndex).subtract(origin);
             var seedState = states.get(seedIndex);
+            long allocateStarted = CaptureTimings.begin();
             var allocated = backend.allocate(host, origin, seedOffset, seedState, ordered, transactionId);
+            CaptureTimings.record(transactionId.toString(), "target_allocate", allocateStarted);
             if (allocated.isEmpty()) {
                 recycleQuietly(transactionId);
                 claims.release(transactionId);
@@ -253,7 +266,10 @@ public final class StructureCaptureCoordinator {
             }
             var target = allocated.get();
             record = record.withTarget(target.id());
-            if (!persistNew(record)) {
+            long targetJournalStarted = CaptureTimings.begin();
+            boolean targetJournalWritten = persistNew(record);
+            CaptureTimings.record(transactionId.toString(), "journal_target", targetJournalStarted);
+            if (!targetJournalWritten) {
                 unloadQuietly(backend, target);
                 recycleQuietly(transactionId);
                 discardEmptyQuietly(backend, target);
@@ -265,11 +281,14 @@ public final class StructureCaptureCoordinator {
             var capture = new PendingCapture(record, host, origin, target, backend, ordered, cells, states,
                     request.permission(), false, seedIndex, seeded, request.physical());
             pending.put(transactionId, capture);
+            long driveStarted = CaptureTimings.begin();
             try {
                 drive(capture);
             } catch (RuntimeException | AssertionError | LinkageError failure) {
                 safeFallback(capture, failure);
             }
+            CaptureTimings.record(transactionId.toString(), "drive_total", driveStarted);
+            CaptureTimings.record(transactionId.toString(), "capture_total", totalStarted);
             return currentResult(transactionId).orElseGet(() -> StructureCaptureResult.failure(transactionId,
                     StructureCaptureResult.Status.RECOVERY_REQUIRED, "transaction_vanished"));
         } catch (RuntimeException | AssertionError | LinkageError failure) {
@@ -318,6 +337,7 @@ public final class StructureCaptureCoordinator {
         if (capture.recovery) loadRecoverySourceChunks(capture);
         for (int transitions = 0; transitions < 8 && capture.result == null; transitions++) {
             var phase = capture.phase;
+            long stepStarted = CaptureTimings.begin();
             switch (phase) {
                 case AWAIT_ACTIVATION -> stepAwaitActivation(capture);
                 case COPY -> stepCopy(capture);
@@ -325,6 +345,8 @@ public final class StructureCaptureCoordinator {
                 case CLEAR_TARGET -> stepClearTarget(capture);
                 case SAVE_TARGET -> stepSaveTarget(capture);
             }
+            CaptureTimings.record(capture.transactionId.toString(),
+                    "step_" + phase.name().toLowerCase(Locale.ROOT), stepStarted);
             if (capture.result == null && capture.phase == phase) return;
         }
         if (capture.result == null) {
@@ -403,6 +425,7 @@ public final class StructureCaptureCoordinator {
 
     /** Verification, finalization and the durable ownership decision after every cell was copied. */
     private void finishCopy(PendingCapture capture) {
+        long verifyStarted = CaptureTimings.begin();
         for (int index = 0; index < capture.positions.size(); index++) {
             var offset = capture.positions.get(index).subtract(capture.origin);
             var current = capture.backend.readCell(capture.target, offset);
@@ -411,26 +434,37 @@ public final class StructureCaptureCoordinator {
                 return;
             }
         }
+        CaptureTimings.record(capture.transactionId.toString(), "copy_verify_cells", verifyStarted);
+        long budgetStarted = CaptureTimings.begin();
         if (!geometryWithinBudget(capture)) {
             abort(capture, StructureCaptureResult.Status.TARGET_WRITE_FAILED, "target_geometry_budget");
             return;
         }
+        CaptureTimings.record(capture.transactionId.toString(), "copy_geometry_budget", budgetStarted);
+        long finalizeStarted = CaptureTimings.begin();
         if (!finalizeTarget(capture)) {
             abort(capture, StructureCaptureResult.Status.TARGET_WRITE_FAILED, "target_finalize_failed");
             return;
         }
+        CaptureTimings.record(capture.transactionId.toString(), "copy_finalize_target", finalizeStarted);
+        long physicsStarted = CaptureTimings.begin();
         if (capture.physical && !preparePhysics(capture)) {
             abort(capture, StructureCaptureResult.Status.TARGET_WRITE_FAILED, "target_physics_prepare_failed");
             return;
         }
+        CaptureTimings.record(capture.transactionId.toString(), "copy_prepare_physics", physicsStarted);
+        long copiedJournalStarted = CaptureTimings.begin();
         if (!persistStage(capture, StructureTransactionJournal.Stage.COPIED)) {
             abort(capture, StructureCaptureResult.Status.TARGET_WRITE_FAILED, "journal_copied_persist_failed");
             return;
         }
+        CaptureTimings.record(capture.transactionId.toString(), "journal_copied", copiedJournalStarted);
+        long decisionJournalStarted = CaptureTimings.begin();
         if (!persistStage(capture, StructureTransactionJournal.Stage.COMMIT_DECIDED)) {
             abort(capture, StructureCaptureResult.Status.TARGET_WRITE_FAILED, "journal_decision_persist_failed");
             return;
         }
+        CaptureTimings.record(capture.transactionId.toString(), "journal_commit_decision", decisionJournalStarted);
         capture.phase = Phase.REMOVE_SOURCE;
     }
 

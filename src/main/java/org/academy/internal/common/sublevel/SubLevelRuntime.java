@@ -88,7 +88,10 @@ public final class SubLevelRuntime {
         if (subLevels.containsKey(id) || SubLevelServer.runtime(host.getServer(), id).isPresent()) {
             throw new IllegalArgumentException("Sub-level already exists: " + id);
         }
+        long allocateStarted = org.academy.internal.common.structure.transaction.CaptureTimings.begin();
         var lease = storage.allocate().orElse(null);
+        org.academy.internal.common.structure.transaction.CaptureTimings.record(id.value().toString(),
+                "plot_allocate", allocateStarted);
         if (lease == null) return Optional.empty();
         var subLevel = new SubLevel(id, lease.plot(), localBounds, pose);
         var managed = new Managed(subLevel, lease, List.of(),
@@ -97,7 +100,10 @@ public final class SubLevelRuntime {
         SubLevelActivationRegistry.activation(id);
         remember(subLevel);
         try {
+            long persistStarted = org.academy.internal.common.structure.transaction.CaptureTimings.begin();
             persist();
+            org.academy.internal.common.structure.transaction.CaptureTimings.record(id.value().toString(),
+                    "staging_manifest_persist", persistStarted);
             return Optional.of(subLevel);
         } catch (RuntimeException | Error failure) {
             forget(id);
@@ -124,10 +130,20 @@ public final class SubLevelRuntime {
             return true;
         }
         if (managed.subLevel.state() != SubLevelState.ALLOCATED && managed.subLevel.state() != SubLevelState.LOADING) return false;
+        long geometryStarted = org.academy.internal.common.structure.transaction.CaptureTimings.begin();
         var geometry = PlotGeometry.capture(storage, managed.subLevel.plot(), managed.subLevel.localBounds());
-        if (geometry.boxes().isEmpty() || !addBody(id, physicsPose(managed.subLevel.pose()), geometry.boxes())) return false;
+        org.academy.internal.common.structure.transaction.CaptureTimings.record(id.value().toString(),
+                "finalize_geometry_capture", geometryStarted);
+        long bodyStarted = org.academy.internal.common.structure.transaction.CaptureTimings.begin();
+        boolean bodyReady = !geometry.boxes().isEmpty() && addBody(id, physicsPose(managed.subLevel.pose()), geometry.boxes());
+        org.academy.internal.common.structure.transaction.CaptureTimings.record(id.value().toString(),
+                "finalize_add_body", bodyStarted);
+        if (!bodyReady) return false;
         var boxes = localBoxes(geometry.boxes());
+        long viewStarted = org.academy.internal.common.structure.transaction.CaptureTimings.begin();
         var view = PlotView.capture(storage, managed.subLevel.plot(), managed.subLevel.localBounds());
+        org.academy.internal.common.structure.transaction.CaptureTimings.record(id.value().toString(),
+                "finalize_view_capture", viewStarted);
         managed.subLevel.setState(SubLevelState.ACTIVE);
         managed.subLevel.geometryChanged();
         subLevels.put(id, new Managed(managed.subLevel, managed.lease, boxes, view));
@@ -136,8 +152,14 @@ public final class SubLevelRuntime {
         budget.invalidate(host, budgetReference(managed.subLevel), StructureSimulationBudget.DirtyPart.CONTENT);
         terrainNeedsUpdate = true;
         remember(managed.subLevel);
+        long flushStarted = org.academy.internal.common.structure.transaction.CaptureTimings.begin();
         flushStorage();
+        org.academy.internal.common.structure.transaction.CaptureTimings.record(id.value().toString(),
+                "finalize_flush_storage", flushStarted);
+        long persistStarted = org.academy.internal.common.structure.transaction.CaptureTimings.begin();
         persist();
+        org.academy.internal.common.structure.transaction.CaptureTimings.record(id.value().toString(),
+                "finalize_manifest_persist", persistStarted);
         return true;
     }
 

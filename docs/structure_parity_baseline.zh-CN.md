@@ -73,5 +73,56 @@
 
 证据：[remeasure-2026-10-20-r7r8.json](../validation/structure_parity/remeasure-2026-10-20-r7r8.json)（SHA-256 `1A66FBFCE06489A6551F3B834AC1E591366691EC3DCBF3D7B89F29F927EA5F8C`）；逐 tick 原始数据在 `run/sable-compat/parity-{local,sable}-{ground,floating}-r{7,8}/server/result.json`，日志在 `build/parity-*.log`，均不纳入 Git。原 `run/saves/test` 未被读写。
 
-下一步优先级据此调整为：**先定位 capture 的固定开销（PIPE-01/03），而不是继续只优化 merge**；merge 算法已有 9 项单测和 4096 格 1 盒/5 秒上限证据，但其真实复杂地形收益仍需专项 JFR 与 Sable 对照。
+下一步优先级据此调整为：**先定位 capture 的固定开销（PIPE-01/03），而不是继续只优化 merge**；r11–r14 已完成该定位并把 plot 区块加载移出 capture，见下节。merge 算法已有 9 项单测和 4096 格 1 盒/5 秒上限证据，但其真实复杂地形收益仍需专项 JFR 与 Sable 对照。
 
+## 2026-10-20 捕获分阶段剖析与 plot 预开（r11–r14）
+
+为定位 `capture_call_ms` 的固定开销，新增 opt-in 的 `CaptureTimings`：设置 `ACADEMY_CAPTURE_TIMINGS=true` 后，parity init 把 `-Dacademy.captureTimings=true` 传给服务器，捕获链路按阶段输出 `CAPTURE_STAGE owner=... stage=... ms=...`。未设置时只保留一次布尔判断，不改变捕获行为。以下 r11/r12 均为单次 local-ground 捕获，包含日志开销，不是 p95，也不能替代多轮配对。
+
+### 分阶段结果
+
+| 阶段 | r11 无预开 ms | r12 有预开 ms |
+| --- | ---: | ---: |
+| `capture_call_ms`（探针） | 363.30 | 227.19 |
+| `capture_total`（链路内） | 357.11 | 224.44 |
+| `plot_chunk_load` | **115.07** | **0** |
+| `target_allocate`（含 create_staged） | 126.56 | 17.66 |
+| `finalize_flush_storage` | 71.57 | 67.03 |
+| `save_host` | 30.38 | 29.64 |
+| `save_plot_level` | 10.11 | 9.97 |
+| `journal_prepare` | 27.04 | 13.97 |
+| `capture_encode_cells` | 9.73 | 3.73 |
+| `step_remove_source` | 9.16 | 6.95 |
+| `copy_verify` + geometry + body + view | 约 16 | 约 15 |
+| `journal_target` + copied + commit | 约 15 | 约 19 |
+
+结论很明确：**创建尖峰的大头不是几何或物理，而是 plot 区块的同步加载和两处整世界保存**。副本写入、读回校验、body 创建、视图捕获合计不到 20 ms；`plot_chunk_load` 一项就占 r11 的 32%，两处整世界保存（finalize flush + host + 第二次 plot）合计约 107 ms。
+
+### plot 预开池
+
+`PlotStorage` 现在默认保留 2 个已加载、已清空的空 plot（`academy.sublevel.plotPrewarm`，0 关闭）。`SubLevelServer.tick` 每 tick 最多推进一个预开区块：先 `reserve` 票据和 lease，再逐 tick `getChunk`，全部到齐后 `clearUnusedContent`，放入 ready 队列；`allocate()` 优先取 ready lease，队列空时仍走原来的同步分配兜底。`close()` 释放 ready/pending lease。
+
+r12 的预开日志：第一个区块 **119.456 ms**（tick 1，plot 维度首次区块生成/加载），随后同一 plot 的区块约 0.017–0.023 ms，第二个 plot 的四个区块约 0.005–0.009 ms——第一次加载把该区域/region 的固定成本付掉了，后续预开几乎免费。因而：
+
+- **capture 从 363 ms 降到 227 ms**（r11→r12），`plot_allocate` 从 117 ms 降到 0.02 ms；
+- 代价是 tick 1 出现一个约 119 ms 的预开 tick；这是**把工作移出 capture，不是消除工作**。夹具的 60 tick 暖机把它排除在 lift p95 之外，首次进服/启动延迟尚未测；
+- 队列目标 2 是有界内存/票据占用；捕获消耗一个后下一 tick 补一个，本会话后续区块已在缓存中，补位约 0.005–0.02 ms；新开服务器仍会在首次预开时付 119 ms。
+
+### r13/r14 两轮配对复测
+
+预开后用 local/Sable × ground/floating × 两轮（第二轮颠倒顺序，floating 因一次外层命令超时改用 `local-floating-r14b` 补跑）复测 8 次，全部 COMPLETE、对齐通过：
+
+| 场景 | 本地创建 ms | Sable 创建 ms | 创建比 | 本地 lift p95 ms | Sable lift p95 ms | p95 比 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 地面 | 221.82（221.85、221.80） | 128.54（127.15、129.93） | **1.73×** | 8.69 | 15.00 | **0.58×** |
+| 悬空 | 208.64（198.43、218.84） | 125.18（142.32、108.04） | **1.67×** | 10.65 | 13.44 | **0.79×** |
+
+对照 r7/r8 的 2.93×/2.93×，本地创建均值从约 408/366 ms 降到约 222/209 ms，Sable 均值基本稳定在约 125–129 ms；创建比降到 **1.67–1.73×**。但：
+
+- 仍不是 1×；剩余约 107 ms 是整世界保存（`finalize_flush_storage` 67 + `save_host` 30 + 第二次 `save_plot_level` 10）。下一步应做**局部 chunk 耐久协议**（只保存受影响的 plot/host chunk 并等待落盘），而不是继续挪动或缩小保存范围。
+- 本地 `lift_status` 仍 FAILED、最长连续 hover 27 tick；Sable PASSED（223/226）。创建变快没有改变 3/5/7 与 200 tick 的精度问题。
+- r13/r14 每格仍只有 2 次，环境/负载未固定；Sable 绝对值在 108–142 ms 间波动，不能用单轮小数点比较。tick 1 的 119 ms 预开尖峰需要另测首次进服/启动延迟，不能只看 capture 指标。
+
+证据：[capture-profile-2026-10-20.json](../validation/structure_parity/capture-profile-2026-10-20.json)（SHA-256 `74B072DC76B86BA92587ADF78BACBA8C660BF1C21F1AF282FCC1F23B2C9233D3`）、[prewarm-2026-10-20-r13r14.json](../validation/structure_parity/prewarm-2026-10-20-r13r14.json)（SHA-256 `591AA82F4B6D6EB203002A2B2F6F8C015714864B31BD8C424F9A08CF32D419CF`）；逐次原始结果在 `run/sable-compat/parity-*/server/result.json`，日志在 `build/parity-*.log` 与各 server `logs/latest.log`，均不纳入 Git。
+
+下一步：**只保存受影响的 chunk 并同步落盘**，替换 `finalize_flush_storage` 与 `save_host` 的整级保存；同时补 `saveHost` 的局部耐久崩溃恢复矩阵。完成后再考虑 journal 写入与 encode 的小头，以及预开 tick 的启动/首帧测量。

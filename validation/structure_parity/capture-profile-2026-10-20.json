@@ -1,0 +1,96 @@
+{
+  "schema": "academy-capture-profile-1",
+  "date": "2026-10-20",
+  "note": "Single local-ground capture per column with opt-in stage timings; log overhead included; first capture after server start; not p95.",
+  "before": {
+    "run": "local-ground-capture-r11",
+    "capture_call_ms": 363.2959,
+    "capture_total_ms": 357.112,
+    "stages_ms": {
+      "capture_validate_cells": 1.336,
+      "capture_claim_cells": 0.774,
+      "capture_encode_cells": 9.733,
+      "journal_prepare": 27.04,
+      "plot_chunk_load": 115.066,
+      "plot_allocate": 117.129,
+      "staging_manifest_persist": 5.734,
+      "journal_target": 5.325,
+      "step_copy": 111.066,
+      "finalize_flush_storage": 71.567,
+      "step_remove_source": 9.158,
+      "save_plot_level": 10.112,
+      "save_manifest": 3.942,
+      "save_host": 30.38,
+      "step_save_target": 52.231,
+      "drive_total": 173.109
+    }
+  },
+  "after_prewarm": {
+    "run": "local-ground-capture-r12",
+    "capture_call_ms": 227.1899,
+    "capture_total_ms": 224.437,
+    "stages_ms": {
+      "capture_validate_cells": 1.626,
+      "capture_claim_cells": 1.496,
+      "capture_encode_cells": 3.729,
+      "journal_prepare": 13.969,
+      "plot_chunk_load": 0,
+      "plot_allocate": 0.022,
+      "staging_manifest_persist": 12.929,
+      "journal_target": 7.515,
+      "step_copy": 111.785,
+      "finalize_flush_storage": 67.034,
+      "step_remove_source": 6.945,
+      "save_plot_level": 9.971,
+      "save_manifest": 4.049,
+      "save_host": 29.642,
+      "step_save_target": 51.559,
+      "drive_total": 171.01
+    },
+    "prewarm": {
+      "target": 2,
+      "first_chunk_ms": 119.456,
+      "following_chunk_ms": [
+        0.023,
+        0.02,
+        0.017,
+        0.011,
+        0.022,
+        0.024,
+        0.021,
+        0.005,
+        0.005,
+        0.009,
+        0.005
+      ],
+      "note": "The first plot-dimension chunk load/generation costs 119 ms in tick 1; later chunks and the second plot are ~0.02 ms because the region is already resident. Work moved out of capture, not eliminated."
+    }
+  },
+  "pair_r13_r14": {
+    "runs_per_backend": 2,
+    "ground": {
+      "local_capture_mean_ms": 221.823,
+      "sable_capture_mean_ms": 128.544,
+      "capture_ratio": 1.726,
+      "local_lift_p95_ms": 8.687,
+      "sable_lift_p95_ms": 15.002,
+      "lift_p95_ratio": 0.579
+    },
+    "floating": {
+      "local_capture_mean_ms": 208.635,
+      "sable_capture_mean_ms": 125.181,
+      "capture_ratio": 1.667,
+      "local_lift_p95_ms": 10.647,
+      "sable_lift_p95_ms": 13.439,
+      "lift_p95_ratio": 0.792
+    },
+    "baseline_r7_r8": {
+      "ground_capture_ratio": 2.929,
+      "floating_capture_ratio": 2.929
+    },
+    "functional": {
+      "local_lift_status": "FAILED (hover 27)",
+      "sable_lift_status": "PASSED"
+    }
+  }
+}

@@ -51,6 +51,9 @@ public final class SubLevelServer {
             System.getProperty("academy.sublevel.clientCollision", "true"));
     private static final int MAX_SYNC_BOXES = Math.min(16_384, Math.max(1, Integer.getInteger(
             "academy.sublevel.maxSyncBoxes", 16_384)));
+    /** Empty plots kept resident; zero disables prewarming. Chunk work stays on the server thread. */
+    private static final int PLOT_PREWARM = Math.max(0, Math.min(4, Integer.getInteger(
+            "academy.sublevel.plotPrewarm", 2)));
 
     private SubLevelServer() {
     }
@@ -176,6 +179,11 @@ public final class SubLevelServer {
         if (runtime == null) return;
         try {
             org.academy.api.common.structure.StructureDirectControl.tick(event.getServer());
+            try {
+                runtime.storage.prewarmTick(PLOT_PREWARM);
+            } catch (RuntimeException failure) {
+                AcademyCraft.LOGGER.warn("SubLevel plot prewarm failed", failure);
+            }
             SubLevelTraction.tick(event.getServer());
             SubLevelMotionController.tick(event.getServer());
             SubLevelDirectControl.tick(event.getServer());

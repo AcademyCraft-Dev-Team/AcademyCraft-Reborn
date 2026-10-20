@@ -21,6 +21,7 @@ allprojects {
                 environment 'IS_DEV', 'true'
                 systemProperty 'academy.structureParity', mode
                 systemProperty 'academy.structureParity.fixture', providers.gradleProperty('academyParityFixture').getOrElse('ground')
+                systemProperty 'academy.captureTimings', System.getenv('ACADEMY_CAPTURE_TIMINGS') ?: 'false'
                 systemProperty 'academy.structureParity.cells', rootProject.file('validation/structure_parity/cuboid_128.csv').absolutePath
                 programArguments.add('--nogui')
             }

@@ -59,9 +59,12 @@ public final class SubLevelCaptureTarget implements CaptureTarget {
             maxZ = Math.max(maxZ, local.getZ() + 1);
         }
         if (maxX == 0 || maxY == 0 || maxZ == 0) return Optional.empty();
-        return runtime.createStaged(new SubLevelId(transactionId), new AABB(0, 0, 0, maxX, maxY, maxZ),
-                        StructurePose.identity(Vec3.atLowerCornerOf(origin)))
-                .map(value -> handle(runtime, value).reference());
+        long started = CaptureTimings.begin();
+        var staged = runtime.createStaged(new SubLevelId(transactionId),
+                new AABB(0, 0, 0, maxX, maxY, maxZ),
+                StructurePose.identity(Vec3.atLowerCornerOf(origin)));
+        CaptureTimings.record(transactionId.toString(), "sublevel_create_staged", started);
+        return staged.map(value -> handle(runtime, value).reference());
     }
 
     @Override public String allocationFailureDetail() { return "sublevel_plot_capacity_unavailable"; }
@@ -146,10 +149,17 @@ public final class SubLevelCaptureTarget implements CaptureTarget {
         if (runtime == null || resolve(target, false).isEmpty() || quarantined(target)
                 || NativeStructureStorageErrors.failed(runtime.host())) return false;
         // Both sides must reach disk before the write-ahead record can be retired.
+        String owner = target.id().toString();
+        long plotStarted = CaptureTimings.begin();
         runtime.storage().level().save(null, true, false);
+        CaptureTimings.record(owner, "save_plot_level", plotStarted);
         if (NativeStructureStorageErrors.failed(runtime.storage().level())) return false;
+        long manifestStarted = CaptureTimings.begin();
         runtime.persist();
+        CaptureTimings.record(owner, "save_manifest", manifestStarted);
+        long hostStarted = CaptureTimings.begin();
         runtime.host().save(null, true, false);
+        CaptureTimings.record(owner, "save_host", hostStarted);
         return !NativeStructureStorageErrors.failed(runtime.host());
     }
 
@@ -177,15 +187,20 @@ public final class SubLevelCaptureTarget implements CaptureTarget {
     public boolean verifyCopy(StructureRef target, int expectedCells) {
         var runtime = runtime(target);
         if (runtime == null || !ready(target)) return false;
+        long started = CaptureTimings.begin();
         var subLevel = runtime.get(new SubLevelId(target.id())).orElseThrow();
         var geometry = PlotGeometry.capture(runtime.storage(), subLevel.plot(), subLevel.localBounds());
+        CaptureTimings.record(target.id().toString(), "sublevel_verify_geometry", started);
         return geometry.blocks() == expectedCells && !geometry.boxes().isEmpty();
     }
 
     @Override
     public boolean finalizeTarget(StructureRef target, BlockPos origin, List<BlockPos> positions) {
         var runtime = runtime(target);
-        return runtime != null && ready(target) && runtime.finalizeStaged(new SubLevelId(target.id()));
+        long started = CaptureTimings.begin();
+        boolean finalized = runtime != null && ready(target) && runtime.finalizeStaged(new SubLevelId(target.id()));
+        CaptureTimings.record(target.id().toString(), "sublevel_finalize_staged", started);
+        return finalized;
     }
 
     @Override
